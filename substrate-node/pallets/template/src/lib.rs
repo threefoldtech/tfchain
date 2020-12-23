@@ -20,7 +20,8 @@ pub trait Trait: frame_system::Trait {
 decl_storage! {
 	trait Store for Module<T: Trait> as TemplateModule {
 		pub Farms get(fn farms): map hasher(blake2_128_concat) u64 => types::Farm; 
-		
+		pub FarmsByNameID get(fn farms_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u64;
+
 		pub Nodes get(fn nodes): map hasher(blake2_128_concat) u64 => types::Node;
 		
 		pub Entities get(fn entities): map hasher(blake2_128_concat) u64 => types::Entity;
@@ -61,11 +62,18 @@ decl_error! {
 	pub enum Error for Module<T: Trait> {
 		NoneValue,
 		StorageOverflow,
+
+		FarmExists,
 		FarmNotExists,
+
 		EntityExists,
 		EntityNotExists,
+	
 		TwinExists,
+		TwinNotExists,
+
 		PricingPolicyExists,
+
 		CertificationCodeExists,
 	}
 }
@@ -87,11 +95,16 @@ decl_module! {
 			city_id: u64) -> dispatch::DispatchResult {
 			let _ = ensure_signed(origin)?;
 
+			ensure!(Entities::contains_key(entity_id), Error::<T>::EntityNotExists);
+			ensure!(Twins::contains_key(twin_id), Error::<T>::TwinNotExists);
+
+			ensure!(!FarmsByNameID::contains_key(name.clone()), Error::<T>::FarmExists);
+
 			let id = FarmID::get();
 
 			let farm = types::Farm {
 				id,
-				name,
+				name: name.clone(),
 				entity_id,
 				twin_id,
 				pricing_policy_id,
@@ -101,6 +114,7 @@ decl_module! {
 			};
 
 			Farms::insert(id, &farm);
+			FarmsByNameID::insert(name, id);
 			FarmID::put(id + 1);
 
 			Self::deposit_event(RawEvent::FarmStored(id));
@@ -118,6 +132,7 @@ decl_module! {
 			city_id: u64) -> dispatch::DispatchResult {
 			let _ = ensure_signed(origin)?;
 
+			ensure!(Twins::contains_key(twin_id), Error::<T>::TwinNotExists);
 			ensure!(!Farms::contains_key(&farm_id), Error::<T>::FarmNotExists);
 
 			let id = NodeID::get();
@@ -193,7 +208,7 @@ decl_module! {
 		pub fn create_pricing_policy(origin, name: Vec<u8>, currency: Vec<u8>, su: u64, cu: u64, nu: u64) -> dispatch::DispatchResult {
 			let _ = ensure_signed(origin)?;
 
-			ensure!(!PricingPoliciesByNameID::contains_key(&name), Error::<T>::TwinExists);
+			ensure!(!PricingPoliciesByNameID::contains_key(&name), Error::<T>::PricingPolicyExists);
 
 			let id = PricingPolicyID::get();
 
