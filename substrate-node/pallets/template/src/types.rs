@@ -56,13 +56,34 @@ pub struct Location {
 	pub latitude: U64F64
 }
 
-struct PricingPolicy {
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+pub struct PricingPolicy {
 	pub id: u64,
 	pub name: Vec<u8>,
 	pub currency: Vec<u8>,
 	pub su: u64,
 	pub cu: u64,
 	pub nu: u64
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+pub struct CertificationCodes {
+	pub id: u64,
+	pub name: Vec<u8>,
+	pub description: Vec<u8>,
+	pub certification_code_type: CertificationCodeType
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
+pub enum CertificationCodeType {
+	Farm,
+	Entity
+}
+
+impl Default for CertificationCodeType {
+    fn default() -> CertificationCodeType {
+        CertificationCodeType::Farm
+    }
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]

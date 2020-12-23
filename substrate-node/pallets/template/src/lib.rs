@@ -20,17 +20,28 @@ pub trait Trait: frame_system::Trait {
 decl_storage! {
 	trait Store for Module<T: Trait> as TemplateModule {
 		pub Farms get(fn farms): map hasher(blake2_128_concat) u64 => types::Farm; 
+		
 		pub Nodes get(fn nodes): map hasher(blake2_128_concat) u64 => types::Node;
+		
 		pub Entities get(fn entities): map hasher(blake2_128_concat) u64 => types::Entity;
 		pub EntitiesByNameID get(fn entities_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u64;
+
 		pub Twins get(fn twins): map hasher(blake2_128_concat) u64 => types::Twin;
 		pub TwinsByPubkeyID get(fn twins_by_pubkey_id): map hasher(blake2_128_concat) Vec<u8> => u64;
+
+		pub PricingPolicies get(fn pricing_policies): map hasher(blake2_128_concat) u64 => types::PricingPolicy;
+		pub PricingPoliciesByNameID get(fn pricing_policies_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u64;
+
+		pub CertificationCodes get(fn certification_codes): map hasher(blake2_128_concat) u64 => types::CertificationCodes;
+		pub CertificationCodesByNameID get(fn certification_codes_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u64;
 
 		// ID maps
 		FarmID: u64;
 		NodeID: u64;
 		EntityID: u64;
 		TwinID: u64;
+		PricingPolicyID: u64;
+		CertificationCodeID: u64;
 	}
 }
 
@@ -39,8 +50,10 @@ decl_event!(
 		SomethingStored(u32, AccountId),
 		FarmStored(u64),
 		NodeStored(u64),
-		EntityStored(Vec<u8>),
-		TwinStored(Vec<u8>),
+		EntityStored(Vec<u8>, u64),
+		TwinStored(Vec<u8>, u64),
+		PricingPolicyStored(Vec<u8>, u64),
+		CertificationCodeStored(Vec<u8>, u64),
 	}
 );
 
@@ -52,6 +65,8 @@ decl_error! {
 		EntityExists,
 		EntityNotExists,
 		TwinExists,
+		PricingPolicyExists,
+		CertificationCodeExists,
 	}
 }
 
@@ -144,7 +159,7 @@ decl_module! {
 			EntitiesByNameID::insert(&name, id);
 			EntityID::put(id + 1);
 
-			Self::deposit_event(RawEvent::EntityStored(name));
+			Self::deposit_event(RawEvent::EntityStored(name, id));
 
 			Ok(())
 		}
@@ -169,8 +184,58 @@ decl_module! {
 			TwinsByPubkeyID::insert(&pubkey, &id);
 			TwinID::put(id + 1);
 
-			Self::deposit_event(RawEvent::TwinStored(pubkey));
+			Self::deposit_event(RawEvent::TwinStored(pubkey, id));
 			
+			Ok(())
+		}
+
+		#[weight = 10_000 + T::DbWeight::get().writes(1)]
+		pub fn create_pricing_policy(origin, name: Vec<u8>, currency: Vec<u8>, su: u64, cu: u64, nu: u64) -> dispatch::DispatchResult {
+			let _ = ensure_signed(origin)?;
+
+			ensure!(!PricingPoliciesByNameID::contains_key(&name), Error::<T>::TwinExists);
+
+			let id = PricingPolicyID::get();
+
+			let policy = types::PricingPolicy {
+				id,
+				name: name.clone(),
+				currency,
+				su,
+				cu,
+				nu
+			};
+
+			PricingPolicies::insert(&id, &policy);
+			PricingPoliciesByNameID::insert(&name, &id);
+			PricingPolicyID::put(id + 1);
+
+			Self::deposit_event(RawEvent::PricingPolicyStored(name, id));
+			
+			Ok(())
+		}
+
+		#[weight = 10_000 + T::DbWeight::get().writes(1)]
+		pub fn create_certification_code(origin, name: Vec<u8>, description: Vec<u8>, certification_code_type: types::CertificationCodeType) -> dispatch::DispatchResult {
+			let _ = ensure_signed(origin)?;
+
+			ensure!(!CertificationCodesByNameID::contains_key(&name), Error::<T>::CertificationCodeExists);
+
+			let id = CertificationCodeID::get();
+
+			let certification_code = types::CertificationCodes{
+				id,
+				name: name.clone(),
+				description,
+				certification_code_type
+			};
+
+			CertificationCodes::insert(&id, &certification_code);
+			CertificationCodesByNameID::insert(&name, &id);
+			CertificationCodeID::put(id + 1);
+
+			Self::deposit_event(RawEvent::CertificationCodeStored(name, id));
+
 			Ok(())
 		}
 	}
