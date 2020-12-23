@@ -1,80 +1,23 @@
 const { getApiClient } = require('./api')
 const { Keyring } = require('@polkadot/api')
-const bip39 = require('bip39')
-const BN = require('bn.js')
 
-async function createEntity (name, country_id, city_id, callback) {
+async function createEntity (name, countryID, cityID, callback) {
   const api = await getApiClient()
   const keyring = new Keyring({ type: 'sr25519' })
   const BOB = keyring.addFromUri('//Bob', { name: 'Bob default' })
 
   return api.tx.templateModule
-    .create_entity(name, country_id, city_id)
+    .createEntity(name, countryID, cityID)
     .signAndSend(BOB, callback)
 }
 
-async function getContract (id) {
+async function getEntity (id) {
   const api = await getApiClient()
-  const contract = await api.query.templateModule.contracts(id)
-  const volume = await api.query.templateModule.volumeReservations(id)
+  const entity = await api.query.templateModule.entities(id)
 
-  // Retrieve the account balance via the system module
-  const { data: balance } = await api.query.system.account(contract.account_id)
-
-  const json = contract.toJSON()
-  json.node_id = hexToAscii(contract.node_id).trim().replace(/\0/g, '')
-
-  return {
-    ...json,
-    balance: balance.free.toHuman(),
-    volume: volume.toJSON()
-  }
-}
-
-async function payContract (id, amount, callback) {
-  const api = await getApiClient()
-  const keyring = new Keyring({ type: 'sr25519' })
-  const BOB = keyring.addFromUri('//Bob', { name: 'Bob default' })
-
-  amount = new BN(amount)
-
-  const a = api.createType('BalanceOf', amount.mul(new BN(1e12)))
-
-  return api.tx.templateModule
-    .pay(id, a)
-    .signAndSend(BOB, callback)
-}
-
-async function acceptContract (id, mnemonic, callback) {
-  const api = await getApiClient()
-
-  const key = getPrivatekey(mnemonic)
-
-  return api.tx.templateModule
-    .acceptContract(id)
-    .signAndSend(key, callback)
-}
-
-async function claimContractFunds (id, mnemonic, callback) {
-  const api = await getApiClient()
-
-  console.log(mnemonic)
-
-  const key = getPrivatekey(mnemonic)
-
-  return api.tx.templateModule
-    .claimFunds(id)
-    .signAndSend(key, callback)
-}
-
-async function cancelContract (id, callback) {
-  const api = await getApiClient()
-  const keyring = new Keyring({ type: 'sr25519' })
-  const BOB = keyring.addFromUri('//Bob', { name: 'Bob default' })
-
-  return api.tx.templateModule
-    .cancelContract(id)
-    .signAndSend(BOB, callback)
+  const res = entity.toJSON()
+  res.name = hexToAscii(res.name)
+  return res
 }
 
 function hexToAscii (str1) {
@@ -86,19 +29,7 @@ function hexToAscii (str1) {
   return str
 }
 
-function getPrivatekey (mnemonic) {
-  let entropy = bip39.mnemonicToEntropy(mnemonic)
-  entropy = '0x' + entropy
-
-  const keyring = new Keyring()
-  return keyring.addFromUri(entropy)
-}
-
 module.exports = {
   createEntity,
-  // getContract,
-  // payContract,
-  // acceptContract,
-  // claimContractFunds,
-  // cancelContract
+  getEntity
 }

@@ -37,13 +37,13 @@ async function getApiClient () {
       },
       Location: {
         longitude: 'U64F64',
-	      latitude: 'U64F64'
+        latitude: 'U64F64'
       },
       Resources: {
         hru: 'u64',
         sru: 'u64',
         cru: 'u64',
-        mru: 'u64',
+        mru: 'u64'
       },
       CertificationType: {
         _enum: ['None', 'Silver', 'Gold']
@@ -64,7 +64,7 @@ async function getApiClient () {
       Address: 'AccountId',
       LookupSource: 'AccountId',
       BalanceOf: 'Balance',
-      Public: '[u8;32]',
+      Public: '[u8;32]'
     }
   })
 }
