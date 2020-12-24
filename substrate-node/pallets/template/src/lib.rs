@@ -51,7 +51,7 @@ decl_event!(
 		SomethingStored(u32, AccountId),
 		FarmStored(u64),
 		NodeStored(u64),
-		EntityStored(Vec<u8>, u64),
+		EntityStored(u64, Vec<u8>, u64, u64),
 		TwinStored(Vec<u8>, u64),
 		PricingPolicyStored(Vec<u8>, u64),
 		CertificationCodeStored(Vec<u8>, u64),
@@ -174,7 +174,7 @@ decl_module! {
 			EntitiesByNameID::insert(&name, id);
 			EntityID::put(id + 1);
 
-			Self::deposit_event(RawEvent::EntityStored(name, id));
+			Self::deposit_event(RawEvent::EntityStored(id, name, country_id, city_id));
 
 			Ok(())
 		}

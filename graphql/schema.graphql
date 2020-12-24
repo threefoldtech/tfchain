@@ -1,0 +1,15 @@
+" All transfers "
+type Transfer @entity {
+  from: Bytes!
+  to: Bytes!
+  value: BigInt!
+  comment: String @fulltext(query: "commentSearch")
+  block: Int!
+} 
+
+type Entity @entity {
+  id: BigInt!
+  name: String
+  country_id: BigInt!
+  city_id: BigInt!
+}
