@@ -8,7 +8,7 @@ type Transfer @entity {
 } 
 
 type Entity @entity {
-  id: BigInt!
+  entity_id: BigInt!
   name: String
   country_id: BigInt!
   city_id: BigInt!

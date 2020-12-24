@@ -49,6 +49,8 @@ export type EntityOrderByInput =   'createdAt_ASC' |
   'updatedAt_DESC' |
   'deletedAt_ASC' |
   'deletedAt_DESC' |
+  'entityId_ASC' |
+  'entityId_DESC' |
   'name_ASC' |
   'name_DESC' |
   'countryId_ASC' |
@@ -98,12 +100,14 @@ export interface BaseWhereInput {
 }
 
 export interface EntityCreateInput {
+  entityId: BigInt
   name?: String | null
   countryId: BigInt
   cityId: BigInt
 }
 
 export interface EntityUpdateInput {
+  entityId?: BigInt | null
   name?: String | null
   countryId?: BigInt | null
   cityId?: BigInt | null
@@ -134,6 +138,12 @@ export interface EntityWhereInput {
   deletedAt_gte?: DateTime | null
   deletedById_eq?: ID_Input | null
   deletedById_in?: ID_Output[] | ID_Output | null
+  entityId_eq?: BigInt | null
+  entityId_gt?: BigInt | null
+  entityId_gte?: BigInt | null
+  entityId_lt?: BigInt | null
+  entityId_lte?: BigInt | null
+  entityId_in?: BigInt[] | BigInt | null
   name_eq?: String | null
   name_contains?: String | null
   name_startsWith?: String | null
@@ -278,6 +288,7 @@ export interface Entity extends BaseGraphQLObject {
   deletedAt?: DateTime | null
   deletedById?: String | null
   version: Int
+  entityId: BigInt
   name?: String | null
   countryId: BigInt
   cityId: BigInt

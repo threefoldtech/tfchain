@@ -88,6 +88,7 @@ type Entity implements BaseGraphQLObject {
   deletedAt: DateTime
   deletedById: String
   version: Int!
+  entityId: BigInt!
   name: String
   countryId: BigInt!
   cityId: BigInt!
@@ -100,6 +101,7 @@ type EntityConnection {
 }
 
 input EntityCreateInput {
+  entityId: BigInt!
   name: String
   countryId: BigInt!
   cityId: BigInt!
@@ -117,6 +119,8 @@ enum EntityOrderByInput {
   updatedAt_DESC
   deletedAt_ASC
   deletedAt_DESC
+  entityId_ASC
+  entityId_DESC
   name_ASC
   name_DESC
   countryId_ASC
@@ -126,6 +130,7 @@ enum EntityOrderByInput {
 }
 
 input EntityUpdateInput {
+  entityId: BigInt
   name: String
   countryId: BigInt
   cityId: BigInt
@@ -156,6 +161,12 @@ input EntityWhereInput {
   deletedAt_gte: DateTime
   deletedById_eq: ID
   deletedById_in: [ID!]
+  entityId_eq: BigInt
+  entityId_gt: BigInt
+  entityId_gte: BigInt
+  entityId_lt: BigInt
+  entityId_lte: BigInt
+  entityId_in: [BigInt!]
   name_eq: String
   name_contains: String
   name_startsWith: String

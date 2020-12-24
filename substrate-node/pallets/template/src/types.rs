@@ -28,7 +28,7 @@ pub struct Node {
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default)]
 pub struct Entity {
-	pub id: u64,
+	pub entity_id: u64,
 	pub name: Vec<u8>,
 	pub country_id: u64,
 	pub city_id: u64

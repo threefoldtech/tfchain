@@ -38,6 +38,9 @@ export enum EntityOrderByEnum {
   deletedAt_ASC = "deletedAt_ASC",
   deletedAt_DESC = "deletedAt_DESC",
 
+  entityId_ASC = "entityId_ASC",
+  entityId_DESC = "entityId_DESC",
+
   name_ASC = "name_ASC",
   name_DESC = "name_DESC",
 
@@ -126,6 +129,24 @@ export class EntityWhereInput {
   @TypeGraphQLField(() => [ID], { nullable: true })
   deletedById_in?: string[];
 
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  entityId_eq?: BN;
+
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  entityId_gt?: BN;
+
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  entityId_gte?: BN;
+
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  entityId_lt?: BN;
+
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  entityId_lte?: BN;
+
+  @TypeGraphQLField(() => [BigInt], { nullable: true })
+  entityId_in?: BN[];
+
   @TypeGraphQLField({ nullable: true })
   name_eq?: string;
 
@@ -186,6 +207,9 @@ export class EntityWhereUniqueInput {
 
 @TypeGraphQLInputType()
 export class EntityCreateInput {
+  @TypeGraphQLField(() => BigInt)
+  entityId!: BN;
+
   @TypeGraphQLField({ nullable: true })
   name?: string;
 
@@ -198,6 +222,9 @@ export class EntityCreateInput {
 
 @TypeGraphQLInputType()
 export class EntityUpdateInput {
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  entityId?: BN;
+
   @TypeGraphQLField({ nullable: true })
   name?: string;
 

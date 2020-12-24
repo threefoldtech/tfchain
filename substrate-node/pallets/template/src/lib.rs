@@ -164,7 +164,7 @@ decl_module! {
 			let id = EntityID::get();
 
 			let entity = types::Entity {
-				id,
+				entity_id: id,
 				name: name.clone(),
 				country_id,
 				city_id,

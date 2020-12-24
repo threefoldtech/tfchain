@@ -3,12 +3,12 @@ import { Entity } from '../generated/graphql-server/src/modules/entity/entity.mo
 import BN from 'bn.js'
 
 export async function templateModule_EntityStored(db: DB, event: SubstrateEvent) {
-  const [id, name, country_id, city_id] = event.params
+  const [entity_id, name, country_id, city_id] = event.params
   const entity = new Entity()
-  entity.id = Buffer.from(id.value as string).toString()
+  entity.entityId = new BN(entity_id.value as number)
   entity.name = Buffer.from(name.value as string).toString()
-  entity.countryId = convertBN(country_id.value as string)
-  entity.cityId = convertBN(city_id.value as string)
+  entity.countryId = new BN(country_id.value as number)
+  entity.cityId = new BN(city_id.value as number)
 
   await db.save<Entity>(entity)
 }
