@@ -1,7 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use fixed::{types::U64F64};
 use frame_support::traits::Vec;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default)]
@@ -50,10 +49,11 @@ pub struct Resources {
 	pub mru: u64,
 }
 
+// Store Location long and lat as string
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
 pub struct Location {
-	pub longitude: U64F64,
-	pub latitude: U64F64
+	pub longitude: Vec<u8>,
+	pub latitude: Vec<u8>
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]

@@ -133,7 +133,7 @@ decl_module! {
 			let _ = ensure_signed(origin)?;
 
 			ensure!(Twins::contains_key(twin_id), Error::<T>::TwinNotExists);
-			ensure!(!Farms::contains_key(&farm_id), Error::<T>::FarmNotExists);
+			ensure!(Farms::contains_key(&farm_id), Error::<T>::FarmNotExists);
 
 			let id = NodeID::get();
 

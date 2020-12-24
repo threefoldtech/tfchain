@@ -270,3 +270,57 @@ fn test_create_farm_with_same_name_fails() {
 		);
 	});
 }
+
+#[test]
+fn create_node_works() {
+	ExternalityBuilder::build().execute_with(|| {
+		let name = "foobar";
+
+		assert_ok!(TemplateModule::create_entity(Origin::signed(1), name.as_bytes().to_vec(), 0,0));
+
+		// Assign the first entity created (starts with index 0)
+		let entity_id = 0;
+		let somepub_key = "GCCBZL5RWQVD64C7RMPSA4RFSHSMU4GVFAMREFWMRQZ5NM344GMDALKE";
+
+		assert_ok!(TemplateModule::create_twin(Origin::signed(1), somepub_key.as_bytes().to_vec(), entity_id));
+
+		let twin_id = 0;
+
+		let farm_name = "test_farm";
+
+		assert_ok!(TemplateModule::create_farm(
+			Origin::signed(1), 
+			farm_name.as_bytes().to_vec(),
+			twin_id,
+			entity_id,
+			0,
+			super::types::CertificationType::None,
+			0,
+			0
+		));
+
+		// random location
+		let location = super::types::Location{
+			longitude: "12.233213231".as_bytes().to_vec(),
+			latitude: "32.323112123".as_bytes().to_vec()
+		};
+
+		let resource = super::types::Resources {
+			hru: 1,
+			sru: 1,
+			cru: 1,
+			mru: 1,
+		};
+
+		let farm_id = 0;
+		assert_ok!(TemplateModule::create_node(
+			Origin::signed(1), 
+			farm_id,
+			twin_id,
+			resource,
+			location,
+			0,
+			0
+		));
+	});
+}
