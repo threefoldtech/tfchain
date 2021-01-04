@@ -11,6 +11,16 @@ async function createEntity (name, countryID, cityID, callback) {
     .signAndSend(BOB, callback)
 }
 
+async function updateEntity (id, name, countryID, cityID, callback) {
+  const api = await getApiClient()
+  const keyring = new Keyring({ type: 'sr25519' })
+  const BOB = keyring.addFromUri('//Bob', { name: 'Bob default' })
+
+  return api.tx.templateModule
+    .updateEntity(id, name, countryID, cityID)
+    .signAndSend(BOB, callback)
+}
+
 async function getEntity (id) {
   const api = await getApiClient()
   const entity = await api.query.templateModule.entities(id)
@@ -31,5 +41,6 @@ function hex2a (hex) {
 
 module.exports = {
   createEntity,
+  updateEntity,
   getEntity
 }

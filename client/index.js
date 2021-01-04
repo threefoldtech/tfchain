@@ -1,9 +1,31 @@
 const yargs = require('yargs')
 const { exit } = require('yargs')
-const { createEntity, getEntity } = require('./src/contracts')
+const { createEntity, updateEntity, getEntity } = require('./src/contracts')
 
 const argv = yargs
   .command('create', 'Create a an entity', {
+    name: {
+      description: 'Name of the entity',
+      alias: 'n',
+      type: 'string'
+    },
+    country_id: {
+      description: 'Id of the country',
+      alias: 'c',
+      type: 'number'
+    },
+    city_id: {
+      description: 'Id of the city',
+      alias: 't',
+      type: 'number'
+    }
+  })
+  .command('update', 'Update a an entity', {
+    id: {
+      description: 'id of the entity',
+      alias: 'i',
+      type: 'number'
+    },
     name: {
       description: 'Name of the entity',
       alias: 'n',
@@ -39,6 +61,30 @@ if (argv._.includes('create')) {
   // }
 
   createEntity(argv.n, argv.c, argv.t, ({ events = [], status }) => {
+    console.log(`Current status is ${status.type}`)
+
+    if (status.isFinalized) {
+      console.log(`Transaction included at blockHash ${status.asFinalized}`)
+
+      // Loop through Vec<EventRecord> to display all events
+      events.forEach(({ phase, event: { data, method, section } }) => {
+        console.log(`\t' ${phase}: ${section}.${method}:: ${data}`)
+      })
+      exit(1)
+    }
+  }).catch(err => {
+    console.log(err)
+    exit(1)
+  })
+}
+if (argv._.includes('update')) {
+  // if (!argv.n || !argv.c || !argv.t) {
+  //   console.log(argv)
+  //   console.log('Bad Params')
+  //   exit(1)
+  // }
+
+  updateEntity(argv.i, argv.n, argv.c, argv.t, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {

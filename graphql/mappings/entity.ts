@@ -14,6 +14,22 @@ export async function templateModule_EntityStored(db: DB, event: SubstrateEvent)
   await db.save<Entity>(entity)
 }
 
+export async function templateModule_EntityUpdated(db: DB, event: SubstrateEvent) {
+  const [entity_id, name, country_id, city_id, pub_key] = event.params
+
+  const savedEntity = await db.get(Entity, { where: { entityId: new BN(entity_id.value as number) } })
+
+  if (savedEntity) {
+    savedEntity.entityId = new BN(entity_id.value as number)
+    savedEntity.name = hex2a(Buffer.from(name.value as string).toString())
+    savedEntity.countryId = new BN(country_id.value as number)
+    savedEntity.cityId = new BN(city_id.value as number)
+    savedEntity.pubKey = Buffer.from(pub_key.value as string).toString()
+  
+    await db.save<Entity>(savedEntity)
+  }
+}
+
 function hex2a (hex: string): string {
   var str = ''
   for (var i = 0; i < hex.length; i += 2) {

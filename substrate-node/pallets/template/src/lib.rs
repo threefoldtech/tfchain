@@ -65,6 +65,7 @@ decl_event!(
 		FarmStored(u64),
 		NodeStored(u64),
 		EntityStored(u64, Vec<u8>, u64, u64, AccountId),
+		EntityUpdated(u64, Vec<u8>, u64, u64, AccountId),
 		TwinStored(Vec<u8>, u64),
 		PricingPolicyStored(Vec<u8>, u64),
 		CertificationCodeStored(Vec<u8>, u64),
@@ -81,6 +82,7 @@ decl_error! {
 
 		EntityExists,
 		EntityNotExists,
+		CannotUpdateEntity,
 	
 		TwinExists,
 		TwinNotExists,
@@ -189,6 +191,37 @@ decl_module! {
 			EntityID::put(id + 1);
 
 			Self::deposit_event(RawEvent::EntityStored(id, name, country_id, city_id, pub_key));
+
+			Ok(())
+		}
+
+		#[weight = 10_000 + T::DbWeight::get().writes(1)]
+		pub fn update_entity(origin, id: u64, name: Vec<u8>, country_id: u64, city_id: u64) -> dispatch::DispatchResult {
+			let pub_key = ensure_signed(origin)?;
+
+			ensure!(Entities::<T>::contains_key(&id), Error::<T>::EntityNotExists);
+
+			let stored_entity = Entities::<T>::get(id);
+
+			ensure!(stored_entity.pub_key == pub_key, Error::<T>::CannotUpdateEntity);
+
+			let entity = types::Entity::<T> {
+				entity_id: id,
+				name: name.clone(),
+				country_id,
+				city_id,
+				pub_key: pub_key.clone(), 
+			};
+
+			// overwrite entity
+			Entities::insert(&id, &entity);
+			
+			// remove entity by name id
+			EntitiesByNameID::remove(&stored_entity.name);
+			// re-insert with new name
+			EntitiesByNameID::insert(&name, id);
+
+			Self::deposit_event(RawEvent::EntityUpdated(id, name, country_id, city_id, pub_key));
 
 			Ok(())
 		}
