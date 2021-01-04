@@ -1,7 +1,16 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::traits::Vec;
+use frame_support::{
+    sp_runtime::{
+        traits::AccountIdConversion, ModuleId
+	},
+	traits::{
+		Vec,
+    },
+};
+
+const PALLET_ID: ModuleId = ModuleId(*b"ABCDEFG!");
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default)]
 pub struct Farm {
@@ -26,12 +35,29 @@ pub struct Node {
 	pub city_id: u64
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default)]
-pub struct Entity {
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode)]
+pub struct Entity<T: super::Trait> {
 	pub entity_id: u64,
 	pub name: Vec<u8>,
 	pub country_id: u64,
-	pub city_id: u64
+	pub city_id: u64,
+	pub pub_key: T::AccountId,
+}
+
+impl<T> Default for Entity<T>
+    where T: super::Trait
+{
+    fn default() -> Entity<T> {
+        let pub_key = PALLET_ID.into_account();
+
+        Entity {
+			entity_id: 0,
+			name: [0].to_vec(),
+			country_id: 0,
+			city_id: 0,
+			pub_key
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default)]

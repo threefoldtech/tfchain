@@ -36,6 +36,11 @@ export class Entity extends BaseModel {
   })
   cityId!: BN;
 
+  @StringField({
+    nullable: true
+  })
+  pubKey?: string;
+
   constructor(init?: Partial<Entity>) {
     super();
     Object.assign(this, init);

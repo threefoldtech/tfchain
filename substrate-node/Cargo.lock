@@ -3594,11 +3594,14 @@ version = "2.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "pallet-balances",
+ "pallet-timestamp",
  "parity-scale-codec",
  "sp-core",
  "sp-io",
  "sp-runtime",
- "substrate-fixed",
+ "sp-std",
+ "sp-storage",
 ]
 
 [[package]]
@@ -6600,15 +6603,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f14feab86fe31e7d0a485d53d7c1c634c426f7ae5b8ce4f705b2e49a35713fcb"
 dependencies = [
  "platforms",
-]
-
-[[package]]
-name = "substrate-fixed"
-version = "0.5.4"
-source = "git+https://github.com/encointer/substrate-fixed#2c52170fa02507dc5b52c516061302670860869a"
-dependencies = [
- "parity-scale-codec",
- "typenum",
 ]
 
 [[package]]

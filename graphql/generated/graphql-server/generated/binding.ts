@@ -56,7 +56,9 @@ export type EntityOrderByInput =   'createdAt_ASC' |
   'countryId_ASC' |
   'countryId_DESC' |
   'cityId_ASC' |
-  'cityId_DESC'
+  'cityId_DESC' |
+  'pubKey_ASC' |
+  'pubKey_DESC'
 
 export type TransferOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -104,6 +106,7 @@ export interface EntityCreateInput {
   name?: String | null
   countryId: BigInt
   cityId: BigInt
+  pubKey?: String | null
 }
 
 export interface EntityUpdateInput {
@@ -111,6 +114,7 @@ export interface EntityUpdateInput {
   name?: String | null
   countryId?: BigInt | null
   cityId?: BigInt | null
+  pubKey?: String | null
 }
 
 export interface EntityWhereInput {
@@ -161,6 +165,11 @@ export interface EntityWhereInput {
   cityId_lt?: BigInt | null
   cityId_lte?: BigInt | null
   cityId_in?: BigInt[] | BigInt | null
+  pubKey_eq?: String | null
+  pubKey_contains?: String | null
+  pubKey_startsWith?: String | null
+  pubKey_endsWith?: String | null
+  pubKey_in?: String[] | String | null
 }
 
 export interface EntityWhereUniqueInput {
@@ -292,6 +301,7 @@ export interface Entity extends BaseGraphQLObject {
   name?: String | null
   countryId: BigInt
   cityId: BigInt
+  pubKey?: String | null
 }
 
 export interface EntityConnection {

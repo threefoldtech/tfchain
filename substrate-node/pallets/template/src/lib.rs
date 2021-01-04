@@ -4,17 +4,30 @@
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
 
-use frame_support::{decl_module, decl_storage, decl_event, decl_error, dispatch, traits::Get, ensure};
-use frame_system::ensure_signed;
-use frame_support::traits::Vec;
+use frame_support::{
+	decl_error, decl_event, decl_module, decl_storage, ensure, dispatch,
+	traits::{
+		Currency, Get,
+	},
+};
+use frame_system::{
+    self as system, ensure_signed,
+};
+// use pallet_timestamp as timestamp;
+
+
+use sp_std::prelude::*;
 
 #[cfg(test)]
 mod tests;
 
 mod types;
 
-pub trait Trait: frame_system::Trait {
+pub type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
+
+pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+	type Currency: Currency<Self::AccountId>;
 }
 
 decl_storage! {
@@ -24,7 +37,7 @@ decl_storage! {
 
 		pub Nodes get(fn nodes): map hasher(blake2_128_concat) u64 => types::Node;
 		
-		pub Entities get(fn entities): map hasher(blake2_128_concat) u64 => types::Entity;
+		pub Entities get(fn entities): map hasher(blake2_128_concat) u64 => types::Entity<T>;
 		pub EntitiesByNameID get(fn entities_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u64;
 
 		pub Twins get(fn twins): map hasher(blake2_128_concat) u64 => types::Twin;
@@ -51,7 +64,7 @@ decl_event!(
 		SomethingStored(u32, AccountId),
 		FarmStored(u64),
 		NodeStored(u64),
-		EntityStored(u64, Vec<u8>, u64, u64),
+		EntityStored(u64, Vec<u8>, u64, u64, AccountId),
 		TwinStored(Vec<u8>, u64),
 		PricingPolicyStored(Vec<u8>, u64),
 		CertificationCodeStored(Vec<u8>, u64),
@@ -95,7 +108,7 @@ decl_module! {
 			city_id: u64) -> dispatch::DispatchResult {
 			let _ = ensure_signed(origin)?;
 
-			ensure!(Entities::contains_key(entity_id), Error::<T>::EntityNotExists);
+			ensure!(Entities::<T>::contains_key(entity_id), Error::<T>::EntityNotExists);
 			ensure!(Twins::contains_key(twin_id), Error::<T>::TwinNotExists);
 
 			ensure!(!FarmsByNameID::contains_key(name.clone()), Error::<T>::FarmExists);
@@ -157,24 +170,25 @@ decl_module! {
 
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
 		pub fn create_entity(origin, name: Vec<u8>, country_id: u64, city_id: u64) -> dispatch::DispatchResult {
-			let _ = ensure_signed(origin)?;
+			let pub_key = ensure_signed(origin)?;
 
 			ensure!(!EntitiesByNameID::contains_key(&name), Error::<T>::EntityExists);
 
 			let id = EntityID::get();
 
-			let entity = types::Entity {
+			let entity = types::Entity::<T> {
 				entity_id: id,
 				name: name.clone(),
 				country_id,
 				city_id,
+				pub_key: pub_key.clone(), 
 			};
 
 			Entities::insert(&id, &entity);
 			EntitiesByNameID::insert(&name, id);
 			EntityID::put(id + 1);
 
-			Self::deposit_event(RawEvent::EntityStored(id, name, country_id, city_id));
+			Self::deposit_event(RawEvent::EntityStored(id, name, country_id, city_id, pub_key));
 
 			Ok(())
 		}
@@ -185,7 +199,7 @@ decl_module! {
 
 			ensure!(!TwinsByPubkeyID::contains_key(&pubkey), Error::<T>::TwinExists);
 
-			ensure!(Entities::contains_key(entity_id), Error::<T>::EntityNotExists);
+			ensure!(Entities::<T>::contains_key(entity_id), Error::<T>::EntityNotExists);
 
 			let id = TwinID::get();
 

@@ -12,4 +12,5 @@ type Entity @entity {
   name: String
   country_id: BigInt!
   city_id: BigInt!
+  pub_key: String
 }

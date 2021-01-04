@@ -3,19 +3,22 @@ import { Entity } from '../generated/graphql-server/src/modules/entity/entity.mo
 import BN from 'bn.js'
 
 export async function templateModule_EntityStored(db: DB, event: SubstrateEvent) {
-  const [entity_id, name, country_id, city_id] = event.params
+  const [entity_id, name, country_id, city_id, pub_key] = event.params
   const entity = new Entity()
   entity.entityId = new BN(entity_id.value as number)
-  entity.name = Buffer.from(name.value as string).toString()
+  entity.name = hex2a(Buffer.from(name.value as string).toString())
   entity.countryId = new BN(country_id.value as number)
   entity.cityId = new BN(city_id.value as number)
+  entity.pubKey = Buffer.from(pub_key.value as string).toString()
 
   await db.save<Entity>(entity)
 }
 
-function convertBN(s: string): BN {
-  if (String(s).startsWith('0x')) {
-    return new BN(s.substring(2), 16)
+function hex2a (hex: string): string {
+  var str = ''
+  for (var i = 0; i < hex.length; i += 2) {
+    var v = parseInt(hex.substr(i, 2), 16)
+    if (v) str += String.fromCharCode(v)
   }
-  return new BN(s)
+  return str
 }

@@ -48,7 +48,10 @@ export enum EntityOrderByEnum {
   countryId_DESC = "countryId_DESC",
 
   cityId_ASC = "cityId_ASC",
-  cityId_DESC = "cityId_DESC"
+  cityId_DESC = "cityId_DESC",
+
+  pubKey_ASC = "pubKey_ASC",
+  pubKey_DESC = "pubKey_DESC"
 }
 
 registerEnumType(EntityOrderByEnum, {
@@ -197,6 +200,21 @@ export class EntityWhereInput {
 
   @TypeGraphQLField(() => [BigInt], { nullable: true })
   cityId_in?: BN[];
+
+  @TypeGraphQLField({ nullable: true })
+  pubKey_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  pubKey_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  pubKey_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  pubKey_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  pubKey_in?: string[];
 }
 
 @TypeGraphQLInputType()
@@ -218,6 +236,9 @@ export class EntityCreateInput {
 
   @TypeGraphQLField(() => BigInt)
   cityId!: BN;
+
+  @TypeGraphQLField({ nullable: true })
+  pubKey?: string;
 }
 
 @TypeGraphQLInputType()
@@ -233,6 +254,9 @@ export class EntityUpdateInput {
 
   @TypeGraphQLField(() => BigInt, { nullable: true })
   cityId?: BN;
+
+  @TypeGraphQLField({ nullable: true })
+  pubKey?: string;
 }
 
 @ArgsType()

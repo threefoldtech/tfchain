@@ -8,6 +8,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 	Perbill,
 };
+use sp_std::prelude::*;
 
 impl_outer_origin! {
 	pub enum Origin for TestRuntime {}
@@ -20,6 +21,7 @@ parameter_types! {
 	pub const MaximumBlockWeight: u32 = 1024;
 	pub const MaximumBlockLength: u32 = 2 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::one();
+	pub const ExistentialDeposit: u64 = 1;
 }
 impl system::Trait for TestRuntime {
 	type BaseCallFilter = ();
@@ -43,15 +45,29 @@ impl system::Trait for TestRuntime {
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
 	type PalletInfo = ();
-	type AccountData = ();
+	type AccountData = balances::AccountData<u64>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 }
 
+impl balances::Trait for TestRuntime {
+	type Balance = u64;
+	type MaxLocks = ();
+	type Event = ();
+	type DustRemoval = ();
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
+	type WeightInfo = ();
+}
+
 impl Trait for TestRuntime {
 	type Event = ();
+	type Currency = Balances;
 }
+
+type Balances = balances::Module<TestRuntime>;
+type System = system::Module<TestRuntime>;
 
 struct ExternalityBuilder;
 
