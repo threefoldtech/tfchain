@@ -9,8 +9,74 @@ type Transfer @entity {
 
 type Entity @entity {
   entity_id: BigInt!
-  name: String
-  country_id: BigInt!
-  city_id: BigInt!
-  pub_key: String
+  name: String!
+  country_id: BigInt
+  city_id: BigInt
+  pub_key: String!
+}
+
+type Twin @entity {
+  twin_id: BigInt!
+  pub_key: String!
+  entity_id: BigInt!
+}
+
+type Farm @entity {
+  farm_id: BigInt!
+  name: String!
+  entity_id: BigInt!
+  twin_id: BigInt!
+  pricing_policy_id: BigInt!
+  certification_type: CertificationType!
+  country_id: BigInt
+  city_id: BigInt
+}
+
+enum CertificationType {
+  None
+  Silver
+  Gold
+}
+
+type Node @entity {
+  node_id: BigInt!
+  farm_id: BigInt!
+  twin_id: BigInt!
+  resources: Resources!
+  location: Location!
+  country_id: BigInt
+  city_id: BigInt
+}
+
+type Resources @entity {
+  hru: BigInt
+  sru: BigInt
+  cru: BigInt
+  mru: BigInt
+}
+
+type Location @entity {
+  longitude: String!
+  latitude: String!
+}
+
+type PricingPolicy @entity {
+  pricing_policy_id: BigInt!
+  name: String!
+  currency: String!
+  su: BigInt!
+  cu: BigInt!
+  nu: BigInt!
+}
+
+type CertificationCodes @entity {
+  certification_code_id: BigInt!
+  name: String!
+  description: String
+  certification_code_type: CertificationCodeType
+}
+
+enum CertificationCodeType {
+  Farm
+  Entity
 }

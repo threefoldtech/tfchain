@@ -1,20 +1,21 @@
-import { BaseModel, NumericField, Model, StringField } from 'warthog';
+import { BaseModel, NumericField, Model, OneToMany, StringField } from 'warthog';
 
 import BN from 'bn.js';
 
+import { Node } from '../node/node.model';
+
 @Model({ api: {} })
-export class Entity extends BaseModel {
+export class Resources extends BaseModel {
   @NumericField({
+    nullable: true,
+
     transformer: {
       to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
       from: (dbValue: string) =>
         dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
     }
   })
-  entityId!: BN;
-
-  @StringField({})
-  name!: string;
+  hru?: BN;
 
   @NumericField({
     nullable: true,
@@ -25,7 +26,7 @@ export class Entity extends BaseModel {
         dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
     }
   })
-  countryId?: BN;
+  sru?: BN;
 
   @NumericField({
     nullable: true,
@@ -36,12 +37,27 @@ export class Entity extends BaseModel {
         dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
     }
   })
-  cityId?: BN;
+  cru?: BN;
 
-  @StringField({})
-  pubKey!: string;
+  @NumericField({
+    nullable: true,
 
-  constructor(init?: Partial<Entity>) {
+    transformer: {
+      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
+      from: (dbValue: string) =>
+        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
+    }
+  })
+  mru?: BN;
+
+  @OneToMany(
+    () => Node,
+    (param: Node) => param.resources,
+    { nullable: true }
+  )
+  noderesources?: Node[];
+
+  constructor(init?: Partial<Resources>) {
     super();
     Object.assign(this, init);
   }

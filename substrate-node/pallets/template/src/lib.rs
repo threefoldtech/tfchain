@@ -40,8 +40,8 @@ decl_storage! {
 		pub Entities get(fn entities): map hasher(blake2_128_concat) u64 => types::Entity<T>;
 		pub EntitiesByNameID get(fn entities_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u64;
 
-		pub Twins get(fn twins): map hasher(blake2_128_concat) u64 => types::Twin;
-		pub TwinsByPubkeyID get(fn twins_by_pubkey_id): map hasher(blake2_128_concat) Vec<u8> => u64;
+		pub Twins get(fn twins): map hasher(blake2_128_concat) u64 => types::Twin<T>;
+		pub TwinsByPubkeyID get(fn twins_by_pubkey_id): map hasher(blake2_128_concat) T::AccountId => u64;
 
 		pub PricingPolicies get(fn pricing_policies): map hasher(blake2_128_concat) u64 => types::PricingPolicy;
 		pub PricingPoliciesByNameID get(fn pricing_policies_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u64;
@@ -61,12 +61,11 @@ decl_storage! {
 
 decl_event!(
 	pub enum Event<T> where AccountId = <T as frame_system::Trait>::AccountId {
-		SomethingStored(u32, AccountId),
-		FarmStored(u64),
-		NodeStored(u64),
+		FarmStored(u64, Vec<u8>, u64, u64, u64, u64, u64, types::CertificationType),
+		NodeStored(u64, u64, u64, types::Resources, types::Location, u64, u64),
 		EntityStored(u64, Vec<u8>, u64, u64, AccountId),
 		EntityUpdated(u64, Vec<u8>, u64, u64, AccountId),
-		TwinStored(Vec<u8>, u64),
+		TwinStored(AccountId, u64, u64),
 		PricingPolicyStored(Vec<u8>, u64),
 		CertificationCodeStored(Vec<u8>, u64),
 	}
@@ -111,7 +110,7 @@ decl_module! {
 			let _ = ensure_signed(origin)?;
 
 			ensure!(Entities::<T>::contains_key(entity_id), Error::<T>::EntityNotExists);
-			ensure!(Twins::contains_key(twin_id), Error::<T>::TwinNotExists);
+			ensure!(Twins::<T>::contains_key(twin_id), Error::<T>::TwinNotExists);
 
 			ensure!(!FarmsByNameID::contains_key(name.clone()), Error::<T>::FarmExists);
 
@@ -129,10 +128,10 @@ decl_module! {
 			};
 
 			Farms::insert(id, &farm);
-			FarmsByNameID::insert(name, id);
+			FarmsByNameID::insert(name.clone(), id);
 			FarmID::put(id + 1);
 
-			Self::deposit_event(RawEvent::FarmStored(id));
+			Self::deposit_event(RawEvent::FarmStored(id, name, entity_id, twin_id, pricing_policy_id, country_id, city_id, certification_type));
 
 			Ok(())
 		}
@@ -147,7 +146,7 @@ decl_module! {
 			city_id: u64) -> dispatch::DispatchResult {
 			let _ = ensure_signed(origin)?;
 
-			ensure!(Twins::contains_key(twin_id), Error::<T>::TwinNotExists);
+			ensure!(Twins::<T>::contains_key(twin_id), Error::<T>::TwinNotExists);
 			ensure!(Farms::contains_key(&farm_id), Error::<T>::FarmNotExists);
 
 			let id = NodeID::get();
@@ -156,8 +155,8 @@ decl_module! {
 				id,
 				farm_id,
 				twin_id,
-				resources,
-				location,
+				resources: resources.clone(),
+				location: location.clone(),
 				country_id,
 				city_id
 			};
@@ -165,7 +164,7 @@ decl_module! {
 			Nodes::insert(id, &node);
 			NodeID::put(id + 1);
 
-			Self::deposit_event(RawEvent::NodeStored(id));
+			Self::deposit_event(RawEvent::NodeStored(id, farm_id, twin_id, resources, location, country_id, city_id));
 
 			Ok(())
 		}
@@ -227,26 +226,26 @@ decl_module! {
 		}
 
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
-		pub fn create_twin(origin, pubkey: Vec<u8>, entity_id: u64) -> dispatch::DispatchResult {
-			let _ = ensure_signed(origin)?;
+		pub fn create_twin(origin, entity_id: u64) -> dispatch::DispatchResult {
+			let pub_key = ensure_signed(origin)?;
 
-			ensure!(!TwinsByPubkeyID::contains_key(&pubkey), Error::<T>::TwinExists);
+			ensure!(!TwinsByPubkeyID::<T>::contains_key(&pub_key), Error::<T>::TwinExists);
 
 			ensure!(Entities::<T>::contains_key(entity_id), Error::<T>::EntityNotExists);
 
-			let id = TwinID::get();
+			let twin_id = TwinID::get();
 
-			let twin = types::Twin {
-				id,
-				pubkey: pubkey.clone(),
+			let twin = types::Twin::<T> {
+				twin_id,
+				pub_key: pub_key.clone(),
 				entity_id,
 			};
 
-			Twins::insert(&id, &twin);
-			TwinsByPubkeyID::insert(&pubkey, &id);
-			TwinID::put(id + 1);
+			Twins::insert(&twin_id, &twin);
+			TwinsByPubkeyID::<T>::insert(&pub_key, &twin_id);
+			TwinID::put(twin_id + 1);
 
-			Self::deposit_event(RawEvent::TwinStored(pubkey, id));
+			Self::deposit_event(RawEvent::TwinStored(pub_key, twin_id, entity_id));
 			
 			Ok(())
 		}

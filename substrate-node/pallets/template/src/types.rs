@@ -60,14 +60,29 @@ impl<T> Default for Entity<T>
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default)]
-pub struct Twin {
-	pub id: u64,
-	pub pubkey: Vec<u8>,
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode)]
+pub struct Twin<T: super::Trait> {
+	pub twin_id: u64,
+	pub pub_key: T::AccountId,
 	pub entity_id: u64
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+impl<T> Default for Twin<T>
+    where T: super::Trait
+{
+    fn default() -> Twin<T> {
+        let pub_key = PALLET_ID.into_account();
+
+        Twin {
+			twin_id: 0,
+			pub_key,
+			entity_id: 0
+        }
+    }
+}
+
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, Copy)]
 pub struct Resources {
 	pub hru: u64,
 	pub sru: u64,
@@ -112,7 +127,7 @@ impl Default for CertificationCodeType {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, Copy)]
 pub enum CertificationType {
 	None,
 	Silver,

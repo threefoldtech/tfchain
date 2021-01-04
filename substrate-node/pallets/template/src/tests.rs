@@ -117,9 +117,8 @@ fn test_create_twin_works() {
 
 		// Assign the first entity created (starts with index 0)
 		let entity_id = 0;
-		let somepub_key = "GCCBZL5RWQVD64C7RMPSA4RFSHSMU4GVFAMREFWMRQZ5NM344GMDALKE";
 
-		assert_ok!(TemplateModule::create_twin(Origin::signed(1), somepub_key.as_bytes().to_vec(), entity_id));
+		assert_ok!(TemplateModule::create_twin(Origin::signed(1), entity_id));
 	});
 }
 
@@ -133,14 +132,13 @@ fn test_create_twin_double_fails() {
 
 		// Assign the first entity created (starts with index 0)
 		let entity_id = 0;
-		let somepub_key = "GCCBZL5RWQVD64C7RMPSA4RFSHSMU4GVFAMREFWMRQZ5NM344GMDALKE";
 
 		// First time creating twin succeeds
-		assert_ok!(TemplateModule::create_twin(Origin::signed(1), somepub_key.as_bytes().to_vec(), entity_id));
+		assert_ok!(TemplateModule::create_twin(Origin::signed(1), entity_id));
 
 		// Creating it a second time with the same pubkey would fail
 		assert_noop!(
-			TemplateModule::create_twin(Origin::signed(1), somepub_key.as_bytes().to_vec(), entity_id),
+			TemplateModule::create_twin(Origin::signed(1), entity_id),
 			Error::<TestRuntime>::TwinExists
 		);
 	});
@@ -151,10 +149,9 @@ fn test_create_twin_with_unknown_entityid_fails() {
 	ExternalityBuilder::build().execute_with(|| {
 		// Assign the first entity created (starts with index 0)
 		let entity_id = 3123;
-		let somepub_key = "GCCBZL5RWQVD64C7RMPSA4RFSHSMU4GVFAMREFWMRQZ5NM344GMDALKE";
 
 		assert_noop!(
-			TemplateModule::create_twin(Origin::signed(1), somepub_key.as_bytes().to_vec(), entity_id),
+			TemplateModule::create_twin(Origin::signed(1), entity_id),
 			Error::<TestRuntime>::EntityNotExists
 		);
 	});
@@ -169,9 +166,8 @@ fn test_create_farm_works() {
 
 		// Assign the first entity created (starts with index 0)
 		let entity_id = 0;
-		let somepub_key = "GCCBZL5RWQVD64C7RMPSA4RFSHSMU4GVFAMREFWMRQZ5NM344GMDALKE";
 
-		assert_ok!(TemplateModule::create_twin(Origin::signed(1), somepub_key.as_bytes().to_vec(), entity_id));
+		assert_ok!(TemplateModule::create_twin(Origin::signed(1), entity_id));
 
 		let twin_id = 0;
 
@@ -252,9 +248,8 @@ fn test_create_farm_with_same_name_fails() {
 
 		// Assign the first entity created (starts with index 0)
 		let entity_id = 0;
-		let somepub_key = "GCCBZL5RWQVD64C7RMPSA4RFSHSMU4GVFAMREFWMRQZ5NM344GMDALKE";
 
-		assert_ok!(TemplateModule::create_twin(Origin::signed(1), somepub_key.as_bytes().to_vec(), entity_id));
+		assert_ok!(TemplateModule::create_twin(Origin::signed(1), entity_id));
 
 		let twin_id = 0;
 
@@ -296,9 +291,8 @@ fn create_node_works() {
 
 		// Assign the first entity created (starts with index 0)
 		let entity_id = 0;
-		let somepub_key = "GCCBZL5RWQVD64C7RMPSA4RFSHSMU4GVFAMREFWMRQZ5NM344GMDALKE";
 
-		assert_ok!(TemplateModule::create_twin(Origin::signed(1), somepub_key.as_bytes().to_vec(), entity_id));
+		assert_ok!(TemplateModule::create_twin(Origin::signed(1), entity_id));
 
 		let twin_id = 0;
 
