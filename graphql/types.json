@@ -18,7 +18,7 @@
   },
   "Twin": {
     "id": "u64",
-    "pubkey": "Vec<u8>",
+    "pub_key": "AccountId",
     "entity_id": "u64"
   },
   "Node": {

@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class CommentSearchMigration1609849997521 implements MigrationInterface {
-    name = 'commentSearchMigration1609849997521'
+export class CommentSearchMigration1609855844669 implements MigrationInterface {
+    name = 'commentSearchMigration1609855844669'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         // TODO: escape 
