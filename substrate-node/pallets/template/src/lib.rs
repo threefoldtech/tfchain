@@ -62,6 +62,7 @@ decl_storage! {
 decl_event!(
 	pub enum Event<T> where AccountId = <T as frame_system::Trait>::AccountId {
 		FarmStored(u64, Vec<u8>, u64, u64, u64, u64, u64, types::CertificationType),
+		FarmDeleted(u64),
 
 		NodeStored(u64, u64, u64, types::Resources, types::Location, u64, u64),
 		NodeDeleted(u64),
@@ -89,7 +90,7 @@ decl_error! {
 
 		FarmExists,
 		FarmNotExists,
-		CannotUpdateFarm,
+		CannotDeleteFarm,
 
 		EntityExists,
 		EntityNotExists,
@@ -151,49 +152,24 @@ decl_module! {
 		}
 
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
-		pub fn update_farm(origin,
-			id: u64,
-			name: Vec<u8>,
-			entity_id: u64,
-			twin_id: u64,
-			pricing_policy_id: u64,
-			certification_type: types::CertificationType,
-			country_id: u64,
-			city_id: u64) -> dispatch::DispatchResult {
+		pub fn delete_farm(origin, id: u64) -> dispatch::DispatchResult {
 			let pub_key = ensure_signed(origin)?;
 
 			ensure!(Farms::contains_key(id), Error::<T>::FarmNotExists);
-
 			let stored_farm = Farms::get(id);
 
-			ensure!(Entities::<T>::contains_key(entity_id), Error::<T>::EntityNotExists);
-			ensure!(Twins::<T>::contains_key(twin_id), Error::<T>::TwinNotExists);
+			ensure!(Entities::<T>::contains_key(stored_farm.entity_id), Error::<T>::EntityNotExists);
+			let stored_entity = Entities::<T>::get(stored_farm.entity_id);
 
-			let stored_entity = Entities::<T>::get(entity_id);
-			let stored_twin = Twins::<T>::get(twin_id);
-			ensure!(stored_entity.pub_key == pub_key && stored_twin.pub_key == pub_key, Error::<T>::CannotUpdateFarm);
+			ensure!(stored_entity.pub_key == pub_key, Error::<T>::CannotDeleteFarm);
 
-			ensure!(!FarmsByNameID::contains_key(name.clone()), Error::<T>::FarmExists);
-
-			let farm = types::Farm {
-				id,
-				name: name.clone(),
-				entity_id,
-				twin_id,
-				pricing_policy_id,
-				country_id,
-				city_id,
-				certification_type
-			};
-
-			// Override farm
-			Farms::insert(id, &farm);
+			// delete farm
+			Farms::remove(id);
 
 			// Remove stored farm by name and insert new one
-			FarmsByNameID::remove(stored_farm.name.clone());
-			FarmsByNameID::insert(name.clone(), id);
+			FarmsByNameID::remove(stored_farm.name);
 
-			Self::deposit_event(RawEvent::FarmStored(id, name, entity_id, twin_id, pricing_policy_id, country_id, city_id, certification_type));
+			Self::deposit_event(RawEvent::FarmDeleted(id));
 
 			Ok(())
 		}
