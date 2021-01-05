@@ -30,6 +30,16 @@ export async function templateModule_EntityUpdated(db: DB, event: SubstrateEvent
   }
 }
 
+export async function templateModule_EntityDeleted(db: DB, event: SubstrateEvent) {
+  const [entity_id] = event.params
+
+  const savedEntity = await db.get(Entity, { where: { entityId: new BN(entity_id.value as number) } })
+
+  if (savedEntity) {
+    await db.remove(savedEntity)
+  }
+}
+
 function hex2a (hex: string): string {
   var str = ''
   for (var i = 0; i < hex.length; i += 2) {

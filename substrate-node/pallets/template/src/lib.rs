@@ -62,10 +62,17 @@ decl_storage! {
 decl_event!(
 	pub enum Event<T> where AccountId = <T as frame_system::Trait>::AccountId {
 		FarmStored(u64, Vec<u8>, u64, u64, u64, u64, u64, types::CertificationType),
+
 		NodeStored(u64, u64, u64, types::Resources, types::Location, u64, u64),
+		NodeDeleted(u64),
+
 		EntityStored(u64, Vec<u8>, u64, u64, AccountId),
 		EntityUpdated(u64, Vec<u8>, u64, u64, AccountId),
+		EntityDeleted(u64),
+
 		TwinStored(AccountId, u64, u64),
+		TwinDeleted(u64),
+
 		PricingPolicyStored(Vec<u8>, u64),
 		CertificationCodeStored(Vec<u8>, u64),
 	}
@@ -76,15 +83,22 @@ decl_error! {
 		NoneValue,
 		StorageOverflow,
 
+		CannotCreateNode,
+		NodeNotExists,
+		CannotDeleteNode,
+
 		FarmExists,
 		FarmNotExists,
+		CannotUpdateFarm,
 
 		EntityExists,
 		EntityNotExists,
 		CannotUpdateEntity,
+		CannotDeleteEntity,
 	
 		TwinExists,
 		TwinNotExists,
+		CannotCreateTwin,
 
 		PricingPolicyExists,
 
@@ -137,6 +151,54 @@ decl_module! {
 		}
 
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
+		pub fn update_farm(origin,
+			id: u64,
+			name: Vec<u8>,
+			entity_id: u64,
+			twin_id: u64,
+			pricing_policy_id: u64,
+			certification_type: types::CertificationType,
+			country_id: u64,
+			city_id: u64) -> dispatch::DispatchResult {
+			let pub_key = ensure_signed(origin)?;
+
+			ensure!(Farms::contains_key(id), Error::<T>::FarmNotExists);
+
+			let stored_farm = Farms::get(id);
+
+			ensure!(Entities::<T>::contains_key(entity_id), Error::<T>::EntityNotExists);
+			ensure!(Twins::<T>::contains_key(twin_id), Error::<T>::TwinNotExists);
+
+			let stored_entity = Entities::<T>::get(entity_id);
+			let stored_twin = Twins::<T>::get(twin_id);
+			ensure!(stored_entity.pub_key == pub_key && stored_twin.pub_key == pub_key, Error::<T>::CannotUpdateFarm);
+
+			ensure!(!FarmsByNameID::contains_key(name.clone()), Error::<T>::FarmExists);
+
+			let farm = types::Farm {
+				id,
+				name: name.clone(),
+				entity_id,
+				twin_id,
+				pricing_policy_id,
+				country_id,
+				city_id,
+				certification_type
+			};
+
+			// Override farm
+			Farms::insert(id, &farm);
+
+			// Remove stored farm by name and insert new one
+			FarmsByNameID::remove(stored_farm.name.clone());
+			FarmsByNameID::insert(name.clone(), id);
+
+			Self::deposit_event(RawEvent::FarmStored(id, name, entity_id, twin_id, pricing_policy_id, country_id, city_id, certification_type));
+
+			Ok(())
+		}
+
+		#[weight = 10_000 + T::DbWeight::get().writes(1)]
 		pub fn create_node(origin,
 			farm_id: u64,
 			twin_id: u64,
@@ -144,10 +206,16 @@ decl_module! {
 			location: types::Location,
 			country_id: u64,
 			city_id: u64) -> dispatch::DispatchResult {
-			let _ = ensure_signed(origin)?;
+			let pub_key = ensure_signed(origin)?;
 
 			ensure!(Twins::<T>::contains_key(twin_id), Error::<T>::TwinNotExists);
-			ensure!(Farms::contains_key(&farm_id), Error::<T>::FarmNotExists);
+			ensure!(Farms::contains_key(farm_id), Error::<T>::FarmNotExists);
+
+			let stored_twin = Twins::<T>::get(twin_id);
+			ensure!(stored_twin.pub_key == pub_key, Error::<T>::CannotCreateNode);
+
+			let stored_farm = Farms::get(farm_id);
+			ensure!(stored_farm.twin_id == twin_id, Error::<T>::CannotCreateNode);
 
 			let id = NodeID::get();
 
@@ -165,6 +233,26 @@ decl_module! {
 			NodeID::put(id + 1);
 
 			Self::deposit_event(RawEvent::NodeStored(id, farm_id, twin_id, resources, location, country_id, city_id));
+
+			Ok(())
+		}
+
+		#[weight = 10_000 + T::DbWeight::get().writes(1)]
+		pub fn delete_node(origin, id: u64) -> dispatch::DispatchResult {
+			let pub_key = ensure_signed(origin)?;
+
+			ensure!(Nodes::contains_key(id), Error::<T>::NodeNotExists);
+
+			let stored_node = Nodes::get(id);
+
+			// check if the user can delete this node based on the twin id
+			ensure!(Twins::<T>::contains_key(stored_node.twin_id), Error::<T>::TwinNotExists);
+			let stored_twin = Twins::<T>::get(stored_node.twin_id);
+			ensure!(stored_twin.pub_key == pub_key, Error::<T>::CannotDeleteNode);
+
+			Nodes::remove(id);
+
+			Self::deposit_event(RawEvent::NodeDeleted(id));
 
 			Ok(())
 		}
@@ -225,6 +313,36 @@ decl_module! {
 			Ok(())
 		}
 
+		// TODO: delete all object that have an entity id reference?
+		#[weight = 10_000 + T::DbWeight::get().writes(1)]
+		pub fn delete_entity(origin, id: u64) -> dispatch::DispatchResult {
+			let pub_key = ensure_signed(origin)?;
+
+			ensure!(Entities::<T>::contains_key(&id), Error::<T>::EntityNotExists);
+
+			let stored_entity = Entities::<T>::get(id);
+
+			ensure!(stored_entity.pub_key == pub_key, Error::<T>::CannotDeleteEntity);
+
+			// Remove entity from storage
+			Entities::<T>::remove(&id);
+			
+			// remove entity by name id
+			EntitiesByNameID::remove(&stored_entity.name);
+
+			// If there is a twin attached, remove that twin
+			if TwinsByPubkeyID::<T>::contains_key(&pub_key) {
+				let twin_id = TwinsByPubkeyID::<T>::get(&pub_key);
+				Twins::<T>::remove(&twin_id);
+				TwinsByPubkeyID::<T>::remove(pub_key);
+				Self::deposit_event(RawEvent::TwinDeleted(twin_id));
+			}
+
+			Self::deposit_event(RawEvent::EntityDeleted(id));
+
+			Ok(())
+		}
+
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
 		pub fn create_twin(origin, entity_id: u64) -> dispatch::DispatchResult {
 			let pub_key = ensure_signed(origin)?;
@@ -232,6 +350,11 @@ decl_module! {
 			ensure!(!TwinsByPubkeyID::<T>::contains_key(&pub_key), Error::<T>::TwinExists);
 
 			ensure!(Entities::<T>::contains_key(entity_id), Error::<T>::EntityNotExists);
+
+			let stored_entity = Entities::<T>::get(entity_id);
+
+			// make sure only the entity with the same public key can create a twin
+			ensure!(stored_entity.pub_key == pub_key, Error::<T>::CannotCreateTwin);
 
 			let twin_id = TwinID::get();
 
@@ -247,6 +370,22 @@ decl_module! {
 
 			Self::deposit_event(RawEvent::TwinStored(pub_key, twin_id, entity_id));
 			
+			Ok(())
+		}
+
+		#[weight = 10_000 + T::DbWeight::get().writes(1)]
+		pub fn delete_twin(origin) -> dispatch::DispatchResult {
+			let pub_key = ensure_signed(origin)?;
+
+			ensure!(TwinsByPubkeyID::<T>::contains_key(&pub_key), Error::<T>::TwinNotExists);
+
+			let twin_id = TwinsByPubkeyID::<T>::get(&pub_key);
+
+			Twins::<T>::remove(&twin_id);
+			TwinsByPubkeyID::<T>::remove(pub_key);
+			
+			Self::deposit_event(RawEvent::TwinDeleted(twin_id));
+
 			Ok(())
 		}
 
