@@ -1,6 +1,7 @@
 import { SubstrateEvent, DB } from '../generated/hydra-processor'
 import { Entity } from '../generated/graphql-server/src/modules/entity/entity.model'
 import BN from 'bn.js'
+import { hex2a } from './util'
 
 export async function templateModule_EntityStored(db: DB, event: SubstrateEvent) {
   const [entity_id, name, country_id, city_id, pub_key] = event.params
@@ -38,13 +39,4 @@ export async function templateModule_EntityDeleted(db: DB, event: SubstrateEvent
   if (savedEntity) {
     await db.remove(savedEntity)
   }
-}
-
-function hex2a (hex: string): string {
-  var str = ''
-  for (var i = 0; i < hex.length; i += 2) {
-    var v = parseInt(hex.substr(i, 2), 16)
-    if (v) str += String.fromCharCode(v)
-  }
-  return str
 }

@@ -102,7 +102,7 @@ fn test_create_entity_double_fails() {
 
 		assert_noop!(
 			TemplateModule::create_entity(Origin::signed(1), name.as_bytes().to_vec(), 0,0),
-			Error::<TestRuntime>::EntityExists
+			Error::<TestRuntime>::EntityWithNameExists
 		);
 	});
 }
@@ -115,10 +115,8 @@ fn test_create_twin_works() {
 
 		assert_ok!(TemplateModule::create_entity(Origin::signed(1), name.as_bytes().to_vec(), 0,0));
 
-		// Assign the first entity created (starts with index 0)
-		let entity_id = 0;
 
-		assert_ok!(TemplateModule::create_twin(Origin::signed(1), entity_id));
+		assert_ok!(TemplateModule::create_twin(Origin::signed(1)));
 	});
 }
 
@@ -130,15 +128,12 @@ fn test_create_twin_double_fails() {
 
 		assert_ok!(TemplateModule::create_entity(Origin::signed(1), name.as_bytes().to_vec(), 0,0));
 
-		// Assign the first entity created (starts with index 0)
-		let entity_id = 0;
-
 		// First time creating twin succeeds
-		assert_ok!(TemplateModule::create_twin(Origin::signed(1), entity_id));
+		assert_ok!(TemplateModule::create_twin(Origin::signed(1)));
 
 		// Creating it a second time with the same pubkey would fail
 		assert_noop!(
-			TemplateModule::create_twin(Origin::signed(1), entity_id),
+			TemplateModule::create_twin(Origin::signed(1)),
 			Error::<TestRuntime>::TwinExists
 		);
 	});
@@ -147,11 +142,8 @@ fn test_create_twin_double_fails() {
 #[test]
 fn test_create_twin_with_unknown_entityid_fails() {
 	ExternalityBuilder::build().execute_with(|| {
-		// Assign the first entity created (starts with index 0)
-		let entity_id = 3123;
-
 		assert_noop!(
-			TemplateModule::create_twin(Origin::signed(1), entity_id),
+			TemplateModule::create_twin(Origin::signed(1)),
 			Error::<TestRuntime>::EntityNotExists
 		);
 	});
@@ -164,10 +156,7 @@ fn test_create_farm_works() {
 
 		assert_ok!(TemplateModule::create_entity(Origin::signed(1), name.as_bytes().to_vec(), 0,0));
 
-		// Assign the first entity created (starts with index 0)
-		let entity_id = 0;
-
-		assert_ok!(TemplateModule::create_twin(Origin::signed(1), entity_id));
+		assert_ok!(TemplateModule::create_twin(Origin::signed(1)));
 
 		let twin_id = 0;
 
@@ -177,7 +166,7 @@ fn test_create_farm_works() {
 			Origin::signed(1), 
 			farm_name.as_bytes().to_vec(),
 			twin_id,
-			entity_id,
+			0,
 			0,
 			super::types::CertificationType::None,
 			0,
@@ -246,10 +235,7 @@ fn test_create_farm_with_same_name_fails() {
 
 		assert_ok!(TemplateModule::create_entity(Origin::signed(1), name.as_bytes().to_vec(), 0,0));
 
-		// Assign the first entity created (starts with index 0)
-		let entity_id = 0;
-
-		assert_ok!(TemplateModule::create_twin(Origin::signed(1), entity_id));
+		assert_ok!(TemplateModule::create_twin(Origin::signed(1)));
 
 		let twin_id = 0;
 
@@ -259,7 +245,7 @@ fn test_create_farm_with_same_name_fails() {
 			Origin::signed(1), 
 			farm_name.as_bytes().to_vec(),
 			twin_id,
-			entity_id,
+			0,
 			0,
 			super::types::CertificationType::None,
 			0,
@@ -270,7 +256,7 @@ fn test_create_farm_with_same_name_fails() {
 			TemplateModule::create_farm(
 				Origin::signed(1), 
 				farm_name.as_bytes().to_vec(),
-				entity_id,
+				0,
 				twin_id,
 				0,
 				super::types::CertificationType::None,
@@ -289,10 +275,7 @@ fn create_node_works() {
 
 		assert_ok!(TemplateModule::create_entity(Origin::signed(1), name.as_bytes().to_vec(), 0,0));
 
-		// Assign the first entity created (starts with index 0)
-		let entity_id = 0;
-
-		assert_ok!(TemplateModule::create_twin(Origin::signed(1), entity_id));
+		assert_ok!(TemplateModule::create_twin(Origin::signed(1)));
 
 		let twin_id = 0;
 
@@ -302,7 +285,7 @@ fn create_node_works() {
 			Origin::signed(1), 
 			farm_name.as_bytes().to_vec(),
 			twin_id,
-			entity_id,
+			0,
 			0,
 			super::types::CertificationType::None,
 			0,

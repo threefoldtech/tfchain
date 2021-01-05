@@ -2,7 +2,7 @@ import { BaseModel, NumericField, Model, ManyToOne, StringField } from 'warthog'
 
 import BN from 'bn.js';
 
-import { Resources } from '../resources/resources.model';
+import { Resource } from '../resource/resource.model';
 import { Location } from '../location/location.model';
 
 @Model({ api: {} })
@@ -35,11 +35,11 @@ export class Node extends BaseModel {
   twinId!: BN;
 
   @ManyToOne(
-    () => Resources,
-    (param: Resources) => param.noderesources,
+    () => Resource,
+    (param: Resource) => param.noderesources,
     { skipGraphQLField: true }
   )
-  resources!: Resources;
+  resources!: Resource;
 
   @ManyToOne(
     () => Location,

@@ -3,7 +3,3 @@ export enum CertificationType {
   Silver = 'Silver',
   Gold = 'Gold'
 }
-export enum CertificationCodeType {
-  Farm = 'Farm',
-  Entity = 'Entity'
-}

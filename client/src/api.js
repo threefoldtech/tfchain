@@ -36,8 +36,8 @@ async function getApiClient () {
         city_id: 'u64'
       },
       Location: {
-        longitude: 'U64F64',
-        latitude: 'U64F64'
+        longitude: 'Vec<u8>',
+        latitude: 'Vec<u8>'
       },
       Resources: {
         hru: 'u64',

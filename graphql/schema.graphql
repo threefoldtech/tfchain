@@ -42,13 +42,13 @@ type Node @entity {
   node_id: BigInt!
   farm_id: BigInt!
   twin_id: BigInt!
-  resources: Resources!
+  resources: Resource!
   location: Location!
   country_id: BigInt
   city_id: BigInt
 }
 
-type Resources @entity {
+type Resource @entity {
   hru: BigInt
   sru: BigInt
   cru: BigInt
@@ -67,16 +67,4 @@ type PricingPolicy @entity {
   su: BigInt!
   cu: BigInt!
   nu: BigInt!
-}
-
-type CertificationCodes @entity {
-  certification_code_id: BigInt!
-  name: String!
-  description: String
-  certification_code_type: CertificationCodeType
-}
-
-enum CertificationCodeType {
-  Farm
-  Entity
 }

@@ -5,7 +5,7 @@ import BN from 'bn.js';
 import { Node } from '../node/node.model';
 
 @Model({ api: {} })
-export class Resources extends BaseModel {
+export class Resource extends BaseModel {
   @NumericField({
     nullable: true,
 
@@ -57,7 +57,7 @@ export class Resources extends BaseModel {
   )
   noderesources?: Node[];
 
-  constructor(init?: Partial<Resources>) {
+  constructor(init?: Partial<Resource>) {
     super();
     Object.assign(this, init);
   }

@@ -18,37 +18,37 @@ import { Min } from 'class-validator';
 import { Fields, StandardDeleteResponse, UserId, PageInfo, RawFields } from 'warthog';
 
 import {
-  ResourcesCreateInput,
-  ResourcesCreateManyArgs,
-  ResourcesUpdateArgs,
-  ResourcesWhereArgs,
-  ResourcesWhereInput,
-  ResourcesWhereUniqueInput,
-  ResourcesOrderByEnum
+  ResourceCreateInput,
+  ResourceCreateManyArgs,
+  ResourceUpdateArgs,
+  ResourceWhereArgs,
+  ResourceWhereInput,
+  ResourceWhereUniqueInput,
+  ResourceOrderByEnum
 } from '../../../generated';
 
-import { Resources } from './resources.model';
-import { ResourcesService } from './resources.service';
+import { Resource } from './resource.model';
+import { ResourceService } from './resource.service';
 
 import { Node } from '../node/node.model';
 import { getConnection } from 'typeorm';
 
 @ObjectType()
-export class ResourcesEdge {
-  @Field(() => Resources, { nullable: false })
-  node!: Resources;
+export class ResourceEdge {
+  @Field(() => Resource, { nullable: false })
+  node!: Resource;
 
   @Field(() => String, { nullable: false })
   cursor!: string;
 }
 
 @ObjectType()
-export class ResourcesConnection {
+export class ResourceConnection {
   @Field(() => Int, { nullable: false })
   totalCount!: number;
 
-  @Field(() => [ResourcesEdge], { nullable: false })
-  edges!: ResourcesEdge[];
+  @Field(() => [ResourceEdge], { nullable: false })
+  edges!: ResourceEdge[];
 
   @Field(() => PageInfo, { nullable: false })
   pageInfo!: PageInfo;
@@ -72,40 +72,37 @@ export class ConnectionPageInputOptions {
 }
 
 @ArgsType()
-export class ResourcesConnectionWhereArgs extends ConnectionPageInputOptions {
-  @Field(() => ResourcesWhereInput, { nullable: true })
-  where?: ResourcesWhereInput;
+export class ResourceConnectionWhereArgs extends ConnectionPageInputOptions {
+  @Field(() => ResourceWhereInput, { nullable: true })
+  where?: ResourceWhereInput;
 
-  @Field(() => ResourcesOrderByEnum, { nullable: true })
-  orderBy?: ResourcesOrderByEnum;
+  @Field(() => ResourceOrderByEnum, { nullable: true })
+  orderBy?: ResourceOrderByEnum;
 }
 
-@Resolver(Resources)
-export class ResourcesResolver {
-  constructor(@Inject('ResourcesService') public readonly service: ResourcesService) {}
+@Resolver(Resource)
+export class ResourceResolver {
+  constructor(@Inject('ResourceService') public readonly service: ResourceService) {}
 
-  @Query(() => [Resources])
+  @Query(() => [Resource])
   async resources(
-    @Args() { where, orderBy, limit, offset }: ResourcesWhereArgs,
+    @Args() { where, orderBy, limit, offset }: ResourceWhereArgs,
     @Fields() fields: string[]
-  ): Promise<Resources[]> {
-    return this.service.find<ResourcesWhereInput>(where, orderBy, limit, offset, fields);
+  ): Promise<Resource[]> {
+    return this.service.find<ResourceWhereInput>(where, orderBy, limit, offset, fields);
   }
 
-  @Query(() => Resources, { nullable: true })
-  async resources(
-    @Arg('where') where: ResourcesWhereUniqueInput,
-    @Fields() fields: string[]
-  ): Promise<Resources | null> {
+  @Query(() => Resource, { nullable: true })
+  async resource(@Arg('where') where: ResourceWhereUniqueInput, @Fields() fields: string[]): Promise<Resource | null> {
     const result = await this.service.find(where, undefined, 1, 0, fields);
     return result && result.length >= 1 ? result[0] : null;
   }
 
-  @Query(() => ResourcesConnection)
+  @Query(() => ResourceConnection)
   async resourcesConnection(
-    @Args() { where, orderBy, ...pageOptions }: ResourcesConnectionWhereArgs,
+    @Args() { where, orderBy, ...pageOptions }: ResourceConnectionWhereArgs,
     @Info() info: any
-  ): Promise<ResourcesConnection> {
+  ): Promise<ResourceConnection> {
     const rawFields = graphqlFields(info, {}, { excludedFields: ['__typename'] });
 
     let result: any = {
@@ -119,20 +116,20 @@ export class ResourcesResolver {
     // If the related database table does not have any records then an error is thrown to the client
     // by warthog
     try {
-      result = await this.service.findConnection<ResourcesWhereInput>(where, orderBy, pageOptions, rawFields);
+      result = await this.service.findConnection<ResourceWhereInput>(where, orderBy, pageOptions, rawFields);
     } catch (err) {
       console.log(err);
       // TODO: should continue to return this on `Error: Items is empty` or throw the error
       if (!(err.message as string).includes('Items is empty')) throw err;
     }
 
-    return result as Promise<ResourcesConnection>;
+    return result as Promise<ResourceConnection>;
   }
 
   @FieldResolver(() => Node)
-  async noderesources(@Root() r: Resources): Promise<Node[] | null> {
+  async noderesources(@Root() r: Resource): Promise<Node[] | null> {
     const result = await getConnection()
-      .getRepository(Resources)
+      .getRepository(Resource)
       .findOne(r.id, { relations: ['noderesources'] });
     if (result && result.noderesources !== undefined) {
       return result.noderesources;

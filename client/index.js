@@ -1,9 +1,9 @@
 const yargs = require('yargs')
 const { exit } = require('yargs')
-const { createEntity, updateEntity, getEntity } = require('./src/contracts')
+const { createEntity, updateEntity, getEntity, deleteEntity, getTwin, createTwin, deleteTwin } = require('./src/contracts')
 
 const argv = yargs
-  .command('create', 'Create a an entity', {
+  .command('createEntity', 'Create a an entity', {
     name: {
       description: 'Name of the entity',
       alias: 'n',
@@ -20,12 +20,7 @@ const argv = yargs
       type: 'number'
     }
   })
-  .command('update', 'Update a an entity', {
-    id: {
-      description: 'id of the entity',
-      alias: 'i',
-      type: 'number'
-    },
+  .command('updateEntity', 'Update a an entity', {
     name: {
       description: 'Name of the entity',
       alias: 'n',
@@ -42,18 +37,27 @@ const argv = yargs
       type: 'number'
     }
   })
-  .command('get', 'Get a entity by ID', {
+  .command('getEntity', 'Get a entity by ID', {
     id: {
       description: 'entity ID',
       alias: 'id',
       type: 'string'
     }
   })
+  .command('createTwin', 'Create a twin')
+  .command('getTwin', 'Get a twin by ID', {
+    id: {
+      description: 'twin ID',
+      alias: 'id',
+      type: 'string'
+    }
+  })
+  .command('deleteTwin', 'Delete your twin')
   .help()
   .alias('help', 'h')
   .argv
 
-if (argv._.includes('create')) {
+if (argv._.includes('createEntity')) {
   // if (!argv.n || !argv.c || !argv.t) {
   //   console.log(argv)
   //   console.log('Bad Params')
@@ -77,14 +81,14 @@ if (argv._.includes('create')) {
     exit(1)
   })
 }
-if (argv._.includes('update')) {
+if (argv._.includes('updateEntity')) {
   // if (!argv.n || !argv.c || !argv.t) {
   //   console.log(argv)
   //   console.log('Bad Params')
   //   exit(1)
   // }
 
-  updateEntity(argv.i, argv.n, argv.c, argv.t, ({ events = [], status }) => {
+  updateEntity(argv.n, argv.c, argv.t, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -101,7 +105,7 @@ if (argv._.includes('update')) {
     exit(1)
   })
 }
-if (argv._.includes('get')) {
+if (argv._.includes('getEntity')) {
   if (!argv.id) {
     console.log('Bad Params')
     exit(1)
@@ -117,4 +121,75 @@ if (argv._.includes('get')) {
       console.log(err)
       exit(1)
     })
+}
+if (argv._.includes('deleteEntity')) {
+  deleteEntity(({ events = [], status }) => {
+    console.log(`Current status is ${status.type}`)
+
+    if (status.isFinalized) {
+      console.log(`Transaction included at blockHash ${status.asFinalized}`)
+
+      // Loop through Vec<EventRecord> to display all events
+      events.forEach(({ phase, event: { data, method, section } }) => {
+        console.log(`\t' ${phase}: ${section}.${method}:: ${data}`)
+      })
+      exit(1)
+    }
+  }).catch(err => {
+    console.log(err)
+    exit(1)
+  })
+}
+if (argv._.includes('createTwin')) {
+  createTwin(({ events = [], status }) => {
+    console.log(`Current status is ${status.type}`)
+
+    if (status.isFinalized) {
+      console.log(`Transaction included at blockHash ${status.asFinalized}`)
+
+      // Loop through Vec<EventRecord> to display all events
+      events.forEach(({ phase, event: { data, method, section } }) => {
+        console.log(`\t' ${phase}: ${section}.${method}:: ${data}`)
+      })
+      exit(1)
+    }
+  }).catch(err => {
+    console.log(err)
+    exit(1)
+  })
+}
+if (argv._.includes('getTwin')) {
+  if (!argv.id) {
+    console.log('Bad Params')
+    exit(1)
+  }
+
+  getTwin(argv.id)
+    .then(contract => {
+      console.log('\n entity: ')
+      console.log(contract)
+      exit(0)
+    })
+    .catch(err => {
+      console.log(err)
+      exit(1)
+    })
+}
+if (argv._.includes('deleteTwin')) {
+  deleteTwin(({ events = [], status }) => {
+    console.log(`Current status is ${status.type}`)
+
+    if (status.isFinalized) {
+      console.log(`Transaction included at blockHash ${status.asFinalized}`)
+
+      // Loop through Vec<EventRecord> to display all events
+      events.forEach(({ phase, event: { data, method, section } }) => {
+        console.log(`\t' ${phase}: ${section}.${method}:: ${data}`)
+      })
+      exit(1)
+    }
+  }).catch(err => {
+    console.log(err)
+    exit(1)
+  })
 }

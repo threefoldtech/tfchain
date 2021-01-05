@@ -1,9 +1,10 @@
 import { SubstrateEvent, DB } from '../generated/hydra-processor'
 import { Twin } from '../generated/graphql-server/src/modules/twin/twin.model'
 import BN from 'bn.js'
+import { hex2a } from './util'
 
 export async function templateModule_TwinStored(db: DB, event: SubstrateEvent) {
-  const [twin_id, pubkey, entity_id] = event.params
+  const [pubkey, twin_id, entity_id] = event.params
   const twin = new Twin()
   twin.twinId = new BN(twin_id.value as number)
   twin.pubKey = hex2a(Buffer.from(pubkey.value as string).toString())
@@ -22,11 +23,3 @@ export async function templateModule_TwinDeleted(db: DB, event: SubstrateEvent) 
   }
 }
 
-function hex2a (hex: string): string {
-  var str = ''
-  for (var i = 0; i < hex.length; i += 2) {
-    var v = parseInt(hex.substr(i, 2), 16)
-    if (v) str += String.fromCharCode(v)
-  }
-  return str
-}

@@ -38,6 +38,7 @@ decl_storage! {
 		pub Nodes get(fn nodes): map hasher(blake2_128_concat) u64 => types::Node;
 		
 		pub Entities get(fn entities): map hasher(blake2_128_concat) u64 => types::Entity<T>;
+		pub EntitiesByPubkeyID get(fn _by_pubkey_id): map hasher(blake2_128_concat) T::AccountId => u64;
 		pub EntitiesByNameID get(fn entities_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u64;
 
 		pub Twins get(fn twins): map hasher(blake2_128_concat) u64 => types::Twin<T>;
@@ -92,7 +93,8 @@ decl_error! {
 		FarmNotExists,
 		CannotDeleteFarm,
 
-		EntityExists,
+		EntityWithNameExists,
+		EntityWithPubkeyExists,
 		EntityNotExists,
 		CannotUpdateEntity,
 		CannotDeleteEntity,
@@ -237,7 +239,9 @@ decl_module! {
 		pub fn create_entity(origin, name: Vec<u8>, country_id: u64, city_id: u64) -> dispatch::DispatchResult {
 			let pub_key = ensure_signed(origin)?;
 
-			ensure!(!EntitiesByNameID::contains_key(&name), Error::<T>::EntityExists);
+			ensure!(!EntitiesByNameID::contains_key(&name), Error::<T>::EntityWithNameExists);
+			
+			ensure!(!EntitiesByPubkeyID::<T>::contains_key(&pub_key), Error::<T>::EntityWithPubkeyExists);
 
 			let id = EntityID::get();
 
@@ -251,6 +255,7 @@ decl_module! {
 
 			Entities::insert(&id, &entity);
 			EntitiesByNameID::insert(&name, id);
+			EntitiesByPubkeyID::<T>::insert(&pub_key, id);
 			EntityID::put(id + 1);
 
 			Self::deposit_event(RawEvent::EntityStored(id, name, country_id, city_id, pub_key));
@@ -259,17 +264,19 @@ decl_module! {
 		}
 
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
-		pub fn update_entity(origin, id: u64, name: Vec<u8>, country_id: u64, city_id: u64) -> dispatch::DispatchResult {
+		pub fn update_entity(origin, name: Vec<u8>, country_id: u64, city_id: u64) -> dispatch::DispatchResult {
 			let pub_key = ensure_signed(origin)?;
 
-			ensure!(Entities::<T>::contains_key(&id), Error::<T>::EntityNotExists);
+			ensure!(EntitiesByPubkeyID::<T>::contains_key(&pub_key), Error::<T>::EntityNotExists);
+			let stored_entity_id = EntitiesByPubkeyID::<T>::get(&pub_key);
 
-			let stored_entity = Entities::<T>::get(id);
+			ensure!(Entities::<T>::contains_key(&stored_entity_id), Error::<T>::EntityNotExists);
+			let stored_entity = Entities::<T>::get(stored_entity_id);
 
 			ensure!(stored_entity.pub_key == pub_key, Error::<T>::CannotUpdateEntity);
 
 			let entity = types::Entity::<T> {
-				entity_id: id,
+				entity_id: stored_entity_id,
 				name: name.clone(),
 				country_id,
 				city_id,
@@ -277,34 +284,39 @@ decl_module! {
 			};
 
 			// overwrite entity
-			Entities::insert(&id, &entity);
+			Entities::insert(&stored_entity_id, &entity);
 			
 			// remove entity by name id
 			EntitiesByNameID::remove(&stored_entity.name);
 			// re-insert with new name
-			EntitiesByNameID::insert(&name, id);
+			EntitiesByNameID::insert(&name, stored_entity_id);
 
-			Self::deposit_event(RawEvent::EntityUpdated(id, name, country_id, city_id, pub_key));
+			Self::deposit_event(RawEvent::EntityUpdated(stored_entity_id, name, country_id, city_id, pub_key));
 
 			Ok(())
 		}
 
 		// TODO: delete all object that have an entity id reference?
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
-		pub fn delete_entity(origin, id: u64) -> dispatch::DispatchResult {
+		pub fn delete_entity(origin) -> dispatch::DispatchResult {
 			let pub_key = ensure_signed(origin)?;
 
-			ensure!(Entities::<T>::contains_key(&id), Error::<T>::EntityNotExists);
+			ensure!(EntitiesByPubkeyID::<T>::contains_key(&pub_key), Error::<T>::EntityNotExists);
+			let stored_entity_id = EntitiesByPubkeyID::<T>::get(&pub_key);
 
-			let stored_entity = Entities::<T>::get(id);
+			ensure!(Entities::<T>::contains_key(&stored_entity_id), Error::<T>::EntityNotExists);
+			let stored_entity = Entities::<T>::get(stored_entity_id);
 
 			ensure!(stored_entity.pub_key == pub_key, Error::<T>::CannotDeleteEntity);
 
 			// Remove entity from storage
-			Entities::<T>::remove(&id);
+			Entities::<T>::remove(&stored_entity_id);
 			
 			// remove entity by name id
 			EntitiesByNameID::remove(&stored_entity.name);
+
+			// remove entity by pubkey id
+			EntitiesByPubkeyID::<T>::remove(&pub_key);
 
 			// If there is a twin attached, remove that twin
 			if TwinsByPubkeyID::<T>::contains_key(&pub_key) {
@@ -314,22 +326,26 @@ decl_module! {
 				Self::deposit_event(RawEvent::TwinDeleted(twin_id));
 			}
 
-			Self::deposit_event(RawEvent::EntityDeleted(id));
+			Self::deposit_event(RawEvent::EntityDeleted(stored_entity_id));
 
 			Ok(())
 		}
 
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
-		pub fn create_twin(origin, entity_id: u64) -> dispatch::DispatchResult {
+		pub fn create_twin(origin) -> dispatch::DispatchResult {
 			let pub_key = ensure_signed(origin)?;
 
 			ensure!(!TwinsByPubkeyID::<T>::contains_key(&pub_key), Error::<T>::TwinExists);
 
-			ensure!(Entities::<T>::contains_key(entity_id), Error::<T>::EntityNotExists);
+			// check if entity exists by pubkey
+			ensure!(EntitiesByPubkeyID::<T>::contains_key(&pub_key), Error::<T>::EntityNotExists);
+			let entity_id = EntitiesByPubkeyID::<T>::get(&pub_key);
 
+			ensure!(Entities::<T>::contains_key(entity_id), Error::<T>::EntityNotExists);
 			let stored_entity = Entities::<T>::get(entity_id);
 
 			// make sure only the entity with the same public key can create a twin
+			// sanity check
 			ensure!(stored_entity.pub_key == pub_key, Error::<T>::CannotCreateTwin);
 
 			let twin_id = TwinID::get();

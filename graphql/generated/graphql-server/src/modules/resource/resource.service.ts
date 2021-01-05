@@ -3,12 +3,12 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from 'typeorm-typedi-extensions';
 import { BaseService, WhereInput } from 'warthog';
 
-import { Resources } from './resources.model';
+import { Resource } from './resource.model';
 
-@Service('ResourcesService')
-export class ResourcesService extends BaseService<Resources> {
-  constructor(@InjectRepository(Resources) protected readonly repository: Repository<Resources>) {
-    super(Resources, repository);
+@Service('ResourceService')
+export class ResourceService extends BaseService<Resource> {
+  constructor(@InjectRepository(Resource) protected readonly repository: Repository<Resource>) {
+    super(Resource, repository);
   }
 
   async find<W extends WhereInput>(
@@ -17,7 +17,7 @@ export class ResourcesService extends BaseService<Resources> {
     limit?: number,
     offset?: number,
     fields?: string[]
-  ): Promise<Resources[]> {
+  ): Promise<Resource[]> {
     let f = fields;
     if (f == undefined) {
       f = [];
