@@ -2,9 +2,21 @@
 
 ## Installation
 
+### Node
+
+You will need a specific version of rust nightly in order to compile:
+
+`rustup install nightly-2020-10-05`
+
+Wasm toolchain:
+
+`rustup target add wasm32-unknown-unknown --toolchain nightly-2020-10-05`
+
+Now you can build.
+
 ```
 cd substrate-node
-make build
+make build-debug
 ```
 
 This will build the node binary in release mode, once built you can execute it by doing following:
@@ -12,6 +24,9 @@ This will build the node binary in release mode, once built you can execute it b
 `./target/release/node-template --dev --tmp --ws-external`
 
 > You need the `ws-external` flag in order to connect from a zos node to substrate in a local setup.
+
+
+### Client
 
 Now you can build the client to interact with this node:
 
@@ -24,7 +39,43 @@ yarn install
 
 > The client uses the keys of **Bob** the sign for transactions in all the examples. The user **Bob** is a dummy user created when the chain starts.
 
-## Creating an entity
+So whenever objects (entities, twins, ..) are created, these will be linked to **Bob**.
+
+
+### Graphql (optional)
+
+If you want to query the data inside the blockchain with graphql you can set this up locally.
+
+```
+cd graphql
+
+yarn
+
+yarn build
+yarn db:up
+yarn db:prepare
+yarn db:migrate
+
+docker-compose up
+```
+
+Now browse to localhost:4000/graphql
+
+Example query: 
+
+```json
+query {
+    entities(limit: 5) {
+        name
+    }
+}
+```
+
+### Client examples
+
+Use the client inside `./client` for following examples
+
+### Creating an entity
 
 Parameters:
 
@@ -32,10 +83,32 @@ Parameters:
 * **-c**: Country ID (id of the country in the db (TODO))
 * **-t**: City ID (id of the city in the db(TODO)) 
 
-`node index.js create -n newEntity -c 0 -t 0`
+`node index.js createEntity -n newEntity -c 0 -t 0`
 
-## Fetching the entity's details.
+### Fetching the entity's details.
 
 entity ID's are incremented sequentially. If you create your first entity the ID will be 0, the second will be 1, etc...
 
-`node index.js get --id 0`
+`node index.js getEntity --id 0`
+
+### Deleting the entity.
+
+Delete your entity
+
+`node index.js deleteEntity`
+
+### Creating a twin
+
+Twins are linked to your public key. You don't need to provide parameters.
+
+`node index.js createTwin`
+
+### Fetching a twin's details
+
+`node index.js getTwin --id 0`
+
+### Deleting a twin
+
+Delete your twin.
+
+`node index.js deleteTwin`

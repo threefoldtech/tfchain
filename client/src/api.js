@@ -1,7 +1,7 @@
 const { ApiPromise, WsProvider } = require('@polkadot/api')
 
 async function getApiClient () {
-  const wsProvider = new WsProvider('ws://192.168.0.170:9944')
+  const wsProvider = new WsProvider('ws://localhost:9944')
   return ApiPromise.create({
     provider: wsProvider,
     types: {
