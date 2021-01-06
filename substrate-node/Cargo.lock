@@ -3594,6 +3594,7 @@ version = "2.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "hex",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",

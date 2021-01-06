@@ -67,6 +67,43 @@ async function deleteTwin (callback) {
     .signAndSend(BOB, callback)
 }
 
+async function createFarm (name, entityID, twinID, pricingPolicyID, certificationType, countryID, cityID, callback) {
+  const api = await getApiClient()
+  const keyring = new Keyring({ type: 'sr25519' })
+  const BOB = keyring.addFromUri('//Bob', { name: 'Bob default' })
+
+  certificationType = api.createType('CertificationType', certificationType)
+
+  return api.tx.templateModule
+    .createFarm(
+      name,
+      entityID,
+      twinID,
+      pricingPolicyID,
+      certificationType,
+      countryID,
+      cityID
+    )
+    .signAndSend(BOB, callback)
+}
+
+async function getFarm (id) {
+  const api = await getApiClient()
+  const farm = await api.query.templateModule.farms(id)
+
+  return farm.toJSON()
+}
+
+async function deleteFarm (farmID, callback) {
+  const api = await getApiClient()
+  const keyring = new Keyring({ type: 'sr25519' })
+  const BOB = keyring.addFromUri('//Bob', { name: 'Bob default' })
+
+  return api.tx.templateModule
+    .deleteFarm(farmID)
+    .signAndSend(BOB, callback)
+}
+
 function hex2a (hex) {
   var str = ''
   for (var i = 0; i < hex.length; i += 2) {
@@ -83,5 +120,8 @@ module.exports = {
   deleteEntity,
   createTwin,
   getTwin,
-  deleteTwin
+  deleteTwin,
+  createFarm,
+  getFarm,
+  deleteFarm
 }

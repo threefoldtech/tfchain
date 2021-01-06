@@ -15,7 +15,7 @@ export async function templateModule_FarmStored(db: DB, event: SubstrateEvent) {
   farm.countryId = new BN(country_id.value as number)
   farm.cityId = new BN(city_id.value as number)
 
-  let certificationTypeAsString = hex2a(Buffer.from(certification_type.value as string).toString())
+  let certificationTypeAsString = Buffer.from(certification_type.value as string).toString()
   let certificationType = CertificationType.None
   switch (certificationTypeAsString) {
       case 'None': certificationType = CertificationType.None
