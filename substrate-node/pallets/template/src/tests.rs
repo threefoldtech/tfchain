@@ -85,7 +85,6 @@ pub type TemplateModule = Module<TestRuntime>;
 #[test]
 fn test_create_entity_works() {
 	ExternalityBuilder::build().execute_with(|| {
-		// Dispatch a signed extrinsic.
 		let name = "foobar";
 
 		assert_ok!(TemplateModule::create_entity(Origin::signed(1), name.as_bytes().to_vec(), 0,0));
@@ -93,9 +92,39 @@ fn test_create_entity_works() {
 }
 
 #[test]
+fn test_update_entity_works() {
+	ExternalityBuilder::build().execute_with(|| {
+		let mut name = "foobar";
+
+		assert_ok!(TemplateModule::create_entity(Origin::signed(1), name.as_bytes().to_vec(), 0,0));
+
+		// Change name to barfoo
+		name = "barfoo";
+
+		assert_ok!(TemplateModule::update_entity(Origin::signed(1), name.as_bytes().to_vec(), 0,0));
+	});
+}
+
+#[test]
+fn test_update_entity_fails_if_signed_by_someone_else() {
+	ExternalityBuilder::build().execute_with(|| {
+		let mut name = "foobar";
+
+		assert_ok!(TemplateModule::create_entity(Origin::signed(1), name.as_bytes().to_vec(), 0,0));
+
+		// Change name to barfoo
+		name = "barfoo";
+
+		assert_noop!(
+			TemplateModule::update_entity(Origin::signed(2), name.as_bytes().to_vec(), 0,0),
+			Error::<TestRuntime>::EntityNotExists
+		);
+	});
+}
+
+#[test]
 fn test_create_entity_double_fails() {
 	ExternalityBuilder::build().execute_with(|| {
-		// Dispatch a signed extrinsic.
 		let name = "foobar";
 
 		assert_ok!(TemplateModule::create_entity(Origin::signed(1), name.as_bytes().to_vec(), 0,0));
@@ -108,9 +137,47 @@ fn test_create_entity_double_fails() {
 }
 
 #[test]
+fn test_create_entity_double_fails_with_same_pubkey() {
+	ExternalityBuilder::build().execute_with(|| {
+		let mut name = "foobar";
+
+		assert_ok!(TemplateModule::create_entity(Origin::signed(1), name.as_bytes().to_vec(), 0,0));
+
+		name = "barfoo";
+
+		assert_noop!(
+			TemplateModule::create_entity(Origin::signed(1), name.as_bytes().to_vec(), 0,0),
+			Error::<TestRuntime>::EntityWithPubkeyExists
+		);
+	});
+}
+
+#[test]
+fn test_delete_entity_works() {
+	ExternalityBuilder::build().execute_with(|| {
+		let name = "foobar";
+		assert_ok!(TemplateModule::create_entity(Origin::signed(1), name.as_bytes().to_vec(), 0,0));
+
+		assert_ok!(TemplateModule::delete_entity(Origin::signed(1)));
+	});
+}
+
+#[test]
+fn test_delete_entity_fails_if_signed_by_someone_else() {
+	ExternalityBuilder::build().execute_with(|| {
+		let name = "foobar";
+		assert_ok!(TemplateModule::create_entity(Origin::signed(1), name.as_bytes().to_vec(), 0,0));
+
+		assert_noop!(
+			TemplateModule::delete_entity(Origin::signed(2)),
+			Error::<TestRuntime>::EntityNotExists
+		);
+	});
+}
+
+#[test]
 fn test_create_twin_works() {
 	ExternalityBuilder::build().execute_with(|| {
-		// Dispatch a signed extrinsic.
 		let name = "foobar";
 
 		assert_ok!(TemplateModule::create_entity(Origin::signed(1), name.as_bytes().to_vec(), 0,0));
@@ -121,9 +188,22 @@ fn test_create_twin_works() {
 }
 
 #[test]
+fn test_delete_twin_works() {
+	ExternalityBuilder::build().execute_with(|| {
+		let name = "foobar";
+
+		assert_ok!(TemplateModule::create_entity(Origin::signed(1), name.as_bytes().to_vec(), 0,0));
+
+
+		assert_ok!(TemplateModule::create_twin(Origin::signed(1)));
+
+		assert_ok!(TemplateModule::delete_twin(Origin::signed(1)));
+	});
+}
+
+#[test]
 fn test_create_twin_double_fails() {
 	ExternalityBuilder::build().execute_with(|| {
-		// Dispatch a signed extrinsic.
 		let name = "foobar";
 
 		assert_ok!(TemplateModule::create_entity(Origin::signed(1), name.as_bytes().to_vec(), 0,0));
