@@ -63,7 +63,7 @@ Now browse to localhost:4000/graphql
 
 Example query: 
 
-```json
+```
 query {
     entities(limit: 5) {
         name
