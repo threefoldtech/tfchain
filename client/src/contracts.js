@@ -3,12 +3,16 @@ const { Keyring } = require('@polkadot/api')
 
 async function createEntity (name, countryID, cityID, callback) {
   const api = await getApiClient()
-  const keyring = new Keyring({ type: 'sr25519' })
-  const BOB = keyring.addFromUri('//Bob', { name: 'Bob default' })
+  // const keyring = new Keyring({ type: 'sr25519' })
+  // const BOB = keyring.addFromUri('//Bob', { name: 'Bob default' })
+
+  const keyring = new Keyring({ type: 'ed25519' })
+  // Add an account, straight mnemonic
+  const newPair = keyring.addFromUri('0x59336423ee7af732b2d4a76e440651e33e5ba51540e5633535b9030492c2a6f6')
 
   return api.tx.templateModule
     .createEntity(name, countryID, cityID)
-    .signAndSend(BOB, callback)
+    .signAndSend(newPair, callback)
 }
 
 async function updateEntity (name, countryID, cityID, callback) {
@@ -43,11 +47,21 @@ async function deleteEntity (callback) {
 async function createTwin (callback) {
   const api = await getApiClient()
   const keyring = new Keyring({ type: 'sr25519' })
-  const BOB = keyring.addFromUri('//Bob', { name: 'Bob default' })
+  const Alice = keyring.addFromUri('//Alice', { name: 'Alice default' })
 
   return api.tx.templateModule
     .createTwin()
-    .signAndSend(BOB, callback)
+    .signAndSend(Alice, callback)
+}
+
+async function addEntity (entityID, signature, callback) {
+  const api = await getApiClient()
+  const keyring = new Keyring({ type: 'sr25519' })
+  const Alice = keyring.addFromUri('//Alice', { name: 'Alice default' })
+
+  return api.tx.templateModule
+    .addEntity(entityID, signature)
+    .signAndSend(Alice, callback)
 }
 
 async function getTwin (id) {
@@ -123,5 +137,6 @@ module.exports = {
   deleteTwin,
   createFarm,
   getFarm,
-  deleteFarm
+  deleteFarm,
+  addEntity
 }
