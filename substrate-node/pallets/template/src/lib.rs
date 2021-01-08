@@ -361,8 +361,6 @@ decl_module! {
 		pub fn add_entity(origin, entity_id: u64, signature: Vec<u8>) -> dispatch::DispatchResult {
 			let pub_key = ensure_signed(origin)?;
 
-			debug::info!("Hello");
-
 			ensure!(TwinsByPubkeyID::<T>::contains_key(&pub_key), Error::<T>::TwinNotExists);
 			let twin_id = TwinsByPubkeyID::<T>::get(&pub_key);
 

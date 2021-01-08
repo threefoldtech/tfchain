@@ -1,19 +1,16 @@
 use crate::{Error, Module, Trait};
 use frame_support::{assert_noop, assert_ok, impl_outer_origin, parameter_types};
 use frame_system as system;
-use sp_core::H256;
 use sp_io::TestExternalities;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 	Perbill,
 };
-use sp_std::prelude::*;
-use hex::FromHex;
 
-use frame_system::{
-    ensure_signed,
-};
+use sp_core::{H256, Pair, Public, ed25519, sr25519};
+
+use sp_std::prelude::*;
 
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::{
@@ -82,12 +79,40 @@ impl ExternalityBuilder {
 
 pub type TemplateModule = Module<TestRuntime>;
 
+type AccountPublic = <MultiSignature as Verify>::Signer;
+
+/// Helper function to generate a crypto pair from seed
+fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
+	TPublic::Pair::from_string(&format!("//{}", seed), None)
+		.expect("static values are valid; qed")
+		.public()
+}
+
+/// Helper function to generate an account ID from seed
+fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId where
+AccountPublic: From<<TPublic::Pair as Pair>::Public>
+{
+	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
+}
+
+fn alice() -> AccountId {
+	get_account_id_from_seed::<sr25519::Public>("Alice")
+}
+
+fn alice_ed25519() -> AccountId {
+	get_account_id_from_seed::<ed25519::Public>("Alice")
+}
+
+fn bob() -> AccountId {
+	get_account_id_from_seed::<sr25519::Public>("Bob")
+}
+
 #[test]
 fn test_create_entity_works() {
 	ExternalityBuilder::build().execute_with(|| {
 		let name = "foobar";
 
-		assert_ok!(TemplateModule::create_entity(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), name.as_bytes().to_vec(), 0,0));
+		assert_ok!(TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0));
 	});
 }
 
@@ -96,12 +121,12 @@ fn test_update_entity_works() {
 	ExternalityBuilder::build().execute_with(|| {
 		let mut name = "foobar";
 
-		assert_ok!(TemplateModule::create_entity(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), name.as_bytes().to_vec(), 0,0));
+		assert_ok!(TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0));
 
 		// Change name to barfoo
 		name = "barfoo";
 
-		assert_ok!(TemplateModule::update_entity(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), name.as_bytes().to_vec(), 0,0));
+		assert_ok!(TemplateModule::update_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0));
 	});
 }
 
@@ -110,13 +135,13 @@ fn test_update_entity_fails_if_signed_by_someone_else() {
 	ExternalityBuilder::build().execute_with(|| {
 		let mut name = "foobar";
 
-		assert_ok!(TemplateModule::create_entity(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), name.as_bytes().to_vec(), 0,0));
+		assert_ok!(TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0));
 
 		// Change name to barfoo
 		name = "barfoo";
 
 		assert_noop!(
-			TemplateModule::update_entity(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), name.as_bytes().to_vec(), 0,0),
+			TemplateModule::update_entity(Origin::signed(bob()), name.as_bytes().to_vec(), 0,0),
 			Error::<TestRuntime>::EntityNotExists
 		);
 	});
@@ -127,10 +152,10 @@ fn test_create_entity_double_fails() {
 	ExternalityBuilder::build().execute_with(|| {
 		let name = "foobar";
 
-		assert_ok!(TemplateModule::create_entity(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), name.as_bytes().to_vec(), 0,0));
+		assert_ok!(TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0));
 
 		assert_noop!(
-			TemplateModule::create_entity(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), name.as_bytes().to_vec(), 0,0),
+			TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0),
 			Error::<TestRuntime>::EntityWithNameExists
 		);
 	});
@@ -141,12 +166,12 @@ fn test_create_entity_double_fails_with_same_pubkey() {
 	ExternalityBuilder::build().execute_with(|| {
 		let mut name = "foobar";
 
-		assert_ok!(TemplateModule::create_entity(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), name.as_bytes().to_vec(), 0,0));
+		assert_ok!(TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0));
 
 		name = "barfoo";
 
 		assert_noop!(
-			TemplateModule::create_entity(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), name.as_bytes().to_vec(), 0,0),
+			TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0),
 			Error::<TestRuntime>::EntityWithPubkeyExists
 		);
 	});
@@ -156,9 +181,9 @@ fn test_create_entity_double_fails_with_same_pubkey() {
 fn test_delete_entity_works() {
 	ExternalityBuilder::build().execute_with(|| {
 		let name = "foobar";
-		assert_ok!(TemplateModule::create_entity(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), name.as_bytes().to_vec(), 0,0));
+		assert_ok!(TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0));
 
-		assert_ok!(TemplateModule::delete_entity(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id())));
+		assert_ok!(TemplateModule::delete_entity(Origin::signed(alice())));
 	});
 }
 
@@ -166,10 +191,10 @@ fn test_delete_entity_works() {
 fn test_delete_entity_fails_if_signed_by_someone_else() {
 	ExternalityBuilder::build().execute_with(|| {
 		let name = "foobar";
-		assert_ok!(TemplateModule::create_entity(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), name.as_bytes().to_vec(), 0,0));
+		assert_ok!(TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0));
 
 		assert_noop!(
-			TemplateModule::delete_entity(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id())),
+			TemplateModule::delete_entity(Origin::signed(bob())),
 			Error::<TestRuntime>::EntityNotExists
 		);
 	});
@@ -179,9 +204,9 @@ fn test_delete_entity_fails_if_signed_by_someone_else() {
 fn test_create_twin_works() {
 	ExternalityBuilder::build().execute_with(|| {
 		let name = "foobar";
-		assert_ok!(TemplateModule::create_entity(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), name.as_bytes().to_vec(), 0,0));
+		assert_ok!(TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0));
 
-		assert_ok!(TemplateModule::create_twin(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id())));
+		assert_ok!(TemplateModule::create_twin(Origin::signed(alice())));
 	});
 }
 
@@ -190,52 +215,52 @@ fn test_delete_twin_works() {
 	ExternalityBuilder::build().execute_with(|| {
 		let name = "foobar";
 
-		assert_ok!(TemplateModule::create_entity(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), name.as_bytes().to_vec(), 0,0));
+		assert_ok!(TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0));
 
 
-		assert_ok!(TemplateModule::create_twin(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id())));
+		assert_ok!(TemplateModule::create_twin(Origin::signed(alice())));
 
-		assert_ok!(TemplateModule::delete_twin(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id())));
+		assert_ok!(TemplateModule::delete_twin(Origin::signed(alice())));
 	});
 }
 
-#[test]
-fn test_add_entity_to_twin() {
-	ExternalityBuilder::build().execute_with(|| {
-		let name = "foobar";
+// #[test]
+// fn test_add_entity_to_twin() {
+// 	ExternalityBuilder::build().execute_with(|| {
+// 		let name = "foobar";
 
-		assert_ok!(TemplateModule::create_entity(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), name.as_bytes().to_vec(), 0,0));
+// 		assert_ok!(TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0));
 
-		assert_ok!(TemplateModule::create_twin(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id())));
+// 		assert_ok!(TemplateModule::create_twin(Origin::signed(alice())));
 
 		
-		let pubkey = sp_keyring::Ed25519Keyring::Alice.public();
+// 		// let pubkey = sp_keyring::Ed25519Keyring::Alice.public();
 		
-		// assert_ok!(TemplateModule::create_twin(sp_keyring::Ed25519Keyring::Alice.to_account_id()));
+// 		// assert_ok!(TemplateModule::create_twin(Origin::signed(alice())));
 
-		let entity_id = 0;
-		let signature = "10efa605762c02eaff13dbc898c61e2a430c531392f389e6cb0b9990b479d153aed5a994cfb82b732ae167a16340df6c7ba4dff12550d5f4569568033fd30986";
+// 		let entity_id = 0;
+// 		let signature = "10efa605762c02eaff13dbc898c61e2a430c531392f389e6cb0b9990b479d153aed5a994cfb82b732ae167a16340df6c7ba4dff12550d5f4569568033fd30986";
 
-		// sp_keyring::Ed25519Keyring::Alice;
-		// let decoded_pub_key_as_vec = Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id());
-		// let decoded_pub_key_as_byteslice = <[u8; 32]>::from_hex(decoded_pub_key_as_vec.clone()).expect("Decoding failed");
-		// let entity_pub_key = sp_core::ed25519::Public::from_raw(decoded_pub_key_as_byteslice);
-	});
-}
+// 		// sp_keyring::Ed25519Keyring::Alice;
+// 		// let decoded_pub_key_as_vec = Origin::signed(alice());
+// 		// let decoded_pub_key_as_byteslice = <[u8; 32]>::from_hex(decoded_pub_key_as_vec.clone()).expect("Decoding failed");
+// 		// let entity_pub_key = sp_core::ed25519::Public::from_raw(decoded_pub_key_as_byteslice);
+// 	});
+// }
 
 // #[test]
 // fn test_create_twin_double_fails() {
 // 	ExternalityBuilder::build().execute_with(|| {
 // 		let name = "foobar";
 
-// 		assert_ok!(TemplateModule::create_entity(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), name.as_bytes().to_vec(), 0,0));
+// 		assert_ok!(TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0));
 
 // 		// First time creating twin succeeds
-// 		assert_ok!(TemplateModule::create_twin(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id())));
+// 		assert_ok!(TemplateModule::create_twin(Origin::signed(alice())));
 
 // 		// Creating it a second time with the same pubkey would fail
 // 		assert_noop!(
-// 			TemplateModule::create_twin(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id())),
+// 			TemplateModule::create_twin(Origin::signed(alice())),
 // 			Error::<TestRuntime>::TwinExists
 // 		);
 // 	});
@@ -245,7 +270,7 @@ fn test_add_entity_to_twin() {
 // fn test_create_twin_with_unknown_entityid_fails() {
 // 	ExternalityBuilder::build().execute_with(|| {
 // 		assert_noop!(
-// 			TemplateModule::create_twin(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id())),
+// 			TemplateModule::create_twin(Origin::signed(alice())),
 // 			Error::<TestRuntime>::EntityNotExists
 // 		);
 // 	});
@@ -256,16 +281,16 @@ fn test_create_farm_works() {
 	ExternalityBuilder::build().execute_with(|| {
 		let name = "foobar";
 
-		assert_ok!(TemplateModule::create_entity(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), name.as_bytes().to_vec(), 0,0));
+		assert_ok!(TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0));
 
-		assert_ok!(TemplateModule::create_twin(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id())));
+		assert_ok!(TemplateModule::create_twin(Origin::signed(alice())));
 
 		let twin_id = 0;
 
 		let farm_name = "test_farm";
 
 		assert_ok!(TemplateModule::create_farm(
-			Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), 
+			Origin::signed(alice()), 
 			farm_name.as_bytes().to_vec(),
 			twin_id,
 			0,
@@ -288,7 +313,7 @@ fn test_create_farm_with_invalid_entity_id_fails() {
 		// Create farm with invalid entity-id
 		assert_noop!(
 			TemplateModule::create_farm(
-				Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), 
+				Origin::signed(alice()), 
 				farm_name.as_bytes().to_vec(),
 				entity_id,
 				twin_id,
@@ -308,7 +333,7 @@ fn test_create_farm_with_invalid_twin_id_fails() {
 		let farm_name = "test_farm";
 
 		let name = "foobar";
-		assert_ok!(TemplateModule::create_entity(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), name.as_bytes().to_vec(), 0,0));
+		assert_ok!(TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0));
 		
 		let entity_id = 0;
 		let twin_id = 5342433;
@@ -316,7 +341,7 @@ fn test_create_farm_with_invalid_twin_id_fails() {
 		// Create farm with invalid twin-id
 		assert_noop!(
 			TemplateModule::create_farm(
-				Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), 
+				Origin::signed(alice()), 
 				farm_name.as_bytes().to_vec(),
 				entity_id,
 				twin_id,
@@ -335,16 +360,16 @@ fn test_create_farm_with_same_name_fails() {
 	ExternalityBuilder::build().execute_with(|| {		
 		let name = "foobar";
 
-		assert_ok!(TemplateModule::create_entity(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), name.as_bytes().to_vec(), 0,0));
+		assert_ok!(TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0));
 
-		assert_ok!(TemplateModule::create_twin(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id())));
+		assert_ok!(TemplateModule::create_twin(Origin::signed(alice())));
 
 		let twin_id = 0;
 
 		let farm_name = "test_farm";
 
 		assert_ok!(TemplateModule::create_farm(
-			Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), 
+			Origin::signed(alice()), 
 			farm_name.as_bytes().to_vec(),
 			twin_id,
 			0,
@@ -356,7 +381,7 @@ fn test_create_farm_with_same_name_fails() {
 
 		assert_noop!(
 			TemplateModule::create_farm(
-				Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), 
+				Origin::signed(alice()), 
 				farm_name.as_bytes().to_vec(),
 				0,
 				twin_id,
@@ -375,16 +400,16 @@ fn create_node_works() {
 	ExternalityBuilder::build().execute_with(|| {
 		let name = "foobar";
 
-		assert_ok!(TemplateModule::create_entity(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), name.as_bytes().to_vec(), 0,0));
+		assert_ok!(TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0));
 
-		assert_ok!(TemplateModule::create_twin(Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id())));
+		assert_ok!(TemplateModule::create_twin(Origin::signed(alice())));
 
 		let twin_id = 0;
 
 		let farm_name = "test_farm";
 
 		assert_ok!(TemplateModule::create_farm(
-			Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), 
+			Origin::signed(alice()), 
 			farm_name.as_bytes().to_vec(),
 			twin_id,
 			0,
@@ -409,7 +434,7 @@ fn create_node_works() {
 
 		let farm_id = 0;
 		assert_ok!(TemplateModule::create_node(
-			Origin::signed(sp_keyring::Ed25519Keyring::Alice.to_account_id()), 
+			Origin::signed(alice()), 
 			farm_id,
 			twin_id,
 			resource,
