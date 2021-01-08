@@ -64,7 +64,7 @@ impl<T> Default for Entity<T>
 pub struct Twin<T: super::Trait> {
 	pub twin_id: u64,
 	pub pub_key: T::AccountId,
-	pub entities: Option<Vec<EntityProof>>
+	pub entities: Vec<EntityProof>
 }
 
 impl<T> Default for Twin<T>
@@ -72,15 +72,11 @@ impl<T> Default for Twin<T>
 {
     fn default() -> Twin<T> {
 		let pub_key = PALLET_ID.into_account();
-		let default_twin_entity = EntityProof{
-			entity_id: 0,
-			entity_signaure: [0].to_vec()
-		};
 
         Twin {
 			twin_id: 0,
 			pub_key,
-			entities: vec![default_twin_entity]
+			entities: Vec::new()
         }
     }
 }
@@ -88,7 +84,7 @@ impl<T> Default for Twin<T>
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default)]
 pub struct EntityProof {
 	pub entity_id: u64,
-	pub entity_signaure: Vec<u8>
+	pub signature: Vec<u8>
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, Copy)]

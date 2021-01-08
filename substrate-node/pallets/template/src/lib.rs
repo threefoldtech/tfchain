@@ -5,22 +5,20 @@
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
 
 use frame_support::{
-	decl_error, decl_event, decl_module, decl_storage, ensure, dispatch,
+	decl_error, decl_event, decl_module, decl_storage, ensure, dispatch, debug,
 	traits::{
-		Currency, Get,
+		Get,
 	},
 };
 use frame_system::{
-    self as system, ensure_signed,
+	self as system, ensure_signed,
 };
-use hex::FromHex;
 
-use sp_runtime::{
-	traits::{
-		AccountIdConversion
-	}
-};
 use codec::{Encode};
+
+use hex::{FromHex};
+use sp_runtime::{AnySignature};
+use sp_runtime::traits::{Verify};
 
 use sp_std::prelude::*;
 
@@ -29,11 +27,8 @@ mod tests;
 
 mod types;
 
-pub type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
-
 pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
-	type Currency: Currency<Self::AccountId>;
 }
 
 decl_storage! {
@@ -78,7 +73,8 @@ decl_event!(
 		EntityUpdated(u64, Vec<u8>, u64, u64, AccountId),
 		EntityDeleted(u64),
 
-		TwinStored(AccountId, u64, Option<Vec<types::EntityProof>>),
+		TwinStored(AccountId, u64),
+		TwinEntityStored(u64, u64, Vec<u8>),
 		TwinDeleted(u64),
 
 		PricingPolicyStored(Vec<u8>, u64),
@@ -339,46 +335,92 @@ decl_module! {
 		}
 
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
-		pub fn create_twin(origin, entities: Option<Vec<types::EntityProof>>) -> dispatch::DispatchResult {
+		pub fn create_twin(origin) -> dispatch::DispatchResult {
 			let pub_key = ensure_signed(origin)?;
 			ensure!(!TwinsByPubkeyID::<T>::contains_key(&pub_key), Error::<T>::TwinExists);
-
-			// check if provided entities exist
-			match entities {
-				Some(entities) => {
-					for entity in entities {
-						ensure!(Entities::<T>::contains_key(&entity.entity_id), Error::<T>::EntityNotExists);
-						let stored_entity = Entities::<T>::get(entity.entity_id);
-						
-						// Verify signature of the entity's proof
-						let decoded = <[u8; 64]>::from_hex(entity.entity_signaure.clone()).expect("Decoding failed");
-						let signature = sp_core::ed25519::Signature::from_raw(decoded);
-
-						let decoded_pub_key_as_vec = T::AccountId::encode(&stored_entity.pub_key);
-						let decoded_pub_key_as_byteslice = <[u8; 32]>::from_hex(decoded_pub_key_as_vec.clone()).expect("Decoding failed");
-
-						let pubkey = sp_core::ed25519::Public::from_raw(decoded_pub_key_as_byteslice);
-
-						ensure!(sp_io::crypto::ed25519_verify(&signature, &entity.entity_id.to_be_bytes(), &pubkey), Error::<T>::EntitySignatureDoesNotMatch);
-					}
-				},
-				None => ()
-			}
 
 			let twin_id = TwinID::get();
 
 			let twin = types::Twin::<T> {
 				twin_id,
 				pub_key: pub_key.clone(),
-				entities
+				entities: Vec::new()
 			};
 
 			Twins::insert(&twin_id, &twin);
 			TwinsByPubkeyID::<T>::insert(&pub_key, &twin_id);
 			TwinID::put(twin_id + 1);
 
-			Self::deposit_event(RawEvent::TwinStored(pub_key, twin_id, entities));
+			Self::deposit_event(RawEvent::TwinStored(pub_key, twin_id));
 			
+			Ok(())
+		}
+
+		// Method for twins only
+		#[weight = 10_000 + T::DbWeight::get().writes(1)]
+		pub fn add_entity(origin, entity_id: u64, signature: Vec<u8>) -> dispatch::DispatchResult {
+			let pub_key = ensure_signed(origin)?;
+
+			debug::info!("Hello");
+
+			ensure!(TwinsByPubkeyID::<T>::contains_key(&pub_key), Error::<T>::TwinNotExists);
+			let twin_id = TwinsByPubkeyID::<T>::get(&pub_key);
+
+			ensure!(Entities::<T>::contains_key(&entity_id), Error::<T>::EntityNotExists);
+			let stored_entity = Entities::<T>::get(entity_id);
+
+			let decoded_signature_as_byteslice = <[u8; 64]>::from_hex(signature.clone()).expect("Decoding failed");
+
+			// Decode signature into a ed25519 signature
+			let ed25519_signature = sp_core::ed25519::Signature::from_raw(decoded_signature_as_byteslice);
+
+			// let sr25519_signature = sp_core::sr25519::Signature::from_raw(decoded_signature_as_byteslice);
+
+			// Decode entity's public key
+			let account_vec = &stored_entity.pub_key.encode();
+			ensure!(account_vec.len() == 32, "AccountId must be 32 bytes.");
+			let mut bytes = [0u8; 32];
+			bytes.copy_from_slice(&account_vec);
+
+			let entity_pubkey_ed25519 = sp_core::ed25519::Public::from_raw(bytes);
+			debug::info!("Public key: {:?}", entity_pubkey_ed25519);
+
+			// let entity_pubkey_sr25519 = sp_core::sr25519::Public::from_raw(bytes);
+			// debug::info!("Public key: {:?}", entity_pubkey_sr25519);
+
+			let mut message = vec![];
+
+			message.extend_from_slice(&entity_id.to_be_bytes()); 
+			message.extend_from_slice(&twin_id.to_be_bytes()); 
+
+			debug::info!("Message: {:?}", message);
+			
+			// Verify that the signature contains the message with the entity's public key
+			debug::info!("Checking signature");
+			let ed25519_verified = sp_io::crypto::ed25519_verify(&ed25519_signature, &message, &entity_pubkey_ed25519);
+			debug::info!("ed25519 verified? {:?}", ed25519_verified);
+			
+			// let sr25519_verified = sp_io::crypto::sr25519_verify(&sr25519_signature, &message, &entity_pubkey_sr25519);
+			// let sr25519_verified = sr25519_signature.verify(message.as_slice(), &entity_pubkey_sr25519);
+			// debug::info!("sr25519 verified? {:?}", sr25519_verified);
+
+			ensure!(sp_io::crypto::ed25519_verify(&ed25519_signature, &message, &entity_pubkey_ed25519), Error::<T>::EntitySignatureDoesNotMatch);
+			
+			debug::info!("Signature is valid");
+			let mut twin = Twins::<T>::get(&twin_id);
+
+			let entity_proof = types::EntityProof{
+				entity_id,
+				signature: signature.clone()
+			};
+
+			// Store proof
+			twin.entities.push(entity_proof);
+
+			Twins::insert(&twin_id, &twin);
+
+			Self::deposit_event(RawEvent::TwinEntityStored(twin_id, entity_id, signature));
+
 			Ok(())
 		}
 
