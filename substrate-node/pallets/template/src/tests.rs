@@ -81,9 +81,18 @@ pub type TemplateModule = Module<TestRuntime>;
 
 type AccountPublic = <MultiSignature as Verify>::Signer;
 
+
+// industry dismiss casual gym gap music pave gasp sick owner dumb cost
+
 /// Helper function to generate a crypto pair from seed
 fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
 	TPublic::Pair::from_string(&format!("//{}", seed), None)
+		.expect("static values are valid; qed")
+		.public()
+}
+
+fn get_from_seed_string<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
+	TPublic::Pair::from_string(&format!("{}", seed), None)
 		.expect("static values are valid; qed")
 		.public()
 }
@@ -95,12 +104,22 @@ AccountPublic: From<<TPublic::Pair as Pair>::Public>
 	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
+fn get_account_id_from_seed_string<TPublic: Public>(seed: &str) -> AccountId where
+AccountPublic: From<<TPublic::Pair as Pair>::Public>
+{
+	AccountPublic::from(get_from_seed_string::<TPublic>(seed)).into_account()
+}
+
 fn alice() -> AccountId {
 	get_account_id_from_seed::<sr25519::Public>("Alice")
 }
 
-fn alice_ed25519() -> AccountId {
-	get_account_id_from_seed::<ed25519::Public>("Alice")
+// fn alice_ed25519() -> AccountId {
+// 	get_account_id_from_seed::<ed25519::Public>("Alice")
+// }
+
+fn test_ed25519() -> AccountId {
+	get_account_id_from_seed_string::<ed25519::Public>("industry dismiss casual gym gap music pave gasp sick owner dumb cost")
 }
 
 fn bob() -> AccountId {
@@ -224,29 +243,48 @@ fn test_delete_twin_works() {
 	});
 }
 
-// #[test]
-// fn test_add_entity_to_twin() {
-// 	ExternalityBuilder::build().execute_with(|| {
-// 		let name = "foobar";
+#[test]
+fn test_add_entity_to_twin() {
+	ExternalityBuilder::build().execute_with(|| {
+		let name = "foobar";
 
-// 		assert_ok!(TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0));
+		assert_ok!(TemplateModule::create_entity(Origin::signed(test_ed25519()), name.as_bytes().to_vec(), 0,0));
 
-// 		assert_ok!(TemplateModule::create_twin(Origin::signed(alice())));
+		assert_ok!(TemplateModule::create_twin(Origin::signed(bob())));
 
+		// Add Alice as entity to bob's twin
+
+		// Signature of the entityid (0) and twinid (0) signed with test_ed25519 account
+		let signature = "0cbebadf1ca1a60e6d9df4ffd9bd971ae91f1336a496154e25774b0037e1cdfe4ee518ccdce9d9006fedba8d76921dccbfe1692f7f4480e034d27749a814e206";
 		
-// 		// let pubkey = sp_keyring::Ed25519Keyring::Alice.public();
+		let entity_id = 0;
 		
-// 		// assert_ok!(TemplateModule::create_twin(Origin::signed(alice())));
+		assert_ok!(TemplateModule::add_entity(Origin::signed(bob()), entity_id, signature.as_bytes().to_vec()));
+	});
+}
 
-// 		let entity_id = 0;
-// 		let signature = "10efa605762c02eaff13dbc898c61e2a430c531392f389e6cb0b9990b479d153aed5a994cfb82b732ae167a16340df6c7ba4dff12550d5f4569568033fd30986";
+#[test]
+fn test_add_entity_to_twin_fails_with_invalid_signature() {
+	ExternalityBuilder::build().execute_with(|| {
+		let name = "foobar";
 
-// 		// sp_keyring::Ed25519Keyring::Alice;
-// 		// let decoded_pub_key_as_vec = Origin::signed(alice());
-// 		// let decoded_pub_key_as_byteslice = <[u8; 32]>::from_hex(decoded_pub_key_as_vec.clone()).expect("Decoding failed");
-// 		// let entity_pub_key = sp_core::ed25519::Public::from_raw(decoded_pub_key_as_byteslice);
-// 	});
-// }
+		assert_ok!(TemplateModule::create_entity(Origin::signed(test_ed25519()), name.as_bytes().to_vec(), 0,0));
+
+		assert_ok!(TemplateModule::create_twin(Origin::signed(bob())));
+
+		// Add Alice as entity to bob's twin
+
+		// Signature of the entityid (0) and twinid (0) signed with test_ed25519 account
+		let signature = "12fa1dfb735dc528a8d38bc0003c90521ea313ff82e4d0b2c683283e0fbc05001af5fd106ccf938356b9679790c6e7c4c4235c3ce2d88c787a1768ddcb401d08";
+		
+		let entity_id = 0;
+		
+		assert_noop!(
+			TemplateModule::add_entity(Origin::signed(bob()), entity_id, signature.as_bytes().to_vec()),
+			Error::<TestRuntime>::EntitySignatureDoesNotMatch
+		);
+	});
+}
 
 // #[test]
 // fn test_create_twin_double_fails() {

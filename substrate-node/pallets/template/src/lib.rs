@@ -17,8 +17,6 @@ use frame_system::{
 use codec::{Encode};
 
 use hex::{FromHex};
-use sp_runtime::{AnySignature};
-use sp_runtime::traits::{Verify};
 
 use sp_std::prelude::*;
 
