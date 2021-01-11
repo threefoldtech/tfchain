@@ -97,6 +97,7 @@ decl_error! {
 		EntityWithPubkeyExists,
 		EntityNotExists,
 		EntitySignatureDoesNotMatch,
+		EntityWithSignatureAlreadyExists,
 		CannotUpdateEntity,
 		CannotDeleteEntity,
 	
@@ -365,11 +366,18 @@ decl_module! {
 			ensure!(Entities::<T>::contains_key(&entity_id), Error::<T>::EntityNotExists);
 			let stored_entity = Entities::<T>::get(entity_id);
 
+			let mut twin = Twins::<T>::get(&twin_id);
+			let entity_proof = types::EntityProof{
+				entity_id,
+				signature: signature.clone()
+			};
+
+			ensure!(!twin.entities.contains(&entity_proof), Error::<T>::EntityWithSignatureAlreadyExists);
+
 			let decoded_signature_as_byteslice = <[u8; 64]>::from_hex(signature.clone()).expect("Decoding failed");
 
 			// Decode signature into a ed25519 signature
 			let ed25519_signature = sp_core::ed25519::Signature::from_raw(decoded_signature_as_byteslice);
-
 			// let sr25519_signature = sp_core::sr25519::Signature::from_raw(decoded_signature_as_byteslice);
 
 			// Decode entity's public key
@@ -403,16 +411,11 @@ decl_module! {
 			ensure!(sp_io::crypto::ed25519_verify(&ed25519_signature, &message, &entity_pubkey_ed25519), Error::<T>::EntitySignatureDoesNotMatch);
 			
 			debug::info!("Signature is valid");
-			let mut twin = Twins::<T>::get(&twin_id);
-
-			let entity_proof = types::EntityProof{
-				entity_id,
-				signature: signature.clone()
-			};
 
 			// Store proof
 			twin.entities.push(entity_proof);
 
+			// Update twin
 			Twins::insert(&twin_id, &twin);
 
 			Self::deposit_event(RawEvent::TwinEntityStored(twin_id, entity_id, signature));
