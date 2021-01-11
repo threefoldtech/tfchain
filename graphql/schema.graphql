@@ -18,7 +18,13 @@ type Entity @entity {
 type Twin @entity {
   twin_id: BigInt!
   pub_key: String!
+  twin_entities: [EntityProof!] @derivedFrom(field: "twin")
+}
+
+type EntityProof @entity {
   entity_id: BigInt!
+  signature: String!
+  twin: Twin!
 }
 
 type Farm @entity {
