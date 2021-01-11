@@ -11,7 +11,8 @@ const {
   createFarm,
   getFarm,
   deleteFarm,
-  addEntity
+  addTwinEntity,
+  removeTwinEntity
 } = require('./src/contracts')
 
 const argv = yargs
@@ -64,7 +65,7 @@ const argv = yargs
       type: 'string'
     }
   })
-  .command('addEntity', 'Add an entity to a twin', {
+  .command('addTwinEntity', 'Add an entity to a twin', {
     signature: {
       description: 'Signature of the entity id + the twin id',
       alias: 'sig',
@@ -73,6 +74,13 @@ const argv = yargs
     entity_id: {
       description: 'Id of the entity',
       alias: 'entity',
+      type: 'number'
+    }
+  })
+  .command('deleteTwinEntity', 'Delete twin entity by id', {
+    id: {
+      description: 'entity ID',
+      alias: 'id',
       type: 'number'
     }
   })
@@ -226,8 +234,26 @@ if (argv._.includes('createTwin')) {
     exit(1)
   })
 }
-if (argv._.includes('addEntity')) {
-  addEntity(argv.entity, argv.sig, ({ events = [], status }) => {
+if (argv._.includes('addTwinEntity')) {
+  addTwinEntity(argv.entity, argv.sig, ({ events = [], status }) => {
+    console.log(`Current status is ${status.type}`)
+
+    if (status.isFinalized) {
+      console.log(`Transaction included at blockHash ${status.asFinalized}`)
+
+      // Loop through Vec<EventRecord> to display all events
+      events.forEach(({ phase, event: { data, method, section } }) => {
+        console.log(`\t' ${phase}: ${section}.${method}:: ${data}`)
+      })
+      exit(1)
+    }
+  }).catch(err => {
+    console.log(err)
+    exit(1)
+  })
+}
+if (argv._.includes('deleteTwinEntity')) {
+  removeTwinEntity(argv.id, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {

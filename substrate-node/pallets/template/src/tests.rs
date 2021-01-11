@@ -259,7 +259,7 @@ fn test_add_entity_to_twin() {
 		
 		let entity_id = 0;
 		
-		assert_ok!(TemplateModule::add_entity(Origin::signed(bob()), entity_id, signature.as_bytes().to_vec()));
+		assert_ok!(TemplateModule::add_twin_entity(Origin::signed(bob()), entity_id, signature.as_bytes().to_vec()));
 	});
 }
 
@@ -280,7 +280,7 @@ fn test_add_entity_to_twin_fails_with_invalid_signature() {
 		let entity_id = 0;
 		
 		assert_noop!(
-			TemplateModule::add_entity(Origin::signed(bob()), entity_id, signature.as_bytes().to_vec()),
+			TemplateModule::add_twin_entity(Origin::signed(bob()), entity_id, signature.as_bytes().to_vec()),
 			Error::<TestRuntime>::EntitySignatureDoesNotMatch
 		);
 	});
@@ -302,11 +302,11 @@ fn test_add_entity_to_twin_fails_if_entity_is_added_twice() {
 		
 		let entity_id = 0;
 		
-		assert_ok!(TemplateModule::add_entity(Origin::signed(bob()), entity_id, signature.as_bytes().to_vec()));
+		assert_ok!(TemplateModule::add_twin_entity(Origin::signed(bob()), entity_id, signature.as_bytes().to_vec()));
 
 		
 		assert_noop!(
-			TemplateModule::add_entity(Origin::signed(bob()), entity_id, signature.as_bytes().to_vec()),
+			TemplateModule::add_twin_entity(Origin::signed(bob()), entity_id, signature.as_bytes().to_vec()),
 			Error::<TestRuntime>::EntityWithSignatureAlreadyExists
 		);
 	});

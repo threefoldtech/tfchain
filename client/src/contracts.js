@@ -54,13 +54,23 @@ async function createTwin (callback) {
     .signAndSend(Alice, callback)
 }
 
-async function addEntity (entityID, signature, callback) {
+async function addTwinEntity (entityID, signature, callback) {
   const api = await getApiClient()
   const keyring = new Keyring({ type: 'sr25519' })
   const Alice = keyring.addFromUri('//Alice', { name: 'Alice default' })
 
   return api.tx.templateModule
-    .addEntity(entityID, signature)
+    .addTwinEntity(entityID, signature)
+    .signAndSend(Alice, callback)
+}
+
+async function removeTwinEntity (entityID, callback) {
+  const api = await getApiClient()
+  const keyring = new Keyring({ type: 'sr25519' })
+  const Alice = keyring.addFromUri('//Alice', { name: 'Alice default' })
+
+  return api.tx.templateModule
+    .deleteTwinEntity(entityID)
     .signAndSend(Alice, callback)
 }
 
@@ -138,5 +148,6 @@ module.exports = {
   createFarm,
   getFarm,
   deleteFarm,
-  addEntity
+  addTwinEntity,
+  removeTwinEntity
 }

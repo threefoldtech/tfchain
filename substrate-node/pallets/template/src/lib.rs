@@ -73,6 +73,7 @@ decl_event!(
 
 		TwinStored(AccountId, u64),
 		TwinEntityStored(u64, u64, Vec<u8>),
+		TwinEntityRemoved(u64, u64),
 		TwinDeleted(u64),
 
 		PricingPolicyStored(Vec<u8>, u64),
@@ -357,7 +358,7 @@ decl_module! {
 
 		// Method for twins only
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
-		pub fn add_entity(origin, entity_id: u64, signature: Vec<u8>) -> dispatch::DispatchResult {
+		pub fn add_twin_entity(origin, entity_id: u64, signature: Vec<u8>) -> dispatch::DispatchResult {
 			let pub_key = ensure_signed(origin)?;
 
 			ensure!(TwinsByPubkeyID::<T>::contains_key(&pub_key), Error::<T>::TwinNotExists);
@@ -419,6 +420,28 @@ decl_module! {
 			Twins::insert(&twin_id, &twin);
 
 			Self::deposit_event(RawEvent::TwinEntityStored(twin_id, entity_id, signature));
+
+			Ok(())
+		}
+
+		#[weight = 10_000 + T::DbWeight::get().writes(1)]
+		pub fn delete_twin_entity(origin, entity_id: u64) -> dispatch::DispatchResult {
+			let pub_key = ensure_signed(origin)?;
+			
+			ensure!(TwinsByPubkeyID::<T>::contains_key(&pub_key), Error::<T>::TwinNotExists);
+			let twin_id = TwinsByPubkeyID::<T>::get(&pub_key);
+
+			let mut twin = Twins::<T>::get(&twin_id);
+
+			ensure!(twin.entities.iter().any(|v| v.entity_id == entity_id), Error::<T>::EntityNotExists);
+
+			let index = twin.entities.iter().position(|x| x.entity_id == entity_id).unwrap();
+			twin.entities.remove(index);
+
+			// Update twin
+			Twins::insert(&twin_id, &twin);
+
+			Self::deposit_event(RawEvent::TwinEntityRemoved(twin_id, entity_id));
 
 			Ok(())
 		}
