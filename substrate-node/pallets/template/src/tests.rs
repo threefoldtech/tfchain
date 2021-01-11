@@ -248,17 +248,18 @@ fn test_add_entity_to_twin() {
 	ExternalityBuilder::build().execute_with(|| {
 		let name = "foobar";
 
+		// Someone first creates an entity
 		assert_ok!(TemplateModule::create_entity(Origin::signed(test_ed25519()), name.as_bytes().to_vec(), 0,0));
 
+		// Bob creates an anonymous twin
 		assert_ok!(TemplateModule::create_twin(Origin::signed(bob())));
-
-		// Add Alice as entity to bob's twin
 
 		// Signature of the entityid (0) and twinid (0) signed with test_ed25519 account
 		let signature = "0cbebadf1ca1a60e6d9df4ffd9bd971ae91f1336a496154e25774b0037e1cdfe4ee518ccdce9d9006fedba8d76921dccbfe1692f7f4480e034d27749a814e206";
 		
 		let entity_id = 0;
 		
+		// Bob adds someone as entity to his twin
 		assert_ok!(TemplateModule::add_twin_entity(Origin::signed(bob()), entity_id, signature.as_bytes().to_vec()));
 	});
 }
@@ -312,33 +313,23 @@ fn test_add_entity_to_twin_fails_if_entity_is_added_twice() {
 	});
 }
 
-// #[test]
-// fn test_create_twin_double_fails() {
-// 	ExternalityBuilder::build().execute_with(|| {
-// 		let name = "foobar";
+#[test]
+fn test_create_twin_double_fails() {
+	ExternalityBuilder::build().execute_with(|| {
+		let name = "foobar";
 
-// 		assert_ok!(TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0));
+		assert_ok!(TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0));
 
-// 		// First time creating twin succeeds
-// 		assert_ok!(TemplateModule::create_twin(Origin::signed(alice())));
+		// First time creating twin succeeds
+		assert_ok!(TemplateModule::create_twin(Origin::signed(alice())));
 
-// 		// Creating it a second time with the same pubkey would fail
-// 		assert_noop!(
-// 			TemplateModule::create_twin(Origin::signed(alice())),
-// 			Error::<TestRuntime>::TwinExists
-// 		);
-// 	});
-// }
-
-// #[test]
-// fn test_create_twin_with_unknown_entityid_fails() {
-// 	ExternalityBuilder::build().execute_with(|| {
-// 		assert_noop!(
-// 			TemplateModule::create_twin(Origin::signed(alice())),
-// 			Error::<TestRuntime>::EntityNotExists
-// 		);
-// 	});
-// }
+		// Creating it a second time with the same pubkey would fail
+		assert_noop!(
+			TemplateModule::create_twin(Origin::signed(alice())),
+			Error::<TestRuntime>::TwinExists
+		);
+	});
+}
 
 #[test]
 fn test_create_farm_works() {
