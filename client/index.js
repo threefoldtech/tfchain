@@ -71,6 +71,11 @@ const argv = yargs
       alias: 'sig',
       type: 'string'
     },
+    twin_id: {
+      description: 'Id of the twin',
+      alias: 'twin',
+      type: 'number'
+    },
     entity_id: {
       description: 'Id of the entity',
       alias: 'entity',
@@ -78,13 +83,24 @@ const argv = yargs
     }
   })
   .command('deleteTwinEntity', 'Delete twin entity by id', {
+    twin_id: {
+      description: 'Id of the twin',
+      alias: 'twin',
+      type: 'number'
+    },
     id: {
       description: 'entity ID',
       alias: 'id',
       type: 'number'
     }
   })
-  .command('deleteTwin', 'Delete your twin')
+  .command('deleteTwin', 'Delete your twin', {
+    twin_id: {
+      description: 'Id of the twin',
+      alias: 'twin',
+      type: 'number'
+    }
+  })
   .command('createFarm', 'Create a Farm', {
     name: {
       description: 'Name of the farm',
@@ -235,7 +251,7 @@ if (argv._.includes('createTwin')) {
   })
 }
 if (argv._.includes('addTwinEntity')) {
-  addTwinEntity(argv.entity, argv.sig, ({ events = [], status }) => {
+  addTwinEntity(argv.twin, argv.entity, argv.sig, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -253,7 +269,7 @@ if (argv._.includes('addTwinEntity')) {
   })
 }
 if (argv._.includes('deleteTwinEntity')) {
-  removeTwinEntity(argv.id, ({ events = [], status }) => {
+  removeTwinEntity(argv.twin, argv.entity, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -278,7 +294,7 @@ if (argv._.includes('getTwin')) {
 
   getTwin(argv.id)
     .then(contract => {
-      console.log('\n entity: ')
+      console.log('\n twin: ')
       console.log(contract)
       exit(0)
     })
@@ -288,7 +304,7 @@ if (argv._.includes('getTwin')) {
     })
 }
 if (argv._.includes('deleteTwin')) {
-  deleteTwin(({ events = [], status }) => {
+  deleteTwin(argv.twin, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {

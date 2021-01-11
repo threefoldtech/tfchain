@@ -17,9 +17,13 @@
     "pub_key": "AccountId"
   },
   "Twin": {
-    "id": "u64",
+    "twin_id": "u64",
     "pub_key": "AccountId",
-    "entity_id": "u64"
+    "entities": "Vec<EntityProof>"
+  },
+  "EntityProof": {
+    "entity_id": "u64",
+    "signature": "Vec<u8>"
   },
   "Node": {
     "id": "u64",
@@ -31,8 +35,8 @@
     "city_id": "u64"
   },
   "Location": {
-    "longitude": "Vec<u8>",
-    "latitude": "Vec<u8>"
+    "longitude": "U64F64",
+    "latitude": "U64F64"
   },
   "Resources": {
     "hru": "u64",
@@ -42,6 +46,15 @@
   },
   "CertificationType": {
     "_enum": ["None", "Silver", "Gold"]
+  },
+  "CertificationCodeType": {
+    "_enum": ["Farm", "Entity"]
+  },
+  "CertificationCodes": {
+    "id": "u64",
+    "name": "Vec<u8>",
+    "description": "Vec<u8>",
+    "certification_code_type": "CertificationCodeType"
   },
   "PricingPolicy": {
     "id": "u64",

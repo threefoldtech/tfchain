@@ -239,7 +239,8 @@ fn test_delete_twin_works() {
 
 		assert_ok!(TemplateModule::create_twin(Origin::signed(alice())));
 
-		assert_ok!(TemplateModule::delete_twin(Origin::signed(alice())));
+		let twin_id = 0;
+		assert_ok!(TemplateModule::delete_twin(Origin::signed(alice()), twin_id));
 	});
 }
 
@@ -257,10 +258,11 @@ fn test_add_entity_to_twin() {
 		// Signature of the entityid (0) and twinid (0) signed with test_ed25519 account
 		let signature = "0cbebadf1ca1a60e6d9df4ffd9bd971ae91f1336a496154e25774b0037e1cdfe4ee518ccdce9d9006fedba8d76921dccbfe1692f7f4480e034d27749a814e206";
 		
+		let twin_id = 0;
 		let entity_id = 0;
 		
 		// Bob adds someone as entity to his twin
-		assert_ok!(TemplateModule::add_twin_entity(Origin::signed(bob()), entity_id, signature.as_bytes().to_vec()));
+		assert_ok!(TemplateModule::add_twin_entity(Origin::signed(bob()), twin_id, entity_id, signature.as_bytes().to_vec()));
 	});
 }
 
@@ -278,10 +280,11 @@ fn test_add_entity_to_twin_fails_with_invalid_signature() {
 		// Signature of the entityid (0) and twinid (0) signed with test_ed25519 account
 		let signature = "12fa1dfb735dc528a8d38bc0003c90521ea313ff82e4d0b2c683283e0fbc05001af5fd106ccf938356b9679790c6e7c4c4235c3ce2d88c787a1768ddcb401d08";
 		
+		let twin_id = 0;
 		let entity_id = 0;
 		
 		assert_noop!(
-			TemplateModule::add_twin_entity(Origin::signed(bob()), entity_id, signature.as_bytes().to_vec()),
+			TemplateModule::add_twin_entity(Origin::signed(bob()), twin_id, entity_id, signature.as_bytes().to_vec()),
 			Error::<TestRuntime>::EntitySignatureDoesNotMatch
 		);
 	});
@@ -301,20 +304,21 @@ fn test_add_entity_to_twin_fails_if_entity_is_added_twice() {
 		// Signature of the entityid (0) and twinid (0) signed with test_ed25519 account
 		let signature = "0cbebadf1ca1a60e6d9df4ffd9bd971ae91f1336a496154e25774b0037e1cdfe4ee518ccdce9d9006fedba8d76921dccbfe1692f7f4480e034d27749a814e206";
 		
+		let twin_id = 0;
 		let entity_id = 0;
 		
-		assert_ok!(TemplateModule::add_twin_entity(Origin::signed(bob()), entity_id, signature.as_bytes().to_vec()));
+		assert_ok!(TemplateModule::add_twin_entity(Origin::signed(bob()), twin_id, entity_id, signature.as_bytes().to_vec()));
 
 		
 		assert_noop!(
-			TemplateModule::add_twin_entity(Origin::signed(bob()), entity_id, signature.as_bytes().to_vec()),
+			TemplateModule::add_twin_entity(Origin::signed(bob()), twin_id, entity_id, signature.as_bytes().to_vec()),
 			Error::<TestRuntime>::EntityWithSignatureAlreadyExists
 		);
 	});
 }
 
 #[test]
-fn test_create_twin_double_fails() {
+fn test_create_twin_double_works() {
 	ExternalityBuilder::build().execute_with(|| {
 		let name = "foobar";
 
@@ -323,11 +327,8 @@ fn test_create_twin_double_fails() {
 		// First time creating twin succeeds
 		assert_ok!(TemplateModule::create_twin(Origin::signed(alice())));
 
-		// Creating it a second time with the same pubkey would fail
-		assert_noop!(
-			TemplateModule::create_twin(Origin::signed(alice())),
-			Error::<TestRuntime>::TwinExists
-		);
+		// Second time creating twin succeeds
+		assert_ok!(TemplateModule::create_twin(Origin::signed(alice())));
 	});
 }
 

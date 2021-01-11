@@ -54,23 +54,23 @@ async function createTwin (callback) {
     .signAndSend(Alice, callback)
 }
 
-async function addTwinEntity (entityID, signature, callback) {
+async function addTwinEntity (twinID, entityID, signature, callback) {
   const api = await getApiClient()
   const keyring = new Keyring({ type: 'sr25519' })
   const Alice = keyring.addFromUri('//Alice', { name: 'Alice default' })
 
   return api.tx.templateModule
-    .addTwinEntity(entityID, signature)
+    .addTwinEntity(twinID, entityID, signature)
     .signAndSend(Alice, callback)
 }
 
-async function removeTwinEntity (entityID, callback) {
+async function removeTwinEntity (twinID, entityID, callback) {
   const api = await getApiClient()
   const keyring = new Keyring({ type: 'sr25519' })
   const Alice = keyring.addFromUri('//Alice', { name: 'Alice default' })
 
   return api.tx.templateModule
-    .deleteTwinEntity(entityID)
+    .deleteTwinEntity(twinID, entityID)
     .signAndSend(Alice, callback)
 }
 
@@ -81,13 +81,13 @@ async function getTwin (id) {
   return twin.toJSON()
 }
 
-async function deleteTwin (callback) {
+async function deleteTwin (twinID, callback) {
   const api = await getApiClient()
   const keyring = new Keyring({ type: 'sr25519' })
-  const BOB = keyring.addFromUri('//Bob', { name: 'Bob default' })
+  const BOB = keyring.addFromUri('//Alice', { name: 'Bob default' })
 
   return api.tx.templateModule
-    .deleteTwin()
+    .deleteTwin(twinID)
     .signAndSend(BOB, callback)
 }
 

@@ -41,7 +41,6 @@ decl_storage! {
 		pub EntitiesByNameID get(fn entities_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u64;
 
 		pub Twins get(fn twins): map hasher(blake2_128_concat) u64 => types::Twin<T>;
-		pub TwinsByPubkeyID get(fn twins_by_pubkey_id): map hasher(blake2_128_concat) T::AccountId => u64;
 
 		pub PricingPolicies get(fn pricing_policies): map hasher(blake2_128_concat) u64 => types::PricingPolicy;
 		pub PricingPoliciesByNameID get(fn pricing_policies_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u64;
@@ -321,14 +320,6 @@ decl_module! {
 			// remove entity by pubkey id
 			EntitiesByPubkeyID::<T>::remove(&pub_key);
 
-			// If there is a twin attached, remove that twin
-			if TwinsByPubkeyID::<T>::contains_key(&pub_key) {
-				let twin_id = TwinsByPubkeyID::<T>::get(&pub_key);
-				Twins::<T>::remove(&twin_id);
-				TwinsByPubkeyID::<T>::remove(pub_key);
-				Self::deposit_event(RawEvent::TwinDeleted(twin_id));
-			}
-
 			Self::deposit_event(RawEvent::EntityDeleted(stored_entity_id));
 
 			Ok(())
@@ -337,7 +328,6 @@ decl_module! {
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
 		pub fn create_twin(origin) -> dispatch::DispatchResult {
 			let pub_key = ensure_signed(origin)?;
-			ensure!(!TwinsByPubkeyID::<T>::contains_key(&pub_key), Error::<T>::TwinExists);
 
 			let twin_id = TwinID::get();
 
@@ -348,7 +338,6 @@ decl_module! {
 			};
 
 			Twins::insert(&twin_id, &twin);
-			TwinsByPubkeyID::<T>::insert(&pub_key, &twin_id);
 			TwinID::put(twin_id + 1);
 
 			Self::deposit_event(RawEvent::TwinStored(pub_key, twin_id));
@@ -358,16 +347,18 @@ decl_module! {
 
 		// Method for twins only
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
-		pub fn add_twin_entity(origin, entity_id: u64, signature: Vec<u8>) -> dispatch::DispatchResult {
+		pub fn add_twin_entity(origin, twin_id: u64, entity_id: u64, signature: Vec<u8>) -> dispatch::DispatchResult {
 			let pub_key = ensure_signed(origin)?;
 
-			ensure!(TwinsByPubkeyID::<T>::contains_key(&pub_key), Error::<T>::TwinNotExists);
-			let twin_id = TwinsByPubkeyID::<T>::get(&pub_key);
+			ensure!(Twins::<T>::contains_key(&twin_id), Error::<T>::TwinNotExists);
 
 			ensure!(Entities::<T>::contains_key(&entity_id), Error::<T>::EntityNotExists);
 			let stored_entity = Entities::<T>::get(entity_id);
 
 			let mut twin = Twins::<T>::get(&twin_id);
+			// Make sure only the owner of this twin can call this method
+			ensure!(twin.pub_key == pub_key, Error::<T>::TwinNotExists);
+
 			let entity_proof = types::EntityProof{
 				entity_id,
 				signature: signature.clone()
@@ -425,13 +416,14 @@ decl_module! {
 		}
 
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
-		pub fn delete_twin_entity(origin, entity_id: u64) -> dispatch::DispatchResult {
+		pub fn delete_twin_entity(origin, twin_id: u64, entity_id: u64) -> dispatch::DispatchResult {
 			let pub_key = ensure_signed(origin)?;
-			
-			ensure!(TwinsByPubkeyID::<T>::contains_key(&pub_key), Error::<T>::TwinNotExists);
-			let twin_id = TwinsByPubkeyID::<T>::get(&pub_key);
+
+			ensure!(Twins::<T>::contains_key(&twin_id), Error::<T>::TwinNotExists);
 
 			let mut twin = Twins::<T>::get(&twin_id);
+			// Make sure only the owner of this twin can call this method
+			ensure!(twin.pub_key == pub_key, Error::<T>::TwinNotExists);
 
 			ensure!(twin.entities.iter().any(|v| v.entity_id == entity_id), Error::<T>::EntityNotExists);
 
@@ -447,15 +439,16 @@ decl_module! {
 		}
 
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
-		pub fn delete_twin(origin) -> dispatch::DispatchResult {
+		pub fn delete_twin(origin, twin_id: u64) -> dispatch::DispatchResult {
 			let pub_key = ensure_signed(origin)?;
 
-			ensure!(TwinsByPubkeyID::<T>::contains_key(&pub_key), Error::<T>::TwinNotExists);
+			ensure!(Twins::<T>::contains_key(&twin_id), Error::<T>::TwinNotExists);
 
-			let twin_id = TwinsByPubkeyID::<T>::get(&pub_key);
+			let twin = Twins::<T>::get(&twin_id);
+			// Make sure only the owner of this twin can call this method
+			ensure!(twin.pub_key == pub_key, Error::<T>::TwinNotExists);
 
 			Twins::<T>::remove(&twin_id);
-			TwinsByPubkeyID::<T>::remove(pub_key);
 			
 			Self::deposit_event(RawEvent::TwinDeleted(twin_id));
 
