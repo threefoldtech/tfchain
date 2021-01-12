@@ -231,6 +231,40 @@ fn test_create_twin_works() {
 }
 
 #[test]
+fn test_update_twin_works() {
+	ExternalityBuilder::build().execute_with(|| {
+		let name = "foobar";
+		assert_ok!(TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0));
+
+		let mut peer_id = "some_peer_id";
+		assert_ok!(TemplateModule::create_twin(Origin::signed(alice()), peer_id.as_bytes().to_vec()));
+
+		let twin_id = 0;
+		peer_id = "some_other_peer_id";
+		assert_ok!(TemplateModule::update_twin(Origin::signed(alice()), twin_id, peer_id.as_bytes().to_vec()));
+	});
+}
+
+#[test]
+fn test_update_twin_fails_if_signed_by_someone_else() {
+	ExternalityBuilder::build().execute_with(|| {
+		let name = "foobar";
+		assert_ok!(TemplateModule::create_entity(Origin::signed(alice()), name.as_bytes().to_vec(), 0,0));
+
+		let mut peer_id = "some_peer_id";
+		assert_ok!(TemplateModule::create_twin(Origin::signed(alice()), peer_id.as_bytes().to_vec()));
+
+		let twin_id = 0;
+		peer_id = "some_other_peer_id";
+		assert_noop!(
+			TemplateModule::update_twin(Origin::signed(bob()), twin_id, peer_id.as_bytes().to_vec()),
+			Error::<TestRuntime>::UnauthorizedToUpdateTwin
+		);
+	});
+}
+
+
+#[test]
 fn test_delete_twin_works() {
 	ExternalityBuilder::build().execute_with(|| {
 		let name = "foobar";

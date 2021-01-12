@@ -71,6 +71,8 @@ decl_event!(
 		EntityDeleted(u64),
 
 		TwinStored(AccountId, u64, Vec<u8>),
+		TwinUpdated(u64, Vec<u8>),
+
 		TwinEntityStored(u64, u64, Vec<u8>),
 		TwinEntityRemoved(u64, u64),
 		TwinDeleted(u64),
@@ -104,6 +106,7 @@ decl_error! {
 		TwinExists,
 		TwinNotExists,
 		CannotCreateTwin,
+		UnauthorizedToUpdateTwin,
 
 		PricingPolicyExists,
 
@@ -346,6 +349,30 @@ decl_module! {
 			Ok(())
 		}
 
+		#[weight = 10_000 + T::DbWeight::get().writes(1)]
+		pub fn update_twin(origin, twin_id: u64, peer_id: Vec<u8>) -> dispatch::DispatchResult {
+			let pub_key = ensure_signed(origin)?;
+
+			ensure!(Twins::<T>::contains_key(&twin_id), Error::<T>::TwinNotExists);
+
+			let twin = Twins::<T>::get(&twin_id);
+			// Make sure only the owner of this twin can update his twin
+			ensure!(twin.pub_key == pub_key, Error::<T>::UnauthorizedToUpdateTwin);
+
+			let updated_twin = types::Twin::<T> {
+				twin_id,
+				pub_key: twin.pub_key,
+				entities: twin.entities,
+				peer_id: peer_id.clone()
+			};
+
+			Twins::insert(&twin_id, &updated_twin);
+
+			Self::deposit_event(RawEvent::TwinUpdated(twin_id, peer_id));
+			
+			Ok(())
+		}
+
 		// Method for twins only
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
 		pub fn add_twin_entity(origin, twin_id: u64, entity_id: u64, signature: Vec<u8>) -> dispatch::DispatchResult {
@@ -358,7 +385,7 @@ decl_module! {
 
 			let mut twin = Twins::<T>::get(&twin_id);
 			// Make sure only the owner of this twin can call this method
-			ensure!(twin.pub_key == pub_key, Error::<T>::TwinNotExists);
+			ensure!(twin.pub_key == pub_key, Error::<T>::UnauthorizedToUpdateTwin);
 
 			let entity_proof = types::EntityProof{
 				entity_id,
@@ -424,7 +451,7 @@ decl_module! {
 
 			let mut twin = Twins::<T>::get(&twin_id);
 			// Make sure only the owner of this twin can call this method
-			ensure!(twin.pub_key == pub_key, Error::<T>::TwinNotExists);
+			ensure!(twin.pub_key == pub_key, Error::<T>::UnauthorizedToUpdateTwin);
 
 			ensure!(twin.entities.iter().any(|v| v.entity_id == entity_id), Error::<T>::EntityNotExists);
 
@@ -447,7 +474,7 @@ decl_module! {
 
 			let twin = Twins::<T>::get(&twin_id);
 			// Make sure only the owner of this twin can call this method
-			ensure!(twin.pub_key == pub_key, Error::<T>::TwinNotExists);
+			ensure!(twin.pub_key == pub_key, Error::<T>::UnauthorizedToUpdateTwin);
 
 			Twins::<T>::remove(&twin_id);
 			
