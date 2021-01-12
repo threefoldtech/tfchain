@@ -44,13 +44,13 @@ async function deleteEntity (callback) {
     .signAndSend(BOB, callback)
 }
 
-async function createTwin (callback) {
+async function createTwin (peerID, callback) {
   const api = await getApiClient()
   const keyring = new Keyring({ type: 'sr25519' })
   const Alice = keyring.addFromUri('//Alice', { name: 'Alice default' })
 
   return api.tx.templateModule
-    .createTwin()
+    .createTwin(peerID)
     .signAndSend(Alice, callback)
 }
 
@@ -78,7 +78,9 @@ async function getTwin (id) {
   const api = await getApiClient()
   const twin = await api.query.templateModule.twins(id)
 
-  return twin.toJSON()
+  const res = twin.toJSON()
+  res.peer_id = hex2a(res.peer_id)
+  return res
 }
 
 async function deleteTwin (twinID, callback) {

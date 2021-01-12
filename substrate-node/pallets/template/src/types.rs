@@ -64,6 +64,7 @@ impl<T> Default for Entity<T>
 pub struct Twin<T: super::Trait> {
 	pub twin_id: u64,
 	pub pub_key: T::AccountId,
+	pub peer_id: Vec<u8>,
 	pub entities: Vec<EntityProof>
 }
 
@@ -76,6 +77,7 @@ impl<T> Default for Twin<T>
         Twin {
 			twin_id: 0,
 			pub_key,
+			peer_id: Vec::new(),
 			entities: Vec::new()
         }
     }

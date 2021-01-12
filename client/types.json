@@ -19,6 +19,7 @@
   "Twin": {
     "twin_id": "u64",
     "pub_key": "AccountId",
+    "peer_id": "Vec<u8>",
     "entities": "Vec<EntityProof>"
   },
   "EntityProof": {

@@ -57,7 +57,13 @@ const argv = yargs
       type: 'string'
     }
   })
-  .command('createTwin', 'Create a twin')
+  .command('createTwin', 'Create a twin', {
+    peerID: {
+      description: 'peer ID',
+      alias: 'id',
+      type: 'string'
+    }
+  })
   .command('getTwin', 'Get a twin by ID', {
     id: {
       description: 'twin ID',
@@ -233,7 +239,7 @@ if (argv._.includes('deleteEntity')) {
   })
 }
 if (argv._.includes('createTwin')) {
-  createTwin(({ events = [], status }) => {
+  createTwin(argv.peerID, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
