@@ -18,9 +18,12 @@ export class Twin extends BaseModel {
   @StringField({})
   pubKey!: string;
 
+  @StringField({})
+  peerId!: string;
+
   @ManyToOne(
     () => EntityProof,
-    (param: EntityProof) => param.twin,
+    (param: EntityProof) => param.twinRel,
     { skipGraphQLField: true }
   )
   twinEntities!: EntityProof;

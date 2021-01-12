@@ -22,7 +22,7 @@ export class EntityProof extends BaseModel {
     () => Twin,
     (param: Twin) => param.twin_entities
   )
-  twin?: Twin[];
+  twinRel?: Twin[];
 
   constructor(init?: Partial<EntityProof>) {
     super();
