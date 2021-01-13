@@ -3,6 +3,8 @@ use anyhow::{Context, Result};
 use sp_keyring::AccountKeyring;
 use substrate_subxt::{extrinsic, ClientBuilder, NodeTemplateRuntime, PairSigner, RuntimeVersion};
 
+use node_template_runtime;
+
 #[tokio::main]
 async fn main() -> Result<()> {
     //println!("Hello, world!");
