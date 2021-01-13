@@ -30,6 +30,9 @@ import {
 import { Twin } from './twin.model';
 import { TwinService } from './twin.service';
 
+import { EntityProof } from '../entity-proof/entity-proof.model';
+import { getConnection } from 'typeorm';
+
 @ObjectType()
 export class TwinEdge {
   @Field(() => Twin, { nullable: false })
@@ -118,5 +121,16 @@ export class TwinResolver {
     }
 
     return result as Promise<TwinConnection>;
+  }
+
+  @FieldResolver(() => EntityProof)
+  async twin_entities(@Root() r: Twin): Promise<EntityProof[] | null> {
+    const result = await getConnection()
+      .getRepository(Twin)
+      .findOne(r.id, { relations: ['twin_entities'] });
+    if (result && result.twin_entities !== undefined) {
+      return result.twin_entities;
+    }
+    return null;
   }
 }

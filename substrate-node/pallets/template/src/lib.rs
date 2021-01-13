@@ -17,8 +17,6 @@ use frame_system::{
 use codec::{Encode};
 
 use hex::{FromHex};
-use sp_runtime::{AnySignature};
-use sp_runtime::traits::{Verify};
 
 use sp_std::prelude::*;
 
@@ -43,7 +41,6 @@ decl_storage! {
 		pub EntitiesByNameID get(fn entities_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u64;
 
 		pub Twins get(fn twins): map hasher(blake2_128_concat) u64 => types::Twin<T>;
-		pub TwinsByPubkeyID get(fn twins_by_pubkey_id): map hasher(blake2_128_concat) T::AccountId => u64;
 
 		pub PricingPolicies get(fn pricing_policies): map hasher(blake2_128_concat) u64 => types::PricingPolicy;
 		pub PricingPoliciesByNameID get(fn pricing_policies_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u64;
@@ -73,8 +70,11 @@ decl_event!(
 		EntityUpdated(u64, Vec<u8>, u64, u64, AccountId),
 		EntityDeleted(u64),
 
-		TwinStored(AccountId, u64),
+		TwinStored(AccountId, u64, Vec<u8>),
+		TwinUpdated(u64, Vec<u8>),
+
 		TwinEntityStored(u64, u64, Vec<u8>),
+		TwinEntityRemoved(u64, u64),
 		TwinDeleted(u64),
 
 		PricingPolicyStored(Vec<u8>, u64),
@@ -99,12 +99,14 @@ decl_error! {
 		EntityWithPubkeyExists,
 		EntityNotExists,
 		EntitySignatureDoesNotMatch,
+		EntityWithSignatureAlreadyExists,
 		CannotUpdateEntity,
 		CannotDeleteEntity,
 	
 		TwinExists,
 		TwinNotExists,
 		CannotCreateTwin,
+		UnauthorizedToUpdateTwin,
 
 		PricingPolicyExists,
 
@@ -321,59 +323,81 @@ decl_module! {
 			// remove entity by pubkey id
 			EntitiesByPubkeyID::<T>::remove(&pub_key);
 
-			// If there is a twin attached, remove that twin
-			if TwinsByPubkeyID::<T>::contains_key(&pub_key) {
-				let twin_id = TwinsByPubkeyID::<T>::get(&pub_key);
-				Twins::<T>::remove(&twin_id);
-				TwinsByPubkeyID::<T>::remove(pub_key);
-				Self::deposit_event(RawEvent::TwinDeleted(twin_id));
-			}
-
 			Self::deposit_event(RawEvent::EntityDeleted(stored_entity_id));
 
 			Ok(())
 		}
 
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
-		pub fn create_twin(origin) -> dispatch::DispatchResult {
+		pub fn create_twin(origin, peer_id: Vec<u8>) -> dispatch::DispatchResult {
 			let pub_key = ensure_signed(origin)?;
-			ensure!(!TwinsByPubkeyID::<T>::contains_key(&pub_key), Error::<T>::TwinExists);
 
 			let twin_id = TwinID::get();
 
 			let twin = types::Twin::<T> {
 				twin_id,
 				pub_key: pub_key.clone(),
-				entities: Vec::new()
+				entities: Vec::new(),
+				peer_id: peer_id.clone()
 			};
 
 			Twins::insert(&twin_id, &twin);
-			TwinsByPubkeyID::<T>::insert(&pub_key, &twin_id);
 			TwinID::put(twin_id + 1);
 
-			Self::deposit_event(RawEvent::TwinStored(pub_key, twin_id));
+			Self::deposit_event(RawEvent::TwinStored(pub_key, twin_id, peer_id));
+			
+			Ok(())
+		}
+
+		#[weight = 10_000 + T::DbWeight::get().writes(1)]
+		pub fn update_twin(origin, twin_id: u64, peer_id: Vec<u8>) -> dispatch::DispatchResult {
+			let pub_key = ensure_signed(origin)?;
+
+			ensure!(Twins::<T>::contains_key(&twin_id), Error::<T>::TwinNotExists);
+
+			let twin = Twins::<T>::get(&twin_id);
+			// Make sure only the owner of this twin can update his twin
+			ensure!(twin.pub_key == pub_key, Error::<T>::UnauthorizedToUpdateTwin);
+
+			let updated_twin = types::Twin::<T> {
+				twin_id,
+				pub_key: twin.pub_key,
+				entities: twin.entities,
+				peer_id: peer_id.clone()
+			};
+
+			Twins::insert(&twin_id, &updated_twin);
+
+			Self::deposit_event(RawEvent::TwinUpdated(twin_id, peer_id));
 			
 			Ok(())
 		}
 
 		// Method for twins only
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
-		pub fn add_entity(origin, entity_id: u64, signature: Vec<u8>) -> dispatch::DispatchResult {
+		pub fn add_twin_entity(origin, twin_id: u64, entity_id: u64, signature: Vec<u8>) -> dispatch::DispatchResult {
 			let pub_key = ensure_signed(origin)?;
 
-			debug::info!("Hello");
-
-			ensure!(TwinsByPubkeyID::<T>::contains_key(&pub_key), Error::<T>::TwinNotExists);
-			let twin_id = TwinsByPubkeyID::<T>::get(&pub_key);
+			ensure!(Twins::<T>::contains_key(&twin_id), Error::<T>::TwinNotExists);
 
 			ensure!(Entities::<T>::contains_key(&entity_id), Error::<T>::EntityNotExists);
 			let stored_entity = Entities::<T>::get(entity_id);
+
+			let mut twin = Twins::<T>::get(&twin_id);
+			// Make sure only the owner of this twin can call this method
+			ensure!(twin.pub_key == pub_key, Error::<T>::UnauthorizedToUpdateTwin);
+
+			let entity_proof = types::EntityProof{
+				entity_id,
+				signature: signature.clone()
+			};
+
+			ensure!(!twin.entities.contains(&entity_proof), Error::<T>::EntityWithSignatureAlreadyExists);
 
 			let decoded_signature_as_byteslice = <[u8; 64]>::from_hex(signature.clone()).expect("Decoding failed");
 
 			// Decode signature into a ed25519 signature
 			let ed25519_signature = sp_core::ed25519::Signature::from_raw(decoded_signature_as_byteslice);
-
 			// let sr25519_signature = sp_core::sr25519::Signature::from_raw(decoded_signature_as_byteslice);
 
 			// Decode entity's public key
@@ -407,16 +431,11 @@ decl_module! {
 			ensure!(sp_io::crypto::ed25519_verify(&ed25519_signature, &message, &entity_pubkey_ed25519), Error::<T>::EntitySignatureDoesNotMatch);
 			
 			debug::info!("Signature is valid");
-			let mut twin = Twins::<T>::get(&twin_id);
-
-			let entity_proof = types::EntityProof{
-				entity_id,
-				signature: signature.clone()
-			};
 
 			// Store proof
 			twin.entities.push(entity_proof);
 
+			// Update twin
 			Twins::insert(&twin_id, &twin);
 
 			Self::deposit_event(RawEvent::TwinEntityStored(twin_id, entity_id, signature));
@@ -425,15 +444,39 @@ decl_module! {
 		}
 
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
-		pub fn delete_twin(origin) -> dispatch::DispatchResult {
+		pub fn delete_twin_entity(origin, twin_id: u64, entity_id: u64) -> dispatch::DispatchResult {
 			let pub_key = ensure_signed(origin)?;
 
-			ensure!(TwinsByPubkeyID::<T>::contains_key(&pub_key), Error::<T>::TwinNotExists);
+			ensure!(Twins::<T>::contains_key(&twin_id), Error::<T>::TwinNotExists);
 
-			let twin_id = TwinsByPubkeyID::<T>::get(&pub_key);
+			let mut twin = Twins::<T>::get(&twin_id);
+			// Make sure only the owner of this twin can call this method
+			ensure!(twin.pub_key == pub_key, Error::<T>::UnauthorizedToUpdateTwin);
+
+			ensure!(twin.entities.iter().any(|v| v.entity_id == entity_id), Error::<T>::EntityNotExists);
+
+			let index = twin.entities.iter().position(|x| x.entity_id == entity_id).unwrap();
+			twin.entities.remove(index);
+
+			// Update twin
+			Twins::insert(&twin_id, &twin);
+
+			Self::deposit_event(RawEvent::TwinEntityRemoved(twin_id, entity_id));
+
+			Ok(())
+		}
+
+		#[weight = 10_000 + T::DbWeight::get().writes(1)]
+		pub fn delete_twin(origin, twin_id: u64) -> dispatch::DispatchResult {
+			let pub_key = ensure_signed(origin)?;
+
+			ensure!(Twins::<T>::contains_key(&twin_id), Error::<T>::TwinNotExists);
+
+			let twin = Twins::<T>::get(&twin_id);
+			// Make sure only the owner of this twin can call this method
+			ensure!(twin.pub_key == pub_key, Error::<T>::UnauthorizedToUpdateTwin);
 
 			Twins::<T>::remove(&twin_id);
-			TwinsByPubkeyID::<T>::remove(pub_key);
 			
 			Self::deposit_event(RawEvent::TwinDeleted(twin_id));
 

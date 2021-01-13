@@ -10,7 +10,9 @@ const {
   deleteTwin,
   createFarm,
   getFarm,
-  deleteFarm
+  deleteFarm,
+  addTwinEntity,
+  removeTwinEntity
 } = require('./src/contracts')
 
 const argv = yargs
@@ -55,7 +57,13 @@ const argv = yargs
       type: 'string'
     }
   })
-  .command('createTwin', 'Create a twin')
+  .command('createTwin', 'Create a twin', {
+    peerID: {
+      description: 'peer ID',
+      alias: 'id',
+      type: 'string'
+    }
+  })
   .command('getTwin', 'Get a twin by ID', {
     id: {
       description: 'twin ID',
@@ -63,7 +71,42 @@ const argv = yargs
       type: 'string'
     }
   })
-  .command('deleteTwin', 'Delete your twin')
+  .command('addTwinEntity', 'Add an entity to a twin', {
+    signature: {
+      description: 'Signature of the entity id + the twin id',
+      alias: 'sig',
+      type: 'string'
+    },
+    twin_id: {
+      description: 'Id of the twin',
+      alias: 'twin',
+      type: 'number'
+    },
+    entity_id: {
+      description: 'Id of the entity',
+      alias: 'entity',
+      type: 'number'
+    }
+  })
+  .command('deleteTwinEntity', 'Delete twin entity by id', {
+    twin_id: {
+      description: 'Id of the twin',
+      alias: 'twin',
+      type: 'number'
+    },
+    id: {
+      description: 'entity ID',
+      alias: 'id',
+      type: 'number'
+    }
+  })
+  .command('deleteTwin', 'Delete your twin', {
+    twin_id: {
+      description: 'Id of the twin',
+      alias: 'twin',
+      type: 'number'
+    }
+  })
   .command('createFarm', 'Create a Farm', {
     name: {
       description: 'Name of the farm',
@@ -196,7 +239,43 @@ if (argv._.includes('deleteEntity')) {
   })
 }
 if (argv._.includes('createTwin')) {
-  createTwin(({ events = [], status }) => {
+  createTwin(argv.peerID, ({ events = [], status }) => {
+    console.log(`Current status is ${status.type}`)
+
+    if (status.isFinalized) {
+      console.log(`Transaction included at blockHash ${status.asFinalized}`)
+
+      // Loop through Vec<EventRecord> to display all events
+      events.forEach(({ phase, event: { data, method, section } }) => {
+        console.log(`\t' ${phase}: ${section}.${method}:: ${data}`)
+      })
+      exit(1)
+    }
+  }).catch(err => {
+    console.log(err)
+    exit(1)
+  })
+}
+if (argv._.includes('addTwinEntity')) {
+  addTwinEntity(argv.twin, argv.entity, argv.sig, ({ events = [], status }) => {
+    console.log(`Current status is ${status.type}`)
+
+    if (status.isFinalized) {
+      console.log(`Transaction included at blockHash ${status.asFinalized}`)
+
+      // Loop through Vec<EventRecord> to display all events
+      events.forEach(({ phase, event: { data, method, section } }) => {
+        console.log(`\t' ${phase}: ${section}.${method}:: ${data}`)
+      })
+      exit(1)
+    }
+  }).catch(err => {
+    console.log(err)
+    exit(1)
+  })
+}
+if (argv._.includes('deleteTwinEntity')) {
+  removeTwinEntity(argv.twin, argv.entity, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -221,7 +300,7 @@ if (argv._.includes('getTwin')) {
 
   getTwin(argv.id)
     .then(contract => {
-      console.log('\n entity: ')
+      console.log('\n twin: ')
       console.log(contract)
       exit(0)
     })
@@ -231,7 +310,7 @@ if (argv._.includes('getTwin')) {
     })
 }
 if (argv._.includes('deleteTwin')) {
-  deleteTwin(({ events = [], status }) => {
+  deleteTwin(argv.twin, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {

@@ -1,6 +1,8 @@
-import { BaseModel, NumericField, Model, StringField } from 'warthog';
+import { BaseModel, NumericField, Model, ManyToOne, StringField } from 'warthog';
 
 import BN from 'bn.js';
+
+import { EntityProof } from '../entity-proof/entity-proof.model';
 
 @Model({ api: {} })
 export class Twin extends BaseModel {
@@ -16,14 +18,15 @@ export class Twin extends BaseModel {
   @StringField({})
   pubKey!: string;
 
-  @NumericField({
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
-  })
-  entityId!: BN;
+  @StringField({})
+  peerId!: string;
+
+  @ManyToOne(
+    () => EntityProof,
+    (param: EntityProof) => param.twinRel,
+    { skipGraphQLField: true }
+  )
+  twinEntities!: EntityProof;
 
   constructor(init?: Partial<Twin>) {
     super();
