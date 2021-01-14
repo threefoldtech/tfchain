@@ -48,7 +48,7 @@ export async function templateModule_TwinEntityStored(db: DB, event: SubstrateEv
     entityProof.signature = Buffer.from(signature.value as string).toString()
     
     // and the twin foreign key to entityproof
-    entityProof.twinRel.push(savedTwin)
+    entityProof.twinRel = savedTwin
 
     await db.save<EntityProof>(entityProof)
   }

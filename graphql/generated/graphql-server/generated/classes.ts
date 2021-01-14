@@ -60,10 +60,7 @@ export enum TwinOrderByEnum {
   pubKey_DESC = "pubKey_DESC",
 
   peerId_ASC = "peerId_ASC",
-  peerId_DESC = "peerId_DESC",
-
-  twinEntitiesId_ASC = "twinEntitiesId_ASC",
-  twinEntitiesId_DESC = "twinEntitiesId_DESC"
+  peerId_DESC = "peerId_DESC"
 }
 
 registerEnumType(TwinOrderByEnum, {
@@ -191,12 +188,6 @@ export class TwinWhereInput {
 
   @TypeGraphQLField(() => [String], { nullable: true })
   peerId_in?: string[];
-
-  @TypeGraphQLField(() => ID, { nullable: true })
-  twinEntitiesId_eq?: string;
-
-  @TypeGraphQLField(() => [ID], { nullable: true })
-  twinEntitiesId_in?: string[];
 }
 
 @TypeGraphQLInputType()
@@ -215,9 +206,6 @@ export class TwinCreateInput {
 
   @TypeGraphQLField()
   peerId!: string;
-
-  @TypeGraphQLField(() => ID)
-  twinEntitiesId!: string;
 }
 
 @TypeGraphQLInputType()
@@ -230,9 +218,6 @@ export class TwinUpdateInput {
 
   @TypeGraphQLField({ nullable: true })
   peerId?: string;
-
-  @TypeGraphQLField(() => ID, { nullable: true })
-  twinEntitiesId?: string;
 }
 
 @ArgsType()
@@ -270,7 +255,10 @@ export enum EntityProofOrderByEnum {
   entityId_DESC = "entityId_DESC",
 
   signature_ASC = "signature_ASC",
-  signature_DESC = "signature_DESC"
+  signature_DESC = "signature_DESC",
+
+  twinRelId_ASC = "twinRelId_ASC",
+  twinRelId_DESC = "twinRelId_DESC"
 }
 
 registerEnumType(EntityProofOrderByEnum, {
@@ -383,6 +371,12 @@ export class EntityProofWhereInput {
 
   @TypeGraphQLField(() => [String], { nullable: true })
   signature_in?: string[];
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  twinRelId_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  twinRelId_in?: string[];
 }
 
 @TypeGraphQLInputType()
@@ -398,6 +392,9 @@ export class EntityProofCreateInput {
 
   @TypeGraphQLField()
   signature!: string;
+
+  @TypeGraphQLField(() => ID)
+  twinRelId!: string;
 }
 
 @TypeGraphQLInputType()
@@ -407,6 +404,9 @@ export class EntityProofUpdateInput {
 
   @TypeGraphQLField({ nullable: true })
   signature?: string;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  twinRelId?: string;
 }
 
 @ArgsType()
@@ -704,8 +704,8 @@ export enum FarmOrderByEnum {
   twinId_ASC = "twinId_ASC",
   twinId_DESC = "twinId_DESC",
 
-  pricingPolicId_ASC = "pricingPolicId_ASC",
-  pricingPolicId_DESC = "pricingPolicId_DESC",
+  pricingPolicyId_ASC = "pricingPolicyId_ASC",
+  pricingPolicyId_DESC = "pricingPolicyId_DESC",
 
   certificationType_ASC = "certificationType_ASC",
   certificationType_DESC = "certificationType_DESC",
@@ -865,22 +865,22 @@ export class FarmWhereInput {
   twinId_in?: BN[];
 
   @TypeGraphQLField(() => BigInt, { nullable: true })
-  pricingPolicId_eq?: BN;
+  pricingPolicyId_eq?: BN;
 
   @TypeGraphQLField(() => BigInt, { nullable: true })
-  pricingPolicId_gt?: BN;
+  pricingPolicyId_gt?: BN;
 
   @TypeGraphQLField(() => BigInt, { nullable: true })
-  pricingPolicId_gte?: BN;
+  pricingPolicyId_gte?: BN;
 
   @TypeGraphQLField(() => BigInt, { nullable: true })
-  pricingPolicId_lt?: BN;
+  pricingPolicyId_lt?: BN;
 
   @TypeGraphQLField(() => BigInt, { nullable: true })
-  pricingPolicId_lte?: BN;
+  pricingPolicyId_lte?: BN;
 
   @TypeGraphQLField(() => [BigInt], { nullable: true })
-  pricingPolicId_in?: BN[];
+  pricingPolicyId_in?: BN[];
 
   @TypeGraphQLField(() => CertificationType, { nullable: true })
   certificationType_eq?: CertificationType;
@@ -946,7 +946,7 @@ export class FarmCreateInput {
   twinId!: BN;
 
   @TypeGraphQLField(() => BigInt)
-  pricingPolicId!: BN;
+  pricingPolicyId!: BN;
 
   @TypeGraphQLField(() => CertificationType)
   certificationType!: CertificationType;
@@ -973,7 +973,7 @@ export class FarmUpdateInput {
   twinId?: BN;
 
   @TypeGraphQLField(() => BigInt, { nullable: true })
-  pricingPolicId?: BN;
+  pricingPolicyId?: BN;
 
   @TypeGraphQLField(() => CertificationType, { nullable: true })
   certificationType?: CertificationType;

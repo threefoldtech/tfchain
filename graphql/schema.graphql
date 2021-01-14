@@ -19,7 +19,6 @@ type Twin @entity {
   twinId: BigInt!
   pubKey: String!
   peerId: String!
-  twinEntities: [EntityProof!] @derivedFrom(field: "twinRel")
 }
 
 type EntityProof @entity {
@@ -33,7 +32,7 @@ type Farm @entity {
   name: String!
   entityId: BigInt!
   twinId: BigInt!
-  pricingPolicId: BigInt!
+  pricingPolicyId: BigInt!
   certification_type: CertificationType!
   countryId: BigInt
   cityId: BigInt

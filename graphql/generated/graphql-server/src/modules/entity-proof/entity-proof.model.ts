@@ -1,4 +1,4 @@
-import { BaseModel, NumericField, Model, OneToMany, StringField } from 'warthog';
+import { BaseModel, NumericField, Model, ManyToOne, StringField } from 'warthog';
 
 import BN from 'bn.js';
 
@@ -18,11 +18,12 @@ export class EntityProof extends BaseModel {
   @StringField({})
   signature!: string;
 
-  @OneToMany(
+  @ManyToOne(
     () => Twin,
-    (param: Twin) => param.twinEntities
+    (param: Twin) => param.entityprooftwinRel,
+    { skipGraphQLField: true }
   )
-  twinRel?: Twin[];
+  twinRel!: Twin;
 
   constructor(init?: Partial<EntityProof>) {
     super();
