@@ -20,7 +20,7 @@ export class EntityProof extends BaseModel {
 
   @OneToMany(
     () => Twin,
-    (param: Twin) => param.twin_entities
+    (param: Twin) => param.twinEntities
   )
   twinRel?: Twin[];
 

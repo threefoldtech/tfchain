@@ -44,7 +44,7 @@ export class Farm extends BaseModel {
         dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
     }
   })
-  pricingPolicyId!: BN;
+  pricingPolicId!: BN;
 
   @EnumField('CertificationType', CertificationType, {})
   certificationType!: CertificationType;

@@ -8,22 +8,22 @@ type Transfer @entity {
 } 
 
 type Entity @entity {
-  entity_id: BigInt!
+  entityId: BigInt!
   name: String!
-  country_id: BigInt
-  city_id: BigInt
-  pub_key: String!
+  countryId: BigInt
+  cityId: BigInt
+  pubKey: String!
 }
 
 type Twin @entity {
-  twin_id: BigInt!
-  pub_key: String!
-  peer_id: String!
-  twin_entities: [EntityProof!] @derivedFrom(field: "twinRel")
+  twinId: BigInt!
+  pubKey: String!
+  peerId: String!
+  twinEntities: [EntityProof!] @derivedFrom(field: "twinRel")
 }
 
 type EntityProof @entity {
-  entity_id: BigInt!
+  entityId: BigInt!
   signature: String!
   twinRel: Twin!
 }
@@ -31,12 +31,12 @@ type EntityProof @entity {
 type Farm @entity {
   farm_id: BigInt!
   name: String!
-  entity_id: BigInt!
-  twin_id: BigInt!
-  pricing_policy_id: BigInt!
+  entityId: BigInt!
+  twinId: BigInt!
+  pricingPolicId: BigInt!
   certification_type: CertificationType!
-  country_id: BigInt
-  city_id: BigInt
+  countryId: BigInt
+  cityId: BigInt
 }
 
 enum CertificationType {
@@ -48,11 +48,11 @@ enum CertificationType {
 type Node @entity {
   node_id: BigInt!
   farm_id: BigInt!
-  twin_id: BigInt!
+  twinId: BigInt!
   resources: Resource!
   location: Location!
-  country_id: BigInt
-  city_id: BigInt
+  countryId: BigInt
+  cityId: BigInt
 }
 
 type Resource @entity {
@@ -68,7 +68,7 @@ type Location @entity {
 }
 
 type PricingPolicy @entity {
-  pricing_policy_id: BigInt!
+  pricingPolicyId: BigInt!
   name: String!
   currency: String!
   su: BigInt!

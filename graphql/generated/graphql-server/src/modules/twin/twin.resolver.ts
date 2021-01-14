@@ -124,12 +124,12 @@ export class TwinResolver {
   }
 
   @FieldResolver(() => EntityProof)
-  async twin_entities(@Root() r: Twin): Promise<EntityProof[] | null> {
+  async twinEntities(@Root() r: Twin): Promise<EntityProof[] | null> {
     const result = await getConnection()
       .getRepository(Twin)
-      .findOne(r.id, { relations: ['twin_entities'] });
-    if (result && result.twin_entities !== undefined) {
-      return result.twin_entities;
+      .findOne(r.id, { relations: ['twinEntities'] });
+    if (result && result.twinEntities !== undefined) {
+      return result.twinEntities;
     }
     return null;
   }
