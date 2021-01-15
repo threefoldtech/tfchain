@@ -37,10 +37,11 @@ decl_storage! {
 		pub Nodes get(fn nodes): map hasher(blake2_128_concat) u64 => types::Node;
 		
 		pub Entities get(fn entities): map hasher(blake2_128_concat) u64 => types::Entity<T>;
-		pub EntitiesByPubkeyID get(fn _by_pubkey_id): map hasher(blake2_128_concat) T::AccountId => u64;
+		pub EntitiesByPubkeyID get(fn entities_by_pubkey_id): map hasher(blake2_128_concat) T::AccountId => u64;
 		pub EntitiesByNameID get(fn entities_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u64;
 
 		pub Twins get(fn twins): map hasher(blake2_128_concat) u64 => types::Twin<T>;
+		pub TwinsByPubkey get(fn twin_ids_by_pubkey): map hasher(blake2_128_concat) T::AccountId => Vec<u64>;
 
 		pub PricingPolicies get(fn pricing_policies): map hasher(blake2_128_concat) u64 => types::PricingPolicy;
 		pub PricingPoliciesByNameID get(fn pricing_policies_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u64;
@@ -344,6 +345,11 @@ decl_module! {
 			Twins::insert(&twin_id, &twin);
 			TwinID::put(twin_id + 1);
 
+			// add the twin id to this users map of twin ids
+			let mut twins_by_pubkey = TwinsByPubkey::<T>::get(&pub_key.clone());
+			twins_by_pubkey.push(twin_id);
+			TwinsByPubkey::<T>::insert(&pub_key.clone(), twins_by_pubkey);
+
 			Self::deposit_event(RawEvent::TwinStored(pub_key, twin_id, peer_id));
 			
 			Ok(())
@@ -477,6 +483,13 @@ decl_module! {
 			ensure!(twin.pub_key == pub_key, Error::<T>::UnauthorizedToUpdateTwin);
 
 			Twins::<T>::remove(&twin_id);
+
+			// remove twin id from this users map of twin ids
+			let mut twins_by_pubkey = TwinsByPubkey::<T>::get(&pub_key.clone());
+			if let Some(pos) = twins_by_pubkey.iter().position(|x| *x == twin_id) {
+				twins_by_pubkey.remove(pos);
+				TwinsByPubkey::<T>::insert(&pub_key.clone(), twins_by_pubkey);
+			}
 			
 			Self::deposit_event(RawEvent::TwinDeleted(twin_id));
 
