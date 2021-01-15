@@ -43,7 +43,7 @@ services:
       - TYPES_JSON=/types.json
     volumes:
       - type: bind
-        source: /home/dylan/Projects/substrate-tfgrid/client/types.json
+        source: /Users/dylan/Projects/tfgrid-substrate/client/types.json
         target: /home/hydra-indexer/types.json
     depends_on: 
       - db
