@@ -31,6 +31,11 @@ const argv = yargs
       description: 'Id of the city',
       alias: 't',
       type: 'number'
+    },
+    mnemonic: {
+      description: 'Mnemonic to sign with',
+      alias: 'm',
+      type: 'string'
     }
   })
   .command('updateEntity', 'Update a an entity', {
@@ -48,6 +53,11 @@ const argv = yargs
       description: 'Id of the city',
       alias: 't',
       type: 'number'
+    },
+    mnemonic: {
+      description: 'Mnemonic to sign with',
+      alias: 'm',
+      type: 'string'
     }
   })
   .command('getEntity', 'Get a entity by ID', {
@@ -61,6 +71,11 @@ const argv = yargs
     peerID: {
       description: 'peer ID',
       alias: 'id',
+      type: 'string'
+    },
+    mnemonic: {
+      description: 'Mnemonic to sign with',
+      alias: 'm',
       type: 'string'
     }
   })
@@ -86,6 +101,11 @@ const argv = yargs
       description: 'Id of the entity',
       alias: 'entity',
       type: 'number'
+    },
+    mnemonic: {
+      description: 'Mnemonic to sign with',
+      alias: 'm',
+      type: 'string'
     }
   })
   .command('deleteTwinEntity', 'Delete twin entity by id', {
@@ -98,6 +118,11 @@ const argv = yargs
       description: 'entity ID',
       alias: 'id',
       type: 'number'
+    },
+    mnemonic: {
+      description: 'Mnemonic to sign with',
+      alias: 'm',
+      type: 'string'
     }
   })
   .command('deleteTwin', 'Delete your twin', {
@@ -105,6 +130,11 @@ const argv = yargs
       description: 'Id of the twin',
       alias: 'twin',
       type: 'number'
+    },
+    mnemonic: {
+      description: 'Mnemonic to sign with',
+      alias: 'm',
+      type: 'string'
     }
   })
   .command('createFarm', 'Create a Farm', {
@@ -142,12 +172,22 @@ const argv = yargs
       description: 'Id of the country',
       alias: 'countryID',
       type: 'number'
+    },
+    mnemonic: {
+      description: 'Mnemonic to sign with',
+      alias: 'm',
+      type: 'string'
     }
   })
   .command('deleteFarm', 'Delete a farm by id', {
     id: {
       description: 'farm ID',
       alias: 'id',
+      type: 'string'
+    },
+    mnemonic: {
+      description: 'Mnemonic to sign with',
+      alias: 'm',
       type: 'string'
     }
   })
@@ -162,7 +202,7 @@ if (argv._.includes('createEntity')) {
   //   exit(1)
   // }
 
-  createEntity(argv.n, argv.c, argv.t, ({ events = [], status }) => {
+  createEntity(argv.n, argv.c, argv.t, argv.m, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -186,7 +226,7 @@ if (argv._.includes('updateEntity')) {
   //   exit(1)
   // }
 
-  updateEntity(argv.n, argv.c, argv.t, ({ events = [], status }) => {
+  updateEntity(argv.n, argv.c, argv.t, argv.m, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -221,7 +261,7 @@ if (argv._.includes('getEntity')) {
     })
 }
 if (argv._.includes('deleteEntity')) {
-  deleteEntity()
+  deleteEntity(argv.m)
     .then(() => exit(0))
     .catch(err => {
       console.log(err)
@@ -229,7 +269,7 @@ if (argv._.includes('deleteEntity')) {
     })
 }
 if (argv._.includes('createTwin')) {
-  createTwin(argv.peerID, ({ events = [], status }) => {
+  createTwin(argv.peerID, argv.m, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -247,7 +287,7 @@ if (argv._.includes('createTwin')) {
   })
 }
 if (argv._.includes('addTwinEntity')) {
-  addTwinEntity(argv.twin, argv.entity, argv.sig, ({ events = [], status }) => {
+  addTwinEntity(argv.twin, argv.entity, argv.sig, argv.m, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -265,7 +305,7 @@ if (argv._.includes('addTwinEntity')) {
   })
 }
 if (argv._.includes('deleteTwinEntity')) {
-  removeTwinEntity(argv.twin, argv.entity, ({ events = [], status }) => {
+  removeTwinEntity(argv.twin, argv.entity, argv.m, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -300,7 +340,7 @@ if (argv._.includes('getTwin')) {
     })
 }
 if (argv._.includes('deleteTwin')) {
-  deleteTwin(argv.twin, ({ events = [], status }) => {
+  deleteTwin(argv.twin, argv.m, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -324,7 +364,7 @@ if (argv._.includes('createFarm')) {
   //   exit(1)
   // }
 
-  createFarm(argv.name, argv.entityID, argv.twinID, argv.policyID, argv.cert, argv.cityID, argv.countryID, ({ events = [], status }) => {
+  createFarm(argv.name, argv.entityID, argv.twinID, argv.policyID, argv.cert, argv.cityID, argv.countryID, argv.m, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -364,7 +404,7 @@ if (argv._.includes('deleteFarm')) {
     exit(1)
   }
 
-  deleteFarm(argv.id, ({ events = [], status }) => {
+  deleteFarm(argv.id, argv.m, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {

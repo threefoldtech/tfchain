@@ -2,15 +2,23 @@ const { getClient } = require('./client')
 
 const testAccount = 'industry dismiss casual gym gap music pave gasp sick owner dumb cost'
 
-async function createEntity (name, countryID, cityID, callback) {
-  const client = await getClient('', testAccount)
+async function createEntity (name, countryID, cityID, mnemonic, callback) {
+  if (mnemonic === '') {
+    mnemonic = testAccount
+  }
+
+  const client = await getClient('', mnemonic)
 
   const entity = await client.createEntity(name, countryID, cityID, callback)
   return entity
 }
 
-async function updateEntity (name, countryID, cityID, callback) {
-  const client = await getClient('', testAccount)
+async function updateEntity (name, countryID, cityID, mnemonic, callback) {
+  if (mnemonic === '') {
+    mnemonic = testAccount
+  }
+
+  const client = await getClient('', mnemonic)
 
   const update = await client.updateEntity(name, countryID, cityID, callback)
   return update
@@ -23,61 +31,67 @@ async function getEntity (id) {
   return entity
 }
 
-async function deleteEntity () {
-  const client = await getClient('', testAccount)
+async function deleteEntity (mnemonic) {
+  if (mnemonic === '') {
+    mnemonic = testAccount
+  }
+
+  const client = await getClient('', mnemonic)
 
   const res = await client.deleteEntity()
   return res
 }
 
-// async function createTwin (peerID, callback) {
-//   const api = await getApiClient()
-//   const keyring = new Keyring({ type: 'sr25519' })
-//   const Alice = keyring.addFromUri('//Alice', { name: 'Alice default' })
+async function createTwin (peerID, mnemonic, callback) {
+  if (mnemonic === '') {
+    mnemonic = testAccount
+  }
 
-//   return api.tx.templateModule
-//     .createTwin(peerID)
-//     .signAndSend(Alice, callback)
-// }
+  const client = await getClient('', mnemonic)
 
-// async function addTwinEntity (twinID, entityID, signature, callback) {
-//   const api = await getApiClient()
-//   const keyring = new Keyring({ type: 'sr25519' })
-//   const Alice = keyring.addFromUri('//Alice', { name: 'Alice default' })
+  const create = await client.createTwin(peerID, callback)
+  return create
+}
 
-//   return api.tx.templateModule
-//     .addTwinEntity(twinID, entityID, signature)
-//     .signAndSend(Alice, callback)
-// }
+async function getTwin (id) {
+  const client = await getClient('', testAccount)
 
-// async function removeTwinEntity (twinID, entityID, callback) {
-//   const api = await getApiClient()
-//   const keyring = new Keyring({ type: 'sr25519' })
-//   const Alice = keyring.addFromUri('//Alice', { name: 'Alice default' })
+  const twin = await client.getTwinByID(id)
+  return twin
+}
 
-//   return api.tx.templateModule
-//     .deleteTwinEntity(twinID, entityID)
-//     .signAndSend(Alice, callback)
-// }
+async function deleteTwin (id, mnemonic, callback) {
+  if (mnemonic === '') {
+    mnemonic = testAccount
+  }
 
-// async function getTwin (id) {
-//   const api = await getApiClient()
-//   const twin = await api.query.templateModule.twins(id)
+  const client = await getClient('', mnemonic)
 
-//   const res = twin.toJSON()
-//   res.peer_id = hex2a(res.peer_id)
-//   return res
-// }
+  const twin = await client.deleteTwinByID(id, callback)
+  return twin
+}
 
-// async function deleteTwin (twinID, callback) {
-//   const api = await getApiClient()
-//   const keyring = new Keyring({ type: 'sr25519' })
-//   const BOB = keyring.addFromUri('//Alice', { name: 'Bob default' })
+async function addTwinEntity (twinID, entityID, signature, mnemonic, callback) {
+  if (mnemonic === '') {
+    mnemonic = testAccount
+  }
 
-//   return api.tx.templateModule
-//     .deleteTwin(twinID)
-//     .signAndSend(BOB, callback)
-// }
+  const client = await getClient('', mnemonic)
+
+  const create = await client.addTwinEntity(twinID, entityID, signature, callback)
+  return create
+}
+
+async function removeTwinEntity (twinID, entityID, mnemonic, callback) {
+  if (mnemonic === '') {
+    mnemonic = testAccount
+  }
+
+  const client = await getClient('', mnemonic)
+
+  const create = await client.removeTwinEntity(twinID, entityID, callback)
+  return create
+}
 
 // async function createFarm (name, entityID, twinID, pricingPolicyID, certificationType, countryID, cityID, callback) {
 //   const api = await getApiClient()
@@ -120,13 +134,12 @@ module.exports = {
   createEntity,
   updateEntity,
   getEntity,
-  deleteEntity
-  // createTwin,
-  // getTwin,
-  // deleteTwin,
-  // createFarm,
+  deleteEntity,
+  createTwin,
+  getTwin,
+  deleteTwin,
+  addTwinEntity,
+  removeTwinEntity
   // getFarm,
   // deleteFarm,
-  // addTwinEntity,
-  // removeTwinEntity
 }

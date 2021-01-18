@@ -6,7 +6,7 @@ async function createEntity (self, name, countryID, cityID, callback) {
   return create.signAndSend(self.key, callback)
 }
 
-// createEntity creates the entity linked to this signing key
+// updateEntity updates the entity linked to this signing key
 async function updateEntity (self, name, countryID, cityID, callback) {
   const update = self.api.tx.templateModule.updateEntity(name, countryID, cityID)
   return update.signAndSend(self.key, callback)

@@ -1,6 +1,7 @@
 const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api')
 const types = require('../types.json')
 const { getEntity, deleteEntity, createEntity, updateEntity } = require('./entity')
+const { createTwin, getTwin, deleteTwin, addTwinEntity, deleteTwinEntity } = require('./twin')
 const bip39 = require('bip39')
 
 class Client {
@@ -39,8 +40,28 @@ class Client {
     return getEntity(this, id)
   }
 
-  async deleteEntity () {
-    return deleteEntity(this)
+  async deleteEntity (callback) {
+    return deleteEntity(this, callback)
+  }
+
+  async createTwin (peerID, callback) {
+    return createTwin(this, peerID, callback)
+  }
+
+  async getTwinByID (id) {
+    return getTwin(this, id)
+  }
+
+  async deleteTwin (id, callback) {
+    return deleteTwin(this, id, callback)
+  }
+
+  async addTwinEntity (twinID, entityID, signature, callback) {
+    return addTwinEntity(this, twinID, entityID, signature, callback)
+  }
+
+  async deleteTwinEntity (twinID, entityID, callback) {
+    return deleteTwinEntity(this, twinID, entityID, callback)
   }
 }
 
