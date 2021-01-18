@@ -210,9 +210,9 @@ if (argv._.includes('getEntity')) {
   }
 
   getEntity(argv.id)
-    .then(contract => {
-      console.log('\n entity: ')
-      console.log(contract)
+    .then(entity => {
+      console.log('\nentity: ')
+      console.log(entity)
       exit(0)
     })
     .catch(err => {
@@ -221,22 +221,12 @@ if (argv._.includes('getEntity')) {
     })
 }
 if (argv._.includes('deleteEntity')) {
-  deleteEntity(({ events = [], status }) => {
-    console.log(`Current status is ${status.type}`)
-
-    if (status.isFinalized) {
-      console.log(`Transaction included at blockHash ${status.asFinalized}`)
-
-      // Loop through Vec<EventRecord> to display all events
-      events.forEach(({ phase, event: { data, method, section } }) => {
-        console.log(`\t' ${phase}: ${section}.${method}:: ${data}`)
-      })
+  deleteEntity()
+    .then(() => exit(0))
+    .catch(err => {
+      console.log(err)
       exit(1)
-    }
-  }).catch(err => {
-    console.log(err)
-    exit(1)
-  })
+    })
 }
 if (argv._.includes('createTwin')) {
   createTwin(argv.peerID, ({ events = [], status }) => {
