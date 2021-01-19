@@ -384,11 +384,6 @@ if (argv._.includes('createFarm')) {
   })
 }
 if (argv._.includes('getFarm')) {
-  if (!argv.id) {
-    console.log('Bad Params')
-    exit(1)
-  }
-
   getFarm(argv.id)
     .then(farm => {
       console.log('\n farm: ')

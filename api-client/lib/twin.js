@@ -23,8 +23,8 @@ async function deleteTwinEntity (self, twinID, entityID, callback) {
 
 // getTwin gets a twin by id
 async function getTwin (self, id) {
-  if (!id) {
-    throw Error('You must pass and ID')
+  if (isNaN(id)) {
+    throw Error('You must pass an ID')
   }
 
   const twin = await self.api.query.templateModule.twins(id)

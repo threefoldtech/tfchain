@@ -26,25 +26,33 @@ try {
 Store an entity:
 
 ```js
-const res = await client.createEntity(name, countryID, cityID, callback)
+// This call wont block and will return the block where the tx is included
+const block = await client.createFarm(farm)
+console.log(`Transaction included in block with hash: ${block.toHex()}`)
+exit(1)
 ```
 
 ### Example with callback and listen for events
 
 ```js
-const callback = ({ events = [], status }) => {
-    console.log(`Current status is ${status.type}`)
+// This call will block until status is Finalized and tx is included in a block and validated
+await client.createFarm(farm, (res) => {
+  if (res instanceof Error) {
+    console.log(res)
+    exit(1)
+  }
 
-    if (status.isFinalized) {
-      console.log(`Transaction included at blockHash ${status.asFinalized}`)
+  const { events = [], status } = res
+  console.log(`Current status is ${status.type}`)
 
-      // Loop through Vec<EventRecord> to display all events
-      events.forEach(({ phase, event: { data, method, section } }) => {
-        console.log(`\t' ${phase}: ${section}.${method}:: ${data}`)
-      })
-      exit(1)
-    }
-}
+  if (status.isFinalized) {
+    console.log(`Transaction included at blockHash ${status.asFinalized}`)
 
-const res = await client.createEntity(name, countryID, cityID, callback)
+    // Loop through Vec<EventRecord> to display all events
+    events.forEach(({ phase, event: { data, method, section } }) => {
+      console.log(`\t' ${phase}: ${section}.${method}:: ${data}`)
+    })
+    exit(1)
+  }
+})
 ```

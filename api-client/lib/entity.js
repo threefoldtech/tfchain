@@ -14,8 +14,8 @@ async function updateEntity (self, name, countryID, cityID, callback) {
 
 // getEntity gets an entity by id
 async function getEntity (self, id) {
-  if (!id) {
-    throw Error('You must pass and ID')
+  if (isNaN(id)) {
+    throw Error('You must pass an ID')
   }
 
   const entity = await self.api.query.templateModule.entities(id)

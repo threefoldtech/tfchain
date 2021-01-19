@@ -4,7 +4,7 @@ const bip39 = require('bip39')
 
 const { getEntity, deleteEntity, createEntity, updateEntity } = require('./entity')
 const { createTwin, getTwin, deleteTwin, addTwinEntity, deleteTwinEntity } = require('./twin')
-const { createFarm } = require('./farms')
+const { createFarm, getFarm, deleteFarm } = require('./farms')
 
 class Client {
   constructor (url, words) {
@@ -25,7 +25,7 @@ class Client {
 
     this.key = key
 
-    console.log(key.address)
+    console.log(`Key with address: ${key.address} is loaded.`)
 
     this.api = api
   }
@@ -68,6 +68,14 @@ class Client {
 
   async createFarm (farm, callback) {
     return createFarm(this, farm, callback)
+  }
+
+  async getFarmByID (id) {
+    return getFarm(this, id)
+  }
+
+  async deleteFarmByID (id, callback) {
+    return deleteFarm(this, id, callback)
   }
 }
 

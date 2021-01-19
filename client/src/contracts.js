@@ -119,22 +119,23 @@ async function createFarm (name, entityID, twinID, pricingPolicyID, certificatio
   return create
 }
 
-// async function getFarm (id) {
-//   const api = await getApiClient()
-//   const farm = await api.query.templateModule.farms(id)
+async function getFarm (id) {
+  const client = await getClient('', testAccount)
 
-//   return farm.toJSON()
-// }
+  const farm = await client.getFarmByID(id)
+  return farm
+}
 
-// async function deleteFarm (farmID, callback) {
-//   const api = await getApiClient()
-//   const keyring = new Keyring({ type: 'sr25519' })
-//   const BOB = keyring.addFromUri('//Bob', { name: 'Bob default' })
+async function deleteFarm (id, mnemonic, callback) {
+  if (mnemonic === '') {
+    mnemonic = testAccount
+  }
 
-//   return api.tx.templateModule
-//     .deleteFarm(farmID)
-//     .signAndSend(BOB, callback)
-// }
+  const client = await getClient('', mnemonic)
+
+  const farm = await client.deleteFarmByID(id, callback)
+  return farm
+}
 
 module.exports = {
   createEntity,
@@ -146,7 +147,7 @@ module.exports = {
   deleteTwin,
   addTwinEntity,
   removeTwinEntity,
-  createFarm
-  // getFarm,
-  // deleteFarm,
+  createFarm,
+  getFarm,
+  deleteFarm
 }

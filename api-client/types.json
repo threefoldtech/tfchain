@@ -10,7 +10,7 @@
     "city_id": "u64"
   },
   "Entity": {
-    "id": "u64",
+    "entity_id": "u64",
     "name": "Vec<u8>",
     "country_id": "u64",
     "city_id": "u64",
