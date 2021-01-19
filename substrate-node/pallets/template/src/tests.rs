@@ -385,18 +385,20 @@ fn test_create_farm_works() {
 
 		let twin_id = 0;
 
-		let farm_name = "test_farm";
+		let name = "test_farm";
 
-		assert_ok!(TemplateModule::create_farm(
-			Origin::signed(alice()), 
-			farm_name.as_bytes().to_vec(),
+		let farm = super::types::Farm{
+			id: 0,
+			name: name.as_bytes().to_vec(),
 			twin_id,
-			0,
-			0,
-			super::types::CertificationType::None,
-			0,
-			0
-		));
+			country_id: 0,
+			city_id: 0,
+			certification_type: super::types::CertificationType::None,
+			entity_id: 0,
+			pricing_policy_id: 0,
+		};
+
+		assert_ok!(TemplateModule::create_farm(Origin::signed(alice()), farm));
 	});
 }
 
@@ -408,18 +410,20 @@ fn test_create_farm_with_invalid_entity_id_fails() {
 		let twin_id = 0;
 		let entity_id = 654;
 
+		let farm = super::types::Farm{
+			id: 0,
+			name: farm_name.as_bytes().to_vec(),
+			twin_id,
+			entity_id,
+			country_id: 0,
+			city_id: 0,
+			certification_type: super::types::CertificationType::None,
+			pricing_policy_id: 0,
+		};
+
 		// Create farm with invalid entity-id
 		assert_noop!(
-			TemplateModule::create_farm(
-				Origin::signed(alice()), 
-				farm_name.as_bytes().to_vec(),
-				entity_id,
-				twin_id,
-				0,
-				super::types::CertificationType::None,
-				0,
-				0
-			),
+			TemplateModule::create_farm(Origin::signed(alice()), farm),
 			Error::<TestRuntime>::EntityNotExists
 		);
 	});
@@ -436,18 +440,20 @@ fn test_create_farm_with_invalid_twin_id_fails() {
 		let entity_id = 0;
 		let twin_id = 5342433;
 
+		let farm = super::types::Farm{
+			id: 0,
+			name: farm_name.as_bytes().to_vec(),
+			twin_id,
+			entity_id,
+			country_id: 0,
+			city_id: 0,
+			certification_type: super::types::CertificationType::None,
+			pricing_policy_id: 0,
+		};
+
 		// Create farm with invalid twin-id
 		assert_noop!(
-			TemplateModule::create_farm(
-				Origin::signed(alice()), 
-				farm_name.as_bytes().to_vec(),
-				entity_id,
-				twin_id,
-				0,
-				super::types::CertificationType::None,
-				0,
-				0
-			),
+			TemplateModule::create_farm(Origin::signed(alice()), farm),
 			Error::<TestRuntime>::TwinNotExists
 		);
 	});
@@ -467,28 +473,21 @@ fn test_create_farm_with_same_name_fails() {
 
 		let farm_name = "test_farm";
 
-		assert_ok!(TemplateModule::create_farm(
-			Origin::signed(alice()), 
-			farm_name.as_bytes().to_vec(),
+		let farm = super::types::Farm{
+			id: 0,
+			name: farm_name.as_bytes().to_vec(),
 			twin_id,
-			0,
-			0,
-			super::types::CertificationType::None,
-			0,
-			0
-		));
+			entity_id: 0,
+			country_id: 0,
+			city_id: 0,
+			certification_type: super::types::CertificationType::None,
+			pricing_policy_id: 0,
+		};
+
+		assert_ok!(TemplateModule::create_farm(Origin::signed(alice()), farm.clone()));
 
 		assert_noop!(
-			TemplateModule::create_farm(
-				Origin::signed(alice()), 
-				farm_name.as_bytes().to_vec(),
-				0,
-				twin_id,
-				0,
-				super::types::CertificationType::None,
-				0,
-				0
-			),
+			TemplateModule::create_farm(Origin::signed(alice()), farm),
 			Error::<TestRuntime>::FarmExists
 		);
 	});
@@ -508,16 +507,18 @@ fn create_node_works() {
 
 		let farm_name = "test_farm";
 
-		assert_ok!(TemplateModule::create_farm(
-			Origin::signed(alice()), 
-			farm_name.as_bytes().to_vec(),
+		let farm = super::types::Farm{
+			id: 0,
+			name: farm_name.as_bytes().to_vec(),
 			twin_id,
-			0,
-			0,
-			super::types::CertificationType::None,
-			0,
-			0
-		));
+			entity_id: 0,
+			country_id: 0,
+			city_id: 0,
+			certification_type: super::types::CertificationType::None,
+			pricing_policy_id: 0,
+		};
+
+		assert_ok!(TemplateModule::create_farm(Origin::signed(alice()), farm));
 
 		// random location
 		let location = super::types::Location{

@@ -122,39 +122,34 @@ decl_module! {
 		fn deposit_event() = default;
 
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
-		pub fn create_farm(origin,
-			name: Vec<u8>,
-			entity_id: u64,
-			twin_id: u64,
-			pricing_policy_id: u64,
-			certification_type: types::CertificationType,
-			country_id: u64,
-			city_id: u64) -> dispatch::DispatchResult {
+		pub fn create_farm(origin, farm: types::Farm) -> dispatch::DispatchResult {
 			let _ = ensure_signed(origin)?;
 
-			ensure!(Entities::<T>::contains_key(entity_id), Error::<T>::EntityNotExists);
-			ensure!(Twins::<T>::contains_key(twin_id), Error::<T>::TwinNotExists);
+			ensure!(Entities::<T>::contains_key(farm.entity_id), Error::<T>::EntityNotExists);
+			ensure!(Twins::<T>::contains_key(farm.twin_id), Error::<T>::TwinNotExists);
 
-			ensure!(!FarmsByNameID::contains_key(name.clone()), Error::<T>::FarmExists);
+			ensure!(!FarmsByNameID::contains_key(farm.name.clone()), Error::<T>::FarmExists);
 
 			let id = FarmID::get();
 
-			let farm = types::Farm {
-				id,
-				name: name.clone(),
-				entity_id,
-				twin_id,
-				pricing_policy_id,
-				country_id,
-				city_id,
-				certification_type
-			};
+			let mut new_farm = farm.clone();
 
-			Farms::insert(id, &farm);
-			FarmsByNameID::insert(name.clone(), id);
+			new_farm.id = id;
+
+			Farms::insert(id, &new_farm);
+			FarmsByNameID::insert(new_farm.name.clone(), id);
 			FarmID::put(id + 1);
 
-			Self::deposit_event(RawEvent::FarmStored(id, name, entity_id, twin_id, pricing_policy_id, country_id, city_id, certification_type));
+			Self::deposit_event(RawEvent::FarmStored(
+				id, 
+				new_farm.name, 
+				new_farm.entity_id, 
+				new_farm.twin_id, 
+				new_farm.pricing_policy_id, 
+				new_farm.country_id, 
+				new_farm.city_id, 
+				new_farm.certification_type
+			));
 
 			Ok(())
 		}

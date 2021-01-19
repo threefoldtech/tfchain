@@ -364,7 +364,12 @@ if (argv._.includes('createFarm')) {
   //   exit(1)
   // }
 
-  createFarm(argv.name, argv.entityID, argv.twinID, argv.policyID, argv.cert, argv.cityID, argv.countryID, argv.m, ({ events = [], status }) => {
+  createFarm(argv.name, argv.entityID, argv.twinID, argv.policyID, argv.cert, argv.cityID, argv.countryID, argv.m, (res) => {
+    if (res instanceof Error) {
+      console.log(res)
+      exit(1)
+    }
+    const { events = [], status } = res
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -376,9 +381,6 @@ if (argv._.includes('createFarm')) {
       })
       exit(1)
     }
-  }).catch(err => {
-    console.log(err)
-    exit(1)
   })
 }
 if (argv._.includes('getFarm')) {

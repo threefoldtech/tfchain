@@ -12,7 +12,7 @@ use frame_support::{
 
 const PALLET_ID: ModuleId = ModuleId(*b"ABCDEFG!");
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
 pub struct Farm {
 	pub id: u64,
 	pub name: Vec<u8>,
