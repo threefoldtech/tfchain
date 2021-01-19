@@ -23,11 +23,17 @@ try {
 
 ### Example
 
-Store an entity:
+Store an example entity:
+
+```js
+const name = "foobar"
+const countryID = 1
+const cityID = 1
+```
 
 ```js
 // This call wont block and will return the block where the tx is included
-const block = await client.createFarm(farm)
+const block = await client.createEntity(name, countryID, cityID)
 console.log(`Transaction included in block with hash: ${block.toHex()}`)
 exit(1)
 ```
@@ -36,7 +42,7 @@ exit(1)
 
 ```js
 // This call will block until status is Finalized and tx is included in a block and validated
-await client.createFarm(farm, (res) => {
+await client.createEntity(name, countryID, cityID, (res) => {
   if (res instanceof Error) {
     console.log(res)
     exit(1)
