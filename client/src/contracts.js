@@ -188,6 +188,16 @@ async function deleteNode (id, mnemonic, callback) {
   return node
 }
 
+async function sign (entityID, twinID, mnemonic) {
+  if (mnemonic === '') {
+    mnemonic = testAccount
+  }
+
+  const client = await getClient('', testAccount)
+
+  return client.sign(entityID, twinID)
+}
+
 module.exports = {
   createEntity,
   updateEntity,
@@ -203,5 +213,6 @@ module.exports = {
   deleteFarm,
   createNode,
   getNode,
-  deleteNode
+  deleteNode,
+  sign
 }

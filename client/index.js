@@ -15,7 +15,8 @@ const {
   removeTwinEntity,
   createNode,
   getNode,
-  deleteNode
+  deleteNode,
+  sign
 } = require('./src/contracts')
 
 const argv = yargs
@@ -233,6 +234,23 @@ const argv = yargs
       description: 'node ID',
       alias: 'id',
       type: 'string'
+    },
+    mnemonic: {
+      description: 'Mnemonic to sign with',
+      alias: 'm',
+      type: 'string'
+    }
+  })
+  .command('sign', 'Sign an entity - twin id', {
+    entityID: {
+      description: 'entity ID',
+      alias: 'entityid',
+      type: 'number'
+    },
+    twinID: {
+      description: 'twin ID',
+      alias: 'twinid',
+      type: 'number'
     },
     mnemonic: {
       description: 'Mnemonic to sign with',
@@ -525,4 +543,16 @@ if (argv._.includes('deleteNode')) {
     console.log(err)
     exit(1)
   })
+}
+if (argv._.includes('sign')) {
+  sign(argv.entityID, argv.twinID, argv.m)
+    .then(message => {
+      console.log('\n message: ')
+      console.log(message)
+      exit(0)
+    })
+    .catch(err => {
+      console.log(err)
+      exit(1)
+    })
 }
