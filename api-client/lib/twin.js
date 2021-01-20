@@ -36,6 +36,11 @@ async function getTwin (self, id) {
 
 // deleteTwin deletes the twin linked to this signing key
 async function deleteTwin (self, id, callback) {
+  const twin = await getTwin(self, id)
+  if (twin.id !== id) {
+    throw Error(`twin with id ${id} does not exist`)
+  }
+
   return self.api.tx.templateModule
     .deleteTwin(id)
     .signAndSend(self.key, callback)

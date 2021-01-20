@@ -137,6 +137,57 @@ async function deleteFarm (id, mnemonic, callback) {
   return farm
 }
 
+async function createNode (farmID, twinID, countryID, cityID, mnemonic, callback) {
+  if (mnemonic === '') {
+    mnemonic = testAccount
+  }
+
+  const client = await getClient('', mnemonic)
+
+  const resources = client.api.createType('Resources', {
+    hru: 2000,
+    sru: 5000,
+    cru: 16,
+    mru: 64
+  })
+
+  const location = client.api.createType('Location', {
+    longitude: '4.349970',
+    latitude: '50.845080'
+  })
+
+  const node = {
+    id: 0,
+    farm_id: farmID,
+    twin_id: twinID,
+    resources,
+    location,
+    country_id: 0,
+    city_id: 0
+  }
+
+  const create = await client.createNode(node, callback)
+  return create
+}
+
+async function getNode (id) {
+  const client = await getClient('', testAccount)
+
+  const node = await client.getNodeByID(id)
+  return node
+}
+
+async function deleteNode (id, mnemonic, callback) {
+  if (mnemonic === '') {
+    mnemonic = testAccount
+  }
+
+  const client = await getClient('', mnemonic)
+
+  const node = await client.deleteNodeByID(id, callback)
+  return node
+}
+
 module.exports = {
   createEntity,
   updateEntity,
@@ -149,5 +200,8 @@ module.exports = {
   removeTwinEntity,
   createFarm,
   getFarm,
-  deleteFarm
+  deleteFarm,
+  createNode,
+  getNode,
+  deleteNode
 }

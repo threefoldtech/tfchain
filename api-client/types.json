@@ -10,14 +10,14 @@
     "city_id": "u64"
   },
   "Entity": {
-    "entity_id": "u64",
+    "id": "u64",
     "name": "Vec<u8>",
     "country_id": "u64",
     "city_id": "u64",
     "pub_key": "AccountId"
   },
   "Twin": {
-    "twin_id": "u64",
+    "id": "u64",
     "pub_key": "AccountId",
     "peer_id": "Vec<u8>",
     "entities": "Vec<EntityProof>"
@@ -36,8 +36,8 @@
     "city_id": "u64"
   },
   "Location": {
-    "longitude": "U64F64",
-    "latitude": "U64F64"
+    "longitude": "Vec<u8>",
+    "latitude": "Vec<u8>"
   },
   "Resources": {
     "hru": "u64",

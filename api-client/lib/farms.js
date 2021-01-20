@@ -31,10 +31,15 @@ async function getFarm (self, id) {
   return res
 }
 
-// deleteEntity deletes the entity linked to this signing key
+// deleteFarm deletes a farm by id
 async function deleteFarm (self, id, callback) {
   if (isNaN(id)) {
     throw Error('You must pass an ID')
+  }
+
+  const farm = await getFarm(self, id)
+  if (farm.id !== id) {
+    throw Error(`farm with id ${id} does not exist`)
   }
 
   return self.api.tx.templateModule
@@ -51,12 +56,12 @@ async function validateFarm (self, farm) {
   }
 
   const entity = await getEntity(self, entityID)
-  if (entity.entity_id !== entityID) {
+  if (entity.id !== entityID) {
     throw Error(`entity with id ${entityID} does not exist`)
   }
 
   const twin = await getTwin(self, twinID)
-  if (twin.twin_id !== twinID) {
+  if (twin.id !== twinID) {
     throw Error(`twin with id ${twinID} does not exist`)
   }
 }

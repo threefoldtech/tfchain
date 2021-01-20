@@ -12,7 +12,10 @@ const {
   getFarm,
   deleteFarm,
   addTwinEntity,
-  removeTwinEntity
+  removeTwinEntity,
+  createNode,
+  getNode,
+  deleteNode
 } = require('./src/contracts')
 
 const argv = yargs
@@ -182,6 +185,52 @@ const argv = yargs
   .command('deleteFarm', 'Delete a farm by id', {
     id: {
       description: 'farm ID',
+      alias: 'id',
+      type: 'string'
+    },
+    mnemonic: {
+      description: 'Mnemonic to sign with',
+      alias: 'm',
+      type: 'string'
+    }
+  })
+  .command('createNode', 'Create a node', {
+    farmID: {
+      description: 'farm ID',
+      alias: 'farm',
+      type: 'number'
+    },
+    twinID: {
+      description: 'twin ID',
+      alias: 'twin',
+      type: 'number'
+    },
+    city_id: {
+      description: 'Id of the city',
+      alias: 'cityID',
+      type: 'number'
+    },
+    country_id: {
+      description: 'Id of the country',
+      alias: 'countryID',
+      type: 'number'
+    },
+    mnemonic: {
+      description: 'Mnemonic to sign with',
+      alias: 'm',
+      type: 'string'
+    }
+  })
+  .command('getNode', 'Get a node by ID', {
+    id: {
+      description: 'node ID',
+      alias: 'id',
+      type: 'string'
+    }
+  })
+  .command('delete node', 'Delete a node by id', {
+    id: {
+      description: 'node ID',
       alias: 'id',
       type: 'string'
     },
@@ -402,6 +451,65 @@ if (argv._.includes('deleteFarm')) {
   }
 
   deleteFarm(argv.id, argv.m, ({ events = [], status }) => {
+    console.log(`Current status is ${status.type}`)
+
+    if (status.isFinalized) {
+      console.log(`Transaction included at blockHash ${status.asFinalized}`)
+
+      // Loop through Vec<EventRecord> to display all events
+      events.forEach(({ phase, event: { data, method, section } }) => {
+        console.log(`\t' ${phase}: ${section}.${method}:: ${data}`)
+      })
+      exit(1)
+    }
+  }).catch(err => {
+    console.log(err)
+    exit(1)
+  })
+}
+if (argv._.includes('createNode')) {
+  createNode(argv.farmID, argv.twinID, argv.cityID, argv.countryID, argv.m, (res) => {
+    if (res instanceof Error) {
+      console.log(res)
+      exit(1)
+    }
+  
+    const { events = [], status } = res
+    console.log(`Current status is ${status.type}`)
+
+    if (status.isFinalized) {
+      console.log(`Transaction included at blockHash ${status.asFinalized}`)
+
+      // Loop through Vec<EventRecord> to display all events
+      events.forEach(({ phase, event: { data, method, section } }) => {
+        console.log(`\t' ${phase}: ${section}.${method}:: ${data}`)
+      })
+      exit(1)
+    }
+  }).catch(err => {
+    console.log(err)
+    exit(1)
+  })
+}
+if (argv._.includes('getNode')) {
+  getNode(argv.id)
+    .then(node => {
+      console.log('\n node: ')
+      console.log(node)
+      exit(0)
+    })
+    .catch(err => {
+      console.log(err)
+      exit(1)
+    })
+}
+if (argv._.includes('deleteNode')) {
+  if (!argv.id) {
+    console.log('Bad Params')
+    exit(1)
+  }
+
+  deleteNode(argv.id, argv.m, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {

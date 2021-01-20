@@ -5,6 +5,7 @@ const bip39 = require('bip39')
 const { getEntity, deleteEntity, createEntity, updateEntity } = require('./entity')
 const { createTwin, getTwin, deleteTwin, addTwinEntity, deleteTwinEntity } = require('./twin')
 const { createFarm, getFarm, deleteFarm } = require('./farms')
+const { createNode, getNode, deleteNode } = require('./node')
 
 class Client {
   constructor (url, words) {
@@ -76,6 +77,18 @@ class Client {
 
   async deleteFarmByID (id, callback) {
     return deleteFarm(this, id, callback)
+  }
+
+  async createNode (node, callback) {
+    return createNode(this, node, callback)
+  }
+
+  async getNodeByID (id) {
+    return getNode(this, id)
+  }
+
+  async deleteNode (id, callback) {
+    return deleteNode(this, id, callback)
   }
 }
 
