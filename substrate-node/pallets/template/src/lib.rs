@@ -178,40 +178,35 @@ decl_module! {
 		}
 
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
-		pub fn create_node(origin,
-			farm_id: u64,
-			twin_id: u64,
-			resources: types::Resources,
-			location: types::Location,
-			country_id: u64,
-			city_id: u64) -> dispatch::DispatchResult {
+		pub fn create_node(origin, node: types::Node) -> dispatch::DispatchResult {
 			let pub_key = ensure_signed(origin)?;
 
-			ensure!(Twins::<T>::contains_key(twin_id), Error::<T>::TwinNotExists);
-			ensure!(Farms::contains_key(farm_id), Error::<T>::FarmNotExists);
+			ensure!(Twins::<T>::contains_key(node.twin_id), Error::<T>::TwinNotExists);
+			ensure!(Farms::contains_key(node.farm_id), Error::<T>::FarmNotExists);
 
-			let stored_twin = Twins::<T>::get(twin_id);
+			let stored_twin = Twins::<T>::get(node.twin_id);
 			ensure!(stored_twin.pub_key == pub_key, Error::<T>::CannotCreateNode);
 
-			let stored_farm = Farms::get(farm_id);
-			ensure!(stored_farm.twin_id == twin_id, Error::<T>::CannotCreateNode);
+			let stored_farm = Farms::get(node.farm_id);
+			ensure!(stored_farm.twin_id == node.twin_id, Error::<T>::CannotCreateNode);
 
 			let id = NodeID::get();
 
-			let node = types::Node {
-				id,
-				farm_id,
-				twin_id,
-				resources: resources.clone(),
-				location: location.clone(),
-				country_id,
-				city_id
-			};
+			let mut new_node = node.clone();
+			new_node.id = id;
 
-			Nodes::insert(id, &node);
+			Nodes::insert(id, &new_node);
 			NodeID::put(id + 1);
 
-			Self::deposit_event(RawEvent::NodeStored(id, farm_id, twin_id, resources, location, country_id, city_id));
+			Self::deposit_event(RawEvent::NodeStored(
+				id, 
+				new_node.farm_id, 
+				new_node.twin_id, 
+				new_node.resources, 
+				new_node.location, 
+				new_node.country_id, 
+				new_node.city_id
+			));
 
 			Ok(())
 		}

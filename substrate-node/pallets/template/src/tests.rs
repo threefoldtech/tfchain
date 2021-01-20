@@ -526,22 +526,23 @@ fn create_node_works() {
 			latitude: "32.323112123".as_bytes().to_vec()
 		};
 
-		let resource = super::types::Resources {
+		let resources = super::types::Resources {
 			hru: 1,
 			sru: 1,
 			cru: 1,
 			mru: 1,
 		};
 
-		let farm_id = 0;
-		assert_ok!(TemplateModule::create_node(
-			Origin::signed(alice()), 
-			farm_id,
+		let node = super::types::Node {
+			id: 0,
+			farm_id: 0,
 			twin_id,
-			resource,
+			resources,
 			location,
-			0,
-			0
-		));
+			city_id: 0,
+			country_id: 0
+		};
+
+		assert_ok!(TemplateModule::create_node(Origin::signed(alice()), node));
 	});
 }

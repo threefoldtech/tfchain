@@ -24,7 +24,7 @@ pub struct Farm {
 	pub city_id: u64
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
 pub struct Node {
 	pub id: u64,
 	pub farm_id: u64,
