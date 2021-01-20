@@ -6,6 +6,7 @@ const { getEntity, deleteEntity, createEntity, updateEntity } = require('./entit
 const { createTwin, getTwin, deleteTwin, addTwinEntity, deleteTwinEntity } = require('./twin')
 const { createFarm, getFarm, deleteFarm } = require('./farms')
 const { createNode, getNode, deleteNode } = require('./node')
+const { signEntityTwinID } = require('./sign')
 
 class Client {
   constructor (url, words) {
@@ -29,6 +30,10 @@ class Client {
     console.log(`Key with address: ${key.address} is loaded.`)
 
     this.api = api
+  }
+
+  async sign (entityID, twinID) {
+    return signEntityTwinID(this, entityID, twinID)
   }
 
   async updateEntity (name, countryID, cityID, callback) {

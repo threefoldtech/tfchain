@@ -473,7 +473,7 @@ if (argv._.includes('createNode')) {
       console.log(res)
       exit(1)
     }
-  
+
     const { events = [], status } = res
     console.log(`Current status is ${status.type}`)
 
