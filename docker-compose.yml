@@ -17,7 +17,7 @@ services:
     image: hydra-kit:latest
     restart: unless-stopped
     build: 
-      dockerfile: docker/Dockerfile.hydra
+      dockerfile: ./graphql/docker/Dockerfile.hydra
       context: ./
     env_file:
       - .env
@@ -43,7 +43,7 @@ services:
       - TYPES_JSON=/types.json
     volumes:
       - type: bind
-        source: /home/dylan/Projects/substrate-tfgrid/client/types.json
+        source: ./api-client/types.json
         target: /home/hydra-indexer/types.json
     depends_on: 
       - db
@@ -54,7 +54,7 @@ services:
     image: hydra-kit:latest
     restart: unless-stopped
     build: 
-      dockerfile: docker/Dockerfile.hydra
+      dockerfile: ./graphql/docker/Dockerfile.hydra
       context: ./
     env_file:
       - .env
