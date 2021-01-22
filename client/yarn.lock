@@ -2074,7 +2074,7 @@ text-table@^0.2.0:
   integrity sha1-f17oI66AUgfACvLfSoTsP8+lcLQ=
 
 tfgrid-api-client@../api-client:
-  version "0.0.1"
+  version "0.0.1-beta.0"
   dependencies:
     "@polkadot/api" "^3.4.1"
     bip39 "^3.0.3"

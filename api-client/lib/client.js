@@ -13,10 +13,11 @@ class Client {
     this.url = url
     this.words = words
     this.key = undefined
+    this.address = undefined
   }
 
   async init () {
-    const api = await getPolkaAPI()
+    const api = await getPolkaAPI(this.url)
 
     if (!bip39.validateMnemonic(this.words)) {
       throw Error('Invalid mnemonic! Must be bip39 compliant')
@@ -28,6 +29,7 @@ class Client {
     this.key = key
 
     console.log(`Key with address: ${key.address} is loaded.`)
+    this.address = key.address
 
     this.api = api
   }
@@ -97,12 +99,12 @@ class Client {
   }
 }
 
-async function getPolkaAPI () {
-  if (!this.url || this.url === '') {
-    this.url = 'ws://localhost:9944'
+async function getPolkaAPI (url) {
+  if (!url || url === '') {
+    url = 'ws://localhost:9944'
   }
 
-  const provider = new WsProvider(this.url)
+  const provider = new WsProvider(url)
   return ApiPromise.create({ provider, types })
 }
 
