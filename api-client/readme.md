@@ -18,13 +18,15 @@ Available methods:
 inits the client and returns a promise
 
 ```js
+const Client = require('tfgrid-api-client')
+
 const url = "urlToWebsocket"
 const mnemonic = "some words"
 
-const cli = new Client(url, mnemonic)
+const client = new Client(url, mnemonic)
 
 try {
-  await cli.init()
+  await client.init()
 } catch (err) {
   return err
 }
