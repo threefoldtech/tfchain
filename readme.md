@@ -33,7 +33,7 @@ Now you can build the client to interact with this node:
 You need Yarn in order to continue.
 
 ```
-cd client
+cd cli-tool
 yarn install
 ```
 
