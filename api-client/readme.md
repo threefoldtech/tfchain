@@ -18,7 +18,16 @@ Available methods:
 inits the client and returns a promise
 
 ```js
-await cli.init()
+const url = "urlToWebsocket"
+const mnemonic = "some words"
+
+const cli = new Client(url, mnemonic)
+
+try {
+  await cli.init()
+} catch (err) {
+  return err
+}
 ```
 
 ### **createEntity**
