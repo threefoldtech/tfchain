@@ -30,13 +30,10 @@ LABEL maintainer="chevdor@gmail.com"
 LABEL description="This is the 2nd stage: a very small image where we copy the Substrate binary."
 ARG PROFILE=release
 
-RUN mv /usr/share/ca* /tmp && \
-	rm -rf /usr/share/*  && \
-	mv /tmp/ca-certificates /usr/share/ && \
+RUN rm -rf /usr/share/* && \
 	useradd -m -u 1000 -U -s /bin/sh -d /substrate substrate && \
-	mkdir -p /substrate/.local/share/substrate && \
-	chown -R substrate:substrate /substrate/.local && \
-	ln -s /substrate/.local/share/substrate /data
+	mkdir -p /substrate/.local && \
+	chown -R substrate:substrate /substrate/.local
 
 COPY --from=builder /substrate/target/$PROFILE/substrate /usr/local/bin
 
@@ -46,10 +43,11 @@ RUN ldd /usr/local/bin/substrate && \
 
 # Shrinking
 RUN rm -rf /usr/lib/python* && \
-	rm -rf /usr/bin /usr/sbin /usr/share/man
+	rm -rf /usr/bin /usr/sbin /usr/share/man && \
+	rm -rf /src
 
 USER substrate
 EXPOSE 30333 9933 9944 9615
-VOLUME ["/data"]
+VOLUME ["/substrate"]
 
-CMD ["/usr/local/bin/substrate --ws-external"]
+CMD ["/usr/local/bin/substrate", "--ws-external", "--rpc-external", "--rpc-cors=all", "--dev"]
