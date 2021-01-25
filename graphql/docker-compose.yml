@@ -23,7 +23,7 @@ services:
     image: hydra-kit:latest
     restart: unless-stopped
     build: 
-      dockerfile: ./graphql/docker/Dockerfile.hydra
+      dockerfile: ./docker/Dockerfile.hydra
       context: ./
     env_file:
       - .env
@@ -60,7 +60,7 @@ services:
     image: hydra-kit:latest
     restart: unless-stopped
     build: 
-      dockerfile: ./graphql/docker/Dockerfile.hydra
+      dockerfile: ./docker/Dockerfile.hydra
       context: ./
     env_file:
       - .env
