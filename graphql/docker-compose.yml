@@ -44,7 +44,7 @@ services:
       - DB_HOST=db
       - DB_NAME=indexer-db
       - INDEXER_WORKERS=5
-      - REDIS_URI=redis://redis:6378/0
+      - REDIS_URI=redis://redis:6379/0
       - DEBUG=index-builder:*
       - TYPES_JSON=/types.json
     volumes:
@@ -86,7 +86,7 @@ services:
       - WARTHOG_STARTER_DB_PASSWORD=${DB_PASS}
       - WARTHOG_STARTER_DB_PORT=${DB_PORT}
       - WARTHOG_STARTER_DB_USERNAME=${DB_USER}
-      - WARTHOG_STARTER_REDIS_URI=redis://redis:6378/0 
+      - WARTHOG_STARTER_REDIS_URI=redis://redis:6379/0 
       - PORT=4000
     ports:
       - "4001:4000"
@@ -98,5 +98,3 @@ services:
   redis:
     image: redis:6.0-alpine
     restart: always
-    ports:
-      - "6378:6378"
