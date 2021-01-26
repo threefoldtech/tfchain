@@ -19,17 +19,23 @@ class Client {
   async init () {
     const api = await getPolkaAPI(this.url)
 
-    if (!bip39.validateMnemonic(this.words)) {
-      throw Error('Invalid mnemonic! Must be bip39 compliant')
+    // if no words provided, use the default alice key
+    if (!this.words) {
+      const keyring = new Keyring({ type: 'sr25519' })
+      const key = keyring.addFromUri('//Alice', { name: 'Alice default' })
+      this.key = key
+      console.log(`Default account Alice with address: ${this.key.address} is loaded.`)
+    } else {
+      if (!bip39.validateMnemonic(this.words)) {
+        throw Error('Invalid mnemonic! Must be bip39 compliant')
+      }
+      const keyring = new Keyring({ type: 'ed25519' })
+      const key = keyring.addFromMnemonic(this.words)
+      this.key = key
+      console.log(`Key with address: ${this.key.address} is loaded.`)
     }
 
-    const keyring = new Keyring({ type: 'ed25519' })
-    const key = keyring.addFromMnemonic(this.words)
-
-    this.key = key
-
-    console.log(`Key with address: ${key.address} is loaded.`)
-    this.address = key.address
+    this.address = this.key.address
 
     this.api = api
   }
