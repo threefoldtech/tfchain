@@ -3,7 +3,7 @@ version: "3.4"
 services:
   substrate:
     image: dylanverstraete/substrate-tfgrid
-    restart: unless-stopped
+    restart: always
     ports:
       - "9944:9944"
 
@@ -21,7 +21,7 @@ services:
   
   graphql-server:
     image: hydra-kit:latest
-    restart: unless-stopped
+    restart: always
     build: 
       dockerfile: ./docker/Dockerfile.hydra
       context: ./
@@ -30,14 +30,14 @@ services:
     environment:
       - DB_HOST=db
     ports:
-      - "4000:${GRAPHQL_SERVER_PORT}"
+      - "4000:4000"
     depends_on: 
       - db
     command: ["yarn", "server:start:prod"]
   
   indexer:
     image: joystream/hydra-indexer:latest
-    restart: unless-stopped
+    restart: always
     env_file:
       - .env 
     environment:
@@ -58,7 +58,7 @@ services:
 
   processor:
     image: hydra-kit:latest
-    restart: unless-stopped
+    restart: always
     build: 
       dockerfile: ./docker/Dockerfile.hydra
       context: ./
@@ -79,7 +79,7 @@ services:
   
   indexer-api-gateway:
     image: joystream/hydra-indexer-gateway:latest
-    restart: unless-stopped
+    restart: always
     environment:
       - WARTHOG_STARTER_DB_DATABASE=indexer-db
       - WARTHOG_STARTER_DB_HOST=db 
