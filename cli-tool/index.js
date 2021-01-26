@@ -40,6 +40,11 @@ const argv = yargs
       description: 'Mnemonic to sign with',
       alias: 'm',
       type: 'string'
+    },
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
+      type: 'string'
     }
   })
   .command('updateEntity', 'Update a an entity', {
@@ -62,12 +67,22 @@ const argv = yargs
       description: 'Mnemonic to sign with',
       alias: 'm',
       type: 'string'
+    },
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
+      type: 'string'
     }
   })
   .command('getEntity', 'Get a entity by ID', {
     id: {
       description: 'entity ID',
       alias: 'id',
+      type: 'string'
+    },
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
       type: 'string'
     }
   })
@@ -81,12 +96,22 @@ const argv = yargs
       description: 'Mnemonic to sign with',
       alias: 'm',
       type: 'string'
+    },
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
+      type: 'string'
     }
   })
   .command('getTwin', 'Get a twin by ID', {
     id: {
       description: 'twin ID',
       alias: 'id',
+      type: 'string'
+    },
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
       type: 'string'
     }
   })
@@ -110,6 +135,11 @@ const argv = yargs
       description: 'Mnemonic to sign with',
       alias: 'm',
       type: 'string'
+    },
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
+      type: 'string'
     }
   })
   .command('deleteTwinEntity', 'Delete twin entity by id', {
@@ -127,6 +157,11 @@ const argv = yargs
       description: 'Mnemonic to sign with',
       alias: 'm',
       type: 'string'
+    },
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
+      type: 'string'
     }
   })
   .command('deleteTwin', 'Delete your twin', {
@@ -138,6 +173,11 @@ const argv = yargs
     mnemonic: {
       description: 'Mnemonic to sign with',
       alias: 'm',
+      type: 'string'
+    },
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
       type: 'string'
     }
   })
@@ -181,6 +221,11 @@ const argv = yargs
       description: 'Mnemonic to sign with',
       alias: 'm',
       type: 'string'
+    },
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
+      type: 'string'
     }
   })
   .command('deleteFarm', 'Delete a farm by id', {
@@ -192,6 +237,11 @@ const argv = yargs
     mnemonic: {
       description: 'Mnemonic to sign with',
       alias: 'm',
+      type: 'string'
+    },
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
       type: 'string'
     }
   })
@@ -220,12 +270,22 @@ const argv = yargs
       description: 'Mnemonic to sign with',
       alias: 'm',
       type: 'string'
+    },
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
+      type: 'string'
     }
   })
   .command('getNode', 'Get a node by ID', {
     id: {
       description: 'node ID',
       alias: 'id',
+      type: 'string'
+    },
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
       type: 'string'
     }
   })
@@ -238,6 +298,11 @@ const argv = yargs
     mnemonic: {
       description: 'Mnemonic to sign with',
       alias: 'm',
+      type: 'string'
+    },
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
       type: 'string'
     }
   })
@@ -256,6 +321,11 @@ const argv = yargs
       description: 'Mnemonic to sign with',
       alias: 'm',
       type: 'string'
+    },
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
+      type: 'string'
     }
   })
   .help()
@@ -269,7 +339,7 @@ if (argv._.includes('createEntity')) {
   //   exit(1)
   // }
 
-  createEntity(argv.n, argv.c, argv.t, argv.m, ({ events = [], status }) => {
+  createEntity(argv.n, argv.c, argv.t, argv.m, argv.a, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -293,7 +363,7 @@ if (argv._.includes('updateEntity')) {
   //   exit(1)
   // }
 
-  updateEntity(argv.n, argv.c, argv.t, argv.m, ({ events = [], status }) => {
+  updateEntity(argv.n, argv.c, argv.t, argv.m, argv.a, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -316,7 +386,7 @@ if (argv._.includes('getEntity')) {
     exit(1)
   }
 
-  getEntity(argv.id)
+  getEntity(argv.id, argv.a)
     .then(entity => {
       console.log('\nentity: ')
       console.log(entity)
@@ -328,7 +398,7 @@ if (argv._.includes('getEntity')) {
     })
 }
 if (argv._.includes('deleteEntity')) {
-  deleteEntity(argv.m)
+  deleteEntity(argv.m, argv.a)
     .then(() => exit(0))
     .catch(err => {
       console.log(err)
@@ -336,7 +406,7 @@ if (argv._.includes('deleteEntity')) {
     })
 }
 if (argv._.includes('createTwin')) {
-  createTwin(argv.peerID, argv.m, ({ events = [], status }) => {
+  createTwin(argv.peerID, argv.m, argv.a, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -354,7 +424,7 @@ if (argv._.includes('createTwin')) {
   })
 }
 if (argv._.includes('addTwinEntity')) {
-  addTwinEntity(argv.twin, argv.entity, argv.sig, argv.m, ({ events = [], status }) => {
+  addTwinEntity(argv.twin, argv.entity, argv.sig, argv.m, argv.a, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -372,7 +442,7 @@ if (argv._.includes('addTwinEntity')) {
   })
 }
 if (argv._.includes('deleteTwinEntity')) {
-  removeTwinEntity(argv.twin, argv.entity, argv.m, ({ events = [], status }) => {
+  removeTwinEntity(argv.twin, argv.entity, argv.m, argv.a, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -395,7 +465,7 @@ if (argv._.includes('getTwin')) {
     exit(1)
   }
 
-  getTwin(argv.id)
+  getTwin(argv.id, argv.a)
     .then(contract => {
       console.log('\n twin: ')
       console.log(contract)
@@ -407,7 +477,7 @@ if (argv._.includes('getTwin')) {
     })
 }
 if (argv._.includes('deleteTwin')) {
-  deleteTwin(argv.twin, argv.m, ({ events = [], status }) => {
+  deleteTwin(argv.twin, argv.m, argv.a, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -431,7 +501,7 @@ if (argv._.includes('createFarm')) {
   //   exit(1)
   // }
 
-  createFarm(argv.name, argv.entityID, argv.twinID, argv.policyID, argv.cert, argv.cityID, argv.countryID, argv.m, (res) => {
+  createFarm(argv.name, argv.entityID, argv.twinID, argv.policyID, argv.cert, argv.cityID, argv.countryID, argv.m, argv.a, (res) => {
     if (res instanceof Error) {
       console.log(res)
       exit(1)
@@ -451,7 +521,7 @@ if (argv._.includes('createFarm')) {
   })
 }
 if (argv._.includes('getFarm')) {
-  getFarm(argv.id)
+  getFarm(argv.id, argv.a)
     .then(farm => {
       console.log('\n farm: ')
       console.log(farm)
@@ -468,7 +538,7 @@ if (argv._.includes('deleteFarm')) {
     exit(1)
   }
 
-  deleteFarm(argv.id, argv.m, ({ events = [], status }) => {
+  deleteFarm(argv.id, argv.m, argv.a, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -486,7 +556,7 @@ if (argv._.includes('deleteFarm')) {
   })
 }
 if (argv._.includes('createNode')) {
-  createNode(argv.farmID, argv.twinID, argv.cityID, argv.countryID, argv.m, (res) => {
+  createNode(argv.farmID, argv.twinID, argv.cityID, argv.countryID, argv.m, argv.a, (res) => {
     if (res instanceof Error) {
       console.log(res)
       exit(1)
@@ -510,7 +580,7 @@ if (argv._.includes('createNode')) {
   })
 }
 if (argv._.includes('getNode')) {
-  getNode(argv.id)
+  getNode(argv.id, argv.a)
     .then(node => {
       console.log('\n node: ')
       console.log(node)
@@ -527,7 +597,7 @@ if (argv._.includes('deleteNode')) {
     exit(1)
   }
 
-  deleteNode(argv.id, argv.m, ({ events = [], status }) => {
+  deleteNode(argv.id, argv.m, argv.a, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -545,7 +615,7 @@ if (argv._.includes('deleteNode')) {
   })
 }
 if (argv._.includes('sign')) {
-  sign(argv.entityID, argv.twinID, argv.m)
+  sign(argv.entityID, argv.twinID, argv.m, argv.a)
     .then(message => {
       console.log('\n message: ')
       console.log(message)

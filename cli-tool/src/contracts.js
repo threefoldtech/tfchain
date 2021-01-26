@@ -1,73 +1,73 @@
 const { getClient } = require('./client')
 
-async function createEntity (name, countryID, cityID, mnemonic, callback) {
-  const client = await getClient('ws://tfgrid.tri-fold.com', mnemonic)
+async function createEntity (name, countryID, cityID, mnemonic, url, callback) {
+  const client = await getClient(url, mnemonic)
 
   const entity = await client.createEntity(name, countryID, cityID, callback)
   return entity
 }
 
-async function updateEntity (name, countryID, cityID, mnemonic, callback) {
-  const client = await getClient('ws://tfgrid.tri-fold.com', mnemonic)
+async function updateEntity (name, countryID, cityID, mnemonic, url, callback) {
+  const client = await getClient(url, mnemonic)
 
   const update = await client.updateEntity(name, countryID, cityID, callback)
   return update
 }
 
-async function getEntity (id) {
-  const client = await getClient('ws://tfgrid.tri-fold.com', '')
+async function getEntity (id, url) {
+  const client = await getClient(url, '')
 
   const entity = await client.getEntityByID(id)
   return entity
 }
 
-async function deleteEntity (mnemonic) {
-  const client = await getClient('ws://tfgrid.tri-fold.com', mnemonic)
+async function deleteEntity (mnemonic, url) {
+  const client = await getClient(url, mnemonic)
 
   const res = await client.deleteEntity()
   return res
 }
 
-async function createTwin (peerID, mnemonic, callback) {
-  const client = await getClient('ws://tfgrid.tri-fold.com', mnemonic)
+async function createTwin (peerID, mnemonic, url, callback) {
+  const client = await getClient(url, mnemonic)
 
   const create = await client.createTwin(peerID, callback)
   return create
 }
 
-async function getTwin (id) {
-  const client = await getClient('ws://tfgrid.tri-fold.com', '')
+async function getTwin (id, url) {
+  const client = await getClient(url, '')
 
   const twin = await client.getTwinByID(id)
   return twin
 }
 
-async function deleteTwin (id, mnemonic, callback) {
-  const client = await getClient('ws://tfgrid.tri-fold.com', mnemonic)
+async function deleteTwin (id, mnemonic, url, callback) {
+  const client = await getClient(url, mnemonic)
 
   const twin = await client.deleteTwinByID(id, callback)
   return twin
 }
 
-async function addTwinEntity (twinID, entityID, signature, mnemonic, callback) {
-  const client = await getClient('ws://tfgrid.tri-fold.com', mnemonic)
+async function addTwinEntity (twinID, entityID, signature, mnemonic, url, callback) {
+  const client = await getClient(url, mnemonic)
 
   const create = await client.addTwinEntity(twinID, entityID, signature, callback)
   return create
 }
 
-async function removeTwinEntity (twinID, entityID, mnemonic, callback) {
-  const client = await getClient('ws://tfgrid.tri-fold.com', mnemonic)
+async function removeTwinEntity (twinID, entityID, mnemonic, url, callback) {
+  const client = await getClient(url, mnemonic)
 
   const create = await client.removeTwinEntity(twinID, entityID, callback)
   return create
 }
 
-async function createFarm (name, entityID, twinID, pricingPolicyID, certificationType, countryID, cityID, mnemonic, callback) {
+async function createFarm (name, entityID, twinID, pricingPolicyID, certificationType, countryID, cityID, mnemonic, url, callback) {
   // const { name, entityID, twinID } = farm
   // const { pricingPolicyID, certificationType, countryID, cityID } = farm
 
-  const client = await getClient('ws://tfgrid.tri-fold.com', mnemonic)
+  const client = await getClient(url, mnemonic)
 
   certificationType = client.api.createType('CertificationType', certificationType)
   const farm = {
@@ -85,22 +85,22 @@ async function createFarm (name, entityID, twinID, pricingPolicyID, certificatio
   return create
 }
 
-async function getFarm (id) {
-  const client = await getClient('ws://tfgrid.tri-fold.com', '')
+async function getFarm (id, url) {
+  const client = await getClient(url, '')
 
   const farm = await client.getFarmByID(id)
   return farm
 }
 
-async function deleteFarm (id, mnemonic, callback) {
-  const client = await getClient('ws://tfgrid.tri-fold.com', mnemonic)
+async function deleteFarm (id, mnemonic, url, callback) {
+  const client = await getClient(url, mnemonic)
 
   const farm = await client.deleteFarmByID(id, callback)
   return farm
 }
 
-async function createNode (farmID, twinID, countryID, cityID, mnemonic, callback) {
-  const client = await getClient('ws://tfgrid.tri-fold.com', mnemonic)
+async function createNode (farmID, twinID, countryID, cityID, mnemonic, url, callback) {
+  const client = await getClient(url, mnemonic)
 
   const resources = client.api.createType('Resources', {
     hru: 2000,
@@ -128,22 +128,22 @@ async function createNode (farmID, twinID, countryID, cityID, mnemonic, callback
   return create
 }
 
-async function getNode (id) {
-  const client = await getClient('ws://tfgrid.tri-fold.com', '')
+async function getNode (id, url) {
+  const client = await getClient(url, '')
 
   const node = await client.getNodeByID(id)
   return node
 }
 
-async function deleteNode (id, mnemonic, callback) {
-  const client = await getClient('ws://tfgrid.tri-fold.com', mnemonic)
+async function deleteNode (id, mnemonic, url, callback) {
+  const client = await getClient(url, mnemonic)
 
   const node = await client.deleteNodeByID(id, callback)
   return node
 }
 
-async function sign (entityID, twinID, mnemonic) {
-  const client = await getClient('ws://tfgrid.tri-fold.com', '')
+async function sign (entityID, twinID, mnemonic, url) {
+  const client = await getClient(url, mnemonic)
 
   return client.sign(entityID, twinID)
 }

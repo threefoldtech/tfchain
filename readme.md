@@ -83,6 +83,7 @@ Parameters:
 * **-c**: Country ID (id of the country in the db (TODO))
 * **-t**: City ID (id of the city in the db(TODO)) 
 * **-m**: Mnemonic to sign with, if you provide a mnemonic of your own, your substrate public address must be funded first.
+* **-a**: API Url (if none is given, it goes to localhost), example: wss://tfgrid.tri-fold.com
 
 `node index.js createEntity -n newEntity -c 0 -t 0`
 
