@@ -11,14 +11,13 @@ use frame_support::{
 	},
 };
 use frame_system::{
-	self as system, ensure_signed,
+    self as system, ensure_signed,
 };
-
-use codec::{Encode};
 
 use hex::{FromHex};
 
 use sp_std::prelude::*;
+use codec::{Encode};
 
 #[cfg(test)]
 mod tests;
@@ -30,7 +29,7 @@ pub trait Trait: system::Trait {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as TemplateModule {
+	trait Store for Module<T: Trait> as TfgridModule {
 		pub Farms get(fn farms): map hasher(blake2_128_concat) u64 => types::Farm; 
 		pub FarmsByNameID get(fn farms_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u64;
 
@@ -112,6 +111,9 @@ decl_error! {
 		PricingPolicyExists,
 
 		CertificationCodeExists,
+
+		OffchainSignedTxError,
+		NoLocalAcctForSigning
 	}
 }
 
