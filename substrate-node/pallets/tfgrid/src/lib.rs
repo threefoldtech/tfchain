@@ -12,73 +12,24 @@ use frame_support::{
 };
 use frame_system::{
     self as system, ensure_signed,
-    offchain::{
-		AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer,
-	},
 };
-use system::{ensure_root, ensure_none};
-
-use codec::{Encode};
 
 use hex::{FromHex};
 
 use sp_std::prelude::*;
-
-use lite_json::json::JsonValue;
-use sp_runtime::{
-    offchain::{http, Duration},
-};
-
-use fixed::{types::U64F64};
-
-use sp_core::crypto::KeyTypeId;
-pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"tft!");
-
-pub mod crypto {
-    use crate::KEY_TYPE;
-    use sp_core::sr25519::Signature as Sr25519Signature;
-    use sp_runtime::{
-        app_crypto::{app_crypto, sr25519},
-        traits::Verify,
-        MultiSignature, MultiSigner,
-    };
-
-    app_crypto!(sr25519, KEY_TYPE);
-
-    pub struct AuthId;
-
-    // implemented for ocw-runtime
-    impl frame_system::offchain::AppCrypto<MultiSigner, MultiSignature> for AuthId {
-        type RuntimeAppPublic = Public;
-        type GenericSignature = sp_core::sr25519::Signature;
-        type GenericPublic = sp_core::sr25519::Public;
-    }
-
-    // implemented for mock runtime in test
-    impl frame_system::offchain::AppCrypto<<Sr25519Signature as Verify>::Signer, Sr25519Signature>
-    for AuthId
-    {
-        type RuntimeAppPublic = Public;
-        type GenericSignature = sp_core::sr25519::Signature;
-        type GenericPublic = sp_core::sr25519::Public;
-    }
-}
+use codec::{Encode};
 
 #[cfg(test)]
 mod tests;
 
 mod types;
 
-pub trait Trait: system::Trait + CreateSignedTransaction<Call<Self>> {
+pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
-
-	// Add other types and constants required to configure this pallet.
-    type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
-    type Call: From<Call<Self>>;
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as TemplateModule {
+	trait Store for Module<T: Trait> as TfgridModule {
 		pub Farms get(fn farms): map hasher(blake2_128_concat) u64 => types::Farm; 
 		pub FarmsByNameID get(fn farms_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u64;
 
@@ -96,9 +47,6 @@ decl_storage! {
 
 		pub CertificationCodes get(fn certification_codes): map hasher(blake2_128_concat) u64 => types::CertificationCodes;
 		pub CertificationCodesByNameID get(fn certification_codes_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u64;
-
-		// Token price
-		TFTPrice: U64F64;
 
 		// ID maps
 		FarmID: u64;
@@ -131,8 +79,6 @@ decl_event!(
 
 		PricingPolicyStored(Vec<u8>, u64),
 		CertificationCodeStored(Vec<u8>, u64),
-
-		NewPrice(U64F64),
 	}
 );
 
@@ -591,122 +537,5 @@ decl_module! {
 
 			Ok(())
 		}
-
-		#[weight = 10_000 + T::DbWeight::get().writes(1)]
-		fn set_prices(origin, price: U64F64){
-			ensure_root(origin)?;
-			TFTPrice::put(price);
-		}
-
-		#[weight = 10_000 + T::DbWeight::get().writes(1)]
-		fn submit_price(origin, price: U64F64) {
-			ensure_none(origin)?;
-			TFTPrice::put(price);
-		}
-
-		fn offchain_worker(block_number: T::BlockNumber) {
-			debug::debug!("hello from worker");
-			match Self::offchain_signed_tx() {
-				Ok(_) => debug::debug!("worker executed"),
-				Err(err) => debug::debug!("err: {:?}", err)
-			}
-        }
 	}
-}
-
-impl<T: Trait> Module<T> {
-    /// Fetch current price and return the result in cents.
-    fn fetch_price() -> Result<f64, http::Error> {
-        let deadline = sp_io::offchain::timestamp().add(Duration::from_millis(2_000));
- 
-        let request =
-            http::Request::get("https://min-api.cryptocompare.com/data/price?fsym=TFT&tsyms=USD");
-
-        let pending = request
-            .deadline(deadline)
-            .send()
-            .map_err(|_| http::Error::IoError)?;
-
-        let response = pending
-            .try_wait(deadline)
-            .map_err(|_| http::Error::DeadlineReached)??;
-        // Let's check the status code before we proceed to reading the response.
-        if response.code != 200 {
-            debug::warn!("Unexpected status code: {}", response.code);
-            return Err(http::Error::Unknown);
-        }
-
-        let body = response.body().collect::<Vec<u8>>();
-
-        // Create a str slice from the body.
-        let body_str = sp_std::str::from_utf8(&body).map_err(|_| {
-            debug::warn!("No UTF8 body");
-            http::Error::Unknown
-        })?;
-
-        let price = match Self::parse_price(body_str) {
-            Some(price) => Ok(price),
-            None => {
-                debug::warn!("Unable to extract price from the response: {:?}", body_str);
-                Err(http::Error::Unknown)
-            }
-        }?;
-
-        Ok(price)
-	}
-	
-	fn parse_price(price_str: &str) -> Option<f64> {
-        let val = lite_json::parse_json(price_str);
-        let price = val.ok().and_then(|v| match v {
-            JsonValue::Object(obj) => {
-                let mut chars = "USD".chars();
-                obj.into_iter()
-                    .find(|(k, _)| k.iter().all(|k| Some(*k) == chars.next()))
-                    .and_then(|v| match v.1 {
-                        JsonValue::Number(number) => Some(number),
-                        _ => None,
-                    })
-            }
-            _ => None,
-        })?;
-
-		let exp = price.fraction_length.checked_sub(2).unwrap_or(0);
-		
-		let price = 
-			(price.integer * 10_i64.pow(exp as u32) + price.fraction as i64) as f64
-			/ (100 * 10_u32.pow(exp as u32)) as f64;
-        Some(price)
-	}
-	
-	fn offchain_signed_tx() -> Result<(), Error<T>> {
-		let price = match Self::fetch_price() {
-			Ok(v) => v,
-			Err(_) => return Err(<Error<T>>::OffchainSignedTxError)
-		};
-
-        // retrieve contract account
-        // let signer = Signer::<T, T::AuthorityId>::any_account();
-
-		let price_to_fixed = U64F64::from_num(price);
-
-        let signer = Signer::<T, T::AuthorityId>::any_account();
-
-        let result = signer.send_signed_transaction(|_acct| {
-            Call::set_prices(price_to_fixed)
-        });
-    
-        // Display error if the signed tx fails.
-        // Display error if the signed tx fails.
-        if let Some((acc, res)) = result {
-            if res.is_err() {
-                debug::error!("failure: offchain_signed_tx: tx sent: {:?}", acc.id);
-                return Err(<Error<T>>::OffchainSignedTxError);
-            }
-            // Transaction is sent successfully
-            return Ok(());
-        }
-        // The case of `None`: no account is available for sending
-        debug::error!("No local account available");
-        return Err(<Error<T>>::OffchainSignedTxError)
-    }
 }

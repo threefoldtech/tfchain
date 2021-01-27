@@ -66,6 +66,7 @@ impl Trait for TestRuntime {
 	type Event = ();
 }
 
+
 struct ExternalityBuilder;
 
 impl ExternalityBuilder {

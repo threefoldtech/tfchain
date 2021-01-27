@@ -3298,7 +3298,8 @@ dependencies = [
  "pallet-grandpa",
  "pallet-randomness-collective-flip",
  "pallet-sudo",
- "pallet-template",
+ "pallet-tfgrid",
+ "pallet-tft-price-oracle",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
@@ -3607,13 +3608,31 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-template"
+name = "pallet-tfgrid"
 version = "2.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
  "hex",
  "hex-literal",
+ "lite-json",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-storage",
+ "substrate-fixed",
+]
+
+[[package]]
+name = "pallet-tft-price-oracle"
+version = "2.0.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
  "lite-json",
  "pallet-balances",
  "pallet-timestamp",
