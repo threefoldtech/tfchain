@@ -148,6 +148,12 @@ async function sign (entityID, twinID, mnemonic, url) {
   return client.sign(entityID, twinID)
 }
 
+async function getPrice (mnemonic, url) {
+  const client = await getClient(url, mnemonic)
+
+  return client.getPrice()
+}
+
 module.exports = {
   createEntity,
   updateEntity,
@@ -164,5 +170,6 @@ module.exports = {
   createNode,
   getNode,
   deleteNode,
-  sign
+  sign,
+  getPrice
 }

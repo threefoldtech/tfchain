@@ -16,7 +16,8 @@ const {
   createNode,
   getNode,
   deleteNode,
-  sign
+  sign,
+  getPrice
 } = require('./src/contracts')
 
 const argv = yargs
@@ -328,6 +329,13 @@ const argv = yargs
       type: 'string'
     }
   })
+  .command('getPrice', 'Get TFT price', {
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
+      type: 'string'
+    }
+  })
   .help()
   .alias('help', 'h')
   .argv
@@ -619,6 +627,18 @@ if (argv._.includes('sign')) {
     .then(message => {
       console.log('\n message: ')
       console.log(message)
+      exit(0)
+    })
+    .catch(err => {
+      console.log(err)
+      exit(1)
+    })
+}
+if (argv._.includes('getPrice')) {
+  getPrice(argv.a)
+    .then(price => {
+      console.log('\n price: ')
+      console.log(price)
       exit(0)
     })
     .catch(err => {

@@ -25,7 +25,7 @@ use sp_runtime::{
     offchain::{http, Duration},
 };
 
-use fixed::{types::U64F64};
+use fixed::{types::U16F16};
 
 use sp_core::crypto::KeyTypeId;
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"tft!");
@@ -74,13 +74,13 @@ pub trait Trait: system::Trait + CreateSignedTransaction<Call<Self>> {
 decl_storage! {
 	trait Store for Module<T: Trait> as TFTPriceModule {
 		// Token price
-		TFTPrice: U64F64;
+		TftPrice: U16F16;
 	}
 }
 
 decl_event! {
 	pub enum Event<T> where AccountId = <T as frame_system::Trait>::AccountId {
-		PriceStored(U64F64, AccountId),
+		PriceStored(U16F16, AccountId),
 	}
 }
 
@@ -98,15 +98,15 @@ decl_module! {
 		fn deposit_event() = default;
 
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
-		fn set_prices(origin, price: U64F64){
+		fn set_prices(origin, price: U16F16){
 			let _ = ensure_signed(origin)?;
-			TFTPrice::put(price);
+			TftPrice::put(price);
 		}
 
 		#[weight = 10_000 + T::DbWeight::get().writes(1)]
-		fn submit_price(origin, price: U64F64) {
+		fn submit_price(origin, price: U16F16) {
 			ensure_none(origin)?;
-			TFTPrice::put(price);
+			TftPrice::put(price);
 		}
 
 		fn offchain_worker(block_number: T::BlockNumber) {
@@ -191,7 +191,7 @@ impl<T: Trait> Module<T> {
 			Err(_) => return Err(<Error<T>>::OffchainSignedTxError)
 		};
 
-		let price_to_fixed = U64F64::from_num(price);
+		let price_to_fixed = U16F16::from_num(price);
 
         let signer = Signer::<T, T::AuthorityId>::any_account();
 
