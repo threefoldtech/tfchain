@@ -110,10 +110,9 @@ decl_module! {
 		}
 
 		fn offchain_worker(block_number: T::BlockNumber) {
-			debug::debug!("hello from worker");
 			match Self::offchain_signed_tx() {
-				Ok(_) => debug::debug!("worker executed"),
-				Err(err) => debug::debug!("err: {:?}", err)
+				Ok(_) => debug::info!("worker executed"),
+				Err(err) => debug::info!("err: {:?}", err)
 			}
         }
 	}
@@ -158,7 +157,7 @@ impl<T: Trait> Module<T> {
             }
         }?;
 
-        debug::debug!("price: {:?}", price);
+        debug::info!("TFT price: {:?}", price);
 
         Ok(price)
 	}
