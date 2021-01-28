@@ -17,7 +17,11 @@ const {
   getNode,
   deleteNode,
   sign,
-  getPrice
+  getPrice,
+  listEntities,
+  listTwins,
+  listFarms,
+  listNodes
 } = require('./src/contracts')
 
 const argv = yargs
@@ -87,6 +91,13 @@ const argv = yargs
       type: 'string'
     }
   })
+  .command('listEntities', 'Get all entities', {
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
+      type: 'string'
+    }
+  })
   .command('createTwin', 'Create a twin', {
     peerID: {
       description: 'peer ID',
@@ -110,6 +121,13 @@ const argv = yargs
       alias: 'id',
       type: 'string'
     },
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
+      type: 'string'
+    }
+  })
+  .command('listTwins', 'Get all twins', {
     apiUrl: {
       description: 'Url of the api',
       alias: 'a',
@@ -229,6 +247,13 @@ const argv = yargs
       type: 'string'
     }
   })
+  .command('listFarms', 'Get all farms', {
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
+      type: 'string'
+    }
+  })
   .command('deleteFarm', 'Delete a farm by id', {
     id: {
       description: 'farm ID',
@@ -284,6 +309,13 @@ const argv = yargs
       alias: 'id',
       type: 'string'
     },
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
+      type: 'string'
+    }
+  })
+  .command('listNodes', 'Get all nodes', {
     apiUrl: {
       description: 'Url of the api',
       alias: 'a',
@@ -405,6 +437,18 @@ if (argv._.includes('getEntity')) {
       exit(1)
     })
 }
+if (argv._.includes('listEntities')) {
+  listEntities(argv.a)
+    .then(entities => {
+      console.log('\nentities: ')
+      console.log(entities)
+      exit(0)
+    })
+    .catch(err => {
+      console.log(err)
+      exit(1)
+    })
+}
 if (argv._.includes('deleteEntity')) {
   deleteEntity(argv.m, argv.a)
     .then(() => exit(0))
@@ -484,6 +528,18 @@ if (argv._.includes('getTwin')) {
       exit(1)
     })
 }
+if (argv._.includes('listTwins')) {
+  listTwins(argv.a)
+    .then(twins => {
+      console.log('\ntwins: ')
+      console.log(twins)
+      exit(0)
+    })
+    .catch(err => {
+      console.log(err)
+      exit(1)
+    })
+}
 if (argv._.includes('deleteTwin')) {
   deleteTwin(argv.twin, argv.m, argv.a, ({ events = [], status }) => {
     console.log(`Current status is ${status.type}`)
@@ -533,6 +589,18 @@ if (argv._.includes('getFarm')) {
     .then(farm => {
       console.log('\n farm: ')
       console.log(farm)
+      exit(0)
+    })
+    .catch(err => {
+      console.log(err)
+      exit(1)
+    })
+}
+if (argv._.includes('listFarms')) {
+  listFarms(argv.a)
+    .then(farms => {
+      console.log('\nfarms: ')
+      console.log(farms)
       exit(0)
     })
     .catch(err => {
@@ -592,6 +660,18 @@ if (argv._.includes('getNode')) {
     .then(node => {
       console.log('\n node: ')
       console.log(node)
+      exit(0)
+    })
+    .catch(err => {
+      console.log(err)
+      exit(1)
+    })
+}
+if (argv._.includes('listNodes')) {
+  listNodes(argv.a)
+    .then(nodes => {
+      console.log('\nnodes: ')
+      console.log(nodes)
       exit(0)
     })
     .catch(err => {

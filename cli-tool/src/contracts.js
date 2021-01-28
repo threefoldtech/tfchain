@@ -21,11 +21,17 @@ async function getEntity (id, url) {
   return entity
 }
 
+async function listEntities (url) {
+  const client = await getClient(url, '')
+
+  const entities = await client.listEntities()
+  return entities
+}
+
 async function deleteEntity (mnemonic, url) {
   const client = await getClient(url, mnemonic)
 
-  const res = await client.deleteEntity()
-  return res
+  return await client.deleteEntity()
 }
 
 async function createTwin (peerID, mnemonic, url, callback) {
@@ -40,6 +46,12 @@ async function getTwin (id, url) {
 
   const twin = await client.getTwinByID(id)
   return twin
+}
+
+async function listTwins (url) {
+  const client = await getClient(url, '')
+
+  return await client.listTwins()
 }
 
 async function deleteTwin (id, mnemonic, url, callback) {
@@ -92,6 +104,12 @@ async function getFarm (id, url) {
   return farm
 }
 
+async function listFarms (url) {
+  const client = await getClient(url, '')
+
+  return await client.listFarms()
+}
+
 async function deleteFarm (id, mnemonic, url, callback) {
   const client = await getClient(url, mnemonic)
 
@@ -135,6 +153,12 @@ async function getNode (id, url) {
   return node
 }
 
+async function listNodes (url) {
+  const client = await getClient(url, '')
+
+  return await client.listNodes()
+}
+
 async function deleteNode (id, mnemonic, url, callback) {
   const client = await getClient(url, mnemonic)
 
@@ -158,6 +182,7 @@ module.exports = {
   createEntity,
   updateEntity,
   getEntity,
+  listEntities,
   deleteEntity,
   createTwin,
   getTwin,
@@ -171,5 +196,8 @@ module.exports = {
   getNode,
   deleteNode,
   sign,
-  getPrice
+  getPrice,
+  listTwins,
+  listFarms,
+  listNodes
 }
