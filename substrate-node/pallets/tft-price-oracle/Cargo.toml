@@ -6,7 +6,7 @@ homepage = 'https://substrate.dev'
 license = 'Unlicense'
 name = 'pallet-tft-price-oracle'
 repository = 'https://github.com/substrate-developer-hub/substrate-node-template/'
-version = '2.0.0'
+version = '2.0.1'
 
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
@@ -26,20 +26,20 @@ package = "substrate-fixed"
 [dependencies]
 # Substrate packages
 
-balances = { package = 'pallet-balances', version = '2.0.0', default-features = false }
-frame-support = { version = '2.0.0', default-features = false }
-frame-system = { version = '2.0.0', default-features = false }
-sp-core = { version = '2.0.0', default-features = false }
-sp-runtime = { version = '2.0.0', default-features = false }
-sp-std = { version = '2.0.0', default-features = false }
-sp-storage = { version = '2.0.0', default-features = false }
-pallet-timestamp = { version = '2.0.0', default-features = false }
-sp-io = { version = '2.0.0', default-features = false }
+balances = { package = 'pallet-balances', version = '2.0.1', default-features = false }
+frame-support = { version = '2.0.1', default-features = false }
+frame-system = { version = '2.0.1', default-features = false }
+sp-core = { version = '2.0.1', default-features = false }
+sp-runtime = { version = '2.0.1', default-features = false }
+sp-std = { version = '2.0.1', default-features = false }
+sp-storage = { version = '2.0.1', default-features = false }
+pallet-timestamp = { version = '2.0.1', default-features = false }
+sp-io = { version = '2.0.1', default-features = false }
 lite-json = { version = "0.1.3", default-features = false }
 
 [dev-dependencies]
-sp-core = { version = '2.0.0', default-features = false }
-sp-io = { version = '2.0.0', default-features = false }
+sp-core = { version = '2.0.1', default-features = false }
+sp-io = { version = '2.0.1', default-features = false }
 
 [features]
 default = ['std']
