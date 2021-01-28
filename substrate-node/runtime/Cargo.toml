@@ -20,13 +20,20 @@ features = ['derive']
 package = 'parity-scale-codec'
 version = '1.3.4'
 
+
+[dependencies.pallet-tfgrid]
+default-features = false
+git = "https://github.com/threefoldtech/substrate-pallet-tfgrid"
+package = "pallet-tfgrid"
+
+[dependencies.pallet-tft-price-oracle]
+default-features = false
+git = "https://github.com/threefoldtech/substrate-pallet-tft-price"
+package = "pallet-tft-price-oracle"
+
 [dependencies]
 hex-literal = { optional = true, version = '0.3.1' }
 serde = { features = ['derive'], optional = true, version = '1.0.101' }
-
-# local dependencies
-pallet-tfgrid = { path = '../pallets/tfgrid', default-features = false, version = '2.0.1' }
-pallet-tft-price-oracle = { path = '../pallets/tft-price-oracle', default-features = false, version = '2.0.1' }
 
 # Substrate dependencies
 frame-benchmarking = { default-features = false, optional = true, version = '2.0.1' }

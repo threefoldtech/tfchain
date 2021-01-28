@@ -3871,11 +3871,11 @@ dependencies = [
 [[package]]
 name = "pallet-tfgrid"
 version = "2.0.1"
+source = "git+https://github.com/threefoldtech/substrate-pallet-tfgrid#a7d38d7a4344feb5d6db78287e74027fe7d512e4"
 dependencies = [
  "frame-support",
  "frame-system",
  "hex",
- "hex-literal",
  "lite-json",
  "pallet-balances",
  "pallet-timestamp",
@@ -3891,6 +3891,7 @@ dependencies = [
 [[package]]
 name = "pallet-tft-price-oracle"
 version = "2.0.1"
+source = "git+https://github.com/threefoldtech/substrate-pallet-tft-price#d8ffa4e0640c0851c3e8ce31df4a6735c40a62af"
 dependencies = [
  "frame-support",
  "frame-system",
