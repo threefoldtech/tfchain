@@ -338,7 +338,7 @@ parameter_types! {
 	pub const MinVestedTransfer: Balance = 100 * 1000000000000;
 }
 
-impl pallet_vesting::Trait for Runtime {
+impl pallet_vesting::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type BlockNumberToBalance = ConvertInto;

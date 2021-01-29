@@ -4001,16 +4001,22 @@ dependencies = [
 [[package]]
 name = "pallet-vesting"
 version = "2.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29727fd6e47463bcb39766645544a8c7c73072dbc35e65f084848f513705773c"
+source = "git+https://github.com/threefoldtech/substrate-pallet-vesting#1692598fe40c4e6f20fa40c4511794f4c65f8940"
 dependencies = [
  "enumflags2",
  "frame-support",
  "frame-system",
+ "hex",
+ "lite-json",
+ "pallet-balances",
+ "pallet-timestamp",
  "parity-scale-codec",
  "serde",
+ "sp-core",
+ "sp-io",
  "sp-runtime",
  "sp-std",
+ "sp-storage",
 ]
 
 [[package]]
