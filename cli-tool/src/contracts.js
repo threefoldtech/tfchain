@@ -178,6 +178,19 @@ async function getPrice (mnemonic, url) {
   return client.getPrice()
 }
 
+async function vestedTransfer (locked, perBlock, startingBlock, tftPrice, mnemonic, url, callback) {
+  const client = await getClient(url, mnemonic)
+
+  const vest = await client.vest(locked, perBlock, startingBlock, tftPrice, callback)
+  return vest
+}
+
+async function getBalance (mnemonic, url) {
+  const client = await getClient(url, mnemonic)
+
+  return await client.balance()
+}
+
 module.exports = {
   createEntity,
   updateEntity,
@@ -199,5 +212,7 @@ module.exports = {
   getPrice,
   listTwins,
   listFarms,
-  listNodes
+  listNodes,
+  vestedTransfer,
+  getBalance
 }
