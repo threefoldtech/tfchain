@@ -3892,7 +3892,7 @@ dependencies = [
 [[package]]
 name = "pallet-tfgrid"
 version = "2.0.1"
-source = "git+https://github.com/threefoldtech/substrate-pallet-tfgrid#a7d38d7a4344feb5d6db78287e74027fe7d512e4"
+source = "git+https://github.com/threefoldtech/substrate-pallets#c90c96c626a5edc09f4f258a296f77e90a005292"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3912,7 +3912,7 @@ dependencies = [
 [[package]]
 name = "pallet-tft-price-oracle"
 version = "2.0.1"
-source = "git+https://github.com/threefoldtech/substrate-pallet-tft-price#d8ffa4e0640c0851c3e8ce31df4a6735c40a62af"
+source = "git+https://github.com/threefoldtech/substrate-pallets#c90c96c626a5edc09f4f258a296f77e90a005292"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4001,7 +4001,7 @@ dependencies = [
 [[package]]
 name = "pallet-vesting"
 version = "2.0.1"
-source = "git+https://github.com/threefoldtech/substrate-pallet-vesting#1692598fe40c4e6f20fa40c4511794f4c65f8940"
+source = "git+https://github.com/threefoldtech/substrate-pallets#c90c96c626a5edc09f4f258a296f77e90a005292"
 dependencies = [
  "enumflags2",
  "frame-support",
@@ -4009,6 +4009,7 @@ dependencies = [
  "hex",
  "lite-json",
  "pallet-balances",
+ "pallet-tft-price-oracle",
  "pallet-timestamp",
  "parity-scale-codec",
  "serde",
@@ -4017,6 +4018,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-storage",
+ "substrate-fixed",
 ]
 
 [[package]]

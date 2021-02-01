@@ -23,18 +23,21 @@ version = '1.3.4'
 
 [dependencies.pallet-tfgrid]
 default-features = false
-git = "https://github.com/threefoldtech/substrate-pallet-tfgrid"
+git = "https://github.com/threefoldtech/substrate-pallets"
+path = "pallet-tfgrid"
 package = "pallet-tfgrid"
 
 [dependencies.pallet-tft-price-oracle]
 default-features = false
-git = "https://github.com/threefoldtech/substrate-pallet-tft-price"
+git = "https://github.com/threefoldtech/substrate-pallets"
+path = "pallet-tft-price"
 package = "pallet-tft-price-oracle"
 
 [dependencies.pallet-vesting]
 default-features = false
-git = "https://github.com/threefoldtech/substrate-pallet-vesting"
+git = "https://github.com/threefoldtech/substrate-pallets"
 # path = "../../../pallets/pallet-vesting"
+path = "pallet-vesting"
 package = "pallet-vesting"
 
 [dependencies]
