@@ -344,6 +344,8 @@ impl pallet_vesting::Config for Runtime {
 	type BlockNumberToBalance = ConvertInto;
 	type MinVestedTransfer = MinVestedTransfer;
 	type WeightInfo = ();
+	type AuthorityId = pallet_tft_price_oracle::crypto::AuthId;
+    type Call = Call;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

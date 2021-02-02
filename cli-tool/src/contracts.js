@@ -188,7 +188,7 @@ async function vestedTransfer (locked, perBlock, startingBlock, tftPrice, mnemon
 async function getBalance (mnemonic, url) {
   const client = await getClient(url, mnemonic)
 
-  return await client.balance()
+  return await client.getBalance()
 }
 
 module.exports = {
