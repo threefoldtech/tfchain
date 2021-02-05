@@ -114,3 +114,21 @@ Twins are linked to your public key. You don't need to provide parameters.
 Delete your twin.
 
 `node index.js deleteTwin`
+
+### Making a vesting call (BETA)
+
+You can vest X amount of tokens for X amount of time:
+
+Example:
+
+- 12000 tokens
+- 0.00228 tokens unlock every block (that is 1000 ish tokens each month, which means te vesting period is 1 year)
+- 0.30 cent is the TFT unlock price
+
+`node index.js vestedTransfer -l 12000 -p 0.00228 -s 8 -t 0.30`
+
+Check your vested balance:
+
+`node index.js getBalance`
+
+You are now vesting! :)
