@@ -21,7 +21,9 @@ const {
   listEntities,
   listTwins,
   listFarms,
-  listNodes
+  listNodes,
+  vestedTransfer,
+  getBalance
 } = require('./src/contracts')
 
 const argv = yargs
@@ -362,6 +364,50 @@ const argv = yargs
     }
   })
   .command('getPrice', 'Get TFT price', {
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
+      type: 'string'
+    }
+  })
+  .command('vestedTransfer', 'vest an amount of tokens', {
+    locked: {
+      description: 'amount of tokens to lock',
+      alias: 'l',
+      type: 'number'
+    },
+    perBlock: {
+      description: 'amount of tokens that unlock per block',
+      alias: 'p',
+      type: 'number'
+    },
+    startingBlock: {
+      description: 'block to start the lock on',
+      alias: 's',
+      type: 'number'
+    },
+    tftPrice: {
+      description: 'tft price that triggers unlock condition',
+      alias: 't',
+      type: 'number'
+    },
+    mnemonic: {
+      description: 'Mnemonic to sign with',
+      alias: 'm',
+      type: 'string'
+    },
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
+      type: 'string'
+    }
+  })
+  .command('getBalance', 'Get your accounts balance', {
+    mnemonic: {
+      description: 'Mnemonic to sign with',
+      alias: 'm',
+      type: 'string'
+    },
     apiUrl: {
       description: 'Url of the api',
       alias: 'a',
@@ -718,6 +764,42 @@ if (argv._.includes('getPrice')) {
   getPrice(argv.a)
     .then(price => {
       console.log('\n price: ')
+      console.log(price)
+      exit(0)
+    })
+    .catch(err => {
+      console.log(err)
+      exit(1)
+    })
+}
+if (argv._.includes('vestedTransfer')) {
+  vestedTransfer(argv.l, argv.p, argv.s, argv.t, argv.m, argv.a, (res) => {
+    if (res instanceof Error) {
+      console.log(res)
+      exit(1)
+    }
+
+    const { events = [], status } = res
+    console.log(`Current status is ${status.type}`)
+
+    if (status.isFinalized) {
+      console.log(`Transaction included at blockHash ${status.asFinalized}`)
+
+      // Loop through Vec<EventRecord> to display all events
+      events.forEach(({ phase, event: { data, method, section } }) => {
+        console.log(`\t' ${phase}: ${section}.${method}:: ${data}`)
+      })
+      exit(1)
+    }
+  }).catch(err => {
+    console.log(err)
+    exit(1)
+  })
+}
+if (argv._.includes('getBalance')) {
+  getBalance(argv.m, argv.a)
+    .then(price => {
+      console.log('\nbalance: ')
       console.log(price)
       exit(0)
     })

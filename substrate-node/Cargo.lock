@@ -1286,6 +1286,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
 
 [[package]]
+name = "enumflags2"
+version = "0.6.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "83c8d82922337cd23a15f88b70d8e4ef5f11da38dd7cdb55e84dd5de99695da0"
+dependencies = [
+ "enumflags2_derive",
+]
+
+[[package]]
+name = "enumflags2_derive"
+version = "0.6.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "946ee94e3dbf58fdd324f9ce245c7b238d46a66f00e86a020b71996349e46cce"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "env_logger"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3558,6 +3578,7 @@ dependencies = [
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
+ "pallet-vesting",
  "parity-scale-codec",
  "serde",
  "sp-api",
@@ -3871,7 +3892,7 @@ dependencies = [
 [[package]]
 name = "pallet-tfgrid"
 version = "2.0.1"
-source = "git+https://github.com/threefoldtech/substrate-pallet-tfgrid#a7d38d7a4344feb5d6db78287e74027fe7d512e4"
+source = "git+https://github.com/threefoldtech/substrate-pallets#b0e9ab23a31783216d24f2c4aaccf6c2a168421d"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3891,7 +3912,7 @@ dependencies = [
 [[package]]
 name = "pallet-tft-price-oracle"
 version = "2.0.1"
-source = "git+https://github.com/threefoldtech/substrate-pallet-tft-price#d8ffa4e0640c0851c3e8ce31df4a6735c40a62af"
+source = "git+https://github.com/threefoldtech/substrate-pallets#b0e9ab23a31783216d24f2c4aaccf6c2a168421d"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3975,6 +3996,29 @@ dependencies = [
  "sp-api",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "pallet-vesting"
+version = "2.0.1"
+source = "git+https://github.com/threefoldtech/substrate-pallets#b0e9ab23a31783216d24f2c4aaccf6c2a168421d"
+dependencies = [
+ "enumflags2",
+ "frame-support",
+ "frame-system",
+ "hex",
+ "lite-json",
+ "pallet-balances",
+ "pallet-tft-price-oracle",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-storage",
+ "substrate-fixed",
 ]
 
 [[package]]
@@ -7056,7 +7100,7 @@ dependencies = [
 [[package]]
 name = "substrate-fixed"
 version = "0.5.5"
-source = "git+https://github.com/encointer/substrate-fixed#310e0d3a4c498b16ab7f790e99bbf6cf06e87a43"
+source = "git+https://github.com/encointer/substrate-fixed#8f0c983854a3ffafaf505a7d4052f5cbae3109c8"
 dependencies = [
  "parity-scale-codec",
  "typenum",
@@ -7706,7 +7750,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.7.3",
+ "rand 0.3.23",
  "static_assertions",
 ]
 

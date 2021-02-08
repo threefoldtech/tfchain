@@ -11,6 +11,7 @@ use sp_core::{crypto::KeyTypeId, OpaqueMetadata, Encode};
 use sp_runtime::{
 	ApplyExtrinsicResult, generic, create_runtime_str, impl_opaque_keys, MultiSignature,
 	transaction_validity::{TransactionValidity, TransactionSource},
+	traits::{ConvertInto}
 };
 use sp_runtime::traits::{
 	BlakeTwo256, Block as BlockT, IdentityLookup, Verify, IdentifyAccount, NumberFor, Saturating,
@@ -333,6 +334,18 @@ impl pallet_tft_price_oracle::Trait for Runtime {
     type Call = Call;
 }
 
+parameter_types! {
+	pub const MinVestedTransfer: Balance = 100 * 1000000000000;
+}
+
+impl pallet_vesting::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type BlockNumberToBalance = ConvertInto;
+	type MinVestedTransfer = MinVestedTransfer;
+	type WeightInfo = ();
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -343,6 +356,7 @@ construct_runtime!(
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
 		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
+		Vesting: pallet_vesting::{Module, Call, Storage, Event<T>, Config<T>},
 		Aura: pallet_aura::{Module, Config<T>, Inherent},
 		Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},

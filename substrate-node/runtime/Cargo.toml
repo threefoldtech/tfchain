@@ -23,13 +23,19 @@ version = '1.3.4'
 
 [dependencies.pallet-tfgrid]
 default-features = false
-git = "https://github.com/threefoldtech/substrate-pallet-tfgrid"
+git = "https://github.com/threefoldtech/substrate-pallets"
 package = "pallet-tfgrid"
 
 [dependencies.pallet-tft-price-oracle]
 default-features = false
-git = "https://github.com/threefoldtech/substrate-pallet-tft-price"
+git = "https://github.com/threefoldtech/substrate-pallets"
 package = "pallet-tft-price-oracle"
+
+[dependencies.pallet-vesting]
+default-features = false
+git = "https://github.com/threefoldtech/substrate-pallets"
+package = "pallet-vesting"
+# path = "../../../pallets/pallet-vesting"
 
 [dependencies]
 hex-literal = { optional = true, version = '0.3.1' }
@@ -89,6 +95,7 @@ std = [
     'pallet-tfgrid/std',
     'pallet-tft-price-oracle/std',
     'pallet-timestamp/std',
+    'pallet-vesting/std',
     'pallet-transaction-payment/std',
     'pallet-transaction-payment-rpc-runtime-api/std',
     'sp-api/std',
