@@ -3574,7 +3574,7 @@ dependencies = [
  "pallet-randomness-collective-flip",
  "pallet-sudo",
  "pallet-tfgrid",
- "pallet-tft-price-oracle 2.0.1 (git+https://github.com/threefoldtech/substrate-pallets)",
+ "pallet-tft-price-oracle",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
@@ -3892,7 +3892,7 @@ dependencies = [
 [[package]]
 name = "pallet-tfgrid"
 version = "2.0.1"
-source = "git+https://github.com/threefoldtech/substrate-pallets#c90c96c626a5edc09f4f258a296f77e90a005292"
+source = "git+https://github.com/threefoldtech/substrate-pallets#b0e9ab23a31783216d24f2c4aaccf6c2a168421d"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3912,25 +3912,7 @@ dependencies = [
 [[package]]
 name = "pallet-tft-price-oracle"
 version = "2.0.1"
-dependencies = [
- "frame-support",
- "frame-system",
- "lite-json",
- "pallet-balances",
- "pallet-timestamp",
- "parity-scale-codec",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "sp-storage",
- "substrate-fixed",
-]
-
-[[package]]
-name = "pallet-tft-price-oracle"
-version = "2.0.1"
-source = "git+https://github.com/threefoldtech/substrate-pallets#c90c96c626a5edc09f4f258a296f77e90a005292"
+source = "git+https://github.com/threefoldtech/substrate-pallets#b0e9ab23a31783216d24f2c4aaccf6c2a168421d"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4019,6 +4001,7 @@ dependencies = [
 [[package]]
 name = "pallet-vesting"
 version = "2.0.1"
+source = "git+https://github.com/threefoldtech/substrate-pallets#b0e9ab23a31783216d24f2c4aaccf6c2a168421d"
 dependencies = [
  "enumflags2",
  "frame-support",
@@ -4026,7 +4009,7 @@ dependencies = [
  "hex",
  "lite-json",
  "pallet-balances",
- "pallet-tft-price-oracle 2.0.1",
+ "pallet-tft-price-oracle",
  "pallet-timestamp",
  "parity-scale-codec",
  "serde",
@@ -7117,7 +7100,7 @@ dependencies = [
 [[package]]
 name = "substrate-fixed"
 version = "0.5.5"
-source = "git+https://github.com/encointer/substrate-fixed#310e0d3a4c498b16ab7f790e99bbf6cf06e87a43"
+source = "git+https://github.com/encointer/substrate-fixed#8f0c983854a3ffafaf505a7d4052f5cbae3109c8"
 dependencies = [
  "parity-scale-codec",
  "typenum",
@@ -7767,7 +7750,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.7.3",
+ "rand 0.3.23",
  "static_assertions",
 ]
 
