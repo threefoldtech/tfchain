@@ -35,10 +35,9 @@ package = "pallet-tft-price-oracle"
 
 [dependencies.pallet-vesting]
 default-features = false
-# git = "https://github.com/threefoldtech/substrate-pallets"
-# path = "pallet-vesting"
-path = "../../../pallets/pallet-vesting"
-package = "pallet-vesting"
+git = "https://github.com/threefoldtech/substrate-pallets"
+path = "pallet-vesting"
+# path = "../../../pallets/pallet-vesting"
 
 [dependencies]
 hex-literal = { optional = true, version = '0.3.1' }
