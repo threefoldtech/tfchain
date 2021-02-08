@@ -2,7 +2,7 @@
   "dependencies": {
     "bip39": "^3.0.3",
     "bn.js": "^5.1.3",
-    "tfgrid-api-client": "^0.0.1-beta.5",
+    "tfgrid-api-client": "^0.0.1-beta.8",
     "yargs": "^16.0.3"
   },
   "devDependencies": {
