@@ -3574,6 +3574,7 @@ dependencies = [
  "pallet-randomness-collective-flip",
  "pallet-sudo",
  "pallet-tfgrid",
+ "pallet-tft-bridge",
  "pallet-tft-price-oracle",
  "pallet-timestamp",
  "pallet-transaction-payment",
@@ -3910,9 +3911,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-tft-bridge"
+version = "1.0.0"
+source = "git+https://github.com/threefoldfoundation/tft-parity?branch=main#3a0465a94d8bfec1b6ab2d09903bb5e74d31e53f"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "lite-json",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-storage",
+ "substrate-fixed",
+]
+
+[[package]]
 name = "pallet-tft-price-oracle"
-version = "2.0.1"
-source = "git+https://github.com/threefoldtech/substrate-pallets#b0e9ab23a31783216d24f2c4aaccf6c2a168421d"
+version = "1.0.0"
+source = "git+https://github.com/threefoldfoundation/tft-parity?branch=main#3a0465a94d8bfec1b6ab2d09903bb5e74d31e53f"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4000,8 +4020,8 @@ dependencies = [
 
 [[package]]
 name = "pallet-vesting"
-version = "2.0.1"
-source = "git+https://github.com/threefoldtech/substrate-pallets#b0e9ab23a31783216d24f2c4aaccf6c2a168421d"
+version = "1.0.0"
+source = "git+https://github.com/threefoldfoundation/tft-parity?branch=main#3a0465a94d8bfec1b6ab2d09903bb5e74d31e53f"
 dependencies = [
  "enumflags2",
  "frame-support",
@@ -7750,7 +7770,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.3.23",
+ "rand 0.7.3",
  "static_assertions",
 ]
 

@@ -28,14 +28,23 @@ package = "pallet-tfgrid"
 
 [dependencies.pallet-tft-price-oracle]
 default-features = false
-git = "https://github.com/threefoldtech/substrate-pallets"
+git = "https://github.com/threefoldfoundation/tft-parity"
+branch = "main"
 package = "pallet-tft-price-oracle"
 
 [dependencies.pallet-vesting]
 default-features = false
-git = "https://github.com/threefoldtech/substrate-pallets"
+git = "https://github.com/threefoldfoundation/tft-parity"
 package = "pallet-vesting"
-# path = "../../../pallets/pallet-vesting"
+branch = "main"
+# path = "../../../tft-parity/pallet-vesting"
+
+[dependencies.pallet-tft-bridge]
+default-features = false
+git = "https://github.com/threefoldfoundation/tft-parity"
+package = "pallet-tft-bridge"
+branch = "main"
+# path = "../../../tft-parity/pallet-tft-bridge"
 
 [dependencies]
 hex-literal = { optional = true, version = '0.3.1' }

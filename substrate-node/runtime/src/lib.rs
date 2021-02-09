@@ -44,6 +44,8 @@ pub use pallet_tfgrid;
 
 pub use pallet_tft_price_oracle;
 
+pub use pallet_tft_bridge;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -346,6 +348,12 @@ impl pallet_vesting::Config for Runtime {
 	type WeightInfo = ();
 }
 
+impl pallet_tft_bridge::Trait for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type Burn = ();
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -364,6 +372,7 @@ construct_runtime!(
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 		TfgridModule: pallet_tfgrid::{Module, Call, Storage, Event<T>},
 		TFTPriceModule: pallet_tft_price_oracle::{Module, Call, Storage, Event<T>},
+		TFTBridgeModule: pallet_tft_bridge::{Module, Call, Storage, Event<T>},
 	}
 );
 
