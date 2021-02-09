@@ -425,7 +425,12 @@ if (argv._.includes('createEntity')) {
   //   exit(1)
   // }
 
-  createEntity(argv.n, argv.c, argv.t, argv.m, argv.a, ({ events = [], status }) => {
+  createEntity(argv.n, argv.c, argv.t, argv.m, argv.a, res => {
+    if (res instanceof Error) {
+      console.log(res)
+      exit(1)
+    }
+    const { events = [], status } = res
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -449,7 +454,12 @@ if (argv._.includes('updateEntity')) {
   //   exit(1)
   // }
 
-  updateEntity(argv.n, argv.c, argv.t, argv.m, argv.a, ({ events = [], status }) => {
+  updateEntity(argv.n, argv.c, argv.t, argv.m, argv.a, res => {
+    if (res instanceof Error) {
+      console.log(res)
+      exit(1)
+    }
+    const { events = [], status } = res
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -504,7 +514,12 @@ if (argv._.includes('deleteEntity')) {
     })
 }
 if (argv._.includes('createTwin')) {
-  createTwin(argv.peerID, argv.m, argv.a, ({ events = [], status }) => {
+  createTwin(argv.peerID, argv.m, argv.a, res => {
+    if (res instanceof Error) {
+      console.log(res)
+      exit(1)
+    }
+    const { events = [], status } = res
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -522,7 +537,12 @@ if (argv._.includes('createTwin')) {
   })
 }
 if (argv._.includes('addTwinEntity')) {
-  addTwinEntity(argv.twin, argv.entity, argv.sig, argv.m, argv.a, ({ events = [], status }) => {
+  addTwinEntity(argv.twin, argv.entity, argv.sig, argv.m, argv.a, res => {
+    if (res instanceof Error) {
+      console.log(res)
+      exit(1)
+    }
+    const { events = [], status } = res
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -540,7 +560,12 @@ if (argv._.includes('addTwinEntity')) {
   })
 }
 if (argv._.includes('deleteTwinEntity')) {
-  removeTwinEntity(argv.twin, argv.entity, argv.m, argv.a, ({ events = [], status }) => {
+  removeTwinEntity(argv.twin, argv.entity, argv.m, argv.a, res => {
+    if (res instanceof Error) {
+      console.log(res)
+      exit(1)
+    }
+    const { events = [], status } = res
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -587,7 +612,12 @@ if (argv._.includes('listTwins')) {
     })
 }
 if (argv._.includes('deleteTwin')) {
-  deleteTwin(argv.twin, argv.m, argv.a, ({ events = [], status }) => {
+  deleteTwin(argv.twin, argv.m, argv.a, res => {
+    if (res instanceof Error) {
+      console.log(res)
+      exit(1)
+    }
+    const { events = [], status } = res
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -660,7 +690,12 @@ if (argv._.includes('deleteFarm')) {
     exit(1)
   }
 
-  deleteFarm(argv.id, argv.m, argv.a, ({ events = [], status }) => {
+  deleteFarm(argv.id, argv.m, argv.a, res => {
+    if (res instanceof Error) {
+      console.log(res)
+      exit(1)
+    }
+    const { events = [], status } = res
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
@@ -731,7 +766,12 @@ if (argv._.includes('deleteNode')) {
     exit(1)
   }
 
-  deleteNode(argv.id, argv.m, argv.a, ({ events = [], status }) => {
+  deleteNode(argv.id, argv.m, argv.a, res => {
+    if (res instanceof Error) {
+      console.log(res)
+      exit(1)
+    }
+    const { events = [], status } = res
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
