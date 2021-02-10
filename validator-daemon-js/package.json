@@ -2,7 +2,7 @@
   "dependencies": {
     "stellar-base": "^4.0.3",
     "stellar-sdk": "^7.0.0",
-    "tfgrid-api-client": "^0.0.1-beta.9",
+    "tfgrid-api-client": "^0.0.1-beta.10",
     "yargs": "^16.0.3"
   },
   "devDependencies": {
