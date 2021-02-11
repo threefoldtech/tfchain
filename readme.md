@@ -6,11 +6,11 @@
 
 You will need a specific version of rust nightly in order to compile:
 
-`rustup install nightly-2020-10-05`
+`rustup install nightly`
 
 Wasm toolchain:
 
-`rustup target add wasm32-unknown-unknown --toolchain nightly-2020-10-05`
+`rustup target add wasm32-unknown-unknown --toolchain nightly`
 
 Now you can build.
 
@@ -52,9 +52,11 @@ cd graphql
 yarn
 
 yarn build
+
 yarn db:up
 yarn db:prepare
 yarn db:migrate
+yarn db:init
 
 docker-compose up
 ```
