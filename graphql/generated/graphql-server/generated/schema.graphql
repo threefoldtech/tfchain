@@ -67,6 +67,95 @@ enum CertificationType {
   Gold
 }
 
+type City implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  countryId: BigInt!
+  name: String!
+}
+
+type CityConnection {
+  totalCount: Int!
+  edges: [CityEdge!]!
+  pageInfo: PageInfo!
+}
+
+input CityCreateInput {
+  countryId: BigInt!
+  name: String!
+}
+
+type CityEdge {
+  node: City!
+  cursor: String!
+}
+
+enum CityOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  countryId_ASC
+  countryId_DESC
+  name_ASC
+  name_DESC
+}
+
+input CityUpdateInput {
+  countryId: BigInt
+  name: String
+}
+
+input CityWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  countryId_eq: BigInt
+  countryId_gt: BigInt
+  countryId_gte: BigInt
+  countryId_lt: BigInt
+  countryId_lte: BigInt
+  countryId_in: [BigInt!]
+  name_eq: String
+  name_contains: String
+  name_startsWith: String
+  name_endsWith: String
+  name_in: [String!]
+}
+
+input CityWhereUniqueInput {
+  id: ID!
+}
+
 type CommentSearchFTSOutput {
   item: CommentSearchSearchResult!
   rank: Float!
@@ -75,6 +164,94 @@ type CommentSearchFTSOutput {
 }
 
 union CommentSearchSearchResult = Transfer
+
+type Country implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  code: String!
+  name: String!
+}
+
+type CountryConnection {
+  totalCount: Int!
+  edges: [CountryEdge!]!
+  pageInfo: PageInfo!
+}
+
+input CountryCreateInput {
+  code: String!
+  name: String!
+}
+
+type CountryEdge {
+  node: Country!
+  cursor: String!
+}
+
+enum CountryOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  code_ASC
+  code_DESC
+  name_ASC
+  name_DESC
+}
+
+input CountryUpdateInput {
+  code: String
+  name: String
+}
+
+input CountryWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  code_eq: String
+  code_contains: String
+  code_startsWith: String
+  code_endsWith: String
+  code_in: [String!]
+  name_eq: String
+  name_contains: String
+  name_startsWith: String
+  name_endsWith: String
+  name_in: [String!]
+}
+
+input CountryWhereUniqueInput {
+  id: ID!
+}
 
 """
 The javascript `Date` as string. Type represents date and time as the ISO Date string.
@@ -822,6 +999,12 @@ input PricingPolicyWhereUniqueInput {
 }
 
 type Query {
+  cities(offset: Int, limit: Int = 50, where: CityWhereInput, orderBy: CityOrderByInput): [City!]!
+  city(where: CityWhereUniqueInput!): City
+  citiesConnection(first: Int, after: String, last: Int, before: String, where: CityWhereInput, orderBy: CityOrderByInput): CityConnection!
+  countries(offset: Int, limit: Int = 50, where: CountryWhereInput, orderBy: CountryOrderByInput): [Country!]!
+  country(where: CountryWhereUniqueInput!): Country
+  countriesConnection(first: Int, after: String, last: Int, before: String, where: CountryWhereInput, orderBy: CountryOrderByInput): CountryConnection!
   entityProofs(offset: Int, limit: Int = 50, where: EntityProofWhereInput, orderBy: EntityProofOrderByInput): [EntityProof!]!
   entityProof(where: EntityProofWhereUniqueInput!): EntityProof
   entityProofsConnection(first: Int, after: String, last: Int, before: String, where: EntityProofWhereInput, orderBy: EntityProofOrderByInput): EntityProofConnection!

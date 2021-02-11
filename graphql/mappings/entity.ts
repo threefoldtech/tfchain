@@ -3,7 +3,7 @@ import { Entity } from '../generated/graphql-server/src/modules/entity/entity.mo
 import BN from 'bn.js'
 import { hex2a } from './util'
 
-export async function templateModule_EntityStored(db: DB, event: SubstrateEvent) {
+export async function tfgridModule_EntityStored(db: DB, event: SubstrateEvent) {
   const [entity_id, name, country_id, city_id, pub_key] = event.params
   const entity = new Entity()
   entity.entityId = new BN(entity_id.value as number)
@@ -15,7 +15,7 @@ export async function templateModule_EntityStored(db: DB, event: SubstrateEvent)
   await db.save<Entity>(entity)
 }
 
-export async function templateModule_EntityUpdated(db: DB, event: SubstrateEvent) {
+export async function tfgridModule_EntityUpdated(db: DB, event: SubstrateEvent) {
   const [entity_id, name, country_id, city_id, pub_key] = event.params
 
   const savedEntity = await db.get(Entity, { where: { entityId: new BN(entity_id.value as number) } })
@@ -31,7 +31,7 @@ export async function templateModule_EntityUpdated(db: DB, event: SubstrateEvent
   }
 }
 
-export async function templateModule_EntityDeleted(db: DB, event: SubstrateEvent) {
+export async function tfgridModule_EntityDeleted(db: DB, event: SubstrateEvent) {
   const [entity_id] = event.params
 
   const savedEntity = await db.get(Entity, { where: { entityId: new BN(entity_id.value as number) } })

@@ -6,6 +6,12 @@ import { IResolvers } from 'graphql-tools/dist/Interfaces'
 import * as schema from  './schema.graphql'
 
 export interface Query {
+    cities: <T = Array<City>>(args: { offset?: Int | null, limit?: Int | null, where?: CityWhereInput | null, orderBy?: CityOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    city: <T = City | null>(args: { where: CityWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    citiesConnection: <T = CityConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: CityWhereInput | null, orderBy?: CityOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    countries: <T = Array<Country>>(args: { offset?: Int | null, limit?: Int | null, where?: CountryWhereInput | null, orderBy?: CountryOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    country: <T = Country | null>(args: { where: CountryWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    countriesConnection: <T = CountryConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: CountryWhereInput | null, orderBy?: CountryOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     entityProofs: <T = Array<EntityProof>>(args: { offset?: Int | null, limit?: Int | null, where?: EntityProofWhereInput | null, orderBy?: EntityProofOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     entityProof: <T = EntityProof | null>(args: { where: EntityProofWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     entityProofsConnection: <T = EntityProofConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: EntityProofWhereInput | null, orderBy?: EntityProofOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
@@ -67,6 +73,28 @@ export const Binding = makeBindingClass<BindingConstructor<Binding>>({ schema: s
 export type CertificationType =   'None' |
   'Silver' |
   'Gold'
+
+export type CityOrderByInput =   'createdAt_ASC' |
+  'createdAt_DESC' |
+  'updatedAt_ASC' |
+  'updatedAt_DESC' |
+  'deletedAt_ASC' |
+  'deletedAt_DESC' |
+  'countryId_ASC' |
+  'countryId_DESC' |
+  'name_ASC' |
+  'name_DESC'
+
+export type CountryOrderByInput =   'createdAt_ASC' |
+  'createdAt_DESC' |
+  'updatedAt_ASC' |
+  'updatedAt_DESC' |
+  'deletedAt_ASC' |
+  'deletedAt_DESC' |
+  'code_ASC' |
+  'code_DESC' |
+  'name_ASC' |
+  'name_DESC'
 
 export type EntityOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -239,6 +267,109 @@ export interface BaseWhereInput {
   deletedAt_gt?: String | null
   deletedAt_gte?: String | null
   deletedById_eq?: String | null
+}
+
+export interface CityCreateInput {
+  countryId: BigInt
+  name: String
+}
+
+export interface CityUpdateInput {
+  countryId?: BigInt | null
+  name?: String | null
+}
+
+export interface CityWhereInput {
+  id_eq?: ID_Input | null
+  id_in?: ID_Output[] | ID_Output | null
+  createdAt_eq?: DateTime | null
+  createdAt_lt?: DateTime | null
+  createdAt_lte?: DateTime | null
+  createdAt_gt?: DateTime | null
+  createdAt_gte?: DateTime | null
+  createdById_eq?: ID_Input | null
+  createdById_in?: ID_Output[] | ID_Output | null
+  updatedAt_eq?: DateTime | null
+  updatedAt_lt?: DateTime | null
+  updatedAt_lte?: DateTime | null
+  updatedAt_gt?: DateTime | null
+  updatedAt_gte?: DateTime | null
+  updatedById_eq?: ID_Input | null
+  updatedById_in?: ID_Output[] | ID_Output | null
+  deletedAt_all?: Boolean | null
+  deletedAt_eq?: DateTime | null
+  deletedAt_lt?: DateTime | null
+  deletedAt_lte?: DateTime | null
+  deletedAt_gt?: DateTime | null
+  deletedAt_gte?: DateTime | null
+  deletedById_eq?: ID_Input | null
+  deletedById_in?: ID_Output[] | ID_Output | null
+  countryId_eq?: BigInt | null
+  countryId_gt?: BigInt | null
+  countryId_gte?: BigInt | null
+  countryId_lt?: BigInt | null
+  countryId_lte?: BigInt | null
+  countryId_in?: BigInt[] | BigInt | null
+  name_eq?: String | null
+  name_contains?: String | null
+  name_startsWith?: String | null
+  name_endsWith?: String | null
+  name_in?: String[] | String | null
+}
+
+export interface CityWhereUniqueInput {
+  id: ID_Output
+}
+
+export interface CountryCreateInput {
+  code: String
+  name: String
+}
+
+export interface CountryUpdateInput {
+  code?: String | null
+  name?: String | null
+}
+
+export interface CountryWhereInput {
+  id_eq?: ID_Input | null
+  id_in?: ID_Output[] | ID_Output | null
+  createdAt_eq?: DateTime | null
+  createdAt_lt?: DateTime | null
+  createdAt_lte?: DateTime | null
+  createdAt_gt?: DateTime | null
+  createdAt_gte?: DateTime | null
+  createdById_eq?: ID_Input | null
+  createdById_in?: ID_Output[] | ID_Output | null
+  updatedAt_eq?: DateTime | null
+  updatedAt_lt?: DateTime | null
+  updatedAt_lte?: DateTime | null
+  updatedAt_gt?: DateTime | null
+  updatedAt_gte?: DateTime | null
+  updatedById_eq?: ID_Input | null
+  updatedById_in?: ID_Output[] | ID_Output | null
+  deletedAt_all?: Boolean | null
+  deletedAt_eq?: DateTime | null
+  deletedAt_lt?: DateTime | null
+  deletedAt_lte?: DateTime | null
+  deletedAt_gt?: DateTime | null
+  deletedAt_gte?: DateTime | null
+  deletedById_eq?: ID_Input | null
+  deletedById_in?: ID_Output[] | ID_Output | null
+  code_eq?: String | null
+  code_contains?: String | null
+  code_startsWith?: String | null
+  code_endsWith?: String | null
+  code_in?: String[] | String | null
+  name_eq?: String | null
+  name_contains?: String | null
+  name_startsWith?: String | null
+  name_endsWith?: String | null
+  name_in?: String[] | String | null
+}
+
+export interface CountryWhereUniqueInput {
+  id: ID_Output
 }
 
 export interface EntityCreateInput {
@@ -920,11 +1051,59 @@ export interface BaseModelUUID extends BaseGraphQLObject {
   version: Int
 }
 
+export interface City extends BaseGraphQLObject {
+  id: ID_Output
+  createdAt: DateTime
+  createdById: String
+  updatedAt?: DateTime | null
+  updatedById?: String | null
+  deletedAt?: DateTime | null
+  deletedById?: String | null
+  version: Int
+  countryId: BigInt
+  name: String
+}
+
+export interface CityConnection {
+  totalCount: Int
+  edges: Array<CityEdge>
+  pageInfo: PageInfo
+}
+
+export interface CityEdge {
+  node: City
+  cursor: String
+}
+
 export interface CommentSearchFTSOutput {
   item: CommentSearchSearchResult
   rank: Float
   isTypeOf: String
   highlight: String
+}
+
+export interface Country extends BaseGraphQLObject {
+  id: ID_Output
+  createdAt: DateTime
+  createdById: String
+  updatedAt?: DateTime | null
+  updatedById?: String | null
+  deletedAt?: DateTime | null
+  deletedById?: String | null
+  version: Int
+  code: String
+  name: String
+}
+
+export interface CountryConnection {
+  totalCount: Int
+  edges: Array<CountryEdge>
+  pageInfo: PageInfo
+}
+
+export interface CountryEdge {
+  node: Country
+  cursor: String
 }
 
 export interface Entity extends BaseGraphQLObject {

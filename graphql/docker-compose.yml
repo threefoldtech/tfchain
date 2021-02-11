@@ -49,7 +49,7 @@ services:
       - TYPES_JSON=/types.json
     volumes:
       - type: bind
-        source: ../api-client/types.json
+        source: ./types.json
         target: /home/hydra-indexer/types.json
     depends_on: 
       - db

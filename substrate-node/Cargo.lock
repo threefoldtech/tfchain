@@ -3913,7 +3913,6 @@ dependencies = [
 [[package]]
 name = "pallet-tft-bridge"
 version = "1.0.0"
-source = "git+https://github.com/threefoldfoundation/tft-parity?branch=main#3a0465a94d8bfec1b6ab2d09903bb5e74d31e53f"
 dependencies = [
  "frame-support",
  "frame-system",

@@ -1,7 +1,7 @@
 {
   "name": "substrate-api-sql",
   "version": "1.0.0",
-  "description": "GraphQL server and Substrate indexer. Generated with \u2665 by Hydra-CLI",
+  "description": "GraphQL server and Substrate indexer. Generated with ♥ by Hydra-CLI",
   "scripts": {
     "build": "yarn clean && yarn codegen:all",
     "lint": "echo \"Skippinng\"",
@@ -13,6 +13,7 @@
     "db:up": "yarn docker:db:up",
     "db:drop": "(cd ./generated/graphql-server && yarn db:drop)",
     "db:prepare": "(cd ./generated/graphql-server && yarn db:create && yarn db:sync)",
+    "db:init": "node init-countries.js",
     "db:schema:migrate": "(cd ./generated/graphql-server && yarn db:migrate)",
     "db:processor:migrate": "(cd ./generated/hydra-processor && yarn db:migrate)",
     "db:migrate": "yarn db:schema:migrate && yarn db:processor:migrate",
@@ -28,14 +29,18 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "tslib": "^2.0.0",
     "@types/bn.js": "^4.11.6",
-    "bn.js": "^5.1.2"
+    "axios": "^0.21.1",
+    "bn.js": "^5.1.2",
+    "dotenv": "^8.2.0",
+    "lodash": "^4.17.20",
+    "pg": "^8.5.1",
+    "tslib": "^2.0.0"
   },
   "devDependencies": {
-    "@metmirr/hydra-cli": "^0.1.5-4",
     "@dzlzv/hydra-common": "^0.0.3",
     "@dzlzv/hydra-db-utils": "^0.0.2",
-    "@dzlzv/hydra-processor": "^0.0.7"
+    "@dzlzv/hydra-processor": "^0.0.7",
+    "@metmirr/hydra-cli": "^0.1.5-4"
   }
 }

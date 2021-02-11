@@ -73,7 +73,7 @@
     "ts-jest": "^24.1.0",
     "ts-node": "^8.10",
     "ts-node-dev": "^1.0.0-pre.60",
-    "typeorm": "^0.2.30",
+    "typeorm": "^0.2.31",
     "typescript": "^3.9.7"
   },
   "jest": {

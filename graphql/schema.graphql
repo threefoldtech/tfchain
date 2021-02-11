@@ -74,3 +74,15 @@ type PricingPolicy @entity {
   cu: BigInt!
   nu: BigInt!
 }
+
+type Country @entity {
+  id: BigInt!
+  code: String!
+  name: String!
+}
+
+type City @entity {
+  id: BigInt!
+  country_id: BigInt!
+  name: String!
+}

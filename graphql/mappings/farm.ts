@@ -3,7 +3,7 @@ import { CertificationType, Farm } from '../generated/graphql-server/src/modules
 import BN from 'bn.js'
 import { hex2a } from './util'
 
-export async function templateModule_FarmStored(db: DB, event: SubstrateEvent) {
+export async function tfgridModule_FarmStored(db: DB, event: SubstrateEvent) {
   const [farm_id, name, entity_id, twin_id, pricing_policy_id, country_id, city_id, certification_type] = event.params
   const farm = new Farm()
   
@@ -28,7 +28,7 @@ export async function templateModule_FarmStored(db: DB, event: SubstrateEvent) {
   await db.save<Farm>(farm)
 }
 
-export async function templateModule_FarmDeleted(db: DB, event: SubstrateEvent) {
+export async function tfgridModule_FarmDeleted(db: DB, event: SubstrateEvent) {
     const [farm_id] = event.params
   
     const savedFarm = await db.get(Farm, { where: { farmId: new BN(farm_id.value as number) } })

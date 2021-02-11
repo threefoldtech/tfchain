@@ -4,7 +4,7 @@ import { EntityProof } from '../generated/graphql-server/src/modules/entity-proo
 import BN from 'bn.js'
 import { hex2a } from './util'
 
-export async function templateModule_TwinStored(db: DB, event: SubstrateEvent) {
+export async function tfgridModule_TwinStored(db: DB, event: SubstrateEvent) {
   const [pubkey, twin_id, peer_id] = event.params
   const twin = new Twin()
   twin.twinId = new BN(twin_id.value as number)
@@ -14,7 +14,7 @@ export async function templateModule_TwinStored(db: DB, event: SubstrateEvent) {
   await db.save<Twin>(twin)
 }
 
-export async function templateModule_TwinUpdated(db: DB, event: SubstrateEvent) {
+export async function tfgridModule_TwinUpdated(db: DB, event: SubstrateEvent) {
   const [twin_id, peer_id] = event.params
 
   let savedTwin = await db.get(Twin, { where: { twinId: new BN(twin_id.value as number) } })
@@ -26,7 +26,7 @@ export async function templateModule_TwinUpdated(db: DB, event: SubstrateEvent) 
   }
 }
 
-export async function templateModule_TwinDeleted(db: DB, event: SubstrateEvent) {
+export async function tfgridModule_TwinDeleted(db: DB, event: SubstrateEvent) {
   const [twin_id] = event.params
 
   const savedTwin = await db.get(Twin, { where: { twinId: new BN(twin_id.value as number) } })
@@ -38,7 +38,7 @@ export async function templateModule_TwinDeleted(db: DB, event: SubstrateEvent) 
 
 /* TWIN ENTITIES */
 
-export async function templateModule_TwinEntityStored(db: DB, event: SubstrateEvent) {
+export async function tfgridModule_TwinEntityStored(db: DB, event: SubstrateEvent) {
   const [twin_id, entity_id, signature] = event.params
 
   let savedTwin = await db.get(Twin, { where: { twinId: new BN(twin_id.value as number) } })

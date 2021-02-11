@@ -41,10 +41,10 @@ branch = "main"
 
 [dependencies.pallet-tft-bridge]
 default-features = false
-git = "https://github.com/threefoldfoundation/tft-parity"
-package = "pallet-tft-bridge"
-branch = "main"
-# path = "../../../tft-parity/pallet-tft-bridge"
+# git = "https://github.com/threefoldfoundation/tft-parity"
+# package = "pallet-tft-bridge"
+# branch = "main"
+path = "../../../tft-parity/pallet-tft-bridge"
 
 [dependencies]
 hex-literal = { optional = true, version = '0.3.1' }
