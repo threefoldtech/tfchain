@@ -18,10 +18,10 @@ RUN apt-get update && \
 
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
 	export PATH="$PATH:$HOME/.cargo/bin" && \
-	rustup install nightly-2020-10-01 && \
-    rustup target add wasm32-unknown-unknown --toolchain nightly-2020-10-01 && \
+	rustup install nightly && \
+    rustup target add wasm32-unknown-unknown --toolchain nightly && \
 	rustup default stable && \
-	cargo +nightly-2020-10-01 build "--$PROFILE"
+	cargo build "--$PROFILE"
 
 # ===== SECOND STAGE ======
 
