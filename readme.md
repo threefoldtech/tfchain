@@ -21,7 +21,7 @@ make build-debug
 
 This will build the node binary in release mode, once built you can execute it by doing following:
 
-`./target/release/node-template --dev --tmp --ws-external`
+`./target/release/susbtrate --dev --tmp --ws-external`
 
 > You need the `ws-external` flag in order to connect from a zos node to substrate in a local setup.
 
