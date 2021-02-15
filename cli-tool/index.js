@@ -514,7 +514,7 @@ if (argv._.includes('deleteEntity')) {
     })
 }
 if (argv._.includes('createTwin')) {
-  createTwin(argv.peerID, argv.m, argv.a, res => {
+  createTwin(argv.m, argv.a, res => {
     if (res instanceof Error) {
       console.log(res)
       exit(1)

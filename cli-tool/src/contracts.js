@@ -34,10 +34,10 @@ async function deleteEntity (mnemonic, url) {
   return await client.deleteEntity()
 }
 
-async function createTwin (peerID, mnemonic, url, callback) {
+async function createTwin (mnemonic, url, callback) {
   const client = await getClient(url, mnemonic)
 
-  const create = await client.createTwin(peerID, callback)
+  const create = await client.createTwin(callback)
   return create
 }
 

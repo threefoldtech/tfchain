@@ -110,6 +110,8 @@ export type EntityOrderByInput =   'createdAt_ASC' |
   'countryId_DESC' |
   'cityId_ASC' |
   'cityId_DESC' |
+  'address_ASC' |
+  'address_DESC' |
   'pubKey_ASC' |
   'pubKey_DESC'
 
@@ -170,8 +172,6 @@ export type NodeOrderByInput =   'createdAt_ASC' |
   'nodeId_DESC' |
   'farmId_ASC' |
   'farmId_DESC' |
-  'twinId_ASC' |
-  'twinId_DESC' |
   'resourcesId_ASC' |
   'resourcesId_DESC' |
   'locationId_ASC' |
@@ -179,7 +179,11 @@ export type NodeOrderByInput =   'createdAt_ASC' |
   'countryId_ASC' |
   'countryId_DESC' |
   'cityId_ASC' |
-  'cityId_DESC'
+  'cityId_DESC' |
+  'address_ASC' |
+  'address_DESC' |
+  'pubKey_ASC' |
+  'pubKey_DESC'
 
 export type PricingPolicyOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -240,10 +244,10 @@ export type TwinOrderByInput =   'createdAt_ASC' |
   'deletedAt_DESC' |
   'twinId_ASC' |
   'twinId_DESC' |
+  'address_ASC' |
+  'address_DESC' |
   'pubKey_ASC' |
-  'pubKey_DESC' |
-  'peerId_ASC' |
-  'peerId_DESC'
+  'pubKey_DESC'
 
 export interface BaseWhereInput {
   id_eq?: String | null
@@ -377,6 +381,7 @@ export interface EntityCreateInput {
   name: String
   countryId?: BigInt | null
   cityId?: BigInt | null
+  address: String
   pubKey: String
 }
 
@@ -441,6 +446,7 @@ export interface EntityUpdateInput {
   name?: String | null
   countryId?: BigInt | null
   cityId?: BigInt | null
+  address?: String | null
   pubKey?: String | null
 }
 
@@ -492,6 +498,11 @@ export interface EntityWhereInput {
   cityId_lt?: BigInt | null
   cityId_lte?: BigInt | null
   cityId_in?: BigInt[] | BigInt | null
+  address_eq?: String | null
+  address_contains?: String | null
+  address_startsWith?: String | null
+  address_endsWith?: String | null
+  address_in?: String[] | String | null
   pubKey_eq?: String | null
   pubKey_contains?: String | null
   pubKey_startsWith?: String | null
@@ -653,21 +664,23 @@ export interface LocationWhereUniqueInput {
 export interface NodeCreateInput {
   nodeId: BigInt
   farmId: BigInt
-  twinId: BigInt
   resourcesId: ID_Output
   locationId: ID_Output
   countryId?: BigInt | null
   cityId?: BigInt | null
+  address: String
+  pubKey: String
 }
 
 export interface NodeUpdateInput {
   nodeId?: BigInt | null
   farmId?: BigInt | null
-  twinId?: BigInt | null
   resourcesId?: ID_Input | null
   locationId?: ID_Input | null
   countryId?: BigInt | null
   cityId?: BigInt | null
+  address?: String | null
+  pubKey?: String | null
 }
 
 export interface NodeWhereInput {
@@ -707,12 +720,6 @@ export interface NodeWhereInput {
   farmId_lt?: BigInt | null
   farmId_lte?: BigInt | null
   farmId_in?: BigInt[] | BigInt | null
-  twinId_eq?: BigInt | null
-  twinId_gt?: BigInt | null
-  twinId_gte?: BigInt | null
-  twinId_lt?: BigInt | null
-  twinId_lte?: BigInt | null
-  twinId_in?: BigInt[] | BigInt | null
   resourcesId_eq?: ID_Input | null
   resourcesId_in?: ID_Output[] | ID_Output | null
   locationId_eq?: ID_Input | null
@@ -729,6 +736,16 @@ export interface NodeWhereInput {
   cityId_lt?: BigInt | null
   cityId_lte?: BigInt | null
   cityId_in?: BigInt[] | BigInt | null
+  address_eq?: String | null
+  address_contains?: String | null
+  address_startsWith?: String | null
+  address_endsWith?: String | null
+  address_in?: String[] | String | null
+  pubKey_eq?: String | null
+  pubKey_contains?: String | null
+  pubKey_startsWith?: String | null
+  pubKey_endsWith?: String | null
+  pubKey_in?: String[] | String | null
 }
 
 export interface NodeWhereUniqueInput {
@@ -957,14 +974,14 @@ export interface TransferWhereUniqueInput {
 
 export interface TwinCreateInput {
   twinId: BigInt
+  address: String
   pubKey: String
-  peerId: String
 }
 
 export interface TwinUpdateInput {
   twinId?: BigInt | null
+  address?: String | null
   pubKey?: String | null
-  peerId?: String | null
 }
 
 export interface TwinWhereInput {
@@ -998,16 +1015,16 @@ export interface TwinWhereInput {
   twinId_lt?: BigInt | null
   twinId_lte?: BigInt | null
   twinId_in?: BigInt[] | BigInt | null
+  address_eq?: String | null
+  address_contains?: String | null
+  address_startsWith?: String | null
+  address_endsWith?: String | null
+  address_in?: String[] | String | null
   pubKey_eq?: String | null
   pubKey_contains?: String | null
   pubKey_startsWith?: String | null
   pubKey_endsWith?: String | null
   pubKey_in?: String[] | String | null
-  peerId_eq?: String | null
-  peerId_contains?: String | null
-  peerId_startsWith?: String | null
-  peerId_endsWith?: String | null
-  peerId_in?: String[] | String | null
 }
 
 export interface TwinWhereUniqueInput {
@@ -1119,6 +1136,7 @@ export interface Entity extends BaseGraphQLObject {
   name: String
   countryId?: BigInt | null
   cityId?: BigInt | null
+  address: String
   pubKey: String
 }
 
@@ -1225,13 +1243,14 @@ export interface Node extends BaseGraphQLObject {
   version: Int
   nodeId: BigInt
   farmId: BigInt
-  twinId: BigInt
   resources: Resource
   resourcesId: String
   location: Location
   locationId: String
   countryId?: BigInt | null
   cityId?: BigInt | null
+  address: String
+  pubKey: String
 }
 
 export interface NodeConnection {
@@ -1352,8 +1371,8 @@ export interface Twin extends BaseGraphQLObject {
   deletedById?: String | null
   version: Int
   twinId: BigInt
+  address: String
   pubKey: String
-  peerId: String
   entityprooftwinRel?: Array<EntityProof> | null
 }
 

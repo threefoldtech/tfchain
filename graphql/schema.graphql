@@ -12,13 +12,14 @@ type Entity @entity {
   name: String!
   countryId: BigInt
   cityId: BigInt
+  address: String!
   pubKey: String!
 }
 
 type Twin @entity {
   twinId: BigInt!
+  address: String!
   pubKey: String!
-  peerId: String!
 }
 
 type EntityProof @entity {
@@ -47,11 +48,12 @@ enum CertificationType {
 type Node @entity {
   node_id: BigInt!
   farm_id: BigInt!
-  twinId: BigInt!
   resources: Resource!
   location: Location!
   countryId: BigInt
   cityId: BigInt
+  address: String!
+  pubKey: String!
 }
 
 type Resource @entity {

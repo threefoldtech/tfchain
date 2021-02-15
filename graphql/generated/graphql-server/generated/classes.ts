@@ -405,11 +405,11 @@ export enum TwinOrderByEnum {
   twinId_ASC = "twinId_ASC",
   twinId_DESC = "twinId_DESC",
 
-  pubKey_ASC = "pubKey_ASC",
-  pubKey_DESC = "pubKey_DESC",
+  address_ASC = "address_ASC",
+  address_DESC = "address_DESC",
 
-  peerId_ASC = "peerId_ASC",
-  peerId_DESC = "peerId_DESC"
+  pubKey_ASC = "pubKey_ASC",
+  pubKey_DESC = "pubKey_DESC"
 }
 
 registerEnumType(TwinOrderByEnum, {
@@ -509,6 +509,21 @@ export class TwinWhereInput {
   twinId_in?: BN[];
 
   @TypeGraphQLField({ nullable: true })
+  address_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  address_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  address_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  address_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  address_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
   pubKey_eq?: string;
 
   @TypeGraphQLField({ nullable: true })
@@ -522,21 +537,6 @@ export class TwinWhereInput {
 
   @TypeGraphQLField(() => [String], { nullable: true })
   pubKey_in?: string[];
-
-  @TypeGraphQLField({ nullable: true })
-  peerId_eq?: string;
-
-  @TypeGraphQLField({ nullable: true })
-  peerId_contains?: string;
-
-  @TypeGraphQLField({ nullable: true })
-  peerId_startsWith?: string;
-
-  @TypeGraphQLField({ nullable: true })
-  peerId_endsWith?: string;
-
-  @TypeGraphQLField(() => [String], { nullable: true })
-  peerId_in?: string[];
 }
 
 @TypeGraphQLInputType()
@@ -551,10 +551,10 @@ export class TwinCreateInput {
   twinId!: BN;
 
   @TypeGraphQLField()
-  pubKey!: string;
+  address!: string;
 
   @TypeGraphQLField()
-  peerId!: string;
+  pubKey!: string;
 }
 
 @TypeGraphQLInputType()
@@ -563,10 +563,10 @@ export class TwinUpdateInput {
   twinId?: BN;
 
   @TypeGraphQLField({ nullable: true })
-  pubKey?: string;
+  address?: string;
 
   @TypeGraphQLField({ nullable: true })
-  peerId?: string;
+  pubKey?: string;
 }
 
 @ArgsType()
@@ -801,6 +801,9 @@ export enum EntityOrderByEnum {
   cityId_ASC = "cityId_ASC",
   cityId_DESC = "cityId_DESC",
 
+  address_ASC = "address_ASC",
+  address_DESC = "address_DESC",
+
   pubKey_ASC = "pubKey_ASC",
   pubKey_DESC = "pubKey_DESC"
 }
@@ -953,6 +956,21 @@ export class EntityWhereInput {
   cityId_in?: BN[];
 
   @TypeGraphQLField({ nullable: true })
+  address_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  address_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  address_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  address_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  address_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
   pubKey_eq?: string;
 
   @TypeGraphQLField({ nullable: true })
@@ -989,6 +1007,9 @@ export class EntityCreateInput {
   cityId?: BN;
 
   @TypeGraphQLField()
+  address!: string;
+
+  @TypeGraphQLField()
   pubKey!: string;
 }
 
@@ -1005,6 +1026,9 @@ export class EntityUpdateInput {
 
   @TypeGraphQLField(() => BigInt, { nullable: true })
   cityId?: BN;
+
+  @TypeGraphQLField({ nullable: true })
+  address?: string;
 
   @TypeGraphQLField({ nullable: true })
   pubKey?: string;
@@ -1602,9 +1626,6 @@ export enum NodeOrderByEnum {
   farmId_ASC = "farmId_ASC",
   farmId_DESC = "farmId_DESC",
 
-  twinId_ASC = "twinId_ASC",
-  twinId_DESC = "twinId_DESC",
-
   resourcesId_ASC = "resourcesId_ASC",
   resourcesId_DESC = "resourcesId_DESC",
 
@@ -1615,7 +1636,13 @@ export enum NodeOrderByEnum {
   countryId_DESC = "countryId_DESC",
 
   cityId_ASC = "cityId_ASC",
-  cityId_DESC = "cityId_DESC"
+  cityId_DESC = "cityId_DESC",
+
+  address_ASC = "address_ASC",
+  address_DESC = "address_DESC",
+
+  pubKey_ASC = "pubKey_ASC",
+  pubKey_DESC = "pubKey_DESC"
 }
 
 registerEnumType(NodeOrderByEnum, {
@@ -1732,24 +1759,6 @@ export class NodeWhereInput {
   @TypeGraphQLField(() => [BigInt], { nullable: true })
   farmId_in?: BN[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  twinId_eq?: BN;
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  twinId_gt?: BN;
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  twinId_gte?: BN;
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  twinId_lt?: BN;
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  twinId_lte?: BN;
-
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  twinId_in?: BN[];
-
   @TypeGraphQLField(() => ID, { nullable: true })
   resourcesId_eq?: string;
 
@@ -1797,6 +1806,36 @@ export class NodeWhereInput {
 
   @TypeGraphQLField(() => [BigInt], { nullable: true })
   cityId_in?: BN[];
+
+  @TypeGraphQLField({ nullable: true })
+  address_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  address_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  address_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  address_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  address_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  pubKey_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  pubKey_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  pubKey_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  pubKey_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  pubKey_in?: string[];
 }
 
 @TypeGraphQLInputType()
@@ -1813,9 +1852,6 @@ export class NodeCreateInput {
   @TypeGraphQLField(() => BigInt)
   farmId!: BN;
 
-  @TypeGraphQLField(() => BigInt)
-  twinId!: BN;
-
   @TypeGraphQLField(() => ID)
   resourcesId!: string;
 
@@ -1827,6 +1863,12 @@ export class NodeCreateInput {
 
   @TypeGraphQLField(() => BigInt, { nullable: true })
   cityId?: BN;
+
+  @TypeGraphQLField()
+  address!: string;
+
+  @TypeGraphQLField()
+  pubKey!: string;
 }
 
 @TypeGraphQLInputType()
@@ -1836,9 +1878,6 @@ export class NodeUpdateInput {
 
   @TypeGraphQLField(() => BigInt, { nullable: true })
   farmId?: BN;
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  twinId?: BN;
 
   @TypeGraphQLField(() => ID, { nullable: true })
   resourcesId?: string;
@@ -1851,6 +1890,12 @@ export class NodeUpdateInput {
 
   @TypeGraphQLField(() => BigInt, { nullable: true })
   cityId?: BN;
+
+  @TypeGraphQLField({ nullable: true })
+  address?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  pubKey?: string;
 }
 
 @ArgsType()

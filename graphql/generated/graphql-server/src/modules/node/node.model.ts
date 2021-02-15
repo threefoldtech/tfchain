@@ -25,15 +25,6 @@ export class Node extends BaseModel {
   })
   farmId!: BN;
 
-  @NumericField({
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
-  })
-  twinId!: BN;
-
   @ManyToOne(
     () => Resource,
     (param: Resource) => param.noderesources,
@@ -69,6 +60,12 @@ export class Node extends BaseModel {
     }
   })
   cityId?: BN;
+
+  @StringField({})
+  address!: string;
+
+  @StringField({})
+  pubKey!: string;
 
   constructor(init?: Partial<Node>) {
     super();

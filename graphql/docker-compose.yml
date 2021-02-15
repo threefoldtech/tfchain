@@ -1,11 +1,11 @@
 version: "3.4"
 
 services:
-  substrate:
-    image: dylanverstraete/substrate-tfgrid
-    restart: always
-    ports:
-      - "9944:9944"
+  # substrate:
+  #   image: dylanverstraete/substrate-tfgrid
+  #   restart: always
+  #   ports:
+  #     - "9944:9944"
 
   db:
     image: postgres:12

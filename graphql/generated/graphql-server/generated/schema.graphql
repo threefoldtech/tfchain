@@ -275,6 +275,7 @@ type Entity implements BaseGraphQLObject {
   name: String!
   countryId: BigInt
   cityId: BigInt
+  address: String!
   pubKey: String!
 }
 
@@ -289,6 +290,7 @@ input EntityCreateInput {
   name: String!
   countryId: BigInt
   cityId: BigInt
+  address: String!
   pubKey: String!
 }
 
@@ -312,6 +314,8 @@ enum EntityOrderByInput {
   countryId_DESC
   cityId_ASC
   cityId_DESC
+  address_ASC
+  address_DESC
   pubKey_ASC
   pubKey_DESC
 }
@@ -418,6 +422,7 @@ input EntityUpdateInput {
   name: String
   countryId: BigInt
   cityId: BigInt
+  address: String
   pubKey: String
 }
 
@@ -469,6 +474,11 @@ input EntityWhereInput {
   cityId_lt: BigInt
   cityId_lte: BigInt
   cityId_in: [BigInt!]
+  address_eq: String
+  address_contains: String
+  address_startsWith: String
+  address_endsWith: String
+  address_in: [String!]
   pubKey_eq: String
   pubKey_contains: String
   pubKey_startsWith: String
@@ -731,13 +741,14 @@ type Node implements BaseGraphQLObject {
   version: Int!
   nodeId: BigInt!
   farmId: BigInt!
-  twinId: BigInt!
   resources: Resource!
   resourcesId: String!
   location: Location!
   locationId: String!
   countryId: BigInt
   cityId: BigInt
+  address: String!
+  pubKey: String!
 }
 
 type NodeConnection {
@@ -749,11 +760,12 @@ type NodeConnection {
 input NodeCreateInput {
   nodeId: BigInt!
   farmId: BigInt!
-  twinId: BigInt!
   resourcesId: ID!
   locationId: ID!
   countryId: BigInt
   cityId: BigInt
+  address: String!
+  pubKey: String!
 }
 
 type NodeEdge {
@@ -772,8 +784,6 @@ enum NodeOrderByInput {
   nodeId_DESC
   farmId_ASC
   farmId_DESC
-  twinId_ASC
-  twinId_DESC
   resourcesId_ASC
   resourcesId_DESC
   locationId_ASC
@@ -782,16 +792,21 @@ enum NodeOrderByInput {
   countryId_DESC
   cityId_ASC
   cityId_DESC
+  address_ASC
+  address_DESC
+  pubKey_ASC
+  pubKey_DESC
 }
 
 input NodeUpdateInput {
   nodeId: BigInt
   farmId: BigInt
-  twinId: BigInt
   resourcesId: ID
   locationId: ID
   countryId: BigInt
   cityId: BigInt
+  address: String
+  pubKey: String
 }
 
 input NodeWhereInput {
@@ -831,12 +846,6 @@ input NodeWhereInput {
   farmId_lt: BigInt
   farmId_lte: BigInt
   farmId_in: [BigInt!]
-  twinId_eq: BigInt
-  twinId_gt: BigInt
-  twinId_gte: BigInt
-  twinId_lt: BigInt
-  twinId_lte: BigInt
-  twinId_in: [BigInt!]
   resourcesId_eq: ID
   resourcesId_in: [ID!]
   locationId_eq: ID
@@ -853,6 +862,16 @@ input NodeWhereInput {
   cityId_lt: BigInt
   cityId_lte: BigInt
   cityId_in: [BigInt!]
+  address_eq: String
+  address_contains: String
+  address_startsWith: String
+  address_endsWith: String
+  address_in: [String!]
+  pubKey_eq: String
+  pubKey_contains: String
+  pubKey_startsWith: String
+  pubKey_endsWith: String
+  pubKey_in: [String!]
 }
 
 input NodeWhereUniqueInput {
@@ -1277,8 +1296,8 @@ type Twin implements BaseGraphQLObject {
   deletedById: String
   version: Int!
   twinId: BigInt!
+  address: String!
   pubKey: String!
-  peerId: String!
   entityprooftwinRel: [EntityProof!]
 }
 
@@ -1290,8 +1309,8 @@ type TwinConnection {
 
 input TwinCreateInput {
   twinId: BigInt!
+  address: String!
   pubKey: String!
-  peerId: String!
 }
 
 type TwinEdge {
@@ -1308,16 +1327,16 @@ enum TwinOrderByInput {
   deletedAt_DESC
   twinId_ASC
   twinId_DESC
+  address_ASC
+  address_DESC
   pubKey_ASC
   pubKey_DESC
-  peerId_ASC
-  peerId_DESC
 }
 
 input TwinUpdateInput {
   twinId: BigInt
+  address: String
   pubKey: String
-  peerId: String
 }
 
 input TwinWhereInput {
@@ -1351,16 +1370,16 @@ input TwinWhereInput {
   twinId_lt: BigInt
   twinId_lte: BigInt
   twinId_in: [BigInt!]
+  address_eq: String
+  address_contains: String
+  address_startsWith: String
+  address_endsWith: String
+  address_in: [String!]
   pubKey_eq: String
   pubKey_contains: String
   pubKey_startsWith: String
   pubKey_endsWith: String
   pubKey_in: [String!]
-  peerId_eq: String
-  peerId_contains: String
-  peerId_startsWith: String
-  peerId_endsWith: String
-  peerId_in: [String!]
 }
 
 input TwinWhereUniqueInput {

@@ -39,6 +39,9 @@ export class Entity extends BaseModel {
   cityId?: BN;
 
   @StringField({})
+  address!: string;
+
+  @StringField({})
   pubKey!: string;
 
   constructor(init?: Partial<Entity>) {

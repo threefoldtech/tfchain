@@ -16,10 +16,10 @@ export class Twin extends BaseModel {
   twinId!: BN;
 
   @StringField({})
-  pubKey!: string;
+  address!: string;
 
   @StringField({})
-  peerId!: string;
+  pubKey!: string;
 
   @OneToMany(
     () => EntityProof,

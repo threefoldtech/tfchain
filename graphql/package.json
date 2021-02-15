@@ -14,6 +14,7 @@
     "db:drop": "(cd ./generated/graphql-server && yarn db:drop)",
     "db:prepare": "(cd ./generated/graphql-server && yarn db:create && yarn db:sync)",
     "db:init": "node init-countries.js",
+    "db:install": "yarn build && yarn db:up && yarn db:drop && yarn db:prepare && yarn db:migrate && yarn db:init",
     "db:schema:migrate": "(cd ./generated/graphql-server && yarn db:migrate)",
     "db:processor:migrate": "(cd ./generated/hydra-processor && yarn db:migrate)",
     "db:migrate": "yarn db:schema:migrate && yarn db:processor:migrate",

@@ -2,28 +2,15 @@ import { SubstrateEvent, DB } from '../generated/hydra-processor'
 import { Twin } from '../generated/graphql-server/src/modules/twin/twin.model'
 import { EntityProof } from '../generated/graphql-server/src/modules/entity-proof/entity-proof.model'
 import BN from 'bn.js'
-import { hex2a } from './util'
 
 export async function tfgridModule_TwinStored(db: DB, event: SubstrateEvent) {
-  const [pubkey, twin_id, peer_id] = event.params
+  const [address, pubkey, twin_id] = event.params
   const twin = new Twin()
   twin.twinId = new BN(twin_id.value as number)
+  twin.address = Buffer.from(address.value as string).toString()
   twin.pubKey = Buffer.from(pubkey.value as string).toString()
-  twin.peerId = hex2a(Buffer.from(peer_id.value as string).toString())
 
-  await db.save<Twin>(twin)
-}
-
-export async function tfgridModule_TwinUpdated(db: DB, event: SubstrateEvent) {
-  const [twin_id, peer_id] = event.params
-
-  let savedTwin = await db.get(Twin, { where: { twinId: new BN(twin_id.value as number) } })
-
-  if (savedTwin) {
-    // update peer id and save
-    savedTwin.peerId = Buffer.from(peer_id.value as string).toString()
-    await db.save<Twin>(savedTwin)
-  }
+  await db.save<Twin>(twin) 
 }
 
 export async function tfgridModule_TwinDeleted(db: DB, event: SubstrateEvent) {

@@ -25,6 +25,7 @@ version = '1.3.4'
 default-features = false
 git = "https://github.com/threefoldtech/substrate-pallets"
 package = "pallet-tfgrid"
+# path = "../../../pallets/pallet-tfgrid"
 
 [dependencies.pallet-tft-price-oracle]
 default-features = false
