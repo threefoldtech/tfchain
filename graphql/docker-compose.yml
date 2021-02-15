@@ -50,7 +50,7 @@ services:
     volumes:
       - type: bind
         source: ./types.json
-        target: /home/hydra-indexer/types.json
+        target: /types.json
     depends_on: 
       - db
     command: > 
