@@ -162,7 +162,7 @@ async function listNodes (url) {
 async function deleteNode (id, mnemonic, url, callback) {
   const client = await getClient(url, mnemonic)
 
-  const node = await client.deleteNodeByID(id, callback)
+  const node = await client.deleteNode(id, callback)
   return node
 }
 
