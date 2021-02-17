@@ -34,10 +34,10 @@ async function deleteEntity (mnemonic, url) {
   return await client.deleteEntity()
 }
 
-async function createTwin (mnemonic, url, callback) {
+async function createTwin (ip, mnemonic, url, callback) {
   const client = await getClient(url, mnemonic)
 
-  const create = await client.createTwin(callback)
+  const create = await client.createTwin(ip, callback)
   return create
 }
 
@@ -85,8 +85,8 @@ async function createFarm (name, entityID, twinID, pricingPolicyID, certificatio
   const farm = {
     id: 0,
     name,
-    entityID,
-    twinID,
+    entity_id: entityID,
+    twin_id: twinID,
     pricingPolicyID,
     certificationType,
     countryID,

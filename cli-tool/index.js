@@ -101,9 +101,9 @@ const argv = yargs
     }
   })
   .command('createTwin', 'Create a twin', {
-    peerID: {
-      description: 'peer ID',
-      alias: 'id',
+    ip: {
+      description: 'ip',
+      alias: 'ip',
       type: 'string'
     },
     mnemonic: {
@@ -514,7 +514,7 @@ if (argv._.includes('deleteEntity')) {
     })
 }
 if (argv._.includes('createTwin')) {
-  createTwin(argv.m, argv.a, res => {
+  createTwin(argv.ip, argv.m, argv.a, res => {
     if (res instanceof Error) {
       console.log(res)
       exit(1)
@@ -647,13 +647,15 @@ if (argv._.includes('createFarm')) {
       exit(1)
     }
     const { events = [], status } = res
+    // console.log(res)
     console.log(`Current status is ${status.type}`)
 
     if (status.isFinalized) {
       console.log(`Transaction included at blockHash ${status.asFinalized}`)
 
       // Loop through Vec<EventRecord> to display all events
-      events.forEach(({ phase, event: { data, method, section } }) => {
+      events.forEach(({ phase, event: x }) => {
+        const { data, method, section } = x
         console.log(`\t' ${phase}: ${section}.${method}:: ${data}`)
       })
       exit(1)
