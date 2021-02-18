@@ -19,7 +19,7 @@ export class Twin extends BaseModel {
   address!: string;
 
   @StringField({})
-  pubKey!: string;
+  ip!: string;
 
   @OneToMany(
     () => EntityProof,

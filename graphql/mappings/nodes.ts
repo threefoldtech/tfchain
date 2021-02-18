@@ -19,7 +19,7 @@ interface ILocation {
 }
 
 export async function tfgridModule_NodeStored(db: DB, event: SubstrateEvent) {
-  const [node_id, farm_id, pub_key, resources, location, country_id, city_id] = event.params
+  const [node_id, farm_id, resources, location, country_id, city_id, pub_key, address] = event.params
   const node = new Node()
   
   node.nodeId = new BN(node_id.value as number)
@@ -49,6 +49,7 @@ export async function tfgridModule_NodeStored(db: DB, event: SubstrateEvent) {
   node.countryId = new BN(country_id.value as number)
   node.cityId = new BN(city_id.value as number)
   node.pubKey = Buffer.from(pub_key.value as string).toString()
+  node.address = Buffer.from(address.value as string).toString()
 
   await db.save<Node>(node)
 }

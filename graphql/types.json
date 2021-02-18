@@ -1,49 +1,49 @@
 {
   "Farm": {
-    "id": "u64",
+    "id": "u32",
     "name": "Vec<u8>",
-    "entity_id": "u64",
-    "twin_id": "u64",
-    "pricing_policy_id": "u64",
+    "twin_id": "u32",
+    "pricing_policy_id": "u32",
     "certification_type": "CertificationType",
-    "country_id": "u64",
-    "city_id": "u64"
+    "country_id": "u32",
+    "city_id": "u32"
   },
   "Entity": {
-    "id": "u64",
+    "id": "u32",
     "name": "Vec<u8>",
-    "country_id": "u64",
-    "city_id": "u64",
-    "address": "AccountId",
-    "pub_key": "Public"
+    "country_id": "u32",
+    "city_id": "u32",
+    "address": "AccountId"
   },
   "Twin": {
-    "id": "u64",
-    "pub_key": "AccountId",
+    "id": "u32",
+    "address": "AccountId",
+    "ip": "Vec<u8>",
     "entities": "Vec<EntityProof>"
   },
   "EntityProof": {
-    "entity_id": "u64",
+    "entity_id": "u32",
     "signature": "Vec<u8>"
   },
   "Node": {
-    "id": "u64",
-    "farm_id": "u64",
-    "pub_key": "AccountId",
+    "id": "u32",
+    "farm_id": "u32",
     "resources": "Resources",
     "location": "Location",
-    "country_id": "u64",
-    "city_id": "u64"
+    "country_id": "u32",
+    "city_id": "u32",
+    "pub_key": "Vec<u8>",
+    "address": "AccountId"
   },
   "Location": {
     "longitude": "Vec<u8>",
     "latitude": "Vec<u8>"
   },
   "Resources": {
-    "hru": "u64",
-    "sru": "u64",
-    "cru": "u64",
-    "mru": "u64"
+    "hru": "u32",
+    "sru": "u32",
+    "cru": "u32",
+    "mru": "u32"
   },
   "CertificationType": {
     "_enum": ["None", "Silver", "Gold"]
@@ -52,22 +52,22 @@
     "_enum": ["Farm", "Entity"]
   },
   "CertificationCodes": {
-    "id": "u64",
+    "id": "u32",
     "name": "Vec<u8>",
     "description": "Vec<u8>",
     "certification_code_type": "CertificationCodeType"
   },
   "PricingPolicy": {
-    "id": "u64",
+    "id": "u32",
     "name": "Vec<u8>",
     "currency": "Vec<u8>",
-    "su": "u64",
-    "cu": "u64",
-    "nu": "u64"
+    "su": "u32",
+    "cu": "u32",
+    "nu": "u32"
   },
   "VolumeType": {
     "disk_type": "u8",
-    "size": "u64"
+    "size": "u32"
   },
   "Address": "AccountId",
   "LookupSource": "AccountId",

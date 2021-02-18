@@ -58,9 +58,6 @@ input BaseWhereInput {
 """GraphQL representation of BigInt"""
 scalar BigInt
 
-"""GraphQL representation of Bytes"""
-scalar Bytes
-
 enum CertificationType {
   None
   Silver
@@ -276,7 +273,6 @@ type Entity implements BaseGraphQLObject {
   countryId: BigInt
   cityId: BigInt
   address: String!
-  pubKey: String!
 }
 
 type EntityConnection {
@@ -291,7 +287,6 @@ input EntityCreateInput {
   countryId: BigInt
   cityId: BigInt
   address: String!
-  pubKey: String!
 }
 
 type EntityEdge {
@@ -316,8 +311,6 @@ enum EntityOrderByInput {
   cityId_DESC
   address_ASC
   address_DESC
-  pubKey_ASC
-  pubKey_DESC
 }
 
 type EntityProof implements BaseGraphQLObject {
@@ -423,7 +416,6 @@ input EntityUpdateInput {
   countryId: BigInt
   cityId: BigInt
   address: String
-  pubKey: String
 }
 
 input EntityWhereInput {
@@ -479,11 +471,6 @@ input EntityWhereInput {
   address_startsWith: String
   address_endsWith: String
   address_in: [String!]
-  pubKey_eq: String
-  pubKey_contains: String
-  pubKey_startsWith: String
-  pubKey_endsWith: String
-  pubKey_in: [String!]
 }
 
 input EntityWhereUniqueInput {
@@ -501,7 +488,6 @@ type Farm implements BaseGraphQLObject {
   version: Int!
   farmId: BigInt!
   name: String!
-  entityId: BigInt!
   twinId: BigInt!
   pricingPolicyId: BigInt!
   certificationType: CertificationType!
@@ -518,7 +504,6 @@ type FarmConnection {
 input FarmCreateInput {
   farmId: BigInt!
   name: String!
-  entityId: BigInt!
   twinId: BigInt!
   pricingPolicyId: BigInt!
   certificationType: CertificationType!
@@ -542,8 +527,6 @@ enum FarmOrderByInput {
   farmId_DESC
   name_ASC
   name_DESC
-  entityId_ASC
-  entityId_DESC
   twinId_ASC
   twinId_DESC
   pricingPolicyId_ASC
@@ -559,7 +542,6 @@ enum FarmOrderByInput {
 input FarmUpdateInput {
   farmId: BigInt
   name: String
-  entityId: BigInt
   twinId: BigInt
   pricingPolicyId: BigInt
   certificationType: CertificationType
@@ -603,12 +585,6 @@ input FarmWhereInput {
   name_startsWith: String
   name_endsWith: String
   name_in: [String!]
-  entityId_eq: BigInt
-  entityId_gt: BigInt
-  entityId_gte: BigInt
-  entityId_lt: BigInt
-  entityId_lte: BigInt
-  entityId_in: [BigInt!]
   twinId_eq: BigInt
   twinId_gt: BigInt
   twinId_gte: BigInt
@@ -1181,8 +1157,8 @@ type Transfer implements BaseGraphQLObject {
   deletedAt: DateTime
   deletedById: String
   version: Int!
-  from: Bytes!
-  to: Bytes!
+  from: String!
+  to: String!
   value: BigInt!
   comment: String
   block: Int!
@@ -1195,8 +1171,8 @@ type TransferConnection {
 }
 
 input TransferCreateInput {
-  from: Bytes!
-  to: Bytes!
+  from: String!
+  to: String!
   value: BigInt!
   comment: String
   block: Float!
@@ -1227,8 +1203,8 @@ enum TransferOrderByInput {
 }
 
 input TransferUpdateInput {
-  from: Bytes
-  to: Bytes
+  from: String
+  to: String
   value: BigInt
   comment: String
   block: Float
@@ -1259,10 +1235,16 @@ input TransferWhereInput {
   deletedAt_gte: DateTime
   deletedById_eq: ID
   deletedById_in: [ID!]
-  from_eq: Bytes
-  from_in: [Bytes!]
-  to_eq: Bytes
-  to_in: [Bytes!]
+  from_eq: String
+  from_contains: String
+  from_startsWith: String
+  from_endsWith: String
+  from_in: [String!]
+  to_eq: String
+  to_contains: String
+  to_startsWith: String
+  to_endsWith: String
+  to_in: [String!]
   value_eq: BigInt
   value_gt: BigInt
   value_gte: BigInt
@@ -1297,7 +1279,7 @@ type Twin implements BaseGraphQLObject {
   version: Int!
   twinId: BigInt!
   address: String!
-  pubKey: String!
+  ip: String!
   entityprooftwinRel: [EntityProof!]
 }
 
@@ -1310,7 +1292,7 @@ type TwinConnection {
 input TwinCreateInput {
   twinId: BigInt!
   address: String!
-  pubKey: String!
+  ip: String!
 }
 
 type TwinEdge {
@@ -1329,14 +1311,14 @@ enum TwinOrderByInput {
   twinId_DESC
   address_ASC
   address_DESC
-  pubKey_ASC
-  pubKey_DESC
+  ip_ASC
+  ip_DESC
 }
 
 input TwinUpdateInput {
   twinId: BigInt
   address: String
-  pubKey: String
+  ip: String
 }
 
 input TwinWhereInput {
@@ -1375,11 +1357,11 @@ input TwinWhereInput {
   address_startsWith: String
   address_endsWith: String
   address_in: [String!]
-  pubKey_eq: String
-  pubKey_contains: String
-  pubKey_startsWith: String
-  pubKey_endsWith: String
-  pubKey_in: [String!]
+  ip_eq: String
+  ip_contains: String
+  ip_startsWith: String
+  ip_endsWith: String
+  ip_in: [String!]
 }
 
 input TwinWhereUniqueInput {

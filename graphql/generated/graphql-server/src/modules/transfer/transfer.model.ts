@@ -1,14 +1,14 @@
-import { BaseModel, IntField, NumericField, BytesField, Model, StringField } from 'warthog';
+import { BaseModel, IntField, NumericField, Model, StringField } from 'warthog';
 
 import BN from 'bn.js';
 
 @Model({ api: { description: ` All transfers ` } })
 export class Transfer extends BaseModel {
-  @BytesField({})
-  from!: Buffer;
+  @StringField({})
+  from!: string;
 
-  @BytesField({})
-  to!: Buffer;
+  @StringField({})
+  to!: string;
 
   @NumericField({
     transformer: {

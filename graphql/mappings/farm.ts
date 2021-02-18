@@ -4,12 +4,11 @@ import BN from 'bn.js'
 import { hex2a } from './util'
 
 export async function tfgridModule_FarmStored(db: DB, event: SubstrateEvent) {
-  const [farm_id, name, entity_id, twin_id, pricing_policy_id, country_id, city_id, certification_type] = event.params
+  const [farm_id, name, twin_id, pricing_policy_id, country_id, city_id, certification_type] = event.params
   const farm = new Farm()
   
   farm.farmId = new BN(farm_id.value as number)
   farm.name = hex2a(Buffer.from(name.value as string).toString())
-  farm.entityId = new BN(entity_id.value as number)
   farm.twinId = new BN(twin_id.value as number)
   farm.pricingPolicyId = new BN(pricing_policy_id.value as number)
   farm.countryId = new BN(country_id.value as number)

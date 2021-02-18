@@ -1,7 +1,7 @@
 " All transfers "
 type Transfer @entity {
-  from: Bytes!
-  to: Bytes!
+  from: String!
+  to: String!
   value: BigInt!
   comment: String @fulltext(query: "commentSearch")
   block: Int!
@@ -13,13 +13,12 @@ type Entity @entity {
   countryId: BigInt
   cityId: BigInt
   address: String!
-  pubKey: String!
 }
 
 type Twin @entity {
   twinId: BigInt!
   address: String!
-  pubKey: String!
+  ip: String!
 }
 
 type EntityProof @entity {
@@ -31,7 +30,6 @@ type EntityProof @entity {
 type Farm @entity {
   farm_id: BigInt!
   name: String!
-  entityId: BigInt!
   twinId: BigInt!
   pricingPolicyId: BigInt!
   certification_type: CertificationType!

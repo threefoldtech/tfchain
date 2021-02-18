@@ -111,9 +111,7 @@ export type EntityOrderByInput =   'createdAt_ASC' |
   'cityId_ASC' |
   'cityId_DESC' |
   'address_ASC' |
-  'address_DESC' |
-  'pubKey_ASC' |
-  'pubKey_DESC'
+  'address_DESC'
 
 export type EntityProofOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -138,8 +136,6 @@ export type FarmOrderByInput =   'createdAt_ASC' |
   'farmId_DESC' |
   'name_ASC' |
   'name_DESC' |
-  'entityId_ASC' |
-  'entityId_DESC' |
   'twinId_ASC' |
   'twinId_DESC' |
   'pricingPolicyId_ASC' |
@@ -246,8 +242,8 @@ export type TwinOrderByInput =   'createdAt_ASC' |
   'twinId_DESC' |
   'address_ASC' |
   'address_DESC' |
-  'pubKey_ASC' |
-  'pubKey_DESC'
+  'ip_ASC' |
+  'ip_DESC'
 
 export interface BaseWhereInput {
   id_eq?: String | null
@@ -382,7 +378,6 @@ export interface EntityCreateInput {
   countryId?: BigInt | null
   cityId?: BigInt | null
   address: String
-  pubKey: String
 }
 
 export interface EntityProofCreateInput {
@@ -447,7 +442,6 @@ export interface EntityUpdateInput {
   countryId?: BigInt | null
   cityId?: BigInt | null
   address?: String | null
-  pubKey?: String | null
 }
 
 export interface EntityWhereInput {
@@ -503,11 +497,6 @@ export interface EntityWhereInput {
   address_startsWith?: String | null
   address_endsWith?: String | null
   address_in?: String[] | String | null
-  pubKey_eq?: String | null
-  pubKey_contains?: String | null
-  pubKey_startsWith?: String | null
-  pubKey_endsWith?: String | null
-  pubKey_in?: String[] | String | null
 }
 
 export interface EntityWhereUniqueInput {
@@ -517,7 +506,6 @@ export interface EntityWhereUniqueInput {
 export interface FarmCreateInput {
   farmId: BigInt
   name: String
-  entityId: BigInt
   twinId: BigInt
   pricingPolicyId: BigInt
   certificationType: CertificationType
@@ -528,7 +516,6 @@ export interface FarmCreateInput {
 export interface FarmUpdateInput {
   farmId?: BigInt | null
   name?: String | null
-  entityId?: BigInt | null
   twinId?: BigInt | null
   pricingPolicyId?: BigInt | null
   certificationType?: CertificationType | null
@@ -572,12 +559,6 @@ export interface FarmWhereInput {
   name_startsWith?: String | null
   name_endsWith?: String | null
   name_in?: String[] | String | null
-  entityId_eq?: BigInt | null
-  entityId_gt?: BigInt | null
-  entityId_gte?: BigInt | null
-  entityId_lt?: BigInt | null
-  entityId_lte?: BigInt | null
-  entityId_in?: BigInt[] | BigInt | null
   twinId_eq?: BigInt | null
   twinId_gt?: BigInt | null
   twinId_gte?: BigInt | null
@@ -905,16 +886,16 @@ export interface ResourceWhereUniqueInput {
 }
 
 export interface TransferCreateInput {
-  from: Bytes
-  to: Bytes
+  from: String
+  to: String
   value: BigInt
   comment?: String | null
   block: Float
 }
 
 export interface TransferUpdateInput {
-  from?: Bytes | null
-  to?: Bytes | null
+  from?: String | null
+  to?: String | null
   value?: BigInt | null
   comment?: String | null
   block?: Float | null
@@ -945,10 +926,16 @@ export interface TransferWhereInput {
   deletedAt_gte?: DateTime | null
   deletedById_eq?: ID_Input | null
   deletedById_in?: ID_Output[] | ID_Output | null
-  from_eq?: Bytes | null
-  from_in?: Bytes[] | Bytes | null
-  to_eq?: Bytes | null
-  to_in?: Bytes[] | Bytes | null
+  from_eq?: String | null
+  from_contains?: String | null
+  from_startsWith?: String | null
+  from_endsWith?: String | null
+  from_in?: String[] | String | null
+  to_eq?: String | null
+  to_contains?: String | null
+  to_startsWith?: String | null
+  to_endsWith?: String | null
+  to_in?: String[] | String | null
   value_eq?: BigInt | null
   value_gt?: BigInt | null
   value_gte?: BigInt | null
@@ -975,13 +962,13 @@ export interface TransferWhereUniqueInput {
 export interface TwinCreateInput {
   twinId: BigInt
   address: String
-  pubKey: String
+  ip: String
 }
 
 export interface TwinUpdateInput {
   twinId?: BigInt | null
   address?: String | null
-  pubKey?: String | null
+  ip?: String | null
 }
 
 export interface TwinWhereInput {
@@ -1020,11 +1007,11 @@ export interface TwinWhereInput {
   address_startsWith?: String | null
   address_endsWith?: String | null
   address_in?: String[] | String | null
-  pubKey_eq?: String | null
-  pubKey_contains?: String | null
-  pubKey_startsWith?: String | null
-  pubKey_endsWith?: String | null
-  pubKey_in?: String[] | String | null
+  ip_eq?: String | null
+  ip_contains?: String | null
+  ip_startsWith?: String | null
+  ip_endsWith?: String | null
+  ip_in?: String[] | String | null
 }
 
 export interface TwinWhereUniqueInput {
@@ -1137,7 +1124,6 @@ export interface Entity extends BaseGraphQLObject {
   countryId?: BigInt | null
   cityId?: BigInt | null
   address: String
-  pubKey: String
 }
 
 export interface EntityConnection {
@@ -1188,7 +1174,6 @@ export interface Farm extends BaseGraphQLObject {
   version: Int
   farmId: BigInt
   name: String
-  entityId: BigInt
   twinId: BigInt
   pricingPolicyId: BigInt
   certificationType: CertificationType
@@ -1343,8 +1328,8 @@ export interface Transfer extends BaseGraphQLObject {
   deletedAt?: DateTime | null
   deletedById?: String | null
   version: Int
-  from: Bytes
-  to: Bytes
+  from: String
+  to: String
   value: BigInt
   comment?: String | null
   block: Int
@@ -1372,7 +1357,7 @@ export interface Twin extends BaseGraphQLObject {
   version: Int
   twinId: BigInt
   address: String
-  pubKey: String
+  ip: String
   entityprooftwinRel?: Array<EntityProof> | null
 }
 
@@ -1396,11 +1381,6 @@ export type BigInt = string
 The `Boolean` scalar type represents `true` or `false`.
 */
 export type Boolean = boolean
-
-/*
-GraphQL representation of Bytes
-*/
-export type Bytes = string
 
 /*
 The javascript `Date` as string. Type represents date and time as the ISO Date string.

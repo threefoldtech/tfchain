@@ -408,8 +408,8 @@ export enum TwinOrderByEnum {
   address_ASC = "address_ASC",
   address_DESC = "address_DESC",
 
-  pubKey_ASC = "pubKey_ASC",
-  pubKey_DESC = "pubKey_DESC"
+  ip_ASC = "ip_ASC",
+  ip_DESC = "ip_DESC"
 }
 
 registerEnumType(TwinOrderByEnum, {
@@ -524,19 +524,19 @@ export class TwinWhereInput {
   address_in?: string[];
 
   @TypeGraphQLField({ nullable: true })
-  pubKey_eq?: string;
+  ip_eq?: string;
 
   @TypeGraphQLField({ nullable: true })
-  pubKey_contains?: string;
+  ip_contains?: string;
 
   @TypeGraphQLField({ nullable: true })
-  pubKey_startsWith?: string;
+  ip_startsWith?: string;
 
   @TypeGraphQLField({ nullable: true })
-  pubKey_endsWith?: string;
+  ip_endsWith?: string;
 
   @TypeGraphQLField(() => [String], { nullable: true })
-  pubKey_in?: string[];
+  ip_in?: string[];
 }
 
 @TypeGraphQLInputType()
@@ -554,7 +554,7 @@ export class TwinCreateInput {
   address!: string;
 
   @TypeGraphQLField()
-  pubKey!: string;
+  ip!: string;
 }
 
 @TypeGraphQLInputType()
@@ -566,7 +566,7 @@ export class TwinUpdateInput {
   address?: string;
 
   @TypeGraphQLField({ nullable: true })
-  pubKey?: string;
+  ip?: string;
 }
 
 @ArgsType()
@@ -802,10 +802,7 @@ export enum EntityOrderByEnum {
   cityId_DESC = "cityId_DESC",
 
   address_ASC = "address_ASC",
-  address_DESC = "address_DESC",
-
-  pubKey_ASC = "pubKey_ASC",
-  pubKey_DESC = "pubKey_DESC"
+  address_DESC = "address_DESC"
 }
 
 registerEnumType(EntityOrderByEnum, {
@@ -969,21 +966,6 @@ export class EntityWhereInput {
 
   @TypeGraphQLField(() => [String], { nullable: true })
   address_in?: string[];
-
-  @TypeGraphQLField({ nullable: true })
-  pubKey_eq?: string;
-
-  @TypeGraphQLField({ nullable: true })
-  pubKey_contains?: string;
-
-  @TypeGraphQLField({ nullable: true })
-  pubKey_startsWith?: string;
-
-  @TypeGraphQLField({ nullable: true })
-  pubKey_endsWith?: string;
-
-  @TypeGraphQLField(() => [String], { nullable: true })
-  pubKey_in?: string[];
 }
 
 @TypeGraphQLInputType()
@@ -1008,9 +990,6 @@ export class EntityCreateInput {
 
   @TypeGraphQLField()
   address!: string;
-
-  @TypeGraphQLField()
-  pubKey!: string;
 }
 
 @TypeGraphQLInputType()
@@ -1029,9 +1008,6 @@ export class EntityUpdateInput {
 
   @TypeGraphQLField({ nullable: true })
   address?: string;
-
-  @TypeGraphQLField({ nullable: true })
-  pubKey?: string;
 }
 
 @ArgsType()
@@ -1070,9 +1046,6 @@ export enum FarmOrderByEnum {
 
   name_ASC = "name_ASC",
   name_DESC = "name_DESC",
-
-  entityId_ASC = "entityId_ASC",
-  entityId_DESC = "entityId_DESC",
 
   twinId_ASC = "twinId_ASC",
   twinId_DESC = "twinId_DESC",
@@ -1202,24 +1175,6 @@ export class FarmWhereInput {
   name_in?: string[];
 
   @TypeGraphQLField(() => BigInt, { nullable: true })
-  entityId_eq?: BN;
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  entityId_gt?: BN;
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  entityId_gte?: BN;
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  entityId_lt?: BN;
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  entityId_lte?: BN;
-
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  entityId_in?: BN[];
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
   twinId_eq?: BN;
 
   @TypeGraphQLField(() => BigInt, { nullable: true })
@@ -1313,9 +1268,6 @@ export class FarmCreateInput {
   name!: string;
 
   @TypeGraphQLField(() => BigInt)
-  entityId!: BN;
-
-  @TypeGraphQLField(() => BigInt)
   twinId!: BN;
 
   @TypeGraphQLField(() => BigInt)
@@ -1338,9 +1290,6 @@ export class FarmUpdateInput {
 
   @TypeGraphQLField({ nullable: true })
   name?: string;
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  entityId?: BN;
 
   @TypeGraphQLField(() => BigInt, { nullable: true })
   twinId?: BN;
@@ -2473,17 +2422,35 @@ export class TransferWhereInput {
   @TypeGraphQLField(() => [ID], { nullable: true })
   deletedById_in?: string[];
 
-  @TypeGraphQLField(() => Bytes, { nullable: true })
-  from_eq?: Buffer;
+  @TypeGraphQLField({ nullable: true })
+  from_eq?: string;
 
-  @TypeGraphQLField(() => [Bytes], { nullable: true })
-  from_in?: Buffer[];
+  @TypeGraphQLField({ nullable: true })
+  from_contains?: string;
 
-  @TypeGraphQLField(() => Bytes, { nullable: true })
-  to_eq?: Buffer;
+  @TypeGraphQLField({ nullable: true })
+  from_startsWith?: string;
 
-  @TypeGraphQLField(() => [Bytes], { nullable: true })
-  to_in?: Buffer[];
+  @TypeGraphQLField({ nullable: true })
+  from_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  from_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  to_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  to_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  to_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  to_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  to_in?: string[];
 
   @TypeGraphQLField(() => BigInt, { nullable: true })
   value_eq?: BN;
@@ -2545,11 +2512,11 @@ export class TransferWhereUniqueInput {
 
 @TypeGraphQLInputType()
 export class TransferCreateInput {
-  @TypeGraphQLField(() => Bytes)
-  from!: Buffer;
+  @TypeGraphQLField()
+  from!: string;
 
-  @TypeGraphQLField(() => Bytes)
-  to!: Buffer;
+  @TypeGraphQLField()
+  to!: string;
 
   @TypeGraphQLField(() => BigInt)
   value!: BN;
@@ -2563,11 +2530,11 @@ export class TransferCreateInput {
 
 @TypeGraphQLInputType()
 export class TransferUpdateInput {
-  @TypeGraphQLField(() => Bytes, { nullable: true })
-  from?: Buffer;
+  @TypeGraphQLField({ nullable: true })
+  from?: string;
 
-  @TypeGraphQLField(() => Bytes, { nullable: true })
-  to?: Buffer;
+  @TypeGraphQLField({ nullable: true })
+  to?: string;
 
   @TypeGraphQLField(() => BigInt, { nullable: true })
   value?: BN;

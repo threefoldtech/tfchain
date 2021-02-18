@@ -5,8 +5,8 @@ import BN from 'bn.js'
 export async function balances_Transfer(db: DB, event: SubstrateEvent) {
   const [from, to, value] = event.params
   const transfer = new Transfer()
-  transfer.from = Buffer.from(from.value as string)
-  transfer.to = Buffer.from(to.value as string)
+  transfer.from = Buffer.from(from.value as string).toString()
+  transfer.to = Buffer.from(to.value as string).toString()
   transfer.value = convertBN(value.value as string)
   transfer.block = event.blockNumber
   transfer.comment = `Transferred ${value.value as string} from ${
