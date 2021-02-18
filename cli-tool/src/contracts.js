@@ -132,6 +132,8 @@ async function createNode (farmID, twinID, countryID, cityID, mnemonic, url, cal
     latitude: '50.845080'
   })
 
+  const role = client.api.createType('Role', 'Node')
+
   const node = {
     id: 0,
     farm_id: farmID,
@@ -139,7 +141,8 @@ async function createNode (farmID, twinID, countryID, cityID, mnemonic, url, cal
     resources,
     location,
     country_id: 0,
-    city_id: 0
+    city_id: 0,
+    role
   }
 
   const create = await client.createNode(node, callback)
