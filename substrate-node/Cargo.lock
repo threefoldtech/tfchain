@@ -201,9 +201,9 @@ dependencies = [
 
 [[package]]
 name = "async-channel"
-version = "1.5.1"
+version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59740d83946db6a5af71ae25ddf9562c2b176b2ca42cf99a455f09f4a220d6b9"
+checksum = "2114d64672151c0c5eaa5e131ec84a74f06e1e559830dabba01ca30605d66319"
 dependencies = [
  "concurrent-queue",
  "event-listener",
@@ -2246,9 +2246,9 @@ dependencies = [
 
 [[package]]
 name = "hyper"
-version = "0.12.35"
+version = "0.12.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9dbe6ed1438e1f8ad955a4701e9a944938e9519f6888d12d8558b645e247d5f6"
+checksum = "5c843caf6296fc1f93444735205af9ed4e109a539005abb2564ae1d6fad34c52"
 dependencies = [
  "bytes 0.4.12",
  "futures 0.1.30",
@@ -2329,9 +2329,9 @@ dependencies = [
 
 [[package]]
 name = "idna"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de910d521f7cc3135c4de8db1cb910e0b5ed1dc6f57c381cd07e8e661ce10094"
+checksum = "89829a5d69c23d348314a7ac337fe39173b61149a9864deabd260983aed48c21"
 dependencies = [
  "matches",
  "unicode-bidi",
@@ -2525,7 +2525,7 @@ version = "15.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4fb5c4513b7b542f42da107942b7b759f27120b5cc894729f88254b28dff44b7"
 dependencies = [
- "hyper 0.12.35",
+ "hyper 0.12.36",
  "jsonrpc-core",
  "jsonrpc-server-utils",
  "log",
@@ -3471,7 +3471,7 @@ dependencies = [
  "blake2b_simd",
  "blake2s_simd",
  "digest 0.9.0",
- "sha-1 0.9.3",
+ "sha-1 0.9.4",
  "sha2 0.9.3",
  "sha3",
  "unsigned-varint 0.5.1",
@@ -3893,7 +3893,7 @@ dependencies = [
 [[package]]
 name = "pallet-tfgrid"
 version = "2.0.1"
-source = "git+https://github.com/threefoldtech/substrate-pallets#5546de32b0f7814cd03047a97a469b1c40e8bdb7"
+source = "git+https://github.com/threefoldtech/substrate-pallets?branch=master#5c827fe4bf3696d29f034b2470811f0d571da949"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3907,13 +3907,12 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-storage",
- "substrate-fixed",
 ]
 
 [[package]]
 name = "pallet-tft-bridge"
 version = "1.0.0"
-source = "git+https://github.com/threefoldfoundation/tft-parity?branch=main#6ad8aa7d65a67954507ebe629a4190b365400340"
+source = "git+https://github.com/threefoldfoundation/tft-parity?branch=main#f1912eaaeb383ac987dc14cf2ee9510a4b52745d"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3926,13 +3925,12 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-storage",
- "substrate-fixed",
 ]
 
 [[package]]
 name = "pallet-tft-price-oracle"
 version = "1.0.0"
-source = "git+https://github.com/threefoldfoundation/tft-parity?branch=main#6ad8aa7d65a67954507ebe629a4190b365400340"
+source = "git+https://github.com/threefoldfoundation/tft-parity?branch=main#f1912eaaeb383ac987dc14cf2ee9510a4b52745d"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4021,7 +4019,7 @@ dependencies = [
 [[package]]
 name = "pallet-vesting"
 version = "1.0.0"
-source = "git+https://github.com/threefoldfoundation/tft-parity?branch=main#6ad8aa7d65a67954507ebe629a4190b365400340"
+source = "git+https://github.com/threefoldfoundation/tft-parity?branch=main#f1912eaaeb383ac987dc14cf2ee9510a4b52745d"
 dependencies = [
  "enumflags2",
  "frame-support",
@@ -6177,9 +6175,9 @@ dependencies = [
 
 [[package]]
 name = "sha-1"
-version = "0.9.3"
+version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4b312c3731e3fe78a185e6b9b911a7aa715b8e31cce117975219aab2acf285d"
+checksum = "dfebf75d25bd900fd1e7d11501efab59bc846dbc76196839663e6637bba9f25f"
 dependencies = [
  "block-buffer 0.9.0",
  "cfg-if 1.0.0",
@@ -6372,7 +6370,7 @@ dependencies = [
  "httparse",
  "log",
  "rand 0.7.3",
- "sha-1 0.9.3",
+ "sha-1 0.9.4",
 ]
 
 [[package]]
@@ -7120,7 +7118,7 @@ dependencies = [
 [[package]]
 name = "substrate-fixed"
 version = "0.5.5"
-source = "git+https://github.com/encointer/substrate-fixed#8f0c983854a3ffafaf505a7d4052f5cbae3109c8"
+source = "git+https://github.com/encointer/substrate-fixed?rev=310e0d3a4c498b16ab7f790e99bbf6cf06e87a43#310e0d3a4c498b16ab7f790e99bbf6cf06e87a43"
 dependencies = [
  "parity-scale-codec",
  "typenum",
@@ -7651,9 +7649,9 @@ checksum = "360dfd1d6d30e05fda32ace2c8c70e9c0a9da713275777f5a4dbb8a1893930c6"
 
 [[package]]
 name = "tracing"
-version = "0.1.23"
+version = "0.1.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7d40a22fd029e33300d8d89a5cc8ffce18bb7c587662f54629e94c9de5487f3"
+checksum = "f77d3842f76ca899ff2dbcf231c5c65813dea431301d6eb686279c15c4464f12"
 dependencies = [
  "cfg-if 1.0.0",
  "log",
@@ -7664,9 +7662,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-attributes"
-version = "0.1.12"
+version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43f080ea7e4107844ef4766459426fa2d5c1ada2e47edba05dc7fa99d9629f47"
+checksum = "a8a9bd1db7706f2373a190b0d067146caa39350c486f3d455b0e33b431f94c07"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -7684,11 +7682,11 @@ dependencies = [
 
 [[package]]
 name = "tracing-futures"
-version = "0.2.4"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab7bb6f14721aa00656086e9335d363c5c8747bae02ebe32ea2c7dece5689b4c"
+checksum = "97d095ae15e245a057c8e8451bab9b3ee1e1f68e9ba2b4fbc18d0ac5237835f2"
 dependencies = [
- "pin-project 0.4.27",
+ "pin-project 1.0.5",
  "tracing",
 ]
 
@@ -7899,7 +7897,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5909f2b0817350449ed73e8bcd81c8c3c8d9a7a5d8acba4b27db277f1868976e"
 dependencies = [
  "form_urlencoded",
- "idna 0.2.1",
+ "idna 0.2.2",
  "matches",
  "percent-encoding 2.1.0",
 ]
@@ -8426,9 +8424,9 @@ dependencies = [
 
 [[package]]
 name = "yamux"
-version = "0.8.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9aeb8c4043cac71c3c299dff107171c220d179492350ea198e109a414981b83c"
+checksum = "1cc7bd8c983209ed5d527f44b01c41b7dc146fd960c61cf9e1d25399841dc271"
 dependencies = [
  "futures 0.3.12",
  "log",
