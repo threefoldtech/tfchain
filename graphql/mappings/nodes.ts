@@ -19,9 +19,10 @@ interface ILocation {
 }
 
 export async function tfgridModule_NodeStored(db: DB, event: SubstrateEvent) {
-  const [node_id, farm_id, resources, location, country_id, city_id, pub_key, address] = event.params
+  const [version, node_id, farm_id, resources, location, country_id, city_id, pub_key, address] = event.params
   const node = new Node()
   
+  node.version = new BN(version.value as number)
   node.nodeId = new BN(node_id.value as number)
   node.farmId = new BN(farm_id.value as number)
 

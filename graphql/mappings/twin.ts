@@ -5,9 +5,10 @@ import { hex2a } from './util'
 import BN from 'bn.js'
 
 export async function tfgridModule_TwinStored(db: DB, event: SubstrateEvent) {
-  const [twin_id, address, ip] = event.params
+  const [version, twin_id, address, ip] = event.params
   const twin = new Twin()
 
+  twin.version = new BN(version.value as number)
   twin.twinId = new BN(twin_id.value as number)
   twin.address = Buffer.from(address.value as string).toString()
   twin.ip = hex2a(Buffer.from(ip.value as string).toString())

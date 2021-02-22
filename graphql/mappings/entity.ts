@@ -4,8 +4,9 @@ import BN from 'bn.js'
 import { hex2a } from './util'
 
 export async function tfgridModule_EntityStored(db: DB, event: SubstrateEvent) {
-  const [entity_id, name, country_id, city_id, account_id] = event.params
+  const [version, entity_id, name, country_id, city_id, account_id] = event.params
   const entity = new Entity()
+  entity.version = new BN(version.value as number)
   entity.entityId = new BN(entity_id.value as number)
   entity.name = hex2a(Buffer.from(name.value as string).toString())
   entity.countryId = new BN(country_id.value as number)

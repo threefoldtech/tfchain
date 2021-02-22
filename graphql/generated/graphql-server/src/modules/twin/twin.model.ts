@@ -13,6 +13,15 @@ export class Twin extends BaseModel {
         dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
     }
   })
+  version!: BN;
+
+  @NumericField({
+    transformer: {
+      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
+      from: (dbValue: string) =>
+        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
+    }
+  })
   twinId!: BN;
 
   @StringField({})
