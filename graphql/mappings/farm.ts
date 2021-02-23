@@ -7,7 +7,7 @@ export async function tfgridModule_FarmStored(db: DB, event: SubstrateEvent) {
   const [version, farm_id, name, twin_id, pricing_policy_id, country_id, city_id, certification_type] = event.params
   const farm = new Farm()
   
-  farm.version = new BN(version.value as number)
+  farm.gridVersion = new BN(version.value as number)
   farm.farmId = new BN(farm_id.value as number)
   farm.name = hex2a(Buffer.from(name.value as string).toString())
   farm.twinId = new BN(twin_id.value as number)

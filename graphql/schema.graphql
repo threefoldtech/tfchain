@@ -8,7 +8,7 @@ type Transfer @entity {
 } 
 
 type Entity @entity {
-  version: BigInt!
+  grid_version: BigInt!
   entityId: BigInt!
   name: String!
   countryId: BigInt
@@ -17,7 +17,7 @@ type Entity @entity {
 }
 
 type Twin @entity {
-  version: BigInt!
+  grid_version: BigInt!
   twinId: BigInt!
   address: String!
   ip: String!
@@ -30,7 +30,7 @@ type EntityProof @entity {
 }
 
 type Farm @entity {
-  version: BigInt!
+  grid_version: BigInt!
   farm_id: BigInt!
   name: String!
   twinId: BigInt!
@@ -47,7 +47,7 @@ enum CertificationType {
 }
 
 type Node @entity {
-  version: BigInt!
+  grid_version: BigInt!
   node_id: BigInt!
   farm_id: BigInt!
   resources: Resource!
@@ -71,7 +71,7 @@ type Location @entity {
 }
 
 type PricingPolicy @entity {
-  version: BigInt!
+  grid_version: BigInt!
   pricingPolicyId: BigInt!
   name: String!
   currency: String!

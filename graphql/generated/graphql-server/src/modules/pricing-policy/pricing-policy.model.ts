@@ -11,7 +11,7 @@ export class PricingPolicy extends BaseModel {
         dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
     }
   })
-  version!: BN;
+  gridVersion!: BN;
 
   @NumericField({
     transformer: {

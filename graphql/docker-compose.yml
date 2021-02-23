@@ -1,11 +1,12 @@
 version: "3.4"
 
 services:
-  # substrate:
-  #   image: dylanverstraete/substrate-tfgrid
-  #   restart: always
-  #   ports:
-  #     - "9944:9944"
+  substrate:
+    image: dylanverstraete/substrate-tfgrid-prod
+    restart: always
+    ports:
+      - "9944:9944"
+    command: ["--rpc-cors=all", "--chain", "./customSpecRaw.json", "--base-path=/substrate/data", "--validator", "--name=ThreefoldNode01", "--ws-external", "--rpc-methods=unsafe"]
 
   db:
     image: postgres:12

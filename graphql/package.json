@@ -15,6 +15,7 @@
     "db:prepare": "(cd ./generated/graphql-server && yarn db:create && yarn db:sync)",
     "db:init": "node init-countries.js",
     "db:install": "yarn build && yarn db:up && yarn db:drop && yarn db:prepare && yarn db:migrate && yarn db:init",
+    "db:install:k8s": "yarn db:prepare && yarn db:migrate && yarn db:init",
     "db:schema:migrate": "(cd ./generated/graphql-server && yarn db:migrate)",
     "db:processor:migrate": "(cd ./generated/hydra-processor && yarn db:migrate)",
     "db:migrate": "yarn db:schema:migrate && yarn db:processor:migrate",
@@ -36,6 +37,7 @@
     "dotenv": "^8.2.0",
     "lodash": "^4.17.20",
     "pg": "^8.5.1",
+    "pg-format": "^1.0.4",
     "tslib": "^2.0.0"
   },
   "devDependencies": {

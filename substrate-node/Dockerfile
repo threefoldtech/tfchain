@@ -31,14 +31,12 @@ LABEL description="This is the 2nd stage: a very small image where we copy the S
 ARG PROFILE=release
 
 RUN rm -rf /usr/share/* && \
-	useradd -m -u 1000 -U -s /bin/sh -d /substrate substrate && \
-	mkdir -p /substrate/.local && \
-	chown -R substrate:substrate /substrate/.local
+	mkdir -p /substrate/.local
 
 COPY --from=builder /substrate/target/$PROFILE/substrate /usr/local/bin
 COPY --from=builder /substrate/customSpecRaw.json /
 
-# checks
+# checks	
 RUN ldd /usr/local/bin/substrate && \
 	/usr/local/bin/substrate --version
 
@@ -47,7 +45,6 @@ RUN rm -rf /usr/lib/python* && \
 	rm -rf /usr/bin /usr/sbin /usr/share/man && \
 	rm -rf /src
 
-USER substrate
 EXPOSE 30333 9933 9944 9615
 VOLUME ["/substrate"]
 

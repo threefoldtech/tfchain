@@ -1,0 +1,1424 @@
+interface BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+}
+
+type BaseModel implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+}
+
+type BaseModelUUID implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+}
+
+input BaseWhereInput {
+  id_eq: String
+  id_in: [String!]
+  createdAt_eq: String
+  createdAt_lt: String
+  createdAt_lte: String
+  createdAt_gt: String
+  createdAt_gte: String
+  createdById_eq: String
+  updatedAt_eq: String
+  updatedAt_lt: String
+  updatedAt_lte: String
+  updatedAt_gt: String
+  updatedAt_gte: String
+  updatedById_eq: String
+  deletedAt_all: Boolean
+  deletedAt_eq: String
+  deletedAt_lt: String
+  deletedAt_lte: String
+  deletedAt_gt: String
+  deletedAt_gte: String
+  deletedById_eq: String
+}
+
+"""GraphQL representation of BigInt"""
+scalar BigInt
+
+enum CertificationType {
+  None
+  Silver
+  Gold
+}
+
+type City implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  countryId: BigInt!
+  name: String!
+}
+
+type CityConnection {
+  totalCount: Int!
+  edges: [CityEdge!]!
+  pageInfo: PageInfo!
+}
+
+input CityCreateInput {
+  countryId: BigInt!
+  name: String!
+}
+
+type CityEdge {
+  node: City!
+  cursor: String!
+}
+
+enum CityOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  countryId_ASC
+  countryId_DESC
+  name_ASC
+  name_DESC
+}
+
+input CityUpdateInput {
+  countryId: BigInt
+  name: String
+}
+
+input CityWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  countryId_eq: BigInt
+  countryId_gt: BigInt
+  countryId_gte: BigInt
+  countryId_lt: BigInt
+  countryId_lte: BigInt
+  countryId_in: [BigInt!]
+  name_eq: String
+  name_contains: String
+  name_startsWith: String
+  name_endsWith: String
+  name_in: [String!]
+}
+
+input CityWhereUniqueInput {
+  id: ID!
+}
+
+type CommentSearchFTSOutput {
+  item: CommentSearchSearchResult!
+  rank: Float!
+  isTypeOf: String!
+  highlight: String!
+}
+
+union CommentSearchSearchResult = Transfer
+
+type Country implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  code: String!
+  name: String!
+}
+
+type CountryConnection {
+  totalCount: Int!
+  edges: [CountryEdge!]!
+  pageInfo: PageInfo!
+}
+
+input CountryCreateInput {
+  code: String!
+  name: String!
+}
+
+type CountryEdge {
+  node: Country!
+  cursor: String!
+}
+
+enum CountryOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  code_ASC
+  code_DESC
+  name_ASC
+  name_DESC
+}
+
+input CountryUpdateInput {
+  code: String
+  name: String
+}
+
+input CountryWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  code_eq: String
+  code_contains: String
+  code_startsWith: String
+  code_endsWith: String
+  code_in: [String!]
+  name_eq: String
+  name_contains: String
+  name_startsWith: String
+  name_endsWith: String
+  name_in: [String!]
+}
+
+input CountryWhereUniqueInput {
+  id: ID!
+}
+
+"""
+The javascript `Date` as string. Type represents date and time as the ISO Date string.
+"""
+scalar DateTime
+
+interface DeleteResponse {
+  id: ID!
+}
+
+type Entity implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  gridVersion: BigInt!
+  entityId: BigInt!
+  name: String!
+  countryId: BigInt
+  cityId: BigInt
+  address: String!
+}
+
+type EntityConnection {
+  totalCount: Int!
+  edges: [EntityEdge!]!
+  pageInfo: PageInfo!
+}
+
+input EntityCreateInput {
+  gridVersion: BigInt!
+  entityId: BigInt!
+  name: String!
+  countryId: BigInt
+  cityId: BigInt
+  address: String!
+}
+
+type EntityEdge {
+  node: Entity!
+  cursor: String!
+}
+
+enum EntityOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  gridVersion_ASC
+  gridVersion_DESC
+  entityId_ASC
+  entityId_DESC
+  name_ASC
+  name_DESC
+  countryId_ASC
+  countryId_DESC
+  cityId_ASC
+  cityId_DESC
+  address_ASC
+  address_DESC
+}
+
+type EntityProof implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  entityId: BigInt!
+  signature: String!
+  twinRel: Twin!
+  twinRelId: String!
+}
+
+type EntityProofConnection {
+  totalCount: Int!
+  edges: [EntityProofEdge!]!
+  pageInfo: PageInfo!
+}
+
+input EntityProofCreateInput {
+  entityId: BigInt!
+  signature: String!
+  twinRelId: ID!
+}
+
+type EntityProofEdge {
+  node: EntityProof!
+  cursor: String!
+}
+
+enum EntityProofOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  entityId_ASC
+  entityId_DESC
+  signature_ASC
+  signature_DESC
+  twinRelId_ASC
+  twinRelId_DESC
+}
+
+input EntityProofUpdateInput {
+  entityId: BigInt
+  signature: String
+  twinRelId: ID
+}
+
+input EntityProofWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  entityId_eq: BigInt
+  entityId_gt: BigInt
+  entityId_gte: BigInt
+  entityId_lt: BigInt
+  entityId_lte: BigInt
+  entityId_in: [BigInt!]
+  signature_eq: String
+  signature_contains: String
+  signature_startsWith: String
+  signature_endsWith: String
+  signature_in: [String!]
+  twinRelId_eq: ID
+  twinRelId_in: [ID!]
+}
+
+input EntityProofWhereUniqueInput {
+  id: ID!
+}
+
+input EntityUpdateInput {
+  gridVersion: BigInt
+  entityId: BigInt
+  name: String
+  countryId: BigInt
+  cityId: BigInt
+  address: String
+}
+
+input EntityWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  gridVersion_eq: BigInt
+  gridVersion_gt: BigInt
+  gridVersion_gte: BigInt
+  gridVersion_lt: BigInt
+  gridVersion_lte: BigInt
+  gridVersion_in: [BigInt!]
+  entityId_eq: BigInt
+  entityId_gt: BigInt
+  entityId_gte: BigInt
+  entityId_lt: BigInt
+  entityId_lte: BigInt
+  entityId_in: [BigInt!]
+  name_eq: String
+  name_contains: String
+  name_startsWith: String
+  name_endsWith: String
+  name_in: [String!]
+  countryId_eq: BigInt
+  countryId_gt: BigInt
+  countryId_gte: BigInt
+  countryId_lt: BigInt
+  countryId_lte: BigInt
+  countryId_in: [BigInt!]
+  cityId_eq: BigInt
+  cityId_gt: BigInt
+  cityId_gte: BigInt
+  cityId_lt: BigInt
+  cityId_lte: BigInt
+  cityId_in: [BigInt!]
+  address_eq: String
+  address_contains: String
+  address_startsWith: String
+  address_endsWith: String
+  address_in: [String!]
+}
+
+input EntityWhereUniqueInput {
+  id: ID!
+}
+
+type Farm implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  gridVersion: BigInt!
+  farmId: BigInt!
+  name: String!
+  twinId: BigInt!
+  pricingPolicyId: BigInt!
+  certificationType: CertificationType!
+  countryId: BigInt
+  cityId: BigInt
+}
+
+type FarmConnection {
+  totalCount: Int!
+  edges: [FarmEdge!]!
+  pageInfo: PageInfo!
+}
+
+input FarmCreateInput {
+  gridVersion: BigInt!
+  farmId: BigInt!
+  name: String!
+  twinId: BigInt!
+  pricingPolicyId: BigInt!
+  certificationType: CertificationType!
+  countryId: BigInt
+  cityId: BigInt
+}
+
+type FarmEdge {
+  node: Farm!
+  cursor: String!
+}
+
+enum FarmOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  gridVersion_ASC
+  gridVersion_DESC
+  farmId_ASC
+  farmId_DESC
+  name_ASC
+  name_DESC
+  twinId_ASC
+  twinId_DESC
+  pricingPolicyId_ASC
+  pricingPolicyId_DESC
+  certificationType_ASC
+  certificationType_DESC
+  countryId_ASC
+  countryId_DESC
+  cityId_ASC
+  cityId_DESC
+}
+
+input FarmUpdateInput {
+  gridVersion: BigInt
+  farmId: BigInt
+  name: String
+  twinId: BigInt
+  pricingPolicyId: BigInt
+  certificationType: CertificationType
+  countryId: BigInt
+  cityId: BigInt
+}
+
+input FarmWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  gridVersion_eq: BigInt
+  gridVersion_gt: BigInt
+  gridVersion_gte: BigInt
+  gridVersion_lt: BigInt
+  gridVersion_lte: BigInt
+  gridVersion_in: [BigInt!]
+  farmId_eq: BigInt
+  farmId_gt: BigInt
+  farmId_gte: BigInt
+  farmId_lt: BigInt
+  farmId_lte: BigInt
+  farmId_in: [BigInt!]
+  name_eq: String
+  name_contains: String
+  name_startsWith: String
+  name_endsWith: String
+  name_in: [String!]
+  twinId_eq: BigInt
+  twinId_gt: BigInt
+  twinId_gte: BigInt
+  twinId_lt: BigInt
+  twinId_lte: BigInt
+  twinId_in: [BigInt!]
+  pricingPolicyId_eq: BigInt
+  pricingPolicyId_gt: BigInt
+  pricingPolicyId_gte: BigInt
+  pricingPolicyId_lt: BigInt
+  pricingPolicyId_lte: BigInt
+  pricingPolicyId_in: [BigInt!]
+  certificationType_eq: CertificationType
+  certificationType_in: [CertificationType!]
+  countryId_eq: BigInt
+  countryId_gt: BigInt
+  countryId_gte: BigInt
+  countryId_lt: BigInt
+  countryId_lte: BigInt
+  countryId_in: [BigInt!]
+  cityId_eq: BigInt
+  cityId_gt: BigInt
+  cityId_gte: BigInt
+  cityId_lt: BigInt
+  cityId_lte: BigInt
+  cityId_in: [BigInt!]
+}
+
+input FarmWhereUniqueInput {
+  id: ID!
+}
+
+type Location implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  longitude: String!
+  latitude: String!
+  nodelocation: [Node!]
+}
+
+type LocationConnection {
+  totalCount: Int!
+  edges: [LocationEdge!]!
+  pageInfo: PageInfo!
+}
+
+input LocationCreateInput {
+  longitude: String!
+  latitude: String!
+}
+
+type LocationEdge {
+  node: Location!
+  cursor: String!
+}
+
+enum LocationOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  longitude_ASC
+  longitude_DESC
+  latitude_ASC
+  latitude_DESC
+}
+
+input LocationUpdateInput {
+  longitude: String
+  latitude: String
+}
+
+input LocationWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  longitude_eq: String
+  longitude_contains: String
+  longitude_startsWith: String
+  longitude_endsWith: String
+  longitude_in: [String!]
+  latitude_eq: String
+  latitude_contains: String
+  latitude_startsWith: String
+  latitude_endsWith: String
+  latitude_in: [String!]
+}
+
+input LocationWhereUniqueInput {
+  id: ID!
+}
+
+type Node implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  gridVersion: BigInt!
+  nodeId: BigInt!
+  farmId: BigInt!
+  resources: Resource!
+  resourcesId: String!
+  location: Location!
+  locationId: String!
+  countryId: BigInt
+  cityId: BigInt
+  address: String!
+  pubKey: String!
+}
+
+type NodeConnection {
+  totalCount: Int!
+  edges: [NodeEdge!]!
+  pageInfo: PageInfo!
+}
+
+input NodeCreateInput {
+  gridVersion: BigInt!
+  nodeId: BigInt!
+  farmId: BigInt!
+  resourcesId: ID!
+  locationId: ID!
+  countryId: BigInt
+  cityId: BigInt
+  address: String!
+  pubKey: String!
+}
+
+type NodeEdge {
+  node: Node!
+  cursor: String!
+}
+
+enum NodeOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  gridVersion_ASC
+  gridVersion_DESC
+  nodeId_ASC
+  nodeId_DESC
+  farmId_ASC
+  farmId_DESC
+  resourcesId_ASC
+  resourcesId_DESC
+  locationId_ASC
+  locationId_DESC
+  countryId_ASC
+  countryId_DESC
+  cityId_ASC
+  cityId_DESC
+  address_ASC
+  address_DESC
+  pubKey_ASC
+  pubKey_DESC
+}
+
+input NodeUpdateInput {
+  gridVersion: BigInt
+  nodeId: BigInt
+  farmId: BigInt
+  resourcesId: ID
+  locationId: ID
+  countryId: BigInt
+  cityId: BigInt
+  address: String
+  pubKey: String
+}
+
+input NodeWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  gridVersion_eq: BigInt
+  gridVersion_gt: BigInt
+  gridVersion_gte: BigInt
+  gridVersion_lt: BigInt
+  gridVersion_lte: BigInt
+  gridVersion_in: [BigInt!]
+  nodeId_eq: BigInt
+  nodeId_gt: BigInt
+  nodeId_gte: BigInt
+  nodeId_lt: BigInt
+  nodeId_lte: BigInt
+  nodeId_in: [BigInt!]
+  farmId_eq: BigInt
+  farmId_gt: BigInt
+  farmId_gte: BigInt
+  farmId_lt: BigInt
+  farmId_lte: BigInt
+  farmId_in: [BigInt!]
+  resourcesId_eq: ID
+  resourcesId_in: [ID!]
+  locationId_eq: ID
+  locationId_in: [ID!]
+  countryId_eq: BigInt
+  countryId_gt: BigInt
+  countryId_gte: BigInt
+  countryId_lt: BigInt
+  countryId_lte: BigInt
+  countryId_in: [BigInt!]
+  cityId_eq: BigInt
+  cityId_gt: BigInt
+  cityId_gte: BigInt
+  cityId_lt: BigInt
+  cityId_lte: BigInt
+  cityId_in: [BigInt!]
+  address_eq: String
+  address_contains: String
+  address_startsWith: String
+  address_endsWith: String
+  address_in: [String!]
+  pubKey_eq: String
+  pubKey_contains: String
+  pubKey_startsWith: String
+  pubKey_endsWith: String
+  pubKey_in: [String!]
+}
+
+input NodeWhereUniqueInput {
+  id: ID!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type PricingPolicy implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  gridVersion: BigInt!
+  pricingPolicyId: BigInt!
+  name: String!
+  currency: String!
+  su: BigInt!
+  cu: BigInt!
+  nu: BigInt!
+}
+
+type PricingPolicyConnection {
+  totalCount: Int!
+  edges: [PricingPolicyEdge!]!
+  pageInfo: PageInfo!
+}
+
+input PricingPolicyCreateInput {
+  gridVersion: BigInt!
+  pricingPolicyId: BigInt!
+  name: String!
+  currency: String!
+  su: BigInt!
+  cu: BigInt!
+  nu: BigInt!
+}
+
+type PricingPolicyEdge {
+  node: PricingPolicy!
+  cursor: String!
+}
+
+enum PricingPolicyOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  gridVersion_ASC
+  gridVersion_DESC
+  pricingPolicyId_ASC
+  pricingPolicyId_DESC
+  name_ASC
+  name_DESC
+  currency_ASC
+  currency_DESC
+  su_ASC
+  su_DESC
+  cu_ASC
+  cu_DESC
+  nu_ASC
+  nu_DESC
+}
+
+input PricingPolicyUpdateInput {
+  gridVersion: BigInt
+  pricingPolicyId: BigInt
+  name: String
+  currency: String
+  su: BigInt
+  cu: BigInt
+  nu: BigInt
+}
+
+input PricingPolicyWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  gridVersion_eq: BigInt
+  gridVersion_gt: BigInt
+  gridVersion_gte: BigInt
+  gridVersion_lt: BigInt
+  gridVersion_lte: BigInt
+  gridVersion_in: [BigInt!]
+  pricingPolicyId_eq: BigInt
+  pricingPolicyId_gt: BigInt
+  pricingPolicyId_gte: BigInt
+  pricingPolicyId_lt: BigInt
+  pricingPolicyId_lte: BigInt
+  pricingPolicyId_in: [BigInt!]
+  name_eq: String
+  name_contains: String
+  name_startsWith: String
+  name_endsWith: String
+  name_in: [String!]
+  currency_eq: String
+  currency_contains: String
+  currency_startsWith: String
+  currency_endsWith: String
+  currency_in: [String!]
+  su_eq: BigInt
+  su_gt: BigInt
+  su_gte: BigInt
+  su_lt: BigInt
+  su_lte: BigInt
+  su_in: [BigInt!]
+  cu_eq: BigInt
+  cu_gt: BigInt
+  cu_gte: BigInt
+  cu_lt: BigInt
+  cu_lte: BigInt
+  cu_in: [BigInt!]
+  nu_eq: BigInt
+  nu_gt: BigInt
+  nu_gte: BigInt
+  nu_lt: BigInt
+  nu_lte: BigInt
+  nu_in: [BigInt!]
+}
+
+input PricingPolicyWhereUniqueInput {
+  id: ID!
+}
+
+type Query {
+  cities(offset: Int, limit: Int = 50, where: CityWhereInput, orderBy: CityOrderByInput): [City!]!
+  city(where: CityWhereUniqueInput!): City
+  citiesConnection(first: Int, after: String, last: Int, before: String, where: CityWhereInput, orderBy: CityOrderByInput): CityConnection!
+  countries(offset: Int, limit: Int = 50, where: CountryWhereInput, orderBy: CountryOrderByInput): [Country!]!
+  country(where: CountryWhereUniqueInput!): Country
+  countriesConnection(first: Int, after: String, last: Int, before: String, where: CountryWhereInput, orderBy: CountryOrderByInput): CountryConnection!
+  entityProofs(offset: Int, limit: Int = 50, where: EntityProofWhereInput, orderBy: EntityProofOrderByInput): [EntityProof!]!
+  entityProof(where: EntityProofWhereUniqueInput!): EntityProof
+  entityProofsConnection(first: Int, after: String, last: Int, before: String, where: EntityProofWhereInput, orderBy: EntityProofOrderByInput): EntityProofConnection!
+  entities(offset: Int, limit: Int = 50, where: EntityWhereInput, orderBy: EntityOrderByInput): [Entity!]!
+  entity(where: EntityWhereUniqueInput!): Entity
+  entitiesConnection(first: Int, after: String, last: Int, before: String, where: EntityWhereInput, orderBy: EntityOrderByInput): EntityConnection!
+  farms(offset: Int, limit: Int = 50, where: FarmWhereInput, orderBy: FarmOrderByInput): [Farm!]!
+  farm(where: FarmWhereUniqueInput!): Farm
+  farmsConnection(first: Int, after: String, last: Int, before: String, where: FarmWhereInput, orderBy: FarmOrderByInput): FarmConnection!
+  locations(offset: Int, limit: Int = 50, where: LocationWhereInput, orderBy: LocationOrderByInput): [Location!]!
+  location(where: LocationWhereUniqueInput!): Location
+  locationsConnection(first: Int, after: String, last: Int, before: String, where: LocationWhereInput, orderBy: LocationOrderByInput): LocationConnection!
+  nodes(offset: Int, limit: Int = 50, where: NodeWhereInput, orderBy: NodeOrderByInput): [Node!]!
+  node(where: NodeWhereUniqueInput!): Node
+  nodesConnection(first: Int, after: String, last: Int, before: String, where: NodeWhereInput, orderBy: NodeOrderByInput): NodeConnection!
+  pricingPolicies(offset: Int, limit: Int = 50, where: PricingPolicyWhereInput, orderBy: PricingPolicyOrderByInput): [PricingPolicy!]!
+  pricingPolicy(where: PricingPolicyWhereUniqueInput!): PricingPolicy
+  pricingPoliciesConnection(first: Int, after: String, last: Int, before: String, where: PricingPolicyWhereInput, orderBy: PricingPolicyOrderByInput): PricingPolicyConnection!
+  commentSearch(limit: Int = 5, text: String!): [CommentSearchFTSOutput!]!
+  resources(offset: Int, limit: Int = 50, where: ResourceWhereInput, orderBy: ResourceOrderByInput): [Resource!]!
+  resource(where: ResourceWhereUniqueInput!): Resource
+  resourcesConnection(first: Int, after: String, last: Int, before: String, where: ResourceWhereInput, orderBy: ResourceOrderByInput): ResourceConnection!
+  transfers(offset: Int, limit: Int = 50, where: TransferWhereInput, orderBy: TransferOrderByInput): [Transfer!]!
+  transfer(where: TransferWhereUniqueInput!): Transfer
+  transfersConnection(first: Int, after: String, last: Int, before: String, where: TransferWhereInput, orderBy: TransferOrderByInput): TransferConnection!
+  twins(offset: Int, limit: Int = 50, where: TwinWhereInput, orderBy: TwinOrderByInput): [Twin!]!
+  twin(where: TwinWhereUniqueInput!): Twin
+  twinsConnection(first: Int, after: String, last: Int, before: String, where: TwinWhereInput, orderBy: TwinOrderByInput): TwinConnection!
+}
+
+type Resource implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  hru: BigInt
+  sru: BigInt
+  cru: BigInt
+  mru: BigInt
+  noderesources: [Node!]
+}
+
+type ResourceConnection {
+  totalCount: Int!
+  edges: [ResourceEdge!]!
+  pageInfo: PageInfo!
+}
+
+input ResourceCreateInput {
+  hru: BigInt
+  sru: BigInt
+  cru: BigInt
+  mru: BigInt
+}
+
+type ResourceEdge {
+  node: Resource!
+  cursor: String!
+}
+
+enum ResourceOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  hru_ASC
+  hru_DESC
+  sru_ASC
+  sru_DESC
+  cru_ASC
+  cru_DESC
+  mru_ASC
+  mru_DESC
+}
+
+input ResourceUpdateInput {
+  hru: BigInt
+  sru: BigInt
+  cru: BigInt
+  mru: BigInt
+}
+
+input ResourceWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  hru_eq: BigInt
+  hru_gt: BigInt
+  hru_gte: BigInt
+  hru_lt: BigInt
+  hru_lte: BigInt
+  hru_in: [BigInt!]
+  sru_eq: BigInt
+  sru_gt: BigInt
+  sru_gte: BigInt
+  sru_lt: BigInt
+  sru_lte: BigInt
+  sru_in: [BigInt!]
+  cru_eq: BigInt
+  cru_gt: BigInt
+  cru_gte: BigInt
+  cru_lt: BigInt
+  cru_lte: BigInt
+  cru_in: [BigInt!]
+  mru_eq: BigInt
+  mru_gt: BigInt
+  mru_gte: BigInt
+  mru_lt: BigInt
+  mru_lte: BigInt
+  mru_in: [BigInt!]
+}
+
+input ResourceWhereUniqueInput {
+  id: ID!
+}
+
+type StandardDeleteResponse {
+  id: ID!
+}
+
+""" All transfers """
+type Transfer implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  from: String!
+  to: String!
+  value: BigInt!
+  comment: String
+  block: Int!
+}
+
+type TransferConnection {
+  totalCount: Int!
+  edges: [TransferEdge!]!
+  pageInfo: PageInfo!
+}
+
+input TransferCreateInput {
+  from: String!
+  to: String!
+  value: BigInt!
+  comment: String
+  block: Float!
+}
+
+type TransferEdge {
+  node: Transfer!
+  cursor: String!
+}
+
+enum TransferOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  from_ASC
+  from_DESC
+  to_ASC
+  to_DESC
+  value_ASC
+  value_DESC
+  comment_ASC
+  comment_DESC
+  block_ASC
+  block_DESC
+}
+
+input TransferUpdateInput {
+  from: String
+  to: String
+  value: BigInt
+  comment: String
+  block: Float
+}
+
+input TransferWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  from_eq: String
+  from_contains: String
+  from_startsWith: String
+  from_endsWith: String
+  from_in: [String!]
+  to_eq: String
+  to_contains: String
+  to_startsWith: String
+  to_endsWith: String
+  to_in: [String!]
+  value_eq: BigInt
+  value_gt: BigInt
+  value_gte: BigInt
+  value_lt: BigInt
+  value_lte: BigInt
+  value_in: [BigInt!]
+  comment_eq: String
+  comment_contains: String
+  comment_startsWith: String
+  comment_endsWith: String
+  comment_in: [String!]
+  block_eq: Int
+  block_gt: Int
+  block_gte: Int
+  block_lt: Int
+  block_lte: Int
+  block_in: [Int!]
+}
+
+input TransferWhereUniqueInput {
+  id: ID!
+}
+
+type Twin implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  gridVersion: BigInt!
+  twinId: BigInt!
+  address: String!
+  ip: String!
+  entityprooftwinRel: [EntityProof!]
+}
+
+type TwinConnection {
+  totalCount: Int!
+  edges: [TwinEdge!]!
+  pageInfo: PageInfo!
+}
+
+input TwinCreateInput {
+  gridVersion: BigInt!
+  twinId: BigInt!
+  address: String!
+  ip: String!
+}
+
+type TwinEdge {
+  node: Twin!
+  cursor: String!
+}
+
+enum TwinOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  gridVersion_ASC
+  gridVersion_DESC
+  twinId_ASC
+  twinId_DESC
+  address_ASC
+  address_DESC
+  ip_ASC
+  ip_DESC
+}
+
+input TwinUpdateInput {
+  gridVersion: BigInt
+  twinId: BigInt
+  address: String
+  ip: String
+}
+
+input TwinWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  gridVersion_eq: BigInt
+  gridVersion_gt: BigInt
+  gridVersion_gte: BigInt
+  gridVersion_lt: BigInt
+  gridVersion_lte: BigInt
+  gridVersion_in: [BigInt!]
+  twinId_eq: BigInt
+  twinId_gt: BigInt
+  twinId_gte: BigInt
+  twinId_lt: BigInt
+  twinId_lte: BigInt
+  twinId_in: [BigInt!]
+  address_eq: String
+  address_contains: String
+  address_startsWith: String
+  address_endsWith: String
+  address_in: [String!]
+  ip_eq: String
+  ip_contains: String
+  ip_startsWith: String
+  ip_endsWith: String
+  ip_in: [String!]
+}
+
+input TwinWhereUniqueInput {
+  id: ID!
+}
