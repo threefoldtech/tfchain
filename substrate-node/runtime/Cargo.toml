@@ -28,19 +28,6 @@ package = "pallet-tfgrid"
 branch = "master"
 # path = "../../../pallets/pallet-tfgrid"
 
-[dependencies.pallet-tft-price-oracle]
-default-features = false
-git = "https://github.com/threefoldfoundation/tft-parity"
-branch = "main"
-package = "pallet-tft-price-oracle"
-
-[dependencies.pallet-vesting]
-default-features = false
-git = "https://github.com/threefoldfoundation/tft-parity"
-package = "pallet-vesting"
-branch = "main"
-# path = "../../../tft-parity/pallet-vesting"
-
 [dependencies.pallet-tft-bridge]
 default-features = false
 git = "https://github.com/threefoldfoundation/tft-parity"
@@ -104,9 +91,7 @@ std = [
     'pallet-randomness-collective-flip/std',
     'pallet-sudo/std',
     'pallet-tfgrid/std',
-    'pallet-tft-price-oracle/std',
     'pallet-timestamp/std',
-    'pallet-vesting/std',
     'pallet-transaction-payment/std',
     'pallet-transaction-payment-rpc-runtime-api/std',
     'sp-api/std',

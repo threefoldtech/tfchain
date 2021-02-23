@@ -10,8 +10,7 @@ use sp_std::prelude::*;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata, Encode};
 use sp_runtime::{
 	ApplyExtrinsicResult, generic, create_runtime_str, impl_opaque_keys, MultiSignature,
-	transaction_validity::{TransactionValidity, TransactionSource},
-	traits::{ConvertInto}
+	transaction_validity::{TransactionValidity, TransactionSource}
 };
 use sp_runtime::traits::{
 	BlakeTwo256, Block as BlockT, IdentityLookup, Verify, IdentifyAccount, NumberFor, Saturating,
@@ -41,8 +40,6 @@ pub use frame_support::{
 
 /// Import the template pallet.
 pub use pallet_tfgrid;
-
-pub use pallet_tft_price_oracle;
 
 pub use pallet_tft_bridge;
 
@@ -330,24 +327,6 @@ impl pallet_tfgrid::Trait for Runtime {
 	type Event = Event;
 }
 
-impl pallet_tft_price_oracle::Trait for Runtime {
-	type Event = Event;
-	type AuthorityId = pallet_tft_price_oracle::crypto::AuthId;
-    type Call = Call;
-}
-
-parameter_types! {
-	pub const MinVestedTransfer: Balance = 100 * 1000000000000;
-}
-
-impl pallet_vesting::Config for Runtime {
-	type Event = Event;
-	type Currency = Balances;
-	type BlockNumberToBalance = ConvertInto;
-	type MinVestedTransfer = MinVestedTransfer;
-	type WeightInfo = ();
-}
-
 impl pallet_tft_bridge::Trait for Runtime {
 	type Event = Event;
 	type Currency = Balances;
@@ -364,14 +343,12 @@ construct_runtime!(
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
 		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-		Vesting: pallet_vesting::{Module, Call, Storage, Event<T>, Config<T>},
 		Aura: pallet_aura::{Module, Config<T>, Inherent},
 		Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 		TfgridModule: pallet_tfgrid::{Module, Call, Storage, Event<T>},
-		TFTPriceModule: pallet_tft_price_oracle::{Module, Call, Storage, Event<T>},
 		TFTBridgeModule: pallet_tft_bridge::{Module, Call, Storage, Event<T>},
 	}
 );

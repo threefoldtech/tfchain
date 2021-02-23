@@ -152,7 +152,6 @@ fn testnet_genesis(
 		pallet_sudo: Some(SudoConfig {
 			// Assign network admin rights.
 			key: root_key,
-		}),
-		pallet_vesting: None,
+		})
 	}
 }
