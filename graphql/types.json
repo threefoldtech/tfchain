@@ -1,5 +1,6 @@
 {
   "Farm": {
+    "version": "u32",
     "id": "u32",
     "name": "Vec<u8>",
     "twin_id": "u32",
@@ -9,6 +10,7 @@
     "city_id": "u32"
   },
   "Entity": {
+    "version": "u32",
     "id": "u32",
     "name": "Vec<u8>",
     "country_id": "u32",
@@ -16,6 +18,7 @@
     "address": "AccountId"
   },
   "Twin": {
+    "version": "u32",
     "id": "u32",
     "address": "AccountId",
     "ip": "Vec<u8>",
@@ -26,6 +29,7 @@
     "signature": "Vec<u8>"
   },
   "Node": {
+    "version": "u32",
     "id": "u32",
     "farm_id": "u32",
     "resources": "Resources",
@@ -33,7 +37,11 @@
     "country_id": "u32",
     "city_id": "u32",
     "pub_key": "Vec<u8>",
-    "address": "AccountId"
+    "address": "AccountId",
+    "role": "Role"
+  },
+  "Role": {
+    "_enum": ["Node", "Gateway"]
   },
   "Location": {
     "longitude": "Vec<u8>",
@@ -52,12 +60,14 @@
     "_enum": ["Farm", "Entity"]
   },
   "CertificationCodes": {
+    "version": "u32",
     "id": "u32",
     "name": "Vec<u8>",
     "description": "Vec<u8>",
     "certification_code_type": "CertificationCodeType"
   },
   "PricingPolicy": {
+    "version": "u32",
     "id": "u32",
     "name": "Vec<u8>",
     "currency": "Vec<u8>",

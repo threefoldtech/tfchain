@@ -2288,10 +2288,10 @@ text-table@^0.2.0:
   resolved "https://registry.yarnpkg.com/text-table/-/text-table-0.2.0.tgz#7f5ee823ae805207c00af2df4a84ec3fcfa570b4"
   integrity sha1-f17oI66AUgfACvLfSoTsP8+lcLQ=
 
-tfgrid-api-client@^0.0.1-beta.15:
-  version "0.0.1-beta.15"
-  resolved "https://registry.yarnpkg.com/tfgrid-api-client/-/tfgrid-api-client-0.0.1-beta.15.tgz#67dea20fa8f930319ffccd3327a17cdf155f2cae"
-  integrity sha512-aR3IKhV4ufE0/N5MIvWI5OhRj43TzMH35Ze+s0bgRsVuCm4nlKuKnC0FIXL4WotwiR70Wk0shKVHm8dJmMEMvQ==
+tfgrid-api-client@^0.0.1-beta.23:
+  version "0.0.1-beta.23"
+  resolved "https://registry.yarnpkg.com/tfgrid-api-client/-/tfgrid-api-client-0.0.1-beta.23.tgz#5ffc0d7ae185dd0143c767086df2e7f23d803894"
+  integrity sha512-kuld93nOkcRjIqjSTVAyM05ZEd7KjCnxVj1Cu+9FlJFxHWS8ft8qOsBv3P46m/+8DhhDw0ipxejI9f9hfOqz6Q==
   dependencies:
     "@encointer/util" "^0.1.0"
     "@polkadot/api" "^3.5.1"
