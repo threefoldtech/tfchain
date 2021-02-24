@@ -17,6 +17,12 @@ const argv = yargs
       description: 'Url of the api',
       alias: 'a',
       type: 'string'
+    },
+    account: {
+      description: 'Account to monitor',
+      alias: 'c',
+      type: 'string',
+      default: 'GDIVGRGFOHOEWJKRR5KKW2AJALUYARHO7MW3SPI4N33IJZ4PQ5WJ6TU2'
     }
   })
   .help()
@@ -30,22 +36,26 @@ if (argv._.includes('validate')) {
   //   exit(1)
   // }
 
-  main(argv.m, argv.a)
+  main(argv.m, argv.a, argv.c)
 }
 
-const paymentHandler = async function (paymentResponse, client) {
+const paymentHandler = async function (paymentResponse, client, accountToMonitor) {
   console.log(chalk.blue.bold('\nreceived transaction'))
   // const tx = await paymentResponse.transaction()
   // const { memo } = tx
 
   const { from, to, amount, transaction_hash: txHash } = paymentResponse
-  console.log(chalk.blue.bold(`from: ${from} to: ${to}`))
-  console.log(chalk.blue.bold(`amount: ${amount} \n`))
 
-  const targetAccount = client.keyring.encodeAddress(stellarbase.StrKey.decodeEd25519PublicKey(from))
+  // only check when destination is the account to monitor
+  if (to === accountToMonitor) {
+    console.log(chalk.blue.bold(`from: ${from} to: ${to}`))
+    console.log(chalk.blue.bold(`amount: ${amount} \n`))
 
-  console.log(chalk.green.bold('trying to propose transaction...'))
-  await client.proposeTransaction(txHash, targetAccount, amount, res => callback(res, client, txHash))
+    const targetAccount = client.keyring.encodeAddress(stellarbase.StrKey.decodeEd25519PublicKey(from))
+
+    console.log(chalk.green.bold('trying to propose transaction...'))
+    await client.proposeTransaction(txHash, targetAccount, amount, res => callback(res, client, txHash))
+  }
 
   // .catch(err => {
   //   console.log(err)
@@ -55,7 +65,7 @@ const paymentHandler = async function (paymentResponse, client) {
   // })
 }
 
-async function main (mnemonic, apiurl) {
+async function main (mnemonic, apiurl, accountToMonitor) {
   const client = await getClient(apiurl, mnemonic)
 
   const knownValidators = await client.listValidators()
@@ -71,13 +81,15 @@ async function main (mnemonic, apiurl) {
   // const y = stellarbase.StrKey.encodeEd25519PublicKey(client.keyring.decodeAddress(client.address))
   // console.log(y)
 
+  // const accountToMonitor = 'GDIVGRGFOHOEWJKRR5KKW2AJALUYARHO7MW3SPI4N33IJZ4PQ5WJ6TU2'
+
   console.log(chalk.green.bold('✓ starting validator daemon...'))
-  console.log(chalk.blue.bold('✓ streaming transactions now...'))
+  console.log(chalk.blue.bold(`✓ streaming transactions for account ${accountToMonitor} now...`))
   server.payments()
-    .forAccount('GDIVGRGFOHOEWJKRR5KKW2AJALUYARHO7MW3SPI4N33IJZ4PQ5WJ6TU2')
+    .forAccount(accountToMonitor)
     .cursor('now')
     .stream({
-      onmessage: message => paymentHandler(message, client)
+      onmessage: message => paymentHandler(message, client, accountToMonitor)
     })
 }
 
