@@ -30,12 +30,6 @@ const argv = yargs
   .argv
 
 if (argv._.includes('validate')) {
-  // if (!argv.n || !argv.c || !argv.t) {
-  //   console.log(argv)
-  //   console.log('Bad Params')
-  //   exit(1)
-  // }
-
   main(argv.m, argv.a, argv.c)
 }
 
@@ -56,13 +50,6 @@ const paymentHandler = async function (paymentResponse, client, accountToMonitor
     console.log(chalk.green.bold('trying to propose transaction...'))
     await client.proposeTransaction(txHash, targetAccount, amount, res => callback(res, client, txHash))
   }
-
-  // .catch(err => {
-  //   console.log(err)
-  //   console.log('error occurred!!!')
-  //   // VOTE
-  //   client.voteTransaction(txHash, res => callback(res, client, txHash))
-  // })
 }
 
 async function main (mnemonic, apiurl, accountToMonitor) {
@@ -73,18 +60,10 @@ async function main (mnemonic, apiurl, accountToMonitor) {
     console.log(chalk.red.bold('❌ You are no validator yet, please contact an admin to add your account as a validator first.'))
     process.exit(0)
   }
-  // // FROM STELLAR
-  // const ss = client.keyring.encodeAddress(stellarbase.StrKey.decodeEd25519PublicKey('GCCNQN4HVJVH5XOV3A2BO7NQ3OJY6MEOW7MSXQJU3VWGRPXU273BN5OB'))
-  // console.log(ss)
-
-  // // TO STELLAR
-  // const y = stellarbase.StrKey.encodeEd25519PublicKey(client.keyring.decodeAddress(client.address))
-  // console.log(y)
-
-  // const accountToMonitor = 'GDIVGRGFOHOEWJKRR5KKW2AJALUYARHO7MW3SPI4N33IJZ4PQ5WJ6TU2'
 
   console.log(chalk.green.bold('✓ starting validator daemon...'))
   console.log(chalk.blue.bold(`✓ streaming transactions for account ${accountToMonitor} now...`))
+
   server.payments()
     .forAccount(accountToMonitor)
     .cursor('now')
@@ -95,8 +74,9 @@ async function main (mnemonic, apiurl, accountToMonitor) {
 
 async function callback (res, client, txHash) {
   if (res instanceof Error) {
-    // console.log(res)
+    console.log(chalk.red.bold(res))
   }
+
   const { events = [], status } = res
 
   if (status.isFinalized) {
@@ -117,7 +97,6 @@ async function callback (res, client, txHash) {
       } else if (method.toString() === 'ExtrinsicSuccess') {
         console.log(chalk.green.bold('Transaction submitted successfully.'))
       }
-      // console.log(`\t' ${phase}: ${section}.${method}:: ${data}`)
     })
 
     if (callbackVote) {
