@@ -3,7 +3,9 @@ const { getClient } = require('./client')
 async function createEntity (name, countryID, cityID, mnemonic, url, callback) {
   const client = await getClient(url, mnemonic)
 
-  const entity = await client.createEntity(name, countryID, cityID, callback)
+  const sig = await client.signEntityCreation(name, countryID, cityID)
+
+  const entity = await client.createEntity(client.address, name, countryID, cityID, sig, callback)
   return entity
 }
 
