@@ -2,9 +2,9 @@ const StellarSdk = require('stellar-sdk')
 const { getClient } = require('./src/subclient')
 const server = new StellarSdk.Server('https://horizon.stellar.org')
 const stellarbase = require('stellar-base')
+const chalk = require('chalk')
 
 const yargs = require('yargs')
-// const { exit } = require('yargs')
 
 const argv = yargs
   .command('validate', 'Start your validator node', {
@@ -34,17 +34,17 @@ if (argv._.includes('validate')) {
 }
 
 const paymentHandler = async function (paymentResponse, client) {
-  console.log('\nreceived transaction')
+  console.log(chalk.blue.bold('\nreceived transaction'))
   // const tx = await paymentResponse.transaction()
   // const { memo } = tx
 
   const { from, to, amount, transaction_hash: txHash } = paymentResponse
-  console.log(`from: ${from} to: ${to}`)
-  console.log(`amount: ${amount} \n`)
+  console.log(chalk.blue.bold(`from: ${from} to: ${to}`))
+  console.log(chalk.blue.bold(`amount: ${amount} \n`))
 
   const targetAccount = client.keyring.encodeAddress(stellarbase.StrKey.decodeEd25519PublicKey(from))
 
-  console.log('trying to propose transaction...')
+  console.log(chalk.green.bold('trying to propose transaction...'))
   await client.proposeTransaction(txHash, targetAccount, amount, res => callback(res, client, txHash)).catch(err => {
     console.log(err)
     console.log('error occurred!!!')
@@ -55,6 +55,12 @@ const paymentHandler = async function (paymentResponse, client) {
 
 async function main (mnemonic, apiurl) {
   const client = await getClient(apiurl, mnemonic)
+
+  const knownValidators = await client.listValidators()
+  if (!knownValidators.includes(client.address)) {
+    console.log(chalk.red.bold('❌ You are no validator yet, please contact an admin to add your account as a validator first.'))
+    process.exit(0)
+  }
   // // FROM STELLAR
   // const ss = client.keyring.encodeAddress(stellarbase.StrKey.decodeEd25519PublicKey('GCCNQN4HVJVH5XOV3A2BO7NQ3OJY6MEOW7MSXQJU3VWGRPXU273BN5OB'))
   // console.log(ss)
@@ -63,8 +69,8 @@ async function main (mnemonic, apiurl) {
   // const y = stellarbase.StrKey.encodeEd25519PublicKey(client.keyring.decodeAddress(client.address))
   // console.log(y)
 
-  console.log('starting validator daemon...')
-  console.log('streaming transaction now...')
+  console.log(chalk.green.bold('✓ starting validator daemon...'))
+  console.log(chalk.blue.bold('✓ streaming transactions now...'))
   server.payments()
     .forAccount('GDIVGRGFOHOEWJKRR5KKW2AJALUYARHO7MW3SPI4N33IJZ4PQ5WJ6TU2')
     .cursor('now')
@@ -79,25 +85,31 @@ async function callback (res, client, txHash) {
     console.log(res)
   }
   const { events = [], status } = res
-  console.log(`Current status is ${status.type}`)
 
   if (status.isFinalized) {
-    console.log(`Transaction included at blockHash ${status.asFinalized}`)
-
     let callbackVote = false
-    // Loop through Vec<EventRecord> to display all events
     events.forEach(({ phase, event: { data, method, section } }) => {
       if (method.toString() === 'ExtrinsicFailed') {
-        console.log('tx failed, might be needed to vote here ;)')
-        // VOTE
-        callbackVote = true
-      }
+        const module = data[0].asModule
 
-      console.log(`\t' ${phase}: ${section}.${method}:: ${data}`)
+        const errid = module.error.words[0]
+
+        // err with id 4 is transaction exists, in this case we want to vote for the transaction because
+        // another validator already proposed it
+        if (errid === 4) {
+          callbackVote = true
+          // error with 5 is transaction not exists, which means it is most likely processed already
+        } else if (errid === 5) {
+          console.log(chalk.blue.bold('\ntransaction already submitted, nothing to do here.'))
+        }
+      } else if (method.toString() === 'ExtrinsicSuccess::') {
+        console.log(chalk.green.bold('Transaction submitted successfully.'))
+      }
+      // console.log(`\t' ${phase}: ${section}.${method}:: ${data}`)
     })
 
-    if (callbackVote || status.type === 'Invalid') {
-      console.log('I need to vote now...')
+    if (callbackVote) {
+      console.log(chalk.blue.bold('\nfailed to propose transaction, voting for validity now...'))
       await client.voteTransaction(txHash, res => callback(res, client, txHash)).catch(err => {
         console.log(err)
         console.log('error occurred!!!')

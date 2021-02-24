@@ -1,8 +1,9 @@
 {
   "dependencies": {
+    "chalk": "^4.1.0",
     "stellar-base": "^4.0.3",
     "stellar-sdk": "^7.0.0",
-    "tfgrid-api-client": "^0.0.1-beta.23",
+    "tfgrid-api-client": "^0.0.1-beta.24",
     "yargs": "^16.0.3"
   },
   "devDependencies": {
