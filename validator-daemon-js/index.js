@@ -45,12 +45,14 @@ const paymentHandler = async function (paymentResponse, client) {
   const targetAccount = client.keyring.encodeAddress(stellarbase.StrKey.decodeEd25519PublicKey(from))
 
   console.log(chalk.green.bold('trying to propose transaction...'))
-  await client.proposeTransaction(txHash, targetAccount, amount, res => callback(res, client, txHash)).catch(err => {
-    console.log(err)
-    console.log('error occurred!!!')
-    // VOTE
-    client.voteTransaction(txHash, res => callback(res, client, txHash))
-  })
+  await client.proposeTransaction(txHash, targetAccount, amount, res => callback(res, client, txHash))
+
+  // .catch(err => {
+  //   console.log(err)
+  //   console.log('error occurred!!!')
+  //   // VOTE
+  //   client.voteTransaction(txHash, res => callback(res, client, txHash))
+  // })
 }
 
 async function main (mnemonic, apiurl) {
@@ -79,10 +81,9 @@ async function main (mnemonic, apiurl) {
     })
 }
 
-// main()
 async function callback (res, client, txHash) {
   if (res instanceof Error) {
-    console.log(res)
+    // console.log(res)
   }
   const { events = [], status } = res
 
@@ -91,7 +92,6 @@ async function callback (res, client, txHash) {
     events.forEach(({ phase, event: { data, method, section } }) => {
       if (method.toString() === 'ExtrinsicFailed') {
         const module = data[0].asModule
-
         const errid = module.error.words[0]
 
         // err with id 4 is transaction exists, in this case we want to vote for the transaction because
@@ -102,7 +102,7 @@ async function callback (res, client, txHash) {
         } else if (errid === 5) {
           console.log(chalk.blue.bold('\ntransaction already submitted, nothing to do here.'))
         }
-      } else if (method.toString() === 'ExtrinsicSuccess::') {
+      } else if (method.toString() === 'ExtrinsicSuccess') {
         console.log(chalk.green.bold('Transaction submitted successfully.'))
       }
       // console.log(`\t' ${phase}: ${section}.${method}:: ${data}`)
@@ -110,10 +110,7 @@ async function callback (res, client, txHash) {
 
     if (callbackVote) {
       console.log(chalk.blue.bold('\nfailed to propose transaction, voting for validity now...'))
-      await client.voteTransaction(txHash, res => callback(res, client, txHash)).catch(err => {
-        console.log(err)
-        console.log('error occurred!!!')
-        // VOTE
+      await client.voteTransaction(txHash, res => callback(res, client, txHash)).catch(() => {
         client.voteTransaction(txHash, callback)
       })
     }
