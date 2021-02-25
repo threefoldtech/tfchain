@@ -1,11 +1,14 @@
 const { getClient } = require('./client')
 
-async function createEntity (name, countryID, cityID, mnemonic, url, callback) {
+async function createEntity (target, name, countryID, cityID, sig, mnemonic, url, callback) {
   const client = await getClient(url, mnemonic)
 
-  const sig = await client.signEntityCreation(name, countryID, cityID)
+  if (!target && !sig) {
+    sig = await client.signEntityCreation(name, countryID, cityID)
+    target = client.address
+  }
 
-  const entity = await client.createEntity(client.address, name, countryID, cityID, sig, callback)
+  const entity = await client.createEntity(target, name, countryID, cityID, sig, callback)
   return entity
 }
 
@@ -177,6 +180,13 @@ async function sign (entityID, twinID, mnemonic, url) {
   return client.sign(entityID, twinID)
 }
 
+async function signEntityCreation (name, countryID, cityID, url, mnemonic) {
+  const client = await getClient(url, mnemonic)
+
+  const sig = await client.signEntityCreation(name, countryID, cityID)
+  return sig
+}
+
 async function getPrice (mnemonic, url) {
   const client = await getClient(url, mnemonic)
 
@@ -219,5 +229,6 @@ module.exports = {
   listFarms,
   listNodes,
   vestedTransfer,
-  getBalance
+  getBalance,
+  signEntityCreation
 }

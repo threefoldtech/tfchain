@@ -23,7 +23,8 @@ const {
   listFarms,
   listNodes,
   vestedTransfer,
-  getBalance
+  getBalance,
+  signEntityCreation
 } = require('./src/contracts')
 
 const argv = yargs
@@ -42,6 +43,16 @@ const argv = yargs
       description: 'Id of the city',
       alias: 't',
       type: 'number'
+    },
+    signature: {
+      description: 'Signature for entity creation',
+      alias: 's',
+      type: 'string'
+    },
+    target: {
+      description: 'Target address to create an entity for',
+      alias: 'f',
+      type: 'string'
     },
     mnemonic: {
       description: 'Mnemonic to sign with',
@@ -414,6 +425,33 @@ const argv = yargs
       type: 'string'
     }
   })
+  .command('SignEntityCreation', 'Sign an entity creation', {
+    name: {
+      description: 'Name of the entity',
+      alias: 'n',
+      type: 'string'
+    },
+    country_id: {
+      description: 'Id of the country',
+      alias: 'c',
+      type: 'number'
+    },
+    city_id: {
+      description: 'Id of the city',
+      alias: 't',
+      type: 'number'
+    },
+    mnemonic: {
+      description: 'Mnemonic to sign with',
+      alias: 'm',
+      type: 'string'
+    },
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
+      type: 'string'
+    }
+  })
   .help()
   .alias('help', 'h')
   .argv
@@ -425,7 +463,7 @@ if (argv._.includes('createEntity')) {
   //   exit(1)
   // }
 
-  createEntity(argv.n, argv.c, argv.t, argv.m, argv.a, res => {
+  createEntity(argv.f, argv.n, argv.c, argv.t, argv.s, argv.m, argv.a, res => {
     if (res instanceof Error) {
       console.log(res)
       exit(1)
@@ -843,6 +881,18 @@ if (argv._.includes('getBalance')) {
     .then(price => {
       console.log('\nbalance: ')
       console.log(price)
+      exit(0)
+    })
+    .catch(err => {
+      console.log(err)
+      exit(1)
+    })
+}
+if (argv._.includes('signEntityCreation')) {
+  signEntityCreation(argv.n, argv.c, argv.t, argv.a, argv.m)
+    .then(message => {
+      console.log('\nsignature: ')
+      console.log(message)
       exit(0)
     })
     .catch(err => {
