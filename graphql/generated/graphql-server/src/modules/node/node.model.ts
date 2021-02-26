@@ -1,6 +1,5 @@
 import { BaseModel, IntField, Model, ManyToOne, StringField } from 'warthog';
 
-import { Resource } from '../resource/resource.model';
 import { Location } from '../location/location.model';
 
 @Model({ api: {} })
@@ -13,13 +12,6 @@ export class Node extends BaseModel {
 
   @IntField({})
   farmId!: number;
-
-  @ManyToOne(
-    () => Resource,
-    (param: Resource) => param.noderesources,
-    { skipGraphQLField: true }
-  )
-  resources!: Resource;
 
   @ManyToOne(
     () => Location,
@@ -43,6 +35,26 @@ export class Node extends BaseModel {
 
   @StringField({})
   pubKey!: string;
+
+  @IntField({
+    nullable: true
+  })
+  hru?: number;
+
+  @IntField({
+    nullable: true
+  })
+  sru?: number;
+
+  @IntField({
+    nullable: true
+  })
+  cru?: number;
+
+  @IntField({
+    nullable: true
+  })
+  mru?: number;
 
   constructor(init?: Partial<Node>) {
     super();

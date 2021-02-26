@@ -1,21 +1,18 @@
 import { SubstrateEvent, DB } from '../generated/hydra-processor'
 import { Node } from '../generated/graphql-server/src/modules/node/node.model'
-import { Resource } from '../generated/graphql-server/src/modules/resource/resource.model'
 import { Location } from '../generated/graphql-server/src/modules/location/location.model'
 import { hex2a } from './util'
 
-import BN from 'bn.js'
-
 interface IResource {
-    hru: number
-    sru: number
-    cru: number
-    mru: number
+  hru: number
+  sru: number
+  cru: number
+  mru: number
 }
 
 interface ILocation {
-    latitude: string
-    longitude: string
+  latitude: string
+  longitude: string
 }
 
 export async function tfgridModule_NodeStored(db: DB, event: SubstrateEvent) {
@@ -28,14 +25,10 @@ export async function tfgridModule_NodeStored(db: DB, event: SubstrateEvent) {
 
   const parsedResource = (resources.value as unknown) as IResource
 
-  const resource = new Resource()
-  resource.sru = parsedResource.sru
-  resource.cru = parsedResource.cru
-  resource.mru = parsedResource.mru
-  resource.hru = parsedResource.hru
-  await db.save<Resource>(resource)
-
-  node.resources = resource
+  node.sru = parsedResource.sru
+  node.cru = parsedResource.cru
+  node.mru = parsedResource.mru
+  node.hru = parsedResource.hru
 
   const parsedLocation = (location.value as unknown) as ILocation
   

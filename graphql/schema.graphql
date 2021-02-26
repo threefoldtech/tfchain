@@ -50,15 +50,11 @@ type Node @entity {
   grid_version: Int!
   node_id: Int!
   farm_id: Int!
-  resources: Resource!
   location: Location!
   countryId: Int
   cityId: Int
   address: String!
   pubKey: String!
-}
-
-type Resource @entity {
   hru: Int
   sru: Int
   cru: Int

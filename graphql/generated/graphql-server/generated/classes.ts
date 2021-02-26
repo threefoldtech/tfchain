@@ -37,8 +37,6 @@ import { Entity } from "../src/modules/entity/entity.model";
 // @ts-ignore
 import { Farm } from "../src/modules/farm/farm.model";
 // @ts-ignore
-import { Resource } from "../src/modules/resource/resource.model";
-// @ts-ignore
 import { Node } from "../src/modules/node/node.model";
 // @ts-ignore
 import { Location } from "../src/modules/location/location.model";
@@ -1409,237 +1407,6 @@ export class FarmUpdateArgs {
   @TypeGraphQLField() where!: FarmWhereUniqueInput;
 }
 
-export enum ResourceOrderByEnum {
-  createdAt_ASC = "createdAt_ASC",
-  createdAt_DESC = "createdAt_DESC",
-
-  updatedAt_ASC = "updatedAt_ASC",
-  updatedAt_DESC = "updatedAt_DESC",
-
-  deletedAt_ASC = "deletedAt_ASC",
-  deletedAt_DESC = "deletedAt_DESC",
-
-  hru_ASC = "hru_ASC",
-  hru_DESC = "hru_DESC",
-
-  sru_ASC = "sru_ASC",
-  sru_DESC = "sru_DESC",
-
-  cru_ASC = "cru_ASC",
-  cru_DESC = "cru_DESC",
-
-  mru_ASC = "mru_ASC",
-  mru_DESC = "mru_DESC"
-}
-
-registerEnumType(ResourceOrderByEnum, {
-  name: "ResourceOrderByInput"
-});
-
-@TypeGraphQLInputType()
-export class ResourceWhereInput {
-  @TypeGraphQLField(() => ID, { nullable: true })
-  id_eq?: string;
-
-  @TypeGraphQLField(() => [ID], { nullable: true })
-  id_in?: string[];
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  createdAt_eq?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  createdAt_lt?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  createdAt_lte?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  createdAt_gt?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  createdAt_gte?: Date;
-
-  @TypeGraphQLField(() => ID, { nullable: true })
-  createdById_eq?: string;
-
-  @TypeGraphQLField(() => [ID], { nullable: true })
-  createdById_in?: string[];
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  updatedAt_eq?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  updatedAt_lt?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  updatedAt_lte?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  updatedAt_gt?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  updatedAt_gte?: Date;
-
-  @TypeGraphQLField(() => ID, { nullable: true })
-  updatedById_eq?: string;
-
-  @TypeGraphQLField(() => [ID], { nullable: true })
-  updatedById_in?: string[];
-
-  @TypeGraphQLField({ nullable: true })
-  deletedAt_all?: Boolean;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  deletedAt_eq?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  deletedAt_lt?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  deletedAt_lte?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  deletedAt_gt?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  deletedAt_gte?: Date;
-
-  @TypeGraphQLField(() => ID, { nullable: true })
-  deletedById_eq?: string;
-
-  @TypeGraphQLField(() => [ID], { nullable: true })
-  deletedById_in?: string[];
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  hru_eq?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  hru_gt?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  hru_gte?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  hru_lt?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  hru_lte?: number;
-
-  @TypeGraphQLField(() => [Int], { nullable: true })
-  hru_in?: number[];
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  sru_eq?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  sru_gt?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  sru_gte?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  sru_lt?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  sru_lte?: number;
-
-  @TypeGraphQLField(() => [Int], { nullable: true })
-  sru_in?: number[];
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cru_eq?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cru_gt?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cru_gte?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cru_lt?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cru_lte?: number;
-
-  @TypeGraphQLField(() => [Int], { nullable: true })
-  cru_in?: number[];
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  mru_eq?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  mru_gt?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  mru_gte?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  mru_lt?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  mru_lte?: number;
-
-  @TypeGraphQLField(() => [Int], { nullable: true })
-  mru_in?: number[];
-}
-
-@TypeGraphQLInputType()
-export class ResourceWhereUniqueInput {
-  @TypeGraphQLField(() => ID)
-  id?: string;
-}
-
-@TypeGraphQLInputType()
-export class ResourceCreateInput {
-  @TypeGraphQLField({ nullable: true })
-  hru?: number;
-
-  @TypeGraphQLField({ nullable: true })
-  sru?: number;
-
-  @TypeGraphQLField({ nullable: true })
-  cru?: number;
-
-  @TypeGraphQLField({ nullable: true })
-  mru?: number;
-}
-
-@TypeGraphQLInputType()
-export class ResourceUpdateInput {
-  @TypeGraphQLField({ nullable: true })
-  hru?: number;
-
-  @TypeGraphQLField({ nullable: true })
-  sru?: number;
-
-  @TypeGraphQLField({ nullable: true })
-  cru?: number;
-
-  @TypeGraphQLField({ nullable: true })
-  mru?: number;
-}
-
-@ArgsType()
-export class ResourceWhereArgs extends PaginationArgs {
-  @TypeGraphQLField(() => ResourceWhereInput, { nullable: true })
-  where?: ResourceWhereInput;
-
-  @TypeGraphQLField(() => ResourceOrderByEnum, { nullable: true })
-  orderBy?: ResourceOrderByEnum;
-}
-
-@ArgsType()
-export class ResourceCreateManyArgs {
-  @TypeGraphQLField(() => [ResourceCreateInput])
-  data!: ResourceCreateInput[];
-}
-
-@ArgsType()
-export class ResourceUpdateArgs {
-  @TypeGraphQLField() data!: ResourceUpdateInput;
-  @TypeGraphQLField() where!: ResourceWhereUniqueInput;
-}
-
 export enum NodeOrderByEnum {
   createdAt_ASC = "createdAt_ASC",
   createdAt_DESC = "createdAt_DESC",
@@ -1659,9 +1426,6 @@ export enum NodeOrderByEnum {
   farmId_ASC = "farmId_ASC",
   farmId_DESC = "farmId_DESC",
 
-  resourcesId_ASC = "resourcesId_ASC",
-  resourcesId_DESC = "resourcesId_DESC",
-
   locationId_ASC = "locationId_ASC",
   locationId_DESC = "locationId_DESC",
 
@@ -1675,7 +1439,19 @@ export enum NodeOrderByEnum {
   address_DESC = "address_DESC",
 
   pubKey_ASC = "pubKey_ASC",
-  pubKey_DESC = "pubKey_DESC"
+  pubKey_DESC = "pubKey_DESC",
+
+  hru_ASC = "hru_ASC",
+  hru_DESC = "hru_DESC",
+
+  sru_ASC = "sru_ASC",
+  sru_DESC = "sru_DESC",
+
+  cru_ASC = "cru_ASC",
+  cru_DESC = "cru_DESC",
+
+  mru_ASC = "mru_ASC",
+  mru_DESC = "mru_DESC"
 }
 
 registerEnumType(NodeOrderByEnum, {
@@ -1811,12 +1587,6 @@ export class NodeWhereInput {
   farmId_in?: number[];
 
   @TypeGraphQLField(() => ID, { nullable: true })
-  resourcesId_eq?: string;
-
-  @TypeGraphQLField(() => [ID], { nullable: true })
-  resourcesId_in?: string[];
-
-  @TypeGraphQLField(() => ID, { nullable: true })
   locationId_eq?: string;
 
   @TypeGraphQLField(() => [ID], { nullable: true })
@@ -1887,6 +1657,78 @@ export class NodeWhereInput {
 
   @TypeGraphQLField(() => [String], { nullable: true })
   pubKey_in?: string[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  hru_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  hru_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  hru_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  hru_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  hru_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  hru_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  sru_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  sru_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  sru_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  sru_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  sru_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  sru_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cru_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cru_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cru_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cru_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cru_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  cru_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  mru_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  mru_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  mru_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  mru_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  mru_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  mru_in?: number[];
 }
 
 @TypeGraphQLInputType()
@@ -1907,9 +1749,6 @@ export class NodeCreateInput {
   farmId!: number;
 
   @TypeGraphQLField(() => ID)
-  resourcesId!: string;
-
-  @TypeGraphQLField(() => ID)
   locationId!: string;
 
   @TypeGraphQLField({ nullable: true })
@@ -1923,6 +1762,18 @@ export class NodeCreateInput {
 
   @TypeGraphQLField()
   pubKey!: string;
+
+  @TypeGraphQLField({ nullable: true })
+  hru?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  sru?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  cru?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  mru?: number;
 }
 
 @TypeGraphQLInputType()
@@ -1935,9 +1786,6 @@ export class NodeUpdateInput {
 
   @TypeGraphQLField({ nullable: true })
   farmId?: number;
-
-  @TypeGraphQLField(() => ID, { nullable: true })
-  resourcesId?: string;
 
   @TypeGraphQLField(() => ID, { nullable: true })
   locationId?: string;
@@ -1953,6 +1801,18 @@ export class NodeUpdateInput {
 
   @TypeGraphQLField({ nullable: true })
   pubKey?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  hru?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  sru?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  cru?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  mru?: number;
 }
 
 @ArgsType()

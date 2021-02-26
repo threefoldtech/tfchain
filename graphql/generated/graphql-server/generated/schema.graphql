@@ -740,14 +740,16 @@ type Node implements BaseGraphQLObject {
   gridVersion: Int!
   nodeId: Int!
   farmId: Int!
-  resources: Resource!
-  resourcesId: String!
   location: Location!
   locationId: String!
   countryId: Int
   cityId: Int
   address: String!
   pubKey: String!
+  hru: Int
+  sru: Int
+  cru: Int
+  mru: Int
 }
 
 type NodeConnection {
@@ -760,12 +762,15 @@ input NodeCreateInput {
   gridVersion: Float!
   nodeId: Float!
   farmId: Float!
-  resourcesId: ID!
   locationId: ID!
   countryId: Float
   cityId: Float
   address: String!
   pubKey: String!
+  hru: Float
+  sru: Float
+  cru: Float
+  mru: Float
 }
 
 type NodeEdge {
@@ -786,8 +791,6 @@ enum NodeOrderByInput {
   nodeId_DESC
   farmId_ASC
   farmId_DESC
-  resourcesId_ASC
-  resourcesId_DESC
   locationId_ASC
   locationId_DESC
   countryId_ASC
@@ -798,18 +801,29 @@ enum NodeOrderByInput {
   address_DESC
   pubKey_ASC
   pubKey_DESC
+  hru_ASC
+  hru_DESC
+  sru_ASC
+  sru_DESC
+  cru_ASC
+  cru_DESC
+  mru_ASC
+  mru_DESC
 }
 
 input NodeUpdateInput {
   gridVersion: Float
   nodeId: Float
   farmId: Float
-  resourcesId: ID
   locationId: ID
   countryId: Float
   cityId: Float
   address: String
   pubKey: String
+  hru: Float
+  sru: Float
+  cru: Float
+  mru: Float
 }
 
 input NodeWhereInput {
@@ -855,8 +869,6 @@ input NodeWhereInput {
   farmId_lt: Int
   farmId_lte: Int
   farmId_in: [Int!]
-  resourcesId_eq: ID
-  resourcesId_in: [ID!]
   locationId_eq: ID
   locationId_in: [ID!]
   countryId_eq: Int
@@ -881,6 +893,30 @@ input NodeWhereInput {
   pubKey_startsWith: String
   pubKey_endsWith: String
   pubKey_in: [String!]
+  hru_eq: Int
+  hru_gt: Int
+  hru_gte: Int
+  hru_lt: Int
+  hru_lte: Int
+  hru_in: [Int!]
+  sru_eq: Int
+  sru_gt: Int
+  sru_gte: Int
+  sru_lt: Int
+  sru_lte: Int
+  sru_in: [Int!]
+  cru_eq: Int
+  cru_gt: Int
+  cru_gte: Int
+  cru_lt: Int
+  cru_lte: Int
+  cru_in: [Int!]
+  mru_eq: Int
+  mru_gt: Int
+  mru_gte: Int
+  mru_lt: Int
+  mru_lte: Int
+  mru_in: [Int!]
 }
 
 input NodeWhereUniqueInput {
@@ -1063,128 +1099,12 @@ type Query {
   pricingPolicy(where: PricingPolicyWhereUniqueInput!): PricingPolicy
   pricingPoliciesConnection(first: Int, after: String, last: Int, before: String, where: PricingPolicyWhereInput, orderBy: PricingPolicyOrderByInput): PricingPolicyConnection!
   commentSearch(limit: Int = 5, text: String!): [CommentSearchFTSOutput!]!
-  resources(offset: Int, limit: Int = 50, where: ResourceWhereInput, orderBy: ResourceOrderByInput): [Resource!]!
-  resource(where: ResourceWhereUniqueInput!): Resource
-  resourcesConnection(first: Int, after: String, last: Int, before: String, where: ResourceWhereInput, orderBy: ResourceOrderByInput): ResourceConnection!
   transfers(offset: Int, limit: Int = 50, where: TransferWhereInput, orderBy: TransferOrderByInput): [Transfer!]!
   transfer(where: TransferWhereUniqueInput!): Transfer
   transfersConnection(first: Int, after: String, last: Int, before: String, where: TransferWhereInput, orderBy: TransferOrderByInput): TransferConnection!
   twins(offset: Int, limit: Int = 50, where: TwinWhereInput, orderBy: TwinOrderByInput): [Twin!]!
   twin(where: TwinWhereUniqueInput!): Twin
   twinsConnection(first: Int, after: String, last: Int, before: String, where: TwinWhereInput, orderBy: TwinOrderByInput): TwinConnection!
-}
-
-type Resource implements BaseGraphQLObject {
-  id: ID!
-  createdAt: DateTime!
-  createdById: String!
-  updatedAt: DateTime
-  updatedById: String
-  deletedAt: DateTime
-  deletedById: String
-  version: Int!
-  hru: Int
-  sru: Int
-  cru: Int
-  mru: Int
-  noderesources: [Node!]
-}
-
-type ResourceConnection {
-  totalCount: Int!
-  edges: [ResourceEdge!]!
-  pageInfo: PageInfo!
-}
-
-input ResourceCreateInput {
-  hru: Float
-  sru: Float
-  cru: Float
-  mru: Float
-}
-
-type ResourceEdge {
-  node: Resource!
-  cursor: String!
-}
-
-enum ResourceOrderByInput {
-  createdAt_ASC
-  createdAt_DESC
-  updatedAt_ASC
-  updatedAt_DESC
-  deletedAt_ASC
-  deletedAt_DESC
-  hru_ASC
-  hru_DESC
-  sru_ASC
-  sru_DESC
-  cru_ASC
-  cru_DESC
-  mru_ASC
-  mru_DESC
-}
-
-input ResourceUpdateInput {
-  hru: Float
-  sru: Float
-  cru: Float
-  mru: Float
-}
-
-input ResourceWhereInput {
-  id_eq: ID
-  id_in: [ID!]
-  createdAt_eq: DateTime
-  createdAt_lt: DateTime
-  createdAt_lte: DateTime
-  createdAt_gt: DateTime
-  createdAt_gte: DateTime
-  createdById_eq: ID
-  createdById_in: [ID!]
-  updatedAt_eq: DateTime
-  updatedAt_lt: DateTime
-  updatedAt_lte: DateTime
-  updatedAt_gt: DateTime
-  updatedAt_gte: DateTime
-  updatedById_eq: ID
-  updatedById_in: [ID!]
-  deletedAt_all: Boolean
-  deletedAt_eq: DateTime
-  deletedAt_lt: DateTime
-  deletedAt_lte: DateTime
-  deletedAt_gt: DateTime
-  deletedAt_gte: DateTime
-  deletedById_eq: ID
-  deletedById_in: [ID!]
-  hru_eq: Int
-  hru_gt: Int
-  hru_gte: Int
-  hru_lt: Int
-  hru_lte: Int
-  hru_in: [Int!]
-  sru_eq: Int
-  sru_gt: Int
-  sru_gte: Int
-  sru_lt: Int
-  sru_lte: Int
-  sru_in: [Int!]
-  cru_eq: Int
-  cru_gt: Int
-  cru_gte: Int
-  cru_lt: Int
-  cru_lte: Int
-  cru_in: [Int!]
-  mru_eq: Int
-  mru_gt: Int
-  mru_gte: Int
-  mru_lt: Int
-  mru_lte: Int
-  mru_in: [Int!]
-}
-
-input ResourceWhereUniqueInput {
-  id: ID!
 }
 
 type StandardDeleteResponse {

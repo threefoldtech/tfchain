@@ -1,6 +1,5 @@
 import { SubstrateEvent, DB } from '../generated/hydra-processor'
 import { CertificationType, Farm } from '../generated/graphql-server/src/modules/farm/farm.model'
-import BN from 'bn.js'
 import { hex2a } from './util'
 
 export async function tfgridModule_FarmStored(db: DB, event: SubstrateEvent) {

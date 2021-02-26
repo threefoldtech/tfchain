@@ -30,7 +30,6 @@ import {
 import { Node } from './node.model';
 import { NodeService } from './node.service';
 
-import { Resource } from '../resource/resource.model';
 import { Location } from '../location/location.model';
 import { getConnection } from 'typeorm';
 
@@ -124,16 +123,6 @@ export class NodeResolver {
     return result as Promise<NodeConnection>;
   }
 
-  @FieldResolver(() => Resource)
-  async resources(@Root() r: Node): Promise<Resource | null> {
-    const result = await getConnection()
-      .getRepository(Node)
-      .findOne(r.id, { relations: ['resources'] });
-    if (result && result.resources !== undefined) {
-      return result.resources;
-    }
-    return null;
-  }
   @FieldResolver(() => Location)
   async location(@Root() r: Node): Promise<Location | null> {
     const result = await getConnection()

@@ -1,6 +1,5 @@
 import { SubstrateEvent, DB } from '../generated/hydra-processor'
 import { Entity } from '../generated/graphql-server/src/modules/entity/entity.model'
-import BN from 'bn.js'
 import { hex2a } from './util'
 
 export async function tfgridModule_EntityStored(db: DB, event: SubstrateEvent) {
@@ -35,7 +34,7 @@ export async function tfgridModule_EntityUpdated(db: DB, event: SubstrateEvent) 
 export async function tfgridModule_EntityDeleted(db: DB, event: SubstrateEvent) {
   const [entity_id] = event.params
 
-  const savedEntity = await db.get(Entity, { where: { entityId: new BN(entity_id.value as number) } })
+  const savedEntity = await db.get(Entity, { where: { entityId: entity_id.value as number } })
 
   if (savedEntity) {
     await db.remove(savedEntity)

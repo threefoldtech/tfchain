@@ -2,7 +2,6 @@ import { SubstrateEvent, DB } from '../generated/hydra-processor'
 import { Twin } from '../generated/graphql-server/src/modules/twin/twin.model'
 import { EntityProof } from '../generated/graphql-server/src/modules/entity-proof/entity-proof.model'
 import { hex2a } from './util'
-import BN from 'bn.js'
 
 export async function tfgridModule_TwinStored(db: DB, event: SubstrateEvent) {
   const [version, twin_id, address, ip] = event.params
@@ -48,7 +47,7 @@ export async function tfgridModule_TwinEntityStored(db: DB, event: SubstrateEven
 export async function tfgridModule_TwinEntityRemoved(db: DB, event: SubstrateEvent) {
   const [twin_id, entity_id] = event.params
 
-  let savedTwinEntity = await db.get(EntityProof, { where: { entityId: new BN(entity_id.value as number) }})
+  let savedTwinEntity = await db.get(EntityProof, { where: { entityId: entity_id.value as number }})
   if (savedTwinEntity) {
     await db.remove(savedTwinEntity)
   }

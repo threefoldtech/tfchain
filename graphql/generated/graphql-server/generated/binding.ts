@@ -31,9 +31,6 @@ export interface Query {
     pricingPolicy: <T = PricingPolicy | null>(args: { where: PricingPolicyWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     pricingPoliciesConnection: <T = PricingPolicyConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: PricingPolicyWhereInput | null, orderBy?: PricingPolicyOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     commentSearch: <T = Array<CommentSearchFTSOutput>>(args: { limit?: Int | null, text: String }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    resources: <T = Array<Resource>>(args: { offset?: Int | null, limit?: Int | null, where?: ResourceWhereInput | null, orderBy?: ResourceOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    resource: <T = Resource | null>(args: { where: ResourceWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    resourcesConnection: <T = ResourceConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: ResourceWhereInput | null, orderBy?: ResourceOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     transfers: <T = Array<Transfer>>(args: { offset?: Int | null, limit?: Int | null, where?: TransferWhereInput | null, orderBy?: TransferOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     transfer: <T = Transfer | null>(args: { where: TransferWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     transfersConnection: <T = TransferConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: TransferWhereInput | null, orderBy?: TransferOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
@@ -174,8 +171,6 @@ export type NodeOrderByInput =   'createdAt_ASC' |
   'nodeId_DESC' |
   'farmId_ASC' |
   'farmId_DESC' |
-  'resourcesId_ASC' |
-  'resourcesId_DESC' |
   'locationId_ASC' |
   'locationId_DESC' |
   'countryId_ASC' |
@@ -185,7 +180,15 @@ export type NodeOrderByInput =   'createdAt_ASC' |
   'address_ASC' |
   'address_DESC' |
   'pubKey_ASC' |
-  'pubKey_DESC'
+  'pubKey_DESC' |
+  'hru_ASC' |
+  'hru_DESC' |
+  'sru_ASC' |
+  'sru_DESC' |
+  'cru_ASC' |
+  'cru_DESC' |
+  'mru_ASC' |
+  'mru_DESC'
 
 export type PricingPolicyOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -207,21 +210,6 @@ export type PricingPolicyOrderByInput =   'createdAt_ASC' |
   'cu_DESC' |
   'nu_ASC' |
   'nu_DESC'
-
-export type ResourceOrderByInput =   'createdAt_ASC' |
-  'createdAt_DESC' |
-  'updatedAt_ASC' |
-  'updatedAt_DESC' |
-  'deletedAt_ASC' |
-  'deletedAt_DESC' |
-  'hru_ASC' |
-  'hru_DESC' |
-  'sru_ASC' |
-  'sru_DESC' |
-  'cru_ASC' |
-  'cru_DESC' |
-  'mru_ASC' |
-  'mru_DESC'
 
 export type TransferOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -672,24 +660,30 @@ export interface NodeCreateInput {
   gridVersion: Float
   nodeId: Float
   farmId: Float
-  resourcesId: ID_Output
   locationId: ID_Output
   countryId?: Float | null
   cityId?: Float | null
   address: String
   pubKey: String
+  hru?: Float | null
+  sru?: Float | null
+  cru?: Float | null
+  mru?: Float | null
 }
 
 export interface NodeUpdateInput {
   gridVersion?: Float | null
   nodeId?: Float | null
   farmId?: Float | null
-  resourcesId?: ID_Input | null
   locationId?: ID_Input | null
   countryId?: Float | null
   cityId?: Float | null
   address?: String | null
   pubKey?: String | null
+  hru?: Float | null
+  sru?: Float | null
+  cru?: Float | null
+  mru?: Float | null
 }
 
 export interface NodeWhereInput {
@@ -735,8 +729,6 @@ export interface NodeWhereInput {
   farmId_lt?: Int | null
   farmId_lte?: Int | null
   farmId_in?: Int[] | Int | null
-  resourcesId_eq?: ID_Input | null
-  resourcesId_in?: ID_Output[] | ID_Output | null
   locationId_eq?: ID_Input | null
   locationId_in?: ID_Output[] | ID_Output | null
   countryId_eq?: Int | null
@@ -761,6 +753,30 @@ export interface NodeWhereInput {
   pubKey_startsWith?: String | null
   pubKey_endsWith?: String | null
   pubKey_in?: String[] | String | null
+  hru_eq?: Int | null
+  hru_gt?: Int | null
+  hru_gte?: Int | null
+  hru_lt?: Int | null
+  hru_lte?: Int | null
+  hru_in?: Int[] | Int | null
+  sru_eq?: Int | null
+  sru_gt?: Int | null
+  sru_gte?: Int | null
+  sru_lt?: Int | null
+  sru_lte?: Int | null
+  sru_in?: Int[] | Int | null
+  cru_eq?: Int | null
+  cru_gt?: Int | null
+  cru_gte?: Int | null
+  cru_lt?: Int | null
+  cru_lte?: Int | null
+  cru_in?: Int[] | Int | null
+  mru_eq?: Int | null
+  mru_gt?: Int | null
+  mru_gte?: Int | null
+  mru_lt?: Int | null
+  mru_lte?: Int | null
+  mru_in?: Int[] | Int | null
 }
 
 export interface NodeWhereUniqueInput {
@@ -855,75 +871,6 @@ export interface PricingPolicyWhereInput {
 }
 
 export interface PricingPolicyWhereUniqueInput {
-  id: ID_Output
-}
-
-export interface ResourceCreateInput {
-  hru?: Float | null
-  sru?: Float | null
-  cru?: Float | null
-  mru?: Float | null
-}
-
-export interface ResourceUpdateInput {
-  hru?: Float | null
-  sru?: Float | null
-  cru?: Float | null
-  mru?: Float | null
-}
-
-export interface ResourceWhereInput {
-  id_eq?: ID_Input | null
-  id_in?: ID_Output[] | ID_Output | null
-  createdAt_eq?: DateTime | null
-  createdAt_lt?: DateTime | null
-  createdAt_lte?: DateTime | null
-  createdAt_gt?: DateTime | null
-  createdAt_gte?: DateTime | null
-  createdById_eq?: ID_Input | null
-  createdById_in?: ID_Output[] | ID_Output | null
-  updatedAt_eq?: DateTime | null
-  updatedAt_lt?: DateTime | null
-  updatedAt_lte?: DateTime | null
-  updatedAt_gt?: DateTime | null
-  updatedAt_gte?: DateTime | null
-  updatedById_eq?: ID_Input | null
-  updatedById_in?: ID_Output[] | ID_Output | null
-  deletedAt_all?: Boolean | null
-  deletedAt_eq?: DateTime | null
-  deletedAt_lt?: DateTime | null
-  deletedAt_lte?: DateTime | null
-  deletedAt_gt?: DateTime | null
-  deletedAt_gte?: DateTime | null
-  deletedById_eq?: ID_Input | null
-  deletedById_in?: ID_Output[] | ID_Output | null
-  hru_eq?: Int | null
-  hru_gt?: Int | null
-  hru_gte?: Int | null
-  hru_lt?: Int | null
-  hru_lte?: Int | null
-  hru_in?: Int[] | Int | null
-  sru_eq?: Int | null
-  sru_gt?: Int | null
-  sru_gte?: Int | null
-  sru_lt?: Int | null
-  sru_lte?: Int | null
-  sru_in?: Int[] | Int | null
-  cru_eq?: Int | null
-  cru_gt?: Int | null
-  cru_gte?: Int | null
-  cru_lt?: Int | null
-  cru_lte?: Int | null
-  cru_in?: Int[] | Int | null
-  mru_eq?: Int | null
-  mru_gt?: Int | null
-  mru_gte?: Int | null
-  mru_lt?: Int | null
-  mru_lte?: Int | null
-  mru_in?: Int[] | Int | null
-}
-
-export interface ResourceWhereUniqueInput {
   id: ID_Output
 }
 
@@ -1281,14 +1228,16 @@ export interface Node extends BaseGraphQLObject {
   gridVersion: Int
   nodeId: Int
   farmId: Int
-  resources: Resource
-  resourcesId: String
   location: Location
   locationId: String
   countryId?: Int | null
   cityId?: Int | null
   address: String
   pubKey: String
+  hru?: Int | null
+  sru?: Int | null
+  cru?: Int | null
+  mru?: Int | null
 }
 
 export interface NodeConnection {
@@ -1335,33 +1284,6 @@ export interface PricingPolicyConnection {
 
 export interface PricingPolicyEdge {
   node: PricingPolicy
-  cursor: String
-}
-
-export interface Resource extends BaseGraphQLObject {
-  id: ID_Output
-  createdAt: DateTime
-  createdById: String
-  updatedAt?: DateTime | null
-  updatedById?: String | null
-  deletedAt?: DateTime | null
-  deletedById?: String | null
-  version: Int
-  hru?: Int | null
-  sru?: Int | null
-  cru?: Int | null
-  mru?: Int | null
-  noderesources?: Array<Node> | null
-}
-
-export interface ResourceConnection {
-  totalCount: Int
-  edges: Array<ResourceEdge>
-  pageInfo: PageInfo
-}
-
-export interface ResourceEdge {
-  node: Resource
   cursor: String
 }
 
