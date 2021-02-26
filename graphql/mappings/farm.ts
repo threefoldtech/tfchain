@@ -7,13 +7,13 @@ export async function tfgridModule_FarmStored(db: DB, event: SubstrateEvent) {
   const [version, farm_id, name, twin_id, pricing_policy_id, country_id, city_id, certification_type] = event.params
   const farm = new Farm()
   
-  farm.gridVersion = new BN(version.value as number)
-  farm.farmId = new BN(farm_id.value as number)
+  farm.gridVersion = version.value as number
+  farm.farmId = farm_id.value as number
   farm.name = hex2a(Buffer.from(name.value as string).toString())
-  farm.twinId = new BN(twin_id.value as number)
-  farm.pricingPolicyId = new BN(pricing_policy_id.value as number)
-  farm.countryId = new BN(country_id.value as number)
-  farm.cityId = new BN(city_id.value as number)
+  farm.twinId = twin_id.value as number
+  farm.pricingPolicyId = pricing_policy_id.value as number
+  farm.countryId = country_id.value as number
+  farm.cityId = city_id.value as number
 
   let certificationTypeAsString = Buffer.from(certification_type.value as string).toString()
   let certificationType = CertificationType.None
@@ -31,7 +31,7 @@ export async function tfgridModule_FarmStored(db: DB, event: SubstrateEvent) {
 export async function tfgridModule_FarmDeleted(db: DB, event: SubstrateEvent) {
     const [farm_id] = event.params
   
-    const savedFarm = await db.get(Farm, { where: { farmId: new BN(farm_id.value as number) } })
+    const savedFarm = await db.get(Farm, { where: { farmId: farm_id.value as number } })
   
     if (savedFarm) {
       await db.remove(savedFarm)

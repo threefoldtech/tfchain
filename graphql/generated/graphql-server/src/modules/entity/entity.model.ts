@@ -1,51 +1,25 @@
-import { BaseModel, NumericField, Model, StringField } from 'warthog';
-
-import BN from 'bn.js';
+import { BaseModel, IntField, Model, StringField } from 'warthog';
 
 @Model({ api: {} })
 export class Entity extends BaseModel {
-  @NumericField({
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
-  })
-  gridVersion!: BN;
+  @IntField({})
+  gridVersion!: number;
 
-  @NumericField({
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
-  })
-  entityId!: BN;
+  @IntField({})
+  entityId!: number;
 
   @StringField({})
   name!: string;
 
-  @NumericField({
-    nullable: true,
-
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
+  @IntField({
+    nullable: true
   })
-  countryId?: BN;
+  countryId?: number;
 
-  @NumericField({
-    nullable: true,
-
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
+  @IntField({
+    nullable: true
   })
-  cityId?: BN;
+  cityId?: number;
 
   @StringField({})
   address!: string;

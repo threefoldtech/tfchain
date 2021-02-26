@@ -8,8 +8,8 @@ export async function tfgridModule_TwinStored(db: DB, event: SubstrateEvent) {
   const [version, twin_id, address, ip] = event.params
   const twin = new Twin()
 
-  twin.gridVersion = new BN(version.value as number)
-  twin.twinId = new BN(twin_id.value as number)
+  twin.gridVersion = version.value as number
+  twin.twinId = twin_id.value as number
   twin.address = Buffer.from(address.value as string).toString()
   twin.ip = hex2a(Buffer.from(ip.value as string).toString())
 
@@ -19,7 +19,7 @@ export async function tfgridModule_TwinStored(db: DB, event: SubstrateEvent) {
 export async function tfgridModule_TwinDeleted(db: DB, event: SubstrateEvent) {
   const [twin_id] = event.params
 
-  const savedTwin = await db.get(Twin, { where: { twinId: new BN(twin_id.value as number) } })
+  const savedTwin = await db.get(Twin, { where: { twinId: twin_id.value as number } })
 
   if (savedTwin) {
     await db.remove(savedTwin)
@@ -31,11 +31,11 @@ export async function tfgridModule_TwinDeleted(db: DB, event: SubstrateEvent) {
 export async function tfgridModule_TwinEntityStored(db: DB, event: SubstrateEvent) {
   const [twin_id, entity_id, signature] = event.params
 
-  let savedTwin = await db.get(Twin, { where: { twinId: new BN(twin_id.value as number) } })
+  let savedTwin = await db.get(Twin, { where: { twinId: twin_id.value as number } })
 
   if (savedTwin) {
     const entityProof = new EntityProof()
-    entityProof.entityId = new BN(entity_id.value as number)
+    entityProof.entityId = entity_id.value as number
     entityProof.signature = Buffer.from(signature.value as string).toString()
     
     // and the twin foreign key to entityproof

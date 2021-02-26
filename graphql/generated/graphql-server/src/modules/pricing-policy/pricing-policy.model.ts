@@ -1,26 +1,12 @@
-import { BaseModel, NumericField, Model, StringField } from 'warthog';
-
-import BN from 'bn.js';
+import { BaseModel, IntField, Model, StringField } from 'warthog';
 
 @Model({ api: {} })
 export class PricingPolicy extends BaseModel {
-  @NumericField({
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
-  })
-  gridVersion!: BN;
+  @IntField({})
+  gridVersion!: number;
 
-  @NumericField({
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
-  })
-  pricingPolicyId!: BN;
+  @IntField({})
+  pricingPolicyId!: number;
 
   @StringField({})
   name!: string;
@@ -28,32 +14,14 @@ export class PricingPolicy extends BaseModel {
   @StringField({})
   currency!: string;
 
-  @NumericField({
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
-  })
-  su!: BN;
+  @IntField({})
+  su!: number;
 
-  @NumericField({
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
-  })
-  cu!: BN;
+  @IntField({})
+  cu!: number;
 
-  @NumericField({
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
-  })
-  nu!: BN;
+  @IntField({})
+  nu!: number;
 
   constructor(init?: Partial<PricingPolicy>) {
     super();

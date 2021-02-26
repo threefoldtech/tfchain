@@ -1,75 +1,37 @@
-import { BaseModel, NumericField, Model, EnumField, StringField } from 'warthog';
-
-import BN from 'bn.js';
+import { BaseModel, IntField, Model, EnumField, StringField } from 'warthog';
 
 import { CertificationType } from '../enums/enums';
 export { CertificationType };
 
 @Model({ api: {} })
 export class Farm extends BaseModel {
-  @NumericField({
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
-  })
-  gridVersion!: BN;
+  @IntField({})
+  gridVersion!: number;
 
-  @NumericField({
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
-  })
-  farmId!: BN;
+  @IntField({})
+  farmId!: number;
 
   @StringField({})
   name!: string;
 
-  @NumericField({
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
-  })
-  twinId!: BN;
+  @IntField({})
+  twinId!: number;
 
-  @NumericField({
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
-  })
-  pricingPolicyId!: BN;
+  @IntField({})
+  pricingPolicyId!: number;
 
   @EnumField('CertificationType', CertificationType, {})
   certificationType!: CertificationType;
 
-  @NumericField({
-    nullable: true,
-
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
+  @IntField({
+    nullable: true
   })
-  countryId?: BN;
+  countryId?: number;
 
-  @NumericField({
-    nullable: true,
-
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
+  @IntField({
+    nullable: true
   })
-  cityId?: BN;
+  cityId?: number;
 
   constructor(init?: Partial<Farm>) {
     super();

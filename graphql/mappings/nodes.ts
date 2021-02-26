@@ -22,17 +22,17 @@ export async function tfgridModule_NodeStored(db: DB, event: SubstrateEvent) {
   const [version, node_id, farm_id, resources, location, country_id, city_id, pub_key, address] = event.params
   const node = new Node()
   
-  node.gridVersion = new BN(version.value as number)
-  node.nodeId = new BN(node_id.value as number)
-  node.farmId = new BN(farm_id.value as number)
+  node.gridVersion = version.value as number
+  node.nodeId = node_id.value as number
+  node.farmId = farm_id.value as number
 
   const parsedResource = (resources.value as unknown) as IResource
 
   const resource = new Resource()
-  resource.sru = new BN(parsedResource.sru)
-  resource.cru = new BN(parsedResource.cru)
-  resource.mru = new BN(parsedResource.mru)
-  resource.hru = new BN(parsedResource.hru)
+  resource.sru = parsedResource.sru
+  resource.cru = parsedResource.cru
+  resource.mru = parsedResource.mru
+  resource.hru = parsedResource.hru
   await db.save<Resource>(resource)
 
   node.resources = resource
@@ -47,8 +47,8 @@ export async function tfgridModule_NodeStored(db: DB, event: SubstrateEvent) {
     await db.save<Location>(loc)
   }
   
-  node.countryId = new BN(country_id.value as number)
-  node.cityId = new BN(city_id.value as number)
+  node.countryId = country_id.value as number
+  node.cityId = city_id.value as number
   node.pubKey = Buffer.from(pub_key.value as string).toString()
   node.address = Buffer.from(address.value as string).toString()
 
@@ -58,7 +58,7 @@ export async function tfgridModule_NodeStored(db: DB, event: SubstrateEvent) {
 export async function tfgridModule_NodeDeleted(db: DB, event: SubstrateEvent) {
     const [node_id] = event.params
   
-    const savedNode = await db.get(Node, { where: { farmId: new BN(node_id.value as number) } })
+    const savedNode = await db.get(Node, { where: { farmId: node_id.value as number } })
   
     if (savedNode) {
       await db.remove(savedNode)

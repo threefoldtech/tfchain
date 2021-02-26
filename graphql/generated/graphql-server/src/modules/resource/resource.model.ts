@@ -1,54 +1,28 @@
-import { BaseModel, NumericField, Model, OneToMany, StringField } from 'warthog';
-
-import BN from 'bn.js';
+import { BaseModel, IntField, Model, OneToMany, StringField } from 'warthog';
 
 import { Node } from '../node/node.model';
 
 @Model({ api: {} })
 export class Resource extends BaseModel {
-  @NumericField({
-    nullable: true,
-
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
+  @IntField({
+    nullable: true
   })
-  hru?: BN;
+  hru?: number;
 
-  @NumericField({
-    nullable: true,
-
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
+  @IntField({
+    nullable: true
   })
-  sru?: BN;
+  sru?: number;
 
-  @NumericField({
-    nullable: true,
-
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
+  @IntField({
+    nullable: true
   })
-  cru?: BN;
+  cru?: number;
 
-  @NumericField({
-    nullable: true,
-
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
+  @IntField({
+    nullable: true
   })
-  mru?: BN;
+  mru?: number;
 
   @OneToMany(
     () => Node,

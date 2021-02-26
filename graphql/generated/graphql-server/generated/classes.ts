@@ -142,23 +142,23 @@ export class CityWhereInput {
   @TypeGraphQLField(() => [ID], { nullable: true })
   deletedById_in?: string[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  countryId_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  countryId_in?: number[];
 
   @TypeGraphQLField({ nullable: true })
   name_eq?: string;
@@ -184,8 +184,8 @@ export class CityWhereUniqueInput {
 
 @TypeGraphQLInputType()
 export class CityCreateInput {
-  @TypeGraphQLField(() => BigInt)
-  countryId!: BN;
+  @TypeGraphQLField()
+  countryId!: number;
 
   @TypeGraphQLField()
   name!: string;
@@ -193,8 +193,8 @@ export class CityCreateInput {
 
 @TypeGraphQLInputType()
 export class CityUpdateInput {
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  countryId?: number;
 
   @TypeGraphQLField({ nullable: true })
   name?: string;
@@ -493,41 +493,41 @@ export class TwinWhereInput {
   @TypeGraphQLField(() => [ID], { nullable: true })
   deletedById_in?: string[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  gridVersion_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  gridVersion_in?: number[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  twinId_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  twinId_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  twinId_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  twinId_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  twinId_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  twinId_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  twinId_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  twinId_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  twinId_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  twinId_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  twinId_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  twinId_in?: number[];
 
   @TypeGraphQLField({ nullable: true })
   address_eq?: string;
@@ -568,11 +568,11 @@ export class TwinWhereUniqueInput {
 
 @TypeGraphQLInputType()
 export class TwinCreateInput {
-  @TypeGraphQLField(() => BigInt)
-  gridVersion!: BN;
+  @TypeGraphQLField()
+  gridVersion!: number;
 
-  @TypeGraphQLField(() => BigInt)
-  twinId!: BN;
+  @TypeGraphQLField()
+  twinId!: number;
 
   @TypeGraphQLField()
   address!: string;
@@ -583,11 +583,11 @@ export class TwinCreateInput {
 
 @TypeGraphQLInputType()
 export class TwinUpdateInput {
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion?: BN;
+  @TypeGraphQLField({ nullable: true })
+  gridVersion?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  twinId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  twinId?: number;
 
   @TypeGraphQLField({ nullable: true })
   address?: string;
@@ -715,23 +715,23 @@ export class EntityProofWhereInput {
   @TypeGraphQLField(() => [ID], { nullable: true })
   deletedById_in?: string[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  entityId_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  entityId_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  entityId_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  entityId_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  entityId_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  entityId_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  entityId_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  entityId_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  entityId_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  entityId_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  entityId_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  entityId_in?: number[];
 
   @TypeGraphQLField({ nullable: true })
   signature_eq?: string;
@@ -763,8 +763,8 @@ export class EntityProofWhereUniqueInput {
 
 @TypeGraphQLInputType()
 export class EntityProofCreateInput {
-  @TypeGraphQLField(() => BigInt)
-  entityId!: BN;
+  @TypeGraphQLField()
+  entityId!: number;
 
   @TypeGraphQLField()
   signature!: string;
@@ -775,8 +775,8 @@ export class EntityProofCreateInput {
 
 @TypeGraphQLInputType()
 export class EntityProofUpdateInput {
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  entityId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  entityId?: number;
 
   @TypeGraphQLField({ nullable: true })
   signature?: string;
@@ -913,41 +913,41 @@ export class EntityWhereInput {
   @TypeGraphQLField(() => [ID], { nullable: true })
   deletedById_in?: string[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  gridVersion_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  gridVersion_in?: number[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  entityId_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  entityId_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  entityId_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  entityId_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  entityId_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  entityId_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  entityId_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  entityId_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  entityId_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  entityId_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  entityId_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  entityId_in?: number[];
 
   @TypeGraphQLField({ nullable: true })
   name_eq?: string;
@@ -964,41 +964,41 @@ export class EntityWhereInput {
   @TypeGraphQLField(() => [String], { nullable: true })
   name_in?: string[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  countryId_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  countryId_in?: number[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cityId_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cityId_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cityId_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cityId_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cityId_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  cityId_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  cityId_in?: number[];
 
   @TypeGraphQLField({ nullable: true })
   address_eq?: string;
@@ -1024,20 +1024,20 @@ export class EntityWhereUniqueInput {
 
 @TypeGraphQLInputType()
 export class EntityCreateInput {
-  @TypeGraphQLField(() => BigInt)
-  gridVersion!: BN;
+  @TypeGraphQLField()
+  gridVersion!: number;
 
-  @TypeGraphQLField(() => BigInt)
-  entityId!: BN;
+  @TypeGraphQLField()
+  entityId!: number;
 
   @TypeGraphQLField()
   name!: string;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  countryId?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cityId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  cityId?: number;
 
   @TypeGraphQLField()
   address!: string;
@@ -1045,20 +1045,20 @@ export class EntityCreateInput {
 
 @TypeGraphQLInputType()
 export class EntityUpdateInput {
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion?: BN;
+  @TypeGraphQLField({ nullable: true })
+  gridVersion?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  entityId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  entityId?: number;
 
   @TypeGraphQLField({ nullable: true })
   name?: string;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  countryId?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cityId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  cityId?: number;
 
   @TypeGraphQLField({ nullable: true })
   address?: string;
@@ -1198,41 +1198,41 @@ export class FarmWhereInput {
   @TypeGraphQLField(() => [ID], { nullable: true })
   deletedById_in?: string[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  gridVersion_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  gridVersion_in?: number[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  farmId_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  farmId_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  farmId_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  farmId_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  farmId_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  farmId_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  farmId_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  farmId_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  farmId_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  farmId_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  farmId_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  farmId_in?: number[];
 
   @TypeGraphQLField({ nullable: true })
   name_eq?: string;
@@ -1249,41 +1249,41 @@ export class FarmWhereInput {
   @TypeGraphQLField(() => [String], { nullable: true })
   name_in?: string[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  twinId_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  twinId_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  twinId_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  twinId_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  twinId_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  twinId_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  twinId_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  twinId_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  twinId_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  twinId_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  twinId_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  twinId_in?: number[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  pricingPolicyId_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  pricingPolicyId_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  pricingPolicyId_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  pricingPolicyId_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  pricingPolicyId_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  pricingPolicyId_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  pricingPolicyId_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  pricingPolicyId_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  pricingPolicyId_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  pricingPolicyId_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  pricingPolicyId_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  pricingPolicyId_in?: number[];
 
   @TypeGraphQLField(() => CertificationType, { nullable: true })
   certificationType_eq?: CertificationType;
@@ -1291,41 +1291,41 @@ export class FarmWhereInput {
   @TypeGraphQLField(() => [CertificationType], { nullable: true })
   certificationType_in?: CertificationType[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  countryId_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  countryId_in?: number[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cityId_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cityId_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cityId_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cityId_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cityId_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  cityId_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  cityId_in?: number[];
 }
 
 @TypeGraphQLInputType()
@@ -1336,56 +1336,56 @@ export class FarmWhereUniqueInput {
 
 @TypeGraphQLInputType()
 export class FarmCreateInput {
-  @TypeGraphQLField(() => BigInt)
-  gridVersion!: BN;
+  @TypeGraphQLField()
+  gridVersion!: number;
 
-  @TypeGraphQLField(() => BigInt)
-  farmId!: BN;
+  @TypeGraphQLField()
+  farmId!: number;
 
   @TypeGraphQLField()
   name!: string;
 
-  @TypeGraphQLField(() => BigInt)
-  twinId!: BN;
+  @TypeGraphQLField()
+  twinId!: number;
 
-  @TypeGraphQLField(() => BigInt)
-  pricingPolicyId!: BN;
+  @TypeGraphQLField()
+  pricingPolicyId!: number;
 
   @TypeGraphQLField(() => CertificationType)
   certificationType!: CertificationType;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  countryId?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cityId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  cityId?: number;
 }
 
 @TypeGraphQLInputType()
 export class FarmUpdateInput {
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion?: BN;
+  @TypeGraphQLField({ nullable: true })
+  gridVersion?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  farmId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  farmId?: number;
 
   @TypeGraphQLField({ nullable: true })
   name?: string;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  twinId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  twinId?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  pricingPolicyId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  pricingPolicyId?: number;
 
   @TypeGraphQLField(() => CertificationType, { nullable: true })
   certificationType?: CertificationType;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  countryId?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cityId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  cityId?: number;
 }
 
 @ArgsType()
@@ -1510,77 +1510,77 @@ export class ResourceWhereInput {
   @TypeGraphQLField(() => [ID], { nullable: true })
   deletedById_in?: string[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  hru_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  hru_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  hru_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  hru_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  hru_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  hru_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  hru_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  hru_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  hru_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  hru_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  hru_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  hru_in?: number[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  sru_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  sru_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  sru_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  sru_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  sru_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  sru_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  sru_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  sru_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  sru_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  sru_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  sru_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  sru_in?: number[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cru_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cru_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cru_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cru_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cru_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cru_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cru_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cru_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cru_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cru_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  cru_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  cru_in?: number[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  mru_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  mru_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  mru_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  mru_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  mru_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  mru_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  mru_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  mru_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  mru_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  mru_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  mru_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  mru_in?: number[];
 }
 
 @TypeGraphQLInputType()
@@ -1591,32 +1591,32 @@ export class ResourceWhereUniqueInput {
 
 @TypeGraphQLInputType()
 export class ResourceCreateInput {
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  hru?: BN;
+  @TypeGraphQLField({ nullable: true })
+  hru?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  sru?: BN;
+  @TypeGraphQLField({ nullable: true })
+  sru?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cru?: BN;
+  @TypeGraphQLField({ nullable: true })
+  cru?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  mru?: BN;
+  @TypeGraphQLField({ nullable: true })
+  mru?: number;
 }
 
 @TypeGraphQLInputType()
 export class ResourceUpdateInput {
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  hru?: BN;
+  @TypeGraphQLField({ nullable: true })
+  hru?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  sru?: BN;
+  @TypeGraphQLField({ nullable: true })
+  sru?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cru?: BN;
+  @TypeGraphQLField({ nullable: true })
+  cru?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  mru?: BN;
+  @TypeGraphQLField({ nullable: true })
+  mru?: number;
 }
 
 @ArgsType()
@@ -1756,59 +1756,59 @@ export class NodeWhereInput {
   @TypeGraphQLField(() => [ID], { nullable: true })
   deletedById_in?: string[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  gridVersion_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  gridVersion_in?: number[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  nodeId_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nodeId_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  nodeId_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nodeId_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  nodeId_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nodeId_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  nodeId_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nodeId_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  nodeId_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nodeId_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  nodeId_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  nodeId_in?: number[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  farmId_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  farmId_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  farmId_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  farmId_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  farmId_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  farmId_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  farmId_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  farmId_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  farmId_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  farmId_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  farmId_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  farmId_in?: number[];
 
   @TypeGraphQLField(() => ID, { nullable: true })
   resourcesId_eq?: string;
@@ -1822,41 +1822,41 @@ export class NodeWhereInput {
   @TypeGraphQLField(() => [ID], { nullable: true })
   locationId_in?: string[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  countryId_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  countryId_in?: number[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cityId_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cityId_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cityId_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cityId_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cityId_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  cityId_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  cityId_in?: number[];
 
   @TypeGraphQLField({ nullable: true })
   address_eq?: string;
@@ -1897,14 +1897,14 @@ export class NodeWhereUniqueInput {
 
 @TypeGraphQLInputType()
 export class NodeCreateInput {
-  @TypeGraphQLField(() => BigInt)
-  gridVersion!: BN;
+  @TypeGraphQLField()
+  gridVersion!: number;
 
-  @TypeGraphQLField(() => BigInt)
-  nodeId!: BN;
+  @TypeGraphQLField()
+  nodeId!: number;
 
-  @TypeGraphQLField(() => BigInt)
-  farmId!: BN;
+  @TypeGraphQLField()
+  farmId!: number;
 
   @TypeGraphQLField(() => ID)
   resourcesId!: string;
@@ -1912,11 +1912,11 @@ export class NodeCreateInput {
   @TypeGraphQLField(() => ID)
   locationId!: string;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  countryId?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cityId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  cityId?: number;
 
   @TypeGraphQLField()
   address!: string;
@@ -1927,14 +1927,14 @@ export class NodeCreateInput {
 
 @TypeGraphQLInputType()
 export class NodeUpdateInput {
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion?: BN;
+  @TypeGraphQLField({ nullable: true })
+  gridVersion?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  nodeId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  nodeId?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  farmId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  farmId?: number;
 
   @TypeGraphQLField(() => ID, { nullable: true })
   resourcesId?: string;
@@ -1942,11 +1942,11 @@ export class NodeUpdateInput {
   @TypeGraphQLField(() => ID, { nullable: true })
   locationId?: string;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  countryId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  countryId?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cityId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  cityId?: number;
 
   @TypeGraphQLField({ nullable: true })
   address?: string;
@@ -2257,41 +2257,41 @@ export class PricingPolicyWhereInput {
   @TypeGraphQLField(() => [ID], { nullable: true })
   deletedById_in?: string[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  gridVersion_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  gridVersion_in?: number[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  pricingPolicyId_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  pricingPolicyId_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  pricingPolicyId_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  pricingPolicyId_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  pricingPolicyId_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  pricingPolicyId_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  pricingPolicyId_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  pricingPolicyId_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  pricingPolicyId_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  pricingPolicyId_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  pricingPolicyId_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  pricingPolicyId_in?: number[];
 
   @TypeGraphQLField({ nullable: true })
   name_eq?: string;
@@ -2323,59 +2323,59 @@ export class PricingPolicyWhereInput {
   @TypeGraphQLField(() => [String], { nullable: true })
   currency_in?: string[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  su_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  su_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  su_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  su_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  su_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  su_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  su_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  su_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  su_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  su_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  su_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  su_in?: number[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cu_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cu_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cu_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cu_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cu_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cu_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cu_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cu_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cu_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cu_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  cu_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  cu_in?: number[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  nu_eq?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nu_eq?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  nu_gt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nu_gt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  nu_gte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nu_gte?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  nu_lt?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nu_lt?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  nu_lte?: BN;
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nu_lte?: number;
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  nu_in?: BN[];
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  nu_in?: number[];
 }
 
 @TypeGraphQLInputType()
@@ -2386,11 +2386,11 @@ export class PricingPolicyWhereUniqueInput {
 
 @TypeGraphQLInputType()
 export class PricingPolicyCreateInput {
-  @TypeGraphQLField(() => BigInt)
-  gridVersion!: BN;
+  @TypeGraphQLField()
+  gridVersion!: number;
 
-  @TypeGraphQLField(() => BigInt)
-  pricingPolicyId!: BN;
+  @TypeGraphQLField()
+  pricingPolicyId!: number;
 
   @TypeGraphQLField()
   name!: string;
@@ -2398,23 +2398,23 @@ export class PricingPolicyCreateInput {
   @TypeGraphQLField()
   currency!: string;
 
-  @TypeGraphQLField(() => BigInt)
-  su!: BN;
+  @TypeGraphQLField()
+  su!: number;
 
-  @TypeGraphQLField(() => BigInt)
-  cu!: BN;
+  @TypeGraphQLField()
+  cu!: number;
 
-  @TypeGraphQLField(() => BigInt)
-  nu!: BN;
+  @TypeGraphQLField()
+  nu!: number;
 }
 
 @TypeGraphQLInputType()
 export class PricingPolicyUpdateInput {
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  gridVersion?: BN;
+  @TypeGraphQLField({ nullable: true })
+  gridVersion?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  pricingPolicyId?: BN;
+  @TypeGraphQLField({ nullable: true })
+  pricingPolicyId?: number;
 
   @TypeGraphQLField({ nullable: true })
   name?: string;
@@ -2422,14 +2422,14 @@ export class PricingPolicyUpdateInput {
   @TypeGraphQLField({ nullable: true })
   currency?: string;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  su?: BN;
+  @TypeGraphQLField({ nullable: true })
+  su?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  cu?: BN;
+  @TypeGraphQLField({ nullable: true })
+  cu?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  nu?: BN;
+  @TypeGraphQLField({ nullable: true })
+  nu?: number;
 }
 
 @ArgsType()

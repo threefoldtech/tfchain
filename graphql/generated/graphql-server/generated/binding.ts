@@ -280,12 +280,12 @@ export interface BaseWhereInput {
 }
 
 export interface CityCreateInput {
-  countryId: BigInt
+  countryId: Float
   name: String
 }
 
 export interface CityUpdateInput {
-  countryId?: BigInt | null
+  countryId?: Float | null
   name?: String | null
 }
 
@@ -314,12 +314,12 @@ export interface CityWhereInput {
   deletedAt_gte?: DateTime | null
   deletedById_eq?: ID_Input | null
   deletedById_in?: ID_Output[] | ID_Output | null
-  countryId_eq?: BigInt | null
-  countryId_gt?: BigInt | null
-  countryId_gte?: BigInt | null
-  countryId_lt?: BigInt | null
-  countryId_lte?: BigInt | null
-  countryId_in?: BigInt[] | BigInt | null
+  countryId_eq?: Int | null
+  countryId_gt?: Int | null
+  countryId_gte?: Int | null
+  countryId_lt?: Int | null
+  countryId_lte?: Int | null
+  countryId_in?: Int[] | Int | null
   name_eq?: String | null
   name_contains?: String | null
   name_startsWith?: String | null
@@ -383,22 +383,22 @@ export interface CountryWhereUniqueInput {
 }
 
 export interface EntityCreateInput {
-  gridVersion: BigInt
-  entityId: BigInt
+  gridVersion: Float
+  entityId: Float
   name: String
-  countryId?: BigInt | null
-  cityId?: BigInt | null
+  countryId?: Float | null
+  cityId?: Float | null
   address: String
 }
 
 export interface EntityProofCreateInput {
-  entityId: BigInt
+  entityId: Float
   signature: String
   twinRelId: ID_Output
 }
 
 export interface EntityProofUpdateInput {
-  entityId?: BigInt | null
+  entityId?: Float | null
   signature?: String | null
   twinRelId?: ID_Input | null
 }
@@ -428,12 +428,12 @@ export interface EntityProofWhereInput {
   deletedAt_gte?: DateTime | null
   deletedById_eq?: ID_Input | null
   deletedById_in?: ID_Output[] | ID_Output | null
-  entityId_eq?: BigInt | null
-  entityId_gt?: BigInt | null
-  entityId_gte?: BigInt | null
-  entityId_lt?: BigInt | null
-  entityId_lte?: BigInt | null
-  entityId_in?: BigInt[] | BigInt | null
+  entityId_eq?: Int | null
+  entityId_gt?: Int | null
+  entityId_gte?: Int | null
+  entityId_lt?: Int | null
+  entityId_lte?: Int | null
+  entityId_in?: Int[] | Int | null
   signature_eq?: String | null
   signature_contains?: String | null
   signature_startsWith?: String | null
@@ -448,11 +448,11 @@ export interface EntityProofWhereUniqueInput {
 }
 
 export interface EntityUpdateInput {
-  gridVersion?: BigInt | null
-  entityId?: BigInt | null
+  gridVersion?: Float | null
+  entityId?: Float | null
   name?: String | null
-  countryId?: BigInt | null
-  cityId?: BigInt | null
+  countryId?: Float | null
+  cityId?: Float | null
   address?: String | null
 }
 
@@ -481,35 +481,35 @@ export interface EntityWhereInput {
   deletedAt_gte?: DateTime | null
   deletedById_eq?: ID_Input | null
   deletedById_in?: ID_Output[] | ID_Output | null
-  gridVersion_eq?: BigInt | null
-  gridVersion_gt?: BigInt | null
-  gridVersion_gte?: BigInt | null
-  gridVersion_lt?: BigInt | null
-  gridVersion_lte?: BigInt | null
-  gridVersion_in?: BigInt[] | BigInt | null
-  entityId_eq?: BigInt | null
-  entityId_gt?: BigInt | null
-  entityId_gte?: BigInt | null
-  entityId_lt?: BigInt | null
-  entityId_lte?: BigInt | null
-  entityId_in?: BigInt[] | BigInt | null
+  gridVersion_eq?: Int | null
+  gridVersion_gt?: Int | null
+  gridVersion_gte?: Int | null
+  gridVersion_lt?: Int | null
+  gridVersion_lte?: Int | null
+  gridVersion_in?: Int[] | Int | null
+  entityId_eq?: Int | null
+  entityId_gt?: Int | null
+  entityId_gte?: Int | null
+  entityId_lt?: Int | null
+  entityId_lte?: Int | null
+  entityId_in?: Int[] | Int | null
   name_eq?: String | null
   name_contains?: String | null
   name_startsWith?: String | null
   name_endsWith?: String | null
   name_in?: String[] | String | null
-  countryId_eq?: BigInt | null
-  countryId_gt?: BigInt | null
-  countryId_gte?: BigInt | null
-  countryId_lt?: BigInt | null
-  countryId_lte?: BigInt | null
-  countryId_in?: BigInt[] | BigInt | null
-  cityId_eq?: BigInt | null
-  cityId_gt?: BigInt | null
-  cityId_gte?: BigInt | null
-  cityId_lt?: BigInt | null
-  cityId_lte?: BigInt | null
-  cityId_in?: BigInt[] | BigInt | null
+  countryId_eq?: Int | null
+  countryId_gt?: Int | null
+  countryId_gte?: Int | null
+  countryId_lt?: Int | null
+  countryId_lte?: Int | null
+  countryId_in?: Int[] | Int | null
+  cityId_eq?: Int | null
+  cityId_gt?: Int | null
+  cityId_gte?: Int | null
+  cityId_lt?: Int | null
+  cityId_lte?: Int | null
+  cityId_in?: Int[] | Int | null
   address_eq?: String | null
   address_contains?: String | null
   address_startsWith?: String | null
@@ -522,25 +522,25 @@ export interface EntityWhereUniqueInput {
 }
 
 export interface FarmCreateInput {
-  gridVersion: BigInt
-  farmId: BigInt
+  gridVersion: Float
+  farmId: Float
   name: String
-  twinId: BigInt
-  pricingPolicyId: BigInt
+  twinId: Float
+  pricingPolicyId: Float
   certificationType: CertificationType
-  countryId?: BigInt | null
-  cityId?: BigInt | null
+  countryId?: Float | null
+  cityId?: Float | null
 }
 
 export interface FarmUpdateInput {
-  gridVersion?: BigInt | null
-  farmId?: BigInt | null
+  gridVersion?: Float | null
+  farmId?: Float | null
   name?: String | null
-  twinId?: BigInt | null
-  pricingPolicyId?: BigInt | null
+  twinId?: Float | null
+  pricingPolicyId?: Float | null
   certificationType?: CertificationType | null
-  countryId?: BigInt | null
-  cityId?: BigInt | null
+  countryId?: Float | null
+  cityId?: Float | null
 }
 
 export interface FarmWhereInput {
@@ -568,49 +568,49 @@ export interface FarmWhereInput {
   deletedAt_gte?: DateTime | null
   deletedById_eq?: ID_Input | null
   deletedById_in?: ID_Output[] | ID_Output | null
-  gridVersion_eq?: BigInt | null
-  gridVersion_gt?: BigInt | null
-  gridVersion_gte?: BigInt | null
-  gridVersion_lt?: BigInt | null
-  gridVersion_lte?: BigInt | null
-  gridVersion_in?: BigInt[] | BigInt | null
-  farmId_eq?: BigInt | null
-  farmId_gt?: BigInt | null
-  farmId_gte?: BigInt | null
-  farmId_lt?: BigInt | null
-  farmId_lte?: BigInt | null
-  farmId_in?: BigInt[] | BigInt | null
+  gridVersion_eq?: Int | null
+  gridVersion_gt?: Int | null
+  gridVersion_gte?: Int | null
+  gridVersion_lt?: Int | null
+  gridVersion_lte?: Int | null
+  gridVersion_in?: Int[] | Int | null
+  farmId_eq?: Int | null
+  farmId_gt?: Int | null
+  farmId_gte?: Int | null
+  farmId_lt?: Int | null
+  farmId_lte?: Int | null
+  farmId_in?: Int[] | Int | null
   name_eq?: String | null
   name_contains?: String | null
   name_startsWith?: String | null
   name_endsWith?: String | null
   name_in?: String[] | String | null
-  twinId_eq?: BigInt | null
-  twinId_gt?: BigInt | null
-  twinId_gte?: BigInt | null
-  twinId_lt?: BigInt | null
-  twinId_lte?: BigInt | null
-  twinId_in?: BigInt[] | BigInt | null
-  pricingPolicyId_eq?: BigInt | null
-  pricingPolicyId_gt?: BigInt | null
-  pricingPolicyId_gte?: BigInt | null
-  pricingPolicyId_lt?: BigInt | null
-  pricingPolicyId_lte?: BigInt | null
-  pricingPolicyId_in?: BigInt[] | BigInt | null
+  twinId_eq?: Int | null
+  twinId_gt?: Int | null
+  twinId_gte?: Int | null
+  twinId_lt?: Int | null
+  twinId_lte?: Int | null
+  twinId_in?: Int[] | Int | null
+  pricingPolicyId_eq?: Int | null
+  pricingPolicyId_gt?: Int | null
+  pricingPolicyId_gte?: Int | null
+  pricingPolicyId_lt?: Int | null
+  pricingPolicyId_lte?: Int | null
+  pricingPolicyId_in?: Int[] | Int | null
   certificationType_eq?: CertificationType | null
   certificationType_in?: CertificationType[] | CertificationType | null
-  countryId_eq?: BigInt | null
-  countryId_gt?: BigInt | null
-  countryId_gte?: BigInt | null
-  countryId_lt?: BigInt | null
-  countryId_lte?: BigInt | null
-  countryId_in?: BigInt[] | BigInt | null
-  cityId_eq?: BigInt | null
-  cityId_gt?: BigInt | null
-  cityId_gte?: BigInt | null
-  cityId_lt?: BigInt | null
-  cityId_lte?: BigInt | null
-  cityId_in?: BigInt[] | BigInt | null
+  countryId_eq?: Int | null
+  countryId_gt?: Int | null
+  countryId_gte?: Int | null
+  countryId_lt?: Int | null
+  countryId_lte?: Int | null
+  countryId_in?: Int[] | Int | null
+  cityId_eq?: Int | null
+  cityId_gt?: Int | null
+  cityId_gte?: Int | null
+  cityId_lt?: Int | null
+  cityId_lte?: Int | null
+  cityId_in?: Int[] | Int | null
 }
 
 export interface FarmWhereUniqueInput {
@@ -669,25 +669,25 @@ export interface LocationWhereUniqueInput {
 }
 
 export interface NodeCreateInput {
-  gridVersion: BigInt
-  nodeId: BigInt
-  farmId: BigInt
+  gridVersion: Float
+  nodeId: Float
+  farmId: Float
   resourcesId: ID_Output
   locationId: ID_Output
-  countryId?: BigInt | null
-  cityId?: BigInt | null
+  countryId?: Float | null
+  cityId?: Float | null
   address: String
   pubKey: String
 }
 
 export interface NodeUpdateInput {
-  gridVersion?: BigInt | null
-  nodeId?: BigInt | null
-  farmId?: BigInt | null
+  gridVersion?: Float | null
+  nodeId?: Float | null
+  farmId?: Float | null
   resourcesId?: ID_Input | null
   locationId?: ID_Input | null
-  countryId?: BigInt | null
-  cityId?: BigInt | null
+  countryId?: Float | null
+  cityId?: Float | null
   address?: String | null
   pubKey?: String | null
 }
@@ -717,40 +717,40 @@ export interface NodeWhereInput {
   deletedAt_gte?: DateTime | null
   deletedById_eq?: ID_Input | null
   deletedById_in?: ID_Output[] | ID_Output | null
-  gridVersion_eq?: BigInt | null
-  gridVersion_gt?: BigInt | null
-  gridVersion_gte?: BigInt | null
-  gridVersion_lt?: BigInt | null
-  gridVersion_lte?: BigInt | null
-  gridVersion_in?: BigInt[] | BigInt | null
-  nodeId_eq?: BigInt | null
-  nodeId_gt?: BigInt | null
-  nodeId_gte?: BigInt | null
-  nodeId_lt?: BigInt | null
-  nodeId_lte?: BigInt | null
-  nodeId_in?: BigInt[] | BigInt | null
-  farmId_eq?: BigInt | null
-  farmId_gt?: BigInt | null
-  farmId_gte?: BigInt | null
-  farmId_lt?: BigInt | null
-  farmId_lte?: BigInt | null
-  farmId_in?: BigInt[] | BigInt | null
+  gridVersion_eq?: Int | null
+  gridVersion_gt?: Int | null
+  gridVersion_gte?: Int | null
+  gridVersion_lt?: Int | null
+  gridVersion_lte?: Int | null
+  gridVersion_in?: Int[] | Int | null
+  nodeId_eq?: Int | null
+  nodeId_gt?: Int | null
+  nodeId_gte?: Int | null
+  nodeId_lt?: Int | null
+  nodeId_lte?: Int | null
+  nodeId_in?: Int[] | Int | null
+  farmId_eq?: Int | null
+  farmId_gt?: Int | null
+  farmId_gte?: Int | null
+  farmId_lt?: Int | null
+  farmId_lte?: Int | null
+  farmId_in?: Int[] | Int | null
   resourcesId_eq?: ID_Input | null
   resourcesId_in?: ID_Output[] | ID_Output | null
   locationId_eq?: ID_Input | null
   locationId_in?: ID_Output[] | ID_Output | null
-  countryId_eq?: BigInt | null
-  countryId_gt?: BigInt | null
-  countryId_gte?: BigInt | null
-  countryId_lt?: BigInt | null
-  countryId_lte?: BigInt | null
-  countryId_in?: BigInt[] | BigInt | null
-  cityId_eq?: BigInt | null
-  cityId_gt?: BigInt | null
-  cityId_gte?: BigInt | null
-  cityId_lt?: BigInt | null
-  cityId_lte?: BigInt | null
-  cityId_in?: BigInt[] | BigInt | null
+  countryId_eq?: Int | null
+  countryId_gt?: Int | null
+  countryId_gte?: Int | null
+  countryId_lt?: Int | null
+  countryId_lte?: Int | null
+  countryId_in?: Int[] | Int | null
+  cityId_eq?: Int | null
+  cityId_gt?: Int | null
+  cityId_gte?: Int | null
+  cityId_lt?: Int | null
+  cityId_lte?: Int | null
+  cityId_in?: Int[] | Int | null
   address_eq?: String | null
   address_contains?: String | null
   address_startsWith?: String | null
@@ -768,23 +768,23 @@ export interface NodeWhereUniqueInput {
 }
 
 export interface PricingPolicyCreateInput {
-  gridVersion: BigInt
-  pricingPolicyId: BigInt
+  gridVersion: Float
+  pricingPolicyId: Float
   name: String
   currency: String
-  su: BigInt
-  cu: BigInt
-  nu: BigInt
+  su: Float
+  cu: Float
+  nu: Float
 }
 
 export interface PricingPolicyUpdateInput {
-  gridVersion?: BigInt | null
-  pricingPolicyId?: BigInt | null
+  gridVersion?: Float | null
+  pricingPolicyId?: Float | null
   name?: String | null
   currency?: String | null
-  su?: BigInt | null
-  cu?: BigInt | null
-  nu?: BigInt | null
+  su?: Float | null
+  cu?: Float | null
+  nu?: Float | null
 }
 
 export interface PricingPolicyWhereInput {
@@ -812,18 +812,18 @@ export interface PricingPolicyWhereInput {
   deletedAt_gte?: DateTime | null
   deletedById_eq?: ID_Input | null
   deletedById_in?: ID_Output[] | ID_Output | null
-  gridVersion_eq?: BigInt | null
-  gridVersion_gt?: BigInt | null
-  gridVersion_gte?: BigInt | null
-  gridVersion_lt?: BigInt | null
-  gridVersion_lte?: BigInt | null
-  gridVersion_in?: BigInt[] | BigInt | null
-  pricingPolicyId_eq?: BigInt | null
-  pricingPolicyId_gt?: BigInt | null
-  pricingPolicyId_gte?: BigInt | null
-  pricingPolicyId_lt?: BigInt | null
-  pricingPolicyId_lte?: BigInt | null
-  pricingPolicyId_in?: BigInt[] | BigInt | null
+  gridVersion_eq?: Int | null
+  gridVersion_gt?: Int | null
+  gridVersion_gte?: Int | null
+  gridVersion_lt?: Int | null
+  gridVersion_lte?: Int | null
+  gridVersion_in?: Int[] | Int | null
+  pricingPolicyId_eq?: Int | null
+  pricingPolicyId_gt?: Int | null
+  pricingPolicyId_gte?: Int | null
+  pricingPolicyId_lt?: Int | null
+  pricingPolicyId_lte?: Int | null
+  pricingPolicyId_in?: Int[] | Int | null
   name_eq?: String | null
   name_contains?: String | null
   name_startsWith?: String | null
@@ -834,24 +834,24 @@ export interface PricingPolicyWhereInput {
   currency_startsWith?: String | null
   currency_endsWith?: String | null
   currency_in?: String[] | String | null
-  su_eq?: BigInt | null
-  su_gt?: BigInt | null
-  su_gte?: BigInt | null
-  su_lt?: BigInt | null
-  su_lte?: BigInt | null
-  su_in?: BigInt[] | BigInt | null
-  cu_eq?: BigInt | null
-  cu_gt?: BigInt | null
-  cu_gte?: BigInt | null
-  cu_lt?: BigInt | null
-  cu_lte?: BigInt | null
-  cu_in?: BigInt[] | BigInt | null
-  nu_eq?: BigInt | null
-  nu_gt?: BigInt | null
-  nu_gte?: BigInt | null
-  nu_lt?: BigInt | null
-  nu_lte?: BigInt | null
-  nu_in?: BigInt[] | BigInt | null
+  su_eq?: Int | null
+  su_gt?: Int | null
+  su_gte?: Int | null
+  su_lt?: Int | null
+  su_lte?: Int | null
+  su_in?: Int[] | Int | null
+  cu_eq?: Int | null
+  cu_gt?: Int | null
+  cu_gte?: Int | null
+  cu_lt?: Int | null
+  cu_lte?: Int | null
+  cu_in?: Int[] | Int | null
+  nu_eq?: Int | null
+  nu_gt?: Int | null
+  nu_gte?: Int | null
+  nu_lt?: Int | null
+  nu_lte?: Int | null
+  nu_in?: Int[] | Int | null
 }
 
 export interface PricingPolicyWhereUniqueInput {
@@ -859,17 +859,17 @@ export interface PricingPolicyWhereUniqueInput {
 }
 
 export interface ResourceCreateInput {
-  hru?: BigInt | null
-  sru?: BigInt | null
-  cru?: BigInt | null
-  mru?: BigInt | null
+  hru?: Float | null
+  sru?: Float | null
+  cru?: Float | null
+  mru?: Float | null
 }
 
 export interface ResourceUpdateInput {
-  hru?: BigInt | null
-  sru?: BigInt | null
-  cru?: BigInt | null
-  mru?: BigInt | null
+  hru?: Float | null
+  sru?: Float | null
+  cru?: Float | null
+  mru?: Float | null
 }
 
 export interface ResourceWhereInput {
@@ -897,30 +897,30 @@ export interface ResourceWhereInput {
   deletedAt_gte?: DateTime | null
   deletedById_eq?: ID_Input | null
   deletedById_in?: ID_Output[] | ID_Output | null
-  hru_eq?: BigInt | null
-  hru_gt?: BigInt | null
-  hru_gte?: BigInt | null
-  hru_lt?: BigInt | null
-  hru_lte?: BigInt | null
-  hru_in?: BigInt[] | BigInt | null
-  sru_eq?: BigInt | null
-  sru_gt?: BigInt | null
-  sru_gte?: BigInt | null
-  sru_lt?: BigInt | null
-  sru_lte?: BigInt | null
-  sru_in?: BigInt[] | BigInt | null
-  cru_eq?: BigInt | null
-  cru_gt?: BigInt | null
-  cru_gte?: BigInt | null
-  cru_lt?: BigInt | null
-  cru_lte?: BigInt | null
-  cru_in?: BigInt[] | BigInt | null
-  mru_eq?: BigInt | null
-  mru_gt?: BigInt | null
-  mru_gte?: BigInt | null
-  mru_lt?: BigInt | null
-  mru_lte?: BigInt | null
-  mru_in?: BigInt[] | BigInt | null
+  hru_eq?: Int | null
+  hru_gt?: Int | null
+  hru_gte?: Int | null
+  hru_lt?: Int | null
+  hru_lte?: Int | null
+  hru_in?: Int[] | Int | null
+  sru_eq?: Int | null
+  sru_gt?: Int | null
+  sru_gte?: Int | null
+  sru_lt?: Int | null
+  sru_lte?: Int | null
+  sru_in?: Int[] | Int | null
+  cru_eq?: Int | null
+  cru_gt?: Int | null
+  cru_gte?: Int | null
+  cru_lt?: Int | null
+  cru_lte?: Int | null
+  cru_in?: Int[] | Int | null
+  mru_eq?: Int | null
+  mru_gt?: Int | null
+  mru_gte?: Int | null
+  mru_lt?: Int | null
+  mru_lte?: Int | null
+  mru_in?: Int[] | Int | null
 }
 
 export interface ResourceWhereUniqueInput {
@@ -1002,15 +1002,15 @@ export interface TransferWhereUniqueInput {
 }
 
 export interface TwinCreateInput {
-  gridVersion: BigInt
-  twinId: BigInt
+  gridVersion: Float
+  twinId: Float
   address: String
   ip: String
 }
 
 export interface TwinUpdateInput {
-  gridVersion?: BigInt | null
-  twinId?: BigInt | null
+  gridVersion?: Float | null
+  twinId?: Float | null
   address?: String | null
   ip?: String | null
 }
@@ -1040,18 +1040,18 @@ export interface TwinWhereInput {
   deletedAt_gte?: DateTime | null
   deletedById_eq?: ID_Input | null
   deletedById_in?: ID_Output[] | ID_Output | null
-  gridVersion_eq?: BigInt | null
-  gridVersion_gt?: BigInt | null
-  gridVersion_gte?: BigInt | null
-  gridVersion_lt?: BigInt | null
-  gridVersion_lte?: BigInt | null
-  gridVersion_in?: BigInt[] | BigInt | null
-  twinId_eq?: BigInt | null
-  twinId_gt?: BigInt | null
-  twinId_gte?: BigInt | null
-  twinId_lt?: BigInt | null
-  twinId_lte?: BigInt | null
-  twinId_in?: BigInt[] | BigInt | null
+  gridVersion_eq?: Int | null
+  gridVersion_gt?: Int | null
+  gridVersion_gte?: Int | null
+  gridVersion_lt?: Int | null
+  gridVersion_lte?: Int | null
+  gridVersion_in?: Int[] | Int | null
+  twinId_eq?: Int | null
+  twinId_gt?: Int | null
+  twinId_gte?: Int | null
+  twinId_lt?: Int | null
+  twinId_lte?: Int | null
+  twinId_in?: Int[] | Int | null
   address_eq?: String | null
   address_contains?: String | null
   address_startsWith?: String | null
@@ -1114,7 +1114,7 @@ export interface City extends BaseGraphQLObject {
   deletedAt?: DateTime | null
   deletedById?: String | null
   version: Int
-  countryId: BigInt
+  countryId: Int
   name: String
 }
 
@@ -1169,11 +1169,11 @@ export interface Entity extends BaseGraphQLObject {
   deletedAt?: DateTime | null
   deletedById?: String | null
   version: Int
-  gridVersion: BigInt
-  entityId: BigInt
+  gridVersion: Int
+  entityId: Int
   name: String
-  countryId?: BigInt | null
-  cityId?: BigInt | null
+  countryId?: Int | null
+  cityId?: Int | null
   address: String
 }
 
@@ -1197,7 +1197,7 @@ export interface EntityProof extends BaseGraphQLObject {
   deletedAt?: DateTime | null
   deletedById?: String | null
   version: Int
-  entityId: BigInt
+  entityId: Int
   signature: String
   twinRel: Twin
   twinRelId: String
@@ -1223,14 +1223,14 @@ export interface Farm extends BaseGraphQLObject {
   deletedAt?: DateTime | null
   deletedById?: String | null
   version: Int
-  gridVersion: BigInt
-  farmId: BigInt
+  gridVersion: Int
+  farmId: Int
   name: String
-  twinId: BigInt
-  pricingPolicyId: BigInt
+  twinId: Int
+  pricingPolicyId: Int
   certificationType: CertificationType
-  countryId?: BigInt | null
-  cityId?: BigInt | null
+  countryId?: Int | null
+  cityId?: Int | null
 }
 
 export interface FarmConnection {
@@ -1278,15 +1278,15 @@ export interface Node extends BaseGraphQLObject {
   deletedAt?: DateTime | null
   deletedById?: String | null
   version: Int
-  gridVersion: BigInt
-  nodeId: BigInt
-  farmId: BigInt
+  gridVersion: Int
+  nodeId: Int
+  farmId: Int
   resources: Resource
   resourcesId: String
   location: Location
   locationId: String
-  countryId?: BigInt | null
-  cityId?: BigInt | null
+  countryId?: Int | null
+  cityId?: Int | null
   address: String
   pubKey: String
 }
@@ -1318,13 +1318,13 @@ export interface PricingPolicy extends BaseGraphQLObject {
   deletedAt?: DateTime | null
   deletedById?: String | null
   version: Int
-  gridVersion: BigInt
-  pricingPolicyId: BigInt
+  gridVersion: Int
+  pricingPolicyId: Int
   name: String
   currency: String
-  su: BigInt
-  cu: BigInt
-  nu: BigInt
+  su: Int
+  cu: Int
+  nu: Int
 }
 
 export interface PricingPolicyConnection {
@@ -1347,10 +1347,10 @@ export interface Resource extends BaseGraphQLObject {
   deletedAt?: DateTime | null
   deletedById?: String | null
   version: Int
-  hru?: BigInt | null
-  sru?: BigInt | null
-  cru?: BigInt | null
-  mru?: BigInt | null
+  hru?: Int | null
+  sru?: Int | null
+  cru?: Int | null
+  mru?: Int | null
   noderesources?: Array<Node> | null
 }
 
@@ -1409,8 +1409,8 @@ export interface Twin extends BaseGraphQLObject {
   deletedAt?: DateTime | null
   deletedById?: String | null
   version: Int
-  gridVersion: BigInt
-  twinId: BigInt
+  gridVersion: Int
+  twinId: Int
   address: String
   ip: String
   entityprooftwinRel?: Array<EntityProof> | null

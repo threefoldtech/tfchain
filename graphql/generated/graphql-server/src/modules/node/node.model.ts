@@ -1,38 +1,18 @@
-import { BaseModel, NumericField, Model, ManyToOne, StringField } from 'warthog';
-
-import BN from 'bn.js';
+import { BaseModel, IntField, Model, ManyToOne, StringField } from 'warthog';
 
 import { Resource } from '../resource/resource.model';
 import { Location } from '../location/location.model';
 
 @Model({ api: {} })
 export class Node extends BaseModel {
-  @NumericField({
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
-  })
-  gridVersion!: BN;
+  @IntField({})
+  gridVersion!: number;
 
-  @NumericField({
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
-  })
-  nodeId!: BN;
+  @IntField({})
+  nodeId!: number;
 
-  @NumericField({
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
-  })
-  farmId!: BN;
+  @IntField({})
+  farmId!: number;
 
   @ManyToOne(
     () => Resource,
@@ -48,27 +28,15 @@ export class Node extends BaseModel {
   )
   location!: Location;
 
-  @NumericField({
-    nullable: true,
-
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
+  @IntField({
+    nullable: true
   })
-  countryId?: BN;
+  countryId?: number;
 
-  @NumericField({
-    nullable: true,
-
-    transformer: {
-      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
-      from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
+  @IntField({
+    nullable: true
   })
-  cityId?: BN;
+  cityId?: number;
 
   @StringField({})
   address!: string;

@@ -1,17 +1,17 @@
 version: "3.4"
 
-volumes:
-  substrate-data
+# volumes:
+#   substrate-data
 
 services:
-  substrate:
-    image: dylanverstraete/substrate-tfgrid-prod
-    restart: always
-    ports:
-      - "9944:9944"
-    volumes:
-      - substrate-data:/substrat
-    command: ["--rpc-cors=all", "--chain", "./customSpecRaw.json", "--base-path=/substrate/data", "--validator", "--name=ThreefoldNode01", "--ws-external", "--rpc-methods=unsafe"]
+  # substrate:
+  #   image: dylanverstraete/substrate-tfgrid-prod
+  #   restart: always
+  #   ports:
+  #     - "9944:9944"
+  #   volumes:
+  #     - substrate-data:/substrat
+  #   command: ["--rpc-cors=all", "--chain", "./customSpecRaw.json", "--base-path=/substrate/data", "--validator", "--name=ThreefoldNode01", "--ws-external", "--rpc-methods=unsafe"]
 
   db:
     image: postgres:12

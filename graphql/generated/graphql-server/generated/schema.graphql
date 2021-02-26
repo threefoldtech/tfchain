@@ -73,7 +73,7 @@ type City implements BaseGraphQLObject {
   deletedAt: DateTime
   deletedById: String
   version: Int!
-  countryId: BigInt!
+  countryId: Int!
   name: String!
 }
 
@@ -84,7 +84,7 @@ type CityConnection {
 }
 
 input CityCreateInput {
-  countryId: BigInt!
+  countryId: Float!
   name: String!
 }
 
@@ -107,7 +107,7 @@ enum CityOrderByInput {
 }
 
 input CityUpdateInput {
-  countryId: BigInt
+  countryId: Float
   name: String
 }
 
@@ -136,12 +136,12 @@ input CityWhereInput {
   deletedAt_gte: DateTime
   deletedById_eq: ID
   deletedById_in: [ID!]
-  countryId_eq: BigInt
-  countryId_gt: BigInt
-  countryId_gte: BigInt
-  countryId_lt: BigInt
-  countryId_lte: BigInt
-  countryId_in: [BigInt!]
+  countryId_eq: Int
+  countryId_gt: Int
+  countryId_gte: Int
+  countryId_lt: Int
+  countryId_lte: Int
+  countryId_in: [Int!]
   name_eq: String
   name_contains: String
   name_startsWith: String
@@ -268,11 +268,11 @@ type Entity implements BaseGraphQLObject {
   deletedAt: DateTime
   deletedById: String
   version: Int!
-  gridVersion: BigInt!
-  entityId: BigInt!
+  gridVersion: Int!
+  entityId: Int!
   name: String!
-  countryId: BigInt
-  cityId: BigInt
+  countryId: Int
+  cityId: Int
   address: String!
 }
 
@@ -283,11 +283,11 @@ type EntityConnection {
 }
 
 input EntityCreateInput {
-  gridVersion: BigInt!
-  entityId: BigInt!
+  gridVersion: Float!
+  entityId: Float!
   name: String!
-  countryId: BigInt
-  cityId: BigInt
+  countryId: Float
+  cityId: Float
   address: String!
 }
 
@@ -326,7 +326,7 @@ type EntityProof implements BaseGraphQLObject {
   deletedAt: DateTime
   deletedById: String
   version: Int!
-  entityId: BigInt!
+  entityId: Int!
   signature: String!
   twinRel: Twin!
   twinRelId: String!
@@ -339,7 +339,7 @@ type EntityProofConnection {
 }
 
 input EntityProofCreateInput {
-  entityId: BigInt!
+  entityId: Float!
   signature: String!
   twinRelId: ID!
 }
@@ -365,7 +365,7 @@ enum EntityProofOrderByInput {
 }
 
 input EntityProofUpdateInput {
-  entityId: BigInt
+  entityId: Float
   signature: String
   twinRelId: ID
 }
@@ -395,12 +395,12 @@ input EntityProofWhereInput {
   deletedAt_gte: DateTime
   deletedById_eq: ID
   deletedById_in: [ID!]
-  entityId_eq: BigInt
-  entityId_gt: BigInt
-  entityId_gte: BigInt
-  entityId_lt: BigInt
-  entityId_lte: BigInt
-  entityId_in: [BigInt!]
+  entityId_eq: Int
+  entityId_gt: Int
+  entityId_gte: Int
+  entityId_lt: Int
+  entityId_lte: Int
+  entityId_in: [Int!]
   signature_eq: String
   signature_contains: String
   signature_startsWith: String
@@ -415,11 +415,11 @@ input EntityProofWhereUniqueInput {
 }
 
 input EntityUpdateInput {
-  gridVersion: BigInt
-  entityId: BigInt
+  gridVersion: Float
+  entityId: Float
   name: String
-  countryId: BigInt
-  cityId: BigInt
+  countryId: Float
+  cityId: Float
   address: String
 }
 
@@ -448,35 +448,35 @@ input EntityWhereInput {
   deletedAt_gte: DateTime
   deletedById_eq: ID
   deletedById_in: [ID!]
-  gridVersion_eq: BigInt
-  gridVersion_gt: BigInt
-  gridVersion_gte: BigInt
-  gridVersion_lt: BigInt
-  gridVersion_lte: BigInt
-  gridVersion_in: [BigInt!]
-  entityId_eq: BigInt
-  entityId_gt: BigInt
-  entityId_gte: BigInt
-  entityId_lt: BigInt
-  entityId_lte: BigInt
-  entityId_in: [BigInt!]
+  gridVersion_eq: Int
+  gridVersion_gt: Int
+  gridVersion_gte: Int
+  gridVersion_lt: Int
+  gridVersion_lte: Int
+  gridVersion_in: [Int!]
+  entityId_eq: Int
+  entityId_gt: Int
+  entityId_gte: Int
+  entityId_lt: Int
+  entityId_lte: Int
+  entityId_in: [Int!]
   name_eq: String
   name_contains: String
   name_startsWith: String
   name_endsWith: String
   name_in: [String!]
-  countryId_eq: BigInt
-  countryId_gt: BigInt
-  countryId_gte: BigInt
-  countryId_lt: BigInt
-  countryId_lte: BigInt
-  countryId_in: [BigInt!]
-  cityId_eq: BigInt
-  cityId_gt: BigInt
-  cityId_gte: BigInt
-  cityId_lt: BigInt
-  cityId_lte: BigInt
-  cityId_in: [BigInt!]
+  countryId_eq: Int
+  countryId_gt: Int
+  countryId_gte: Int
+  countryId_lt: Int
+  countryId_lte: Int
+  countryId_in: [Int!]
+  cityId_eq: Int
+  cityId_gt: Int
+  cityId_gte: Int
+  cityId_lt: Int
+  cityId_lte: Int
+  cityId_in: [Int!]
   address_eq: String
   address_contains: String
   address_startsWith: String
@@ -497,14 +497,14 @@ type Farm implements BaseGraphQLObject {
   deletedAt: DateTime
   deletedById: String
   version: Int!
-  gridVersion: BigInt!
-  farmId: BigInt!
+  gridVersion: Int!
+  farmId: Int!
   name: String!
-  twinId: BigInt!
-  pricingPolicyId: BigInt!
+  twinId: Int!
+  pricingPolicyId: Int!
   certificationType: CertificationType!
-  countryId: BigInt
-  cityId: BigInt
+  countryId: Int
+  cityId: Int
 }
 
 type FarmConnection {
@@ -514,14 +514,14 @@ type FarmConnection {
 }
 
 input FarmCreateInput {
-  gridVersion: BigInt!
-  farmId: BigInt!
+  gridVersion: Float!
+  farmId: Float!
   name: String!
-  twinId: BigInt!
-  pricingPolicyId: BigInt!
+  twinId: Float!
+  pricingPolicyId: Float!
   certificationType: CertificationType!
-  countryId: BigInt
-  cityId: BigInt
+  countryId: Float
+  cityId: Float
 }
 
 type FarmEdge {
@@ -555,14 +555,14 @@ enum FarmOrderByInput {
 }
 
 input FarmUpdateInput {
-  gridVersion: BigInt
-  farmId: BigInt
+  gridVersion: Float
+  farmId: Float
   name: String
-  twinId: BigInt
-  pricingPolicyId: BigInt
+  twinId: Float
+  pricingPolicyId: Float
   certificationType: CertificationType
-  countryId: BigInt
-  cityId: BigInt
+  countryId: Float
+  cityId: Float
 }
 
 input FarmWhereInput {
@@ -590,49 +590,49 @@ input FarmWhereInput {
   deletedAt_gte: DateTime
   deletedById_eq: ID
   deletedById_in: [ID!]
-  gridVersion_eq: BigInt
-  gridVersion_gt: BigInt
-  gridVersion_gte: BigInt
-  gridVersion_lt: BigInt
-  gridVersion_lte: BigInt
-  gridVersion_in: [BigInt!]
-  farmId_eq: BigInt
-  farmId_gt: BigInt
-  farmId_gte: BigInt
-  farmId_lt: BigInt
-  farmId_lte: BigInt
-  farmId_in: [BigInt!]
+  gridVersion_eq: Int
+  gridVersion_gt: Int
+  gridVersion_gte: Int
+  gridVersion_lt: Int
+  gridVersion_lte: Int
+  gridVersion_in: [Int!]
+  farmId_eq: Int
+  farmId_gt: Int
+  farmId_gte: Int
+  farmId_lt: Int
+  farmId_lte: Int
+  farmId_in: [Int!]
   name_eq: String
   name_contains: String
   name_startsWith: String
   name_endsWith: String
   name_in: [String!]
-  twinId_eq: BigInt
-  twinId_gt: BigInt
-  twinId_gte: BigInt
-  twinId_lt: BigInt
-  twinId_lte: BigInt
-  twinId_in: [BigInt!]
-  pricingPolicyId_eq: BigInt
-  pricingPolicyId_gt: BigInt
-  pricingPolicyId_gte: BigInt
-  pricingPolicyId_lt: BigInt
-  pricingPolicyId_lte: BigInt
-  pricingPolicyId_in: [BigInt!]
+  twinId_eq: Int
+  twinId_gt: Int
+  twinId_gte: Int
+  twinId_lt: Int
+  twinId_lte: Int
+  twinId_in: [Int!]
+  pricingPolicyId_eq: Int
+  pricingPolicyId_gt: Int
+  pricingPolicyId_gte: Int
+  pricingPolicyId_lt: Int
+  pricingPolicyId_lte: Int
+  pricingPolicyId_in: [Int!]
   certificationType_eq: CertificationType
   certificationType_in: [CertificationType!]
-  countryId_eq: BigInt
-  countryId_gt: BigInt
-  countryId_gte: BigInt
-  countryId_lt: BigInt
-  countryId_lte: BigInt
-  countryId_in: [BigInt!]
-  cityId_eq: BigInt
-  cityId_gt: BigInt
-  cityId_gte: BigInt
-  cityId_lt: BigInt
-  cityId_lte: BigInt
-  cityId_in: [BigInt!]
+  countryId_eq: Int
+  countryId_gt: Int
+  countryId_gte: Int
+  countryId_lt: Int
+  countryId_lte: Int
+  countryId_in: [Int!]
+  cityId_eq: Int
+  cityId_gt: Int
+  cityId_gte: Int
+  cityId_lt: Int
+  cityId_lte: Int
+  cityId_in: [Int!]
 }
 
 input FarmWhereUniqueInput {
@@ -737,15 +737,15 @@ type Node implements BaseGraphQLObject {
   deletedAt: DateTime
   deletedById: String
   version: Int!
-  gridVersion: BigInt!
-  nodeId: BigInt!
-  farmId: BigInt!
+  gridVersion: Int!
+  nodeId: Int!
+  farmId: Int!
   resources: Resource!
   resourcesId: String!
   location: Location!
   locationId: String!
-  countryId: BigInt
-  cityId: BigInt
+  countryId: Int
+  cityId: Int
   address: String!
   pubKey: String!
 }
@@ -757,13 +757,13 @@ type NodeConnection {
 }
 
 input NodeCreateInput {
-  gridVersion: BigInt!
-  nodeId: BigInt!
-  farmId: BigInt!
+  gridVersion: Float!
+  nodeId: Float!
+  farmId: Float!
   resourcesId: ID!
   locationId: ID!
-  countryId: BigInt
-  cityId: BigInt
+  countryId: Float
+  cityId: Float
   address: String!
   pubKey: String!
 }
@@ -801,13 +801,13 @@ enum NodeOrderByInput {
 }
 
 input NodeUpdateInput {
-  gridVersion: BigInt
-  nodeId: BigInt
-  farmId: BigInt
+  gridVersion: Float
+  nodeId: Float
+  farmId: Float
   resourcesId: ID
   locationId: ID
-  countryId: BigInt
-  cityId: BigInt
+  countryId: Float
+  cityId: Float
   address: String
   pubKey: String
 }
@@ -837,40 +837,40 @@ input NodeWhereInput {
   deletedAt_gte: DateTime
   deletedById_eq: ID
   deletedById_in: [ID!]
-  gridVersion_eq: BigInt
-  gridVersion_gt: BigInt
-  gridVersion_gte: BigInt
-  gridVersion_lt: BigInt
-  gridVersion_lte: BigInt
-  gridVersion_in: [BigInt!]
-  nodeId_eq: BigInt
-  nodeId_gt: BigInt
-  nodeId_gte: BigInt
-  nodeId_lt: BigInt
-  nodeId_lte: BigInt
-  nodeId_in: [BigInt!]
-  farmId_eq: BigInt
-  farmId_gt: BigInt
-  farmId_gte: BigInt
-  farmId_lt: BigInt
-  farmId_lte: BigInt
-  farmId_in: [BigInt!]
+  gridVersion_eq: Int
+  gridVersion_gt: Int
+  gridVersion_gte: Int
+  gridVersion_lt: Int
+  gridVersion_lte: Int
+  gridVersion_in: [Int!]
+  nodeId_eq: Int
+  nodeId_gt: Int
+  nodeId_gte: Int
+  nodeId_lt: Int
+  nodeId_lte: Int
+  nodeId_in: [Int!]
+  farmId_eq: Int
+  farmId_gt: Int
+  farmId_gte: Int
+  farmId_lt: Int
+  farmId_lte: Int
+  farmId_in: [Int!]
   resourcesId_eq: ID
   resourcesId_in: [ID!]
   locationId_eq: ID
   locationId_in: [ID!]
-  countryId_eq: BigInt
-  countryId_gt: BigInt
-  countryId_gte: BigInt
-  countryId_lt: BigInt
-  countryId_lte: BigInt
-  countryId_in: [BigInt!]
-  cityId_eq: BigInt
-  cityId_gt: BigInt
-  cityId_gte: BigInt
-  cityId_lt: BigInt
-  cityId_lte: BigInt
-  cityId_in: [BigInt!]
+  countryId_eq: Int
+  countryId_gt: Int
+  countryId_gte: Int
+  countryId_lt: Int
+  countryId_lte: Int
+  countryId_in: [Int!]
+  cityId_eq: Int
+  cityId_gt: Int
+  cityId_gte: Int
+  cityId_lt: Int
+  cityId_lte: Int
+  cityId_in: [Int!]
   address_eq: String
   address_contains: String
   address_startsWith: String
@@ -903,13 +903,13 @@ type PricingPolicy implements BaseGraphQLObject {
   deletedAt: DateTime
   deletedById: String
   version: Int!
-  gridVersion: BigInt!
-  pricingPolicyId: BigInt!
+  gridVersion: Int!
+  pricingPolicyId: Int!
   name: String!
   currency: String!
-  su: BigInt!
-  cu: BigInt!
-  nu: BigInt!
+  su: Int!
+  cu: Int!
+  nu: Int!
 }
 
 type PricingPolicyConnection {
@@ -919,13 +919,13 @@ type PricingPolicyConnection {
 }
 
 input PricingPolicyCreateInput {
-  gridVersion: BigInt!
-  pricingPolicyId: BigInt!
+  gridVersion: Float!
+  pricingPolicyId: Float!
   name: String!
   currency: String!
-  su: BigInt!
-  cu: BigInt!
-  nu: BigInt!
+  su: Float!
+  cu: Float!
+  nu: Float!
 }
 
 type PricingPolicyEdge {
@@ -957,13 +957,13 @@ enum PricingPolicyOrderByInput {
 }
 
 input PricingPolicyUpdateInput {
-  gridVersion: BigInt
-  pricingPolicyId: BigInt
+  gridVersion: Float
+  pricingPolicyId: Float
   name: String
   currency: String
-  su: BigInt
-  cu: BigInt
-  nu: BigInt
+  su: Float
+  cu: Float
+  nu: Float
 }
 
 input PricingPolicyWhereInput {
@@ -991,18 +991,18 @@ input PricingPolicyWhereInput {
   deletedAt_gte: DateTime
   deletedById_eq: ID
   deletedById_in: [ID!]
-  gridVersion_eq: BigInt
-  gridVersion_gt: BigInt
-  gridVersion_gte: BigInt
-  gridVersion_lt: BigInt
-  gridVersion_lte: BigInt
-  gridVersion_in: [BigInt!]
-  pricingPolicyId_eq: BigInt
-  pricingPolicyId_gt: BigInt
-  pricingPolicyId_gte: BigInt
-  pricingPolicyId_lt: BigInt
-  pricingPolicyId_lte: BigInt
-  pricingPolicyId_in: [BigInt!]
+  gridVersion_eq: Int
+  gridVersion_gt: Int
+  gridVersion_gte: Int
+  gridVersion_lt: Int
+  gridVersion_lte: Int
+  gridVersion_in: [Int!]
+  pricingPolicyId_eq: Int
+  pricingPolicyId_gt: Int
+  pricingPolicyId_gte: Int
+  pricingPolicyId_lt: Int
+  pricingPolicyId_lte: Int
+  pricingPolicyId_in: [Int!]
   name_eq: String
   name_contains: String
   name_startsWith: String
@@ -1013,24 +1013,24 @@ input PricingPolicyWhereInput {
   currency_startsWith: String
   currency_endsWith: String
   currency_in: [String!]
-  su_eq: BigInt
-  su_gt: BigInt
-  su_gte: BigInt
-  su_lt: BigInt
-  su_lte: BigInt
-  su_in: [BigInt!]
-  cu_eq: BigInt
-  cu_gt: BigInt
-  cu_gte: BigInt
-  cu_lt: BigInt
-  cu_lte: BigInt
-  cu_in: [BigInt!]
-  nu_eq: BigInt
-  nu_gt: BigInt
-  nu_gte: BigInt
-  nu_lt: BigInt
-  nu_lte: BigInt
-  nu_in: [BigInt!]
+  su_eq: Int
+  su_gt: Int
+  su_gte: Int
+  su_lt: Int
+  su_lte: Int
+  su_in: [Int!]
+  cu_eq: Int
+  cu_gt: Int
+  cu_gte: Int
+  cu_lt: Int
+  cu_lte: Int
+  cu_in: [Int!]
+  nu_eq: Int
+  nu_gt: Int
+  nu_gte: Int
+  nu_lt: Int
+  nu_lte: Int
+  nu_in: [Int!]
 }
 
 input PricingPolicyWhereUniqueInput {
@@ -1083,10 +1083,10 @@ type Resource implements BaseGraphQLObject {
   deletedAt: DateTime
   deletedById: String
   version: Int!
-  hru: BigInt
-  sru: BigInt
-  cru: BigInt
-  mru: BigInt
+  hru: Int
+  sru: Int
+  cru: Int
+  mru: Int
   noderesources: [Node!]
 }
 
@@ -1097,10 +1097,10 @@ type ResourceConnection {
 }
 
 input ResourceCreateInput {
-  hru: BigInt
-  sru: BigInt
-  cru: BigInt
-  mru: BigInt
+  hru: Float
+  sru: Float
+  cru: Float
+  mru: Float
 }
 
 type ResourceEdge {
@@ -1126,10 +1126,10 @@ enum ResourceOrderByInput {
 }
 
 input ResourceUpdateInput {
-  hru: BigInt
-  sru: BigInt
-  cru: BigInt
-  mru: BigInt
+  hru: Float
+  sru: Float
+  cru: Float
+  mru: Float
 }
 
 input ResourceWhereInput {
@@ -1157,30 +1157,30 @@ input ResourceWhereInput {
   deletedAt_gte: DateTime
   deletedById_eq: ID
   deletedById_in: [ID!]
-  hru_eq: BigInt
-  hru_gt: BigInt
-  hru_gte: BigInt
-  hru_lt: BigInt
-  hru_lte: BigInt
-  hru_in: [BigInt!]
-  sru_eq: BigInt
-  sru_gt: BigInt
-  sru_gte: BigInt
-  sru_lt: BigInt
-  sru_lte: BigInt
-  sru_in: [BigInt!]
-  cru_eq: BigInt
-  cru_gt: BigInt
-  cru_gte: BigInt
-  cru_lt: BigInt
-  cru_lte: BigInt
-  cru_in: [BigInt!]
-  mru_eq: BigInt
-  mru_gt: BigInt
-  mru_gte: BigInt
-  mru_lt: BigInt
-  mru_lte: BigInt
-  mru_in: [BigInt!]
+  hru_eq: Int
+  hru_gt: Int
+  hru_gte: Int
+  hru_lt: Int
+  hru_lte: Int
+  hru_in: [Int!]
+  sru_eq: Int
+  sru_gt: Int
+  sru_gte: Int
+  sru_lt: Int
+  sru_lte: Int
+  sru_in: [Int!]
+  cru_eq: Int
+  cru_gt: Int
+  cru_gte: Int
+  cru_lt: Int
+  cru_lte: Int
+  cru_in: [Int!]
+  mru_eq: Int
+  mru_gt: Int
+  mru_gte: Int
+  mru_lt: Int
+  mru_lte: Int
+  mru_in: [Int!]
 }
 
 input ResourceWhereUniqueInput {
@@ -1321,8 +1321,8 @@ type Twin implements BaseGraphQLObject {
   deletedAt: DateTime
   deletedById: String
   version: Int!
-  gridVersion: BigInt!
-  twinId: BigInt!
+  gridVersion: Int!
+  twinId: Int!
   address: String!
   ip: String!
   entityprooftwinRel: [EntityProof!]
@@ -1335,8 +1335,8 @@ type TwinConnection {
 }
 
 input TwinCreateInput {
-  gridVersion: BigInt!
-  twinId: BigInt!
+  gridVersion: Float!
+  twinId: Float!
   address: String!
   ip: String!
 }
@@ -1364,8 +1364,8 @@ enum TwinOrderByInput {
 }
 
 input TwinUpdateInput {
-  gridVersion: BigInt
-  twinId: BigInt
+  gridVersion: Float
+  twinId: Float
   address: String
   ip: String
 }
@@ -1395,18 +1395,18 @@ input TwinWhereInput {
   deletedAt_gte: DateTime
   deletedById_eq: ID
   deletedById_in: [ID!]
-  gridVersion_eq: BigInt
-  gridVersion_gt: BigInt
-  gridVersion_gte: BigInt
-  gridVersion_lt: BigInt
-  gridVersion_lte: BigInt
-  gridVersion_in: [BigInt!]
-  twinId_eq: BigInt
-  twinId_gt: BigInt
-  twinId_gte: BigInt
-  twinId_lt: BigInt
-  twinId_lte: BigInt
-  twinId_in: [BigInt!]
+  gridVersion_eq: Int
+  gridVersion_gt: Int
+  gridVersion_gte: Int
+  gridVersion_lt: Int
+  gridVersion_lte: Int
+  gridVersion_in: [Int!]
+  twinId_eq: Int
+  twinId_gt: Int
+  twinId_gte: Int
+  twinId_lt: Int
+  twinId_lte: Int
+  twinId_in: [Int!]
   address_eq: String
   address_contains: String
   address_startsWith: String
