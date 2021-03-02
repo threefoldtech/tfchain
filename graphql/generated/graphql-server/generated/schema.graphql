@@ -750,6 +750,7 @@ type Node implements BaseGraphQLObject {
   sru: Int
   cru: Int
   mru: Int
+  role: String!
 }
 
 type NodeConnection {
@@ -771,6 +772,7 @@ input NodeCreateInput {
   sru: Float
   cru: Float
   mru: Float
+  role: String!
 }
 
 type NodeEdge {
@@ -809,6 +811,8 @@ enum NodeOrderByInput {
   cru_DESC
   mru_ASC
   mru_DESC
+  role_ASC
+  role_DESC
 }
 
 input NodeUpdateInput {
@@ -824,6 +828,7 @@ input NodeUpdateInput {
   sru: Float
   cru: Float
   mru: Float
+  role: String
 }
 
 input NodeWhereInput {
@@ -917,6 +922,11 @@ input NodeWhereInput {
   mru_lt: Int
   mru_lte: Int
   mru_in: [Int!]
+  role_eq: String
+  role_contains: String
+  role_startsWith: String
+  role_endsWith: String
+  role_in: [String!]
 }
 
 input NodeWhereUniqueInput {

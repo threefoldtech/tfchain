@@ -188,7 +188,9 @@ export type NodeOrderByInput =   'createdAt_ASC' |
   'cru_ASC' |
   'cru_DESC' |
   'mru_ASC' |
-  'mru_DESC'
+  'mru_DESC' |
+  'role_ASC' |
+  'role_DESC'
 
 export type PricingPolicyOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -669,6 +671,7 @@ export interface NodeCreateInput {
   sru?: Float | null
   cru?: Float | null
   mru?: Float | null
+  role: String
 }
 
 export interface NodeUpdateInput {
@@ -684,6 +687,7 @@ export interface NodeUpdateInput {
   sru?: Float | null
   cru?: Float | null
   mru?: Float | null
+  role?: String | null
 }
 
 export interface NodeWhereInput {
@@ -777,6 +781,11 @@ export interface NodeWhereInput {
   mru_lt?: Int | null
   mru_lte?: Int | null
   mru_in?: Int[] | Int | null
+  role_eq?: String | null
+  role_contains?: String | null
+  role_startsWith?: String | null
+  role_endsWith?: String | null
+  role_in?: String[] | String | null
 }
 
 export interface NodeWhereUniqueInput {
@@ -1238,6 +1247,7 @@ export interface Node extends BaseGraphQLObject {
   sru?: Int | null
   cru?: Int | null
   mru?: Int | null
+  role: String
 }
 
 export interface NodeConnection {

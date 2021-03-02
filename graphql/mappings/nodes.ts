@@ -1,6 +1,7 @@
 import { SubstrateEvent, DB } from '../generated/hydra-processor'
 import { Node } from '../generated/graphql-server/src/modules/node/node.model'
 import { Location } from '../generated/graphql-server/src/modules/location/location.model'
+
 import { hex2a } from './util'
 
 interface IResource {
@@ -16,7 +17,7 @@ interface ILocation {
 }
 
 export async function tfgridModule_NodeStored(db: DB, event: SubstrateEvent) {
-  const [version, node_id, farm_id, resources, location, country_id, city_id, pub_key, address] = event.params
+  const [version, node_id, farm_id, resources, location, country_id, city_id, pub_key, address, role] = event.params
   const node = new Node()
   
   node.gridVersion = version.value as number
@@ -44,6 +45,8 @@ export async function tfgridModule_NodeStored(db: DB, event: SubstrateEvent) {
   node.cityId = city_id.value as number
   node.pubKey = Buffer.from(pub_key.value as string).toString()
   node.address = Buffer.from(address.value as string).toString()
+
+  node.role = Buffer.from(role.value as string).toString()
 
   await db.save<Node>(node)
 }

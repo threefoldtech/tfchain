@@ -59,6 +59,7 @@ type Node @entity {
   sru: Int
   cru: Int
   mru: Int
+  role: String!
 }
 
 type Location @entity {

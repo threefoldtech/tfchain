@@ -17,10 +17,10 @@ export async function tfgridModule_FarmStored(db: DB, event: SubstrateEvent) {
   let certificationTypeAsString = Buffer.from(certification_type.value as string).toString()
   let certificationType = CertificationType.None
   switch (certificationTypeAsString) {
-      case 'None': certificationType = CertificationType.None
-      case 'Silver': certificationType = CertificationType.Silver
-      case 'Gold': certificationType = CertificationType.Gold
-      default: certificationType = CertificationType.None
+    case 'None': certificationType = CertificationType.None
+    case 'Silver': certificationType = CertificationType.Silver
+    case 'Gold': certificationType = CertificationType.Gold
+    default: certificationType = CertificationType.None
   }
   farm.certificationType = certificationType
 

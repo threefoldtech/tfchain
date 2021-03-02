@@ -1451,7 +1451,10 @@ export enum NodeOrderByEnum {
   cru_DESC = "cru_DESC",
 
   mru_ASC = "mru_ASC",
-  mru_DESC = "mru_DESC"
+  mru_DESC = "mru_DESC",
+
+  role_ASC = "role_ASC",
+  role_DESC = "role_DESC"
 }
 
 registerEnumType(NodeOrderByEnum, {
@@ -1729,6 +1732,21 @@ export class NodeWhereInput {
 
   @TypeGraphQLField(() => [Int], { nullable: true })
   mru_in?: number[];
+
+  @TypeGraphQLField({ nullable: true })
+  role_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  role_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  role_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  role_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  role_in?: string[];
 }
 
 @TypeGraphQLInputType()
@@ -1774,6 +1792,9 @@ export class NodeCreateInput {
 
   @TypeGraphQLField({ nullable: true })
   mru?: number;
+
+  @TypeGraphQLField()
+  role!: string;
 }
 
 @TypeGraphQLInputType()
@@ -1813,6 +1834,9 @@ export class NodeUpdateInput {
 
   @TypeGraphQLField({ nullable: true })
   mru?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  role?: string;
 }
 
 @ArgsType()

@@ -56,6 +56,9 @@ export class Node extends BaseModel {
   })
   mru?: number;
 
+  @StringField({})
+  role!: string;
+
   constructor(init?: Partial<Node>) {
     super();
     Object.assign(this, init);
