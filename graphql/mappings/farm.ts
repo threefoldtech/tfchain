@@ -28,11 +28,11 @@ export async function tfgridModule_FarmStored(db: DB, event: SubstrateEvent) {
 }
 
 export async function tfgridModule_FarmDeleted(db: DB, event: SubstrateEvent) {
-    const [farm_id] = event.params
-  
-    const savedFarm = await db.get(Farm, { where: { farmId: farm_id.value as number } })
-  
-    if (savedFarm) {
-      await db.remove(savedFarm)
-    }
+  const [farm_id] = event.params
+
+  const savedFarm = await db.get(Farm, { where: { farmId: farm_id.value as number } })
+
+  if (savedFarm) {
+    await db.remove(savedFarm)
   }
+}
