@@ -43,7 +43,7 @@ export async function tfgridModule_NodeStored(db: DB, event: SubstrateEvent) {
   
   node.countryId = country_id.value as number
   node.cityId = city_id.value as number
-  node.pubKey = Buffer.from(pub_key.value as string).toString()
+  node.pubKey = hex2a(Buffer.from(pub_key.value as string).toString())
   node.address = Buffer.from(address.value as string).toString()
 
   node.role = Buffer.from(role.value as string).toString()
