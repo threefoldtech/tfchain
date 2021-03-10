@@ -81,6 +81,14 @@
   },
   "Address": "AccountId",
   "LookupSource": "AccountId",
+  "PerDispatchClassU32": {
+    "normal": "u32",
+    "operational": "u32",
+    "mandatory": "u32"
+  },
+  "BlockLength": {
+    "max": "PerDispatchClassU32"
+  },
   "BalanceOf": "Balance",
   "Public": "[u8;32]",
   "U16F16": "[u8; 4]",
