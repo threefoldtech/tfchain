@@ -15,12 +15,12 @@
     "name": "Vec<u8>",
     "country_id": "u32",
     "city_id": "u32",
-    "address": "AccountId"
+    "address": "MultiAddress"
   },
   "Twin": {
     "version": "u32",
     "id": "u32",
-    "address": "AccountId",
+    "address": "MultiAddress",
     "ip": "Vec<u8>",
     "entities": "Vec<EntityProof>"
   },
@@ -37,7 +37,7 @@
     "country_id": "u32",
     "city_id": "u32",
     "pub_key": "Vec<u8>",
-    "address": "AccountId",
+    "address": "MultiAddress",
     "role": "Role"
   },
   "Role": {
@@ -79,8 +79,8 @@
     "disk_type": "u8",
     "size": "u32"
   },
-  "Address": "AccountId",
-  "LookupSource": "AccountId",
+  "Address": "MultiAddress",
+  "LookupSource": "MultiAddress",
   "PerDispatchClassU32": {
     "normal": "u32",
     "operational": "u32",
@@ -101,7 +101,7 @@
   },
   "StellarTransaction": {
     "amount": "Balance",
-    "target": "AccountId"
+    "target": "MultiAddress"
   }
 }
   
