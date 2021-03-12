@@ -8,7 +8,7 @@ async function main () {
   const client = await getClient('', testAccount)
 
   // FROM STELLAR
-  const addr = client.keyring.encodeAddress(stellarbase.StrKey.decodeEd25519PublicKey('GCCNQN4HVJVH5XOV3A2BO7NQ3OJY6MEOW7MSXQJU3VWGRPXU273BN5OB'))
+  const addr = client.keyring.encodeAddress(stellarbase.StrKey.decodeEd25519PublicKey('GC6HHHS7SH7KNUAOBKVGT2QZIQLRB5UA7QAGLA3IROWPH4TN65UKNJPK'))
   console.log(addr)
 
   // TO STELLAR
