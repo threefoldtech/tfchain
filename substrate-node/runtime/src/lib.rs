@@ -42,7 +42,9 @@ use pallet_transaction_payment::CurrencyAdapter;
 /// Import the template pallet.
 pub use pallet_tfgrid;
 
-pub use pallet_tft_bridge;
+// pub use pallet_tft_bridge;
+
+pub use pallet_vesting_validator;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -269,11 +271,15 @@ impl pallet_tfgrid::Config for Runtime {
 	type Event = Event;
 }
 
-impl pallet_tft_bridge::Config for Runtime {
+impl pallet_vesting_validator::Config for Runtime {
 	type Event = Event;
-	type Currency = Balances;
-	type Burn = ();
 }
+
+// impl pallet_tft_bridge::Config for Runtime {
+// 	type Event = Event;
+// 	type Currency = Balances;
+// 	type Burn = ();
+// }
 
 impl pallet_scheduler::Config for Runtime {
     type Event = Event;
@@ -302,7 +308,8 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 		TfgridModule: pallet_tfgrid::{Module, Call, Storage, Event<T>},
-		TFTBridgeModule: pallet_tft_bridge::{Module, Call, Storage, Event<T>},
+		VestingValidatorModule: pallet_vesting_validator::{Module, Call, Storage, Event<T>},
+		// TFTBridgeModule: pallet_tft_bridge::{Module, Call, Storage, Event<T>},
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 	}
 );

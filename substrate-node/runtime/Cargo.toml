@@ -27,12 +27,19 @@ package = "pallet-tfgrid"
 branch = "master"
 # path = "../../../pallets/pallet-tfgrid"
 
-[dependencies.pallet-tft-bridge]
-default-features = false
-git = "https://github.com/threefoldfoundation/tft-parity"
-package = "pallet-tft-bridge"
-branch = "main"
+# [dependencies.pallet-tft-bridge]
+# default-features = false
+# git = "https://github.com/threefoldfoundation/tft-parity"
+# package = "pallet-tft-bridge"
+# branch = "main"
 # path = "../../../tft-parity/pallet-tft-bridge"
+
+[dependencies.pallet-vesting-validator]
+default-features = false
+# git = "https://github.com/threefoldfoundation/tft-parity"
+# package = "pallet-vesting-validator"
+# branch = "main"
+path = "../../../pallets/pallet-vesting-validator"
 
 [dependencies]
 hex-literal = { optional = true, version = '0.3.1' }
@@ -105,6 +112,6 @@ std = [
     'sp-transaction-pool/std',
     'sp-version/std',
     'pallet-tfgrid/std',
-    'pallet-tft-bridge/std',
+    'pallet-vesting-validator/std',
     'pallet-scheduler/std',
 ]

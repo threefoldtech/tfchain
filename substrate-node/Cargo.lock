@@ -3509,10 +3509,10 @@ dependencies = [
  "pallet-scheduler",
  "pallet-sudo",
  "pallet-tfgrid",
- "pallet-tft-bridge",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
+ "pallet-vesting-validator",
  "parity-scale-codec",
  "serde",
  "sp-api",
@@ -3818,24 +3818,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-tft-bridge"
-version = "1.0.0"
-source = "git+https://github.com/threefoldfoundation/tft-parity?branch=main#82ca89509f4daef2e61dc490ab0dff4a70ce3b9c"
-dependencies = [
- "frame-support",
- "frame-system",
- "lite-json",
- "pallet-balances",
- "pallet-timestamp",
- "parity-scale-codec",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "sp-storage",
-]
-
-[[package]]
 name = "pallet-timestamp"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3899,6 +3881,23 @@ dependencies = [
  "parity-scale-codec",
  "sp-api",
  "sp-runtime",
+]
+
+[[package]]
+name = "pallet-vesting-validator"
+version = "1.0.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "lite-json",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-storage",
 ]
 
 [[package]]
