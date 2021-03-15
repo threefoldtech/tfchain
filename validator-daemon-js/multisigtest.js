@@ -1,68 +1,74 @@
-const { Account } = require('stellar-sdk')
 const StellarSdk = require('stellar-sdk')
-const { parse } = require('yargs')
 
-const rootKeypair = StellarSdk.Keypair.fromSecret('SBQWY3DNPFWGSZTFNV4WQZLBOJ2GQYLTMJSWK3TTMVQXEY3INFXGO52X')
+const rootKeypair = StellarSdk.Keypair.fromSecret('SBHCSSL5FXCQMJN4VFIGBXME7FZ5AHKZA5GATXZLTQEGGJPK4BWNSIOD')
 const sourcePublicKey = rootKeypair.publicKey()
 console.log(sourcePublicKey)
 
-const secondaryAddress = 'GC6HHHS7SH7KNUAOBKVGT2QZIQLRB5UA7QAGLA3IROWPH4TN65UKNJPK'
+const v1 = 'GDNMP6Q6LR5LYARNCOIQUWJABX37F26NP7ULD6D4BZGWW4WZSNICZNMB'
+const v2 = 'GDP4XCSCDHDZLTAI3MUVTRU3EO4WBHLERUZT75AUM6O2LCSDQ4JNFNTR'
+const v3 = 'GCHBTKV5VKKV6TUORHLASVDTJ336QTT24YOXAEK433SZN5VXJK5NRLAF'
+const v4 = 'GBJNADYGQKFRLZZLKJUTD2ECTX65TV35B7LTMKLC6KWH5QSQL3ZKLBEW'
+const v5 = 'GBX2GPH27S32GQRDTIKGCGLEMEIW4YLJCQSRVM5NX7WEFANS3UUBYY3M'
 
 async function main () {
   const server = new StellarSdk.Server('https://horizon-testnet.stellar.org')
 
   const account = await server.loadAccount(sourcePublicKey)
 
-  // let transaction = new StellarSdk.TransactionBuilder(account, {
-  //   fee: StellarSdk.BASE_FEE,
-  //   networkPassphrase: StellarSdk.Networks.TESTNET
-  // })
-  //   .addOperation(StellarSdk.Operation.setOptions({
-  //     signer: {
-  //       ed25519PublicKey: secondaryAddress,
-  //       weight: 1
-  //     }
-  //   }))
-  //   .addOperation(StellarSdk.Operation.setOptions({
-  //     masterWeight: 1, // set master key weight
-  //     lowThreshold: 1,
-  //     medThreshold: 2, // a payment is medium threshold
-  //     highThreshold: 2 // make sure to have enough weight to add up to the high threshold!
-  //   }))
-  //   .setTimeout(30)
-  //   .build()
-
-  // transaction.sign(rootKeypair) // only need to sign with the root signer as the 2nd signer won't be added to the account till after this transaction completes
-
-  // try {
-  //   const transactionResult = await server.submitTransaction(transaction)
-  //   console.log(JSON.stringify(transactionResult, null, 2))
-  //   console.log('\nSuccess! View the transaction at: ')
-  //   console.log(transactionResult._links.transaction.href)
-  // } catch (e) {
-  //   console.log('An error has occured:')
-  //   console.log(e)
-  // }
-
-  // now create a payment with the account that has two signers
-
   const transaction = new StellarSdk.TransactionBuilder(account, {
     fee: StellarSdk.BASE_FEE,
     networkPassphrase: StellarSdk.Networks.TESTNET
   })
-    .addOperation(StellarSdk.Operation.payment({
-      destination: 'GBTVUCDT5CNSXIHJTDHYSZG3YJFXBAJ6FM4CKS5GKSAWJOLZW6XX7NVC',
-      asset: StellarSdk.Asset.native(),
-      amount: '2000' // 2000 XLM
+    .addOperation(StellarSdk.Operation.setOptions({
+      signer: {
+        ed25519PublicKey: v1,
+        weight: 1
+      }
     }))
-    .setTimeout(6000)
+    .addOperation(StellarSdk.Operation.setOptions({
+      signer: {
+        ed25519PublicKey: v2,
+        weight: 1
+      }
+    }))
+    .addOperation(StellarSdk.Operation.setOptions({
+      signer: {
+        ed25519PublicKey: v3,
+        weight: 1
+      }
+    }))
+    .addOperation(StellarSdk.Operation.setOptions({
+      signer: {
+        ed25519PublicKey: v4,
+        weight: 1
+      }
+    }))
+    .addOperation(StellarSdk.Operation.setOptions({
+      signer: {
+        ed25519PublicKey: v5,
+        weight: 1
+      }
+    }))
+    .addOperation(StellarSdk.Operation.setOptions({
+      masterWeight: 5, // set master key weight
+      lowThreshold: 8,
+      medThreshold: 8, // a payment is medium threshold
+      highThreshold: 8 // make sure to have enough weight to add up to the high threshold!
+    }))
+    .setTimeout(30)
     .build()
 
-  // now we need to sign the transaction with both the root and the secondaryAddress
-  transaction.sign(rootKeypair)
-  console.log(transaction.sequence)
+  transaction.sign(rootKeypair) // only need to sign with the root signer as the 2nd signer won't be added to the account till after this transaction completes
 
-  console.log(transaction.toXDR())
+  try {
+    const transactionResult = await server.submitTransaction(transaction)
+    console.log(JSON.stringify(transactionResult, null, 2))
+    console.log('\nSuccess! View the transaction at: ')
+    console.log(transactionResult._links.transaction.href)
+  } catch (e) {
+    console.log('An error has occured:')
+    console.log(e.response.data.extras)
+  }
 }
 
 main()

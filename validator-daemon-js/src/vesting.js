@@ -2,14 +2,21 @@ const { getClient } = require('./subclient')
 const StellarSdk = require('stellar-sdk')
 const stellarbase = require('stellar-base')
 const chalk = require('chalk')
-const { difference } = require('lodash')
+const { difference, first } = require('lodash')
+const bip39 = require('bip39')
 
 const server = new StellarSdk.Server('https://horizon-testnet.stellar.org')
 
 async function monitorVesting (mnemonic, url) {
   const client = await getClient(url, mnemonic)
-  // second signer in this case for the multisig test
-  const stellarPair = StellarSdk.Keypair.fromSecret('SAMZUAAPLRUH62HH3XE7NVD6ZSMTWPWGM6DS4X47HLVRHEBKP4U2H5E7')
+
+  const seed = await bip39.mnemonicToSeed(mnemonic)
+
+  // extract stellar keypair from secret seed
+  const stellarPair = StellarSdk.Keypair.fromRawEd25519Seed(seed.slice(0, 32))
+
+  console.log(chalk.blue.bold(`Substrate address: ${client.address} is loaded.`))
+  console.log(chalk.blue.bold(`Stellar address: ${stellarPair.publicKey()} is loaded.`))
   console.log(chalk.green.bold('✓ starting vesting validator daemon...'))
 
   client.api.query.system.events((events) => {
@@ -17,8 +24,6 @@ async function monitorVesting (mnemonic, url) {
       const { event } = record
 
       if (event.section === 'vestingValidatorModule') {
-        console.log(event.method)
-
         switch (event.method) {
           case 'TransactionProposed':
             console.log(chalk.blue.bold('transaction proposal found'))
@@ -26,7 +31,7 @@ async function monitorVesting (mnemonic, url) {
             break
           case 'TransactionReady':
             console.log(chalk.blue.bold('found a ready to be sumbitted transaction'))
-            handleTransactionReady(record, client, stellarPair)
+            handleTransactionReady(record, client)
             break
           default:
             console.log(chalk.blue.bold(`unknown event seen ${event.method}, skipping ...`))
@@ -42,8 +47,9 @@ async function handleTransactionProposal (record, client, stellarPair) {
 
   const [tx, account] = event.data
 
+  const transactionXDR = hex2a(tx.toJSON())
   // parse transaction from xdr string
-  const transaction = new StellarSdk.Transaction(hex2a(tx.toJSON()), StellarSdk.Networks.TESTNET)
+  const transaction = new StellarSdk.Transaction(transactionXDR, StellarSdk.Networks.TESTNET)
 
   // parse account from substrate address to stellar public key
   const stellarAccount = stellarbase.StrKey.encodeEd25519PublicKey(client.keyring.decodeAddress(account.toJSON()))
@@ -62,28 +68,27 @@ async function handleTransactionProposal (record, client, stellarPair) {
   transaction.sign(stellarPair)
 
   const signatureToAdd = difference(transaction.signatures.map(sigs => sigs.toXDR().toString('base64')), signaturesPresent)
-  console.log(signatureToAdd)
 
-  await client.addTransactionSignature(transaction.toXDR(), signatureToAdd[0], res => callback(res))
+  try {
+    await client.addTransactionSignature(transactionXDR, first(signatureToAdd), res => callback(res))
+  } catch (error) {
+    console.log(error)
+  }
 }
 
-async function handleTransactionReady (record, client, stellarPair) {
+async function handleTransactionReady (record, client) {
   const { event } = record
 
   const [tx] = event.data
   const transactionXDR = hex2a(tx.toJSON())
 
   const transactionFromStorage = await client.getTransaction(transactionXDR)
-  console.log(transactionFromStorage)
 
   // parse transaction from xdr string
   const stellarTransaction = new StellarSdk.Transaction(transactionXDR, StellarSdk.Networks.TESTNET)
 
   // add all the signatures from storage to this transaction
-  const stellarSignatures = transactionFromStorage.signatures.map(sig => {
-    const sigBuffer = Buffer.from(sig, 'base64')
-    return StellarSdk.xdr.DecoratedSignature.fromXDR(sigBuffer)
-  })
+  const stellarSignatures = transactionFromStorage.signatures.map(sig => StellarSdk.xdr.DecoratedSignature.fromXDR(Buffer.from(hex2a(sig), 'base64')))
   stellarTransaction.signatures.push(...stellarSignatures)
 
   try {
@@ -112,7 +117,7 @@ async function callback (res) {
 
   const { events = [], status } = res
 
-  console.log(status)
+  console.log(`Current status is ${status.type}`)
   if (status.isFinalized) {
     events.forEach(({ event: { data, method } }) => {
       if (method.toString() === 'ExtrinsicFailed') {
