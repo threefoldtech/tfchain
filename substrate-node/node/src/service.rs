@@ -11,6 +11,7 @@ pub use sc_executor::NativeExecutor;
 use sp_consensus_aura::sr25519::{AuthorityPair as AuraPair};
 use sc_finality_grandpa::SharedVoterState;
 use sc_keystore::LocalKeystore;
+use sp_core::{Pair, sr25519};
 
 // Our native executor instance.
 native_executor_instance!(
@@ -92,7 +93,7 @@ fn remote_keystore(_url: &String) -> Result<Arc<LocalKeystore>, &'static str> {
 }
 
 /// Builds a new service for a full client.
-pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> {
+pub async fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> {
 	let sc_service::PartialComponents {
 		client, backend, mut task_manager, import_queue, mut keystore_container, select_chain, transaction_pool,
 		inherent_data_providers,
@@ -105,6 +106,19 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
 			Err(e) => {
 				return Err(ServiceError::Other(
 					format!("Error hooking up remote keystore for {}: {}", url, e)))
+			}
+		};
+	}
+
+	let dev_seed = config.dev_key_seed.clone();
+	
+	if let Some(seed) = dev_seed {
+		let pair: sr25519::Pair = Pair::from_string(&seed, None).unwrap();
+		match keystore_container.keystore().insert_unknown(node_template_runtime::pallet_tft_price::KEY_TYPE, &seed, &pair.public()).await {
+			Ok(_) => (),
+			Err(e) => {
+				return Err(ServiceError::Other(
+					format!("Error inserting local dev seed {:?}", e)))
 			}
 		};
 	}
