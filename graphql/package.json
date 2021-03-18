@@ -38,6 +38,7 @@
     "lodash": "^4.17.20",
     "pg": "^8.5.1",
     "pg-format": "^1.0.4",
+    "stellar-sdk": "^8.0.0",
     "tslib": "^2.0.0"
   },
   "devDependencies": {

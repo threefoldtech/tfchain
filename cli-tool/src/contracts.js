@@ -193,6 +193,12 @@ async function getPrice (mnemonic, url) {
   return client.getPrice()
 }
 
+async function getAvgPrice (mnemonic, url) {
+  const client = await getClient(url, mnemonic)
+
+  return client.getAveragePrice()
+}
+
 async function vestedTransfer (locked, perBlock, startingBlock, tftPrice, mnemonic, url, callback) {
   const client = await getClient(url, mnemonic)
 
@@ -225,6 +231,7 @@ module.exports = {
   deleteNode,
   sign,
   getPrice,
+  getAvgPrice,
   listTwins,
   listFarms,
   listNodes,

@@ -88,3 +88,27 @@ type City @entity {
   country_id: Int!
   name: String!
 }
+
+type ExecutedVestingWithdrawal @entity {
+  from: String!
+  to: String!
+  value: Int!
+  tx_xdr: String!
+  block: Int!
+}
+
+type ExpiredVestingWithdrawal @entity {
+  from: String!
+  to: String!
+  value: Int!
+  tx_xdr: String!
+  block: Int!
+}
+
+type FailedVestingWithdrawal @entity {
+  from: String!
+  to: String!
+  value: Int!
+  tx_xdr: String!
+  block: Int!
+}

@@ -35,6 +35,12 @@ import { EntityProof } from "../src/modules/entity-proof/entity-proof.model";
 // @ts-ignore
 import { Entity } from "../src/modules/entity/entity.model";
 // @ts-ignore
+import { ExecutedVestingWithdrawal } from "../src/modules/executed-vesting-withdrawal/executed-vesting-withdrawal.model";
+// @ts-ignore
+import { ExpiredVestingWithdrawal } from "../src/modules/expired-vesting-withdrawal/expired-vesting-withdrawal.model";
+// @ts-ignore
+import { FailedVestingWithdrawal } from "../src/modules/failed-vesting-withdrawal/failed-vesting-withdrawal.model";
+// @ts-ignore
 import { Farm } from "../src/modules/farm/farm.model";
 // @ts-ignore
 import { Node } from "../src/modules/node/node.model";
@@ -1081,6 +1087,763 @@ export class EntityCreateManyArgs {
 export class EntityUpdateArgs {
   @TypeGraphQLField() data!: EntityUpdateInput;
   @TypeGraphQLField() where!: EntityWhereUniqueInput;
+}
+
+export enum ExecutedVestingWithdrawalOrderByEnum {
+  createdAt_ASC = "createdAt_ASC",
+  createdAt_DESC = "createdAt_DESC",
+
+  updatedAt_ASC = "updatedAt_ASC",
+  updatedAt_DESC = "updatedAt_DESC",
+
+  deletedAt_ASC = "deletedAt_ASC",
+  deletedAt_DESC = "deletedAt_DESC",
+
+  from_ASC = "from_ASC",
+  from_DESC = "from_DESC",
+
+  to_ASC = "to_ASC",
+  to_DESC = "to_DESC",
+
+  value_ASC = "value_ASC",
+  value_DESC = "value_DESC",
+
+  txXdr_ASC = "txXdr_ASC",
+  txXdr_DESC = "txXdr_DESC",
+
+  block_ASC = "block_ASC",
+  block_DESC = "block_DESC"
+}
+
+registerEnumType(ExecutedVestingWithdrawalOrderByEnum, {
+  name: "ExecutedVestingWithdrawalOrderByInput"
+});
+
+@TypeGraphQLInputType()
+export class ExecutedVestingWithdrawalWhereInput {
+  @TypeGraphQLField(() => ID, { nullable: true })
+  id_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  id_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  createdById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  createdById_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  updatedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  updatedById_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  deletedAt_all?: Boolean;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  deletedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  deletedById_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  from_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  from_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  from_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  from_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  from_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  to_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  to_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  to_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  to_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  to_in?: string[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  value_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  value_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  value_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  value_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  value_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  value_in?: number[];
+
+  @TypeGraphQLField({ nullable: true })
+  txXdr_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  txXdr_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  txXdr_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  txXdr_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  txXdr_in?: string[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  block_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  block_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  block_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  block_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  block_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  block_in?: number[];
+}
+
+@TypeGraphQLInputType()
+export class ExecutedVestingWithdrawalWhereUniqueInput {
+  @TypeGraphQLField(() => ID)
+  id?: string;
+}
+
+@TypeGraphQLInputType()
+export class ExecutedVestingWithdrawalCreateInput {
+  @TypeGraphQLField()
+  from!: string;
+
+  @TypeGraphQLField()
+  to!: string;
+
+  @TypeGraphQLField()
+  value!: number;
+
+  @TypeGraphQLField()
+  txXdr!: string;
+
+  @TypeGraphQLField()
+  block!: number;
+}
+
+@TypeGraphQLInputType()
+export class ExecutedVestingWithdrawalUpdateInput {
+  @TypeGraphQLField({ nullable: true })
+  from?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  to?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  value?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  txXdr?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  block?: number;
+}
+
+@ArgsType()
+export class ExecutedVestingWithdrawalWhereArgs extends PaginationArgs {
+  @TypeGraphQLField(() => ExecutedVestingWithdrawalWhereInput, {
+    nullable: true
+  })
+  where?: ExecutedVestingWithdrawalWhereInput;
+
+  @TypeGraphQLField(() => ExecutedVestingWithdrawalOrderByEnum, {
+    nullable: true
+  })
+  orderBy?: ExecutedVestingWithdrawalOrderByEnum;
+}
+
+@ArgsType()
+export class ExecutedVestingWithdrawalCreateManyArgs {
+  @TypeGraphQLField(() => [ExecutedVestingWithdrawalCreateInput])
+  data!: ExecutedVestingWithdrawalCreateInput[];
+}
+
+@ArgsType()
+export class ExecutedVestingWithdrawalUpdateArgs {
+  @TypeGraphQLField() data!: ExecutedVestingWithdrawalUpdateInput;
+  @TypeGraphQLField() where!: ExecutedVestingWithdrawalWhereUniqueInput;
+}
+
+export enum ExpiredVestingWithdrawalOrderByEnum {
+  createdAt_ASC = "createdAt_ASC",
+  createdAt_DESC = "createdAt_DESC",
+
+  updatedAt_ASC = "updatedAt_ASC",
+  updatedAt_DESC = "updatedAt_DESC",
+
+  deletedAt_ASC = "deletedAt_ASC",
+  deletedAt_DESC = "deletedAt_DESC",
+
+  from_ASC = "from_ASC",
+  from_DESC = "from_DESC",
+
+  to_ASC = "to_ASC",
+  to_DESC = "to_DESC",
+
+  value_ASC = "value_ASC",
+  value_DESC = "value_DESC",
+
+  txXdr_ASC = "txXdr_ASC",
+  txXdr_DESC = "txXdr_DESC",
+
+  block_ASC = "block_ASC",
+  block_DESC = "block_DESC"
+}
+
+registerEnumType(ExpiredVestingWithdrawalOrderByEnum, {
+  name: "ExpiredVestingWithdrawalOrderByInput"
+});
+
+@TypeGraphQLInputType()
+export class ExpiredVestingWithdrawalWhereInput {
+  @TypeGraphQLField(() => ID, { nullable: true })
+  id_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  id_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  createdById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  createdById_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  updatedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  updatedById_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  deletedAt_all?: Boolean;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  deletedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  deletedById_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  from_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  from_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  from_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  from_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  from_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  to_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  to_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  to_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  to_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  to_in?: string[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  value_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  value_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  value_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  value_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  value_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  value_in?: number[];
+
+  @TypeGraphQLField({ nullable: true })
+  txXdr_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  txXdr_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  txXdr_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  txXdr_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  txXdr_in?: string[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  block_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  block_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  block_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  block_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  block_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  block_in?: number[];
+}
+
+@TypeGraphQLInputType()
+export class ExpiredVestingWithdrawalWhereUniqueInput {
+  @TypeGraphQLField(() => ID)
+  id?: string;
+}
+
+@TypeGraphQLInputType()
+export class ExpiredVestingWithdrawalCreateInput {
+  @TypeGraphQLField()
+  from!: string;
+
+  @TypeGraphQLField()
+  to!: string;
+
+  @TypeGraphQLField()
+  value!: number;
+
+  @TypeGraphQLField()
+  txXdr!: string;
+
+  @TypeGraphQLField()
+  block!: number;
+}
+
+@TypeGraphQLInputType()
+export class ExpiredVestingWithdrawalUpdateInput {
+  @TypeGraphQLField({ nullable: true })
+  from?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  to?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  value?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  txXdr?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  block?: number;
+}
+
+@ArgsType()
+export class ExpiredVestingWithdrawalWhereArgs extends PaginationArgs {
+  @TypeGraphQLField(() => ExpiredVestingWithdrawalWhereInput, {
+    nullable: true
+  })
+  where?: ExpiredVestingWithdrawalWhereInput;
+
+  @TypeGraphQLField(() => ExpiredVestingWithdrawalOrderByEnum, {
+    nullable: true
+  })
+  orderBy?: ExpiredVestingWithdrawalOrderByEnum;
+}
+
+@ArgsType()
+export class ExpiredVestingWithdrawalCreateManyArgs {
+  @TypeGraphQLField(() => [ExpiredVestingWithdrawalCreateInput])
+  data!: ExpiredVestingWithdrawalCreateInput[];
+}
+
+@ArgsType()
+export class ExpiredVestingWithdrawalUpdateArgs {
+  @TypeGraphQLField() data!: ExpiredVestingWithdrawalUpdateInput;
+  @TypeGraphQLField() where!: ExpiredVestingWithdrawalWhereUniqueInput;
+}
+
+export enum FailedVestingWithdrawalOrderByEnum {
+  createdAt_ASC = "createdAt_ASC",
+  createdAt_DESC = "createdAt_DESC",
+
+  updatedAt_ASC = "updatedAt_ASC",
+  updatedAt_DESC = "updatedAt_DESC",
+
+  deletedAt_ASC = "deletedAt_ASC",
+  deletedAt_DESC = "deletedAt_DESC",
+
+  from_ASC = "from_ASC",
+  from_DESC = "from_DESC",
+
+  to_ASC = "to_ASC",
+  to_DESC = "to_DESC",
+
+  value_ASC = "value_ASC",
+  value_DESC = "value_DESC",
+
+  txXdr_ASC = "txXdr_ASC",
+  txXdr_DESC = "txXdr_DESC",
+
+  block_ASC = "block_ASC",
+  block_DESC = "block_DESC"
+}
+
+registerEnumType(FailedVestingWithdrawalOrderByEnum, {
+  name: "FailedVestingWithdrawalOrderByInput"
+});
+
+@TypeGraphQLInputType()
+export class FailedVestingWithdrawalWhereInput {
+  @TypeGraphQLField(() => ID, { nullable: true })
+  id_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  id_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  createdById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  createdById_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  updatedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  updatedById_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  deletedAt_all?: Boolean;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  deletedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  deletedById_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  from_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  from_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  from_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  from_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  from_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  to_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  to_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  to_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  to_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  to_in?: string[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  value_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  value_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  value_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  value_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  value_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  value_in?: number[];
+
+  @TypeGraphQLField({ nullable: true })
+  txXdr_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  txXdr_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  txXdr_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  txXdr_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  txXdr_in?: string[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  block_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  block_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  block_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  block_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  block_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  block_in?: number[];
+}
+
+@TypeGraphQLInputType()
+export class FailedVestingWithdrawalWhereUniqueInput {
+  @TypeGraphQLField(() => ID)
+  id?: string;
+}
+
+@TypeGraphQLInputType()
+export class FailedVestingWithdrawalCreateInput {
+  @TypeGraphQLField()
+  from!: string;
+
+  @TypeGraphQLField()
+  to!: string;
+
+  @TypeGraphQLField()
+  value!: number;
+
+  @TypeGraphQLField()
+  txXdr!: string;
+
+  @TypeGraphQLField()
+  block!: number;
+}
+
+@TypeGraphQLInputType()
+export class FailedVestingWithdrawalUpdateInput {
+  @TypeGraphQLField({ nullable: true })
+  from?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  to?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  value?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  txXdr?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  block?: number;
+}
+
+@ArgsType()
+export class FailedVestingWithdrawalWhereArgs extends PaginationArgs {
+  @TypeGraphQLField(() => FailedVestingWithdrawalWhereInput, { nullable: true })
+  where?: FailedVestingWithdrawalWhereInput;
+
+  @TypeGraphQLField(() => FailedVestingWithdrawalOrderByEnum, {
+    nullable: true
+  })
+  orderBy?: FailedVestingWithdrawalOrderByEnum;
+}
+
+@ArgsType()
+export class FailedVestingWithdrawalCreateManyArgs {
+  @TypeGraphQLField(() => [FailedVestingWithdrawalCreateInput])
+  data!: FailedVestingWithdrawalCreateInput[];
+}
+
+@ArgsType()
+export class FailedVestingWithdrawalUpdateArgs {
+  @TypeGraphQLField() data!: FailedVestingWithdrawalUpdateInput;
+  @TypeGraphQLField() where!: FailedVestingWithdrawalWhereUniqueInput;
 }
 
 export enum FarmOrderByEnum {

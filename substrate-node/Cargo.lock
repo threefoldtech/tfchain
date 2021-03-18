@@ -3802,7 +3802,7 @@ dependencies = [
 [[package]]
 name = "pallet-tfgrid"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/substrate-pallets?branch=master#84578a8a93828a44a8ad467bfe46e2114c6b1813"
+source = "git+https://github.com/threefoldtech/substrate-pallets?branch=master#ea4727f4f27639236cf48b1861f36b5dd6ffe9ae"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3821,7 +3821,7 @@ dependencies = [
 [[package]]
 name = "pallet-tft-price"
 version = "1.0.0"
-source = "git+https://github.com/threefoldfoundation/tft-parity?branch=main#4d46a05f1d20cc60eaae2ced15d741eb1221479d"
+source = "git+https://github.com/threefoldfoundation/tft-parity?branch=main#900b62c1cf5fd569f876dca69e4938bdbbe3f452"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3906,7 +3906,7 @@ dependencies = [
 [[package]]
 name = "pallet-vesting-validator"
 version = "1.0.0"
-source = "git+https://github.com/threefoldtech/substrate-pallets?branch=master#84578a8a93828a44a8ad467bfe46e2114c6b1813"
+source = "git+https://github.com/threefoldtech/substrate-pallets?branch=master#ea4727f4f27639236cf48b1861f36b5dd6ffe9ae"
 dependencies = [
  "frame-support",
  "frame-system",

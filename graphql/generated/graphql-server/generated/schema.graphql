@@ -488,6 +488,366 @@ input EntityWhereUniqueInput {
   id: ID!
 }
 
+type ExecutedVestingWithdrawal implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  from: String!
+  to: String!
+  value: Int!
+  txXdr: String!
+  block: Int!
+}
+
+type ExecutedVestingWithdrawalConnection {
+  totalCount: Int!
+  edges: [ExecutedVestingWithdrawalEdge!]!
+  pageInfo: PageInfo!
+}
+
+input ExecutedVestingWithdrawalCreateInput {
+  from: String!
+  to: String!
+  value: Float!
+  txXdr: String!
+  block: Float!
+}
+
+type ExecutedVestingWithdrawalEdge {
+  node: ExecutedVestingWithdrawal!
+  cursor: String!
+}
+
+enum ExecutedVestingWithdrawalOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  from_ASC
+  from_DESC
+  to_ASC
+  to_DESC
+  value_ASC
+  value_DESC
+  txXdr_ASC
+  txXdr_DESC
+  block_ASC
+  block_DESC
+}
+
+input ExecutedVestingWithdrawalUpdateInput {
+  from: String
+  to: String
+  value: Float
+  txXdr: String
+  block: Float
+}
+
+input ExecutedVestingWithdrawalWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  from_eq: String
+  from_contains: String
+  from_startsWith: String
+  from_endsWith: String
+  from_in: [String!]
+  to_eq: String
+  to_contains: String
+  to_startsWith: String
+  to_endsWith: String
+  to_in: [String!]
+  value_eq: Int
+  value_gt: Int
+  value_gte: Int
+  value_lt: Int
+  value_lte: Int
+  value_in: [Int!]
+  txXdr_eq: String
+  txXdr_contains: String
+  txXdr_startsWith: String
+  txXdr_endsWith: String
+  txXdr_in: [String!]
+  block_eq: Int
+  block_gt: Int
+  block_gte: Int
+  block_lt: Int
+  block_lte: Int
+  block_in: [Int!]
+}
+
+input ExecutedVestingWithdrawalWhereUniqueInput {
+  id: ID!
+}
+
+type ExpiredVestingWithdrawal implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  from: String!
+  to: String!
+  value: Int!
+  txXdr: String!
+  block: Int!
+}
+
+type ExpiredVestingWithdrawalConnection {
+  totalCount: Int!
+  edges: [ExpiredVestingWithdrawalEdge!]!
+  pageInfo: PageInfo!
+}
+
+input ExpiredVestingWithdrawalCreateInput {
+  from: String!
+  to: String!
+  value: Float!
+  txXdr: String!
+  block: Float!
+}
+
+type ExpiredVestingWithdrawalEdge {
+  node: ExpiredVestingWithdrawal!
+  cursor: String!
+}
+
+enum ExpiredVestingWithdrawalOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  from_ASC
+  from_DESC
+  to_ASC
+  to_DESC
+  value_ASC
+  value_DESC
+  txXdr_ASC
+  txXdr_DESC
+  block_ASC
+  block_DESC
+}
+
+input ExpiredVestingWithdrawalUpdateInput {
+  from: String
+  to: String
+  value: Float
+  txXdr: String
+  block: Float
+}
+
+input ExpiredVestingWithdrawalWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  from_eq: String
+  from_contains: String
+  from_startsWith: String
+  from_endsWith: String
+  from_in: [String!]
+  to_eq: String
+  to_contains: String
+  to_startsWith: String
+  to_endsWith: String
+  to_in: [String!]
+  value_eq: Int
+  value_gt: Int
+  value_gte: Int
+  value_lt: Int
+  value_lte: Int
+  value_in: [Int!]
+  txXdr_eq: String
+  txXdr_contains: String
+  txXdr_startsWith: String
+  txXdr_endsWith: String
+  txXdr_in: [String!]
+  block_eq: Int
+  block_gt: Int
+  block_gte: Int
+  block_lt: Int
+  block_lte: Int
+  block_in: [Int!]
+}
+
+input ExpiredVestingWithdrawalWhereUniqueInput {
+  id: ID!
+}
+
+type FailedVestingWithdrawal implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  from: String!
+  to: String!
+  value: Int!
+  txXdr: String!
+  block: Int!
+}
+
+type FailedVestingWithdrawalConnection {
+  totalCount: Int!
+  edges: [FailedVestingWithdrawalEdge!]!
+  pageInfo: PageInfo!
+}
+
+input FailedVestingWithdrawalCreateInput {
+  from: String!
+  to: String!
+  value: Float!
+  txXdr: String!
+  block: Float!
+}
+
+type FailedVestingWithdrawalEdge {
+  node: FailedVestingWithdrawal!
+  cursor: String!
+}
+
+enum FailedVestingWithdrawalOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  from_ASC
+  from_DESC
+  to_ASC
+  to_DESC
+  value_ASC
+  value_DESC
+  txXdr_ASC
+  txXdr_DESC
+  block_ASC
+  block_DESC
+}
+
+input FailedVestingWithdrawalUpdateInput {
+  from: String
+  to: String
+  value: Float
+  txXdr: String
+  block: Float
+}
+
+input FailedVestingWithdrawalWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  from_eq: String
+  from_contains: String
+  from_startsWith: String
+  from_endsWith: String
+  from_in: [String!]
+  to_eq: String
+  to_contains: String
+  to_startsWith: String
+  to_endsWith: String
+  to_in: [String!]
+  value_eq: Int
+  value_gt: Int
+  value_gte: Int
+  value_lt: Int
+  value_lte: Int
+  value_in: [Int!]
+  txXdr_eq: String
+  txXdr_contains: String
+  txXdr_startsWith: String
+  txXdr_endsWith: String
+  txXdr_in: [String!]
+  block_eq: Int
+  block_gt: Int
+  block_gte: Int
+  block_lt: Int
+  block_lte: Int
+  block_in: [Int!]
+}
+
+input FailedVestingWithdrawalWhereUniqueInput {
+  id: ID!
+}
+
 type Farm implements BaseGraphQLObject {
   id: ID!
   createdAt: DateTime!
@@ -1096,6 +1456,15 @@ type Query {
   entities(offset: Int, limit: Int = 50, where: EntityWhereInput, orderBy: EntityOrderByInput): [Entity!]!
   entity(where: EntityWhereUniqueInput!): Entity
   entitiesConnection(first: Int, after: String, last: Int, before: String, where: EntityWhereInput, orderBy: EntityOrderByInput): EntityConnection!
+  executedVestingWithdrawals(offset: Int, limit: Int = 50, where: ExecutedVestingWithdrawalWhereInput, orderBy: ExecutedVestingWithdrawalOrderByInput): [ExecutedVestingWithdrawal!]!
+  executedVestingWithdrawal(where: ExecutedVestingWithdrawalWhereUniqueInput!): ExecutedVestingWithdrawal
+  executedVestingWithdrawalsConnection(first: Int, after: String, last: Int, before: String, where: ExecutedVestingWithdrawalWhereInput, orderBy: ExecutedVestingWithdrawalOrderByInput): ExecutedVestingWithdrawalConnection!
+  expiredVestingWithdrawals(offset: Int, limit: Int = 50, where: ExpiredVestingWithdrawalWhereInput, orderBy: ExpiredVestingWithdrawalOrderByInput): [ExpiredVestingWithdrawal!]!
+  expiredVestingWithdrawal(where: ExpiredVestingWithdrawalWhereUniqueInput!): ExpiredVestingWithdrawal
+  expiredVestingWithdrawalsConnection(first: Int, after: String, last: Int, before: String, where: ExpiredVestingWithdrawalWhereInput, orderBy: ExpiredVestingWithdrawalOrderByInput): ExpiredVestingWithdrawalConnection!
+  failedVestingWithdrawals(offset: Int, limit: Int = 50, where: FailedVestingWithdrawalWhereInput, orderBy: FailedVestingWithdrawalOrderByInput): [FailedVestingWithdrawal!]!
+  failedVestingWithdrawal(where: FailedVestingWithdrawalWhereUniqueInput!): FailedVestingWithdrawal
+  failedVestingWithdrawalsConnection(first: Int, after: String, last: Int, before: String, where: FailedVestingWithdrawalWhereInput, orderBy: FailedVestingWithdrawalOrderByInput): FailedVestingWithdrawalConnection!
   farms(offset: Int, limit: Int = 50, where: FarmWhereInput, orderBy: FarmOrderByInput): [Farm!]!
   farm(where: FarmWhereUniqueInput!): Farm
   farmsConnection(first: Int, after: String, last: Int, before: String, where: FarmWhereInput, orderBy: FarmOrderByInput): FarmConnection!

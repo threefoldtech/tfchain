@@ -18,6 +18,15 @@ export interface Query {
     entities: <T = Array<Entity>>(args: { offset?: Int | null, limit?: Int | null, where?: EntityWhereInput | null, orderBy?: EntityOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     entity: <T = Entity | null>(args: { where: EntityWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     entitiesConnection: <T = EntityConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: EntityWhereInput | null, orderBy?: EntityOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    executedVestingWithdrawals: <T = Array<ExecutedVestingWithdrawal>>(args: { offset?: Int | null, limit?: Int | null, where?: ExecutedVestingWithdrawalWhereInput | null, orderBy?: ExecutedVestingWithdrawalOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    executedVestingWithdrawal: <T = ExecutedVestingWithdrawal | null>(args: { where: ExecutedVestingWithdrawalWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    executedVestingWithdrawalsConnection: <T = ExecutedVestingWithdrawalConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: ExecutedVestingWithdrawalWhereInput | null, orderBy?: ExecutedVestingWithdrawalOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    expiredVestingWithdrawals: <T = Array<ExpiredVestingWithdrawal>>(args: { offset?: Int | null, limit?: Int | null, where?: ExpiredVestingWithdrawalWhereInput | null, orderBy?: ExpiredVestingWithdrawalOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    expiredVestingWithdrawal: <T = ExpiredVestingWithdrawal | null>(args: { where: ExpiredVestingWithdrawalWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    expiredVestingWithdrawalsConnection: <T = ExpiredVestingWithdrawalConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: ExpiredVestingWithdrawalWhereInput | null, orderBy?: ExpiredVestingWithdrawalOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    failedVestingWithdrawals: <T = Array<FailedVestingWithdrawal>>(args: { offset?: Int | null, limit?: Int | null, where?: FailedVestingWithdrawalWhereInput | null, orderBy?: FailedVestingWithdrawalOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    failedVestingWithdrawal: <T = FailedVestingWithdrawal | null>(args: { where: FailedVestingWithdrawalWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    failedVestingWithdrawalsConnection: <T = FailedVestingWithdrawalConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: FailedVestingWithdrawalWhereInput | null, orderBy?: FailedVestingWithdrawalOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     farms: <T = Array<Farm>>(args: { offset?: Int | null, limit?: Int | null, where?: FarmWhereInput | null, orderBy?: FarmOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     farm: <T = Farm | null>(args: { where: FarmWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     farmsConnection: <T = FarmConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: FarmWhereInput | null, orderBy?: FarmOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
@@ -124,6 +133,57 @@ export type EntityProofOrderByInput =   'createdAt_ASC' |
   'signature_DESC' |
   'twinRelId_ASC' |
   'twinRelId_DESC'
+
+export type ExecutedVestingWithdrawalOrderByInput =   'createdAt_ASC' |
+  'createdAt_DESC' |
+  'updatedAt_ASC' |
+  'updatedAt_DESC' |
+  'deletedAt_ASC' |
+  'deletedAt_DESC' |
+  'from_ASC' |
+  'from_DESC' |
+  'to_ASC' |
+  'to_DESC' |
+  'value_ASC' |
+  'value_DESC' |
+  'txXdr_ASC' |
+  'txXdr_DESC' |
+  'block_ASC' |
+  'block_DESC'
+
+export type ExpiredVestingWithdrawalOrderByInput =   'createdAt_ASC' |
+  'createdAt_DESC' |
+  'updatedAt_ASC' |
+  'updatedAt_DESC' |
+  'deletedAt_ASC' |
+  'deletedAt_DESC' |
+  'from_ASC' |
+  'from_DESC' |
+  'to_ASC' |
+  'to_DESC' |
+  'value_ASC' |
+  'value_DESC' |
+  'txXdr_ASC' |
+  'txXdr_DESC' |
+  'block_ASC' |
+  'block_DESC'
+
+export type FailedVestingWithdrawalOrderByInput =   'createdAt_ASC' |
+  'createdAt_DESC' |
+  'updatedAt_ASC' |
+  'updatedAt_DESC' |
+  'deletedAt_ASC' |
+  'deletedAt_DESC' |
+  'from_ASC' |
+  'from_DESC' |
+  'to_ASC' |
+  'to_DESC' |
+  'value_ASC' |
+  'value_DESC' |
+  'txXdr_ASC' |
+  'txXdr_DESC' |
+  'block_ASC' |
+  'block_DESC'
 
 export type FarmOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -508,6 +568,228 @@ export interface EntityWhereInput {
 }
 
 export interface EntityWhereUniqueInput {
+  id: ID_Output
+}
+
+export interface ExecutedVestingWithdrawalCreateInput {
+  from: String
+  to: String
+  value: Float
+  txXdr: String
+  block: Float
+}
+
+export interface ExecutedVestingWithdrawalUpdateInput {
+  from?: String | null
+  to?: String | null
+  value?: Float | null
+  txXdr?: String | null
+  block?: Float | null
+}
+
+export interface ExecutedVestingWithdrawalWhereInput {
+  id_eq?: ID_Input | null
+  id_in?: ID_Output[] | ID_Output | null
+  createdAt_eq?: DateTime | null
+  createdAt_lt?: DateTime | null
+  createdAt_lte?: DateTime | null
+  createdAt_gt?: DateTime | null
+  createdAt_gte?: DateTime | null
+  createdById_eq?: ID_Input | null
+  createdById_in?: ID_Output[] | ID_Output | null
+  updatedAt_eq?: DateTime | null
+  updatedAt_lt?: DateTime | null
+  updatedAt_lte?: DateTime | null
+  updatedAt_gt?: DateTime | null
+  updatedAt_gte?: DateTime | null
+  updatedById_eq?: ID_Input | null
+  updatedById_in?: ID_Output[] | ID_Output | null
+  deletedAt_all?: Boolean | null
+  deletedAt_eq?: DateTime | null
+  deletedAt_lt?: DateTime | null
+  deletedAt_lte?: DateTime | null
+  deletedAt_gt?: DateTime | null
+  deletedAt_gte?: DateTime | null
+  deletedById_eq?: ID_Input | null
+  deletedById_in?: ID_Output[] | ID_Output | null
+  from_eq?: String | null
+  from_contains?: String | null
+  from_startsWith?: String | null
+  from_endsWith?: String | null
+  from_in?: String[] | String | null
+  to_eq?: String | null
+  to_contains?: String | null
+  to_startsWith?: String | null
+  to_endsWith?: String | null
+  to_in?: String[] | String | null
+  value_eq?: Int | null
+  value_gt?: Int | null
+  value_gte?: Int | null
+  value_lt?: Int | null
+  value_lte?: Int | null
+  value_in?: Int[] | Int | null
+  txXdr_eq?: String | null
+  txXdr_contains?: String | null
+  txXdr_startsWith?: String | null
+  txXdr_endsWith?: String | null
+  txXdr_in?: String[] | String | null
+  block_eq?: Int | null
+  block_gt?: Int | null
+  block_gte?: Int | null
+  block_lt?: Int | null
+  block_lte?: Int | null
+  block_in?: Int[] | Int | null
+}
+
+export interface ExecutedVestingWithdrawalWhereUniqueInput {
+  id: ID_Output
+}
+
+export interface ExpiredVestingWithdrawalCreateInput {
+  from: String
+  to: String
+  value: Float
+  txXdr: String
+  block: Float
+}
+
+export interface ExpiredVestingWithdrawalUpdateInput {
+  from?: String | null
+  to?: String | null
+  value?: Float | null
+  txXdr?: String | null
+  block?: Float | null
+}
+
+export interface ExpiredVestingWithdrawalWhereInput {
+  id_eq?: ID_Input | null
+  id_in?: ID_Output[] | ID_Output | null
+  createdAt_eq?: DateTime | null
+  createdAt_lt?: DateTime | null
+  createdAt_lte?: DateTime | null
+  createdAt_gt?: DateTime | null
+  createdAt_gte?: DateTime | null
+  createdById_eq?: ID_Input | null
+  createdById_in?: ID_Output[] | ID_Output | null
+  updatedAt_eq?: DateTime | null
+  updatedAt_lt?: DateTime | null
+  updatedAt_lte?: DateTime | null
+  updatedAt_gt?: DateTime | null
+  updatedAt_gte?: DateTime | null
+  updatedById_eq?: ID_Input | null
+  updatedById_in?: ID_Output[] | ID_Output | null
+  deletedAt_all?: Boolean | null
+  deletedAt_eq?: DateTime | null
+  deletedAt_lt?: DateTime | null
+  deletedAt_lte?: DateTime | null
+  deletedAt_gt?: DateTime | null
+  deletedAt_gte?: DateTime | null
+  deletedById_eq?: ID_Input | null
+  deletedById_in?: ID_Output[] | ID_Output | null
+  from_eq?: String | null
+  from_contains?: String | null
+  from_startsWith?: String | null
+  from_endsWith?: String | null
+  from_in?: String[] | String | null
+  to_eq?: String | null
+  to_contains?: String | null
+  to_startsWith?: String | null
+  to_endsWith?: String | null
+  to_in?: String[] | String | null
+  value_eq?: Int | null
+  value_gt?: Int | null
+  value_gte?: Int | null
+  value_lt?: Int | null
+  value_lte?: Int | null
+  value_in?: Int[] | Int | null
+  txXdr_eq?: String | null
+  txXdr_contains?: String | null
+  txXdr_startsWith?: String | null
+  txXdr_endsWith?: String | null
+  txXdr_in?: String[] | String | null
+  block_eq?: Int | null
+  block_gt?: Int | null
+  block_gte?: Int | null
+  block_lt?: Int | null
+  block_lte?: Int | null
+  block_in?: Int[] | Int | null
+}
+
+export interface ExpiredVestingWithdrawalWhereUniqueInput {
+  id: ID_Output
+}
+
+export interface FailedVestingWithdrawalCreateInput {
+  from: String
+  to: String
+  value: Float
+  txXdr: String
+  block: Float
+}
+
+export interface FailedVestingWithdrawalUpdateInput {
+  from?: String | null
+  to?: String | null
+  value?: Float | null
+  txXdr?: String | null
+  block?: Float | null
+}
+
+export interface FailedVestingWithdrawalWhereInput {
+  id_eq?: ID_Input | null
+  id_in?: ID_Output[] | ID_Output | null
+  createdAt_eq?: DateTime | null
+  createdAt_lt?: DateTime | null
+  createdAt_lte?: DateTime | null
+  createdAt_gt?: DateTime | null
+  createdAt_gte?: DateTime | null
+  createdById_eq?: ID_Input | null
+  createdById_in?: ID_Output[] | ID_Output | null
+  updatedAt_eq?: DateTime | null
+  updatedAt_lt?: DateTime | null
+  updatedAt_lte?: DateTime | null
+  updatedAt_gt?: DateTime | null
+  updatedAt_gte?: DateTime | null
+  updatedById_eq?: ID_Input | null
+  updatedById_in?: ID_Output[] | ID_Output | null
+  deletedAt_all?: Boolean | null
+  deletedAt_eq?: DateTime | null
+  deletedAt_lt?: DateTime | null
+  deletedAt_lte?: DateTime | null
+  deletedAt_gt?: DateTime | null
+  deletedAt_gte?: DateTime | null
+  deletedById_eq?: ID_Input | null
+  deletedById_in?: ID_Output[] | ID_Output | null
+  from_eq?: String | null
+  from_contains?: String | null
+  from_startsWith?: String | null
+  from_endsWith?: String | null
+  from_in?: String[] | String | null
+  to_eq?: String | null
+  to_contains?: String | null
+  to_startsWith?: String | null
+  to_endsWith?: String | null
+  to_in?: String[] | String | null
+  value_eq?: Int | null
+  value_gt?: Int | null
+  value_gte?: Int | null
+  value_lt?: Int | null
+  value_lte?: Int | null
+  value_in?: Int[] | Int | null
+  txXdr_eq?: String | null
+  txXdr_contains?: String | null
+  txXdr_startsWith?: String | null
+  txXdr_endsWith?: String | null
+  txXdr_in?: String[] | String | null
+  block_eq?: Int | null
+  block_gt?: Int | null
+  block_gte?: Int | null
+  block_lt?: Int | null
+  block_lte?: Int | null
+  block_in?: Int[] | Int | null
+}
+
+export interface FailedVestingWithdrawalWhereUniqueInput {
   id: ID_Output
 }
 
@@ -1167,6 +1449,87 @@ export interface EntityProofConnection {
 
 export interface EntityProofEdge {
   node: EntityProof
+  cursor: String
+}
+
+export interface ExecutedVestingWithdrawal extends BaseGraphQLObject {
+  id: ID_Output
+  createdAt: DateTime
+  createdById: String
+  updatedAt?: DateTime | null
+  updatedById?: String | null
+  deletedAt?: DateTime | null
+  deletedById?: String | null
+  version: Int
+  from: String
+  to: String
+  value: Int
+  txXdr: String
+  block: Int
+}
+
+export interface ExecutedVestingWithdrawalConnection {
+  totalCount: Int
+  edges: Array<ExecutedVestingWithdrawalEdge>
+  pageInfo: PageInfo
+}
+
+export interface ExecutedVestingWithdrawalEdge {
+  node: ExecutedVestingWithdrawal
+  cursor: String
+}
+
+export interface ExpiredVestingWithdrawal extends BaseGraphQLObject {
+  id: ID_Output
+  createdAt: DateTime
+  createdById: String
+  updatedAt?: DateTime | null
+  updatedById?: String | null
+  deletedAt?: DateTime | null
+  deletedById?: String | null
+  version: Int
+  from: String
+  to: String
+  value: Int
+  txXdr: String
+  block: Int
+}
+
+export interface ExpiredVestingWithdrawalConnection {
+  totalCount: Int
+  edges: Array<ExpiredVestingWithdrawalEdge>
+  pageInfo: PageInfo
+}
+
+export interface ExpiredVestingWithdrawalEdge {
+  node: ExpiredVestingWithdrawal
+  cursor: String
+}
+
+export interface FailedVestingWithdrawal extends BaseGraphQLObject {
+  id: ID_Output
+  createdAt: DateTime
+  createdById: String
+  updatedAt?: DateTime | null
+  updatedById?: String | null
+  deletedAt?: DateTime | null
+  deletedById?: String | null
+  version: Int
+  from: String
+  to: String
+  value: Int
+  txXdr: String
+  block: Int
+}
+
+export interface FailedVestingWithdrawalConnection {
+  totalCount: Int
+  edges: Array<FailedVestingWithdrawalEdge>
+  pageInfo: PageInfo
+}
+
+export interface FailedVestingWithdrawalEdge {
+  node: FailedVestingWithdrawal
   cursor: String
 }
 

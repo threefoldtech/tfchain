@@ -1,6 +1,6 @@
 const StellarSdk = require('stellar-sdk')
 
-const rootKeypair = StellarSdk.Keypair.fromSecret('SBHCSSL5FXCQMJN4VFIGBXME7FZ5AHKZA5GATXZLTQEGGJPK4BWNSIOD')
+const rootKeypair = StellarSdk.Keypair.fromSecret('SCDBPKFTGKZMYX3BI6H73RRT6IEP55GX6BBWJGCSQKZXIVE5JMTBQBJU')
 const sourcePublicKey = rootKeypair.publicKey()
 
 async function main () {

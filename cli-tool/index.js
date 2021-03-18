@@ -24,7 +24,8 @@ const {
   listNodes,
   vestedTransfer,
   getBalance,
-  signEntityCreation
+  signEntityCreation,
+  getAvgPrice
 } = require('./src/contracts')
 
 const argv = yargs
@@ -375,6 +376,13 @@ const argv = yargs
     }
   })
   .command('getPrice', 'Get TFT price', {
+    apiUrl: {
+      description: 'Url of the api',
+      alias: 'a',
+      type: 'string'
+    }
+  })
+  .command('getAvgPrice', 'Get Avg TFT price', {
     apiUrl: {
       description: 'Url of the api',
       alias: 'a',
@@ -843,8 +851,18 @@ if (argv._.includes('sign')) {
 if (argv._.includes('getPrice')) {
   getPrice(argv.a)
     .then(price => {
-      console.log('\n price: ')
-      console.log(price)
+      console.log(`avg price: ${price}`)
+      exit(0)
+    })
+    .catch(err => {
+      console.log(err)
+      exit(1)
+    })
+}
+if (argv._.includes('getAvgPrice')) {
+  getAvgPrice(argv.a)
+    .then(price => {
+      console.log(`avg price: ${price}`)
       exit(0)
     })
     .catch(err => {

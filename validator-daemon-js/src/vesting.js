@@ -2,7 +2,7 @@ const { getClient } = require('./subclient')
 const StellarSdk = require('stellar-sdk')
 const stellarbase = require('stellar-base')
 const chalk = require('chalk')
-const { difference, first } = require('lodash')
+const { difference, first, find } = require('lodash')
 const bip39 = require('bip39')
 
 const server = new StellarSdk.Server('https://horizon-testnet.stellar.org')
@@ -55,13 +55,19 @@ async function handleTransactionProposal (record, client, stellarPair) {
   const stellarAccount = stellarbase.StrKey.encodeEd25519PublicKey(client.keyring.decodeAddress(account.toJSON()))
   const accountResponse = await server.loadAccount(stellarAccount)
 
+  const avgTftPrice = await client.getAveragePrice()
+  console.log(`tft price: ${avgTftPrice}`)
+
   // todo add validation
   accountResponse.balances.map(balance => {
     console.log(balance)
   })
 
   // todo: check if the account can indeed send X amount of tokens
-  console.log(transaction.operations)
+  const paymentOperation = find(transaction.operations, ['type', 'payment'])
+  if (!paymentOperation) return
+
+  console.log(paymentOperation)
 
   const signaturesPresent = transaction.signatures.map(sigs => sigs.toXDR().toString('base64'))
   // Sign the transaction and submit it back to storage
@@ -94,10 +100,12 @@ async function handleTransactionReady (record, client) {
   try {
     const transactionResult = await server.submitTransaction(stellarTransaction)
     console.log(chalk.green.bold(`Success! View the transaction at: ${transactionResult._links.transaction.href}`))
-    await client.removeTransaction(stellarTransaction.toXDR(), res => callback(res))
+    await client.removeTransaction(transactionXDR, res => callback(res))
   } catch (e) {
     console.log('An error has occured:')
     console.log(e.response.data.extras)
+    console.log(chalk.blue.bold('tx failed, reporting now...'))
+    await client.reportFailedTransaction(transactionXDR, res => callback(res))
   }
 }
 
