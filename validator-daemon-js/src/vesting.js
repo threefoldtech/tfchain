@@ -4,6 +4,8 @@ const stellarbase = require('stellar-base')
 const chalk = require('chalk')
 const { difference, first, find } = require('lodash')
 const bip39 = require('bip39')
+const moment = require('moment')
+const { sumBy } = require('lodash')
 
 const server = new StellarSdk.Server('https://horizon-testnet.stellar.org')
 
@@ -53,21 +55,26 @@ async function handleTransactionProposal (record, client, stellarPair) {
 
   // parse account from substrate address to stellar public key
   const stellarAccount = stellarbase.StrKey.encodeEd25519PublicKey(client.keyring.decodeAddress(account.toJSON()))
-  const accountResponse = await server.loadAccount(stellarAccount)
 
   const avgTftPrice = await client.getAveragePrice()
-  console.log(`tft price: ${avgTftPrice}`)
-
-  // todo add validation
-  accountResponse.balances.map(balance => {
-    console.log(balance)
-  })
 
   // todo: check if the account can indeed send X amount of tokens
   const paymentOperation = find(transaction.operations, ['type', 'payment'])
   if (!paymentOperation) return
 
-  console.log(paymentOperation)
+  let amountWithdrawable = 0
+  try {
+    amountWithdrawable = await validateWithdrawal(account.data_attr['tft-vesting'], stellarAccount, avgTftPrice)
+    if (parseFloat(paymentOperation.amount) > amountWithdrawable) {
+      console.log(chalk.blue.bold('client trying to withdraw to much, reporting failed transaction'))
+      await client.reportFailedTransaction(transactionXDR, res => callback(res))
+      return
+    }
+  } catch (error) {
+    console.log(chalk.blue.bold('tx failed, reporting now...'))
+    await client.reportFailedTransaction(transactionXDR, res => callback(res))
+    return
+  }
 
   const signaturesPresent = transaction.signatures.map(sigs => sigs.toXDR().toString('base64'))
   // Sign the transaction and submit it back to storage
@@ -106,6 +113,85 @@ async function handleTransactionReady (record, client) {
     console.log(e.response.data.extras)
     console.log(chalk.blue.bold('tx failed, reporting now...'))
     await client.reportFailedTransaction(transactionXDR, res => callback(res))
+  }
+}
+
+async function validateWithdrawal (encodedVestingSchedule, accountID, avgTftPrice) {
+  const vestingSchedule = Buffer.from(encodedVestingSchedule, 'base64').toString()
+
+  if (!vestingSchedule || vestingSchedule === '') {
+    return
+  }
+
+  const [start, duration, priceUnlock] = vestingSchedule.split(',')
+
+  const x = start.split('=')[1]
+  const month = parseInt(x.split('/')[0])
+  const year = parseInt(x.split('/')[1])
+  const startDate = moment().month(month - 1).date(1).hour(0).minute(0).second(0).millisecond(0).set('year', year)
+
+  const transactions = await server.transactions()
+    .forAccount(accountID)
+    .call()
+
+  const operations = transactions.records.map(tx => {
+    return tx.operations()
+  })
+
+  const res = await Promise.all(operations)
+
+  // Calculate the total amount of TFT available on this account
+  const total = sumBy(res, r => {
+    return sumBy(r.records, record => {
+      // gather all payment before the startdate of the vesting to calculate the amount of tokens that
+      // can be withdrawn each month
+      if (moment(record.created_at) < startDate) {
+        if (record.type === 'payment' && record.to === accountID && record.asset_code === 'TFT') {
+          return parseFloat(record.amount)
+        }
+      }
+    })
+  }) || 0
+
+  // if no funds are present on the escrow account, just return
+  if (!total) return Error('no funds are present on escrow account!')
+
+  const numberOfMonths = parseInt(duration.slice(0, 2))
+
+  const monthlyWithdrawable = total / numberOfMonths
+
+  // calculate how much already has been withdrawn from this account
+  // in order to have replay protection
+  const totalWithdrawn = sumBy(res, r => {
+    return sumBy(r.records, record => {
+      if (moment(record.created_at) < startDate) {
+        if (record.type === 'payment' && record.from === accountID) {
+          return parseFloat(record.amount)
+        }
+      }
+    })
+  }) || 0
+
+  const now = moment().month(5)
+  const monthsBetweenStartAndNow = now.diff(startDate, 'months')
+
+  if (monthsBetweenStartAndNow <= 0) throw Error('cannot withdraw yet!')
+
+  const parsedPriceUnlockCondition = priceUnlock.split('*')[1]
+  const [multiplier, basePrice] = parsedPriceUnlockCondition.split('+')
+
+  const multiplierFloat = parseFloat(multiplier)
+  const basePriceFloat = parseFloat(basePrice)
+
+  // tftvalue>month*0.015+0.15
+
+  const unlockCondition = (monthsBetweenStartAndNow * multiplierFloat) + basePriceFloat
+  const canUnlock = avgTftPrice > unlockCondition
+
+  if (canUnlock) {
+    return (monthlyWithdrawable * monthsBetweenStartAndNow) - totalWithdrawn
+  } else {
+    throw Error('cannot withdraw funds yet')
   }
 }
 

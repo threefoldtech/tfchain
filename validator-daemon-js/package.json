@@ -2,6 +2,8 @@
   "dependencies": {
     "bip39": "^3.0.3",
     "chalk": "^4.1.0",
+    "lodash": "^4.17.21",
+    "moment": "^2.29.1",
     "stellar-base": "^4.0.3",
     "stellar-sdk": "^7.0.0",
     "tfgrid-api-client": "^0.0.1-beta.31",
