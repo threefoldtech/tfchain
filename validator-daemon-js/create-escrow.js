@@ -1,6 +1,6 @@
 const StellarSdk = require('stellar-sdk')
 
-const rootKeypair = StellarSdk.Keypair.fromSecret('SCDBPKFTGKZMYX3BI6H73RRT6IEP55GX6BBWJGCSQKZXIVE5JMTBQBJU')
+const rootKeypair = StellarSdk.Keypair.fromSecret('SAZ2Q6Q2PDKEJLV7DPG75S7N7SNY6DPSJY2ILN5O6WALJZEPJ5FGCJW2')
 const sourcePublicKey = rootKeypair.publicKey()
 console.log(sourcePublicKey)
 
@@ -54,6 +54,10 @@ async function main () {
       lowThreshold: 8,
       medThreshold: 8, // a payment is medium threshold
       highThreshold: 8 // make sure to have enough weight to add up to the high threshold!
+    }))
+    .addOperation(StellarSdk.Operation.changeTrust({
+      asset: new StellarSdk.Asset('TFT', 'GA47YZA3PKFUZMPLQ3B5F2E3CJIB57TGGU7SPCQT2WAEYKN766PWIMB3'),
+      limit: '922337203685.4775807'
     }))
     .setTimeout(30)
     .build()

@@ -63,19 +63,25 @@ async function handleTransactionProposal (record, client, stellarPair) {
   if (!paymentOperation) return
 
   let amountWithdrawable = 0
+
+  const accountVestingData = account.data_attr['tft-vesting']
+
   try {
-    amountWithdrawable = await validateWithdrawal(account.data_attr['tft-vesting'], stellarAccount, avgTftPrice)
+    amountWithdrawable = await validateWithdrawal(accountVestingData, stellarAccount, avgTftPrice)
+    console.log(`\t amount withdrawable: ${amountWithdrawable}\n`)
     if (parseFloat(paymentOperation.amount) > amountWithdrawable) {
-      console.log(chalk.blue.bold('client trying to withdraw to much, reporting failed transaction'))
+      console.log(chalk.red('client trying to withdraw to much, reporting failed transaction'))
       await client.reportFailedTransaction(transactionXDR, res => callback(res))
       return
     }
   } catch (error) {
-    console.log(chalk.blue.bold('tx failed, reporting now...'))
+    console.log(error)
+    console.log(chalk.red('tx failed, reporting now...'))
     await client.reportFailedTransaction(transactionXDR, res => callback(res))
     return
   }
 
+  console.log(chalk.blue.red('withdrawal verified and ready to be signed, signing now...'))
   const signaturesPresent = transaction.signatures.map(sigs => sigs.toXDR().toString('base64'))
   // Sign the transaction and submit it back to storage
   transaction.sign(stellarPair)
@@ -123,11 +129,15 @@ async function validateWithdrawal (encodedVestingSchedule, accountID, avgTftPric
     return
   }
 
+  console.log(chalk.blue.bold(`\n\tfetching withdrawal details for: ${accountID}`))
+
+  // const test = 'month1=04/2021,12months,priceunlock=tftvalue>month*0.0015+0.02'
   const [start, duration, priceUnlock] = vestingSchedule.split(',')
 
   const x = start.split('=')[1]
   const month = parseInt(x.split('/')[0])
   const year = parseInt(x.split('/')[1])
+  // clean start date for vestin schedule
   const startDate = moment().month(month - 1).date(1).hour(0).minute(0).second(0).millisecond(0).set('year', year)
 
   const transactions = await server.transactions()
@@ -145,48 +155,54 @@ async function validateWithdrawal (encodedVestingSchedule, accountID, avgTftPric
     return sumBy(r.records, record => {
       // gather all payment before the startdate of the vesting to calculate the amount of tokens that
       // can be withdrawn each month
-      if (moment(record.created_at) < startDate) {
-        if (record.type === 'payment' && record.to === accountID && record.asset_code === 'TFT') {
-          return parseFloat(record.amount)
-        }
+      if (record.type === 'payment' && record.to === accountID && record.asset_code === 'TFT') {
+        return parseFloat(record.amount)
       }
     })
   }) || 0
+  console.log(`\t total deposited: ${total}`)
 
   // if no funds are present on the escrow account, just return
   if (!total) return Error('no funds are present on escrow account!')
 
   const numberOfMonths = parseInt(duration.slice(0, 2))
+  console.log(`\t total months of vesting: ${numberOfMonths}`)
 
   const monthlyWithdrawable = total / numberOfMonths
+  console.log(`\t monthly withdrawable: ${monthlyWithdrawable}`)
 
   // calculate how much already has been withdrawn from this account
   // in order to have replay protection
   const totalWithdrawn = sumBy(res, r => {
     return sumBy(r.records, record => {
-      if (moment(record.created_at) < startDate) {
-        if (record.type === 'payment' && record.from === accountID) {
-          return parseFloat(record.amount)
-        }
+      if (record.type === 'payment' && record.from === accountID) {
+        return parseFloat(record.amount)
       }
     })
   }) || 0
+  console.log(`\t total withdrawn already: ${totalWithdrawn}`)
 
-  const now = moment().month(5)
+  const now = moment().month(6)
+  console.log(`\t simulated now date: ${now}`)
+  console.log(`\t vesting start date: ${startDate}`)
   const monthsBetweenStartAndNow = now.diff(startDate, 'months')
+  console.log(`\t months between start and now: ${monthsBetweenStartAndNow}`)
 
   if (monthsBetweenStartAndNow <= 0) throw Error('cannot withdraw yet!')
 
+  // tftvalue>month*0.015+0.15
   const parsedPriceUnlockCondition = priceUnlock.split('*')[1]
   const [multiplier, basePrice] = parsedPriceUnlockCondition.split('+')
 
   const multiplierFloat = parseFloat(multiplier)
   const basePriceFloat = parseFloat(basePrice)
 
-  // tftvalue>month*0.015+0.15
-
   const unlockCondition = (monthsBetweenStartAndNow * multiplierFloat) + basePriceFloat
+  console.log(`\t unlock price condition: ${unlockCondition}`)
+  console.log(`\t avg tft price: ${avgTftPrice}`)
+
   const canUnlock = avgTftPrice > unlockCondition
+  console.log(`\t user can withdraw: ${canUnlock}`)
 
   if (canUnlock) {
     return (monthlyWithdrawable * monthsBetweenStartAndNow) - totalWithdrawn

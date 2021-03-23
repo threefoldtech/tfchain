@@ -1,6 +1,6 @@
 const StellarSdk = require('stellar-sdk')
 
-const rootKeypair = StellarSdk.Keypair.fromSecret('SCDBPKFTGKZMYX3BI6H73RRT6IEP55GX6BBWJGCSQKZXIVE5JMTBQBJU')
+const rootKeypair = StellarSdk.Keypair.fromSecret('SAZ2Q6Q2PDKEJLV7DPG75S7N7SNY6DPSJY2ILN5O6WALJZEPJ5FGCJW2')
 const sourcePublicKey = rootKeypair.publicKey()
 
 async function main () {
@@ -13,9 +13,9 @@ async function main () {
     networkPassphrase: StellarSdk.Networks.TESTNET
   })
     .addOperation(StellarSdk.Operation.payment({
-      destination: 'GBTVUCDT5CNSXIHJTDHYSZG3YJFXBAJ6FM4CKS5GKSAWJOLZW6XX7NVC',
-      asset: StellarSdk.Asset.native(),
-      amount: '2000' // 2000 XLM
+      destination: 'GCGBK2U4AP6CTBYDSI6SIVSSPAGS6GSVAR6KUEYRIQTQURFNOYI2B7FU',
+      asset: new StellarSdk.Asset('TFT', 'GA47YZA3PKFUZMPLQ3B5F2E3CJIB57TGGU7SPCQT2WAEYKN766PWIMB3'),
+      amount: '1250'
     }))
     .setTimeout(6000)
     .build()
