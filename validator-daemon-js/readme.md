@@ -29,7 +29,7 @@ Pallets:
 
 This is a runtime extension which adds a voting mechanism to "vote" for validity of stellar withdrawal transactions. This pallet has a list of `validators`, these are substrate accounts (ed25519) which can only be added by using the sudo extension. This will make sure only true validators can be added, as there will be an admin for this service which in his turn will add the validator accounts to this runtime storage map.
 
-The vesting pallet gives the functionality to propose a Stellar transaction, only a validator which is a member of the `validators` list can propose transactions. We will later on in this document explain what defines a `validator`. Once a transaction is proposed it needs (n / 2 + 1) votes (where `n` is the amount of validators) in order to become a `valid` transaction. A majority must vote for validity in shorter terms.
+The vesting pallet gives the functionality to propose a Stellar transaction, anyone can propose a transaction. Once a transaction is proposed it needs (n / 2 + 1) votes (where `n` is the amount of validators) in order to become a `valid` transaction. A majority must vote for validity in shorter terms.
 
 To vote on the validity off a transaction, a "validator" must provide a signature that signs the Stellar Multisig withdrawal transaction. Once enough signatures are provided by the validators, the runtime pallet will see this transaction as "valid".
 
