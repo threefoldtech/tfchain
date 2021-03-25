@@ -33,6 +33,10 @@ The vesting pallet gives the functionality to propose a Stellar transaction, onl
 
 To vote on the validity off a transaction, a "validator" must provide a signature that signs the Stellar Multisig withdrawal transaction. Once enough signatures are provided by the validators, the runtime pallet will see this transaction as "valid".
 
+### TFT Price pallet
+
+This runtime extension will check the price on a regular basis and compute a monthly average price. This price can be retrieved by the validator daemon in order to validate withdrawal transactions.
+
 ## Vesting validator daemon (NodeJS).
 
 This is a daemon which needs to run by the "validators". Atleast (n / 2 + 1) (where `n` is the amount of validators) need to run this validator in order to make this system work.
