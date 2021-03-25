@@ -17,6 +17,9 @@ export class FailedVestingWithdrawal extends BaseModel {
   @IntField({})
   block!: number;
 
+  @StringField({})
+  reason!: string;
+
   constructor(init?: Partial<FailedVestingWithdrawal>) {
     super();
     Object.assign(this, init);

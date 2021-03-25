@@ -742,6 +742,7 @@ type FailedVestingWithdrawal implements BaseGraphQLObject {
   value: Int!
   txXdr: String!
   block: Int!
+  reason: String!
 }
 
 type FailedVestingWithdrawalConnection {
@@ -756,6 +757,7 @@ input FailedVestingWithdrawalCreateInput {
   value: Float!
   txXdr: String!
   block: Float!
+  reason: String!
 }
 
 type FailedVestingWithdrawalEdge {
@@ -780,6 +782,8 @@ enum FailedVestingWithdrawalOrderByInput {
   txXdr_DESC
   block_ASC
   block_DESC
+  reason_ASC
+  reason_DESC
 }
 
 input FailedVestingWithdrawalUpdateInput {
@@ -788,6 +792,7 @@ input FailedVestingWithdrawalUpdateInput {
   value: Float
   txXdr: String
   block: Float
+  reason: String
 }
 
 input FailedVestingWithdrawalWhereInput {
@@ -842,6 +847,11 @@ input FailedVestingWithdrawalWhereInput {
   block_lt: Int
   block_lte: Int
   block_in: [Int!]
+  reason_eq: String
+  reason_contains: String
+  reason_startsWith: String
+  reason_endsWith: String
+  reason_in: [String!]
 }
 
 input FailedVestingWithdrawalWhereUniqueInput {

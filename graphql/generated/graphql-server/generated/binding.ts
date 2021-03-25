@@ -183,7 +183,9 @@ export type FailedVestingWithdrawalOrderByInput =   'createdAt_ASC' |
   'txXdr_ASC' |
   'txXdr_DESC' |
   'block_ASC' |
-  'block_DESC'
+  'block_DESC' |
+  'reason_ASC' |
+  'reason_DESC'
 
 export type FarmOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -725,6 +727,7 @@ export interface FailedVestingWithdrawalCreateInput {
   value: Float
   txXdr: String
   block: Float
+  reason: String
 }
 
 export interface FailedVestingWithdrawalUpdateInput {
@@ -733,6 +736,7 @@ export interface FailedVestingWithdrawalUpdateInput {
   value?: Float | null
   txXdr?: String | null
   block?: Float | null
+  reason?: String | null
 }
 
 export interface FailedVestingWithdrawalWhereInput {
@@ -787,6 +791,11 @@ export interface FailedVestingWithdrawalWhereInput {
   block_lt?: Int | null
   block_lte?: Int | null
   block_in?: Int[] | Int | null
+  reason_eq?: String | null
+  reason_contains?: String | null
+  reason_startsWith?: String | null
+  reason_endsWith?: String | null
+  reason_in?: String[] | String | null
 }
 
 export interface FailedVestingWithdrawalWhereUniqueInput {
@@ -1520,6 +1529,7 @@ export interface FailedVestingWithdrawal extends BaseGraphQLObject {
   value: Int
   txXdr: String
   block: Int
+  reason: String
 }
 
 export interface FailedVestingWithdrawalConnection {

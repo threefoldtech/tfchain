@@ -26,7 +26,7 @@ const paymentHandler = async function (paymentResponse, client, accountToMonitor
 async function monitorBridge (mnemonic, apiurl, accountToMonitor) {
   const client = await getClient(apiurl, mnemonic)
 
-  const knownValidators = await client.listValidators()
+  const knownValidators = await client.listBridgeValidators()
   if (!knownValidators.includes(client.address)) {
     console.log(chalk.red.bold('❌ You are no validator yet, please contact an admin to add your account as a validator first.'))
     process.exit(0)

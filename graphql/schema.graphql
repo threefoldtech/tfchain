@@ -111,4 +111,5 @@ type FailedVestingWithdrawal @entity {
   value: Int!
   tx_xdr: String!
   block: Int!
+  reason: String!
 }

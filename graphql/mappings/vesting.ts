@@ -45,7 +45,7 @@ export async function vestingValidatorModule_TransactionExpired(db: DB, event: S
 }
 
 export async function vestingValidatorModule_TransactionFailed(db: DB, event: SubstrateEvent) {
-  const [tx_id] = event.params
+  const [tx_id, reason] = event.params
   const transfer = new FailedVestingWithdrawal()
 
   const transactionXDR = hex2a(Buffer.from(tx_id.value as string).toString())
@@ -59,6 +59,7 @@ export async function vestingValidatorModule_TransactionFailed(db: DB, event: Su
   transfer.from = transaction.source
   transfer.block = event.blockNumber
   transfer.txXdr = transactionXDR
+  transfer.reason = hex2a(Buffer.from(reason.value as string).toString())
 
   await db.save<FailedVestingWithdrawal>(transfer)
 }

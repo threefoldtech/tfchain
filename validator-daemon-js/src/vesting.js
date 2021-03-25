@@ -12,6 +12,12 @@ const server = new StellarSdk.Server('https://horizon-testnet.stellar.org')
 async function monitorVesting (mnemonic, url) {
   const client = await getClient(url, mnemonic)
 
+  const knownValidators = await client.listVestingValidators()
+  if (!knownValidators.includes(client.address)) {
+    console.log(chalk.red.bold('❌ You are no validator yet, please contact an admin to add your account as a validator first.'))
+    process.exit(0)
+  }
+
   const seed = await bip39.mnemonicToSeed(mnemonic)
 
   // extract stellar keypair from secret seed
@@ -70,14 +76,15 @@ async function handleTransactionProposal (record, client, stellarPair) {
     amountWithdrawable = await validateWithdrawal(accountVestingData, stellarAccount, avgTftPrice)
     console.log(`\t amount withdrawable: ${amountWithdrawable}\n`)
     if (parseFloat(paymentOperation.amount) > amountWithdrawable) {
-      console.log(chalk.red('client trying to withdraw to much, reporting failed transaction'))
-      await client.reportFailedTransaction(transactionXDR, res => callback(res))
+      const error = `client trying to withdraw ${parseFloat(paymentOperation.amount)} whilst there is only ${amountWithdrawable} withdrawable.`
+      console.log(chalk.red(error))
+      await client.reportFailedTransaction(transactionXDR, error, res => callback(res))
       return
     }
   } catch (error) {
     console.log(error)
     console.log(chalk.red('tx failed, reporting now...'))
-    await client.reportFailedTransaction(transactionXDR, res => callback(res))
+    await client.reportFailedTransaction(transactionXDR, error, res => callback(res))
     return
   }
 
@@ -115,10 +122,9 @@ async function handleTransactionReady (record, client) {
     console.log(chalk.green.bold(`Success! View the transaction at: ${transactionResult._links.transaction.href}`))
     await client.removeTransaction(transactionXDR, res => callback(res))
   } catch (e) {
-    console.log('An error has occured:')
-    console.log(e.response.data.extras)
+    console.log(`A Stellar error has occured: ${e.response.data.extras}`)
     console.log(chalk.blue.bold('tx failed, reporting now...'))
-    await client.reportFailedTransaction(transactionXDR, res => callback(res))
+    await client.reportFailedTransaction(transactionXDR, e.response.data.extras, res => callback(res))
   }
 }
 
@@ -182,8 +188,10 @@ async function validateWithdrawal (encodedVestingSchedule, accountID, avgTftPric
   }) || 0
   console.log(`\t total withdrawn already: ${totalWithdrawn}`)
 
+  // TODO: remove simulation
   const now = moment().month(6)
   console.log(`\t simulated now date: ${now}`)
+
   console.log(`\t vesting start date: ${startDate}`)
   const monthsBetweenStartAndNow = now.diff(startDate, 'months')
   console.log(`\t months between start and now: ${monthsBetweenStartAndNow}`)
@@ -207,7 +215,7 @@ async function validateWithdrawal (encodedVestingSchedule, accountID, avgTftPric
   if (canUnlock) {
     return (monthlyWithdrawable * monthsBetweenStartAndNow) - totalWithdrawn
   } else {
-    throw Error('cannot withdraw funds yet')
+    throw Error(`cannot withdraw funds yet, the unlock price condition is $ ${unlockCondition} whilst the price is still $ ${avgTftPrice}`)
   }
 }
 

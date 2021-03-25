@@ -1618,7 +1618,10 @@ export enum FailedVestingWithdrawalOrderByEnum {
   txXdr_DESC = "txXdr_DESC",
 
   block_ASC = "block_ASC",
-  block_DESC = "block_DESC"
+  block_DESC = "block_DESC",
+
+  reason_ASC = "reason_ASC",
+  reason_DESC = "reason_DESC"
 }
 
 registerEnumType(FailedVestingWithdrawalOrderByEnum, {
@@ -1779,6 +1782,21 @@ export class FailedVestingWithdrawalWhereInput {
 
   @TypeGraphQLField(() => [Int], { nullable: true })
   block_in?: number[];
+
+  @TypeGraphQLField({ nullable: true })
+  reason_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  reason_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  reason_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  reason_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  reason_in?: string[];
 }
 
 @TypeGraphQLInputType()
@@ -1803,6 +1821,9 @@ export class FailedVestingWithdrawalCreateInput {
 
   @TypeGraphQLField()
   block!: number;
+
+  @TypeGraphQLField()
+  reason!: string;
 }
 
 @TypeGraphQLInputType()
@@ -1821,6 +1842,9 @@ export class FailedVestingWithdrawalUpdateInput {
 
   @TypeGraphQLField({ nullable: true })
   block?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  reason?: string;
 }
 
 @ArgsType()

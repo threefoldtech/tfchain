@@ -3906,7 +3906,6 @@ dependencies = [
 [[package]]
 name = "pallet-vesting-validator"
 version = "1.0.0"
-source = "git+https://github.com/threefoldtech/substrate-pallets?branch=master#ea4727f4f27639236cf48b1861f36b5dd6ffe9ae"
 dependencies = [
  "frame-support",
  "frame-system",
