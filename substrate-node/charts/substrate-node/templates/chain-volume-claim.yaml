@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    backupType: {{ .Values.threefoldVdc.backup | quote }}
+  name: substrate-node-volume-claim-{{ .Release.Name }}
+spec:
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.volume.size }}

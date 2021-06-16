@@ -1,0 +1,22 @@
+{{- $fullName := include "substrate-node.fullname" . -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}
+  labels:
+    {{- include "substrate-node.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: 80
+      targetPort: {{ .Values.ws_port }}
+      protocol: TCP
+      name: ws
+    - port: {{ .Values.port }}
+      protocol: TCP
+      name: http
+    - port: {{ .Values.rpc_port }}
+      protocol: TCP
+      name: rpc
+  selector:
+    {{- include "substrate-node.selectorLabels" . | nindent 4 }}

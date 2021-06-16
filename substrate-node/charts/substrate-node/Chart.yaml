@@ -1,0 +1,6 @@
+apiVersion: v2
+name: substrate-node
+description: A Helm chart substrate node
+type: application
+version: 0.1.0
+appVersion: "1.16.0"

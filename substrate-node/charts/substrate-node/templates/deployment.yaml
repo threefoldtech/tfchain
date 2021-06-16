@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "substrate-node.fullname" . }}
+  labels:
+    {{- include "substrate-node.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "substrate-node.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "substrate-node.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "substrate-node.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.port }}
+              protocol: TCP
+            - name: rpc
+              containerPort: {{ .Values.rpc_port }}
+              protocol: TCP
+            - name: ws
+              containerPort: {{ .Values.ws_port }}
+              protocol: TCP
+          env:
+          - name: SUBSTRATE_NAME
+            value: {{ .Values.name }}
+          - name: SUBSTRATE_PORT
+            value: {{ .Values.port | quote }}
+          - name: SUBSTRATE_WS_PORT
+            value: {{ .Values.ws_port | quote }}
+          - name: SUBSTRATE_RPC_PORT
+            value: {{ .Values.rpc_port | quote }}
+          - name: SUBSTRATE_BOOT_NODE
+            value: {{ .Values.boot_node }}
+          args: [
+            "--name", "$(SUBSTRATE_NAME)",
+            "--ws-external",
+            "--rpc-cors=all",
+            "--rpc-methods=unsafe",
+            "--base-path=/storage",
+            "--chain=./customSpecRaw.json",
+            "--port", "$(SUBSTRATE_PORT)",
+            "--ws-port", "$(SUBSTRATE_WS_PORT)",
+            "--rpc-port", "$(SUBSTRATE_RPC_PORT)",
+            {{ if .Values.boot_node }}
+            "--bootnodes", "$(SUBSTRATE_BOOT_NODE)",
+            {{ end }}
+            {{ if .Values.is_validator }}
+            "--validator",
+            {{ end }}
+          ]
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: chain-storage-{{ .Release.Name }}
+              mountPath: /storage
+      volumes:
+        - name: chain-storage-{{ .Release.Name }}
+          persistentVolumeClaim:
+            claimName: substrate-node-volume-claim-{{ .Release.Name }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
