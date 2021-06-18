@@ -40,23 +40,23 @@ service:
   type: ClusterIP
   port: 80
 
-name: "substrate03"
-port: 30335
-ws_port: 9946
-rpc_port: 9935
+name: "substrate01"
+port: 30333
+ws_port: 9944
+rpc_port: 9933
 is_validator: true
-boot_node: "/ip4/185.69.167.181/tcp/30333/p2p/12D3KooWKAJoj7CYS32S5JYQZuofrPcdmQM9ghBsdsShKCbcsmPS"
+# boot_node: "/ip4/185.69.167.181/tcp/30333/p2p/12D3KooWKAJoj7CYS32S5JYQZuofrPcdmQM9ghBsdsShKCbcsmPS"
 
 global:
   ingress:
-    certresolver: default
+    certresolver: le
 
 ingress:
   enabled: true
   annotations:
     kubernetes.io/ingress.class: traefik
   hosts:
-    - host: substrate03.threefold.io
+    - host: substrate01.threefold.io
       paths: 
         - /
   tls: []
@@ -82,7 +82,7 @@ autoscaling:
 
 volume:
   size: 10 # GB
-  hostPath: "/chain03"
+  hostPath: "/chain01"
 
 nodeSelector: {}
 

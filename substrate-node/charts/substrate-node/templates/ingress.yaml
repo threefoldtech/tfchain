@@ -11,13 +11,14 @@ metadata:
   name: {{ $fullName }}
   labels:
     {{- include "substrate-node.labels" . | nindent 4 }}
+    backupType: {{ .Values.threefoldVdc.backup | quote }}
   annotations:
-  {{- if .Values.global.ingress.certresolver }}
-    traefik.ingress.kubernetes.io/router.tls.certresolver: {{ .Values.global.ingress.certresolver }}
-  {{- end }}
-  {{- with .Values.ingress.annotations }}
+    {{- with .Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- end }}
+    {{- if .Values.global.ingress.certresolver }}
+    traefik.ingress.kubernetes.io/router.tls.certresolver: {{ .Values.global.ingress.certresolver }}
+    {{- end }}
 spec:
   {{- if .Values.ingress.tls }}
   tls:
