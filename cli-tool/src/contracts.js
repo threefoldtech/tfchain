@@ -187,7 +187,7 @@ async function signEntityCreation (name, countryID, cityID, url, mnemonic) {
   return sig
 }
 
-async function getPrice (mnemonic, url) {
+async function getPrice (url, mnemonic) {
   const client = await getClient(url, mnemonic)
 
   return client.getPrice()

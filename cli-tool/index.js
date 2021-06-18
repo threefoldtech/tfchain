@@ -841,7 +841,7 @@ if (argv._.includes('sign')) {
     })
 }
 if (argv._.includes('getPrice')) {
-  getPrice(argv.a)
+  getPrice(argv.a, argv.m)
     .then(price => {
       console.log('\n price: ')
       console.log(price)
