@@ -24,12 +24,16 @@ export async function tfgridModule_NodeStored(db: DB, event: SubstrateEvent) {
   node.nodeId = node_id.value as number
   node.farmId = farm_id.value as number
 
-  const parsedResource = (resources.value as unknown) as IResource
-
-  node.sru = parsedResource.sru
-  node.cru = parsedResource.cru
-  node.mru = parsedResource.mru
-  node.hru = parsedResource.hru
+  // skip parsed node resource if node id is 1
+  // node with id 1 is on accident stored node with old data model
+  if (node.nodeId !== 1) {
+    const parsedResource = (resources.value as unknown) as IResource
+  
+    node.sru = parsedResource.sru
+    node.cru = parsedResource.cru
+    node.mru = parsedResource.mru
+    node.hru = parsedResource.hru
+  }
 
   const parsedLocation = (location.value as unknown) as ILocation
   
