@@ -6,42 +6,20 @@ import { IResolvers } from 'graphql-tools/dist/Interfaces'
 import * as schema from  './schema.graphql'
 
 export interface Query {
-    cities: <T = Array<City>>(args: { offset?: Int | null, limit?: Int | null, where?: CityWhereInput | null, orderBy?: CityOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    city: <T = City | null>(args: { where: CityWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    citiesConnection: <T = CityConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: CityWhereInput | null, orderBy?: CityOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    countries: <T = Array<Country>>(args: { offset?: Int | null, limit?: Int | null, where?: CountryWhereInput | null, orderBy?: CountryOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    country: <T = Country | null>(args: { where: CountryWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    countriesConnection: <T = CountryConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: CountryWhereInput | null, orderBy?: CountryOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    entityProofs: <T = Array<EntityProof>>(args: { offset?: Int | null, limit?: Int | null, where?: EntityProofWhereInput | null, orderBy?: EntityProofOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    entityProof: <T = EntityProof | null>(args: { where: EntityProofWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    entityProofsConnection: <T = EntityProofConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: EntityProofWhereInput | null, orderBy?: EntityProofOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    entities: <T = Array<Entity>>(args: { offset?: Int | null, limit?: Int | null, where?: EntityWhereInput | null, orderBy?: EntityOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    entity: <T = Entity | null>(args: { where: EntityWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    entitiesConnection: <T = EntityConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: EntityWhereInput | null, orderBy?: EntityOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    farms: <T = Array<Farm>>(args: { offset?: Int | null, limit?: Int | null, where?: FarmWhereInput | null, orderBy?: FarmOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    farm: <T = Farm | null>(args: { where: FarmWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    farmsConnection: <T = FarmConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: FarmWhereInput | null, orderBy?: FarmOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    locations: <T = Array<Location>>(args: { offset?: Int | null, limit?: Int | null, where?: LocationWhereInput | null, orderBy?: LocationOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    location: <T = Location | null>(args: { where: LocationWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    locationsConnection: <T = LocationConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: LocationWhereInput | null, orderBy?: LocationOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    nodes: <T = Array<Node>>(args: { offset?: Int | null, limit?: Int | null, where?: NodeWhereInput | null, orderBy?: NodeOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    node: <T = Node | null>(args: { where: NodeWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    nodesConnection: <T = NodeConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: NodeWhereInput | null, orderBy?: NodeOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    pricingPolicies: <T = Array<PricingPolicy>>(args: { offset?: Int | null, limit?: Int | null, where?: PricingPolicyWhereInput | null, orderBy?: PricingPolicyOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    pricingPolicy: <T = PricingPolicy | null>(args: { where: PricingPolicyWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    pricingPoliciesConnection: <T = PricingPolicyConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: PricingPolicyWhereInput | null, orderBy?: PricingPolicyOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    commentSearch: <T = Array<CommentSearchFTSOutput>>(args: { limit?: Int | null, text: String }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    transfers: <T = Array<Transfer>>(args: { offset?: Int | null, limit?: Int | null, where?: TransferWhereInput | null, orderBy?: TransferOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    transfer: <T = Transfer | null>(args: { where: TransferWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    transfersConnection: <T = TransferConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: TransferWhereInput | null, orderBy?: TransferOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    twins: <T = Array<Twin>>(args: { offset?: Int | null, limit?: Int | null, where?: TwinWhereInput | null, orderBy?: TwinOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    twin: <T = Twin | null>(args: { where: TwinWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    twinsConnection: <T = TwinConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: TwinWhereInput | null, orderBy?: TwinOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> 
+    blockTimestamps: <T = Array<BlockTimestamp>>(args: { offset?: Int | null, limit?: Int | null, where?: BlockTimestampWhereInput | null, orderBy?: Array<BlockTimestampOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    blockTimestampByUniqueInput: <T = BlockTimestamp | null>(args: { where: BlockTimestampWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    blockTimestampsConnection: <T = BlockTimestampConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: BlockTimestampWhereInput | null, orderBy?: Array<BlockTimestampOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    commentSearch: <T = Array<CommentSearchFTSOutput>>(args: { whereTransfer?: TransferWhereInput | null, skip?: Int | null, limit?: Int | null, text: String }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    transfers: <T = Array<Transfer>>(args: { offset?: Int | null, limit?: Int | null, where?: TransferWhereInput | null, orderBy?: Array<TransferOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    transferByUniqueInput: <T = Transfer | null>(args: { where: TransferWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    transfersConnection: <T = TransferConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: TransferWhereInput | null, orderBy?: Array<TransferOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> 
   }
 
 export interface Mutation {}
 
-export interface Subscription {}
+export interface Subscription {
+    stateSubscription: <T = ProcessorState>(args?: {}, info?: GraphQLResolveInfo | string, options?: Options) => Promise<AsyncIterator<T>> 
+  }
 
 export interface Binding {
   query: Query
@@ -67,151 +45,16 @@ export const Binding = makeBindingClass<BindingConstructor<Binding>>({ schema: s
  * Types
 */
 
-export type CertificationType =   'None' |
-  'Silver' |
-  'Gold'
-
-export type CityOrderByInput =   'createdAt_ASC' |
+export type BlockTimestampOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
   'updatedAt_ASC' |
   'updatedAt_DESC' |
   'deletedAt_ASC' |
   'deletedAt_DESC' |
-  'countryId_ASC' |
-  'countryId_DESC' |
-  'name_ASC' |
-  'name_DESC'
-
-export type CountryOrderByInput =   'createdAt_ASC' |
-  'createdAt_DESC' |
-  'updatedAt_ASC' |
-  'updatedAt_DESC' |
-  'deletedAt_ASC' |
-  'deletedAt_DESC' |
-  'code_ASC' |
-  'code_DESC' |
-  'name_ASC' |
-  'name_DESC'
-
-export type EntityOrderByInput =   'createdAt_ASC' |
-  'createdAt_DESC' |
-  'updatedAt_ASC' |
-  'updatedAt_DESC' |
-  'deletedAt_ASC' |
-  'deletedAt_DESC' |
-  'gridVersion_ASC' |
-  'gridVersion_DESC' |
-  'entityId_ASC' |
-  'entityId_DESC' |
-  'name_ASC' |
-  'name_DESC' |
-  'countryId_ASC' |
-  'countryId_DESC' |
-  'cityId_ASC' |
-  'cityId_DESC' |
-  'address_ASC' |
-  'address_DESC'
-
-export type EntityProofOrderByInput =   'createdAt_ASC' |
-  'createdAt_DESC' |
-  'updatedAt_ASC' |
-  'updatedAt_DESC' |
-  'deletedAt_ASC' |
-  'deletedAt_DESC' |
-  'entityId_ASC' |
-  'entityId_DESC' |
-  'signature_ASC' |
-  'signature_DESC' |
-  'twinRelId_ASC' |
-  'twinRelId_DESC'
-
-export type FarmOrderByInput =   'createdAt_ASC' |
-  'createdAt_DESC' |
-  'updatedAt_ASC' |
-  'updatedAt_DESC' |
-  'deletedAt_ASC' |
-  'deletedAt_DESC' |
-  'gridVersion_ASC' |
-  'gridVersion_DESC' |
-  'farmId_ASC' |
-  'farmId_DESC' |
-  'name_ASC' |
-  'name_DESC' |
-  'twinId_ASC' |
-  'twinId_DESC' |
-  'pricingPolicyId_ASC' |
-  'pricingPolicyId_DESC' |
-  'certificationType_ASC' |
-  'certificationType_DESC' |
-  'countryId_ASC' |
-  'countryId_DESC' |
-  'cityId_ASC' |
-  'cityId_DESC'
-
-export type LocationOrderByInput =   'createdAt_ASC' |
-  'createdAt_DESC' |
-  'updatedAt_ASC' |
-  'updatedAt_DESC' |
-  'deletedAt_ASC' |
-  'deletedAt_DESC' |
-  'longitude_ASC' |
-  'longitude_DESC' |
-  'latitude_ASC' |
-  'latitude_DESC'
-
-export type NodeOrderByInput =   'createdAt_ASC' |
-  'createdAt_DESC' |
-  'updatedAt_ASC' |
-  'updatedAt_DESC' |
-  'deletedAt_ASC' |
-  'deletedAt_DESC' |
-  'gridVersion_ASC' |
-  'gridVersion_DESC' |
-  'nodeId_ASC' |
-  'nodeId_DESC' |
-  'farmId_ASC' |
-  'farmId_DESC' |
-  'locationId_ASC' |
-  'locationId_DESC' |
-  'countryId_ASC' |
-  'countryId_DESC' |
-  'cityId_ASC' |
-  'cityId_DESC' |
-  'address_ASC' |
-  'address_DESC' |
-  'pubKey_ASC' |
-  'pubKey_DESC' |
-  'hru_ASC' |
-  'hru_DESC' |
-  'sru_ASC' |
-  'sru_DESC' |
-  'cru_ASC' |
-  'cru_DESC' |
-  'mru_ASC' |
-  'mru_DESC' |
-  'role_ASC' |
-  'role_DESC'
-
-export type PricingPolicyOrderByInput =   'createdAt_ASC' |
-  'createdAt_DESC' |
-  'updatedAt_ASC' |
-  'updatedAt_DESC' |
-  'deletedAt_ASC' |
-  'deletedAt_DESC' |
-  'gridVersion_ASC' |
-  'gridVersion_DESC' |
-  'pricingPolicyId_ASC' |
-  'pricingPolicyId_DESC' |
-  'name_ASC' |
-  'name_DESC' |
-  'currency_ASC' |
-  'currency_DESC' |
-  'su_ASC' |
-  'su_DESC' |
-  'cu_ASC' |
-  'cu_DESC' |
-  'nu_ASC' |
-  'nu_DESC'
+  'blockNumber_ASC' |
+  'blockNumber_DESC' |
+  'timestamp_ASC' |
+  'timestamp_DESC'
 
 export type TransferOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -228,22 +71,13 @@ export type TransferOrderByInput =   'createdAt_ASC' |
   'comment_ASC' |
   'comment_DESC' |
   'block_ASC' |
-  'block_DESC'
-
-export type TwinOrderByInput =   'createdAt_ASC' |
-  'createdAt_DESC' |
-  'updatedAt_ASC' |
-  'updatedAt_DESC' |
-  'deletedAt_ASC' |
-  'deletedAt_DESC' |
-  'gridVersion_ASC' |
-  'gridVersion_DESC' |
-  'twinId_ASC' |
-  'twinId_DESC' |
-  'address_ASC' |
-  'address_DESC' |
-  'ip_ASC' |
-  'ip_DESC'
+  'block_DESC' |
+  'tip_ASC' |
+  'tip_DESC' |
+  'timestamp_ASC' |
+  'timestamp_DESC' |
+  'insertedAt_ASC' |
+  'insertedAt_DESC'
 
 export interface BaseWhereInput {
   id_eq?: String | null
@@ -269,17 +103,17 @@ export interface BaseWhereInput {
   deletedById_eq?: String | null
 }
 
-export interface CityCreateInput {
-  countryId: Float
-  name: String
+export interface BlockTimestampCreateInput {
+  blockNumber: Float
+  timestamp: BigInt
 }
 
-export interface CityUpdateInput {
-  countryId?: Float | null
-  name?: String | null
+export interface BlockTimestampUpdateInput {
+  blockNumber?: Float | null
+  timestamp?: BigInt | null
 }
 
-export interface CityWhereInput {
+export interface BlockTimestampWhereInput {
   id_eq?: ID_Input | null
   id_in?: ID_Output[] | ID_Output | null
   createdAt_eq?: DateTime | null
@@ -304,599 +138,46 @@ export interface CityWhereInput {
   deletedAt_gte?: DateTime | null
   deletedById_eq?: ID_Input | null
   deletedById_in?: ID_Output[] | ID_Output | null
-  countryId_eq?: Int | null
-  countryId_gt?: Int | null
-  countryId_gte?: Int | null
-  countryId_lt?: Int | null
-  countryId_lte?: Int | null
-  countryId_in?: Int[] | Int | null
-  name_eq?: String | null
-  name_contains?: String | null
-  name_startsWith?: String | null
-  name_endsWith?: String | null
-  name_in?: String[] | String | null
+  blockNumber_eq?: Int | null
+  blockNumber_gt?: Int | null
+  blockNumber_gte?: Int | null
+  blockNumber_lt?: Int | null
+  blockNumber_lte?: Int | null
+  blockNumber_in?: Int[] | Int | null
+  timestamp_eq?: BigInt | null
+  timestamp_gt?: BigInt | null
+  timestamp_gte?: BigInt | null
+  timestamp_lt?: BigInt | null
+  timestamp_lte?: BigInt | null
+  timestamp_in?: BigInt[] | BigInt | null
+  AND?: BlockTimestampWhereInput[] | BlockTimestampWhereInput | null
+  OR?: BlockTimestampWhereInput[] | BlockTimestampWhereInput | null
 }
 
-export interface CityWhereUniqueInput {
-  id: ID_Output
-}
-
-export interface CountryCreateInput {
-  code: String
-  name: String
-}
-
-export interface CountryUpdateInput {
-  code?: String | null
-  name?: String | null
-}
-
-export interface CountryWhereInput {
-  id_eq?: ID_Input | null
-  id_in?: ID_Output[] | ID_Output | null
-  createdAt_eq?: DateTime | null
-  createdAt_lt?: DateTime | null
-  createdAt_lte?: DateTime | null
-  createdAt_gt?: DateTime | null
-  createdAt_gte?: DateTime | null
-  createdById_eq?: ID_Input | null
-  createdById_in?: ID_Output[] | ID_Output | null
-  updatedAt_eq?: DateTime | null
-  updatedAt_lt?: DateTime | null
-  updatedAt_lte?: DateTime | null
-  updatedAt_gt?: DateTime | null
-  updatedAt_gte?: DateTime | null
-  updatedById_eq?: ID_Input | null
-  updatedById_in?: ID_Output[] | ID_Output | null
-  deletedAt_all?: Boolean | null
-  deletedAt_eq?: DateTime | null
-  deletedAt_lt?: DateTime | null
-  deletedAt_lte?: DateTime | null
-  deletedAt_gt?: DateTime | null
-  deletedAt_gte?: DateTime | null
-  deletedById_eq?: ID_Input | null
-  deletedById_in?: ID_Output[] | ID_Output | null
-  code_eq?: String | null
-  code_contains?: String | null
-  code_startsWith?: String | null
-  code_endsWith?: String | null
-  code_in?: String[] | String | null
-  name_eq?: String | null
-  name_contains?: String | null
-  name_startsWith?: String | null
-  name_endsWith?: String | null
-  name_in?: String[] | String | null
-}
-
-export interface CountryWhereUniqueInput {
-  id: ID_Output
-}
-
-export interface EntityCreateInput {
-  gridVersion: Float
-  entityId: Float
-  name: String
-  countryId?: Float | null
-  cityId?: Float | null
-  address: String
-}
-
-export interface EntityProofCreateInput {
-  entityId: Float
-  signature: String
-  twinRelId: ID_Output
-}
-
-export interface EntityProofUpdateInput {
-  entityId?: Float | null
-  signature?: String | null
-  twinRelId?: ID_Input | null
-}
-
-export interface EntityProofWhereInput {
-  id_eq?: ID_Input | null
-  id_in?: ID_Output[] | ID_Output | null
-  createdAt_eq?: DateTime | null
-  createdAt_lt?: DateTime | null
-  createdAt_lte?: DateTime | null
-  createdAt_gt?: DateTime | null
-  createdAt_gte?: DateTime | null
-  createdById_eq?: ID_Input | null
-  createdById_in?: ID_Output[] | ID_Output | null
-  updatedAt_eq?: DateTime | null
-  updatedAt_lt?: DateTime | null
-  updatedAt_lte?: DateTime | null
-  updatedAt_gt?: DateTime | null
-  updatedAt_gte?: DateTime | null
-  updatedById_eq?: ID_Input | null
-  updatedById_in?: ID_Output[] | ID_Output | null
-  deletedAt_all?: Boolean | null
-  deletedAt_eq?: DateTime | null
-  deletedAt_lt?: DateTime | null
-  deletedAt_lte?: DateTime | null
-  deletedAt_gt?: DateTime | null
-  deletedAt_gte?: DateTime | null
-  deletedById_eq?: ID_Input | null
-  deletedById_in?: ID_Output[] | ID_Output | null
-  entityId_eq?: Int | null
-  entityId_gt?: Int | null
-  entityId_gte?: Int | null
-  entityId_lt?: Int | null
-  entityId_lte?: Int | null
-  entityId_in?: Int[] | Int | null
-  signature_eq?: String | null
-  signature_contains?: String | null
-  signature_startsWith?: String | null
-  signature_endsWith?: String | null
-  signature_in?: String[] | String | null
-  twinRelId_eq?: ID_Input | null
-  twinRelId_in?: ID_Output[] | ID_Output | null
-}
-
-export interface EntityProofWhereUniqueInput {
-  id: ID_Output
-}
-
-export interface EntityUpdateInput {
-  gridVersion?: Float | null
-  entityId?: Float | null
-  name?: String | null
-  countryId?: Float | null
-  cityId?: Float | null
-  address?: String | null
-}
-
-export interface EntityWhereInput {
-  id_eq?: ID_Input | null
-  id_in?: ID_Output[] | ID_Output | null
-  createdAt_eq?: DateTime | null
-  createdAt_lt?: DateTime | null
-  createdAt_lte?: DateTime | null
-  createdAt_gt?: DateTime | null
-  createdAt_gte?: DateTime | null
-  createdById_eq?: ID_Input | null
-  createdById_in?: ID_Output[] | ID_Output | null
-  updatedAt_eq?: DateTime | null
-  updatedAt_lt?: DateTime | null
-  updatedAt_lte?: DateTime | null
-  updatedAt_gt?: DateTime | null
-  updatedAt_gte?: DateTime | null
-  updatedById_eq?: ID_Input | null
-  updatedById_in?: ID_Output[] | ID_Output | null
-  deletedAt_all?: Boolean | null
-  deletedAt_eq?: DateTime | null
-  deletedAt_lt?: DateTime | null
-  deletedAt_lte?: DateTime | null
-  deletedAt_gt?: DateTime | null
-  deletedAt_gte?: DateTime | null
-  deletedById_eq?: ID_Input | null
-  deletedById_in?: ID_Output[] | ID_Output | null
-  gridVersion_eq?: Int | null
-  gridVersion_gt?: Int | null
-  gridVersion_gte?: Int | null
-  gridVersion_lt?: Int | null
-  gridVersion_lte?: Int | null
-  gridVersion_in?: Int[] | Int | null
-  entityId_eq?: Int | null
-  entityId_gt?: Int | null
-  entityId_gte?: Int | null
-  entityId_lt?: Int | null
-  entityId_lte?: Int | null
-  entityId_in?: Int[] | Int | null
-  name_eq?: String | null
-  name_contains?: String | null
-  name_startsWith?: String | null
-  name_endsWith?: String | null
-  name_in?: String[] | String | null
-  countryId_eq?: Int | null
-  countryId_gt?: Int | null
-  countryId_gte?: Int | null
-  countryId_lt?: Int | null
-  countryId_lte?: Int | null
-  countryId_in?: Int[] | Int | null
-  cityId_eq?: Int | null
-  cityId_gt?: Int | null
-  cityId_gte?: Int | null
-  cityId_lt?: Int | null
-  cityId_lte?: Int | null
-  cityId_in?: Int[] | Int | null
-  address_eq?: String | null
-  address_contains?: String | null
-  address_startsWith?: String | null
-  address_endsWith?: String | null
-  address_in?: String[] | String | null
-}
-
-export interface EntityWhereUniqueInput {
-  id: ID_Output
-}
-
-export interface FarmCreateInput {
-  gridVersion: Float
-  farmId: Float
-  name: String
-  twinId: Float
-  pricingPolicyId: Float
-  certificationType: CertificationType
-  countryId?: Float | null
-  cityId?: Float | null
-}
-
-export interface FarmUpdateInput {
-  gridVersion?: Float | null
-  farmId?: Float | null
-  name?: String | null
-  twinId?: Float | null
-  pricingPolicyId?: Float | null
-  certificationType?: CertificationType | null
-  countryId?: Float | null
-  cityId?: Float | null
-}
-
-export interface FarmWhereInput {
-  id_eq?: ID_Input | null
-  id_in?: ID_Output[] | ID_Output | null
-  createdAt_eq?: DateTime | null
-  createdAt_lt?: DateTime | null
-  createdAt_lte?: DateTime | null
-  createdAt_gt?: DateTime | null
-  createdAt_gte?: DateTime | null
-  createdById_eq?: ID_Input | null
-  createdById_in?: ID_Output[] | ID_Output | null
-  updatedAt_eq?: DateTime | null
-  updatedAt_lt?: DateTime | null
-  updatedAt_lte?: DateTime | null
-  updatedAt_gt?: DateTime | null
-  updatedAt_gte?: DateTime | null
-  updatedById_eq?: ID_Input | null
-  updatedById_in?: ID_Output[] | ID_Output | null
-  deletedAt_all?: Boolean | null
-  deletedAt_eq?: DateTime | null
-  deletedAt_lt?: DateTime | null
-  deletedAt_lte?: DateTime | null
-  deletedAt_gt?: DateTime | null
-  deletedAt_gte?: DateTime | null
-  deletedById_eq?: ID_Input | null
-  deletedById_in?: ID_Output[] | ID_Output | null
-  gridVersion_eq?: Int | null
-  gridVersion_gt?: Int | null
-  gridVersion_gte?: Int | null
-  gridVersion_lt?: Int | null
-  gridVersion_lte?: Int | null
-  gridVersion_in?: Int[] | Int | null
-  farmId_eq?: Int | null
-  farmId_gt?: Int | null
-  farmId_gte?: Int | null
-  farmId_lt?: Int | null
-  farmId_lte?: Int | null
-  farmId_in?: Int[] | Int | null
-  name_eq?: String | null
-  name_contains?: String | null
-  name_startsWith?: String | null
-  name_endsWith?: String | null
-  name_in?: String[] | String | null
-  twinId_eq?: Int | null
-  twinId_gt?: Int | null
-  twinId_gte?: Int | null
-  twinId_lt?: Int | null
-  twinId_lte?: Int | null
-  twinId_in?: Int[] | Int | null
-  pricingPolicyId_eq?: Int | null
-  pricingPolicyId_gt?: Int | null
-  pricingPolicyId_gte?: Int | null
-  pricingPolicyId_lt?: Int | null
-  pricingPolicyId_lte?: Int | null
-  pricingPolicyId_in?: Int[] | Int | null
-  certificationType_eq?: CertificationType | null
-  certificationType_in?: CertificationType[] | CertificationType | null
-  countryId_eq?: Int | null
-  countryId_gt?: Int | null
-  countryId_gte?: Int | null
-  countryId_lt?: Int | null
-  countryId_lte?: Int | null
-  countryId_in?: Int[] | Int | null
-  cityId_eq?: Int | null
-  cityId_gt?: Int | null
-  cityId_gte?: Int | null
-  cityId_lt?: Int | null
-  cityId_lte?: Int | null
-  cityId_in?: Int[] | Int | null
-}
-
-export interface FarmWhereUniqueInput {
-  id: ID_Output
-}
-
-export interface LocationCreateInput {
-  longitude: String
-  latitude: String
-}
-
-export interface LocationUpdateInput {
-  longitude?: String | null
-  latitude?: String | null
-}
-
-export interface LocationWhereInput {
-  id_eq?: ID_Input | null
-  id_in?: ID_Output[] | ID_Output | null
-  createdAt_eq?: DateTime | null
-  createdAt_lt?: DateTime | null
-  createdAt_lte?: DateTime | null
-  createdAt_gt?: DateTime | null
-  createdAt_gte?: DateTime | null
-  createdById_eq?: ID_Input | null
-  createdById_in?: ID_Output[] | ID_Output | null
-  updatedAt_eq?: DateTime | null
-  updatedAt_lt?: DateTime | null
-  updatedAt_lte?: DateTime | null
-  updatedAt_gt?: DateTime | null
-  updatedAt_gte?: DateTime | null
-  updatedById_eq?: ID_Input | null
-  updatedById_in?: ID_Output[] | ID_Output | null
-  deletedAt_all?: Boolean | null
-  deletedAt_eq?: DateTime | null
-  deletedAt_lt?: DateTime | null
-  deletedAt_lte?: DateTime | null
-  deletedAt_gt?: DateTime | null
-  deletedAt_gte?: DateTime | null
-  deletedById_eq?: ID_Input | null
-  deletedById_in?: ID_Output[] | ID_Output | null
-  longitude_eq?: String | null
-  longitude_contains?: String | null
-  longitude_startsWith?: String | null
-  longitude_endsWith?: String | null
-  longitude_in?: String[] | String | null
-  latitude_eq?: String | null
-  latitude_contains?: String | null
-  latitude_startsWith?: String | null
-  latitude_endsWith?: String | null
-  latitude_in?: String[] | String | null
-}
-
-export interface LocationWhereUniqueInput {
-  id: ID_Output
-}
-
-export interface NodeCreateInput {
-  gridVersion: Float
-  nodeId: Float
-  farmId: Float
-  locationId: ID_Output
-  countryId?: Float | null
-  cityId?: Float | null
-  address: String
-  pubKey: String
-  hru?: Float | null
-  sru?: Float | null
-  cru?: Float | null
-  mru?: Float | null
-  role: String
-}
-
-export interface NodeUpdateInput {
-  gridVersion?: Float | null
-  nodeId?: Float | null
-  farmId?: Float | null
-  locationId?: ID_Input | null
-  countryId?: Float | null
-  cityId?: Float | null
-  address?: String | null
-  pubKey?: String | null
-  hru?: Float | null
-  sru?: Float | null
-  cru?: Float | null
-  mru?: Float | null
-  role?: String | null
-}
-
-export interface NodeWhereInput {
-  id_eq?: ID_Input | null
-  id_in?: ID_Output[] | ID_Output | null
-  createdAt_eq?: DateTime | null
-  createdAt_lt?: DateTime | null
-  createdAt_lte?: DateTime | null
-  createdAt_gt?: DateTime | null
-  createdAt_gte?: DateTime | null
-  createdById_eq?: ID_Input | null
-  createdById_in?: ID_Output[] | ID_Output | null
-  updatedAt_eq?: DateTime | null
-  updatedAt_lt?: DateTime | null
-  updatedAt_lte?: DateTime | null
-  updatedAt_gt?: DateTime | null
-  updatedAt_gte?: DateTime | null
-  updatedById_eq?: ID_Input | null
-  updatedById_in?: ID_Output[] | ID_Output | null
-  deletedAt_all?: Boolean | null
-  deletedAt_eq?: DateTime | null
-  deletedAt_lt?: DateTime | null
-  deletedAt_lte?: DateTime | null
-  deletedAt_gt?: DateTime | null
-  deletedAt_gte?: DateTime | null
-  deletedById_eq?: ID_Input | null
-  deletedById_in?: ID_Output[] | ID_Output | null
-  gridVersion_eq?: Int | null
-  gridVersion_gt?: Int | null
-  gridVersion_gte?: Int | null
-  gridVersion_lt?: Int | null
-  gridVersion_lte?: Int | null
-  gridVersion_in?: Int[] | Int | null
-  nodeId_eq?: Int | null
-  nodeId_gt?: Int | null
-  nodeId_gte?: Int | null
-  nodeId_lt?: Int | null
-  nodeId_lte?: Int | null
-  nodeId_in?: Int[] | Int | null
-  farmId_eq?: Int | null
-  farmId_gt?: Int | null
-  farmId_gte?: Int | null
-  farmId_lt?: Int | null
-  farmId_lte?: Int | null
-  farmId_in?: Int[] | Int | null
-  locationId_eq?: ID_Input | null
-  locationId_in?: ID_Output[] | ID_Output | null
-  countryId_eq?: Int | null
-  countryId_gt?: Int | null
-  countryId_gte?: Int | null
-  countryId_lt?: Int | null
-  countryId_lte?: Int | null
-  countryId_in?: Int[] | Int | null
-  cityId_eq?: Int | null
-  cityId_gt?: Int | null
-  cityId_gte?: Int | null
-  cityId_lt?: Int | null
-  cityId_lte?: Int | null
-  cityId_in?: Int[] | Int | null
-  address_eq?: String | null
-  address_contains?: String | null
-  address_startsWith?: String | null
-  address_endsWith?: String | null
-  address_in?: String[] | String | null
-  pubKey_eq?: String | null
-  pubKey_contains?: String | null
-  pubKey_startsWith?: String | null
-  pubKey_endsWith?: String | null
-  pubKey_in?: String[] | String | null
-  hru_eq?: Int | null
-  hru_gt?: Int | null
-  hru_gte?: Int | null
-  hru_lt?: Int | null
-  hru_lte?: Int | null
-  hru_in?: Int[] | Int | null
-  sru_eq?: Int | null
-  sru_gt?: Int | null
-  sru_gte?: Int | null
-  sru_lt?: Int | null
-  sru_lte?: Int | null
-  sru_in?: Int[] | Int | null
-  cru_eq?: Int | null
-  cru_gt?: Int | null
-  cru_gte?: Int | null
-  cru_lt?: Int | null
-  cru_lte?: Int | null
-  cru_in?: Int[] | Int | null
-  mru_eq?: Int | null
-  mru_gt?: Int | null
-  mru_gte?: Int | null
-  mru_lt?: Int | null
-  mru_lte?: Int | null
-  mru_in?: Int[] | Int | null
-  role_eq?: String | null
-  role_contains?: String | null
-  role_startsWith?: String | null
-  role_endsWith?: String | null
-  role_in?: String[] | String | null
-}
-
-export interface NodeWhereUniqueInput {
-  id: ID_Output
-}
-
-export interface PricingPolicyCreateInput {
-  gridVersion: Float
-  pricingPolicyId: Float
-  name: String
-  currency: String
-  su: Float
-  cu: Float
-  nu: Float
-}
-
-export interface PricingPolicyUpdateInput {
-  gridVersion?: Float | null
-  pricingPolicyId?: Float | null
-  name?: String | null
-  currency?: String | null
-  su?: Float | null
-  cu?: Float | null
-  nu?: Float | null
-}
-
-export interface PricingPolicyWhereInput {
-  id_eq?: ID_Input | null
-  id_in?: ID_Output[] | ID_Output | null
-  createdAt_eq?: DateTime | null
-  createdAt_lt?: DateTime | null
-  createdAt_lte?: DateTime | null
-  createdAt_gt?: DateTime | null
-  createdAt_gte?: DateTime | null
-  createdById_eq?: ID_Input | null
-  createdById_in?: ID_Output[] | ID_Output | null
-  updatedAt_eq?: DateTime | null
-  updatedAt_lt?: DateTime | null
-  updatedAt_lte?: DateTime | null
-  updatedAt_gt?: DateTime | null
-  updatedAt_gte?: DateTime | null
-  updatedById_eq?: ID_Input | null
-  updatedById_in?: ID_Output[] | ID_Output | null
-  deletedAt_all?: Boolean | null
-  deletedAt_eq?: DateTime | null
-  deletedAt_lt?: DateTime | null
-  deletedAt_lte?: DateTime | null
-  deletedAt_gt?: DateTime | null
-  deletedAt_gte?: DateTime | null
-  deletedById_eq?: ID_Input | null
-  deletedById_in?: ID_Output[] | ID_Output | null
-  gridVersion_eq?: Int | null
-  gridVersion_gt?: Int | null
-  gridVersion_gte?: Int | null
-  gridVersion_lt?: Int | null
-  gridVersion_lte?: Int | null
-  gridVersion_in?: Int[] | Int | null
-  pricingPolicyId_eq?: Int | null
-  pricingPolicyId_gt?: Int | null
-  pricingPolicyId_gte?: Int | null
-  pricingPolicyId_lt?: Int | null
-  pricingPolicyId_lte?: Int | null
-  pricingPolicyId_in?: Int[] | Int | null
-  name_eq?: String | null
-  name_contains?: String | null
-  name_startsWith?: String | null
-  name_endsWith?: String | null
-  name_in?: String[] | String | null
-  currency_eq?: String | null
-  currency_contains?: String | null
-  currency_startsWith?: String | null
-  currency_endsWith?: String | null
-  currency_in?: String[] | String | null
-  su_eq?: Int | null
-  su_gt?: Int | null
-  su_gte?: Int | null
-  su_lt?: Int | null
-  su_lte?: Int | null
-  su_in?: Int[] | Int | null
-  cu_eq?: Int | null
-  cu_gt?: Int | null
-  cu_gte?: Int | null
-  cu_lt?: Int | null
-  cu_lte?: Int | null
-  cu_in?: Int[] | Int | null
-  nu_eq?: Int | null
-  nu_gt?: Int | null
-  nu_gte?: Int | null
-  nu_lt?: Int | null
-  nu_lte?: Int | null
-  nu_in?: Int[] | Int | null
-}
-
-export interface PricingPolicyWhereUniqueInput {
+export interface BlockTimestampWhereUniqueInput {
   id: ID_Output
 }
 
 export interface TransferCreateInput {
-  from: String
-  to: String
+  from: Bytes
+  to: Bytes
   value: BigInt
   comment?: String | null
   block: Float
+  tip: BigInt
+  timestamp: BigInt
+  insertedAt: DateTime
 }
 
 export interface TransferUpdateInput {
-  from?: String | null
-  to?: String | null
+  from?: Bytes | null
+  to?: Bytes | null
   value?: BigInt | null
   comment?: String | null
   block?: Float | null
+  tip?: BigInt | null
+  timestamp?: BigInt | null
+  insertedAt?: DateTime | null
 }
 
 export interface TransferWhereInput {
@@ -924,16 +205,10 @@ export interface TransferWhereInput {
   deletedAt_gte?: DateTime | null
   deletedById_eq?: ID_Input | null
   deletedById_in?: ID_Output[] | ID_Output | null
-  from_eq?: String | null
-  from_contains?: String | null
-  from_startsWith?: String | null
-  from_endsWith?: String | null
-  from_in?: String[] | String | null
-  to_eq?: String | null
-  to_contains?: String | null
-  to_startsWith?: String | null
-  to_endsWith?: String | null
-  to_in?: String[] | String | null
+  from_eq?: Bytes | null
+  from_in?: Bytes[] | Bytes | null
+  to_eq?: Bytes | null
+  to_in?: Bytes[] | Bytes | null
   value_eq?: BigInt | null
   value_gt?: BigInt | null
   value_gte?: BigInt | null
@@ -951,76 +226,28 @@ export interface TransferWhereInput {
   block_lt?: Int | null
   block_lte?: Int | null
   block_in?: Int[] | Int | null
+  tip_eq?: BigInt | null
+  tip_gt?: BigInt | null
+  tip_gte?: BigInt | null
+  tip_lt?: BigInt | null
+  tip_lte?: BigInt | null
+  tip_in?: BigInt[] | BigInt | null
+  timestamp_eq?: BigInt | null
+  timestamp_gt?: BigInt | null
+  timestamp_gte?: BigInt | null
+  timestamp_lt?: BigInt | null
+  timestamp_lte?: BigInt | null
+  timestamp_in?: BigInt[] | BigInt | null
+  insertedAt_eq?: DateTime | null
+  insertedAt_lt?: DateTime | null
+  insertedAt_lte?: DateTime | null
+  insertedAt_gt?: DateTime | null
+  insertedAt_gte?: DateTime | null
+  AND?: TransferWhereInput[] | TransferWhereInput | null
+  OR?: TransferWhereInput[] | TransferWhereInput | null
 }
 
 export interface TransferWhereUniqueInput {
-  id: ID_Output
-}
-
-export interface TwinCreateInput {
-  gridVersion: Float
-  twinId: Float
-  address: String
-  ip: String
-}
-
-export interface TwinUpdateInput {
-  gridVersion?: Float | null
-  twinId?: Float | null
-  address?: String | null
-  ip?: String | null
-}
-
-export interface TwinWhereInput {
-  id_eq?: ID_Input | null
-  id_in?: ID_Output[] | ID_Output | null
-  createdAt_eq?: DateTime | null
-  createdAt_lt?: DateTime | null
-  createdAt_lte?: DateTime | null
-  createdAt_gt?: DateTime | null
-  createdAt_gte?: DateTime | null
-  createdById_eq?: ID_Input | null
-  createdById_in?: ID_Output[] | ID_Output | null
-  updatedAt_eq?: DateTime | null
-  updatedAt_lt?: DateTime | null
-  updatedAt_lte?: DateTime | null
-  updatedAt_gt?: DateTime | null
-  updatedAt_gte?: DateTime | null
-  updatedById_eq?: ID_Input | null
-  updatedById_in?: ID_Output[] | ID_Output | null
-  deletedAt_all?: Boolean | null
-  deletedAt_eq?: DateTime | null
-  deletedAt_lt?: DateTime | null
-  deletedAt_lte?: DateTime | null
-  deletedAt_gt?: DateTime | null
-  deletedAt_gte?: DateTime | null
-  deletedById_eq?: ID_Input | null
-  deletedById_in?: ID_Output[] | ID_Output | null
-  gridVersion_eq?: Int | null
-  gridVersion_gt?: Int | null
-  gridVersion_gte?: Int | null
-  gridVersion_lt?: Int | null
-  gridVersion_lte?: Int | null
-  gridVersion_in?: Int[] | Int | null
-  twinId_eq?: Int | null
-  twinId_gt?: Int | null
-  twinId_gte?: Int | null
-  twinId_lt?: Int | null
-  twinId_lte?: Int | null
-  twinId_in?: Int[] | Int | null
-  address_eq?: String | null
-  address_contains?: String | null
-  address_startsWith?: String | null
-  address_endsWith?: String | null
-  address_in?: String[] | String | null
-  ip_eq?: String | null
-  ip_contains?: String | null
-  ip_startsWith?: String | null
-  ip_endsWith?: String | null
-  ip_in?: String[] | String | null
-}
-
-export interface TwinWhereUniqueInput {
   id: ID_Output
 }
 
@@ -1061,7 +288,11 @@ export interface BaseModelUUID extends BaseGraphQLObject {
   version: Int
 }
 
-export interface City extends BaseGraphQLObject {
+/*
+ *  Tracks block timestamps 
+
+ */
+export interface BlockTimestamp extends BaseGraphQLObject {
   id: ID_Output
   createdAt: DateTime
   createdById: String
@@ -1070,18 +301,18 @@ export interface City extends BaseGraphQLObject {
   deletedAt?: DateTime | null
   deletedById?: String | null
   version: Int
-  countryId: Int
-  name: String
+  blockNumber: Int
+  timestamp: BigInt
 }
 
-export interface CityConnection {
+export interface BlockTimestampConnection {
   totalCount: Int
-  edges: Array<CityEdge>
+  edges: Array<BlockTimestampEdge>
   pageInfo: PageInfo
 }
 
-export interface CityEdge {
-  node: City
+export interface BlockTimestampEdge {
+  node: BlockTimestamp
   cursor: String
 }
 
@@ -1092,175 +323,6 @@ export interface CommentSearchFTSOutput {
   highlight: String
 }
 
-export interface Country extends BaseGraphQLObject {
-  id: ID_Output
-  createdAt: DateTime
-  createdById: String
-  updatedAt?: DateTime | null
-  updatedById?: String | null
-  deletedAt?: DateTime | null
-  deletedById?: String | null
-  version: Int
-  code: String
-  name: String
-}
-
-export interface CountryConnection {
-  totalCount: Int
-  edges: Array<CountryEdge>
-  pageInfo: PageInfo
-}
-
-export interface CountryEdge {
-  node: Country
-  cursor: String
-}
-
-export interface Entity extends BaseGraphQLObject {
-  id: ID_Output
-  createdAt: DateTime
-  createdById: String
-  updatedAt?: DateTime | null
-  updatedById?: String | null
-  deletedAt?: DateTime | null
-  deletedById?: String | null
-  version: Int
-  gridVersion: Int
-  entityId: Int
-  name: String
-  countryId?: Int | null
-  cityId?: Int | null
-  address: String
-}
-
-export interface EntityConnection {
-  totalCount: Int
-  edges: Array<EntityEdge>
-  pageInfo: PageInfo
-}
-
-export interface EntityEdge {
-  node: Entity
-  cursor: String
-}
-
-export interface EntityProof extends BaseGraphQLObject {
-  id: ID_Output
-  createdAt: DateTime
-  createdById: String
-  updatedAt?: DateTime | null
-  updatedById?: String | null
-  deletedAt?: DateTime | null
-  deletedById?: String | null
-  version: Int
-  entityId: Int
-  signature: String
-  twinRel: Twin
-  twinRelId: String
-}
-
-export interface EntityProofConnection {
-  totalCount: Int
-  edges: Array<EntityProofEdge>
-  pageInfo: PageInfo
-}
-
-export interface EntityProofEdge {
-  node: EntityProof
-  cursor: String
-}
-
-export interface Farm extends BaseGraphQLObject {
-  id: ID_Output
-  createdAt: DateTime
-  createdById: String
-  updatedAt?: DateTime | null
-  updatedById?: String | null
-  deletedAt?: DateTime | null
-  deletedById?: String | null
-  version: Int
-  gridVersion: Int
-  farmId: Int
-  name: String
-  twinId: Int
-  pricingPolicyId: Int
-  certificationType: CertificationType
-  countryId?: Int | null
-  cityId?: Int | null
-}
-
-export interface FarmConnection {
-  totalCount: Int
-  edges: Array<FarmEdge>
-  pageInfo: PageInfo
-}
-
-export interface FarmEdge {
-  node: Farm
-  cursor: String
-}
-
-export interface Location extends BaseGraphQLObject {
-  id: ID_Output
-  createdAt: DateTime
-  createdById: String
-  updatedAt?: DateTime | null
-  updatedById?: String | null
-  deletedAt?: DateTime | null
-  deletedById?: String | null
-  version: Int
-  longitude: String
-  latitude: String
-  nodelocation?: Array<Node> | null
-}
-
-export interface LocationConnection {
-  totalCount: Int
-  edges: Array<LocationEdge>
-  pageInfo: PageInfo
-}
-
-export interface LocationEdge {
-  node: Location
-  cursor: String
-}
-
-export interface Node extends BaseGraphQLObject {
-  id: ID_Output
-  createdAt: DateTime
-  createdById: String
-  updatedAt?: DateTime | null
-  updatedById?: String | null
-  deletedAt?: DateTime | null
-  deletedById?: String | null
-  version: Int
-  gridVersion: Int
-  nodeId: Int
-  farmId: Int
-  location: Location
-  locationId: String
-  countryId?: Int | null
-  cityId?: Int | null
-  address: String
-  pubKey: String
-  hru?: Int | null
-  sru?: Int | null
-  cru?: Int | null
-  mru?: Int | null
-  role: String
-}
-
-export interface NodeConnection {
-  totalCount: Int
-  edges: Array<NodeEdge>
-  pageInfo: PageInfo
-}
-
-export interface NodeEdge {
-  node: Node
-  cursor: String
-}
-
 export interface PageInfo {
   hasNextPage: Boolean
   hasPreviousPage: Boolean
@@ -1268,33 +330,11 @@ export interface PageInfo {
   endCursor?: String | null
 }
 
-export interface PricingPolicy extends BaseGraphQLObject {
-  id: ID_Output
-  createdAt: DateTime
-  createdById: String
-  updatedAt?: DateTime | null
-  updatedById?: String | null
-  deletedAt?: DateTime | null
-  deletedById?: String | null
-  version: Int
-  gridVersion: Int
-  pricingPolicyId: Int
-  name: String
-  currency: String
-  su: Int
-  cu: Int
-  nu: Int
-}
-
-export interface PricingPolicyConnection {
-  totalCount: Int
-  edges: Array<PricingPolicyEdge>
-  pageInfo: PageInfo
-}
-
-export interface PricingPolicyEdge {
-  node: PricingPolicy
-  cursor: String
+export interface ProcessorState {
+  lastCompleteBlock: Float
+  lastProcessedEvent: String
+  indexerHead: Float
+  chainHead: Float
 }
 
 export interface StandardDeleteResponse {
@@ -1314,11 +354,14 @@ export interface Transfer extends BaseGraphQLObject {
   deletedAt?: DateTime | null
   deletedById?: String | null
   version: Int
-  from: String
-  to: String
+  from: Bytes
+  to: Bytes
   value: BigInt
   comment?: String | null
   block: Int
+  tip: BigInt
+  timestamp: BigInt
+  insertedAt: DateTime
 }
 
 export interface TransferConnection {
@@ -1332,33 +375,6 @@ export interface TransferEdge {
   cursor: String
 }
 
-export interface Twin extends BaseGraphQLObject {
-  id: ID_Output
-  createdAt: DateTime
-  createdById: String
-  updatedAt?: DateTime | null
-  updatedById?: String | null
-  deletedAt?: DateTime | null
-  deletedById?: String | null
-  version: Int
-  gridVersion: Int
-  twinId: Int
-  address: String
-  ip: String
-  entityprooftwinRel?: Array<EntityProof> | null
-}
-
-export interface TwinConnection {
-  totalCount: Int
-  edges: Array<TwinEdge>
-  pageInfo: PageInfo
-}
-
-export interface TwinEdge {
-  node: Twin
-  cursor: String
-}
-
 /*
 GraphQL representation of BigInt
 */
@@ -1368,6 +384,11 @@ export type BigInt = string
 The `Boolean` scalar type represents `true` or `false`.
 */
 export type Boolean = boolean
+
+/*
+GraphQL representation of Bytes
+*/
+export type Bytes = string
 
 /*
 The javascript `Date` as string. Type represents date and time as the ISO Date string.

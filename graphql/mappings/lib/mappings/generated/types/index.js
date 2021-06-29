@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.typeRegistry = void 0;
+const tslib_1 = require("tslib");
+const types_1 = require("@polkadot/types");
+const path_1 = tslib_1.__importDefault(require("path"));
+const fs_1 = tslib_1.__importDefault(require("fs"));
+const typeRegistry = new types_1.TypeRegistry();
+exports.typeRegistry = typeRegistry;
+typeRegistry.register(JSON.parse(fs_1.default.readFileSync(path_1.default.join(__dirname, "typedefs.json"), "utf-8")));
+tslib_1.__exportStar(require("./balances"), exports);
+tslib_1.__exportStar(require("./tfgrid-module"), exports);
+tslib_1.__exportStar(require("./timestamp"), exports);
