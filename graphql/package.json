@@ -1,11 +1,11 @@
 {
-  "name": "",
+  "name": "query-node-root",
   "private": "true",
-  "version": "0.0.0",
-  "description": "GraphQL server and Substrate indexer. Generated with \u2665 by Hydra-CLI",
+  "version": "0.0.1",
+  "description": "GraphQL server and Substrate indexer. Generated with ♥ by Hydra-CLI",
   "workspaces": [
     "./generated/*",
-    "./mappings"
+    "./mappings/"
   ],
   "nohoist": [
     "mappings/**",
@@ -44,9 +44,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "tslib": "^2.0.0",
     "@types/bn.js": "^4.11.6",
-    "bn.js": "^5.1.2"
+    "bn.js": "^5.1.2",
+    "tslib": "^2.0.0",
+    "substrate-tfgrid-ts-types": "^0.0.3"
   },
   "devDependencies": {
     "@subsquid/hydra-cli": "3.1.0-alpha.1",

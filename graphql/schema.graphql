@@ -1,7 +1,9 @@
 " All transfers "
 type Transfer @entity {
-  from: String!
-  to: String!
+  # changing these two to bytes because they were used like that in mappings
+  # consider changing it on both places depending on your use-case
+  from: Bytes!
+  to: Bytes!
   value: BigInt!
   comment: String @fulltext(query: "commentSearch")
   block: Int!
@@ -87,4 +89,12 @@ type City @entity {
   id: Int!
   country_id: Int!
   name: String!
+}
+
+
+# adding this entity because it was used in mappings - consider deleting it from here and from mappings
+type BlockTimestamp @entity {
+  blockNumber: Int!
+
+  timestamp: BigInt!
 }

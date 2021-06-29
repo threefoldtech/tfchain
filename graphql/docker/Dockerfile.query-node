@@ -5,6 +5,7 @@ WORKDIR /home/query-node
 
 COPY --from=builder /home/hydra-builder/generated/graphql-server/dist ./dist 
 COPY --from=builder /home/hydra-builder/generated/graphql-server/package.json .
+#COPY --from=builder /home/hydra-builder/generated/graphql-server/types.json .
 COPY --from=builder /home/hydra-builder/generated/graphql-server/warthog.config.js . 
 COPY --from=builder /home/hydra-builder/generated/graphql-server/env.yml . 
 COPY --from=builder /home/hydra-builder/generated/graphql-server/node_modules ./node_modules

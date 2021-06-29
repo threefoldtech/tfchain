@@ -1,4 +1,5 @@
-import { Transfer, BlockTimestamp } from '../generated/graphql-server/model'
+// Tranfer and BlockTimestamp are not in schema - but you 
+import { Transfer, BlockTimestamp } from 'query-node'
 
 // run 'NODE_URL=<RPC_ENDPOINT> EVENTS=<comma separated list of events> yarn codegen:mappings-types'
 // to genenerate typescript classes for events, such as Balances.TransferEvent
@@ -21,12 +22,14 @@ export async function balancesTransfer({
   transfer.from = Buffer.from(from.toHex())
   transfer.to = Buffer.from(to.toHex())
   transfer.value = value.toBn()
-  transfer.tip = extrinsic ? new BN(extrinsic.tip.toString(10)) : new BN(0)
-  transfer.insertedAt = new Date(block.timestamp)
+
+  // if you want to use these - add them to input schema (`schema.graphql`)
+  //transfer.tip = extrinsic ? new BN(extrinsic.tip.toString(10)) : new BN(0)
+  //transfer.insertedAt = new Date(block.timestamp)
+  //transfer.timestamp = new BN(block.timestamp)
 
   transfer.block = block.height
   transfer.comment = `Transferred ${transfer.value} from ${transfer.from} to ${transfer.to}`
-  transfer.timestamp = new BN(block.timestamp)
   console.log(`Saving transfer: ${JSON.stringify(transfer, null, 2)}`)
   await store.save<Transfer>(transfer)
 }

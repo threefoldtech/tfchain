@@ -1,20 +1,29 @@
 version: "3.4"
 
 services:
+  builder:
+    image: builder:latest
+    build:
+      dockerfile: docker/Dockerfile.builder
+      context: ./
+    command: >
+      echo "builder has been prepared"
+
   db:
     image: postgres:12
     restart: always
     ports:
       - "${DB_PORT}:5432"
-    volumes:
-      - type: bind
-        source: /opt/graphqldb
-        target: /var/lib/postgresql/data
+    # this is specific to your localhost ;)
+    #volumes:
+    #  - type: bind
+    #    source: /opt/graphqldb
+    #    target: /var/lib/postgresql/data
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASS}
       POSTGRES_DB: ${DB_NAME}
-      
+
   indexer:
     image: joystream/hydra-indexer:latest
     restart: unless-stopped
@@ -55,7 +64,7 @@ services:
     depends_on:
       - redis
       - indexer
-    
+
   redis:
     image: redis:6.0-alpine
     restart: always
@@ -76,6 +85,7 @@ services:
       - "8080:${GRAPHQL_SERVER_PORT}"
     depends_on: 
       - db
+      - builder
 
   processor:
     image: hydra-processor:latest
@@ -91,4 +101,6 @@ services:
       - POLL_INTERVAL_MS=300
       - TYPEORM_HOST=db
       - DEBUG=hydra-processor:*
+    depends_on:
+      - builder
     command: ["yarn", "processor:start"]

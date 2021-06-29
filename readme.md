@@ -36,6 +36,9 @@ If you want to query the data inside the blockchain with graphql you can set thi
 ```
 cd graphql
 
+# this installs Volta that provides Node v14 (needed for some OS distribution without proper v14 support)
+./setup.sh 
+
 yarn
 
 yarn build
