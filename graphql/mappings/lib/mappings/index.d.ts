@@ -1,1 +1,1 @@
-export { balancesTransfer, timestampCall } from './mappings';
+export { balancesTransfer, entityStored } from './mappings';

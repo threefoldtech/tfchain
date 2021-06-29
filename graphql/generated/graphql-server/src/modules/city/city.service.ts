@@ -4,16 +4,16 @@ import { InjectRepository } from 'typeorm-typedi-extensions';
 import { WhereInput } from 'warthog';
 import { WarthogBaseService } from '../../WarthogBaseService';
 
-import { BlockTimestamp } from './block-timestamp.model';
+import { City } from './city.model';
 
 import {} from '../variants/variants.model';
 
-import { BlockTimestampWhereArgs, BlockTimestampWhereInput } from '../../../generated';
+import { CityWhereArgs, CityWhereInput } from '../../../generated';
 
-@Service('BlockTimestampService')
-export class BlockTimestampService extends WarthogBaseService<BlockTimestamp> {
-  constructor(@InjectRepository(BlockTimestamp) protected readonly repository: Repository<BlockTimestamp>) {
-    super(BlockTimestamp, repository);
+@Service('CityService')
+export class CityService extends WarthogBaseService<City> {
+  constructor(@InjectRepository(City) protected readonly repository: Repository<City>) {
+    super(City, repository);
   }
 
   async find<W extends WhereInput>(
@@ -22,7 +22,7 @@ export class BlockTimestampService extends WarthogBaseService<BlockTimestamp> {
     limit?: number,
     offset?: number,
     fields?: string[]
-  ): Promise<BlockTimestamp[]> {
+  ): Promise<City[]> {
     let f = fields || [];
 
     return this.findWithRelations<W>(where, orderBy, limit, offset, f);
@@ -34,8 +34,8 @@ export class BlockTimestampService extends WarthogBaseService<BlockTimestamp> {
     limit?: number,
     offset?: number,
     fields?: string[]
-  ): Promise<BlockTimestamp[]> {
-    const where = <BlockTimestampWhereInput>(_where || {});
+  ): Promise<City[]> {
+    const where = <CityWhereInput>(_where || {});
 
     let mainQuery = this.buildFindQueryWithParams(<any>where, orderBy, undefined, fields, 'main').take(undefined); // remove LIMIT
 

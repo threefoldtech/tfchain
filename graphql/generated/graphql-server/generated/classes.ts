@@ -23,12 +23,30 @@ const { GraphQLJSONObject } = require('graphql-type-json');
 // @ts-ignore
 import { BaseWhereInput, JsonObject, PaginationArgs, DateOnlyString, DateTimeString, BigInt, Bytes } from 'warthog';
 
+import { CertificationType } from "../src/modules/farm/farm.model";
+
 // @ts-ignore
-import { BlockTimestamp } from "../src/modules/block-timestamp/block-timestamp.model";
+import { City } from "../src/modules/city/city.model";
+// @ts-ignore
+import { Country } from "../src/modules/country/country.model";
+// @ts-ignore
+import { Twin } from "../src/modules/twin/twin.model";
+// @ts-ignore
+import { EntityProof } from "../src/modules/entity-proof/entity-proof.model";
+// @ts-ignore
+import { Entity } from "../src/modules/entity/entity.model";
+// @ts-ignore
+import { Farm } from "../src/modules/farm/farm.model";
+// @ts-ignore
+import { Node } from "../src/modules/node/node.model";
+// @ts-ignore
+import { Location } from "../src/modules/location/location.model";
+// @ts-ignore
+import { PricingPolicy } from "../src/modules/pricing-policy/pricing-policy.model";
 // @ts-ignore
 import { Transfer } from "../src/modules/transfer/transfer.model";
 
-export enum BlockTimestampOrderByEnum {
+export enum CityOrderByEnum {
   createdAt_ASC = "createdAt_ASC",
   createdAt_DESC = "createdAt_DESC",
 
@@ -38,19 +56,19 @@ export enum BlockTimestampOrderByEnum {
   deletedAt_ASC = "deletedAt_ASC",
   deletedAt_DESC = "deletedAt_DESC",
 
-  blockNumber_ASC = "blockNumber_ASC",
-  blockNumber_DESC = "blockNumber_DESC",
+  countryId_ASC = "countryId_ASC",
+  countryId_DESC = "countryId_DESC",
 
-  timestamp_ASC = "timestamp_ASC",
-  timestamp_DESC = "timestamp_DESC"
+  name_ASC = "name_ASC",
+  name_DESC = "name_DESC"
 }
 
-registerEnumType(BlockTimestampOrderByEnum, {
-  name: "BlockTimestampOrderByInput"
+registerEnumType(CityOrderByEnum, {
+  name: "CityOrderByInput"
 });
 
 @TypeGraphQLInputType()
-export class BlockTimestampWhereInput {
+export class CityWhereInput {
   @TypeGraphQLField(() => ID, { nullable: true })
   id_eq?: string;
 
@@ -124,91 +142,2278 @@ export class BlockTimestampWhereInput {
   deletedById_in?: string[];
 
   @TypeGraphQLField(() => Int, { nullable: true })
-  blockNumber_eq?: number;
+  countryId_eq?: number;
 
   @TypeGraphQLField(() => Int, { nullable: true })
-  blockNumber_gt?: number;
+  countryId_gt?: number;
 
   @TypeGraphQLField(() => Int, { nullable: true })
-  blockNumber_gte?: number;
+  countryId_gte?: number;
 
   @TypeGraphQLField(() => Int, { nullable: true })
-  blockNumber_lt?: number;
+  countryId_lt?: number;
 
   @TypeGraphQLField(() => Int, { nullable: true })
-  blockNumber_lte?: number;
+  countryId_lte?: number;
 
   @TypeGraphQLField(() => [Int], { nullable: true })
-  blockNumber_in?: number[];
+  countryId_in?: number[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  timestamp_eq?: BN;
+  @TypeGraphQLField({ nullable: true })
+  name_eq?: string;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  timestamp_gt?: BN;
+  @TypeGraphQLField({ nullable: true })
+  name_contains?: string;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  timestamp_gte?: BN;
+  @TypeGraphQLField({ nullable: true })
+  name_startsWith?: string;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  timestamp_lt?: BN;
+  @TypeGraphQLField({ nullable: true })
+  name_endsWith?: string;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  timestamp_lte?: BN;
+  @TypeGraphQLField(() => [String], { nullable: true })
+  name_in?: string[];
 
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  timestamp_in?: BN[];
+  @TypeGraphQLField(() => CityWhereInput, { nullable: true })
+  AND?: [CityWhereInput];
 
-  @TypeGraphQLField(() => BlockTimestampWhereInput, { nullable: true })
-  AND?: [BlockTimestampWhereInput];
-
-  @TypeGraphQLField(() => BlockTimestampWhereInput, { nullable: true })
-  OR?: [BlockTimestampWhereInput];
+  @TypeGraphQLField(() => CityWhereInput, { nullable: true })
+  OR?: [CityWhereInput];
 }
 
 @TypeGraphQLInputType()
-export class BlockTimestampWhereUniqueInput {
+export class CityWhereUniqueInput {
   @TypeGraphQLField(() => ID)
   id?: string;
 }
 
 @TypeGraphQLInputType()
-export class BlockTimestampCreateInput {
+export class CityCreateInput {
   @TypeGraphQLField()
-  blockNumber!: number;
+  countryId!: number;
 
-  @TypeGraphQLField(() => BigInt)
-  timestamp!: BN;
+  @TypeGraphQLField()
+  name!: string;
 }
 
 @TypeGraphQLInputType()
-export class BlockTimestampUpdateInput {
+export class CityUpdateInput {
   @TypeGraphQLField({ nullable: true })
-  blockNumber?: number;
+  countryId?: number;
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  timestamp?: BN;
+  @TypeGraphQLField({ nullable: true })
+  name?: string;
 }
 
 @ArgsType()
-export class BlockTimestampWhereArgs extends PaginationArgs {
-  @TypeGraphQLField(() => BlockTimestampWhereInput, { nullable: true })
-  where?: BlockTimestampWhereInput;
+export class CityWhereArgs extends PaginationArgs {
+  @TypeGraphQLField(() => CityWhereInput, { nullable: true })
+  where?: CityWhereInput;
 
-  @TypeGraphQLField(() => BlockTimestampOrderByEnum, { nullable: true })
-  orderBy?: BlockTimestampOrderByEnum[];
+  @TypeGraphQLField(() => CityOrderByEnum, { nullable: true })
+  orderBy?: CityOrderByEnum[];
 }
 
 @ArgsType()
-export class BlockTimestampCreateManyArgs {
-  @TypeGraphQLField(() => [BlockTimestampCreateInput])
-  data!: BlockTimestampCreateInput[];
+export class CityCreateManyArgs {
+  @TypeGraphQLField(() => [CityCreateInput])
+  data!: CityCreateInput[];
 }
 
 @ArgsType()
-export class BlockTimestampUpdateArgs {
-  @TypeGraphQLField() data!: BlockTimestampUpdateInput;
-  @TypeGraphQLField() where!: BlockTimestampWhereUniqueInput;
+export class CityUpdateArgs {
+  @TypeGraphQLField() data!: CityUpdateInput;
+  @TypeGraphQLField() where!: CityWhereUniqueInput;
+}
+
+export enum CountryOrderByEnum {
+  createdAt_ASC = "createdAt_ASC",
+  createdAt_DESC = "createdAt_DESC",
+
+  updatedAt_ASC = "updatedAt_ASC",
+  updatedAt_DESC = "updatedAt_DESC",
+
+  deletedAt_ASC = "deletedAt_ASC",
+  deletedAt_DESC = "deletedAt_DESC",
+
+  code_ASC = "code_ASC",
+  code_DESC = "code_DESC",
+
+  name_ASC = "name_ASC",
+  name_DESC = "name_DESC"
+}
+
+registerEnumType(CountryOrderByEnum, {
+  name: "CountryOrderByInput"
+});
+
+@TypeGraphQLInputType()
+export class CountryWhereInput {
+  @TypeGraphQLField(() => ID, { nullable: true })
+  id_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  id_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  createdById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  createdById_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  updatedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  updatedById_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  deletedAt_all?: Boolean;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  deletedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  deletedById_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  code_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  code_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  code_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  code_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  code_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  name_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  name_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  name_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  name_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  name_in?: string[];
+
+  @TypeGraphQLField(() => CountryWhereInput, { nullable: true })
+  AND?: [CountryWhereInput];
+
+  @TypeGraphQLField(() => CountryWhereInput, { nullable: true })
+  OR?: [CountryWhereInput];
+}
+
+@TypeGraphQLInputType()
+export class CountryWhereUniqueInput {
+  @TypeGraphQLField(() => ID)
+  id?: string;
+}
+
+@TypeGraphQLInputType()
+export class CountryCreateInput {
+  @TypeGraphQLField()
+  code!: string;
+
+  @TypeGraphQLField()
+  name!: string;
+}
+
+@TypeGraphQLInputType()
+export class CountryUpdateInput {
+  @TypeGraphQLField({ nullable: true })
+  code?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  name?: string;
+}
+
+@ArgsType()
+export class CountryWhereArgs extends PaginationArgs {
+  @TypeGraphQLField(() => CountryWhereInput, { nullable: true })
+  where?: CountryWhereInput;
+
+  @TypeGraphQLField(() => CountryOrderByEnum, { nullable: true })
+  orderBy?: CountryOrderByEnum[];
+}
+
+@ArgsType()
+export class CountryCreateManyArgs {
+  @TypeGraphQLField(() => [CountryCreateInput])
+  data!: CountryCreateInput[];
+}
+
+@ArgsType()
+export class CountryUpdateArgs {
+  @TypeGraphQLField() data!: CountryUpdateInput;
+  @TypeGraphQLField() where!: CountryWhereUniqueInput;
+}
+
+export enum TwinOrderByEnum {
+  createdAt_ASC = "createdAt_ASC",
+  createdAt_DESC = "createdAt_DESC",
+
+  updatedAt_ASC = "updatedAt_ASC",
+  updatedAt_DESC = "updatedAt_DESC",
+
+  deletedAt_ASC = "deletedAt_ASC",
+  deletedAt_DESC = "deletedAt_DESC",
+
+  gridVersion_ASC = "gridVersion_ASC",
+  gridVersion_DESC = "gridVersion_DESC",
+
+  twinId_ASC = "twinId_ASC",
+  twinId_DESC = "twinId_DESC",
+
+  address_ASC = "address_ASC",
+  address_DESC = "address_DESC",
+
+  ip_ASC = "ip_ASC",
+  ip_DESC = "ip_DESC"
+}
+
+registerEnumType(TwinOrderByEnum, {
+  name: "TwinOrderByInput"
+});
+
+@TypeGraphQLInputType()
+export class TwinWhereInput {
+  @TypeGraphQLField(() => ID, { nullable: true })
+  id_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  id_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  createdById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  createdById_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  updatedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  updatedById_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  deletedAt_all?: Boolean;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  deletedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  deletedById_in?: string[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  gridVersion_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  twinId_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  twinId_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  twinId_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  twinId_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  twinId_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  twinId_in?: number[];
+
+  @TypeGraphQLField({ nullable: true })
+  address_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  address_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  address_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  address_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  address_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  ip_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  ip_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  ip_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  ip_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  ip_in?: string[];
+
+  @TypeGraphQLField(() => EntityProofWhereInput, { nullable: true })
+  entityprooftwinRel_none?: EntityProofWhereInput;
+
+  @TypeGraphQLField(() => EntityProofWhereInput, { nullable: true })
+  entityprooftwinRel_some?: EntityProofWhereInput;
+
+  @TypeGraphQLField(() => EntityProofWhereInput, { nullable: true })
+  entityprooftwinRel_every?: EntityProofWhereInput;
+
+  @TypeGraphQLField(() => TwinWhereInput, { nullable: true })
+  AND?: [TwinWhereInput];
+
+  @TypeGraphQLField(() => TwinWhereInput, { nullable: true })
+  OR?: [TwinWhereInput];
+}
+
+@TypeGraphQLInputType()
+export class TwinWhereUniqueInput {
+  @TypeGraphQLField(() => ID)
+  id?: string;
+}
+
+@TypeGraphQLInputType()
+export class TwinCreateInput {
+  @TypeGraphQLField()
+  gridVersion!: number;
+
+  @TypeGraphQLField()
+  twinId!: number;
+
+  @TypeGraphQLField()
+  address!: string;
+
+  @TypeGraphQLField()
+  ip!: string;
+}
+
+@TypeGraphQLInputType()
+export class TwinUpdateInput {
+  @TypeGraphQLField({ nullable: true })
+  gridVersion?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  twinId?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  address?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  ip?: string;
+}
+
+@ArgsType()
+export class TwinWhereArgs extends PaginationArgs {
+  @TypeGraphQLField(() => TwinWhereInput, { nullable: true })
+  where?: TwinWhereInput;
+
+  @TypeGraphQLField(() => TwinOrderByEnum, { nullable: true })
+  orderBy?: TwinOrderByEnum[];
+}
+
+@ArgsType()
+export class TwinCreateManyArgs {
+  @TypeGraphQLField(() => [TwinCreateInput])
+  data!: TwinCreateInput[];
+}
+
+@ArgsType()
+export class TwinUpdateArgs {
+  @TypeGraphQLField() data!: TwinUpdateInput;
+  @TypeGraphQLField() where!: TwinWhereUniqueInput;
+}
+
+export enum EntityProofOrderByEnum {
+  createdAt_ASC = "createdAt_ASC",
+  createdAt_DESC = "createdAt_DESC",
+
+  updatedAt_ASC = "updatedAt_ASC",
+  updatedAt_DESC = "updatedAt_DESC",
+
+  deletedAt_ASC = "deletedAt_ASC",
+  deletedAt_DESC = "deletedAt_DESC",
+
+  entityId_ASC = "entityId_ASC",
+  entityId_DESC = "entityId_DESC",
+
+  signature_ASC = "signature_ASC",
+  signature_DESC = "signature_DESC",
+
+  twinRel_ASC = "twinRel_ASC",
+  twinRel_DESC = "twinRel_DESC"
+}
+
+registerEnumType(EntityProofOrderByEnum, {
+  name: "EntityProofOrderByInput"
+});
+
+@TypeGraphQLInputType()
+export class EntityProofWhereInput {
+  @TypeGraphQLField(() => ID, { nullable: true })
+  id_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  id_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  createdById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  createdById_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  updatedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  updatedById_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  deletedAt_all?: Boolean;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  deletedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  deletedById_in?: string[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  entityId_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  entityId_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  entityId_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  entityId_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  entityId_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  entityId_in?: number[];
+
+  @TypeGraphQLField({ nullable: true })
+  signature_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  signature_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  signature_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  signature_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  signature_in?: string[];
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  twinRel_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  twinRel_in?: string[];
+
+  @TypeGraphQLField(() => TwinWhereInput, { nullable: true })
+  twinRel?: TwinWhereInput;
+
+  @TypeGraphQLField(() => EntityProofWhereInput, { nullable: true })
+  AND?: [EntityProofWhereInput];
+
+  @TypeGraphQLField(() => EntityProofWhereInput, { nullable: true })
+  OR?: [EntityProofWhereInput];
+}
+
+@TypeGraphQLInputType()
+export class EntityProofWhereUniqueInput {
+  @TypeGraphQLField(() => ID)
+  id?: string;
+}
+
+@TypeGraphQLInputType()
+export class EntityProofCreateInput {
+  @TypeGraphQLField()
+  entityId!: number;
+
+  @TypeGraphQLField()
+  signature!: string;
+
+  @TypeGraphQLField(() => ID)
+  twinRel!: string;
+}
+
+@TypeGraphQLInputType()
+export class EntityProofUpdateInput {
+  @TypeGraphQLField({ nullable: true })
+  entityId?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  signature?: string;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  twinRel?: string;
+}
+
+@ArgsType()
+export class EntityProofWhereArgs extends PaginationArgs {
+  @TypeGraphQLField(() => EntityProofWhereInput, { nullable: true })
+  where?: EntityProofWhereInput;
+
+  @TypeGraphQLField(() => EntityProofOrderByEnum, { nullable: true })
+  orderBy?: EntityProofOrderByEnum[];
+}
+
+@ArgsType()
+export class EntityProofCreateManyArgs {
+  @TypeGraphQLField(() => [EntityProofCreateInput])
+  data!: EntityProofCreateInput[];
+}
+
+@ArgsType()
+export class EntityProofUpdateArgs {
+  @TypeGraphQLField() data!: EntityProofUpdateInput;
+  @TypeGraphQLField() where!: EntityProofWhereUniqueInput;
+}
+
+export enum EntityOrderByEnum {
+  createdAt_ASC = "createdAt_ASC",
+  createdAt_DESC = "createdAt_DESC",
+
+  updatedAt_ASC = "updatedAt_ASC",
+  updatedAt_DESC = "updatedAt_DESC",
+
+  deletedAt_ASC = "deletedAt_ASC",
+  deletedAt_DESC = "deletedAt_DESC",
+
+  gridVersion_ASC = "gridVersion_ASC",
+  gridVersion_DESC = "gridVersion_DESC",
+
+  entityId_ASC = "entityId_ASC",
+  entityId_DESC = "entityId_DESC",
+
+  name_ASC = "name_ASC",
+  name_DESC = "name_DESC",
+
+  countryId_ASC = "countryId_ASC",
+  countryId_DESC = "countryId_DESC",
+
+  cityId_ASC = "cityId_ASC",
+  cityId_DESC = "cityId_DESC",
+
+  address_ASC = "address_ASC",
+  address_DESC = "address_DESC"
+}
+
+registerEnumType(EntityOrderByEnum, {
+  name: "EntityOrderByInput"
+});
+
+@TypeGraphQLInputType()
+export class EntityWhereInput {
+  @TypeGraphQLField(() => ID, { nullable: true })
+  id_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  id_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  createdById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  createdById_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  updatedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  updatedById_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  deletedAt_all?: Boolean;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  deletedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  deletedById_in?: string[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  gridVersion_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  entityId_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  entityId_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  entityId_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  entityId_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  entityId_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  entityId_in?: number[];
+
+  @TypeGraphQLField({ nullable: true })
+  name_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  name_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  name_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  name_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  name_in?: string[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  countryId_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  cityId_in?: number[];
+
+  @TypeGraphQLField({ nullable: true })
+  address_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  address_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  address_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  address_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  address_in?: string[];
+
+  @TypeGraphQLField(() => EntityWhereInput, { nullable: true })
+  AND?: [EntityWhereInput];
+
+  @TypeGraphQLField(() => EntityWhereInput, { nullable: true })
+  OR?: [EntityWhereInput];
+}
+
+@TypeGraphQLInputType()
+export class EntityWhereUniqueInput {
+  @TypeGraphQLField(() => ID)
+  id?: string;
+}
+
+@TypeGraphQLInputType()
+export class EntityCreateInput {
+  @TypeGraphQLField()
+  gridVersion!: number;
+
+  @TypeGraphQLField()
+  entityId!: number;
+
+  @TypeGraphQLField()
+  name!: string;
+
+  @TypeGraphQLField({ nullable: true })
+  countryId?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  cityId?: number;
+
+  @TypeGraphQLField()
+  address!: string;
+}
+
+@TypeGraphQLInputType()
+export class EntityUpdateInput {
+  @TypeGraphQLField({ nullable: true })
+  gridVersion?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  entityId?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  name?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  countryId?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  cityId?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  address?: string;
+}
+
+@ArgsType()
+export class EntityWhereArgs extends PaginationArgs {
+  @TypeGraphQLField(() => EntityWhereInput, { nullable: true })
+  where?: EntityWhereInput;
+
+  @TypeGraphQLField(() => EntityOrderByEnum, { nullable: true })
+  orderBy?: EntityOrderByEnum[];
+}
+
+@ArgsType()
+export class EntityCreateManyArgs {
+  @TypeGraphQLField(() => [EntityCreateInput])
+  data!: EntityCreateInput[];
+}
+
+@ArgsType()
+export class EntityUpdateArgs {
+  @TypeGraphQLField() data!: EntityUpdateInput;
+  @TypeGraphQLField() where!: EntityWhereUniqueInput;
+}
+
+export enum FarmOrderByEnum {
+  createdAt_ASC = "createdAt_ASC",
+  createdAt_DESC = "createdAt_DESC",
+
+  updatedAt_ASC = "updatedAt_ASC",
+  updatedAt_DESC = "updatedAt_DESC",
+
+  deletedAt_ASC = "deletedAt_ASC",
+  deletedAt_DESC = "deletedAt_DESC",
+
+  gridVersion_ASC = "gridVersion_ASC",
+  gridVersion_DESC = "gridVersion_DESC",
+
+  farmId_ASC = "farmId_ASC",
+  farmId_DESC = "farmId_DESC",
+
+  name_ASC = "name_ASC",
+  name_DESC = "name_DESC",
+
+  twinId_ASC = "twinId_ASC",
+  twinId_DESC = "twinId_DESC",
+
+  pricingPolicyId_ASC = "pricingPolicyId_ASC",
+  pricingPolicyId_DESC = "pricingPolicyId_DESC",
+
+  certificationType_ASC = "certificationType_ASC",
+  certificationType_DESC = "certificationType_DESC",
+
+  countryId_ASC = "countryId_ASC",
+  countryId_DESC = "countryId_DESC",
+
+  cityId_ASC = "cityId_ASC",
+  cityId_DESC = "cityId_DESC"
+}
+
+registerEnumType(FarmOrderByEnum, {
+  name: "FarmOrderByInput"
+});
+
+@TypeGraphQLInputType()
+export class FarmWhereInput {
+  @TypeGraphQLField(() => ID, { nullable: true })
+  id_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  id_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  createdById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  createdById_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  updatedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  updatedById_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  deletedAt_all?: Boolean;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  deletedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  deletedById_in?: string[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  gridVersion_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  farmId_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  farmId_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  farmId_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  farmId_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  farmId_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  farmId_in?: number[];
+
+  @TypeGraphQLField({ nullable: true })
+  name_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  name_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  name_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  name_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  name_in?: string[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  twinId_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  twinId_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  twinId_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  twinId_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  twinId_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  twinId_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  pricingPolicyId_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  pricingPolicyId_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  pricingPolicyId_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  pricingPolicyId_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  pricingPolicyId_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  pricingPolicyId_in?: number[];
+
+  @TypeGraphQLField(() => CertificationType, { nullable: true })
+  certificationType_eq?: CertificationType;
+
+  @TypeGraphQLField(() => [CertificationType], { nullable: true })
+  certificationType_in?: CertificationType[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  countryId_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  cityId_in?: number[];
+
+  @TypeGraphQLField(() => FarmWhereInput, { nullable: true })
+  AND?: [FarmWhereInput];
+
+  @TypeGraphQLField(() => FarmWhereInput, { nullable: true })
+  OR?: [FarmWhereInput];
+}
+
+@TypeGraphQLInputType()
+export class FarmWhereUniqueInput {
+  @TypeGraphQLField(() => ID)
+  id?: string;
+}
+
+@TypeGraphQLInputType()
+export class FarmCreateInput {
+  @TypeGraphQLField()
+  gridVersion!: number;
+
+  @TypeGraphQLField()
+  farmId!: number;
+
+  @TypeGraphQLField()
+  name!: string;
+
+  @TypeGraphQLField()
+  twinId!: number;
+
+  @TypeGraphQLField()
+  pricingPolicyId!: number;
+
+  @TypeGraphQLField(() => CertificationType)
+  certificationType!: CertificationType;
+
+  @TypeGraphQLField({ nullable: true })
+  countryId?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  cityId?: number;
+}
+
+@TypeGraphQLInputType()
+export class FarmUpdateInput {
+  @TypeGraphQLField({ nullable: true })
+  gridVersion?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  farmId?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  name?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  twinId?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  pricingPolicyId?: number;
+
+  @TypeGraphQLField(() => CertificationType, { nullable: true })
+  certificationType?: CertificationType;
+
+  @TypeGraphQLField({ nullable: true })
+  countryId?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  cityId?: number;
+}
+
+@ArgsType()
+export class FarmWhereArgs extends PaginationArgs {
+  @TypeGraphQLField(() => FarmWhereInput, { nullable: true })
+  where?: FarmWhereInput;
+
+  @TypeGraphQLField(() => FarmOrderByEnum, { nullable: true })
+  orderBy?: FarmOrderByEnum[];
+}
+
+@ArgsType()
+export class FarmCreateManyArgs {
+  @TypeGraphQLField(() => [FarmCreateInput])
+  data!: FarmCreateInput[];
+}
+
+@ArgsType()
+export class FarmUpdateArgs {
+  @TypeGraphQLField() data!: FarmUpdateInput;
+  @TypeGraphQLField() where!: FarmWhereUniqueInput;
+}
+
+export enum NodeOrderByEnum {
+  createdAt_ASC = "createdAt_ASC",
+  createdAt_DESC = "createdAt_DESC",
+
+  updatedAt_ASC = "updatedAt_ASC",
+  updatedAt_DESC = "updatedAt_DESC",
+
+  deletedAt_ASC = "deletedAt_ASC",
+  deletedAt_DESC = "deletedAt_DESC",
+
+  gridVersion_ASC = "gridVersion_ASC",
+  gridVersion_DESC = "gridVersion_DESC",
+
+  nodeId_ASC = "nodeId_ASC",
+  nodeId_DESC = "nodeId_DESC",
+
+  farmId_ASC = "farmId_ASC",
+  farmId_DESC = "farmId_DESC",
+
+  location_ASC = "location_ASC",
+  location_DESC = "location_DESC",
+
+  countryId_ASC = "countryId_ASC",
+  countryId_DESC = "countryId_DESC",
+
+  cityId_ASC = "cityId_ASC",
+  cityId_DESC = "cityId_DESC",
+
+  address_ASC = "address_ASC",
+  address_DESC = "address_DESC",
+
+  pubKey_ASC = "pubKey_ASC",
+  pubKey_DESC = "pubKey_DESC",
+
+  hru_ASC = "hru_ASC",
+  hru_DESC = "hru_DESC",
+
+  sru_ASC = "sru_ASC",
+  sru_DESC = "sru_DESC",
+
+  cru_ASC = "cru_ASC",
+  cru_DESC = "cru_DESC",
+
+  mru_ASC = "mru_ASC",
+  mru_DESC = "mru_DESC",
+
+  role_ASC = "role_ASC",
+  role_DESC = "role_DESC"
+}
+
+registerEnumType(NodeOrderByEnum, {
+  name: "NodeOrderByInput"
+});
+
+@TypeGraphQLInputType()
+export class NodeWhereInput {
+  @TypeGraphQLField(() => ID, { nullable: true })
+  id_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  id_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  createdById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  createdById_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  updatedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  updatedById_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  deletedAt_all?: Boolean;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  deletedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  deletedById_in?: string[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  gridVersion_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nodeId_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nodeId_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nodeId_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nodeId_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nodeId_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  nodeId_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  farmId_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  farmId_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  farmId_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  farmId_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  farmId_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  farmId_in?: number[];
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  location_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  location_in?: string[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  countryId_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  countryId_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cityId_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  cityId_in?: number[];
+
+  @TypeGraphQLField({ nullable: true })
+  address_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  address_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  address_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  address_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  address_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  pubKey_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  pubKey_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  pubKey_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  pubKey_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  pubKey_in?: string[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  hru_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  hru_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  hru_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  hru_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  hru_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  hru_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  sru_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  sru_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  sru_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  sru_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  sru_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  sru_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cru_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cru_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cru_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cru_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cru_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  cru_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  mru_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  mru_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  mru_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  mru_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  mru_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  mru_in?: number[];
+
+  @TypeGraphQLField({ nullable: true })
+  role_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  role_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  role_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  role_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  role_in?: string[];
+
+  @TypeGraphQLField(() => LocationWhereInput, { nullable: true })
+  location?: LocationWhereInput;
+
+  @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
+  AND?: [NodeWhereInput];
+
+  @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
+  OR?: [NodeWhereInput];
+}
+
+@TypeGraphQLInputType()
+export class NodeWhereUniqueInput {
+  @TypeGraphQLField(() => ID)
+  id?: string;
+}
+
+@TypeGraphQLInputType()
+export class NodeCreateInput {
+  @TypeGraphQLField()
+  gridVersion!: number;
+
+  @TypeGraphQLField()
+  nodeId!: number;
+
+  @TypeGraphQLField()
+  farmId!: number;
+
+  @TypeGraphQLField(() => ID)
+  location!: string;
+
+  @TypeGraphQLField({ nullable: true })
+  countryId?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  cityId?: number;
+
+  @TypeGraphQLField()
+  address!: string;
+
+  @TypeGraphQLField()
+  pubKey!: string;
+
+  @TypeGraphQLField({ nullable: true })
+  hru?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  sru?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  cru?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  mru?: number;
+
+  @TypeGraphQLField()
+  role!: string;
+}
+
+@TypeGraphQLInputType()
+export class NodeUpdateInput {
+  @TypeGraphQLField({ nullable: true })
+  gridVersion?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  nodeId?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  farmId?: number;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  location?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  countryId?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  cityId?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  address?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  pubKey?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  hru?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  sru?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  cru?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  mru?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  role?: string;
+}
+
+@ArgsType()
+export class NodeWhereArgs extends PaginationArgs {
+  @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
+  where?: NodeWhereInput;
+
+  @TypeGraphQLField(() => NodeOrderByEnum, { nullable: true })
+  orderBy?: NodeOrderByEnum[];
+}
+
+@ArgsType()
+export class NodeCreateManyArgs {
+  @TypeGraphQLField(() => [NodeCreateInput])
+  data!: NodeCreateInput[];
+}
+
+@ArgsType()
+export class NodeUpdateArgs {
+  @TypeGraphQLField() data!: NodeUpdateInput;
+  @TypeGraphQLField() where!: NodeWhereUniqueInput;
+}
+
+export enum LocationOrderByEnum {
+  createdAt_ASC = "createdAt_ASC",
+  createdAt_DESC = "createdAt_DESC",
+
+  updatedAt_ASC = "updatedAt_ASC",
+  updatedAt_DESC = "updatedAt_DESC",
+
+  deletedAt_ASC = "deletedAt_ASC",
+  deletedAt_DESC = "deletedAt_DESC",
+
+  longitude_ASC = "longitude_ASC",
+  longitude_DESC = "longitude_DESC",
+
+  latitude_ASC = "latitude_ASC",
+  latitude_DESC = "latitude_DESC"
+}
+
+registerEnumType(LocationOrderByEnum, {
+  name: "LocationOrderByInput"
+});
+
+@TypeGraphQLInputType()
+export class LocationWhereInput {
+  @TypeGraphQLField(() => ID, { nullable: true })
+  id_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  id_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  createdById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  createdById_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  updatedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  updatedById_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  deletedAt_all?: Boolean;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  deletedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  deletedById_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  longitude_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  longitude_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  longitude_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  longitude_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  longitude_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  latitude_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  latitude_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  latitude_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  latitude_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  latitude_in?: string[];
+
+  @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
+  nodelocation_none?: NodeWhereInput;
+
+  @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
+  nodelocation_some?: NodeWhereInput;
+
+  @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
+  nodelocation_every?: NodeWhereInput;
+
+  @TypeGraphQLField(() => LocationWhereInput, { nullable: true })
+  AND?: [LocationWhereInput];
+
+  @TypeGraphQLField(() => LocationWhereInput, { nullable: true })
+  OR?: [LocationWhereInput];
+}
+
+@TypeGraphQLInputType()
+export class LocationWhereUniqueInput {
+  @TypeGraphQLField(() => ID)
+  id?: string;
+}
+
+@TypeGraphQLInputType()
+export class LocationCreateInput {
+  @TypeGraphQLField()
+  longitude!: string;
+
+  @TypeGraphQLField()
+  latitude!: string;
+}
+
+@TypeGraphQLInputType()
+export class LocationUpdateInput {
+  @TypeGraphQLField({ nullable: true })
+  longitude?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  latitude?: string;
+}
+
+@ArgsType()
+export class LocationWhereArgs extends PaginationArgs {
+  @TypeGraphQLField(() => LocationWhereInput, { nullable: true })
+  where?: LocationWhereInput;
+
+  @TypeGraphQLField(() => LocationOrderByEnum, { nullable: true })
+  orderBy?: LocationOrderByEnum[];
+}
+
+@ArgsType()
+export class LocationCreateManyArgs {
+  @TypeGraphQLField(() => [LocationCreateInput])
+  data!: LocationCreateInput[];
+}
+
+@ArgsType()
+export class LocationUpdateArgs {
+  @TypeGraphQLField() data!: LocationUpdateInput;
+  @TypeGraphQLField() where!: LocationWhereUniqueInput;
+}
+
+export enum PricingPolicyOrderByEnum {
+  createdAt_ASC = "createdAt_ASC",
+  createdAt_DESC = "createdAt_DESC",
+
+  updatedAt_ASC = "updatedAt_ASC",
+  updatedAt_DESC = "updatedAt_DESC",
+
+  deletedAt_ASC = "deletedAt_ASC",
+  deletedAt_DESC = "deletedAt_DESC",
+
+  gridVersion_ASC = "gridVersion_ASC",
+  gridVersion_DESC = "gridVersion_DESC",
+
+  pricingPolicyId_ASC = "pricingPolicyId_ASC",
+  pricingPolicyId_DESC = "pricingPolicyId_DESC",
+
+  name_ASC = "name_ASC",
+  name_DESC = "name_DESC",
+
+  currency_ASC = "currency_ASC",
+  currency_DESC = "currency_DESC",
+
+  su_ASC = "su_ASC",
+  su_DESC = "su_DESC",
+
+  cu_ASC = "cu_ASC",
+  cu_DESC = "cu_DESC",
+
+  nu_ASC = "nu_ASC",
+  nu_DESC = "nu_DESC"
+}
+
+registerEnumType(PricingPolicyOrderByEnum, {
+  name: "PricingPolicyOrderByInput"
+});
+
+@TypeGraphQLInputType()
+export class PricingPolicyWhereInput {
+  @TypeGraphQLField(() => ID, { nullable: true })
+  id_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  id_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  createdById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  createdById_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  updatedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  updatedById_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  deletedAt_all?: Boolean;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  deletedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  deletedById_in?: string[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  gridVersion_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  gridVersion_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  pricingPolicyId_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  pricingPolicyId_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  pricingPolicyId_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  pricingPolicyId_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  pricingPolicyId_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  pricingPolicyId_in?: number[];
+
+  @TypeGraphQLField({ nullable: true })
+  name_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  name_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  name_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  name_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  name_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  currency_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  currency_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  currency_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  currency_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  currency_in?: string[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  su_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  su_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  su_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  su_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  su_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  su_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cu_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cu_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cu_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cu_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cu_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  cu_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nu_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nu_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nu_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nu_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nu_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  nu_in?: number[];
+
+  @TypeGraphQLField(() => PricingPolicyWhereInput, { nullable: true })
+  AND?: [PricingPolicyWhereInput];
+
+  @TypeGraphQLField(() => PricingPolicyWhereInput, { nullable: true })
+  OR?: [PricingPolicyWhereInput];
+}
+
+@TypeGraphQLInputType()
+export class PricingPolicyWhereUniqueInput {
+  @TypeGraphQLField(() => ID)
+  id?: string;
+}
+
+@TypeGraphQLInputType()
+export class PricingPolicyCreateInput {
+  @TypeGraphQLField()
+  gridVersion!: number;
+
+  @TypeGraphQLField()
+  pricingPolicyId!: number;
+
+  @TypeGraphQLField()
+  name!: string;
+
+  @TypeGraphQLField()
+  currency!: string;
+
+  @TypeGraphQLField()
+  su!: number;
+
+  @TypeGraphQLField()
+  cu!: number;
+
+  @TypeGraphQLField()
+  nu!: number;
+}
+
+@TypeGraphQLInputType()
+export class PricingPolicyUpdateInput {
+  @TypeGraphQLField({ nullable: true })
+  gridVersion?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  pricingPolicyId?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  name?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  currency?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  su?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  cu?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  nu?: number;
+}
+
+@ArgsType()
+export class PricingPolicyWhereArgs extends PaginationArgs {
+  @TypeGraphQLField(() => PricingPolicyWhereInput, { nullable: true })
+  where?: PricingPolicyWhereInput;
+
+  @TypeGraphQLField(() => PricingPolicyOrderByEnum, { nullable: true })
+  orderBy?: PricingPolicyOrderByEnum[];
+}
+
+@ArgsType()
+export class PricingPolicyCreateManyArgs {
+  @TypeGraphQLField(() => [PricingPolicyCreateInput])
+  data!: PricingPolicyCreateInput[];
+}
+
+@ArgsType()
+export class PricingPolicyUpdateArgs {
+  @TypeGraphQLField() data!: PricingPolicyUpdateInput;
+  @TypeGraphQLField() where!: PricingPolicyWhereUniqueInput;
 }
 
 export enum TransferOrderByEnum {
@@ -234,16 +2439,7 @@ export enum TransferOrderByEnum {
   comment_DESC = "comment_DESC",
 
   block_ASC = "block_ASC",
-  block_DESC = "block_DESC",
-
-  tip_ASC = "tip_ASC",
-  tip_DESC = "tip_DESC",
-
-  timestamp_ASC = "timestamp_ASC",
-  timestamp_DESC = "timestamp_DESC",
-
-  insertedAt_ASC = "insertedAt_ASC",
-  insertedAt_DESC = "insertedAt_DESC"
+  block_DESC = "block_DESC"
 }
 
 registerEnumType(TransferOrderByEnum, {
@@ -324,17 +2520,35 @@ export class TransferWhereInput {
   @TypeGraphQLField(() => [ID], { nullable: true })
   deletedById_in?: string[];
 
-  @TypeGraphQLField(() => Bytes, { nullable: true })
-  from_eq?: Buffer;
+  @TypeGraphQLField({ nullable: true })
+  from_eq?: string;
 
-  @TypeGraphQLField(() => [Bytes], { nullable: true })
-  from_in?: Buffer[];
+  @TypeGraphQLField({ nullable: true })
+  from_contains?: string;
 
-  @TypeGraphQLField(() => Bytes, { nullable: true })
-  to_eq?: Buffer;
+  @TypeGraphQLField({ nullable: true })
+  from_startsWith?: string;
 
-  @TypeGraphQLField(() => [Bytes], { nullable: true })
-  to_in?: Buffer[];
+  @TypeGraphQLField({ nullable: true })
+  from_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  from_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  to_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  to_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  to_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  to_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  to_in?: string[];
 
   @TypeGraphQLField(() => BigInt, { nullable: true })
   value_eq?: BN;
@@ -387,57 +2601,6 @@ export class TransferWhereInput {
   @TypeGraphQLField(() => [Int], { nullable: true })
   block_in?: number[];
 
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  tip_eq?: BN;
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  tip_gt?: BN;
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  tip_gte?: BN;
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  tip_lt?: BN;
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  tip_lte?: BN;
-
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  tip_in?: BN[];
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  timestamp_eq?: BN;
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  timestamp_gt?: BN;
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  timestamp_gte?: BN;
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  timestamp_lt?: BN;
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  timestamp_lte?: BN;
-
-  @TypeGraphQLField(() => [BigInt], { nullable: true })
-  timestamp_in?: BN[];
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  insertedAt_eq?: DateTimeString;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  insertedAt_lt?: DateTimeString;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  insertedAt_lte?: DateTimeString;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  insertedAt_gt?: DateTimeString;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  insertedAt_gte?: DateTimeString;
-
   @TypeGraphQLField(() => TransferWhereInput, { nullable: true })
   AND?: [TransferWhereInput];
 
@@ -453,11 +2616,11 @@ export class TransferWhereUniqueInput {
 
 @TypeGraphQLInputType()
 export class TransferCreateInput {
-  @TypeGraphQLField(() => Bytes)
-  from!: Buffer;
+  @TypeGraphQLField()
+  from!: string;
 
-  @TypeGraphQLField(() => Bytes)
-  to!: Buffer;
+  @TypeGraphQLField()
+  to!: string;
 
   @TypeGraphQLField(() => BigInt)
   value!: BN;
@@ -467,24 +2630,15 @@ export class TransferCreateInput {
 
   @TypeGraphQLField()
   block!: number;
-
-  @TypeGraphQLField(() => BigInt)
-  tip!: BN;
-
-  @TypeGraphQLField(() => BigInt)
-  timestamp!: BN;
-
-  @TypeGraphQLField(() => DateTime)
-  insertedAt!: DateTimeString;
 }
 
 @TypeGraphQLInputType()
 export class TransferUpdateInput {
-  @TypeGraphQLField(() => Bytes, { nullable: true })
-  from?: Buffer;
+  @TypeGraphQLField({ nullable: true })
+  from?: string;
 
-  @TypeGraphQLField(() => Bytes, { nullable: true })
-  to?: Buffer;
+  @TypeGraphQLField({ nullable: true })
+  to?: string;
 
   @TypeGraphQLField(() => BigInt, { nullable: true })
   value?: BN;
@@ -494,15 +2648,6 @@ export class TransferUpdateInput {
 
   @TypeGraphQLField({ nullable: true })
   block?: number;
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  tip?: BN;
-
-  @TypeGraphQLField(() => BigInt, { nullable: true })
-  timestamp?: BN;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  insertedAt?: DateTimeString;
 }
 
 @ArgsType()

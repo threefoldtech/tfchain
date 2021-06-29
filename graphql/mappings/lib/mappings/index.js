@@ -5,4 +5,4 @@ Object.defineProperty(exports, "__esModule", { value: true });
 //export { balancesTransfer as balances_Transfer } from './transfer'
 var mappings_1 = require("./mappings");
 Object.defineProperty(exports, "balancesTransfer", { enumerable: true, get: function () { return mappings_1.balancesTransfer; } });
-Object.defineProperty(exports, "timestampCall", { enumerable: true, get: function () { return mappings_1.timestampCall; } });
+Object.defineProperty(exports, "entityStored", { enumerable: true, get: function () { return mappings_1.entityStored; } });
