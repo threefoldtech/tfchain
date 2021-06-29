@@ -1,8 +1,8 @@
-import { Transfer, BlockTimestamp } from '../generated/graphql-server/model'
+import { Transfer,  } from '../generated/graphql-server/model'
 
 // run 'NODE_URL=<RPC_ENDPOINT> EVENTS=<comma separated list of events> yarn codegen:mappings-types'
 // to genenerate typescript classes for events, such as Balances.TransferEvent
-import { Balances, Timestamp } from './generated/types'
+import { Balances, TfgridModule } from './generated/types'
 import BN from 'bn.js'
 import {
   ExtrinsicContext,
@@ -31,14 +31,19 @@ export async function balancesTransfer({
   await store.save<Transfer>(transfer)
 }
 
-export async function timestampCall({
+export async function entityStored({
   store,
   event,
   block,
-}: ExtrinsicContext & StoreContext) {
-  const call = new Timestamp.SetCall(event)
-  const blockT = new BlockTimestamp()
-  blockT.timestamp = call.args.now.toBn()
-  blockT.blockNumber = block.height
-  await store.save<BlockTimestamp>(blockT)
+  extrinsic,
+}: EventContext & StoreContext) {
+  const [version, entity_id, name, country_id, city_id, account_id] = new TfgridModule.EntityStoredEvent(event).params
+  // entity.gridVersion = version.value as number
+  // entity.entityId = entity_id.value as number
+  // entity.name = hex2a(Buffer.from(name.value as string).toString())
+  // entity.countryId = country_id.value as number
+  // entity.cityId = city_id.value as number
+  // entity.address = Buffer.from(account_id.value as string).toString()
+
+  // await db.save<Entity>(entity)
 }

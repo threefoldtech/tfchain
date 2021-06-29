@@ -10,7 +10,7 @@ import {
   Location,
   Resources,
   Role
-} from "substrate-tfgrid-ts-types/src/interfaces";
+} from "substrate-tfgrid-ts-types";
 
 export namespace TfgridModule {
   export class EntityStoredEvent {

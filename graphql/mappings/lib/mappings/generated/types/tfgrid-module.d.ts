@@ -1,7 +1,7 @@
 import { SubstrateEvent } from "@subsquid/hydra-common";
 import { Bytes, u32 } from "@polkadot/types";
 import { AccountId } from "@polkadot/types/interfaces";
-import { CertificationType, Location, Resources, Role } from "substrate-tfgrid-ts-types/src/interfaces";
+import { CertificationType, Location, Resources, Role } from "substrate-tfgrid-ts-types";
 export declare namespace TfgridModule {
     class EntityStoredEvent {
         readonly ctx: SubstrateEvent;
