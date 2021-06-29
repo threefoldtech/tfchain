@@ -37,7 +37,7 @@ export async function entityStored({
   const entity = new Entity()
   const [version, entity_id, name, country_id, city_id, account_id] = new TfgridModule.EntityStoredEvent(event).params
 
-  entity.version = version.toNumber()
+  entity.gridVersion = version.toNumber()
   entity.entityId = entity_id.toNumber()
   entity.name = name.toString()
   entity.countryId = country_id.toNumber()

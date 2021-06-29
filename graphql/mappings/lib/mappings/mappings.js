@@ -20,7 +20,7 @@ exports.balancesTransfer = balancesTransfer;
 async function entityStored({ store, event, block, extrinsic, }) {
     const entity = new model_1.Entity();
     const [version, entity_id, name, country_id, city_id, account_id] = new types_1.TfgridModule.EntityStoredEvent(event).params;
-    entity.version = version.toNumber();
+    entity.gridVersion = version.toNumber();
     entity.entityId = entity_id.toNumber();
     entity.name = name.toString();
     entity.countryId = country_id.toNumber();

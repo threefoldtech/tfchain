@@ -78,7 +78,7 @@ services:
       - db
 
   processor:
-    image: hydra-processor:latest
+    image: processor:latest
     restart: unless-stopped
     build: 
       dockerfile: docker/Dockerfile.processor
