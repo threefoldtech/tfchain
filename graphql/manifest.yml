@@ -26,8 +26,8 @@ typegen:
     - tfgridModule.TwinDeleted
     - tfgridModule.TwinEntityStored
     - tfgridModule.TwinEntityRemoved
-  calls:
-    - timestamp.set
+  # calls:
+  #   - timestamp.set
   outDir: ./mappings/generated/types
 mappings:
   mappingsModule: mappings/lib/mappings
@@ -36,10 +36,12 @@ mappings:
   eventHandlers:
     - event: balances.Transfer 
       handler: balancesTransfer
-  extrinsicHandlers:
-    # infer defaults
-    - extrinsic: timestamp.set 
-      handler: timestampCall
+    - event: tfgridModule.EntityStored
+      handler: entityStored
+  # extrinsicHandlers:
+  #   # infer defaults
+  #   - extrinsic: timestamp.set 
+  #     handler: timestampCall
   preBlockHooks:
   postBlockHooks:
   

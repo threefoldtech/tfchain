@@ -10,4 +10,3 @@ exports.typeRegistry = typeRegistry;
 typeRegistry.register(JSON.parse(fs_1.default.readFileSync(path_1.default.join(__dirname, "typedefs.json"), "utf-8")));
 tslib_1.__exportStar(require("./balances"), exports);
 tslib_1.__exportStar(require("./tfgrid-module"), exports);
-tslib_1.__exportStar(require("./timestamp"), exports);

@@ -3,4 +3,3 @@ declare const typeRegistry: TypeRegistry;
 export { typeRegistry };
 export * from "./balances";
 export * from "./tfgrid-module";
-export * from "./timestamp";

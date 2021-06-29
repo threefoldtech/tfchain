@@ -16,7 +16,7 @@ services:
       POSTGRES_DB: ${DB_NAME}
       
   indexer:
-    image: joystream/hydra-indexer:latest
+    image: subsquid/hydra-indexer:3
     restart: unless-stopped
     environment:
       - INDEXER_WORKERS=5
@@ -28,7 +28,7 @@ services:
       - REDIS_URI=redis://redis:6379/0
       - DEBUG=index*
       - BLOCK_HEIGHT=0
-      - WS_PROVIDER_ENDPOINT_URI=wss://substrate01.threefold.io
+      - WS_PROVIDER_ENDPOINT_URI=ws://192.168.0.154:9944
       - TYPES_JSON=/types.json
     volumes:
       - type: bind
@@ -40,7 +40,7 @@ services:
       sh -c "yarn db:bootstrap && yarn start:prod" 
   
   indexer-api-gateway:
-    image: joystream/hydra-indexer-gateway:latest
+    image: subsquid/hydra-indexer-gateway:3
     restart: unless-stopped
     environment:
       - WARTHOG_STARTER_DB_DATABASE=indexer-db
