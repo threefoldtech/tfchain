@@ -15,12 +15,12 @@
     "name": "Vec<u8>",
     "country_id": "u32",
     "city_id": "u32",
-    "address": "MultiAddress"
+    "address": "AccountId"
   },
   "Twin": {
     "version": "u32",
     "id": "u32",
-    "address": "MultiAddress",
+    "address": "AccountId",
     "ip": "Vec<u8>",
     "entities": "Vec<EntityProof>"
   },
@@ -32,16 +32,26 @@
     "version": "u32",
     "id": "u32",
     "farm_id": "u32",
+    "twin_id": "u32",
     "resources": "Resources",
     "location": "Location",
     "country_id": "u32",
     "city_id": "u32",
-    "pub_key": "Vec<u8>",
-    "address": "MultiAddress",
-    "role": "Role"
+    "address": "AccountId",
+    "role": "Role",
+    "public_config": "Option<PublicConfig>"
+  },
+  "PublicConfig": {
+    "ipv4": "Vec<u8>",
+    "ipv6": "Vec<u8>",
+    "gw4": "Vec<u8>",
+    "gw6": "Vec<u8>"
   },
   "Role": {
-    "_enum": ["Node", "Gateway"]
+    "_enum": [
+      "Node",
+      "Gateway"
+    ]
   },
   "Location": {
     "longitude": "Vec<u8>",
@@ -54,10 +64,17 @@
     "mru": "u64"
   },
   "CertificationType": {
-    "_enum": ["None", "Silver", "Gold"]
+    "_enum": [
+      "None",
+      "Silver",
+      "Gold"
+    ]
   },
   "CertificationCodeType": {
-    "_enum": ["Farm", "Entity"]
+    "_enum": [
+      "Farm",
+      "Entity"
+    ]
   },
   "CertificationCodes": {
     "version": "u32",
@@ -81,14 +98,6 @@
   },
   "Address": "MultiAddress",
   "LookupSource": "MultiAddress",
-  "PerDispatchClassU32": {
-    "normal": "u32",
-    "operational": "u32",
-    "mandatory": "u32"
-  },
-  "BlockLength": {
-    "max": "PerDispatchClassU32"
-  },
   "BalanceOf": "Balance",
   "Public": "[u8;32]",
   "U16F16": "[u8; 4]",
@@ -102,6 +111,6 @@
   "StellarTransaction": {
     "amount": "Balance",
     "target": "MultiAddress"
-  }
+  },
+  "AccountInfo": "AccountInfoWithProviders"
 }
-  

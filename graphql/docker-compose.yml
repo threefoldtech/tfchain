@@ -28,7 +28,7 @@ services:
       - REDIS_URI=redis://redis:6379/0
       - DEBUG=index*
       - BLOCK_HEIGHT=0
-      - WS_PROVIDER_ENDPOINT_URI=ws://192.168.0.154:9944
+      - WS_PROVIDER_ENDPOINT_URI=wss://substrate01.threefold.io
       - TYPES_JSON=/types.json
     volumes:
       - type: bind

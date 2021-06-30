@@ -214,9 +214,10 @@ var TfgridModule;
                 "types::Location",
                 "u32",
                 "u32",
-                "Vec<u8>",
                 "AccountId",
-                "types::Role"
+                "types::Role",
+                "u32",
+                "Option<types::PublicConfig>"
             ];
         }
         get params() {
@@ -242,15 +243,16 @@ var TfgridModule;
                 create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
                     this.ctx.params[6].value
                 ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "Bytes", [
+                create_1.createTypeUnsafe(_1.typeRegistry, "AccountId", [
                     this.ctx.params[7].value
                 ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "AccountId", [
+                create_1.createTypeUnsafe(_1.typeRegistry, "Role", [
                     this.ctx.params[8].value
                 ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "Role", [
+                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
                     this.ctx.params[9].value
-                ])
+                ]),
+                create_1.createTypeUnsafe(_1.typeRegistry, "Option<PublicConfig>", [this.ctx.params[10].value])
             ];
         }
         validateParams() {

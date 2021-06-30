@@ -3,11 +3,12 @@ import { SubstrateEvent, SubstrateExtrinsic } from "@subsquid/hydra-common";
 import { Codec } from "@polkadot/types/types";
 import { typeRegistry } from ".";
 
-import { Bytes, u32 } from "@polkadot/types";
+import { Bytes, Option, u32 } from "@polkadot/types";
 import { AccountId } from "@polkadot/types/interfaces";
 import {
   CertificationType,
   Location,
+  PublicConfig,
   Resources,
   Role
 } from "substrate-tfgrid-ts-types";
@@ -229,9 +230,10 @@ export namespace TfgridModule {
       "types::Location",
       "u32",
       "u32",
-      "Vec<u8>",
       "AccountId",
-      "types::Role"
+      "types::Role",
+      "u32",
+      "Option<types::PublicConfig>"
     ];
 
     constructor(public readonly ctx: SubstrateEvent) {}
@@ -244,9 +246,10 @@ export namespace TfgridModule {
       Location,
       u32,
       u32,
-      Bytes,
       AccountId,
-      Role
+      Role,
+      u32,
+      Option<PublicConfig>
     ] {
       return [
         createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
@@ -270,15 +273,20 @@ export namespace TfgridModule {
         createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
           this.ctx.params[6].value
         ]),
-        createTypeUnsafe<Bytes & Codec>(typeRegistry, "Bytes", [
+        createTypeUnsafe<AccountId & Codec>(typeRegistry, "AccountId", [
           this.ctx.params[7].value
         ]),
-        createTypeUnsafe<AccountId & Codec>(typeRegistry, "AccountId", [
+        createTypeUnsafe<Role & Codec>(typeRegistry, "Role", [
           this.ctx.params[8].value
         ]),
-        createTypeUnsafe<Role & Codec>(typeRegistry, "Role", [
+        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
           this.ctx.params[9].value
-        ])
+        ]),
+        createTypeUnsafe<Option<PublicConfig> & Codec>(
+          typeRegistry,
+          "Option<PublicConfig>",
+          [this.ctx.params[10].value]
+        )
       ];
     }
 

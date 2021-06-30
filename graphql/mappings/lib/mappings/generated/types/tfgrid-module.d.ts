@@ -1,7 +1,7 @@
 import { SubstrateEvent } from "@subsquid/hydra-common";
-import { Bytes, u32 } from "@polkadot/types";
+import { Bytes, Option, u32 } from "@polkadot/types";
 import { AccountId } from "@polkadot/types/interfaces";
-import { CertificationType, Location, Resources, Role } from "substrate-tfgrid-ts-types";
+import { CertificationType, Location, PublicConfig, Resources, Role } from "substrate-tfgrid-ts-types";
 export declare namespace TfgridModule {
     class EntityStoredEvent {
         readonly ctx: SubstrateEvent;
@@ -42,7 +42,7 @@ export declare namespace TfgridModule {
         readonly ctx: SubstrateEvent;
         readonly expectedParamTypes: string[];
         constructor(ctx: SubstrateEvent);
-        get params(): [u32, u32, u32, Resources, Location, u32, u32, Bytes, AccountId, Role];
+        get params(): [u32, u32, u32, Resources, Location, u32, u32, AccountId, Role, u32, Option<PublicConfig>];
         validateParams(): boolean;
     }
     class NodeDeletedEvent {

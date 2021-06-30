@@ -38,6 +38,10 @@ mappings:
       handler: balancesTransfer
     - event: tfgridModule.EntityStored
       handler: entityStored
+    - event: tfgridModule.EntityUpdated
+      handler: entityUpdated
+    - event: tfgridModule.EntityDeleted
+      handler: entityDeleted
   # extrinsicHandlers:
   #   # infer defaults
   #   - extrinsic: timestamp.set 
