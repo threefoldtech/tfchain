@@ -1,9 +1,9 @@
 const {
-  createNode
+  updateNode
 } = require('../../src/nodes')
 
-exports.command = 'create'
-exports.desc = 'Create a node given parameters'
+exports.command = 'update <id>'
+exports.desc = 'Update a node by id given parameters'
 exports.builder = function (yargs) {
   yargs.option('twinID', {
     description: 'TwinID for the node',
@@ -18,4 +18,4 @@ exports.builder = function (yargs) {
   yargs.demandOption(['t', 'f'])
   return yargs
 }
-exports.handler = createNode
+exports.handler = updateNode
