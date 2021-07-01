@@ -15,6 +15,9 @@
     "substrate-tfgrid-ts-types": "^0.0.5",
     "warthog": "https://github.com/metmirr/warthog/releases/download/v2.30.0/warthog-v2.30.0.tgz"
   },
+  "resolutions": {
+    "@polkadot/types": "4.16.2"
+  },
   "devDependencies": {
     "copyfiles": "^2.4.1",
     "rimraf": "^3.0.2",

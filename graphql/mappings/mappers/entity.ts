@@ -21,7 +21,7 @@ export async function entityStored({
   entity.name = hex2a(name.toString())
   entity.countryId = country_id.toNumber()
   entity.cityId = city_id.toNumber()
-  entity.address = Buffer.from(account_id.toHex()).toString()
+  entity.address = hex2a(account_id.toString())
 
   await store.save<Entity>(entity)
 }
@@ -43,7 +43,7 @@ export async function entityUpdated({
     savedEntity.name = hex2a(name.toString())
     savedEntity.countryId = country_id.toNumber()
     savedEntity.cityId = city_id.toNumber()
-    savedEntity.address = Buffer.from(account_id.toHex()).toString()
+    savedEntity.address = hex2a(account_id.toString())
   
     await store.save<Entity>(savedEntity)
   }

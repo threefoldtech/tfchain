@@ -21,6 +21,7 @@ typegen:
     - tfgridModule.FarmStored
     - tfgridModule.FarmDeleted
     - tfgridModule.NodeStored
+    # - tfgridModule.NodeUpdated
     - tfgridModule.NodeDeleted
     - tfgridModule.TwinStored
     - tfgridModule.TwinDeleted
@@ -42,6 +43,24 @@ mappings:
       handler: entityUpdated
     - event: tfgridModule.EntityDeleted
       handler: entityDeleted
+    - event: tfgridModule.TwinStored
+      handler: twinStored
+    - event: tfgridModule.TwinDeleted
+      handler: twinDeleted
+    - event: tfgridModule.TwinEntityStored
+      handler: twinEntityStored
+    - event: tfgridModule.TwinEntityRemoved
+      handler: twinEntityRemoved
+    - event: tfgridModule.NodeStored
+      handler: nodeStored
+    # - event: tfgridModule.NodeUpdated
+      # handler: nodeUpdated
+    - event: tfgridModule.NodeDeleted
+      handler: nodeDeleted
+    - event: tfgridModule.FarmStored
+      handler: farmStored
+    - event: tfgridModule.FarmDeleted
+      handler: farmDeleted
   # extrinsicHandlers:
   #   # infer defaults
   #   - extrinsic: timestamp.set 
