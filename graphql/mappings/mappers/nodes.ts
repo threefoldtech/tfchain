@@ -31,7 +31,7 @@ export async function nodeStored({
   node.location.latitude = hex2a(location.latitude.toString())
   node.location.longitude = hex2a(location.longitude.toString())
 
-  node.address = hex2a(address.toString())
+  node.address = address.toHuman()
 
   node.role = role.toString()
 

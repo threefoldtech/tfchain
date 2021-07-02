@@ -18,7 +18,7 @@ async function nodeStored({ store, event, block, extrinsic, }) {
     node.cityId = cityID.toNumber();
     node.location.latitude = util_1.hex2a(location.latitude.toString());
     node.location.longitude = util_1.hex2a(location.longitude.toString());
-    node.address = util_1.hex2a(address.toString());
+    node.address = util_1.hex2a(Buffer.from(address.toHex()).toString());
     node.role = role.toString();
     // todo twin id
     // todo public config

@@ -14,14 +14,14 @@ export async function entityStored({
   extrinsic,
 }: EventContext & StoreContext) {
   const entity = new Entity()
-  const [version, entity_id, name, country_id, city_id, account_id] = new TfgridModule.EntityStoredEvent(event).params
+  const [version, eneityID, name, countryID, cityID, accountID] = new TfgridModule.EntityStoredEvent(event).params
 
   entity.gridVersion = version.toNumber()
-  entity.entityId = entity_id.toNumber()
+  entity.entityId = eneityID.toNumber()
   entity.name = hex2a(name.toString())
-  entity.countryId = country_id.toNumber()
-  entity.cityId = city_id.toNumber()
-  entity.address = hex2a(account_id.toString())
+  entity.countryId = countryID.toNumber()
+  entity.cityId = cityID.toNumber()
+  entity.address = accountID.toHuman()
 
   await store.save<Entity>(entity)
 }
@@ -33,17 +33,17 @@ export async function entityUpdated({
   extrinsic,
 }: EventContext & StoreContext) {
   const entity = new Entity()
-  const [entity_id, name, country_id, city_id, account_id] = new TfgridModule.EntityUpdatedEvent(event).params
+  const [eneityID, name, countryID, cityID, accountID] = new TfgridModule.EntityUpdatedEvent(event).params
 
-  const savedEntity = await store.get(Entity, { where: { entityId: entity_id.toNumber() } })
+  const savedEntity = await store.get(Entity, { where: { entityId: eneityID.toNumber() } })
 
   if (savedEntity) {
     // entity.gridVersion = version.toNumber()
-    savedEntity.entityId = entity_id.toNumber()
+    savedEntity.entityId = eneityID.toNumber()
     savedEntity.name = hex2a(name.toString())
-    savedEntity.countryId = country_id.toNumber()
-    savedEntity.cityId = city_id.toNumber()
-    savedEntity.address = hex2a(account_id.toString())
+    savedEntity.countryId = countryID.toNumber()
+    savedEntity.cityId = cityID.toNumber()
+    savedEntity.address = accountID.toHuman()
   
     await store.save<Entity>(savedEntity)
   }
@@ -56,9 +56,9 @@ export async function entityDeleted({
   extrinsic,
 }: EventContext & StoreContext) {
   const entity = new Entity()
-  const [entity_id] = new TfgridModule.EntityDeletedEvent(event).params
+  const [eneityID] = new TfgridModule.EntityDeletedEvent(event).params
 
-  const savedEntity = await store.get(Entity, { where: { entityId: entity_id.toNumber() } })
+  const savedEntity = await store.get(Entity, { where: { entityId: eneityID.toNumber() } })
 
   if (savedEntity) {
     store.remove(savedEntity)

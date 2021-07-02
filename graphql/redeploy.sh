@@ -5,12 +5,12 @@ docker-compose down
 sudo rm -rf /opt/graphqldb
 sudo mkdir /opt/graphqldb
 
-yarn build
+# yarn build
 
-yarn typegen
+# yarn typegen
 
-yarn workspace sample-mappings install
-yarn mappings:build
+# yarn workspace sample-mappings install
+# yarn mappings:build
 
 docker build . -f docker/Dockerfile.builder -t builder
 docker build . -f docker/Dockerfile.processor -t processor:latest

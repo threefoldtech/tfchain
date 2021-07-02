@@ -14,11 +14,11 @@ export async function twinStored({
   extrinsic,
 }: EventContext & StoreContext) {
   const twin = new Twin()
-  const [version, twin_id, account_id, ip] = new TfgridModule.TwinStoredEvent(event).params
+  const [version, twinID, accountID, ip] = new TfgridModule.TwinStoredEvent(event).params
 
   twin.gridVersion = version.toNumber()
-  twin.twinId = twin_id.toNumber()
-  twin.address = hex2a(account_id.toString())
+  twin.twinId = twinID.toNumber()
+  twin.address = accountID.toHuman()
   twin.ip = hex2a(ip.toString())
 
   await store.save<Twin>(twin)
@@ -30,9 +30,9 @@ export async function twinDeleted({
   block,
   extrinsic,
 }: EventContext & StoreContext) {
-  const [twin_id] = new TfgridModule.TwinDeletedEvent(event).params
+  const [twinID] = new TfgridModule.TwinDeletedEvent(event).params
   
-  const savedTwin = await store.get(Twin, { where: { twinId: twin_id.toNumber() } })
+  const savedTwin = await store.get(Twin, { where: { twinId: twinID.toNumber() } })
 
   if (savedTwin) {
     await store.remove(savedTwin)
@@ -46,13 +46,13 @@ export async function twinEntityStored({
   extrinsic,
 }: EventContext & StoreContext) {
   const entityProof = new EntityProof()
-  const [twin_id, entity_id, signature] = new TfgridModule.TwinEntityStoredEvent(event).params
+  const [twinID, entityID, signature] = new TfgridModule.TwinEntityStoredEvent(event).params
 
-  let savedTwin = await store.get(Twin, { where: { twinId: twin_id.toNumber() } })
+  let savedTwin = await store.get(Twin, { where: { twinId: twinID.toNumber() } })
 
   if (savedTwin) {
     const entityProof = new EntityProof()
-    entityProof.entityId = entity_id.toNumber()
+    entityProof.entityId = entityID.toNumber()
     entityProof.signature = Buffer.from(signature.toString()).toString()
     
     // and the twin foreign key to entityproof
@@ -68,9 +68,9 @@ export async function twinEntityRemoved({
   block,
   extrinsic,
 }: EventContext & StoreContext) {
-  const [twin_id, entity_id] = new TfgridModule.TwinEntityRemovedEvent(event).params
+  const [twinID, entityID] = new TfgridModule.TwinEntityRemovedEvent(event).params
 
-  let savedTwinEntity = await store.get(EntityProof, { where: { entityId: entity_id.toNumber() }})
+  let savedTwinEntity = await store.get(EntityProof, { where: { entityId: entityID.toNumber() }})
   if (savedTwinEntity) {
     await store.remove(savedTwinEntity)
   }
