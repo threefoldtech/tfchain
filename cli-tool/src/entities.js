@@ -21,10 +21,7 @@ async function updateEntity (args) {
 
   const { name, c: countryID, t: cityID } = args
 
-  await client.updateEntity(name, countryID, cityID, callback)
-
-  console.log('entity updated')
-  process.exit(0)
+  return client.updateEntity(name, countryID, cityID, callback)
 }
 
 async function getEntity (args) {

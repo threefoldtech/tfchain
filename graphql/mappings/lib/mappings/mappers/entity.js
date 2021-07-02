@@ -26,7 +26,7 @@ async function entityUpdated({ store, event, block, extrinsic, }) {
         savedEntity.name = util_1.hex2a(name.toString());
         savedEntity.countryId = countryID.toNumber();
         savedEntity.cityId = cityID.toNumber();
-        savedEntity.address = util_1.hex2a(Buffer.from(accountID.toHex()).toString());
+        savedEntity.address = accountID.toHuman();
         await store.save(savedEntity);
     }
 }

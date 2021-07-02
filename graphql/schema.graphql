@@ -54,12 +54,19 @@ type Node @entity {
   countryId: Int
   cityId: Int
   address: String!
-  pubKey: String!
   hru: Int
   sru: Int
   cru: Int
   mru: Int
   role: String!
+  publicConfig: PublicConfig
+}
+
+type PublicConfig @entity {
+  ipv4: String!
+  ipv6: String!
+  gw4: String!
+  gw6: String!
 }
 
 type Location @entity {

@@ -9,7 +9,7 @@ async function twinStored({ store, event, block, extrinsic, }) {
     const [version, twinID, accountID, ip] = new types_1.TfgridModule.TwinStoredEvent(event).params;
     twin.gridVersion = version.toNumber();
     twin.twinId = twinID.toNumber();
-    twin.address = util_1.hex2a(Buffer.from(accountID.toHex()).toString());
+    twin.address = accountID.toHuman();
     twin.ip = util_1.hex2a(ip.toString());
     await store.save(twin);
 }

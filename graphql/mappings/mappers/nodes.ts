@@ -1,4 +1,4 @@
-import { Node  } from '../../generated/graphql-server/model'
+import { Node, Location } from '../../generated/graphql-server/model'
 import { TfgridModule } from '../generated/types'
 import { hex2a } from './util'
 
@@ -28,8 +28,12 @@ export async function nodeStored({
   node.countryId = countryID.toNumber()
   node.cityId = cityID.toNumber()
 
-  node.location.latitude = hex2a(location.latitude.toString())
-  node.location.longitude = hex2a(location.longitude.toString())
+  const newLocation = new Location()
+  newLocation.latitude = hex2a(location.latitude.toString())
+  newLocation.longitude = hex2a(location.longitude.toString())
+  await store.save<Location>(newLocation)
+
+  node.location = newLocation
 
   node.address = address.toHuman()
 
