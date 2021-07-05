@@ -10,12 +10,13 @@ import {
   Field,
   Int,
   ArgsType,
-  Info
+  Info,
+  Ctx
 } from 'type-graphql';
 import graphqlFields from 'graphql-fields';
 import { Inject } from 'typedi';
 import { Min } from 'class-validator';
-import { Fields, StandardDeleteResponse, UserId, PageInfo, RawFields } from 'warthog';
+import { Fields, StandardDeleteResponse, UserId, PageInfo, RawFields, NestedFields, BaseContext } from 'warthog';
 
 import {
   TwinCreateInput,
@@ -31,7 +32,9 @@ import { Twin } from './twin.model';
 import { TwinService } from './twin.service';
 
 import { EntityProof } from '../entity-proof/entity-proof.model';
-import { getConnection } from 'typeorm';
+import { EntityProofService } from '../entity-proof/entity-proof.service';
+import { getConnection, getRepository, In, Not } from 'typeorm';
+import _ from 'lodash';
 
 @ObjectType()
 export class TwinEdge {
@@ -77,7 +80,7 @@ export class TwinConnectionWhereArgs extends ConnectionPageInputOptions {
   where?: TwinWhereInput;
 
   @Field(() => TwinOrderByEnum, { nullable: true })
-  orderBy?: TwinOrderByEnum;
+  orderBy?: [TwinOrderByEnum];
 }
 
 @Resolver(Twin)
@@ -90,7 +93,7 @@ export class TwinResolver {
   }
 
   @Query(() => Twin, { nullable: true })
-  async twin(@Arg('where') where: TwinWhereUniqueInput, @Fields() fields: string[]): Promise<Twin | null> {
+  async twinByUniqueInput(@Arg('where') where: TwinWhereUniqueInput, @Fields() fields: string[]): Promise<Twin | null> {
     const result = await this.service.find(where, undefined, 1, 0, fields);
     return result && result.length >= 1 ? result[0] : null;
   }
@@ -124,13 +127,7 @@ export class TwinResolver {
   }
 
   @FieldResolver(() => EntityProof)
-  async entityprooftwinRel(@Root() r: Twin): Promise<EntityProof[] | null> {
-    const result = await getConnection()
-      .getRepository(Twin)
-      .findOne(r.id, { relations: ['entityprooftwinRel'] });
-    if (result && result.entityprooftwinRel !== undefined) {
-      return result.entityprooftwinRel;
-    }
-    return null;
+  async entityprooftwinRel(@Root() r: Twin, @Ctx() ctx: BaseContext): Promise<EntityProof[] | null> {
+    return ctx.dataLoader.loaders.Twin.entityprooftwinRel.load(r);
   }
 }

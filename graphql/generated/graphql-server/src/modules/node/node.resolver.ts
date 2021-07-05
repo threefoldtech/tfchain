@@ -10,12 +10,13 @@ import {
   Field,
   Int,
   ArgsType,
-  Info
+  Info,
+  Ctx
 } from 'type-graphql';
 import graphqlFields from 'graphql-fields';
 import { Inject } from 'typedi';
 import { Min } from 'class-validator';
-import { Fields, StandardDeleteResponse, UserId, PageInfo, RawFields } from 'warthog';
+import { Fields, StandardDeleteResponse, UserId, PageInfo, RawFields, NestedFields, BaseContext } from 'warthog';
 
 import {
   NodeCreateInput,
@@ -31,7 +32,9 @@ import { Node } from './node.model';
 import { NodeService } from './node.service';
 
 import { Location } from '../location/location.model';
-import { getConnection } from 'typeorm';
+import { LocationService } from '../location/location.service';
+import { getConnection, getRepository, In, Not } from 'typeorm';
+import _ from 'lodash';
 
 @ObjectType()
 export class NodeEdge {
@@ -77,7 +80,7 @@ export class NodeConnectionWhereArgs extends ConnectionPageInputOptions {
   where?: NodeWhereInput;
 
   @Field(() => NodeOrderByEnum, { nullable: true })
-  orderBy?: NodeOrderByEnum;
+  orderBy?: [NodeOrderByEnum];
 }
 
 @Resolver(Node)
@@ -90,7 +93,7 @@ export class NodeResolver {
   }
 
   @Query(() => Node, { nullable: true })
-  async node(@Arg('where') where: NodeWhereUniqueInput, @Fields() fields: string[]): Promise<Node | null> {
+  async nodeByUniqueInput(@Arg('where') where: NodeWhereUniqueInput, @Fields() fields: string[]): Promise<Node | null> {
     const result = await this.service.find(where, undefined, 1, 0, fields);
     return result && result.length >= 1 ? result[0] : null;
   }
@@ -124,13 +127,7 @@ export class NodeResolver {
   }
 
   @FieldResolver(() => Location)
-  async location(@Root() r: Node): Promise<Location | null> {
-    const result = await getConnection()
-      .getRepository(Node)
-      .findOne(r.id, { relations: ['location'] });
-    if (result && result.location !== undefined) {
-      return result.location;
-    }
-    return null;
+  async location(@Root() r: Node, @Ctx() ctx: BaseContext): Promise<Location | null> {
+    return ctx.dataLoader.loaders.Node.location.load(r);
   }
 }

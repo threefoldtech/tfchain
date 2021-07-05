@@ -10,12 +10,13 @@ import {
   Field,
   Int,
   ArgsType,
-  Info
+  Info,
+  Ctx
 } from 'type-graphql';
 import graphqlFields from 'graphql-fields';
 import { Inject } from 'typedi';
 import { Min } from 'class-validator';
-import { Fields, StandardDeleteResponse, UserId, PageInfo, RawFields } from 'warthog';
+import { Fields, StandardDeleteResponse, UserId, PageInfo, RawFields, NestedFields, BaseContext } from 'warthog';
 
 import {
   FarmCreateInput,
@@ -74,7 +75,7 @@ export class FarmConnectionWhereArgs extends ConnectionPageInputOptions {
   where?: FarmWhereInput;
 
   @Field(() => FarmOrderByEnum, { nullable: true })
-  orderBy?: FarmOrderByEnum;
+  orderBy?: [FarmOrderByEnum];
 }
 
 @Resolver(Farm)
@@ -87,7 +88,7 @@ export class FarmResolver {
   }
 
   @Query(() => Farm, { nullable: true })
-  async farm(@Arg('where') where: FarmWhereUniqueInput, @Fields() fields: string[]): Promise<Farm | null> {
+  async farmByUniqueInput(@Arg('where') where: FarmWhereUniqueInput, @Fields() fields: string[]): Promise<Farm | null> {
     const result = await this.service.find(where, undefined, 1, 0, fields);
     return result && result.length >= 1 ? result[0] : null;
   }

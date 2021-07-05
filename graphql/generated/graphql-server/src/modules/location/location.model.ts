@@ -13,7 +13,12 @@ export class Location extends BaseModel {
   @OneToMany(
     () => Node,
     (param: Node) => param.location,
-    { nullable: true }
+    {
+      nullable: true,
+      modelName: 'Location',
+      relModelName: 'Node',
+      propertyName: 'nodelocation'
+    }
   )
   nodelocation?: Node[];
 

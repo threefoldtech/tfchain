@@ -10,12 +10,13 @@ import {
   Field,
   Int,
   ArgsType,
-  Info
+  Info,
+  Ctx
 } from 'type-graphql';
 import graphqlFields from 'graphql-fields';
 import { Inject } from 'typedi';
 import { Min } from 'class-validator';
-import { Fields, StandardDeleteResponse, UserId, PageInfo, RawFields } from 'warthog';
+import { Fields, StandardDeleteResponse, UserId, PageInfo, RawFields, NestedFields, BaseContext } from 'warthog';
 
 import {
   PricingPolicyCreateInput,
@@ -74,7 +75,7 @@ export class PricingPolicyConnectionWhereArgs extends ConnectionPageInputOptions
   where?: PricingPolicyWhereInput;
 
   @Field(() => PricingPolicyOrderByEnum, { nullable: true })
-  orderBy?: PricingPolicyOrderByEnum;
+  orderBy?: [PricingPolicyOrderByEnum];
 }
 
 @Resolver(PricingPolicy)
@@ -90,7 +91,7 @@ export class PricingPolicyResolver {
   }
 
   @Query(() => PricingPolicy, { nullable: true })
-  async pricingPolicy(
+  async pricingPolicyByUniqueInput(
     @Arg('where') where: PricingPolicyWhereUniqueInput,
     @Fields() fields: string[]
   ): Promise<PricingPolicy | null> {

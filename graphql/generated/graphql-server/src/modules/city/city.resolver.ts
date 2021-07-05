@@ -10,12 +10,13 @@ import {
   Field,
   Int,
   ArgsType,
-  Info
+  Info,
+  Ctx
 } from 'type-graphql';
 import graphqlFields from 'graphql-fields';
 import { Inject } from 'typedi';
 import { Min } from 'class-validator';
-import { Fields, StandardDeleteResponse, UserId, PageInfo, RawFields } from 'warthog';
+import { Fields, StandardDeleteResponse, UserId, PageInfo, RawFields, NestedFields, BaseContext } from 'warthog';
 
 import {
   CityCreateInput,
@@ -74,7 +75,7 @@ export class CityConnectionWhereArgs extends ConnectionPageInputOptions {
   where?: CityWhereInput;
 
   @Field(() => CityOrderByEnum, { nullable: true })
-  orderBy?: CityOrderByEnum;
+  orderBy?: [CityOrderByEnum];
 }
 
 @Resolver(City)
@@ -87,7 +88,7 @@ export class CityResolver {
   }
 
   @Query(() => City, { nullable: true })
-  async city(@Arg('where') where: CityWhereUniqueInput, @Fields() fields: string[]): Promise<City | null> {
+  async cityByUniqueInput(@Arg('where') where: CityWhereUniqueInput, @Fields() fields: string[]): Promise<City | null> {
     const result = await this.service.find(where, undefined, 1, 0, fields);
     return result && result.length >= 1 ? result[0] : null;
   }

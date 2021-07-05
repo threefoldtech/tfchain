@@ -10,12 +10,13 @@ import {
   Field,
   Int,
   ArgsType,
-  Info
+  Info,
+  Ctx
 } from 'type-graphql';
 import graphqlFields from 'graphql-fields';
 import { Inject } from 'typedi';
 import { Min } from 'class-validator';
-import { Fields, StandardDeleteResponse, UserId, PageInfo, RawFields } from 'warthog';
+import { Fields, StandardDeleteResponse, UserId, PageInfo, RawFields, NestedFields, BaseContext } from 'warthog';
 
 import {
   LocationCreateInput,
@@ -31,7 +32,9 @@ import { Location } from './location.model';
 import { LocationService } from './location.service';
 
 import { Node } from '../node/node.model';
-import { getConnection } from 'typeorm';
+import { NodeService } from '../node/node.service';
+import { getConnection, getRepository, In, Not } from 'typeorm';
+import _ from 'lodash';
 
 @ObjectType()
 export class LocationEdge {
@@ -77,7 +80,7 @@ export class LocationConnectionWhereArgs extends ConnectionPageInputOptions {
   where?: LocationWhereInput;
 
   @Field(() => LocationOrderByEnum, { nullable: true })
-  orderBy?: LocationOrderByEnum;
+  orderBy?: [LocationOrderByEnum];
 }
 
 @Resolver(Location)
@@ -93,7 +96,10 @@ export class LocationResolver {
   }
 
   @Query(() => Location, { nullable: true })
-  async location(@Arg('where') where: LocationWhereUniqueInput, @Fields() fields: string[]): Promise<Location | null> {
+  async locationByUniqueInput(
+    @Arg('where') where: LocationWhereUniqueInput,
+    @Fields() fields: string[]
+  ): Promise<Location | null> {
     const result = await this.service.find(where, undefined, 1, 0, fields);
     return result && result.length >= 1 ? result[0] : null;
   }
@@ -127,13 +133,7 @@ export class LocationResolver {
   }
 
   @FieldResolver(() => Node)
-  async nodelocation(@Root() r: Location): Promise<Node[] | null> {
-    const result = await getConnection()
-      .getRepository(Location)
-      .findOne(r.id, { relations: ['nodelocation'] });
-    if (result && result.nodelocation !== undefined) {
-      return result.nodelocation;
-    }
-    return null;
+  async nodelocation(@Root() r: Location, @Ctx() ctx: BaseContext): Promise<Node[] | null> {
+    return ctx.dataLoader.loaders.Location.nodelocation.load(r);
   }
 }

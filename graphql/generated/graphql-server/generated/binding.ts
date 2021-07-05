@@ -6,42 +6,44 @@ import { IResolvers } from 'graphql-tools/dist/Interfaces'
 import * as schema from  './schema.graphql'
 
 export interface Query {
-    cities: <T = Array<City>>(args: { offset?: Int | null, limit?: Int | null, where?: CityWhereInput | null, orderBy?: CityOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    city: <T = City | null>(args: { where: CityWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    citiesConnection: <T = CityConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: CityWhereInput | null, orderBy?: CityOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    countries: <T = Array<Country>>(args: { offset?: Int | null, limit?: Int | null, where?: CountryWhereInput | null, orderBy?: CountryOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    country: <T = Country | null>(args: { where: CountryWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    countriesConnection: <T = CountryConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: CountryWhereInput | null, orderBy?: CountryOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    entityProofs: <T = Array<EntityProof>>(args: { offset?: Int | null, limit?: Int | null, where?: EntityProofWhereInput | null, orderBy?: EntityProofOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    entityProof: <T = EntityProof | null>(args: { where: EntityProofWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    entityProofsConnection: <T = EntityProofConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: EntityProofWhereInput | null, orderBy?: EntityProofOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    entities: <T = Array<Entity>>(args: { offset?: Int | null, limit?: Int | null, where?: EntityWhereInput | null, orderBy?: EntityOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    entity: <T = Entity | null>(args: { where: EntityWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    entitiesConnection: <T = EntityConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: EntityWhereInput | null, orderBy?: EntityOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    farms: <T = Array<Farm>>(args: { offset?: Int | null, limit?: Int | null, where?: FarmWhereInput | null, orderBy?: FarmOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    farm: <T = Farm | null>(args: { where: FarmWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    farmsConnection: <T = FarmConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: FarmWhereInput | null, orderBy?: FarmOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    locations: <T = Array<Location>>(args: { offset?: Int | null, limit?: Int | null, where?: LocationWhereInput | null, orderBy?: LocationOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    location: <T = Location | null>(args: { where: LocationWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    locationsConnection: <T = LocationConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: LocationWhereInput | null, orderBy?: LocationOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    nodes: <T = Array<Node>>(args: { offset?: Int | null, limit?: Int | null, where?: NodeWhereInput | null, orderBy?: NodeOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    node: <T = Node | null>(args: { where: NodeWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    nodesConnection: <T = NodeConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: NodeWhereInput | null, orderBy?: NodeOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    pricingPolicies: <T = Array<PricingPolicy>>(args: { offset?: Int | null, limit?: Int | null, where?: PricingPolicyWhereInput | null, orderBy?: PricingPolicyOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    pricingPolicy: <T = PricingPolicy | null>(args: { where: PricingPolicyWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    pricingPoliciesConnection: <T = PricingPolicyConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: PricingPolicyWhereInput | null, orderBy?: PricingPolicyOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    commentSearch: <T = Array<CommentSearchFTSOutput>>(args: { limit?: Int | null, text: String }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    transfers: <T = Array<Transfer>>(args: { offset?: Int | null, limit?: Int | null, where?: TransferWhereInput | null, orderBy?: TransferOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    transfer: <T = Transfer | null>(args: { where: TransferWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    transfersConnection: <T = TransferConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: TransferWhereInput | null, orderBy?: TransferOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    twins: <T = Array<Twin>>(args: { offset?: Int | null, limit?: Int | null, where?: TwinWhereInput | null, orderBy?: TwinOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    twin: <T = Twin | null>(args: { where: TwinWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    twinsConnection: <T = TwinConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: TwinWhereInput | null, orderBy?: TwinOrderByInput | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> 
+    cities: <T = Array<City>>(args: { offset?: Int | null, limit?: Int | null, where?: CityWhereInput | null, orderBy?: Array<CityOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    cityByUniqueInput: <T = City | null>(args: { where: CityWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    citiesConnection: <T = CityConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: CityWhereInput | null, orderBy?: Array<CityOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    countries: <T = Array<Country>>(args: { offset?: Int | null, limit?: Int | null, where?: CountryWhereInput | null, orderBy?: Array<CountryOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    countryByUniqueInput: <T = Country | null>(args: { where: CountryWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    countriesConnection: <T = CountryConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: CountryWhereInput | null, orderBy?: Array<CountryOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    entityProofs: <T = Array<EntityProof>>(args: { offset?: Int | null, limit?: Int | null, where?: EntityProofWhereInput | null, orderBy?: Array<EntityProofOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    entityProofByUniqueInput: <T = EntityProof | null>(args: { where: EntityProofWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    entityProofsConnection: <T = EntityProofConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: EntityProofWhereInput | null, orderBy?: Array<EntityProofOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    entities: <T = Array<Entity>>(args: { offset?: Int | null, limit?: Int | null, where?: EntityWhereInput | null, orderBy?: Array<EntityOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    entityByUniqueInput: <T = Entity | null>(args: { where: EntityWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    entitiesConnection: <T = EntityConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: EntityWhereInput | null, orderBy?: Array<EntityOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    farms: <T = Array<Farm>>(args: { offset?: Int | null, limit?: Int | null, where?: FarmWhereInput | null, orderBy?: Array<FarmOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    farmByUniqueInput: <T = Farm | null>(args: { where: FarmWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    farmsConnection: <T = FarmConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: FarmWhereInput | null, orderBy?: Array<FarmOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    locations: <T = Array<Location>>(args: { offset?: Int | null, limit?: Int | null, where?: LocationWhereInput | null, orderBy?: Array<LocationOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    locationByUniqueInput: <T = Location | null>(args: { where: LocationWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    locationsConnection: <T = LocationConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: LocationWhereInput | null, orderBy?: Array<LocationOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    nodes: <T = Array<Node>>(args: { offset?: Int | null, limit?: Int | null, where?: NodeWhereInput | null, orderBy?: Array<NodeOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    nodeByUniqueInput: <T = Node | null>(args: { where: NodeWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    nodesConnection: <T = NodeConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: NodeWhereInput | null, orderBy?: Array<NodeOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    pricingPolicies: <T = Array<PricingPolicy>>(args: { offset?: Int | null, limit?: Int | null, where?: PricingPolicyWhereInput | null, orderBy?: Array<PricingPolicyOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    pricingPolicyByUniqueInput: <T = PricingPolicy | null>(args: { where: PricingPolicyWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    pricingPoliciesConnection: <T = PricingPolicyConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: PricingPolicyWhereInput | null, orderBy?: Array<PricingPolicyOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    commentSearch: <T = Array<CommentSearchFTSOutput>>(args: { whereTransfer?: TransferWhereInput | null, skip?: Int | null, limit?: Int | null, text: String }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    transfers: <T = Array<Transfer>>(args: { offset?: Int | null, limit?: Int | null, where?: TransferWhereInput | null, orderBy?: Array<TransferOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    transferByUniqueInput: <T = Transfer | null>(args: { where: TransferWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    transfersConnection: <T = TransferConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: TransferWhereInput | null, orderBy?: Array<TransferOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    twins: <T = Array<Twin>>(args: { offset?: Int | null, limit?: Int | null, where?: TwinWhereInput | null, orderBy?: Array<TwinOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    twinByUniqueInput: <T = Twin | null>(args: { where: TwinWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    twinsConnection: <T = TwinConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: TwinWhereInput | null, orderBy?: Array<TwinOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> 
   }
 
 export interface Mutation {}
 
-export interface Subscription {}
+export interface Subscription {
+    stateSubscription: <T = ProcessorState>(args?: {}, info?: GraphQLResolveInfo | string, options?: Options) => Promise<AsyncIterator<T>> 
+  }
 
 export interface Binding {
   query: Query
@@ -122,8 +124,8 @@ export type EntityProofOrderByInput =   'createdAt_ASC' |
   'entityId_DESC' |
   'signature_ASC' |
   'signature_DESC' |
-  'twinRelId_ASC' |
-  'twinRelId_DESC'
+  'twinRel_ASC' |
+  'twinRel_DESC'
 
 export type FarmOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -171,8 +173,8 @@ export type NodeOrderByInput =   'createdAt_ASC' |
   'nodeId_DESC' |
   'farmId_ASC' |
   'farmId_DESC' |
-  'locationId_ASC' |
-  'locationId_DESC' |
+  'location_ASC' |
+  'location_DESC' |
   'countryId_ASC' |
   'countryId_DESC' |
   'cityId_ASC' |
@@ -315,6 +317,8 @@ export interface CityWhereInput {
   name_startsWith?: String | null
   name_endsWith?: String | null
   name_in?: String[] | String | null
+  AND?: CityWhereInput[] | CityWhereInput | null
+  OR?: CityWhereInput[] | CityWhereInput | null
 }
 
 export interface CityWhereUniqueInput {
@@ -366,6 +370,8 @@ export interface CountryWhereInput {
   name_startsWith?: String | null
   name_endsWith?: String | null
   name_in?: String[] | String | null
+  AND?: CountryWhereInput[] | CountryWhereInput | null
+  OR?: CountryWhereInput[] | CountryWhereInput | null
 }
 
 export interface CountryWhereUniqueInput {
@@ -384,13 +390,13 @@ export interface EntityCreateInput {
 export interface EntityProofCreateInput {
   entityId: Float
   signature: String
-  twinRelId: ID_Output
+  twinRel: ID_Output
 }
 
 export interface EntityProofUpdateInput {
   entityId?: Float | null
   signature?: String | null
-  twinRelId?: ID_Input | null
+  twinRel?: ID_Input | null
 }
 
 export interface EntityProofWhereInput {
@@ -429,8 +435,11 @@ export interface EntityProofWhereInput {
   signature_startsWith?: String | null
   signature_endsWith?: String | null
   signature_in?: String[] | String | null
-  twinRelId_eq?: ID_Input | null
-  twinRelId_in?: ID_Output[] | ID_Output | null
+  twinRel_eq?: ID_Input | null
+  twinRel_in?: ID_Output[] | ID_Output | null
+  twinRel?: TwinWhereInput | null
+  AND?: EntityProofWhereInput[] | EntityProofWhereInput | null
+  OR?: EntityProofWhereInput[] | EntityProofWhereInput | null
 }
 
 export interface EntityProofWhereUniqueInput {
@@ -505,6 +514,8 @@ export interface EntityWhereInput {
   address_startsWith?: String | null
   address_endsWith?: String | null
   address_in?: String[] | String | null
+  AND?: EntityWhereInput[] | EntityWhereInput | null
+  OR?: EntityWhereInput[] | EntityWhereInput | null
 }
 
 export interface EntityWhereUniqueInput {
@@ -601,6 +612,8 @@ export interface FarmWhereInput {
   cityId_lt?: Int | null
   cityId_lte?: Int | null
   cityId_in?: Int[] | Int | null
+  AND?: FarmWhereInput[] | FarmWhereInput | null
+  OR?: FarmWhereInput[] | FarmWhereInput | null
 }
 
 export interface FarmWhereUniqueInput {
@@ -652,6 +665,11 @@ export interface LocationWhereInput {
   latitude_startsWith?: String | null
   latitude_endsWith?: String | null
   latitude_in?: String[] | String | null
+  nodelocation_none?: NodeWhereInput | null
+  nodelocation_some?: NodeWhereInput | null
+  nodelocation_every?: NodeWhereInput | null
+  AND?: LocationWhereInput[] | LocationWhereInput | null
+  OR?: LocationWhereInput[] | LocationWhereInput | null
 }
 
 export interface LocationWhereUniqueInput {
@@ -662,7 +680,7 @@ export interface NodeCreateInput {
   gridVersion: Float
   nodeId: Float
   farmId: Float
-  locationId: ID_Output
+  location: ID_Output
   countryId?: Float | null
   cityId?: Float | null
   address: String
@@ -678,7 +696,7 @@ export interface NodeUpdateInput {
   gridVersion?: Float | null
   nodeId?: Float | null
   farmId?: Float | null
-  locationId?: ID_Input | null
+  location?: ID_Input | null
   countryId?: Float | null
   cityId?: Float | null
   address?: String | null
@@ -733,8 +751,8 @@ export interface NodeWhereInput {
   farmId_lt?: Int | null
   farmId_lte?: Int | null
   farmId_in?: Int[] | Int | null
-  locationId_eq?: ID_Input | null
-  locationId_in?: ID_Output[] | ID_Output | null
+  location_eq?: ID_Input | null
+  location_in?: ID_Output[] | ID_Output | null
   countryId_eq?: Int | null
   countryId_gt?: Int | null
   countryId_gte?: Int | null
@@ -786,6 +804,9 @@ export interface NodeWhereInput {
   role_startsWith?: String | null
   role_endsWith?: String | null
   role_in?: String[] | String | null
+  location?: LocationWhereInput | null
+  AND?: NodeWhereInput[] | NodeWhereInput | null
+  OR?: NodeWhereInput[] | NodeWhereInput | null
 }
 
 export interface NodeWhereUniqueInput {
@@ -877,6 +898,8 @@ export interface PricingPolicyWhereInput {
   nu_lt?: Int | null
   nu_lte?: Int | null
   nu_in?: Int[] | Int | null
+  AND?: PricingPolicyWhereInput[] | PricingPolicyWhereInput | null
+  OR?: PricingPolicyWhereInput[] | PricingPolicyWhereInput | null
 }
 
 export interface PricingPolicyWhereUniqueInput {
@@ -951,6 +974,8 @@ export interface TransferWhereInput {
   block_lt?: Int | null
   block_lte?: Int | null
   block_in?: Int[] | Int | null
+  AND?: TransferWhereInput[] | TransferWhereInput | null
+  OR?: TransferWhereInput[] | TransferWhereInput | null
 }
 
 export interface TransferWhereUniqueInput {
@@ -1018,6 +1043,11 @@ export interface TwinWhereInput {
   ip_startsWith?: String | null
   ip_endsWith?: String | null
   ip_in?: String[] | String | null
+  entityprooftwinRel_none?: EntityProofWhereInput | null
+  entityprooftwinRel_some?: EntityProofWhereInput | null
+  entityprooftwinRel_every?: EntityProofWhereInput | null
+  AND?: TwinWhereInput[] | TwinWhereInput | null
+  OR?: TwinWhereInput[] | TwinWhereInput | null
 }
 
 export interface TwinWhereUniqueInput {
@@ -1295,6 +1325,13 @@ export interface PricingPolicyConnection {
 export interface PricingPolicyEdge {
   node: PricingPolicy
   cursor: String
+}
+
+export interface ProcessorState {
+  lastCompleteBlock: Float
+  lastProcessedEvent: String
+  indexerHead: Float
+  chainHead: Float
 }
 
 export interface StandardDeleteResponse {

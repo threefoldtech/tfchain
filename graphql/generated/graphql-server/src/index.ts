@@ -6,7 +6,8 @@ import { snakeCase } from 'typeorm/util/StringUtils';
 import { loadConfig } from '../src/config';
 import { Logger } from '../src/logger';
 
-import { getServer } from './server';
+import { buildServerSchema, getServer } from './server';
+import { startPgSubsribers } from './pubsub';
 
 
 class CustomNamingStrategy extends SnakeNamingStrategy {
@@ -19,9 +20,9 @@ class CustomNamingStrategy extends SnakeNamingStrategy {
 }
 
 async function bootstrap() {
-  await loadConfig();
+  loadConfig();
 
-  const server = getServer({}, { namingStrategy: new CustomNamingStrategy() });
+  const server = getServer({}, { namingStrategy: new CustomNamingStrategy(), maxQueryExecutionTime: 1000, logging: [ process.env.WARTHOG_DB_LOGGING || "error"] });
 
   // Create database tables. Warthog migrate command does not support CustomNamingStrategy thats why
   // we have this code
@@ -30,7 +31,8 @@ async function bootstrap() {
     await server.establishDBConnection();
     process.exit(0);
   }
-
+  await buildServerSchema(server);
+  await startPgSubsribers();
   await server.start();
 }
 

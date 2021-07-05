@@ -10,12 +10,13 @@ import {
   Field,
   Int,
   ArgsType,
-  Info
+  Info,
+  Ctx
 } from 'type-graphql';
 import graphqlFields from 'graphql-fields';
 import { Inject } from 'typedi';
 import { Min } from 'class-validator';
-import { Fields, StandardDeleteResponse, UserId, PageInfo, RawFields } from 'warthog';
+import { Fields, StandardDeleteResponse, UserId, PageInfo, RawFields, NestedFields, BaseContext } from 'warthog';
 
 import {
   EntityProofCreateInput,
@@ -31,7 +32,9 @@ import { EntityProof } from './entity-proof.model';
 import { EntityProofService } from './entity-proof.service';
 
 import { Twin } from '../twin/twin.model';
-import { getConnection } from 'typeorm';
+import { TwinService } from '../twin/twin.service';
+import { getConnection, getRepository, In, Not } from 'typeorm';
+import _ from 'lodash';
 
 @ObjectType()
 export class EntityProofEdge {
@@ -77,7 +80,7 @@ export class EntityProofConnectionWhereArgs extends ConnectionPageInputOptions {
   where?: EntityProofWhereInput;
 
   @Field(() => EntityProofOrderByEnum, { nullable: true })
-  orderBy?: EntityProofOrderByEnum;
+  orderBy?: [EntityProofOrderByEnum];
 }
 
 @Resolver(EntityProof)
@@ -93,7 +96,7 @@ export class EntityProofResolver {
   }
 
   @Query(() => EntityProof, { nullable: true })
-  async entityProof(
+  async entityProofByUniqueInput(
     @Arg('where') where: EntityProofWhereUniqueInput,
     @Fields() fields: string[]
   ): Promise<EntityProof | null> {
@@ -130,13 +133,7 @@ export class EntityProofResolver {
   }
 
   @FieldResolver(() => Twin)
-  async twinRel(@Root() r: EntityProof): Promise<Twin | null> {
-    const result = await getConnection()
-      .getRepository(EntityProof)
-      .findOne(r.id, { relations: ['twinRel'] });
-    if (result && result.twinRel !== undefined) {
-      return result.twinRel;
-    }
-    return null;
+  async twinRel(@Root() r: EntityProof, @Ctx() ctx: BaseContext): Promise<Twin | null> {
+    return ctx.dataLoader.loaders.EntityProof.twinRel.load(r);
   }
 }

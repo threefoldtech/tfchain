@@ -13,7 +13,13 @@ export class EntityProof extends BaseModel {
   @ManyToOne(
     () => Twin,
     (param: Twin) => param.entityprooftwinRel,
-    { skipGraphQLField: true }
+    {
+      skipGraphQLField: true,
+
+      modelName: 'EntityProof',
+      relModelName: 'Twin',
+      propertyName: 'twinRel'
+    }
   )
   twinRel!: Twin;
 

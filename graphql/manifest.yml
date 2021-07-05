@@ -1,0 +1,70 @@
+version: '3.0'
+description: Test manifest
+repository: https://github.com/
+hydraVersion: "3"
+dataSource:
+  kind: substrate 
+  chain: node-template
+entities:
+  - mappings/lib/generated/**/*.model.js
+typegen:
+  customTypes:
+    lib: 'substrate-tfgrid-ts-types'
+    typedefsLoc: ./types.json
+  metadata:
+    source: wss://substrate01.threefold.io
+  events:
+    - balances.Transfer
+    - tfgridModule.EntityStored
+    - tfgridModule.EntityUpdated
+    - tfgridModule.EntityDeleted
+    - tfgridModule.FarmStored
+    - tfgridModule.FarmDeleted
+    - tfgridModule.NodeStored
+    # - tfgridModule.NodeUpdated
+    - tfgridModule.NodeDeleted
+    - tfgridModule.TwinStored
+    - tfgridModule.TwinDeleted
+    - tfgridModule.TwinEntityStored
+    - tfgridModule.TwinEntityRemoved
+  # calls:
+  #   - timestamp.set
+  outDir: ./mappings/generated/types
+mappings:
+  mappingsModule: mappings/lib/mappings
+  imports:
+    - mappings/lib/mappings/generated/types
+  eventHandlers:
+    - event: balances.Transfer 
+      handler: balancesTransfer
+    - event: tfgridModule.EntityStored
+      handler: entityStored
+    - event: tfgridModule.EntityUpdated
+      handler: entityUpdated
+    - event: tfgridModule.EntityDeleted
+      handler: entityDeleted
+    - event: tfgridModule.TwinStored
+      handler: twinStored
+    - event: tfgridModule.TwinDeleted
+      handler: twinDeleted
+    - event: tfgridModule.TwinEntityStored
+      handler: twinEntityStored
+    - event: tfgridModule.TwinEntityRemoved
+      handler: twinEntityRemoved
+    - event: tfgridModule.NodeStored
+      handler: nodeStored
+    # - event: tfgridModule.NodeUpdated
+      # handler: nodeUpdated
+    - event: tfgridModule.NodeDeleted
+      handler: nodeDeleted
+    - event: tfgridModule.FarmStored
+      handler: farmStored
+    - event: tfgridModule.FarmDeleted
+      handler: farmDeleted
+  # extrinsicHandlers:
+  #   # infer defaults
+  #   - extrinsic: timestamp.set 
+  #     handler: timestampCall
+  preBlockHooks:
+  postBlockHooks:
+  

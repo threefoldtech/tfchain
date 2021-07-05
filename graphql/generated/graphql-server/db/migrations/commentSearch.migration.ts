@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class CommentSearchMigration1624879542764 implements MigrationInterface {
-    name = 'commentSearchMigration1624879542764'
+export class CommentSearchMigration1625066276450 implements MigrationInterface {
+    name = 'commentSearchMigration1625066276450'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         // TODO: escape 
@@ -22,11 +22,12 @@ export class CommentSearchMigration1624879542764 implements MigrationInterface {
             STORED;
         `);
         await queryRunner.query(`CREATE INDEX comment_search_transfer_idx ON transfer USING GIN (comment_search_tsv)`);
+        await queryRunner.query(`CREATE INDEX transfer_id_idx ON transfer (('transfer' || '_' || id))`);
 
         await queryRunner.query(`
             CREATE VIEW comment_search_view AS
             SELECT 
-                text 'transfer' AS origin_table, id, comment_search_tsv AS tsv, comment_search_doc AS document 
+                text 'transfer' AS origin_table, 'transfer' || '_' || id AS unique_id, id, comment_search_tsv AS tsv, comment_search_doc AS document 
             FROM
                 transfer
         `);
@@ -36,6 +37,7 @@ export class CommentSearchMigration1624879542764 implements MigrationInterface {
     public async down(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`DROP VIEW comment_search_view`);
         await queryRunner.query(`DROP INDEX comment_search_transfer_idx`);
+        await queryRunner.query(`DROP INDEX transfer_id_idx`);
         await queryRunner.query(`ALTER TABLE transfer DROP COLUMN comment_search_tsv`);
         await queryRunner.query(`ALTER TABLE transfer DROP COLUMN comment_search_doc`);
     }

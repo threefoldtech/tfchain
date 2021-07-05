@@ -12,10 +12,7 @@ async function createEntity (args) {
     target = client.address
   }
 
-  await client.createEntity(target, name, countryID, cityID, sig, callback)
-
-  console.log('entity created')
-  process.exit(0)
+  return client.createEntity(target, name, countryID, cityID, sig, callback)
 }
 
 async function updateEntity (args) {
@@ -24,10 +21,7 @@ async function updateEntity (args) {
 
   const { name, c: countryID, t: cityID } = args
 
-  await client.updateEntity(name, countryID, cityID, callback)
-
-  console.log('entity updated')
-  process.exit(0)
+  return client.updateEntity(name, countryID, cityID, callback)
 }
 
 async function getEntity (args) {

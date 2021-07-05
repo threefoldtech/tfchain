@@ -10,12 +10,13 @@ import {
   Field,
   Int,
   ArgsType,
-  Info
+  Info,
+  Ctx
 } from 'type-graphql';
 import graphqlFields from 'graphql-fields';
 import { Inject } from 'typedi';
 import { Min } from 'class-validator';
-import { Fields, StandardDeleteResponse, UserId, PageInfo, RawFields } from 'warthog';
+import { Fields, StandardDeleteResponse, UserId, PageInfo, RawFields, NestedFields, BaseContext } from 'warthog';
 
 import {
   TransferCreateInput,
@@ -74,7 +75,7 @@ export class TransferConnectionWhereArgs extends ConnectionPageInputOptions {
   where?: TransferWhereInput;
 
   @Field(() => TransferOrderByEnum, { nullable: true })
-  orderBy?: TransferOrderByEnum;
+  orderBy?: [TransferOrderByEnum];
 }
 
 @Resolver(Transfer)
@@ -90,7 +91,10 @@ export class TransferResolver {
   }
 
   @Query(() => Transfer, { nullable: true })
-  async transfer(@Arg('where') where: TransferWhereUniqueInput, @Fields() fields: string[]): Promise<Transfer | null> {
+  async transferByUniqueInput(
+    @Arg('where') where: TransferWhereUniqueInput,
+    @Fields() fields: string[]
+  ): Promise<Transfer | null> {
     const result = await this.service.find(where, undefined, 1, 0, fields);
     return result && result.length >= 1 ? result[0] : null;
   }

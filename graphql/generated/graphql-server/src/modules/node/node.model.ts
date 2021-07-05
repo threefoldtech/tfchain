@@ -16,7 +16,13 @@ export class Node extends BaseModel {
   @ManyToOne(
     () => Location,
     (param: Location) => param.nodelocation,
-    { skipGraphQLField: true }
+    {
+      skipGraphQLField: true,
+
+      modelName: 'Node',
+      relModelName: 'Location',
+      propertyName: 'location'
+    }
   )
   location!: Location;
 

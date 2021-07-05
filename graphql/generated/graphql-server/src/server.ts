@@ -1,8 +1,11 @@
 import 'reflect-metadata';
-
-import { BaseContext, Server } from 'warthog';
+import { GraphQLID } from 'graphql';
+import { BaseContext, DataLoaderMiddleware, Server, ServerOptions } from 'warthog';
+import { DateResolver } from 'graphql-scalars';
+import { buildSchema } from 'type-graphql';
 
 import { Logger } from './logger';
+import { getPubSub } from './pubsub';
 
 interface Context extends BaseContext {
   user: {
@@ -15,20 +18,36 @@ interface Context extends BaseContext {
 export function getServer(AppOptions = {}, dbOptions = {}) {
   return new Server<Context>(
     {
-      // Inject a fake user.  In a real app you'd parse a JWT to add the user
-      context: (request: any) => {
-        const userId = JSON.stringify(request.headers).length.toString();
-
-        return {
-          user: {
-            id: `user:${userId}`
-          }
-        };
-      },
       introspection: true,
       logger: Logger,
-      ...AppOptions
+      ...AppOptions,
     },
     dbOptions
   );
+}
+
+export async function buildServerSchema<C extends BaseContext>(
+  server: Server<C>,
+  appOptions: ServerOptions<C> = {}
+): Promise<void> {
+  server.schema = await buildSchema({
+    authChecker: server.authChecker,
+    scalarsMap: [
+      {
+        type: 'ID' as any,
+        scalar: GraphQLID,
+      },
+      // Note: DateTime already included in type-graphql
+      {
+        type: 'DateOnlyString' as any,
+        scalar: DateResolver,
+      },
+    ],
+    container: server.container as any,
+    globalMiddlewares: [DataLoaderMiddleware, ...(appOptions.middlewares || [])],
+    resolvers: server.config.get('RESOLVERS_PATH'),
+    pubSub: getPubSub(),
+    // TODO: scalarsMap: [{ type: GraphQLDate, scalar: GraphQLDate }]
+    validate: server.config.get('VALIDATE_RESOLVERS') === 'true',
+  });
 }

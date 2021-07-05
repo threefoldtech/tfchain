@@ -19,7 +19,12 @@ export class Twin extends BaseModel {
   @OneToMany(
     () => EntityProof,
     (param: EntityProof) => param.twinRel,
-    { nullable: true }
+    {
+      nullable: true,
+      modelName: 'Twin',
+      relModelName: 'EntityProof',
+      propertyName: 'entityprooftwinRel'
+    }
   )
   entityprooftwinRel?: EntityProof[];
 

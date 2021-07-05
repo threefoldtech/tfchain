@@ -2,7 +2,7 @@ const {
   createNode
 } = require('../../src/nodes')
 
-exports.command = 'create <name>'
+exports.command = 'create'
 exports.desc = 'Create a node given parameters'
 exports.builder = function (yargs) {
   yargs.option('twinID', {
@@ -15,7 +15,7 @@ exports.builder = function (yargs) {
     alias: 'f',
     type: 'number'
   })
-  yargs.demandOption(['e', 'f'])
+  yargs.demandOption(['t', 'f'])
   return yargs
 }
 exports.handler = createNode

@@ -24,6 +24,7 @@ const { GraphQLJSONObject } = require('graphql-type-json');
 import { BaseWhereInput, JsonObject, PaginationArgs, DateOnlyString, DateTimeString, BigInt, Bytes } from 'warthog';
 
 import { CertificationType } from "../src/modules/farm/farm.model";
+
 // @ts-ignore
 import { City } from "../src/modules/city/city.model";
 // @ts-ignore
@@ -172,6 +173,12 @@ export class CityWhereInput {
 
   @TypeGraphQLField(() => [String], { nullable: true })
   name_in?: string[];
+
+  @TypeGraphQLField(() => CityWhereInput, { nullable: true })
+  AND?: [CityWhereInput];
+
+  @TypeGraphQLField(() => CityWhereInput, { nullable: true })
+  OR?: [CityWhereInput];
 }
 
 @TypeGraphQLInputType()
@@ -204,7 +211,7 @@ export class CityWhereArgs extends PaginationArgs {
   where?: CityWhereInput;
 
   @TypeGraphQLField(() => CityOrderByEnum, { nullable: true })
-  orderBy?: CityOrderByEnum;
+  orderBy?: CityOrderByEnum[];
 }
 
 @ArgsType()
@@ -343,6 +350,12 @@ export class CountryWhereInput {
 
   @TypeGraphQLField(() => [String], { nullable: true })
   name_in?: string[];
+
+  @TypeGraphQLField(() => CountryWhereInput, { nullable: true })
+  AND?: [CountryWhereInput];
+
+  @TypeGraphQLField(() => CountryWhereInput, { nullable: true })
+  OR?: [CountryWhereInput];
 }
 
 @TypeGraphQLInputType()
@@ -375,7 +388,7 @@ export class CountryWhereArgs extends PaginationArgs {
   where?: CountryWhereInput;
 
   @TypeGraphQLField(() => CountryOrderByEnum, { nullable: true })
-  orderBy?: CountryOrderByEnum;
+  orderBy?: CountryOrderByEnum[];
 }
 
 @ArgsType()
@@ -556,6 +569,21 @@ export class TwinWhereInput {
 
   @TypeGraphQLField(() => [String], { nullable: true })
   ip_in?: string[];
+
+  @TypeGraphQLField(() => EntityProofWhereInput, { nullable: true })
+  entityprooftwinRel_none?: EntityProofWhereInput;
+
+  @TypeGraphQLField(() => EntityProofWhereInput, { nullable: true })
+  entityprooftwinRel_some?: EntityProofWhereInput;
+
+  @TypeGraphQLField(() => EntityProofWhereInput, { nullable: true })
+  entityprooftwinRel_every?: EntityProofWhereInput;
+
+  @TypeGraphQLField(() => TwinWhereInput, { nullable: true })
+  AND?: [TwinWhereInput];
+
+  @TypeGraphQLField(() => TwinWhereInput, { nullable: true })
+  OR?: [TwinWhereInput];
 }
 
 @TypeGraphQLInputType()
@@ -600,7 +628,7 @@ export class TwinWhereArgs extends PaginationArgs {
   where?: TwinWhereInput;
 
   @TypeGraphQLField(() => TwinOrderByEnum, { nullable: true })
-  orderBy?: TwinOrderByEnum;
+  orderBy?: TwinOrderByEnum[];
 }
 
 @ArgsType()
@@ -631,8 +659,8 @@ export enum EntityProofOrderByEnum {
   signature_ASC = "signature_ASC",
   signature_DESC = "signature_DESC",
 
-  twinRelId_ASC = "twinRelId_ASC",
-  twinRelId_DESC = "twinRelId_DESC"
+  twinRel_ASC = "twinRel_ASC",
+  twinRel_DESC = "twinRel_DESC"
 }
 
 registerEnumType(EntityProofOrderByEnum, {
@@ -747,10 +775,19 @@ export class EntityProofWhereInput {
   signature_in?: string[];
 
   @TypeGraphQLField(() => ID, { nullable: true })
-  twinRelId_eq?: string;
+  twinRel_eq?: string;
 
   @TypeGraphQLField(() => [ID], { nullable: true })
-  twinRelId_in?: string[];
+  twinRel_in?: string[];
+
+  @TypeGraphQLField(() => TwinWhereInput, { nullable: true })
+  twinRel?: TwinWhereInput;
+
+  @TypeGraphQLField(() => EntityProofWhereInput, { nullable: true })
+  AND?: [EntityProofWhereInput];
+
+  @TypeGraphQLField(() => EntityProofWhereInput, { nullable: true })
+  OR?: [EntityProofWhereInput];
 }
 
 @TypeGraphQLInputType()
@@ -768,7 +805,7 @@ export class EntityProofCreateInput {
   signature!: string;
 
   @TypeGraphQLField(() => ID)
-  twinRelId!: string;
+  twinRel!: string;
 }
 
 @TypeGraphQLInputType()
@@ -780,7 +817,7 @@ export class EntityProofUpdateInput {
   signature?: string;
 
   @TypeGraphQLField(() => ID, { nullable: true })
-  twinRelId?: string;
+  twinRel?: string;
 }
 
 @ArgsType()
@@ -789,7 +826,7 @@ export class EntityProofWhereArgs extends PaginationArgs {
   where?: EntityProofWhereInput;
 
   @TypeGraphQLField(() => EntityProofOrderByEnum, { nullable: true })
-  orderBy?: EntityProofOrderByEnum;
+  orderBy?: EntityProofOrderByEnum[];
 }
 
 @ArgsType()
@@ -1012,6 +1049,12 @@ export class EntityWhereInput {
 
   @TypeGraphQLField(() => [String], { nullable: true })
   address_in?: string[];
+
+  @TypeGraphQLField(() => EntityWhereInput, { nullable: true })
+  AND?: [EntityWhereInput];
+
+  @TypeGraphQLField(() => EntityWhereInput, { nullable: true })
+  OR?: [EntityWhereInput];
 }
 
 @TypeGraphQLInputType()
@@ -1068,7 +1111,7 @@ export class EntityWhereArgs extends PaginationArgs {
   where?: EntityWhereInput;
 
   @TypeGraphQLField(() => EntityOrderByEnum, { nullable: true })
-  orderBy?: EntityOrderByEnum;
+  orderBy?: EntityOrderByEnum[];
 }
 
 @ArgsType()
@@ -1324,6 +1367,12 @@ export class FarmWhereInput {
 
   @TypeGraphQLField(() => [Int], { nullable: true })
   cityId_in?: number[];
+
+  @TypeGraphQLField(() => FarmWhereInput, { nullable: true })
+  AND?: [FarmWhereInput];
+
+  @TypeGraphQLField(() => FarmWhereInput, { nullable: true })
+  OR?: [FarmWhereInput];
 }
 
 @TypeGraphQLInputType()
@@ -1392,7 +1441,7 @@ export class FarmWhereArgs extends PaginationArgs {
   where?: FarmWhereInput;
 
   @TypeGraphQLField(() => FarmOrderByEnum, { nullable: true })
-  orderBy?: FarmOrderByEnum;
+  orderBy?: FarmOrderByEnum[];
 }
 
 @ArgsType()
@@ -1426,8 +1475,8 @@ export enum NodeOrderByEnum {
   farmId_ASC = "farmId_ASC",
   farmId_DESC = "farmId_DESC",
 
-  locationId_ASC = "locationId_ASC",
-  locationId_DESC = "locationId_DESC",
+  location_ASC = "location_ASC",
+  location_DESC = "location_DESC",
 
   countryId_ASC = "countryId_ASC",
   countryId_DESC = "countryId_DESC",
@@ -1590,10 +1639,10 @@ export class NodeWhereInput {
   farmId_in?: number[];
 
   @TypeGraphQLField(() => ID, { nullable: true })
-  locationId_eq?: string;
+  location_eq?: string;
 
   @TypeGraphQLField(() => [ID], { nullable: true })
-  locationId_in?: string[];
+  location_in?: string[];
 
   @TypeGraphQLField(() => Int, { nullable: true })
   countryId_eq?: number;
@@ -1747,6 +1796,15 @@ export class NodeWhereInput {
 
   @TypeGraphQLField(() => [String], { nullable: true })
   role_in?: string[];
+
+  @TypeGraphQLField(() => LocationWhereInput, { nullable: true })
+  location?: LocationWhereInput;
+
+  @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
+  AND?: [NodeWhereInput];
+
+  @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
+  OR?: [NodeWhereInput];
 }
 
 @TypeGraphQLInputType()
@@ -1767,7 +1825,7 @@ export class NodeCreateInput {
   farmId!: number;
 
   @TypeGraphQLField(() => ID)
-  locationId!: string;
+  location!: string;
 
   @TypeGraphQLField({ nullable: true })
   countryId?: number;
@@ -1809,7 +1867,7 @@ export class NodeUpdateInput {
   farmId?: number;
 
   @TypeGraphQLField(() => ID, { nullable: true })
-  locationId?: string;
+  location?: string;
 
   @TypeGraphQLField({ nullable: true })
   countryId?: number;
@@ -1845,7 +1903,7 @@ export class NodeWhereArgs extends PaginationArgs {
   where?: NodeWhereInput;
 
   @TypeGraphQLField(() => NodeOrderByEnum, { nullable: true })
-  orderBy?: NodeOrderByEnum;
+  orderBy?: NodeOrderByEnum[];
 }
 
 @ArgsType()
@@ -1984,6 +2042,21 @@ export class LocationWhereInput {
 
   @TypeGraphQLField(() => [String], { nullable: true })
   latitude_in?: string[];
+
+  @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
+  nodelocation_none?: NodeWhereInput;
+
+  @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
+  nodelocation_some?: NodeWhereInput;
+
+  @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
+  nodelocation_every?: NodeWhereInput;
+
+  @TypeGraphQLField(() => LocationWhereInput, { nullable: true })
+  AND?: [LocationWhereInput];
+
+  @TypeGraphQLField(() => LocationWhereInput, { nullable: true })
+  OR?: [LocationWhereInput];
 }
 
 @TypeGraphQLInputType()
@@ -2016,7 +2089,7 @@ export class LocationWhereArgs extends PaginationArgs {
   where?: LocationWhereInput;
 
   @TypeGraphQLField(() => LocationOrderByEnum, { nullable: true })
-  orderBy?: LocationOrderByEnum;
+  orderBy?: LocationOrderByEnum[];
 }
 
 @ArgsType()
@@ -2260,6 +2333,12 @@ export class PricingPolicyWhereInput {
 
   @TypeGraphQLField(() => [Int], { nullable: true })
   nu_in?: number[];
+
+  @TypeGraphQLField(() => PricingPolicyWhereInput, { nullable: true })
+  AND?: [PricingPolicyWhereInput];
+
+  @TypeGraphQLField(() => PricingPolicyWhereInput, { nullable: true })
+  OR?: [PricingPolicyWhereInput];
 }
 
 @TypeGraphQLInputType()
@@ -2322,7 +2401,7 @@ export class PricingPolicyWhereArgs extends PaginationArgs {
   where?: PricingPolicyWhereInput;
 
   @TypeGraphQLField(() => PricingPolicyOrderByEnum, { nullable: true })
-  orderBy?: PricingPolicyOrderByEnum;
+  orderBy?: PricingPolicyOrderByEnum[];
 }
 
 @ArgsType()
@@ -2521,6 +2600,12 @@ export class TransferWhereInput {
 
   @TypeGraphQLField(() => [Int], { nullable: true })
   block_in?: number[];
+
+  @TypeGraphQLField(() => TransferWhereInput, { nullable: true })
+  AND?: [TransferWhereInput];
+
+  @TypeGraphQLField(() => TransferWhereInput, { nullable: true })
+  OR?: [TransferWhereInput];
 }
 
 @TypeGraphQLInputType()
@@ -2571,7 +2656,7 @@ export class TransferWhereArgs extends PaginationArgs {
   where?: TransferWhereInput;
 
   @TypeGraphQLField(() => TransferOrderByEnum, { nullable: true })
-  orderBy?: TransferOrderByEnum;
+  orderBy?: TransferOrderByEnum[];
 }
 
 @ArgsType()
