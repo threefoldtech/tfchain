@@ -60,7 +60,7 @@ spec:
             "--rpc-cors=all",
             "--rpc-methods=unsafe",
             "--base-path=/storage",
-            "--chain=./customSpecRaw.json",
+            "--chain=/etc/customSpecRaw.json",
             "--port", "$(SUBSTRATE_PORT)",
             "--ws-port", "$(SUBSTRATE_WS_PORT)",
             "--rpc-port", "$(SUBSTRATE_RPC_PORT)",

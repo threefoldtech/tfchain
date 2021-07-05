@@ -34,7 +34,7 @@ RUN rm -rf /usr/share/* && \
 	mkdir -p /substrate/.local
 
 COPY --from=builder /substrate/target/$PROFILE/substrate /usr/local/bin
-COPY --from=builder /substrate/customSpecRaw.json /
+COPY --from=builder /substrate/customSpecRaw.json /etc
 
 # checks	
 RUN ldd /usr/local/bin/substrate && \

@@ -5,8 +5,8 @@
 replicaCount: 1
 
 image:
-  repository: dylanverstraete/substrate-tfgrid-dev
-  pullPolicy: IfNotPresent
+  repository: dylanverstraete/substrate-tfgrid
+  pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
 
@@ -45,7 +45,7 @@ port: 30333
 ws_port: 9944
 rpc_port: 9933
 is_validator: true
-# boot_node: "/ip4/185.69.167.181/tcp/30333/p2p/12D3KooWKAJoj7CYS32S5JYQZuofrPcdmQM9ghBsdsShKCbcsmPS"
+# boot_node: "/ip4/10.42.1.134/tcp/30333/p2p/12D3KooWGX8JFxZu2dDmGVpa9t9enZnFCLhH4NUBA7PDuhEVQTMg"
 
 global:
   ingress:
@@ -56,7 +56,7 @@ ingress:
   annotations:
     kubernetes.io/ingress.class: traefik
   hosts:
-    - host: substrate01.threefold.io
+    - host: dev.substrate01.threefold.io
       paths: 
         - /
   tls: []
