@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CertificationType = exports.Twin = exports.Transfer = exports.PricingPolicy = exports.Node = exports.Location = exports.Farm = exports.EntityProof = exports.Entity = exports.Country = exports.City = void 0;
+exports.CertificationType = exports.Twin = exports.Transfer = exports.PublicIp = exports.PublicConfig = exports.PricingPolicy = exports.Node = exports.Location = exports.Farm = exports.EntityProof = exports.Entity = exports.Country = exports.City = void 0;
 const city_model_1 = require("../src/modules/city/city.model");
 Object.defineProperty(exports, "City", { enumerable: true, get: function () { return city_model_1.City; } });
 const country_model_1 = require("../src/modules/country/country.model");
@@ -17,6 +17,10 @@ const node_model_1 = require("../src/modules/node/node.model");
 Object.defineProperty(exports, "Node", { enumerable: true, get: function () { return node_model_1.Node; } });
 const pricing_policy_model_1 = require("../src/modules/pricing-policy/pricing-policy.model");
 Object.defineProperty(exports, "PricingPolicy", { enumerable: true, get: function () { return pricing_policy_model_1.PricingPolicy; } });
+const public_config_model_1 = require("../src/modules/public-config/public-config.model");
+Object.defineProperty(exports, "PublicConfig", { enumerable: true, get: function () { return public_config_model_1.PublicConfig; } });
+const public_ip_model_1 = require("../src/modules/public-ip/public-ip.model");
+Object.defineProperty(exports, "PublicIp", { enumerable: true, get: function () { return public_ip_model_1.PublicIp; } });
 const transfer_model_1 = require("../src/modules/transfer/transfer.model");
 Object.defineProperty(exports, "Transfer", { enumerable: true, get: function () { return transfer_model_1.Transfer; } });
 const twin_model_1 = require("../src/modules/twin/twin.model");

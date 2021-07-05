@@ -19,7 +19,7 @@ export async function twinStored({
   twin.gridVersion = version.toNumber()
   twin.twinId = twinID.toNumber()
   twin.address = accountID.toHuman()
-  twin.ip = hex2a(ip.toString())
+  twin.ip = hex2a(Buffer.from(ip.toString()).toString())
 
   await store.save<Twin>(twin)
 }

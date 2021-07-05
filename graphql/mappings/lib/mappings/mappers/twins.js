@@ -10,7 +10,7 @@ async function twinStored({ store, event, block, extrinsic, }) {
     twin.gridVersion = version.toNumber();
     twin.twinId = twinID.toNumber();
     twin.address = accountID.toHuman();
-    twin.ip = util_1.hex2a(ip.toString());
+    twin.ip = util_1.hex2a(Buffer.from(ip.toString()).toString());
     await store.save(twin);
 }
 exports.twinStored = twinStored;

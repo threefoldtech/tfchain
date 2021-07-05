@@ -12,6 +12,8 @@ import { NodeWhereArgs, NodeWhereInput } from '../../../generated';
 
 import { Location } from '../location/location.model';
 import { LocationService } from '../location/location.service';
+import { PublicConfig } from '../public-config/public-config.model';
+import { PublicConfigService } from '../public-config/public-config.service';
 import { getConnection, getRepository, In, Not } from 'typeorm';
 import _ from 'lodash';
 
@@ -19,6 +21,8 @@ import _ from 'lodash';
 export class NodeService extends WarthogBaseService<Node> {
   @Inject('LocationService')
   public readonly locationService!: LocationService;
+  @Inject('PublicConfigService')
+  public readonly publicConfigService!: PublicConfigService;
 
   constructor(@InjectRepository(Node) protected readonly repository: Repository<Node>) {
     super(Node, repository);
@@ -49,6 +53,10 @@ export class NodeService extends WarthogBaseService<Node> {
     const { location } = where;
     delete where.location;
 
+    // remove relation filters to enable warthog query builders
+    const { publicConfig } = where;
+    delete where.publicConfig;
+
     let mainQuery = this.buildFindQueryWithParams(<any>where, orderBy, undefined, fields, 'main').take(undefined); // remove LIMIT
 
     let parameters = mainQuery.getParameters();
@@ -62,6 +70,17 @@ export class NodeService extends WarthogBaseService<Node> {
       mainQuery = mainQuery.andWhere(`"node"."location_id" IN (${locationQuery.getQuery()})`);
 
       parameters = { ...parameters, ...locationQuery.getParameters() };
+    }
+
+    if (publicConfig) {
+      // OTO or MTO
+      const publicConfigQuery = this.publicConfigService
+        .buildFindQueryWithParams(<any>publicConfig, undefined, undefined, ['id'], 'publicConfig')
+        .take(undefined); // remove the default LIMIT
+
+      mainQuery = mainQuery.andWhere(`"node"."public_config_id" IN (${publicConfigQuery.getQuery()})`);
+
+      parameters = { ...parameters, ...publicConfigQuery.getParameters() };
     }
 
     mainQuery = mainQuery.setParameters(parameters);

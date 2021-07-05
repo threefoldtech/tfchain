@@ -12,7 +12,7 @@ typegen:
     lib: 'substrate-tfgrid-ts-types'
     typedefsLoc: ./types.json
   metadata:
-    source: wss://substrate01.threefold.io
+    source: wss://dev.substrate01.threefold.io
   events:
     - balances.Transfer
     - tfgridModule.EntityStored
@@ -21,7 +21,7 @@ typegen:
     - tfgridModule.FarmStored
     - tfgridModule.FarmDeleted
     - tfgridModule.NodeStored
-    # - tfgridModule.NodeUpdated
+    - tfgridModule.NodeUpdated
     - tfgridModule.NodeDeleted
     - tfgridModule.TwinStored
     - tfgridModule.TwinDeleted
@@ -53,8 +53,8 @@ mappings:
       handler: twinEntityRemoved
     - event: tfgridModule.NodeStored
       handler: nodeStored
-    # - event: tfgridModule.NodeUpdated
-      # handler: nodeUpdated
+    - event: tfgridModule.NodeUpdated
+      handler: nodeUpdated
     - event: tfgridModule.NodeDeleted
       handler: nodeDeleted
     - event: tfgridModule.FarmStored

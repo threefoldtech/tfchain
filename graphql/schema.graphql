@@ -8,36 +8,42 @@ type Transfer @entity {
 } 
 
 type Entity @entity {
-  grid_version: Int!
-  entityId: Int!
+  gridVersion: Int!
+  entityID: Int!
   name: String!
-  countryId: Int
-  cityId: Int
+  countryID: Int
+  cityID: Int
   address: String!
 }
 
 type Twin @entity {
-  grid_version: Int!
-  twinId: Int!
+  gridVersion: Int!
+  twinID: Int!
   address: String!
   ip: String!
 }
 
 type EntityProof @entity {
-  entityId: Int!
+  entityID: Int!
   signature: String!
   twinRel: Twin!
 }
 
 type Farm @entity {
-  grid_version: Int!
-  farm_id: Int!
+  gridVersion: Int!
+  farmID: Int!
   name: String!
-  twinId: Int!
-  pricingPolicyId: Int!
-  certification_type: CertificationType!
-  countryId: Int
-  cityId: Int
+  twinID: Int!
+  pricingPolicyID: Int!
+  certificationType: CertificationType!
+  countryID: Int
+  cityID: Int
+}
+
+type PublicIP @entity {
+  farmID: Int!
+  ip: String!
+  workloadId: Int!
 }
 
 enum CertificationType {
@@ -47,17 +53,18 @@ enum CertificationType {
 }
 
 type Node @entity {
-  grid_version: Int!
-  node_id: Int!
-  farm_id: Int!
+  gridVersion: Int!
+  nodeID: Int!
+  farmID: Int!
+  twinID: Int!
   location: Location!
-  countryId: Int
-  cityId: Int
+  countryID: Int
+  cityID: Int
   address: String!
-  hru: Int
-  sru: Int
-  cru: Int
-  mru: Int
+  hru: BigInt
+  sru: BigInt
+  cru: BigInt
+  mru: BigInt
   role: String!
   publicConfig: PublicConfig
 }
@@ -75,8 +82,8 @@ type Location @entity {
 }
 
 type PricingPolicy @entity {
-  grid_version: Int!
-  pricingPolicyId: Int!
+  gridVersion: Int!
+  pricingPolicyID: Int!
   name: String!
   currency: String!
   su: Int!
@@ -92,6 +99,6 @@ type Country @entity {
 
 type City @entity {
   id: Int!
-  country_id: Int!
+  countryID: Int!
   name: String!
 }

@@ -7,7 +7,13 @@
     "pricing_policy_id": "u32",
     "certification_type": "CertificationType",
     "country_id": "u32",
-    "city_id": "u32"
+    "city_id": "u32",
+    "public_ips": "Vec<PublicIP>"
+  },
+  "PublicIP": {
+    "ip": "Vec<u8>",
+    "gateway": "Vec<u8>",
+    "contract_id": "u32"
   },
   "Entity": {
     "version": "u32",

@@ -33,6 +33,8 @@ import { NodeService } from './node.service';
 
 import { Location } from '../location/location.model';
 import { LocationService } from '../location/location.service';
+import { PublicConfig } from '../public-config/public-config.model';
+import { PublicConfigService } from '../public-config/public-config.service';
 import { getConnection, getRepository, In, Not } from 'typeorm';
 import _ from 'lodash';
 
@@ -129,5 +131,10 @@ export class NodeResolver {
   @FieldResolver(() => Location)
   async location(@Root() r: Node, @Ctx() ctx: BaseContext): Promise<Location | null> {
     return ctx.dataLoader.loaders.Node.location.load(r);
+  }
+
+  @FieldResolver(() => PublicConfig)
+  async publicConfig(@Root() r: Node, @Ctx() ctx: BaseContext): Promise<PublicConfig | null> {
+    return ctx.dataLoader.loaders.Node.publicConfig.load(r);
   }
 }

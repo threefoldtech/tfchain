@@ -6,10 +6,10 @@ const types_1 = require("../generated/types");
 const util_1 = require("./util");
 async function entityStored({ store, event, block, extrinsic, }) {
     const entity = new model_1.Entity();
-    const [version, eneityID, name, countryID, cityID, accountID] = new types_1.TfgridModule.EntityStoredEvent(event).params;
+    const [version, entityID, name, countryID, cityID, accountID] = new types_1.TfgridModule.EntityStoredEvent(event).params;
     entity.gridVersion = version.toNumber();
-    entity.entityId = eneityID.toNumber();
-    entity.name = util_1.hex2a(name.toString());
+    entity.entityId = entityID.toNumber();
+    entity.name = util_1.hex2a(Buffer.from(name.toString()).toString());
     entity.countryId = countryID.toNumber();
     entity.cityId = cityID.toNumber();
     entity.address = accountID.toHuman();
@@ -18,12 +18,12 @@ async function entityStored({ store, event, block, extrinsic, }) {
 exports.entityStored = entityStored;
 async function entityUpdated({ store, event, block, extrinsic, }) {
     const entity = new model_1.Entity();
-    const [eneityID, name, countryID, cityID, accountID] = new types_1.TfgridModule.EntityUpdatedEvent(event).params;
-    const savedEntity = await store.get(model_1.Entity, { where: { entityId: eneityID.toNumber() } });
+    const [entityID, name, countryID, cityID, accountID] = new types_1.TfgridModule.EntityUpdatedEvent(event).params;
+    const savedEntity = await store.get(model_1.Entity, { where: { entityId: entityID.toNumber() } });
     if (savedEntity) {
         // entity.gridVersion = version.toNumber()
-        savedEntity.entityId = eneityID.toNumber();
-        savedEntity.name = util_1.hex2a(name.toString());
+        savedEntity.entityId = entityID.toNumber();
+        savedEntity.name = util_1.hex2a(Buffer.from(name.toString()).toString());
         savedEntity.countryId = countryID.toNumber();
         savedEntity.cityId = cityID.toNumber();
         savedEntity.address = accountID.toHuman();
@@ -33,8 +33,8 @@ async function entityUpdated({ store, event, block, extrinsic, }) {
 exports.entityUpdated = entityUpdated;
 async function entityDeleted({ store, event, block, extrinsic, }) {
     const entity = new model_1.Entity();
-    const [eneityID] = new types_1.TfgridModule.EntityDeletedEvent(event).params;
-    const savedEntity = await store.get(model_1.Entity, { where: { entityId: eneityID.toNumber() } });
+    const [entityID] = new types_1.TfgridModule.EntityDeletedEvent(event).params;
+    const savedEntity = await store.get(model_1.Entity, { where: { entityId: entityID.toNumber() } });
     if (savedEntity) {
         store.remove(savedEntity);
     }

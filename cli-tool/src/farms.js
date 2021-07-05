@@ -2,20 +2,27 @@ const { getClient } = require('./client')
 const { callback } = require('./util')
 
 async function createFarm (args) {
-  const { name, entityID, twinID, c: countryID, t: cityID, certificationType, pricingPolicyID, a: url, m: mnemonic } = args
+  const { name, twinID, c: countryID, t: cityID, certificationType, pricingPolicyID, a: url, m: mnemonic } = args
 
   const client = await getClient(url, mnemonic)
 
   const certificationTypeParsed = client.api.createType('CertificationType', certificationType)
+
+  const publicIP = client.api.createType('PublicIP', {
+    ip: '1.1.1.1',
+    gateway: '1.1.1.1',
+    contract_id: 0
+  })
+
   const farm = {
     id: 0,
     name,
-    entity_id: entityID,
     twin_id: twinID,
     pricingPolicyID,
     certificationType: certificationTypeParsed,
     countryID,
-    cityID
+    cityID,
+    public_ips: [publicIP]
   }
 
   return client.createFarm(farm, callback)

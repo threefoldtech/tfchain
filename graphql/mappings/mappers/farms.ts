@@ -19,7 +19,7 @@ export async function farmStored({
   
   farm.gridVersion = version.toNumber()
   farm.farmId = farm_id.toNumber()
-  farm.name = hex2a(name.toString())
+  farm.name = hex2a(Buffer.from(name.toString()).toString())
   farm.twinId = twin_id.toNumber()
   farm.pricingPolicyId = pricing_policy_id.toNumber()
   farm.countryId = country_id.toNumber()

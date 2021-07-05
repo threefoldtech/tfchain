@@ -14,11 +14,11 @@ export async function entityStored({
   extrinsic,
 }: EventContext & StoreContext) {
   const entity = new Entity()
-  const [version, eneityID, name, countryID, cityID, accountID] = new TfgridModule.EntityStoredEvent(event).params
+  const [version, entityID, name, countryID, cityID, accountID] = new TfgridModule.EntityStoredEvent(event).params
 
   entity.gridVersion = version.toNumber()
-  entity.entityId = eneityID.toNumber()
-  entity.name = hex2a(name.toString())
+  entity.entityId = entityID.toNumber()
+  entity.name = hex2a(Buffer.from(name.toString()).toString())
   entity.countryId = countryID.toNumber()
   entity.cityId = cityID.toNumber()
   entity.address = accountID.toHuman()
@@ -33,14 +33,14 @@ export async function entityUpdated({
   extrinsic,
 }: EventContext & StoreContext) {
   const entity = new Entity()
-  const [eneityID, name, countryID, cityID, accountID] = new TfgridModule.EntityUpdatedEvent(event).params
+  const [entityID, name, countryID, cityID, accountID] = new TfgridModule.EntityUpdatedEvent(event).params
 
-  const savedEntity = await store.get(Entity, { where: { entityId: eneityID.toNumber() } })
+  const savedEntity = await store.get(Entity, { where: { entityId: entityID.toNumber() } })
 
   if (savedEntity) {
     // entity.gridVersion = version.toNumber()
-    savedEntity.entityId = eneityID.toNumber()
-    savedEntity.name = hex2a(name.toString())
+    savedEntity.entityId = entityID.toNumber()
+    savedEntity.name = hex2a(Buffer.from(name.toString()).toString())
     savedEntity.countryId = countryID.toNumber()
     savedEntity.cityId = cityID.toNumber()
     savedEntity.address = accountID.toHuman()
@@ -56,9 +56,9 @@ export async function entityDeleted({
   extrinsic,
 }: EventContext & StoreContext) {
   const entity = new Entity()
-  const [eneityID] = new TfgridModule.EntityDeletedEvent(event).params
+  const [entityID] = new TfgridModule.EntityDeletedEvent(event).params
 
-  const savedEntity = await store.get(Entity, { where: { entityId: eneityID.toNumber() } })
+  const savedEntity = await store.get(Entity, { where: { entityId: entityID.toNumber() } })
 
   if (savedEntity) {
     store.remove(savedEntity)

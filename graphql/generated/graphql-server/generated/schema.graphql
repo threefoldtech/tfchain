@@ -756,17 +756,19 @@ type Node implements BaseGraphQLObject {
   gridVersion: Int!
   nodeId: Int!
   farmId: Int!
+  twinId: Int!
   location: Location!
   locationId: String!
   countryId: Int
   cityId: Int
   address: String!
-  pubKey: String!
-  hru: Int
-  sru: Int
-  cru: Int
-  mru: Int
+  hru: BigInt
+  sru: BigInt
+  cru: BigInt
+  mru: BigInt
   role: String!
+  publicConfig: PublicConfig
+  publicConfigId: String
 }
 
 type NodeConnection {
@@ -779,16 +781,17 @@ input NodeCreateInput {
   gridVersion: Float!
   nodeId: Float!
   farmId: Float!
+  twinId: Float!
   location: ID!
   countryId: Float
   cityId: Float
   address: String!
-  pubKey: String!
-  hru: Float
-  sru: Float
-  cru: Float
-  mru: Float
+  hru: BigInt
+  sru: BigInt
+  cru: BigInt
+  mru: BigInt
   role: String!
+  publicConfig: ID
 }
 
 type NodeEdge {
@@ -809,6 +812,8 @@ enum NodeOrderByInput {
   nodeId_DESC
   farmId_ASC
   farmId_DESC
+  twinId_ASC
+  twinId_DESC
   location_ASC
   location_DESC
   countryId_ASC
@@ -817,8 +822,6 @@ enum NodeOrderByInput {
   cityId_DESC
   address_ASC
   address_DESC
-  pubKey_ASC
-  pubKey_DESC
   hru_ASC
   hru_DESC
   sru_ASC
@@ -829,22 +832,25 @@ enum NodeOrderByInput {
   mru_DESC
   role_ASC
   role_DESC
+  publicConfig_ASC
+  publicConfig_DESC
 }
 
 input NodeUpdateInput {
   gridVersion: Float
   nodeId: Float
   farmId: Float
+  twinId: Float
   location: ID
   countryId: Float
   cityId: Float
   address: String
-  pubKey: String
-  hru: Float
-  sru: Float
-  cru: Float
-  mru: Float
+  hru: BigInt
+  sru: BigInt
+  cru: BigInt
+  mru: BigInt
   role: String
+  publicConfig: ID
 }
 
 input NodeWhereInput {
@@ -890,6 +896,12 @@ input NodeWhereInput {
   farmId_lt: Int
   farmId_lte: Int
   farmId_in: [Int!]
+  twinId_eq: Int
+  twinId_gt: Int
+  twinId_gte: Int
+  twinId_lt: Int
+  twinId_lte: Int
+  twinId_in: [Int!]
   location_eq: ID
   location_in: [ID!]
   countryId_eq: Int
@@ -909,41 +921,39 @@ input NodeWhereInput {
   address_startsWith: String
   address_endsWith: String
   address_in: [String!]
-  pubKey_eq: String
-  pubKey_contains: String
-  pubKey_startsWith: String
-  pubKey_endsWith: String
-  pubKey_in: [String!]
-  hru_eq: Int
-  hru_gt: Int
-  hru_gte: Int
-  hru_lt: Int
-  hru_lte: Int
-  hru_in: [Int!]
-  sru_eq: Int
-  sru_gt: Int
-  sru_gte: Int
-  sru_lt: Int
-  sru_lte: Int
-  sru_in: [Int!]
-  cru_eq: Int
-  cru_gt: Int
-  cru_gte: Int
-  cru_lt: Int
-  cru_lte: Int
-  cru_in: [Int!]
-  mru_eq: Int
-  mru_gt: Int
-  mru_gte: Int
-  mru_lt: Int
-  mru_lte: Int
-  mru_in: [Int!]
+  hru_eq: BigInt
+  hru_gt: BigInt
+  hru_gte: BigInt
+  hru_lt: BigInt
+  hru_lte: BigInt
+  hru_in: [BigInt!]
+  sru_eq: BigInt
+  sru_gt: BigInt
+  sru_gte: BigInt
+  sru_lt: BigInt
+  sru_lte: BigInt
+  sru_in: [BigInt!]
+  cru_eq: BigInt
+  cru_gt: BigInt
+  cru_gte: BigInt
+  cru_lt: BigInt
+  cru_lte: BigInt
+  cru_in: [BigInt!]
+  mru_eq: BigInt
+  mru_gt: BigInt
+  mru_gte: BigInt
+  mru_lt: BigInt
+  mru_lte: BigInt
+  mru_in: [BigInt!]
   role_eq: String
   role_contains: String
   role_startsWith: String
   role_endsWith: String
   role_in: [String!]
+  publicConfig_eq: ID
+  publicConfig_in: [ID!]
   location: LocationWhereInput
+  publicConfig: PublicConfigWhereInput
   AND: [NodeWhereInput!]
   OR: [NodeWhereInput!]
 }
@@ -1111,6 +1121,222 @@ type ProcessorState {
   chainHead: Float!
 }
 
+type PublicConfig implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  ipv4: String!
+  ipv6: String!
+  gw4: String!
+  gw6: String!
+  nodepublicConfig: [Node!]
+}
+
+type PublicConfigConnection {
+  totalCount: Int!
+  edges: [PublicConfigEdge!]!
+  pageInfo: PageInfo!
+}
+
+input PublicConfigCreateInput {
+  ipv4: String!
+  ipv6: String!
+  gw4: String!
+  gw6: String!
+}
+
+type PublicConfigEdge {
+  node: PublicConfig!
+  cursor: String!
+}
+
+enum PublicConfigOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  ipv4_ASC
+  ipv4_DESC
+  ipv6_ASC
+  ipv6_DESC
+  gw4_ASC
+  gw4_DESC
+  gw6_ASC
+  gw6_DESC
+}
+
+input PublicConfigUpdateInput {
+  ipv4: String
+  ipv6: String
+  gw4: String
+  gw6: String
+}
+
+input PublicConfigWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  ipv4_eq: String
+  ipv4_contains: String
+  ipv4_startsWith: String
+  ipv4_endsWith: String
+  ipv4_in: [String!]
+  ipv6_eq: String
+  ipv6_contains: String
+  ipv6_startsWith: String
+  ipv6_endsWith: String
+  ipv6_in: [String!]
+  gw4_eq: String
+  gw4_contains: String
+  gw4_startsWith: String
+  gw4_endsWith: String
+  gw4_in: [String!]
+  gw6_eq: String
+  gw6_contains: String
+  gw6_startsWith: String
+  gw6_endsWith: String
+  gw6_in: [String!]
+  nodepublicConfig_none: NodeWhereInput
+  nodepublicConfig_some: NodeWhereInput
+  nodepublicConfig_every: NodeWhereInput
+  AND: [PublicConfigWhereInput!]
+  OR: [PublicConfigWhereInput!]
+}
+
+input PublicConfigWhereUniqueInput {
+  id: ID!
+}
+
+type PublicIp implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  farmId: Int!
+  ip: String!
+  workloadId: Int!
+}
+
+type PublicIpConnection {
+  totalCount: Int!
+  edges: [PublicIpEdge!]!
+  pageInfo: PageInfo!
+}
+
+input PublicIpCreateInput {
+  farmId: Float!
+  ip: String!
+  workloadId: Float!
+}
+
+type PublicIpEdge {
+  node: PublicIp!
+  cursor: String!
+}
+
+enum PublicIpOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  farmId_ASC
+  farmId_DESC
+  ip_ASC
+  ip_DESC
+  workloadId_ASC
+  workloadId_DESC
+}
+
+input PublicIpUpdateInput {
+  farmId: Float
+  ip: String
+  workloadId: Float
+}
+
+input PublicIpWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  farmId_eq: Int
+  farmId_gt: Int
+  farmId_gte: Int
+  farmId_lt: Int
+  farmId_lte: Int
+  farmId_in: [Int!]
+  ip_eq: String
+  ip_contains: String
+  ip_startsWith: String
+  ip_endsWith: String
+  ip_in: [String!]
+  workloadId_eq: Int
+  workloadId_gt: Int
+  workloadId_gte: Int
+  workloadId_lt: Int
+  workloadId_lte: Int
+  workloadId_in: [Int!]
+  AND: [PublicIpWhereInput!]
+  OR: [PublicIpWhereInput!]
+}
+
+input PublicIpWhereUniqueInput {
+  id: ID!
+}
+
 type Query {
   cities(offset: Int, limit: Int = 50, where: CityWhereInput, orderBy: [CityOrderByInput!]): [City!]!
   cityByUniqueInput(where: CityWhereUniqueInput!): City
@@ -1136,6 +1362,12 @@ type Query {
   pricingPolicies(offset: Int, limit: Int = 50, where: PricingPolicyWhereInput, orderBy: [PricingPolicyOrderByInput!]): [PricingPolicy!]!
   pricingPolicyByUniqueInput(where: PricingPolicyWhereUniqueInput!): PricingPolicy
   pricingPoliciesConnection(first: Int, after: String, last: Int, before: String, where: PricingPolicyWhereInput, orderBy: [PricingPolicyOrderByInput!]): PricingPolicyConnection!
+  publicConfigs(offset: Int, limit: Int = 50, where: PublicConfigWhereInput, orderBy: [PublicConfigOrderByInput!]): [PublicConfig!]!
+  publicConfigByUniqueInput(where: PublicConfigWhereUniqueInput!): PublicConfig
+  publicConfigsConnection(first: Int, after: String, last: Int, before: String, where: PublicConfigWhereInput, orderBy: [PublicConfigOrderByInput!]): PublicConfigConnection!
+  publicIps(offset: Int, limit: Int = 50, where: PublicIpWhereInput, orderBy: [PublicIpOrderByInput!]): [PublicIp!]!
+  publicIpByUniqueInput(where: PublicIpWhereUniqueInput!): PublicIp
+  publicIpsConnection(first: Int, after: String, last: Int, before: String, where: PublicIpWhereInput, orderBy: [PublicIpOrderByInput!]): PublicIpConnection!
   commentSearch(whereTransfer: TransferWhereInput, skip: Int = 0, limit: Int = 5, text: String!): [CommentSearchFTSOutput!]!
   transfers(offset: Int, limit: Int = 50, where: TransferWhereInput, orderBy: [TransferOrderByInput!]): [Transfer!]!
   transferByUniqueInput(where: TransferWhereUniqueInput!): Transfer

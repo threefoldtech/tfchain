@@ -304,6 +304,89 @@ export namespace TfgridModule {
     }
   }
 
+  export class NodeUpdatedEvent {
+    public readonly expectedParamTypes = [
+      "u32",
+      "u32",
+      "u32",
+      "types::Resources",
+      "types::Location",
+      "u32",
+      "u32",
+      "AccountId",
+      "types::Role",
+      "u32",
+      "Option<types::PublicConfig>"
+    ];
+
+    constructor(public readonly ctx: SubstrateEvent) {}
+
+    get params(): [
+      u32,
+      u32,
+      u32,
+      Resources,
+      Location,
+      u32,
+      u32,
+      AccountId,
+      Role,
+      u32,
+      Option<PublicConfig>
+    ] {
+      return [
+        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
+          this.ctx.params[0].value
+        ]),
+        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
+          this.ctx.params[1].value
+        ]),
+        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
+          this.ctx.params[2].value
+        ]),
+        createTypeUnsafe<Resources & Codec>(typeRegistry, "Resources", [
+          this.ctx.params[3].value
+        ]),
+        createTypeUnsafe<Location & Codec>(typeRegistry, "Location", [
+          this.ctx.params[4].value
+        ]),
+        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
+          this.ctx.params[5].value
+        ]),
+        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
+          this.ctx.params[6].value
+        ]),
+        createTypeUnsafe<AccountId & Codec>(typeRegistry, "AccountId", [
+          this.ctx.params[7].value
+        ]),
+        createTypeUnsafe<Role & Codec>(typeRegistry, "Role", [
+          this.ctx.params[8].value
+        ]),
+        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
+          this.ctx.params[9].value
+        ]),
+        createTypeUnsafe<Option<PublicConfig> & Codec>(
+          typeRegistry,
+          "Option<PublicConfig>",
+          [this.ctx.params[10].value]
+        )
+      ];
+    }
+
+    validateParams(): boolean {
+      if (this.expectedParamTypes.length !== this.ctx.params.length) {
+        return false;
+      }
+      let valid = true;
+      this.expectedParamTypes.forEach((type, i) => {
+        if (type !== this.ctx.params[i].type) {
+          valid = false;
+        }
+      });
+      return valid;
+    }
+  }
+
   export class NodeDeletedEvent {
     public readonly expectedParamTypes = ["u32"];
 

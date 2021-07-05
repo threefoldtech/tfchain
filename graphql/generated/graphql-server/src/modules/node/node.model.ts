@@ -1,6 +1,9 @@
-import { BaseModel, IntField, Model, ManyToOne, StringField } from 'warthog';
+import { BaseModel, IntField, NumericField, Model, ManyToOne, StringField } from 'warthog';
+
+import BN from 'bn.js';
 
 import { Location } from '../location/location.model';
+import { PublicConfig } from '../public-config/public-config.model';
 
 @Model({ api: {} })
 export class Node extends BaseModel {
@@ -12,6 +15,9 @@ export class Node extends BaseModel {
 
   @IntField({})
   farmId!: number;
+
+  @IntField({})
+  twinId!: number;
 
   @ManyToOne(
     () => Location,
@@ -39,31 +45,65 @@ export class Node extends BaseModel {
   @StringField({})
   address!: string;
 
-  @StringField({})
-  pubKey!: string;
+  @NumericField({
+    nullable: true,
 
-  @IntField({
-    nullable: true
+    transformer: {
+      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
+      from: (dbValue: string) =>
+        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
+    }
   })
-  hru?: number;
+  hru?: BN;
 
-  @IntField({
-    nullable: true
-  })
-  sru?: number;
+  @NumericField({
+    nullable: true,
 
-  @IntField({
-    nullable: true
+    transformer: {
+      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
+      from: (dbValue: string) =>
+        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
+    }
   })
-  cru?: number;
+  sru?: BN;
 
-  @IntField({
-    nullable: true
+  @NumericField({
+    nullable: true,
+
+    transformer: {
+      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
+      from: (dbValue: string) =>
+        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
+    }
   })
-  mru?: number;
+  cru?: BN;
+
+  @NumericField({
+    nullable: true,
+
+    transformer: {
+      to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
+      from: (dbValue: string) =>
+        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
+    }
+  })
+  mru?: BN;
 
   @StringField({})
   role!: string;
+
+  @ManyToOne(
+    () => PublicConfig,
+    (param: PublicConfig) => param.nodepublicConfig,
+    {
+      skipGraphQLField: true,
+      nullable: true,
+      modelName: 'Node',
+      relModelName: 'PublicConfig',
+      propertyName: 'publicConfig'
+    }
+  )
+  publicConfig?: PublicConfig;
 
   constructor(init?: Partial<Node>) {
     super();

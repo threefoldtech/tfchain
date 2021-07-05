@@ -45,6 +45,13 @@ export declare namespace TfgridModule {
         get params(): [u32, u32, u32, Resources, Location, u32, u32, AccountId, Role, u32, Option<PublicConfig>];
         validateParams(): boolean;
     }
+    class NodeUpdatedEvent {
+        readonly ctx: SubstrateEvent;
+        readonly expectedParamTypes: string[];
+        constructor(ctx: SubstrateEvent);
+        get params(): [u32, u32, u32, Resources, Location, u32, u32, AccountId, Role, u32, Option<PublicConfig>];
+        validateParams(): boolean;
+    }
     class NodeDeletedEvent {
         readonly ctx: SubstrateEvent;
         readonly expectedParamTypes: string[];

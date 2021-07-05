@@ -30,6 +30,12 @@ export interface Query {
     pricingPolicies: <T = Array<PricingPolicy>>(args: { offset?: Int | null, limit?: Int | null, where?: PricingPolicyWhereInput | null, orderBy?: Array<PricingPolicyOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     pricingPolicyByUniqueInput: <T = PricingPolicy | null>(args: { where: PricingPolicyWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     pricingPoliciesConnection: <T = PricingPolicyConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: PricingPolicyWhereInput | null, orderBy?: Array<PricingPolicyOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    publicConfigs: <T = Array<PublicConfig>>(args: { offset?: Int | null, limit?: Int | null, where?: PublicConfigWhereInput | null, orderBy?: Array<PublicConfigOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    publicConfigByUniqueInput: <T = PublicConfig | null>(args: { where: PublicConfigWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    publicConfigsConnection: <T = PublicConfigConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: PublicConfigWhereInput | null, orderBy?: Array<PublicConfigOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    publicIps: <T = Array<PublicIp>>(args: { offset?: Int | null, limit?: Int | null, where?: PublicIpWhereInput | null, orderBy?: Array<PublicIpOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    publicIpByUniqueInput: <T = PublicIp | null>(args: { where: PublicIpWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    publicIpsConnection: <T = PublicIpConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: PublicIpWhereInput | null, orderBy?: Array<PublicIpOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     commentSearch: <T = Array<CommentSearchFTSOutput>>(args: { whereTransfer?: TransferWhereInput | null, skip?: Int | null, limit?: Int | null, text: String }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     transfers: <T = Array<Transfer>>(args: { offset?: Int | null, limit?: Int | null, where?: TransferWhereInput | null, orderBy?: Array<TransferOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     transferByUniqueInput: <T = Transfer | null>(args: { where: TransferWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
@@ -173,6 +179,8 @@ export type NodeOrderByInput =   'createdAt_ASC' |
   'nodeId_DESC' |
   'farmId_ASC' |
   'farmId_DESC' |
+  'twinId_ASC' |
+  'twinId_DESC' |
   'location_ASC' |
   'location_DESC' |
   'countryId_ASC' |
@@ -181,8 +189,6 @@ export type NodeOrderByInput =   'createdAt_ASC' |
   'cityId_DESC' |
   'address_ASC' |
   'address_DESC' |
-  'pubKey_ASC' |
-  'pubKey_DESC' |
   'hru_ASC' |
   'hru_DESC' |
   'sru_ASC' |
@@ -192,7 +198,9 @@ export type NodeOrderByInput =   'createdAt_ASC' |
   'mru_ASC' |
   'mru_DESC' |
   'role_ASC' |
-  'role_DESC'
+  'role_DESC' |
+  'publicConfig_ASC' |
+  'publicConfig_DESC'
 
 export type PricingPolicyOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -214,6 +222,34 @@ export type PricingPolicyOrderByInput =   'createdAt_ASC' |
   'cu_DESC' |
   'nu_ASC' |
   'nu_DESC'
+
+export type PublicConfigOrderByInput =   'createdAt_ASC' |
+  'createdAt_DESC' |
+  'updatedAt_ASC' |
+  'updatedAt_DESC' |
+  'deletedAt_ASC' |
+  'deletedAt_DESC' |
+  'ipv4_ASC' |
+  'ipv4_DESC' |
+  'ipv6_ASC' |
+  'ipv6_DESC' |
+  'gw4_ASC' |
+  'gw4_DESC' |
+  'gw6_ASC' |
+  'gw6_DESC'
+
+export type PublicIpOrderByInput =   'createdAt_ASC' |
+  'createdAt_DESC' |
+  'updatedAt_ASC' |
+  'updatedAt_DESC' |
+  'deletedAt_ASC' |
+  'deletedAt_DESC' |
+  'farmId_ASC' |
+  'farmId_DESC' |
+  'ip_ASC' |
+  'ip_DESC' |
+  'workloadId_ASC' |
+  'workloadId_DESC'
 
 export type TransferOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -680,32 +716,34 @@ export interface NodeCreateInput {
   gridVersion: Float
   nodeId: Float
   farmId: Float
+  twinId: Float
   location: ID_Output
   countryId?: Float | null
   cityId?: Float | null
   address: String
-  pubKey: String
-  hru?: Float | null
-  sru?: Float | null
-  cru?: Float | null
-  mru?: Float | null
+  hru?: BigInt | null
+  sru?: BigInt | null
+  cru?: BigInt | null
+  mru?: BigInt | null
   role: String
+  publicConfig?: ID_Input | null
 }
 
 export interface NodeUpdateInput {
   gridVersion?: Float | null
   nodeId?: Float | null
   farmId?: Float | null
+  twinId?: Float | null
   location?: ID_Input | null
   countryId?: Float | null
   cityId?: Float | null
   address?: String | null
-  pubKey?: String | null
-  hru?: Float | null
-  sru?: Float | null
-  cru?: Float | null
-  mru?: Float | null
+  hru?: BigInt | null
+  sru?: BigInt | null
+  cru?: BigInt | null
+  mru?: BigInt | null
   role?: String | null
+  publicConfig?: ID_Input | null
 }
 
 export interface NodeWhereInput {
@@ -751,6 +789,12 @@ export interface NodeWhereInput {
   farmId_lt?: Int | null
   farmId_lte?: Int | null
   farmId_in?: Int[] | Int | null
+  twinId_eq?: Int | null
+  twinId_gt?: Int | null
+  twinId_gte?: Int | null
+  twinId_lt?: Int | null
+  twinId_lte?: Int | null
+  twinId_in?: Int[] | Int | null
   location_eq?: ID_Input | null
   location_in?: ID_Output[] | ID_Output | null
   countryId_eq?: Int | null
@@ -770,41 +814,39 @@ export interface NodeWhereInput {
   address_startsWith?: String | null
   address_endsWith?: String | null
   address_in?: String[] | String | null
-  pubKey_eq?: String | null
-  pubKey_contains?: String | null
-  pubKey_startsWith?: String | null
-  pubKey_endsWith?: String | null
-  pubKey_in?: String[] | String | null
-  hru_eq?: Int | null
-  hru_gt?: Int | null
-  hru_gte?: Int | null
-  hru_lt?: Int | null
-  hru_lte?: Int | null
-  hru_in?: Int[] | Int | null
-  sru_eq?: Int | null
-  sru_gt?: Int | null
-  sru_gte?: Int | null
-  sru_lt?: Int | null
-  sru_lte?: Int | null
-  sru_in?: Int[] | Int | null
-  cru_eq?: Int | null
-  cru_gt?: Int | null
-  cru_gte?: Int | null
-  cru_lt?: Int | null
-  cru_lte?: Int | null
-  cru_in?: Int[] | Int | null
-  mru_eq?: Int | null
-  mru_gt?: Int | null
-  mru_gte?: Int | null
-  mru_lt?: Int | null
-  mru_lte?: Int | null
-  mru_in?: Int[] | Int | null
+  hru_eq?: BigInt | null
+  hru_gt?: BigInt | null
+  hru_gte?: BigInt | null
+  hru_lt?: BigInt | null
+  hru_lte?: BigInt | null
+  hru_in?: BigInt[] | BigInt | null
+  sru_eq?: BigInt | null
+  sru_gt?: BigInt | null
+  sru_gte?: BigInt | null
+  sru_lt?: BigInt | null
+  sru_lte?: BigInt | null
+  sru_in?: BigInt[] | BigInt | null
+  cru_eq?: BigInt | null
+  cru_gt?: BigInt | null
+  cru_gte?: BigInt | null
+  cru_lt?: BigInt | null
+  cru_lte?: BigInt | null
+  cru_in?: BigInt[] | BigInt | null
+  mru_eq?: BigInt | null
+  mru_gt?: BigInt | null
+  mru_gte?: BigInt | null
+  mru_lt?: BigInt | null
+  mru_lte?: BigInt | null
+  mru_in?: BigInt[] | BigInt | null
   role_eq?: String | null
   role_contains?: String | null
   role_startsWith?: String | null
   role_endsWith?: String | null
   role_in?: String[] | String | null
+  publicConfig_eq?: ID_Input | null
+  publicConfig_in?: ID_Output[] | ID_Output | null
   location?: LocationWhereInput | null
+  publicConfig?: PublicConfigWhereInput | null
   AND?: NodeWhereInput[] | NodeWhereInput | null
   OR?: NodeWhereInput[] | NodeWhereInput | null
 }
@@ -903,6 +945,138 @@ export interface PricingPolicyWhereInput {
 }
 
 export interface PricingPolicyWhereUniqueInput {
+  id: ID_Output
+}
+
+export interface PublicConfigCreateInput {
+  ipv4: String
+  ipv6: String
+  gw4: String
+  gw6: String
+}
+
+export interface PublicConfigUpdateInput {
+  ipv4?: String | null
+  ipv6?: String | null
+  gw4?: String | null
+  gw6?: String | null
+}
+
+export interface PublicConfigWhereInput {
+  id_eq?: ID_Input | null
+  id_in?: ID_Output[] | ID_Output | null
+  createdAt_eq?: DateTime | null
+  createdAt_lt?: DateTime | null
+  createdAt_lte?: DateTime | null
+  createdAt_gt?: DateTime | null
+  createdAt_gte?: DateTime | null
+  createdById_eq?: ID_Input | null
+  createdById_in?: ID_Output[] | ID_Output | null
+  updatedAt_eq?: DateTime | null
+  updatedAt_lt?: DateTime | null
+  updatedAt_lte?: DateTime | null
+  updatedAt_gt?: DateTime | null
+  updatedAt_gte?: DateTime | null
+  updatedById_eq?: ID_Input | null
+  updatedById_in?: ID_Output[] | ID_Output | null
+  deletedAt_all?: Boolean | null
+  deletedAt_eq?: DateTime | null
+  deletedAt_lt?: DateTime | null
+  deletedAt_lte?: DateTime | null
+  deletedAt_gt?: DateTime | null
+  deletedAt_gte?: DateTime | null
+  deletedById_eq?: ID_Input | null
+  deletedById_in?: ID_Output[] | ID_Output | null
+  ipv4_eq?: String | null
+  ipv4_contains?: String | null
+  ipv4_startsWith?: String | null
+  ipv4_endsWith?: String | null
+  ipv4_in?: String[] | String | null
+  ipv6_eq?: String | null
+  ipv6_contains?: String | null
+  ipv6_startsWith?: String | null
+  ipv6_endsWith?: String | null
+  ipv6_in?: String[] | String | null
+  gw4_eq?: String | null
+  gw4_contains?: String | null
+  gw4_startsWith?: String | null
+  gw4_endsWith?: String | null
+  gw4_in?: String[] | String | null
+  gw6_eq?: String | null
+  gw6_contains?: String | null
+  gw6_startsWith?: String | null
+  gw6_endsWith?: String | null
+  gw6_in?: String[] | String | null
+  nodepublicConfig_none?: NodeWhereInput | null
+  nodepublicConfig_some?: NodeWhereInput | null
+  nodepublicConfig_every?: NodeWhereInput | null
+  AND?: PublicConfigWhereInput[] | PublicConfigWhereInput | null
+  OR?: PublicConfigWhereInput[] | PublicConfigWhereInput | null
+}
+
+export interface PublicConfigWhereUniqueInput {
+  id: ID_Output
+}
+
+export interface PublicIpCreateInput {
+  farmId: Float
+  ip: String
+  workloadId: Float
+}
+
+export interface PublicIpUpdateInput {
+  farmId?: Float | null
+  ip?: String | null
+  workloadId?: Float | null
+}
+
+export interface PublicIpWhereInput {
+  id_eq?: ID_Input | null
+  id_in?: ID_Output[] | ID_Output | null
+  createdAt_eq?: DateTime | null
+  createdAt_lt?: DateTime | null
+  createdAt_lte?: DateTime | null
+  createdAt_gt?: DateTime | null
+  createdAt_gte?: DateTime | null
+  createdById_eq?: ID_Input | null
+  createdById_in?: ID_Output[] | ID_Output | null
+  updatedAt_eq?: DateTime | null
+  updatedAt_lt?: DateTime | null
+  updatedAt_lte?: DateTime | null
+  updatedAt_gt?: DateTime | null
+  updatedAt_gte?: DateTime | null
+  updatedById_eq?: ID_Input | null
+  updatedById_in?: ID_Output[] | ID_Output | null
+  deletedAt_all?: Boolean | null
+  deletedAt_eq?: DateTime | null
+  deletedAt_lt?: DateTime | null
+  deletedAt_lte?: DateTime | null
+  deletedAt_gt?: DateTime | null
+  deletedAt_gte?: DateTime | null
+  deletedById_eq?: ID_Input | null
+  deletedById_in?: ID_Output[] | ID_Output | null
+  farmId_eq?: Int | null
+  farmId_gt?: Int | null
+  farmId_gte?: Int | null
+  farmId_lt?: Int | null
+  farmId_lte?: Int | null
+  farmId_in?: Int[] | Int | null
+  ip_eq?: String | null
+  ip_contains?: String | null
+  ip_startsWith?: String | null
+  ip_endsWith?: String | null
+  ip_in?: String[] | String | null
+  workloadId_eq?: Int | null
+  workloadId_gt?: Int | null
+  workloadId_gte?: Int | null
+  workloadId_lt?: Int | null
+  workloadId_lte?: Int | null
+  workloadId_in?: Int[] | Int | null
+  AND?: PublicIpWhereInput[] | PublicIpWhereInput | null
+  OR?: PublicIpWhereInput[] | PublicIpWhereInput | null
+}
+
+export interface PublicIpWhereUniqueInput {
   id: ID_Output
 }
 
@@ -1267,17 +1441,19 @@ export interface Node extends BaseGraphQLObject {
   gridVersion: Int
   nodeId: Int
   farmId: Int
+  twinId: Int
   location: Location
   locationId: String
   countryId?: Int | null
   cityId?: Int | null
   address: String
-  pubKey: String
-  hru?: Int | null
-  sru?: Int | null
-  cru?: Int | null
-  mru?: Int | null
+  hru?: BigInt | null
+  sru?: BigInt | null
+  cru?: BigInt | null
+  mru?: BigInt | null
   role: String
+  publicConfig?: PublicConfig | null
+  publicConfigId?: String | null
 }
 
 export interface NodeConnection {
@@ -1332,6 +1508,58 @@ export interface ProcessorState {
   lastProcessedEvent: String
   indexerHead: Float
   chainHead: Float
+}
+
+export interface PublicConfig extends BaseGraphQLObject {
+  id: ID_Output
+  createdAt: DateTime
+  createdById: String
+  updatedAt?: DateTime | null
+  updatedById?: String | null
+  deletedAt?: DateTime | null
+  deletedById?: String | null
+  version: Int
+  ipv4: String
+  ipv6: String
+  gw4: String
+  gw6: String
+  nodepublicConfig?: Array<Node> | null
+}
+
+export interface PublicConfigConnection {
+  totalCount: Int
+  edges: Array<PublicConfigEdge>
+  pageInfo: PageInfo
+}
+
+export interface PublicConfigEdge {
+  node: PublicConfig
+  cursor: String
+}
+
+export interface PublicIp extends BaseGraphQLObject {
+  id: ID_Output
+  createdAt: DateTime
+  createdById: String
+  updatedAt?: DateTime | null
+  updatedById?: String | null
+  deletedAt?: DateTime | null
+  deletedById?: String | null
+  version: Int
+  farmId: Int
+  ip: String
+  workloadId: Int
+}
+
+export interface PublicIpConnection {
+  totalCount: Int
+  edges: Array<PublicIpEdge>
+  pageInfo: PageInfo
+}
+
+export interface PublicIpEdge {
+  node: PublicIp
+  cursor: String
 }
 
 export interface StandardDeleteResponse {
