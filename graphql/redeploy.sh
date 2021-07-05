@@ -9,6 +9,8 @@ yarn
 
 cd node_modules/@subsquid/hydra-typegen && yarn add ws
 
+cd ../../..
+
 yarn build
 
 yarn typegen

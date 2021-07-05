@@ -3507,6 +3507,7 @@ dependencies = [
  "pallet-grandpa",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
+ "pallet-smart-contract",
  "pallet-sudo",
  "pallet-tfgrid",
  "pallet-tft-bridge",
@@ -3784,6 +3785,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-smart-contract"
+version = "3.0.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "hex",
+ "lite-json",
+ "pallet-balances",
+ "pallet-tfgrid",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-storage",
+]
+
+[[package]]
 name = "pallet-sudo"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3801,7 +3821,6 @@ dependencies = [
 [[package]]
 name = "pallet-tfgrid"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/substrate-pallets?branch=master#80f083f1aa8cabde238168b4fa5c00f3f2b13f9e"
 dependencies = [
  "frame-support",
  "frame-system",

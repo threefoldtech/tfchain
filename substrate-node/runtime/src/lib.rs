@@ -42,6 +42,8 @@ use pallet_transaction_payment::CurrencyAdapter;
 /// Import the template pallet.
 pub use pallet_tfgrid;
 
+pub use pallet_smart_contract;
+
 pub use pallet_tft_bridge;
 
 /// An index to a block.
@@ -269,6 +271,10 @@ impl pallet_tfgrid::Config for Runtime {
 	type Event = Event;
 }
 
+impl pallet_smart_contract::Config for Runtime {
+	type Event = Event;
+}
+
 impl pallet_tft_bridge::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
@@ -302,6 +308,7 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 		TfgridModule: pallet_tfgrid::{Module, Call, Storage, Event<T>},
+		SmartContractModule: pallet_smart_contract::{Module, Call, Storage, Event<T>},
 		TFTBridgeModule: pallet_tft_bridge::{Module, Call, Storage, Event<T>},
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 	}

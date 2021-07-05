@@ -22,10 +22,17 @@ version = '2.0.0'
 
 [dependencies.pallet-tfgrid]
 default-features = false
-git = "https://github.com/threefoldtech/substrate-pallets"
-package = "pallet-tfgrid"
-branch = "master"
-# path = "../../../pallets/pallet-tfgrid"
+# git = "https://github.com/threefoldtech/substrate-pallets"
+# package = "pallet-tfgrid"
+# branch = "master"
+path = "../../../pallets/pallet-tfgrid"
+
+[dependencies.pallet-smart-contract]
+default-features = false
+# git = "https://github.com/threefoldtech/substrate-pallets"
+# package = "pallet-smart-contract"
+# branch = "master"
+path = "../../../pallets/pallet-smart-contract"
 
 [dependencies.pallet-tft-bridge]
 default-features = false
