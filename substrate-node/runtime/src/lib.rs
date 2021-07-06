@@ -273,6 +273,7 @@ impl pallet_tfgrid::Config for Runtime {
 
 impl pallet_smart_contract::Config for Runtime {
 	type Event = Event;
+	type Currency = Balances;
 }
 
 impl pallet_tft_bridge::Config for Runtime {
