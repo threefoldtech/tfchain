@@ -41,6 +41,16 @@ pub fn authority_keys_from_seed(s: &str) -> (AuraId, GrandpaId) {
 pub fn development_config() -> Result<ChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
 
+	let properties = Some(
+		serde_json::json!({
+			"tokenDecimals": 7,
+			"tokenSymbol": "TFT-DB",
+		})
+		.as_object()
+		.expect("Map given; qed")
+		.clone(),
+	);
+
 	Ok(ChainSpec::from_genesis(
 		// Name
 		"Development",
@@ -71,7 +81,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		// Protocol ID
 		None,
 		// Properties
-		None,
+		properties,
 		// Extensions
 		None,
 	))
@@ -79,6 +89,16 @@ pub fn development_config() -> Result<ChainSpec, String> {
 
 pub fn local_testnet_config() -> Result<ChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
+
+	let properties = Some(
+		serde_json::json!({
+			"tokenDecimals": 7,
+			"tokenSymbol": "TFT-DB",
+		})
+		.as_object()
+		.expect("Map given; qed")
+		.clone(),
+	);
 
 	Ok(ChainSpec::from_genesis(
 		// Name
@@ -119,7 +139,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 		// Protocol ID
 		None,
 		// Properties
-		None,
+		properties,
 		// Extensions
 		None,
 	))
