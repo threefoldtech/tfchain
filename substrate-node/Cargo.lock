@@ -3787,6 +3787,7 @@ dependencies = [
 [[package]]
 name = "pallet-smart-contract"
 version = "3.0.0"
+source = "git+https://github.com/threefoldtech/substrate-pallets?branch=master#e90695f513581455e5e50b0dc6170ed536d5eb6b"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3822,6 +3823,7 @@ dependencies = [
 [[package]]
 name = "pallet-tfgrid"
 version = "3.0.0"
+source = "git+https://github.com/threefoldtech/substrate-pallets?branch=master#e90695f513581455e5e50b0dc6170ed536d5eb6b"
 dependencies = [
  "frame-support",
  "frame-system",
