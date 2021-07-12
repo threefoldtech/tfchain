@@ -5,9 +5,9 @@ async function createContract (args) {
   const { a: url, m: mnemonic } = args
   const client = await getClient(url, mnemonic)
 
-  const { t: twinID, n: nodeID, w: workload, p: publicIPs } = args
+  const { n: nodeID, d: data, h: hash, p: publicIPs } = args
 
-  return client.createContract(twinID, nodeID, workload, publicIPs, callback)
+  return client.createContract(nodeID, data, hash, publicIPs, callback)
 }
 
 async function cancelContract (args) {

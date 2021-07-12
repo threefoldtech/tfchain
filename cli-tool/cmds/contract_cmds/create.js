@@ -5,19 +5,19 @@ const {
 exports.command = 'create'
 exports.desc = 'Create a contract given a twinID, nodeID workload and number of ips'
 exports.builder = function (yargs) {
-  yargs.option('twinID', {
-    description: 'Id of the twin',
-    alias: 't',
-    type: 'number'
-  })
   yargs.option('nodeID', {
     description: 'Public key of the node',
     alias: 'n',
     type: 'string'
   })
-  yargs.option('workload', {
+  yargs.option('data', {
     description: 'Workload data',
-    alias: 'w',
+    alias: 'd',
+    type: 'string'
+  })
+  yargs.option('hash', {
+    description: 'Deployment hash',
+    alias: 'h',
     type: 'string'
   })
   yargs.option('publicIPs', {
@@ -25,7 +25,7 @@ exports.builder = function (yargs) {
     alias: 'p',
     type: 'number'
   })
-  yargs.demandOption(['t', 'n', 'w', 'p'])
+  yargs.demandOption(['n', 'd', 'h', 'p'])
   return yargs
 }
 exports.handler = createContract
