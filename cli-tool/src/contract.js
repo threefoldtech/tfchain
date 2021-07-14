@@ -10,6 +10,13 @@ async function createContract (args) {
   return client.createContract(nodeID, data, hash, publicIPs, callback)
 }
 
+async function updateContract (args) {
+  const { a: url, m: mnemonic, id, data, hash } = args
+  const client = await getClient(url, mnemonic)
+
+  return client.updateContract(id, data, hash, callback)
+}
+
 async function cancelContract (args) {
   const { a: url, m: mnemonic, id } = args
   const client = await getClient(url, mnemonic)
@@ -28,6 +35,7 @@ async function getContract (args) {
 
 module.exports = {
   createContract,
+  updateContract,
   cancelContract,
   getContract
 }
