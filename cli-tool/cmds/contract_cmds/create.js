@@ -25,6 +25,11 @@ exports.builder = function (yargs) {
     alias: 'p',
     type: 'number'
   })
+  yargs.option('json', {
+    description: 'Output only the json',
+    alias: 'j',
+    type: 'bool'
+  })
   yargs.demandOption(['n', 'd', 'h', 'p'])
   return yargs
 }
