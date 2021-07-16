@@ -244,12 +244,14 @@ export type PublicIpOrderByInput =   'createdAt_ASC' |
   'updatedAt_DESC' |
   'deletedAt_ASC' |
   'deletedAt_DESC' |
-  'farmId_ASC' |
-  'farmId_DESC' |
+  'farm_ASC' |
+  'farm_DESC' |
+  'gateway_ASC' |
+  'gateway_DESC' |
   'ip_ASC' |
   'ip_DESC' |
-  'workloadId_ASC' |
-  'workloadId_DESC'
+  'contractId_ASC' |
+  'contractId_DESC'
 
 export type TransferOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -648,6 +650,9 @@ export interface FarmWhereInput {
   cityId_lt?: Int | null
   cityId_lte?: Int | null
   cityId_in?: Int[] | Int | null
+  publicIPs_none?: PublicIpWhereInput | null
+  publicIPs_some?: PublicIpWhereInput | null
+  publicIPs_every?: PublicIpWhereInput | null
   AND?: FarmWhereInput[] | FarmWhereInput | null
   OR?: FarmWhereInput[] | FarmWhereInput | null
 }
@@ -1019,15 +1024,17 @@ export interface PublicConfigWhereUniqueInput {
 }
 
 export interface PublicIpCreateInput {
-  farmId: Float
+  farm: ID_Output
+  gateway: String
   ip: String
-  workloadId: Float
+  contractId: Float
 }
 
 export interface PublicIpUpdateInput {
-  farmId?: Float | null
+  farm?: ID_Input | null
+  gateway?: String | null
   ip?: String | null
-  workloadId?: Float | null
+  contractId?: Float | null
 }
 
 export interface PublicIpWhereInput {
@@ -1055,23 +1062,25 @@ export interface PublicIpWhereInput {
   deletedAt_gte?: DateTime | null
   deletedById_eq?: ID_Input | null
   deletedById_in?: ID_Output[] | ID_Output | null
-  farmId_eq?: Int | null
-  farmId_gt?: Int | null
-  farmId_gte?: Int | null
-  farmId_lt?: Int | null
-  farmId_lte?: Int | null
-  farmId_in?: Int[] | Int | null
+  farm_eq?: ID_Input | null
+  farm_in?: ID_Output[] | ID_Output | null
+  gateway_eq?: String | null
+  gateway_contains?: String | null
+  gateway_startsWith?: String | null
+  gateway_endsWith?: String | null
+  gateway_in?: String[] | String | null
   ip_eq?: String | null
   ip_contains?: String | null
   ip_startsWith?: String | null
   ip_endsWith?: String | null
   ip_in?: String[] | String | null
-  workloadId_eq?: Int | null
-  workloadId_gt?: Int | null
-  workloadId_gte?: Int | null
-  workloadId_lt?: Int | null
-  workloadId_lte?: Int | null
-  workloadId_in?: Int[] | Int | null
+  contractId_eq?: Int | null
+  contractId_gt?: Int | null
+  contractId_gte?: Int | null
+  contractId_lt?: Int | null
+  contractId_lte?: Int | null
+  contractId_in?: Int[] | Int | null
+  farm?: FarmWhereInput | null
   AND?: PublicIpWhereInput[] | PublicIpWhereInput | null
   OR?: PublicIpWhereInput[] | PublicIpWhereInput | null
 }
@@ -1391,6 +1400,7 @@ export interface Farm extends BaseGraphQLObject {
   certificationType: CertificationType
   countryId?: Int | null
   cityId?: Int | null
+  publicIPs: Array<PublicIp>
 }
 
 export interface FarmConnection {
@@ -1546,9 +1556,11 @@ export interface PublicIp extends BaseGraphQLObject {
   deletedAt?: DateTime | null
   deletedById?: String | null
   version: Int
-  farmId: Int
+  farm: Farm
+  farmId: String
+  gateway: String
   ip: String
-  workloadId: Int
+  contractId: Int
 }
 
 export interface PublicIpConnection {

@@ -13,7 +13,7 @@
   "PublicIP": {
     "ip": "Vec<u8>",
     "gateway": "Vec<u8>",
-    "contract_id": "u32"
+    "contract_id": "u64"
   },
   "Entity": {
     "version": "u32",
@@ -93,14 +93,49 @@
     "version": "u32",
     "id": "u32",
     "name": "Vec<u8>",
-    "currency": "Vec<u8>",
+    "unit": "Unit",
     "su": "u32",
     "cu": "u32",
-    "nu": "u32"
+    "nu": "u32",
+    "ipu": "u32"
   },
-  "VolumeType": {
-    "disk_type": "u8",
-    "size": "u32"
+  "Unit": {
+    "_enum": [
+      "Bytes",
+      "Kilobytes",
+      "Megabytes",
+      "Gigabytes"
+    ]
+  },
+  "Contract": {
+    "version": "u32",
+    "contract_id": "u64",
+    "twin_id": "u32",
+	  "node_id": "AccountId",
+    "data": "Vec<u8>",
+    "deployment_hash": "Vec<u8>",
+    "public_ips": "u32",
+    "state": "ContractState",
+    "last_updated": "u64",
+    "previous_nu_reported": "u64",
+    "public_ips_list": "Vec<PublicIP>",
+    "amount_unbilled": "u64"
+  },
+  "ContractState": {
+    "_enum": [
+      "Created",
+      "Deleted",
+      "OutOfFunds"
+    ]
+  },
+  "Consumption": {
+    "contract_id": "u64",
+    "timestamp": "u64",
+    "cru": "u64",
+    "sru": "u64",
+    "hru": "u64",
+    "mru": "u64",
+    "nru": "u64"
   },
   "Address": "MultiAddress",
   "LookupSource": "MultiAddress",

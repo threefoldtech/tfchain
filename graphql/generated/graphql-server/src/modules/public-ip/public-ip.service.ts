@@ -10,8 +10,16 @@ import {} from '../variants/variants.model';
 
 import { PublicIpWhereArgs, PublicIpWhereInput } from '../../../generated';
 
+import { Farm } from '../farm/farm.model';
+import { FarmService } from '../farm/farm.service';
+import { getConnection, getRepository, In, Not } from 'typeorm';
+import _ from 'lodash';
+
 @Service('PublicIpService')
 export class PublicIpService extends WarthogBaseService<PublicIp> {
+  @Inject('FarmService')
+  public readonly farmService!: FarmService;
+
   constructor(@InjectRepository(PublicIp) protected readonly repository: Repository<PublicIp>) {
     super(PublicIp, repository);
   }
@@ -37,9 +45,24 @@ export class PublicIpService extends WarthogBaseService<PublicIp> {
   ): Promise<PublicIp[]> {
     const where = <PublicIpWhereInput>(_where || {});
 
+    // remove relation filters to enable warthog query builders
+    const { farm } = where;
+    delete where.farm;
+
     let mainQuery = this.buildFindQueryWithParams(<any>where, orderBy, undefined, fields, 'main').take(undefined); // remove LIMIT
 
     let parameters = mainQuery.getParameters();
+
+    if (farm) {
+      // OTO or MTO
+      const farmQuery = this.farmService
+        .buildFindQueryWithParams(<any>farm, undefined, undefined, ['id'], 'farm')
+        .take(undefined); // remove the default LIMIT
+
+      mainQuery = mainQuery.andWhere(`"publicip"."farm_id" IN (${farmQuery.getQuery()})`);
+
+      parameters = { ...parameters, ...farmQuery.getParameters() };
+    }
 
     mainQuery = mainQuery.setParameters(parameters);
 

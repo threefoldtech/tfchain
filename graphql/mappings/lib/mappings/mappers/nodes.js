@@ -5,70 +5,72 @@ const model_1 = require("../../generated/graphql-server/model");
 const types_1 = require("../generated/types");
 const util_1 = require("./util");
 async function nodeStored({ store, event, block, extrinsic, }) {
-    const node = new model_1.Node();
-    const [version, nodeID, farm_id, resources, location, countryID, cityID, address, role, twinID, publicConfig] = new types_1.TfgridModule.NodeStoredEvent(event).params;
-    node.gridVersion = version.toNumber();
-    node.farmId = farm_id.toNumber();
-    node.nodeId = nodeID.toNumber();
-    node.sru = resources.sru.toBn();
-    node.hru = resources.hru.toBn();
-    node.mru = resources.mru.toBn();
-    node.cru = resources.cru.toBn();
-    node.countryId = countryID.toNumber();
-    node.cityId = cityID.toNumber();
+    const [node] = new types_1.TfgridModule.NodeStoredEvent(event).params;
+    const newNode = new model_1.Node();
+    newNode.gridVersion = node.version.toNumber();
+    newNode.farmId = node.farm_id.toNumber();
+    newNode.nodeId = node.id.toNumber();
+    newNode.sru = node.resources.sru.toBn();
+    newNode.hru = node.resources.hru.toBn();
+    newNode.mru = node.resources.mru.toBn();
+    newNode.cru = node.resources.cru.toBn();
+    newNode.countryId = node.country_id.toNumber();
+    newNode.cityId = node.city_id.toNumber();
     const newLocation = new model_1.Location();
-    newLocation.latitude = util_1.hex2a(location.latitude.toString());
-    newLocation.longitude = util_1.hex2a(location.longitude.toString());
+    newLocation.latitude = util_1.hex2a(node.location.latitude.toString());
+    newLocation.longitude = util_1.hex2a(node.location.longitude.toString());
     await store.save(newLocation);
-    node.location = newLocation;
-    node.address = address.toString();
-    node.role = role.toString();
-    if (publicConfig.isSome) {
+    newNode.location = newLocation;
+    newNode.address = node.address.toString();
+    newNode.role = node.role.toString();
+    if (node.public_config.isSome) {
         const pubConfig = new model_1.PublicConfig();
-        const parsedConfig = publicConfig.unwrapOrDefault();
+        const parsedConfig = node.public_config.unwrapOrDefault();
         pubConfig.ipv4 = util_1.hex2a(parsedConfig.ipv4.toString());
         pubConfig.ipv6 = util_1.hex2a(parsedConfig.ipv6.toString());
         pubConfig.gw4 = util_1.hex2a(parsedConfig.gw4.toString());
         pubConfig.gw6 = util_1.hex2a(parsedConfig.gw6.toString());
         await store.save(pubConfig);
-        node.publicConfig = pubConfig;
+        newNode.publicConfig = pubConfig;
     }
-    node.twinId = twinID.toNumber();
-    await store.save(node);
+    newNode.twinId = node.twin_id.toNumber();
+    await store.save(newNode);
 }
 exports.nodeStored = nodeStored;
 // TODO
 async function nodeUpdated({ store, event, block, extrinsic, }) {
-    const node = new model_1.Node();
-    const [version, nodeID, farm_id, resources, location, countryID, cityID, address, role, twinID, publicConfig] = new types_1.TfgridModule.NodeUpdatedEvent(event).params;
-    const savedNode = await store.get(model_1.Node, { where: { nodeId: nodeID.toNumber() } });
+    const [node] = new types_1.TfgridModule.NodeUpdatedEvent(event).params;
+    const savedNode = await store.get(model_1.Node, { where: { nodeId: node.id.toNumber() } });
     if (!savedNode)
         return;
-    node.gridVersion = version.toNumber();
-    node.farmId = farm_id.toNumber();
-    node.nodeId = nodeID.toNumber();
-    node.sru = resources.sru.toBn();
-    node.hru = resources.hru.toBn();
-    node.mru = resources.mru.toBn();
-    node.cru = resources.cru.toBn();
-    node.countryId = countryID.toNumber();
-    node.cityId = cityID.toNumber();
-    node.location.latitude = util_1.hex2a(location.latitude.toString());
-    node.location.longitude = util_1.hex2a(location.longitude.toString());
-    node.address = util_1.hex2a(address.toString());
-    if (publicConfig.isSome) {
+    savedNode.gridVersion = node.version.toNumber();
+    savedNode.farmId = node.farm_id.toNumber();
+    savedNode.nodeId = node.id.toNumber();
+    savedNode.sru = node.resources.sru.toBn();
+    savedNode.hru = node.resources.hru.toBn();
+    savedNode.mru = node.resources.mru.toBn();
+    savedNode.cru = node.resources.cru.toBn();
+    savedNode.countryId = node.country_id.toNumber();
+    savedNode.cityId = node.city_id.toNumber();
+    const newLocation = new model_1.Location();
+    newLocation.latitude = util_1.hex2a(node.location.latitude.toString());
+    newLocation.longitude = util_1.hex2a(node.location.longitude.toString());
+    await store.save(newLocation);
+    savedNode.location = newLocation;
+    savedNode.address = node.address.toString();
+    savedNode.role = node.role.toString();
+    if (node.public_config.isSome) {
         const pubConfig = new model_1.PublicConfig();
-        const parsedConfig = publicConfig.unwrapOrDefault();
+        const parsedConfig = node.public_config.unwrapOrDefault();
         pubConfig.ipv4 = util_1.hex2a(parsedConfig.ipv4.toString());
         pubConfig.ipv6 = util_1.hex2a(parsedConfig.ipv6.toString());
         pubConfig.gw4 = util_1.hex2a(parsedConfig.gw4.toString());
         pubConfig.gw6 = util_1.hex2a(parsedConfig.gw6.toString());
         await store.save(pubConfig);
-        node.publicConfig = pubConfig;
+        savedNode.publicConfig = pubConfig;
     }
-    node.role = role.toString();
-    node.twinId = twinID.toNumber();
-    await store.save(node);
+    savedNode.twinId = node.twin_id.toNumber();
+    await store.save(savedNode);
 }
 exports.nodeUpdated = nodeUpdated;
 async function nodeDeleted({ store, event, block, extrinsic, }) {

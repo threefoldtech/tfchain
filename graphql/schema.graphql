@@ -38,12 +38,14 @@ type Farm @entity {
   certificationType: CertificationType!
   countryID: Int
   cityID: Int
+  publicIPs: [PublicIp!] @derivedFrom(field: "farm")
 }
 
-type PublicIP @entity {
-  farmID: Int!
+type PublicIp @entity {
+  farm: Farm!
+  gateway: String!
   ip: String!
-  workloadId: Int!
+  contract_id: Int!
 }
 
 enum CertificationType {

@@ -8,34 +8,12 @@ var TfgridModule;
     class EntityStoredEvent {
         constructor(ctx) {
             this.ctx = ctx;
-            this.expectedParamTypes = [
-                "u32",
-                "u32",
-                "Vec<u8>",
-                "u32",
-                "u32",
-                "AccountId"
-            ];
+            this.expectedParamTypes = ["types::Entity<AccountId>"];
         }
         get params() {
             return [
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
+                create_1.createTypeUnsafe(_1.typeRegistry, "Entity", [
                     this.ctx.params[0].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
-                    this.ctx.params[1].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "Bytes", [
-                    this.ctx.params[2].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
-                    this.ctx.params[3].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
-                    this.ctx.params[4].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "AccountId", [
-                    this.ctx.params[5].value
                 ])
             ];
         }
@@ -56,30 +34,12 @@ var TfgridModule;
     class EntityUpdatedEvent {
         constructor(ctx) {
             this.ctx = ctx;
-            this.expectedParamTypes = [
-                "u32",
-                "Vec<u8>",
-                "u32",
-                "u32",
-                "AccountId"
-            ];
+            this.expectedParamTypes = ["types::Entity<AccountId>"];
         }
         get params() {
             return [
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
+                create_1.createTypeUnsafe(_1.typeRegistry, "Entity", [
                     this.ctx.params[0].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "Bytes", [
-                    this.ctx.params[1].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
-                    this.ctx.params[2].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
-                    this.ctx.params[3].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "AccountId", [
-                    this.ctx.params[4].value
                 ])
             ];
         }
@@ -126,41 +86,13 @@ var TfgridModule;
     class FarmStoredEvent {
         constructor(ctx) {
             this.ctx = ctx;
-            this.expectedParamTypes = [
-                "u32",
-                "u32",
-                "Vec<u8>",
-                "u32",
-                "u32",
-                "u32",
-                "u32",
-                "types::CertificationType"
-            ];
+            this.expectedParamTypes = ["types::Farm"];
         }
         get params() {
             return [
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
+                create_1.createTypeUnsafe(_1.typeRegistry, "Farm", [
                     this.ctx.params[0].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
-                    this.ctx.params[1].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "Bytes", [
-                    this.ctx.params[2].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
-                    this.ctx.params[3].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
-                    this.ctx.params[4].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
-                    this.ctx.params[5].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
-                    this.ctx.params[6].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "CertificationType", [this.ctx.params[7].value])
+                ])
             ];
         }
         validateParams() {
@@ -177,6 +109,32 @@ var TfgridModule;
         }
     }
     TfgridModule.FarmStoredEvent = FarmStoredEvent;
+    class FarmUpdatedEvent {
+        constructor(ctx) {
+            this.ctx = ctx;
+            this.expectedParamTypes = ["types::Farm"];
+        }
+        get params() {
+            return [
+                create_1.createTypeUnsafe(_1.typeRegistry, "Farm", [
+                    this.ctx.params[0].value
+                ])
+            ];
+        }
+        validateParams() {
+            if (this.expectedParamTypes.length !== this.ctx.params.length) {
+                return false;
+            }
+            let valid = true;
+            this.expectedParamTypes.forEach((type, i) => {
+                if (type !== this.ctx.params[i].type) {
+                    valid = false;
+                }
+            });
+            return valid;
+        }
+    }
+    TfgridModule.FarmUpdatedEvent = FarmUpdatedEvent;
     class FarmDeletedEvent {
         constructor(ctx) {
             this.ctx = ctx;
@@ -206,53 +164,13 @@ var TfgridModule;
     class NodeStoredEvent {
         constructor(ctx) {
             this.ctx = ctx;
-            this.expectedParamTypes = [
-                "u32",
-                "u32",
-                "u32",
-                "types::Resources",
-                "types::Location",
-                "u32",
-                "u32",
-                "AccountId",
-                "types::Role",
-                "u32",
-                "Option<types::PublicConfig>"
-            ];
+            this.expectedParamTypes = ["types::Node<AccountId>"];
         }
         get params() {
             return [
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
+                create_1.createTypeUnsafe(_1.typeRegistry, "Node", [
                     this.ctx.params[0].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
-                    this.ctx.params[1].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
-                    this.ctx.params[2].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "Resources", [
-                    this.ctx.params[3].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "Location", [
-                    this.ctx.params[4].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
-                    this.ctx.params[5].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
-                    this.ctx.params[6].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "AccountId", [
-                    this.ctx.params[7].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "Role", [
-                    this.ctx.params[8].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
-                    this.ctx.params[9].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "Option<PublicConfig>", [this.ctx.params[10].value])
+                ])
             ];
         }
         validateParams() {
@@ -272,53 +190,13 @@ var TfgridModule;
     class NodeUpdatedEvent {
         constructor(ctx) {
             this.ctx = ctx;
-            this.expectedParamTypes = [
-                "u32",
-                "u32",
-                "u32",
-                "types::Resources",
-                "types::Location",
-                "u32",
-                "u32",
-                "AccountId",
-                "types::Role",
-                "u32",
-                "Option<types::PublicConfig>"
-            ];
+            this.expectedParamTypes = ["types::Node<AccountId>"];
         }
         get params() {
             return [
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
+                create_1.createTypeUnsafe(_1.typeRegistry, "Node", [
                     this.ctx.params[0].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
-                    this.ctx.params[1].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
-                    this.ctx.params[2].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "Resources", [
-                    this.ctx.params[3].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "Location", [
-                    this.ctx.params[4].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
-                    this.ctx.params[5].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
-                    this.ctx.params[6].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "AccountId", [
-                    this.ctx.params[7].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "Role", [
-                    this.ctx.params[8].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
-                    this.ctx.params[9].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "Option<PublicConfig>", [this.ctx.params[10].value])
+                ])
             ];
         }
         validateParams() {
@@ -364,21 +242,12 @@ var TfgridModule;
     class TwinStoredEvent {
         constructor(ctx) {
             this.ctx = ctx;
-            this.expectedParamTypes = ["u32", "u32", "AccountId", "Vec<u8>"];
+            this.expectedParamTypes = ["types::Twin<AccountId>"];
         }
         get params() {
             return [
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
+                create_1.createTypeUnsafe(_1.typeRegistry, "Twin", [
                     this.ctx.params[0].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "u32", [
-                    this.ctx.params[1].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "AccountId", [
-                    this.ctx.params[2].value
-                ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "Bytes", [
-                    this.ctx.params[3].value
                 ])
             ];
         }

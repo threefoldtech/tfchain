@@ -1,20 +1,19 @@
 import { SubstrateEvent } from "@subsquid/hydra-common";
-import { Bytes, Option, u32 } from "@polkadot/types";
-import { AccountId } from "@polkadot/types/interfaces";
-import { CertificationType, Location, PublicConfig, Resources, Role } from "substrate-tfgrid-ts-types";
+import { Entity, Farm, Node, Twin } from "substrate-tfgrid-ts-types";
+import { Bytes, u32 } from "@polkadot/types";
 export declare namespace TfgridModule {
     class EntityStoredEvent {
         readonly ctx: SubstrateEvent;
         readonly expectedParamTypes: string[];
         constructor(ctx: SubstrateEvent);
-        get params(): [u32, u32, Bytes, u32, u32, AccountId];
+        get params(): [Entity];
         validateParams(): boolean;
     }
     class EntityUpdatedEvent {
         readonly ctx: SubstrateEvent;
         readonly expectedParamTypes: string[];
         constructor(ctx: SubstrateEvent);
-        get params(): [u32, Bytes, u32, u32, AccountId];
+        get params(): [Entity];
         validateParams(): boolean;
     }
     class EntityDeletedEvent {
@@ -28,7 +27,14 @@ export declare namespace TfgridModule {
         readonly ctx: SubstrateEvent;
         readonly expectedParamTypes: string[];
         constructor(ctx: SubstrateEvent);
-        get params(): [u32, u32, Bytes, u32, u32, u32, u32, CertificationType];
+        get params(): [Farm];
+        validateParams(): boolean;
+    }
+    class FarmUpdatedEvent {
+        readonly ctx: SubstrateEvent;
+        readonly expectedParamTypes: string[];
+        constructor(ctx: SubstrateEvent);
+        get params(): [Farm];
         validateParams(): boolean;
     }
     class FarmDeletedEvent {
@@ -42,14 +48,14 @@ export declare namespace TfgridModule {
         readonly ctx: SubstrateEvent;
         readonly expectedParamTypes: string[];
         constructor(ctx: SubstrateEvent);
-        get params(): [u32, u32, u32, Resources, Location, u32, u32, AccountId, Role, u32, Option<PublicConfig>];
+        get params(): [Node];
         validateParams(): boolean;
     }
     class NodeUpdatedEvent {
         readonly ctx: SubstrateEvent;
         readonly expectedParamTypes: string[];
         constructor(ctx: SubstrateEvent);
-        get params(): [u32, u32, u32, Resources, Location, u32, u32, AccountId, Role, u32, Option<PublicConfig>];
+        get params(): [Node];
         validateParams(): boolean;
     }
     class NodeDeletedEvent {
@@ -63,7 +69,7 @@ export declare namespace TfgridModule {
         readonly ctx: SubstrateEvent;
         readonly expectedParamTypes: string[];
         constructor(ctx: SubstrateEvent);
-        get params(): [u32, u32, AccountId, Bytes];
+        get params(): [Twin];
         validateParams(): boolean;
     }
     class TwinDeletedEvent {

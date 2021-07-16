@@ -5,13 +5,13 @@ const model_1 = require("../../generated/graphql-server/model");
 const types_1 = require("../generated/types");
 const util_1 = require("./util");
 async function twinStored({ store, event, block, extrinsic, }) {
-    const twin = new model_1.Twin();
-    const [version, twinID, accountID, ip] = new types_1.TfgridModule.TwinStoredEvent(event).params;
-    twin.gridVersion = version.toNumber();
-    twin.twinId = twinID.toNumber();
-    twin.address = accountID.toHuman();
-    twin.ip = util_1.hex2a(Buffer.from(ip.toString()).toString());
-    await store.save(twin);
+    const [twin] = new types_1.TfgridModule.TwinStoredEvent(event).params;
+    const newTwin = new model_1.Twin();
+    newTwin.gridVersion = twin.version.toNumber();
+    newTwin.twinId = twin.id.toNumber();
+    newTwin.address = twin.address.toHuman();
+    newTwin.ip = util_1.hex2a(Buffer.from(twin.ip.toString()).toString());
+    await store.save(newTwin);
 }
 exports.twinStored = twinStored;
 async function twinDeleted({ store, event, block, extrinsic, }) {
@@ -23,7 +23,6 @@ async function twinDeleted({ store, event, block, extrinsic, }) {
 }
 exports.twinDeleted = twinDeleted;
 async function twinEntityStored({ store, event, block, extrinsic, }) {
-    const entityProof = new model_1.EntityProof();
     const [twinID, entityID, signature] = new types_1.TfgridModule.TwinEntityStoredEvent(event).params;
     let savedTwin = await store.get(model_1.Twin, { where: { twinId: twinID.toNumber() } });
     if (savedTwin) {

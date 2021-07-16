@@ -1,15 +1,30 @@
-import { BaseModel, IntField, Model, StringField } from 'warthog';
+import { BaseModel, IntField, Model, ManyToOne, StringField } from 'warthog';
+
+import { Farm } from '../farm/farm.model';
 
 @Model({ api: {} })
 export class PublicIp extends BaseModel {
-  @IntField({})
-  farmId!: number;
+  @ManyToOne(
+    () => Farm,
+    (param: Farm) => param.publicIPs,
+    {
+      skipGraphQLField: true,
+
+      modelName: 'PublicIp',
+      relModelName: 'Farm',
+      propertyName: 'farm'
+    }
+  )
+  farm!: Farm;
+
+  @StringField({})
+  gateway!: string;
 
   @StringField({})
   ip!: string;
 
   @IntField({})
-  workloadId!: number;
+  contractId!: number;
 
   constructor(init?: Partial<PublicIp>) {
     super();

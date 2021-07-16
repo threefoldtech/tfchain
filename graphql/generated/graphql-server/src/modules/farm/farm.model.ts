@@ -1,4 +1,6 @@
-import { BaseModel, IntField, Model, EnumField, StringField } from 'warthog';
+import { BaseModel, IntField, Model, OneToMany, EnumField, StringField } from 'warthog';
+
+import { PublicIp } from '../public-ip/public-ip.model';
 
 import { CertificationType } from '../enums/enums';
 export { CertificationType };
@@ -32,6 +34,17 @@ export class Farm extends BaseModel {
     nullable: true
   })
   cityId?: number;
+
+  @OneToMany(
+    () => PublicIp,
+    (param: PublicIp) => param.farm,
+    {
+      modelName: 'Farm',
+      relModelName: 'PublicIp',
+      propertyName: 'publicIPs'
+    }
+  )
+  publicIPs?: PublicIp[];
 
   constructor(init?: Partial<Farm>) {
     super();

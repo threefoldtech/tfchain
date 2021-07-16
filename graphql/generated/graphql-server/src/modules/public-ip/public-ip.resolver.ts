@@ -31,6 +31,11 @@ import {
 import { PublicIp } from './public-ip.model';
 import { PublicIpService } from './public-ip.service';
 
+import { Farm } from '../farm/farm.model';
+import { FarmService } from '../farm/farm.service';
+import { getConnection, getRepository, In, Not } from 'typeorm';
+import _ from 'lodash';
+
 @ObjectType()
 export class PublicIpEdge {
   @Field(() => PublicIp, { nullable: false })
@@ -125,5 +130,10 @@ export class PublicIpResolver {
     }
 
     return result as Promise<PublicIpConnection>;
+  }
+
+  @FieldResolver(() => Farm)
+  async farm(@Root() r: PublicIp, @Ctx() ctx: BaseContext): Promise<Farm | null> {
+    return ctx.dataLoader.loaders.PublicIp.farm.load(r);
   }
 }

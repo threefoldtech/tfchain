@@ -514,6 +514,7 @@ type Farm implements BaseGraphQLObject {
   certificationType: CertificationType!
   countryId: Int
   cityId: Int
+  publicIPs: [PublicIp!]!
 }
 
 type FarmConnection {
@@ -642,6 +643,9 @@ input FarmWhereInput {
   cityId_lt: Int
   cityId_lte: Int
   cityId_in: [Int!]
+  publicIPs_none: PublicIpWhereInput
+  publicIPs_some: PublicIpWhereInput
+  publicIPs_every: PublicIpWhereInput
   AND: [FarmWhereInput!]
   OR: [FarmWhereInput!]
 }
@@ -1244,9 +1248,11 @@ type PublicIp implements BaseGraphQLObject {
   deletedAt: DateTime
   deletedById: String
   version: Int!
-  farmId: Int!
+  farm: Farm!
+  farmId: String!
+  gateway: String!
   ip: String!
-  workloadId: Int!
+  contractId: Int!
 }
 
 type PublicIpConnection {
@@ -1256,9 +1262,10 @@ type PublicIpConnection {
 }
 
 input PublicIpCreateInput {
-  farmId: Float!
+  farm: ID!
+  gateway: String!
   ip: String!
-  workloadId: Float!
+  contractId: Float!
 }
 
 type PublicIpEdge {
@@ -1273,18 +1280,21 @@ enum PublicIpOrderByInput {
   updatedAt_DESC
   deletedAt_ASC
   deletedAt_DESC
-  farmId_ASC
-  farmId_DESC
+  farm_ASC
+  farm_DESC
+  gateway_ASC
+  gateway_DESC
   ip_ASC
   ip_DESC
-  workloadId_ASC
-  workloadId_DESC
+  contractId_ASC
+  contractId_DESC
 }
 
 input PublicIpUpdateInput {
-  farmId: Float
+  farm: ID
+  gateway: String
   ip: String
-  workloadId: Float
+  contractId: Float
 }
 
 input PublicIpWhereInput {
@@ -1312,23 +1322,25 @@ input PublicIpWhereInput {
   deletedAt_gte: DateTime
   deletedById_eq: ID
   deletedById_in: [ID!]
-  farmId_eq: Int
-  farmId_gt: Int
-  farmId_gte: Int
-  farmId_lt: Int
-  farmId_lte: Int
-  farmId_in: [Int!]
+  farm_eq: ID
+  farm_in: [ID!]
+  gateway_eq: String
+  gateway_contains: String
+  gateway_startsWith: String
+  gateway_endsWith: String
+  gateway_in: [String!]
   ip_eq: String
   ip_contains: String
   ip_startsWith: String
   ip_endsWith: String
   ip_in: [String!]
-  workloadId_eq: Int
-  workloadId_gt: Int
-  workloadId_gte: Int
-  workloadId_lt: Int
-  workloadId_lte: Int
-  workloadId_in: [Int!]
+  contractId_eq: Int
+  contractId_gt: Int
+  contractId_gte: Int
+  contractId_lt: Int
+  contractId_lte: Int
+  contractId_in: [Int!]
+  farm: FarmWhereInput
   AND: [PublicIpWhereInput!]
   OR: [PublicIpWhereInput!]
 }

@@ -1,7 +1,9 @@
 import { BaseModel } from 'warthog';
+import { Farm } from '../farm/farm.model';
 export declare class PublicIp extends BaseModel {
-    farmId: number;
+    farm: Farm;
+    gateway: string;
     ip: string;
-    workloadId: number;
+    contractId: number;
     constructor(init?: Partial<PublicIp>);
 }

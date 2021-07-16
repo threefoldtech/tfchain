@@ -3,48 +3,19 @@ import { SubstrateEvent, SubstrateExtrinsic } from "@subsquid/hydra-common";
 import { Codec } from "@polkadot/types/types";
 import { typeRegistry } from ".";
 
-import { Bytes, Option, u32 } from "@polkadot/types";
-import { AccountId } from "@polkadot/types/interfaces";
-import {
-  CertificationType,
-  Location,
-  PublicConfig,
-  Resources,
-  Role
-} from "substrate-tfgrid-ts-types";
+import { Entity, Farm, Node, Twin } from "substrate-tfgrid-ts-types";
+import { Bytes, u32 } from "@polkadot/types";
 
 export namespace TfgridModule {
   export class EntityStoredEvent {
-    public readonly expectedParamTypes = [
-      "u32",
-      "u32",
-      "Vec<u8>",
-      "u32",
-      "u32",
-      "AccountId"
-    ];
+    public readonly expectedParamTypes = ["types::Entity<AccountId>"];
 
     constructor(public readonly ctx: SubstrateEvent) {}
 
-    get params(): [u32, u32, Bytes, u32, u32, AccountId] {
+    get params(): [Entity] {
       return [
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
+        createTypeUnsafe<Entity & Codec>(typeRegistry, "Entity", [
           this.ctx.params[0].value
-        ]),
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[1].value
-        ]),
-        createTypeUnsafe<Bytes & Codec>(typeRegistry, "Bytes", [
-          this.ctx.params[2].value
-        ]),
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[3].value
-        ]),
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[4].value
-        ]),
-        createTypeUnsafe<AccountId & Codec>(typeRegistry, "AccountId", [
-          this.ctx.params[5].value
         ])
       ];
     }
@@ -64,32 +35,14 @@ export namespace TfgridModule {
   }
 
   export class EntityUpdatedEvent {
-    public readonly expectedParamTypes = [
-      "u32",
-      "Vec<u8>",
-      "u32",
-      "u32",
-      "AccountId"
-    ];
+    public readonly expectedParamTypes = ["types::Entity<AccountId>"];
 
     constructor(public readonly ctx: SubstrateEvent) {}
 
-    get params(): [u32, Bytes, u32, u32, AccountId] {
+    get params(): [Entity] {
       return [
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
+        createTypeUnsafe<Entity & Codec>(typeRegistry, "Entity", [
           this.ctx.params[0].value
-        ]),
-        createTypeUnsafe<Bytes & Codec>(typeRegistry, "Bytes", [
-          this.ctx.params[1].value
-        ]),
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[2].value
-        ]),
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[3].value
-        ]),
-        createTypeUnsafe<AccountId & Codec>(typeRegistry, "AccountId", [
-          this.ctx.params[4].value
         ])
       ];
     }
@@ -136,47 +89,42 @@ export namespace TfgridModule {
   }
 
   export class FarmStoredEvent {
-    public readonly expectedParamTypes = [
-      "u32",
-      "u32",
-      "Vec<u8>",
-      "u32",
-      "u32",
-      "u32",
-      "u32",
-      "types::CertificationType"
-    ];
+    public readonly expectedParamTypes = ["types::Farm"];
 
     constructor(public readonly ctx: SubstrateEvent) {}
 
-    get params(): [u32, u32, Bytes, u32, u32, u32, u32, CertificationType] {
+    get params(): [Farm] {
       return [
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
+        createTypeUnsafe<Farm & Codec>(typeRegistry, "Farm", [
           this.ctx.params[0].value
-        ]),
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[1].value
-        ]),
-        createTypeUnsafe<Bytes & Codec>(typeRegistry, "Bytes", [
-          this.ctx.params[2].value
-        ]),
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[3].value
-        ]),
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[4].value
-        ]),
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[5].value
-        ]),
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[6].value
-        ]),
-        createTypeUnsafe<CertificationType & Codec>(
-          typeRegistry,
-          "CertificationType",
-          [this.ctx.params[7].value]
-        )
+        ])
+      ];
+    }
+
+    validateParams(): boolean {
+      if (this.expectedParamTypes.length !== this.ctx.params.length) {
+        return false;
+      }
+      let valid = true;
+      this.expectedParamTypes.forEach((type, i) => {
+        if (type !== this.ctx.params[i].type) {
+          valid = false;
+        }
+      });
+      return valid;
+    }
+  }
+
+  export class FarmUpdatedEvent {
+    public readonly expectedParamTypes = ["types::Farm"];
+
+    constructor(public readonly ctx: SubstrateEvent) {}
+
+    get params(): [Farm] {
+      return [
+        createTypeUnsafe<Farm & Codec>(typeRegistry, "Farm", [
+          this.ctx.params[0].value
+        ])
       ];
     }
 
@@ -222,71 +170,15 @@ export namespace TfgridModule {
   }
 
   export class NodeStoredEvent {
-    public readonly expectedParamTypes = [
-      "u32",
-      "u32",
-      "u32",
-      "types::Resources",
-      "types::Location",
-      "u32",
-      "u32",
-      "AccountId",
-      "types::Role",
-      "u32",
-      "Option<types::PublicConfig>"
-    ];
+    public readonly expectedParamTypes = ["types::Node<AccountId>"];
 
     constructor(public readonly ctx: SubstrateEvent) {}
 
-    get params(): [
-      u32,
-      u32,
-      u32,
-      Resources,
-      Location,
-      u32,
-      u32,
-      AccountId,
-      Role,
-      u32,
-      Option<PublicConfig>
-    ] {
+    get params(): [Node] {
       return [
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
+        createTypeUnsafe<Node & Codec>(typeRegistry, "Node", [
           this.ctx.params[0].value
-        ]),
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[1].value
-        ]),
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[2].value
-        ]),
-        createTypeUnsafe<Resources & Codec>(typeRegistry, "Resources", [
-          this.ctx.params[3].value
-        ]),
-        createTypeUnsafe<Location & Codec>(typeRegistry, "Location", [
-          this.ctx.params[4].value
-        ]),
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[5].value
-        ]),
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[6].value
-        ]),
-        createTypeUnsafe<AccountId & Codec>(typeRegistry, "AccountId", [
-          this.ctx.params[7].value
-        ]),
-        createTypeUnsafe<Role & Codec>(typeRegistry, "Role", [
-          this.ctx.params[8].value
-        ]),
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[9].value
-        ]),
-        createTypeUnsafe<Option<PublicConfig> & Codec>(
-          typeRegistry,
-          "Option<PublicConfig>",
-          [this.ctx.params[10].value]
-        )
+        ])
       ];
     }
 
@@ -305,71 +197,15 @@ export namespace TfgridModule {
   }
 
   export class NodeUpdatedEvent {
-    public readonly expectedParamTypes = [
-      "u32",
-      "u32",
-      "u32",
-      "types::Resources",
-      "types::Location",
-      "u32",
-      "u32",
-      "AccountId",
-      "types::Role",
-      "u32",
-      "Option<types::PublicConfig>"
-    ];
+    public readonly expectedParamTypes = ["types::Node<AccountId>"];
 
     constructor(public readonly ctx: SubstrateEvent) {}
 
-    get params(): [
-      u32,
-      u32,
-      u32,
-      Resources,
-      Location,
-      u32,
-      u32,
-      AccountId,
-      Role,
-      u32,
-      Option<PublicConfig>
-    ] {
+    get params(): [Node] {
       return [
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
+        createTypeUnsafe<Node & Codec>(typeRegistry, "Node", [
           this.ctx.params[0].value
-        ]),
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[1].value
-        ]),
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[2].value
-        ]),
-        createTypeUnsafe<Resources & Codec>(typeRegistry, "Resources", [
-          this.ctx.params[3].value
-        ]),
-        createTypeUnsafe<Location & Codec>(typeRegistry, "Location", [
-          this.ctx.params[4].value
-        ]),
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[5].value
-        ]),
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[6].value
-        ]),
-        createTypeUnsafe<AccountId & Codec>(typeRegistry, "AccountId", [
-          this.ctx.params[7].value
-        ]),
-        createTypeUnsafe<Role & Codec>(typeRegistry, "Role", [
-          this.ctx.params[8].value
-        ]),
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[9].value
-        ]),
-        createTypeUnsafe<Option<PublicConfig> & Codec>(
-          typeRegistry,
-          "Option<PublicConfig>",
-          [this.ctx.params[10].value]
-        )
+        ])
       ];
     }
 
@@ -415,23 +251,14 @@ export namespace TfgridModule {
   }
 
   export class TwinStoredEvent {
-    public readonly expectedParamTypes = ["u32", "u32", "AccountId", "Vec<u8>"];
+    public readonly expectedParamTypes = ["types::Twin<AccountId>"];
 
     constructor(public readonly ctx: SubstrateEvent) {}
 
-    get params(): [u32, u32, AccountId, Bytes] {
+    get params(): [Twin] {
       return [
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
+        createTypeUnsafe<Twin & Codec>(typeRegistry, "Twin", [
           this.ctx.params[0].value
-        ]),
-        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[1].value
-        ]),
-        createTypeUnsafe<AccountId & Codec>(typeRegistry, "AccountId", [
-          this.ctx.params[2].value
-        ]),
-        createTypeUnsafe<Bytes & Codec>(typeRegistry, "Bytes", [
-          this.ctx.params[3].value
         ])
       ];
     }

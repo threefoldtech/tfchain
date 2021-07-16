@@ -13,17 +13,17 @@ export async function entityStored({
   block,
   extrinsic,
 }: EventContext & StoreContext) {
-  const entity = new Entity()
-  const [version, entityID, name, countryID, cityID, accountID] = new TfgridModule.EntityStoredEvent(event).params
+  const newEntity = new Entity()
+  const [entity] = new TfgridModule.EntityStoredEvent(event).params
 
-  entity.gridVersion = version.toNumber()
-  entity.entityId = entityID.toNumber()
-  entity.name = hex2a(Buffer.from(name.toString()).toString())
-  entity.countryId = countryID.toNumber()
-  entity.cityId = cityID.toNumber()
-  entity.address = accountID.toHuman()
+  newEntity.gridVersion = entity.version.toNumber()
+  newEntity.entityId = entity.id.toNumber()
+  newEntity.name = hex2a(Buffer.from(entity.name.toString()).toString())
+  newEntity.countryId = entity.country_id.toNumber()
+  newEntity.cityId = entity.city_id.toNumber()
+  newEntity.address = entity.address.toHuman()
 
-  await store.save<Entity>(entity)
+  await store.save<Entity>(newEntity)
 }
 
 export async function entityUpdated({
@@ -32,18 +32,18 @@ export async function entityUpdated({
   block,
   extrinsic,
 }: EventContext & StoreContext) {
-  const entity = new Entity()
-  const [entityID, name, countryID, cityID, accountID] = new TfgridModule.EntityUpdatedEvent(event).params
+  const newEntity = new Entity()
+  const [entity] = new TfgridModule.EntityUpdatedEvent(event).params
 
-  const savedEntity = await store.get(Entity, { where: { entityId: entityID.toNumber() } })
+  const savedEntity = await store.get(Entity, { where: { entityId: entity.id.toNumber() } })
 
   if (savedEntity) {
-    // entity.gridVersion = version.toNumber()
-    savedEntity.entityId = entityID.toNumber()
-    savedEntity.name = hex2a(Buffer.from(name.toString()).toString())
-    savedEntity.countryId = countryID.toNumber()
-    savedEntity.cityId = cityID.toNumber()
-    savedEntity.address = accountID.toHuman()
+    newEntity.gridVersion = entity.version.toNumber()
+    newEntity.entityId = entity.id.toNumber()
+    newEntity.name = hex2a(Buffer.from(entity.name.toString()).toString())
+    newEntity.countryId = entity.country_id.toNumber()
+    newEntity.cityId = entity.city_id.toNumber()
+    newEntity.address = entity.address.toHuman()
   
     await store.save<Entity>(savedEntity)
   }

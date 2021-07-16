@@ -13,47 +13,47 @@ export async function nodeStored({
   block,
   extrinsic,
 }: EventContext & StoreContext) {
-  const node = new Node()
-  const [version, nodeID, farm_id, resources, location, countryID, cityID, address, role, twinID, publicConfig]  = new TfgridModule.NodeStoredEvent(event).params
+  const [node]  = new TfgridModule.NodeStoredEvent(event).params
+  const newNode = new Node()
 
-  node.gridVersion = version.toNumber()
-  node.farmId = farm_id.toNumber()
-  node.nodeId = nodeID.toNumber()
+  newNode.gridVersion = node.version.toNumber()
+  newNode.farmId = node.farm_id.toNumber()
+  newNode.nodeId = node.id.toNumber()
 
-  node.sru = resources.sru.toBn()
-  node.hru = resources.hru.toBn()
-  node.mru = resources.mru.toBn()
-  node.cru = resources.cru.toBn()
+  newNode.sru = node.resources.sru.toBn()
+  newNode.hru = node.resources.hru.toBn()
+  newNode.mru = node.resources.mru.toBn()
+  newNode.cru = node.resources.cru.toBn()
 
-  node.countryId = countryID.toNumber()
-  node.cityId = cityID.toNumber()
+  newNode.countryId = node.country_id.toNumber()
+  newNode.cityId = node.city_id.toNumber()
 
   const newLocation = new Location()
-  newLocation.latitude = hex2a(location.latitude.toString())
-  newLocation.longitude = hex2a(location.longitude.toString())
+  newLocation.latitude = hex2a(node.location.latitude.toString())
+  newLocation.longitude = hex2a(node.location.longitude.toString())
   await store.save<Location>(newLocation)
 
-  node.location = newLocation
+  newNode.location = newLocation
 
-  node.address = address.toString()
+  newNode.address = node.address.toString()
 
-  node.role = role.toString()
+  newNode.role = node.role.toString()
   
-  if (publicConfig.isSome) {
+  if (node.public_config.isSome) {
     const pubConfig = new PublicConfig()
-    const parsedConfig = publicConfig.unwrapOrDefault()
+    const parsedConfig = node.public_config.unwrapOrDefault()
     pubConfig.ipv4 = hex2a(parsedConfig.ipv4.toString())
     pubConfig.ipv6 = hex2a(parsedConfig.ipv6.toString())
     pubConfig.gw4 = hex2a(parsedConfig.gw4.toString())
     pubConfig.gw6 = hex2a(parsedConfig.gw6.toString())
 
     await store.save<PublicConfig>(pubConfig)
-    node.publicConfig = pubConfig
+    newNode.publicConfig = pubConfig
   }
 
-  node.twinId = twinID.toNumber()
+  newNode.twinId = node.twin_id.toNumber()
 
-  await store.save<Node>(node)
+  await store.save<Node>(newNode)
 }
 
 // TODO
@@ -64,45 +64,49 @@ export async function nodeUpdated({
   block,
   extrinsic,
 }: EventContext & StoreContext) {
-  const node = new Node()
-  const [version, nodeID, farm_id, resources, location, countryID, cityID, address, role, twinID, publicConfig]  = new TfgridModule.NodeUpdatedEvent(event).params
+  const [node]  = new TfgridModule.NodeUpdatedEvent(event).params
 
-  const savedNode = await store.get(Node, { where: { nodeId: nodeID.toNumber() } })
+  const savedNode = await store.get(Node, { where: { nodeId: node.id.toNumber() } })
   if (!savedNode) return
 
-  node.gridVersion = version.toNumber()
-  node.farmId = farm_id.toNumber()
-  node.nodeId = nodeID.toNumber()
+  savedNode.gridVersion = node.version.toNumber()
+  savedNode.farmId = node.farm_id.toNumber()
+  savedNode.nodeId = node.id.toNumber()
 
-  node.sru = resources.sru.toBn()
-  node.hru = resources.hru.toBn()
-  node.mru = resources.mru.toBn()
-  node.cru = resources.cru.toBn()
+  savedNode.sru = node.resources.sru.toBn()
+  savedNode.hru = node.resources.hru.toBn()
+  savedNode.mru = node.resources.mru.toBn()
+  savedNode.cru = node.resources.cru.toBn()
 
-  node.countryId = countryID.toNumber()
-  node.cityId = cityID.toNumber()
+  savedNode.countryId = node.country_id.toNumber()
+  savedNode.cityId = node.city_id.toNumber()
 
-  node.location.latitude = hex2a(location.latitude.toString())
-  node.location.longitude = hex2a(location.longitude.toString())
+  const newLocation = new Location()
+  newLocation.latitude = hex2a(node.location.latitude.toString())
+  newLocation.longitude = hex2a(node.location.longitude.toString())
+  await store.save<Location>(newLocation)
 
-  node.address = hex2a(address.toString())
+  savedNode.location = newLocation
 
-  if (publicConfig.isSome) {
+  savedNode.address = node.address.toString()
+
+  savedNode.role = node.role.toString()
+  
+  if (node.public_config.isSome) {
     const pubConfig = new PublicConfig()
-    const parsedConfig = publicConfig.unwrapOrDefault()
+    const parsedConfig = node.public_config.unwrapOrDefault()
     pubConfig.ipv4 = hex2a(parsedConfig.ipv4.toString())
     pubConfig.ipv6 = hex2a(parsedConfig.ipv6.toString())
     pubConfig.gw4 = hex2a(parsedConfig.gw4.toString())
     pubConfig.gw6 = hex2a(parsedConfig.gw6.toString())
 
     await store.save<PublicConfig>(pubConfig)
-    node.publicConfig = pubConfig
+    savedNode.publicConfig = pubConfig
   }
 
-  node.role = role.toString()
-  node.twinId = twinID.toNumber()
+  savedNode.twinId = node.twin_id.toNumber()
 
-  await store.save<Node>(node)
+  await store.save<Node>(savedNode)
 }
 
 export async function nodeDeleted({

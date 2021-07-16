@@ -13,15 +13,15 @@ export async function twinStored({
   block,
   extrinsic,
 }: EventContext & StoreContext) {
-  const twin = new Twin()
-  const [version, twinID, accountID, ip] = new TfgridModule.TwinStoredEvent(event).params
+  const [twin] = new TfgridModule.TwinStoredEvent(event).params
+  const newTwin = new Twin()
 
-  twin.gridVersion = version.toNumber()
-  twin.twinId = twinID.toNumber()
-  twin.address = accountID.toHuman()
-  twin.ip = hex2a(Buffer.from(ip.toString()).toString())
+  newTwin.gridVersion = twin.version.toNumber()
+  newTwin.twinId = twin.id.toNumber()
+  newTwin.address = twin.address.toHuman()
+  newTwin.ip = hex2a(Buffer.from(twin.ip.toString()).toString())
 
-  await store.save<Twin>(twin)
+  await store.save<Twin>(newTwin)
 }
 
 export async function twinDeleted({
@@ -45,7 +45,6 @@ export async function twinEntityStored({
   block,
   extrinsic,
 }: EventContext & StoreContext) {
-  const entityProof = new EntityProof()
   const [twinID, entityID, signature] = new TfgridModule.TwinEntityStoredEvent(event).params
 
   let savedTwin = await store.get(Twin, { where: { twinId: twinID.toNumber() } })
