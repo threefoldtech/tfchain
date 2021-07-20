@@ -2,7 +2,7 @@ const { getClient } = require('./client')
 const { callback } = require('./util')
 
 async function createFarm (args) {
-  const { name, twinID, c: countryID, t: cityID, certificationType, pricingPolicyID, a: url, m: mnemonic } = args
+  const { name, c: countryID, g: cityID, certificationType, pricingPolicyID, a: url, m: mnemonic } = args
 
   const client = await getClient(url, mnemonic)
 
@@ -14,18 +14,7 @@ async function createFarm (args) {
     contract_id: 0
   })
 
-  const farm = {
-    id: 0,
-    name,
-    twin_id: twinID,
-    pricingPolicyID,
-    certificationType: certificationTypeParsed,
-    countryID,
-    cityID,
-    public_ips: [publicIP]
-  }
-
-  return client.createFarm(farm, callback)
+  return client.createFarm(name, pricingPolicyID, certificationTypeParsed, countryID, cityID, [publicIP], callback)
 }
 
 async function getFarm (args) {

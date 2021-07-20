@@ -2,7 +2,7 @@ const { getClient } = require('./client')
 const { callback } = require('./util')
 
 async function createNode (args) {
-  const { a: url, m: mnemonic, farmID, twinID } = args
+  const { a: url, m: mnemonic, farmID, c: countryID, g: cityID } = args
   const client = await getClient(url, mnemonic)
 
   const resources = client.api.createType('Resources', {
@@ -17,32 +17,18 @@ async function createNode (args) {
     latitude: '50.845080'
   })
 
-  const role = client.api.createType('Role', 'Node')
+  const publicConfig = client.api.createType('PublicConfig', {
+    ipv4: '1.1.1.1',
+    ipv6: 'fe80::b4cf:8aff:fecc:8f64/64',
+    gw4: '1.1.1.1',
+    gw6: 'fe80::b4cf:8aff:fecc:8f64/64'
+  })
 
-  // const publicConfig = client.api.createType('PublicConfig', {
-  //   ipv4: '1.1.1.1',
-  //   ipv6: 'fe80::b4cf:8aff:fecc:8f64/64',
-  //   gw4: '1.1.1.1',
-  //   gw6: 'fe80::b4cf:8aff:fecc:8f64/64'
-  // })
-
-  const node = {
-    id: 0,
-    farm_id: farmID,
-    twin_id: twinID,
-    resources,
-    location,
-    country_id: 0,
-    city_id: 0,
-    role
-    // public_config: publicConfig
-  }
-
-  return await client.createNode(node, callback)
+  return await client.createNode(farmID, resources, location, countryID, cityID, publicConfig, callback)
 }
 
 async function updateNode (args) {
-  const { a: url, m: mnemonic, farmID, twinID, id } = args
+  const { a: url, m: mnemonic, farmID, c: countryID, g: cityID, id } = args
   const client = await getClient(url, mnemonic)
 
   const resources = client.api.createType('Resources', {
@@ -57,8 +43,6 @@ async function updateNode (args) {
     latitude: '51.845080'
   })
 
-  const role = client.api.createType('Role', 'Node')
-
   const publicConfig = client.api.createType('PublicConfig', {
     ipv4: '1.1.1.2',
     ipv6: 'fe80::b4cf:8aff:fecc:8f64/64',
@@ -66,20 +50,7 @@ async function updateNode (args) {
     gw6: 'fe80::b4cf:8aff:fecc:8f64/64'
   })
 
-  const node = {
-    id,
-    farm_id: farmID,
-    twin_id: twinID,
-    resources,
-    location,
-    country_id: 0,
-    city_id: 0,
-    role,
-    public_config: publicConfig,
-    version: 1
-  }
-
-  return await client.updateNode(node, callback)
+  return await client.updateNode(id, farmID, resources, location, countryID, cityID, publicConfig, callback)
 }
 
 async function getNode (args) {

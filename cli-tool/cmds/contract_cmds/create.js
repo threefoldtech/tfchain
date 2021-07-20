@@ -3,12 +3,12 @@ const {
 } = require('../../src/contract')
 
 exports.command = 'create'
-exports.desc = 'Create a contract given a twinID, nodeID workload and number of ips'
+exports.desc = 'Create a contract given a node id, workload and number of ips'
 exports.builder = function (yargs) {
-  yargs.option('nodeID', {
-    description: 'Public key of the node',
+  yargs.option('node_id', {
+    description: 'Numeric ID of the node',
     alias: 'n',
-    type: 'string'
+    type: 'number'
   })
   yargs.option('data', {
     description: 'Workload data',

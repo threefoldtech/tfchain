@@ -5,11 +5,6 @@ const {
 exports.command = 'create <name>'
 exports.desc = 'Create a farm given parameters'
 exports.builder = function (yargs) {
-  yargs.option('twinID', {
-    description: 'TwinId for the farm',
-    alias: 't',
-    type: 'number'
-  })
   yargs.option('countryID', {
     description: 'Id of the country',
     alias: 'c',
@@ -30,7 +25,7 @@ exports.builder = function (yargs) {
     alias: 'p',
     type: 'number'
   })
-  yargs.demandOption(['t', 'c', 'g', 'y', 'p'])
+  yargs.demandOption(['c', 'g', 'y', 'p'])
   return yargs
 }
 exports.handler = createFarm
