@@ -21,7 +21,7 @@ tslib_1.__decorate([
 tslib_1.__decorate([
     warthog_1.StringField({}),
     tslib_1.__metadata("design:type", String)
-], Twin.prototype, "address", void 0);
+], Twin.prototype, "accountId", void 0);
 tslib_1.__decorate([
     warthog_1.StringField({}),
     tslib_1.__metadata("design:type", String)

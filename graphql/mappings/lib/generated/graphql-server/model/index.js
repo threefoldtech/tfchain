@@ -1,8 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CertificationType = exports.Twin = exports.Transfer = exports.PublicIp = exports.PublicConfig = exports.PricingPolicy = exports.Node = exports.Location = exports.Farm = exports.EntityProof = exports.Entity = exports.Country = exports.City = void 0;
+exports.CertificationType = exports.Twin = exports.Transfer = exports.PublicIp = exports.PublicConfig = exports.PricingPolicy = exports.Node = exports.Location = exports.Farm = exports.EntityProof = exports.Entity = exports.Country = exports.Consumption = exports.City = void 0;
 const city_model_1 = require("../src/modules/city/city.model");
 Object.defineProperty(exports, "City", { enumerable: true, get: function () { return city_model_1.City; } });
+const consumption_model_1 = require("../src/modules/consumption/consumption.model");
+Object.defineProperty(exports, "Consumption", { enumerable: true, get: function () { return consumption_model_1.Consumption; } });
 const country_model_1 = require("../src/modules/country/country.model");
 Object.defineProperty(exports, "Country", { enumerable: true, get: function () { return country_model_1.Country; } });
 const entity_model_1 = require("../src/modules/entity/entity.model");

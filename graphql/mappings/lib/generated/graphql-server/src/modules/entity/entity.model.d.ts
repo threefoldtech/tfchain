@@ -5,6 +5,6 @@ export declare class Entity extends BaseModel {
     name: string;
     countryId?: number;
     cityId?: number;
-    address: string;
+    accountId: string;
     constructor(init?: Partial<Entity>);
 }

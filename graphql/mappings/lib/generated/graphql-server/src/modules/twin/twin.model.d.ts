@@ -3,7 +3,7 @@ import { EntityProof } from '../entity-proof/entity-proof.model';
 export declare class Twin extends BaseModel {
     gridVersion: number;
     twinId: number;
-    address: string;
+    accountId: string;
     ip: string;
     entityprooftwinRel?: EntityProof[];
     constructor(init?: Partial<Twin>);

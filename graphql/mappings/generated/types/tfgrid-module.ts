@@ -170,7 +170,7 @@ export namespace TfgridModule {
   }
 
   export class NodeStoredEvent {
-    public readonly expectedParamTypes = ["types::Node<AccountId>"];
+    public readonly expectedParamTypes = ["types::Node"];
 
     constructor(public readonly ctx: SubstrateEvent) {}
 
@@ -197,7 +197,7 @@ export namespace TfgridModule {
   }
 
   export class NodeUpdatedEvent {
-    public readonly expectedParamTypes = ["types::Node<AccountId>"];
+    public readonly expectedParamTypes = ["types::Node"];
 
     constructor(public readonly ctx: SubstrateEvent) {}
 

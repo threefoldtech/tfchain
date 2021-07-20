@@ -17,6 +17,14 @@ tslib_1.__decorate([
     warthog_1.StringField({}),
     tslib_1.__metadata("design:type", String)
 ], Country.prototype, "name", void 0);
+tslib_1.__decorate([
+    warthog_1.StringField({}),
+    tslib_1.__metadata("design:type", String)
+], Country.prototype, "region", void 0);
+tslib_1.__decorate([
+    warthog_1.StringField({}),
+    tslib_1.__metadata("design:type", String)
+], Country.prototype, "subregion", void 0);
 Country = tslib_1.__decorate([
     warthog_1.Model({ api: {} }),
     tslib_1.__metadata("design:paramtypes", [Object])

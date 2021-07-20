@@ -21,8 +21,6 @@ async function nodeStored({ store, event, block, extrinsic, }) {
     newLocation.longitude = util_1.hex2a(node.location.longitude.toString());
     await store.save(newLocation);
     newNode.location = newLocation;
-    newNode.address = node.address.toString();
-    newNode.role = node.role.toString();
     if (node.public_config.isSome) {
         const pubConfig = new model_1.PublicConfig();
         const parsedConfig = node.public_config.unwrapOrDefault();
@@ -57,8 +55,6 @@ async function nodeUpdated({ store, event, block, extrinsic, }) {
     newLocation.longitude = util_1.hex2a(node.location.longitude.toString());
     await store.save(newLocation);
     savedNode.location = newLocation;
-    savedNode.address = node.address.toString();
-    savedNode.role = node.role.toString();
     if (node.public_config.isSome) {
         const pubConfig = new model_1.PublicConfig();
         const parsedConfig = node.public_config.unwrapOrDefault();

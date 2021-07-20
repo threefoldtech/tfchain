@@ -50,10 +50,6 @@ tslib_1.__decorate([
     tslib_1.__metadata("design:type", Number)
 ], Node.prototype, "cityId", void 0);
 tslib_1.__decorate([
-    warthog_1.StringField({}),
-    tslib_1.__metadata("design:type", String)
-], Node.prototype, "address", void 0);
-tslib_1.__decorate([
     warthog_1.NumericField({
         nullable: true,
         transformer: {
@@ -93,10 +89,6 @@ tslib_1.__decorate([
     }),
     tslib_1.__metadata("design:type", bn_js_1.default)
 ], Node.prototype, "mru", void 0);
-tslib_1.__decorate([
-    warthog_1.StringField({}),
-    tslib_1.__metadata("design:type", String)
-], Node.prototype, "role", void 0);
 tslib_1.__decorate([
     warthog_1.ManyToOne(() => public_config_model_1.PublicConfig, (param) => param.nodepublicConfig, {
         skipGraphQLField: true,

@@ -42,9 +42,6 @@ export class Node extends BaseModel {
   })
   cityId?: number;
 
-  @StringField({})
-  address!: string;
-
   @NumericField({
     nullable: true,
 
@@ -88,9 +85,6 @@ export class Node extends BaseModel {
     }
   })
   mru?: BN;
-
-  @StringField({})
-  role!: string;
 
   @ManyToOne(
     () => PublicConfig,

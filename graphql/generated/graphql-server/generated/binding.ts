@@ -9,6 +9,9 @@ export interface Query {
     cities: <T = Array<City>>(args: { offset?: Int | null, limit?: Int | null, where?: CityWhereInput | null, orderBy?: Array<CityOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     cityByUniqueInput: <T = City | null>(args: { where: CityWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     citiesConnection: <T = CityConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: CityWhereInput | null, orderBy?: Array<CityOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    consumptions: <T = Array<Consumption>>(args: { offset?: Int | null, limit?: Int | null, where?: ConsumptionWhereInput | null, orderBy?: Array<ConsumptionOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    consumptionByUniqueInput: <T = Consumption | null>(args: { where: ConsumptionWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    consumptionsConnection: <T = ConsumptionConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: ConsumptionWhereInput | null, orderBy?: Array<ConsumptionOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     countries: <T = Array<Country>>(args: { offset?: Int | null, limit?: Int | null, where?: CountryWhereInput | null, orderBy?: Array<CountryOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     countryByUniqueInput: <T = Country | null>(args: { where: CountryWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     countriesConnection: <T = CountryConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: CountryWhereInput | null, orderBy?: Array<CountryOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
@@ -75,9 +78,8 @@ export const Binding = makeBindingClass<BindingConstructor<Binding>>({ schema: s
  * Types
 */
 
-export type CertificationType =   'None' |
-  'Silver' |
-  'Gold'
+export type CertificationType =   'Diy' |
+  'Certified'
 
 export type CityOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -90,6 +92,27 @@ export type CityOrderByInput =   'createdAt_ASC' |
   'name_ASC' |
   'name_DESC'
 
+export type ConsumptionOrderByInput =   'createdAt_ASC' |
+  'createdAt_DESC' |
+  'updatedAt_ASC' |
+  'updatedAt_DESC' |
+  'deletedAt_ASC' |
+  'deletedAt_DESC' |
+  'contractId_ASC' |
+  'contractId_DESC' |
+  'timestamp_ASC' |
+  'timestamp_DESC' |
+  'cru_ASC' |
+  'cru_DESC' |
+  'sru_ASC' |
+  'sru_DESC' |
+  'hru_ASC' |
+  'hru_DESC' |
+  'mru_ASC' |
+  'mru_DESC' |
+  'nru_ASC' |
+  'nru_DESC'
+
 export type CountryOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
   'updatedAt_ASC' |
@@ -99,7 +122,11 @@ export type CountryOrderByInput =   'createdAt_ASC' |
   'code_ASC' |
   'code_DESC' |
   'name_ASC' |
-  'name_DESC'
+  'name_DESC' |
+  'region_ASC' |
+  'region_DESC' |
+  'subregion_ASC' |
+  'subregion_DESC'
 
 export type EntityOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -117,8 +144,8 @@ export type EntityOrderByInput =   'createdAt_ASC' |
   'countryId_DESC' |
   'cityId_ASC' |
   'cityId_DESC' |
-  'address_ASC' |
-  'address_DESC'
+  'accountId_ASC' |
+  'accountId_DESC'
 
 export type EntityProofOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -187,8 +214,6 @@ export type NodeOrderByInput =   'createdAt_ASC' |
   'countryId_DESC' |
   'cityId_ASC' |
   'cityId_DESC' |
-  'address_ASC' |
-  'address_DESC' |
   'hru_ASC' |
   'hru_DESC' |
   'sru_ASC' |
@@ -197,8 +222,6 @@ export type NodeOrderByInput =   'createdAt_ASC' |
   'cru_DESC' |
   'mru_ASC' |
   'mru_DESC' |
-  'role_ASC' |
-  'role_DESC' |
   'publicConfig_ASC' |
   'publicConfig_DESC'
 
@@ -280,8 +303,8 @@ export type TwinOrderByInput =   'createdAt_ASC' |
   'gridVersion_DESC' |
   'twinId_ASC' |
   'twinId_DESC' |
-  'address_ASC' |
-  'address_DESC' |
+  'accountId_ASC' |
+  'accountId_DESC' |
   'ip_ASC' |
   'ip_DESC'
 
@@ -363,14 +386,113 @@ export interface CityWhereUniqueInput {
   id: ID_Output
 }
 
+export interface ConsumptionCreateInput {
+  contractId: Float
+  timestamp: Float
+  cru: Float
+  sru: Float
+  hru: Float
+  mru: Float
+  nru: Float
+}
+
+export interface ConsumptionUpdateInput {
+  contractId?: Float | null
+  timestamp?: Float | null
+  cru?: Float | null
+  sru?: Float | null
+  hru?: Float | null
+  mru?: Float | null
+  nru?: Float | null
+}
+
+export interface ConsumptionWhereInput {
+  id_eq?: ID_Input | null
+  id_in?: ID_Output[] | ID_Output | null
+  createdAt_eq?: DateTime | null
+  createdAt_lt?: DateTime | null
+  createdAt_lte?: DateTime | null
+  createdAt_gt?: DateTime | null
+  createdAt_gte?: DateTime | null
+  createdById_eq?: ID_Input | null
+  createdById_in?: ID_Output[] | ID_Output | null
+  updatedAt_eq?: DateTime | null
+  updatedAt_lt?: DateTime | null
+  updatedAt_lte?: DateTime | null
+  updatedAt_gt?: DateTime | null
+  updatedAt_gte?: DateTime | null
+  updatedById_eq?: ID_Input | null
+  updatedById_in?: ID_Output[] | ID_Output | null
+  deletedAt_all?: Boolean | null
+  deletedAt_eq?: DateTime | null
+  deletedAt_lt?: DateTime | null
+  deletedAt_lte?: DateTime | null
+  deletedAt_gt?: DateTime | null
+  deletedAt_gte?: DateTime | null
+  deletedById_eq?: ID_Input | null
+  deletedById_in?: ID_Output[] | ID_Output | null
+  contractId_eq?: Int | null
+  contractId_gt?: Int | null
+  contractId_gte?: Int | null
+  contractId_lt?: Int | null
+  contractId_lte?: Int | null
+  contractId_in?: Int[] | Int | null
+  timestamp_eq?: Int | null
+  timestamp_gt?: Int | null
+  timestamp_gte?: Int | null
+  timestamp_lt?: Int | null
+  timestamp_lte?: Int | null
+  timestamp_in?: Int[] | Int | null
+  cru_eq?: Int | null
+  cru_gt?: Int | null
+  cru_gte?: Int | null
+  cru_lt?: Int | null
+  cru_lte?: Int | null
+  cru_in?: Int[] | Int | null
+  sru_eq?: Int | null
+  sru_gt?: Int | null
+  sru_gte?: Int | null
+  sru_lt?: Int | null
+  sru_lte?: Int | null
+  sru_in?: Int[] | Int | null
+  hru_eq?: Int | null
+  hru_gt?: Int | null
+  hru_gte?: Int | null
+  hru_lt?: Int | null
+  hru_lte?: Int | null
+  hru_in?: Int[] | Int | null
+  mru_eq?: Int | null
+  mru_gt?: Int | null
+  mru_gte?: Int | null
+  mru_lt?: Int | null
+  mru_lte?: Int | null
+  mru_in?: Int[] | Int | null
+  nru_eq?: Int | null
+  nru_gt?: Int | null
+  nru_gte?: Int | null
+  nru_lt?: Int | null
+  nru_lte?: Int | null
+  nru_in?: Int[] | Int | null
+  AND?: ConsumptionWhereInput[] | ConsumptionWhereInput | null
+  OR?: ConsumptionWhereInput[] | ConsumptionWhereInput | null
+}
+
+export interface ConsumptionWhereUniqueInput {
+  id: ID_Output
+}
+
 export interface CountryCreateInput {
   code: String
   name: String
+  region: String
+  subregion: String
 }
 
 export interface CountryUpdateInput {
   code?: String | null
   name?: String | null
+  region?: String | null
+  subregion?: String | null
 }
 
 export interface CountryWhereInput {
@@ -408,6 +530,16 @@ export interface CountryWhereInput {
   name_startsWith?: String | null
   name_endsWith?: String | null
   name_in?: String[] | String | null
+  region_eq?: String | null
+  region_contains?: String | null
+  region_startsWith?: String | null
+  region_endsWith?: String | null
+  region_in?: String[] | String | null
+  subregion_eq?: String | null
+  subregion_contains?: String | null
+  subregion_startsWith?: String | null
+  subregion_endsWith?: String | null
+  subregion_in?: String[] | String | null
   AND?: CountryWhereInput[] | CountryWhereInput | null
   OR?: CountryWhereInput[] | CountryWhereInput | null
 }
@@ -422,7 +554,7 @@ export interface EntityCreateInput {
   name: String
   countryId?: Float | null
   cityId?: Float | null
-  address: String
+  accountId: String
 }
 
 export interface EntityProofCreateInput {
@@ -490,7 +622,7 @@ export interface EntityUpdateInput {
   name?: String | null
   countryId?: Float | null
   cityId?: Float | null
-  address?: String | null
+  accountId?: String | null
 }
 
 export interface EntityWhereInput {
@@ -547,11 +679,11 @@ export interface EntityWhereInput {
   cityId_lt?: Int | null
   cityId_lte?: Int | null
   cityId_in?: Int[] | Int | null
-  address_eq?: String | null
-  address_contains?: String | null
-  address_startsWith?: String | null
-  address_endsWith?: String | null
-  address_in?: String[] | String | null
+  accountId_eq?: String | null
+  accountId_contains?: String | null
+  accountId_startsWith?: String | null
+  accountId_endsWith?: String | null
+  accountId_in?: String[] | String | null
   AND?: EntityWhereInput[] | EntityWhereInput | null
   OR?: EntityWhereInput[] | EntityWhereInput | null
 }
@@ -725,12 +857,10 @@ export interface NodeCreateInput {
   location: ID_Output
   countryId?: Float | null
   cityId?: Float | null
-  address: String
   hru?: BigInt | null
   sru?: BigInt | null
   cru?: BigInt | null
   mru?: BigInt | null
-  role: String
   publicConfig?: ID_Input | null
 }
 
@@ -742,12 +872,10 @@ export interface NodeUpdateInput {
   location?: ID_Input | null
   countryId?: Float | null
   cityId?: Float | null
-  address?: String | null
   hru?: BigInt | null
   sru?: BigInt | null
   cru?: BigInt | null
   mru?: BigInt | null
-  role?: String | null
   publicConfig?: ID_Input | null
 }
 
@@ -814,11 +942,6 @@ export interface NodeWhereInput {
   cityId_lt?: Int | null
   cityId_lte?: Int | null
   cityId_in?: Int[] | Int | null
-  address_eq?: String | null
-  address_contains?: String | null
-  address_startsWith?: String | null
-  address_endsWith?: String | null
-  address_in?: String[] | String | null
   hru_eq?: BigInt | null
   hru_gt?: BigInt | null
   hru_gte?: BigInt | null
@@ -843,11 +966,6 @@ export interface NodeWhereInput {
   mru_lt?: BigInt | null
   mru_lte?: BigInt | null
   mru_in?: BigInt[] | BigInt | null
-  role_eq?: String | null
-  role_contains?: String | null
-  role_startsWith?: String | null
-  role_endsWith?: String | null
-  role_in?: String[] | String | null
   publicConfig_eq?: ID_Input | null
   publicConfig_in?: ID_Output[] | ID_Output | null
   location?: LocationWhereInput | null
@@ -1168,14 +1286,14 @@ export interface TransferWhereUniqueInput {
 export interface TwinCreateInput {
   gridVersion: Float
   twinId: Float
-  address: String
+  accountId: String
   ip: String
 }
 
 export interface TwinUpdateInput {
   gridVersion?: Float | null
   twinId?: Float | null
-  address?: String | null
+  accountId?: String | null
   ip?: String | null
 }
 
@@ -1216,11 +1334,11 @@ export interface TwinWhereInput {
   twinId_lt?: Int | null
   twinId_lte?: Int | null
   twinId_in?: Int[] | Int | null
-  address_eq?: String | null
-  address_contains?: String | null
-  address_startsWith?: String | null
-  address_endsWith?: String | null
-  address_in?: String[] | String | null
+  accountId_eq?: String | null
+  accountId_contains?: String | null
+  accountId_startsWith?: String | null
+  accountId_endsWith?: String | null
+  accountId_in?: String[] | String | null
   ip_eq?: String | null
   ip_contains?: String | null
   ip_startsWith?: String | null
@@ -1305,6 +1423,35 @@ export interface CommentSearchFTSOutput {
   highlight: String
 }
 
+export interface Consumption extends BaseGraphQLObject {
+  id: ID_Output
+  createdAt: DateTime
+  createdById: String
+  updatedAt?: DateTime | null
+  updatedById?: String | null
+  deletedAt?: DateTime | null
+  deletedById?: String | null
+  version: Int
+  contractId: Int
+  timestamp: Int
+  cru: Int
+  sru: Int
+  hru: Int
+  mru: Int
+  nru: Int
+}
+
+export interface ConsumptionConnection {
+  totalCount: Int
+  edges: Array<ConsumptionEdge>
+  pageInfo: PageInfo
+}
+
+export interface ConsumptionEdge {
+  node: Consumption
+  cursor: String
+}
+
 export interface Country extends BaseGraphQLObject {
   id: ID_Output
   createdAt: DateTime
@@ -1316,6 +1463,8 @@ export interface Country extends BaseGraphQLObject {
   version: Int
   code: String
   name: String
+  region: String
+  subregion: String
 }
 
 export interface CountryConnection {
@@ -1343,7 +1492,7 @@ export interface Entity extends BaseGraphQLObject {
   name: String
   countryId?: Int | null
   cityId?: Int | null
-  address: String
+  accountId: String
 }
 
 export interface EntityConnection {
@@ -1456,12 +1605,10 @@ export interface Node extends BaseGraphQLObject {
   locationId: String
   countryId?: Int | null
   cityId?: Int | null
-  address: String
   hru?: BigInt | null
   sru?: BigInt | null
   cru?: BigInt | null
   mru?: BigInt | null
-  role: String
   publicConfig?: PublicConfig | null
   publicConfigId?: String | null
 }
@@ -1620,7 +1767,7 @@ export interface Twin extends BaseGraphQLObject {
   version: Int
   gridVersion: Int
   twinId: Int
-  address: String
+  accountId: String
   ip: String
   entityprooftwinRel?: Array<EntityProof> | null
 }

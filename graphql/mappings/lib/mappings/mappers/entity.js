@@ -12,7 +12,7 @@ async function entityStored({ store, event, block, extrinsic, }) {
     newEntity.name = util_1.hex2a(Buffer.from(entity.name.toString()).toString());
     newEntity.countryId = entity.country_id.toNumber();
     newEntity.cityId = entity.city_id.toNumber();
-    newEntity.address = entity.address.toHuman();
+    newEntity.accountId = entity.account_id.toHuman();
     await store.save(newEntity);
 }
 exports.entityStored = entityStored;
@@ -26,7 +26,7 @@ async function entityUpdated({ store, event, block, extrinsic, }) {
         newEntity.name = util_1.hex2a(Buffer.from(entity.name.toString()).toString());
         newEntity.countryId = entity.country_id.toNumber();
         newEntity.cityId = entity.city_id.toNumber();
-        newEntity.address = entity.address.toHuman();
+        newEntity.accountId = entity.account_id.toHuman();
         await store.save(savedEntity);
     }
 }

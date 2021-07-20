@@ -59,9 +59,8 @@ input BaseWhereInput {
 scalar BigInt
 
 enum CertificationType {
-  None
-  Silver
-  Gold
+  Diy
+  Certified
 }
 
 type City implements BaseGraphQLObject {
@@ -164,6 +163,153 @@ type CommentSearchFTSOutput {
 
 union CommentSearchSearchResult = Transfer
 
+type Consumption implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  contractId: Int!
+  timestamp: Int!
+  cru: Int!
+  sru: Int!
+  hru: Int!
+  mru: Int!
+  nru: Int!
+}
+
+type ConsumptionConnection {
+  totalCount: Int!
+  edges: [ConsumptionEdge!]!
+  pageInfo: PageInfo!
+}
+
+input ConsumptionCreateInput {
+  contractId: Float!
+  timestamp: Float!
+  cru: Float!
+  sru: Float!
+  hru: Float!
+  mru: Float!
+  nru: Float!
+}
+
+type ConsumptionEdge {
+  node: Consumption!
+  cursor: String!
+}
+
+enum ConsumptionOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  contractId_ASC
+  contractId_DESC
+  timestamp_ASC
+  timestamp_DESC
+  cru_ASC
+  cru_DESC
+  sru_ASC
+  sru_DESC
+  hru_ASC
+  hru_DESC
+  mru_ASC
+  mru_DESC
+  nru_ASC
+  nru_DESC
+}
+
+input ConsumptionUpdateInput {
+  contractId: Float
+  timestamp: Float
+  cru: Float
+  sru: Float
+  hru: Float
+  mru: Float
+  nru: Float
+}
+
+input ConsumptionWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  contractId_eq: Int
+  contractId_gt: Int
+  contractId_gte: Int
+  contractId_lt: Int
+  contractId_lte: Int
+  contractId_in: [Int!]
+  timestamp_eq: Int
+  timestamp_gt: Int
+  timestamp_gte: Int
+  timestamp_lt: Int
+  timestamp_lte: Int
+  timestamp_in: [Int!]
+  cru_eq: Int
+  cru_gt: Int
+  cru_gte: Int
+  cru_lt: Int
+  cru_lte: Int
+  cru_in: [Int!]
+  sru_eq: Int
+  sru_gt: Int
+  sru_gte: Int
+  sru_lt: Int
+  sru_lte: Int
+  sru_in: [Int!]
+  hru_eq: Int
+  hru_gt: Int
+  hru_gte: Int
+  hru_lt: Int
+  hru_lte: Int
+  hru_in: [Int!]
+  mru_eq: Int
+  mru_gt: Int
+  mru_gte: Int
+  mru_lt: Int
+  mru_lte: Int
+  mru_in: [Int!]
+  nru_eq: Int
+  nru_gt: Int
+  nru_gte: Int
+  nru_lt: Int
+  nru_lte: Int
+  nru_in: [Int!]
+  AND: [ConsumptionWhereInput!]
+  OR: [ConsumptionWhereInput!]
+}
+
+input ConsumptionWhereUniqueInput {
+  id: ID!
+}
+
 type Country implements BaseGraphQLObject {
   id: ID!
   createdAt: DateTime!
@@ -175,6 +321,8 @@ type Country implements BaseGraphQLObject {
   version: Int!
   code: String!
   name: String!
+  region: String!
+  subregion: String!
 }
 
 type CountryConnection {
@@ -186,6 +334,8 @@ type CountryConnection {
 input CountryCreateInput {
   code: String!
   name: String!
+  region: String!
+  subregion: String!
 }
 
 type CountryEdge {
@@ -204,11 +354,17 @@ enum CountryOrderByInput {
   code_DESC
   name_ASC
   name_DESC
+  region_ASC
+  region_DESC
+  subregion_ASC
+  subregion_DESC
 }
 
 input CountryUpdateInput {
   code: String
   name: String
+  region: String
+  subregion: String
 }
 
 input CountryWhereInput {
@@ -246,6 +402,16 @@ input CountryWhereInput {
   name_startsWith: String
   name_endsWith: String
   name_in: [String!]
+  region_eq: String
+  region_contains: String
+  region_startsWith: String
+  region_endsWith: String
+  region_in: [String!]
+  subregion_eq: String
+  subregion_contains: String
+  subregion_startsWith: String
+  subregion_endsWith: String
+  subregion_in: [String!]
   AND: [CountryWhereInput!]
   OR: [CountryWhereInput!]
 }
@@ -277,7 +443,7 @@ type Entity implements BaseGraphQLObject {
   name: String!
   countryId: Int
   cityId: Int
-  address: String!
+  accountId: String!
 }
 
 type EntityConnection {
@@ -292,7 +458,7 @@ input EntityCreateInput {
   name: String!
   countryId: Float
   cityId: Float
-  address: String!
+  accountId: String!
 }
 
 type EntityEdge {
@@ -317,8 +483,8 @@ enum EntityOrderByInput {
   countryId_DESC
   cityId_ASC
   cityId_DESC
-  address_ASC
-  address_DESC
+  accountId_ASC
+  accountId_DESC
 }
 
 type EntityProof implements BaseGraphQLObject {
@@ -427,7 +593,7 @@ input EntityUpdateInput {
   name: String
   countryId: Float
   cityId: Float
-  address: String
+  accountId: String
 }
 
 input EntityWhereInput {
@@ -484,11 +650,11 @@ input EntityWhereInput {
   cityId_lt: Int
   cityId_lte: Int
   cityId_in: [Int!]
-  address_eq: String
-  address_contains: String
-  address_startsWith: String
-  address_endsWith: String
-  address_in: [String!]
+  accountId_eq: String
+  accountId_contains: String
+  accountId_startsWith: String
+  accountId_endsWith: String
+  accountId_in: [String!]
   AND: [EntityWhereInput!]
   OR: [EntityWhereInput!]
 }
@@ -765,12 +931,10 @@ type Node implements BaseGraphQLObject {
   locationId: String!
   countryId: Int
   cityId: Int
-  address: String!
   hru: BigInt
   sru: BigInt
   cru: BigInt
   mru: BigInt
-  role: String!
   publicConfig: PublicConfig
   publicConfigId: String
 }
@@ -789,12 +953,10 @@ input NodeCreateInput {
   location: ID!
   countryId: Float
   cityId: Float
-  address: String!
   hru: BigInt
   sru: BigInt
   cru: BigInt
   mru: BigInt
-  role: String!
   publicConfig: ID
 }
 
@@ -824,8 +986,6 @@ enum NodeOrderByInput {
   countryId_DESC
   cityId_ASC
   cityId_DESC
-  address_ASC
-  address_DESC
   hru_ASC
   hru_DESC
   sru_ASC
@@ -834,8 +994,6 @@ enum NodeOrderByInput {
   cru_DESC
   mru_ASC
   mru_DESC
-  role_ASC
-  role_DESC
   publicConfig_ASC
   publicConfig_DESC
 }
@@ -848,12 +1006,10 @@ input NodeUpdateInput {
   location: ID
   countryId: Float
   cityId: Float
-  address: String
   hru: BigInt
   sru: BigInt
   cru: BigInt
   mru: BigInt
-  role: String
   publicConfig: ID
 }
 
@@ -920,11 +1076,6 @@ input NodeWhereInput {
   cityId_lt: Int
   cityId_lte: Int
   cityId_in: [Int!]
-  address_eq: String
-  address_contains: String
-  address_startsWith: String
-  address_endsWith: String
-  address_in: [String!]
   hru_eq: BigInt
   hru_gt: BigInt
   hru_gte: BigInt
@@ -949,11 +1100,6 @@ input NodeWhereInput {
   mru_lt: BigInt
   mru_lte: BigInt
   mru_in: [BigInt!]
-  role_eq: String
-  role_contains: String
-  role_startsWith: String
-  role_endsWith: String
-  role_in: [String!]
   publicConfig_eq: ID
   publicConfig_in: [ID!]
   location: LocationWhereInput
@@ -1353,6 +1499,9 @@ type Query {
   cities(offset: Int, limit: Int = 50, where: CityWhereInput, orderBy: [CityOrderByInput!]): [City!]!
   cityByUniqueInput(where: CityWhereUniqueInput!): City
   citiesConnection(first: Int, after: String, last: Int, before: String, where: CityWhereInput, orderBy: [CityOrderByInput!]): CityConnection!
+  consumptions(offset: Int, limit: Int = 50, where: ConsumptionWhereInput, orderBy: [ConsumptionOrderByInput!]): [Consumption!]!
+  consumptionByUniqueInput(where: ConsumptionWhereUniqueInput!): Consumption
+  consumptionsConnection(first: Int, after: String, last: Int, before: String, where: ConsumptionWhereInput, orderBy: [ConsumptionOrderByInput!]): ConsumptionConnection!
   countries(offset: Int, limit: Int = 50, where: CountryWhereInput, orderBy: [CountryOrderByInput!]): [Country!]!
   countryByUniqueInput(where: CountryWhereUniqueInput!): Country
   countriesConnection(first: Int, after: String, last: Int, before: String, where: CountryWhereInput, orderBy: [CountryOrderByInput!]): CountryConnection!
@@ -1531,7 +1680,7 @@ type Twin implements BaseGraphQLObject {
   version: Int!
   gridVersion: Int!
   twinId: Int!
-  address: String!
+  accountId: String!
   ip: String!
   entityprooftwinRel: [EntityProof!]
 }
@@ -1545,7 +1694,7 @@ type TwinConnection {
 input TwinCreateInput {
   gridVersion: Float!
   twinId: Float!
-  address: String!
+  accountId: String!
   ip: String!
 }
 
@@ -1565,8 +1714,8 @@ enum TwinOrderByInput {
   gridVersion_DESC
   twinId_ASC
   twinId_DESC
-  address_ASC
-  address_DESC
+  accountId_ASC
+  accountId_DESC
   ip_ASC
   ip_DESC
 }
@@ -1574,7 +1723,7 @@ enum TwinOrderByInput {
 input TwinUpdateInput {
   gridVersion: Float
   twinId: Float
-  address: String
+  accountId: String
   ip: String
 }
 
@@ -1615,11 +1764,11 @@ input TwinWhereInput {
   twinId_lt: Int
   twinId_lte: Int
   twinId_in: [Int!]
-  address_eq: String
-  address_contains: String
-  address_startsWith: String
-  address_endsWith: String
-  address_in: [String!]
+  accountId_eq: String
+  accountId_contains: String
+  accountId_startsWith: String
+  accountId_endsWith: String
+  accountId_in: [String!]
   ip_eq: String
   ip_contains: String
   ip_startsWith: String

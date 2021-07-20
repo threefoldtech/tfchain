@@ -36,7 +36,7 @@ tslib_1.__decorate([
 tslib_1.__decorate([
     warthog_1.StringField({}),
     tslib_1.__metadata("design:type", String)
-], Entity.prototype, "address", void 0);
+], Entity.prototype, "accountId", void 0);
 Entity = tslib_1.__decorate([
     warthog_1.Model({ api: {} }),
     tslib_1.__metadata("design:paramtypes", [Object])

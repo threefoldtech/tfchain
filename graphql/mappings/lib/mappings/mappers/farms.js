@@ -15,10 +15,10 @@ async function farmStored({ store, event, block, extrinsic, }) {
     newFarm.countryId = farm.country_id.toNumber();
     newFarm.cityId = farm.city_id.toNumber();
     const certificationTypeAsString = farm.certification_type.toString();
-    let certType = model_1.CertificationType.None;
+    let certType = model_1.CertificationType.Diy;
     switch (certificationTypeAsString) {
-        case 'Gold': certType = model_1.CertificationType.Gold;
-        case 'Silver': certType = model_1.CertificationType.Silver;
+        case 'Diy': certType = model_1.CertificationType.Diy;
+        case 'Diy': certType = model_1.CertificationType.Certified;
     }
     newFarm.certificationType = certType;
     await store.save(newFarm);
@@ -48,10 +48,10 @@ async function farmUpdated({ store, event, block, extrinsic, }) {
         savedFarm.countryId = farm.country_id.toNumber();
         savedFarm.cityId = farm.city_id.toNumber();
         const certificationTypeAsString = farm.certification_type.toString();
-        let certType = model_1.CertificationType.None;
+        let certType = model_1.CertificationType.Diy;
         switch (certificationTypeAsString) {
-            case 'Gold': certType = model_1.CertificationType.Gold;
-            case 'Silver': certType = model_1.CertificationType.Silver;
+            case 'Diy': certType = model_1.CertificationType.Diy;
+            case 'Diy': certType = model_1.CertificationType.Certified;
         }
         savedFarm.certificationType = certType;
         const publicIps = [];

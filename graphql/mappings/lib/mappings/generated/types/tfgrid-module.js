@@ -164,7 +164,7 @@ var TfgridModule;
     class NodeStoredEvent {
         constructor(ctx) {
             this.ctx = ctx;
-            this.expectedParamTypes = ["types::Node<AccountId>"];
+            this.expectedParamTypes = ["types::Node"];
         }
         get params() {
             return [
@@ -190,7 +190,7 @@ var TfgridModule;
     class NodeUpdatedEvent {
         constructor(ctx) {
             this.ctx = ctx;
-            this.expectedParamTypes = ["types::Node<AccountId>"];
+            this.expectedParamTypes = ["types::Node"];
         }
         get params() {
             return [

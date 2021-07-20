@@ -26,10 +26,10 @@ export async function farmStored({
   newFarm.cityId = farm.city_id.toNumber()
 
   const certificationTypeAsString = farm.certification_type.toString()
-  let certType = CertificationType.None
+  let certType = CertificationType.Diy
   switch (certificationTypeAsString) {
-    case 'Gold': certType = CertificationType.Gold
-    case 'Silver': certType = CertificationType.Silver
+    case 'Diy': certType = CertificationType.Diy
+    case 'Diy': certType = CertificationType.Certified
   }
   newFarm.certificationType = certType
 
@@ -74,11 +74,11 @@ export async function farmUpdated({
     savedFarm.countryId = farm.country_id.toNumber()
     savedFarm.cityId = farm.city_id.toNumber()
     const certificationTypeAsString = farm.certification_type.toString()
-    let certType = CertificationType.None
-    switch (certificationTypeAsString) {
-      case 'Gold': certType = CertificationType.Gold
-      case 'Silver': certType = CertificationType.Silver
-    }
+    let certType = CertificationType.Diy
+  switch (certificationTypeAsString) {
+    case 'Diy': certType = CertificationType.Diy
+    case 'Diy': certType = CertificationType.Certified
+  }
     savedFarm.certificationType = certType
 
     const publicIps: PublicIp[] = []

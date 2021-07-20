@@ -1,5 +1,7 @@
 import { City } from '../src/modules/city/city.model';
 export { City };
+import { Consumption } from '../src/modules/consumption/consumption.model';
+export { Consumption };
 import { Country } from '../src/modules/country/country.model';
 export { Country };
 import { Entity } from '../src/modules/entity/entity.model';

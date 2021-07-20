@@ -13,13 +13,13 @@ type Entity @entity {
   name: String!
   countryID: Int
   cityID: Int
-  address: String!
+  accountID: String!
 }
 
 type Twin @entity {
   gridVersion: Int!
   twinID: Int!
-  address: String!
+  accountID: String!
   ip: String!
 }
 
@@ -41,19 +41,6 @@ type Farm @entity {
   publicIPs: [PublicIp!] @derivedFrom(field: "farm")
 }
 
-type PublicIp @entity {
-  farm: Farm!
-  gateway: String!
-  ip: String!
-  contract_id: Int!
-}
-
-enum CertificationType {
-  None
-  Silver
-  Gold
-}
-
 type Node @entity {
   gridVersion: Int!
   nodeID: Int!
@@ -62,13 +49,23 @@ type Node @entity {
   location: Location!
   countryID: Int
   cityID: Int
-  address: String!
   hru: BigInt
   sru: BigInt
   cru: BigInt
   mru: BigInt
-  role: String!
   publicConfig: PublicConfig
+}
+
+type PublicIp @entity {
+  farm: Farm!
+  gateway: String!
+  ip: String!
+  contract_id: Int!
+}
+
+enum CertificationType {
+  Diy
+  Certified
 }
 
 type PublicConfig @entity {
@@ -97,10 +94,22 @@ type Country @entity {
   id: Int!
   code: String!
   name: String!
+  region: String!
+  subregion: String!
 }
 
 type City @entity {
   id: Int!
   countryID: Int!
   name: String!
+}
+
+type Consumption @entity {
+  contractID: Int!
+  timestamp: Int!
+  cru: Int!
+  sru: Int!
+  hru: Int!
+  mru: Int!
+  nru: Int!
 }

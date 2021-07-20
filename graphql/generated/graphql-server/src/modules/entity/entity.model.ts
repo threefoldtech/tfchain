@@ -22,7 +22,7 @@ export class Entity extends BaseModel {
   cityId?: number;
 
   @StringField({})
-  address!: string;
+  accountId!: string;
 
   constructor(init?: Partial<Entity>) {
     super();

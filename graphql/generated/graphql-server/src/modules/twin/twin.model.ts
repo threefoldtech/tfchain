@@ -11,7 +11,7 @@ export class Twin extends BaseModel {
   twinId!: number;
 
   @StringField({})
-  address!: string;
+  accountId!: string;
 
   @StringField({})
   ip!: string;

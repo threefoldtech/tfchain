@@ -1,5 +1,4 @@
 export declare enum CertificationType {
-    None = "None",
-    Silver = "Silver",
-    Gold = "Gold"
+    Diy = "Diy",
+    Certified = "Certified"
 }

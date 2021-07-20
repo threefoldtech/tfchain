@@ -10,12 +10,10 @@ export declare class Node extends BaseModel {
     location: Location;
     countryId?: number;
     cityId?: number;
-    address: string;
     hru?: BN;
     sru?: BN;
     cru?: BN;
     mru?: BN;
-    role: string;
     publicConfig?: PublicConfig;
     constructor(init?: Partial<Node>);
 }

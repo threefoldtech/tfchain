@@ -9,7 +9,7 @@ async function twinStored({ store, event, block, extrinsic, }) {
     const newTwin = new model_1.Twin();
     newTwin.gridVersion = twin.version.toNumber();
     newTwin.twinId = twin.id.toNumber();
-    newTwin.address = twin.address.toHuman();
+    newTwin.accountId = twin.account_id.toHuman();
     newTwin.ip = util_1.hex2a(Buffer.from(twin.ip.toString()).toString());
     await store.save(newTwin);
 }

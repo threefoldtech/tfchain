@@ -34,10 +34,6 @@ export async function nodeStored({
   await store.save<Location>(newLocation)
 
   newNode.location = newLocation
-
-  newNode.address = node.address.toString()
-
-  newNode.role = node.role.toString()
   
   if (node.public_config.isSome) {
     const pubConfig = new PublicConfig()
@@ -87,10 +83,6 @@ export async function nodeUpdated({
   await store.save<Location>(newLocation)
 
   savedNode.location = newLocation
-
-  savedNode.address = node.address.toString()
-
-  savedNode.role = node.role.toString()
   
   if (node.public_config.isSome) {
     const pubConfig = new PublicConfig()

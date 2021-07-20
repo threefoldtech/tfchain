@@ -35,8 +35,8 @@ async function main () {
 
     try {
         const countryPromises = countries.data.map((country, index) => {
-            const text = 'INSERT INTO country(id, name, code, created_by_id, version) VALUES($1, $2, $3, $4, $5)'
-            return client.query(text, [index, country.name, country.alpha3Code, 0, 0]) 
+            const text = 'INSERT INTO country(id, name, code, region, subregion, created_by_id, version) VALUES($1, $2, $3, $4, $5, $6, $7)'
+            return client.query(text, [index, country.name, country.alpha3Code, country.region, country.subregion, 0, 0]) 
         })
     
         await Promise.all(countryPromises)

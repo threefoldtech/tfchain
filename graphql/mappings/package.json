@@ -12,7 +12,7 @@
   "dependencies": {
     "@polkadot/types": "~2.10.2-7",
     "@subsquid/hydra-common": "3.1.0-alpha.1",
-    "substrate-tfgrid-ts-types": "^0.0.9",
+    "substrate-tfgrid-ts-types": "^0.0.12",
     "warthog": "https://github.com/metmirr/warthog/releases/download/v2.30.0/warthog-v2.30.0.tgz"
   },
   "resolutions": {

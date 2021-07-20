@@ -28,6 +28,8 @@ import { CertificationType } from "../src/modules/farm/farm.model";
 // @ts-ignore
 import { City } from "../src/modules/city/city.model";
 // @ts-ignore
+import { Consumption } from "../src/modules/consumption/consumption.model";
+// @ts-ignore
 import { Country } from "../src/modules/country/country.model";
 // @ts-ignore
 import { Twin } from "../src/modules/twin/twin.model";
@@ -230,6 +232,324 @@ export class CityUpdateArgs {
   @TypeGraphQLField() where!: CityWhereUniqueInput;
 }
 
+export enum ConsumptionOrderByEnum {
+  createdAt_ASC = "createdAt_ASC",
+  createdAt_DESC = "createdAt_DESC",
+
+  updatedAt_ASC = "updatedAt_ASC",
+  updatedAt_DESC = "updatedAt_DESC",
+
+  deletedAt_ASC = "deletedAt_ASC",
+  deletedAt_DESC = "deletedAt_DESC",
+
+  contractId_ASC = "contractId_ASC",
+  contractId_DESC = "contractId_DESC",
+
+  timestamp_ASC = "timestamp_ASC",
+  timestamp_DESC = "timestamp_DESC",
+
+  cru_ASC = "cru_ASC",
+  cru_DESC = "cru_DESC",
+
+  sru_ASC = "sru_ASC",
+  sru_DESC = "sru_DESC",
+
+  hru_ASC = "hru_ASC",
+  hru_DESC = "hru_DESC",
+
+  mru_ASC = "mru_ASC",
+  mru_DESC = "mru_DESC",
+
+  nru_ASC = "nru_ASC",
+  nru_DESC = "nru_DESC"
+}
+
+registerEnumType(ConsumptionOrderByEnum, {
+  name: "ConsumptionOrderByInput"
+});
+
+@TypeGraphQLInputType()
+export class ConsumptionWhereInput {
+  @TypeGraphQLField(() => ID, { nullable: true })
+  id_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  id_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  createdById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  createdById_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  updatedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  updatedById_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  deletedAt_all?: Boolean;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  deletedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  deletedById_in?: string[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  contractId_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  contractId_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  contractId_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  contractId_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  contractId_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  contractId_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  timestamp_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  timestamp_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  timestamp_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  timestamp_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  timestamp_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  timestamp_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cru_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cru_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cru_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cru_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  cru_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  cru_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  sru_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  sru_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  sru_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  sru_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  sru_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  sru_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  hru_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  hru_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  hru_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  hru_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  hru_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  hru_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  mru_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  mru_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  mru_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  mru_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  mru_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  mru_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nru_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nru_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nru_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nru_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nru_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  nru_in?: number[];
+
+  @TypeGraphQLField(() => ConsumptionWhereInput, { nullable: true })
+  AND?: [ConsumptionWhereInput];
+
+  @TypeGraphQLField(() => ConsumptionWhereInput, { nullable: true })
+  OR?: [ConsumptionWhereInput];
+}
+
+@TypeGraphQLInputType()
+export class ConsumptionWhereUniqueInput {
+  @TypeGraphQLField(() => ID)
+  id?: string;
+}
+
+@TypeGraphQLInputType()
+export class ConsumptionCreateInput {
+  @TypeGraphQLField()
+  contractId!: number;
+
+  @TypeGraphQLField()
+  timestamp!: number;
+
+  @TypeGraphQLField()
+  cru!: number;
+
+  @TypeGraphQLField()
+  sru!: number;
+
+  @TypeGraphQLField()
+  hru!: number;
+
+  @TypeGraphQLField()
+  mru!: number;
+
+  @TypeGraphQLField()
+  nru!: number;
+}
+
+@TypeGraphQLInputType()
+export class ConsumptionUpdateInput {
+  @TypeGraphQLField({ nullable: true })
+  contractId?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  timestamp?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  cru?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  sru?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  hru?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  mru?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  nru?: number;
+}
+
+@ArgsType()
+export class ConsumptionWhereArgs extends PaginationArgs {
+  @TypeGraphQLField(() => ConsumptionWhereInput, { nullable: true })
+  where?: ConsumptionWhereInput;
+
+  @TypeGraphQLField(() => ConsumptionOrderByEnum, { nullable: true })
+  orderBy?: ConsumptionOrderByEnum[];
+}
+
+@ArgsType()
+export class ConsumptionCreateManyArgs {
+  @TypeGraphQLField(() => [ConsumptionCreateInput])
+  data!: ConsumptionCreateInput[];
+}
+
+@ArgsType()
+export class ConsumptionUpdateArgs {
+  @TypeGraphQLField() data!: ConsumptionUpdateInput;
+  @TypeGraphQLField() where!: ConsumptionWhereUniqueInput;
+}
+
 export enum CountryOrderByEnum {
   createdAt_ASC = "createdAt_ASC",
   createdAt_DESC = "createdAt_DESC",
@@ -244,7 +564,13 @@ export enum CountryOrderByEnum {
   code_DESC = "code_DESC",
 
   name_ASC = "name_ASC",
-  name_DESC = "name_DESC"
+  name_DESC = "name_DESC",
+
+  region_ASC = "region_ASC",
+  region_DESC = "region_DESC",
+
+  subregion_ASC = "subregion_ASC",
+  subregion_DESC = "subregion_DESC"
 }
 
 registerEnumType(CountryOrderByEnum, {
@@ -355,6 +681,36 @@ export class CountryWhereInput {
   @TypeGraphQLField(() => [String], { nullable: true })
   name_in?: string[];
 
+  @TypeGraphQLField({ nullable: true })
+  region_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  region_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  region_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  region_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  region_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  subregion_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  subregion_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  subregion_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  subregion_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  subregion_in?: string[];
+
   @TypeGraphQLField(() => CountryWhereInput, { nullable: true })
   AND?: [CountryWhereInput];
 
@@ -375,6 +731,12 @@ export class CountryCreateInput {
 
   @TypeGraphQLField()
   name!: string;
+
+  @TypeGraphQLField()
+  region!: string;
+
+  @TypeGraphQLField()
+  subregion!: string;
 }
 
 @TypeGraphQLInputType()
@@ -384,6 +746,12 @@ export class CountryUpdateInput {
 
   @TypeGraphQLField({ nullable: true })
   name?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  region?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  subregion?: string;
 }
 
 @ArgsType()
@@ -423,8 +791,8 @@ export enum TwinOrderByEnum {
   twinId_ASC = "twinId_ASC",
   twinId_DESC = "twinId_DESC",
 
-  address_ASC = "address_ASC",
-  address_DESC = "address_DESC",
+  accountId_ASC = "accountId_ASC",
+  accountId_DESC = "accountId_DESC",
 
   ip_ASC = "ip_ASC",
   ip_DESC = "ip_DESC"
@@ -545,19 +913,19 @@ export class TwinWhereInput {
   twinId_in?: number[];
 
   @TypeGraphQLField({ nullable: true })
-  address_eq?: string;
+  accountId_eq?: string;
 
   @TypeGraphQLField({ nullable: true })
-  address_contains?: string;
+  accountId_contains?: string;
 
   @TypeGraphQLField({ nullable: true })
-  address_startsWith?: string;
+  accountId_startsWith?: string;
 
   @TypeGraphQLField({ nullable: true })
-  address_endsWith?: string;
+  accountId_endsWith?: string;
 
   @TypeGraphQLField(() => [String], { nullable: true })
-  address_in?: string[];
+  accountId_in?: string[];
 
   @TypeGraphQLField({ nullable: true })
   ip_eq?: string;
@@ -605,7 +973,7 @@ export class TwinCreateInput {
   twinId!: number;
 
   @TypeGraphQLField()
-  address!: string;
+  accountId!: string;
 
   @TypeGraphQLField()
   ip!: string;
@@ -620,7 +988,7 @@ export class TwinUpdateInput {
   twinId?: number;
 
   @TypeGraphQLField({ nullable: true })
-  address?: string;
+  accountId?: string;
 
   @TypeGraphQLField({ nullable: true })
   ip?: string;
@@ -870,8 +1238,8 @@ export enum EntityOrderByEnum {
   cityId_ASC = "cityId_ASC",
   cityId_DESC = "cityId_DESC",
 
-  address_ASC = "address_ASC",
-  address_DESC = "address_DESC"
+  accountId_ASC = "accountId_ASC",
+  accountId_DESC = "accountId_DESC"
 }
 
 registerEnumType(EntityOrderByEnum, {
@@ -1040,19 +1408,19 @@ export class EntityWhereInput {
   cityId_in?: number[];
 
   @TypeGraphQLField({ nullable: true })
-  address_eq?: string;
+  accountId_eq?: string;
 
   @TypeGraphQLField({ nullable: true })
-  address_contains?: string;
+  accountId_contains?: string;
 
   @TypeGraphQLField({ nullable: true })
-  address_startsWith?: string;
+  accountId_startsWith?: string;
 
   @TypeGraphQLField({ nullable: true })
-  address_endsWith?: string;
+  accountId_endsWith?: string;
 
   @TypeGraphQLField(() => [String], { nullable: true })
-  address_in?: string[];
+  accountId_in?: string[];
 
   @TypeGraphQLField(() => EntityWhereInput, { nullable: true })
   AND?: [EntityWhereInput];
@@ -1085,7 +1453,7 @@ export class EntityCreateInput {
   cityId?: number;
 
   @TypeGraphQLField()
-  address!: string;
+  accountId!: string;
 }
 
 @TypeGraphQLInputType()
@@ -1106,7 +1474,7 @@ export class EntityUpdateInput {
   cityId?: number;
 
   @TypeGraphQLField({ nullable: true })
-  address?: string;
+  accountId?: string;
 }
 
 @ArgsType()
@@ -1956,9 +2324,6 @@ export enum NodeOrderByEnum {
   cityId_ASC = "cityId_ASC",
   cityId_DESC = "cityId_DESC",
 
-  address_ASC = "address_ASC",
-  address_DESC = "address_DESC",
-
   hru_ASC = "hru_ASC",
   hru_DESC = "hru_DESC",
 
@@ -1970,9 +2335,6 @@ export enum NodeOrderByEnum {
 
   mru_ASC = "mru_ASC",
   mru_DESC = "mru_DESC",
-
-  role_ASC = "role_ASC",
-  role_DESC = "role_DESC",
 
   publicConfig_ASC = "publicConfig_ASC",
   publicConfig_DESC = "publicConfig_DESC"
@@ -2170,21 +2532,6 @@ export class NodeWhereInput {
   @TypeGraphQLField(() => [Int], { nullable: true })
   cityId_in?: number[];
 
-  @TypeGraphQLField({ nullable: true })
-  address_eq?: string;
-
-  @TypeGraphQLField({ nullable: true })
-  address_contains?: string;
-
-  @TypeGraphQLField({ nullable: true })
-  address_startsWith?: string;
-
-  @TypeGraphQLField({ nullable: true })
-  address_endsWith?: string;
-
-  @TypeGraphQLField(() => [String], { nullable: true })
-  address_in?: string[];
-
   @TypeGraphQLField(() => BigInt, { nullable: true })
   hru_eq?: BN;
 
@@ -2257,21 +2604,6 @@ export class NodeWhereInput {
   @TypeGraphQLField(() => [BigInt], { nullable: true })
   mru_in?: BN[];
 
-  @TypeGraphQLField({ nullable: true })
-  role_eq?: string;
-
-  @TypeGraphQLField({ nullable: true })
-  role_contains?: string;
-
-  @TypeGraphQLField({ nullable: true })
-  role_startsWith?: string;
-
-  @TypeGraphQLField({ nullable: true })
-  role_endsWith?: string;
-
-  @TypeGraphQLField(() => [String], { nullable: true })
-  role_in?: string[];
-
   @TypeGraphQLField(() => ID, { nullable: true })
   publicConfig_eq?: string;
 
@@ -2320,9 +2652,6 @@ export class NodeCreateInput {
   @TypeGraphQLField({ nullable: true })
   cityId?: number;
 
-  @TypeGraphQLField()
-  address!: string;
-
   @TypeGraphQLField(() => BigInt, { nullable: true })
   hru?: BN;
 
@@ -2334,9 +2663,6 @@ export class NodeCreateInput {
 
   @TypeGraphQLField(() => BigInt, { nullable: true })
   mru?: BN;
-
-  @TypeGraphQLField()
-  role!: string;
 
   @TypeGraphQLField(() => ID, { nullable: true })
   publicConfig?: string;
@@ -2365,9 +2691,6 @@ export class NodeUpdateInput {
   @TypeGraphQLField({ nullable: true })
   cityId?: number;
 
-  @TypeGraphQLField({ nullable: true })
-  address?: string;
-
   @TypeGraphQLField(() => BigInt, { nullable: true })
   hru?: BN;
 
@@ -2379,9 +2702,6 @@ export class NodeUpdateInput {
 
   @TypeGraphQLField(() => BigInt, { nullable: true })
   mru?: BN;
-
-  @TypeGraphQLField({ nullable: true })
-  role?: string;
 
   @TypeGraphQLField(() => ID, { nullable: true })
   publicConfig?: string;
