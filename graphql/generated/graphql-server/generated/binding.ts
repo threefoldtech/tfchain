@@ -1142,7 +1142,7 @@ export interface PublicConfigWhereUniqueInput {
 }
 
 export interface PublicIpCreateInput {
-  farm: ID_Output
+  farm?: ID_Input | null
   gateway: String
   ip: String
   contractId: Float
@@ -1703,8 +1703,8 @@ export interface PublicIp extends BaseGraphQLObject {
   deletedAt?: DateTime | null
   deletedById?: String | null
   version: Int
-  farm: Farm
-  farmId: String
+  farm?: Farm | null
+  farmId?: String | null
   gateway: String
   ip: String
   contractId: Int

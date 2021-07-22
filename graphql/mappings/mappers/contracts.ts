@@ -7,7 +7,7 @@ import {
   StoreContext,
 } from '@subsquid/hydra-common'
 
-export async function ConsumptionReportReceived({
+export async function consumptionReportReceived({
   store,
   event,
   block,

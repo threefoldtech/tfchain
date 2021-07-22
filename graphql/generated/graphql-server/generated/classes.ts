@@ -1671,8 +1671,8 @@ export class PublicIpWhereUniqueInput {
 
 @TypeGraphQLInputType()
 export class PublicIpCreateInput {
-  @TypeGraphQLField(() => ID)
-  farm!: string;
+  @TypeGraphQLField(() => ID, { nullable: true })
+  farm?: string;
 
   @TypeGraphQLField()
   gateway!: string;

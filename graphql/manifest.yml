@@ -12,7 +12,7 @@ typegen:
     lib: 'substrate-tfgrid-ts-types'
     typedefsLoc: ./types.json
   metadata:
-    source: ws://192.168.0.154:9944
+    source: wss://explorer.devnet.grid.tf/ws
   events:
     - balances.Transfer
     - tfgridModule.EntityStored

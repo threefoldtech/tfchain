@@ -41,7 +41,7 @@ async function farmUpdated({ store, event, block, extrinsic, }) {
     const savedFarm = await store.get(model_1.Farm, { where: { farmId: farm.id.toNumber() } });
     if (savedFarm) {
         savedFarm.gridVersion = farm.version.toNumber();
-        savedFarm.farmId = farm.id.toNumber();
+        // savedFarm.farmId = farm.id.toNumber()
         savedFarm.name = util_1.hex2a(Buffer.from(farm.name.toString()).toString());
         savedFarm.twinId = farm.twin_id.toNumber();
         savedFarm.pricingPolicyId = farm.pricing_policy_id.toNumber();
@@ -54,9 +54,14 @@ async function farmUpdated({ store, event, block, extrinsic, }) {
             case 'Diy': certType = model_1.CertificationType.Certified;
         }
         savedFarm.certificationType = certType;
+        console.log(`public ips: ${farm.public_ips}`);
+        console.log(`farm ${farm}`);
+        console.log(`savedFarm ${savedFarm}`);
+        console.log(`savedFarm ips ${savedFarm.publicIPs}`);
         const publicIps = [];
         farm.public_ips.forEach(async (ip) => {
             const newIP = new model_1.PublicIp();
+            console.log('hello');
             newIP.ip = util_1.hex2a(Buffer.from(ip.ip.toString()).toString());
             newIP.gateway = util_1.hex2a(Buffer.from(ip.gateway.toString()).toString());
             newIP.contractId = ip.contract_id.toNumber();
@@ -64,6 +69,14 @@ async function farmUpdated({ store, event, block, extrinsic, }) {
             await store.save(newIP);
             publicIps.push(newIP);
         });
+        const savedIps = await store.get(model_1.PublicIp, { where: { farmId: farm.id.toNumber() } });
+        console.log(`saved ips ${savedIps}`);
+        // console.log(savedFarm.publicIPs)
+        // savedFarm.publicIPs?.forEach(async ip => {
+        //   if (!publicIps.includes(ip)) {
+        //     await store.remove<PublicIp>(ip)
+        //   }
+        // })
         savedFarm.publicIPs = publicIps;
         await store.save(savedFarm);
     }

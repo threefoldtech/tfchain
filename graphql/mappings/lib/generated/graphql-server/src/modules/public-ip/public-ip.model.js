@@ -13,6 +13,7 @@ let PublicIp = class PublicIp extends warthog_1.BaseModel {
 tslib_1.__decorate([
     warthog_1.ManyToOne(() => farm_model_1.Farm, (param) => param.publicIPs, {
         skipGraphQLField: true,
+        nullable: true,
         modelName: 'PublicIp',
         relModelName: 'Farm',
         propertyName: 'farm'

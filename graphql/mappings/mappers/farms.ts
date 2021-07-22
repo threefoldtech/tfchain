@@ -67,7 +67,7 @@ export async function farmUpdated({
   
   if (savedFarm) {
     savedFarm.gridVersion = farm.version.toNumber()
-    savedFarm.farmId = farm.id.toNumber()
+    // savedFarm.farmId = farm.id.toNumber()
     savedFarm.name = hex2a(Buffer.from(farm.name.toString()).toString())
     savedFarm.twinId = farm.twin_id.toNumber()
     savedFarm.pricingPolicyId = farm.pricing_policy_id.toNumber()
@@ -75,17 +75,16 @@ export async function farmUpdated({
     savedFarm.cityId = farm.city_id.toNumber()
     const certificationTypeAsString = farm.certification_type.toString()
     let certType = CertificationType.Diy
-  switch (certificationTypeAsString) {
-    case 'Diy': certType = CertificationType.Diy
-    case 'Diy': certType = CertificationType.Certified
-  }
+    switch (certificationTypeAsString) {
+      case 'Diy': certType = CertificationType.Diy
+      case 'Diy': certType = CertificationType.Certified
+    }
+
     savedFarm.certificationType = certType
 
     const publicIps: PublicIp[] = []
-  
     farm.public_ips.forEach(async ip => {
       const newIP = new PublicIp()
-
       newIP.ip = hex2a(Buffer.from(ip.ip.toString()).toString())
       newIP.gateway = hex2a(Buffer.from(ip.gateway.toString()).toString())
       newIP.contractId = ip.contract_id.toNumber()

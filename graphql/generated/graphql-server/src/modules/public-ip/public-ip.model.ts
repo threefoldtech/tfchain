@@ -9,13 +9,13 @@ export class PublicIp extends BaseModel {
     (param: Farm) => param.publicIPs,
     {
       skipGraphQLField: true,
-
+      nullable: true,
       modelName: 'PublicIp',
       relModelName: 'Farm',
       propertyName: 'farm'
     }
   )
-  farm!: Farm;
+  farm?: Farm;
 
   @StringField({})
   gateway!: string;

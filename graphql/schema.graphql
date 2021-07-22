@@ -57,7 +57,7 @@ type Node @entity {
 }
 
 type PublicIp @entity {
-  farm: Farm!
+  farm: Farm
   gateway: String!
   ip: String!
   contract_id: Int!
