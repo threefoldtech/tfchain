@@ -27,13 +27,9 @@ ARG PROFILE=release
 
 # COPY substrate-node /substrate
 
-RUN apt-get install -y cmake pkg-config libssl-dev git clang
+RUN apt-get install -y cmake pkg-config libssl-dev clang
+# ADD ct_scripts/install_rust.sh /tmp/install_rust.sh
+# RUN sudo bash /tmp/install_rust.sh
 
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
-	export PATH="$PATH:$HOME/.cargo/bin" && \
-	rustup install nightly && \
-	rustup target add wasm32-unknown-unknown --toolchain nightly && \
-	rustup default stable && \
-	cargo build "--$PROFILE"
 
 # USER gitpod
