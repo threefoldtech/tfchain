@@ -1,0 +1,36 @@
+image:
+  file: .gitpod.Dockerfile
+tasks:
+#   - init: bash prepare.sh
+    # - command: mkdir -p ~/.ssh && chmod 700 ~/.ssh && cp keys/gitpod ~/.ssh/id_ed25519 && cp keys/gitpod.pub ~/.ssh/id_ed25519.pub && chmod 644 ~/.ssh/id_ed25519.pub && chmod 600 ~/.ssh/id_ed25519
+    - command: bash ct_scripts/install.sh && sudo /etc/init.d/redis-server start && clear && cat gitpod_readme.md 
+ports:
+  - port: 9998
+    onOpen: open-browser
+  - port: 6379
+    onOpen: ignore
+vscode:
+  extensions:
+    - vlanguage.vscode-vlang
+    - yzhang.markdown-all-in-one
+    - shd101wyy.markdown-preview-enhanced
+    - bierner.markdown-mermaid
+    - darkriszty.markdown-table-prettify
+    - bpruitt-goddard.mermaid-markdown-syntax-highlighting
+    - shuworks.vscode-table-formatter
+github:
+  prebuilds:
+    # enable for the master/default branch (defaults to true)
+    master: true
+    # enable for all branches in this repo (defaults to false)
+    branches: true
+    # enable for pull requests coming from this repo (defaults to true)
+    pullRequests: true
+    # enable for pull requests coming from forks (defaults to false)
+    pullRequestsFromForks: false
+    # add a "Review in Gitpod" button as a comment to pull requests (defaults to true)
+    addComment: true
+    # add a "Review in Gitpod" button to pull requests (defaults to false)
+    addBadge: false
+    # add a label once the prebuild is ready to pull requests (defaults to false)
+    addLabel: prebuilt-in-gitpod

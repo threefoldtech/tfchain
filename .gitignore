@@ -1,0 +1,15 @@
+examples/builder
+examples/docker
+examples/publisher
+examples/texttools
+examples/gittools
+examples/tmux
+examples/vredis2
+*dSYM/
+publisher/publish
+install_publisher
+.vmodules/
+vex_webserver
+publishtools/publishtools
+.vscode
+testdeployment
