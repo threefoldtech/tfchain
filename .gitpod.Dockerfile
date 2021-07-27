@@ -18,6 +18,6 @@ RUN sudo bash /tmp/install_node.sh
 
 RUN curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add - && echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list && sudo apt update && sudo apt install -y yarn
 
-RUN cd tfgrid-substrate/cli-tool && sudo yarn
+RUN cd cli-tool && sudo yarn
 
 # USER gitpod
