@@ -7,6 +7,7 @@ tasks:
       init: bash node_build.sh
       command: bash ct_scripts/install.sh && sudo /etc/init.d/redis-server start && clear && cat gitpod_readme.md 
     - name: Graphql
+      openMode: split-right
       command: cat gitpod_readme.md 
 
 ports:
