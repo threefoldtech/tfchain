@@ -4,7 +4,7 @@ tasks:
 #   - init: bash prepare.sh
     # - command: mkdir -p ~/.ssh && chmod 700 ~/.ssh && cp keys/gitpod ~/.ssh/id_ed25519 && cp keys/gitpod.pub ~/.ssh/id_ed25519.pub && chmod 644 ~/.ssh/id_ed25519.pub && chmod 600 ~/.ssh/id_ed25519
     - name: Substrate Node
-      init: bash ../ct_scripts/install_rust.sh && bash node_build.sh
+      init: bash ct_scripts/install_rust.sh && bash node_build.sh
       command: bash node_build.sh
     - name: Graphql
       openMode: split-right
