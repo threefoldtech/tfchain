@@ -5,12 +5,12 @@ USER root
 RUN apt-get update && apt-get install -y redis-server mc
 
 #prepare for gitpod nodejs env
-ADD install_node.sh /tmp/install_node.sh
+ADD ct_scripts/install_node.sh /tmp/install_node.sh
 RUN sudo bash /tmp/install_node.sh
 
 
 #install node & rmb 
-# ADD install_v_rmb.sh /tmp/install_v_rmb.sh
+# ADD ct_scripts/install_v_rmb.sh /tmp/install_v_rmb.sh
 # RUN sudo bash /tmp/install_v_rmb.sh
 
 
