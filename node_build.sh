@@ -7,5 +7,6 @@ then
     exit
 fi
 
-cargo build "--release"
+# cargo build "--release"
 
+cargo run --release -- --dev --tmp
