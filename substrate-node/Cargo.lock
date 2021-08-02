@@ -3748,7 +3748,7 @@ dependencies = [
 [[package]]
 name = "pallet-smart-contract"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#b14648df5880422c69fbaffb49977344c18b484c"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#2b0622f42e5304dfd8ca6aeb296065800bae28e8"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3784,7 +3784,7 @@ dependencies = [
 [[package]]
 name = "pallet-tfgrid"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#b14648df5880422c69fbaffb49977344c18b484c"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#2b0622f42e5304dfd8ca6aeb296065800bae28e8"
 dependencies = [
  "frame-support",
  "frame-system",
