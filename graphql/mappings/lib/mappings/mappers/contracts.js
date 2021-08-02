@@ -1,9 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ConsumptionReportReceived = void 0;
+exports.consumptionReportReceived = void 0;
 const model_1 = require("../../generated/graphql-server/model");
 const types_1 = require("../generated/types");
-async function ConsumptionReportReceived({ store, event, block, extrinsic, }) {
+async function consumptionReportReceived({ store, event, block, extrinsic, }) {
     const newConsumptionReport = new model_1.Consumption();
     const [consumptionReport] = new types_1.SmartContractModule.ConsumptionReportReceivedEvent(event).params;
     newConsumptionReport.contractId = consumptionReport.contract_id.toNumber();
@@ -15,4 +15,4 @@ async function ConsumptionReportReceived({ store, event, block, extrinsic, }) {
     newConsumptionReport.nru = consumptionReport.nru.toNumber();
     await store.save(newConsumptionReport);
 }
-exports.ConsumptionReportReceived = ConsumptionReportReceived;
+exports.consumptionReportReceived = consumptionReportReceived;
