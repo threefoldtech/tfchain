@@ -24,7 +24,7 @@ Once the project has been built, the following command can be used to explore al
 subcommands:
 
 ```sh
-./target/release/node-template -h
+./target/release/substrate -h
 ```
 
 ## Run
@@ -38,17 +38,17 @@ node.
 This command will start the single-node development chain with persistent state:
 
 ```bash
-./target/release/node-template --dev
+./target/release/substrate --dev
 ```
 
 Purge the development chain's state:
 
 ```bash
-./target/release/node-template purge-chain --dev
+./target/release/substrate purge-chain --dev
 ```
 
 Start the development chain with detailed logging:
 
 ```bash
-RUST_LOG=debug RUST_BACKTRACE=1 ./target/release/node-template -lruntime=debug --dev
+RUST_LOG=debug RUST_BACKTRACE=1 ./target/release/substrate -lruntime=debug --dev
 ```
