@@ -7,4 +7,6 @@ then
     exit
 fi
 
+cargo build --release
+
 ./target/release/tfchain --ws-external --dev --alice
