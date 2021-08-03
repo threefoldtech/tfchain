@@ -9,6 +9,9 @@ tasks:
     - name: Graphql
       openMode: split-right
       command: bash ct_scripts/install_graphql.sh && sudo /etc/init.d/redis-server start && clear && cat gitpod_readme.md
+    - name: Cli Tool
+      openMode: split-right
+      command: bash ct_scripts/install_cli.sh
 
 ports:
   - port: 9998
