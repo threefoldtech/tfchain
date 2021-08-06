@@ -12,6 +12,9 @@ export interface Query {
     consumptions: <T = Array<Consumption>>(args: { offset?: Int | null, limit?: Int | null, where?: ConsumptionWhereInput | null, orderBy?: Array<ConsumptionOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     consumptionByUniqueInput: <T = Consumption | null>(args: { where: ConsumptionWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     consumptionsConnection: <T = ConsumptionConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: ConsumptionWhereInput | null, orderBy?: Array<ConsumptionOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    contractBillReports: <T = Array<ContractBillReport>>(args: { offset?: Int | null, limit?: Int | null, where?: ContractBillReportWhereInput | null, orderBy?: Array<ContractBillReportOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    contractBillReportByUniqueInput: <T = ContractBillReport | null>(args: { where: ContractBillReportWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    contractBillReportsConnection: <T = ContractBillReportConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: ContractBillReportWhereInput | null, orderBy?: Array<ContractBillReportOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     countries: <T = Array<Country>>(args: { offset?: Int | null, limit?: Int | null, where?: CountryWhereInput | null, orderBy?: Array<CountryOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     countryByUniqueInput: <T = Country | null>(args: { where: CountryWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     countriesConnection: <T = CountryConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: CountryWhereInput | null, orderBy?: Array<CountryOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
@@ -27,6 +30,9 @@ export interface Query {
     locations: <T = Array<Location>>(args: { offset?: Int | null, limit?: Int | null, where?: LocationWhereInput | null, orderBy?: Array<LocationOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     locationByUniqueInput: <T = Location | null>(args: { where: LocationWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     locationsConnection: <T = LocationConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: LocationWhereInput | null, orderBy?: Array<LocationOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    nodeContracts: <T = Array<NodeContract>>(args: { offset?: Int | null, limit?: Int | null, where?: NodeContractWhereInput | null, orderBy?: Array<NodeContractOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    nodeContractByUniqueInput: <T = NodeContract | null>(args: { where: NodeContractWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    nodeContractsConnection: <T = NodeContractConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: NodeContractWhereInput | null, orderBy?: Array<NodeContractOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     nodes: <T = Array<Node>>(args: { offset?: Int | null, limit?: Int | null, where?: NodeWhereInput | null, orderBy?: Array<NodeOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     nodeByUniqueInput: <T = Node | null>(args: { where: NodeWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     nodesConnection: <T = NodeConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: NodeWhereInput | null, orderBy?: Array<NodeOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
@@ -113,6 +119,23 @@ export type ConsumptionOrderByInput =   'createdAt_ASC' |
   'nru_ASC' |
   'nru_DESC'
 
+export type ContractBillReportOrderByInput =   'createdAt_ASC' |
+  'createdAt_DESC' |
+  'updatedAt_ASC' |
+  'updatedAt_DESC' |
+  'deletedAt_ASC' |
+  'deletedAt_DESC' |
+  'contractId_ASC' |
+  'contractId_DESC' |
+  'discountReceived_ASC' |
+  'discountReceived_DESC' |
+  'amountBilled_ASC' |
+  'amountBilled_DESC'
+
+export type ContractState =   'Created' |
+  'Deleted' |
+  'OutOfFunds'
+
 export type CountryOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
   'updatedAt_ASC' |
@@ -193,6 +216,29 @@ export type LocationOrderByInput =   'createdAt_ASC' |
   'longitude_DESC' |
   'latitude_ASC' |
   'latitude_DESC'
+
+export type NodeContractOrderByInput =   'createdAt_ASC' |
+  'createdAt_DESC' |
+  'updatedAt_ASC' |
+  'updatedAt_DESC' |
+  'deletedAt_ASC' |
+  'deletedAt_DESC' |
+  'version_ASC' |
+  'version_DESC' |
+  'contractId_ASC' |
+  'contractId_DESC' |
+  'twinId_ASC' |
+  'twinId_DESC' |
+  'nodeId_ASC' |
+  'nodeId_DESC' |
+  'deploymentData_ASC' |
+  'deploymentData_DESC' |
+  'deploymentHash_ASC' |
+  'deploymentHash_DESC' |
+  'numberOfPublicIPs_ASC' |
+  'numberOfPublicIPs_DESC' |
+  'state_ASC' |
+  'state_DESC'
 
 export type NodeOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -478,6 +524,68 @@ export interface ConsumptionWhereInput {
 }
 
 export interface ConsumptionWhereUniqueInput {
+  id: ID_Output
+}
+
+export interface ContractBillReportCreateInput {
+  contractId: Float
+  discountReceived: String
+  amountBilled: Float
+}
+
+export interface ContractBillReportUpdateInput {
+  contractId?: Float | null
+  discountReceived?: String | null
+  amountBilled?: Float | null
+}
+
+export interface ContractBillReportWhereInput {
+  id_eq?: ID_Input | null
+  id_in?: ID_Output[] | ID_Output | null
+  createdAt_eq?: DateTime | null
+  createdAt_lt?: DateTime | null
+  createdAt_lte?: DateTime | null
+  createdAt_gt?: DateTime | null
+  createdAt_gte?: DateTime | null
+  createdById_eq?: ID_Input | null
+  createdById_in?: ID_Output[] | ID_Output | null
+  updatedAt_eq?: DateTime | null
+  updatedAt_lt?: DateTime | null
+  updatedAt_lte?: DateTime | null
+  updatedAt_gt?: DateTime | null
+  updatedAt_gte?: DateTime | null
+  updatedById_eq?: ID_Input | null
+  updatedById_in?: ID_Output[] | ID_Output | null
+  deletedAt_all?: Boolean | null
+  deletedAt_eq?: DateTime | null
+  deletedAt_lt?: DateTime | null
+  deletedAt_lte?: DateTime | null
+  deletedAt_gt?: DateTime | null
+  deletedAt_gte?: DateTime | null
+  deletedById_eq?: ID_Input | null
+  deletedById_in?: ID_Output[] | ID_Output | null
+  contractId_eq?: Int | null
+  contractId_gt?: Int | null
+  contractId_gte?: Int | null
+  contractId_lt?: Int | null
+  contractId_lte?: Int | null
+  contractId_in?: Int[] | Int | null
+  discountReceived_eq?: String | null
+  discountReceived_contains?: String | null
+  discountReceived_startsWith?: String | null
+  discountReceived_endsWith?: String | null
+  discountReceived_in?: String[] | String | null
+  amountBilled_eq?: Int | null
+  amountBilled_gt?: Int | null
+  amountBilled_gte?: Int | null
+  amountBilled_lt?: Int | null
+  amountBilled_lte?: Int | null
+  amountBilled_in?: Int[] | Int | null
+  AND?: ContractBillReportWhereInput[] | ContractBillReportWhereInput | null
+  OR?: ContractBillReportWhereInput[] | ContractBillReportWhereInput | null
+}
+
+export interface ContractBillReportWhereUniqueInput {
   id: ID_Output
 }
 
@@ -846,6 +954,103 @@ export interface LocationWhereInput {
 }
 
 export interface LocationWhereUniqueInput {
+  id: ID_Output
+}
+
+export interface NodeContractCreateInput {
+  version: Float
+  contractId: Float
+  twinId: Float
+  nodeId: Float
+  deploymentData: String
+  deploymentHash: String
+  numberOfPublicIPs: Float
+  state: ContractState
+}
+
+export interface NodeContractUpdateInput {
+  version?: Float | null
+  contractId?: Float | null
+  twinId?: Float | null
+  nodeId?: Float | null
+  deploymentData?: String | null
+  deploymentHash?: String | null
+  numberOfPublicIPs?: Float | null
+  state?: ContractState | null
+}
+
+export interface NodeContractWhereInput {
+  id_eq?: ID_Input | null
+  id_in?: ID_Output[] | ID_Output | null
+  createdAt_eq?: DateTime | null
+  createdAt_lt?: DateTime | null
+  createdAt_lte?: DateTime | null
+  createdAt_gt?: DateTime | null
+  createdAt_gte?: DateTime | null
+  createdById_eq?: ID_Input | null
+  createdById_in?: ID_Output[] | ID_Output | null
+  updatedAt_eq?: DateTime | null
+  updatedAt_lt?: DateTime | null
+  updatedAt_lte?: DateTime | null
+  updatedAt_gt?: DateTime | null
+  updatedAt_gte?: DateTime | null
+  updatedById_eq?: ID_Input | null
+  updatedById_in?: ID_Output[] | ID_Output | null
+  deletedAt_all?: Boolean | null
+  deletedAt_eq?: DateTime | null
+  deletedAt_lt?: DateTime | null
+  deletedAt_lte?: DateTime | null
+  deletedAt_gt?: DateTime | null
+  deletedAt_gte?: DateTime | null
+  deletedById_eq?: ID_Input | null
+  deletedById_in?: ID_Output[] | ID_Output | null
+  version_eq?: Int | null
+  version_gt?: Int | null
+  version_gte?: Int | null
+  version_lt?: Int | null
+  version_lte?: Int | null
+  version_in?: Int[] | Int | null
+  contractId_eq?: Int | null
+  contractId_gt?: Int | null
+  contractId_gte?: Int | null
+  contractId_lt?: Int | null
+  contractId_lte?: Int | null
+  contractId_in?: Int[] | Int | null
+  twinId_eq?: Int | null
+  twinId_gt?: Int | null
+  twinId_gte?: Int | null
+  twinId_lt?: Int | null
+  twinId_lte?: Int | null
+  twinId_in?: Int[] | Int | null
+  nodeId_eq?: Int | null
+  nodeId_gt?: Int | null
+  nodeId_gte?: Int | null
+  nodeId_lt?: Int | null
+  nodeId_lte?: Int | null
+  nodeId_in?: Int[] | Int | null
+  deploymentData_eq?: String | null
+  deploymentData_contains?: String | null
+  deploymentData_startsWith?: String | null
+  deploymentData_endsWith?: String | null
+  deploymentData_in?: String[] | String | null
+  deploymentHash_eq?: String | null
+  deploymentHash_contains?: String | null
+  deploymentHash_startsWith?: String | null
+  deploymentHash_endsWith?: String | null
+  deploymentHash_in?: String[] | String | null
+  numberOfPublicIPs_eq?: Int | null
+  numberOfPublicIPs_gt?: Int | null
+  numberOfPublicIPs_gte?: Int | null
+  numberOfPublicIPs_lt?: Int | null
+  numberOfPublicIPs_lte?: Int | null
+  numberOfPublicIPs_in?: Int[] | Int | null
+  state_eq?: ContractState | null
+  state_in?: ContractState[] | ContractState | null
+  AND?: NodeContractWhereInput[] | NodeContractWhereInput | null
+  OR?: NodeContractWhereInput[] | NodeContractWhereInput | null
+}
+
+export interface NodeContractWhereUniqueInput {
   id: ID_Output
 }
 
@@ -1452,6 +1657,31 @@ export interface ConsumptionEdge {
   cursor: String
 }
 
+export interface ContractBillReport extends BaseGraphQLObject {
+  id: ID_Output
+  createdAt: DateTime
+  createdById: String
+  updatedAt?: DateTime | null
+  updatedById?: String | null
+  deletedAt?: DateTime | null
+  deletedById?: String | null
+  version: Int
+  contractId: Int
+  discountReceived: String
+  amountBilled: Int
+}
+
+export interface ContractBillReportConnection {
+  totalCount: Int
+  edges: Array<ContractBillReportEdge>
+  pageInfo: PageInfo
+}
+
+export interface ContractBillReportEdge {
+  node: ContractBillReport
+  cursor: String
+}
+
 export interface Country extends BaseGraphQLObject {
   id: ID_Output
   createdAt: DateTime
@@ -1617,6 +1847,35 @@ export interface NodeConnection {
   totalCount: Int
   edges: Array<NodeEdge>
   pageInfo: PageInfo
+}
+
+export interface NodeContract extends BaseGraphQLObject {
+  id: ID_Output
+  createdAt: DateTime
+  createdById: String
+  updatedAt?: DateTime | null
+  updatedById?: String | null
+  deletedAt?: DateTime | null
+  deletedById?: String | null
+  version: Int
+  contractId: Int
+  twinId: Int
+  nodeId: Int
+  deploymentData: String
+  deploymentHash: String
+  numberOfPublicIPs: Int
+  state: ContractState
+}
+
+export interface NodeContractConnection {
+  totalCount: Int
+  edges: Array<NodeContractEdge>
+  pageInfo: PageInfo
+}
+
+export interface NodeContractEdge {
+  node: NodeContract
+  cursor: String
 }
 
 export interface NodeEdge {

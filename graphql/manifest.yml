@@ -29,6 +29,10 @@ typegen:
     - tfgridModule.TwinEntityStored
     - tfgridModule.TwinEntityRemoved
     - smartContractModule.ConsumptionReportReceived
+    - smartContractModule.ContractCreated
+    - smartContractModule.ContractUpdated
+    - smartContractModule.ContractCanceled
+    - smartContractModule.ContractBilled
   # calls:
   #   - timestamp.set
   outDir: ./mappings/generated/types
@@ -67,6 +71,14 @@ mappings:
       handler: farmDeleted
     - event: smartContractModule.ConsumptionReportReceived
       handler: consumptionReportReceived
+    - event: smartContractModule.ContractCreated
+      handler: contractCreated
+    - event: smartContractModule.ContractUpdated
+      handler: contractUpdated
+    - event: smartContractModule.ContractCanceled
+      handler: contractCanceled
+    - event: smartContractModule.ContractBilled
+      handler: contractBilled
   # extrinsicHandlers:
   #   # infer defaults
   #   - extrinsic: timestamp.set 

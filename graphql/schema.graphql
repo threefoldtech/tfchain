@@ -104,6 +104,23 @@ type City @entity {
   name: String!
 }
 
+type NodeContract @entity {
+  version: Int!
+  contract_id: Int!
+  twin_id: Int!
+  node_id: Int!
+  deployment_data: String!
+  deployment_hash: String!
+  numberOfPublicIPs: Int!
+  state: ContractState!
+}
+
+enum ContractState {
+  Created,
+  Deleted,
+  OutOfFunds
+}
+
 type Consumption @entity {
   contractID: Int!
   timestamp: Int!
@@ -112,4 +129,10 @@ type Consumption @entity {
   hru: Int!
   mru: Int!
   nru: Int!
+}
+
+type ContractBillReport @entity {
+  contract_id: Int!
+  discount_received: String!
+  amount_billed: Int!
 }

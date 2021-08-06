@@ -310,6 +310,114 @@ input ConsumptionWhereUniqueInput {
   id: ID!
 }
 
+type ContractBillReport implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  contractId: Int!
+  discountReceived: String!
+  amountBilled: Int!
+}
+
+type ContractBillReportConnection {
+  totalCount: Int!
+  edges: [ContractBillReportEdge!]!
+  pageInfo: PageInfo!
+}
+
+input ContractBillReportCreateInput {
+  contractId: Float!
+  discountReceived: String!
+  amountBilled: Float!
+}
+
+type ContractBillReportEdge {
+  node: ContractBillReport!
+  cursor: String!
+}
+
+enum ContractBillReportOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  contractId_ASC
+  contractId_DESC
+  discountReceived_ASC
+  discountReceived_DESC
+  amountBilled_ASC
+  amountBilled_DESC
+}
+
+input ContractBillReportUpdateInput {
+  contractId: Float
+  discountReceived: String
+  amountBilled: Float
+}
+
+input ContractBillReportWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  contractId_eq: Int
+  contractId_gt: Int
+  contractId_gte: Int
+  contractId_lt: Int
+  contractId_lte: Int
+  contractId_in: [Int!]
+  discountReceived_eq: String
+  discountReceived_contains: String
+  discountReceived_startsWith: String
+  discountReceived_endsWith: String
+  discountReceived_in: [String!]
+  amountBilled_eq: Int
+  amountBilled_gt: Int
+  amountBilled_gte: Int
+  amountBilled_lt: Int
+  amountBilled_lte: Int
+  amountBilled_in: [Int!]
+  AND: [ContractBillReportWhereInput!]
+  OR: [ContractBillReportWhereInput!]
+}
+
+input ContractBillReportWhereUniqueInput {
+  id: ID!
+}
+
+enum ContractState {
+  Created
+  Deleted
+  OutOfFunds
+}
+
 type Country implements BaseGraphQLObject {
   id: ID!
   createdAt: DateTime!
@@ -945,6 +1053,157 @@ type NodeConnection {
   pageInfo: PageInfo!
 }
 
+type NodeContract implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  contractId: Int!
+  twinId: Int!
+  nodeId: Int!
+  deploymentData: String!
+  deploymentHash: String!
+  numberOfPublicIPs: Int!
+  state: ContractState!
+}
+
+type NodeContractConnection {
+  totalCount: Int!
+  edges: [NodeContractEdge!]!
+  pageInfo: PageInfo!
+}
+
+input NodeContractCreateInput {
+  version: Float!
+  contractId: Float!
+  twinId: Float!
+  nodeId: Float!
+  deploymentData: String!
+  deploymentHash: String!
+  numberOfPublicIPs: Float!
+  state: ContractState!
+}
+
+type NodeContractEdge {
+  node: NodeContract!
+  cursor: String!
+}
+
+enum NodeContractOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  version_ASC
+  version_DESC
+  contractId_ASC
+  contractId_DESC
+  twinId_ASC
+  twinId_DESC
+  nodeId_ASC
+  nodeId_DESC
+  deploymentData_ASC
+  deploymentData_DESC
+  deploymentHash_ASC
+  deploymentHash_DESC
+  numberOfPublicIPs_ASC
+  numberOfPublicIPs_DESC
+  state_ASC
+  state_DESC
+}
+
+input NodeContractUpdateInput {
+  version: Float
+  contractId: Float
+  twinId: Float
+  nodeId: Float
+  deploymentData: String
+  deploymentHash: String
+  numberOfPublicIPs: Float
+  state: ContractState
+}
+
+input NodeContractWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  version_eq: Int
+  version_gt: Int
+  version_gte: Int
+  version_lt: Int
+  version_lte: Int
+  version_in: [Int!]
+  contractId_eq: Int
+  contractId_gt: Int
+  contractId_gte: Int
+  contractId_lt: Int
+  contractId_lte: Int
+  contractId_in: [Int!]
+  twinId_eq: Int
+  twinId_gt: Int
+  twinId_gte: Int
+  twinId_lt: Int
+  twinId_lte: Int
+  twinId_in: [Int!]
+  nodeId_eq: Int
+  nodeId_gt: Int
+  nodeId_gte: Int
+  nodeId_lt: Int
+  nodeId_lte: Int
+  nodeId_in: [Int!]
+  deploymentData_eq: String
+  deploymentData_contains: String
+  deploymentData_startsWith: String
+  deploymentData_endsWith: String
+  deploymentData_in: [String!]
+  deploymentHash_eq: String
+  deploymentHash_contains: String
+  deploymentHash_startsWith: String
+  deploymentHash_endsWith: String
+  deploymentHash_in: [String!]
+  numberOfPublicIPs_eq: Int
+  numberOfPublicIPs_gt: Int
+  numberOfPublicIPs_gte: Int
+  numberOfPublicIPs_lt: Int
+  numberOfPublicIPs_lte: Int
+  numberOfPublicIPs_in: [Int!]
+  state_eq: ContractState
+  state_in: [ContractState!]
+  AND: [NodeContractWhereInput!]
+  OR: [NodeContractWhereInput!]
+}
+
+input NodeContractWhereUniqueInput {
+  id: ID!
+}
+
 input NodeCreateInput {
   gridVersion: Float!
   nodeId: Float!
@@ -1502,6 +1761,9 @@ type Query {
   consumptions(offset: Int, limit: Int = 50, where: ConsumptionWhereInput, orderBy: [ConsumptionOrderByInput!]): [Consumption!]!
   consumptionByUniqueInput(where: ConsumptionWhereUniqueInput!): Consumption
   consumptionsConnection(first: Int, after: String, last: Int, before: String, where: ConsumptionWhereInput, orderBy: [ConsumptionOrderByInput!]): ConsumptionConnection!
+  contractBillReports(offset: Int, limit: Int = 50, where: ContractBillReportWhereInput, orderBy: [ContractBillReportOrderByInput!]): [ContractBillReport!]!
+  contractBillReportByUniqueInput(where: ContractBillReportWhereUniqueInput!): ContractBillReport
+  contractBillReportsConnection(first: Int, after: String, last: Int, before: String, where: ContractBillReportWhereInput, orderBy: [ContractBillReportOrderByInput!]): ContractBillReportConnection!
   countries(offset: Int, limit: Int = 50, where: CountryWhereInput, orderBy: [CountryOrderByInput!]): [Country!]!
   countryByUniqueInput(where: CountryWhereUniqueInput!): Country
   countriesConnection(first: Int, after: String, last: Int, before: String, where: CountryWhereInput, orderBy: [CountryOrderByInput!]): CountryConnection!
@@ -1517,6 +1779,9 @@ type Query {
   locations(offset: Int, limit: Int = 50, where: LocationWhereInput, orderBy: [LocationOrderByInput!]): [Location!]!
   locationByUniqueInput(where: LocationWhereUniqueInput!): Location
   locationsConnection(first: Int, after: String, last: Int, before: String, where: LocationWhereInput, orderBy: [LocationOrderByInput!]): LocationConnection!
+  nodeContracts(offset: Int, limit: Int = 50, where: NodeContractWhereInput, orderBy: [NodeContractOrderByInput!]): [NodeContract!]!
+  nodeContractByUniqueInput(where: NodeContractWhereUniqueInput!): NodeContract
+  nodeContractsConnection(first: Int, after: String, last: Int, before: String, where: NodeContractWhereInput, orderBy: [NodeContractOrderByInput!]): NodeContractConnection!
   nodes(offset: Int, limit: Int = 50, where: NodeWhereInput, orderBy: [NodeOrderByInput!]): [Node!]!
   nodeByUniqueInput(where: NodeWhereUniqueInput!): Node
   nodesConnection(first: Int, after: String, last: Int, before: String, where: NodeWhereInput, orderBy: [NodeOrderByInput!]): NodeConnection!
