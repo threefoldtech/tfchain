@@ -383,95 +383,95 @@ export class ConsumptionWhereInput {
   @TypeGraphQLField(() => [Int], { nullable: true })
   timestamp_in?: number[];
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cru_eq?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  cru_eq?: BN;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cru_gt?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  cru_gt?: BN;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cru_gte?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  cru_gte?: BN;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cru_lt?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  cru_lt?: BN;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cru_lte?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  cru_lte?: BN;
 
-  @TypeGraphQLField(() => [Int], { nullable: true })
-  cru_in?: number[];
+  @TypeGraphQLField(() => [BigInt], { nullable: true })
+  cru_in?: BN[];
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  sru_eq?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  sru_eq?: BN;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  sru_gt?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  sru_gt?: BN;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  sru_gte?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  sru_gte?: BN;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  sru_lt?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  sru_lt?: BN;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  sru_lte?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  sru_lte?: BN;
 
-  @TypeGraphQLField(() => [Int], { nullable: true })
-  sru_in?: number[];
+  @TypeGraphQLField(() => [BigInt], { nullable: true })
+  sru_in?: BN[];
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  hru_eq?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  hru_eq?: BN;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  hru_gt?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  hru_gt?: BN;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  hru_gte?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  hru_gte?: BN;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  hru_lt?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  hru_lt?: BN;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  hru_lte?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  hru_lte?: BN;
 
-  @TypeGraphQLField(() => [Int], { nullable: true })
-  hru_in?: number[];
+  @TypeGraphQLField(() => [BigInt], { nullable: true })
+  hru_in?: BN[];
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  mru_eq?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  mru_eq?: BN;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  mru_gt?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  mru_gt?: BN;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  mru_gte?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  mru_gte?: BN;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  mru_lt?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  mru_lt?: BN;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  mru_lte?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  mru_lte?: BN;
 
-  @TypeGraphQLField(() => [Int], { nullable: true })
-  mru_in?: number[];
+  @TypeGraphQLField(() => [BigInt], { nullable: true })
+  mru_in?: BN[];
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  nru_eq?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  nru_eq?: BN;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  nru_gt?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  nru_gt?: BN;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  nru_gte?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  nru_gte?: BN;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  nru_lt?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  nru_lt?: BN;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  nru_lte?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  nru_lte?: BN;
 
-  @TypeGraphQLField(() => [Int], { nullable: true })
-  nru_in?: number[];
+  @TypeGraphQLField(() => [BigInt], { nullable: true })
+  nru_in?: BN[];
 
   @TypeGraphQLField(() => ConsumptionWhereInput, { nullable: true })
   AND?: [ConsumptionWhereInput];
@@ -494,20 +494,20 @@ export class ConsumptionCreateInput {
   @TypeGraphQLField()
   timestamp!: number;
 
-  @TypeGraphQLField()
-  cru!: number;
+  @TypeGraphQLField(() => BigInt)
+  cru!: BN;
 
-  @TypeGraphQLField()
-  sru!: number;
+  @TypeGraphQLField(() => BigInt)
+  sru!: BN;
 
-  @TypeGraphQLField()
-  hru!: number;
+  @TypeGraphQLField(() => BigInt)
+  hru!: BN;
 
-  @TypeGraphQLField()
-  mru!: number;
+  @TypeGraphQLField(() => BigInt)
+  mru!: BN;
 
-  @TypeGraphQLField()
-  nru!: number;
+  @TypeGraphQLField(() => BigInt)
+  nru!: BN;
 }
 
 @TypeGraphQLInputType()
@@ -518,20 +518,20 @@ export class ConsumptionUpdateInput {
   @TypeGraphQLField({ nullable: true })
   timestamp?: number;
 
-  @TypeGraphQLField({ nullable: true })
-  cru?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  cru?: BN;
 
-  @TypeGraphQLField({ nullable: true })
-  sru?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  sru?: BN;
 
-  @TypeGraphQLField({ nullable: true })
-  hru?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  hru?: BN;
 
-  @TypeGraphQLField({ nullable: true })
-  mru?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  mru?: BN;
 
-  @TypeGraphQLField({ nullable: true })
-  nru?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  nru?: BN;
 }
 
 @ArgsType()

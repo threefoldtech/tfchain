@@ -9,11 +9,11 @@ async function consumptionReportReceived({ store, event, block, extrinsic, }) {
     const [consumptionReport] = new types_1.SmartContractModule.ConsumptionReportReceivedEvent(event).params;
     newConsumptionReport.contractId = consumptionReport.contract_id.toNumber();
     newConsumptionReport.timestamp = consumptionReport.timestamp.toNumber();
-    newConsumptionReport.cru = consumptionReport.cru.toNumber();
-    newConsumptionReport.sru = consumptionReport.sru.toNumber();
-    newConsumptionReport.hru = consumptionReport.hru.toNumber();
-    newConsumptionReport.mru = consumptionReport.mru.toNumber();
-    newConsumptionReport.nru = consumptionReport.nru.toNumber();
+    newConsumptionReport.cru = consumptionReport.cru.toBn();
+    newConsumptionReport.sru = consumptionReport.sru.toBn();
+    newConsumptionReport.hru = consumptionReport.hru.toBn();
+    newConsumptionReport.mru = consumptionReport.mru.toBn();
+    newConsumptionReport.nru = consumptionReport.nru.toBn();
     await store.save(newConsumptionReport);
 }
 exports.consumptionReportReceived = consumptionReportReceived;

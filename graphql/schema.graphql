@@ -124,11 +124,11 @@ enum ContractState {
 type Consumption @entity {
   contractID: Int!
   timestamp: Int!
-  cru: Int!
-  sru: Int!
-  hru: Int!
-  mru: Int!
-  nru: Int!
+  cru: BigInt!
+  sru: BigInt!
+  hru: BigInt!
+  mru: BigInt!
+  nru: BigInt!
 }
 
 type ContractBillReport @entity {

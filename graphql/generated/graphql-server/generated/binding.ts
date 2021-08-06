@@ -435,21 +435,21 @@ export interface CityWhereUniqueInput {
 export interface ConsumptionCreateInput {
   contractId: Float
   timestamp: Float
-  cru: Float
-  sru: Float
-  hru: Float
-  mru: Float
-  nru: Float
+  cru: BigInt
+  sru: BigInt
+  hru: BigInt
+  mru: BigInt
+  nru: BigInt
 }
 
 export interface ConsumptionUpdateInput {
   contractId?: Float | null
   timestamp?: Float | null
-  cru?: Float | null
-  sru?: Float | null
-  hru?: Float | null
-  mru?: Float | null
-  nru?: Float | null
+  cru?: BigInt | null
+  sru?: BigInt | null
+  hru?: BigInt | null
+  mru?: BigInt | null
+  nru?: BigInt | null
 }
 
 export interface ConsumptionWhereInput {
@@ -489,36 +489,36 @@ export interface ConsumptionWhereInput {
   timestamp_lt?: Int | null
   timestamp_lte?: Int | null
   timestamp_in?: Int[] | Int | null
-  cru_eq?: Int | null
-  cru_gt?: Int | null
-  cru_gte?: Int | null
-  cru_lt?: Int | null
-  cru_lte?: Int | null
-  cru_in?: Int[] | Int | null
-  sru_eq?: Int | null
-  sru_gt?: Int | null
-  sru_gte?: Int | null
-  sru_lt?: Int | null
-  sru_lte?: Int | null
-  sru_in?: Int[] | Int | null
-  hru_eq?: Int | null
-  hru_gt?: Int | null
-  hru_gte?: Int | null
-  hru_lt?: Int | null
-  hru_lte?: Int | null
-  hru_in?: Int[] | Int | null
-  mru_eq?: Int | null
-  mru_gt?: Int | null
-  mru_gte?: Int | null
-  mru_lt?: Int | null
-  mru_lte?: Int | null
-  mru_in?: Int[] | Int | null
-  nru_eq?: Int | null
-  nru_gt?: Int | null
-  nru_gte?: Int | null
-  nru_lt?: Int | null
-  nru_lte?: Int | null
-  nru_in?: Int[] | Int | null
+  cru_eq?: BigInt | null
+  cru_gt?: BigInt | null
+  cru_gte?: BigInt | null
+  cru_lt?: BigInt | null
+  cru_lte?: BigInt | null
+  cru_in?: BigInt[] | BigInt | null
+  sru_eq?: BigInt | null
+  sru_gt?: BigInt | null
+  sru_gte?: BigInt | null
+  sru_lt?: BigInt | null
+  sru_lte?: BigInt | null
+  sru_in?: BigInt[] | BigInt | null
+  hru_eq?: BigInt | null
+  hru_gt?: BigInt | null
+  hru_gte?: BigInt | null
+  hru_lt?: BigInt | null
+  hru_lte?: BigInt | null
+  hru_in?: BigInt[] | BigInt | null
+  mru_eq?: BigInt | null
+  mru_gt?: BigInt | null
+  mru_gte?: BigInt | null
+  mru_lt?: BigInt | null
+  mru_lte?: BigInt | null
+  mru_in?: BigInt[] | BigInt | null
+  nru_eq?: BigInt | null
+  nru_gt?: BigInt | null
+  nru_gte?: BigInt | null
+  nru_lt?: BigInt | null
+  nru_lte?: BigInt | null
+  nru_in?: BigInt[] | BigInt | null
   AND?: ConsumptionWhereInput[] | ConsumptionWhereInput | null
   OR?: ConsumptionWhereInput[] | ConsumptionWhereInput | null
 }
@@ -1639,11 +1639,11 @@ export interface Consumption extends BaseGraphQLObject {
   version: Int
   contractId: Int
   timestamp: Int
-  cru: Int
-  sru: Int
-  hru: Int
-  mru: Int
-  nru: Int
+  cru: BigInt
+  sru: BigInt
+  hru: BigInt
+  mru: BigInt
+  nru: BigInt
 }
 
 export interface ConsumptionConnection {

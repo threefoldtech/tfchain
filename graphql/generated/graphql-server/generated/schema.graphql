@@ -174,11 +174,11 @@ type Consumption implements BaseGraphQLObject {
   version: Int!
   contractId: Int!
   timestamp: Int!
-  cru: Int!
-  sru: Int!
-  hru: Int!
-  mru: Int!
-  nru: Int!
+  cru: BigInt!
+  sru: BigInt!
+  hru: BigInt!
+  mru: BigInt!
+  nru: BigInt!
 }
 
 type ConsumptionConnection {
@@ -190,11 +190,11 @@ type ConsumptionConnection {
 input ConsumptionCreateInput {
   contractId: Float!
   timestamp: Float!
-  cru: Float!
-  sru: Float!
-  hru: Float!
-  mru: Float!
-  nru: Float!
+  cru: BigInt!
+  sru: BigInt!
+  hru: BigInt!
+  mru: BigInt!
+  nru: BigInt!
 }
 
 type ConsumptionEdge {
@@ -228,11 +228,11 @@ enum ConsumptionOrderByInput {
 input ConsumptionUpdateInput {
   contractId: Float
   timestamp: Float
-  cru: Float
-  sru: Float
-  hru: Float
-  mru: Float
-  nru: Float
+  cru: BigInt
+  sru: BigInt
+  hru: BigInt
+  mru: BigInt
+  nru: BigInt
 }
 
 input ConsumptionWhereInput {
@@ -272,36 +272,36 @@ input ConsumptionWhereInput {
   timestamp_lt: Int
   timestamp_lte: Int
   timestamp_in: [Int!]
-  cru_eq: Int
-  cru_gt: Int
-  cru_gte: Int
-  cru_lt: Int
-  cru_lte: Int
-  cru_in: [Int!]
-  sru_eq: Int
-  sru_gt: Int
-  sru_gte: Int
-  sru_lt: Int
-  sru_lte: Int
-  sru_in: [Int!]
-  hru_eq: Int
-  hru_gt: Int
-  hru_gte: Int
-  hru_lt: Int
-  hru_lte: Int
-  hru_in: [Int!]
-  mru_eq: Int
-  mru_gt: Int
-  mru_gte: Int
-  mru_lt: Int
-  mru_lte: Int
-  mru_in: [Int!]
-  nru_eq: Int
-  nru_gt: Int
-  nru_gte: Int
-  nru_lt: Int
-  nru_lte: Int
-  nru_in: [Int!]
+  cru_eq: BigInt
+  cru_gt: BigInt
+  cru_gte: BigInt
+  cru_lt: BigInt
+  cru_lte: BigInt
+  cru_in: [BigInt!]
+  sru_eq: BigInt
+  sru_gt: BigInt
+  sru_gte: BigInt
+  sru_lt: BigInt
+  sru_lte: BigInt
+  sru_in: [BigInt!]
+  hru_eq: BigInt
+  hru_gt: BigInt
+  hru_gte: BigInt
+  hru_lt: BigInt
+  hru_lte: BigInt
+  hru_in: [BigInt!]
+  mru_eq: BigInt
+  mru_gt: BigInt
+  mru_gte: BigInt
+  mru_lt: BigInt
+  mru_lte: BigInt
+  mru_in: [BigInt!]
+  nru_eq: BigInt
+  nru_gt: BigInt
+  nru_gte: BigInt
+  nru_lt: BigInt
+  nru_lte: BigInt
+  nru_in: [BigInt!]
   AND: [ConsumptionWhereInput!]
   OR: [ConsumptionWhereInput!]
 }
