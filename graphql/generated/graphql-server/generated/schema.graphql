@@ -174,11 +174,11 @@ type Consumption implements BaseGraphQLObject {
   version: Int!
   contractId: Int!
   timestamp: Int!
-  cru: BigInt!
-  sru: BigInt!
-  hru: BigInt!
-  mru: BigInt!
-  nru: BigInt!
+  cru: BigInt
+  sru: BigInt
+  hru: BigInt
+  mru: BigInt
+  nru: BigInt
 }
 
 type ConsumptionConnection {
@@ -190,11 +190,11 @@ type ConsumptionConnection {
 input ConsumptionCreateInput {
   contractId: Float!
   timestamp: Float!
-  cru: BigInt!
-  sru: BigInt!
-  hru: BigInt!
-  mru: BigInt!
-  nru: BigInt!
+  cru: BigInt
+  sru: BigInt
+  hru: BigInt
+  mru: BigInt
+  nru: BigInt
 }
 
 type ConsumptionEdge {

@@ -435,11 +435,11 @@ export interface CityWhereUniqueInput {
 export interface ConsumptionCreateInput {
   contractId: Float
   timestamp: Float
-  cru: BigInt
-  sru: BigInt
-  hru: BigInt
-  mru: BigInt
-  nru: BigInt
+  cru?: BigInt | null
+  sru?: BigInt | null
+  hru?: BigInt | null
+  mru?: BigInt | null
+  nru?: BigInt | null
 }
 
 export interface ConsumptionUpdateInput {
@@ -1639,11 +1639,11 @@ export interface Consumption extends BaseGraphQLObject {
   version: Int
   contractId: Int
   timestamp: Int
-  cru: BigInt
-  sru: BigInt
-  hru: BigInt
-  mru: BigInt
-  nru: BigInt
+  cru?: BigInt | null
+  sru?: BigInt | null
+  hru?: BigInt | null
+  mru?: BigInt | null
+  nru?: BigInt | null
 }
 
 export interface ConsumptionConnection {

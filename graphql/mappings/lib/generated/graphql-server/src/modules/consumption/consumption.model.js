@@ -20,6 +20,7 @@ tslib_1.__decorate([
 ], Consumption.prototype, "timestamp", void 0);
 tslib_1.__decorate([
     warthog_1.NumericField({
+        nullable: true,
         transformer: {
             to: (entityValue) => (entityValue !== undefined ? entityValue.toString(10) : null),
             from: (dbValue) => dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new bn_js_1.default(dbValue, 10) : undefined
@@ -29,6 +30,7 @@ tslib_1.__decorate([
 ], Consumption.prototype, "cru", void 0);
 tslib_1.__decorate([
     warthog_1.NumericField({
+        nullable: true,
         transformer: {
             to: (entityValue) => (entityValue !== undefined ? entityValue.toString(10) : null),
             from: (dbValue) => dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new bn_js_1.default(dbValue, 10) : undefined
@@ -38,6 +40,7 @@ tslib_1.__decorate([
 ], Consumption.prototype, "sru", void 0);
 tslib_1.__decorate([
     warthog_1.NumericField({
+        nullable: true,
         transformer: {
             to: (entityValue) => (entityValue !== undefined ? entityValue.toString(10) : null),
             from: (dbValue) => dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new bn_js_1.default(dbValue, 10) : undefined
@@ -47,6 +50,7 @@ tslib_1.__decorate([
 ], Consumption.prototype, "hru", void 0);
 tslib_1.__decorate([
     warthog_1.NumericField({
+        nullable: true,
         transformer: {
             to: (entityValue) => (entityValue !== undefined ? entityValue.toString(10) : null),
             from: (dbValue) => dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new bn_js_1.default(dbValue, 10) : undefined
@@ -56,6 +60,7 @@ tslib_1.__decorate([
 ], Consumption.prototype, "mru", void 0);
 tslib_1.__decorate([
     warthog_1.NumericField({
+        nullable: true,
         transformer: {
             to: (entityValue) => (entityValue !== undefined ? entityValue.toString(10) : null),
             from: (dbValue) => dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new bn_js_1.default(dbValue, 10) : undefined

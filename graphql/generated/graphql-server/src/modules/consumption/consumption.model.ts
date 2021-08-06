@@ -11,49 +11,59 @@ export class Consumption extends BaseModel {
   timestamp!: number;
 
   @NumericField({
+    nullable: true,
+
     transformer: {
       to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
       from: (dbValue: string) =>
         dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
     }
   })
-  cru!: BN;
+  cru?: BN;
 
   @NumericField({
+    nullable: true,
+
     transformer: {
       to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
       from: (dbValue: string) =>
         dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
     }
   })
-  sru!: BN;
+  sru?: BN;
 
   @NumericField({
+    nullable: true,
+
     transformer: {
       to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
       from: (dbValue: string) =>
         dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
     }
   })
-  hru!: BN;
+  hru?: BN;
 
   @NumericField({
+    nullable: true,
+
     transformer: {
       to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
       from: (dbValue: string) =>
         dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
     }
   })
-  mru!: BN;
+  mru?: BN;
 
   @NumericField({
+    nullable: true,
+
     transformer: {
       to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
       from: (dbValue: string) =>
         dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
     }
   })
-  nru!: BN;
+  nru?: BN;
 
   constructor(init?: Partial<Consumption>) {
     super();

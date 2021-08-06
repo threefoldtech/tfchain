@@ -494,20 +494,20 @@ export class ConsumptionCreateInput {
   @TypeGraphQLField()
   timestamp!: number;
 
-  @TypeGraphQLField(() => BigInt)
-  cru!: BN;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  cru?: BN;
 
-  @TypeGraphQLField(() => BigInt)
-  sru!: BN;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  sru?: BN;
 
-  @TypeGraphQLField(() => BigInt)
-  hru!: BN;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  hru?: BN;
 
-  @TypeGraphQLField(() => BigInt)
-  mru!: BN;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  mru?: BN;
 
-  @TypeGraphQLField(() => BigInt)
-  nru!: BN;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  nru?: BN;
 }
 
 @TypeGraphQLInputType()
