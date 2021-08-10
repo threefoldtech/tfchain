@@ -7,3 +7,10 @@ export declare enum ContractState {
     Deleted = "Deleted",
     OutOfFunds = "OutOfFunds"
 }
+export declare enum DiscountLevel {
+    None = "None",
+    Default = "Default",
+    Bronze = "Bronze",
+    Silver = "Silver",
+    Gold = "Gold"
+}

@@ -130,6 +130,15 @@
     "mru": "u64",
     "nru": "u64"
   },
+  "DiscountLevel": {
+    "_enum": [
+      "None",
+      "Default",
+      "Bronze",
+      "Silver",
+      "Gold"
+    ]
+  },
   "Address": "MultiAddress",
   "LookupSource": "MultiAddress",
   "BalanceOf": "Balance",

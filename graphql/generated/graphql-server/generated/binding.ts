@@ -151,6 +151,12 @@ export type CountryOrderByInput =   'createdAt_ASC' |
   'subregion_ASC' |
   'subregion_DESC'
 
+export type DiscountLevel =   'None' |
+  'Default' |
+  'Bronze' |
+  'Silver' |
+  'Gold'
+
 export type EntityOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
   'updatedAt_ASC' |
@@ -529,13 +535,13 @@ export interface ConsumptionWhereUniqueInput {
 
 export interface ContractBillReportCreateInput {
   contractId: Float
-  discountReceived: String
+  discountReceived: DiscountLevel
   amountBilled: Float
 }
 
 export interface ContractBillReportUpdateInput {
   contractId?: Float | null
-  discountReceived?: String | null
+  discountReceived?: DiscountLevel | null
   amountBilled?: Float | null
 }
 
@@ -570,11 +576,8 @@ export interface ContractBillReportWhereInput {
   contractId_lt?: Int | null
   contractId_lte?: Int | null
   contractId_in?: Int[] | Int | null
-  discountReceived_eq?: String | null
-  discountReceived_contains?: String | null
-  discountReceived_startsWith?: String | null
-  discountReceived_endsWith?: String | null
-  discountReceived_in?: String[] | String | null
+  discountReceived_eq?: DiscountLevel | null
+  discountReceived_in?: DiscountLevel[] | DiscountLevel | null
   amountBilled_eq?: Int | null
   amountBilled_gt?: Int | null
   amountBilled_gte?: Int | null
@@ -1667,7 +1670,7 @@ export interface ContractBillReport extends BaseGraphQLObject {
   deletedById?: String | null
   version: Int
   contractId: Int
-  discountReceived: String
+  discountReceived: DiscountLevel
   amountBilled: Int
 }
 

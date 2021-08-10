@@ -320,7 +320,7 @@ type ContractBillReport implements BaseGraphQLObject {
   deletedById: String
   version: Int!
   contractId: Int!
-  discountReceived: String!
+  discountReceived: DiscountLevel!
   amountBilled: Int!
 }
 
@@ -332,7 +332,7 @@ type ContractBillReportConnection {
 
 input ContractBillReportCreateInput {
   contractId: Float!
-  discountReceived: String!
+  discountReceived: DiscountLevel!
   amountBilled: Float!
 }
 
@@ -358,7 +358,7 @@ enum ContractBillReportOrderByInput {
 
 input ContractBillReportUpdateInput {
   contractId: Float
-  discountReceived: String
+  discountReceived: DiscountLevel
   amountBilled: Float
 }
 
@@ -393,11 +393,8 @@ input ContractBillReportWhereInput {
   contractId_lt: Int
   contractId_lte: Int
   contractId_in: [Int!]
-  discountReceived_eq: String
-  discountReceived_contains: String
-  discountReceived_startsWith: String
-  discountReceived_endsWith: String
-  discountReceived_in: [String!]
+  discountReceived_eq: DiscountLevel
+  discountReceived_in: [DiscountLevel!]
   amountBilled_eq: Int
   amountBilled_gt: Int
   amountBilled_gte: Int
@@ -535,6 +532,14 @@ scalar DateTime
 
 interface DeleteResponse {
   id: ID!
+}
+
+enum DiscountLevel {
+  None
+  Default
+  Bronze
+  Silver
+  Gold
 }
 
 type Entity implements BaseGraphQLObject {

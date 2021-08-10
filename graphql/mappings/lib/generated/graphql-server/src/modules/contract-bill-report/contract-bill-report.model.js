@@ -1,8 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ContractBillReport = void 0;
+exports.ContractBillReport = exports.DiscountLevel = void 0;
 const tslib_1 = require("tslib");
 const warthog_1 = require("warthog");
+const enums_1 = require("../enums/enums");
+Object.defineProperty(exports, "DiscountLevel", { enumerable: true, get: function () { return enums_1.DiscountLevel; } });
 let ContractBillReport = class ContractBillReport extends warthog_1.BaseModel {
     constructor(init) {
         super();
@@ -14,7 +16,7 @@ tslib_1.__decorate([
     tslib_1.__metadata("design:type", Number)
 ], ContractBillReport.prototype, "contractId", void 0);
 tslib_1.__decorate([
-    warthog_1.StringField({}),
+    warthog_1.EnumField('DiscountLevel', enums_1.DiscountLevel, {}),
     tslib_1.__metadata("design:type", String)
 ], ContractBillReport.prototype, "discountReceived", void 0);
 tslib_1.__decorate([

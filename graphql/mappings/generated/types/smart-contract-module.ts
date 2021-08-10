@@ -8,7 +8,7 @@ import { Bytes, u128, u64 } from "@polkadot/types";
 
 export namespace SmartContractModule {
   export class ConsumptionReportReceivedEvent {
-    public readonly expectedParamTypes = ["Consumption"];
+    public readonly expectedParamTypes = ["types::Consumption"];
 
     constructor(public readonly ctx: SubstrateEvent) {}
 
@@ -35,7 +35,7 @@ export namespace SmartContractModule {
   }
 
   export class ContractCreatedEvent {
-    public readonly expectedParamTypes = ["NodeContract"];
+    public readonly expectedParamTypes = ["types::NodeContract"];
 
     constructor(public readonly ctx: SubstrateEvent) {}
 
@@ -62,7 +62,7 @@ export namespace SmartContractModule {
   }
 
   export class ContractUpdatedEvent {
-    public readonly expectedParamTypes = ["NodeContract"];
+    public readonly expectedParamTypes = ["types::NodeContract"];
 
     constructor(public readonly ctx: SubstrateEvent) {}
 

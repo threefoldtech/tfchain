@@ -8,7 +8,7 @@ var SmartContractModule;
     class ConsumptionReportReceivedEvent {
         constructor(ctx) {
             this.ctx = ctx;
-            this.expectedParamTypes = ["Consumption"];
+            this.expectedParamTypes = ["types::Consumption"];
         }
         get params() {
             return [
@@ -34,7 +34,7 @@ var SmartContractModule;
     class ContractCreatedEvent {
         constructor(ctx) {
             this.ctx = ctx;
-            this.expectedParamTypes = ["NodeContract"];
+            this.expectedParamTypes = ["types::NodeContract"];
         }
         get params() {
             return [
@@ -60,7 +60,7 @@ var SmartContractModule;
     class ContractUpdatedEvent {
         constructor(ctx) {
             this.ctx = ctx;
-            this.expectedParamTypes = ["NodeContract"];
+            this.expectedParamTypes = ["types::NodeContract"];
         }
         get params() {
             return [

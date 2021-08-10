@@ -1,4 +1,4 @@
-import { Consumption, NodeContract, ContractState, PublicIp, ContractBillReport } from '../../generated/graphql-server/model'
+import { Consumption, NodeContract, ContractState, DiscountLevel, ContractBillReport } from '../../generated/graphql-server/model'
 import { SmartContractModule } from '../generated/types'
 import { hex2a } from './util'
 
@@ -143,7 +143,16 @@ export async function contractBilled({
   const [contract_id, discount_received, amount_billed] = new SmartContractModule.ContractBilledEvent(event).params
 
   newContractBilledReport.contractId = contract_id.toNumber()
-  newContractBilledReport.discountReceived = hex2a(Buffer.from(discount_received.toString()).toString())
+
+  let level = DiscountLevel.None
+  switch (discount_received.toString()) {
+    case 'None': break
+    case 'Default': level = DiscountLevel.Default
+    case 'Bronze': level = DiscountLevel.Bronze
+    case 'Silver': level = DiscountLevel.Silver
+    case 'Gold': level = DiscountLevel.Gold
+  }
+  newContractBilledReport.discountReceived = level
   newContractBilledReport.amountBilled = amount_billed.toNumber()
 
   await store.save<ContractBillReport>(newContractBilledReport)

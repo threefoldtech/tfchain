@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ContractState = exports.CertificationType = void 0;
+exports.DiscountLevel = exports.ContractState = exports.CertificationType = void 0;
 var CertificationType;
 (function (CertificationType) {
     CertificationType["Diy"] = "Diy";
@@ -12,3 +12,11 @@ var ContractState;
     ContractState["Deleted"] = "Deleted";
     ContractState["OutOfFunds"] = "OutOfFunds";
 })(ContractState = exports.ContractState || (exports.ContractState = {}));
+var DiscountLevel;
+(function (DiscountLevel) {
+    DiscountLevel["None"] = "None";
+    DiscountLevel["Default"] = "Default";
+    DiscountLevel["Bronze"] = "Bronze";
+    DiscountLevel["Silver"] = "Silver";
+    DiscountLevel["Gold"] = "Gold";
+})(DiscountLevel = exports.DiscountLevel || (exports.DiscountLevel = {}));

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ContractState = exports.CertificationType = exports.Twin = exports.Transfer = exports.PublicIp = exports.PublicConfig = exports.PricingPolicy = exports.NodeContract = exports.Node = exports.Location = exports.Farm = exports.EntityProof = exports.Entity = exports.Country = exports.ContractBillReport = exports.Consumption = exports.City = void 0;
+exports.DiscountLevel = exports.ContractState = exports.CertificationType = exports.Twin = exports.Transfer = exports.PublicIp = exports.PublicConfig = exports.PricingPolicy = exports.NodeContract = exports.Node = exports.Location = exports.Farm = exports.EntityProof = exports.Entity = exports.Country = exports.ContractBillReport = exports.Consumption = exports.City = void 0;
 const city_model_1 = require("../src/modules/city/city.model");
 Object.defineProperty(exports, "City", { enumerable: true, get: function () { return city_model_1.City; } });
 const consumption_model_1 = require("../src/modules/consumption/consumption.model");
@@ -35,3 +35,5 @@ const enums_1 = require("../src/modules/enums/enums");
 Object.defineProperty(exports, "CertificationType", { enumerable: true, get: function () { return enums_1.CertificationType; } });
 const enums_2 = require("../src/modules/enums/enums");
 Object.defineProperty(exports, "ContractState", { enumerable: true, get: function () { return enums_2.ContractState; } });
+const enums_3 = require("../src/modules/enums/enums");
+Object.defineProperty(exports, "DiscountLevel", { enumerable: true, get: function () { return enums_3.DiscountLevel; } });

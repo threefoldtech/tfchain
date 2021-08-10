@@ -32,3 +32,5 @@ import { CertificationType } from '../src/modules/enums/enums';
 export { CertificationType };
 import { ContractState } from '../src/modules/enums/enums';
 export { ContractState };
+import { DiscountLevel } from '../src/modules/enums/enums';
+export { DiscountLevel };

@@ -23,6 +23,7 @@ const { GraphQLJSONObject } = require('graphql-type-json');
 // @ts-ignore
 import { BaseWhereInput, JsonObject, PaginationArgs, DateOnlyString, DateTimeString, BigInt, Bytes } from 'warthog';
 
+import { DiscountLevel } from "../src/modules/contract-bill-report/contract-bill-report.model";
 import { CertificationType } from "../src/modules/farm/farm.model";
 import { ContractState } from "../src/modules/node-contract/node-contract.model";
 
@@ -671,20 +672,11 @@ export class ContractBillReportWhereInput {
   @TypeGraphQLField(() => [Int], { nullable: true })
   contractId_in?: number[];
 
-  @TypeGraphQLField({ nullable: true })
-  discountReceived_eq?: string;
+  @TypeGraphQLField(() => DiscountLevel, { nullable: true })
+  discountReceived_eq?: DiscountLevel;
 
-  @TypeGraphQLField({ nullable: true })
-  discountReceived_contains?: string;
-
-  @TypeGraphQLField({ nullable: true })
-  discountReceived_startsWith?: string;
-
-  @TypeGraphQLField({ nullable: true })
-  discountReceived_endsWith?: string;
-
-  @TypeGraphQLField(() => [String], { nullable: true })
-  discountReceived_in?: string[];
+  @TypeGraphQLField(() => [DiscountLevel], { nullable: true })
+  discountReceived_in?: DiscountLevel[];
 
   @TypeGraphQLField(() => Int, { nullable: true })
   amountBilled_eq?: number;
@@ -722,8 +714,8 @@ export class ContractBillReportCreateInput {
   @TypeGraphQLField()
   contractId!: number;
 
-  @TypeGraphQLField()
-  discountReceived!: string;
+  @TypeGraphQLField(() => DiscountLevel)
+  discountReceived!: DiscountLevel;
 
   @TypeGraphQLField()
   amountBilled!: number;
@@ -734,8 +726,8 @@ export class ContractBillReportUpdateInput {
   @TypeGraphQLField({ nullable: true })
   contractId?: number;
 
-  @TypeGraphQLField({ nullable: true })
-  discountReceived?: string;
+  @TypeGraphQLField(() => DiscountLevel, { nullable: true })
+  discountReceived?: DiscountLevel;
 
   @TypeGraphQLField({ nullable: true })
   amountBilled?: number;

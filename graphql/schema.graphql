@@ -133,6 +133,14 @@ type Consumption @entity {
 
 type ContractBillReport @entity {
   contract_id: Int!
-  discount_received: String!
+  discount_received: DiscountLevel!
   amount_billed: Int!
+}
+
+enum DiscountLevel {
+  None,
+  Default,
+  Bronze,
+  Silver,
+  Gold
 }

@@ -3,7 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.contractBilled = exports.contractCanceled = exports.contractUpdated = exports.contractCreated = exports.consumptionReportReceived = void 0;
 const model_1 = require("../../generated/graphql-server/model");
 const types_1 = require("../generated/types");
-const util_1 = require("./util");
 async function consumptionReportReceived({ store, event, block, extrinsic, }) {
     const newConsumptionReport = new model_1.Consumption();
     const [consumptionReport] = new types_1.SmartContractModule.ConsumptionReportReceivedEvent(event).params;
@@ -94,7 +93,15 @@ async function contractBilled({ store, event, block, extrinsic, }) {
     const newContractBilledReport = new model_1.ContractBillReport();
     const [contract_id, discount_received, amount_billed] = new types_1.SmartContractModule.ContractBilledEvent(event).params;
     newContractBilledReport.contractId = contract_id.toNumber();
-    newContractBilledReport.discountReceived = util_1.hex2a(Buffer.from(discount_received.toString()).toString());
+    let level = model_1.DiscountLevel.None;
+    switch (discount_received.toString()) {
+        case 'None': break;
+        case 'Default': level = model_1.DiscountLevel.Default;
+        case 'Bronze': level = model_1.DiscountLevel.Bronze;
+        case 'Silver': level = model_1.DiscountLevel.Silver;
+        case 'Gold': level = model_1.DiscountLevel.Gold;
+    }
+    newContractBilledReport.discountReceived = level;
     newContractBilledReport.amountBilled = amount_billed.toNumber();
     await store.save(newContractBilledReport);
 }
