@@ -2,7 +2,7 @@ const { getClient } = require('./client')
 const { callback } = require('./util')
 
 async function createFarm (args) {
-  const { name, c: countryID, g: cityID, certificationType, pricingPolicyID, a: url, m: mnemonic } = args
+  const { name, c: countryID, g: cityID, certificationType, a: url, m: mnemonic } = args
 
   const client = await getClient(url, mnemonic)
 
@@ -14,7 +14,23 @@ async function createFarm (args) {
     contract_id: 0
   })
 
-  return client.createFarm(name, pricingPolicyID, certificationTypeParsed, countryID, cityID, [publicIP], callback)
+  return client.createFarm(name, certificationTypeParsed, countryID, cityID, [publicIP], callback)
+}
+
+async function addPublicIP (args) {
+  const { id, ip, gateway, a: url, m: mnemonic } = args
+
+  const client = await getClient(url, mnemonic)
+
+  return client.addFarmIp(id, ip, gateway, callback)
+}
+
+async function deletePublicIP (args) {
+  const { id, ip, a: url, m: mnemonic } = args
+
+  const client = await getClient(url, mnemonic)
+
+  return client.deleteFarmIp(id, ip, callback)
 }
 
 async function getFarm (args) {
@@ -51,5 +67,7 @@ module.exports = {
   createFarm,
   getFarm,
   listFarms,
-  deleteFarm
+  deleteFarm,
+  addPublicIP,
+  deletePublicIP
 }

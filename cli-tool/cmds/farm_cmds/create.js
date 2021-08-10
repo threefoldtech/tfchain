@@ -20,12 +20,7 @@ exports.builder = function (yargs) {
     alias: 'y',
     type: 'string'
   })
-  yargs.option('pricingPolicyID', {
-    description: 'PricingPolicyID for the farm',
-    alias: 'p',
-    type: 'number'
-  })
-  yargs.demandOption(['c', 'g', 'y', 'p'])
+  yargs.demandOption(['c', 'g', 'y'])
   return yargs
 }
 exports.handler = createFarm
