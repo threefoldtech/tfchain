@@ -25,7 +25,7 @@ default-features = false
 git = "https://github.com/threefoldtech/tfchain_pallets"
 package = "pallet-tfgrid"
 branch = "development"
-# path = "../../../tfchain_pallets/pallet-tfgrid"
+#path = "../../../tfchain_pallets/pallet-tfgrid"
 
 [dependencies.pallet-smart-contract]
 default-features = false
