@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DiscountLevel = exports.ContractState = exports.CertificationType = exports.Twin = exports.Transfer = exports.PublicIp = exports.PublicConfig = exports.PricingPolicy = exports.NodeContract = exports.Node = exports.Location = exports.Farm = exports.EntityProof = exports.Entity = exports.Country = exports.ContractBillReport = exports.Consumption = exports.City = void 0;
+exports.DiscountLevel = exports.ContractState = exports.CertificationType = exports.Twin = exports.Transfer = exports.PublicIp = exports.PublicConfig = exports.PricingPolicy = exports.NodeContract = exports.Node = exports.Location = exports.FarmingPolicy = exports.Farm = exports.EntityProof = exports.Entity = exports.Country = exports.ContractBillReport = exports.Consumption = exports.City = void 0;
 const city_model_1 = require("../src/modules/city/city.model");
 Object.defineProperty(exports, "City", { enumerable: true, get: function () { return city_model_1.City; } });
 const consumption_model_1 = require("../src/modules/consumption/consumption.model");
@@ -15,6 +15,8 @@ const entity_proof_model_1 = require("../src/modules/entity-proof/entity-proof.m
 Object.defineProperty(exports, "EntityProof", { enumerable: true, get: function () { return entity_proof_model_1.EntityProof; } });
 const farm_model_1 = require("../src/modules/farm/farm.model");
 Object.defineProperty(exports, "Farm", { enumerable: true, get: function () { return farm_model_1.Farm; } });
+const farming_policy_model_1 = require("../src/modules/farming-policy/farming-policy.model");
+Object.defineProperty(exports, "FarmingPolicy", { enumerable: true, get: function () { return farming_policy_model_1.FarmingPolicy; } });
 const location_model_1 = require("../src/modules/location/location.model");
 Object.defineProperty(exports, "Location", { enumerable: true, get: function () { return location_model_1.Location; } });
 const node_model_1 = require("../src/modules/node/node.model");

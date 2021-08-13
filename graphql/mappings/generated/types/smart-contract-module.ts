@@ -3,8 +3,12 @@ import { SubstrateEvent, SubstrateExtrinsic } from "@subsquid/hydra-common";
 import { Codec } from "@polkadot/types/types";
 import { typeRegistry } from ".";
 
-import { Consumption, NodeContract } from "substrate-tfgrid-ts-types";
-import { Bytes, u128, u64 } from "@polkadot/types";
+import {
+  Consumption,
+  DiscountLevel,
+  NodeContract
+} from "substrate-tfgrid-ts-types";
+import { u128, u64 } from "@polkadot/types";
 
 export namespace SmartContractModule {
   export class ConsumptionReportReceivedEvent {
@@ -116,16 +120,20 @@ export namespace SmartContractModule {
   }
 
   export class ContractBilledEvent {
-    public readonly expectedParamTypes = ["u64", "Vec<u8>", "u128"];
+    public readonly expectedParamTypes = [
+      "u64",
+      "types::DiscountLevel",
+      "u128"
+    ];
 
     constructor(public readonly ctx: SubstrateEvent) {}
 
-    get params(): [u64, Bytes, u128] {
+    get params(): [u64, DiscountLevel, u128] {
       return [
         createTypeUnsafe<u64 & Codec>(typeRegistry, "u64", [
           this.ctx.params[0].value
         ]),
-        createTypeUnsafe<Bytes & Codec>(typeRegistry, "Bytes", [
+        createTypeUnsafe<DiscountLevel & Codec>(typeRegistry, "DiscountLevel", [
           this.ctx.params[1].value
         ]),
         createTypeUnsafe<u128 & Codec>(typeRegistry, "u128", [

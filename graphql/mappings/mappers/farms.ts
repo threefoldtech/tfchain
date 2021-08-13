@@ -34,10 +34,8 @@ export async function farmStored({
   newFarm.certificationType = certType
 
   await store.save<Farm>(newFarm)
-  
-  const publicIps: PublicIp[] = []
-  
-  farm.public_ips.forEach(async ip => {
+
+  const ipPromises = farm.public_ips.map(ip => {
     const newIP = new PublicIp()
 
     newIP.ip = hex2a(Buffer.from(ip.ip.toString()).toString())
@@ -45,14 +43,9 @@ export async function farmStored({
     newIP.contractId = ip.contract_id.toNumber()
     newIP.farm = newFarm
 
-    await store.save<PublicIp>(newIP)
-
-    publicIps.push(newIP)
+    return store.save<PublicIp>(newIP)
   })
-
-  newFarm.publicIPs = publicIps
-
-  await store.save<Farm>(newFarm)
+  await Promise.all(ipPromises)
 }
 
 export async function farmUpdated({
@@ -82,22 +75,18 @@ export async function farmUpdated({
 
     savedFarm.certificationType = certType
 
-    const publicIps: PublicIp[] = []
-    farm.public_ips.forEach(async ip => {
+    const ipPromises = farm.public_ips.map(ip => {
       const newIP = new PublicIp()
+  
       newIP.ip = hex2a(Buffer.from(ip.ip.toString()).toString())
       newIP.gateway = hex2a(Buffer.from(ip.gateway.toString()).toString())
       newIP.contractId = ip.contract_id.toNumber()
       newIP.farm = savedFarm
-
-      await store.save<PublicIp>(newIP)
-
-      publicIps.push(newIP)
+  
+      return store.save<PublicIp>(newIP)
     })
 
-    savedFarm.publicIPs = publicIps
-  
-    await store.save<Farm>(savedFarm)
+    await Promise.all(ipPromises)
   }
 }
 

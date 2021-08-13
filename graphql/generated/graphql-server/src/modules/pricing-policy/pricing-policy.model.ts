@@ -23,6 +23,12 @@ export class PricingPolicy extends BaseModel {
   @IntField({})
   nu!: number;
 
+  @StringField({})
+  foundationAccount!: string;
+
+  @StringField({})
+  certifiedSalesAccount!: string;
+
   constructor(init?: Partial<PricingPolicy>) {
     super();
     Object.assign(this, init);

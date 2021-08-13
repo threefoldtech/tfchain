@@ -12,6 +12,8 @@ import { EntityProof } from '../src/modules/entity-proof/entity-proof.model';
 export { EntityProof };
 import { Farm } from '../src/modules/farm/farm.model';
 export { Farm };
+import { FarmingPolicy } from '../src/modules/farming-policy/farming-policy.model';
+export { FarmingPolicy };
 import { Location } from '../src/modules/location/location.model';
 export { Location };
 import { Node } from '../src/modules/node/node.model';

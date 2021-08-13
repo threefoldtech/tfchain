@@ -7,5 +7,7 @@ export declare class PricingPolicy extends BaseModel {
     su: number;
     cu: number;
     nu: number;
+    foundationAccount: string;
+    certifiedSalesAccount: string;
     constructor(init?: Partial<PricingPolicy>);
 }

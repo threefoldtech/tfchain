@@ -112,14 +112,18 @@ var SmartContractModule;
     class ContractBilledEvent {
         constructor(ctx) {
             this.ctx = ctx;
-            this.expectedParamTypes = ["u64", "Vec<u8>", "u128"];
+            this.expectedParamTypes = [
+                "u64",
+                "types::DiscountLevel",
+                "u128"
+            ];
         }
         get params() {
             return [
                 create_1.createTypeUnsafe(_1.typeRegistry, "u64", [
                     this.ctx.params[0].value
                 ]),
-                create_1.createTypeUnsafe(_1.typeRegistry, "Bytes", [
+                create_1.createTypeUnsafe(_1.typeRegistry, "DiscountLevel", [
                     this.ctx.params[1].value
                 ]),
                 create_1.createTypeUnsafe(_1.typeRegistry, "u128", [

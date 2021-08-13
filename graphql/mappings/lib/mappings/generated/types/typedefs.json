@@ -43,7 +43,10 @@
     "location": "Location",
     "country_id": "u32",
     "city_id": "u32",
-    "public_config": "Option<PublicConfig>"
+    "public_config": "Option<PublicConfig>",
+    "uptime": "u64",
+    "created": "u64",
+    "farming_policy_id": "u32"
   },
   "PublicConfig": {
     "ipv4": "Vec<u8>",
@@ -88,7 +91,9 @@
     "su": "u32",
     "cu": "u32",
     "nu": "u32",
-    "ipu": "u32"
+    "ipu": "u32",
+    "foundation_account": "AccountId",
+    "certified_sales_account": "AccountId"
   },
   "Unit": {
     "_enum": [
@@ -138,6 +143,22 @@
       "Silver",
       "Gold"
     ]
+  },
+  "NameRegistration": {
+    "name_registration_id": "u64",
+    "twin_id": "u32",
+    "name": "Vec<u8>"
+  },
+  "FarmingPolicy": {
+    "version": "u32",
+    "id": "u32",
+    "name": "Vec<u8>",
+    "cu": "u32",
+    "su": "u32",
+    "nu": "u32",
+    "ipv4": "u32",
+    "timestamp": "u64",
+    "certification_type": "CertificationType"
   },
   "Address": "MultiAddress",
   "LookupSource": "MultiAddress",

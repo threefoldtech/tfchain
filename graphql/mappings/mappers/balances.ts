@@ -20,6 +20,5 @@ export async function balancesTransfer({
 
   transfer.block = block.height
   transfer.comment = `Transferred ${transfer.value} from ${transfer.from} to ${transfer.to}`
-  console.log(`Saving transfer: ${JSON.stringify(transfer, null, 2)}`)
   await store.save<Transfer>(transfer)
 }

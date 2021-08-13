@@ -28,6 +28,10 @@ export async function nodeStored({
   newNode.countryId = node.country_id.toNumber()
   newNode.cityId = node.city_id.toNumber()
 
+  newNode.created = node.created.toNumber()
+  newNode.uptime = node.uptime.toNumber()
+  newNode.farmingPolicyId = node.farming_policy_id.toNumber()
+
   const newLocation = new Location()
   newLocation.latitude = hex2a(node.location.latitude.toString())
   newLocation.longitude = hex2a(node.location.longitude.toString())
@@ -76,6 +80,10 @@ export async function nodeUpdated({
 
   savedNode.countryId = node.country_id.toNumber()
   savedNode.cityId = node.city_id.toNumber()
+
+  savedNode.created = node.created.toNumber()
+  savedNode.uptime = node.uptime.toNumber()
+  savedNode.farmingPolicyId = node.farming_policy_id.toNumber()
 
   const newLocation = new Location()
   newLocation.latitude = hex2a(node.location.latitude.toString())

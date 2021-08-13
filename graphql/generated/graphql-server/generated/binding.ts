@@ -27,6 +27,9 @@ export interface Query {
     farms: <T = Array<Farm>>(args: { offset?: Int | null, limit?: Int | null, where?: FarmWhereInput | null, orderBy?: Array<FarmOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     farmByUniqueInput: <T = Farm | null>(args: { where: FarmWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     farmsConnection: <T = FarmConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: FarmWhereInput | null, orderBy?: Array<FarmOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    farmingPolicies: <T = Array<FarmingPolicy>>(args: { offset?: Int | null, limit?: Int | null, where?: FarmingPolicyWhereInput | null, orderBy?: Array<FarmingPolicyOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    farmingPolicyByUniqueInput: <T = FarmingPolicy | null>(args: { where: FarmingPolicyWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    farmingPoliciesConnection: <T = FarmingPolicyConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: FarmingPolicyWhereInput | null, orderBy?: Array<FarmingPolicyOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     locations: <T = Array<Location>>(args: { offset?: Int | null, limit?: Int | null, where?: LocationWhereInput | null, orderBy?: Array<LocationOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     locationByUniqueInput: <T = Location | null>(args: { where: LocationWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     locationsConnection: <T = LocationConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: LocationWhereInput | null, orderBy?: Array<LocationOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
@@ -189,6 +192,29 @@ export type EntityProofOrderByInput =   'createdAt_ASC' |
   'twinRel_ASC' |
   'twinRel_DESC'
 
+export type FarmingPolicyOrderByInput =   'createdAt_ASC' |
+  'createdAt_DESC' |
+  'updatedAt_ASC' |
+  'updatedAt_DESC' |
+  'deletedAt_ASC' |
+  'deletedAt_DESC' |
+  'version_ASC' |
+  'version_DESC' |
+  'name_ASC' |
+  'name_DESC' |
+  'cu_ASC' |
+  'cu_DESC' |
+  'su_ASC' |
+  'su_DESC' |
+  'nu_ASC' |
+  'nu_DESC' |
+  'ipv4_ASC' |
+  'ipv4_DESC' |
+  'timestamp_ASC' |
+  'timestamp_DESC' |
+  'certificationType_ASC' |
+  'certificationType_DESC'
+
 export type FarmOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
   'updatedAt_ASC' |
@@ -275,7 +301,13 @@ export type NodeOrderByInput =   'createdAt_ASC' |
   'mru_ASC' |
   'mru_DESC' |
   'publicConfig_ASC' |
-  'publicConfig_DESC'
+  'publicConfig_DESC' |
+  'uptime_ASC' |
+  'uptime_DESC' |
+  'created_ASC' |
+  'created_DESC' |
+  'farmingPolicyId_ASC' |
+  'farmingPolicyId_DESC'
 
 export type PricingPolicyOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -296,7 +328,11 @@ export type PricingPolicyOrderByInput =   'createdAt_ASC' |
   'cu_ASC' |
   'cu_DESC' |
   'nu_ASC' |
-  'nu_DESC'
+  'nu_DESC' |
+  'foundationAccount_ASC' |
+  'foundationAccount_DESC' |
+  'certifiedSalesAccount_ASC' |
+  'certifiedSalesAccount_DESC'
 
 export type PublicConfigOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -814,6 +850,104 @@ export interface FarmCreateInput {
   cityId?: Float | null
 }
 
+export interface FarmingPolicyCreateInput {
+  version: Float
+  name: String
+  cu: Float
+  su: Float
+  nu: Float
+  ipv4: Float
+  timestamp: Float
+  certificationType: CertificationType
+}
+
+export interface FarmingPolicyUpdateInput {
+  version?: Float | null
+  name?: String | null
+  cu?: Float | null
+  su?: Float | null
+  nu?: Float | null
+  ipv4?: Float | null
+  timestamp?: Float | null
+  certificationType?: CertificationType | null
+}
+
+export interface FarmingPolicyWhereInput {
+  id_eq?: ID_Input | null
+  id_in?: ID_Output[] | ID_Output | null
+  createdAt_eq?: DateTime | null
+  createdAt_lt?: DateTime | null
+  createdAt_lte?: DateTime | null
+  createdAt_gt?: DateTime | null
+  createdAt_gte?: DateTime | null
+  createdById_eq?: ID_Input | null
+  createdById_in?: ID_Output[] | ID_Output | null
+  updatedAt_eq?: DateTime | null
+  updatedAt_lt?: DateTime | null
+  updatedAt_lte?: DateTime | null
+  updatedAt_gt?: DateTime | null
+  updatedAt_gte?: DateTime | null
+  updatedById_eq?: ID_Input | null
+  updatedById_in?: ID_Output[] | ID_Output | null
+  deletedAt_all?: Boolean | null
+  deletedAt_eq?: DateTime | null
+  deletedAt_lt?: DateTime | null
+  deletedAt_lte?: DateTime | null
+  deletedAt_gt?: DateTime | null
+  deletedAt_gte?: DateTime | null
+  deletedById_eq?: ID_Input | null
+  deletedById_in?: ID_Output[] | ID_Output | null
+  version_eq?: Int | null
+  version_gt?: Int | null
+  version_gte?: Int | null
+  version_lt?: Int | null
+  version_lte?: Int | null
+  version_in?: Int[] | Int | null
+  name_eq?: String | null
+  name_contains?: String | null
+  name_startsWith?: String | null
+  name_endsWith?: String | null
+  name_in?: String[] | String | null
+  cu_eq?: Int | null
+  cu_gt?: Int | null
+  cu_gte?: Int | null
+  cu_lt?: Int | null
+  cu_lte?: Int | null
+  cu_in?: Int[] | Int | null
+  su_eq?: Int | null
+  su_gt?: Int | null
+  su_gte?: Int | null
+  su_lt?: Int | null
+  su_lte?: Int | null
+  su_in?: Int[] | Int | null
+  nu_eq?: Int | null
+  nu_gt?: Int | null
+  nu_gte?: Int | null
+  nu_lt?: Int | null
+  nu_lte?: Int | null
+  nu_in?: Int[] | Int | null
+  ipv4_eq?: Int | null
+  ipv4_gt?: Int | null
+  ipv4_gte?: Int | null
+  ipv4_lt?: Int | null
+  ipv4_lte?: Int | null
+  ipv4_in?: Int[] | Int | null
+  timestamp_eq?: Int | null
+  timestamp_gt?: Int | null
+  timestamp_gte?: Int | null
+  timestamp_lt?: Int | null
+  timestamp_lte?: Int | null
+  timestamp_in?: Int[] | Int | null
+  certificationType_eq?: CertificationType | null
+  certificationType_in?: CertificationType[] | CertificationType | null
+  AND?: FarmingPolicyWhereInput[] | FarmingPolicyWhereInput | null
+  OR?: FarmingPolicyWhereInput[] | FarmingPolicyWhereInput | null
+}
+
+export interface FarmingPolicyWhereUniqueInput {
+  id: ID_Output
+}
+
 export interface FarmUpdateInput {
   gridVersion?: Float | null
   farmId?: Float | null
@@ -1070,6 +1204,9 @@ export interface NodeCreateInput {
   cru?: BigInt | null
   mru?: BigInt | null
   publicConfig?: ID_Input | null
+  uptime: Float
+  created: Float
+  farmingPolicyId: Float
 }
 
 export interface NodeUpdateInput {
@@ -1085,6 +1222,9 @@ export interface NodeUpdateInput {
   cru?: BigInt | null
   mru?: BigInt | null
   publicConfig?: ID_Input | null
+  uptime?: Float | null
+  created?: Float | null
+  farmingPolicyId?: Float | null
 }
 
 export interface NodeWhereInput {
@@ -1176,6 +1316,24 @@ export interface NodeWhereInput {
   mru_in?: BigInt[] | BigInt | null
   publicConfig_eq?: ID_Input | null
   publicConfig_in?: ID_Output[] | ID_Output | null
+  uptime_eq?: Int | null
+  uptime_gt?: Int | null
+  uptime_gte?: Int | null
+  uptime_lt?: Int | null
+  uptime_lte?: Int | null
+  uptime_in?: Int[] | Int | null
+  created_eq?: Int | null
+  created_gt?: Int | null
+  created_gte?: Int | null
+  created_lt?: Int | null
+  created_lte?: Int | null
+  created_in?: Int[] | Int | null
+  farmingPolicyId_eq?: Int | null
+  farmingPolicyId_gt?: Int | null
+  farmingPolicyId_gte?: Int | null
+  farmingPolicyId_lt?: Int | null
+  farmingPolicyId_lte?: Int | null
+  farmingPolicyId_in?: Int[] | Int | null
   location?: LocationWhereInput | null
   publicConfig?: PublicConfigWhereInput | null
   AND?: NodeWhereInput[] | NodeWhereInput | null
@@ -1194,6 +1352,8 @@ export interface PricingPolicyCreateInput {
   su: Float
   cu: Float
   nu: Float
+  foundationAccount: String
+  certifiedSalesAccount: String
 }
 
 export interface PricingPolicyUpdateInput {
@@ -1204,6 +1364,8 @@ export interface PricingPolicyUpdateInput {
   su?: Float | null
   cu?: Float | null
   nu?: Float | null
+  foundationAccount?: String | null
+  certifiedSalesAccount?: String | null
 }
 
 export interface PricingPolicyWhereInput {
@@ -1271,6 +1433,16 @@ export interface PricingPolicyWhereInput {
   nu_lt?: Int | null
   nu_lte?: Int | null
   nu_in?: Int[] | Int | null
+  foundationAccount_eq?: String | null
+  foundationAccount_contains?: String | null
+  foundationAccount_startsWith?: String | null
+  foundationAccount_endsWith?: String | null
+  foundationAccount_in?: String[] | String | null
+  certifiedSalesAccount_eq?: String | null
+  certifiedSalesAccount_contains?: String | null
+  certifiedSalesAccount_startsWith?: String | null
+  certifiedSalesAccount_endsWith?: String | null
+  certifiedSalesAccount_in?: String[] | String | null
   AND?: PricingPolicyWhereInput[] | PricingPolicyWhereInput | null
   OR?: PricingPolicyWhereInput[] | PricingPolicyWhereInput | null
 }
@@ -1350,7 +1522,7 @@ export interface PublicConfigWhereUniqueInput {
 }
 
 export interface PublicIpCreateInput {
-  farm?: ID_Input | null
+  farm: ID_Output
   gateway: String
   ip: String
   contractId: Float
@@ -1796,6 +1968,35 @@ export interface FarmEdge {
   cursor: String
 }
 
+export interface FarmingPolicy extends BaseGraphQLObject {
+  id: ID_Output
+  createdAt: DateTime
+  createdById: String
+  updatedAt?: DateTime | null
+  updatedById?: String | null
+  deletedAt?: DateTime | null
+  deletedById?: String | null
+  version: Int
+  name: String
+  cu: Int
+  su: Int
+  nu: Int
+  ipv4: Int
+  timestamp: Int
+  certificationType: CertificationType
+}
+
+export interface FarmingPolicyConnection {
+  totalCount: Int
+  edges: Array<FarmingPolicyEdge>
+  pageInfo: PageInfo
+}
+
+export interface FarmingPolicyEdge {
+  node: FarmingPolicy
+  cursor: String
+}
+
 export interface Location extends BaseGraphQLObject {
   id: ID_Output
   createdAt: DateTime
@@ -1844,6 +2045,9 @@ export interface Node extends BaseGraphQLObject {
   mru?: BigInt | null
   publicConfig?: PublicConfig | null
   publicConfigId?: String | null
+  uptime: Int
+  created: Int
+  farmingPolicyId: Int
 }
 
 export interface NodeConnection {
@@ -1909,6 +2113,8 @@ export interface PricingPolicy extends BaseGraphQLObject {
   su: Int
   cu: Int
   nu: Int
+  foundationAccount: String
+  certifiedSalesAccount: String
 }
 
 export interface PricingPolicyConnection {
@@ -1965,8 +2171,8 @@ export interface PublicIp extends BaseGraphQLObject {
   deletedAt?: DateTime | null
   deletedById?: String | null
   version: Int
-  farm?: Farm | null
-  farmId?: String | null
+  farm: Farm
+  farmId: String
   gateway: String
   ip: String
   contractId: Int

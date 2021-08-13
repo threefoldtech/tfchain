@@ -818,6 +818,158 @@ type FarmEdge {
   cursor: String!
 }
 
+type FarmingPolicy implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  name: String!
+  cu: Int!
+  su: Int!
+  nu: Int!
+  ipv4: Int!
+  timestamp: Int!
+  certificationType: CertificationType!
+}
+
+type FarmingPolicyConnection {
+  totalCount: Int!
+  edges: [FarmingPolicyEdge!]!
+  pageInfo: PageInfo!
+}
+
+input FarmingPolicyCreateInput {
+  version: Float!
+  name: String!
+  cu: Float!
+  su: Float!
+  nu: Float!
+  ipv4: Float!
+  timestamp: Float!
+  certificationType: CertificationType!
+}
+
+type FarmingPolicyEdge {
+  node: FarmingPolicy!
+  cursor: String!
+}
+
+enum FarmingPolicyOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  version_ASC
+  version_DESC
+  name_ASC
+  name_DESC
+  cu_ASC
+  cu_DESC
+  su_ASC
+  su_DESC
+  nu_ASC
+  nu_DESC
+  ipv4_ASC
+  ipv4_DESC
+  timestamp_ASC
+  timestamp_DESC
+  certificationType_ASC
+  certificationType_DESC
+}
+
+input FarmingPolicyUpdateInput {
+  version: Float
+  name: String
+  cu: Float
+  su: Float
+  nu: Float
+  ipv4: Float
+  timestamp: Float
+  certificationType: CertificationType
+}
+
+input FarmingPolicyWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  version_eq: Int
+  version_gt: Int
+  version_gte: Int
+  version_lt: Int
+  version_lte: Int
+  version_in: [Int!]
+  name_eq: String
+  name_contains: String
+  name_startsWith: String
+  name_endsWith: String
+  name_in: [String!]
+  cu_eq: Int
+  cu_gt: Int
+  cu_gte: Int
+  cu_lt: Int
+  cu_lte: Int
+  cu_in: [Int!]
+  su_eq: Int
+  su_gt: Int
+  su_gte: Int
+  su_lt: Int
+  su_lte: Int
+  su_in: [Int!]
+  nu_eq: Int
+  nu_gt: Int
+  nu_gte: Int
+  nu_lt: Int
+  nu_lte: Int
+  nu_in: [Int!]
+  ipv4_eq: Int
+  ipv4_gt: Int
+  ipv4_gte: Int
+  ipv4_lt: Int
+  ipv4_lte: Int
+  ipv4_in: [Int!]
+  timestamp_eq: Int
+  timestamp_gt: Int
+  timestamp_gte: Int
+  timestamp_lt: Int
+  timestamp_lte: Int
+  timestamp_in: [Int!]
+  certificationType_eq: CertificationType
+  certificationType_in: [CertificationType!]
+  AND: [FarmingPolicyWhereInput!]
+  OR: [FarmingPolicyWhereInput!]
+}
+
+input FarmingPolicyWhereUniqueInput {
+  id: ID!
+}
+
 enum FarmOrderByInput {
   createdAt_ASC
   createdAt_DESC
@@ -1050,6 +1202,9 @@ type Node implements BaseGraphQLObject {
   mru: BigInt
   publicConfig: PublicConfig
   publicConfigId: String
+  uptime: Int!
+  created: Int!
+  farmingPolicyId: Int!
 }
 
 type NodeConnection {
@@ -1222,6 +1377,9 @@ input NodeCreateInput {
   cru: BigInt
   mru: BigInt
   publicConfig: ID
+  uptime: Float!
+  created: Float!
+  farmingPolicyId: Float!
 }
 
 type NodeEdge {
@@ -1260,6 +1418,12 @@ enum NodeOrderByInput {
   mru_DESC
   publicConfig_ASC
   publicConfig_DESC
+  uptime_ASC
+  uptime_DESC
+  created_ASC
+  created_DESC
+  farmingPolicyId_ASC
+  farmingPolicyId_DESC
 }
 
 input NodeUpdateInput {
@@ -1275,6 +1439,9 @@ input NodeUpdateInput {
   cru: BigInt
   mru: BigInt
   publicConfig: ID
+  uptime: Float
+  created: Float
+  farmingPolicyId: Float
 }
 
 input NodeWhereInput {
@@ -1366,6 +1533,24 @@ input NodeWhereInput {
   mru_in: [BigInt!]
   publicConfig_eq: ID
   publicConfig_in: [ID!]
+  uptime_eq: Int
+  uptime_gt: Int
+  uptime_gte: Int
+  uptime_lt: Int
+  uptime_lte: Int
+  uptime_in: [Int!]
+  created_eq: Int
+  created_gt: Int
+  created_gte: Int
+  created_lt: Int
+  created_lte: Int
+  created_in: [Int!]
+  farmingPolicyId_eq: Int
+  farmingPolicyId_gt: Int
+  farmingPolicyId_gte: Int
+  farmingPolicyId_lt: Int
+  farmingPolicyId_lte: Int
+  farmingPolicyId_in: [Int!]
   location: LocationWhereInput
   publicConfig: PublicConfigWhereInput
   AND: [NodeWhereInput!]
@@ -1399,6 +1584,8 @@ type PricingPolicy implements BaseGraphQLObject {
   su: Int!
   cu: Int!
   nu: Int!
+  foundationAccount: String!
+  certifiedSalesAccount: String!
 }
 
 type PricingPolicyConnection {
@@ -1415,6 +1602,8 @@ input PricingPolicyCreateInput {
   su: Float!
   cu: Float!
   nu: Float!
+  foundationAccount: String!
+  certifiedSalesAccount: String!
 }
 
 type PricingPolicyEdge {
@@ -1443,6 +1632,10 @@ enum PricingPolicyOrderByInput {
   cu_DESC
   nu_ASC
   nu_DESC
+  foundationAccount_ASC
+  foundationAccount_DESC
+  certifiedSalesAccount_ASC
+  certifiedSalesAccount_DESC
 }
 
 input PricingPolicyUpdateInput {
@@ -1453,6 +1646,8 @@ input PricingPolicyUpdateInput {
   su: Float
   cu: Float
   nu: Float
+  foundationAccount: String
+  certifiedSalesAccount: String
 }
 
 input PricingPolicyWhereInput {
@@ -1520,6 +1715,16 @@ input PricingPolicyWhereInput {
   nu_lt: Int
   nu_lte: Int
   nu_in: [Int!]
+  foundationAccount_eq: String
+  foundationAccount_contains: String
+  foundationAccount_startsWith: String
+  foundationAccount_endsWith: String
+  foundationAccount_in: [String!]
+  certifiedSalesAccount_eq: String
+  certifiedSalesAccount_contains: String
+  certifiedSalesAccount_startsWith: String
+  certifiedSalesAccount_endsWith: String
+  certifiedSalesAccount_in: [String!]
   AND: [PricingPolicyWhereInput!]
   OR: [PricingPolicyWhereInput!]
 }
@@ -1658,8 +1863,8 @@ type PublicIp implements BaseGraphQLObject {
   deletedAt: DateTime
   deletedById: String
   version: Int!
-  farm: Farm
-  farmId: String
+  farm: Farm!
+  farmId: String!
   gateway: String!
   ip: String!
   contractId: Int!
@@ -1672,7 +1877,7 @@ type PublicIpConnection {
 }
 
 input PublicIpCreateInput {
-  farm: ID
+  farm: ID!
   gateway: String!
   ip: String!
   contractId: Float!
@@ -1781,6 +1986,9 @@ type Query {
   farms(offset: Int, limit: Int = 50, where: FarmWhereInput, orderBy: [FarmOrderByInput!]): [Farm!]!
   farmByUniqueInput(where: FarmWhereUniqueInput!): Farm
   farmsConnection(first: Int, after: String, last: Int, before: String, where: FarmWhereInput, orderBy: [FarmOrderByInput!]): FarmConnection!
+  farmingPolicies(offset: Int, limit: Int = 50, where: FarmingPolicyWhereInput, orderBy: [FarmingPolicyOrderByInput!]): [FarmingPolicy!]!
+  farmingPolicyByUniqueInput(where: FarmingPolicyWhereUniqueInput!): FarmingPolicy
+  farmingPoliciesConnection(first: Int, after: String, last: Int, before: String, where: FarmingPolicyWhereInput, orderBy: [FarmingPolicyOrderByInput!]): FarmingPolicyConnection!
   locations(offset: Int, limit: Int = 50, where: LocationWhereInput, orderBy: [LocationOrderByInput!]): [Location!]!
   locationByUniqueInput(where: LocationWhereUniqueInput!): Location
   locationsConnection(first: Int, after: String, last: Int, before: String, where: LocationWhereInput, orderBy: [LocationOrderByInput!]): LocationConnection!

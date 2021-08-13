@@ -41,6 +41,13 @@ type Farm @entity {
   publicIPs: [PublicIp!] @derivedFrom(field: "farm")
 }
 
+type PublicIp @entity {
+  farm: Farm!
+  gateway: String!
+  ip: String!
+  contract_id: Int!
+}
+
 type Node @entity {
   gridVersion: Int!
   nodeID: Int!
@@ -54,13 +61,9 @@ type Node @entity {
   cru: BigInt
   mru: BigInt
   publicConfig: PublicConfig
-}
-
-type PublicIp @entity {
-  farm: Farm
-  gateway: String!
-  ip: String!
-  contract_id: Int!
+  uptime: Int!
+  created: Int!
+  farming_policy_id: Int!
 }
 
 enum CertificationType {
@@ -88,6 +91,8 @@ type PricingPolicy @entity {
   su: Int!
   cu: Int!
   nu: Int!
+  foundation_account: String!
+  certified_sales_account: String!
 }
 
 type Country @entity {
@@ -122,7 +127,7 @@ enum ContractState {
 }
 
 type Consumption @entity {
-  contractID: Int!
+  contract_id: Int!
   timestamp: Int!
   cru: BigInt
   sru: BigInt
@@ -143,4 +148,16 @@ enum DiscountLevel {
   Bronze,
   Silver,
   Gold
+}
+
+type FarmingPolicy @entity {
+  version: Int!
+  id: Int!
+  name: String!
+  cu: Int!
+  su: Int!
+  nu: Int!
+  ipv4: Int!
+  timestamp: Int!
+  certification_type: CertificationType!
 }

@@ -99,6 +99,15 @@ export class Node extends BaseModel {
   )
   publicConfig?: PublicConfig;
 
+  @IntField({})
+  uptime!: number;
+
+  @IntField({})
+  created!: number;
+
+  @IntField({})
+  farmingPolicyId!: number;
+
   constructor(init?: Partial<Node>) {
     super();
     Object.assign(this, init);

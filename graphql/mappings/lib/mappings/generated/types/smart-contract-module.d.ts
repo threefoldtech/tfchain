@@ -1,6 +1,6 @@
 import { SubstrateEvent } from "@subsquid/hydra-common";
-import { Consumption, NodeContract } from "substrate-tfgrid-ts-types";
-import { Bytes, u128, u64 } from "@polkadot/types";
+import { Consumption, DiscountLevel, NodeContract } from "substrate-tfgrid-ts-types";
+import { u128, u64 } from "@polkadot/types";
 export declare namespace SmartContractModule {
     class ConsumptionReportReceivedEvent {
         readonly ctx: SubstrateEvent;
@@ -34,7 +34,7 @@ export declare namespace SmartContractModule {
         readonly ctx: SubstrateEvent;
         readonly expectedParamTypes: string[];
         constructor(ctx: SubstrateEvent);
-        get params(): [u64, Bytes, u128];
+        get params(): [u64, DiscountLevel, u128];
         validateParams(): boolean;
     }
 }

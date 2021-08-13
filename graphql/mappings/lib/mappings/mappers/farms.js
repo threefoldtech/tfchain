@@ -22,18 +22,15 @@ async function farmStored({ store, event, block, extrinsic, }) {
     }
     newFarm.certificationType = certType;
     await store.save(newFarm);
-    const publicIps = [];
-    farm.public_ips.forEach(async (ip) => {
+    const ipPromises = farm.public_ips.map(ip => {
         const newIP = new model_1.PublicIp();
         newIP.ip = util_1.hex2a(Buffer.from(ip.ip.toString()).toString());
         newIP.gateway = util_1.hex2a(Buffer.from(ip.gateway.toString()).toString());
         newIP.contractId = ip.contract_id.toNumber();
         newIP.farm = newFarm;
-        await store.save(newIP);
-        publicIps.push(newIP);
+        return store.save(newIP);
     });
-    newFarm.publicIPs = publicIps;
-    await store.save(newFarm);
+    await Promise.all(ipPromises);
 }
 exports.farmStored = farmStored;
 async function farmUpdated({ store, event, block, extrinsic, }) {
@@ -54,18 +51,15 @@ async function farmUpdated({ store, event, block, extrinsic, }) {
             case 'Diy': certType = model_1.CertificationType.Certified;
         }
         savedFarm.certificationType = certType;
-        const publicIps = [];
-        farm.public_ips.forEach(async (ip) => {
+        const ipPromises = farm.public_ips.map(ip => {
             const newIP = new model_1.PublicIp();
             newIP.ip = util_1.hex2a(Buffer.from(ip.ip.toString()).toString());
             newIP.gateway = util_1.hex2a(Buffer.from(ip.gateway.toString()).toString());
             newIP.contractId = ip.contract_id.toNumber();
             newIP.farm = savedFarm;
-            await store.save(newIP);
-            publicIps.push(newIP);
+            return store.save(newIP);
         });
-        savedFarm.publicIPs = publicIps;
-        await store.save(savedFarm);
+        await Promise.all(ipPromises);
     }
 }
 exports.farmUpdated = farmUpdated;

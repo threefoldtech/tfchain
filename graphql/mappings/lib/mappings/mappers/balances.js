@@ -11,7 +11,6 @@ async function balancesTransfer({ store, event, block, extrinsic, }) {
     transfer.value = value.toBn();
     transfer.block = block.height;
     transfer.comment = `Transferred ${transfer.value} from ${transfer.from} to ${transfer.to}`;
-    console.log(`Saving transfer: ${JSON.stringify(transfer, null, 2)}`);
     await store.save(transfer);
 }
 exports.balancesTransfer = balancesTransfer;
