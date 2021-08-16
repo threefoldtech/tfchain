@@ -1204,7 +1204,7 @@ export interface NodeCreateInput {
   cru?: BigInt | null
   mru?: BigInt | null
   publicConfig?: ID_Input | null
-  uptime: Float
+  uptime?: Float | null
   created: Float
   farmingPolicyId: Float
 }
@@ -2045,7 +2045,7 @@ export interface Node extends BaseGraphQLObject {
   mru?: BigInt | null
   publicConfig?: PublicConfig | null
   publicConfigId?: String | null
-  uptime: Int
+  uptime?: Int | null
   created: Int
   farmingPolicyId: Int
 }

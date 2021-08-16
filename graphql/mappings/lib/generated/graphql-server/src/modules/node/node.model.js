@@ -100,7 +100,9 @@ tslib_1.__decorate([
     tslib_1.__metadata("design:type", public_config_model_1.PublicConfig)
 ], Node.prototype, "publicConfig", void 0);
 tslib_1.__decorate([
-    warthog_1.IntField({}),
+    warthog_1.IntField({
+        nullable: true
+    }),
     tslib_1.__metadata("design:type", Number)
 ], Node.prototype, "uptime", void 0);
 tslib_1.__decorate([

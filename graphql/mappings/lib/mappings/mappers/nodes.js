@@ -16,6 +16,9 @@ async function nodeStored({ store, event, block, extrinsic, }) {
     newNode.cru = node.resources.cru.toBn();
     newNode.countryId = node.country_id.toNumber();
     newNode.cityId = node.city_id.toNumber();
+    newNode.created = node.created.toNumber();
+    newNode.uptime = node.uptime.toNumber();
+    newNode.farmingPolicyId = node.farming_policy_id.toNumber();
     const newLocation = new model_1.Location();
     newLocation.latitude = util_1.hex2a(node.location.latitude.toString());
     newLocation.longitude = util_1.hex2a(node.location.longitude.toString());
@@ -50,6 +53,9 @@ async function nodeUpdated({ store, event, block, extrinsic, }) {
     savedNode.cru = node.resources.cru.toBn();
     savedNode.countryId = node.country_id.toNumber();
     savedNode.cityId = node.city_id.toNumber();
+    savedNode.created = node.created.toNumber();
+    savedNode.uptime = node.uptime.toNumber();
+    savedNode.farmingPolicyId = node.farming_policy_id.toNumber();
     const newLocation = new model_1.Location();
     newLocation.latitude = util_1.hex2a(node.location.latitude.toString());
     newLocation.longitude = util_1.hex2a(node.location.longitude.toString());

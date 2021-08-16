@@ -78,7 +78,7 @@ export async function contractUpdated({
 }: EventContext & StoreContext) {
   const [nodeContract] = new SmartContractModule.ContractCreatedEvent(event).params
 
-  const savedContract = await store.get(NodeContract, { where: { contract_id: nodeContract.contract_id.toNumber() } })
+  const savedContract = await store.get(NodeContract, { where: { contractId: nodeContract.contract_id.toNumber() } })
 
   if (!savedContract) return
 
@@ -124,7 +124,7 @@ export async function contractCanceled({
 }: EventContext & StoreContext) {
   const [nodeContract] = new SmartContractModule.ContractCreatedEvent(event).params
 
-  const savedContract = await store.get(NodeContract, { where: { contract_id: nodeContract.contract_id.toNumber() } })
+  const savedContract = await store.get(NodeContract, { where: { contractId: nodeContract.contract_id.toNumber() } })
 
   if (!savedContract) return
 

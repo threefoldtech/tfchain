@@ -99,8 +99,10 @@ export class Node extends BaseModel {
   )
   publicConfig?: PublicConfig;
 
-  @IntField({})
-  uptime!: number;
+  @IntField({
+    nullable: true
+  })
+  uptime?: number;
 
   @IntField({})
   created!: number;

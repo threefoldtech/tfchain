@@ -1202,7 +1202,7 @@ type Node implements BaseGraphQLObject {
   mru: BigInt
   publicConfig: PublicConfig
   publicConfigId: String
-  uptime: Int!
+  uptime: Int
   created: Int!
   farmingPolicyId: Int!
 }
@@ -1377,7 +1377,7 @@ input NodeCreateInput {
   cru: BigInt
   mru: BigInt
   publicConfig: ID
-  uptime: Float!
+  uptime: Float
   created: Float!
   farmingPolicyId: Float!
 }

@@ -15,7 +15,7 @@ export declare class Node extends BaseModel {
     cru?: BN;
     mru?: BN;
     publicConfig?: PublicConfig;
-    uptime: number;
+    uptime?: number;
     created: number;
     farmingPolicyId: number;
     constructor(init?: Partial<Node>);

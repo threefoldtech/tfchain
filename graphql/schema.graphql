@@ -61,7 +61,7 @@ type Node @entity {
   cru: BigInt
   mru: BigInt
   publicConfig: PublicConfig
-  uptime: Int!
+  uptime: Int
   created: Int!
   farming_policy_id: Int!
 }
@@ -111,9 +111,9 @@ type City @entity {
 
 type NodeContract @entity {
   version: Int!
-  contract_id: Int!
-  twin_id: Int!
-  node_id: Int!
+  contractID: Int!
+  twinID: Int!
+  nodeID: Int!
   deployment_data: String!
   deployment_hash: String!
   numberOfPublicIPs: Int!
@@ -127,7 +127,7 @@ enum ContractState {
 }
 
 type Consumption @entity {
-  contract_id: Int!
+  contractID: Int!
   timestamp: Int!
   cru: BigInt
   sru: BigInt
@@ -137,7 +137,7 @@ type Consumption @entity {
 }
 
 type ContractBillReport @entity {
-  contract_id: Int!
+  contractID: Int!
   discount_received: DiscountLevel!
   amount_billed: Int!
 }
