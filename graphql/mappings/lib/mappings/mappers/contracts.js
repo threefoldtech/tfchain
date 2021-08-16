@@ -81,8 +81,8 @@ async function contractUpdated({ store, event, block, extrinsic, }) {
 }
 exports.contractUpdated = contractUpdated;
 async function contractCanceled({ store, event, block, extrinsic, }) {
-    const [nodeContract] = new types_1.SmartContractModule.ContractCreatedEvent(event).params;
-    const savedContract = await store.get(model_1.NodeContract, { where: { contractId: nodeContract.contract_id.toNumber() } });
+    const [id] = new types_1.SmartContractModule.ContractCanceledEvent(event).params;
+    const savedContract = await store.get(model_1.NodeContract, { where: { contractId: id.toNumber() } });
     if (!savedContract)
         return;
     savedContract.state = model_1.ContractState.Deleted;

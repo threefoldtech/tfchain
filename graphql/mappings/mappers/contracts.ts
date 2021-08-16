@@ -122,9 +122,9 @@ export async function contractCanceled({
   block,
   extrinsic,
 }: EventContext & StoreContext) {
-  const [nodeContract] = new SmartContractModule.ContractCreatedEvent(event).params
+  const [id] = new SmartContractModule.ContractCanceledEvent(event).params
 
-  const savedContract = await store.get(NodeContract, { where: { contractId: nodeContract.contract_id.toNumber() } })
+  const savedContract = await store.get(NodeContract, { where: { contractId: id.toNumber() } })
 
   if (!savedContract) return
 
