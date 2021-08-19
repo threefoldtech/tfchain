@@ -11,7 +11,7 @@ Open https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/settings/dev
 
 Paste it in in the box and hit `save`
 
-[img](./assets/copy_types.png)
+![img](./assets/copy_types_1.png)
 
 ## Step 3: Create an account
 
@@ -21,13 +21,13 @@ click `Add account`, take note of the seed. Click on the `Advanced creation opti
 
 Click `I have saved my mnemonic seed safely` and click next and fill in the required fields.
 
-[account_creation](./assets/account_create.png)
+![account_creation](./assets/account_create_1.png)
 
 ## Step 4: Fund your account
 
 On the same page, on the left top, hover over `Account` button and click on `Transfer`. First select account `Alice` and secondly select your newly created account from the list. Send any amount to your account (these are just tokens to play around with, they hold no real value).
 
-[account_transfer](./assets/account_transfer.png)
+![account_transfer](./assets/account_transfer_1.png)
 
 ## Step 5: Create a Twin
 
@@ -37,7 +37,7 @@ and select your account from the list. Next, select `tfgridModule` -> `createTwi
 
 Fill in your [Yggdrasil](https://github.com/yggdrasil-network/yggdrasil-go) IPV6. And click on submit transaction and sign it with your account.
 
-[create_twin](./assets/create_twin.png)
+![create_twin](./assets/create_twin_1.png)
 
 ## Step 6: Create a Farm
 
@@ -51,7 +51,7 @@ To find a country or city you can query all the available countries and cities i
 
 Optionally you can also provide public ips on your farm.
 
-[create_farm](./assets/create_farm.png)
+![create_farm](./assets/create_farm_1.png)
 
 ## Step 7: query twin ID and Farm ID
 
@@ -61,8 +61,12 @@ Open https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/chainstate
 
 and select `tfgridModule` -> scroll all the way down to `twinIdByAccountID(accountID):u32` and select your account ID from the list. Hit the PLUS symbol and you should see your twin ID.
 
+![query_twin](./assets/query_twin_1.png)
+
 ### Query farm:
 
 Open https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/chainstate 
 
 and select `tfgridModule` -> scroll to `farmIdByName(bytes):u32` and search your farm ID based on your farm name. Hit the PLUS symbol and you should see your farm ID.
+
+![query_farm](./assets/query_farm_1.png)
