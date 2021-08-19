@@ -12,6 +12,10 @@ let City = class City extends warthog_1.BaseModel {
 tslib_1.__decorate([
     warthog_1.IntField({}),
     tslib_1.__metadata("design:type", Number)
+], City.prototype, "cityId", void 0);
+tslib_1.__decorate([
+    warthog_1.IntField({}),
+    tslib_1.__metadata("design:type", Number)
 ], City.prototype, "countryId", void 0);
 tslib_1.__decorate([
     warthog_1.StringField({}),

@@ -14,6 +14,9 @@ export class ContractBillReport extends BaseModel {
   @IntField({})
   amountBilled!: number;
 
+  @IntField({})
+  timestamp!: number;
+
   constructor(init?: Partial<ContractBillReport>) {
     super();
     Object.assign(this, init);

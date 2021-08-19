@@ -87,20 +87,24 @@
     "version": "u32",
     "id": "u32",
     "name": "Vec<u8>",
-    "unit": "Unit",
-    "su": "u32",
-    "cu": "u32",
-    "nu": "u32",
-    "ipu": "u32",
+    "su": "policy",
+    "cu": "policy",
+    "nu": "policy",
+    "ipu": "policy",
     "foundation_account": "AccountId",
     "certified_sales_account": "AccountId"
+  },
+  "Policy":{
+    "value": "u32",
+    "unit": "Unit"
   },
   "Unit": {
     "_enum": [
       "Bytes",
       "Kilobytes",
       "Megabytes",
-      "Gigabytes"
+      "Gigabytes",
+      "Terrabytes"
     ]
   },
   "NodeContract": {
@@ -159,6 +163,12 @@
     "ipv4": "u32",
     "timestamp": "u64",
     "certification_type": "CertificationType"
+  },
+  "ContractBill": {
+    "contract_id": "u64",
+    "timestamp": "u64",
+    "discount_level": "DiscountLevel",
+    "amount_billed": "u128"
   },
   "Address": "MultiAddress",
   "LookupSource": "MultiAddress",

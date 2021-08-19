@@ -23,6 +23,10 @@ tslib_1.__decorate([
     warthog_1.IntField({}),
     tslib_1.__metadata("design:type", Number)
 ], ContractBillReport.prototype, "amountBilled", void 0);
+tslib_1.__decorate([
+    warthog_1.IntField({}),
+    tslib_1.__metadata("design:type", Number)
+], ContractBillReport.prototype, "timestamp", void 0);
 ContractBillReport = tslib_1.__decorate([
     warthog_1.Model({ api: {} }),
     tslib_1.__metadata("design:paramtypes", [Object])

@@ -7,3 +7,4 @@ tslib_1.__exportStar(require("./twins"), exports);
 tslib_1.__exportStar(require("./nodes"), exports);
 tslib_1.__exportStar(require("./farms"), exports);
 tslib_1.__exportStar(require("./contracts"), exports);
+tslib_1.__exportStar(require("./policies"), exports);

@@ -140,12 +140,12 @@ export async function contractBilled({
   extrinsic,
 }: EventContext & StoreContext) {
   const newContractBilledReport = new ContractBillReport()
-  const [contract_id, discount_received, amount_billed] = new SmartContractModule.ContractBilledEvent(event).params
+  const [contract_billed_event] = new SmartContractModule.ContractBilledEvent(event).params
 
-  newContractBilledReport.contractId = contract_id.toNumber()
+  newContractBilledReport.contractId = contract_billed_event.contract_id.toNumber()
 
   let level = DiscountLevel.None
-  switch (discount_received.toString()) {
+  switch (contract_billed_event.discount_level.toString()) {
     case 'None': break
     case 'Default': level = DiscountLevel.Default
     case 'Bronze': level = DiscountLevel.Bronze
@@ -153,7 +153,8 @@ export async function contractBilled({
     case 'Gold': level = DiscountLevel.Gold
   }
   newContractBilledReport.discountReceived = level
-  newContractBilledReport.amountBilled = amount_billed.toNumber()
+  newContractBilledReport.amountBilled = contract_billed_event.amount_billed.toNumber()
+  newContractBilledReport.timestamp = contract_billed_event.timestamp.toNumber()
 
   await store.save<ContractBillReport>(newContractBilledReport)
 }

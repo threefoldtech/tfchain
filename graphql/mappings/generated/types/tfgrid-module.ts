@@ -3,7 +3,14 @@ import { SubstrateEvent, SubstrateExtrinsic } from "@subsquid/hydra-common";
 import { Codec } from "@polkadot/types/types";
 import { typeRegistry } from ".";
 
-import { Entity, Farm, Node, Twin } from "substrate-tfgrid-ts-types";
+import {
+  Entity,
+  Farm,
+  FarmingPolicy,
+  Node,
+  PricingPolicy,
+  Twin
+} from "substrate-tfgrid-ts-types";
 import { Bytes, u32 } from "@polkadot/types";
 
 export namespace TfgridModule {
@@ -349,6 +356,60 @@ export namespace TfgridModule {
         ]),
         createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
           this.ctx.params[1].value
+        ])
+      ];
+    }
+
+    validateParams(): boolean {
+      if (this.expectedParamTypes.length !== this.ctx.params.length) {
+        return false;
+      }
+      let valid = true;
+      this.expectedParamTypes.forEach((type, i) => {
+        if (type !== this.ctx.params[i].type) {
+          valid = false;
+        }
+      });
+      return valid;
+    }
+  }
+
+  export class PricingPolicyStoredEvent {
+    public readonly expectedParamTypes = ["types::PricingPolicy<AccountId>"];
+
+    constructor(public readonly ctx: SubstrateEvent) {}
+
+    get params(): [PricingPolicy] {
+      return [
+        createTypeUnsafe<PricingPolicy & Codec>(typeRegistry, "PricingPolicy", [
+          this.ctx.params[0].value
+        ])
+      ];
+    }
+
+    validateParams(): boolean {
+      if (this.expectedParamTypes.length !== this.ctx.params.length) {
+        return false;
+      }
+      let valid = true;
+      this.expectedParamTypes.forEach((type, i) => {
+        if (type !== this.ctx.params[i].type) {
+          valid = false;
+        }
+      });
+      return valid;
+    }
+  }
+
+  export class FarmingPolicyStoredEvent {
+    public readonly expectedParamTypes = ["types::FarmingPolicy"];
+
+    constructor(public readonly ctx: SubstrateEvent) {}
+
+    get params(): [FarmingPolicy] {
+      return [
+        createTypeUnsafe<FarmingPolicy & Codec>(typeRegistry, "FarmingPolicy", [
+          this.ctx.params[0].value
         ])
       ];
     }

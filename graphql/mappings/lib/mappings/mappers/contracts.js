@@ -91,10 +91,10 @@ async function contractCanceled({ store, event, block, extrinsic, }) {
 exports.contractCanceled = contractCanceled;
 async function contractBilled({ store, event, block, extrinsic, }) {
     const newContractBilledReport = new model_1.ContractBillReport();
-    const [contract_id, discount_received, amount_billed] = new types_1.SmartContractModule.ContractBilledEvent(event).params;
-    newContractBilledReport.contractId = contract_id.toNumber();
+    const [contract_billed_event] = new types_1.SmartContractModule.ContractBilledEvent(event).params;
+    newContractBilledReport.contractId = contract_billed_event.contract_id.toNumber();
     let level = model_1.DiscountLevel.None;
-    switch (discount_received.toString()) {
+    switch (contract_billed_event.discount_level.toString()) {
         case 'None': break;
         case 'Default': level = model_1.DiscountLevel.Default;
         case 'Bronze': level = model_1.DiscountLevel.Bronze;
@@ -102,7 +102,8 @@ async function contractBilled({ store, event, block, extrinsic, }) {
         case 'Gold': level = model_1.DiscountLevel.Gold;
     }
     newContractBilledReport.discountReceived = level;
-    newContractBilledReport.amountBilled = amount_billed.toNumber();
+    newContractBilledReport.amountBilled = contract_billed_event.amount_billed.toNumber();
+    newContractBilledReport.timestamp = contract_billed_event.timestamp.toNumber();
     await store.save(newContractBilledReport);
 }
 exports.contractBilled = contractBilled;

@@ -35,8 +35,12 @@ async function main () {
 
     try {
         const countryPromises = countries.data.map((country, index) => {
-            const text = 'INSERT INTO country(id, name, code, region, subregion, created_by_id, version) VALUES($1, $2, $3, $4, $5, $6, $7)'
-            return client.query(text, [index, country.name, country.alpha2Code, country.region, country.subregion, 0, 0]) 
+            const text = 'INSERT INTO country(id, country_id, name, code, region, subregion, created_by_id, version) VALUES($1, $2, $3, $4, $5, $6, $7, $8)'
+            let code = country.alpha2Code
+            if (!code) {
+                code = country.alpha3Code
+            }
+            return client.query(text, [index, index, country.name, code, country.region, country.subregion, 0, 0]) 
         })
     
         await Promise.all(countryPromises)
@@ -55,16 +59,16 @@ async function main () {
 
             if (!foundCountry) return
 
-            foundCountryID = foundCountry.id
+            foundCountryID = foundCountry.country_id
             return countryCities.map(countryCity => {
-                const text = 'INSERT INTO city(id, country_id, name, created_by_id, version) VALUES($1, $2, $3, $4, $5) RETURNING *'
+                const text = 'INSERT INTO city(city_id, country_id, name, created_by_id, version) VALUES($1, $2, $3, $4, $5) RETURNING *'
                 index++
                
                 return [index, foundCountryID, countryCity, 0, 0]
             })
         }).filter(g => g)
 
-        const inserts = format('INSERT INTO city(id, country_id, name, created_by_id, version) VALUES %L', flatten(mappedCities))
+        const inserts = format('INSERT INTO city(city_id, country_id, name, created_by_id, version) VALUES %L', flatten(mappedCities))
 
         client.query(inserts)
             .then(res => {

@@ -20,6 +20,8 @@ import { Node } from '../src/modules/node/node.model';
 export { Node };
 import { NodeContract } from '../src/modules/node-contract/node-contract.model';
 export { NodeContract };
+import { Policy } from '../src/modules/policy/policy.model';
+export { Policy };
 import { PricingPolicy } from '../src/modules/pricing-policy/pricing-policy.model';
 export { PricingPolicy };
 import { PublicConfig } from '../src/modules/public-config/public-config.model';
@@ -33,6 +35,8 @@ export { Twin };
 
 import { CertificationType } from '../src/modules/enums/enums';
 export { CertificationType };
+import { Unit } from '../src/modules/enums/enums';
+export { Unit };
 import { ContractState } from '../src/modules/enums/enums';
 export { ContractState };
 import { DiscountLevel } from '../src/modules/enums/enums';

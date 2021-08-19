@@ -1,4 +1,6 @@
-import { BaseModel, IntField, Model, StringField } from 'warthog';
+import { BaseModel, IntField, Model, ManyToOne, StringField } from 'warthog';
+
+import { Policy } from '../policy/policy.model';
 
 @Model({ api: {} })
 export class PricingPolicy extends BaseModel {
@@ -11,17 +13,57 @@ export class PricingPolicy extends BaseModel {
   @StringField({})
   name!: string;
 
-  @StringField({})
-  currency!: string;
+  @ManyToOne(
+    () => Policy,
+    (param: Policy) => param.pricingpolicysu,
+    {
+      skipGraphQLField: true,
 
-  @IntField({})
-  su!: number;
+      modelName: 'PricingPolicy',
+      relModelName: 'Policy',
+      propertyName: 'su'
+    }
+  )
+  su!: Policy;
 
-  @IntField({})
-  cu!: number;
+  @ManyToOne(
+    () => Policy,
+    (param: Policy) => param.pricingpolicycu,
+    {
+      skipGraphQLField: true,
 
-  @IntField({})
-  nu!: number;
+      modelName: 'PricingPolicy',
+      relModelName: 'Policy',
+      propertyName: 'cu'
+    }
+  )
+  cu!: Policy;
+
+  @ManyToOne(
+    () => Policy,
+    (param: Policy) => param.pricingpolicynu,
+    {
+      skipGraphQLField: true,
+
+      modelName: 'PricingPolicy',
+      relModelName: 'Policy',
+      propertyName: 'nu'
+    }
+  )
+  nu!: Policy;
+
+  @ManyToOne(
+    () => Policy,
+    (param: Policy) => param.pricingpolicyipu,
+    {
+      skipGraphQLField: true,
+
+      modelName: 'PricingPolicy',
+      relModelName: 'Policy',
+      propertyName: 'ipu'
+    }
+  )
+  ipu!: Policy;
 
   @StringField({})
   foundationAccount!: string;

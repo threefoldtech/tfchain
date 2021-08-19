@@ -3,6 +3,7 @@ import { CertificationType } from '../enums/enums';
 export { CertificationType };
 export declare class FarmingPolicy extends BaseModel {
     version: number;
+    farmingPolicyId: number;
     name: string;
     cu: number;
     su: number;

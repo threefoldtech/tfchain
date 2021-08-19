@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DiscountLevel = exports.ContractState = exports.CertificationType = exports.Twin = exports.Transfer = exports.PublicIp = exports.PublicConfig = exports.PricingPolicy = exports.NodeContract = exports.Node = exports.Location = exports.FarmingPolicy = exports.Farm = exports.EntityProof = exports.Entity = exports.Country = exports.ContractBillReport = exports.Consumption = exports.City = void 0;
+exports.DiscountLevel = exports.ContractState = exports.Unit = exports.CertificationType = exports.Twin = exports.Transfer = exports.PublicIp = exports.PublicConfig = exports.PricingPolicy = exports.Policy = exports.NodeContract = exports.Node = exports.Location = exports.FarmingPolicy = exports.Farm = exports.EntityProof = exports.Entity = exports.Country = exports.ContractBillReport = exports.Consumption = exports.City = void 0;
 const city_model_1 = require("../src/modules/city/city.model");
 Object.defineProperty(exports, "City", { enumerable: true, get: function () { return city_model_1.City; } });
 const consumption_model_1 = require("../src/modules/consumption/consumption.model");
@@ -23,6 +23,8 @@ const node_model_1 = require("../src/modules/node/node.model");
 Object.defineProperty(exports, "Node", { enumerable: true, get: function () { return node_model_1.Node; } });
 const node_contract_model_1 = require("../src/modules/node-contract/node-contract.model");
 Object.defineProperty(exports, "NodeContract", { enumerable: true, get: function () { return node_contract_model_1.NodeContract; } });
+const policy_model_1 = require("../src/modules/policy/policy.model");
+Object.defineProperty(exports, "Policy", { enumerable: true, get: function () { return policy_model_1.Policy; } });
 const pricing_policy_model_1 = require("../src/modules/pricing-policy/pricing-policy.model");
 Object.defineProperty(exports, "PricingPolicy", { enumerable: true, get: function () { return pricing_policy_model_1.PricingPolicy; } });
 const public_config_model_1 = require("../src/modules/public-config/public-config.model");
@@ -36,6 +38,8 @@ Object.defineProperty(exports, "Twin", { enumerable: true, get: function () { re
 const enums_1 = require("../src/modules/enums/enums");
 Object.defineProperty(exports, "CertificationType", { enumerable: true, get: function () { return enums_1.CertificationType; } });
 const enums_2 = require("../src/modules/enums/enums");
-Object.defineProperty(exports, "ContractState", { enumerable: true, get: function () { return enums_2.ContractState; } });
+Object.defineProperty(exports, "Unit", { enumerable: true, get: function () { return enums_2.Unit; } });
 const enums_3 = require("../src/modules/enums/enums");
-Object.defineProperty(exports, "DiscountLevel", { enumerable: true, get: function () { return enums_3.DiscountLevel; } });
+Object.defineProperty(exports, "ContractState", { enumerable: true, get: function () { return enums_3.ContractState; } });
+const enums_4 = require("../src/modules/enums/enums");
+Object.defineProperty(exports, "DiscountLevel", { enumerable: true, get: function () { return enums_4.DiscountLevel; } });

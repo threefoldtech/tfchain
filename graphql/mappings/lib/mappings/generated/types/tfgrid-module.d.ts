@@ -1,5 +1,5 @@
 import { SubstrateEvent } from "@subsquid/hydra-common";
-import { Entity, Farm, Node, Twin } from "substrate-tfgrid-ts-types";
+import { Entity, Farm, FarmingPolicy, Node, PricingPolicy, Twin } from "substrate-tfgrid-ts-types";
 import { Bytes, u32 } from "@polkadot/types";
 export declare namespace TfgridModule {
     class EntityStoredEvent {
@@ -91,6 +91,20 @@ export declare namespace TfgridModule {
         readonly expectedParamTypes: string[];
         constructor(ctx: SubstrateEvent);
         get params(): [u32, u32];
+        validateParams(): boolean;
+    }
+    class PricingPolicyStoredEvent {
+        readonly ctx: SubstrateEvent;
+        readonly expectedParamTypes: string[];
+        constructor(ctx: SubstrateEvent);
+        get params(): [PricingPolicy];
+        validateParams(): boolean;
+    }
+    class FarmingPolicyStoredEvent {
+        readonly ctx: SubstrateEvent;
+        readonly expectedParamTypes: string[];
+        constructor(ctx: SubstrateEvent);
+        get params(): [FarmingPolicy];
         validateParams(): boolean;
     }
 }

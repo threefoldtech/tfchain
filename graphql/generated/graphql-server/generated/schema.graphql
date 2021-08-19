@@ -72,6 +72,7 @@ type City implements BaseGraphQLObject {
   deletedAt: DateTime
   deletedById: String
   version: Int!
+  cityId: Int!
   countryId: Int!
   name: String!
 }
@@ -83,6 +84,7 @@ type CityConnection {
 }
 
 input CityCreateInput {
+  cityId: Float!
   countryId: Float!
   name: String!
 }
@@ -99,6 +101,8 @@ enum CityOrderByInput {
   updatedAt_DESC
   deletedAt_ASC
   deletedAt_DESC
+  cityId_ASC
+  cityId_DESC
   countryId_ASC
   countryId_DESC
   name_ASC
@@ -106,6 +110,7 @@ enum CityOrderByInput {
 }
 
 input CityUpdateInput {
+  cityId: Float
   countryId: Float
   name: String
 }
@@ -135,6 +140,12 @@ input CityWhereInput {
   deletedAt_gte: DateTime
   deletedById_eq: ID
   deletedById_in: [ID!]
+  cityId_eq: Int
+  cityId_gt: Int
+  cityId_gte: Int
+  cityId_lt: Int
+  cityId_lte: Int
+  cityId_in: [Int!]
   countryId_eq: Int
   countryId_gt: Int
   countryId_gte: Int
@@ -322,6 +333,7 @@ type ContractBillReport implements BaseGraphQLObject {
   contractId: Int!
   discountReceived: DiscountLevel!
   amountBilled: Int!
+  timestamp: Int!
 }
 
 type ContractBillReportConnection {
@@ -334,6 +346,7 @@ input ContractBillReportCreateInput {
   contractId: Float!
   discountReceived: DiscountLevel!
   amountBilled: Float!
+  timestamp: Float!
 }
 
 type ContractBillReportEdge {
@@ -354,12 +367,15 @@ enum ContractBillReportOrderByInput {
   discountReceived_DESC
   amountBilled_ASC
   amountBilled_DESC
+  timestamp_ASC
+  timestamp_DESC
 }
 
 input ContractBillReportUpdateInput {
   contractId: Float
   discountReceived: DiscountLevel
   amountBilled: Float
+  timestamp: Float
 }
 
 input ContractBillReportWhereInput {
@@ -401,6 +417,12 @@ input ContractBillReportWhereInput {
   amountBilled_lt: Int
   amountBilled_lte: Int
   amountBilled_in: [Int!]
+  timestamp_eq: Int
+  timestamp_gt: Int
+  timestamp_gte: Int
+  timestamp_lt: Int
+  timestamp_lte: Int
+  timestamp_in: [Int!]
   AND: [ContractBillReportWhereInput!]
   OR: [ContractBillReportWhereInput!]
 }
@@ -424,6 +446,7 @@ type Country implements BaseGraphQLObject {
   deletedAt: DateTime
   deletedById: String
   version: Int!
+  countryId: Int!
   code: String!
   name: String!
   region: String!
@@ -437,6 +460,7 @@ type CountryConnection {
 }
 
 input CountryCreateInput {
+  countryId: Float!
   code: String!
   name: String!
   region: String!
@@ -455,6 +479,8 @@ enum CountryOrderByInput {
   updatedAt_DESC
   deletedAt_ASC
   deletedAt_DESC
+  countryId_ASC
+  countryId_DESC
   code_ASC
   code_DESC
   name_ASC
@@ -466,6 +492,7 @@ enum CountryOrderByInput {
 }
 
 input CountryUpdateInput {
+  countryId: Float
   code: String
   name: String
   region: String
@@ -497,6 +524,12 @@ input CountryWhereInput {
   deletedAt_gte: DateTime
   deletedById_eq: ID
   deletedById_in: [ID!]
+  countryId_eq: Int
+  countryId_gt: Int
+  countryId_gte: Int
+  countryId_lt: Int
+  countryId_lte: Int
+  countryId_in: [Int!]
   code_eq: String
   code_contains: String
   code_startsWith: String
@@ -827,6 +860,7 @@ type FarmingPolicy implements BaseGraphQLObject {
   deletedAt: DateTime
   deletedById: String
   version: Int!
+  farmingPolicyId: Int!
   name: String!
   cu: Int!
   su: Int!
@@ -844,6 +878,7 @@ type FarmingPolicyConnection {
 
 input FarmingPolicyCreateInput {
   version: Float!
+  farmingPolicyId: Float!
   name: String!
   cu: Float!
   su: Float!
@@ -867,6 +902,8 @@ enum FarmingPolicyOrderByInput {
   deletedAt_DESC
   version_ASC
   version_DESC
+  farmingPolicyId_ASC
+  farmingPolicyId_DESC
   name_ASC
   name_DESC
   cu_ASC
@@ -885,6 +922,7 @@ enum FarmingPolicyOrderByInput {
 
 input FarmingPolicyUpdateInput {
   version: Float
+  farmingPolicyId: Float
   name: String
   cu: Float
   su: Float
@@ -925,6 +963,12 @@ input FarmingPolicyWhereInput {
   version_lt: Int
   version_lte: Int
   version_in: [Int!]
+  farmingPolicyId_eq: Int
+  farmingPolicyId_gt: Int
+  farmingPolicyId_gte: Int
+  farmingPolicyId_lt: Int
+  farmingPolicyId_lte: Int
+  farmingPolicyId_in: [Int!]
   name_eq: String
   name_contains: String
   name_startsWith: String
@@ -1568,6 +1612,110 @@ type PageInfo {
   endCursor: String
 }
 
+type Policy implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  value: Int!
+  unit: Unit!
+  pricingpolicysu: [PricingPolicy!]
+  pricingpolicycu: [PricingPolicy!]
+  pricingpolicynu: [PricingPolicy!]
+  pricingpolicyipu: [PricingPolicy!]
+}
+
+type PolicyConnection {
+  totalCount: Int!
+  edges: [PolicyEdge!]!
+  pageInfo: PageInfo!
+}
+
+input PolicyCreateInput {
+  value: Float!
+  unit: Unit!
+}
+
+type PolicyEdge {
+  node: Policy!
+  cursor: String!
+}
+
+enum PolicyOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  value_ASC
+  value_DESC
+  unit_ASC
+  unit_DESC
+}
+
+input PolicyUpdateInput {
+  value: Float
+  unit: Unit
+}
+
+input PolicyWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  value_eq: Int
+  value_gt: Int
+  value_gte: Int
+  value_lt: Int
+  value_lte: Int
+  value_in: [Int!]
+  unit_eq: Unit
+  unit_in: [Unit!]
+  pricingpolicysu_none: PricingPolicyWhereInput
+  pricingpolicysu_some: PricingPolicyWhereInput
+  pricingpolicysu_every: PricingPolicyWhereInput
+  pricingpolicycu_none: PricingPolicyWhereInput
+  pricingpolicycu_some: PricingPolicyWhereInput
+  pricingpolicycu_every: PricingPolicyWhereInput
+  pricingpolicynu_none: PricingPolicyWhereInput
+  pricingpolicynu_some: PricingPolicyWhereInput
+  pricingpolicynu_every: PricingPolicyWhereInput
+  pricingpolicyipu_none: PricingPolicyWhereInput
+  pricingpolicyipu_some: PricingPolicyWhereInput
+  pricingpolicyipu_every: PricingPolicyWhereInput
+  AND: [PolicyWhereInput!]
+  OR: [PolicyWhereInput!]
+}
+
+input PolicyWhereUniqueInput {
+  id: ID!
+}
+
 type PricingPolicy implements BaseGraphQLObject {
   id: ID!
   createdAt: DateTime!
@@ -1580,10 +1728,14 @@ type PricingPolicy implements BaseGraphQLObject {
   gridVersion: Int!
   pricingPolicyId: Int!
   name: String!
-  currency: String!
-  su: Int!
-  cu: Int!
-  nu: Int!
+  su: Policy!
+  suId: String!
+  cu: Policy!
+  cuId: String!
+  nu: Policy!
+  nuId: String!
+  ipu: Policy!
+  ipuId: String!
   foundationAccount: String!
   certifiedSalesAccount: String!
 }
@@ -1598,10 +1750,10 @@ input PricingPolicyCreateInput {
   gridVersion: Float!
   pricingPolicyId: Float!
   name: String!
-  currency: String!
-  su: Float!
-  cu: Float!
-  nu: Float!
+  su: ID!
+  cu: ID!
+  nu: ID!
+  ipu: ID!
   foundationAccount: String!
   certifiedSalesAccount: String!
 }
@@ -1624,14 +1776,14 @@ enum PricingPolicyOrderByInput {
   pricingPolicyId_DESC
   name_ASC
   name_DESC
-  currency_ASC
-  currency_DESC
   su_ASC
   su_DESC
   cu_ASC
   cu_DESC
   nu_ASC
   nu_DESC
+  ipu_ASC
+  ipu_DESC
   foundationAccount_ASC
   foundationAccount_DESC
   certifiedSalesAccount_ASC
@@ -1642,10 +1794,10 @@ input PricingPolicyUpdateInput {
   gridVersion: Float
   pricingPolicyId: Float
   name: String
-  currency: String
-  su: Float
-  cu: Float
-  nu: Float
+  su: ID
+  cu: ID
+  nu: ID
+  ipu: ID
   foundationAccount: String
   certifiedSalesAccount: String
 }
@@ -1692,29 +1844,14 @@ input PricingPolicyWhereInput {
   name_startsWith: String
   name_endsWith: String
   name_in: [String!]
-  currency_eq: String
-  currency_contains: String
-  currency_startsWith: String
-  currency_endsWith: String
-  currency_in: [String!]
-  su_eq: Int
-  su_gt: Int
-  su_gte: Int
-  su_lt: Int
-  su_lte: Int
-  su_in: [Int!]
-  cu_eq: Int
-  cu_gt: Int
-  cu_gte: Int
-  cu_lt: Int
-  cu_lte: Int
-  cu_in: [Int!]
-  nu_eq: Int
-  nu_gt: Int
-  nu_gte: Int
-  nu_lt: Int
-  nu_lte: Int
-  nu_in: [Int!]
+  su_eq: ID
+  su_in: [ID!]
+  cu_eq: ID
+  cu_in: [ID!]
+  nu_eq: ID
+  nu_in: [ID!]
+  ipu_eq: ID
+  ipu_in: [ID!]
   foundationAccount_eq: String
   foundationAccount_contains: String
   foundationAccount_startsWith: String
@@ -1725,6 +1862,10 @@ input PricingPolicyWhereInput {
   certifiedSalesAccount_startsWith: String
   certifiedSalesAccount_endsWith: String
   certifiedSalesAccount_in: [String!]
+  su: PolicyWhereInput
+  cu: PolicyWhereInput
+  nu: PolicyWhereInput
+  ipu: PolicyWhereInput
   AND: [PricingPolicyWhereInput!]
   OR: [PricingPolicyWhereInput!]
 }
@@ -1998,6 +2139,9 @@ type Query {
   nodes(offset: Int, limit: Int = 50, where: NodeWhereInput, orderBy: [NodeOrderByInput!]): [Node!]!
   nodeByUniqueInput(where: NodeWhereUniqueInput!): Node
   nodesConnection(first: Int, after: String, last: Int, before: String, where: NodeWhereInput, orderBy: [NodeOrderByInput!]): NodeConnection!
+  policies(offset: Int, limit: Int = 50, where: PolicyWhereInput, orderBy: [PolicyOrderByInput!]): [Policy!]!
+  policyByUniqueInput(where: PolicyWhereUniqueInput!): Policy
+  policiesConnection(first: Int, after: String, last: Int, before: String, where: PolicyWhereInput, orderBy: [PolicyOrderByInput!]): PolicyConnection!
   pricingPolicies(offset: Int, limit: Int = 50, where: PricingPolicyWhereInput, orderBy: [PricingPolicyOrderByInput!]): [PricingPolicy!]!
   pricingPolicyByUniqueInput(where: PricingPolicyWhereUniqueInput!): PricingPolicy
   pricingPoliciesConnection(first: Int, after: String, last: Int, before: String, where: PricingPolicyWhereInput, orderBy: [PricingPolicyOrderByInput!]): PricingPolicyConnection!
@@ -2261,4 +2405,12 @@ input TwinWhereInput {
 
 input TwinWhereUniqueInput {
   id: ID!
+}
+
+enum Unit {
+  Bytes
+  Kilobytes
+  Megabytes
+  Gigabytes
+  Terrabytes
 }

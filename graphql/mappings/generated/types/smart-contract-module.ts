@@ -5,10 +5,10 @@ import { typeRegistry } from ".";
 
 import {
   Consumption,
-  DiscountLevel,
+  ContractBill,
   NodeContract
 } from "substrate-tfgrid-ts-types";
-import { u128, u64 } from "@polkadot/types";
+import { u64 } from "@polkadot/types";
 
 export namespace SmartContractModule {
   export class ConsumptionReportReceivedEvent {
@@ -120,24 +120,14 @@ export namespace SmartContractModule {
   }
 
   export class ContractBilledEvent {
-    public readonly expectedParamTypes = [
-      "u64",
-      "types::DiscountLevel",
-      "u128"
-    ];
+    public readonly expectedParamTypes = ["types::ContractBill"];
 
     constructor(public readonly ctx: SubstrateEvent) {}
 
-    get params(): [u64, DiscountLevel, u128] {
+    get params(): [ContractBill] {
       return [
-        createTypeUnsafe<u64 & Codec>(typeRegistry, "u64", [
+        createTypeUnsafe<ContractBill & Codec>(typeRegistry, "ContractBill", [
           this.ctx.params[0].value
-        ]),
-        createTypeUnsafe<DiscountLevel & Codec>(typeRegistry, "DiscountLevel", [
-          this.ctx.params[1].value
-        ]),
-        createTypeUnsafe<u128 & Codec>(typeRegistry, "u128", [
-          this.ctx.params[2].value
         ])
       ];
     }

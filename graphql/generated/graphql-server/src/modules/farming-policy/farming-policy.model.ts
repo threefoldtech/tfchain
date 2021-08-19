@@ -8,6 +8,9 @@ export class FarmingPolicy extends BaseModel {
   @IntField({})
   version!: number;
 
+  @IntField({})
+  farmingPolicyId!: number;
+
   @StringField({})
   name!: string;
 

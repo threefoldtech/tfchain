@@ -1,7 +1,10 @@
-import { BaseModel, Model, StringField } from 'warthog';
+import { BaseModel, IntField, Model, StringField } from 'warthog';
 
 @Model({ api: {} })
 export class Country extends BaseModel {
+  @IntField({})
+  countryId!: number;
+
   @StringField({})
   code!: string;
 

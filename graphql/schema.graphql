@@ -87,16 +87,29 @@ type PricingPolicy @entity {
   gridVersion: Int!
   pricingPolicyID: Int!
   name: String!
-  currency: String!
-  su: Int!
-  cu: Int!
-  nu: Int!
+  su: Policy!
+  cu: Policy!
+  nu: Policy!
+  ipu: Policy!
   foundation_account: String!
   certified_sales_account: String!
 }
 
+type Policy @entity {
+  value: Int!
+  unit: Unit!
+}
+
+enum Unit {
+  Bytes,
+  Kilobytes,
+  Megabytes,
+  Gigabytes,
+  Terrabytes
+}
+
 type Country @entity {
-  id: Int!
+  countryID: Int!
   code: String!
   name: String!
   region: String!
@@ -104,7 +117,7 @@ type Country @entity {
 }
 
 type City @entity {
-  id: Int!
+  cityID: Int!
   countryID: Int!
   name: String!
 }
@@ -140,6 +153,7 @@ type ContractBillReport @entity {
   contractID: Int!
   discount_received: DiscountLevel!
   amount_billed: Int!
+  timestamp: Int!
 }
 
 enum DiscountLevel {
@@ -152,7 +166,7 @@ enum DiscountLevel {
 
 type FarmingPolicy @entity {
   version: Int!
-  id: Int!
+  farmingPolicyID: Int!
   name: String!
   cu: Int!
   su: Int!

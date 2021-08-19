@@ -352,4 +352,56 @@ var TfgridModule;
         }
     }
     TfgridModule.TwinEntityRemovedEvent = TwinEntityRemovedEvent;
+    class PricingPolicyStoredEvent {
+        constructor(ctx) {
+            this.ctx = ctx;
+            this.expectedParamTypes = ["types::PricingPolicy<AccountId>"];
+        }
+        get params() {
+            return [
+                create_1.createTypeUnsafe(_1.typeRegistry, "PricingPolicy", [
+                    this.ctx.params[0].value
+                ])
+            ];
+        }
+        validateParams() {
+            if (this.expectedParamTypes.length !== this.ctx.params.length) {
+                return false;
+            }
+            let valid = true;
+            this.expectedParamTypes.forEach((type, i) => {
+                if (type !== this.ctx.params[i].type) {
+                    valid = false;
+                }
+            });
+            return valid;
+        }
+    }
+    TfgridModule.PricingPolicyStoredEvent = PricingPolicyStoredEvent;
+    class FarmingPolicyStoredEvent {
+        constructor(ctx) {
+            this.ctx = ctx;
+            this.expectedParamTypes = ["types::FarmingPolicy"];
+        }
+        get params() {
+            return [
+                create_1.createTypeUnsafe(_1.typeRegistry, "FarmingPolicy", [
+                    this.ctx.params[0].value
+                ])
+            ];
+        }
+        validateParams() {
+            if (this.expectedParamTypes.length !== this.ctx.params.length) {
+                return false;
+            }
+            let valid = true;
+            this.expectedParamTypes.forEach((type, i) => {
+                if (type !== this.ctx.params[i].type) {
+                    valid = false;
+                }
+            });
+            return valid;
+        }
+    }
+    TfgridModule.FarmingPolicyStoredEvent = FarmingPolicyStoredEvent;
 })(TfgridModule = exports.TfgridModule || (exports.TfgridModule = {}));

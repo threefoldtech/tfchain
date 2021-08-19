@@ -39,6 +39,9 @@ export interface Query {
     nodes: <T = Array<Node>>(args: { offset?: Int | null, limit?: Int | null, where?: NodeWhereInput | null, orderBy?: Array<NodeOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     nodeByUniqueInput: <T = Node | null>(args: { where: NodeWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     nodesConnection: <T = NodeConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: NodeWhereInput | null, orderBy?: Array<NodeOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    policies: <T = Array<Policy>>(args: { offset?: Int | null, limit?: Int | null, where?: PolicyWhereInput | null, orderBy?: Array<PolicyOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    policyByUniqueInput: <T = Policy | null>(args: { where: PolicyWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    policiesConnection: <T = PolicyConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: PolicyWhereInput | null, orderBy?: Array<PolicyOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     pricingPolicies: <T = Array<PricingPolicy>>(args: { offset?: Int | null, limit?: Int | null, where?: PricingPolicyWhereInput | null, orderBy?: Array<PricingPolicyOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     pricingPolicyByUniqueInput: <T = PricingPolicy | null>(args: { where: PricingPolicyWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     pricingPoliciesConnection: <T = PricingPolicyConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: PricingPolicyWhereInput | null, orderBy?: Array<PricingPolicyOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
@@ -96,6 +99,8 @@ export type CityOrderByInput =   'createdAt_ASC' |
   'updatedAt_DESC' |
   'deletedAt_ASC' |
   'deletedAt_DESC' |
+  'cityId_ASC' |
+  'cityId_DESC' |
   'countryId_ASC' |
   'countryId_DESC' |
   'name_ASC' |
@@ -133,7 +138,9 @@ export type ContractBillReportOrderByInput =   'createdAt_ASC' |
   'discountReceived_ASC' |
   'discountReceived_DESC' |
   'amountBilled_ASC' |
-  'amountBilled_DESC'
+  'amountBilled_DESC' |
+  'timestamp_ASC' |
+  'timestamp_DESC'
 
 export type ContractState =   'Created' |
   'Deleted' |
@@ -145,6 +152,8 @@ export type CountryOrderByInput =   'createdAt_ASC' |
   'updatedAt_DESC' |
   'deletedAt_ASC' |
   'deletedAt_DESC' |
+  'countryId_ASC' |
+  'countryId_DESC' |
   'code_ASC' |
   'code_DESC' |
   'name_ASC' |
@@ -200,6 +209,8 @@ export type FarmingPolicyOrderByInput =   'createdAt_ASC' |
   'deletedAt_DESC' |
   'version_ASC' |
   'version_DESC' |
+  'farmingPolicyId_ASC' |
+  'farmingPolicyId_DESC' |
   'name_ASC' |
   'name_DESC' |
   'cu_ASC' |
@@ -309,6 +320,17 @@ export type NodeOrderByInput =   'createdAt_ASC' |
   'farmingPolicyId_ASC' |
   'farmingPolicyId_DESC'
 
+export type PolicyOrderByInput =   'createdAt_ASC' |
+  'createdAt_DESC' |
+  'updatedAt_ASC' |
+  'updatedAt_DESC' |
+  'deletedAt_ASC' |
+  'deletedAt_DESC' |
+  'value_ASC' |
+  'value_DESC' |
+  'unit_ASC' |
+  'unit_DESC'
+
 export type PricingPolicyOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
   'updatedAt_ASC' |
@@ -321,14 +343,14 @@ export type PricingPolicyOrderByInput =   'createdAt_ASC' |
   'pricingPolicyId_DESC' |
   'name_ASC' |
   'name_DESC' |
-  'currency_ASC' |
-  'currency_DESC' |
   'su_ASC' |
   'su_DESC' |
   'cu_ASC' |
   'cu_DESC' |
   'nu_ASC' |
   'nu_DESC' |
+  'ipu_ASC' |
+  'ipu_DESC' |
   'foundationAccount_ASC' |
   'foundationAccount_DESC' |
   'certifiedSalesAccount_ASC' |
@@ -396,6 +418,12 @@ export type TwinOrderByInput =   'createdAt_ASC' |
   'ip_ASC' |
   'ip_DESC'
 
+export type Unit =   'Bytes' |
+  'Kilobytes' |
+  'Megabytes' |
+  'Gigabytes' |
+  'Terrabytes'
+
 export interface BaseWhereInput {
   id_eq?: String | null
   id_in?: String[] | String | null
@@ -421,11 +449,13 @@ export interface BaseWhereInput {
 }
 
 export interface CityCreateInput {
+  cityId: Float
   countryId: Float
   name: String
 }
 
 export interface CityUpdateInput {
+  cityId?: Float | null
   countryId?: Float | null
   name?: String | null
 }
@@ -455,6 +485,12 @@ export interface CityWhereInput {
   deletedAt_gte?: DateTime | null
   deletedById_eq?: ID_Input | null
   deletedById_in?: ID_Output[] | ID_Output | null
+  cityId_eq?: Int | null
+  cityId_gt?: Int | null
+  cityId_gte?: Int | null
+  cityId_lt?: Int | null
+  cityId_lte?: Int | null
+  cityId_in?: Int[] | Int | null
   countryId_eq?: Int | null
   countryId_gt?: Int | null
   countryId_gte?: Int | null
@@ -573,12 +609,14 @@ export interface ContractBillReportCreateInput {
   contractId: Float
   discountReceived: DiscountLevel
   amountBilled: Float
+  timestamp: Float
 }
 
 export interface ContractBillReportUpdateInput {
   contractId?: Float | null
   discountReceived?: DiscountLevel | null
   amountBilled?: Float | null
+  timestamp?: Float | null
 }
 
 export interface ContractBillReportWhereInput {
@@ -620,6 +658,12 @@ export interface ContractBillReportWhereInput {
   amountBilled_lt?: Int | null
   amountBilled_lte?: Int | null
   amountBilled_in?: Int[] | Int | null
+  timestamp_eq?: Int | null
+  timestamp_gt?: Int | null
+  timestamp_gte?: Int | null
+  timestamp_lt?: Int | null
+  timestamp_lte?: Int | null
+  timestamp_in?: Int[] | Int | null
   AND?: ContractBillReportWhereInput[] | ContractBillReportWhereInput | null
   OR?: ContractBillReportWhereInput[] | ContractBillReportWhereInput | null
 }
@@ -629,6 +673,7 @@ export interface ContractBillReportWhereUniqueInput {
 }
 
 export interface CountryCreateInput {
+  countryId: Float
   code: String
   name: String
   region: String
@@ -636,6 +681,7 @@ export interface CountryCreateInput {
 }
 
 export interface CountryUpdateInput {
+  countryId?: Float | null
   code?: String | null
   name?: String | null
   region?: String | null
@@ -667,6 +713,12 @@ export interface CountryWhereInput {
   deletedAt_gte?: DateTime | null
   deletedById_eq?: ID_Input | null
   deletedById_in?: ID_Output[] | ID_Output | null
+  countryId_eq?: Int | null
+  countryId_gt?: Int | null
+  countryId_gte?: Int | null
+  countryId_lt?: Int | null
+  countryId_lte?: Int | null
+  countryId_in?: Int[] | Int | null
   code_eq?: String | null
   code_contains?: String | null
   code_startsWith?: String | null
@@ -852,6 +904,7 @@ export interface FarmCreateInput {
 
 export interface FarmingPolicyCreateInput {
   version: Float
+  farmingPolicyId: Float
   name: String
   cu: Float
   su: Float
@@ -863,6 +916,7 @@ export interface FarmingPolicyCreateInput {
 
 export interface FarmingPolicyUpdateInput {
   version?: Float | null
+  farmingPolicyId?: Float | null
   name?: String | null
   cu?: Float | null
   su?: Float | null
@@ -903,6 +957,12 @@ export interface FarmingPolicyWhereInput {
   version_lt?: Int | null
   version_lte?: Int | null
   version_in?: Int[] | Int | null
+  farmingPolicyId_eq?: Int | null
+  farmingPolicyId_gt?: Int | null
+  farmingPolicyId_gte?: Int | null
+  farmingPolicyId_lt?: Int | null
+  farmingPolicyId_lte?: Int | null
+  farmingPolicyId_in?: Int[] | Int | null
   name_eq?: String | null
   name_contains?: String | null
   name_startsWith?: String | null
@@ -1344,14 +1404,77 @@ export interface NodeWhereUniqueInput {
   id: ID_Output
 }
 
+export interface PolicyCreateInput {
+  value: Float
+  unit: Unit
+}
+
+export interface PolicyUpdateInput {
+  value?: Float | null
+  unit?: Unit | null
+}
+
+export interface PolicyWhereInput {
+  id_eq?: ID_Input | null
+  id_in?: ID_Output[] | ID_Output | null
+  createdAt_eq?: DateTime | null
+  createdAt_lt?: DateTime | null
+  createdAt_lte?: DateTime | null
+  createdAt_gt?: DateTime | null
+  createdAt_gte?: DateTime | null
+  createdById_eq?: ID_Input | null
+  createdById_in?: ID_Output[] | ID_Output | null
+  updatedAt_eq?: DateTime | null
+  updatedAt_lt?: DateTime | null
+  updatedAt_lte?: DateTime | null
+  updatedAt_gt?: DateTime | null
+  updatedAt_gte?: DateTime | null
+  updatedById_eq?: ID_Input | null
+  updatedById_in?: ID_Output[] | ID_Output | null
+  deletedAt_all?: Boolean | null
+  deletedAt_eq?: DateTime | null
+  deletedAt_lt?: DateTime | null
+  deletedAt_lte?: DateTime | null
+  deletedAt_gt?: DateTime | null
+  deletedAt_gte?: DateTime | null
+  deletedById_eq?: ID_Input | null
+  deletedById_in?: ID_Output[] | ID_Output | null
+  value_eq?: Int | null
+  value_gt?: Int | null
+  value_gte?: Int | null
+  value_lt?: Int | null
+  value_lte?: Int | null
+  value_in?: Int[] | Int | null
+  unit_eq?: Unit | null
+  unit_in?: Unit[] | Unit | null
+  pricingpolicysu_none?: PricingPolicyWhereInput | null
+  pricingpolicysu_some?: PricingPolicyWhereInput | null
+  pricingpolicysu_every?: PricingPolicyWhereInput | null
+  pricingpolicycu_none?: PricingPolicyWhereInput | null
+  pricingpolicycu_some?: PricingPolicyWhereInput | null
+  pricingpolicycu_every?: PricingPolicyWhereInput | null
+  pricingpolicynu_none?: PricingPolicyWhereInput | null
+  pricingpolicynu_some?: PricingPolicyWhereInput | null
+  pricingpolicynu_every?: PricingPolicyWhereInput | null
+  pricingpolicyipu_none?: PricingPolicyWhereInput | null
+  pricingpolicyipu_some?: PricingPolicyWhereInput | null
+  pricingpolicyipu_every?: PricingPolicyWhereInput | null
+  AND?: PolicyWhereInput[] | PolicyWhereInput | null
+  OR?: PolicyWhereInput[] | PolicyWhereInput | null
+}
+
+export interface PolicyWhereUniqueInput {
+  id: ID_Output
+}
+
 export interface PricingPolicyCreateInput {
   gridVersion: Float
   pricingPolicyId: Float
   name: String
-  currency: String
-  su: Float
-  cu: Float
-  nu: Float
+  su: ID_Output
+  cu: ID_Output
+  nu: ID_Output
+  ipu: ID_Output
   foundationAccount: String
   certifiedSalesAccount: String
 }
@@ -1360,10 +1483,10 @@ export interface PricingPolicyUpdateInput {
   gridVersion?: Float | null
   pricingPolicyId?: Float | null
   name?: String | null
-  currency?: String | null
-  su?: Float | null
-  cu?: Float | null
-  nu?: Float | null
+  su?: ID_Input | null
+  cu?: ID_Input | null
+  nu?: ID_Input | null
+  ipu?: ID_Input | null
   foundationAccount?: String | null
   certifiedSalesAccount?: String | null
 }
@@ -1410,29 +1533,14 @@ export interface PricingPolicyWhereInput {
   name_startsWith?: String | null
   name_endsWith?: String | null
   name_in?: String[] | String | null
-  currency_eq?: String | null
-  currency_contains?: String | null
-  currency_startsWith?: String | null
-  currency_endsWith?: String | null
-  currency_in?: String[] | String | null
-  su_eq?: Int | null
-  su_gt?: Int | null
-  su_gte?: Int | null
-  su_lt?: Int | null
-  su_lte?: Int | null
-  su_in?: Int[] | Int | null
-  cu_eq?: Int | null
-  cu_gt?: Int | null
-  cu_gte?: Int | null
-  cu_lt?: Int | null
-  cu_lte?: Int | null
-  cu_in?: Int[] | Int | null
-  nu_eq?: Int | null
-  nu_gt?: Int | null
-  nu_gte?: Int | null
-  nu_lt?: Int | null
-  nu_lte?: Int | null
-  nu_in?: Int[] | Int | null
+  su_eq?: ID_Input | null
+  su_in?: ID_Output[] | ID_Output | null
+  cu_eq?: ID_Input | null
+  cu_in?: ID_Output[] | ID_Output | null
+  nu_eq?: ID_Input | null
+  nu_in?: ID_Output[] | ID_Output | null
+  ipu_eq?: ID_Input | null
+  ipu_in?: ID_Output[] | ID_Output | null
   foundationAccount_eq?: String | null
   foundationAccount_contains?: String | null
   foundationAccount_startsWith?: String | null
@@ -1443,6 +1551,10 @@ export interface PricingPolicyWhereInput {
   certifiedSalesAccount_startsWith?: String | null
   certifiedSalesAccount_endsWith?: String | null
   certifiedSalesAccount_in?: String[] | String | null
+  su?: PolicyWhereInput | null
+  cu?: PolicyWhereInput | null
+  nu?: PolicyWhereInput | null
+  ipu?: PolicyWhereInput | null
   AND?: PricingPolicyWhereInput[] | PricingPolicyWhereInput | null
   OR?: PricingPolicyWhereInput[] | PricingPolicyWhereInput | null
 }
@@ -1781,6 +1893,7 @@ export interface City extends BaseGraphQLObject {
   deletedAt?: DateTime | null
   deletedById?: String | null
   version: Int
+  cityId: Int
   countryId: Int
   name: String
 }
@@ -1844,6 +1957,7 @@ export interface ContractBillReport extends BaseGraphQLObject {
   contractId: Int
   discountReceived: DiscountLevel
   amountBilled: Int
+  timestamp: Int
 }
 
 export interface ContractBillReportConnection {
@@ -1866,6 +1980,7 @@ export interface Country extends BaseGraphQLObject {
   deletedAt?: DateTime | null
   deletedById?: String | null
   version: Int
+  countryId: Int
   code: String
   name: String
   region: String
@@ -1977,6 +2092,7 @@ export interface FarmingPolicy extends BaseGraphQLObject {
   deletedAt?: DateTime | null
   deletedById?: String | null
   version: Int
+  farmingPolicyId: Int
   name: String
   cu: Int
   su: Int
@@ -2097,6 +2213,34 @@ export interface PageInfo {
   endCursor?: String | null
 }
 
+export interface Policy extends BaseGraphQLObject {
+  id: ID_Output
+  createdAt: DateTime
+  createdById: String
+  updatedAt?: DateTime | null
+  updatedById?: String | null
+  deletedAt?: DateTime | null
+  deletedById?: String | null
+  version: Int
+  value: Int
+  unit: Unit
+  pricingpolicysu?: Array<PricingPolicy> | null
+  pricingpolicycu?: Array<PricingPolicy> | null
+  pricingpolicynu?: Array<PricingPolicy> | null
+  pricingpolicyipu?: Array<PricingPolicy> | null
+}
+
+export interface PolicyConnection {
+  totalCount: Int
+  edges: Array<PolicyEdge>
+  pageInfo: PageInfo
+}
+
+export interface PolicyEdge {
+  node: Policy
+  cursor: String
+}
+
 export interface PricingPolicy extends BaseGraphQLObject {
   id: ID_Output
   createdAt: DateTime
@@ -2109,10 +2253,14 @@ export interface PricingPolicy extends BaseGraphQLObject {
   gridVersion: Int
   pricingPolicyId: Int
   name: String
-  currency: String
-  su: Int
-  cu: Int
-  nu: Int
+  su: Policy
+  suId: String
+  cu: Policy
+  cuId: String
+  nu: Policy
+  nuId: String
+  ipu: Policy
+  ipuId: String
   foundationAccount: String
   certifiedSalesAccount: String
 }

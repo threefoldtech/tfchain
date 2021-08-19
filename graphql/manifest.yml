@@ -28,6 +28,8 @@ typegen:
     - tfgridModule.TwinDeleted
     - tfgridModule.TwinEntityStored
     - tfgridModule.TwinEntityRemoved
+    - tfgridModule.PricingPolicyStored
+    - tfgridModule.FarmingPolicyStored
     - smartContractModule.ConsumptionReportReceived
     - smartContractModule.ContractCreated
     - smartContractModule.ContractUpdated
@@ -69,6 +71,12 @@ mappings:
       handler: farmUpdated
     - event: tfgridModule.FarmDeleted
       handler: farmDeleted
+    - event: tfgridModule.PricingPolicyStored
+      handler: pricingPolicyStored
+      filter:
+        specVersion: '[2, )'
+    - event: tfgridModule.FarmingPolicyStored
+      handler: farmingPolicyStored
     - event: smartContractModule.ConsumptionReportReceived
       handler: consumptionReportReceived
     - event: smartContractModule.ContractCreated
@@ -79,6 +87,8 @@ mappings:
       handler: contractCanceled
     - event: smartContractModule.ContractBilled
       handler: contractBilled
+      filter:
+        specVersion: '[3, )'
   # extrinsicHandlers:
   #   # infer defaults
   #   - extrinsic: timestamp.set 

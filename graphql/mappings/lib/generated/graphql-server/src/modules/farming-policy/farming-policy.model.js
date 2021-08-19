@@ -16,6 +16,10 @@ tslib_1.__decorate([
     tslib_1.__metadata("design:type", Number)
 ], FarmingPolicy.prototype, "version", void 0);
 tslib_1.__decorate([
+    warthog_1.IntField({}),
+    tslib_1.__metadata("design:type", Number)
+], FarmingPolicy.prototype, "farmingPolicyId", void 0);
+tslib_1.__decorate([
     warthog_1.StringField({}),
     tslib_1.__metadata("design:type", String)
 ], FarmingPolicy.prototype, "name", void 0);

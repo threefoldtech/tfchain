@@ -31,6 +31,11 @@ import {
 import { PricingPolicy } from './pricing-policy.model';
 import { PricingPolicyService } from './pricing-policy.service';
 
+import { Policy } from '../policy/policy.model';
+import { PolicyService } from '../policy/policy.service';
+import { getConnection, getRepository, In, Not } from 'typeorm';
+import _ from 'lodash';
+
 @ObjectType()
 export class PricingPolicyEdge {
   @Field(() => PricingPolicy, { nullable: false })
@@ -125,5 +130,25 @@ export class PricingPolicyResolver {
     }
 
     return result as Promise<PricingPolicyConnection>;
+  }
+
+  @FieldResolver(() => Policy)
+  async su(@Root() r: PricingPolicy, @Ctx() ctx: BaseContext): Promise<Policy | null> {
+    return ctx.dataLoader.loaders.PricingPolicy.su.load(r);
+  }
+
+  @FieldResolver(() => Policy)
+  async cu(@Root() r: PricingPolicy, @Ctx() ctx: BaseContext): Promise<Policy | null> {
+    return ctx.dataLoader.loaders.PricingPolicy.cu.load(r);
+  }
+
+  @FieldResolver(() => Policy)
+  async nu(@Root() r: PricingPolicy, @Ctx() ctx: BaseContext): Promise<Policy | null> {
+    return ctx.dataLoader.loaders.PricingPolicy.nu.load(r);
+  }
+
+  @FieldResolver(() => Policy)
+  async ipu(@Root() r: PricingPolicy, @Ctx() ctx: BaseContext): Promise<Policy | null> {
+    return ctx.dataLoader.loaders.PricingPolicy.ipu.load(r);
   }
 }
