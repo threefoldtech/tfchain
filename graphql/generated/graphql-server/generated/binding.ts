@@ -161,7 +161,11 @@ export type CountryOrderByInput =   'createdAt_ASC' |
   'region_ASC' |
   'region_DESC' |
   'subregion_ASC' |
-  'subregion_DESC'
+  'subregion_DESC' |
+  'lat_ASC' |
+  'lat_DESC' |
+  'long_ASC' |
+  'long_DESC'
 
 export type DiscountLevel =   'None' |
   'Default' |
@@ -207,8 +211,8 @@ export type FarmingPolicyOrderByInput =   'createdAt_ASC' |
   'updatedAt_DESC' |
   'deletedAt_ASC' |
   'deletedAt_DESC' |
-  'version_ASC' |
-  'version_DESC' |
+  'gridVersion_ASC' |
+  'gridVersion_DESC' |
   'farmingPolicyId_ASC' |
   'farmingPolicyId_DESC' |
   'name_ASC' |
@@ -678,6 +682,8 @@ export interface CountryCreateInput {
   name: String
   region: String
   subregion: String
+  lat?: String | null
+  long?: String | null
 }
 
 export interface CountryUpdateInput {
@@ -686,6 +692,8 @@ export interface CountryUpdateInput {
   name?: String | null
   region?: String | null
   subregion?: String | null
+  lat?: String | null
+  long?: String | null
 }
 
 export interface CountryWhereInput {
@@ -739,6 +747,16 @@ export interface CountryWhereInput {
   subregion_startsWith?: String | null
   subregion_endsWith?: String | null
   subregion_in?: String[] | String | null
+  lat_eq?: String | null
+  lat_contains?: String | null
+  lat_startsWith?: String | null
+  lat_endsWith?: String | null
+  lat_in?: String[] | String | null
+  long_eq?: String | null
+  long_contains?: String | null
+  long_startsWith?: String | null
+  long_endsWith?: String | null
+  long_in?: String[] | String | null
   AND?: CountryWhereInput[] | CountryWhereInput | null
   OR?: CountryWhereInput[] | CountryWhereInput | null
 }
@@ -903,7 +921,7 @@ export interface FarmCreateInput {
 }
 
 export interface FarmingPolicyCreateInput {
-  version: Float
+  gridVersion: Float
   farmingPolicyId: Float
   name: String
   cu: Float
@@ -915,7 +933,7 @@ export interface FarmingPolicyCreateInput {
 }
 
 export interface FarmingPolicyUpdateInput {
-  version?: Float | null
+  gridVersion?: Float | null
   farmingPolicyId?: Float | null
   name?: String | null
   cu?: Float | null
@@ -951,12 +969,12 @@ export interface FarmingPolicyWhereInput {
   deletedAt_gte?: DateTime | null
   deletedById_eq?: ID_Input | null
   deletedById_in?: ID_Output[] | ID_Output | null
-  version_eq?: Int | null
-  version_gt?: Int | null
-  version_gte?: Int | null
-  version_lt?: Int | null
-  version_lte?: Int | null
-  version_in?: Int[] | Int | null
+  gridVersion_eq?: Int | null
+  gridVersion_gt?: Int | null
+  gridVersion_gte?: Int | null
+  gridVersion_lt?: Int | null
+  gridVersion_lte?: Int | null
+  gridVersion_in?: Int[] | Int | null
   farmingPolicyId_eq?: Int | null
   farmingPolicyId_gt?: Int | null
   farmingPolicyId_gte?: Int | null
@@ -1985,6 +2003,8 @@ export interface Country extends BaseGraphQLObject {
   name: String
   region: String
   subregion: String
+  lat?: String | null
+  long?: String | null
 }
 
 export interface CountryConnection {
@@ -2092,6 +2112,7 @@ export interface FarmingPolicy extends BaseGraphQLObject {
   deletedAt?: DateTime | null
   deletedById?: String | null
   version: Int
+  gridVersion: Int
   farmingPolicyId: Int
   name: String
   cu: Int

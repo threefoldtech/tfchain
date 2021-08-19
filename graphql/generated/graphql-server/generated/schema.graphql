@@ -451,6 +451,8 @@ type Country implements BaseGraphQLObject {
   name: String!
   region: String!
   subregion: String!
+  lat: String
+  long: String
 }
 
 type CountryConnection {
@@ -465,6 +467,8 @@ input CountryCreateInput {
   name: String!
   region: String!
   subregion: String!
+  lat: String
+  long: String
 }
 
 type CountryEdge {
@@ -489,6 +493,10 @@ enum CountryOrderByInput {
   region_DESC
   subregion_ASC
   subregion_DESC
+  lat_ASC
+  lat_DESC
+  long_ASC
+  long_DESC
 }
 
 input CountryUpdateInput {
@@ -497,6 +505,8 @@ input CountryUpdateInput {
   name: String
   region: String
   subregion: String
+  lat: String
+  long: String
 }
 
 input CountryWhereInput {
@@ -550,6 +560,16 @@ input CountryWhereInput {
   subregion_startsWith: String
   subregion_endsWith: String
   subregion_in: [String!]
+  lat_eq: String
+  lat_contains: String
+  lat_startsWith: String
+  lat_endsWith: String
+  lat_in: [String!]
+  long_eq: String
+  long_contains: String
+  long_startsWith: String
+  long_endsWith: String
+  long_in: [String!]
   AND: [CountryWhereInput!]
   OR: [CountryWhereInput!]
 }
@@ -860,6 +880,7 @@ type FarmingPolicy implements BaseGraphQLObject {
   deletedAt: DateTime
   deletedById: String
   version: Int!
+  gridVersion: Int!
   farmingPolicyId: Int!
   name: String!
   cu: Int!
@@ -877,7 +898,7 @@ type FarmingPolicyConnection {
 }
 
 input FarmingPolicyCreateInput {
-  version: Float!
+  gridVersion: Float!
   farmingPolicyId: Float!
   name: String!
   cu: Float!
@@ -900,8 +921,8 @@ enum FarmingPolicyOrderByInput {
   updatedAt_DESC
   deletedAt_ASC
   deletedAt_DESC
-  version_ASC
-  version_DESC
+  gridVersion_ASC
+  gridVersion_DESC
   farmingPolicyId_ASC
   farmingPolicyId_DESC
   name_ASC
@@ -921,7 +942,7 @@ enum FarmingPolicyOrderByInput {
 }
 
 input FarmingPolicyUpdateInput {
-  version: Float
+  gridVersion: Float
   farmingPolicyId: Float
   name: String
   cu: Float
@@ -957,12 +978,12 @@ input FarmingPolicyWhereInput {
   deletedAt_gte: DateTime
   deletedById_eq: ID
   deletedById_in: [ID!]
-  version_eq: Int
-  version_gt: Int
-  version_gte: Int
-  version_lt: Int
-  version_lte: Int
-  version_in: [Int!]
+  gridVersion_eq: Int
+  gridVersion_gt: Int
+  gridVersion_gte: Int
+  gridVersion_lt: Int
+  gridVersion_lte: Int
+  gridVersion_in: [Int!]
   farmingPolicyId_eq: Int
   farmingPolicyId_gt: Int
   farmingPolicyId_gte: Int

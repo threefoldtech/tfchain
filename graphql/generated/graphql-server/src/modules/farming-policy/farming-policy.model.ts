@@ -6,7 +6,7 @@ export { CertificationType };
 @Model({ api: {} })
 export class FarmingPolicy extends BaseModel {
   @IntField({})
-  version!: number;
+  gridVersion!: number;
 
   @IntField({})
   farmingPolicyId!: number;

@@ -35,15 +35,22 @@ async function main () {
 
     try {
         const countryPromises = countries.data.map((country, index) => {
-            const text = 'INSERT INTO country(id, country_id, name, code, region, subregion, created_by_id, version) VALUES($1, $2, $3, $4, $5, $6, $7, $8)'
+            const text = 'INSERT INTO country(id, country_id, name, code, region, subregion, lat, long, created_by_id, version) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)'
             let code = country.alpha2Code
             if (!code) {
                 code = country.alpha3Code
             }
-            return client.query(text, [index, index, country.name, code, country.region, country.subregion, 0, 0]) 
+
+            let lat, long = ''
+            if (country.latlng.lenght > 0) {
+                lat = country.latlng[0].toString()
+                long = country.latlng[1].toString()
+            }
+            index++
+            return client.query(text, [index, index, country.name, code, country.region, country.subregion, lat, long, 0, 0]) 
         })
     
-        await Promise.all(countryPromises)
+        // await Promise.all(countryPromises)
 
         const query = {
             name: 'fetch',
@@ -56,20 +63,26 @@ async function main () {
         let index = 0
         const mappedCities = map(cities.data, (countryCities, country) => {
             let foundCountry = countryData.filter(c => c.name === country)[0]
-
             if (!foundCountry) return
 
-            foundCountryID = foundCountry.country_id
+            console.log(foundCountry.country_id || foundCountry.id)
+            foundCountryID = foundCountry.country_id || foundCountry.id
+
             return countryCities.map(countryCity => {
-                const text = 'INSERT INTO city(city_id, country_id, name, created_by_id, version) VALUES($1, $2, $3, $4, $5) RETURNING *'
+                if (countryCity === '') {
+                    countryCity = 'Unknown'
+                }
+
+                const text = 'INSERT INTO city(id, city_id, country_id, name, created_by_id, version) VALUES($1, $2, $3, $4, $5, $6) RETURNING *'
                 index++
                
-                return [index, foundCountryID, countryCity, 0, 0]
+                return [index, index, foundCountryID, countryCity, 0, 0]
             })
         }).filter(g => g)
 
-        const inserts = format('INSERT INTO city(city_id, country_id, name, created_by_id, version) VALUES %L', flatten(mappedCities))
+        const inserts = format('INSERT INTO city(id, city_id, country_id, name, created_by_id, version) VALUES %L', flatten(mappedCities))
 
+        // console.log(inserts)
         client.query(inserts)
             .then(res => {
                 console.log(res)

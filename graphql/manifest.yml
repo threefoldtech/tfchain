@@ -74,7 +74,7 @@ mappings:
     - event: tfgridModule.PricingPolicyStored
       handler: pricingPolicyStored
       filter:
-        specVersion: '[2, )'
+        specVersion: '[3, )'
     - event: tfgridModule.FarmingPolicyStored
       handler: farmingPolicyStored
     - event: smartContractModule.ConsumptionReportReceived

@@ -16,25 +16,34 @@ export async function pricingPolicyStored({
   const newPricingPolicy = new PricingPolicy()
   const [pricing_policy] = new TfgridModule.PricingPolicyStoredEvent(event).params
 
-  newPricingPolicy.version = pricing_policy.version.toNumber()
+  newPricingPolicy.gridVersion = pricing_policy.version.toNumber()
   newPricingPolicy.pricingPolicyId = pricing_policy.id.toNumber()
   newPricingPolicy.name = hex2a(Buffer.from(pricing_policy.name.toString()).toString())
 
   const suPolicy = new Policy()
   suPolicy.value = pricing_policy.su.value.toNumber()
   suPolicy.unit = formatUnit(pricing_policy.su.unit.toString())
+  await store.save<Policy>(suPolicy)
 
   const nuPolicy = new Policy()
   nuPolicy.value = pricing_policy.nu.value.toNumber()
   nuPolicy.unit = formatUnit(pricing_policy.nu.unit.toString())
+  await store.save<Policy>(nuPolicy)
 
   const cuPolicy = new Policy()
   cuPolicy.value = pricing_policy.cu.value.toNumber()
   cuPolicy.unit = formatUnit(pricing_policy.cu.unit.toString())
+  await store.save<Policy>(cuPolicy)
 
-  const IpuPolcy = new Policy()
-  IpuPolcy.value = pricing_policy.ipu.value.toNumber()
-  IpuPolcy.unit = formatUnit(pricing_policy.ipu.unit.toString())
+  const IpuPolicy = new Policy()
+  IpuPolicy.value = pricing_policy.ipu.value.toNumber()
+  IpuPolicy.unit = formatUnit(pricing_policy.ipu.unit.toString())
+  await store.save<Policy>(IpuPolicy)
+
+  newPricingPolicy.su = suPolicy
+  newPricingPolicy.cu = cuPolicy
+  newPricingPolicy.nu = nuPolicy
+  newPricingPolicy.ipu = IpuPolicy
 
   newPricingPolicy.foundationAccount = Buffer.from(pricing_policy.foundation_account.toHex()).toString()
   newPricingPolicy.certifiedSalesAccount = Buffer.from(pricing_policy.certified_sales_account.toHex()).toString()
@@ -51,7 +60,7 @@ export async function farmingPolicyStored({
   const newFarmingPolicy = new FarmingPolicy()
   const [farming_policy] = new TfgridModule.FarmingPolicyStoredEvent(event).params
 
-  newFarmingPolicy.version = farming_policy.version.toNumber()
+  newFarmingPolicy.gridVersion = farming_policy.version.toNumber()
   newFarmingPolicy.farmingPolicyId = farming_policy.id.toNumber()
   newFarmingPolicy.name = hex2a(Buffer.from(farming_policy.name.toString()).toString())
 

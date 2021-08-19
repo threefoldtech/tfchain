@@ -17,6 +17,16 @@ export class Country extends BaseModel {
   @StringField({})
   subregion!: string;
 
+  @StringField({
+    nullable: true
+  })
+  lat?: string;
+
+  @StringField({
+    nullable: true
+  })
+  long?: string;
+
   constructor(init?: Partial<Country>) {
     super();
     Object.assign(this, init);

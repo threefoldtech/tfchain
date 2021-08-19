@@ -114,6 +114,8 @@ type Country @entity {
   name: String!
   region: String!
   subregion: String!
+  lat: String
+  long: String
 }
 
 type City @entity {
@@ -165,7 +167,7 @@ enum DiscountLevel {
 }
 
 type FarmingPolicy @entity {
-  version: Int!
+  gridVersion: Int!
   farmingPolicyID: Int!
   name: String!
   cu: Int!

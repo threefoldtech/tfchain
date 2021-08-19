@@ -14,7 +14,7 @@ let FarmingPolicy = class FarmingPolicy extends warthog_1.BaseModel {
 tslib_1.__decorate([
     warthog_1.IntField({}),
     tslib_1.__metadata("design:type", Number)
-], FarmingPolicy.prototype, "version", void 0);
+], FarmingPolicy.prototype, "gridVersion", void 0);
 tslib_1.__decorate([
     warthog_1.IntField({}),
     tslib_1.__metadata("design:type", Number)

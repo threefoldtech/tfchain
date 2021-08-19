@@ -2,7 +2,7 @@ import { BaseModel } from 'warthog';
 import { CertificationType } from '../enums/enums';
 export { CertificationType };
 export declare class FarmingPolicy extends BaseModel {
-    version: number;
+    gridVersion: number;
     farmingPolicyId: number;
     name: string;
     cu: number;

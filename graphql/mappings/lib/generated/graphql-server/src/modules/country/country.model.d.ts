@@ -5,5 +5,7 @@ export declare class Country extends BaseModel {
     name: string;
     region: string;
     subregion: string;
+    lat?: string;
+    long?: string;
     constructor(init?: Partial<Country>);
 }
