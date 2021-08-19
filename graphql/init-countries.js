@@ -65,7 +65,6 @@ async function main () {
             let foundCountry = countryData.filter(c => c.name === country)[0]
             if (!foundCountry) return
 
-            console.log(foundCountry.country_id || foundCountry.id)
             foundCountryID = foundCountry.country_id || foundCountry.id
 
             return countryCities.map(countryCity => {

@@ -10,6 +10,8 @@ async function pricingPolicyStored({ store, event, block, extrinsic, }) {
     newPricingPolicy.gridVersion = pricing_policy.version.toNumber();
     newPricingPolicy.pricingPolicyId = pricing_policy.id.toNumber();
     newPricingPolicy.name = util_1.hex2a(Buffer.from(pricing_policy.name.toString()).toString());
+    newPricingPolicy.foundationAccount = Buffer.from(pricing_policy.foundation_account.toHex()).toString();
+    newPricingPolicy.certifiedSalesAccount = Buffer.from(pricing_policy.certified_sales_account.toHex()).toString();
     const suPolicy = new model_1.Policy();
     suPolicy.value = pricing_policy.su.value.toNumber();
     suPolicy.unit = formatUnit(pricing_policy.su.unit.toString());
@@ -30,8 +32,6 @@ async function pricingPolicyStored({ store, event, block, extrinsic, }) {
     newPricingPolicy.cu = cuPolicy;
     newPricingPolicy.nu = nuPolicy;
     newPricingPolicy.ipu = IpuPolicy;
-    newPricingPolicy.foundationAccount = Buffer.from(pricing_policy.foundation_account.toHex()).toString();
-    newPricingPolicy.certifiedSalesAccount = Buffer.from(pricing_policy.certified_sales_account.toHex()).toString();
     await store.save(newPricingPolicy);
 }
 exports.pricingPolicyStored = pricingPolicyStored;

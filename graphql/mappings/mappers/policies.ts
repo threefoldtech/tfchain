@@ -20,6 +20,9 @@ export async function pricingPolicyStored({
   newPricingPolicy.pricingPolicyId = pricing_policy.id.toNumber()
   newPricingPolicy.name = hex2a(Buffer.from(pricing_policy.name.toString()).toString())
 
+  newPricingPolicy.foundationAccount = Buffer.from(pricing_policy.foundation_account.toHex()).toString()
+  newPricingPolicy.certifiedSalesAccount = Buffer.from(pricing_policy.certified_sales_account.toHex()).toString()
+
   const suPolicy = new Policy()
   suPolicy.value = pricing_policy.su.value.toNumber()
   suPolicy.unit = formatUnit(pricing_policy.su.unit.toString())
@@ -44,9 +47,6 @@ export async function pricingPolicyStored({
   newPricingPolicy.cu = cuPolicy
   newPricingPolicy.nu = nuPolicy
   newPricingPolicy.ipu = IpuPolicy
-
-  newPricingPolicy.foundationAccount = Buffer.from(pricing_policy.foundation_account.toHex()).toString()
-  newPricingPolicy.certifiedSalesAccount = Buffer.from(pricing_policy.certified_sales_account.toHex()).toString()
 
   await store.save<PricingPolicy>(newPricingPolicy)
 }
