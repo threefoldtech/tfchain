@@ -1,16 +1,19 @@
 version: '3.0'
 description: Test manifest
 repository: https://github.com/
-hydraVersion: "3"
+hydraVersion: "4"
+
 dataSource:
-  kind: substrate 
+  kind: substrate
   chain: node-template
+
 entities:
-  - mappings/lib/generated/**/*.model.js
+  - generated/modules/**/*.model.ts
+
 typegen:
   customTypes:
     lib: 'substrate-tfgrid-ts-types'
-    typedefsLoc: ./types.json
+    typedefsLoc: ./indexer/types.json
   metadata:
     source: wss://explorer.devnet.grid.tf/ws
   events:
@@ -35,13 +38,12 @@ typegen:
     - smartContractModule.ContractUpdated
     - smartContractModule.ContractCanceled
     - smartContractModule.ContractBilled
-  # calls:
-  #   - timestamp.set
-  outDir: ./mappings/generated/types
+  outDir: types
+
 mappings:
-  mappingsModule: mappings/lib/mappings
+  mappingsModule: mappings
   imports:
-    - mappings/lib/mappings/generated/types
+    - generated/server/config # configure the processor environment (for now this is required)
   eventHandlers:
     - event: balances.Transfer 
       handler: balancesTransfer
@@ -89,10 +91,6 @@ mappings:
       handler: contractBilled
       filter:
         specVersion: '[3, )'
-  # extrinsicHandlers:
-  #   # infer defaults
-  #   - extrinsic: timestamp.set 
-  #     handler: timestampCall
+  extrinsicHandlers:
   preBlockHooks:
   postBlockHooks:
-  

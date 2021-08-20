@@ -1,61 +1,36 @@
 {
-  "name": "substrate-graphql",
+  "name": "hydra-template",
   "private": "true",
   "version": "0.0.0",
   "description": "GraphQL server and Substrate indexer. Generated with ♥ by Hydra-CLI",
-  "workspaces": [
-    "./generated/*",
-    "./mappings"
-  ],
-  "nohoist": [
-    "mappings/**",
-    "**/mappings",
-    "**/mappings/**"
-  ],
-  "scripts": {
-    "build": "yarn clean && yarn codegen",
-    "rebuild": "yarn clean:query-node && yarn bootstrap",
-    "lint": "echo \"Skippinng\"",
-    "clean": "rm -rf ./generated",
-    "clean:query-node": "rm -rf ./generated/graphql-server",
-    "processor:start": "DEBUG=${DEBUG} hydra-processor run -e .env",
-    "query-node:start:dev": "yarn workspace query-node start:dev",
-    "query-node:build:prod": "yarn workspace query-node compile",
-    "query-node:start:prod": "dotenv -- yarn workspace query-node start:prod",
-    "query-node:configure": "yarn workspace query-node config:dev",
-    "db:up": "yarn docker:db:up",
-    "db:create": "yarn workspace query-node db:create",
-    "db:drop": "yarn workspace query-node db:drop",
-    "db:prepare": "yarn workspace query-node db:create && yarn workspace query-node db:sync",
-    "db:schema:migrate": "yarn workspace query-node db:migrate",
-    "db:processor:migrate": "hydra-processor migrate -e .env",
-    "db:migrate": "yarn db:schema:migrate && yarn db:processor:migrate",
-    "db:bootstrap": "yarn db:drop; yarn db:create ; yarn db:prepare && yarn db:migrate",
-    "db:init": "node init-countries.js",
-    "bootstrap": "yarn codegen && yarn db:bootstrap",
-    "codegen": "hydra-cli codegen",
-    "typegen:configure": "NODE_URL=${NODE_URL:-ws://localhost:9000} envsub typegen.template.yml typegen.yml",
-    "typegen": "rm -rf ./mappings/generated && hydra-typegen typegen manifest.yml --debug",
-    "mappings:build": "yarn workspace sample-mappings build",
-    "docker:build": "docker build . -f docker/Dockerfile.hydra -t hydra-kit:latest",
-    "docker:db:up": "docker-compose up -d db",
-    "docker:db:migrate": "docker run --env-file .env --env DB_HOST=db --env TYPEORM_HOST=db --network container:${PWD##*/}_db_1 builder yarn db:bootstrap",
-    "docker:up": "docker-compose up -d"
-  },
   "author": "",
   "license": "ISC",
+  "scripts": {
+    "typegen": "hydra-typegen typegen manifest.yml",
+    "codegen": "hydra-cli codegen",
+    "db:create": "hydra-cli db:create",
+    "db:create-migration": "hydra-cli db:create-migration",
+    "db:migrate": "hydra-cli db:migrate",
+    "db:init": "node init-countries.js",
+    "processor:migrate": "hydra-processor migrate",
+    "processor:start": "hydra-processor run",
+    "query-node:start": "ts-node --type-check ./generated/server/index.ts"
+  },
   "dependencies": {
     "@types/bn.js": "^4.11.6",
     "bn.js": "^5.1.2",
-    "tslib": "^2.0.0"
-  },
-  "resolutions": {
-    "@polkadot/types": "4.16.2"
+    "pg": "^8.3.2",
+    "pg-listen": "^1.7.0",
+    "tslib": "^2.0.0",
+    "ts-node": "^8.10.2",
+    "typescript": "^3.9.7",
+    "substrate-tfgrid-ts-types": "^0.0.17",
+    "warthog": "https://eldargab.s3.eu-central-1.amazonaws.com/warthog-2.32.0.tgz"
   },
   "devDependencies": {
-    "@subsquid/hydra-cli": "3.1.0-alpha.1",
-    "@subsquid/hydra-processor": "3.1.0-alpha.1",
-    "@subsquid/hydra-typegen": "3.1.0-alpha.1",
+    "@subsquid/hydra-cli": "4.1.0-alpha.0",
+    "@subsquid/hydra-processor": "4.1.0-alpha.0",
+    "@subsquid/hydra-typegen": "4.1.0-alpha.0",
     "dotenv-cli": "^4.0.0"
   }
 }

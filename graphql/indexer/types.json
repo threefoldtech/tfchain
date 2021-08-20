@@ -1,0 +1,188 @@
+{
+  "Farm": {
+    "version": "u32",
+    "id": "u32",
+    "name": "Vec<u8>",
+    "twin_id": "u32",
+    "pricing_policy_id": "u32",
+    "certification_type": "CertificationType",
+    "public_ips": "Vec<PublicIP>"
+  },
+  "PublicIP": {
+    "ip": "Vec<u8>",
+    "gateway": "Vec<u8>",
+    "contract_id": "u64"
+  },
+  "Entity": {
+    "version": "u32",
+    "id": "u32",
+    "name": "Vec<u8>",
+    "country": "Vec<u8>",
+    "city": "Vec<u8>",
+    "account_id": "AccountId"
+  },
+  "Twin": {
+    "version": "u32",
+    "id": "u32",
+    "account_id": "AccountId",
+    "ip": "Vec<u8>",
+    "entities": "Vec<EntityProof>"
+  },
+  "EntityProof": {
+    "entity_id": "u32",
+    "signature": "Vec<u8>"
+  },
+  "Node": {
+    "version": "u32",
+    "id": "u32",
+    "farm_id": "u32",
+    "twin_id": "u32",
+    "resources": "Resources",
+    "location": "Location",
+    "country": "Vec<u8>",
+    "city": "Vec<u8>",
+    "public_config": "Option<PublicConfig>",
+    "uptime": "u64",
+    "created": "u64",
+    "farming_policy_id": "u32"
+  },
+  "PublicConfig": {
+    "ipv4": "Vec<u8>",
+    "ipv6": "Vec<u8>",
+    "gw4": "Vec<u8>",
+    "gw6": "Vec<u8>"
+  },
+  "Location": {
+    "longitude": "Vec<u8>",
+    "latitude": "Vec<u8>"
+  },
+  "Resources": {
+    "hru": "u64",
+    "sru": "u64",
+    "cru": "u64",
+    "mru": "u64"
+  },
+  "CertificationType": {
+    "_enum": [
+      "Diy",
+      "Certified"
+    ]
+  },
+  "CertificationCodeType": {
+    "_enum": [
+      "Farm",
+      "Entity"
+    ]
+  },
+  "CertificationCodes": {
+    "version": "u32",
+    "id": "u32",
+    "name": "Vec<u8>",
+    "description": "Vec<u8>",
+    "certification_code_type": "CertificationCodeType"
+  },
+  "PricingPolicy": {
+    "version": "u32",
+    "id": "u32",
+    "name": "Vec<u8>",
+    "su": "Policy",
+    "cu": "Policy",
+    "nu": "Policy",
+    "ipu": "Policy",
+    "foundation_account": "AccountId",
+    "certified_sales_account": "AccountId"
+  },
+  "Policy":{
+    "value": "u32",
+    "unit": "Unit"
+  },
+  "Unit": {
+    "_enum": [
+      "Bytes",
+      "Kilobytes",
+      "Megabytes",
+      "Gigabytes",
+      "Terrabytes"
+    ]
+  },
+  "NodeContract": {
+    "version": "u32",
+    "contract_id": "u64",
+    "twin_id": "u32",
+	  "node_id": "u32",
+    "deploy_mentdata": "Vec<u8>",
+    "deployment_hash": "Vec<u8>",
+    "public_ips": "u32",
+    "state": "ContractState",
+    "public_ips_list": "Vec<PublicIP>"
+  },
+  "ContractBillingInformation": {
+    "previous_nu_reported": "u64",
+    "last_updated": "u64",
+    "amount_unbilled": "u64"
+  },
+  "ContractState": {
+    "_enum": [
+      "Created",
+      "Deleted",
+      "OutOfFunds"
+    ]
+  },
+  "Consumption": {
+    "contract_id": "u64",
+    "timestamp": "u64",
+    "cru": "u64",
+    "sru": "u64",
+    "hru": "u64",
+    "mru": "u64",
+    "nru": "u64"
+  },
+  "DiscountLevel": {
+    "_enum": [
+      "None",
+      "Default",
+      "Bronze",
+      "Silver",
+      "Gold"
+    ]
+  },
+  "NameRegistration": {
+    "name_registration_id": "u64",
+    "twin_id": "u32",
+    "name": "Vec<u8>"
+  },
+  "FarmingPolicy": {
+    "version": "u32",
+    "id": "u32",
+    "name": "Vec<u8>",
+    "cu": "u32",
+    "su": "u32",
+    "nu": "u32",
+    "ipv4": "u32",
+    "timestamp": "u64",
+    "certification_type": "CertificationType"
+  },
+  "ContractBill": {
+    "contract_id": "u64",
+    "timestamp": "u64",
+    "discount_level": "DiscountLevel",
+    "amount_billed": "u128"
+  },
+  "Address": "MultiAddress",
+  "LookupSource": "MultiAddress",
+  "BalanceOf": "Balance",
+  "Public": "[u8;32]",
+  "U16F16": "[u8; 4]",
+  "VestingInfo": {
+    "locked": "Balance",
+    "perBlock": "Balance",
+    "startingBlock": "BlockNumber",
+    "tft_price": "U16F16",
+    "lastReleasedBlock": "BlockNumber"
+  },
+  "StellarTransaction": {
+    "amount": "Balance",
+    "target": "MultiAddress"
+  },
+  "AccountInfo": "AccountInfoWithProviders"
+}
