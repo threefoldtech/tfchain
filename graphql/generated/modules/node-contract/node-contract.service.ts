@@ -6,8 +6,6 @@ import { WarthogBaseService } from '../../server/WarthogBaseService';
 
 import { NodeContract } from './node-contract.model';
 
- 
-
 import { NodeContractWhereArgs, NodeContractWhereInput } from '../../warthog';
 
 @Service('NodeContractService')

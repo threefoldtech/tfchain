@@ -13,15 +13,15 @@ export class Entity extends BaseModel {
   @StringField({})
   name!: string;
 
-  @IntField({
+  @StringField({
     nullable: true
   })
-  countryId?: number;
+  country?: string;
 
-  @IntField({
+  @StringField({
     nullable: true
   })
-  cityId?: number;
+  city?: string;
 
   @StringField({})
   accountId!: string;

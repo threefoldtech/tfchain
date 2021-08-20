@@ -6,8 +6,6 @@ import { WarthogBaseService } from '../../server/WarthogBaseService';
 
 import { FarmingPolicy } from './farming-policy.model';
 
- 
-
 import { FarmingPolicyWhereArgs, FarmingPolicyWhereInput } from '../../warthog';
 
 @Service('FarmingPolicyService')

@@ -6,8 +6,6 @@ import { WarthogBaseService } from '../../server/WarthogBaseService';
 
 import { Policy } from './policy.model';
 
- 
-
 import { PolicyWhereArgs, PolicyWhereInput } from '../../warthog';
 
 import { PricingPolicy } from '../pricing-policy/pricing-policy.model';

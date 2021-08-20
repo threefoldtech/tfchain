@@ -11,8 +11,8 @@ type Entity @entity {
   gridVersion: Int!
   entityID: Int!
   name: String!
-  countryID: Int
-  cityID: Int
+  country: String
+  city: String
   accountID: String!
 }
 
@@ -36,8 +36,6 @@ type Farm @entity {
   twinID: Int!
   pricingPolicyID: Int!
   certificationType: CertificationType!
-  countryID: Int
-  cityID: Int
   publicIPs: [PublicIp!] @derivedFrom(field: "farm")
 }
 
@@ -54,8 +52,8 @@ type Node @entity {
   farmID: Int!
   twinID: Int!
   location: Location!
-  countryID: Int
-  cityID: Int
+  country: String
+  city: String
   hru: BigInt
   sru: BigInt
   cru: BigInt

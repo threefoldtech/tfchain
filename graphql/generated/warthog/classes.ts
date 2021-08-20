@@ -1570,11 +1570,11 @@ export enum EntityOrderByEnum {
   name_ASC = "name_ASC",
   name_DESC = "name_DESC",
 
-  countryId_ASC = "countryId_ASC",
-  countryId_DESC = "countryId_DESC",
+  country_ASC = "country_ASC",
+  country_DESC = "country_DESC",
 
-  cityId_ASC = "cityId_ASC",
-  cityId_DESC = "cityId_DESC",
+  city_ASC = "city_ASC",
+  city_DESC = "city_DESC",
 
   accountId_ASC = "accountId_ASC",
   accountId_DESC = "accountId_DESC"
@@ -1709,41 +1709,35 @@ export class EntityWhereInput {
   @TypeGraphQLField(() => [String], { nullable: true })
   name_in?: string[];
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  countryId_eq?: number;
+  @TypeGraphQLField({ nullable: true })
+  country_eq?: string;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  countryId_gt?: number;
+  @TypeGraphQLField({ nullable: true })
+  country_contains?: string;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  countryId_gte?: number;
+  @TypeGraphQLField({ nullable: true })
+  country_startsWith?: string;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  countryId_lt?: number;
+  @TypeGraphQLField({ nullable: true })
+  country_endsWith?: string;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  countryId_lte?: number;
+  @TypeGraphQLField(() => [String], { nullable: true })
+  country_in?: string[];
 
-  @TypeGraphQLField(() => [Int], { nullable: true })
-  countryId_in?: number[];
+  @TypeGraphQLField({ nullable: true })
+  city_eq?: string;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cityId_eq?: number;
+  @TypeGraphQLField({ nullable: true })
+  city_contains?: string;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cityId_gt?: number;
+  @TypeGraphQLField({ nullable: true })
+  city_startsWith?: string;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cityId_gte?: number;
+  @TypeGraphQLField({ nullable: true })
+  city_endsWith?: string;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cityId_lt?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cityId_lte?: number;
-
-  @TypeGraphQLField(() => [Int], { nullable: true })
-  cityId_in?: number[];
+  @TypeGraphQLField(() => [String], { nullable: true })
+  city_in?: string[];
 
   @TypeGraphQLField({ nullable: true })
   accountId_eq?: string;
@@ -1785,10 +1779,10 @@ export class EntityCreateInput {
   name!: string;
 
   @TypeGraphQLField({ nullable: true })
-  countryId?: number;
+  country?: string;
 
   @TypeGraphQLField({ nullable: true })
-  cityId?: number;
+  city?: string;
 
   @TypeGraphQLField()
   accountId!: string;
@@ -1806,10 +1800,10 @@ export class EntityUpdateInput {
   name?: string;
 
   @TypeGraphQLField({ nullable: true })
-  countryId?: number;
+  country?: string;
 
   @TypeGraphQLField({ nullable: true })
-  cityId?: number;
+  city?: string;
 
   @TypeGraphQLField({ nullable: true })
   accountId?: string;
@@ -2084,13 +2078,7 @@ export enum FarmOrderByEnum {
   pricingPolicyId_DESC = "pricingPolicyId_DESC",
 
   certificationType_ASC = "certificationType_ASC",
-  certificationType_DESC = "certificationType_DESC",
-
-  countryId_ASC = "countryId_ASC",
-  countryId_DESC = "countryId_DESC",
-
-  cityId_ASC = "cityId_ASC",
-  cityId_DESC = "cityId_DESC"
+  certificationType_DESC = "certificationType_DESC"
 }
 
 registerEnumType(FarmOrderByEnum, {
@@ -2264,42 +2252,6 @@ export class FarmWhereInput {
   @TypeGraphQLField(() => [CertificationType], { nullable: true })
   certificationType_in?: CertificationType[];
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  countryId_eq?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  countryId_gt?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  countryId_gte?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  countryId_lt?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  countryId_lte?: number;
-
-  @TypeGraphQLField(() => [Int], { nullable: true })
-  countryId_in?: number[];
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cityId_eq?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cityId_gt?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cityId_gte?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cityId_lt?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cityId_lte?: number;
-
-  @TypeGraphQLField(() => [Int], { nullable: true })
-  cityId_in?: number[];
-
   @TypeGraphQLField(() => PublicIpWhereInput, { nullable: true })
   publicIPs_none?: PublicIpWhereInput;
 
@@ -2341,12 +2293,6 @@ export class FarmCreateInput {
 
   @TypeGraphQLField(() => CertificationType)
   certificationType!: CertificationType;
-
-  @TypeGraphQLField({ nullable: true })
-  countryId?: number;
-
-  @TypeGraphQLField({ nullable: true })
-  cityId?: number;
 }
 
 @TypeGraphQLInputType()
@@ -2368,12 +2314,6 @@ export class FarmUpdateInput {
 
   @TypeGraphQLField(() => CertificationType, { nullable: true })
   certificationType?: CertificationType;
-
-  @TypeGraphQLField({ nullable: true })
-  countryId?: number;
-
-  @TypeGraphQLField({ nullable: true })
-  cityId?: number;
 }
 
 @ArgsType()
@@ -3013,11 +2953,11 @@ export enum NodeOrderByEnum {
   location_ASC = "location_ASC",
   location_DESC = "location_DESC",
 
-  countryId_ASC = "countryId_ASC",
-  countryId_DESC = "countryId_DESC",
+  country_ASC = "country_ASC",
+  country_DESC = "country_DESC",
 
-  cityId_ASC = "cityId_ASC",
-  cityId_DESC = "cityId_DESC",
+  city_ASC = "city_ASC",
+  city_DESC = "city_DESC",
 
   hru_ASC = "hru_ASC",
   hru_DESC = "hru_DESC",
@@ -3200,41 +3140,35 @@ export class NodeWhereInput {
   @TypeGraphQLField(() => [ID], { nullable: true })
   location_in?: string[];
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  countryId_eq?: number;
+  @TypeGraphQLField({ nullable: true })
+  country_eq?: string;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  countryId_gt?: number;
+  @TypeGraphQLField({ nullable: true })
+  country_contains?: string;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  countryId_gte?: number;
+  @TypeGraphQLField({ nullable: true })
+  country_startsWith?: string;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  countryId_lt?: number;
+  @TypeGraphQLField({ nullable: true })
+  country_endsWith?: string;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  countryId_lte?: number;
+  @TypeGraphQLField(() => [String], { nullable: true })
+  country_in?: string[];
 
-  @TypeGraphQLField(() => [Int], { nullable: true })
-  countryId_in?: number[];
+  @TypeGraphQLField({ nullable: true })
+  city_eq?: string;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cityId_eq?: number;
+  @TypeGraphQLField({ nullable: true })
+  city_contains?: string;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cityId_gt?: number;
+  @TypeGraphQLField({ nullable: true })
+  city_startsWith?: string;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cityId_gte?: number;
+  @TypeGraphQLField({ nullable: true })
+  city_endsWith?: string;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cityId_lt?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  cityId_lte?: number;
-
-  @TypeGraphQLField(() => [Int], { nullable: true })
-  cityId_in?: number[];
+  @TypeGraphQLField(() => [String], { nullable: true })
+  city_in?: string[];
 
   @TypeGraphQLField(() => BigInt, { nullable: true })
   hru_eq?: string;
@@ -3405,10 +3339,10 @@ export class NodeCreateInput {
   location!: string;
 
   @TypeGraphQLField({ nullable: true })
-  countryId?: number;
+  country?: string;
 
   @TypeGraphQLField({ nullable: true })
-  cityId?: number;
+  city?: string;
 
   @TypeGraphQLField({ nullable: true })
   hru?: string;
@@ -3453,10 +3387,10 @@ export class NodeUpdateInput {
   location?: string;
 
   @TypeGraphQLField({ nullable: true })
-  countryId?: number;
+  country?: string;
 
   @TypeGraphQLField({ nullable: true })
-  cityId?: number;
+  city?: string;
 
   @TypeGraphQLField({ nullable: true })
   hru?: string;

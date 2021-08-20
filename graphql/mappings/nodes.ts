@@ -25,8 +25,8 @@ export async function nodeStored({
   newNode.mru = node.resources.mru.toBn()
   newNode.cru = node.resources.cru.toBn()
 
-  newNode.countryId = node.country_id.toNumber()
-  newNode.cityId = node.city_id.toNumber()
+  newNode.country = hex2a(node.country.toString())
+  newNode.city = hex2a(node.city.toString())
 
   newNode.created = node.created.toNumber()
   newNode.uptime = node.uptime.toNumber()
@@ -78,8 +78,8 @@ export async function nodeUpdated({
   savedNode.mru = node.resources.mru.toBn()
   savedNode.cru = node.resources.cru.toBn()
 
-  savedNode.countryId = node.country_id.toNumber()
-  savedNode.cityId = node.city_id.toNumber()
+  savedNode.country = hex2a(node.country.toString())
+  savedNode.city = hex2a(node.city.toString())
 
   savedNode.created = node.created.toNumber()
   savedNode.uptime = node.uptime.toNumber()

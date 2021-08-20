@@ -6,8 +6,6 @@ import { WarthogBaseService } from '../../server/WarthogBaseService';
 
 import { Farm } from './farm.model';
 
- 
-
 import { FarmWhereArgs, FarmWhereInput } from '../../warthog';
 
 import { PublicIp } from '../public-ip/public-ip.model';

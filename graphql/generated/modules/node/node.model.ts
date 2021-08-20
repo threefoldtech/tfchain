@@ -34,15 +34,15 @@ export class Node extends BaseModel {
   )
   location!: Location;
 
-  @IntField({
+  @StringField({
     nullable: true
   })
-  countryId?: number;
+  country?: string;
 
-  @IntField({
+  @StringField({
     nullable: true
   })
-  cityId?: number;
+  city?: string;
 
   @NumericField({
     nullable: true,

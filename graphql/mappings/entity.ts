@@ -19,8 +19,8 @@ export async function entityStored({
   newEntity.gridVersion = entity.version.toNumber()
   newEntity.entityId = entity.id.toNumber()
   newEntity.name = hex2a(Buffer.from(entity.name.toString()).toString())
-  newEntity.countryId = entity.country_id.toNumber()
-  newEntity.cityId = entity.city_id.toNumber()
+  newEntity.country = hex2a(entity.country.toString())
+  newEntity.city = hex2a(entity.city.toString())
   newEntity.accountId = entity.account_id.toHuman()
 
   await store.save<Entity>(newEntity)
@@ -41,8 +41,8 @@ export async function entityUpdated({
     newEntity.gridVersion = entity.version.toNumber()
     newEntity.entityId = entity.id.toNumber()
     newEntity.name = hex2a(Buffer.from(entity.name.toString()).toString())
-    newEntity.countryId = entity.country_id.toNumber()
-    newEntity.cityId = entity.city_id.toNumber()
+    newEntity.country = hex2a(entity.country.toString())
+    newEntity.city = hex2a(entity.city.toString())
     newEntity.accountId = entity.account_id.toHuman()
   
     await store.save<Entity>(savedEntity)

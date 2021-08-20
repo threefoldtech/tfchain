@@ -22,8 +22,6 @@ export async function farmStored({
   newFarm.name = hex2a(Buffer.from(farm.name.toString()).toString())
   newFarm.twinId = farm.twin_id.toNumber()
   newFarm.pricingPolicyId = farm.pricing_policy_id.toNumber()
-  newFarm.countryId = farm.country_id.toNumber()
-  newFarm.cityId = farm.city_id.toNumber()
 
   const certificationTypeAsString = farm.certification_type.toString()
   let certType = CertificationType.Diy
@@ -64,8 +62,7 @@ export async function farmUpdated({
     savedFarm.name = hex2a(Buffer.from(farm.name.toString()).toString())
     savedFarm.twinId = farm.twin_id.toNumber()
     savedFarm.pricingPolicyId = farm.pricing_policy_id.toNumber()
-    savedFarm.countryId = farm.country_id.toNumber()
-    savedFarm.cityId = farm.city_id.toNumber()
+
     const certificationTypeAsString = farm.certification_type.toString()
     let certType = CertificationType.Diy
     switch (certificationTypeAsString) {

@@ -27,16 +27,6 @@ export class Farm extends BaseModel {
   @EnumField('CertificationType', CertificationType, {})
   certificationType!: CertificationType;
 
-  @IntField({
-    nullable: true
-  })
-  countryId?: number;
-
-  @IntField({
-    nullable: true
-  })
-  cityId?: number;
-
   @OneToMany(
     () => PublicIp,
     (param: PublicIp) => param.farm,
