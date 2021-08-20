@@ -12,3 +12,19 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASS}
       POSTGRES_DB: ${DB_NAME}
+
+  processor:
+    image: processor:latest
+    restart: unless-stopped
+    build: 
+      dockerfile: docker/Dockerfile.processor
+      context: ./
+    env_file:
+      - .env
+    environment:
+      - INDEXER_ENDPOINT_URL=http://172.17.0.1:4010/v1/graphql
+      - DB_HOST=db
+      - POLL_INTERVAL_MS=300
+      - TYPEORM_HOST=db
+      - DEBUG=hydra-processor:*
+    command: ["yarn", "processor:start"]
