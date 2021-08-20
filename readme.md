@@ -25,6 +25,10 @@ This will build the node binary in release mode, once built you can execute it b
 
 > You need the `ws-external` flag in order to connect from a zos node to substrate in a local setup.
 
+### Upgrading runtime
+
+See [process](./substrate-node/upgrade_process.md)
+
 ### Client
 
 You can use the client to interact with the chain, [read more](./cli-tool/readme.md)
