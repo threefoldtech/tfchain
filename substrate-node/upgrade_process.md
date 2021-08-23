@@ -50,4 +50,7 @@ If a type change occurred in the modified runtime pallets, all objects stored un
 
 There are several ways to work around that but none are advised. More information on runtime upgrades can be found [here](https://substrate.dev/docs/en/knowledgebase/runtime/upgrades).
 
+### Upgrade grapqhl
+
+[graphql upgrade documentation](../graphql/docs/readme.md)
 
