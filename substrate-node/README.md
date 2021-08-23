@@ -52,3 +52,9 @@ Start the development chain with detailed logging:
 ```bash
 RUST_LOG=debug RUST_BACKTRACE=1 ./target/release/tfchain -lruntime=debug --dev
 ```
+
+### Multi-Node local testnet Chain
+
+Everything needed in order to create multi-node network Chain is explained in the official documentation of Substrate.
+
+[start a private network here](https://substrate.dev/docs/en/tutorials/start-a-private-network/)
