@@ -11,6 +11,7 @@
     "db:create": "hydra-cli db:create",
     "db:create-migration": "hydra-cli db:create-migration",
     "db:migrate": "hydra-cli db:migrate",
+    "db:up": "docker-compose up -d db",
     "db:init": "node init-countries.js",
     "processor:migrate": "hydra-processor migrate",
     "processor:start": "hydra-processor run",

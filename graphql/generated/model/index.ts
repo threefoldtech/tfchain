@@ -1,3 +1,5 @@
+import { Account } from '../modules/account/account.model';
+export { Account };
 import { City } from '../modules/city/city.model';
 export { City };
 import { Consumption } from '../modules/consumption/consumption.model';
@@ -14,6 +16,8 @@ import { Farm } from '../modules/farm/farm.model';
 export { Farm };
 import { FarmingPolicy } from '../modules/farming-policy/farming-policy.model';
 export { FarmingPolicy };
+import { HistoricalBalance } from '../modules/historical-balance/historical-balance.model';
+export { HistoricalBalance };
 import { Location } from '../modules/location/location.model';
 export { Location };
 import { Node } from '../modules/node/node.model';
@@ -28,8 +32,6 @@ import { PublicConfig } from '../modules/public-config/public-config.model';
 export { PublicConfig };
 import { PublicIp } from '../modules/public-ip/public-ip.model';
 export { PublicIp };
-import { Transfer } from '../modules/transfer/transfer.model';
-export { Transfer };
 import { Twin } from '../modules/twin/twin.model';
 export { Twin };
 

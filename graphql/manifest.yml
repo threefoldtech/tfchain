@@ -75,8 +75,6 @@ mappings:
       handler: farmDeleted
     - event: tfgridModule.PricingPolicyStored
       handler: pricingPolicyStored
-      filter:
-        specVersion: '[3, )'
     - event: tfgridModule.FarmingPolicyStored
       handler: farmingPolicyStored
     - event: smartContractModule.ConsumptionReportReceived
@@ -89,8 +87,6 @@ mappings:
       handler: contractCanceled
     - event: smartContractModule.ContractBilled
       handler: contractBilled
-      filter:
-        specVersion: '[3, )'
   extrinsicHandlers:
   preBlockHooks:
   postBlockHooks:
