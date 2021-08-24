@@ -8,9 +8,9 @@ LABEL description="This is the build stage for Substrate. Here we create the bin
 ENV DEBIAN_FRONTEND=noninteractive
 
 ARG PROFILE=release
-WORKDIR /substrate
+WORKDIR /tfchain
 
-COPY . /substrate
+COPY . /tfchain
 
 RUN apt-get update && \
 	apt-get dist-upgrade -y -o Dpkg::Options::="--force-confold" && \
@@ -27,18 +27,18 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
 
 FROM phusion/baseimage:0.11
 LABEL maintainer="dylan@threefold.tech"
-LABEL description="This is the 2nd stage: a very small image where we copy the Substrate binary."
+LABEL description="This is the 2nd stage: a very small image where we copy the tfchain binary."
 ARG PROFILE=release
 
 RUN rm -rf /usr/share/* && \
-	mkdir -p /substrate/.local
+	mkdir -p /tfchain/.local
 
-COPY --from=builder /substrate/target/$PROFILE/substrate /usr/local/bin
-COPY --from=builder /substrate/customSpecRaw.json /etc
+COPY --from=builder /tfchain/target/$PROFILE/tfchain /usr/local/bin
+COPY --from=builder /tfchain/customSpecRaw.json /etc
 
 # checks	
-RUN ldd /usr/local/bin/substrate && \
-	/usr/local/bin/substrate --version
+RUN ldd /usr/local/bin/tfchain && \
+	/usr/local/bin/tfchain --version
 
 # Shrinking
 RUN rm -rf /usr/lib/python* && \
@@ -46,6 +46,6 @@ RUN rm -rf /usr/lib/python* && \
 	rm -rf /src
 
 EXPOSE 30333 9933 9944 9615
-VOLUME ["/substrate"]
+VOLUME ["/tfchain"]
 
-ENTRYPOINT ["/usr/local/bin/substrate"]
+ENTRYPOINT ["/usr/local/bin/tfchain"]
