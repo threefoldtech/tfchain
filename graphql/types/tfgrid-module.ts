@@ -11,7 +11,7 @@ import {
   PricingPolicy,
   Twin
 } from "substrate-tfgrid-ts-types";
-import { Bytes, u32 } from "@polkadot/types";
+import { Bytes, u32, u64 } from "@polkadot/types";
 
 export namespace TfgridModule {
   export class EntityStoredEvent {
@@ -239,6 +239,39 @@ export namespace TfgridModule {
       return [
         createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
           this.ctx.params[0].value
+        ])
+      ];
+    }
+
+    validateParams(): boolean {
+      if (this.expectedParamTypes.length !== this.ctx.params.length) {
+        return false;
+      }
+      let valid = true;
+      this.expectedParamTypes.forEach((type, i) => {
+        if (type !== this.ctx.params[i].type) {
+          valid = false;
+        }
+      });
+      return valid;
+    }
+  }
+
+  export class NodeUptimeReportedEvent {
+    public readonly expectedParamTypes = ["u32", "u64", "u64"];
+
+    constructor(public readonly ctx: SubstrateEvent) {}
+
+    get params(): [u32, u64, u64] {
+      return [
+        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
+          this.ctx.params[0].value
+        ]),
+        createTypeUnsafe<u64 & Codec>(typeRegistry, "u64", [
+          this.ctx.params[1].value
+        ]),
+        createTypeUnsafe<u64 & Codec>(typeRegistry, "u64", [
+          this.ctx.params[2].value
         ])
       ];
     }

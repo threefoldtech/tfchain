@@ -1,4 +1,4 @@
-import { Node, Location, PublicConfig } from '../generated/model'
+import { Node, Location, PublicConfig, UptimeEvent } from '../generated/model'
 import { TfgridModule } from '../types'
 import { hex2a } from './util'
 
@@ -121,5 +121,27 @@ export async function nodeDeleted({
 
   if (savedNode) {
     store.remove(savedNode)
+  }
+}
+
+export async function nodeUptimeReported({
+  store,
+  event,
+  block,
+  extrinsic,
+}: EventContext & StoreContext) {
+  const [nodeID, now, uptime] = new TfgridModule.NodeUptimeReportedEvent(event).params
+
+  const newUptimeEvent = new UptimeEvent()
+  newUptimeEvent.nodeId = nodeID.toNumber()
+  newUptimeEvent.timestamp = now.toNumber()
+  newUptimeEvent.uptime = uptime.toNumber()
+  await store.save<UptimeEvent>(newUptimeEvent)
+
+  const savedNode = await store.get(Node, { where: { nodeId: nodeID.toNumber() } })
+
+  if (savedNode) {
+    savedNode.uptime = uptime.toNumber()
+    await store.save<Node>(savedNode)
   }
 }

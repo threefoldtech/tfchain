@@ -181,3 +181,9 @@ type FarmingPolicy @entity {
   timestamp: Int!
   certification_type: CertificationType!
 }
+
+type UptimeEvent @entity {
+  nodeID: Int!
+  uptime: Int!
+  timestamp: Int!
+}

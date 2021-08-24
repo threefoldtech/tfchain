@@ -34,6 +34,8 @@ import { PublicIp } from '../modules/public-ip/public-ip.model';
 export { PublicIp };
 import { Twin } from '../modules/twin/twin.model';
 export { Twin };
+import { UptimeEvent } from '../modules/uptime-event/uptime-event.model';
+export { UptimeEvent };
 
 import { CertificationType } from '../modules/enums/enums';
 export { CertificationType };

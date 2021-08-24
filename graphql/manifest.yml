@@ -27,6 +27,7 @@ typegen:
     - tfgridModule.NodeStored
     - tfgridModule.NodeUpdated
     - tfgridModule.NodeDeleted
+    - tfgridModule.NodeUptimeReported
     - tfgridModule.TwinStored
     - tfgridModule.TwinDeleted
     - tfgridModule.TwinEntityStored
@@ -67,6 +68,8 @@ mappings:
       handler: nodeUpdated
     - event: tfgridModule.NodeDeleted
       handler: nodeDeleted
+    - event: tfgridModule.NodeUptimeReported
+      handler: nodeUptimeReported
     - event: tfgridModule.FarmStored
       handler: farmStored
     - event: tfgridModule.FarmUpdated

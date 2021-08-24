@@ -64,6 +64,8 @@ import { NodeContract } from "../modules/node-contract/node-contract.model";
 import { PricingPolicy } from "../modules/pricing-policy/pricing-policy.model";
 // @ts-ignore
 import { Policy } from "../modules/policy/policy.model";
+// @ts-ignore
+import { UptimeEvent } from "../modules/uptime-event/uptime-event.model";
 
 export enum HistoricalBalanceOrderByEnum {
   createdAt_ASC = "createdAt_ASC",
@@ -4875,4 +4877,214 @@ export class PolicyCreateManyArgs {
 export class PolicyUpdateArgs {
   @TypeGraphQLField() data!: PolicyUpdateInput;
   @TypeGraphQLField() where!: PolicyWhereUniqueInput;
+}
+
+export enum UptimeEventOrderByEnum {
+  createdAt_ASC = "createdAt_ASC",
+  createdAt_DESC = "createdAt_DESC",
+
+  updatedAt_ASC = "updatedAt_ASC",
+  updatedAt_DESC = "updatedAt_DESC",
+
+  deletedAt_ASC = "deletedAt_ASC",
+  deletedAt_DESC = "deletedAt_DESC",
+
+  nodeId_ASC = "nodeId_ASC",
+  nodeId_DESC = "nodeId_DESC",
+
+  uptime_ASC = "uptime_ASC",
+  uptime_DESC = "uptime_DESC",
+
+  timestamp_ASC = "timestamp_ASC",
+  timestamp_DESC = "timestamp_DESC"
+}
+
+registerEnumType(UptimeEventOrderByEnum, {
+  name: "UptimeEventOrderByInput"
+});
+
+@TypeGraphQLInputType()
+export class UptimeEventWhereInput {
+  @TypeGraphQLField(() => ID, { nullable: true })
+  id_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  id_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  createdById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  createdById_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  updatedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  updatedById_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  deletedAt_all?: Boolean;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  deletedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  deletedById_in?: string[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nodeId_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nodeId_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nodeId_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nodeId_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  nodeId_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  nodeId_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  uptime_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  uptime_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  uptime_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  uptime_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  uptime_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  uptime_in?: number[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  timestamp_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  timestamp_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  timestamp_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  timestamp_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  timestamp_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  timestamp_in?: number[];
+
+  @TypeGraphQLField(() => UptimeEventWhereInput, { nullable: true })
+  AND?: [UptimeEventWhereInput];
+
+  @TypeGraphQLField(() => UptimeEventWhereInput, { nullable: true })
+  OR?: [UptimeEventWhereInput];
+}
+
+@TypeGraphQLInputType()
+export class UptimeEventWhereUniqueInput {
+  @TypeGraphQLField(() => ID)
+  id?: string;
+}
+
+@TypeGraphQLInputType()
+export class UptimeEventCreateInput {
+  @TypeGraphQLField()
+  nodeId!: number;
+
+  @TypeGraphQLField()
+  uptime!: number;
+
+  @TypeGraphQLField()
+  timestamp!: number;
+}
+
+@TypeGraphQLInputType()
+export class UptimeEventUpdateInput {
+  @TypeGraphQLField({ nullable: true })
+  nodeId?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  uptime?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  timestamp?: number;
+}
+
+@ArgsType()
+export class UptimeEventWhereArgs extends PaginationArgs {
+  @TypeGraphQLField(() => UptimeEventWhereInput, { nullable: true })
+  where?: UptimeEventWhereInput;
+
+  @TypeGraphQLField(() => UptimeEventOrderByEnum, { nullable: true })
+  orderBy?: UptimeEventOrderByEnum[];
+}
+
+@ArgsType()
+export class UptimeEventCreateManyArgs {
+  @TypeGraphQLField(() => [UptimeEventCreateInput])
+  data!: UptimeEventCreateInput[];
+}
+
+@ArgsType()
+export class UptimeEventUpdateArgs {
+  @TypeGraphQLField() data!: UptimeEventUpdateInput;
+  @TypeGraphQLField() where!: UptimeEventWhereUniqueInput;
 }

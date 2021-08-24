@@ -1,7 +1,7 @@
 import {MigrationInterface, QueryRunner} from "typeorm";
 
-export class initial1629796066003 implements MigrationInterface {
-    name = 'initial1629796066003'
+export class tfgrid1629814241736 implements MigrationInterface {
+    name = 'tfgrid1629814241736'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`CREATE TABLE "historical_balance" ("id" character varying NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "created_by_id" character varying NOT NULL, "updated_at" TIMESTAMP DEFAULT now(), "updated_by_id" character varying, "deleted_at" TIMESTAMP, "deleted_by_id" character varying, "version" integer NOT NULL, "account_id" character varying NOT NULL, "balance" numeric NOT NULL, "timestamp" numeric NOT NULL, CONSTRAINT "PK_74ac29ad0bdffb6d1281a1e17e8" PRIMARY KEY ("id"))`);
@@ -22,6 +22,7 @@ export class initial1629796066003 implements MigrationInterface {
         await queryRunner.query(`CREATE TABLE "node_contract" ("id" character varying NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "created_by_id" character varying NOT NULL, "updated_at" TIMESTAMP DEFAULT now(), "updated_by_id" character varying, "deleted_at" TIMESTAMP, "deleted_by_id" character varying, "version" integer NOT NULL, "contract_id" integer NOT NULL, "twin_id" integer NOT NULL, "node_id" integer NOT NULL, "deployment_data" character varying NOT NULL, "deployment_hash" character varying NOT NULL, "number_of_public_i_ps" integer NOT NULL, "state" character varying NOT NULL, CONSTRAINT "PK_a5f90b17f504ffcd79d1f66574a" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE TABLE "pricing_policy" ("id" character varying NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "created_by_id" character varying NOT NULL, "updated_at" TIMESTAMP DEFAULT now(), "updated_by_id" character varying, "deleted_at" TIMESTAMP, "deleted_by_id" character varying, "version" integer NOT NULL, "grid_version" integer NOT NULL, "pricing_policy_id" integer NOT NULL, "name" character varying NOT NULL, "su_id" character varying NOT NULL, "cu_id" character varying NOT NULL, "nu_id" character varying NOT NULL, "ipu_id" character varying NOT NULL, "foundation_account" character varying NOT NULL, "certified_sales_account" character varying NOT NULL, CONSTRAINT "PK_78105eb11bd75fd76a23bbc9bb1" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE TABLE "policy" ("id" character varying NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "created_by_id" character varying NOT NULL, "updated_at" TIMESTAMP DEFAULT now(), "updated_by_id" character varying, "deleted_at" TIMESTAMP, "deleted_by_id" character varying, "version" integer NOT NULL, "value" integer NOT NULL, "unit" character varying NOT NULL, CONSTRAINT "PK_9917b0c5e4286703cc656b1d39f" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE TABLE "uptime_event" ("id" character varying NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "created_by_id" character varying NOT NULL, "updated_at" TIMESTAMP DEFAULT now(), "updated_by_id" character varying, "deleted_at" TIMESTAMP, "deleted_by_id" character varying, "version" integer NOT NULL, "node_id" integer NOT NULL, "uptime" integer NOT NULL, "timestamp" integer NOT NULL, CONSTRAINT "PK_90783463b0d0b660367ebd7f5ff" PRIMARY KEY ("id"))`);
         await queryRunner.query(`ALTER TABLE "historical_balance" ADD CONSTRAINT "FK_383ff006e4b59db91d32cb891e9" FOREIGN KEY ("account_id") REFERENCES "account"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "entity_proof" ADD CONSTRAINT "FK_3d9cbf30c68b79a801e1d5c9b41" FOREIGN KEY ("twin_rel_id") REFERENCES "twin"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "public_ip" ADD CONSTRAINT "FK_5cc2d1af1d8132b614abd340b06" FOREIGN KEY ("farm_id") REFERENCES "farm"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
@@ -43,6 +44,7 @@ export class initial1629796066003 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE "public_ip" DROP CONSTRAINT "FK_5cc2d1af1d8132b614abd340b06"`);
         await queryRunner.query(`ALTER TABLE "entity_proof" DROP CONSTRAINT "FK_3d9cbf30c68b79a801e1d5c9b41"`);
         await queryRunner.query(`ALTER TABLE "historical_balance" DROP CONSTRAINT "FK_383ff006e4b59db91d32cb891e9"`);
+        await queryRunner.query(`DROP TABLE "uptime_event"`);
         await queryRunner.query(`DROP TABLE "policy"`);
         await queryRunner.query(`DROP TABLE "pricing_policy"`);
         await queryRunner.query(`DROP TABLE "node_contract"`);
