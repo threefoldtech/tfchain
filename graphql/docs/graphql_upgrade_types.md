@@ -32,6 +32,8 @@ Generate code again.
 yarn codegen
 ```
 
+Issue right now: in `generated/modules` in some submodules an import will be added that currently is not working. Subsquid devs know that this issue exists and a fix is in progress. For now just reset the `some_module.service.ts` files.
+
 ## Change mappings
 
 A mapping file contains methods to map an event's data to an object to be saved in the graphql database. If you change a type, the events emitting these types might need a change as well.
@@ -53,7 +55,7 @@ docker-compose down
 Recompile the processor's docker image
 
 ```
-docker build . -t processor:latest
+docker-compose build
 ```
 
 Restart database:

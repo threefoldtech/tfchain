@@ -28,6 +28,7 @@ This one is very straightforward, in `indexer/` directory there is a docker comp
 Run it:
 
 ```
+docker-compose build
 docker-compose up -d
 ```
 
@@ -43,30 +44,31 @@ Substrate chain public Websocket endpoint.
 
 The processor stack should run seperately from the indexer stack.
 
-## Compile and prepare processor stack
-
-Install dependencies, create the processor db, run migrations and run the init script, run the processor migration and start the stack.
-
-```
-yarn
-yarn codegen
-yarn db:up
-yarn db:migrate
-yarn db:init
-yarn processor:migrate
-```
-
 ## Configuration
 
 The processor has an environment variable that needs to be set: `INDEXER_ENDPOINT_URL`, which is the Indexer-api-gateway url. If run on the same machine it can reach the indexer-api on the private ip or docker ip. 
 
 Example: `INDEXER_ENDPOINT_URL=http://172.17.0.1:4010/v1/graphql`
 
+
+## Compile and prepare processor stack
+
+Install dependencies, create the processor db, run migrations and run the init script, run the processor migration and start the stack.
+
+```
+yarn
+yarn db:up
+yarn db:migrate
+yarn db:init
+yarn processor:migrate
+```
+
 ## Run it
 
 Finally run the stack:
 
 ```
+docker-compose build
 docker-compose up -d
 ```
 

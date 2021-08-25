@@ -28,3 +28,18 @@ services:
       - TYPEORM_HOST=db
       - DEBUG=hydra-processor:*
     command: ["yarn", "processor:start"]
+
+  query-node:
+    image: query-node:latest
+    restart: unless-stopped
+    build: 
+      dockerfile: docker/Dockerfile.query-node
+      context: ./
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=db
+    ports:
+      - "4000:${GRAPHQL_SERVER_PORT}"
+    depends_on: 
+      - db
