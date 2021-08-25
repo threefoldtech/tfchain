@@ -3,12 +3,14 @@ sudo /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/crystalunivers
 
 cd graphql
 
-IP=$(ip -4 addr show eth0 | grep -oP "(?<=inet ).*(?=/)")
-echo -e "\nWS_ENDPOINT=ws://$IP:9944" >> .env
 
 yarn
 
 cd indexer
+
+IP=$(ip -4 addr show eth0 | grep -oP "(?<=inet ).*(?=/)")
+echo -e "\nWS_ENDPOINT=ws://$IP:9944" >> .env
+
 docker-compose build
 docker-compose up -d
 
