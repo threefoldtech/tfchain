@@ -1,0 +1,8 @@
+# Indexer config
+
+# substrate websocket endpoint
+# ws_endpoint: "ws://192.168.8.60:9944"
+ws_endpoint: 
+
+# db_endpoint: "10.101.127.50" # internal db-service ip
+db_endpoint: 
