@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -c
+    kompose.version: 1.23.0 (HEAD)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: query-node
+  name: query-node
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: query-node
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -c
+        kompose.version: 1.23.0 (HEAD)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: query-node
+    spec:
+      containers:
+        - env:
+            - name: BATCH_SIZE
+              valueFrom:
+                configMapKeyRef:
+                  key: BATCH_SIZE
+                  name: env
+            - name: BLOCK_WINDOW
+              valueFrom:
+                configMapKeyRef:
+                  key: BLOCK_WINDOW
+                  name: env
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  key: DB_HOST
+                  name: env
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: DB_NAME
+                  name: env
+            - name: DB_PASS
+              valueFrom:
+                configMapKeyRef:
+                  key: DB_PASS
+                  name: env
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  key: DB_PORT
+                  name: env
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  key: DB_USER
+                  name: env
+            - name: DEBUG
+              valueFrom:
+                configMapKeyRef:
+                  key: DEBUG
+                  name: env
+            - name: GRAPHQL_SERVER_HOST
+              valueFrom:
+                configMapKeyRef:
+                  key: GRAPHQL_SERVER_HOST
+                  name: env
+            - name: GRAPHQL_SERVER_PORT
+              valueFrom:
+                configMapKeyRef:
+                  key: GRAPHQL_SERVER_PORT
+                  name: env
+            - name: INDEXER_ENDPOINT_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: INDEXER_ENDPOINT_URL
+                  name: env
+            - name: PROJECT_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: PROJECT_NAME
+                  name: env
+            - name: TYPEORM_LOGGING
+              valueFrom:
+                configMapKeyRef:
+                  key: TYPEORM_LOGGING
+                  name: env
+          image: dylanverstraete/query-node:latest
+          name: query-node
+          ports:
+            - containerPort: 4000
+          resources: {}
+      restartPolicy: Always
+status: {}
