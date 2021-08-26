@@ -3,7 +3,7 @@
 
 FROM phusion/baseimage:0.11 as builder
 LABEL maintainer="dylan@threefold.tech"
-LABEL description="This is the build stage for Substrate. Here we create the binary."
+LABEL description="This is the build stage for the tfchain substrate node binary."
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -34,7 +34,6 @@ RUN rm -rf /usr/share/* && \
 	mkdir -p /tfchain/.local
 
 COPY --from=builder /tfchain/target/$PROFILE/tfchain /usr/local/bin
-COPY --from=builder /tfchain/customSpecRaw.json /etc
 
 # checks	
 RUN ldd /usr/local/bin/tfchain && \
