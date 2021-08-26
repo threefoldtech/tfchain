@@ -1,13 +1,21 @@
 # Creating a Farm on TFChain Devnet
 
+## Prerequisites:
+
+- you have to have an account (ID) on the polkadot TFChain.  We create a user account in the process below.  If you want to do that first, here's how you get [one](create_account.md)
+- you have to have yggdrasil networking installed on your desktop/lapop.  Here's how you do [that](https://yggdrasil-network.github.io/installation.html)
+
+With these two steps done - we're good to go and get a devnet 3.0 farm_id
+
 ## Step 1: Copy types to clipboard
 
 Open https://raw.githubusercontent.com/threefoldtech/tfgrid-api-client/master/types.json and copy the whole content to your clipboard.
 
 ## Step 2: browse to Polkadot UI
 
-Open https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/settings/developer in your browser.
-
+Open the following URL based on your setup:
+- Using a private node: https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/settings/developer
+- Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fexplorer.devnet.grid.tf%2Fws#/settings/developer
 
 Paste the types in in the box and hit `save`
 
@@ -15,7 +23,9 @@ Paste the types in in the box and hit `save`
 
 ## Step 3: Create an account
 
-Open https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/accounts in your browser, 
+Open the following URL based on your setup:
+- Using a private node:https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/accounts
+- Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fexplorer.devnet.grid.tf%2Fws#/accounts
 
 click `Add account`, take note of the seed. Click on the `Advanced creation options` arrow, and select keypair crypto type: `Edwards(ed25519, alternative)`
 
@@ -31,7 +41,9 @@ On the same page, on the left top, hover over `Account` button and click on `Tra
 
 ## Step 5: Create a Twin
 
-Open https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/extrinsics in your browser 
+Open the following URL based on your setup:
+- Using a private node: https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/extrinsics
+- Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fexplorer.devnet.grid.tf%2Fws#/extrinsics
 
 and select your account from the list. Next, select `tfgridModule` -> `createTwin(ip)` from the list.
 
@@ -41,7 +53,9 @@ Fill in your [Yggdrasil](https://github.com/yggdrasil-network/yggdrasil-go) IPV6
 
 ## Step 6: Create a Farm
 
-Open https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/extrinsics in your browser 
+Open the following URL based on your setup:
+- Using a private node: https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/extrinsics
+- Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fexplorer.devnet.grid.tf%2Fws#/extrinsics
 
 and select your account from the list. Next, select `tfgridModule` -> `createFarm(..)` from the list.
 
@@ -57,7 +71,9 @@ Optionally you can also provide public ips on your farm.
 
 ### Query twin
 
-Open https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/chainstate 
+Open the following URL based on your setup:
+- Using a private node: https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/chainstate 
+- Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fexplorer.devnet.grid.tf%2Fws#/chainstate
 
 and select `tfgridModule` -> scroll all the way down to `twinIdByAccountID(accountID):u32` and select your account ID from the list. Hit the PLUS symbol and you should see your twin ID.
 
