@@ -4,7 +4,7 @@
 
 Local builds and running a single node development chain is explained in the [development doc](./development.m).
 
-## Multi-Node local chain
+## Multi-Node chain
 
 Everything needed in order to create multi-node network chain is explained in the official documentation of Substrate.
 
@@ -14,7 +14,7 @@ Everything needed in order to create multi-node network chain is explained in th
 
 Keys are generated using [subkey](https://substrate.dev/docs/en/knowledgebase/integrate/subkey).
 
-For eack Aurablockproducer generate a key:
+For each Aura blockproducer generate a key:
 
 ```sh
 subkey generate --scheme sr2551
@@ -24,4 +24,22 @@ If you want it to work as a GRANDPA validator, create the ed25519 public key and
 
 ```sh
 subkey inspect --scheme ed25519 "<seed from the previous command>"
+```
+
+### Creating a custom chain spec
+
+First build the tfchain binary.
+
+Export the local chain spec to json:
+
+```sh
+./target/release/tfchain build-spec --disable-default-bootnode --chain local > chainspecs/<name>/chainSpec.json
+```
+
+Change the `genesis/runtime/palletAura/authorities` and  `genesis/runtime/palletGrandpa/authorities` with SS58 public keys generated in the above explained key generation section.
+
+Distributing a raw spec ensures that each node will store the data at the proper storage keys.so convert it to raw chain spec:
+
+```sh
+./target/release/tfchain build-spec --chain=chainspecs/<name>/customSpec.json --raw --disable-default-bootnode > ichainspecs/<name>/chainSpecRaw.json
 ```
