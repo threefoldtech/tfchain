@@ -7,7 +7,7 @@ Local builds and running a single node development chain is explained in the [de
 ## Build container image
 
 ```sh
-docker build -t tfchainnode:dev .
+docker build -t tfchainnode:$(git describe --abbrev=0 --tags | sed 's/^v//') .
 ```
 
 Add `--no-cache` if a newer rust toolchain is required.
