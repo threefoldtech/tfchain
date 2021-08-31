@@ -7,10 +7,8 @@ LABEL description="This is the build stage for the tfchain substrate node binary
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-ARG PROFILE=release
 WORKDIR /tfchain
 
-COPY . /tfchain
 
 RUN apt-get update && \
 	apt-get dist-upgrade -y -o Dpkg::Options::="--force-confold" && \
@@ -20,7 +18,13 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
 	export PATH="$PATH:$HOME/.cargo/bin" && \
 	rustup install nightly && \
 	rustup target add wasm32-unknown-unknown --toolchain nightly && \
-	rustup default stable && \
+	rustup default stable
+
+
+ARG PROFILE=release
+COPY . /tfchain
+
+RUN export PATH="$PATH:$HOME/.cargo/bin" && \
 	cargo build "--$PROFILE"
 
 # ===== SECOND STAGE ======

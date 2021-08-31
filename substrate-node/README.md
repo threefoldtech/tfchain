@@ -4,6 +4,14 @@
 
 Local builds and running a single node development chain is explained in the [development doc](./development.m).
 
+## Build container image
+
+```sh
+docker build -t tfchainnode:dev .
+```
+
+Add `--no-cache` if a newer rust toolchain is required.
+
 ## Multi-Node chain
 
 Everything needed in order to create multi-node network chain is explained in the official documentation of Substrate.
