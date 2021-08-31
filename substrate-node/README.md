@@ -25,7 +25,7 @@ Keys are generated using [subkey](https://substrate.dev/docs/en/knowledgebase/in
 For each Aura blockproducer generate a key:
 
 ```sh
-subkey generate --scheme sr2551
+subkey generate --scheme sr25519
 ```
 
 If you want it to work as a GRANDPA validator, create the ed25519 public key and address:
@@ -49,5 +49,5 @@ Change the `genesis/runtime/palletAura/authorities` and  `genesis/runtime/pallet
 Distributing a raw spec ensures that each node will store the data at the proper storage keys.so convert it to raw chain spec:
 
 ```sh
-./target/release/tfchain build-spec --chain=chainspecs/<name>/customSpec.json --raw --disable-default-bootnode > ichainspecs/<name>/chainSpecRaw.json
+./target/release/tfchain build-spec --chain=chainspecs/<name>/chainSpec.json --raw --disable-default-bootnode > chainspecs/<name>/chainSpecRaw.json
 ```
