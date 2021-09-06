@@ -60,6 +60,7 @@ spec:
             "--rpc-cors=all",
             "--rpc-methods=unsafe",
             "--base-path=/storage",
+            "--keystore-path=/keystore",
             "--chain=/etc/customSpecRaw.json",
             "--port", "$(SUBSTRATE_PORT)",
             "--ws-port", "$(SUBSTRATE_WS_PORT)",
@@ -76,7 +77,13 @@ spec:
           volumeMounts:
             - name: chain-storage-{{ .Release.Name }}
               mountPath: /storage
+            - name: keystore
+              mountPath: /keystore
+              readOnly: true
       volumes:
+        - name: keystore
+          secret:
+            secretName: {{ include "substrate-node.fullname" .  }}-keys
         - name: chain-storage-{{ .Release.Name }}
           persistentVolumeClaim:
             claimName: substrate-node-volume-claim-{{ .Release.Name }}

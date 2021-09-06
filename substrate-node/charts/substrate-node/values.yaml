@@ -5,9 +5,8 @@
 replicaCount: 1
 
 image:
-  repository: dylanverstraete/substrate-tfgrid
-  pullPolicy: Always
-  # Overrides the image tag whose default is the chart appVersion.
+  repository: tfchainnode
+  pullPolicy: IfNotPresent
   tag: ""
 
 imagePullSecrets: []
@@ -25,10 +24,12 @@ serviceAccount:
 
 podAnnotations: {}
 
-podSecurityContext: {}
+podSecurityContext:
+  {}
   # fsGroup: 2000
 
-securityContext: {}
+securityContext:
+  {}
   # capabilities:
   #   drop:
   #   - ALL
@@ -40,11 +41,15 @@ service:
   type: ClusterIP
   port: 80
 
-name: "substrate01"
+name: "tfchainnode01"
 port: 30333
 ws_port: 9944
 rpc_port: 9933
 is_validator: true
+keys: []
+# - name: 617572617e8438f38deaf5535162ccd148d7892e5ecbe4ba009a0d3874f506aac55dd37b
+#   secret: kkjghjfkkj kjhgkkhhgg
+
 # boot_node: "/ip4/10.42.1.134/tcp/30333/p2p/12D3KooWGX8JFxZu2dDmGVpa9t9enZnFCLhH4NUBA7PDuhEVQTMg"
 
 global:
@@ -54,14 +59,14 @@ global:
 ingress:
   enabled: true
   annotations:
-    kubernetes.io/ingress.class: traefik
   hosts:
     - host: dev.substrate01.threefold.io
-      paths: 
+      paths:
         - /
   tls: []
 
-resources: {}
+resources:
+  {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
