@@ -48,7 +48,7 @@ rpc_port: 9933
 is_validator: true
 keys: []
 # - name: 617572617e8438f38deaf5535162ccd148d7892e5ecbe4ba009a0d3874f506aac55dd37b
-#   secret: kkjghjfkkj kjhgkkhhgg
+#   secret: "kkjghjfkkj kjhgkkhhgg"
 
 # boot_node: "/ip4/10.42.1.134/tcp/30333/p2p/12D3KooWGX8JFxZu2dDmGVpa9t9enZnFCLhH4NUBA7PDuhEVQTMg"
 
@@ -77,13 +77,6 @@ resources:
   # requests:
   #   cpu: 100m
   #   memory: 128Mi
-
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 100
-  targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
 
 volume:
   size: 10 # GB
