@@ -61,7 +61,7 @@ spec:
             "--rpc-methods=unsafe",
             "--base-path=/storage",
             "--keystore-path=/keystore",
-            "--chain=/etc/customSpecRaw.json",
+            "--chain=/etc/chainspecs/dev/chainSpecRaw.json",
             "--port", "$(SUBSTRATE_PORT)",
             "--ws-port", "$(SUBSTRATE_WS_PORT)",
             "--rpc-port", "$(SUBSTRATE_RPC_PORT)",
@@ -86,7 +86,7 @@ spec:
             secretName: {{ include "substrate-node.fullname" .  }}-keys
         - name: chain-storage-{{ .Release.Name }}
           persistentVolumeClaim:
-            claimName: substrate-node-volume-claim-{{ .Release.Name }}
+            claimName: {{if .Values.volume.existingpersistentVolumeClaim }} {{.Values.volume.existingpersistentVolumeClaim}} {{ else }} substrate-node-volume-claim-{{ .Release.Name }} {{ end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

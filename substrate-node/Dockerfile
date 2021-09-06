@@ -38,6 +38,8 @@ RUN rm -rf /usr/share/* && \
 	mkdir -p /tfchain/.local
 
 COPY --from=builder /tfchain/target/$PROFILE/tfchain /usr/local/bin
+COPY chainspecs /etc/chainspecs/
+
 
 # checks	
 RUN ldd /usr/local/bin/tfchain && \

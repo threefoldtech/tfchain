@@ -80,7 +80,11 @@ resources:
 
 volume:
   size: 10 # GB
-  hostPath: "/chain01"
+  existingpersistentVolumeClaim: ""
+
+  persistentVolume:
+    create: true
+    hostPath: "/chain01"
 
 nodeSelector: {}
 
