@@ -58,7 +58,7 @@ spec:
             "--name", "$(SUBSTRATE_NAME)",
             "--ws-external",
             "--rpc-cors=all",
-            "--rpc-methods=unsafe",
+            "--rpc-methods=safe",
             "--base-path=/storage",
             "--keystore-path=/keystore",
             "--chain=/etc/chainspecs/dev/chainSpecRaw.json",
