@@ -5,9 +5,7 @@ metadata:
   labels:
     {{- include "substrate-node.labels" . | nindent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
-  {{- end }}
+  replicas: 1
   selector:
     matchLabels:
       {{- include "substrate-node.selectorLabels" . | nindent 6 }}

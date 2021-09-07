@@ -2,8 +2,6 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-replicaCount: 1
-
 image:
   repository: tfchainnode
   pullPolicy: IfNotPresent
@@ -81,7 +79,6 @@ resources:
 volume:
   size: 10 # GB
   existingpersistentVolumeClaim: ""
-
   persistentVolume:
     create: true
     hostPath: "/chain01"
