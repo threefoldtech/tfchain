@@ -54,7 +54,6 @@ spec:
             value: {{ .Values.boot_node }}
           args: [
             "--name", "$(SUBSTRATE_NAME)",
-            "--ws-external",
             "--rpc-cors=all",
             "--rpc-methods=safe",
             "--base-path=/storage",
@@ -67,7 +66,9 @@ spec:
             "--bootnodes", "$(SUBSTRATE_BOOT_NODE)",
             {{ end }}
             {{ if .Values.is_validator }}
-            "--validator",
+            "--validator"
+            {{ else }}
+            "--ws-external"
             {{ end }}
           ]
           resources:
@@ -77,9 +78,47 @@ spec:
               mountPath: /storage
             - name: keystore
               mountPath: /keystore
-              readOnly: true
+      initContainers:
+        - name: insert-aura-key
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: [
+            "key",
+            "insert",
+            "--keystore-path=/keystore",
+            "--key-type", "aura",
+            "--suri","/keys/aura"
+          ]
+          volumeMounts:
+            - name: keystore
+              mountPath: /keystore
+            - name: keys
+              mountPath: /keys
+              readOnly: true 
+        - name: insert-grandpa-key
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: [
+            "key",
+            "insert",
+            "--keystore-path=/keystore",
+            "--key-type", "gran",
+            "--suri","/keys/grandpa"
+          ]
+          volumeMounts:
+            - name: keystore
+              mountPath: /keystore
+            - name: keys
+              mountPath: /keys
+              readOnly: true 
       volumes:
         - name: keystore
+          emptyDir: {}
+        - name: keys
           secret:
             secretName: {{ include "substrate-node.fullname" .  }}-keys
         - name: chain-storage-{{ .Release.Name }}
