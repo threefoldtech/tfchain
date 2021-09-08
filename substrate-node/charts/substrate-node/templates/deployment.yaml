@@ -78,6 +78,7 @@ spec:
               mountPath: /storage
             - name: keystore
               mountPath: /keystore
+      {{ if .Values.is_validator }}
       initContainers:
         - name: insert-aura-key
           securityContext:
@@ -114,7 +115,8 @@ spec:
               mountPath: /keystore
             - name: keys
               mountPath: /keys
-              readOnly: true 
+              readOnly: true
+      {{ end }}
       volumes:
         - name: keystore
           emptyDir: {}
