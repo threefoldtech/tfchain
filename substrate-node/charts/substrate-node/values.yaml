@@ -49,6 +49,8 @@ keys: []
 #   secret: "kkjghjfkkj kjhgkkhhgg"
 # - name: grandpa
 #   secret: "kkjghjfkkj kjhgkkhhgg"
+# - name: node
+#   secret: 1a...
 
 # boot_node: "/ip4/10.42.1.134/tcp/30333/p2p/12D3KooWGX8JFxZu2dDmGVpa9t9enZnFCLhH4NUBA7PDuhEVQTMg"
 
