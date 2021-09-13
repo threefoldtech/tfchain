@@ -42,10 +42,12 @@ export async function nodeStored({
   if (node.public_config.isSome) {
     const pubConfig = new PublicConfig()
     const parsedConfig = node.public_config.unwrapOrDefault()
+    console.log(parsedConfig)
     pubConfig.ipv4 = hex2a(parsedConfig.ipv4.toString())
     pubConfig.ipv6 = hex2a(parsedConfig.ipv6.toString())
     pubConfig.gw4 = hex2a(parsedConfig.gw4.toString())
     pubConfig.gw6 = hex2a(parsedConfig.gw6.toString())
+    pubConfig.domain = hex2a(parsedConfig.domain.toString())
 
     await store.save<PublicConfig>(pubConfig)
     newNode.publicConfig = pubConfig

@@ -18,6 +18,9 @@ export class PublicConfig extends BaseModel {
   @StringField({})
   gw6!: string;
 
+  @StringField({})
+  domain!: string;
+
   @OneToMany(
     () => Node,
     (param: Node) => param.publicConfig,

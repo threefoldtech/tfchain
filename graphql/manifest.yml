@@ -15,6 +15,7 @@ typegen:
     lib: 'substrate-tfgrid-ts-types'
     typedefsLoc: ./indexer/types.json
   metadata:
+    # source: ws://localhost:9944
     source: wss://explorer.devnet.grid.tf/ws
   events:
     - balances.Transfer

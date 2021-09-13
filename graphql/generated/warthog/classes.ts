@@ -3132,7 +3132,10 @@ export enum PublicConfigOrderByEnum {
   gw4_DESC = "gw4_DESC",
 
   gw6_ASC = "gw6_ASC",
-  gw6_DESC = "gw6_DESC"
+  gw6_DESC = "gw6_DESC",
+
+  domain_ASC = "domain_ASC",
+  domain_DESC = "domain_DESC"
 }
 
 registerEnumType(PublicConfigOrderByEnum, {
@@ -3273,6 +3276,21 @@ export class PublicConfigWhereInput {
   @TypeGraphQLField(() => [String], { nullable: true })
   gw6_in?: string[];
 
+  @TypeGraphQLField({ nullable: true })
+  domain_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  domain_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  domain_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  domain_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  domain_in?: string[];
+
   @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
   nodepublicConfig_none?: NodeWhereInput;
 
@@ -3308,6 +3326,9 @@ export class PublicConfigCreateInput {
 
   @TypeGraphQLField()
   gw6!: string;
+
+  @TypeGraphQLField()
+  domain!: string;
 }
 
 @TypeGraphQLInputType()
@@ -3323,6 +3344,9 @@ export class PublicConfigUpdateInput {
 
   @TypeGraphQLField({ nullable: true })
   gw6?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  domain?: string;
 }
 
 @ArgsType()

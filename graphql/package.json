@@ -25,7 +25,7 @@
     "tslib": "^2.0.0",
     "ts-node": "^8.10.2",
     "typescript": "^3.9.7",
-    "substrate-tfgrid-ts-types": "^0.0.19",
+    "substrate-tfgrid-ts-types": "^0.0.20",
     "warthog": "https://eldargab.s3.eu-central-1.amazonaws.com/warthog-2.32.0.tgz"
   },
   "devDependencies": {

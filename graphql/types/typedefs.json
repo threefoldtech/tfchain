@@ -50,7 +50,8 @@
     "ipv4": "Vec<u8>",
     "ipv6": "Vec<u8>",
     "gw4": "Vec<u8>",
-    "gw6": "Vec<u8>"
+    "gw6": "Vec<u8>",
+    "domain": "Vec<u8>"
   },
   "Location": {
     "longitude": "Vec<u8>",
