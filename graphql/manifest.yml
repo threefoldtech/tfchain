@@ -34,6 +34,7 @@ typegen:
     - tfgridModule.TwinEntityRemoved
     - tfgridModule.PricingPolicyStored
     - tfgridModule.FarmingPolicyStored
+    - tfgridModule.FarmPayoutV2AddressRegistered
     - smartContractModule.ConsumptionReportReceived
     - smartContractModule.ContractCreated
     - smartContractModule.ContractUpdated
@@ -80,6 +81,8 @@ mappings:
       handler: pricingPolicyStored
     - event: tfgridModule.FarmingPolicyStored
       handler: farmingPolicyStored
+    - event: tfgridModule.FarmPayoutV2AddressRegistered
+      handler: farmPayoutV2AddressRegistered
     - event: smartContractModule.ConsumptionReportReceived
       handler: consumptionReportReceived
     - event: smartContractModule.ContractCreated

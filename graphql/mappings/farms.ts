@@ -93,11 +93,27 @@ export async function farmDeleted({
     block,
     extrinsic,
   }: EventContext & StoreContext) {
-    const [farmID] = new TfgridModule.FarmDeletedEvent(event).params
-  
-    const savedFarm = await store.get(Farm, { where: { farmId: farmID.toNumber() } })
-  
-    if (savedFarm) {
-      store.remove(savedFarm)
-    }
+  const [farmID] = new TfgridModule.FarmDeletedEvent(event).params
+
+  const savedFarm = await store.get(Farm, { where: { farmId: farmID.toNumber() } })
+
+  if (savedFarm) {
+    store.remove(savedFarm)
   }
+}
+
+export async function farmPayoutV2AddressRegistered({
+  store,
+  event,
+  block,
+  extrinsic,
+}: EventContext & StoreContext) {
+  const [farmID, stellarAddress] = new TfgridModule.FarmPayoutV2AddressRegisteredEvent(event).params
+
+  const savedFarm = await store.get(Farm, { where: { farmId: farmID.toNumber() } })
+
+  if (savedFarm) {
+    savedFarm.stellarAddress = hex2a(Buffer.from(stellarAddress.toString()).toString())
+    await store.save<Farm>(savedFarm)
+  }
+}

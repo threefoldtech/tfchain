@@ -38,6 +38,11 @@ export class Farm extends BaseModel {
   )
   publicIPs?: PublicIp[];
 
+  @StringField({
+    nullable: true
+  })
+  stellarAddress?: string;
+
   constructor(init?: Partial<Farm>) {
     super();
     Object.assign(this, init);

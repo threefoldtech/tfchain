@@ -460,4 +460,34 @@ export namespace TfgridModule {
       return valid;
     }
   }
+
+  export class FarmPayoutV2AddressRegisteredEvent {
+    public readonly expectedParamTypes = ["u32", "Vec<u8>"];
+
+    constructor(public readonly ctx: SubstrateEvent) {}
+
+    get params(): [u32, Bytes] {
+      return [
+        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
+          this.ctx.params[0].value
+        ]),
+        createTypeUnsafe<Bytes & Codec>(typeRegistry, "Bytes", [
+          this.ctx.params[1].value
+        ])
+      ];
+    }
+
+    validateParams(): boolean {
+      if (this.expectedParamTypes.length !== this.ctx.params.length) {
+        return false;
+      }
+      let valid = true;
+      this.expectedParamTypes.forEach((type, i) => {
+        if (type !== this.ctx.params[i].type) {
+          valid = false;
+        }
+      });
+      return valid;
+    }
+  }
 }

@@ -2472,7 +2472,10 @@ export enum FarmOrderByEnum {
   pricingPolicyId_DESC = "pricingPolicyId_DESC",
 
   certificationType_ASC = "certificationType_ASC",
-  certificationType_DESC = "certificationType_DESC"
+  certificationType_DESC = "certificationType_DESC",
+
+  stellarAddress_ASC = "stellarAddress_ASC",
+  stellarAddress_DESC = "stellarAddress_DESC"
 }
 
 registerEnumType(FarmOrderByEnum, {
@@ -2646,6 +2649,21 @@ export class FarmWhereInput {
   @TypeGraphQLField(() => [CertificationType], { nullable: true })
   certificationType_in?: CertificationType[];
 
+  @TypeGraphQLField({ nullable: true })
+  stellarAddress_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  stellarAddress_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  stellarAddress_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  stellarAddress_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  stellarAddress_in?: string[];
+
   @TypeGraphQLField(() => PublicIpWhereInput, { nullable: true })
   publicIPs_none?: PublicIpWhereInput;
 
@@ -2687,6 +2705,9 @@ export class FarmCreateInput {
 
   @TypeGraphQLField(() => CertificationType)
   certificationType!: CertificationType;
+
+  @TypeGraphQLField({ nullable: true })
+  stellarAddress?: string;
 }
 
 @TypeGraphQLInputType()
@@ -2708,6 +2729,9 @@ export class FarmUpdateInput {
 
   @TypeGraphQLField(() => CertificationType, { nullable: true })
   certificationType?: CertificationType;
+
+  @TypeGraphQLField({ nullable: true })
+  stellarAddress?: string;
 }
 
 @ArgsType()

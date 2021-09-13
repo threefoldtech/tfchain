@@ -43,6 +43,7 @@ type Farm @entity {
   pricingPolicyID: Int!
   certificationType: CertificationType!
   publicIPs: [PublicIp!] @derivedFrom(field: "farm")
+  stellarAddress: String
 }
 
 type PublicIp @entity {
