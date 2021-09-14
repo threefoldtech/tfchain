@@ -1,5 +1,5 @@
 import { Farm, CertificationType, PublicIp } from '../generated/model'
-import { TfgridModule } from '../types'
+import { TfgridModule } from '../chain'
 import { hex2a } from './util'
 
 import {

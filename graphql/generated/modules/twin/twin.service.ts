@@ -1,8 +1,7 @@
 import { Service, Inject } from 'typedi';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { InjectRepository } from 'typeorm-typedi-extensions';
-import { WhereInput } from 'warthog';
-import { WarthogBaseService } from '../../server/WarthogBaseService';
+import { WhereInput, HydraBaseService } from '@subsquid/warthog';
 
 import { Twin } from './twin.model';
 
@@ -14,7 +13,7 @@ import { getConnection, getRepository, In, Not } from 'typeorm';
 import _ from 'lodash';
 
 @Service('TwinService')
-export class TwinService extends WarthogBaseService<Twin> {
+export class TwinService extends HydraBaseService<Twin> {
   @Inject('EntityProofService')
   public readonly entityprooftwinRelService!: EntityProofService;
 
@@ -32,13 +31,23 @@ export class TwinService extends WarthogBaseService<Twin> {
     return this.findWithRelations<W>(where, orderBy, limit, offset, fields);
   }
 
-  async findWithRelations<W extends WhereInput>(
+  findWithRelations<W extends WhereInput>(
     _where?: any,
     orderBy?: string | string[],
     limit?: number,
     offset?: number,
     fields?: string[]
   ): Promise<Twin[]> {
+    return this.buildFindWithRelationsQuery(_where, orderBy, limit, offset, fields).getMany();
+  }
+
+  buildFindWithRelationsQuery<W extends WhereInput>(
+    _where?: any,
+    orderBy?: string | string[],
+    limit?: number,
+    offset?: number,
+    fields?: string[]
+  ): SelectQueryBuilder<Twin> {
     const where = <TwinWhereInput>(_where || {});
 
     // remove relation filters to enable warthog query builders
@@ -129,9 +138,6 @@ export class TwinService extends WarthogBaseService<Twin> {
 
     mainQuery = mainQuery.setParameters(parameters);
 
-    return mainQuery
-      .take(limit || 50)
-      .skip(offset || 0)
-      .getMany();
+    return mainQuery.take(limit || 50).skip(offset || 0);
   }
 }

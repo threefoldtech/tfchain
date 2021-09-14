@@ -9,7 +9,7 @@ import {
   BytesField,
   EnumField,
   StringField,
-  ObjectType
-} from 'warthog';
+  ObjectType,
+} from '@subsquid/warthog';
 import BN from 'bn.js';
 import { InputType, Field } from 'type-graphql';

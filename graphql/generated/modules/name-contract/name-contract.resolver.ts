@@ -27,34 +27,34 @@ import {
 } from '@subsquid/warthog';
 
 import {
-  EntityCreateInput,
-  EntityCreateManyArgs,
-  EntityUpdateArgs,
-  EntityWhereArgs,
-  EntityWhereInput,
-  EntityWhereUniqueInput,
-  EntityOrderByEnum,
+  NameContractCreateInput,
+  NameContractCreateManyArgs,
+  NameContractUpdateArgs,
+  NameContractWhereArgs,
+  NameContractWhereInput,
+  NameContractWhereUniqueInput,
+  NameContractOrderByEnum,
 } from '../../warthog';
 
-import { Entity } from './entity.model';
-import { EntityService } from './entity.service';
+import { NameContract } from './name-contract.model';
+import { NameContractService } from './name-contract.service';
 
 @ObjectType()
-export class EntityEdge {
-  @Field(() => Entity, { nullable: false })
-  node!: Entity;
+export class NameContractEdge {
+  @Field(() => NameContract, { nullable: false })
+  node!: NameContract;
 
   @Field(() => String, { nullable: false })
   cursor!: string;
 }
 
 @ObjectType()
-export class EntityConnection {
+export class NameContractConnection {
   @Field(() => Int, { nullable: false })
   totalCount!: number;
 
-  @Field(() => [EntityEdge], { nullable: false })
-  edges!: EntityEdge[];
+  @Field(() => [NameContractEdge], { nullable: false })
+  edges!: NameContractEdge[];
 
   @Field(() => PageInfo, { nullable: false })
   pageInfo!: PageInfo;
@@ -78,40 +78,40 @@ export class ConnectionPageInputOptions {
 }
 
 @ArgsType()
-export class EntityConnectionWhereArgs extends ConnectionPageInputOptions {
-  @Field(() => EntityWhereInput, { nullable: true })
-  where?: EntityWhereInput;
+export class NameContractConnectionWhereArgs extends ConnectionPageInputOptions {
+  @Field(() => NameContractWhereInput, { nullable: true })
+  where?: NameContractWhereInput;
 
-  @Field(() => EntityOrderByEnum, { nullable: true })
-  orderBy?: [EntityOrderByEnum];
+  @Field(() => NameContractOrderByEnum, { nullable: true })
+  orderBy?: [NameContractOrderByEnum];
 }
 
-@Resolver(Entity)
-export class EntityResolver {
-  constructor(@Inject('EntityService') public readonly service: EntityService) {}
+@Resolver(NameContract)
+export class NameContractResolver {
+  constructor(@Inject('NameContractService') public readonly service: NameContractService) {}
 
-  @Query(() => [Entity])
-  async entities(
-    @Args() { where, orderBy, limit, offset }: EntityWhereArgs,
+  @Query(() => [NameContract])
+  async nameContracts(
+    @Args() { where, orderBy, limit, offset }: NameContractWhereArgs,
     @Fields() fields: string[]
-  ): Promise<Entity[]> {
-    return this.service.find<EntityWhereInput>(where, orderBy, limit, offset, fields);
+  ): Promise<NameContract[]> {
+    return this.service.find<NameContractWhereInput>(where, orderBy, limit, offset, fields);
   }
 
-  @Query(() => Entity, { nullable: true })
-  async entityByUniqueInput(
-    @Arg('where') where: EntityWhereUniqueInput,
+  @Query(() => NameContract, { nullable: true })
+  async nameContractByUniqueInput(
+    @Arg('where') where: NameContractWhereUniqueInput,
     @Fields() fields: string[]
-  ): Promise<Entity | null> {
+  ): Promise<NameContract | null> {
     const result = await this.service.find(where, undefined, 1, 0, fields);
     return result && result.length >= 1 ? result[0] : null;
   }
 
-  @Query(() => EntityConnection)
-  async entitiesConnection(
-    @Args() { where, orderBy, ...pageOptions }: EntityConnectionWhereArgs,
+  @Query(() => NameContractConnection)
+  async nameContractsConnection(
+    @Args() { where, orderBy, ...pageOptions }: NameContractConnectionWhereArgs,
     @Info() info: any
-  ): Promise<EntityConnection> {
+  ): Promise<NameContractConnection> {
     const rawFields = graphqlFields(info, {}, { excludedFields: ['__typename'] });
 
     let result: any = {
@@ -125,13 +125,13 @@ export class EntityResolver {
     // If the related database table does not have any records then an error is thrown to the client
     // by warthog
     try {
-      result = await this.service.findConnection<EntityWhereInput>(where, orderBy, pageOptions, rawFields);
+      result = await this.service.findConnection<NameContractWhereInput>(where, orderBy, pageOptions, rawFields);
     } catch (err: any) {
       console.log(err);
       // TODO: should continue to return this on `Error: Items is empty` or throw the error
       if (!(err.message as string).includes('Items is empty')) throw err;
     }
 
-    return result as Promise<EntityConnection>;
+    return result as Promise<NameContractConnection>;
   }
 }

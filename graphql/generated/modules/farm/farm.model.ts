@@ -1,4 +1,4 @@
-import { BaseModel, IntField, Model, OneToMany, EnumField, StringField, JSONField } from 'warthog';
+import { BaseModel, IntField, Model, OneToMany, EnumField, StringField, JSONField } from '@subsquid/warthog';
 
 import { PublicIp } from '../public-ip/public-ip.model';
 
@@ -27,19 +27,15 @@ export class Farm extends BaseModel {
   @EnumField('CertificationType', CertificationType, {})
   certificationType!: CertificationType;
 
-  @OneToMany(
-    () => PublicIp,
-    (param: PublicIp) => param.farm,
-    {
-      modelName: 'Farm',
-      relModelName: 'PublicIp',
-      propertyName: 'publicIPs'
-    }
-  )
+  @OneToMany(() => PublicIp, (param: PublicIp) => param.farm, {
+    modelName: 'Farm',
+    relModelName: 'PublicIp',
+    propertyName: 'publicIPs',
+  })
   publicIPs?: PublicIp[];
 
   @StringField({
-    nullable: true
+    nullable: true,
   })
   stellarAddress?: string;
 

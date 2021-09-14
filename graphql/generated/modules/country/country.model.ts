@@ -1,4 +1,4 @@
-import { BaseModel, IntField, Model, StringField, JSONField } from 'warthog';
+import { BaseModel, IntField, Model, StringField, JSONField } from '@subsquid/warthog';
 
 import * as jsonTypes from '../jsonfields/jsonfields.model';
 
@@ -20,12 +20,12 @@ export class Country extends BaseModel {
   subregion!: string;
 
   @StringField({
-    nullable: true
+    nullable: true,
   })
   lat?: string;
 
   @StringField({
-    nullable: true
+    nullable: true,
   })
   long?: string;
 

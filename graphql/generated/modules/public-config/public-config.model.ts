@@ -1,4 +1,4 @@
-import { BaseModel, Model, OneToMany, StringField, JSONField } from 'warthog';
+import { BaseModel, Model, OneToMany, StringField, JSONField } from '@subsquid/warthog';
 
 import { Node } from '../node/node.model';
 
@@ -21,16 +21,12 @@ export class PublicConfig extends BaseModel {
   @StringField({})
   domain!: string;
 
-  @OneToMany(
-    () => Node,
-    (param: Node) => param.publicConfig,
-    {
-      nullable: true,
-      modelName: 'PublicConfig',
-      relModelName: 'Node',
-      propertyName: 'nodepublicConfig'
-    }
-  )
+  @OneToMany(() => Node, (param: Node) => param.publicConfig, {
+    nullable: true,
+    modelName: 'PublicConfig',
+    relModelName: 'Node',
+    propertyName: 'nodepublicConfig',
+  })
   nodepublicConfig?: Node[];
 
   constructor(init?: Partial<PublicConfig>) {

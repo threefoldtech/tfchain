@@ -11,12 +11,20 @@ import {
   Int,
   ArgsType,
   Info,
-  Ctx
+  Ctx,
 } from 'type-graphql';
 import graphqlFields from 'graphql-fields';
 import { Inject } from 'typedi';
 import { Min } from 'class-validator';
-import { Fields, StandardDeleteResponse, UserId, PageInfo, RawFields, NestedFields, BaseContext } from 'warthog';
+import {
+  Fields,
+  StandardDeleteResponse,
+  UserId,
+  PageInfo,
+  RawFields,
+  NestedFields,
+  BaseContext,
+} from '@subsquid/warthog';
 
 import {
   UptimeEventCreateInput,
@@ -25,7 +33,7 @@ import {
   UptimeEventWhereArgs,
   UptimeEventWhereInput,
   UptimeEventWhereUniqueInput,
-  UptimeEventOrderByEnum
+  UptimeEventOrderByEnum,
 } from '../../warthog';
 
 import { UptimeEvent } from './uptime-event.model';
@@ -111,14 +119,14 @@ export class UptimeEventResolver {
       edges: [],
       pageInfo: {
         hasNextPage: false,
-        hasPreviousPage: false
-      }
+        hasPreviousPage: false,
+      },
     };
     // If the related database table does not have any records then an error is thrown to the client
     // by warthog
     try {
       result = await this.service.findConnection<UptimeEventWhereInput>(where, orderBy, pageOptions, rawFields);
-    } catch (err) {
+    } catch (err: any) {
       console.log(err);
       // TODO: should continue to return this on `Error: Items is empty` or throw the error
       if (!(err.message as string).includes('Items is empty')) throw err;

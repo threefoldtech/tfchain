@@ -141,6 +141,14 @@ type NodeContract @entity {
   state: ContractState!
 }
 
+type NameContract @entity {
+  version: Int!
+  contractID: Int!
+  twinID: Int!
+  name: String!
+  state: ContractState!
+}
+
 enum ContractState {
   Created,
   Deleted,

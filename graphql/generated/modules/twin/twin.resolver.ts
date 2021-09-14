@@ -11,12 +11,20 @@ import {
   Int,
   ArgsType,
   Info,
-  Ctx
+  Ctx,
 } from 'type-graphql';
 import graphqlFields from 'graphql-fields';
 import { Inject } from 'typedi';
 import { Min } from 'class-validator';
-import { Fields, StandardDeleteResponse, UserId, PageInfo, RawFields, NestedFields, BaseContext } from 'warthog';
+import {
+  Fields,
+  StandardDeleteResponse,
+  UserId,
+  PageInfo,
+  RawFields,
+  NestedFields,
+  BaseContext,
+} from '@subsquid/warthog';
 
 import {
   TwinCreateInput,
@@ -25,7 +33,7 @@ import {
   TwinWhereArgs,
   TwinWhereInput,
   TwinWhereUniqueInput,
-  TwinOrderByEnum
+  TwinOrderByEnum,
 } from '../../warthog';
 
 import { Twin } from './twin.model';
@@ -110,14 +118,14 @@ export class TwinResolver {
       edges: [],
       pageInfo: {
         hasNextPage: false,
-        hasPreviousPage: false
-      }
+        hasPreviousPage: false,
+      },
     };
     // If the related database table does not have any records then an error is thrown to the client
     // by warthog
     try {
       result = await this.service.findConnection<TwinWhereInput>(where, orderBy, pageOptions, rawFields);
-    } catch (err) {
+    } catch (err: any) {
       console.log(err);
       // TODO: should continue to return this on `Error: Items is empty` or throw the error
       if (!(err.message as string).includes('Items is empty')) throw err;

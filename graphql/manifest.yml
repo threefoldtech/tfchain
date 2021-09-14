@@ -3,20 +3,13 @@ description: Test manifest
 repository: https://github.com/
 hydraVersion: "4"
 
-dataSource:
-  kind: substrate
-  chain: node-template
-
-entities:
-  - generated/modules/**/*.model.ts
-
 typegen:
   customTypes:
     lib: 'substrate-tfgrid-ts-types'
     typedefsLoc: ./indexer/types.json
   metadata:
-    # source: ws://localhost:9944
-    source: wss://explorer.devnet.grid.tf/ws
+    source: ws://localhost:9944
+    # source: wss://explorer.devnet.grid.tf/ws
   events:
     - balances.Transfer
     - tfgridModule.EntityStored
@@ -41,14 +34,12 @@ typegen:
     - smartContractModule.ContractUpdated
     - smartContractModule.ContractCanceled
     - smartContractModule.ContractBilled
-  outDir: types
+  outDir: chain
 
 mappings:
   mappingsModule: mappings
-  imports:
-    - generated/server/config # configure the processor environment (for now this is required)
   eventHandlers:
-    - event: balances.Transfer 
+    - event: balances.Transfer
       handler: balancesTransfer
     - event: tfgridModule.EntityStored
       handler: entityStored

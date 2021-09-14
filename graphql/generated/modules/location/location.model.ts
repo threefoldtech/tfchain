@@ -1,4 +1,4 @@
-import { BaseModel, Model, OneToMany, StringField, JSONField } from 'warthog';
+import { BaseModel, Model, OneToMany, StringField, JSONField } from '@subsquid/warthog';
 
 import { Node } from '../node/node.model';
 
@@ -12,16 +12,12 @@ export class Location extends BaseModel {
   @StringField({})
   latitude!: string;
 
-  @OneToMany(
-    () => Node,
-    (param: Node) => param.location,
-    {
-      nullable: true,
-      modelName: 'Location',
-      relModelName: 'Node',
-      propertyName: 'nodelocation'
-    }
-  )
+  @OneToMany(() => Node, (param: Node) => param.location, {
+    nullable: true,
+    modelName: 'Location',
+    relModelName: 'Node',
+    propertyName: 'nodelocation',
+  })
   nodelocation?: Node[];
 
   constructor(init?: Partial<Location>) {

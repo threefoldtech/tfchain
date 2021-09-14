@@ -1,8 +1,7 @@
 import { Service, Inject } from 'typedi';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { InjectRepository } from 'typeorm-typedi-extensions';
-import { WhereInput } from 'warthog';
-import { WarthogBaseService } from '../../server/WarthogBaseService';
+import { WhereInput, HydraBaseService } from '@subsquid/warthog';
 
 import { PublicIp } from './public-ip.model';
 
@@ -14,7 +13,7 @@ import { getConnection, getRepository, In, Not } from 'typeorm';
 import _ from 'lodash';
 
 @Service('PublicIpService')
-export class PublicIpService extends WarthogBaseService<PublicIp> {
+export class PublicIpService extends HydraBaseService<PublicIp> {
   @Inject('FarmService')
   public readonly farmService!: FarmService;
 
@@ -32,13 +31,23 @@ export class PublicIpService extends WarthogBaseService<PublicIp> {
     return this.findWithRelations<W>(where, orderBy, limit, offset, fields);
   }
 
-  async findWithRelations<W extends WhereInput>(
+  findWithRelations<W extends WhereInput>(
     _where?: any,
     orderBy?: string | string[],
     limit?: number,
     offset?: number,
     fields?: string[]
   ): Promise<PublicIp[]> {
+    return this.buildFindWithRelationsQuery(_where, orderBy, limit, offset, fields).getMany();
+  }
+
+  buildFindWithRelationsQuery<W extends WhereInput>(
+    _where?: any,
+    orderBy?: string | string[],
+    limit?: number,
+    offset?: number,
+    fields?: string[]
+  ): SelectQueryBuilder<PublicIp> {
     const where = <PublicIpWhereInput>(_where || {});
 
     // remove relation filters to enable warthog query builders
@@ -62,9 +71,6 @@ export class PublicIpService extends WarthogBaseService<PublicIp> {
 
     mainQuery = mainQuery.setParameters(parameters);
 
-    return mainQuery
-      .take(limit || 50)
-      .skip(offset || 0)
-      .getMany();
+    return mainQuery.take(limit || 50).skip(offset || 0);
   }
 }

@@ -1,8 +1,7 @@
 import { Service, Inject } from 'typedi';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { InjectRepository } from 'typeorm-typedi-extensions';
-import { WhereInput } from 'warthog';
-import { WarthogBaseService } from '../../server/WarthogBaseService';
+import { WhereInput, HydraBaseService } from '@subsquid/warthog';
 
 import { HistoricalBalance } from './historical-balance.model';
 
@@ -14,7 +13,7 @@ import { getConnection, getRepository, In, Not } from 'typeorm';
 import _ from 'lodash';
 
 @Service('HistoricalBalanceService')
-export class HistoricalBalanceService extends WarthogBaseService<HistoricalBalance> {
+export class HistoricalBalanceService extends HydraBaseService<HistoricalBalance> {
   @Inject('AccountService')
   public readonly accountService!: AccountService;
 
@@ -32,13 +31,23 @@ export class HistoricalBalanceService extends WarthogBaseService<HistoricalBalan
     return this.findWithRelations<W>(where, orderBy, limit, offset, fields);
   }
 
-  async findWithRelations<W extends WhereInput>(
+  findWithRelations<W extends WhereInput>(
     _where?: any,
     orderBy?: string | string[],
     limit?: number,
     offset?: number,
     fields?: string[]
   ): Promise<HistoricalBalance[]> {
+    return this.buildFindWithRelationsQuery(_where, orderBy, limit, offset, fields).getMany();
+  }
+
+  buildFindWithRelationsQuery<W extends WhereInput>(
+    _where?: any,
+    orderBy?: string | string[],
+    limit?: number,
+    offset?: number,
+    fields?: string[]
+  ): SelectQueryBuilder<HistoricalBalance> {
     const where = <HistoricalBalanceWhereInput>(_where || {});
 
     // remove relation filters to enable warthog query builders
@@ -62,9 +71,6 @@ export class HistoricalBalanceService extends WarthogBaseService<HistoricalBalan
 
     mainQuery = mainQuery.setParameters(parameters);
 
-    return mainQuery
-      .take(limit || 50)
-      .skip(offset || 0)
-      .getMany();
+    return mainQuery.take(limit || 50).skip(offset || 0);
   }
 }

@@ -20,6 +20,8 @@ import { HistoricalBalance } from '../modules/historical-balance/historical-bala
 export { HistoricalBalance };
 import { Location } from '../modules/location/location.model';
 export { Location };
+import { NameContract } from '../modules/name-contract/name-contract.model';
+export { NameContract };
 import { Node } from '../modules/node/node.model';
 export { Node };
 import { NodeContract } from '../modules/node-contract/node-contract.model';

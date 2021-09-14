@@ -9,7 +9,7 @@ import {
   FarmingPolicy,
   Node,
   PricingPolicy,
-  Twin
+  Twin,
 } from "substrate-tfgrid-ts-types";
 import { Bytes, u32, u64 } from "@polkadot/types";
 
@@ -22,8 +22,8 @@ export namespace TfgridModule {
     get params(): [Entity] {
       return [
         createTypeUnsafe<Entity & Codec>(typeRegistry, "Entity", [
-          this.ctx.params[0].value
-        ])
+          this.ctx.params[0].value,
+        ]),
       ];
     }
 
@@ -49,8 +49,8 @@ export namespace TfgridModule {
     get params(): [Entity] {
       return [
         createTypeUnsafe<Entity & Codec>(typeRegistry, "Entity", [
-          this.ctx.params[0].value
-        ])
+          this.ctx.params[0].value,
+        ]),
       ];
     }
 
@@ -76,8 +76,8 @@ export namespace TfgridModule {
     get params(): [u32] {
       return [
         createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[0].value
-        ])
+          this.ctx.params[0].value,
+        ]),
       ];
     }
 
@@ -103,8 +103,8 @@ export namespace TfgridModule {
     get params(): [Farm] {
       return [
         createTypeUnsafe<Farm & Codec>(typeRegistry, "Farm", [
-          this.ctx.params[0].value
-        ])
+          this.ctx.params[0].value,
+        ]),
       ];
     }
 
@@ -130,8 +130,8 @@ export namespace TfgridModule {
     get params(): [Farm] {
       return [
         createTypeUnsafe<Farm & Codec>(typeRegistry, "Farm", [
-          this.ctx.params[0].value
-        ])
+          this.ctx.params[0].value,
+        ]),
       ];
     }
 
@@ -157,8 +157,8 @@ export namespace TfgridModule {
     get params(): [u32] {
       return [
         createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[0].value
-        ])
+          this.ctx.params[0].value,
+        ]),
       ];
     }
 
@@ -184,8 +184,8 @@ export namespace TfgridModule {
     get params(): [Node] {
       return [
         createTypeUnsafe<Node & Codec>(typeRegistry, "Node", [
-          this.ctx.params[0].value
-        ])
+          this.ctx.params[0].value,
+        ]),
       ];
     }
 
@@ -211,8 +211,8 @@ export namespace TfgridModule {
     get params(): [Node] {
       return [
         createTypeUnsafe<Node & Codec>(typeRegistry, "Node", [
-          this.ctx.params[0].value
-        ])
+          this.ctx.params[0].value,
+        ]),
       ];
     }
 
@@ -238,8 +238,8 @@ export namespace TfgridModule {
     get params(): [u32] {
       return [
         createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[0].value
-        ])
+          this.ctx.params[0].value,
+        ]),
       ];
     }
 
@@ -265,14 +265,14 @@ export namespace TfgridModule {
     get params(): [u32, u64, u64] {
       return [
         createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[0].value
+          this.ctx.params[0].value,
         ]),
         createTypeUnsafe<u64 & Codec>(typeRegistry, "u64", [
-          this.ctx.params[1].value
+          this.ctx.params[1].value,
         ]),
         createTypeUnsafe<u64 & Codec>(typeRegistry, "u64", [
-          this.ctx.params[2].value
-        ])
+          this.ctx.params[2].value,
+        ]),
       ];
     }
 
@@ -298,8 +298,8 @@ export namespace TfgridModule {
     get params(): [Twin] {
       return [
         createTypeUnsafe<Twin & Codec>(typeRegistry, "Twin", [
-          this.ctx.params[0].value
-        ])
+          this.ctx.params[0].value,
+        ]),
       ];
     }
 
@@ -325,8 +325,8 @@ export namespace TfgridModule {
     get params(): [u32] {
       return [
         createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[0].value
-        ])
+          this.ctx.params[0].value,
+        ]),
       ];
     }
 
@@ -352,14 +352,14 @@ export namespace TfgridModule {
     get params(): [u32, u32, Bytes] {
       return [
         createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[0].value
+          this.ctx.params[0].value,
         ]),
         createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[1].value
+          this.ctx.params[1].value,
         ]),
         createTypeUnsafe<Bytes & Codec>(typeRegistry, "Bytes", [
-          this.ctx.params[2].value
-        ])
+          this.ctx.params[2].value,
+        ]),
       ];
     }
 
@@ -385,11 +385,11 @@ export namespace TfgridModule {
     get params(): [u32, u32] {
       return [
         createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[0].value
+          this.ctx.params[0].value,
         ]),
         createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[1].value
-        ])
+          this.ctx.params[1].value,
+        ]),
       ];
     }
 
@@ -415,8 +415,8 @@ export namespace TfgridModule {
     get params(): [PricingPolicy] {
       return [
         createTypeUnsafe<PricingPolicy & Codec>(typeRegistry, "PricingPolicy", [
-          this.ctx.params[0].value
-        ])
+          this.ctx.params[0].value,
+        ]),
       ];
     }
 
@@ -442,8 +442,8 @@ export namespace TfgridModule {
     get params(): [FarmingPolicy] {
       return [
         createTypeUnsafe<FarmingPolicy & Codec>(typeRegistry, "FarmingPolicy", [
-          this.ctx.params[0].value
-        ])
+          this.ctx.params[0].value,
+        ]),
       ];
     }
 
@@ -469,11 +469,11 @@ export namespace TfgridModule {
     get params(): [u32, Bytes] {
       return [
         createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
-          this.ctx.params[0].value
+          this.ctx.params[0].value,
         ]),
         createTypeUnsafe<Bytes & Codec>(typeRegistry, "Bytes", [
-          this.ctx.params[1].value
-        ])
+          this.ctx.params[1].value,
+        ]),
       ];
     }
 

@@ -1,4 +1,4 @@
-import { BaseModel, IntField, Model, StringField, JSONField } from 'warthog';
+import { BaseModel, IntField, Model, StringField, JSONField } from '@subsquid/warthog';
 
 import * as jsonTypes from '../jsonfields/jsonfields.model';
 

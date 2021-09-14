@@ -1,7 +1,7 @@
 import BN from 'bn.js'
 import { DatabaseManager, EventContext, StoreContext } from '@subsquid/hydra-common'
 import { Account, HistoricalBalance } from '../generated/model'
-import { Balances } from '../types'
+import { Balances } from '../chain'
 
 
 export async function balancesTransfer({

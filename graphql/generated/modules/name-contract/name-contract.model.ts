@@ -6,7 +6,7 @@ import { ContractState } from '../enums/enums';
 export { ContractState };
 
 @Model({ api: {} })
-export class NodeContract extends BaseModel {
+export class NameContract extends BaseModel {
   @IntField({})
   version!: number;
 
@@ -16,22 +16,13 @@ export class NodeContract extends BaseModel {
   @IntField({})
   twinId!: number;
 
-  @IntField({})
-  nodeId!: number;
-
   @StringField({})
-  deploymentData!: string;
-
-  @StringField({})
-  deploymentHash!: string;
-
-  @IntField({})
-  numberOfPublicIPs!: number;
+  name!: string;
 
   @EnumField('ContractState', ContractState, {})
   state!: ContractState;
 
-  constructor(init?: Partial<NodeContract>) {
+  constructor(init?: Partial<NameContract>) {
     super();
     Object.assign(this, init);
   }

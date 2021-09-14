@@ -1,4 +1,4 @@
-import { BaseModel, IntField, Model, ManyToOne, StringField, JSONField } from 'warthog';
+import { BaseModel, IntField, Model, ManyToOne, StringField, JSONField } from '@subsquid/warthog';
 
 import { Twin } from '../twin/twin.model';
 
@@ -12,17 +12,13 @@ export class EntityProof extends BaseModel {
   @StringField({})
   signature!: string;
 
-  @ManyToOne(
-    () => Twin,
-    (param: Twin) => param.entityprooftwinRel,
-    {
-      skipGraphQLField: true,
+  @ManyToOne(() => Twin, (param: Twin) => param.entityprooftwinRel, {
+    skipGraphQLField: true,
 
-      modelName: 'EntityProof',
-      relModelName: 'Twin',
-      propertyName: 'twinRel'
-    }
-  )
+    modelName: 'EntityProof',
+    relModelName: 'Twin',
+    propertyName: 'twinRel',
+  })
   twinRel!: Twin;
 
   constructor(init?: Partial<EntityProof>) {

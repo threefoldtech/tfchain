@@ -1,11 +1,102 @@
-import { Consumption, NodeContract, ContractState, DiscountLevel, ContractBillReport } from '../generated/model'
-import { SmartContractModule } from '../types'
+import { Consumption, NodeContract, NameContract, ContractState, DiscountLevel, ContractBillReport } from '../generated/model'
+import { SmartContractModule } from '../chain'
 import { hex2a } from './util'
 
 import {
   EventContext,
   StoreContext,
 } from '@subsquid/hydra-common'
+
+export async function contractCreated({
+  store,
+  event,
+  block,
+  extrinsic,
+}: EventContext & StoreContext) {
+  const [nodeContract] = new SmartContractModule.ContractCreatedEvent(event).params
+
+  let state = ContractState.Created
+  switch (nodeContract.state.toString()) {
+    case 'Created': break
+    case 'Deleted': state = ContractState.Deleted
+    case 'OutOfFunds': state = ContractState.OutOfFunds
+  }
+
+  let contract
+  if (nodeContract.contract_type.isNameContract) {
+    let newNameContract = new NameContract()
+    contract = nodeContract.contract_type.asNameContract
+    newNameContract.name = hex2a(Buffer.from(contract.name.toString()).toString())
+    newNameContract.contractId = nodeContract.contract_id.toNumber()
+    newNameContract.version = nodeContract.version.toNumber()
+    newNameContract.twinId = nodeContract.twin_id.toNumber()
+    newNameContract.state = state
+    await store.save<NameContract>(newNameContract)
+  }
+  else if (nodeContract.contract_type.isNodeContract) {
+    let newNodeContract = new NodeContract()
+    contract = nodeContract.contract_type.asNodeContract
+    newNodeContract.contractId = nodeContract.contract_id.toNumber()
+    newNodeContract.version = nodeContract.version.toNumber()
+    newNodeContract.twinId = nodeContract.twin_id.toNumber()
+    newNodeContract.nodeId = contract.node_id.toNumber()
+    newNodeContract.numberOfPublicIPs = contract.public_ips.toNumber()
+    newNodeContract.deploymentData = contract.deployment_data.toString()
+    newNodeContract.deploymentHash = contract.deployment_hash.toString()
+    newNodeContract.state = state
+    await store.save<NodeContract>(newNodeContract)
+  }
+}
+
+export async function contractUpdated({
+  store,
+  event,
+  block,
+  extrinsic,
+}: EventContext & StoreContext) {
+  const [nodeContract] = new SmartContractModule.ContractUpdatedEvent(event).params
+
+  const savedContract = await store.get(NodeContract, { where: { contractId: nodeContract.contract_id.toNumber() } })
+
+  if (!savedContract) return
+
+  const parsedNodeContract = nodeContract.contract_type.asNodeContract
+
+  savedContract.contractId = nodeContract.contract_id.toNumber()
+  savedContract.version = nodeContract.version.toNumber()
+  savedContract.twinId = nodeContract.twin_id.toNumber()
+  savedContract.nodeId = parsedNodeContract.node_id.toNumber()
+  savedContract.numberOfPublicIPs = parsedNodeContract.public_ips.toNumber()
+  savedContract.deploymentData = parsedNodeContract.deployment_data.toString()
+  savedContract.deploymentHash = parsedNodeContract.deployment_hash.toString()
+
+  let state = ContractState.Created
+  switch (nodeContract.state.toString()) {
+    case 'Created': break
+    case 'Deleted': state = ContractState.Deleted
+    case 'OutOfFunds': state = ContractState.OutOfFunds
+  }
+  savedContract.state = state
+
+  await store.save<NodeContract>(savedContract)
+}
+
+export async function contractCanceled({
+  store,
+  event,
+  block,
+  extrinsic,
+}: EventContext & StoreContext) {
+  const [id] = new SmartContractModule.ContractCanceledEvent(event).params
+
+  const savedContract = await store.get(NodeContract, { where: { contractId: id.toNumber() } })
+
+  if (!savedContract) return
+
+  savedContract.state = ContractState.Deleted
+
+  await store.save<NodeContract>(savedContract)
+}
 
 export async function consumptionReportReceived({
   store,
@@ -25,112 +116,6 @@ export async function consumptionReportReceived({
   newConsumptionReport.nru = consumptionReport.nru.toBn()
 
   await store.save<Consumption>(newConsumptionReport)
-}
-
-export async function contractCreated({
-  store,
-  event,
-  block,
-  extrinsic,
-}: EventContext & StoreContext) {
-  const newNodeContract = new NodeContract()
-  const [nodeContract] = new SmartContractModule.ContractCreatedEvent(event).params
-
-  newNodeContract.contractId = nodeContract.contract_id.toNumber()
-  newNodeContract.version = nodeContract.version.toNumber()
-  newNodeContract.twinId = nodeContract.twin_id.toNumber()
-  newNodeContract.nodeId = nodeContract.node_id.toNumber()
-  newNodeContract.numberOfPublicIPs = nodeContract.public_ips.toNumber()
-  newNodeContract.deploymentData = nodeContract.deploy_mentdata.toString()
-  newNodeContract.deploymentHash = nodeContract.deployment_hash.toString()
-
-  let state = ContractState.Created
-  switch (nodeContract.state.toString()) {
-    case 'Created': break
-    case 'Deleted': state = ContractState.Deleted
-    case 'OutOfFunds': state = ContractState.OutOfFunds
-  }
-  newNodeContract.state = state
-
-  // await store.save<NodeContract>(newNodeContract)
-  
-  // const publicIps: PublicIp[] = []
-  // nodeContract.public_ips_list.forEach(async ip => {
-  //   const savedIp = await store.get(PublicIp, { where: { contract_id: nodeContract.contract_id.toNumber() } })
-
-  //   if (savedIp) {
-  //     savedIp.contract = newNodeContract
-
-  //     publicIps.push(savedIp)
-  //     await store.save<PublicIp>(savedIp)
-  //   }
-  // })
-
-  // newNodeContract.publicIPs = publicIps
-  await store.save<NodeContract>(newNodeContract)
-}
-
-export async function contractUpdated({
-  store,
-  event,
-  block,
-  extrinsic,
-}: EventContext & StoreContext) {
-  const [nodeContract] = new SmartContractModule.ContractCreatedEvent(event).params
-
-  const savedContract = await store.get(NodeContract, { where: { contractId: nodeContract.contract_id.toNumber() } })
-
-  if (!savedContract) return
-
-  savedContract.contractId = nodeContract.contract_id.toNumber()
-  savedContract.version = nodeContract.version.toNumber()
-  savedContract.twinId = nodeContract.twin_id.toNumber()
-  savedContract.nodeId = nodeContract.node_id.toNumber()
-  savedContract.numberOfPublicIPs = nodeContract.public_ips.toNumber()
-  savedContract.deploymentData = nodeContract.deploy_mentdata.toString()
-  savedContract.deploymentHash = nodeContract.deployment_hash.toString()
-
-  let state = ContractState.Created
-  switch (nodeContract.state.toString()) {
-    case 'Created': break
-    case 'Deleted': state = ContractState.Deleted
-    case 'OutOfFunds': state = ContractState.OutOfFunds
-  }
-  savedContract.state = state
-
-  // await store.save<NodeContract>(savedContract)
-  
-  // const publicIps: PublicIp[] = []
-  // nodeContract.public_ips_list.forEach(async ip => {
-  //   const savedIp = await store.get(PublicIp, { where: { contract_id: nodeContract.contract_id.toNumber() } })
-
-  //   if (savedIp) {
-  //     savedIp.contract = savedContract
-
-  //     publicIps.push(savedIp)
-  //     await store.save<PublicIp>(savedIp)
-  //   }
-  // })
-
-  // savedContract.publicIPs = publicIps
-  await store.save<NodeContract>(savedContract)
-}
-
-export async function contractCanceled({
-  store,
-  event,
-  block,
-  extrinsic,
-}: EventContext & StoreContext) {
-  const [id] = new SmartContractModule.ContractCanceledEvent(event).params
-
-  const savedContract = await store.get(NodeContract, { where: { contractId: id.toNumber() } })
-
-  if (!savedContract) return
-
-  savedContract.state = ContractState.Deleted
-
-  await store.save<NodeContract>(savedContract)
 }
 
 export async function contractBilled({

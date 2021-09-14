@@ -1,4 +1,4 @@
-import { BaseModel, IntField, Model, ManyToOne, StringField, JSONField } from 'warthog';
+import { BaseModel, IntField, Model, ManyToOne, StringField, JSONField } from '@subsquid/warthog';
 
 import { Farm } from '../farm/farm.model';
 
@@ -6,17 +6,13 @@ import * as jsonTypes from '../jsonfields/jsonfields.model';
 
 @Model({ api: {} })
 export class PublicIp extends BaseModel {
-  @ManyToOne(
-    () => Farm,
-    (param: Farm) => param.publicIPs,
-    {
-      skipGraphQLField: true,
+  @ManyToOne(() => Farm, (param: Farm) => param.publicIPs, {
+    skipGraphQLField: true,
 
-      modelName: 'PublicIp',
-      relModelName: 'Farm',
-      propertyName: 'farm'
-    }
-  )
+    modelName: 'PublicIp',
+    relModelName: 'Farm',
+    propertyName: 'farm',
+  })
   farm!: Farm;
 
   @StringField({})

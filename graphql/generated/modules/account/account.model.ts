@@ -1,4 +1,4 @@
-import { BaseModel, NumericField, Model, OneToMany, StringField, JSONField } from 'warthog';
+import { BaseModel, NumericField, Model, OneToMany, StringField, JSONField } from '@subsquid/warthog';
 
 import BN from 'bn.js';
 
@@ -15,20 +15,16 @@ export class Account extends BaseModel {
     transformer: {
       to: (entityValue: BN) => (entityValue !== undefined ? entityValue.toString(10) : null),
       from: (dbValue: string) =>
-        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined
-    }
+        dbValue !== undefined && dbValue !== null && dbValue.length > 0 ? new BN(dbValue, 10) : undefined,
+    },
   })
   balance!: BN;
 
-  @OneToMany(
-    () => HistoricalBalance,
-    (param: HistoricalBalance) => param.account,
-    {
-      modelName: 'Account',
-      relModelName: 'HistoricalBalance',
-      propertyName: 'historicalBalances'
-    }
-  )
+  @OneToMany(() => HistoricalBalance, (param: HistoricalBalance) => param.account, {
+    modelName: 'Account',
+    relModelName: 'HistoricalBalance',
+    propertyName: 'historicalBalances',
+  })
   historicalBalances?: HistoricalBalance[];
 
   constructor(init?: Partial<Account>) {

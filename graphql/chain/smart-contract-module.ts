@@ -3,11 +3,7 @@ import { SubstrateEvent, SubstrateExtrinsic } from "@subsquid/hydra-common";
 import { Codec } from "@polkadot/types/types";
 import { typeRegistry } from ".";
 
-import {
-  Consumption,
-  ContractBill,
-  NodeContract
-} from "substrate-tfgrid-ts-types";
+import { Consumption, Contract, ContractBill } from "substrate-tfgrid-ts-types";
 import { u64 } from "@polkadot/types";
 
 export namespace SmartContractModule {
@@ -19,8 +15,8 @@ export namespace SmartContractModule {
     get params(): [Consumption] {
       return [
         createTypeUnsafe<Consumption & Codec>(typeRegistry, "Consumption", [
-          this.ctx.params[0].value
-        ])
+          this.ctx.params[0].value,
+        ]),
       ];
     }
 
@@ -39,15 +35,15 @@ export namespace SmartContractModule {
   }
 
   export class ContractCreatedEvent {
-    public readonly expectedParamTypes = ["types::NodeContract"];
+    public readonly expectedParamTypes = ["types::Contract"];
 
     constructor(public readonly ctx: SubstrateEvent) {}
 
-    get params(): [NodeContract] {
+    get params(): [Contract] {
       return [
-        createTypeUnsafe<NodeContract & Codec>(typeRegistry, "NodeContract", [
-          this.ctx.params[0].value
-        ])
+        createTypeUnsafe<Contract & Codec>(typeRegistry, "Contract", [
+          this.ctx.params[0].value,
+        ]),
       ];
     }
 
@@ -66,15 +62,15 @@ export namespace SmartContractModule {
   }
 
   export class ContractUpdatedEvent {
-    public readonly expectedParamTypes = ["types::NodeContract"];
+    public readonly expectedParamTypes = ["types::Contract"];
 
     constructor(public readonly ctx: SubstrateEvent) {}
 
-    get params(): [NodeContract] {
+    get params(): [Contract] {
       return [
-        createTypeUnsafe<NodeContract & Codec>(typeRegistry, "NodeContract", [
-          this.ctx.params[0].value
-        ])
+        createTypeUnsafe<Contract & Codec>(typeRegistry, "Contract", [
+          this.ctx.params[0].value,
+        ]),
       ];
     }
 
@@ -100,8 +96,8 @@ export namespace SmartContractModule {
     get params(): [u64] {
       return [
         createTypeUnsafe<u64 & Codec>(typeRegistry, "u64", [
-          this.ctx.params[0].value
-        ])
+          this.ctx.params[0].value,
+        ]),
       ];
     }
 
@@ -127,8 +123,8 @@ export namespace SmartContractModule {
     get params(): [ContractBill] {
       return [
         createTypeUnsafe<ContractBill & Codec>(typeRegistry, "ContractBill", [
-          this.ctx.params[0].value
-        ])
+          this.ctx.params[0].value,
+        ]),
       ];
     }
 

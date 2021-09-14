@@ -1,4 +1,4 @@
-import { BaseModel, IntField, Model, ManyToOne, StringField, JSONField } from 'warthog';
+import { BaseModel, IntField, Model, ManyToOne, StringField, JSONField } from '@subsquid/warthog';
 
 import { Policy } from '../policy/policy.model';
 
@@ -15,56 +15,40 @@ export class PricingPolicy extends BaseModel {
   @StringField({})
   name!: string;
 
-  @ManyToOne(
-    () => Policy,
-    (param: Policy) => param.pricingpolicysu,
-    {
-      skipGraphQLField: true,
+  @ManyToOne(() => Policy, (param: Policy) => param.pricingpolicysu, {
+    skipGraphQLField: true,
 
-      modelName: 'PricingPolicy',
-      relModelName: 'Policy',
-      propertyName: 'su'
-    }
-  )
+    modelName: 'PricingPolicy',
+    relModelName: 'Policy',
+    propertyName: 'su',
+  })
   su!: Policy;
 
-  @ManyToOne(
-    () => Policy,
-    (param: Policy) => param.pricingpolicycu,
-    {
-      skipGraphQLField: true,
+  @ManyToOne(() => Policy, (param: Policy) => param.pricingpolicycu, {
+    skipGraphQLField: true,
 
-      modelName: 'PricingPolicy',
-      relModelName: 'Policy',
-      propertyName: 'cu'
-    }
-  )
+    modelName: 'PricingPolicy',
+    relModelName: 'Policy',
+    propertyName: 'cu',
+  })
   cu!: Policy;
 
-  @ManyToOne(
-    () => Policy,
-    (param: Policy) => param.pricingpolicynu,
-    {
-      skipGraphQLField: true,
+  @ManyToOne(() => Policy, (param: Policy) => param.pricingpolicynu, {
+    skipGraphQLField: true,
 
-      modelName: 'PricingPolicy',
-      relModelName: 'Policy',
-      propertyName: 'nu'
-    }
-  )
+    modelName: 'PricingPolicy',
+    relModelName: 'Policy',
+    propertyName: 'nu',
+  })
   nu!: Policy;
 
-  @ManyToOne(
-    () => Policy,
-    (param: Policy) => param.pricingpolicyipu,
-    {
-      skipGraphQLField: true,
+  @ManyToOne(() => Policy, (param: Policy) => param.pricingpolicyipu, {
+    skipGraphQLField: true,
 
-      modelName: 'PricingPolicy',
-      relModelName: 'Policy',
-      propertyName: 'ipu'
-    }
-  )
+    modelName: 'PricingPolicy',
+    relModelName: 'Policy',
+    propertyName: 'ipu',
+  })
   ipu!: Policy;
 
   @StringField({})
