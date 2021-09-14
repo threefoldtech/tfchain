@@ -6,6 +6,8 @@ import { WarthogBaseService } from '../../server/WarthogBaseService';
 
 import { ContractBillReport } from './contract-bill-report.model';
 
+import {} from '../variants/variants.model';
+
 import { ContractBillReportWhereArgs, ContractBillReportWhereInput } from '../../warthog';
 
 @Service('ContractBillReportService')
