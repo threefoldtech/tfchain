@@ -1,7 +1,7 @@
 use sp_core::{Pair, Public, sr25519};
 use tfchain_runtime::{
 	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig,
-	SudoConfig, SystemConfig, WASM_BINARY, Signature
+	SudoConfig, SystemConfig, WASM_BINARY, Signature, TfgridModuleConfig
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_finality_grandpa::AuthorityId as GrandpaId;
@@ -65,6 +65,10 @@ pub fn development_config() -> Result<ChainSpec, String> {
 			],
 			// Sudo account
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
+			// Foundation account
+			get_account_id_from_seed::<sr25519::Public>("Eve"),
+			// Sales account
+			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
 			// Pre-funded accounts
 			vec![
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -115,6 +119,10 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 			],
 			// Sudo account
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
+			// Foundation account
+			get_account_id_from_seed::<sr25519::Public>("Eve"),
+			// Sales account
+			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
 			// Pre-funded accounts
 			vec![
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -150,6 +158,8 @@ fn testnet_genesis(
 	wasm_binary: &[u8],
 	initial_authorities: Vec<(AuraId, GrandpaId)>,
 	root_key: AccountId,
+	foundation_account: AccountId,
+	sales_account: AccountId,
 	endowed_accounts: Vec<AccountId>,
 	_enable_println: bool,
 ) -> GenesisConfig {
@@ -173,5 +183,27 @@ fn testnet_genesis(
 			// Assign network admin rights.
 			key: root_key,
 		}),
+		pallet_tfgrid: Some(TfgridModuleConfig {
+			su_price_value: 300000,
+			su_price_unit: 1,
+			nu_price_value: 2000,
+			nu_price_unit: 1,
+			cu_price_value: 600000,
+			cu_price_unit: 1,
+			ipu_price_value: 100000,
+			ipu_price_unit: 1,
+			unique_name_price_value: 20000,
+			domain_name_price_value: 40000,
+			foundation_account,
+			sales_account,
+			farming_policy_diy_cu: 160000000,
+			farming_policy_diy_su: 100000000,
+			farming_policy_diy_nu: 2000000,
+			farming_policy_diy_ipu: 800000,
+			farming_policy_certified_cu: 200000000,
+			farming_policy_certified_su: 120000000,
+			farming_policy_certified_nu: 3000000,
+			farming_policy_certified_ipu: 1000000
+		})
 	}
 }
