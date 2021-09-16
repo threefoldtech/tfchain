@@ -308,7 +308,7 @@ construct_runtime!(
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
-		TfgridModule: pallet_tfgrid::{Module, Call, Storage, Event<T>},
+		TfgridModule: pallet_tfgrid::{Module, Call, Config<T>, Storage, Event<T>},
 		SmartContractModule: pallet_smart_contract::{Module, Call, Storage, Event<T>},
 		TFTBridgeModule: pallet_tft_bridge::{Module, Call, Storage, Event<T>},
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
