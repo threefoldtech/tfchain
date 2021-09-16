@@ -26,6 +26,10 @@ subcommands:
 ./target/release/tfchain -h
 ```
 
+## Update the chain spec
+
+When the [tfchain_pallets](https://github.com/threefoldtech/tfchain_pallets) have been updated, the chainspec needs to be updated if you want to start a new chain.
+
 ## Single-Node Development Chain
 
 The provided `cargo run` command will launch a temporary node and its state will be discarded after
