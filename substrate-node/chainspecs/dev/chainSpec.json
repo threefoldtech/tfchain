@@ -1,6 +1,6 @@
 {
-  "name": "Local Testnet",
-  "id": "local_testnet",
+  "name": "Tfchain Devnet",
+  "id": "tfchain_devnet",
   "chainType": "Local",
   "bootNodes": [],
   "telemetryEndpoints": null,
