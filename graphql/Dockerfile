@@ -1,19 +1,18 @@
 FROM node:14 AS processor
 WORKDIR /hydra-project
 ADD package.json .
-ADD package-lock.json .
-RUN npm ci
+ADD yarn.lock .
 ADD tsconfig.json .
 ADD db db
 ADD generated generated
 ADD mappings mappings
 ADD chain chain
-ADD server-extension server-extension
-RUN npx tsc
+# RUN npx tsc
 ADD manifest.yml .
 ADD .env .
+ADD init-countries.js .
 ENV HYDRA_NO_TS=true
-CMD [ "npm", "run", "processor:start"]
+CMD [ "yarn", "processor:start"]
 
 
 FROM processor AS query-node

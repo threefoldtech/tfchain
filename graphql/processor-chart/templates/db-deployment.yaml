@@ -27,26 +27,31 @@ spec:
       containers:
       - env:
           - name: POSTGRES_DB
+            valueFrom:
+                configMapKeyRef:
+                  key: DB_NAME
+                  name: env
           - name: POSTGRES_PASSWORD
+            valueFrom:
+                configMapKeyRef:
+                  key: DB_PASS
+                  name: env
           - name: POSTGRES_USER
+            valueFrom:
+                configMapKeyRef:
+                  key: DB_USER
+                  name: env
         image: postgres:12
         name: processor-db
         ports:
           - containerPort: 5432
         resources: {}
-        volumeMounts:
-          - mountPath: /var/lib/postgresql/data
-            name: db-claim-processor
-      initContainers:
-      - name: init-db
-        image: dylanverstraete/processor:latest
-        command: ['/bin/sh', '-c', 'yarn && yarn db:migrate && yarn db:init']
-        envFrom:
-          - configMapRef:
-              name: env
+        # volumeMounts:
+        #   - mountPath: /var/lib/postgresql/data
+        #     name: db-claim-processor
       restartPolicy: Always
-      volumes:
-        - name: db-claim-processor
-          persistentVolumeClaim:
-            claimName: db-claim-processor
+      # volumes:
+      #   - name: db-claim-processor
+      #     persistentVolumeClaim:
+      #       claimName: db-claim-processor
 status: {}
