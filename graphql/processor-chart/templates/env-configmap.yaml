@@ -10,7 +10,7 @@ data:
   DEBUG: index-builder:*
   GRAPHQL_SERVER_HOST: localhost
   GRAPHQL_SERVER_PORT: "4000"
-  INDEXER_ENDPOINT_URL: http://10.104.111.140:4010/v1/graphql
+  INDEXER_ENDPOINT_URL: http://10.109.215.154:4010/v1/graphql
   PROJECT_NAME: tfgrid-graphql
   TYPEORM_LOGGING: error
 kind: ConfigMap

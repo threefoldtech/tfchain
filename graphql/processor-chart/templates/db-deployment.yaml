@@ -46,12 +46,12 @@ spec:
         ports:
           - containerPort: 5432
         resources: {}
-        # volumeMounts:
-        #   - mountPath: /var/lib/postgresql/data
-        #     name: db-claim-processor
+        volumeMounts:
+          - mountPath: /var/lib/postgresql/data
+            name: db-claim-processor
       restartPolicy: Always
-      # volumes:
-      #   - name: db-claim-processor
-      #     persistentVolumeClaim:
-      #       claimName: db-claim-processor
+      volumes:
+        - name: db-claim-processor
+          persistentVolumeClaim:
+            claimName: db-claim-processor
 status: {}

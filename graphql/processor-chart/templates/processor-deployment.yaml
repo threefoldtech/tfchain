@@ -103,7 +103,7 @@ spec:
       initContainers:
       - name: init-processor
         image: dylanverstraete/processor:latest
-        command: ['/bin/sh', '-c', 'yarn && yarn db:migrate && yarn db:init && yarn processor:migrate']
+        command: ['/bin/sh', '-c', 'yarn && yarn db:migrate && yarn db:init && yarn processor:migrate && yarn processor:start']
         envFrom:
           - configMapRef:
               name: env

@@ -38,7 +38,7 @@ spec:
             - name: DEV_MODE
               value: "true"
             - name: HYDRA_INDEXER_STATUS_SERVICE
-              value: http://indexer-status-service:8081/status
+              value: {{ .Values.indexer_status_service_url }}
           image: subsquid/hydra-indexer-gateway:4
           name: indexer-gateway
           ports:

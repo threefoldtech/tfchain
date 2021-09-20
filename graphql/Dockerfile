@@ -11,7 +11,7 @@ ADD chain chain
 ADD manifest.yml .
 ADD .env .
 ADD init-countries.js .
-ENV HYDRA_NO_TS=true
+ENV HYDRA_NO_TS=false
 CMD [ "yarn", "processor:start"]
 
 

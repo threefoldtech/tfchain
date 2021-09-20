@@ -1,8 +1,72 @@
-# Indexer config
+replicaCount: 1
+
+# image:
+#   repository: 
+#   pullPolicy: Always
+#   # Overrides the image tag whose default is the chart appVersion.
+#   tag: ""
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+global:
+  ingress:
+    certresolver: le
+
+ingress:
+  enabled: true
+  annotations:
+  hosts:
+    - host: 
+      paths:
+        - /
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
 
 # substrate websocket endpoint
 # ws_endpoint: "ws://192.168.8.60:9944"
-ws_endpoint: wss://tfchain.dev.threefold.io
+ws_endpoint:
 
 # db_endpoint: "10.101.127.50" # internal db-service ip
-db_endpoint: 10.110.63.219
+db_endpoint:
+
+# internal ip for the status service service
+# indexer_status_service_url: http://10.97.12.24:8081/status
+indexer_status_service_url: 
+
+resources: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
