@@ -6,6 +6,7 @@ metadata:
     io.kompose.service: db-claim0
   name: db-claim0
 spec:
+  storageClassName: kadalu.replica3
   accessModes:
     - ReadWriteOnce
   resources:

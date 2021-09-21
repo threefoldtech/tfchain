@@ -6,6 +6,7 @@ metadata:
     io.kompose.service: indexer-claim0
   name: indexer-claim0
 spec:
+  storageClassName: kadalu.replica3
   accessModes:
     - ReadWriteOnce
   resources:
