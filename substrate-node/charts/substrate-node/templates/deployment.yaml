@@ -94,7 +94,8 @@ spec:
             "insert",
             "--keystore-path=/keystore",
             "--key-type", "aura",
-            "--suri","/keys/aura"
+            "--suri","/keys/aura",
+            "--scheme=sr25519"
           ]
           volumeMounts:
             - name: keystore
@@ -112,7 +113,8 @@ spec:
             "insert",
             "--keystore-path=/keystore",
             "--key-type", "gran",
-            "--suri","/keys/grandpa"
+            "--suri","/keys/grandpa",
+            "--scheme=ed25519"
           ]
           volumeMounts:
             - name: keystore
