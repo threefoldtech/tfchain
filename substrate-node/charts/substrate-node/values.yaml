@@ -81,7 +81,7 @@ resources:
   #   memory: 128Mi
 
 volume:
-  size: 10 # GB
+  size: 10Gi
   existingpersistentVolumeClaim: ""
   persistentVolume:
     create: true
