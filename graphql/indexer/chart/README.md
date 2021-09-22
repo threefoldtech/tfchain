@@ -6,6 +6,13 @@
 kubectl create configmap indexer-config --from-file=./types.json
 ```
 
+## Create PersistentVolumeClaims for db and indexer
+
+```sh
+kubectl apply -f pvc-db.yaml
+kubectl apply -f pvc-indexer.yaml
+```
+
 ## Install chart with helm
 
 ```sh
