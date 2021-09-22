@@ -6,6 +6,7 @@ metadata:
     io.kompose.service: db-claim-processor
   name: db-claim-processor
 spec:
+  storageClassName: kadalu.replica3
   accessModes:
     - ReadWriteOnce
   resources:

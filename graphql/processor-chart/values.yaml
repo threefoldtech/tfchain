@@ -44,17 +44,22 @@ global:
 ingress:
   enabled: true
   annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt
   hosts:
-    - host: 
+    - host: tfchain.dev.threefold.io
       paths:
-        - /
-  tls: []
+        - /graphql
+  tls:
+  - hosts:
+    - tfchain.dev.threefold.io
+    secretName: tfchain-dev-threefold-io-tls
   #  - secretName: chart-example-tls
   #    hosts:
   #      - chart-example.local
 
 # db host of the processor-db service
-db_host: 10.105.45.218
+db_host: 10.244.1.36
 # db_host:
 
 
