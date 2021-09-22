@@ -5,7 +5,7 @@ RUN mkdir -p /home/hydra-builder && chown -R node:node /home/hydra-builder
 WORKDIR /home/hydra-builder
 
 ADD ./mappings ./mappings
-ADD ./types ./types
+ADD ./chain ./chain
 ADD ./generated ./generated
 COPY ./*.yml ./
 COPY ./*.json ./
