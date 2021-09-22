@@ -54,8 +54,8 @@ ingress:
   #      - chart-example.local
 
 # db host of the processor-db service
-#db_host: 10.105.45.218
-db_host:
+db_host: 10.105.45.218
+# db_host:
 
 
 resources: {}
@@ -72,3 +72,6 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+threefoldVdc:
+  backup: ""
