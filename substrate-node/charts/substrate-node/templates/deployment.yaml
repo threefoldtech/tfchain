@@ -69,7 +69,8 @@ spec:
             "--node-key-file","/keys/node",
             "--validator"
             {{ else }}
-            "--ws-external"
+            "--ws-external",
+            "--pruning", "archive"
             {{ end }}
           ]
           resources:
