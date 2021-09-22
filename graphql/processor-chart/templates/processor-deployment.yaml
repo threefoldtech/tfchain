@@ -97,12 +97,12 @@ spec:
                 configMapKeyRef:
                   key: TYPEORM_LOGGING
                   name: env
-          image: dylanverstraete/processor:latest
+          image: processor
           name: processor
           resources: {}
       initContainers:
       - name: init-processor
-        image: dylanverstraete/processor:latest
+        image: processor
         command: ['/bin/sh', '-c', 'yarn && yarn db:migrate && yarn db:init && yarn processor:migrate && yarn processor:start']
         envFrom:
           - configMapRef:

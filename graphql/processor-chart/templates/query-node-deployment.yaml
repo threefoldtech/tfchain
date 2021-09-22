@@ -90,7 +90,7 @@ spec:
                 configMapKeyRef:
                   key: TYPEORM_LOGGING
                   name: env
-          image: dylanverstraete/query-node:latest
+          image: query-node
           name: query-node
           ports:
             - containerPort: 4000
