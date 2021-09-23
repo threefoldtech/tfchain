@@ -2,8 +2,9 @@
 
 ## Building the images
 
-```
-cd tfchain/graphql
+In the graphql folder (`..`):
+
+```sh
 docker build . -t tfchainprocessor:$(git describe --abbrev=0 --tags | sed 's/^v//')  -f docker/Dockerfile.processor
 docker build . -t tfchainquerynode:$(git describe --abbrev=0 --tags | sed 's/^v//')-f docker/Dockerfile.query-node
 ```
@@ -22,7 +23,7 @@ cd tfchain/graphql/processor-chart
 helm install processor .
 ```
 
-If indexer cannot reach Database, you can set `db_url` to the db-service cluster ip.
+If the indexer cannot reach the database, you can set `db_url` to the db-service cluster ip.
 
 ```sh
 kubectl get svc
