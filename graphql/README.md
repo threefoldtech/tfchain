@@ -10,6 +10,8 @@ The substrate events are processed in a multi-step pipeline:
 
     Tfchain => Hydra Indexer => Indexer GraphQL gateway => Hydra Processor => Database => Query Node GraphQL endpoint
 
+![Bird eye overview](https://gblobscdn.gitbook.com/assets%2F-MdI-MAyz-csivC8mmdb%2Fsync%2Fe587479ff22ad79886861487b2734b6556302d10.png?alt=media)
+
 ## Prerequisites
 
 * Node v14x
