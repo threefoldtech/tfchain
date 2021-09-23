@@ -25,4 +25,4 @@ If indexer cannot reach Database, you can set `db_url` to the db-service cluster
 kubectl get svc
 ```
 
-take note of the IP assigned the db-service. Use this IP in `values.yaml` for the db url.
+NOTE: take note of the IP assigned the db-service. Use this IP in `values.yaml` for the db_endpoint, ws_endpoint and indexer_status_service_url. Until DNS resolution works you can update these via 'helm upgrade'.
