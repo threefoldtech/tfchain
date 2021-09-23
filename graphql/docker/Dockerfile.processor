@@ -11,8 +11,8 @@ COPY ./*.yml ./
 COPY ./*.json ./
 COPY ./*.graphql ./
 COPY ./.env ./
+COPY ./init-countries.js ./
 
 RUN yarn --frozen-lockfile
 
-CMD ["yarn", "processor:migrate"]
 CMD ["yarn", "processor:start"]
