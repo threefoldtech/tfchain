@@ -25,76 +25,76 @@ spec:
     spec:
       containers:
         - env:
-            - name: BATCH_SIZE
-              valueFrom:
-                configMapKeyRef:
-                  key: BATCH_SIZE
-                  name: env
-            - name: BLOCK_WINDOW
-              valueFrom:
-                configMapKeyRef:
-                  key: BLOCK_WINDOW
-                  name: env
-            - name: DB_HOST
-              valueFrom:
-                configMapKeyRef:
-                  key: DB_HOST
-                  name: env
-            - name: DB_NAME
-              valueFrom:
-                configMapKeyRef:
-                  key: DB_NAME
-                  name: env
-            - name: DB_PASS
-              valueFrom:
-                configMapKeyRef:
-                  key: DB_PASS
-                  name: env
-            - name: DB_PORT
-              valueFrom:
-                configMapKeyRef:
-                  key: DB_PORT
-                  name: env
-            - name: DB_USER
-              valueFrom:
-                configMapKeyRef:
-                  key: DB_USER
-                  name: env
-            - name: DEBUG
-              valueFrom:
-                configMapKeyRef:
-                  key: DEBUG
-                  name: env
-            - name: GRAPHQL_SERVER_HOST
-              valueFrom:
-                configMapKeyRef:
-                  key: GRAPHQL_SERVER_HOST
-                  name: env
-            - name: GRAPHQL_SERVER_PORT
-              valueFrom:
-                configMapKeyRef:
-                  key: GRAPHQL_SERVER_PORT
-                  name: env
-            - name: INDEXER_ENDPOINT_URL
-              valueFrom:
-                configMapKeyRef:
-                  key: INDEXER_ENDPOINT_URL
-                  name: env
-            - name: PROJECT_NAME
-              valueFrom:
-                configMapKeyRef:
-                  key: PROJECT_NAME
-                  name: env
-            - name: TYPEORM_LOGGING
-              valueFrom:
-                configMapKeyRef:
-                  key: TYPEORM_LOGGING
-                  name: env
-        image: "{{ .Values.image.querynode.repository }}:{{ .Values.image.querynode.tag | default .Chart.AppVersion }}"
-        imagePullPolicy: {{ .Values.image.querynode.pullPolicy }}
-        name: query-node
-        ports:
-          - containerPort: 4000
-        resources: {}
+          - name: BATCH_SIZE
+            valueFrom:
+              configMapKeyRef:
+                key: BATCH_SIZE
+                name: env
+          - name: BLOCK_WINDOW
+            valueFrom:
+              configMapKeyRef:
+                key: BLOCK_WINDOW
+                name: env
+          - name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                key: DB_HOST
+                name: env
+          - name: DB_NAME
+            valueFrom:
+              configMapKeyRef:
+                key: DB_NAME
+                name: env
+          - name: DB_PASS
+            valueFrom:
+              configMapKeyRef:
+                key: DB_PASS
+                name: env
+          - name: DB_PORT
+            valueFrom:
+              configMapKeyRef:
+                key: DB_PORT
+                name: env
+          - name: DB_USER
+            valueFrom:
+              configMapKeyRef:
+                key: DB_USER
+                name: env
+          - name: DEBUG
+            valueFrom:
+              configMapKeyRef:
+                key: DEBUG
+                name: env
+          - name: GRAPHQL_SERVER_HOST
+            valueFrom:
+              configMapKeyRef:
+                key: GRAPHQL_SERVER_HOST
+                name: env
+          - name: GRAPHQL_SERVER_PORT
+            valueFrom:
+              configMapKeyRef:
+                key: GRAPHQL_SERVER_PORT
+                name: env
+          - name: INDEXER_ENDPOINT_URL
+            valueFrom:
+              configMapKeyRef:
+                key: INDEXER_ENDPOINT_URL
+                name: env
+          - name: PROJECT_NAME
+            valueFrom:
+              configMapKeyRef:
+                key: PROJECT_NAME
+                name: env
+          - name: TYPEORM_LOGGING
+            valueFrom:
+              configMapKeyRef:
+                key: TYPEORM_LOGGING
+                name: env
+          image: "{{ .Values.image.querynode.repository }}:{{ .Values.image.querynode.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.querynode.pullPolicy }}
+          name: query-node
+          ports:
+            - containerPort: 4000
+          resources: {}
       restartPolicy: Always
 status: {}
