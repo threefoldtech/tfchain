@@ -4,6 +4,7 @@ RUN mkdir -p /home/hydra-builder && chown -R node:node /home/hydra-builder
 
 WORKDIR /home/hydra-builder
 
+ADD ./db ./db
 ADD ./mappings ./mappings
 ADD ./chain ./chain
 ADD ./generated ./generated
@@ -14,5 +15,7 @@ COPY ./.env ./
 COPY ./init-countries.js ./
 
 RUN yarn --frozen-lockfile
+
+ENV HYDRA_NO_TS=false
 
 CMD ["yarn", "processor:start"]
