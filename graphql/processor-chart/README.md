@@ -4,8 +4,8 @@
 
 ```
 cd tfchain/graphql
-docker build . -f docker/Dockerfile.processor
-docker build . -f docker/Dockerfile.query-node
+docker build . -t tfchainprocessor:$(git describe --abbrev=0 --tags | sed 's/^v//')  -f docker/Dockerfile.processor
+docker build . -t tfchainquerynode:$(git describe --abbrev=0 --tags | sed 's/^v//')-f docker/Dockerfile.query-node
 ```
 
 ## Create PersistentVolumeClaim

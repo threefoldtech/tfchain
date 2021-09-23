@@ -90,8 +90,9 @@ spec:
                 configMapKeyRef:
                   key: TYPEORM_LOGGING
                   name: env
-          image: query-node
-          name: query-node
+          image: "{{ .Values.image.querynode.repository }}:{{ .Values.image.querynode.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.querynode.pullPolicy }}
+         name: query-node
           ports:
             - containerPort: 4000
           resources: {}

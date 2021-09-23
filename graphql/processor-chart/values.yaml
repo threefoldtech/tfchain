@@ -4,11 +4,15 @@
 
 replicaCount: 1
 
-# image:
-#   repository: 
-#   pullPolicy: Always
-#   # Overrides the image tag whose default is the chart appVersion.
-#   tag: ""
+image:
+  processor:
+    repository: tfchainprocessor
+    pullPolicy: IfNotPresent
+    tag: ""
+  querynode:
+    repository: tfchainquerynode
+    pullPolicy: IfNotPresent
+    tag: ""
 
 imagePullSecrets: []
 
@@ -22,10 +26,12 @@ serviceAccount:
 
 podAnnotations: {}
 
-podSecurityContext: {}
+podSecurityContext:
+  {}
   # fsGroup: 2000
 
-securityContext: {}
+securityContext:
+  {}
   # capabilities:
   #   drop:
   #   - ALL
@@ -51,17 +57,12 @@ ingress:
       paths:
         - /graphql
   tls:
-  - hosts:
-    - tfchain.dev.threefold.io
-    secretName: tfchain-dev-threefold-io-tls
-  #  - secretName: chart-example-tls
-  #    hosts:
-  #      - chart-example.local
+    - hosts:
+        - tfchain.dev.threefold.io
+      secretName: tfchain-dev-threefold-io-tls
 
 # db host of the processor-db service
 db_host: 10.244.1.36
-# db_host:
-
 
 resources: {}
 

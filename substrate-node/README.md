@@ -54,6 +54,12 @@ Export the local chain spec to json:
 
 Change the `genesis/runtime/palletAura/authorities` and  `genesis/runtime/palletGrandpa/authorities` with SS58 public keys generated in the above explained key generation section.
 
+If you only want to see the updated code:
+
+```sh
+./target/release/tfchain build-spec --disable-default-bootnode --chain local | jq ".genesis.runtime.frameSystem.code"
+```
+
 Distributing a raw spec ensures that each node will store the data at the proper storage keys.so convert it to raw chain spec:
 
 ```sh

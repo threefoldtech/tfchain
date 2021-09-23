@@ -1,27 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  annotations:
-    kompose.cmd: kompose convert -c
-    kompose.version: 1.23.0 (HEAD)
-  creationTimestamp: null
+  name: {{ include "processor.fullname" . }}
   labels:
+    {{- include "processor.labels" . | nindent 4 }}
     io.kompose.service: processor
-  name: processor
+  name: tfchainprocessor
 spec:
   replicas: 1
   selector:
     matchLabels:
-      io.kompose.service: processor
+      {{- include "processor.selectorLabels" . | nindent 6 }}
   strategy: {}
   template:
     metadata:
+      {{- with .Values.podAnnotations }}
       annotations:
-        kompose.cmd: kompose convert -c
-        kompose.version: 1.23.0 (HEAD)
-      creationTimestamp: null
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       labels:
-        io.kompose.service: processor
+        {{- include "processor.selectorLabels" . | nindent 8 }}
     spec:
       containers:
         - args:
@@ -97,12 +95,14 @@ spec:
                 configMapKeyRef:
                   key: TYPEORM_LOGGING
                   name: env
-          image: processor
+          image: "{{ .Values.image.processor.repository }}:{{ .Values.image.processor.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.processor.pullPolicy }}
           name: processor
           resources: {}
       initContainers:
       - name: init-processor
-        image: processor
+        image: "{{ .Values.image.processor.repository }}:{{ .Values.image.processor.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.processor.pullPolicy }}
         command: ['/bin/sh', '-c', 'yarn && yarn db:migrate && yarn db:init && yarn processor:migrate && yarn processor:start']
         envFrom:
           - configMapRef:
