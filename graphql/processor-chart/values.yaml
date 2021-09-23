@@ -64,6 +64,10 @@ ingress:
 # db host of the processor-db service
 db_host: 10.244.1.36
 
+# points to local ip of indexer-gateway!
+#indexer_endpoint: http://10.109.215.154:4010/v1/graphql
+indexer_endpoint:
+
 resources: {}
 
 autoscaling:
