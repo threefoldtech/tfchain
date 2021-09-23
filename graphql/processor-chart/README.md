@@ -5,8 +5,15 @@
 In the graphql folder (`..`):
 
 ```sh
-docker build . -t tfchainprocessor:$(git describe --abbrev=0 --tags | sed 's/^v//')  -f docker/Dockerfile.processor
-docker build . -t tfchainquerynode:$(git describe --abbrev=0 --tags | sed 's/^v//')-f docker/Dockerfile.query-node
+docker build . -t tfchainprocessor:$(git describe --abbrev=0 --tags | sed 's/^v//') -f docker/Dockerfile.processor
+docker build . -t tfchainquerynode:$(git describe --abbrev=0 --tags | sed 's/^v//') -f docker/Dockerfile.query-node
+```
+
+## Push images to the other k8s nodes
+
+```sh
+docker save tfchainprocessor:$(git describe --abbrev=0 --tags | sed 's/^v//') | ssh -C ubuntu@xx.xx.xx.xx docker load
+docker save tfchainquerynode:$(git describe --abbrev=0 --tags | sed 's/^v//') | ssh -C ubuntu@xx.xx.xx.xx docker load
 ```
 
 ## Create PersistentVolumeClaim
