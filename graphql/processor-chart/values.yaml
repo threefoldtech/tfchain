@@ -6,11 +6,11 @@ replicaCount: 1
 
 image:
   processor:
-    repository: dylanverstraete/processor
+    repository: tfchainprocessor
     pullPolicy: IfNotPresent
     tag: ""
   querynode:
-    repository: dylanverstraete/query-node
+    repository: tfchainquerynode
     pullPolicy: IfNotPresent
     tag: ""
 
