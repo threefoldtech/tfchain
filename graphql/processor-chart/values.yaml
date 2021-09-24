@@ -61,7 +61,7 @@ ingress:
         - tfchain.dev.threefold.io
       secretName: tfchain-dev-threefold-io-tls
 
-ingress-test:
+ingresstest:
   enabled: true
   annotations:
     kubernetes.io/ingress.class: nginx
