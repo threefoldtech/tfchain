@@ -1,11 +1,5 @@
 # Indexer stack chart
 
-## Create types json configmap
-
-```sh
-kubectl create configmap indexer-config --from-file=./types.json
-```
-
 ## Create PersistentVolumeClaims for the database
 
 ```sh

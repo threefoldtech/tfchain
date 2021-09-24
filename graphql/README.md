@@ -69,7 +69,7 @@ and `manifest.yml`. For more details see https://docs.subsquid.io.
 
 ## Indexer
 
-Running an indexer is required.
+Running an indexer is required. The indexer can be found in the [indexer folder](./indexer).
 
 It is recommeded to use already set up indexer if available, as new indexer typically
 requires some time to catch up with interesting events.
