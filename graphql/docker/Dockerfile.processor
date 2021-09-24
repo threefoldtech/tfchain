@@ -13,8 +13,9 @@ COPY ./*.json ./
 COPY ./*.graphql ./
 COPY ./.env ./
 COPY ./init-countries.js ./
+ADD ./yarn.lock ./
 
-RUN yarn --frozen-lockfile
+RUN yarn
 
 ENV HYDRA_NO_TS=false
 
