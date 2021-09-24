@@ -8,7 +8,7 @@ apiVersion: extensions/v1beta1
 {{- end }}
 kind: Ingress
 metadata:
-  name: {{ $fullName-test }}
+  name: ingresstest
   labels:
     {{- include "processor.labels" . | nindent 4 }}
     backupType: {{ .Values.threefoldVdc.backup | quote }}
