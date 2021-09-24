@@ -42,12 +42,16 @@ async function main () {
             }
 
             let lat, long = ''
-            if (country.latlng.lenght > 0) {
+            if (country.latlng) {
                 lat = country.latlng[0].toString()
                 long = country.latlng[1].toString()
             }
             index++
-            return client.query(text, [index, index, country.name, code, country.region, country.subregion, lat, long, 0, 0]) 
+            
+            const region = country.continent || "unknown region"
+            const subregion = country.region || "unknown subregion"
+
+            return client.query(text, [index, index, country.name, code, region, subregion, lat, long, 0, 0]) 
         })
     
         // await Promise.all(countryPromises)
@@ -96,7 +100,7 @@ async function main () {
 }
 
 async function getCountries () {
-    return axios.get('https://restcountries.eu/rest/v2/all')
+    return axios.get('https://restcountries.com/v2/all')
 }
 
 async function getCities () {
