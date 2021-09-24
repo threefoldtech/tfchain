@@ -6,11 +6,11 @@ replicaCount: 1
 
 image:
   processor:
-    repository: tfchainprocessor
+    repository: dylanverstraete/processor
     pullPolicy: IfNotPresent
     tag: ""
   querynode:
-    repository: tfchainquerynode
+    repository: dylanverstraete/query-node
     pullPolicy: IfNotPresent
     tag: ""
 
@@ -61,11 +61,25 @@ ingress:
         - tfchain.dev.threefold.io
       secretName: tfchain-dev-threefold-io-tls
 
+ingress-test:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt
+  hosts:
+    - host: tfchain.dev.threefold.io
+      paths:
+        - /graphql
+  tls:
+    - hosts:
+        - tfchain.dev.threefold.io
+      secretName: tfchain-dev-threefold-io-tls
+
 # db host of the processor-db service
-db_host: 10.244.1.36
+db_host:
 
 # points to local ip of indexer-gateway!
-#indexer_endpoint: http://10.109.215.154:4010/v1/graphql
+# indexer_endpoint: http://10.103.176.175:4010/v1/graphql
 indexer_endpoint:
 
 resources: {}
