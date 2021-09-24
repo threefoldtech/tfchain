@@ -38,10 +38,7 @@ spec:
                   key: BLOCK_WINDOW
                   name: env
             - name: DB_HOST
-              valueFrom:
-                configMapKeyRef:
-                  key: DB_HOST
-                  name: env
+              value: {{ .Values.db_host }}
             - name: DB_NAME
               valueFrom:
                 configMapKeyRef:
