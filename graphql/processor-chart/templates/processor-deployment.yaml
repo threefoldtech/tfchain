@@ -25,7 +25,7 @@ spec:
         - args:
             - sh
             - -c
-            - yarn && yarn db:migrate && yarn db:init && yarn processor:migrate && yarn processor:start
+            - yarn && yarn processor:start
           env:
             - name: BATCH_SIZE
               valueFrom:
@@ -86,24 +86,17 @@ spec:
                 configMapKeyRef:
                   key: PROJECT_NAME
                   name: env
-            - name: TYPEORM_HOST
-              value: db
-            - name: TYPEORM_LOGGING
-              valueFrom:
-                configMapKeyRef:
-                  key: TYPEORM_LOGGING
-                  name: env
           image: "{{ .Values.image.processor.repository }}:{{ .Values.image.processor.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.processor.pullPolicy }}
           name: processor
           resources: {}
-      # initContainers:
-      # - name: init-processor
-      #   image: "{{ .Values.image.processor.repository }}:{{ .Values.image.processor.tag | default .Chart.AppVersion }}"
-      #   imagePullPolicy: {{ .Values.image.processor.pullPolicy }}
-      #   command: ['/bin/sh', '-c', 'yarn && yarn db:migrate && yarn db:init && yarn processor:migrate']
-      #   envFrom:
-      #     - configMapRef:
-      #         name: env
+      initContainers:
+      - name: init-processor
+        image: "{{ .Values.image.processor.repository }}:{{ .Values.image.processor.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.processor.pullPolicy }}
+        command: ['/bin/sh', '-c', 'yarn && yarn db:migrate && yarn db:init && yarn processor:migrate']
+        envFrom:
+          - configMapRef:
+              name: env
       restartPolicy: Always
 status: {}
