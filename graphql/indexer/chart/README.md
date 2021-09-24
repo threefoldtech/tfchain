@@ -6,11 +6,10 @@
 kubectl create configmap indexer-config --from-file=./types.json
 ```
 
-## Create PersistentVolumeClaims for db and indexer
+## Create PersistentVolumeClaims for the database
 
 ```sh
 kubectl apply -f pvc-db.yaml
-kubectl apply -f pvc-indexer.yaml
 ```
 
 ## Install chart with helm
@@ -19,7 +18,7 @@ kubectl apply -f pvc-indexer.yaml
 helm install indexer .
 ```
 
-If indexer cannot reach Database, you can set `db_url` to the db-service cluster ip.
+If the indexer cannot reach the database, you can set `db_url` to the db-service cluster ip.
 
 ```sh
 kubectl get svc
