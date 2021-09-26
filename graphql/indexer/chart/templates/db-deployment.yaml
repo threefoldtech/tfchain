@@ -40,5 +40,5 @@ spec:
       volumes:
         - name: db-claim0
           persistentVolumeClaim:
-            claimName: db-claim0
+            claimName: {{if .Values.volume.existingpersistentVolumeClaim }} {{.Values.volume.existingpersistentVolumeClaim}} {{ else }} tfchainindexer-volume-claim-{{ .Release.Name }} {{ end }}
 status: {}

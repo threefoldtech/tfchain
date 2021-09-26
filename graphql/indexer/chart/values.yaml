@@ -1,7 +1,7 @@
 replicaCount: 1
 
 # image:
-#   repository: 
+#   repository:
 #   pullPolicy: Always
 #   # Overrides the image tag whose default is the chart appVersion.
 #   tag: ""
@@ -18,16 +18,25 @@ serviceAccount:
 
 podAnnotations: {}
 
-podSecurityContext: {}
+podSecurityContext:
+  {}
   # fsGroup: 2000
 
-securityContext: {}
+securityContext:
+  {}
   # capabilities:
   #   drop:
   #   - ALL
   # readOnlyRootFilesystem: true
   # runAsNonRoot: true
   # runAsUser: 1000
+
+volume:
+  size: 5Gi
+  existingpersistentVolumeClaim: ""
+  persistentVolume:
+    create: true
+    hostPath: "/tfchainindexer"
 
 global:
   ingress:
@@ -37,7 +46,7 @@ ingress:
   enabled: true
   annotations:
   hosts:
-    - host: 
+    - host:
       paths:
         - /
   tls: []
@@ -54,7 +63,7 @@ db_endpoint:
 
 # internal ip for the status service service
 # indexer_status_service_url: http://10.97.12.24:8081/status
-indexer_status_service_url: 
+indexer_status_service_url:
 
 resources: {}
 
