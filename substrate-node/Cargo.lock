@@ -3760,7 +3760,6 @@ dependencies = [
 [[package]]
 name = "pallet-smart-contract"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#252f1a6381f5ebecf9cd6d85ed95906262cf7fd1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3796,7 +3795,6 @@ dependencies = [
 [[package]]
 name = "pallet-tfgrid"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#252f1a6381f5ebecf9cd6d85ed95906262cf7fd1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3816,7 +3814,6 @@ dependencies = [
 [[package]]
 name = "pallet-tft-bridge"
 version = "1.0.0"
-source = "git+https://github.com/threefoldfoundation/tft-parity?branch=main#900b62c1cf5fd569f876dca69e4938bdbbe3f452"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3824,6 +3821,7 @@ dependencies = [
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
+ "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",
