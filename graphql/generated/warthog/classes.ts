@@ -3311,8 +3311,8 @@ export class PublicConfigCreateInput {
   @TypeGraphQLField()
   gw6!: string;
 
-  @TypeGraphQLField()
-  domain!: string;
+  @TypeGraphQLField({ nullable: true })
+  domain?: string;
 }
 
 @TypeGraphQLInputType()

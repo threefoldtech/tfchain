@@ -1793,7 +1793,7 @@ export interface PublicConfigCreateInput {
   ipv6: String
   gw4: String
   gw6: String
-  domain: String
+  domain?: String | null
 }
 
 export interface PublicConfigUpdateInput {
@@ -2585,7 +2585,7 @@ export interface PublicConfig extends BaseGraphQLObject {
   ipv6: String
   gw4: String
   gw6: String
-  domain: String
+  domain?: String | null
   nodepublicConfig?: Array<Node> | null
 }
 

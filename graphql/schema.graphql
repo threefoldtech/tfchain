@@ -81,7 +81,7 @@ type PublicConfig @entity {
   ipv6: String!
   gw4: String!
   gw6: String!
-  domain: String!
+  domain: String
 }
 
 type Location @entity {

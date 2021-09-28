@@ -2189,7 +2189,7 @@ type PublicConfig implements BaseGraphQLObject {
   ipv6: String!
   gw4: String!
   gw6: String!
-  domain: String!
+  domain: String
   nodepublicConfig: [Node!]
 }
 
@@ -2204,7 +2204,7 @@ input PublicConfigCreateInput {
   ipv6: String!
   gw4: String!
   gw6: String!
-  domain: String!
+  domain: String
 }
 
 type PublicConfigEdge {
