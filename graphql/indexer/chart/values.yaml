@@ -32,9 +32,11 @@ securityContext:
   # runAsUser: 1000
 
 volume:
-  existingpersistentVolumeClaim: "indexer-db"
+  size: 5Gi
+  existingpersistentVolumeClaim: ""
   persistentVolume:
-    create: false
+    create: true
+    hostPath: "/tfchainindexer"
 
 global:
   ingress:
