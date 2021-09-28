@@ -1,5 +1,5 @@
 const {
-  updateContract
+  updateNodeContract
 } = require('../../src/contract')
 
 exports.command = 'update <id>'
@@ -18,4 +18,4 @@ exports.builder = function (yargs) {
   yargs.demandOption(['d', 'h'])
   return yargs
 }
-exports.handler = updateContract
+exports.handler = updateNodeContract

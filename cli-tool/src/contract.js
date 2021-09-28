@@ -1,7 +1,7 @@
 const { getClient } = require('./client')
 const { callback } = require('./util')
 
-async function createContract (args) {
+async function createNodeContract (args) {
   const { a: url, m: mnemonic, json } = args
   const client = await getClient(url, mnemonic)
 
@@ -12,14 +12,26 @@ async function createContract (args) {
     fnCallback = JSONcallback
   }
 
-  return client.createContract(nodeID, data, hash, publicIPs, fnCallback)
+  return client.createNodeContract(nodeID, data, hash, publicIPs, fnCallback)
 }
 
-async function updateContract (args) {
+async function updateNodeContract (args) {
   const { a: url, m: mnemonic, id, data, hash } = args
   const client = await getClient(url, mnemonic)
 
-  return client.updateContract(id, data, hash, callback)
+  return client.updateNodeContract(id, data, hash, callback)
+}
+
+async function createNameContract (args) {
+  const { a: url, m: mnemonic, json, name } = args
+  const client = await getClient(url, mnemonic)
+
+  let fnCallback = callback
+  if (json) {
+    fnCallback = JSONcallback
+  }
+
+  return client.createNameContract(name, fnCallback)
 }
 
 async function cancelContract (args) {
@@ -39,8 +51,9 @@ async function getContract (args) {
 }
 
 module.exports = {
-  createContract,
-  updateContract,
+  createNodeContract,
+  createNameContract,
+  updateNodeContract,
   cancelContract,
   getContract
 }

@@ -1,5 +1,5 @@
 const {
-  createContract
+  createNodeContract
 } = require('../../src/contract')
 
 exports.command = 'create'
@@ -33,4 +33,4 @@ exports.builder = function (yargs) {
   yargs.demandOption(['n', 'd', 'h', 'p'])
   return yargs
 }
-exports.handler = createContract
+exports.handler = createNodeContract

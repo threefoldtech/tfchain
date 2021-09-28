@@ -1,5 +1,5 @@
-exports.command = 'contract <command>'
-exports.desc = 'Manage contracts'
+exports.command = 'nameContract <command>'
+exports.desc = 'Manage name contracts'
 exports.builder = function (yargs) {
   yargs.option('apiURL', {
     alias: 'a',
@@ -12,6 +12,6 @@ exports.builder = function (yargs) {
     type: 'string'
   })
   // yargs.demandOption(['a', 'm'])
-  return yargs.commandDir('node_contract_cmds')
+  return yargs.commandDir('name_contract_cmds')
 }
 exports.handler = function (argv) {}
