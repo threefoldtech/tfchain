@@ -2,7 +2,7 @@
 
 ## Development
 
-Local builds and running a single node development chain is explained in the [development doc](./development.m).
+Local builds and running a single node development chain is explained in the [development doc](./development.md).
 
 ## Build container image
 
