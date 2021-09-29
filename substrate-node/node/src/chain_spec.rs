@@ -103,6 +103,8 @@ pub fn development_config() -> Result<ChainSpec, String> {
 				// bridge validator dev key 3
 				get_account_id_from_seed_string::<ed25519::Public>("remind bird banner word spread volume card keep want faith insect mind"),
 			],
+			// Bridge fee account
+			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
 		),
 		// Bootnodes
 		vec![],
@@ -179,6 +181,8 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 				// bridge validator dev key 3
 				get_account_id_from_seed_string::<ed25519::Public>("remind bird banner word spread volume card keep want faith insect mind"),
 			],
+			// Bridge fee account
+			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
 		),
 		// Bootnodes
 		vec![],
@@ -203,6 +207,7 @@ fn testnet_genesis(
 	endowed_accounts: Vec<AccountId>,
 	_enable_println: bool,
 	bridge_validator_accounts: Vec<AccountId>,
+	bridge_fee_account: AccountId,
 ) -> GenesisConfig {
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -248,6 +253,9 @@ fn testnet_genesis(
 		}),
 		pallet_tft_bridge: Some(TFTBridgeModuleConfig{
 			validator_accounts: bridge_validator_accounts,
+			fee_account: bridge_fee_account,
+			deposit_fee: 500000000,
+			burn_fee: 500000000
 		})
 	}
 }
