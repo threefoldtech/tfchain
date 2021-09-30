@@ -1103,23 +1103,23 @@ export class ContractBillReportWhereInput {
   @TypeGraphQLField(() => [DiscountLevel], { nullable: true })
   discountReceived_in?: DiscountLevel[];
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  amountBilled_eq?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  amountBilled_eq?: string;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  amountBilled_gt?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  amountBilled_gt?: string;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  amountBilled_gte?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  amountBilled_gte?: string;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  amountBilled_lt?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  amountBilled_lt?: string;
 
-  @TypeGraphQLField(() => Int, { nullable: true })
-  amountBilled_lte?: number;
+  @TypeGraphQLField(() => BigInt, { nullable: true })
+  amountBilled_lte?: string;
 
-  @TypeGraphQLField(() => [Int], { nullable: true })
-  amountBilled_in?: number[];
+  @TypeGraphQLField(() => [BigInt], { nullable: true })
+  amountBilled_in?: string[];
 
   @TypeGraphQLField(() => Int, { nullable: true })
   timestamp_eq?: number;
@@ -1161,7 +1161,7 @@ export class ContractBillReportCreateInput {
   discountReceived!: DiscountLevel;
 
   @TypeGraphQLField()
-  amountBilled!: number;
+  amountBilled!: string;
 
   @TypeGraphQLField()
   timestamp!: number;
@@ -1176,7 +1176,7 @@ export class ContractBillReportUpdateInput {
   discountReceived?: DiscountLevel;
 
   @TypeGraphQLField({ nullable: true })
-  amountBilled?: number;
+  amountBilled?: string;
 
   @TypeGraphQLField({ nullable: true })
   timestamp?: number;
