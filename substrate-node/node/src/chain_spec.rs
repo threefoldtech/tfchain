@@ -1,7 +1,7 @@
-use sp_core::{Pair, Public, sr25519};
+use sp_core::{Pair, Public, sr25519, ed25519};
 use tfchain_runtime::{
 	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig,
-	SudoConfig, SystemConfig, WASM_BINARY, Signature, TfgridModuleConfig
+	SudoConfig, SystemConfig, WASM_BINARY, Signature, TfgridModuleConfig, TFTBridgeModuleConfig,
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_finality_grandpa::AuthorityId as GrandpaId;
@@ -28,6 +28,18 @@ pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId where
 	AccountPublic: From<<TPublic::Pair as Pair>::Public>
 {
 	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
+}
+
+fn get_account_id_from_seed_string<TPublic: Public>(seed: &str) -> AccountId where
+AccountPublic: From<<TPublic::Pair as Pair>::Public>
+{
+	AccountPublic::from(get_from_seed_string::<TPublic>(seed)).into_account()
+}
+
+fn get_from_seed_string<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
+	TPublic::Pair::from_string(&format!("{}", seed), None)
+		.expect("static values are valid; qed")
+		.public()
 }
 
 /// Generate an Aura authority key.
@@ -75,8 +87,24 @@ pub fn development_config() -> Result<ChainSpec, String> {
 				get_account_id_from_seed::<sr25519::Public>("Bob"),
 				get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 				get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+				// bridge validator dev key 1
+				get_account_id_from_seed_string::<ed25519::Public>("quarter between satisfy three sphere six soda boss cute decade old trend"),
+				// bridge validator dev key 2
+				get_account_id_from_seed_string::<ed25519::Public>("employ split promote annual couple elder remain cricket company fitness senior fiscal"),
+				// bridge validator dev key 3
+				get_account_id_from_seed_string::<ed25519::Public>("remind bird banner word spread volume card keep want faith insect mind"),
 			],
 			true,
+			vec![
+				// bridge validator dev key 1
+				get_account_id_from_seed_string::<ed25519::Public>("quarter between satisfy three sphere six soda boss cute decade old trend"),
+				// bridge validator dev key 2
+				get_account_id_from_seed_string::<ed25519::Public>("employ split promote annual couple elder remain cricket company fitness senior fiscal"),
+				// bridge validator dev key 3
+				get_account_id_from_seed_string::<ed25519::Public>("remind bird banner word spread volume card keep want faith insect mind"),
+			],
+			// Bridge fee account
+			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
 		),
 		// Bootnodes
 		vec![],
@@ -137,8 +165,24 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 				get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
 				get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 				get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+				// bridge validator dev key 1
+				get_account_id_from_seed_string::<ed25519::Public>("quarter between satisfy three sphere six soda boss cute decade old trend"),
+				// bridge validator dev key 2
+				get_account_id_from_seed_string::<ed25519::Public>("employ split promote annual couple elder remain cricket company fitness senior fiscal"),
+				// bridge validator dev key 3
+				get_account_id_from_seed_string::<ed25519::Public>("remind bird banner word spread volume card keep want faith insect mind"),
 			],
 			true,
+			vec![
+				// bridge validator dev key 1
+				get_account_id_from_seed_string::<ed25519::Public>("quarter between satisfy three sphere six soda boss cute decade old trend"),
+				// bridge validator dev key 2
+				get_account_id_from_seed_string::<ed25519::Public>("employ split promote annual couple elder remain cricket company fitness senior fiscal"),
+				// bridge validator dev key 3
+				get_account_id_from_seed_string::<ed25519::Public>("remind bird banner word spread volume card keep want faith insect mind"),
+			],
+			// Bridge fee account
+			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
 		),
 		// Bootnodes
 		vec![],
@@ -162,6 +206,8 @@ fn testnet_genesis(
 	sales_account: AccountId,
 	endowed_accounts: Vec<AccountId>,
 	_enable_println: bool,
+	bridge_validator_accounts: Vec<AccountId>,
+	bridge_fee_account: AccountId,
 ) -> GenesisConfig {
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -204,6 +250,12 @@ fn testnet_genesis(
 			farming_policy_certified_su: 120000000,
 			farming_policy_certified_nu: 3000000,
 			farming_policy_certified_ipu: 1000000
+		}),
+		pallet_tft_bridge: Some(TFTBridgeModuleConfig{
+			validator_accounts: bridge_validator_accounts,
+			fee_account: bridge_fee_account,
+			deposit_fee: 500000000,
+			burn_fee: 500000000
 		})
 	}
 }
