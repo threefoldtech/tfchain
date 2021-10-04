@@ -44,6 +44,7 @@ port: 30333
 ws_port: 9944
 rpc_port: 9933
 is_validator: true
+chainspec: "/etc/chainspecs/dev/chainSpecRaw.json"
 keys: []
 # - name: aura
 #   secret: "kkjghjfkkj kjhgkkhhgg"

@@ -138,7 +138,7 @@ export async function contractBilled({
     case 'Gold': level = DiscountLevel.Gold
   }
   newContractBilledReport.discountReceived = level
-  newContractBilledReport.amountBilled = contract_billed_event.amount_billed.toNumber()
+  newContractBilledReport.amountBilled = contract_billed_event.amount_billed.toBn()
   newContractBilledReport.timestamp = contract_billed_event.timestamp.toNumber()
 
   await store.save<ContractBillReport>(newContractBilledReport)

@@ -418,7 +418,7 @@ type ContractBillReport implements BaseGraphQLObject {
   version: Int!
   contractId: Int!
   discountReceived: DiscountLevel!
-  amountBilled: Int!
+  amountBilled: BigInt!
   timestamp: Int!
 }
 
@@ -431,7 +431,7 @@ type ContractBillReportConnection {
 input ContractBillReportCreateInput {
   contractId: Float!
   discountReceived: DiscountLevel!
-  amountBilled: Float!
+  amountBilled: String!
   timestamp: Float!
 }
 
@@ -460,7 +460,7 @@ enum ContractBillReportOrderByInput {
 input ContractBillReportUpdateInput {
   contractId: Float
   discountReceived: DiscountLevel
-  amountBilled: Float
+  amountBilled: String
   timestamp: Float
 }
 
@@ -497,12 +497,12 @@ input ContractBillReportWhereInput {
   contractId_in: [Int!]
   discountReceived_eq: DiscountLevel
   discountReceived_in: [DiscountLevel!]
-  amountBilled_eq: Int
-  amountBilled_gt: Int
-  amountBilled_gte: Int
-  amountBilled_lt: Int
-  amountBilled_lte: Int
-  amountBilled_in: [Int!]
+  amountBilled_eq: BigInt
+  amountBilled_gt: BigInt
+  amountBilled_gte: BigInt
+  amountBilled_lt: BigInt
+  amountBilled_lte: BigInt
+  amountBilled_in: [BigInt!]
   timestamp_eq: Int
   timestamp_gt: Int
   timestamp_gte: Int

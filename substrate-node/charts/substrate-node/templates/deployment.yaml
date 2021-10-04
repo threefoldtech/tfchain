@@ -52,13 +52,15 @@ spec:
             value: {{ .Values.rpc_port | quote }}
           - name: SUBSTRATE_BOOT_NODE
             value: {{ .Values.boot_node }}
+          - name: CHAINSPEC
+            value: {{ .Values.chainspec }}
           args: [
             "--name", "$(SUBSTRATE_NAME)",
             "--rpc-cors=all",
             "--rpc-methods=safe",
             "--base-path=/storage",
             "--keystore-path=/keystore",
-            "--chain=/etc/chainspecs/dev/chainSpecRaw.json",
+            "--chain=$(CHAINSPEC)",
             "--port", "$(SUBSTRATE_PORT)",
             "--ws-port", "$(SUBSTRATE_WS_PORT)",
             "--rpc-port", "$(SUBSTRATE_RPC_PORT)",

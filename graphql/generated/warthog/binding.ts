@@ -714,14 +714,14 @@ export interface ConsumptionWhereUniqueInput {
 export interface ContractBillReportCreateInput {
   contractId: Float
   discountReceived: DiscountLevel
-  amountBilled: Float
+  amountBilled: String
   timestamp: Float
 }
 
 export interface ContractBillReportUpdateInput {
   contractId?: Float | null
   discountReceived?: DiscountLevel | null
-  amountBilled?: Float | null
+  amountBilled?: String | null
   timestamp?: Float | null
 }
 
@@ -758,12 +758,12 @@ export interface ContractBillReportWhereInput {
   contractId_in?: Int[] | Int | null
   discountReceived_eq?: DiscountLevel | null
   discountReceived_in?: DiscountLevel[] | DiscountLevel | null
-  amountBilled_eq?: Int | null
-  amountBilled_gt?: Int | null
-  amountBilled_gte?: Int | null
-  amountBilled_lt?: Int | null
-  amountBilled_lte?: Int | null
-  amountBilled_in?: Int[] | Int | null
+  amountBilled_eq?: BigInt | null
+  amountBilled_gt?: BigInt | null
+  amountBilled_gte?: BigInt | null
+  amountBilled_lt?: BigInt | null
+  amountBilled_lte?: BigInt | null
+  amountBilled_in?: BigInt[] | BigInt | null
   timestamp_eq?: Int | null
   timestamp_gt?: Int | null
   timestamp_gte?: Int | null
@@ -2191,7 +2191,7 @@ export interface ContractBillReport extends BaseGraphQLObject {
   version: Int
   contractId: Int
   discountReceived: DiscountLevel
-  amountBilled: Int
+  amountBilled: BigInt
   timestamp: Int
 }
 

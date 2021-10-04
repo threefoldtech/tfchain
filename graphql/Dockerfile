@@ -18,4 +18,4 @@ CMD [ "yarn", "processor:start"]
 
 
 FROM processor AS query-node
-CMD ["node", "./generated/server/index.js"]
+CMD ["yarn", "query-node:start"]

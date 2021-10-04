@@ -22,28 +22,29 @@ version = '2.0.0'
 
 [dependencies.pallet-tfgrid]
 default-features = false
-#git = "https://github.com/threefoldtech/tfchain_pallets"
-#package = "pallet-tfgrid"
-#branch = "development"
-path = "../../../tfchain_pallets/pallet-tfgrid"
+git = "https://github.com/threefoldtech/tfchain_pallets"
+package = "pallet-tfgrid"
+branch = "development"
+#path = "../../../tfchain_pallets/pallet-tfgrid"
 
 [dependencies.pallet-smart-contract]
 default-features = false
-#git = "https://github.com/threefoldtech/tfchain_pallets"
-#package = "pallet-smart-contract"
-#branch = "development"
-path = "../../../tfchain_pallets/pallet-smart-contract"
+git = "https://github.com/threefoldtech/tfchain_pallets"
+package = "pallet-smart-contract"
+branch = "development"
+#path = "../../../tfchain_pallets/pallet-smart-contract"
 
 [dependencies.pallet-tft-bridge]
 default-features = false
-#git = "https://github.com/threefoldfoundation/tft-parity"
-#package = "pallet-tft-bridge"
-#branch = "main"
-path = "../../../tfchain_tft/pallet-tft-bridge"
+git = "https://github.com/threefoldfoundation/tft-parity"
+package = "pallet-tft-bridge"
+branch = "main"
+#path = "../../../tfchain_tft/pallet-tft-bridge"
 
 [dependencies]
 hex-literal = { optional = true, version = '0.3.1' }
 serde = { features = ['derive'], optional = true, version = '1.0.119' }
+smallvec = "1.4.0"
 
 # Substrate dependencies
 frame-benchmarking = { default-features = false, optional = true, version = '3.0.0' }

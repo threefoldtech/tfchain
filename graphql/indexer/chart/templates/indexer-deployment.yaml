@@ -35,7 +35,7 @@ spec:
             - name: DB_HOST
               value: {{ .Values.db_endpoint }}
             - name: DB_NAME
-              value: tf-grid-indexer
+              value: indexer-db
             - name: DB_PASS
               value: postgres
             - name: DB_PORT

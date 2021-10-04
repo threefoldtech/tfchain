@@ -168,7 +168,7 @@ type Consumption @entity {
 type ContractBillReport @entity {
   contractID: Int!
   discount_received: DiscountLevel!
-  amount_billed: Int!
+  amount_billed: BigInt!
   timestamp: Int!
 }
 
