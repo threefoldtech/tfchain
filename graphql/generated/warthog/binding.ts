@@ -36,6 +36,9 @@ export interface Query {
     historicalBalances: <T = Array<HistoricalBalance>>(args: { offset?: Int | null, limit?: Int | null, where?: HistoricalBalanceWhereInput | null, orderBy?: Array<HistoricalBalanceOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     historicalBalanceByUniqueInput: <T = HistoricalBalance | null>(args: { where: HistoricalBalanceWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     historicalBalancesConnection: <T = HistoricalBalanceConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: HistoricalBalanceWhereInput | null, orderBy?: Array<HistoricalBalanceOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    interfaces: <T = Array<Interfaces>>(args: { offset?: Int | null, limit?: Int | null, where?: InterfacesWhereInput | null, orderBy?: Array<InterfacesOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    interfacesByUniqueInput: <T = Interfaces | null>(args: { where: InterfacesWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    interfacesConnection: <T = InterfacesConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: InterfacesWhereInput | null, orderBy?: Array<InterfacesOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     locations: <T = Array<Location>>(args: { offset?: Int | null, limit?: Int | null, where?: LocationWhereInput | null, orderBy?: Array<LocationOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     locationByUniqueInput: <T = Location | null>(args: { where: LocationWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     locationsConnection: <T = LocationConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: LocationWhereInput | null, orderBy?: Array<LocationOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
@@ -282,6 +285,21 @@ export type HistoricalBalanceOrderByInput =   'createdAt_ASC' |
   'balance_DESC' |
   'timestamp_ASC' |
   'timestamp_DESC'
+
+export type InterfacesOrderByInput =   'createdAt_ASC' |
+  'createdAt_DESC' |
+  'updatedAt_ASC' |
+  'updatedAt_DESC' |
+  'deletedAt_ASC' |
+  'deletedAt_DESC' |
+  'node_ASC' |
+  'node_DESC' |
+  'name_ASC' |
+  'name_DESC' |
+  'mac_ASC' |
+  'mac_DESC' |
+  'ips_ASC' |
+  'ips_DESC'
 
 export type LocationOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -1263,6 +1281,69 @@ export interface HistoricalBalanceWhereUniqueInput {
   id: ID_Output
 }
 
+export interface InterfacesCreateInput {
+  node: ID_Output
+  name: String
+  mac: String
+  ips: String
+}
+
+export interface InterfacesUpdateInput {
+  node?: ID_Input | null
+  name?: String | null
+  mac?: String | null
+  ips?: String | null
+}
+
+export interface InterfacesWhereInput {
+  id_eq?: ID_Input | null
+  id_in?: ID_Output[] | ID_Output | null
+  createdAt_eq?: DateTime | null
+  createdAt_lt?: DateTime | null
+  createdAt_lte?: DateTime | null
+  createdAt_gt?: DateTime | null
+  createdAt_gte?: DateTime | null
+  createdById_eq?: ID_Input | null
+  createdById_in?: ID_Output[] | ID_Output | null
+  updatedAt_eq?: DateTime | null
+  updatedAt_lt?: DateTime | null
+  updatedAt_lte?: DateTime | null
+  updatedAt_gt?: DateTime | null
+  updatedAt_gte?: DateTime | null
+  updatedById_eq?: ID_Input | null
+  updatedById_in?: ID_Output[] | ID_Output | null
+  deletedAt_all?: Boolean | null
+  deletedAt_eq?: DateTime | null
+  deletedAt_lt?: DateTime | null
+  deletedAt_lte?: DateTime | null
+  deletedAt_gt?: DateTime | null
+  deletedAt_gte?: DateTime | null
+  deletedById_eq?: ID_Input | null
+  deletedById_in?: ID_Output[] | ID_Output | null
+  name_eq?: String | null
+  name_contains?: String | null
+  name_startsWith?: String | null
+  name_endsWith?: String | null
+  name_in?: String[] | String | null
+  mac_eq?: String | null
+  mac_contains?: String | null
+  mac_startsWith?: String | null
+  mac_endsWith?: String | null
+  mac_in?: String[] | String | null
+  ips_eq?: String | null
+  ips_contains?: String | null
+  ips_startsWith?: String | null
+  ips_endsWith?: String | null
+  ips_in?: String[] | String | null
+  node?: NodeWhereInput | null
+  AND?: InterfacesWhereInput[] | InterfacesWhereInput | null
+  OR?: InterfacesWhereInput[] | InterfacesWhereInput | null
+}
+
+export interface InterfacesWhereUniqueInput {
+  id: ID_Output
+}
+
 export interface LocationCreateInput {
   longitude: String
   latitude: String
@@ -1629,6 +1710,9 @@ export interface NodeWhereInput {
   farmingPolicyId_in?: Int[] | Int | null
   location?: LocationWhereInput | null
   publicConfig?: PublicConfigWhereInput | null
+  interfaces_none?: InterfacesWhereInput | null
+  interfaces_some?: InterfacesWhereInput | null
+  interfaces_every?: InterfacesWhereInput | null
   AND?: NodeWhereInput[] | NodeWhereInput | null
   OR?: NodeWhereInput[] | NodeWhereInput | null
 }
@@ -2376,6 +2460,33 @@ export interface HistoricalBalanceEdge {
   cursor: String
 }
 
+export interface Interfaces extends BaseGraphQLObject {
+  id: ID_Output
+  createdAt: DateTime
+  createdById: String
+  updatedAt?: DateTime | null
+  updatedById?: String | null
+  deletedAt?: DateTime | null
+  deletedById?: String | null
+  version: Int
+  node: Node
+  nodeId: String
+  name: String
+  mac: String
+  ips: String
+}
+
+export interface InterfacesConnection {
+  totalCount: Int
+  edges: Array<InterfacesEdge>
+  pageInfo: PageInfo
+}
+
+export interface InterfacesEdge {
+  node: Interfaces
+  cursor: String
+}
+
 export interface Location extends BaseGraphQLObject {
   id: ID_Output
   createdAt: DateTime
@@ -2453,6 +2564,7 @@ export interface Node extends BaseGraphQLObject {
   uptime?: Int | null
   created: Int
   farmingPolicyId: Int
+  interfaces: Array<Interfaces>
 }
 
 export interface NodeConnection {

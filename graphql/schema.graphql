@@ -69,6 +69,14 @@ type Node @entity {
   uptime: Int
   created: Int!
   farming_policy_id: Int!
+  interfaces: [Interfaces!] @derivedFrom(field: "node")
+}
+
+type Interfaces @entity {
+  node: Node!
+  name: String!
+  mac: String!
+  ips: String!
 }
 
 enum CertificationType {

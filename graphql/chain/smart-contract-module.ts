@@ -14,9 +14,9 @@ export namespace SmartContractModule {
 
     get params(): [Consumption] {
       return [
-        createTypeUnsafe<Consumption & Codec>(typeRegistry, "Consumption", [
+        (createTypeUnsafe<Consumption & Codec>(typeRegistry, "Consumption", [
           this.ctx.params[0].value,
-        ]),
+        ]) as any) as Consumption,
       ];
     }
 
@@ -41,9 +41,9 @@ export namespace SmartContractModule {
 
     get params(): [Contract] {
       return [
-        createTypeUnsafe<Contract & Codec>(typeRegistry, "Contract", [
+        (createTypeUnsafe<Contract & Codec>(typeRegistry, "Contract", [
           this.ctx.params[0].value,
-        ]),
+        ]) as any) as Contract,
       ];
     }
 
@@ -68,9 +68,9 @@ export namespace SmartContractModule {
 
     get params(): [Contract] {
       return [
-        createTypeUnsafe<Contract & Codec>(typeRegistry, "Contract", [
+        (createTypeUnsafe<Contract & Codec>(typeRegistry, "Contract", [
           this.ctx.params[0].value,
-        ]),
+        ]) as any) as Contract,
       ];
     }
 
@@ -122,9 +122,9 @@ export namespace SmartContractModule {
 
     get params(): [ContractBill] {
       return [
-        createTypeUnsafe<ContractBill & Codec>(typeRegistry, "ContractBill", [
+        (createTypeUnsafe<ContractBill & Codec>(typeRegistry, "ContractBill", [
           this.ctx.params[0].value,
-        ]),
+        ]) as any) as ContractBill,
       ];
     }
 

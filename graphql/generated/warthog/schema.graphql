@@ -1319,6 +1319,113 @@ input HistoricalBalanceWhereUniqueInput {
   id: ID!
 }
 
+type Interfaces implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  node: Node!
+  nodeId: String!
+  name: String!
+  mac: String!
+  ips: String!
+}
+
+type InterfacesConnection {
+  totalCount: Int!
+  edges: [InterfacesEdge!]!
+  pageInfo: PageInfo!
+}
+
+input InterfacesCreateInput {
+  node: ID!
+  name: String!
+  mac: String!
+  ips: String!
+}
+
+type InterfacesEdge {
+  node: Interfaces!
+  cursor: String!
+}
+
+enum InterfacesOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  node_ASC
+  node_DESC
+  name_ASC
+  name_DESC
+  mac_ASC
+  mac_DESC
+  ips_ASC
+  ips_DESC
+}
+
+input InterfacesUpdateInput {
+  node: ID
+  name: String
+  mac: String
+  ips: String
+}
+
+input InterfacesWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  name_eq: String
+  name_contains: String
+  name_startsWith: String
+  name_endsWith: String
+  name_in: [String!]
+  mac_eq: String
+  mac_contains: String
+  mac_startsWith: String
+  mac_endsWith: String
+  mac_in: [String!]
+  ips_eq: String
+  ips_contains: String
+  ips_startsWith: String
+  ips_endsWith: String
+  ips_in: [String!]
+  node: NodeWhereInput
+  AND: [InterfacesWhereInput!]
+  OR: [InterfacesWhereInput!]
+}
+
+input InterfacesWhereUniqueInput {
+  id: ID!
+}
+
 type Location implements BaseGraphQLObject {
   id: ID!
   createdAt: DateTime!
@@ -1558,6 +1665,7 @@ type Node implements BaseGraphQLObject {
   uptime: Int
   created: Int!
   farmingPolicyId: Int!
+  interfaces: [Interfaces!]!
 }
 
 type NodeConnection {
@@ -1900,6 +2008,9 @@ input NodeWhereInput {
   farmingPolicyId_in: [Int!]
   location: LocationWhereInput
   publicConfig: PublicConfigWhereInput
+  interfaces_none: InterfacesWhereInput
+  interfaces_some: InterfacesWhereInput
+  interfaces_every: InterfacesWhereInput
   AND: [NodeWhereInput!]
   OR: [NodeWhereInput!]
 }
@@ -2439,6 +2550,9 @@ type Query {
   historicalBalances(offset: Int, limit: Int = 50, where: HistoricalBalanceWhereInput, orderBy: [HistoricalBalanceOrderByInput!]): [HistoricalBalance!]!
   historicalBalanceByUniqueInput(where: HistoricalBalanceWhereUniqueInput!): HistoricalBalance
   historicalBalancesConnection(first: Int, after: String, last: Int, before: String, where: HistoricalBalanceWhereInput, orderBy: [HistoricalBalanceOrderByInput!]): HistoricalBalanceConnection!
+  interfaces(offset: Int, limit: Int = 50, where: InterfacesWhereInput, orderBy: [InterfacesOrderByInput!]): [Interfaces!]!
+  interfacesByUniqueInput(where: InterfacesWhereUniqueInput!): Interfaces
+  interfacesConnection(first: Int, after: String, last: Int, before: String, where: InterfacesWhereInput, orderBy: [InterfacesOrderByInput!]): InterfacesConnection!
   locations(offset: Int, limit: Int = 50, where: LocationWhereInput, orderBy: [LocationOrderByInput!]): [Location!]!
   locationByUniqueInput(where: LocationWhereUniqueInput!): Location
   locationsConnection(first: Int, after: String, last: Int, before: String, where: LocationWhereInput, orderBy: [LocationOrderByInput!]): LocationConnection!

@@ -1,4 +1,4 @@
-import { Node, Location, PublicConfig, UptimeEvent } from '../generated/model'
+import { Node, Location, PublicConfig, UptimeEvent, Interfaces } from '../generated/model'
 import { TfgridModule } from '../chain'
 import { hex2a } from './util'
 
@@ -56,6 +56,17 @@ export async function nodeStored({
   newNode.twinId = node.twin_id.toNumber()
 
   await store.save<Node>(newNode)
+
+  const interfacesPromisses = node.interfaces.map(intf => {
+    const newInterface = new Interfaces()
+
+    newInterface.name = hex2a(Buffer.from(intf.name.toString()).toString())
+    newInterface.mac = hex2a(Buffer.from(intf.mac.toString()).toString())
+    newInterface.node = newNode
+    newInterface.ips = intf.ips.map(ip => hex2a(Buffer.from(ip.toString()).toString())).join(',')
+    return store.save<Interfaces>(newInterface)
+  })
+  await Promise.all(interfacesPromisses)
 }
 
 // TODO
@@ -110,6 +121,17 @@ export async function nodeUpdated({
   savedNode.twinId = node.twin_id.toNumber()
 
   await store.save<Node>(savedNode)
+
+  const interfacesPromisses = node.interfaces.map(intf => {
+    const newInterface = new Interfaces()
+
+    newInterface.name = hex2a(Buffer.from(intf.name.toString()).toString())
+    newInterface.mac = hex2a(Buffer.from(intf.mac.toString()).toString())
+    newInterface.node = savedNode
+    newInterface.ips = intf.ips.map(ip => hex2a(Buffer.from(ip.toString()).toString())).join(',')
+    return store.save<Interfaces>(newInterface)
+  })
+  await Promise.all(interfacesPromisses)
 }
 
 export async function nodeDeleted({

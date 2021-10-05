@@ -53,11 +53,13 @@ import { Farm } from "../modules/farm/farm.model";
 // @ts-ignore
 import { FarmingPolicy } from "../modules/farming-policy/farming-policy.model";
 // @ts-ignore
+import { Location } from "../modules/location/location.model";
+// @ts-ignore
 import { PublicConfig } from "../modules/public-config/public-config.model";
 // @ts-ignore
 import { Node } from "../modules/node/node.model";
 // @ts-ignore
-import { Location } from "../modules/location/location.model";
+import { Interfaces } from "../modules/interfaces/interfaces.model";
 // @ts-ignore
 import { NameContract } from "../modules/name-contract/name-contract.model";
 // @ts-ignore
@@ -3096,6 +3098,192 @@ export class FarmingPolicyUpdateArgs {
   @TypeGraphQLField() where!: FarmingPolicyWhereUniqueInput;
 }
 
+export enum LocationOrderByEnum {
+  createdAt_ASC = "createdAt_ASC",
+  createdAt_DESC = "createdAt_DESC",
+
+  updatedAt_ASC = "updatedAt_ASC",
+  updatedAt_DESC = "updatedAt_DESC",
+
+  deletedAt_ASC = "deletedAt_ASC",
+  deletedAt_DESC = "deletedAt_DESC",
+
+  longitude_ASC = "longitude_ASC",
+  longitude_DESC = "longitude_DESC",
+
+  latitude_ASC = "latitude_ASC",
+  latitude_DESC = "latitude_DESC",
+}
+
+registerEnumType(LocationOrderByEnum, {
+  name: "LocationOrderByInput",
+});
+
+@TypeGraphQLInputType()
+export class LocationWhereInput {
+  @TypeGraphQLField(() => ID, { nullable: true })
+  id_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  id_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  createdById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  createdById_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  updatedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  updatedById_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  deletedAt_all?: Boolean;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  deletedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  deletedById_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  longitude_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  longitude_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  longitude_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  longitude_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  longitude_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  latitude_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  latitude_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  latitude_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  latitude_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  latitude_in?: string[];
+
+  @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
+  nodelocation_none?: NodeWhereInput;
+
+  @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
+  nodelocation_some?: NodeWhereInput;
+
+  @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
+  nodelocation_every?: NodeWhereInput;
+
+  @TypeGraphQLField(() => LocationWhereInput, { nullable: true })
+  AND?: [LocationWhereInput];
+
+  @TypeGraphQLField(() => LocationWhereInput, { nullable: true })
+  OR?: [LocationWhereInput];
+}
+
+@TypeGraphQLInputType()
+export class LocationWhereUniqueInput {
+  @TypeGraphQLField(() => ID)
+  id?: string;
+}
+
+@TypeGraphQLInputType()
+export class LocationCreateInput {
+  @TypeGraphQLField()
+  longitude!: string;
+
+  @TypeGraphQLField()
+  latitude!: string;
+}
+
+@TypeGraphQLInputType()
+export class LocationUpdateInput {
+  @TypeGraphQLField({ nullable: true })
+  longitude?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  latitude?: string;
+}
+
+@ArgsType()
+export class LocationWhereArgs extends PaginationArgs {
+  @TypeGraphQLField(() => LocationWhereInput, { nullable: true })
+  where?: LocationWhereInput;
+
+  @TypeGraphQLField(() => LocationOrderByEnum, { nullable: true })
+  orderBy?: LocationOrderByEnum[];
+}
+
+@ArgsType()
+export class LocationCreateManyArgs {
+  @TypeGraphQLField(() => [LocationCreateInput])
+  data!: LocationCreateInput[];
+}
+
+@ArgsType()
+export class LocationUpdateArgs {
+  @TypeGraphQLField() data!: LocationUpdateInput;
+  @TypeGraphQLField() where!: LocationWhereUniqueInput;
+}
+
 export enum PublicConfigOrderByEnum {
   createdAt_ASC = "createdAt_ASC",
   createdAt_DESC = "createdAt_DESC",
@@ -3722,6 +3910,15 @@ export class NodeWhereInput {
   @TypeGraphQLField(() => PublicConfigWhereInput, { nullable: true })
   publicConfig?: PublicConfigWhereInput;
 
+  @TypeGraphQLField(() => InterfacesWhereInput, { nullable: true })
+  interfaces_none?: InterfacesWhereInput;
+
+  @TypeGraphQLField(() => InterfacesWhereInput, { nullable: true })
+  interfaces_some?: InterfacesWhereInput;
+
+  @TypeGraphQLField(() => InterfacesWhereInput, { nullable: true })
+  interfaces_every?: InterfacesWhereInput;
+
   @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
   AND?: [NodeWhereInput];
 
@@ -3852,7 +4049,7 @@ export class NodeUpdateArgs {
   @TypeGraphQLField() where!: NodeWhereUniqueInput;
 }
 
-export enum LocationOrderByEnum {
+export enum InterfacesOrderByEnum {
   createdAt_ASC = "createdAt_ASC",
   createdAt_DESC = "createdAt_DESC",
 
@@ -3862,19 +4059,25 @@ export enum LocationOrderByEnum {
   deletedAt_ASC = "deletedAt_ASC",
   deletedAt_DESC = "deletedAt_DESC",
 
-  longitude_ASC = "longitude_ASC",
-  longitude_DESC = "longitude_DESC",
+  node_ASC = "node_ASC",
+  node_DESC = "node_DESC",
 
-  latitude_ASC = "latitude_ASC",
-  latitude_DESC = "latitude_DESC",
+  name_ASC = "name_ASC",
+  name_DESC = "name_DESC",
+
+  mac_ASC = "mac_ASC",
+  mac_DESC = "mac_DESC",
+
+  ips_ASC = "ips_ASC",
+  ips_DESC = "ips_DESC",
 }
 
-registerEnumType(LocationOrderByEnum, {
-  name: "LocationOrderByInput",
+registerEnumType(InterfacesOrderByEnum, {
+  name: "InterfacesOrderByInput",
 });
 
 @TypeGraphQLInputType()
-export class LocationWhereInput {
+export class InterfacesWhereInput {
   @TypeGraphQLField(() => ID, { nullable: true })
   id_eq?: string;
 
@@ -3948,94 +4151,115 @@ export class LocationWhereInput {
   deletedById_in?: string[];
 
   @TypeGraphQLField({ nullable: true })
-  longitude_eq?: string;
+  name_eq?: string;
 
   @TypeGraphQLField({ nullable: true })
-  longitude_contains?: string;
+  name_contains?: string;
 
   @TypeGraphQLField({ nullable: true })
-  longitude_startsWith?: string;
+  name_startsWith?: string;
 
   @TypeGraphQLField({ nullable: true })
-  longitude_endsWith?: string;
+  name_endsWith?: string;
 
   @TypeGraphQLField(() => [String], { nullable: true })
-  longitude_in?: string[];
+  name_in?: string[];
 
   @TypeGraphQLField({ nullable: true })
-  latitude_eq?: string;
+  mac_eq?: string;
 
   @TypeGraphQLField({ nullable: true })
-  latitude_contains?: string;
+  mac_contains?: string;
 
   @TypeGraphQLField({ nullable: true })
-  latitude_startsWith?: string;
+  mac_startsWith?: string;
 
   @TypeGraphQLField({ nullable: true })
-  latitude_endsWith?: string;
+  mac_endsWith?: string;
 
   @TypeGraphQLField(() => [String], { nullable: true })
-  latitude_in?: string[];
+  mac_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  ips_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  ips_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  ips_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  ips_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  ips_in?: string[];
 
   @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
-  nodelocation_none?: NodeWhereInput;
+  node?: NodeWhereInput;
 
-  @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
-  nodelocation_some?: NodeWhereInput;
+  @TypeGraphQLField(() => InterfacesWhereInput, { nullable: true })
+  AND?: [InterfacesWhereInput];
 
-  @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
-  nodelocation_every?: NodeWhereInput;
-
-  @TypeGraphQLField(() => LocationWhereInput, { nullable: true })
-  AND?: [LocationWhereInput];
-
-  @TypeGraphQLField(() => LocationWhereInput, { nullable: true })
-  OR?: [LocationWhereInput];
+  @TypeGraphQLField(() => InterfacesWhereInput, { nullable: true })
+  OR?: [InterfacesWhereInput];
 }
 
 @TypeGraphQLInputType()
-export class LocationWhereUniqueInput {
+export class InterfacesWhereUniqueInput {
   @TypeGraphQLField(() => ID)
   id?: string;
 }
 
 @TypeGraphQLInputType()
-export class LocationCreateInput {
-  @TypeGraphQLField()
-  longitude!: string;
+export class InterfacesCreateInput {
+  @TypeGraphQLField(() => ID)
+  node!: string;
 
   @TypeGraphQLField()
-  latitude!: string;
+  name!: string;
+
+  @TypeGraphQLField()
+  mac!: string;
+
+  @TypeGraphQLField()
+  ips!: string;
 }
 
 @TypeGraphQLInputType()
-export class LocationUpdateInput {
-  @TypeGraphQLField({ nullable: true })
-  longitude?: string;
+export class InterfacesUpdateInput {
+  @TypeGraphQLField(() => ID, { nullable: true })
+  node?: string;
 
   @TypeGraphQLField({ nullable: true })
-  latitude?: string;
+  name?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  mac?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  ips?: string;
 }
 
 @ArgsType()
-export class LocationWhereArgs extends PaginationArgs {
-  @TypeGraphQLField(() => LocationWhereInput, { nullable: true })
-  where?: LocationWhereInput;
+export class InterfacesWhereArgs extends PaginationArgs {
+  @TypeGraphQLField(() => InterfacesWhereInput, { nullable: true })
+  where?: InterfacesWhereInput;
 
-  @TypeGraphQLField(() => LocationOrderByEnum, { nullable: true })
-  orderBy?: LocationOrderByEnum[];
+  @TypeGraphQLField(() => InterfacesOrderByEnum, { nullable: true })
+  orderBy?: InterfacesOrderByEnum[];
 }
 
 @ArgsType()
-export class LocationCreateManyArgs {
-  @TypeGraphQLField(() => [LocationCreateInput])
-  data!: LocationCreateInput[];
+export class InterfacesCreateManyArgs {
+  @TypeGraphQLField(() => [InterfacesCreateInput])
+  data!: InterfacesCreateInput[];
 }
 
 @ArgsType()
-export class LocationUpdateArgs {
-  @TypeGraphQLField() data!: LocationUpdateInput;
-  @TypeGraphQLField() where!: LocationWhereUniqueInput;
+export class InterfacesUpdateArgs {
+  @TypeGraphQLField() data!: InterfacesUpdateInput;
+  @TypeGraphQLField() where!: InterfacesWhereUniqueInput;
 }
 
 export enum NameContractOrderByEnum {

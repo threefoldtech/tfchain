@@ -11,6 +11,8 @@ import { Location } from '../location/location.model';
 import { LocationService } from '../location/location.service';
 import { PublicConfig } from '../public-config/public-config.model';
 import { PublicConfigService } from '../public-config/public-config.service';
+import { Interfaces } from '../interfaces/interfaces.model';
+import { InterfacesService } from '../interfaces/interfaces.service';
 import { getConnection, getRepository, In, Not } from 'typeorm';
 import _ from 'lodash';
 
@@ -20,6 +22,8 @@ export class NodeService extends HydraBaseService<Node> {
   public readonly locationService!: LocationService;
   @Inject('PublicConfigService')
   public readonly publicConfigService!: PublicConfigService;
+  @Inject('InterfacesService')
+  public readonly interfacesService!: InterfacesService;
 
   constructor(@InjectRepository(Node) protected readonly repository: Repository<Node>) {
     super(Node, repository);
@@ -62,6 +66,18 @@ export class NodeService extends HydraBaseService<Node> {
     const { publicConfig } = where;
     delete where.publicConfig;
 
+    // remove relation filters to enable warthog query builders
+
+    const { interfaces_some, interfaces_none, interfaces_every } = where;
+
+    if (+!!interfaces_some + +!!interfaces_none + +!!interfaces_every > 1) {
+      throw new Error(`A query can have at most one of none, some, every clauses on a relation field`);
+    }
+
+    delete where.interfaces_some;
+    delete where.interfaces_none;
+    delete where.interfaces_every;
+
     let mainQuery = this.buildFindQueryWithParams(<any>where, orderBy, undefined, fields, 'main').take(undefined); // remove LIMIT
 
     let parameters = mainQuery.getParameters();
@@ -86,6 +102,72 @@ export class NodeService extends HydraBaseService<Node> {
       mainQuery = mainQuery.andWhere(`"node"."public_config_id" IN (${publicConfigQuery.getQuery()})`);
 
       parameters = { ...parameters, ...publicConfigQuery.getParameters() };
+    }
+
+    const interfacesFilter = interfaces_some || interfaces_none || interfaces_every;
+
+    if (interfacesFilter) {
+      const interfacesQuery = this.interfacesService
+        .buildFindQueryWithParams(<any>interfacesFilter, undefined, undefined, ['id'], 'interfaces')
+        .take(undefined); //remove the default LIMIT
+
+      parameters = { ...parameters, ...interfacesQuery.getParameters() };
+
+      const subQueryFiltered = this.getQueryBuilder()
+        .select([])
+        .leftJoin('node.interfaces', 'interfaces_filtered', `interfaces_filtered.id IN (${interfacesQuery.getQuery()})`)
+        .groupBy('node_id')
+        .addSelect('count(interfaces_filtered.id)', 'cnt_filtered')
+        .addSelect('node.id', 'node_id');
+
+      const subQueryTotal = this.getQueryBuilder()
+        .select([])
+        .leftJoin('node.interfaces', 'interfaces_total')
+        .groupBy('node_id')
+        .addSelect('count(interfaces_total.id)', 'cnt_total')
+        .addSelect('node.id', 'node_id');
+
+      const subQuery = `
+                SELECT
+                    f.node_id node_id, f.cnt_filtered cnt_filtered, t.cnt_total cnt_total
+                FROM
+                    (${subQueryTotal.getQuery()}) t, (${subQueryFiltered.getQuery()}) f
+                WHERE
+                    t.node_id = f.node_id`;
+
+      if (interfaces_none) {
+        mainQuery = mainQuery.andWhere(`node.id IN
+                (SELECT
+                    interfaces_subq.node_id
+                FROM
+                    (${subQuery}) interfaces_subq
+                WHERE
+                    interfaces_subq.cnt_filtered = 0
+                )`);
+      }
+
+      if (interfaces_some) {
+        mainQuery = mainQuery.andWhere(`node.id IN
+                (SELECT
+                    interfaces_subq.node_id
+                FROM
+                    (${subQuery}) interfaces_subq
+                WHERE
+                    interfaces_subq.cnt_filtered > 0
+                )`);
+      }
+
+      if (interfaces_every) {
+        mainQuery = mainQuery.andWhere(`node.id IN
+                (SELECT
+                    interfaces_subq.node_id
+                FROM
+                    (${subQuery}) interfaces_subq
+                WHERE
+                    interfaces_subq.cnt_filtered > 0
+                    AND interfaces_subq.cnt_filtered = interfaces_subq.cnt_total
+                )`);
+      }
     }
 
     mainQuery = mainQuery.setParameters(parameters);

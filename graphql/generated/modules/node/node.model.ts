@@ -1,9 +1,19 @@
-import { BaseModel, IntField, NumericField, Model, ManyToOne, StringField, JSONField } from '@subsquid/warthog';
+import {
+  BaseModel,
+  IntField,
+  NumericField,
+  Model,
+  ManyToOne,
+  OneToMany,
+  StringField,
+  JSONField,
+} from '@subsquid/warthog';
 
 import BN from 'bn.js';
 
 import { Location } from '../location/location.model';
 import { PublicConfig } from '../public-config/public-config.model';
+import { Interfaces } from '../interfaces/interfaces.model';
 
 import * as jsonTypes from '../jsonfields/jsonfields.model';
 
@@ -103,6 +113,13 @@ export class Node extends BaseModel {
 
   @IntField({})
   farmingPolicyId!: number;
+
+  @OneToMany(() => Interfaces, (param: Interfaces) => param.node, {
+    modelName: 'Node',
+    relModelName: 'Interfaces',
+    propertyName: 'interfaces',
+  })
+  interfaces?: Interfaces[];
 
   constructor(init?: Partial<Node>) {
     super();

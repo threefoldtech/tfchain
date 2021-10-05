@@ -44,7 +44,8 @@
     "public_config": "Option<PublicConfig>",
     "uptime": "u64",
     "created": "u64",
-    "farming_policy_id": "u32"
+    "farming_policy_id": "u32",
+    "interfaces": "Vec<Interface>"
   },
   "PublicConfig": {
     "ipv4": "Vec<u8>",
@@ -62,6 +63,11 @@
     "sru": "u64",
     "cru": "u64",
     "mru": "u64"
+  },
+  "Interface": {
+    "name": "Vec<u8>",
+    "mac": "Vec<u8>",
+    "ips": "Vec<Vec<u8>>"
   },
   "CertificationType": {
     "_enum": [
@@ -198,6 +204,31 @@
   "StellarTransaction": {
     "amount": "Balance",
     "target": "MultiAddress"
+  },
+  "MintTransaction": {
+    "amount": "u64",
+    "target": "AccountId",
+    "block": "BlockNumber",
+    "votes": "u32"
+  },
+  "BurnTransaction": {
+    "block": "BlockNumber",
+    "amount": "u64",
+    "target": "AccountId",
+    "signatures": "Vec<StellarSignature>",
+    "sequence_number": "u64"
+  },
+  "RefundTransaction": {
+    "block": "BlockNumber",
+    "amount": "u64",
+    "target": "Vec<u8>",
+    "tx_hash": "Vec<u8>",
+    "signatures": "Vec<StellarSignature>",
+    "sequence_number": "u64"
+  },
+  "StellarSignature": {
+    "signature": "Vec<u8>",
+    "stellar_pubkey": "Vec<u8>"
   },
   "AccountInfo": "AccountInfoWithProviders"
 }

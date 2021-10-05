@@ -18,6 +18,8 @@ import { FarmingPolicy } from '../modules/farming-policy/farming-policy.model';
 export { FarmingPolicy };
 import { HistoricalBalance } from '../modules/historical-balance/historical-balance.model';
 export { HistoricalBalance };
+import { Interfaces } from '../modules/interfaces/interfaces.model';
+export { Interfaces };
 import { Location } from '../modules/location/location.model';
 export { Location };
 import { NameContract } from '../modules/name-contract/name-contract.model';
