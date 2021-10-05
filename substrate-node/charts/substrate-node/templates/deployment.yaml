@@ -72,11 +72,11 @@ spec:
             "--validator"
             {{ else }}
             "--ws-external",
-            "--pruning", "archive"
+            "--pruning", "archive",
             {{ end }}
             {{ if .Values.is_unsafe_rpc_mode }}
-            "--rpc-methods", "Unsafe"
-            {{ else }}
+            "--rpc-methods", "Unsafe",
+            {{ end }}
           ]
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
