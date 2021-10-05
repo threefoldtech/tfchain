@@ -74,6 +74,9 @@ spec:
             "--ws-external",
             "--pruning", "archive"
             {{ end }}
+            {{ if .Values.is_unsafe_rpc_mode }}
+            "--rpc-methods", "Unsafe"
+            {{ else }}
           ]
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
