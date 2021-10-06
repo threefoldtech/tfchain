@@ -13,6 +13,6 @@ spec:
   accessModes:
     - ReadWriteOnce
   hostPath:
-    path: {{ .Values.volume.hostPath }}
+    path: {{ .Values.volume.persistentVolume.hostPath }}
     type: DirectoryOrCreate
 {{- end }}
