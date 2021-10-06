@@ -8,6 +8,10 @@ Use Rust's native `cargo` command to build
 cargo run --release -- --dev --tmp
 ```
 
+## Attach a UI
+
+In your web browser, navigate to [https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9945#/explorer](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9945#/explorer) .
+
 ## Release Build
 
 The `cargo run` command will perform an initial build. Use the following command to build the node
