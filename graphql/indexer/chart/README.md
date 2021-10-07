@@ -1,15 +1,11 @@
 # Indexer stack chart
 
-## Create PersistentVolumeClaims for the database
-
-```sh
-kubectl apply -f pvc-db.yaml
-```
-
 ## Install chart with helm
 
+Create PersistentVolumeClaims for the database if wanted and reference the name in your values file in the `volume.existingpersistentVolumeClaim` property.
+
 ```sh
-helm install indexer .
+helm install [-f yourvaluesfile.yaml] indexer .
 ```
 
 If the indexer cannot reach the database, you can set `db_url` to the db-service cluster ip.
