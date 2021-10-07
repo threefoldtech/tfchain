@@ -42,9 +42,9 @@
     "country": "Vec<u8>",
     "city": "Vec<u8>",
     "public_config": "Option<PublicConfig>",
-    "uptime": "u64",
     "created": "u64",
-    "farming_policy_id": "u32"
+    "farming_policy_id": "u32",
+    "interfaces": "Vec<Interface>"
   },
   "PublicConfig": {
     "ipv4": "Vec<u8>",
@@ -62,6 +62,11 @@
     "sru": "u64",
     "cru": "u64",
     "mru": "u64"
+  },
+  "Interface": {
+    "name": "Vec<u8>",
+    "mac": "Vec<u8>",
+    "ips": "Vec<Vec<u8>>"
   },
   "CertificationType": {
     "_enum": [
@@ -182,6 +187,12 @@
     "timestamp": "u64",
     "discount_level": "DiscountLevel",
     "amount_billed": "u128"
+  },
+  "StorageVersion": {
+    "_enum": [
+      "V1Struct",
+      "V2Struct"
+    ]
   },
   "Address": "MultiAddress",
   "LookupSource": "MultiAddress",
