@@ -4,7 +4,7 @@ kind: PersistentVolume
 metadata:
   name: tfchainindexer-volume-{{ .Release.Name }}
   labels:
-    backupType: {{ .Values.threefoldVdc.backup | quote }}
+    {{- include "tfchainindexer.labels" . | nindent 4 }}
     type: local
 spec:
   storageClassName: local-path
@@ -13,6 +13,6 @@ spec:
   accessModes:
     - ReadWriteOnce
   hostPath:
-    path: {{ .Values.volume.hostPath }}
+    path: {{ .Values.volume.persistentVolume.hostPath }}
     type: DirectoryOrCreate
 {{- end }}
