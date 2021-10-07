@@ -29,7 +29,6 @@ export async function nodeStored({
   newNode.city = hex2a(node.city.toString())
 
   newNode.created = node.created.toNumber()
-  newNode.uptime = node.uptime.toNumber()
   newNode.farmingPolicyId = node.farming_policy_id.toNumber()
 
   const newLocation = new Location()
@@ -95,7 +94,6 @@ export async function nodeUpdated({
   savedNode.city = hex2a(node.city.toString())
 
   savedNode.created = node.created.toNumber()
-  savedNode.uptime = node.uptime.toNumber()
   savedNode.farmingPolicyId = node.farming_policy_id.toNumber()
 
   const newLocation = new Location()

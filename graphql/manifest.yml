@@ -9,7 +9,7 @@ typegen:
     typedefsLoc: ./indexer/types.json
   metadata:
     source: ws://localhost:9944
-    # source: wss://explorer.devnet.grid.tf/ws
+    # source: wss://tfchain.dev.threefold.io/ws
   events:
     - balances.Transfer
     - tfgridModule.EntityStored

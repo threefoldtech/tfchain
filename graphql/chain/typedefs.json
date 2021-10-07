@@ -42,7 +42,6 @@
     "country": "Vec<u8>",
     "city": "Vec<u8>",
     "public_config": "Option<PublicConfig>",
-    "uptime": "u64",
     "created": "u64",
     "farming_policy_id": "u32",
     "interfaces": "Vec<Interface>"
@@ -188,6 +187,12 @@
     "timestamp": "u64",
     "discount_level": "DiscountLevel",
     "amount_billed": "u128"
+  },
+  "StorageVersion": {
+    "_enum": [
+      "V1Struct",
+      "V2Struct"
+    ]
   },
   "Address": "MultiAddress",
   "LookupSource": "MultiAddress",
