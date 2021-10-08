@@ -1,10 +1,6 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  annotations:
-    kompose.cmd: kompose convert -c
-    kompose.version: 1.23.0 (HEAD)§
-  creationTimestamp: null
   labels:
     io.kompose.service: processor-db
   name: processor-db
@@ -17,10 +13,6 @@ spec:
     type: Recreate
   template:
     metadata:
-      annotations:
-        kompose.cmd: kompose convert -c
-        kompose.version: 1.23.0 (HEAD)
-      creationTimestamp: null
       labels:
         io.kompose.service: processor-db
     spec:
