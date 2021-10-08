@@ -53,5 +53,5 @@ spec:
       volumes:
         - name: db-claim-processor
           persistentVolumeClaim:
-            claimName: db-claim-processor
+            claimName: {{if .Values.volume.existingpersistentVolumeClaim }} {{.Values.volume.existingpersistentVolumeClaim}} {{ else }} {{ include "processor.fullname" . }}-db {{ end }}
 status: {}
