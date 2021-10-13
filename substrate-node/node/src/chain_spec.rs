@@ -98,10 +98,10 @@ pub fn development_config() -> Result<ChainSpec, String> {
 			vec![
 				// bridge validator dev key 1
 				get_account_id_from_seed_string::<ed25519::Public>("quarter between satisfy three sphere six soda boss cute decade old trend"),
-				// bridge validator dev key 2
-				get_account_id_from_seed_string::<ed25519::Public>("employ split promote annual couple elder remain cricket company fitness senior fiscal"),
-				// bridge validator dev key 3
-				get_account_id_from_seed_string::<ed25519::Public>("remind bird banner word spread volume card keep want faith insect mind"),
+				// // bridge validator dev key 2
+				// get_account_id_from_seed_string::<ed25519::Public>("employ split promote annual couple elder remain cricket company fitness senior fiscal"),
+				// // bridge validator dev key 3
+				// get_account_id_from_seed_string::<ed25519::Public>("remind bird banner word spread volume card keep want faith insect mind"),
 			],
 			// Bridge fee account
 			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
@@ -167,10 +167,10 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 				get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				// bridge validator dev key 1
 				get_account_id_from_seed_string::<ed25519::Public>("quarter between satisfy three sphere six soda boss cute decade old trend"),
-				// bridge validator dev key 2
-				get_account_id_from_seed_string::<ed25519::Public>("employ split promote annual couple elder remain cricket company fitness senior fiscal"),
-				// bridge validator dev key 3
-				get_account_id_from_seed_string::<ed25519::Public>("remind bird banner word spread volume card keep want faith insect mind"),
+				// // bridge validator dev key 2
+				// get_account_id_from_seed_string::<ed25519::Public>("employ split promote annual couple elder remain cricket company fitness senior fiscal"),
+				// // bridge validator dev key 3
+				// get_account_id_from_seed_string::<ed25519::Public>("remind bird banner word spread volume card keep want faith insect mind"),
 			],
 			true,
 			vec![
@@ -254,8 +254,8 @@ fn testnet_genesis(
 		pallet_tft_bridge: Some(TFTBridgeModuleConfig{
 			validator_accounts: bridge_validator_accounts,
 			fee_account: bridge_fee_account,
-			deposit_fee: 500000000,
-			burn_fee: 500000000
+			deposit_fee: 10000000,
+			burn_fee: 10000000
 		})
 	}
 }
