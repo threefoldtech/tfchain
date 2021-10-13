@@ -55,7 +55,7 @@ spec:
           - name: CHAINSPEC
             value: {{ .Values.chainspec }}
           - name: WS_MAX_CONNECTIONS
-            value: {{ .Values.ws_max_connections }}
+            value: {{ .Values.ws_max_connections | quote }}
           args: [
             "--name", "$(SUBSTRATE_NAME)",
             "--rpc-cors=all",
