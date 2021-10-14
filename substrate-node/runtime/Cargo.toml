@@ -48,6 +48,12 @@ package = "pallet-tft-price"
 branch = "main"
 #path = "../../../tfchain_tft/pallet-tft-price"
 
+[dependencies.validatorset]
+default-features = false
+package = 'substrate-validator-set'
+git = 'https://github.com/gautamdhameja/substrate-validator-set.git'
+rev = 'f83f1000c298c376ab180787eb73d0a0fdb740e0'
+
 [dependencies]
 hex-literal = { optional = true, version = '0.3.1' }
 serde = { features = ['derive'], optional = true, version = '1.0.119' }
@@ -80,6 +86,8 @@ sp-std = { default-features = false, version = '3.0.0' }
 sp-transaction-pool = { default-features = false, version = '3.0.0' }
 sp-version = { default-features = false, version = '3.0.0' }
 pallet-scheduler = { default-features = false, version = '3.0.0' }
+sp-staking = { default-features = false, version = '3.0.0' }
+pallet-session = { default-features = false, version = '3.0.0', features = ['historical'] }
 
 [features]
 default = ['std']
@@ -124,4 +132,7 @@ std = [
     'pallet-tft-price/std',
     'pallet-smart-contract/std',
     'pallet-scheduler/std',
+    'sp-staking/std',
+    'pallet-session/std',
+    'validatorset/std',
 ]
