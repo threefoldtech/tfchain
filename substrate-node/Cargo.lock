@@ -3796,7 +3796,7 @@ dependencies = [
 [[package]]
 name = "pallet-tfgrid"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#d6298f66d18e159d6fe707552800d2bc7b135b80"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#bbde88b193eb2eaffc920fffc9a669ebb93caa4d"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3816,11 +3816,10 @@ dependencies = [
 [[package]]
 name = "pallet-tft-bridge"
 version = "1.0.0"
-source = "git+https://github.com/threefoldfoundation/tft-parity?branch=main#3222b3fd3bbde0e26f141fe827b8687e634e8d75"
+source = "git+https://github.com/threefoldfoundation/tft-parity?branch=main#ce19792dd55edd6f7c3d38565c10365f91e77041"
 dependencies = [
  "frame-support",
  "frame-system",
- "lite-json",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -7759,7 +7758,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.3.23",
+ "rand 0.7.3",
  "static_assertions",
 ]
 
