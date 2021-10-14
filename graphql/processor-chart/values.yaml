@@ -76,11 +76,17 @@ ingresstest:
       secretName: tfchain-dev-threefold-io-tls
 
 # db host of the processor-db service
-db_host:
+db_host: processor-db
 
-# points to local ip of indexer-gateway!
-# indexer_endpoint: http://10.103.176.175:4010/v1/graphql
-indexer_endpoint:
+# points to local indexer-gateway
+indexer_endpoint: http://indexer-gateway:4010/v1/graphql
+
+volume:
+  size: 5Gi
+  existingpersistentVolumeClaim: ""
+  persistentVolume:
+    create: true
+    hostPath: "/tfchainprocessor"
 
 resources: {}
 

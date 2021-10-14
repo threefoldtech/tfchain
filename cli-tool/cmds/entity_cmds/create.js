@@ -6,14 +6,14 @@ exports.command = 'create <name>'
 exports.desc = 'Create an entity given a name, countryID, cityID and optional signature'
 exports.builder = function (yargs) {
   yargs.option('countryID', {
-    description: 'Id of the country',
+    description: 'Name of the country',
     alias: 'c',
-    type: 'number'
+    type: 'string'
   })
   yargs.option('cityID', {
-    description: 'Id of the city',
+    description: 'Name of the city',
     alias: 't',
-    type: 'number'
+    type: 'string'
   })
   yargs.option('signature', {
     description: 'Signature for entity creation',

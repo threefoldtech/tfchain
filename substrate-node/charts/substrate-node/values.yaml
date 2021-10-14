@@ -46,6 +46,7 @@ rpc_port: 9933
 is_validator: true
 is_unsafe_rpc_mode: false
 chainspec: "/etc/chainspecs/dev/chainSpecRaw.json"
+ws_max_connections: 1048576
 keys: []
 # - name: aura
 #   secret: "kkjghjfkkj kjhgkkhhgg"

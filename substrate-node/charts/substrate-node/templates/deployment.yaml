@@ -54,6 +54,8 @@ spec:
             value: {{ .Values.boot_node }}
           - name: CHAINSPEC
             value: {{ .Values.chainspec }}
+          - name: WS_MAX_CONNECTIONS
+            value: {{ .Values.ws_max_connections | quote }}
           args: [
             "--name", "$(SUBSTRATE_NAME)",
             "--rpc-cors=all",
@@ -77,6 +79,7 @@ spec:
             {{ if .Values.is_unsafe_rpc_mode }}
             "--rpc-methods", "Unsafe",
             {{ end }}
+            "--ws-max-connections", "$(WS_MAX_CONNECTIONS)"
           ]
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

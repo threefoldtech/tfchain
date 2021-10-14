@@ -5,13 +5,13 @@ data:
     \"u32\",\n    \"certification_type\": \"CertificationType\",\n    \"public_ips\":
     \"Vec<PublicIP>\"\n  },\n  \"PublicIP\": {\n    \"ip\": \"Vec<u8>\",\n    \"gateway\":
     \"Vec<u8>\",\n    \"contract_id\": \"u64\"\n  },\n  \"Entity\": {\n    \"version\":
-    \"u32\",\n    \"id\": \"u32\",\n    \"name\": \"Vec<u8>\",\n    \"country\": \"Vec<u8>\",\n
-    \   \"city\": \"Vec<u8>\",\n    \"account_id\": \"AccountId\"\n  },\n  \"Twin\":
-    {\n    \"version\": \"u32\",\n    \"id\": \"u32\",\n    \"account_id\": \"AccountId\",\n
-    \   \"ip\": \"Vec<u8>\",\n    \"entities\": \"Vec<EntityProof>\"\n  },\n  \"EntityProof\":
-    {\n    \"entity_id\": \"u32\",\n    \"signature\": \"Vec<u8>\"\n  },\n  \"Node\":
-    {\n    \"version\": \"u32\",\n    \"id\": \"u32\",\n    \"farm_id\": \"u32\",\n
-    \   \"twin_id\": \"u32\",\n    \"resources\": \"Resources\",\n    \"location\":
+    \"u32\",\n    \"id\": \"u32\",\n    \"name\": \"Vec<u8>\",\n    \"account_id\":
+    \"AccountId\",\n    \"country\": \"Vec<u8>\",\n    \"city\": \"Vec<u8>\"\n  },\n
+    \ \"Twin\": {\n    \"version\": \"u32\",\n    \"id\": \"u32\",\n    \"account_id\":
+    \"AccountId\",\n    \"ip\": \"Vec<u8>\",\n    \"entities\": \"Vec<EntityProof>\"\n
+    \ },\n  \"EntityProof\": {\n    \"entity_id\": \"u32\",\n    \"signature\": \"Vec<u8>\"\n
+    \ },\n  \"Node\": {\n    \"version\": \"u32\",\n    \"id\": \"u32\",\n    \"farm_id\":
+    \"u32\",\n    \"twin_id\": \"u32\",\n    \"resources\": \"Resources\",\n    \"location\":
     \"Location\",\n    \"country\": \"Vec<u8>\",\n    \"city\": \"Vec<u8>\",\n    \"public_config\":
     \"Option<PublicConfig>\",\n    \"created\": \"u64\",\n    \"farming_policy_id\":
     \"u32\",\n    \"interfaces\": \"Vec<Interface>\"\n  },\n  \"PublicConfig\": {\n
