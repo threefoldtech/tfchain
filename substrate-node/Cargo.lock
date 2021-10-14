@@ -3760,7 +3760,7 @@ dependencies = [
 [[package]]
 name = "pallet-smart-contract"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#2c8f398c35141180a0ab6e437bba637080662852"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#675f48634d408474f27bee75f9709d162bd54546"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3768,7 +3768,7 @@ dependencies = [
  "lite-json",
  "pallet-balances",
  "pallet-tfgrid",
- "pallet-tft-price 1.0.0 (git+https://github.com/threefoldtech/tfchain_tft.git)",
+ "pallet-tft-price",
  "pallet-timestamp",
  "parity-scale-codec",
  "serde",
@@ -3798,7 +3798,7 @@ dependencies = [
 [[package]]
 name = "pallet-tfgrid"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#2c8f398c35141180a0ab6e437bba637080662852"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#675f48634d408474f27bee75f9709d162bd54546"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3818,7 +3818,7 @@ dependencies = [
 [[package]]
 name = "pallet-tft-bridge"
 version = "1.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_tft?branch=main#d1b8cc68d3e656a3e794a417216fdec80e09b6bb"
+source = "git+https://github.com/threefoldtech/tfchain_tft?branch=main#1a7a6a1eee98bfcb6831ce4146e3041096d0db7b"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3836,27 +3836,7 @@ dependencies = [
 [[package]]
 name = "pallet-tft-price"
 version = "1.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_tft?branch=main#d1b8cc68d3e656a3e794a417216fdec80e09b6bb"
-dependencies = [
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "parking_lot 0.11.1",
- "serde",
- "serde_json",
- "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-keystore",
- "sp-runtime",
- "sp-std",
- "substrate-fixed",
-]
-
-[[package]]
-name = "pallet-tft-price"
-version = "1.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_tft.git#d1b8cc68d3e656a3e794a417216fdec80e09b6bb"
+source = "git+https://github.com/threefoldtech/tfchain_tft?branch=main#1a7a6a1eee98bfcb6831ce4146e3041096d0db7b"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7290,7 +7270,7 @@ dependencies = [
  "pallet-sudo",
  "pallet-tfgrid",
  "pallet-tft-bridge",
- "pallet-tft-price 1.0.0 (git+https://github.com/threefoldtech/tfchain_tft?branch=main)",
+ "pallet-tft-price",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
