@@ -31,7 +31,7 @@ branch = "development"
 default-features = false
 git = "https://github.com/threefoldtech/tfchain_pallets"
 package = "pallet-smart-contract"
-branch = "development"
+branch = "development_test"
 #path = "../../../tfchain_pallets/pallet-smart-contract"
 
 [dependencies.pallet-tft-bridge]

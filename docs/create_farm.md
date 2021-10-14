@@ -15,7 +15,7 @@ Open https://raw.githubusercontent.com/threefoldtech/tfgrid-api-client/master/ty
 
 Open the following URL based on your setup:
 - Using a private node: https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/settings/developer
-- Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fexplorer.devnet.grid.tf%2Fws#/settings/developer
+- Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.threefold.io#/settings/developer
 
 Paste the types in in the box and hit `save`
 
@@ -25,7 +25,7 @@ Paste the types in in the box and hit `save`
 
 Open the following URL based on your setup:
 - Using a private node:https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/accounts
-- Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fexplorer.devnet.grid.tf%2Fws#/accounts
+- Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.threefold.io#/accounts
 
 click `Add account`, take note of the seed. Click on the `Advanced creation options` arrow, and select keypair crypto type: `Edwards(ed25519, alternative)`
 
@@ -43,7 +43,7 @@ On the same page, on the left top, hover over `Account` button and click on `Tra
 
 Open the following URL based on your setup:
 - Using a private node: https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/extrinsics
-- Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fexplorer.devnet.grid.tf%2Fws#/extrinsics
+- Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.threefold.io#/extrinsics
 
 and select your account from the list. Next, select `tfgridModule` -> `createTwin(ip)` from the list.
 
@@ -55,7 +55,7 @@ Fill in your [Yggdrasil](https://github.com/yggdrasil-network/yggdrasil-go) IPV6
 
 Open the following URL based on your setup:
 - Using a private node: https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/extrinsics
-- Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fexplorer.devnet.grid.tf%2Fws#/extrinsics
+- Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.threefold.io#/extrinsics
 
 and select your account from the list. Next, select `tfgridModule` -> `createFarm(..)` from the list.
 
@@ -73,7 +73,7 @@ Optionally you can also provide public ips on your farm.
 
 Open the following URL based on your setup:
 - Using a private node: https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/chainstate 
-- Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fexplorer.devnet.grid.tf%2Fws#/chainstate
+- Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.threefold.io#/chainstate
 
 and select `tfgridModule` -> scroll all the way down to `twinIdByAccountID(accountID):u32` and select your account ID from the list. Hit the PLUS symbol and you should see your twin ID.
 

@@ -1,0 +1,15 @@
+{{- if not .Values.volume.existingpersistentVolumeClaim -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "processor.fullname" . }}-db
+  labels:
+    {{- include "processor.labels" . | nindent 4 }}
+spec:
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.volume.size }}
+{{- end }}
