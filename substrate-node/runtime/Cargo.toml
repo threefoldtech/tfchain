@@ -36,10 +36,17 @@ branch = "development_test"
 
 [dependencies.pallet-tft-bridge]
 default-features = false
-git = "https://github.com/threefoldfoundation/tft-parity"
+git = "https://github.com/threefoldtech/tfchain_tft"
 package = "pallet-tft-bridge"
 branch = "main"
 #path = "../../../tfchain_tft/pallet-tft-bridge"
+
+[dependencies.pallet-tft-price]
+default-features = false
+git = "https://github.com/threefoldtech/tfchain_tft"
+package = "pallet-tft-price"
+branch = "main"
+#path = "../../../tfchain_tft/pallet-tft-price"
 
 [dependencies]
 hex-literal = { optional = true, version = '0.3.1' }
@@ -114,5 +121,7 @@ std = [
     'sp-version/std',
     'pallet-tfgrid/std',
     'pallet-tft-bridge/std',
+    'pallet-tft-price/std',
+    'pallet-smart-contract/std',
     'pallet-scheduler/std',
 ]
