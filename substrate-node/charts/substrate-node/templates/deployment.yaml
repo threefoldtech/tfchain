@@ -61,7 +61,7 @@ spec:
           args: [
             "--name", "$(SUBSTRATE_NAME)",
             "--rpc-cors=all",
-            "--rpc-methods", "$(SUBSTRATE_RPC_METHODS)"
+            "--rpc-methods", "$(SUBSTRATE_RPC_METHODS)",
             "--base-path=/storage",
             "--keystore-path=/keystore",
             "--chain=$(CHAINSPEC)",
