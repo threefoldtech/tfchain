@@ -56,10 +56,12 @@ spec:
             value: {{ .Values.chainspec }}
           - name: WS_MAX_CONNECTIONS
             value: {{ .Values.ws_max_connections | quote }}
+          - name: WS_MAX_CONNECTIONS
+            value: {{ .Values.rpc_methods }}
           args: [
             "--name", "$(SUBSTRATE_NAME)",
             "--rpc-cors=all",
-            "--rpc-methods=safe",
+            "--rpc-methods", "$(SUBSTRATE_RPC_METHODS)"
             "--base-path=/storage",
             "--keystore-path=/keystore",
             "--chain=$(CHAINSPEC)",
@@ -75,9 +77,6 @@ spec:
             {{ else }}
             "--ws-external",
             "--pruning", "archive",
-            {{ end }}
-            {{ if .Values.is_unsafe_rpc_mode }}
-            "--rpc-methods", "Unsafe",
             {{ end }}
             "--ws-max-connections", "$(WS_MAX_CONNECTIONS)"
           ]
