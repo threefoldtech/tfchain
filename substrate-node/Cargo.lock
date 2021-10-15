@@ -3760,7 +3760,7 @@ dependencies = [
 [[package]]
 name = "pallet-smart-contract"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#675f48634d408474f27bee75f9709d162bd54546"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#76f71b4c8399febe222dc1158aca2e6b411a3c05"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3798,7 +3798,7 @@ dependencies = [
 [[package]]
 name = "pallet-tfgrid"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#675f48634d408474f27bee75f9709d162bd54546"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#76f71b4c8399febe222dc1158aca2e6b411a3c05"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7781,7 +7781,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.7.3",
+ "rand 0.3.23",
  "static_assertions",
 ]
 
