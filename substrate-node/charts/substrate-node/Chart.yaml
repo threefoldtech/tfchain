@@ -3,4 +3,4 @@ name: substrate-node
 description: A Helm chart for a tfchain substrate node
 type: application
 version: 0.1.7
-appVersion: "0.1.0-b11"
+appVersion: "0.1.0-b12"
