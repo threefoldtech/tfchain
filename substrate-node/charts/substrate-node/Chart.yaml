@@ -2,5 +2,5 @@ apiVersion: v2
 name: substrate-node
 description: A Helm chart for a tfchain substrate node
 type: application
-version: 0.1.8
+version: 0.1.9
 appVersion: "0.1.0-b13"

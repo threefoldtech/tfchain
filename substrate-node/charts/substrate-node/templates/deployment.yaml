@@ -141,7 +141,7 @@ spec:
             "insert",
             "--keystore-path=/keystore",
             "--key-type", "tft!",
-            "--suri","/keys/tft!",
+            "--suri","/keys/tft",
             "--scheme=sr25519"
           ]
           volumeMounts:
