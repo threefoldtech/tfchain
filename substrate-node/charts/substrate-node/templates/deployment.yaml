@@ -56,7 +56,7 @@ spec:
             value: {{ .Values.chainspec }}
           - name: WS_MAX_CONNECTIONS
             value: {{ .Values.ws_max_connections | quote }}
-          - name: WS_MAX_CONNECTIONS
+          - name: SUBSTRATE_RPC_METHODS
             value: {{ .Values.rpc_methods }}
           args: [
             "--name", "$(SUBSTRATE_NAME)",
