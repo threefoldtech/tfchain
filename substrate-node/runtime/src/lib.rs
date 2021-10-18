@@ -13,7 +13,7 @@ use sp_runtime::{
 	transaction_validity::{TransactionValidity, TransactionSource},
 };
 use sp_runtime::traits::{
-	AccountIdLookup, BlakeTwo256, Block as BlockT, Verify, IdentifyAccount, NumberFor, SaturatedConversion,
+	AccountIdLookup, BlakeTwo256, Block as BlockT, Verify, IdentifyAccount, NumberFor, SaturatedConversion, OpaqueKeys,
 };
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -47,6 +47,8 @@ pub use pallet_smart_contract;
 pub use pallet_tft_bridge;
 
 pub use pallet_tft_price;
+
+pub use pallet_session;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -96,6 +98,20 @@ pub mod opaque {
 			pub grandpa: Grandpa,
 		}
 	}
+}
+
+impl_opaque_keys! {
+	pub struct SessionKeys {
+		pub grandpa: Grandpa,
+		pub aura: Aura,
+	}
+}
+
+pub fn session_keys(
+	aura: AuraId,
+	grandpa: GrandpaId,
+) -> SessionKeys {
+	SessionKeys { aura, grandpa }
 }
 
 /// Constant values used within the runtime.
@@ -297,6 +313,44 @@ impl pallet_tft_price::Config for Runtime {
 	type Event = Event;
 }
 
+impl validatorset::Config for Runtime {
+	type Event = Event;
+}
+
+/// Special `FullIdentificationOf` implementation that is returning for every input `Some(Default::default())`.
+pub struct FullIdentificationOf;
+impl sp_runtime::traits::Convert<AccountId, Option<()>> for FullIdentificationOf {
+	fn convert(_: AccountId) -> Option<()> {
+		Some(Default::default())
+	}
+}
+
+impl pallet_session::historical::Config for Runtime {
+	type FullIdentification = ();
+	type FullIdentificationOf = FullIdentificationOf;
+}
+
+/// Special `ValidatorIdOf` implementation that is just returning the input as result.
+pub struct ValidatorIdOf;
+impl sp_runtime::traits::Convert<AccountId, Option<AccountId>> for ValidatorIdOf {
+	fn convert(a: AccountId) -> Option<AccountId> {
+		Some(a)
+	}
+}
+
+impl pallet_session::Config for Runtime {
+	type SessionHandler = <opaque::SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
+	type ShouldEndSession = ValidatorSet;
+	type SessionManager = ValidatorSet;
+	type Event = Event;
+	type Keys = opaque::SessionKeys;
+	type NextSessionRotation = ValidatorSet;
+	type ValidatorId = <Self as frame_system::Config>::AccountId;
+	type ValidatorIdOf = validatorset::ValidatorOf<Self>;
+	type DisabledValidatorsThreshold = ();
+	type WeightInfo = ();
+}
+
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
 where
 	Call: From<LocalCall>,
@@ -374,9 +428,11 @@ construct_runtime!(
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
 		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
+		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
+		Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
+		ValidatorSet: validatorset::{Module, Call, Storage, Event<T>, Config<T>},
 		Aura: pallet_aura::{Module, Config<T>},
 		Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
-		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 		TfgridModule: pallet_tfgrid::{Module, Call, Config<T>, Storage, Event<T>},

@@ -7113,6 +7113,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "substrate-validator-set"
+version = "3.0.0"
+source = "git+https://github.com/gautamdhameja/substrate-validator-set.git?rev=f83f1000c298c376ab180787eb73d0a0fdb740e0#f83f1000c298c376ab180787eb73d0a0fdb740e0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-session",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "substrate-wasm-builder"
 version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7266,6 +7282,7 @@ dependencies = [
  "pallet-grandpa",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
+ "pallet-session",
  "pallet-smart-contract",
  "pallet-sudo",
  "pallet-tfgrid",
@@ -7285,9 +7302,11 @@ dependencies = [
  "sp-offchain",
  "sp-runtime",
  "sp-session",
+ "sp-staking",
  "sp-std",
  "sp-transaction-pool",
  "sp-version",
+ "substrate-validator-set",
  "substrate-wasm-builder",
 ]
 
