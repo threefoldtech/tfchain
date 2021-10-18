@@ -78,7 +78,10 @@ spec:
             "--ws-external",
             "--pruning", "archive",
             {{ end }}
-            "--ws-max-connections", "$(WS_MAX_CONNECTIONS)"
+            "--ws-max-connections", "$(WS_MAX_CONNECTIONS)",
+            {{ if .Values.disable_offchain_worker }}
+            "--offchain-worker", "Never",
+            {{ end }}
           ]
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
