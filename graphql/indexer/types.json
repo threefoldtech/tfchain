@@ -219,7 +219,7 @@
   "BurnTransaction": {
     "block": "BlockNumber",
     "amount": "u64",
-    "target": "AccountId",
+    "target": "Vec<u8>",
     "signatures": "Vec<StellarSignature>",
     "sequence_number": "u64"
   },
