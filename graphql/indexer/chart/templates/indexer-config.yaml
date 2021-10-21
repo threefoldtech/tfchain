@@ -61,12 +61,12 @@ data:
     {\n    \"amount\": \"Balance\",\n    \"target\": \"MultiAddress\"\n  },\n  \"MintTransaction\":
     {\n    \"amount\": \"u64\",\n    \"target\": \"AccountId\",\n    \"block\": \"BlockNumber\",\n
     \   \"votes\": \"u32\"\n  },\n  \"BurnTransaction\": {\n    \"block\": \"BlockNumber\",\n
-    \   \"amount\": \"u64\",\n    \"target\": \"AccountId\",\n    \"signatures\":
-    \"Vec<StellarSignature>\",\n    \"sequence_number\": \"u64\"\n  },\n  \"RefundTransaction\":
-    {\n    \"block\": \"BlockNumber\",\n    \"amount\": \"u64\",\n    \"target\":
-    \"Vec<u8>\",\n    \"tx_hash\": \"Vec<u8>\",\n    \"signatures\": \"Vec<StellarSignature>\",\n
-    \   \"sequence_number\": \"u64\"\n  },\n  \"StellarSignature\": {\n    \"signature\":
-    \"Vec<u8>\",\n    \"stellar_pubkey\": \"Vec<u8>\"\n  },\n  \"AccountInfo\": \"AccountInfoWithProviders\"\n}"
+    \   \"amount\": \"u64\",\n    \"target\": \"Vec<u8>\",\n    \"signatures\": \"Vec<StellarSignature>\",\n
+    \   \"sequence_number\": \"u64\"\n  },\n  \"RefundTransaction\": {\n    \"block\":
+    \"BlockNumber\",\n    \"amount\": \"u64\",\n    \"target\": \"Vec<u8>\",\n    \"tx_hash\":
+    \"Vec<u8>\",\n    \"signatures\": \"Vec<StellarSignature>\",\n    \"sequence_number\":
+    \"u64\"\n  },\n  \"StellarSignature\": {\n    \"signature\": \"Vec<u8>\",\n    \"stellar_pubkey\":
+    \"Vec<u8>\"\n  },\n  \"AccountInfo\": \"AccountInfoWithProviders\"\n}"
 kind: ConfigMap
 metadata:
   creationTimestamp: null
