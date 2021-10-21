@@ -34,6 +34,13 @@ package = "pallet-smart-contract"
 branch = "development"
 #path = "../../../tfchain_pallets/pallet-smart-contract"
 
+[dependencies.pallet-burning]
+default-features = false
+git = "https://github.com/threefoldtech/tfchain_pallets"
+package = "pallet-burning"
+branch = "development"
+#path = "../../../tfchain_pallets/pallet-burning"
+
 [dependencies.pallet-tft-bridge]
 default-features = false
 git = "https://github.com/threefoldtech/tfchain_tft"
@@ -135,4 +142,5 @@ std = [
     'sp-staking/std',
     'pallet-session/std',
     'validatorset/std',
+    'pallet-burning/std'
 ]

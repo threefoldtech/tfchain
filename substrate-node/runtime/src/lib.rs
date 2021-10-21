@@ -50,6 +50,8 @@ pub use pallet_tft_price;
 
 pub use pallet_session;
 
+pub use pallet_burning;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -122,7 +124,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("substrate-threefold"),
 	impl_name: create_runtime_str!("substrate-threefold"),
 	authoring_version: 1,
-	spec_version: 9,
+	spec_version: 10,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -305,6 +307,12 @@ impl pallet_tft_bridge::Config for Runtime {
 	type Burn = ();
 }
 
+impl pallet_burning::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type Burn = ();
+}
+
 pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
 
 impl pallet_tft_price::Config for Runtime {
@@ -440,6 +448,7 @@ construct_runtime!(
 		TFTBridgeModule: pallet_tft_bridge::{Module, Call, Config<T>, Storage, Event<T>},
 		TFTPriceModule: pallet_tft_price::{Module, Call, Storage, Event<T>},
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
+		BurningModule: pallet_burning::{Module, Call, Storage, Event<T>},
 	}
 );
 

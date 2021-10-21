@@ -3685,6 +3685,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-burning"
+version = "3.0.0"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#91c123f9da9d4911057e89d2fac728daba2e59a9"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-storage",
+]
+
+[[package]]
 name = "pallet-grandpa"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3760,7 +3778,7 @@ dependencies = [
 [[package]]
 name = "pallet-smart-contract"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#76f71b4c8399febe222dc1158aca2e6b411a3c05"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#91c123f9da9d4911057e89d2fac728daba2e59a9"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3798,7 +3816,7 @@ dependencies = [
 [[package]]
 name = "pallet-tfgrid"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#76f71b4c8399febe222dc1158aca2e6b411a3c05"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#91c123f9da9d4911057e89d2fac728daba2e59a9"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3818,7 +3836,7 @@ dependencies = [
 [[package]]
 name = "pallet-tft-bridge"
 version = "1.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_tft?branch=main#1a7a6a1eee98bfcb6831ce4146e3041096d0db7b"
+source = "git+https://github.com/threefoldtech/tfchain_tft?branch=main#9b05f402f7e7a27b7dfdebb21ab4affc84933a6e"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3836,7 +3854,7 @@ dependencies = [
 [[package]]
 name = "pallet-tft-price"
 version = "1.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_tft?branch=main#1a7a6a1eee98bfcb6831ce4146e3041096d0db7b"
+source = "git+https://github.com/threefoldtech/tfchain_tft?branch=main#9b05f402f7e7a27b7dfdebb21ab4affc84933a6e"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7279,6 +7297,7 @@ dependencies = [
  "hex-literal",
  "pallet-aura",
  "pallet-balances",
+ "pallet-burning",
  "pallet-grandpa",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
