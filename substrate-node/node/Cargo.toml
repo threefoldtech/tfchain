@@ -35,6 +35,7 @@ sc-cli = { features = ['wasmtime'], version = '0.9.0' }
 sc-client-api = '3.0.0'
 sc-consensus = '0.9.0'
 sc-consensus-aura = '0.9.0'
+sc-finality-grandpa-rpc = '0.9.0'
 sc-executor = { features = ['wasmtime'], version = '0.9.0' }
 sc-finality-grandpa = '0.9.0'
 sc-keystore = '3.0.0'
