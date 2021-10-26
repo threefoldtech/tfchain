@@ -205,3 +205,22 @@ type UptimeEvent @entity {
   uptime: Int!
   timestamp: Int!
 }
+
+type MintTransaction @entity {
+  amount: BigInt!
+  target: String!
+  block: Int! 
+}
+
+type BurnTransaction @entity {
+  block: Int!
+  amount: BigInt!
+  target: String!
+}
+
+type RefundTransaction @entity {
+  block: Int!
+  amount: BigInt!
+  target: String!
+  txHash: String!
+}

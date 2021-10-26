@@ -153,6 +153,108 @@ input BaseWhereInput {
 """GraphQL representation of BigInt"""
 scalar BigInt
 
+type BurnTransaction implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  block: Int!
+  amount: BigInt!
+  target: String!
+}
+
+type BurnTransactionConnection {
+  totalCount: Int!
+  edges: [BurnTransactionEdge!]!
+  pageInfo: PageInfo!
+}
+
+input BurnTransactionCreateInput {
+  block: Float!
+  amount: String!
+  target: String!
+}
+
+type BurnTransactionEdge {
+  node: BurnTransaction!
+  cursor: String!
+}
+
+enum BurnTransactionOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  block_ASC
+  block_DESC
+  amount_ASC
+  amount_DESC
+  target_ASC
+  target_DESC
+}
+
+input BurnTransactionUpdateInput {
+  block: Float
+  amount: String
+  target: String
+}
+
+input BurnTransactionWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  block_eq: Int
+  block_gt: Int
+  block_gte: Int
+  block_lt: Int
+  block_lte: Int
+  block_in: [Int!]
+  amount_eq: BigInt
+  amount_gt: BigInt
+  amount_gte: BigInt
+  amount_lt: BigInt
+  amount_lte: BigInt
+  amount_in: [BigInt!]
+  target_eq: String
+  target_contains: String
+  target_startsWith: String
+  target_endsWith: String
+  target_in: [String!]
+  AND: [BurnTransactionWhereInput!]
+  OR: [BurnTransactionWhereInput!]
+}
+
+input BurnTransactionWhereUniqueInput {
+  id: ID!
+}
+
 enum CertificationType {
   Diy
   Certified
@@ -1520,6 +1622,108 @@ input LocationWhereUniqueInput {
   id: ID!
 }
 
+type MintTransaction implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  amount: BigInt!
+  target: String!
+  block: Int!
+}
+
+type MintTransactionConnection {
+  totalCount: Int!
+  edges: [MintTransactionEdge!]!
+  pageInfo: PageInfo!
+}
+
+input MintTransactionCreateInput {
+  amount: String!
+  target: String!
+  block: Float!
+}
+
+type MintTransactionEdge {
+  node: MintTransaction!
+  cursor: String!
+}
+
+enum MintTransactionOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  amount_ASC
+  amount_DESC
+  target_ASC
+  target_DESC
+  block_ASC
+  block_DESC
+}
+
+input MintTransactionUpdateInput {
+  amount: String
+  target: String
+  block: Float
+}
+
+input MintTransactionWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  amount_eq: BigInt
+  amount_gt: BigInt
+  amount_gte: BigInt
+  amount_lt: BigInt
+  amount_lte: BigInt
+  amount_in: [BigInt!]
+  target_eq: String
+  target_contains: String
+  target_startsWith: String
+  target_endsWith: String
+  target_in: [String!]
+  block_eq: Int
+  block_gt: Int
+  block_gte: Int
+  block_lt: Int
+  block_lte: Int
+  block_in: [Int!]
+  AND: [MintTransactionWhereInput!]
+  OR: [MintTransactionWhereInput!]
+}
+
+input MintTransactionWhereUniqueInput {
+  id: ID!
+}
+
 type NameContract implements BaseGraphQLObject {
   id: ID!
   createdAt: DateTime!
@@ -2523,6 +2727,9 @@ type Query {
   accounts(offset: Int, limit: Int = 50, where: AccountWhereInput, orderBy: [AccountOrderByInput!]): [Account!]!
   accountByUniqueInput(where: AccountWhereUniqueInput!): Account
   accountsConnection(first: Int, after: String, last: Int, before: String, where: AccountWhereInput, orderBy: [AccountOrderByInput!]): AccountConnection!
+  burnTransactions(offset: Int, limit: Int = 50, where: BurnTransactionWhereInput, orderBy: [BurnTransactionOrderByInput!]): [BurnTransaction!]!
+  burnTransactionByUniqueInput(where: BurnTransactionWhereUniqueInput!): BurnTransaction
+  burnTransactionsConnection(first: Int, after: String, last: Int, before: String, where: BurnTransactionWhereInput, orderBy: [BurnTransactionOrderByInput!]): BurnTransactionConnection!
   cities(offset: Int, limit: Int = 50, where: CityWhereInput, orderBy: [CityOrderByInput!]): [City!]!
   cityByUniqueInput(where: CityWhereUniqueInput!): City
   citiesConnection(first: Int, after: String, last: Int, before: String, where: CityWhereInput, orderBy: [CityOrderByInput!]): CityConnection!
@@ -2556,6 +2763,9 @@ type Query {
   locations(offset: Int, limit: Int = 50, where: LocationWhereInput, orderBy: [LocationOrderByInput!]): [Location!]!
   locationByUniqueInput(where: LocationWhereUniqueInput!): Location
   locationsConnection(first: Int, after: String, last: Int, before: String, where: LocationWhereInput, orderBy: [LocationOrderByInput!]): LocationConnection!
+  mintTransactions(offset: Int, limit: Int = 50, where: MintTransactionWhereInput, orderBy: [MintTransactionOrderByInput!]): [MintTransaction!]!
+  mintTransactionByUniqueInput(where: MintTransactionWhereUniqueInput!): MintTransaction
+  mintTransactionsConnection(first: Int, after: String, last: Int, before: String, where: MintTransactionWhereInput, orderBy: [MintTransactionOrderByInput!]): MintTransactionConnection!
   nameContracts(offset: Int, limit: Int = 50, where: NameContractWhereInput, orderBy: [NameContractOrderByInput!]): [NameContract!]!
   nameContractByUniqueInput(where: NameContractWhereUniqueInput!): NameContract
   nameContractsConnection(first: Int, after: String, last: Int, before: String, where: NameContractWhereInput, orderBy: [NameContractOrderByInput!]): NameContractConnection!
@@ -2577,12 +2787,127 @@ type Query {
   publicIps(offset: Int, limit: Int = 50, where: PublicIpWhereInput, orderBy: [PublicIpOrderByInput!]): [PublicIp!]!
   publicIpByUniqueInput(where: PublicIpWhereUniqueInput!): PublicIp
   publicIpsConnection(first: Int, after: String, last: Int, before: String, where: PublicIpWhereInput, orderBy: [PublicIpOrderByInput!]): PublicIpConnection!
+  refundTransactions(offset: Int, limit: Int = 50, where: RefundTransactionWhereInput, orderBy: [RefundTransactionOrderByInput!]): [RefundTransaction!]!
+  refundTransactionByUniqueInput(where: RefundTransactionWhereUniqueInput!): RefundTransaction
+  refundTransactionsConnection(first: Int, after: String, last: Int, before: String, where: RefundTransactionWhereInput, orderBy: [RefundTransactionOrderByInput!]): RefundTransactionConnection!
   twins(offset: Int, limit: Int = 50, where: TwinWhereInput, orderBy: [TwinOrderByInput!]): [Twin!]!
   twinByUniqueInput(where: TwinWhereUniqueInput!): Twin
   twinsConnection(first: Int, after: String, last: Int, before: String, where: TwinWhereInput, orderBy: [TwinOrderByInput!]): TwinConnection!
   uptimeEvents(offset: Int, limit: Int = 50, where: UptimeEventWhereInput, orderBy: [UptimeEventOrderByInput!]): [UptimeEvent!]!
   uptimeEventByUniqueInput(where: UptimeEventWhereUniqueInput!): UptimeEvent
   uptimeEventsConnection(first: Int, after: String, last: Int, before: String, where: UptimeEventWhereInput, orderBy: [UptimeEventOrderByInput!]): UptimeEventConnection!
+}
+
+type RefundTransaction implements BaseGraphQLObject {
+  id: ID!
+  createdAt: DateTime!
+  createdById: String!
+  updatedAt: DateTime
+  updatedById: String
+  deletedAt: DateTime
+  deletedById: String
+  version: Int!
+  block: Int!
+  amount: BigInt!
+  target: String!
+  txHash: String!
+}
+
+type RefundTransactionConnection {
+  totalCount: Int!
+  edges: [RefundTransactionEdge!]!
+  pageInfo: PageInfo!
+}
+
+input RefundTransactionCreateInput {
+  block: Float!
+  amount: String!
+  target: String!
+  txHash: String!
+}
+
+type RefundTransactionEdge {
+  node: RefundTransaction!
+  cursor: String!
+}
+
+enum RefundTransactionOrderByInput {
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+  deletedAt_ASC
+  deletedAt_DESC
+  block_ASC
+  block_DESC
+  amount_ASC
+  amount_DESC
+  target_ASC
+  target_DESC
+  txHash_ASC
+  txHash_DESC
+}
+
+input RefundTransactionUpdateInput {
+  block: Float
+  amount: String
+  target: String
+  txHash: String
+}
+
+input RefundTransactionWhereInput {
+  id_eq: ID
+  id_in: [ID!]
+  createdAt_eq: DateTime
+  createdAt_lt: DateTime
+  createdAt_lte: DateTime
+  createdAt_gt: DateTime
+  createdAt_gte: DateTime
+  createdById_eq: ID
+  createdById_in: [ID!]
+  updatedAt_eq: DateTime
+  updatedAt_lt: DateTime
+  updatedAt_lte: DateTime
+  updatedAt_gt: DateTime
+  updatedAt_gte: DateTime
+  updatedById_eq: ID
+  updatedById_in: [ID!]
+  deletedAt_all: Boolean
+  deletedAt_eq: DateTime
+  deletedAt_lt: DateTime
+  deletedAt_lte: DateTime
+  deletedAt_gt: DateTime
+  deletedAt_gte: DateTime
+  deletedById_eq: ID
+  deletedById_in: [ID!]
+  block_eq: Int
+  block_gt: Int
+  block_gte: Int
+  block_lt: Int
+  block_lte: Int
+  block_in: [Int!]
+  amount_eq: BigInt
+  amount_gt: BigInt
+  amount_gte: BigInt
+  amount_lt: BigInt
+  amount_lte: BigInt
+  amount_in: [BigInt!]
+  target_eq: String
+  target_contains: String
+  target_startsWith: String
+  target_endsWith: String
+  target_in: [String!]
+  txHash_eq: String
+  txHash_contains: String
+  txHash_startsWith: String
+  txHash_endsWith: String
+  txHash_in: [String!]
+  AND: [RefundTransactionWhereInput!]
+  OR: [RefundTransactionWhereInput!]
+}
+
+input RefundTransactionWhereUniqueInput {
+  id: ID!
 }
 
 type StandardDeleteResponse {

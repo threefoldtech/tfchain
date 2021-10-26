@@ -17,9 +17,9 @@
     "version": "u32",
     "id": "u32",
     "name": "Vec<u8>",
+    "account_id": "AccountId",
     "country": "Vec<u8>",
-    "city": "Vec<u8>",
-    "account_id": "AccountId"
+    "city": "Vec<u8>"
   },
   "Twin": {
     "version": "u32",
@@ -219,7 +219,7 @@
   "BurnTransaction": {
     "block": "BlockNumber",
     "amount": "u64",
-    "target": "AccountId",
+    "target": "Vec<u8>",
     "signatures": "Vec<StellarSignature>",
     "sequence_number": "u64"
   },

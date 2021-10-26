@@ -9,6 +9,9 @@ export interface Query {
     accounts: <T = Array<Account>>(args: { offset?: Int | null, limit?: Int | null, where?: AccountWhereInput | null, orderBy?: Array<AccountOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     accountByUniqueInput: <T = Account | null>(args: { where: AccountWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     accountsConnection: <T = AccountConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: AccountWhereInput | null, orderBy?: Array<AccountOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    burnTransactions: <T = Array<BurnTransaction>>(args: { offset?: Int | null, limit?: Int | null, where?: BurnTransactionWhereInput | null, orderBy?: Array<BurnTransactionOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    burnTransactionByUniqueInput: <T = BurnTransaction | null>(args: { where: BurnTransactionWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    burnTransactionsConnection: <T = BurnTransactionConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: BurnTransactionWhereInput | null, orderBy?: Array<BurnTransactionOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     cities: <T = Array<City>>(args: { offset?: Int | null, limit?: Int | null, where?: CityWhereInput | null, orderBy?: Array<CityOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     cityByUniqueInput: <T = City | null>(args: { where: CityWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     citiesConnection: <T = CityConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: CityWhereInput | null, orderBy?: Array<CityOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
@@ -42,6 +45,9 @@ export interface Query {
     locations: <T = Array<Location>>(args: { offset?: Int | null, limit?: Int | null, where?: LocationWhereInput | null, orderBy?: Array<LocationOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     locationByUniqueInput: <T = Location | null>(args: { where: LocationWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     locationsConnection: <T = LocationConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: LocationWhereInput | null, orderBy?: Array<LocationOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    mintTransactions: <T = Array<MintTransaction>>(args: { offset?: Int | null, limit?: Int | null, where?: MintTransactionWhereInput | null, orderBy?: Array<MintTransactionOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    mintTransactionByUniqueInput: <T = MintTransaction | null>(args: { where: MintTransactionWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    mintTransactionsConnection: <T = MintTransactionConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: MintTransactionWhereInput | null, orderBy?: Array<MintTransactionOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     nameContracts: <T = Array<NameContract>>(args: { offset?: Int | null, limit?: Int | null, where?: NameContractWhereInput | null, orderBy?: Array<NameContractOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     nameContractByUniqueInput: <T = NameContract | null>(args: { where: NameContractWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     nameContractsConnection: <T = NameContractConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: NameContractWhereInput | null, orderBy?: Array<NameContractOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
@@ -63,6 +69,9 @@ export interface Query {
     publicIps: <T = Array<PublicIp>>(args: { offset?: Int | null, limit?: Int | null, where?: PublicIpWhereInput | null, orderBy?: Array<PublicIpOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     publicIpByUniqueInput: <T = PublicIp | null>(args: { where: PublicIpWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     publicIpsConnection: <T = PublicIpConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: PublicIpWhereInput | null, orderBy?: Array<PublicIpOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    refundTransactions: <T = Array<RefundTransaction>>(args: { offset?: Int | null, limit?: Int | null, where?: RefundTransactionWhereInput | null, orderBy?: Array<RefundTransactionOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
+    refundTransactionByUniqueInput: <T = RefundTransaction | null>(args: { where: RefundTransactionWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
+    refundTransactionsConnection: <T = RefundTransactionConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: RefundTransactionWhereInput | null, orderBy?: Array<RefundTransactionOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     twins: <T = Array<Twin>>(args: { offset?: Int | null, limit?: Int | null, where?: TwinWhereInput | null, orderBy?: Array<TwinOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     twinByUniqueInput: <T = Twin | null>(args: { where: TwinWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     twinsConnection: <T = TwinConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: TwinWhereInput | null, orderBy?: Array<TwinOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
@@ -111,6 +120,19 @@ export type AccountOrderByInput =   'createdAt_ASC' |
   'wallet_DESC' |
   'balance_ASC' |
   'balance_DESC'
+
+export type BurnTransactionOrderByInput =   'createdAt_ASC' |
+  'createdAt_DESC' |
+  'updatedAt_ASC' |
+  'updatedAt_DESC' |
+  'deletedAt_ASC' |
+  'deletedAt_DESC' |
+  'block_ASC' |
+  'block_DESC' |
+  'amount_ASC' |
+  'amount_DESC' |
+  'target_ASC' |
+  'target_DESC'
 
 export type CertificationType =   'Diy' |
   'Certified'
@@ -312,6 +334,19 @@ export type LocationOrderByInput =   'createdAt_ASC' |
   'latitude_ASC' |
   'latitude_DESC'
 
+export type MintTransactionOrderByInput =   'createdAt_ASC' |
+  'createdAt_DESC' |
+  'updatedAt_ASC' |
+  'updatedAt_DESC' |
+  'deletedAt_ASC' |
+  'deletedAt_DESC' |
+  'amount_ASC' |
+  'amount_DESC' |
+  'target_ASC' |
+  'target_DESC' |
+  'block_ASC' |
+  'block_DESC'
+
 export type NameContractOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
   'updatedAt_ASC' |
@@ -457,6 +492,21 @@ export type PublicIpOrderByInput =   'createdAt_ASC' |
   'contractId_ASC' |
   'contractId_DESC'
 
+export type RefundTransactionOrderByInput =   'createdAt_ASC' |
+  'createdAt_DESC' |
+  'updatedAt_ASC' |
+  'updatedAt_DESC' |
+  'deletedAt_ASC' |
+  'deletedAt_DESC' |
+  'block_ASC' |
+  'block_DESC' |
+  'amount_ASC' |
+  'amount_DESC' |
+  'target_ASC' |
+  'target_DESC' |
+  'txHash_ASC' |
+  'txHash_DESC'
+
 export type TwinOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
   'updatedAt_ASC' |
@@ -570,6 +620,68 @@ export interface BaseWhereInput {
   deletedAt_gt?: String | null
   deletedAt_gte?: String | null
   deletedById_eq?: String | null
+}
+
+export interface BurnTransactionCreateInput {
+  block: Float
+  amount: String
+  target: String
+}
+
+export interface BurnTransactionUpdateInput {
+  block?: Float | null
+  amount?: String | null
+  target?: String | null
+}
+
+export interface BurnTransactionWhereInput {
+  id_eq?: ID_Input | null
+  id_in?: ID_Output[] | ID_Output | null
+  createdAt_eq?: DateTime | null
+  createdAt_lt?: DateTime | null
+  createdAt_lte?: DateTime | null
+  createdAt_gt?: DateTime | null
+  createdAt_gte?: DateTime | null
+  createdById_eq?: ID_Input | null
+  createdById_in?: ID_Output[] | ID_Output | null
+  updatedAt_eq?: DateTime | null
+  updatedAt_lt?: DateTime | null
+  updatedAt_lte?: DateTime | null
+  updatedAt_gt?: DateTime | null
+  updatedAt_gte?: DateTime | null
+  updatedById_eq?: ID_Input | null
+  updatedById_in?: ID_Output[] | ID_Output | null
+  deletedAt_all?: Boolean | null
+  deletedAt_eq?: DateTime | null
+  deletedAt_lt?: DateTime | null
+  deletedAt_lte?: DateTime | null
+  deletedAt_gt?: DateTime | null
+  deletedAt_gte?: DateTime | null
+  deletedById_eq?: ID_Input | null
+  deletedById_in?: ID_Output[] | ID_Output | null
+  block_eq?: Int | null
+  block_gt?: Int | null
+  block_gte?: Int | null
+  block_lt?: Int | null
+  block_lte?: Int | null
+  block_in?: Int[] | Int | null
+  amount_eq?: BigInt | null
+  amount_gt?: BigInt | null
+  amount_gte?: BigInt | null
+  amount_lt?: BigInt | null
+  amount_lte?: BigInt | null
+  amount_in?: BigInt[] | BigInt | null
+  target_eq?: String | null
+  target_contains?: String | null
+  target_startsWith?: String | null
+  target_endsWith?: String | null
+  target_in?: String[] | String | null
+  AND?: BurnTransactionWhereInput[] | BurnTransactionWhereInput | null
+  OR?: BurnTransactionWhereInput[] | BurnTransactionWhereInput | null
+}
+
+export interface BurnTransactionWhereUniqueInput {
+  id: ID_Output
 }
 
 export interface CityCreateInput {
@@ -1400,6 +1512,68 @@ export interface LocationWhereUniqueInput {
   id: ID_Output
 }
 
+export interface MintTransactionCreateInput {
+  amount: String
+  target: String
+  block: Float
+}
+
+export interface MintTransactionUpdateInput {
+  amount?: String | null
+  target?: String | null
+  block?: Float | null
+}
+
+export interface MintTransactionWhereInput {
+  id_eq?: ID_Input | null
+  id_in?: ID_Output[] | ID_Output | null
+  createdAt_eq?: DateTime | null
+  createdAt_lt?: DateTime | null
+  createdAt_lte?: DateTime | null
+  createdAt_gt?: DateTime | null
+  createdAt_gte?: DateTime | null
+  createdById_eq?: ID_Input | null
+  createdById_in?: ID_Output[] | ID_Output | null
+  updatedAt_eq?: DateTime | null
+  updatedAt_lt?: DateTime | null
+  updatedAt_lte?: DateTime | null
+  updatedAt_gt?: DateTime | null
+  updatedAt_gte?: DateTime | null
+  updatedById_eq?: ID_Input | null
+  updatedById_in?: ID_Output[] | ID_Output | null
+  deletedAt_all?: Boolean | null
+  deletedAt_eq?: DateTime | null
+  deletedAt_lt?: DateTime | null
+  deletedAt_lte?: DateTime | null
+  deletedAt_gt?: DateTime | null
+  deletedAt_gte?: DateTime | null
+  deletedById_eq?: ID_Input | null
+  deletedById_in?: ID_Output[] | ID_Output | null
+  amount_eq?: BigInt | null
+  amount_gt?: BigInt | null
+  amount_gte?: BigInt | null
+  amount_lt?: BigInt | null
+  amount_lte?: BigInt | null
+  amount_in?: BigInt[] | BigInt | null
+  target_eq?: String | null
+  target_contains?: String | null
+  target_startsWith?: String | null
+  target_endsWith?: String | null
+  target_in?: String[] | String | null
+  block_eq?: Int | null
+  block_gt?: Int | null
+  block_gte?: Int | null
+  block_lt?: Int | null
+  block_lte?: Int | null
+  block_in?: Int[] | Int | null
+  AND?: MintTransactionWhereInput[] | MintTransactionWhereInput | null
+  OR?: MintTransactionWhereInput[] | MintTransactionWhereInput | null
+}
+
+export interface MintTransactionWhereUniqueInput {
+  id: ID_Output
+}
+
 export interface NameContractCreateInput {
   version: Float
   contractId: Float
@@ -2013,6 +2187,75 @@ export interface PublicIpWhereUniqueInput {
   id: ID_Output
 }
 
+export interface RefundTransactionCreateInput {
+  block: Float
+  amount: String
+  target: String
+  txHash: String
+}
+
+export interface RefundTransactionUpdateInput {
+  block?: Float | null
+  amount?: String | null
+  target?: String | null
+  txHash?: String | null
+}
+
+export interface RefundTransactionWhereInput {
+  id_eq?: ID_Input | null
+  id_in?: ID_Output[] | ID_Output | null
+  createdAt_eq?: DateTime | null
+  createdAt_lt?: DateTime | null
+  createdAt_lte?: DateTime | null
+  createdAt_gt?: DateTime | null
+  createdAt_gte?: DateTime | null
+  createdById_eq?: ID_Input | null
+  createdById_in?: ID_Output[] | ID_Output | null
+  updatedAt_eq?: DateTime | null
+  updatedAt_lt?: DateTime | null
+  updatedAt_lte?: DateTime | null
+  updatedAt_gt?: DateTime | null
+  updatedAt_gte?: DateTime | null
+  updatedById_eq?: ID_Input | null
+  updatedById_in?: ID_Output[] | ID_Output | null
+  deletedAt_all?: Boolean | null
+  deletedAt_eq?: DateTime | null
+  deletedAt_lt?: DateTime | null
+  deletedAt_lte?: DateTime | null
+  deletedAt_gt?: DateTime | null
+  deletedAt_gte?: DateTime | null
+  deletedById_eq?: ID_Input | null
+  deletedById_in?: ID_Output[] | ID_Output | null
+  block_eq?: Int | null
+  block_gt?: Int | null
+  block_gte?: Int | null
+  block_lt?: Int | null
+  block_lte?: Int | null
+  block_in?: Int[] | Int | null
+  amount_eq?: BigInt | null
+  amount_gt?: BigInt | null
+  amount_gte?: BigInt | null
+  amount_lt?: BigInt | null
+  amount_lte?: BigInt | null
+  amount_in?: BigInt[] | BigInt | null
+  target_eq?: String | null
+  target_contains?: String | null
+  target_startsWith?: String | null
+  target_endsWith?: String | null
+  target_in?: String[] | String | null
+  txHash_eq?: String | null
+  txHash_contains?: String | null
+  txHash_startsWith?: String | null
+  txHash_endsWith?: String | null
+  txHash_in?: String[] | String | null
+  AND?: RefundTransactionWhereInput[] | RefundTransactionWhereInput | null
+  OR?: RefundTransactionWhereInput[] | RefundTransactionWhereInput | null
+}
+
+export interface RefundTransactionWhereUniqueInput {
+  id: ID_Output
+}
+
 export interface TwinCreateInput {
   gridVersion: Float
   twinId: Float
@@ -2208,6 +2451,31 @@ export interface BaseModelUUID extends BaseGraphQLObject {
   deletedAt?: DateTime | null
   deletedById?: String | null
   version: Int
+}
+
+export interface BurnTransaction extends BaseGraphQLObject {
+  id: ID_Output
+  createdAt: DateTime
+  createdById: String
+  updatedAt?: DateTime | null
+  updatedById?: String | null
+  deletedAt?: DateTime | null
+  deletedById?: String | null
+  version: Int
+  block: Int
+  amount: BigInt
+  target: String
+}
+
+export interface BurnTransactionConnection {
+  totalCount: Int
+  edges: Array<BurnTransactionEdge>
+  pageInfo: PageInfo
+}
+
+export interface BurnTransactionEdge {
+  node: BurnTransaction
+  cursor: String
 }
 
 export interface City extends BaseGraphQLObject {
@@ -2512,6 +2780,31 @@ export interface LocationEdge {
   cursor: String
 }
 
+export interface MintTransaction extends BaseGraphQLObject {
+  id: ID_Output
+  createdAt: DateTime
+  createdById: String
+  updatedAt?: DateTime | null
+  updatedById?: String | null
+  deletedAt?: DateTime | null
+  deletedById?: String | null
+  version: Int
+  amount: BigInt
+  target: String
+  block: Int
+}
+
+export interface MintTransactionConnection {
+  totalCount: Int
+  edges: Array<MintTransactionEdge>
+  pageInfo: PageInfo
+}
+
+export interface MintTransactionEdge {
+  node: MintTransaction
+  cursor: String
+}
+
 export interface NameContract extends BaseGraphQLObject {
   id: ID_Output
   createdAt: DateTime
@@ -2736,6 +3029,32 @@ export interface PublicIpConnection {
 
 export interface PublicIpEdge {
   node: PublicIp
+  cursor: String
+}
+
+export interface RefundTransaction extends BaseGraphQLObject {
+  id: ID_Output
+  createdAt: DateTime
+  createdById: String
+  updatedAt?: DateTime | null
+  updatedById?: String | null
+  deletedAt?: DateTime | null
+  deletedById?: String | null
+  version: Int
+  block: Int
+  amount: BigInt
+  target: String
+  txHash: String
+}
+
+export interface RefundTransactionConnection {
+  totalCount: Int
+  edges: Array<RefundTransactionEdge>
+  pageInfo: PageInfo
+}
+
+export interface RefundTransactionEdge {
+  node: RefundTransaction
   cursor: String
 }
 
