@@ -3836,7 +3836,7 @@ dependencies = [
 [[package]]
 name = "pallet-tft-bridge"
 version = "1.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_tft?branch=main#9b05f402f7e7a27b7dfdebb21ab4affc84933a6e"
+source = "git+https://github.com/threefoldtech/tfchain_tft?branch=main#354f2fbbba31358312b8e27492a796a19bfd28e1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3854,7 +3854,7 @@ dependencies = [
 [[package]]
 name = "pallet-tft-price"
 version = "1.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_tft?branch=main#9b05f402f7e7a27b7dfdebb21ab4affc84933a6e"
+source = "git+https://github.com/threefoldtech/tfchain_tft?branch=main#354f2fbbba31358312b8e27492a796a19bfd28e1"
 dependencies = [
  "frame-support",
  "frame-system",
