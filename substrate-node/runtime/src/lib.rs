@@ -52,6 +52,8 @@ pub use pallet_session;
 
 pub use pallet_burning;
 
+pub use pallet_multisig as multisig;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -118,7 +120,7 @@ pub fn session_keys(
 
 /// Constant values used within the runtime.
 pub mod constants;
-use constants::{fee::*};
+use constants::{fee::*, currency::CENTS};
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("substrate-threefold"),
@@ -426,6 +428,25 @@ impl pallet_scheduler::Config for Runtime {
     type WeightInfo = ();
 }
 
+parameter_types! {
+	// One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
+	pub const DepositBase: Balance = 5 * CENTS;
+	// Additional storage item size of 32 bytes.
+	pub const DepositFactor: Balance = 10 * CENTS;
+	pub const MaxSignatories: u16 = 10;
+}
+
+/// Used for the module multisig in `$ROOT/pallets/multisig`
+impl multisig::Config for Runtime {
+	type Event = Event;
+	type Call = Call;
+	type Currency = Balances;
+	type DepositBase = DepositBase;
+	type DepositFactor = DepositFactor;
+	type MaxSignatories = MaxSignatories;
+	type WeightInfo = ();
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -449,6 +470,7 @@ construct_runtime!(
 		TFTPriceModule: pallet_tft_price::{Module, Call, Storage, Event<T>},
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 		BurningModule: pallet_burning::{Module, Call, Storage, Event<T>},
+		Multisig: multisig::{Module, Call, Config<T>, Storage, Event<T>},
 	}
 );
 
