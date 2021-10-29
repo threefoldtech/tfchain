@@ -3687,7 +3687,7 @@ dependencies = [
 [[package]]
 name = "pallet-burning"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#e1047dbbf2177a5bdf4c85e098bbcf1d86be5dec"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#6ace2f170cae923894812cd8d3a80a163b16a139"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3778,7 +3778,7 @@ dependencies = [
 [[package]]
 name = "pallet-smart-contract"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#e1047dbbf2177a5bdf4c85e098bbcf1d86be5dec"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#6ace2f170cae923894812cd8d3a80a163b16a139"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3816,7 +3816,7 @@ dependencies = [
 [[package]]
 name = "pallet-tfgrid"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#e1047dbbf2177a5bdf4c85e098bbcf1d86be5dec"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#6ace2f170cae923894812cd8d3a80a163b16a139"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7845,7 +7845,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.3.23",
+ "rand 0.7.3",
  "static_assertions",
 ]
 
