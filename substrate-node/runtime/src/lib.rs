@@ -52,6 +52,8 @@ pub use pallet_session;
 
 pub use pallet_burning;
 
+pub use pallet_kvstore;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -124,7 +126,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("substrate-threefold"),
 	impl_name: create_runtime_str!("substrate-threefold"),
 	authoring_version: 1,
-	spec_version: 17,
+	spec_version: 18,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -313,6 +315,10 @@ impl pallet_burning::Config for Runtime {
 	type Burn = ();
 }
 
+impl pallet_kvstore::Config for Runtime {
+	type Event = Event;
+}
+
 pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
 
 impl pallet_tft_price::Config for Runtime {
@@ -449,6 +455,7 @@ construct_runtime!(
 		TFTPriceModule: pallet_tft_price::{Module, Call, Storage, Event<T>},
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 		BurningModule: pallet_burning::{Module, Call, Storage, Event<T>},
+		TFKVStore: pallet_kvstore::{Module, Call, Storage, Event<T>},
 	}
 );
 

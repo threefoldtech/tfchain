@@ -3687,7 +3687,7 @@ dependencies = [
 [[package]]
 name = "pallet-burning"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#6ace2f170cae923894812cd8d3a80a163b16a139"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#394b1a16902acba09773f5c2a716d0c87a1229dc"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3722,6 +3722,21 @@ dependencies = [
  "sp-session",
  "sp-staking",
  "sp-std",
+]
+
+[[package]]
+name = "pallet-kvstore"
+version = "3.0.0"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#394b1a16902acba09773f5c2a716d0c87a1229dc"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-storage",
 ]
 
 [[package]]
@@ -3778,7 +3793,7 @@ dependencies = [
 [[package]]
 name = "pallet-smart-contract"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#6ace2f170cae923894812cd8d3a80a163b16a139"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#394b1a16902acba09773f5c2a716d0c87a1229dc"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3816,7 +3831,7 @@ dependencies = [
 [[package]]
 name = "pallet-tfgrid"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#6ace2f170cae923894812cd8d3a80a163b16a139"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#394b1a16902acba09773f5c2a716d0c87a1229dc"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7325,6 +7340,7 @@ dependencies = [
  "pallet-balances",
  "pallet-burning",
  "pallet-grandpa",
+ "pallet-kvstore",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
  "pallet-session",
@@ -7845,7 +7861,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.7.3",
+ "rand 0.3.23",
  "static_assertions",
 ]
 

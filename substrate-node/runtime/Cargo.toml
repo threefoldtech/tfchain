@@ -41,6 +41,13 @@ package = "pallet-burning"
 branch = "development"
 #path = "../../../tfchain_pallets/pallet-burning"
 
+[dependencies.pallet-kvstore]
+default-features = false
+git = "https://github.com/threefoldtech/tfchain_pallets"
+package = "pallet-kvstore"
+branch = "development"
+#path = "../../../tfchain_pallets/pallet-kvstore"
+
 [dependencies.pallet-tft-bridge]
 default-features = false
 git = "https://github.com/threefoldtech/tfchain_tft"
@@ -138,6 +145,7 @@ std = [
     'pallet-tft-bridge/std',
     'pallet-tft-price/std',
     'pallet-smart-contract/std',
+    'pallet-kvstore/std',
     'pallet-scheduler/std',
     'sp-staking/std',
     'pallet-session/std',
