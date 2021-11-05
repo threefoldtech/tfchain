@@ -6,7 +6,9 @@ First create a new key:
 subkey generate --scheme sr25519
 ```
 
-Take note of the Public key (hex)
+Take note of the SS58 address.
+
+Transfer some balance to the new address. (0.1 TFT should be enough)
 
 ## Start a new node in validator mode with new key
 
@@ -20,16 +22,27 @@ Take note of the Public key (hex)
 
 Insert Aura and Grandpa key for this new node.
 
-## Insert the Public Key in the session
+## Insert a key in the session
 
-Connect to any public node and go to `extrinsics` -> `session` -> `setKeys`
+Connect to the new node deployed with polkadot js apps. You will need to install a local version of this application since you will have to connect over a not secured websocket.
 
 ```
-keys: generated public key (see step 1)
-proof: 0x
+git clone git@github.com:polkadot-js/apps.git
+yarn
+yarn start
 ```
 
-This extrinsic must be signed by the newly generated key.
+Browse to http://localhost:3000 and connect to the new node over it's public ip.
+
+Go to `rpc` -> `session` -> `rotateKeys`, excecute it and take note of the output.
+
+On the same new node, go to `extrinsics` -> `session` -> `setKeys`, Make sure you execute it this with the newly generated keypair.
+
+input:
+```
+keys: the key from rotate keys ouput
+proofs: 0
+```
 
 ## Contact admin to insert the key into the validator set
 
