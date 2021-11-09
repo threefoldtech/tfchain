@@ -9,6 +9,7 @@ import {
   FarmingPolicy,
   Node,
   PricingPolicy,
+  PublicConfig,
   Twin,
 } from "substrate-tfgrid-ts-types";
 import { Bytes, u32, u64 } from "@polkadot/types";
@@ -472,6 +473,36 @@ export namespace TfgridModule {
           this.ctx.params[0].value,
         ]),
         createTypeUnsafe<Bytes & Codec>(typeRegistry, "Bytes", [
+          this.ctx.params[1].value,
+        ]),
+      ];
+    }
+
+    validateParams(): boolean {
+      if (this.expectedParamTypes.length !== this.ctx.params.length) {
+        return false;
+      }
+      let valid = true;
+      this.expectedParamTypes.forEach((type, i) => {
+        if (type !== this.ctx.params[i].type) {
+          valid = false;
+        }
+      });
+      return valid;
+    }
+  }
+
+  export class NodePublicConfigStoredEvent {
+    public readonly expectedParamTypes = ["u32", "types::PublicConfig"];
+
+    constructor(public readonly ctx: SubstrateEvent) {}
+
+    get params(): [u32, PublicConfig] {
+      return [
+        createTypeUnsafe<u32 & Codec>(typeRegistry, "u32", [
+          this.ctx.params[0].value,
+        ]),
+        createTypeUnsafe<PublicConfig & Codec>(typeRegistry, "PublicConfig", [
           this.ctx.params[1].value,
         ]),
       ];

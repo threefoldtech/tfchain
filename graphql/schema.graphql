@@ -84,11 +84,11 @@ enum CertificationType {
   Certified
 }
 
-type PublicConfig @entity {
-  ipv4: String!
-  ipv6: String!
-  gw4: String!
-  gw6: String!
+type PublicConfig @jsonField {
+  ipv4: String
+  ipv6: String
+  gw4: String
+  gw6: String
   domain: String
 }
 

@@ -1870,7 +1870,6 @@ type Node implements BaseGraphQLObject {
   cru: BigInt
   mru: BigInt
   publicConfig: PublicConfig
-  publicConfigId: String
   uptime: Int
   created: Int!
   farmingPolicyId: Int!
@@ -2046,7 +2045,7 @@ input NodeCreateInput {
   sru: String
   cru: String
   mru: String
-  publicConfig: ID
+  publicConfig: PublicConfigInput
   uptime: Float
   created: Float!
   farmingPolicyId: Float!
@@ -2086,8 +2085,6 @@ enum NodeOrderByInput {
   cru_DESC
   mru_ASC
   mru_DESC
-  publicConfig_ASC
-  publicConfig_DESC
   uptime_ASC
   uptime_DESC
   created_ASC
@@ -2108,7 +2105,7 @@ input NodeUpdateInput {
   sru: String
   cru: String
   mru: String
-  publicConfig: ID
+  publicConfig: PublicConfigInput
   uptime: Float
   created: Float
   farmingPolicyId: Float
@@ -2197,6 +2194,7 @@ input NodeWhereInput {
   mru_lt: BigInt
   mru_lte: BigInt
   mru_in: [BigInt!]
+  publicConfig_json: JSONObject
   uptime_eq: Int
   uptime_gt: Int
   uptime_gte: Int
@@ -2216,7 +2214,6 @@ input NodeWhereInput {
   farmingPolicyId_lte: Int
   farmingPolicyId_in: [Int!]
   location: LocationWhereInput
-  publicConfig: PublicConfigWhereInput
   interfaces_none: InterfacesWhereInput
   interfaces_some: InterfacesWhereInput
   interfaces_every: InterfacesWhereInput
@@ -2444,59 +2441,28 @@ type ProcessorState {
   chainHead: Float!
 }
 
-type PublicConfig implements BaseGraphQLObject {
-  id: ID!
-  createdAt: DateTime!
-  createdById: String!
-  updatedAt: DateTime
-  updatedById: String
-  deletedAt: DateTime
-  deletedById: String
-  version: Int!
-  ipv4: String!
-  ipv6: String!
-  gw4: String!
-  gw6: String!
+type PublicConfig {
+  ipv4: String
+  ipv6: String
+  gw4: String
+  gw6: String
   domain: String
-  nodepublicConfig: [Node!]
-}
-
-type PublicConfigConnection {
-  totalCount: Int!
-  edges: [PublicConfigEdge!]!
-  pageInfo: PageInfo!
 }
 
 input PublicConfigCreateInput {
-  ipv4: String!
-  ipv6: String!
-  gw4: String!
-  gw6: String!
+  ipv4: String
+  ipv6: String
+  gw4: String
+  gw6: String
   domain: String
 }
 
-type PublicConfigEdge {
-  node: PublicConfig!
-  cursor: String!
-}
-
-enum PublicConfigOrderByInput {
-  createdAt_ASC
-  createdAt_DESC
-  updatedAt_ASC
-  updatedAt_DESC
-  deletedAt_ASC
-  deletedAt_DESC
-  ipv4_ASC
-  ipv4_DESC
-  ipv6_ASC
-  ipv6_DESC
-  gw4_ASC
-  gw4_DESC
-  gw6_ASC
-  gw6_DESC
-  domain_ASC
-  domain_DESC
+input PublicConfigInput {
+  ipv4: String
+  ipv6: String
+  gw4: String
+  gw6: String
+  domain: String
 }
 
 input PublicConfigUpdateInput {
@@ -2557,9 +2523,6 @@ input PublicConfigWhereInput {
   domain_startsWith: String
   domain_endsWith: String
   domain_in: [String!]
-  nodepublicConfig_none: NodeWhereInput
-  nodepublicConfig_some: NodeWhereInput
-  nodepublicConfig_every: NodeWhereInput
   AND: [PublicConfigWhereInput!]
   OR: [PublicConfigWhereInput!]
 }
@@ -2731,9 +2694,6 @@ type Query {
   pricingPolicies(offset: Int, limit: Int = 50, where: PricingPolicyWhereInput, orderBy: [PricingPolicyOrderByInput!]): [PricingPolicy!]!
   pricingPolicyByUniqueInput(where: PricingPolicyWhereUniqueInput!): PricingPolicy
   pricingPoliciesConnection(first: Int, after: String, last: Int, before: String, where: PricingPolicyWhereInput, orderBy: [PricingPolicyOrderByInput!]): PricingPolicyConnection!
-  publicConfigs(offset: Int, limit: Int = 50, where: PublicConfigWhereInput, orderBy: [PublicConfigOrderByInput!]): [PublicConfig!]!
-  publicConfigByUniqueInput(where: PublicConfigWhereUniqueInput!): PublicConfig
-  publicConfigsConnection(first: Int, after: String, last: Int, before: String, where: PublicConfigWhereInput, orderBy: [PublicConfigOrderByInput!]): PublicConfigConnection!
   publicIps(offset: Int, limit: Int = 50, where: PublicIpWhereInput, orderBy: [PublicIpOrderByInput!]): [PublicIp!]!
   publicIpByUniqueInput(where: PublicIpWhereUniqueInput!): PublicIp
   publicIpsConnection(first: Int, after: String, last: Int, before: String, where: PublicIpWhereInput, orderBy: [PublicIpOrderByInput!]): PublicIpConnection!

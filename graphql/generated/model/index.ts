@@ -34,8 +34,6 @@ import { NodeContract } from '../modules/node-contract/node-contract.model';
 export { NodeContract };
 import { PricingPolicy } from '../modules/pricing-policy/pricing-policy.model';
 export { PricingPolicy };
-import { PublicConfig } from '../modules/public-config/public-config.model';
-export { PublicConfig };
 import { PublicIp } from '../modules/public-ip/public-ip.model';
 export { PublicIp };
 import { RefundTransaction } from '../modules/refund-transaction/refund-transaction.model';
@@ -54,3 +52,5 @@ export { DiscountLevel };
 
 import { Policy } from '../modules/jsonfields/jsonfields.model';
 export { Policy };
+import { PublicConfig } from '../modules/jsonfields/jsonfields.model';
+export { PublicConfig };

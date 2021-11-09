@@ -12,7 +12,6 @@ import {
 import BN from 'bn.js';
 
 import { Location } from '../location/location.model';
-import { PublicConfig } from '../public-config/public-config.model';
 import { Interfaces } from '../interfaces/interfaces.model';
 
 import * as jsonTypes from '../jsonfields/jsonfields.model';
@@ -94,14 +93,8 @@ export class Node extends BaseModel {
   })
   mru?: BN;
 
-  @ManyToOne(() => PublicConfig, (param: PublicConfig) => param.nodepublicConfig, {
-    skipGraphQLField: true,
-    nullable: true,
-    modelName: 'Node',
-    relModelName: 'PublicConfig',
-    propertyName: 'publicConfig',
-  })
-  publicConfig?: PublicConfig;
+  @JSONField({ filter: true, gqlFieldType: jsonTypes.PublicConfig, nullable: true })
+  publicConfig?: jsonTypes.PublicConfig;
 
   @IntField({
     nullable: true,

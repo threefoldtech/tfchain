@@ -56,13 +56,13 @@ import { FarmingPolicy } from "../modules/farming-policy/farming-policy.model";
 // @ts-ignore
 import { Location } from "../modules/location/location.model";
 // @ts-ignore
-import { PublicConfig } from "../modules/public-config/public-config.model";
+import { Policy } from "../modules/jsonfields/jsonfields.model";
+// @ts-ignore
+import { PublicConfig } from "../modules/jsonfields/jsonfields.model";
 // @ts-ignore
 import { Node } from "../modules/node/node.model";
 // @ts-ignore
 import { Interfaces } from "../modules/interfaces/interfaces.model";
-// @ts-ignore
-import { Policy } from "../modules/jsonfields/jsonfields.model";
 // @ts-ignore
 import { MintTransaction } from "../modules/mint-transaction/mint-transaction.model";
 // @ts-ignore
@@ -3496,6 +3496,186 @@ export class LocationUpdateArgs {
   @TypeGraphQLField() where!: LocationWhereUniqueInput;
 }
 
+export enum PolicyOrderByEnum {
+  createdAt_ASC = "createdAt_ASC",
+  createdAt_DESC = "createdAt_DESC",
+
+  updatedAt_ASC = "updatedAt_ASC",
+  updatedAt_DESC = "updatedAt_DESC",
+
+  deletedAt_ASC = "deletedAt_ASC",
+  deletedAt_DESC = "deletedAt_DESC",
+
+  value_ASC = "value_ASC",
+  value_DESC = "value_DESC",
+
+  unit_ASC = "unit_ASC",
+  unit_DESC = "unit_DESC",
+}
+
+registerEnumType(PolicyOrderByEnum, {
+  name: "PolicyOrderByInput",
+});
+
+@TypeGraphQLInputType()
+export class PolicyWhereInput {
+  @TypeGraphQLField(() => ID, { nullable: true })
+  id_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  id_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  createdAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  createdById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  createdById_in?: string[];
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  updatedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  updatedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  updatedById_in?: string[];
+
+  @TypeGraphQLField({ nullable: true })
+  deletedAt_all?: Boolean;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_eq?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_lte?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gt?: Date;
+
+  @TypeGraphQLField(() => DateTime, { nullable: true })
+  deletedAt_gte?: Date;
+
+  @TypeGraphQLField(() => ID, { nullable: true })
+  deletedById_eq?: string;
+
+  @TypeGraphQLField(() => [ID], { nullable: true })
+  deletedById_in?: string[];
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  value_eq?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  value_gt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  value_gte?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  value_lt?: number;
+
+  @TypeGraphQLField(() => Int, { nullable: true })
+  value_lte?: number;
+
+  @TypeGraphQLField(() => [Int], { nullable: true })
+  value_in?: number[];
+
+  @TypeGraphQLField({ nullable: true })
+  unit_eq?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  unit_contains?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  unit_startsWith?: string;
+
+  @TypeGraphQLField({ nullable: true })
+  unit_endsWith?: string;
+
+  @TypeGraphQLField(() => [String], { nullable: true })
+  unit_in?: string[];
+
+  @TypeGraphQLField(() => PolicyWhereInput, { nullable: true })
+  AND?: [PolicyWhereInput];
+
+  @TypeGraphQLField(() => PolicyWhereInput, { nullable: true })
+  OR?: [PolicyWhereInput];
+}
+
+@TypeGraphQLInputType()
+export class PolicyWhereUniqueInput {
+  @TypeGraphQLField(() => ID)
+  id?: string;
+}
+
+@TypeGraphQLInputType()
+export class PolicyCreateInput {
+  @TypeGraphQLField({ nullable: true })
+  value?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  unit?: string;
+}
+
+@TypeGraphQLInputType()
+export class PolicyUpdateInput {
+  @TypeGraphQLField({ nullable: true })
+  value?: number;
+
+  @TypeGraphQLField({ nullable: true })
+  unit?: string;
+}
+
+@ArgsType()
+export class PolicyWhereArgs extends PaginationArgs {
+  @TypeGraphQLField(() => PolicyWhereInput, { nullable: true })
+  where?: PolicyWhereInput;
+
+  @TypeGraphQLField(() => PolicyOrderByEnum, { nullable: true })
+  orderBy?: PolicyOrderByEnum[];
+}
+
+@ArgsType()
+export class PolicyCreateManyArgs {
+  @TypeGraphQLField(() => [PolicyCreateInput])
+  data!: PolicyCreateInput[];
+}
+
+@ArgsType()
+export class PolicyUpdateArgs {
+  @TypeGraphQLField() data!: PolicyUpdateInput;
+  @TypeGraphQLField() where!: PolicyWhereUniqueInput;
+}
+
 export enum PublicConfigOrderByEnum {
   createdAt_ASC = "createdAt_ASC",
   createdAt_DESC = "createdAt_DESC",
@@ -3675,15 +3855,6 @@ export class PublicConfigWhereInput {
   @TypeGraphQLField(() => [String], { nullable: true })
   domain_in?: string[];
 
-  @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
-  nodepublicConfig_none?: NodeWhereInput;
-
-  @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
-  nodepublicConfig_some?: NodeWhereInput;
-
-  @TypeGraphQLField(() => NodeWhereInput, { nullable: true })
-  nodepublicConfig_every?: NodeWhereInput;
-
   @TypeGraphQLField(() => PublicConfigWhereInput, { nullable: true })
   AND?: [PublicConfigWhereInput];
 
@@ -3699,17 +3870,17 @@ export class PublicConfigWhereUniqueInput {
 
 @TypeGraphQLInputType()
 export class PublicConfigCreateInput {
-  @TypeGraphQLField()
-  ipv4!: string;
+  @TypeGraphQLField({ nullable: true })
+  ipv4?: string;
 
-  @TypeGraphQLField()
-  ipv6!: string;
+  @TypeGraphQLField({ nullable: true })
+  ipv6?: string;
 
-  @TypeGraphQLField()
-  gw4!: string;
+  @TypeGraphQLField({ nullable: true })
+  gw4?: string;
 
-  @TypeGraphQLField()
-  gw6!: string;
+  @TypeGraphQLField({ nullable: true })
+  gw6?: string;
 
   @TypeGraphQLField({ nullable: true })
   domain?: string;
@@ -3796,9 +3967,6 @@ export enum NodeOrderByEnum {
 
   mru_ASC = "mru_ASC",
   mru_DESC = "mru_DESC",
-
-  publicConfig_ASC = "publicConfig_ASC",
-  publicConfig_DESC = "publicConfig_DESC",
 
   uptime_ASC = "uptime_ASC",
   uptime_DESC = "uptime_DESC",
@@ -4062,6 +4230,9 @@ export class NodeWhereInput {
   @TypeGraphQLField(() => [BigInt], { nullable: true })
   mru_in?: string[];
 
+  @TypeGraphQLField(() => GraphQLJSONObject, { nullable: true })
+  publicConfig_json?: JsonObject;
+
   @TypeGraphQLField(() => Int, { nullable: true })
   uptime_eq?: number;
 
@@ -4118,9 +4289,6 @@ export class NodeWhereInput {
 
   @TypeGraphQLField(() => LocationWhereInput, { nullable: true })
   location?: LocationWhereInput;
-
-  @TypeGraphQLField(() => PublicConfigWhereInput, { nullable: true })
-  publicConfig?: PublicConfigWhereInput;
 
   @TypeGraphQLField(() => InterfacesWhereInput, { nullable: true })
   interfaces_none?: InterfacesWhereInput;
@@ -4179,8 +4347,8 @@ export class NodeCreateInput {
   @TypeGraphQLField({ nullable: true })
   mru?: string;
 
-  @TypeGraphQLField(() => ID, { nullable: true })
-  publicConfig?: string;
+  @TypeGraphQLField(() => PublicConfig, { nullable: true })
+  publicConfig?: PublicConfig;
 
   @TypeGraphQLField({ nullable: true })
   uptime?: number;
@@ -4227,8 +4395,8 @@ export class NodeUpdateInput {
   @TypeGraphQLField({ nullable: true })
   mru?: string;
 
-  @TypeGraphQLField(() => ID, { nullable: true })
-  publicConfig?: string;
+  @TypeGraphQLField(() => PublicConfig, { nullable: true })
+  publicConfig?: PublicConfig;
 
   @TypeGraphQLField({ nullable: true })
   uptime?: number;
@@ -4472,186 +4640,6 @@ export class InterfacesCreateManyArgs {
 export class InterfacesUpdateArgs {
   @TypeGraphQLField() data!: InterfacesUpdateInput;
   @TypeGraphQLField() where!: InterfacesWhereUniqueInput;
-}
-
-export enum PolicyOrderByEnum {
-  createdAt_ASC = "createdAt_ASC",
-  createdAt_DESC = "createdAt_DESC",
-
-  updatedAt_ASC = "updatedAt_ASC",
-  updatedAt_DESC = "updatedAt_DESC",
-
-  deletedAt_ASC = "deletedAt_ASC",
-  deletedAt_DESC = "deletedAt_DESC",
-
-  value_ASC = "value_ASC",
-  value_DESC = "value_DESC",
-
-  unit_ASC = "unit_ASC",
-  unit_DESC = "unit_DESC",
-}
-
-registerEnumType(PolicyOrderByEnum, {
-  name: "PolicyOrderByInput",
-});
-
-@TypeGraphQLInputType()
-export class PolicyWhereInput {
-  @TypeGraphQLField(() => ID, { nullable: true })
-  id_eq?: string;
-
-  @TypeGraphQLField(() => [ID], { nullable: true })
-  id_in?: string[];
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  createdAt_eq?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  createdAt_lt?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  createdAt_lte?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  createdAt_gt?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  createdAt_gte?: Date;
-
-  @TypeGraphQLField(() => ID, { nullable: true })
-  createdById_eq?: string;
-
-  @TypeGraphQLField(() => [ID], { nullable: true })
-  createdById_in?: string[];
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  updatedAt_eq?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  updatedAt_lt?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  updatedAt_lte?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  updatedAt_gt?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  updatedAt_gte?: Date;
-
-  @TypeGraphQLField(() => ID, { nullable: true })
-  updatedById_eq?: string;
-
-  @TypeGraphQLField(() => [ID], { nullable: true })
-  updatedById_in?: string[];
-
-  @TypeGraphQLField({ nullable: true })
-  deletedAt_all?: Boolean;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  deletedAt_eq?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  deletedAt_lt?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  deletedAt_lte?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  deletedAt_gt?: Date;
-
-  @TypeGraphQLField(() => DateTime, { nullable: true })
-  deletedAt_gte?: Date;
-
-  @TypeGraphQLField(() => ID, { nullable: true })
-  deletedById_eq?: string;
-
-  @TypeGraphQLField(() => [ID], { nullable: true })
-  deletedById_in?: string[];
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  value_eq?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  value_gt?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  value_gte?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  value_lt?: number;
-
-  @TypeGraphQLField(() => Int, { nullable: true })
-  value_lte?: number;
-
-  @TypeGraphQLField(() => [Int], { nullable: true })
-  value_in?: number[];
-
-  @TypeGraphQLField({ nullable: true })
-  unit_eq?: string;
-
-  @TypeGraphQLField({ nullable: true })
-  unit_contains?: string;
-
-  @TypeGraphQLField({ nullable: true })
-  unit_startsWith?: string;
-
-  @TypeGraphQLField({ nullable: true })
-  unit_endsWith?: string;
-
-  @TypeGraphQLField(() => [String], { nullable: true })
-  unit_in?: string[];
-
-  @TypeGraphQLField(() => PolicyWhereInput, { nullable: true })
-  AND?: [PolicyWhereInput];
-
-  @TypeGraphQLField(() => PolicyWhereInput, { nullable: true })
-  OR?: [PolicyWhereInput];
-}
-
-@TypeGraphQLInputType()
-export class PolicyWhereUniqueInput {
-  @TypeGraphQLField(() => ID)
-  id?: string;
-}
-
-@TypeGraphQLInputType()
-export class PolicyCreateInput {
-  @TypeGraphQLField({ nullable: true })
-  value?: number;
-
-  @TypeGraphQLField({ nullable: true })
-  unit?: string;
-}
-
-@TypeGraphQLInputType()
-export class PolicyUpdateInput {
-  @TypeGraphQLField({ nullable: true })
-  value?: number;
-
-  @TypeGraphQLField({ nullable: true })
-  unit?: string;
-}
-
-@ArgsType()
-export class PolicyWhereArgs extends PaginationArgs {
-  @TypeGraphQLField(() => PolicyWhereInput, { nullable: true })
-  where?: PolicyWhereInput;
-
-  @TypeGraphQLField(() => PolicyOrderByEnum, { nullable: true })
-  orderBy?: PolicyOrderByEnum[];
-}
-
-@ArgsType()
-export class PolicyCreateManyArgs {
-  @TypeGraphQLField(() => [PolicyCreateInput])
-  data!: PolicyCreateInput[];
-}
-
-@ArgsType()
-export class PolicyUpdateArgs {
-  @TypeGraphQLField() data!: PolicyUpdateInput;
-  @TypeGraphQLField() where!: PolicyWhereUniqueInput;
 }
 
 export enum MintTransactionOrderByEnum {

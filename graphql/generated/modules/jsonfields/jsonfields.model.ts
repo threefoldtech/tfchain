@@ -27,3 +27,32 @@ export class Policy {
   })
   unit?: string;
 }
+
+@InputType('PublicConfigInput')
+@ObjectType()
+export class PublicConfig {
+  @StringField({
+    nullable: true,
+  })
+  ipv4?: string;
+
+  @StringField({
+    nullable: true,
+  })
+  ipv6?: string;
+
+  @StringField({
+    nullable: true,
+  })
+  gw4?: string;
+
+  @StringField({
+    nullable: true,
+  })
+  gw6?: string;
+
+  @StringField({
+    nullable: true,
+  })
+  domain?: string;
+}

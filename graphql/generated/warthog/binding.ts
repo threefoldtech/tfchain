@@ -60,9 +60,6 @@ export interface Query {
     pricingPolicies: <T = Array<PricingPolicy>>(args: { offset?: Int | null, limit?: Int | null, where?: PricingPolicyWhereInput | null, orderBy?: Array<PricingPolicyOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     pricingPolicyByUniqueInput: <T = PricingPolicy | null>(args: { where: PricingPolicyWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     pricingPoliciesConnection: <T = PricingPolicyConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: PricingPolicyWhereInput | null, orderBy?: Array<PricingPolicyOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    publicConfigs: <T = Array<PublicConfig>>(args: { offset?: Int | null, limit?: Int | null, where?: PublicConfigWhereInput | null, orderBy?: Array<PublicConfigOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    publicConfigByUniqueInput: <T = PublicConfig | null>(args: { where: PublicConfigWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    publicConfigsConnection: <T = PublicConfigConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: PublicConfigWhereInput | null, orderBy?: Array<PublicConfigOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     publicIps: <T = Array<PublicIp>>(args: { offset?: Int | null, limit?: Int | null, where?: PublicIpWhereInput | null, orderBy?: Array<PublicIpOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     publicIpByUniqueInput: <T = PublicIp | null>(args: { where: PublicIpWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     publicIpsConnection: <T = PublicIpConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: PublicIpWhereInput | null, orderBy?: Array<PublicIpOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
@@ -412,8 +409,6 @@ export type NodeOrderByInput =   'createdAt_ASC' |
   'cru_DESC' |
   'mru_ASC' |
   'mru_DESC' |
-  'publicConfig_ASC' |
-  'publicConfig_DESC' |
   'uptime_ASC' |
   'uptime_DESC' |
   'created_ASC' |
@@ -437,23 +432,6 @@ export type PricingPolicyOrderByInput =   'createdAt_ASC' |
   'foundationAccount_DESC' |
   'certifiedSalesAccount_ASC' |
   'certifiedSalesAccount_DESC'
-
-export type PublicConfigOrderByInput =   'createdAt_ASC' |
-  'createdAt_DESC' |
-  'updatedAt_ASC' |
-  'updatedAt_DESC' |
-  'deletedAt_ASC' |
-  'deletedAt_DESC' |
-  'ipv4_ASC' |
-  'ipv4_DESC' |
-  'ipv6_ASC' |
-  'ipv6_DESC' |
-  'gw4_ASC' |
-  'gw4_DESC' |
-  'gw6_ASC' |
-  'gw6_DESC' |
-  'domain_ASC' |
-  'domain_DESC'
 
 export type PublicIpOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -1729,7 +1707,7 @@ export interface NodeCreateInput {
   sru?: String | null
   cru?: String | null
   mru?: String | null
-  publicConfig?: ID_Input | null
+  publicConfig?: PublicConfigInput | null
   uptime?: Float | null
   created: Float
   farmingPolicyId: Float
@@ -1747,7 +1725,7 @@ export interface NodeUpdateInput {
   sru?: String | null
   cru?: String | null
   mru?: String | null
-  publicConfig?: ID_Input | null
+  publicConfig?: PublicConfigInput | null
   uptime?: Float | null
   created?: Float | null
   farmingPolicyId?: Float | null
@@ -1836,6 +1814,7 @@ export interface NodeWhereInput {
   mru_lt?: BigInt | null
   mru_lte?: BigInt | null
   mru_in?: BigInt[] | BigInt | null
+  publicConfig_json?: JSONObject | null
   uptime_eq?: Int | null
   uptime_gt?: Int | null
   uptime_gte?: Int | null
@@ -1855,7 +1834,6 @@ export interface NodeWhereInput {
   farmingPolicyId_lte?: Int | null
   farmingPolicyId_in?: Int[] | Int | null
   location?: LocationWhereInput | null
-  publicConfig?: PublicConfigWhereInput | null
   interfaces_none?: InterfacesWhereInput | null
   interfaces_some?: InterfacesWhereInput | null
   interfaces_every?: InterfacesWhereInput | null
@@ -2015,10 +1993,18 @@ export interface PricingPolicyWhereUniqueInput {
 }
 
 export interface PublicConfigCreateInput {
-  ipv4: String
-  ipv6: String
-  gw4: String
-  gw6: String
+  ipv4?: String | null
+  ipv6?: String | null
+  gw4?: String | null
+  gw6?: String | null
+  domain?: String | null
+}
+
+export interface PublicConfigInput {
+  ipv4?: String | null
+  ipv6?: String | null
+  gw4?: String | null
+  gw6?: String | null
   domain?: String | null
 }
 
@@ -2080,9 +2066,6 @@ export interface PublicConfigWhereInput {
   domain_startsWith?: String | null
   domain_endsWith?: String | null
   domain_in?: String[] | String | null
-  nodepublicConfig_none?: NodeWhereInput | null
-  nodepublicConfig_some?: NodeWhereInput | null
-  nodepublicConfig_every?: NodeWhereInput | null
   AND?: PublicConfigWhereInput[] | PublicConfigWhereInput | null
   OR?: PublicConfigWhereInput[] | PublicConfigWhereInput | null
 }
@@ -2821,7 +2804,6 @@ export interface Node extends BaseGraphQLObject {
   cru?: BigInt | null
   mru?: BigInt | null
   publicConfig?: PublicConfig | null
-  publicConfigId?: String | null
   uptime?: Int | null
   created: Int
   farmingPolicyId: Int
@@ -2918,32 +2900,12 @@ export interface ProcessorState {
   chainHead: Float
 }
 
-export interface PublicConfig extends BaseGraphQLObject {
-  id: ID_Output
-  createdAt: DateTime
-  createdById: String
-  updatedAt?: DateTime | null
-  updatedById?: String | null
-  deletedAt?: DateTime | null
-  deletedById?: String | null
-  version: Int
-  ipv4: String
-  ipv6: String
-  gw4: String
-  gw6: String
+export interface PublicConfig {
+  ipv4?: String | null
+  ipv6?: String | null
+  gw4?: String | null
+  gw6?: String | null
   domain?: String | null
-  nodepublicConfig?: Array<Node> | null
-}
-
-export interface PublicConfigConnection {
-  totalCount: Int
-  edges: Array<PublicConfigEdge>
-  pageInfo: PageInfo
-}
-
-export interface PublicConfigEdge {
-  node: PublicConfig
-  cursor: String
 }
 
 export interface PublicIp extends BaseGraphQLObject {

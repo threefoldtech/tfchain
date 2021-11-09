@@ -9,7 +9,7 @@ typegen:
     typedefsLoc: ./indexer/types.json
   metadata:
     # source: ws://localhost:9944
-    source: wss://tfchain.dev.threefold.io/ws
+    source: wss://tfchain.dev.grid.tf/ws
   events:
     - balances.Transfer
     - tfgridModule.EntityStored
@@ -29,10 +29,12 @@ typegen:
     - tfgridModule.PricingPolicyStored
     - tfgridModule.FarmingPolicyStored
     - tfgridModule.FarmPayoutV2AddressRegistered
+    - tfgridModule.NodePublicConfigStored
     - smartContractModule.ConsumptionReportReceived
     - smartContractModule.ContractCreated
     - smartContractModule.ContractUpdated
-    - smartContractModule.ContractCanceled
+    - smartContractModule.NodeContractCanceled
+    # - smartContractModule.NameContractCanceled
     - smartContractModule.ContractBilled
     - tftBridgeModule.MintCompleted
     - tftBridgeModule.BurnTransactionProcessed
@@ -78,14 +80,18 @@ mappings:
       handler: farmingPolicyStored
     - event: tfgridModule.FarmPayoutV2AddressRegistered
       handler: farmPayoutV2AddressRegistered
+    - event: tfgridModule.NodePublicConfigStored
+      handler: nodePublicConfigStored
     - event: smartContractModule.ConsumptionReportReceived
       handler: consumptionReportReceived
     - event: smartContractModule.ContractCreated
       handler: contractCreated
     - event: smartContractModule.ContractUpdated
       handler: contractUpdated
-    - event: smartContractModule.ContractCanceled
-      handler: contractCanceled
+    - event: smartContractModule.NodeContractCanceled
+      handler: nodeContractCanceled
+    # - event: smartContractModule.NameContractCanceled
+    #   handler: nameContractCanceled
     - event: smartContractModule.ContractBilled
       handler: contractBilled
     - event: tftBridgeModule.MintCompleted

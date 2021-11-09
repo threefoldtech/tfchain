@@ -112,7 +112,6 @@ export async function nodeUpdated({
     pubConfig.gw6 = hex2a(parsedConfig.gw6.toString())
     pubConfig.domain = hex2a(parsedConfig.domain.toString()) || ''
 
-    await store.save<PublicConfig>(pubConfig)
     savedNode.publicConfig = pubConfig
   }
 
@@ -165,6 +164,29 @@ export async function nodeUptimeReported({
 
   if (savedNode) {
     savedNode.uptime = uptime.toNumber()
+    await store.save<Node>(savedNode)
+  }
+}
+
+export async function nodePublicConfigStored({
+  store,
+  event,
+  block,
+  extrinsic,
+}: EventContext & StoreContext) {
+  const [nodeID, config] = new TfgridModule.NodePublicConfigStoredEvent(event).params
+
+  const savedNode = await store.get(Node, { where: { nodeId: nodeID.toNumber() } })
+
+  if (savedNode) {
+    const pubConfig = new PublicConfig()
+    pubConfig.ipv4 = hex2a(config.ipv4.toString())
+    pubConfig.ipv6 = hex2a(config.ipv6.toString())
+    pubConfig.gw4 = hex2a(config.gw4.toString())
+    pubConfig.gw6 = hex2a(config.gw6.toString())
+    pubConfig.domain = hex2a(config.domain.toString()) || ''
+
+    savedNode.publicConfig = pubConfig
     await store.save<Node>(savedNode)
   }
 }

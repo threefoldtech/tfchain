@@ -9,8 +9,6 @@ import { NodeWhereArgs, NodeWhereInput } from '../../warthog';
 
 import { Location } from '../location/location.model';
 import { LocationService } from '../location/location.service';
-import { PublicConfig } from '../public-config/public-config.model';
-import { PublicConfigService } from '../public-config/public-config.service';
 import { Interfaces } from '../interfaces/interfaces.model';
 import { InterfacesService } from '../interfaces/interfaces.service';
 import { getConnection, getRepository, In, Not } from 'typeorm';
@@ -20,8 +18,6 @@ import _ from 'lodash';
 export class NodeService extends HydraBaseService<Node> {
   @Inject('LocationService')
   public readonly locationService!: LocationService;
-  @Inject('PublicConfigService')
-  public readonly publicConfigService!: PublicConfigService;
   @Inject('InterfacesService')
   public readonly interfacesService!: InterfacesService;
 
@@ -63,10 +59,6 @@ export class NodeService extends HydraBaseService<Node> {
     delete where.location;
 
     // remove relation filters to enable warthog query builders
-    const { publicConfig } = where;
-    delete where.publicConfig;
-
-    // remove relation filters to enable warthog query builders
 
     const { interfaces_some, interfaces_none, interfaces_every } = where;
 
@@ -91,17 +83,6 @@ export class NodeService extends HydraBaseService<Node> {
       mainQuery = mainQuery.andWhere(`"node"."location_id" IN (${locationQuery.getQuery()})`);
 
       parameters = { ...parameters, ...locationQuery.getParameters() };
-    }
-
-    if (publicConfig) {
-      // OTO or MTO
-      const publicConfigQuery = this.publicConfigService
-        .buildFindQueryWithParams(<any>publicConfig, undefined, undefined, ['id'], 'publicConfig')
-        .take(undefined); // remove the default LIMIT
-
-      mainQuery = mainQuery.andWhere(`"node"."public_config_id" IN (${publicConfigQuery.getQuery()})`);
-
-      parameters = { ...parameters, ...publicConfigQuery.getParameters() };
     }
 
     const interfacesFilter = interfaces_some || interfaces_none || interfaces_every;
