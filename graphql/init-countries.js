@@ -54,7 +54,7 @@ async function main () {
             return client.query(text, [index, index, country.name, code, region, subregion, lat, long, 0, 0]) 
         })
     
-        // await Promise.all(countryPromises)
+        await Promise.all(countryPromises)
 
         const query = {
             name: 'fetch',

@@ -32,8 +32,6 @@ import { Node } from '../modules/node/node.model';
 export { Node };
 import { NodeContract } from '../modules/node-contract/node-contract.model';
 export { NodeContract };
-import { Policy } from '../modules/policy/policy.model';
-export { Policy };
 import { PricingPolicy } from '../modules/pricing-policy/pricing-policy.model';
 export { PricingPolicy };
 import { PublicConfig } from '../modules/public-config/public-config.model';
@@ -49,9 +47,10 @@ export { UptimeEvent };
 
 import { CertificationType } from '../modules/enums/enums';
 export { CertificationType };
-import { Unit } from '../modules/enums/enums';
-export { Unit };
 import { ContractState } from '../modules/enums/enums';
 export { ContractState };
 import { DiscountLevel } from '../modules/enums/enums';
 export { DiscountLevel };
+
+import { Policy } from '../modules/jsonfields/jsonfields.model';
+export { Policy };

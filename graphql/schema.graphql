@@ -109,17 +109,9 @@ type PricingPolicy @entity {
   certified_sales_account: String!
 }
 
-type Policy @entity {
-  value: Int!
-  unit: Unit!
-}
-
-enum Unit {
-  Bytes,
-  Kilobytes,
-  Megabytes,
-  Gigabytes,
-  Terrabytes
+type Policy @jsonField {
+  value: Int
+  unit: String
 }
 
 type Country @entity {

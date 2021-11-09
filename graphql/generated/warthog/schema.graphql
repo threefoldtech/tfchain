@@ -1528,6 +1528,11 @@ input InterfacesWhereUniqueInput {
   id: ID!
 }
 
+"""
+The `JSONObject` scalar type represents JSON objects as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSONObject
+
 type Location implements BaseGraphQLObject {
   id: ID!
   createdAt: DateTime!
@@ -2230,55 +2235,24 @@ type PageInfo {
   endCursor: String
 }
 
-type Policy implements BaseGraphQLObject {
-  id: ID!
-  createdAt: DateTime!
-  createdById: String!
-  updatedAt: DateTime
-  updatedById: String
-  deletedAt: DateTime
-  deletedById: String
-  version: Int!
-  value: Int!
-  unit: Unit!
-  pricingpolicysu: [PricingPolicy!]
-  pricingpolicycu: [PricingPolicy!]
-  pricingpolicynu: [PricingPolicy!]
-  pricingpolicyipu: [PricingPolicy!]
-}
-
-type PolicyConnection {
-  totalCount: Int!
-  edges: [PolicyEdge!]!
-  pageInfo: PageInfo!
+type Policy {
+  value: Int
+  unit: String
 }
 
 input PolicyCreateInput {
-  value: Float!
-  unit: Unit!
+  value: Float
+  unit: String
 }
 
-type PolicyEdge {
-  node: Policy!
-  cursor: String!
-}
-
-enum PolicyOrderByInput {
-  createdAt_ASC
-  createdAt_DESC
-  updatedAt_ASC
-  updatedAt_DESC
-  deletedAt_ASC
-  deletedAt_DESC
-  value_ASC
-  value_DESC
-  unit_ASC
-  unit_DESC
+input PolicyInput {
+  value: Int
+  unit: String
 }
 
 input PolicyUpdateInput {
   value: Float
-  unit: Unit
+  unit: String
 }
 
 input PolicyWhereInput {
@@ -2312,20 +2286,11 @@ input PolicyWhereInput {
   value_lt: Int
   value_lte: Int
   value_in: [Int!]
-  unit_eq: Unit
-  unit_in: [Unit!]
-  pricingpolicysu_none: PricingPolicyWhereInput
-  pricingpolicysu_some: PricingPolicyWhereInput
-  pricingpolicysu_every: PricingPolicyWhereInput
-  pricingpolicycu_none: PricingPolicyWhereInput
-  pricingpolicycu_some: PricingPolicyWhereInput
-  pricingpolicycu_every: PricingPolicyWhereInput
-  pricingpolicynu_none: PricingPolicyWhereInput
-  pricingpolicynu_some: PricingPolicyWhereInput
-  pricingpolicynu_every: PricingPolicyWhereInput
-  pricingpolicyipu_none: PricingPolicyWhereInput
-  pricingpolicyipu_some: PricingPolicyWhereInput
-  pricingpolicyipu_every: PricingPolicyWhereInput
+  unit_eq: String
+  unit_contains: String
+  unit_startsWith: String
+  unit_endsWith: String
+  unit_in: [String!]
   AND: [PolicyWhereInput!]
   OR: [PolicyWhereInput!]
 }
@@ -2347,13 +2312,9 @@ type PricingPolicy implements BaseGraphQLObject {
   pricingPolicyId: Int!
   name: String!
   su: Policy!
-  suId: String!
   cu: Policy!
-  cuId: String!
   nu: Policy!
-  nuId: String!
   ipu: Policy!
-  ipuId: String!
   foundationAccount: String!
   certifiedSalesAccount: String!
 }
@@ -2368,10 +2329,10 @@ input PricingPolicyCreateInput {
   gridVersion: Float!
   pricingPolicyId: Float!
   name: String!
-  su: ID!
-  cu: ID!
-  nu: ID!
-  ipu: ID!
+  su: PolicyInput!
+  cu: PolicyInput!
+  nu: PolicyInput!
+  ipu: PolicyInput!
   foundationAccount: String!
   certifiedSalesAccount: String!
 }
@@ -2394,14 +2355,6 @@ enum PricingPolicyOrderByInput {
   pricingPolicyId_DESC
   name_ASC
   name_DESC
-  su_ASC
-  su_DESC
-  cu_ASC
-  cu_DESC
-  nu_ASC
-  nu_DESC
-  ipu_ASC
-  ipu_DESC
   foundationAccount_ASC
   foundationAccount_DESC
   certifiedSalesAccount_ASC
@@ -2412,10 +2365,10 @@ input PricingPolicyUpdateInput {
   gridVersion: Float
   pricingPolicyId: Float
   name: String
-  su: ID
-  cu: ID
-  nu: ID
-  ipu: ID
+  su: PolicyInput
+  cu: PolicyInput
+  nu: PolicyInput
+  ipu: PolicyInput
   foundationAccount: String
   certifiedSalesAccount: String
 }
@@ -2462,6 +2415,10 @@ input PricingPolicyWhereInput {
   name_startsWith: String
   name_endsWith: String
   name_in: [String!]
+  su_json: JSONObject
+  cu_json: JSONObject
+  nu_json: JSONObject
+  ipu_json: JSONObject
   foundationAccount_eq: String
   foundationAccount_contains: String
   foundationAccount_startsWith: String
@@ -2472,10 +2429,6 @@ input PricingPolicyWhereInput {
   certifiedSalesAccount_startsWith: String
   certifiedSalesAccount_endsWith: String
   certifiedSalesAccount_in: [String!]
-  su: PolicyWhereInput
-  cu: PolicyWhereInput
-  nu: PolicyWhereInput
-  ipu: PolicyWhereInput
   AND: [PricingPolicyWhereInput!]
   OR: [PricingPolicyWhereInput!]
 }
@@ -2775,9 +2728,6 @@ type Query {
   nodes(offset: Int, limit: Int = 50, where: NodeWhereInput, orderBy: [NodeOrderByInput!]): [Node!]!
   nodeByUniqueInput(where: NodeWhereUniqueInput!): Node
   nodesConnection(first: Int, after: String, last: Int, before: String, where: NodeWhereInput, orderBy: [NodeOrderByInput!]): NodeConnection!
-  policies(offset: Int, limit: Int = 50, where: PolicyWhereInput, orderBy: [PolicyOrderByInput!]): [Policy!]!
-  policyByUniqueInput(where: PolicyWhereUniqueInput!): Policy
-  policiesConnection(first: Int, after: String, last: Int, before: String, where: PolicyWhereInput, orderBy: [PolicyOrderByInput!]): PolicyConnection!
   pricingPolicies(offset: Int, limit: Int = 50, where: PricingPolicyWhereInput, orderBy: [PricingPolicyOrderByInput!]): [PricingPolicy!]!
   pricingPolicyByUniqueInput(where: PricingPolicyWhereUniqueInput!): PricingPolicy
   pricingPoliciesConnection(first: Int, after: String, last: Int, before: String, where: PricingPolicyWhereInput, orderBy: [PricingPolicyOrderByInput!]): PricingPolicyConnection!
@@ -3032,14 +2982,6 @@ input TwinWhereInput {
 
 input TwinWhereUniqueInput {
   id: ID!
-}
-
-enum Unit {
-  Bytes
-  Kilobytes
-  Megabytes
-  Gigabytes
-  Terrabytes
 }
 
 type UptimeEvent implements BaseGraphQLObject {

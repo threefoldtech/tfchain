@@ -2,13 +2,6 @@ export enum CertificationType {
   Diy = 'Diy',
   Certified = 'Certified',
 }
-export enum Unit {
-  Bytes = 'Bytes',
-  Kilobytes = 'Kilobytes',
-  Megabytes = 'Megabytes',
-  Gigabytes = 'Gigabytes',
-  Terrabytes = 'Terrabytes',
-}
 export enum ContractState {
   Created = 'Created',
   Deleted = 'Deleted',

@@ -26,9 +26,14 @@ export async function farmStored({
   const certificationTypeAsString = farm.certification_type.toString()
   let certType = CertificationType.Diy
   switch (certificationTypeAsString) {
-    case 'Diy': certType = CertificationType.Diy
-    case 'Diy': certType = CertificationType.Certified
+    case 'Diy': 
+      certType = CertificationType.Diy
+      break
+    case 'Certified': 
+      certType = CertificationType.Certified
+      break
   }
+
   newFarm.certificationType = certType
 
   await store.save<Farm>(newFarm)
@@ -39,7 +44,6 @@ export async function farmStored({
     newIP.ip = hex2a(Buffer.from(ip.ip.toString()).toString())
     newIP.gateway = hex2a(Buffer.from(ip.gateway.toString()).toString())
     newIP.contractId = ip.contract_id.toNumber()
-    newIP.farm = newFarm
 
     return store.save<PublicIp>(newIP)
   })
@@ -63,24 +67,19 @@ export async function farmUpdated({
     savedFarm.twinId = farm.twin_id.toNumber()
     savedFarm.pricingPolicyId = farm.pricing_policy_id.toNumber()
 
-    const certificationTypeAsString = farm.certification_type.toString()
-    let certType = CertificationType.Diy
-    switch (certificationTypeAsString) {
-      case 'Diy': certType = CertificationType.Diy
-      case 'Diy': certType = CertificationType.Certified
-    }
-
-    savedFarm.certificationType = certType
-
-    const ipPromises = farm.public_ips.map(ip => {
+    const ipPromises = farm.public_ips.map(async ip => {
       const newIP = new PublicIp()
+
+      const savedIP = await store.get(PublicIp, { where: { ip: hex2a(Buffer.from(ip.ip.toString()).toString()) }})
+      // ip is already there in storage, don't save it again
+      if (savedIP) return
   
       newIP.ip = hex2a(Buffer.from(ip.ip.toString()).toString())
       newIP.gateway = hex2a(Buffer.from(ip.gateway.toString()).toString())
       newIP.contractId = ip.contract_id.toNumber()
       newIP.farm = savedFarm
   
-      return store.save<PublicIp>(newIP)
+      return await store.save<PublicIp>(newIP)
     })
 
     await Promise.all(ipPromises)

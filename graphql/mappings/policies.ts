@@ -1,4 +1,4 @@
-import { PricingPolicy, FarmingPolicy, Policy, Unit, CertificationType } from '../generated/model'
+import { PricingPolicy, FarmingPolicy, Policy, CertificationType } from '../generated/model'
 import { TfgridModule } from '../chain'
 import { hex2a } from './util'
 
@@ -13,42 +13,43 @@ export async function pricingPolicyStored({
   block,
   extrinsic,
 }: EventContext & StoreContext) {
-  const newPricingPolicy = new PricingPolicy()
+  let pricingPolicy = new PricingPolicy()
   const [pricing_policy] = new TfgridModule.PricingPolicyStoredEvent(event).params
 
-  newPricingPolicy.gridVersion = pricing_policy.version.toNumber()
-  newPricingPolicy.pricingPolicyId = pricing_policy.id.toNumber()
-  newPricingPolicy.name = hex2a(Buffer.from(pricing_policy.name.toString()).toString())
+  const savedPolicy = await store.get(PricingPolicy, { where: { pricingPolicyId: pricing_policy.id.toNumber() }})
+  if (savedPolicy) {
+    pricingPolicy = savedPolicy
+  }
 
-  newPricingPolicy.foundationAccount = Buffer.from(pricing_policy.foundation_account.toHex()).toString()
-  newPricingPolicy.certifiedSalesAccount = Buffer.from(pricing_policy.certified_sales_account.toHex()).toString()
+  pricingPolicy.gridVersion = pricing_policy.version.toNumber()
+  pricingPolicy.pricingPolicyId = pricing_policy.id.toNumber()
+  pricingPolicy.name = hex2a(Buffer.from(pricing_policy.name.toString()).toString())
+
+  pricingPolicy.foundationAccount = Buffer.from(pricing_policy.foundation_account.toHex()).toString()
+  pricingPolicy.certifiedSalesAccount = Buffer.from(pricing_policy.certified_sales_account.toHex()).toString()
 
   const suPolicy = new Policy()
   suPolicy.value = pricing_policy.su.value.toNumber()
-  suPolicy.unit = formatUnit(pricing_policy.su.unit.toString())
-  await store.save<Policy>(suPolicy)
+  suPolicy.unit = pricing_policy.su.unit.toString()
 
   const nuPolicy = new Policy()
   nuPolicy.value = pricing_policy.nu.value.toNumber()
-  nuPolicy.unit = formatUnit(pricing_policy.nu.unit.toString())
-  await store.save<Policy>(nuPolicy)
+  nuPolicy.unit = pricing_policy.nu.unit.toString()
 
   const cuPolicy = new Policy()
   cuPolicy.value = pricing_policy.cu.value.toNumber()
-  cuPolicy.unit = formatUnit(pricing_policy.cu.unit.toString())
-  await store.save<Policy>(cuPolicy)
+  cuPolicy.unit = pricing_policy.cu.unit.toString()
 
   const IpuPolicy = new Policy()
   IpuPolicy.value = pricing_policy.ipu.value.toNumber()
-  IpuPolicy.unit = formatUnit(pricing_policy.ipu.unit.toString())
-  await store.save<Policy>(IpuPolicy)
+  IpuPolicy.unit = pricing_policy.ipu.unit.toString()
 
-  newPricingPolicy.su = suPolicy
-  newPricingPolicy.cu = cuPolicy
-  newPricingPolicy.nu = nuPolicy
-  newPricingPolicy.ipu = IpuPolicy
+  pricingPolicy.su = suPolicy
+  pricingPolicy.cu = cuPolicy
+  pricingPolicy.nu = nuPolicy
+  pricingPolicy.ipu = IpuPolicy
 
-  await store.save<PricingPolicy>(newPricingPolicy)
+  await store.save<PricingPolicy>(pricingPolicy)
 }
 
 export async function farmingPolicyStored({
@@ -73,20 +74,15 @@ export async function farmingPolicyStored({
   const certificationTypeAsString = farming_policy.certification_type.toString()
   let certType = CertificationType.Diy
   switch (certificationTypeAsString) {
-    case 'Diy': certType = CertificationType.Diy
-    case 'Diy': certType = CertificationType.Certified
+    case 'Diy': 
+      certType = CertificationType.Diy
+      break
+    case 'Certified': 
+      certType = CertificationType.Certified
+      break
   }
+
   newFarmingPolicy.certificationType = certType
 
   await store.save<FarmingPolicy>(newFarmingPolicy)
-}
-
-function formatUnit(unitAsString: string) : Unit {
-  switch (unitAsString) {
-    case 'Kilobytes': return Unit.Kilobytes
-    case 'Megabytes': return Unit.Megabytes
-    case 'Gigabytes': return Unit.Gigabytes
-    case 'Terrabytes': return Unit.Terrabytes
-    default: return Unit.Bytes
-  }
 }

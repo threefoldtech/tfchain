@@ -1,6 +1,4 @@
-import { BaseModel, IntField, Model, ManyToOne, StringField, JSONField } from '@subsquid/warthog';
-
-import { Policy } from '../policy/policy.model';
+import { BaseModel, IntField, Model, StringField, JSONField } from '@subsquid/warthog';
 
 import * as jsonTypes from '../jsonfields/jsonfields.model';
 
@@ -15,41 +13,17 @@ export class PricingPolicy extends BaseModel {
   @StringField({})
   name!: string;
 
-  @ManyToOne(() => Policy, (param: Policy) => param.pricingpolicysu, {
-    skipGraphQLField: true,
+  @JSONField({ filter: true, gqlFieldType: jsonTypes.Policy })
+  su!: jsonTypes.Policy;
 
-    modelName: 'PricingPolicy',
-    relModelName: 'Policy',
-    propertyName: 'su',
-  })
-  su!: Policy;
+  @JSONField({ filter: true, gqlFieldType: jsonTypes.Policy })
+  cu!: jsonTypes.Policy;
 
-  @ManyToOne(() => Policy, (param: Policy) => param.pricingpolicycu, {
-    skipGraphQLField: true,
+  @JSONField({ filter: true, gqlFieldType: jsonTypes.Policy })
+  nu!: jsonTypes.Policy;
 
-    modelName: 'PricingPolicy',
-    relModelName: 'Policy',
-    propertyName: 'cu',
-  })
-  cu!: Policy;
-
-  @ManyToOne(() => Policy, (param: Policy) => param.pricingpolicynu, {
-    skipGraphQLField: true,
-
-    modelName: 'PricingPolicy',
-    relModelName: 'Policy',
-    propertyName: 'nu',
-  })
-  nu!: Policy;
-
-  @ManyToOne(() => Policy, (param: Policy) => param.pricingpolicyipu, {
-    skipGraphQLField: true,
-
-    modelName: 'PricingPolicy',
-    relModelName: 'Policy',
-    propertyName: 'ipu',
-  })
-  ipu!: Policy;
+  @JSONField({ filter: true, gqlFieldType: jsonTypes.Policy })
+  ipu!: jsonTypes.Policy;
 
   @StringField({})
   foundationAccount!: string;

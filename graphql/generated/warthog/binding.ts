@@ -57,9 +57,6 @@ export interface Query {
     nodes: <T = Array<Node>>(args: { offset?: Int | null, limit?: Int | null, where?: NodeWhereInput | null, orderBy?: Array<NodeOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     nodeByUniqueInput: <T = Node | null>(args: { where: NodeWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     nodesConnection: <T = NodeConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: NodeWhereInput | null, orderBy?: Array<NodeOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    policies: <T = Array<Policy>>(args: { offset?: Int | null, limit?: Int | null, where?: PolicyWhereInput | null, orderBy?: Array<PolicyOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
-    policyByUniqueInput: <T = Policy | null>(args: { where: PolicyWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
-    policiesConnection: <T = PolicyConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: PolicyWhereInput | null, orderBy?: Array<PolicyOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     pricingPolicies: <T = Array<PricingPolicy>>(args: { offset?: Int | null, limit?: Int | null, where?: PricingPolicyWhereInput | null, orderBy?: Array<PricingPolicyOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
     pricingPolicyByUniqueInput: <T = PricingPolicy | null>(args: { where: PricingPolicyWhereUniqueInput }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T | null> ,
     pricingPoliciesConnection: <T = PricingPolicyConnection>(args: { first?: Int | null, after?: String | null, last?: Int | null, before?: String | null, where?: PricingPolicyWhereInput | null, orderBy?: Array<PricingPolicyOrderByInput> | null }, info?: GraphQLResolveInfo | string, options?: Options) => Promise<T> ,
@@ -424,17 +421,6 @@ export type NodeOrderByInput =   'createdAt_ASC' |
   'farmingPolicyId_ASC' |
   'farmingPolicyId_DESC'
 
-export type PolicyOrderByInput =   'createdAt_ASC' |
-  'createdAt_DESC' |
-  'updatedAt_ASC' |
-  'updatedAt_DESC' |
-  'deletedAt_ASC' |
-  'deletedAt_DESC' |
-  'value_ASC' |
-  'value_DESC' |
-  'unit_ASC' |
-  'unit_DESC'
-
 export type PricingPolicyOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
   'updatedAt_ASC' |
@@ -447,14 +433,6 @@ export type PricingPolicyOrderByInput =   'createdAt_ASC' |
   'pricingPolicyId_DESC' |
   'name_ASC' |
   'name_DESC' |
-  'su_ASC' |
-  'su_DESC' |
-  'cu_ASC' |
-  'cu_DESC' |
-  'nu_ASC' |
-  'nu_DESC' |
-  'ipu_ASC' |
-  'ipu_DESC' |
   'foundationAccount_ASC' |
   'foundationAccount_DESC' |
   'certifiedSalesAccount_ASC' |
@@ -521,12 +499,6 @@ export type TwinOrderByInput =   'createdAt_ASC' |
   'accountId_DESC' |
   'ip_ASC' |
   'ip_DESC'
-
-export type Unit =   'Bytes' |
-  'Kilobytes' |
-  'Megabytes' |
-  'Gigabytes' |
-  'Terrabytes'
 
 export type UptimeEventOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -1896,13 +1868,18 @@ export interface NodeWhereUniqueInput {
 }
 
 export interface PolicyCreateInput {
-  value: Float
-  unit: Unit
+  value?: Float | null
+  unit?: String | null
+}
+
+export interface PolicyInput {
+  value?: Int | null
+  unit?: String | null
 }
 
 export interface PolicyUpdateInput {
   value?: Float | null
-  unit?: Unit | null
+  unit?: String | null
 }
 
 export interface PolicyWhereInput {
@@ -1936,20 +1913,11 @@ export interface PolicyWhereInput {
   value_lt?: Int | null
   value_lte?: Int | null
   value_in?: Int[] | Int | null
-  unit_eq?: Unit | null
-  unit_in?: Unit[] | Unit | null
-  pricingpolicysu_none?: PricingPolicyWhereInput | null
-  pricingpolicysu_some?: PricingPolicyWhereInput | null
-  pricingpolicysu_every?: PricingPolicyWhereInput | null
-  pricingpolicycu_none?: PricingPolicyWhereInput | null
-  pricingpolicycu_some?: PricingPolicyWhereInput | null
-  pricingpolicycu_every?: PricingPolicyWhereInput | null
-  pricingpolicynu_none?: PricingPolicyWhereInput | null
-  pricingpolicynu_some?: PricingPolicyWhereInput | null
-  pricingpolicynu_every?: PricingPolicyWhereInput | null
-  pricingpolicyipu_none?: PricingPolicyWhereInput | null
-  pricingpolicyipu_some?: PricingPolicyWhereInput | null
-  pricingpolicyipu_every?: PricingPolicyWhereInput | null
+  unit_eq?: String | null
+  unit_contains?: String | null
+  unit_startsWith?: String | null
+  unit_endsWith?: String | null
+  unit_in?: String[] | String | null
   AND?: PolicyWhereInput[] | PolicyWhereInput | null
   OR?: PolicyWhereInput[] | PolicyWhereInput | null
 }
@@ -1962,10 +1930,10 @@ export interface PricingPolicyCreateInput {
   gridVersion: Float
   pricingPolicyId: Float
   name: String
-  su: ID_Output
-  cu: ID_Output
-  nu: ID_Output
-  ipu: ID_Output
+  su: PolicyInput
+  cu: PolicyInput
+  nu: PolicyInput
+  ipu: PolicyInput
   foundationAccount: String
   certifiedSalesAccount: String
 }
@@ -1974,10 +1942,10 @@ export interface PricingPolicyUpdateInput {
   gridVersion?: Float | null
   pricingPolicyId?: Float | null
   name?: String | null
-  su?: ID_Input | null
-  cu?: ID_Input | null
-  nu?: ID_Input | null
-  ipu?: ID_Input | null
+  su?: PolicyInput | null
+  cu?: PolicyInput | null
+  nu?: PolicyInput | null
+  ipu?: PolicyInput | null
   foundationAccount?: String | null
   certifiedSalesAccount?: String | null
 }
@@ -2024,6 +1992,10 @@ export interface PricingPolicyWhereInput {
   name_startsWith?: String | null
   name_endsWith?: String | null
   name_in?: String[] | String | null
+  su_json?: JSONObject | null
+  cu_json?: JSONObject | null
+  nu_json?: JSONObject | null
+  ipu_json?: JSONObject | null
   foundationAccount_eq?: String | null
   foundationAccount_contains?: String | null
   foundationAccount_startsWith?: String | null
@@ -2034,10 +2006,6 @@ export interface PricingPolicyWhereInput {
   certifiedSalesAccount_startsWith?: String | null
   certifiedSalesAccount_endsWith?: String | null
   certifiedSalesAccount_in?: String[] | String | null
-  su?: PolicyWhereInput | null
-  cu?: PolicyWhereInput | null
-  nu?: PolicyWhereInput | null
-  ipu?: PolicyWhereInput | null
   AND?: PricingPolicyWhereInput[] | PricingPolicyWhereInput | null
   OR?: PricingPolicyWhereInput[] | PricingPolicyWhereInput | null
 }
@@ -2907,32 +2875,9 @@ export interface PageInfo {
   endCursor?: String | null
 }
 
-export interface Policy extends BaseGraphQLObject {
-  id: ID_Output
-  createdAt: DateTime
-  createdById: String
-  updatedAt?: DateTime | null
-  updatedById?: String | null
-  deletedAt?: DateTime | null
-  deletedById?: String | null
-  version: Int
-  value: Int
-  unit: Unit
-  pricingpolicysu?: Array<PricingPolicy> | null
-  pricingpolicycu?: Array<PricingPolicy> | null
-  pricingpolicynu?: Array<PricingPolicy> | null
-  pricingpolicyipu?: Array<PricingPolicy> | null
-}
-
-export interface PolicyConnection {
-  totalCount: Int
-  edges: Array<PolicyEdge>
-  pageInfo: PageInfo
-}
-
-export interface PolicyEdge {
-  node: Policy
-  cursor: String
+export interface Policy {
+  value?: Int | null
+  unit?: String | null
 }
 
 export interface PricingPolicy extends BaseGraphQLObject {
@@ -2948,13 +2893,9 @@ export interface PricingPolicy extends BaseGraphQLObject {
   pricingPolicyId: Int
   name: String
   su: Policy
-  suId: String
   cu: Policy
-  cuId: String
   nu: Policy
-  nuId: String
   ipu: Policy
-  ipuId: String
   foundationAccount: String
   certifiedSalesAccount: String
 }
@@ -3144,6 +3085,22 @@ export type ID_Output = string
 The `Int` scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.
 */
 export type Int = number
+
+/*
+The `JSONObject` scalar type represents JSON objects as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+*/
+
+    export type JsonValue = JsonPrimitive | JsonObject | JsonArray;
+
+    export type JsonPrimitive = string | number | boolean | null | {};
+    
+        // eslint-disable-next-line @typescript-eslint/no-empty-interface
+    export interface JsonArray extends Array<JsonValue> {}
+    
+    export type JsonObject = { [member: string]: JsonValue };
+
+    export type JSONObject = JsonObject;
+  
 
 /*
 The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
