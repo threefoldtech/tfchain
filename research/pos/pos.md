@@ -24,3 +24,11 @@ We could issue the vested tokens on tfchain on an account with the proper securi
 Slashing might be a problem but this can be turned off for the validator of the vested accounts if needed.
 
 I'm not going more in to detail on this topic as the other ones are more important at the moment.
+
+## Stimulating community paricipation and decentralization
+
+If we run high uptime validators, why would someone else run a validator and why would other people nominate the other validators?
+
+Comission is the percentage the validator gets for being a validator and is taken from the payout to the nominators.
+
+A simple way to stimulate community paricipation and decentralization is by setting the comission of our validators to a high but acceptable value. This way other validators can be preferred if they set their comission lower than ours.
