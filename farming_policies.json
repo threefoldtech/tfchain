@@ -1,0 +1,24 @@
+[
+    {
+      "version": 1,
+      "id": 1,
+      "name": "threefold_default_diy_farming_policy",
+      "cu": 160000000,
+      "su": 100000000,
+      "nu": 2000000,
+      "ipv4": 800000,
+      "timestamp": 0,
+      "certification_type": "Diy"
+    },
+    {
+      "version": 1,
+      "id": 2,
+      "name": "threefold_default_certified_farming_policy",
+      "cu": 200000000,
+      "su": 120000000,
+      "nu": 3000000,
+      "ipv4": 1000000,
+      "timestamp": 0,
+      "certification_type": "Certified"
+    }
+  ]
