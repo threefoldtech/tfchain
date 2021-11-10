@@ -3,13 +3,22 @@
 Questions to resolve:
 
 - Can we transition from aura/grandpa to POS?
-- How can the participants in the POS be rewarded?
 
 ## POS in substrate
 
 There is a default pallet in substrate for staking: [pallet_staking](https://paritytech.github.io/substrate/master/pallet_staking/index.html).
 
 This pallet also supports nominated POS (NPOS), it actually relies on it. This has the benefit of not having too many validators and that delegated staking is immediately solved.
+
+## Staking rewards
+
+The staking pallet uses a yearly inflation curve where rewards are newly minted tokens. For tfchain this is not an option.
+
+Instead a percentage (1 % for example) of the payed contract vales should go to a `pos_reward` account and at each payout time, 1% of the pos_reward account is distributed (minimizes variance).
+
+**This is no default pallet_staking functionality.**
+
+Currently [transaction fees are also burned](https://github.com/threefoldtech/tfchain/issues/72). This causes a little of deflation. The transaction fees should also go to the pos_reward pool.
 
 ## Using vested tokens to paricipate in POS
 
