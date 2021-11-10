@@ -17,6 +17,7 @@ The staking pallet uses a yearly inflation curve where rewards are newly minted 
 Instead a percentage (1 % for example) of the payed contract vales should go to a `pos_reward` account and at each payout time, 1% of the pos_reward account is distributed (minimizes variance).
 
 **This is no default pallet_staking functionality.**
+But it should be possible by overriding the [make_payout function](https://github.com/paritytech/substrate/blob/755569d202b4007179cc250279bad55df45b5f7d/frame/staking/src/pallet/impls.rs#L223).
 
 Currently [transaction fees are also burned](https://github.com/threefoldtech/tfchain/issues/72). This causes a little of deflation. The transaction fees should also go to the pos_reward pool.
 
