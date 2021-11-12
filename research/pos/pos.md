@@ -3,6 +3,7 @@
 Questions to resolve:
 
 - Can we transition from aura/grandpa to POS?
+- Test what happens if 90 % of the validators are suddenly offline (if they are run on the grid for example and there is a problem).
 
 ## POS in substrate
 
@@ -12,30 +13,28 @@ This pallet also supports nominated POS (NPOS), it actually relies on it. This h
 
 ## Staking rewards
 
-The staking pallet uses a yearly inflation curve where rewards are newly minted tokens. For tfchain this is not an option.
+The staking pallet uses a yearly inflation curve where rewards are newly minted tokens.
+While other reward schemes can be implemented, let's take a yearly inflation of 5%.
 
-Instead a percentage (1 % for example) of the payed contract vales should go to a `pos_reward` account and at each payout time, 1% of the pos_reward account is distributed (minimizes variance).
+In the contract values payouts, 30% is burned, let's increase this with 5% to compensate for the pos.
 
-**This is no default pallet_staking functionality.**
-But it should be possible by overriding the [make_payout function](https://github.com/paritytech/substrate/blob/755569d202b4007179cc250279bad55df45b5f7d/frame/staking/src/pallet/impls.rs#L223).
+The [transaction fees are also burned](https://github.com/threefoldtech/tfchain/issues/72). This causes a little of deflation that compensates this a bit a well.
 
-Currently [transaction fees are also burned](https://github.com/threefoldtech/tfchain/issues/72). This causes a little of deflation. The transaction fees should also go to the pos_reward pool.
-
-## Using vested tokens to paricipate in POS
+## Using vested tokens to participate in POS
 
 Vested tokens are locked on the Stellar network.
 
 There is a possibility to have the vested tokens to be used in the POS.
 
-We could issue the vested tokens on tfchain on an account with the proper security measures that and nominate a validator.
+We could issue the vested tokens on tfchain on an account with the proper security measures and nominate a validator.
 Slashing might be a problem but this can be turned off for the validator of the vested accounts if needed.
 
 I'm not going more in to detail on this topic as the other ones are more important at the moment.
 
-## Stimulating community paricipation and decentralization
+## Stimulating community participation and decentralization
 
 If we run high uptime validators, why would someone else run a validator and why would other people nominate the other validators?
 
 Comission is the percentage the validator gets for being a validator and is taken from the payout to the nominators.
 
-A simple way to stimulate community paricipation and decentralization is by setting the comission of our validators to a high but acceptable value. This way other validators can be preferred if they set their comission lower than ours.
+A simple way to stimulate community paricipation and decentralization is by setting the comission of our validators to a high value. This way other validators can be preferred if they set their comission lower than ours.
