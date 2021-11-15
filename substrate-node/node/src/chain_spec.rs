@@ -1,14 +1,18 @@
 use sp_core::{Pair, Public, sr25519, ed25519};
 use tfchain_runtime::{
-	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig,
-	SudoConfig, SystemConfig, WASM_BINARY, Signature, TfgridModuleConfig, TFTBridgeModuleConfig, ValidatorSetConfig, SessionConfig,
+	AccountId, BabeConfig, BalancesConfig, 
+	GenesisConfig, GrandpaConfig, ImOnlineId,
+	SudoConfig, SystemConfig, WASM_BINARY, Signature, 
+	TfgridModuleConfig, TFTBridgeModuleConfig, SessionConfig,
+	AuthorityDiscoveryConfig, AuthorityDiscoveryId, StakingConfig,
+	StakerStatus,
 };
-use sp_consensus_aura::sr25519::AuthorityId as AuraId;
+use sp_consensus_babe::AuthorityId as BabeId;
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{Verify, IdentifyAccount};
 use sc_service::ChainType;
 use tfchain_runtime::opaque::SessionKeys;
-
+use tfchain_runtime::constants;
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
@@ -43,22 +47,25 @@ fn get_from_seed_string<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>:
 		.public()
 }
 
-fn session_keys(
-	aura: AuraId,
+fn get_session_keys(
 	grandpa: GrandpaId,
-) -> SessionKeys {
-	SessionKeys { aura, grandpa }
+	babe: BabeId,
+	im_online: ImOnlineId,
+	authority_discovery: AuthorityDiscoveryId,
+	) -> SessionKeys {
+	SessionKeys { babe, grandpa, im_online, authority_discovery }
 }
 
-pub fn authority_keys_from_seed(seed: &str) -> (
-	AccountId,
-	AuraId,
-	GrandpaId
-) {
+/// Generate an authority keys.
+pub fn get_authority_keys_from_seed(seed: &str)
+	-> (AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId) {
 	(
+		get_account_id_from_seed::<sr25519::Public>(&format!("{}//stash", seed)),
 		get_account_id_from_seed::<sr25519::Public>(seed),
-		get_from_seed::<AuraId>(seed),
-		get_from_seed::<GrandpaId>(seed)
+		get_from_seed::<GrandpaId>(seed),
+		get_from_seed::<BabeId>(seed),
+		get_from_seed::<ImOnlineId>(seed),
+		get_from_seed::<AuthorityDiscoveryId>(seed),
 	)
 }
 
@@ -85,7 +92,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 			wasm_binary,
 			// Initial PoA authorities
 			vec![
-				authority_keys_from_seed("Alice"),
+				get_authority_keys_from_seed("Alice"),
 			],
 			// Sudo account
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -154,8 +161,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 			wasm_binary,
 			// Initial PoA authorities
 			vec![
-				authority_keys_from_seed("Alice"),
-				authority_keys_from_seed("Bob"),
+				get_authority_keys_from_seed("Alice"),
 			],
 			// Sudo account
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -212,7 +218,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 /// Configure initial storage state for FRAME modules.
 fn testnet_genesis(
 	wasm_binary: &[u8],
-	initial_authorities: Vec<(AccountId, AuraId, GrandpaId)>,
+	initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)>,
 	root_key: AccountId,
 	foundation_account: AccountId,
 	sales_account: AccountId,
@@ -221,6 +227,7 @@ fn testnet_genesis(
 	bridge_validator_accounts: Vec<AccountId>,
 	bridge_fee_account: AccountId,
 ) -> GenesisConfig {
+	const INITIAL_STAKING: u128 = 1_000_000 * constants::currency::CENTS;
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
 			// Add Wasm runtime to storage.
@@ -231,24 +238,40 @@ fn testnet_genesis(
 			// Configure endowed accounts with initial balance of 1 << 60.
 			balances: endowed_accounts.iter().cloned().map(|k|(k, 1 << 60)).collect(),
 		}),
-		validatorset: Some(ValidatorSetConfig {
-			validators: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
-		}),
 		pallet_session: Some(SessionConfig {
-			keys: initial_authorities.iter().map(|x| {
-				(x.0.clone(), x.0.clone(), session_keys(x.1.clone(), x.2.clone()))
-			}).collect::<Vec<_>>(),
+			keys: initial_authorities
+				.iter()
+				.map(|x| (
+						x.0.clone(), // stash
+						x.0.clone(), // stash
+						get_session_keys(
+							x.2.clone(), // grandpa
+							x.3.clone(), // babe
+							x.4.clone(), // im-online
+							x.5.clone(), // authority-discovery
+						)))
+				.collect::<Vec<_>>(),
 		}),
-		pallet_aura: Some(AuraConfig {
-			authorities: vec![],
+		pallet_staking: Some(StakingConfig {
+			validator_count: initial_authorities.len() as u32 * 2,
+			minimum_validator_count: initial_authorities.len() as u32,
+			stakers: initial_authorities
+				.iter()
+				.map(|x| (x.0.clone(), x.1.clone(), INITIAL_STAKING, StakerStatus::Validator))
+				.collect(),
+			invulnerables: initial_authorities.iter().map(|x| x.0.clone()).collect(),
+			slash_reward_fraction: sp_runtime::Perbill::from_percent(10),
+			..Default::default()
 		}),
-		pallet_grandpa: Some(GrandpaConfig {
-			authorities: vec![],
-		}),
+		pallet_babe: Some(BabeConfig { authorities: vec![] }),
+		pallet_grandpa: Some(GrandpaConfig { authorities: vec![] }),
+		pallet_authority_discovery: Some(AuthorityDiscoveryConfig { keys: vec![] }),
+		pallet_im_online: Default::default(),
 		pallet_sudo: Some(SudoConfig {
 			// Assign network admin rights.
 			key: root_key,
 		}),
+		pallet_collective_Instance1: Some(Default::default()),
 		pallet_tfgrid: Some(TfgridModuleConfig {
 			su_price_value: 300000,
 			su_price_unit: 4,

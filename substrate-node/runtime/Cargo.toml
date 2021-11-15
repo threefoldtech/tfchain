@@ -62,12 +62,6 @@ package = "pallet-tft-price"
 branch = "main"
 #path = "../../../tfchain_tft/pallet-tft-price"
 
-[dependencies.validatorset]
-default-features = false
-package = 'substrate-validator-set'
-git = 'https://github.com/gautamdhameja/substrate-validator-set.git'
-rev = 'f83f1000c298c376ab180787eb73d0a0fdb740e0'
-
 [dependencies]
 hex-literal = { optional = true, version = '0.3.1' }
 serde = { features = ['derive'], optional = true, version = '1.0.119' }
@@ -96,6 +90,7 @@ sp-offchain = { default-features = false, version = '3.0.0' }
 sp-runtime = { default-features = false, version = '3.0.0' }
 sp-session = { default-features = false, version = '3.0.0' }
 sp-std = { default-features = false, version = '3.0.0' }
+sp-arithmetic = { default-features = false, version = '3.0.0' }
 sp-transaction-pool = { default-features = false, version = '3.0.0' }
 sp-version = { default-features = false, version = '3.0.0' }
 pallet-scheduler = { default-features = false, version = '3.0.0' }
@@ -113,6 +108,7 @@ pallet-offences = { version = "3.0.0", default-features = false }
 sp-authority-discovery = { version = "3.0.0", default-features = false }
 pallet-authority-discovery = { version = "3.0.0", default-features = false }
 pallet-identity = { version = "3.0.0", default-features = false }
+pallet-collective = { version = "3.0.0", default-features = false }
 
 [dev-dependencies]
 libsecp256k1 = "0.3.4"
@@ -154,7 +150,6 @@ std = [
     'pallet-scheduler/std',
     'sp-staking/std',
     'pallet-session/std',
-    'validatorset/std',
     'pallet-burning/std',
     'pallet-staking/std',
 	'pallet-authorship/std',
@@ -176,4 +171,6 @@ std = [
     'sp-std/std',
     'sp-transaction-pool/std',
     'sp-version/std',
+    'sp-arithmetic/std',
+    'pallet-collective/std'
 ]

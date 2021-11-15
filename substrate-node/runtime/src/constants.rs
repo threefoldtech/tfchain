@@ -14,6 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Polkadot.  If not, see <http://www.gnu.org/licenses/>.
 
+/// An instant or duration in time.
+pub type Moment = u64;
+pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
+
 /// Money matters.
 pub mod currency {
 	use crate::Balance;
@@ -34,6 +38,10 @@ pub mod time {
 	pub const MILLISECS_PER_BLOCK: u64 = 6000;
 	pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 	pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 1 * HOURS;
+	pub const EPOCH_DURATION_IN_SLOTS: u64 = {
+		const SLOT_FILL_RATE: f64 = MILLISECS_PER_BLOCK as f64 / SLOT_DURATION as f64;
+		(EPOCH_DURATION_IN_BLOCKS as f64 * SLOT_FILL_RATE) as u64
+	};
 
 	// These time units are defined in number of blocks.
 	pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
