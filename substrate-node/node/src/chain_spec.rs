@@ -90,9 +90,10 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		ChainType::Development,
 		move || testnet_genesis(
 			wasm_binary,
-			// Initial PoA authorities
+			// Initial validators
 			vec![
 				get_authority_keys_from_seed("Alice"),
+				get_authority_keys_from_seed("Bob"),
 			],
 			// Sudo account
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -159,9 +160,10 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 		ChainType::Local,
 		move || testnet_genesis(
 			wasm_binary,
-			// Initial PoA authorities
+			// Initial validators
 			vec![
 				get_authority_keys_from_seed("Alice"),
+				get_authority_keys_from_seed("Bob"),
 			],
 			// Sudo account
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
