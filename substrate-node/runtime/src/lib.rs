@@ -13,7 +13,7 @@ use sp_core::{
 };
 use sp_runtime::{
 	ApplyExtrinsicResult, generic, create_runtime_str, impl_opaque_keys, MultiSignature,
-	transaction_validity::{TransactionValidity, TransactionSource, TransactionPriority}, curve::PiecewiseLinear,
+	transaction_validity::{TransactionValidity, TransactionSource, TransactionPriority},
 };
 use sp_runtime::traits::{
 	AccountIdLookup, BlakeTwo256, Block as BlockT, Verify, 
@@ -432,18 +432,6 @@ impl pallet_scheduler::Config for Runtime {
     type WeightInfo = ();
 }
 
-pallet_staking_reward_curve::build! {
-	// 4.5% min, 27.5% max, 50% ideal stake
-	const REWARD_CURVE: PiecewiseLinear<'static> = curve!(
-		min_inflation: 0_045_000,
-		max_inflation: 0_275_000,
-		ideal_stake: 0_500_000,
-		falloff: 0_050_000,
-		max_piece_count: 40,
-		test_precision: 0_005_500,
-	);
-}
-
 parameter_types! {
 	/// A limit for off-chain phragmen unsigned solution submission.
 	///
@@ -457,7 +445,6 @@ parameter_types! {
 	pub const SessionsPerEra: sp_staking::SessionIndex = 2; // 24 hours
 	pub const BondingDuration: pallet_staking::EraIndex = 28; // 28 days
 	pub const SlashDeferDuration: pallet_staking::EraIndex = 27; // 27 days
-	pub const RewardCurve: &'static PiecewiseLinear<'static> = &REWARD_CURVE;
 	// only top N nominators get paid for each validator
 	pub const MaxNominatorRewardedPerValidator: u32 = 256;
 	pub const ElectionLookahead: BlockNumber = constants::time::EPOCH_DURATION_IN_BLOCKS / 4;
@@ -481,7 +468,6 @@ impl pallet_staking::Config for Runtime {
 	type SlashDeferDuration = SlashDeferDuration;
 	type SlashCancelOrigin = EnsureRootOrThreeFourthsTechCouncil;
 	type SessionInterface = Self;
-	type RewardCurve = RewardCurve;
 	type NextNewSession = Session;
 	type ElectionLookahead = ElectionLookahead;
 	type Call = Call;
