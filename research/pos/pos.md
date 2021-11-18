@@ -50,4 +50,6 @@ Besides the fact that this is very clear, no private key that can leak or kept s
 The Base58 alphabet consists of the following characters:
 123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz
 
-`NposRewardPoolAccount11....` should as such be possible, prefixed with the network type and the checksum at the end that should match according to the [SS58 format](https://docs.substrate.io/v3/advanced/ss58/).
+`NposRewardAccount11....` should as such be possible, prefixed with the network type and the checksum at the end that should match according to the [SS58 format](https://docs.substrate.io/v3/advanced/ss58/).
+The main.go program was used to decode the wanted adress, calculate the correct checksum and encode it again.
+The result is the `5CNposRewardAccount11111111111111111111111111FSU` address
