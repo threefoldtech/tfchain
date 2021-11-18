@@ -125,6 +125,8 @@ pub fn development_config() -> Result<ChainSpec, String> {
 			],
 			// Bridge fee account
 			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+			// Staking Pool Account
+			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
 		),
 		// Bootnodes
 		vec![],
@@ -203,6 +205,8 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 			],
 			// Bridge fee account
 			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+			// Staking Pool Account
+			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
 		),
 		// Bootnodes
 		vec![],
@@ -228,6 +232,7 @@ fn testnet_genesis(
 	_enable_println: bool,
 	bridge_validator_accounts: Vec<AccountId>,
 	bridge_fee_account: AccountId,
+	staking_pool_account: AccountId,
 ) -> GenesisConfig {
 	const INITIAL_STAKING: u128 = 1_000_000 * constants::currency::CENTS;
 	GenesisConfig {
@@ -255,6 +260,7 @@ fn testnet_genesis(
 				.collect::<Vec<_>>(),
 		}),
 		pallet_staking: Some(StakingConfig {
+			staking_pool_account,
 			validator_count: initial_authorities.len() as u32 * 2,
 			minimum_validator_count: initial_authorities.len() as u32,
 			stakers: initial_authorities

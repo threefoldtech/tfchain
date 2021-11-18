@@ -64,10 +64,10 @@ branch = "main"
 
 [dependencies.pallet-staking]
 default-features = false
-#git = "https://github.com/threefoldtech/tfchain_pallets"
-#package = "pallet-staking"
-#branch = "development"
-path = "../../../tfchain_pallets/staking"
+git = "https://github.com/threefoldtech/tfchain_pallets"
+package = "pallet-staking"
+branch = "development_staking"
+#path = "../../../tfchain_pallets/pallet-staking"
 
 [dependencies]
 hex-literal = { optional = true, version = '0.3.1' }

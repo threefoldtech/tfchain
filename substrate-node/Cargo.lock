@@ -3956,6 +3956,7 @@ dependencies = [
 [[package]]
 name = "pallet-staking"
 version = "3.0.0"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development_staking#9f9cb29386be9e56e92bd6936c648c3ade1ae127"
 dependencies = [
  "frame-support",
  "frame-system",

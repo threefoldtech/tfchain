@@ -442,7 +442,7 @@ parameter_types! {
 		.max_extrinsic
 		.expect("Normal extrinsics have weight limit configured by default; qed")
 		.saturating_sub(BlockExecutionWeight::get());
-	pub const SessionsPerEra: sp_staking::SessionIndex = 2; // 24 hours
+	pub const SessionsPerEra: sp_staking::SessionIndex = 24; // 24 hours
 	pub const BondingDuration: pallet_staking::EraIndex = 28; // 28 days
 	pub const SlashDeferDuration: pallet_staking::EraIndex = 27; // 27 days
 	// only top N nominators get paid for each validator
