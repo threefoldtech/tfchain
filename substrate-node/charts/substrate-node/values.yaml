@@ -50,7 +50,7 @@ ws_max_connections: 1048576
 rpc_methods: "safe"
 disable_offchain_worker: true
 keys: []
-# - name: aura
+# - name: babe
 #   secret: "kkjghjfkkj kjhgkkhhgg"
 # - name: grandpa
 #   secret: "kkjghjfkkj kjhgkkhhgg"

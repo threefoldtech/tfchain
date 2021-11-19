@@ -95,7 +95,7 @@ spec:
               readOnly: true 
       {{ if .Values.is_validator }}
       initContainers:
-        - name: insert-aura-key
+        - name: insert-babe-key
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -104,8 +104,8 @@ spec:
             "key",
             "insert",
             "--keystore-path=/keystore",
-            "--key-type", "aura",
-            "--suri","/keys/aura",
+            "--key-type", "babe",
+            "--suri","/keys/babe",
             "--scheme=sr25519"
           ]
           volumeMounts:
