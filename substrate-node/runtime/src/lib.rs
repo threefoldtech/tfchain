@@ -9,7 +9,6 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 use sp_std::prelude::*;
 use sp_core::{
 	crypto::KeyTypeId, OpaqueMetadata, Encode,
-	u32_trait::{_3, _4},
 };
 use sp_runtime::{
 	ApplyExtrinsicResult, generic, create_runtime_str, impl_opaque_keys, MultiSignature,
@@ -25,6 +24,7 @@ use pallet_grandpa::fg_primitives;
 use sp_version::RuntimeVersion;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
+use frame_system::EnsureRoot;
 
 // A few exports that help ease life for downstream crates.
 #[cfg(any(feature = "std", test))]
@@ -466,7 +466,8 @@ impl pallet_staking::Config for Runtime {
 	type SessionsPerEra = SessionsPerEra;
 	type BondingDuration = BondingDuration;
 	type SlashDeferDuration = SlashDeferDuration;
-	type SlashCancelOrigin = EnsureRootOrThreeFourthsTechCouncil;
+	// Root can cancel slashes
+    type SlashCancelOrigin = EnsureRoot<AccountId>;
 	type SessionInterface = Self;
 	type NextNewSession = Session;
 	type ElectionLookahead = ElectionLookahead;
@@ -538,40 +539,6 @@ impl pallet_im_online::Config for Runtime {
 
 use pallet_session::historical as pallet_session_historical;
 
-type TechCouncilInstance = pallet_collective::Instance1;
-
-type EnsureRootOrThreeFourthsTechCouncil = frame_system::EnsureOneOf<
-	AccountId,
-	frame_system::EnsureRoot<AccountId>,
-	pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, TechCouncilInstance>,
->;
-
-parameter_types! {
-	pub const EraDuration: BlockNumber = 7 * DAYS;
-	pub const TechCouncilMotionDuration: BlockNumber = 7 * DAYS;
-
-	pub const TechCouncilMaxMembers: u32 = 9; // 21 eventually
-	pub const TechCouncilMaxCandidates: u32 = 100;
-	pub const TechCouncilMaxProposals: u32 = 10;
-
-	pub const NominatorAPY: Perbill =     Perbill::from_percent(10);
-	pub const CouncilInflation: Perbill = Perbill::from_percent(1);
-	pub const CandidacyDeposit: Balance =   1_000_000 * constants::currency::CENTS;
-	pub const MinLockAmount: Balance =        100_000 * constants::currency::CENTS;
-	pub const TotalLockedCap: Balance = 2_000_000_000 * constants::currency::CENTS;
-}
-
-impl pallet_collective::Config<TechCouncilInstance> for Runtime {
-	type Origin = Origin;
-	type Proposal = Call;
-	type Event = Event;
-	type MotionDuration = TechCouncilMotionDuration;
-	type MaxProposals = TechCouncilMaxProposals;
-	type MaxMembers = TechCouncilMaxMembers;
-	type DefaultVote = pallet_collective::MoreThanMajorityThenPrimeDefaultVote;
-	type WeightInfo = ();
-}
-
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -602,7 +569,6 @@ construct_runtime!(
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>} = 19,
 		BurningModule: pallet_burning::{Module, Call, Storage, Event<T>} = 20,
 		TFKVStore: pallet_kvstore::{Module, Call, Storage, Event<T>} = 21,
-		TechCouncil: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>} = 22
 	}
 );
 

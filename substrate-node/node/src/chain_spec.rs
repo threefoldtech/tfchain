@@ -279,7 +279,6 @@ fn testnet_genesis(
 			// Assign network admin rights.
 			key: root_key,
 		}),
-		pallet_collective_Instance1: Some(Default::default()),
 		pallet_tfgrid: Some(TfgridModuleConfig {
 			su_price_value: 300000,
 			su_price_unit: 4,
