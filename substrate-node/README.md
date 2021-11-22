@@ -14,9 +14,7 @@ Add `--no-cache` if a newer rust toolchain is required.
 
 ## Multi-Node chain
 
-Everything needed in order to create multi-node network chain is explained in the official documentation of Substrate.
-
-[start a private network here](https://substrate.dev/docs/en/tutorials/start-a-private-network/)
+For all information required to run a validator in production network you can head over to: https://wiki.polkadot.network/docs/maintain-guides-how-to-validate-polkadot#preliminaries
 
 ### Key generation
 

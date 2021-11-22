@@ -34,16 +34,40 @@ subcommands:
 
 When the [tfchain_pallets](https://github.com/threefoldtech/tfchain_pallets) have been updated, the chainspec needs to be updated if you want to start a new chain.
 
-## Single-Node Development Chain
+## Multi-Node Development Chain
 
 The provided `cargo run` command will launch a temporary node and its state will be discarded after
 you terminate the process. After the project has been built, there are other ways to launch the
 node.
 
-This command will start the single-node development chain with persistent state:
+To run the NPoS network you need 2 validators running in order to finalize blocks. You can use Alice & Bob for ease of use.
 
-```bash
-./target/release/tfchain --dev
+### Start a Node with Alice
+
+```
+./target/release/tfchain \
+  --base-path /tmp/alice \
+  --chain local \
+  --alice \
+  --port 30333 \
+  --ws-port 9945 \
+  --rpc-port 9933 \
+  --node-key 0000000000000000000000000000000000000000000000000000000000000001 \
+  --validator
+```
+
+### Start a Node with Bob
+
+```
+./target/release/tfchain \
+  --base-path /tmp/bob \
+  --chain local \
+  --bob \
+  --port 30334 \
+  --ws-port 9946 \
+  --rpc-port 9934 \
+  --validator \
+  --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp
 ```
 
 Purge the development chain's state:
