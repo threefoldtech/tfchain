@@ -27,7 +27,7 @@ use sp_version::NativeVersion;
 use frame_system::EnsureRoot;
 
 pub mod impls;
-use impls::DealWithFees;
+use impls::{DealWithFees, DealWithSlash};
 
 // A few exports that help ease life for downstream crates.
 #[cfg(any(feature = "std", test))]
@@ -462,9 +462,9 @@ impl pallet_staking::Config for Runtime {
 	type Currency = Balances;
 	type UnixTime = Timestamp;
 	type CurrencyToVote = U128CurrencyToVote;
-	type RewardRemainder = (); // burn
+	type RewardRemainder = DealWithSlash<Runtime>; // burn
 	type Event = Event;
-	type Slash = (); // burn slashed rewards
+	type Slash = DealWithSlash<Runtime>; // burn slashed rewards
 	type Reward = ();
 	type SessionsPerEra = SessionsPerEra;
 	type BondingDuration = BondingDuration;
