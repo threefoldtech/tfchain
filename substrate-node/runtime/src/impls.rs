@@ -4,7 +4,7 @@ use crate::Runtime;
 
 type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
 
-/// Logic for the author to get a portion of fees.
+/// Logic for the stakingpool to receive the fees.
 pub struct ToStakingPot<R>(sp_std::marker::PhantomData<R>);
 impl<R> OnUnbalanced<NegativeImbalance> for ToStakingPot<R>
 where
