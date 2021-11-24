@@ -3956,7 +3956,7 @@ dependencies = [
 [[package]]
 name = "pallet-staking"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development_staking#9f9cb29386be9e56e92bd6936c648c3ade1ae127"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development_staking#3d85067be89c120bfc615d69f39857fea2a4ff23"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3971,18 +3971,6 @@ dependencies = [
  "sp-staking",
  "sp-std",
  "static_assertions",
-]
-
-[[package]]
-name = "pallet-staking-reward-curve"
-version = "3.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7cb16d9e2597ce7cfc786b0ebf09cd5e6375fc65df6f38cd7e67797ec7bda990"
-dependencies = [
- "proc-macro-crate",
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -7584,7 +7572,6 @@ dependencies = [
  "pallet-session",
  "pallet-smart-contract",
  "pallet-staking",
- "pallet-staking-reward-curve",
  "pallet-sudo",
  "pallet-tfgrid",
  "pallet-tft-bridge",

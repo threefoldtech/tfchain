@@ -106,7 +106,6 @@ sp-staking = { default-features = false, version = '3.0.0' }
 # NPoS
 pallet-session = { version = "3.0.0", features = ["historical"], default-features = false }
 # pallet-staking = { version = "3.0.0", default-features = false }
-pallet-staking-reward-curve = { version = "3.0.0", default-features = false }
 pallet-authorship = { version = "3.0.0", default-features = false }
 pallet-babe = { version = "3.0.0", default-features = false }
 sp-consensus-babe = { version = "0.9.0", default-features = false }

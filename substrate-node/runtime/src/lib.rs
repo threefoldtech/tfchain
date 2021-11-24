@@ -465,7 +465,6 @@ impl pallet_staking::Config for Runtime {
 	type RewardRemainder = (); // burn
 	type Event = Event;
 	type Slash = (); // burn slashed rewards
-	type Reward = ();
 	type SessionsPerEra = SessionsPerEra;
 	type BondingDuration = BondingDuration;
 	type SlashDeferDuration = SlashDeferDuration;
