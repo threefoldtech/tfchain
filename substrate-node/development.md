@@ -44,7 +44,7 @@ To run the NPoS network you need 2 validators running in order to finalize block
 
 ### Start a Node with Alice
 
-```
+```sh
 ./target/release/tfchain \
   --base-path /tmp/alice \
   --chain local \
@@ -58,7 +58,7 @@ To run the NPoS network you need 2 validators running in order to finalize block
 
 ### Start a Node with Bob
 
-```
+```sh
 ./target/release/tfchain \
   --base-path /tmp/bob \
   --chain local \
@@ -70,14 +70,23 @@ To run the NPoS network you need 2 validators running in order to finalize block
   --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp
 ```
 
+There will show errors from the tft_price offchain_worker:
+
+```log
+2021-11-25 13:00:42  No local account available
+2021-11-25 13:00:42  err: OffchainSignedTxError
+```
+
+These can be ignored.
+
 Purge the development chain's state:
 
-```bash
+```sh
 ./target/release/tfchain purge-chain --dev
 ```
 
 Start the development chain with detailed logging:
 
-```bash
+```sh
 RUST_LOG=debug RUST_BACKTRACE=1 ./target/release/tfchain -lruntime=debug --dev
 ```
