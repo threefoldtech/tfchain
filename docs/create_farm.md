@@ -1,6 +1,6 @@
 # Creating a Farm on TFChain Devnet
 
-## Prerequisites:
+## Prerequisites
 
 - you have to have an account (ID) on the polkadot TFChain.  We create a user account in the process below.  If you want to do that first, here's how you get [one](create_account.md)
 - you have to have yggdrasil networking installed on your desktop/lapop.  Here's how you do [that](https://yggdrasil-network.github.io/installation.html)
@@ -14,6 +14,7 @@ Open https://raw.githubusercontent.com/threefoldtech/tfgrid-api-client/master/ty
 ## Step 2: browse to Polkadot UI
 
 Open the following URL based on your setup:
+
 - Using a private node: https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/settings/developer
 - Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.threefold.io#/settings/developer
 
@@ -24,6 +25,7 @@ Paste the types in in the box and hit `save`
 ## Step 3: Create an account
 
 Open the following URL based on your setup:
+
 - Using a private node:https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/accounts
 - Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.threefold.io#/accounts
 
@@ -42,6 +44,7 @@ On the same page, on the left top, hover over `Account` button and click on `Tra
 ## Step 5: Create a Twin
 
 Open the following URL based on your setup:
+
 - Using a private node: https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/extrinsics
 - Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.threefold.io#/extrinsics
 
@@ -54,6 +57,7 @@ Fill in your [Yggdrasil](https://github.com/yggdrasil-network/yggdrasil-go) IPV6
 ## Step 6: Create a Farm
 
 Open the following URL based on your setup:
+
 - Using a private node: https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/extrinsics
 - Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.threefold.io#/extrinsics
 
@@ -72,6 +76,7 @@ Optionally you can also provide public ips on your farm.
 ### Query twin
 
 Open the following URL based on your setup:
+
 - Using a private node: https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/chainstate 
 - Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.threefold.io#/chainstate
 
@@ -79,7 +84,7 @@ and select `tfgridModule` -> scroll all the way down to `twinIdByAccountID(accou
 
 ![query_twin](./assets/query_twin_1.png)
 
-### Query farm:
+### Query farm
 
 Open https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/chainstate 
 
