@@ -5,6 +5,7 @@ import { hex2a } from './util'
 import {
   EventContext,
   StoreContext,
+  DatabaseManager,
 } from '@subsquid/hydra-common'
 
 export async function contractCreated({
@@ -18,8 +19,12 @@ export async function contractCreated({
   let state = ContractState.Created
   switch (nodeContract.state.toString()) {
     case 'Created': break
-    case 'Deleted': state = ContractState.Deleted
-    case 'OutOfFunds': state = ContractState.OutOfFunds
+    case 'Deleted': 
+      state = ContractState.Deleted
+      break
+    case 'OutOfFunds': 
+      state = ContractState.OutOfFunds
+      break
   }
 
   let contract
@@ -56,29 +61,65 @@ export async function contractUpdated({
 }: EventContext & StoreContext) {
   const [nodeContract] = new SmartContractModule.ContractUpdatedEvent(event).params
 
-  const savedContract = await store.get(NodeContract, { where: { contractId: nodeContract.contract_id.toNumber() } })
+  const SavedNodeContract = await store.get(NodeContract, { where: { contractId: nodeContract.contract_id.toNumber() } })
+  if (SavedNodeContract) {
+    await updateNodeContract(nodeContract, SavedNodeContract, store)
+  }
 
-  if (!savedContract) return
+  const SavedNameContract = await store.get(NameContract, { where: { contractId: nodeContract.contract_id.toNumber() } })
+  if (SavedNameContract) {
+    await updateNameContract(nodeContract, SavedNameContract, store)
+  }
+}
 
-  const parsedNodeContract = nodeContract.contract_type.asNodeContract
+async function updateNodeContract(ctr: any, contract: NodeContract, store: DatabaseManager) {
+  const parsedNodeContract = ctr.contract_type.asNodeContract
 
-  savedContract.contractId = nodeContract.contract_id.toNumber()
-  savedContract.version = nodeContract.version.toNumber()
-  savedContract.twinId = nodeContract.twin_id.toNumber()
-  savedContract.nodeId = parsedNodeContract.node_id.toNumber()
-  savedContract.numberOfPublicIPs = parsedNodeContract.public_ips.toNumber()
-  savedContract.deploymentData = parsedNodeContract.deployment_data.toString()
-  savedContract.deploymentHash = parsedNodeContract.deployment_hash.toString()
+  console.log(parsedNodeContract)
+  contract.contractId = ctr.contract_id.toNumber()
+  contract.version = ctr.version.toNumber()
+  contract.twinId = ctr.twin_id.toNumber()
+  contract.nodeId = parsedNodeContract.node_id.toNumber()
+  contract.numberOfPublicIPs = parsedNodeContract.public_ips.toNumber()
+  contract.deploymentData = parsedNodeContract.deployment_data.toString()
+  contract.deploymentHash = parsedNodeContract.deployment_hash.toString()
 
   let state = ContractState.Created
-  switch (nodeContract.state.toString()) {
+  switch (ctr.state.toString()) {
     case 'Created': break
-    case 'Deleted': state = ContractState.Deleted
-    case 'OutOfFunds': state = ContractState.OutOfFunds
+    case 'Deleted': 
+      state = ContractState.Deleted
+      break
+    case 'OutOfFunds': 
+      state = ContractState.OutOfFunds
+      break
   }
-  savedContract.state = state
+  contract.state = state
 
-  await store.save<NodeContract>(savedContract)
+  await store.save<NodeContract>(contract)
+}
+
+async function updateNameContract(ctr: any, contract: NameContract, store: DatabaseManager) {
+  const parsedNameContract = ctr.contract_type.asNameContract
+
+  contract.contractId = ctr.contract_id.toNumber()
+  contract.version = ctr.version.toNumber()
+  contract.twinId = ctr.twin_id.toNumber()
+  contract.name = hex2a(Buffer.from(contract.name.toString()).toString())
+
+  let state = ContractState.Created
+  switch (parsedNameContract.state.toString()) {
+    case 'Created': break
+    case 'Deleted': 
+      state = ContractState.Deleted
+      break
+    case 'OutOfFunds': 
+      state = ContractState.OutOfFunds
+      break
+  }
+  contract.state = state
+
+  await store.save<NameContract>(contract)
 }
 
 export async function nodeContractCanceled({
@@ -96,6 +137,23 @@ export async function nodeContractCanceled({
   savedContract.state = ContractState.Deleted
 
   await store.save<NodeContract>(savedContract)
+}
+
+export async function nameContractCanceled({
+  store,
+  event,
+  block,
+  extrinsic,
+}: EventContext & StoreContext) {
+  const [id] = new SmartContractModule.NameContractCanceledEvent(event).params
+
+  const savedContract = await store.get(NameContract, { where: { contractId: id.toNumber() } })
+
+  if (!savedContract) return
+
+  savedContract.state = ContractState.Deleted
+
+  await store.save<NameContract>(savedContract)
 }
 
 export async function consumptionReportReceived({
@@ -132,9 +190,15 @@ export async function contractBilled({
   let level = DiscountLevel.None
   switch (contract_billed_event.discount_level.toString()) {
     case 'None': break
-    case 'Default': level = DiscountLevel.Default
-    case 'Bronze': level = DiscountLevel.Bronze
-    case 'Silver': level = DiscountLevel.Silver
+    case 'Default':
+      level = DiscountLevel.Default
+      break
+    case 'Bronze': 
+      level = DiscountLevel.Bronze
+      break
+    case 'Silver': 
+      level = DiscountLevel.Silver
+      break
     case 'Gold': level = DiscountLevel.Gold
   }
   newContractBilledReport.discountReceived = level

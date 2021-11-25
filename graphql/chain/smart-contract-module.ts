@@ -121,6 +121,33 @@ export namespace SmartContractModule {
     }
   }
 
+  export class NameContractCanceledEvent {
+    public readonly expectedParamTypes = ["u64"];
+
+    constructor(public readonly ctx: SubstrateEvent) {}
+
+    get params(): [u64] {
+      return [
+        createTypeUnsafe<u64 & Codec>(typeRegistry, "u64", [
+          this.ctx.params[0].value,
+        ]),
+      ];
+    }
+
+    validateParams(): boolean {
+      if (this.expectedParamTypes.length !== this.ctx.params.length) {
+        return false;
+      }
+      let valid = true;
+      this.expectedParamTypes.forEach((type, i) => {
+        if (type !== this.ctx.params[i].type) {
+          valid = false;
+        }
+      });
+      return valid;
+    }
+  }
+
   export class ContractBilledEvent {
     public readonly expectedParamTypes = ["types::ContractBill"];
 
