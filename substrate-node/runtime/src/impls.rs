@@ -1,6 +1,6 @@
+use crate::Runtime;
 use crate::{AccountId, Balances};
 use frame_support::traits::{Currency, Imbalance, OnUnbalanced};
-use crate::Runtime;
 
 type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
 
@@ -54,7 +54,10 @@ where
     fn on_nonzero_unbalanced(amount: NegativeImbalance) {
         let numeric_amount = amount.peek();
         let pricing_policy = <pallet_tfgrid::Module<Runtime>>::pricing_policies(1);
-        <pallet_balances::Module<Runtime>>::resolve_creating(&pricing_policy.foundation_account, amount);
+        <pallet_balances::Module<Runtime>>::resolve_creating(
+            &pricing_policy.foundation_account,
+            amount,
+        );
         <frame_system::Module<Runtime>>::deposit_event(pallet_balances::Event::Deposit(
             pricing_policy.foundation_account,
             numeric_amount,
@@ -79,4 +82,3 @@ where
         }
     }
 }
-
