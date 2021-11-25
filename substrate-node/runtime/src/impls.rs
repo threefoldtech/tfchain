@@ -32,13 +32,8 @@ where
     <R as frame_system::Config>::AccountId: Into<AccountId>,
     <R as frame_system::Config>::Event: From<pallet_balances::Event<R>>,
 {
-    fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance>) {
-        if let Some(mut fees) = fees_then_tips.next() {
-            if let Some(tips) = fees_then_tips.next() {
-                tips.merge_into(&mut fees);
-            }
-            <ToStakingPot<R> as OnUnbalanced<_>>::on_unbalanced(fees);
-        }
+    fn on_nonzero_unbalanced(amount: NegativeImbalance) {
+        <ToStakingPot<R> as OnUnbalanced<_>>::on_nonzero_unbalanced(amount);
     }
 }
 
