@@ -462,9 +462,9 @@ impl pallet_staking::Config for Runtime {
     type Currency = Balances;
     type UnixTime = Timestamp;
     type CurrencyToVote = U128CurrencyToVote;
-    type RewardRemainder = DealWithSlash<Runtime>; // burn
+    type RewardRemainder = DealWithFees<Runtime>; // Recycle leftover in the staking pool
     type Event = Event;
-    type Slash = DealWithSlash<Runtime>; // burn slashed rewards
+    type Slash = DealWithSlash<Runtime>; // Send slashed rewards to foundation account
     type Reward = ();
     type SessionsPerEra = SessionsPerEra;
     type BondingDuration = BondingDuration;
