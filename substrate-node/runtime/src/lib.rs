@@ -445,9 +445,9 @@ parameter_types! {
 		.max_extrinsic
 		.expect("Normal extrinsics have weight limit configured by default; qed")
 		.saturating_sub(BlockExecutionWeight::get());
-	pub const SessionsPerEra: sp_staking::SessionIndex = 24; // 24 hours
-	pub const BondingDuration: pallet_staking::EraIndex = 28; // 28 days
-	pub const SlashDeferDuration: pallet_staking::EraIndex = 27; // 27 days
+	pub const SessionsPerEra: sp_staking::SessionIndex = 6; // 6 hours
+	pub const BondingDuration: pallet_staking::EraIndex = 6; // 1 day
+	pub const SlashDeferDuration: pallet_staking::EraIndex = 6; // 1 day
 	// only top N nominators get paid for each validator
 	pub const MaxNominatorRewardedPerValidator: u32 = 256;
 	pub const ElectionLookahead: BlockNumber = constants::time::EPOCH_DURATION_IN_BLOCKS / 4;
