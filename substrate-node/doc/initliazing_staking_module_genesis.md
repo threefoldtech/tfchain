@@ -12,7 +12,7 @@ This document describes an example of 2 initial validators.
 
 This keypair will be the controller account for validator 1
 
-```
+```sh
 subkey generate
 
 Secret phrase `wire eagle crawl boss legal broken hockey mother topic board alley suit` is account:
@@ -24,7 +24,7 @@ Secret phrase `wire eagle crawl boss legal broken hockey mother topic board alle
 
 Inspect the ED25519 keypair
 
-```
+```sh
 subkey inspect "wire eagle crawl boss legal broken hockey mother topic board alley suit" --scheme ed25519
 
 Secret phrase `wire eagle crawl boss legal broken hockey mother topic board alley suit` is account:
@@ -38,7 +38,7 @@ Secret phrase `wire eagle crawl boss legal broken hockey mother topic board alle
 
 This keypair will be the stash account for validator 1
 
-```
+```sh
 subkey generate
 
 Secret phrase ` remain ancient slam case text adapt unable wheat warm cheese walnut endless` is account:
@@ -48,14 +48,13 @@ Secret phrase ` remain ancient slam case text adapt unable wheat warm cheese wal
   SS58 Address:     5Ff7bJgotSSR9EvDm1BsvVjS62V2t9yPSaWKBHmV8nXoZ3Y1
 ```
 
-
 ## Generate keypairs for Validator 2
 
 ### Contoller account
 
 This keypair will be the controller account for validator 2
 
-```
+```sh
 subkey generate
 
 Secret phrase ` lazy toast trumpet zone pig april want goddess hollow grocery security buzz` is account:
@@ -67,7 +66,7 @@ Secret phrase ` lazy toast trumpet zone pig april want goddess hollow grocery se
 
 Inspect the ED25519 keypair
 
-```
+```sh
 subkey inspect "lazy toast trumpet zone pig april want goddess hollow grocery security buzz" --scheme ed25519
 
 Secret phrase ` lazy toast trumpet zone pig april want goddess hollow grocery security buzz` is account:
@@ -79,7 +78,7 @@ Secret phrase ` lazy toast trumpet zone pig april want goddess hollow grocery se
 
 ### Stash account
 
-```
+```sh
 subkey generate
 
 Secret phrase `yellow globe swear always choose festival lounge mercy catalog normal base profit` is account:
@@ -91,14 +90,14 @@ Secret phrase `yellow globe swear always choose festival lounge mercy catalog no
 
 ## Generate a chainspec
 
-```
+```sh
 cargo build
 ./target/debug/tfchain build-spec --disable-default-bootnode --chain local > customSpec.json
 ```
 
 Open `customSpec.json` and modify the following:
 
-### Add Controller and Stash account of Validator 1 & 2 to the balances module. 
+### Add Controller and Stash account of Validator 1 & 2 to the balances module
 
 This will yield in 4 account having some initial balance.
 
@@ -124,6 +123,7 @@ This will yield in 4 account having some initial balance.
     ]
 },
 ```
+
 ### Add Stash account of Validator 1 & 2 to the `palletStaking` -> `invulnerables`
 
 ```json
@@ -162,7 +162,7 @@ Every element in `stakers` array is a combination of `[stashAccount, controllerA
 }
 ```
 
-### Configure StakingPoolAccount 
+### Configure StakingPoolAccount
 
 Set the value to `5CNposRewardAccount11111111111111111111111111FSU` , this is the account where the payouts will be paid from
 
@@ -179,7 +179,8 @@ Every element in the keys array is a combination of:
 
 - stash account
 - stash account
-- object: 
+- object:
+
     ```json
     { 
         "babe": "sr25519 account id of validator controller keypair",
