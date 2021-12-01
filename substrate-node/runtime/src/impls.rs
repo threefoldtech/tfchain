@@ -37,29 +37,8 @@ where
     }
 }
 
-/// Logic for the foundation account to receive slashed funds
-pub struct ToFoundationAccount<R>(sp_std::marker::PhantomData<R>);
-impl<R> OnUnbalanced<NegativeImbalance> for ToFoundationAccount<R>
-where
-    R: pallet_balances::Config,
-    <R as frame_system::Config>::AccountId: From<AccountId>,
-    <R as frame_system::Config>::AccountId: Into<AccountId>,
-    <R as frame_system::Config>::Event: From<pallet_balances::Event<R>>,
-{
-    fn on_nonzero_unbalanced(amount: NegativeImbalance) {
-        let numeric_amount = amount.peek();
-        let pricing_policy = <pallet_tfgrid::Module<Runtime>>::pricing_policies(1);
-        <pallet_balances::Module<Runtime>>::resolve_creating(
-            &pricing_policy.foundation_account,
-            amount,
-        );
-        <frame_system::Module<Runtime>>::deposit_event(pallet_balances::Event::Deposit(
-            pricing_policy.foundation_account,
-            numeric_amount,
-        ));
-    }
-}
 
+/// Recover slashed funds
 pub struct DealWithSlash<R>(sp_std::marker::PhantomData<R>);
 impl<R> OnUnbalanced<NegativeImbalance> for DealWithSlash<R>
 where
@@ -69,6 +48,15 @@ where
     <R as frame_system::Config>::Event: From<pallet_balances::Event<R>>,
 {
     fn on_nonzero_unbalanced(amount: NegativeImbalance) {
-        <ToFoundationAccount<R> as OnUnbalanced<_>>::on_nonzero_unbalanced(amount);
+        let numeric_amount = amount.peek();
+        let slashing_beneficiary = <pallet_staking::Module<Runtime>>::slashing_beneficiary();
+        <pallet_balances::Module<Runtime>>::resolve_creating(
+            &slashing_beneficiary,
+            amount,
+        );
+        <frame_system::Module<Runtime>>::deposit_event(pallet_balances::Event::Deposit(
+            slashing_beneficiary,
+            numeric_amount,
+        ));
     }
 }
