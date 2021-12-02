@@ -79,6 +79,15 @@ There will show errors from the tft_price offchain_worker:
 
 These can be ignored.
 
+### Special accounts for dev or local chains
+
+- Sudo: "Alice" is the default sudo account
+- palletStaking/stakingPoolAccount: "5CNposRewardAccount11111111111111111111111111FSU"
+- palletStaking/slashingBeneficiary: "Ferdie"
+- palletTftBridge/feeAccount: "Ferdie"
+
+## Useful commands
+
 Purge the development chain's state:
 
 ```sh
