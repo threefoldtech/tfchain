@@ -81,7 +81,8 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		.expect("Map given; qed")
 		.clone(),
 	);
-
+	use sp_runtime::AccountId32;
+	use sp_core::crypto::Ss58Codec;
 	Ok(ChainSpec::from_genesis(
 		// Name
 		"Development",
@@ -126,6 +127,8 @@ pub fn development_config() -> Result<ChainSpec, String> {
 			// Bridge fee account
 			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
 			// Staking Pool Account
+			AccountId32::from_ss58check("5CNposRewardAccount11111111111111111111111111FSU").unwrap(),
+			//Slashing beneficiary
 			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
 		),
 		// Bootnodes
@@ -154,6 +157,8 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 		.clone(),
 	);
 
+	use sp_runtime::AccountId32;
+	use sp_core::crypto::Ss58Codec;
 	Ok(ChainSpec::from_genesis(
 		// Name
 		"TF Chain Local Testnet",
@@ -205,7 +210,9 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 			],
 			// Bridge fee account
 			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-			// Staking Pool Account
+			// Staking Pool Account	
+			AccountId32::from_ss58check("5CNposRewardAccount11111111111111111111111111FSU").unwrap(),
+			//Slashing beneficiary
 			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
 		),
 		// Bootnodes
@@ -233,6 +240,7 @@ fn testnet_genesis(
 	bridge_validator_accounts: Vec<AccountId>,
 	bridge_fee_account: AccountId,
 	staking_pool_account: AccountId,
+	slashing_beneficiary:AccountId
 ) -> GenesisConfig {
 	const INITIAL_STAKING: u128 = 1_000_000 * constants::currency::CENTS;
 	GenesisConfig {
@@ -260,7 +268,8 @@ fn testnet_genesis(
 				.collect::<Vec<_>>(),
 		}),
 		pallet_staking: Some(StakingConfig {
-			staking_pool_account,
+			staking_pool_account: staking_pool_account,
+			slashing_beneficiary: slashing_beneficiary,
 			validator_count: initial_authorities.len() as u32 * 2,
 			minimum_validator_count: initial_authorities.len() as u32,
 			stakers: initial_authorities
