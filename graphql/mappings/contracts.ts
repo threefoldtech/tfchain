@@ -1,4 +1,4 @@
-import { Consumption, NodeContract, NameContract, ContractState, DiscountLevel, ContractBillReport } from '../generated/model'
+import { Consumption, NodeContract, NameContract, ContractState, DiscountLevel, ContractBillReport, PublicIp } from '../generated/model'
 import { SmartContractModule } from '../chain'
 import { hex2a } from './util'
 
@@ -50,6 +50,15 @@ export async function contractCreated({
     newNodeContract.deploymentHash = contract.deployment_hash.toString()
     newNodeContract.state = state
     await store.save<NodeContract>(newNodeContract)
+
+    contract.public_ips_list.forEach(async ip => {
+      const savedIp = await store.get(PublicIp, { where: { ip: hex2a(Buffer.from(ip.ip.toString()).toString()) } })
+
+      if (savedIp) {
+        savedIp.contractId = newNodeContract.contractId
+        await store.save<PublicIp>(savedIp)
+      }
+    })
   }
 }
 
@@ -75,7 +84,6 @@ export async function contractUpdated({
 async function updateNodeContract(ctr: any, contract: NodeContract, store: DatabaseManager) {
   const parsedNodeContract = ctr.contract_type.asNodeContract
 
-  console.log(parsedNodeContract)
   contract.contractId = ctr.contract_id.toNumber()
   contract.version = ctr.version.toNumber()
   contract.twinId = ctr.twin_id.toNumber()
@@ -95,7 +103,6 @@ async function updateNodeContract(ctr: any, contract: NodeContract, store: Datab
       break
   }
   contract.state = state
-
   await store.save<NodeContract>(contract)
 }
 
@@ -133,6 +140,12 @@ export async function nodeContractCanceled({
   const savedContract = await store.get(NodeContract, { where: { contractId: id.toNumber() } })
 
   if (!savedContract) return
+
+  const savedIps = await store.getMany(PublicIp, { where: { contractId: id.toNumber() } })
+  await savedIps.forEach(async ip => {
+    ip.contractId = 0
+    await store.save<PublicIp>(ip)
+  })
 
   savedContract.state = ContractState.Deleted
 

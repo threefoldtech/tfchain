@@ -44,10 +44,14 @@ export async function farmStored({
     newIP.ip = hex2a(Buffer.from(ip.ip.toString()).toString())
     newIP.gateway = hex2a(Buffer.from(ip.gateway.toString()).toString())
     newIP.contractId = ip.contract_id.toNumber()
+    newIP.farm = newFarm
+
+    newFarm.publicIPs?.push(newIP)
 
     return store.save<PublicIp>(newIP)
   })
   await Promise.all(ipPromises)
+  await store.save<Farm>(newFarm)
 }
 
 export async function farmUpdated({
