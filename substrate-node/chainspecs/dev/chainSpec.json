@@ -136,7 +136,7 @@
           "5Dfiaccytu741LE8KxqegrBeVKgmCKRHU7KEuamf3igxgGW9"
         ],
         "feeAccount": "5Esq6iLLBGGJFsCEXpoFhxHhqcaGqTvDasdwy8jPFDH1jYaM",
-        "burnFee": 10000000,
+        "withdrawFee": 10000000,
         "depositFee": 10000000
       }
     }
