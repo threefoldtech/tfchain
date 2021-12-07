@@ -24,14 +24,14 @@ version = '2.0.0'
 default-features = false
 git = "https://github.com/threefoldtech/tfchain_pallets"
 package = "pallet-tfgrid"
-branch = "development"
+branch = "development_smart_contract_rewards_payout"
 #path = "../../../tfchain_pallets/pallet-tfgrid"
 
 [dependencies.pallet-smart-contract]
 default-features = false
 git = "https://github.com/threefoldtech/tfchain_pallets"
 package = "pallet-smart-contract"
-branch = "development"
+branch = "development_smart_contract_rewards_payout"
 #path = "../../../tfchain_pallets/pallet-smart-contract"
 
 [dependencies.pallet-burning]
