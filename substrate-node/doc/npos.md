@@ -17,10 +17,6 @@ Pallet_staking relies on Babe consensus for block creation and Grandpa for final
 
 The npos_reward account account also gets the transaction fees spent in tfchain.
 
-### Slashing
-
-When slashing occurs (penalty for bad validators), the penalty goes to a foundation account.
-
 ## pos reward account
 
 The pos reward account is `5CNposRewardAccount11111111111111111111111111FSU`, 5C being the network indicator  and the last 2 bytes are the checksum.
@@ -44,3 +40,9 @@ A simple way to stimulate community paricipation and decentralization is by sett
 - Controller account: The account that controls an owner's funds for staking.
 - Era: A (whole) number of sessions, which is the period that the validator set (and each validator's active nominator set) is recalculated and where rewards are paid out.
 - Slash: The punishment of a staker by reducing its funds.
+
+## Slashing
+
+More information on slashing (penalty for bad validators), unresponsiveness and slashing calculations can be found on the [polkadot wiki](https://wiki.polkadot.network/docs/learn-staking#slashing).
+
+Tfchain did not apply any modifications to the slashing logic besides the fact that slashed amounts go to a foundation account, this reduces the incentive for validators to attack each other.
