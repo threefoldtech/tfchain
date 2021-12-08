@@ -68,16 +68,16 @@ export async function contractUpdated({
   block,
   extrinsic,
 }: EventContext & StoreContext) {
-  const [nodeContract] = new SmartContractModule.ContractUpdatedEvent(event).params
+  const [contract] = new SmartContractModule.ContractUpdatedEvent(event).params
 
-  const SavedNodeContract = await store.get(NodeContract, { where: { contractId: nodeContract.contract_id.toNumber() } })
+  const SavedNodeContract = await store.get(NodeContract, { where: { contractId: contract.contract_id.toNumber() } })
   if (SavedNodeContract) {
-    await updateNodeContract(nodeContract, SavedNodeContract, store)
+    await updateNodeContract(contract, SavedNodeContract, store)
   }
 
-  const SavedNameContract = await store.get(NameContract, { where: { contractId: nodeContract.contract_id.toNumber() } })
+  const SavedNameContract = await store.get(NameContract, { where: { contractId: contract.contract_id.toNumber() } })
   if (SavedNameContract) {
-    await updateNameContract(nodeContract, SavedNameContract, store)
+    await updateNameContract(contract, SavedNameContract, store)
   }
 }
 
@@ -95,7 +95,7 @@ async function updateNodeContract(ctr: any, contract: NodeContract, store: Datab
   let state = ContractState.Created
   switch (ctr.state.toString()) {
     case 'Created': break
-    case 'Deleted': 
+    case 'Deleted':
       state = ContractState.Deleted
       break
     case 'OutOfFunds': 
@@ -148,6 +148,33 @@ export async function nodeContractCanceled({
   })
 
   savedContract.state = ContractState.Deleted
+
+  console.log(`saving contract to delete state ${id}`)
+
+  await store.save<NodeContract>(savedContract)
+}
+
+export async function contractCanceled({
+  store,
+  event,
+  block,
+  extrinsic,
+}: EventContext & StoreContext) {
+  const [id] = new ContractCanceledEvent(event).params
+
+  const savedContract = await store.get(NodeContract, { where: { contractId: id.toNumber() } })
+
+  if (!savedContract) return
+
+  const savedIps = await store.getMany(PublicIp, { where: { contractId: id.toNumber() } })
+  await savedIps.forEach(async ip => {
+    ip.contractId = 0
+    await store.save<PublicIp>(ip)
+  })
+
+  savedContract.state = ContractState.Deleted
+
+  console.log(`saving contract to delete state ${id}`)
 
   await store.save<NodeContract>(savedContract)
 }
@@ -219,4 +246,40 @@ export async function contractBilled({
   newContractBilledReport.timestamp = contract_billed_event.timestamp.toNumber()
 
   await store.save<ContractBillReport>(newContractBilledReport)
+}
+
+
+// Deprecated event types
+import { createTypeUnsafe } from "@polkadot/types/create";
+import { SubstrateEvent } from "@subsquid/hydra-common";
+import { Codec } from "@polkadot/types/types";
+import { typeRegistry } from "../chain/index";
+
+import { u64 } from "@polkadot/types";
+
+export class ContractCanceledEvent {
+  public readonly expectedParamTypes = ["u64"];
+
+  constructor(public readonly ctx: SubstrateEvent) {}
+
+  get params(): [u64] {
+    return [
+      createTypeUnsafe<u64 & Codec>(typeRegistry, "u64", [
+        this.ctx.params[0].value,
+      ]),
+    ];
+  }
+
+  validateParams(): boolean {
+    if (this.expectedParamTypes.length !== this.ctx.params.length) {
+      return false;
+    }
+    let valid = true;
+    this.expectedParamTypes.forEach((type, i) => {
+      if (type !== this.ctx.params[i].type) {
+        valid = false;
+      }
+    });
+    return valid;
+  }
 }

@@ -88,6 +88,8 @@ mappings:
       handler: contractCreated
     - event: smartContractModule.ContractUpdated
       handler: contractUpdated
+    - event: smartContractModule.ContractCanceled
+      handler: contractCanceled
     - event: smartContractModule.NodeContractCanceled
       handler: nodeContractCanceled
     - event: smartContractModule.NameContractCanceled
