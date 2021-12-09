@@ -291,10 +291,6 @@ impl pallet_tfgrid::Config for Runtime {
     type Currency = Balances;
 }
 
-parameter_types! {
-    pub StakingPoolAccount: AccountId = get_staking_pool_account();
-}
-
 pub fn get_staking_pool_account() -> AccountId {
 	// decoded public key from staking pool account 5CNposRewardAccount11111111111111111111111111FSU
 	AccountId::from([13, 209, 209, 166, 229, 163, 90, 168, 199, 245, 229, 126, 30, 221, 12, 63, 189, 106, 191, 46, 170, 142, 244, 37, 72, 152, 110, 84, 162, 86, 32, 0])
@@ -471,6 +467,7 @@ parameter_types! {
     pub MinSolutionScoreBump: Perbill = Perbill::from_rational_approximation(5 as u32, 10_000);
     // offchain tx signing
     pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
+	pub StakingPoolAccount: AccountId = get_staking_pool_account();
 	pub StakingRewardAccount: AccountId = get_staking_reward_account();
 }
 
