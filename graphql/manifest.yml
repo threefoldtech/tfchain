@@ -34,7 +34,7 @@ typegen:
     - smartContractModule.ContractCreated
     - smartContractModule.ContractUpdated
     - smartContractModule.NodeContractCanceled
-    # - smartContractModule.NameContractCanceled
+    - smartContractModule.NameContractCanceled
     - smartContractModule.ContractBilled
     - tftBridgeModule.MintCompleted
     - tftBridgeModule.BurnTransactionProcessed
@@ -88,10 +88,12 @@ mappings:
       handler: contractCreated
     - event: smartContractModule.ContractUpdated
       handler: contractUpdated
+    - event: smartContractModule.ContractCanceled
+      handler: contractCanceled
     - event: smartContractModule.NodeContractCanceled
       handler: nodeContractCanceled
-    # - event: smartContractModule.NameContractCanceled
-    #   handler: nameContractCanceled
+    - event: smartContractModule.NameContractCanceled
+      handler: nameContractCanceled
     - event: smartContractModule.ContractBilled
       handler: contractBilled
     - event: tftBridgeModule.MintCompleted

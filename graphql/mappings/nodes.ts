@@ -120,12 +120,25 @@ export async function nodeUpdated({
   await store.save<Node>(savedNode)
 
   const interfacesPromisses = node.interfaces.map(intf => {
-    const newInterface = new Interfaces()
+    let newInterface
+
+    if (savedNode.interfaces) {
+      // if an interface with same name exists
+      const found = savedNode.interfaces.findIndex(interf => interf.name === hex2a(Buffer.from(intf.name.toString()).toString()))
+      if (found > 0) {
+        newInterface = savedNode.interfaces[found]    
+      } else {
+        newInterface = new Interfaces()
+      }
+    }
+    
+    if (!newInterface) return
 
     newInterface.name = hex2a(Buffer.from(intf.name.toString()).toString())
     newInterface.mac = hex2a(Buffer.from(intf.mac.toString()).toString())
     newInterface.node = savedNode
     newInterface.ips = intf.ips.map(ip => hex2a(Buffer.from(ip.toString()).toString())).join(',')
+    
     return store.save<Interfaces>(newInterface)
   })
   await Promise.all(interfacesPromisses)

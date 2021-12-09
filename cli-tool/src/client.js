@@ -14,7 +14,7 @@ async function getClient (url, mnemonic) {
     mnemonic = MNEMONIC
   }
 
-  const cli = new Client(url, mnemonic)
+  const cli = new Client(url, mnemonic, 'sr25519')
 
   try {
     await cli.init()
