@@ -300,6 +300,11 @@ pub fn get_staking_pool_account() -> AccountId {
 	AccountId::from([13, 209, 209, 166, 229, 163, 90, 168, 199, 245, 229, 126, 30, 221, 12, 63, 189, 106, 191, 46, 170, 142, 244, 37, 72, 152, 110, 84, 162, 86, 32, 0])
 }
 
+pub fn get_staking_reward_account() -> AccountId {
+	// decoded public key from staking pool account 5CNposRewardAccount222222222222222222222222228PW
+	AccountId::from([13, 209, 209, 166, 229, 163, 90, 168, 199, 245, 229, 126, 30, 237, 152, 117, 214, 176, 112, 59, 80, 192, 57, 93, 214, 48, 97, 64, 186, 21, 7, 220])
+}
+
 impl pallet_smart_contract::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
@@ -466,6 +471,7 @@ parameter_types! {
     pub MinSolutionScoreBump: Perbill = Perbill::from_rational_approximation(5 as u32, 10_000);
     // offchain tx signing
     pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
+	pub StakingRewardAccount: AccountId = get_staking_reward_account();
 }
 
 impl pallet_staking::Config for Runtime {
@@ -490,6 +496,8 @@ impl pallet_staking::Config for Runtime {
     type UnsignedPriority = StakingUnsignedPriority;
     type WeightInfo = ();
     type OffchainSolutionWeightLimit = OffchainSolutionWeightLimit;
+	type StakingPoolAccount = StakingPoolAccount;
+	type StakingRewardAccount = StakingRewardAccount;
 }
 
 impl pallet_babe::Config for Runtime {

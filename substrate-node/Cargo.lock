@@ -3934,7 +3934,7 @@ dependencies = [
 [[package]]
 name = "pallet-staking"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development_staking#42a5f27e4bf3b6e0d1489fbd5c6968ba14013772"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development_staking#8a43028018bf7a00f4f24d9115550e6123ba9747"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -8068,7 +8068,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.3.23",
+ "rand 0.7.3",
  "static_assertions",
 ]
 

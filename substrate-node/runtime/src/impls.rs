@@ -1,5 +1,5 @@
 use crate::Runtime;
-use crate::{AccountId, Balances};
+use crate::{AccountId, Balances, get_staking_pool_account};
 use frame_support::traits::{Currency, Imbalance, OnUnbalanced};
 
 type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
@@ -15,7 +15,7 @@ where
 {
     fn on_nonzero_unbalanced(amount: NegativeImbalance) {
         let numeric_amount = amount.peek();
-        let staking_pot = <pallet_staking::Module<Runtime>>::staking_pool_account();
+        let staking_pot = get_staking_pool_account();
         <pallet_balances::Module<Runtime>>::resolve_creating(&staking_pot, amount);
         <frame_system::Module<Runtime>>::deposit_event(pallet_balances::Event::Deposit(
             staking_pot,
