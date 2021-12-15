@@ -3687,7 +3687,7 @@ dependencies = [
 [[package]]
 name = "pallet-burning"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#c5f6e6222b0fd1e02dd898d134d681b5becdb73d"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#681f0e5faae458c4b3c520f5cc59ebc143e847f0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3727,7 +3727,7 @@ dependencies = [
 [[package]]
 name = "pallet-kvstore"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#c5f6e6222b0fd1e02dd898d134d681b5becdb73d"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#681f0e5faae458c4b3c520f5cc59ebc143e847f0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3793,7 +3793,7 @@ dependencies = [
 [[package]]
 name = "pallet-smart-contract"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#c5f6e6222b0fd1e02dd898d134d681b5becdb73d"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#681f0e5faae458c4b3c520f5cc59ebc143e847f0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3831,7 +3831,7 @@ dependencies = [
 [[package]]
 name = "pallet-tfgrid"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#c5f6e6222b0fd1e02dd898d134d681b5becdb73d"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#681f0e5faae458c4b3c520f5cc59ebc143e847f0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3851,7 +3851,7 @@ dependencies = [
 [[package]]
 name = "pallet-tft-bridge"
 version = "1.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_tft?branch=main#354f2fbbba31358312b8e27492a796a19bfd28e1"
+source = "git+https://github.com/threefoldtech/tfchain_tft?branch=main#5422636461f8b1d74e37a7b0ad2616c8281bf4fe"
 dependencies = [
  "frame-support",
  "frame-system",

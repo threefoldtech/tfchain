@@ -275,7 +275,7 @@ fn testnet_genesis(
 			validator_accounts: bridge_validator_accounts,
 			fee_account: bridge_fee_account,
 			deposit_fee: 10000000,
-			burn_fee: 10000000
+			withdraw_fee: 10000000
 		})
 	}
 }

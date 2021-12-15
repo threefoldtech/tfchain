@@ -126,7 +126,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("substrate-threefold"),
 	impl_name: create_runtime_str!("substrate-threefold"),
 	authoring_version: 1,
-	spec_version: 21,
+	spec_version: 22,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -300,6 +300,7 @@ impl pallet_tfgrid::Config for Runtime {
 
 parameter_types! {
     pub StakingPoolAccount: AccountId = get_staking_pool_account();
+	pub BillingFrequency: u64 = 600;
 }
 
 pub fn get_staking_pool_account() -> AccountId {
@@ -311,6 +312,7 @@ impl pallet_smart_contract::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type StakingPoolAccount = StakingPoolAccount;
+	type BillingFrequency = BillingFrequency;
 }
 
 impl pallet_tft_bridge::Config for Runtime {
