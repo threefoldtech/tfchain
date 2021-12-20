@@ -3703,6 +3703,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-collective"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe826f3bfb984b3dd8d6675d7d156ba4c0877ee562bf59d86a4e805b7737dcb1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-grandpa"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3740,6 +3756,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-membership"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "531c600ffd1f92cc510ecfb59a94d0c81af8fc57c8b920d0858f39ea9f8ad060"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "serde",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-randomness-collective-flip"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3751,6 +3782,16 @@ dependencies = [
  "safe-mix",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "pallet-runtime-upgrade"
+version = "3.0.0"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=feat_runtime_upgrade_pallet#11bd5b86a09de091c44513d8450cc2f3f47c516c"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
 ]
 
 [[package]]
@@ -7173,7 +7214,7 @@ dependencies = [
 [[package]]
 name = "substrate-validator-set"
 version = "3.0.0"
-source = "git+https://github.com/gautamdhameja/substrate-validator-set.git?rev=f83f1000c298c376ab180787eb73d0a0fdb740e0#f83f1000c298c376ab180787eb73d0a0fdb740e0"
+source = "git+https://github.com/dylanverstraete/substrate-validator-set.git?branch=allow_others_then_root#8b80401284aee95144aa7184872841e4174482c0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7339,9 +7380,12 @@ dependencies = [
  "pallet-aura",
  "pallet-balances",
  "pallet-burning",
+ "pallet-collective",
  "pallet-grandpa",
  "pallet-kvstore",
+ "pallet-membership",
  "pallet-randomness-collective-flip",
+ "pallet-runtime-upgrade",
  "pallet-scheduler",
  "pallet-session",
  "pallet-smart-contract",
@@ -7861,7 +7905,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.3.23",
+ "rand 0.7.3",
  "static_assertions",
 ]
 

@@ -37,6 +37,10 @@ pub use frame_support::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 	},
 };
+use frame_system::{EnsureOneOf, EnsureRoot};
+pub use pallet_collective;
+use sp_core::u32_trait::{_1, _2};
+
 use pallet_transaction_payment::CurrencyAdapter;
 
 /// Import the template pallet.
@@ -53,6 +57,8 @@ pub use pallet_session;
 pub use pallet_burning;
 
 pub use pallet_kvstore;
+
+pub use pallet_runtime_upgrade;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -341,6 +347,7 @@ impl pallet_tft_price::Config for Runtime {
 
 impl validatorset::Config for Runtime {
 	type Event = Event;
+	type AddRemoveOrigin = EnsureRootOrHalfCouncil;
 }
 
 /// Special `FullIdentificationOf` implementation that is returning for every input `Some(Default::default())`.
@@ -444,6 +451,35 @@ impl pallet_scheduler::Config for Runtime {
     type WeightInfo = ();
 }
 
+parameter_types! {
+	pub const CouncilMotionDuration: BlockNumber = 3 * MINUTES;
+	pub const CouncilMaxProposals: u32 = 100;
+	pub const CouncilMaxMembers: u32 = 100;
+}
+
+type CouncilCollective = pallet_collective::Instance1;
+impl pallet_collective::Config<CouncilCollective> for Runtime {
+	type Origin = Origin;
+	type Proposal = Call;
+	type Event = Event;
+	type MotionDuration = CouncilMotionDuration;
+	type MaxProposals = CouncilMaxProposals;
+	type MaxMembers = CouncilMaxMembers;
+	type DefaultVote = pallet_collective::PrimeDefaultVote;
+	type WeightInfo = ();
+}
+
+type EnsureRootOrHalfCouncil = EnsureOneOf<
+	AccountId,
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>
+>;
+
+impl pallet_runtime_upgrade::Config for Runtime {
+	type Event = Event;
+	type SetCodeOrigin = EnsureRootOrHalfCouncil;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -468,6 +504,8 @@ construct_runtime!(
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 		BurningModule: pallet_burning::{Module, Call, Storage, Event<T>},
 		TFKVStore: pallet_kvstore::{Module, Call, Storage, Event<T>},
+        Council: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		RuntimeUpgrade: pallet_runtime_upgrade::{Module, Call, Event},
 	}
 );
 
