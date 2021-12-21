@@ -132,7 +132,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("substrate-threefold"),
 	impl_name: create_runtime_str!("substrate-threefold"),
 	authoring_version: 1,
-	spec_version: 24,
+	spec_version: 26,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -302,6 +302,7 @@ impl pallet_sudo::Config for Runtime {
 impl pallet_tfgrid::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
+	type CouncilOrigin = EnsureRootOrHalfCouncil;
 }
 
 parameter_types! {
@@ -325,6 +326,7 @@ impl pallet_tft_bridge::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type Burn = ();
+	type CouncilOrigin = EnsureRootOrHalfCouncil;
 }
 
 impl pallet_burning::Config for Runtime {

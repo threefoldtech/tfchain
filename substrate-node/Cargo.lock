@@ -3687,7 +3687,7 @@ dependencies = [
 [[package]]
 name = "pallet-burning"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#70a54000cccd59449822326004321f3ba88b9957"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=feat_runtime_upgrade_pallet#4700ab16778215437f5271253aab673115194bf5"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3743,7 +3743,7 @@ dependencies = [
 [[package]]
 name = "pallet-kvstore"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#70a54000cccd59449822326004321f3ba88b9957"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=feat_runtime_upgrade_pallet#4700ab16778215437f5271253aab673115194bf5"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3834,7 +3834,7 @@ dependencies = [
 [[package]]
 name = "pallet-smart-contract"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#70a54000cccd59449822326004321f3ba88b9957"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=feat_runtime_upgrade_pallet#4700ab16778215437f5271253aab673115194bf5"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3872,7 +3872,7 @@ dependencies = [
 [[package]]
 name = "pallet-tfgrid"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#70a54000cccd59449822326004321f3ba88b9957"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=feat_runtime_upgrade_pallet#4700ab16778215437f5271253aab673115194bf5"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3892,7 +3892,7 @@ dependencies = [
 [[package]]
 name = "pallet-tft-bridge"
 version = "1.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_tft?branch=main#5422636461f8b1d74e37a7b0ad2616c8281bf4fe"
+source = "git+https://github.com/threefoldtech/tfchain_tft?branch=allow_others_than_root#847c64e4dd40c1bce86dc78aa987d51aa75fa85f"
 dependencies = [
  "frame-support",
  "frame-system",

@@ -24,35 +24,35 @@ version = '2.0.0'
 default-features = false
 git = "https://github.com/threefoldtech/tfchain_pallets"
 package = "pallet-tfgrid"
-branch = "development"
+branch = "feat_runtime_upgrade_pallet"
 #path = "../../../tfchain_pallets/pallet-tfgrid"
 
 [dependencies.pallet-smart-contract]
 default-features = false
 git = "https://github.com/threefoldtech/tfchain_pallets"
 package = "pallet-smart-contract"
-branch = "development"
+branch = "feat_runtime_upgrade_pallet"
 #path = "../../../tfchain_pallets/pallet-smart-contract"
 
 [dependencies.pallet-burning]
 default-features = false
 git = "https://github.com/threefoldtech/tfchain_pallets"
 package = "pallet-burning"
-branch = "development"
+branch = "feat_runtime_upgrade_pallet"
 #path = "../../../tfchain_pallets/pallet-burning"
 
 [dependencies.pallet-kvstore]
 default-features = false
 git = "https://github.com/threefoldtech/tfchain_pallets"
 package = "pallet-kvstore"
-branch = "development"
+branch = "feat_runtime_upgrade_pallet"
 #path = "../../../tfchain_pallets/pallet-kvstore"
 
 [dependencies.pallet-tft-bridge]
 default-features = false
 git = "https://github.com/threefoldtech/tfchain_tft"
 package = "pallet-tft-bridge"
-branch = "main"
+branch = "allow_others_than_root"
 #path = "../../../tfchain_tft/pallet-tft-bridge"
 
 [dependencies.pallet-tft-price]
