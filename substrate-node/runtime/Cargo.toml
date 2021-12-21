@@ -102,6 +102,7 @@ sp-version = { default-features = false, version = '3.0.0' }
 pallet-scheduler = { default-features = false, version = '3.0.0' }
 sp-staking = { default-features = false, version = '3.0.0' }
 pallet-session = { default-features = false, version = '3.0.0', features = ['historical'] }
+pallet-authorship = { version = "3.0.0", default-features = false }
 
 [features]
 default = ['std']
@@ -150,5 +151,6 @@ std = [
     'sp-staking/std',
     'pallet-session/std',
     'validatorset/std',
-    'pallet-burning/std'
+    'pallet-burning/std',
+    'pallet-authorship/std'
 ]
