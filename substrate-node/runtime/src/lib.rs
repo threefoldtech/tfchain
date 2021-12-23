@@ -39,7 +39,7 @@ pub use frame_support::{
 };
 use frame_system::{EnsureOneOf, EnsureRoot};
 pub use pallet_collective;
-use sp_core::u32_trait::{_1, _2};
+use sp_core::u32_trait::{_2, _3};
 
 use pallet_transaction_payment::CurrencyAdapter;
 
@@ -471,15 +471,15 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type WeightInfo = ();
 }
 
-type EnsureRootOrHalfCouncil = EnsureOneOf<
+type EnsureRootOrCouncilApproval = EnsureOneOf<
 	AccountId,
 	EnsureRoot<AccountId>,
-	pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>
+	pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>
 >;
 
 impl pallet_runtime_upgrade::Config for Runtime {
 	type Event = Event;
-	type SetCodeOrigin = EnsureRootOrHalfCouncil;
+	type SetCodeOrigin = EnsureRootOrCouncilApproval;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
