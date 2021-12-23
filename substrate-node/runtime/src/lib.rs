@@ -302,7 +302,7 @@ impl pallet_sudo::Config for Runtime {
 impl pallet_tfgrid::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
-	type RestrictedOrigin = EnsureRootOrHalfCouncil;
+	type RestrictedOrigin = EnsureRootOrCouncilApproval;
 }
 
 parameter_types! {
@@ -326,7 +326,7 @@ impl pallet_tft_bridge::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type Burn = ();
-	type RestrictedOrigin = EnsureRootOrHalfCouncil;
+	type RestrictedOrigin = EnsureRootOrCouncilApproval;
 }
 
 impl pallet_burning::Config for Runtime {
@@ -349,7 +349,7 @@ impl pallet_tft_price::Config for Runtime {
 
 impl validatorset::Config for Runtime {
 	type Event = Event;
-	type AddRemoveOrigin = EnsureRootOrHalfCouncil;
+	type AddRemoveOrigin = EnsureRootOrCouncilApproval;
 }
 
 /// Special `FullIdentificationOf` implementation that is returning for every input `Some(Default::default())`.
