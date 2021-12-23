@@ -31,7 +31,7 @@ pub use pallet_balances::Call as BalancesCall;
 pub use sp_runtime::{Permill, Perbill};
 pub use frame_support::{
 	construct_runtime, debug, parameter_types, StorageValue,
-	traits::{KeyOwnerProofSystem, Randomness},
+	traits::{KeyOwnerProofSystem, Randomness, FindAuthor},
 	weights::{
 		Weight, IdentityFee,
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -42,6 +42,8 @@ pub use pallet_collective;
 use sp_core::u32_trait::{_3, _5};
 
 use pallet_transaction_payment::CurrencyAdapter;
+
+pub mod impls;
 
 /// Import the template pallet.
 pub use pallet_tfgrid;
@@ -288,7 +290,7 @@ parameter_types! {
 }
 
 impl pallet_transaction_payment::Config for Runtime {
-	type OnChargeTransaction = CurrencyAdapter<Balances, ()>;
+    type OnChargeTransaction = CurrencyAdapter<Balances, impls::DealWithFees<Runtime>>;
 	type TransactionByteFee = TransactionByteFee;
 	type WeightToFee = WeightToFee;
 	type FeeMultiplierUpdate = ();
@@ -482,6 +484,34 @@ impl pallet_runtime_upgrade::Config for Runtime {
 	type SetCodeOrigin = EnsureRootOrCouncilApproval;
 }
 
+pub struct AuraAccountAdapter;
+use sp_runtime::ConsensusEngineId;
+
+impl FindAuthor<AccountId> for AuraAccountAdapter {
+    fn find_author<'a, I>(digests: I) -> Option<AccountId>
+    where
+        I: 'a + IntoIterator<Item = (ConsensusEngineId, &'a [u8])>,
+    {
+        if let Some(index) = pallet_aura::Module::<Runtime>::find_author(digests) {
+            let validator = pallet_session::Module::<Runtime>::validators()[index as usize].clone();
+            Some(validator)
+        } else {
+            None
+        }
+    }
+}
+
+parameter_types! {
+	pub const UncleGenerations: u32 = 0;
+}
+
+impl pallet_authorship::Config for Runtime {
+    type FindAuthor = AuraAccountAdapter;
+    type UncleGenerations = UncleGenerations;
+    type FilterUncle = ();
+    type EventHandler = ();
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -499,6 +529,7 @@ construct_runtime!(
 		Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
+		Authorship: pallet_authorship::{Module, Call, Storage, Inherent},
 		TfgridModule: pallet_tfgrid::{Module, Call, Config<T>, Storage, Event<T>},
 		SmartContractModule: pallet_smart_contract::{Module, Call, Storage, Event<T>},
 		TFTBridgeModule: pallet_tft_bridge::{Module, Call, Config<T>, Storage, Event<T>},
