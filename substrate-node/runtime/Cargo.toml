@@ -62,11 +62,18 @@ package = "pallet-tft-price"
 branch = "main"
 #path = "../../../tfchain_tft/pallet-tft-price"
 
+[dependencies.pallet-runtime-upgrade]
+default-features = false
+git = "https://github.com/threefoldtech/tfchain_pallets"
+package = "pallet-runtime-upgrade"
+branch = "development"
+#path = "../../../tfchain_pallets/pallet-runtime-upgrade"
+
 [dependencies.validatorset]
 default-features = false
 package = 'substrate-validator-set'
-git = 'https://github.com/gautamdhameja/substrate-validator-set.git'
-rev = 'f83f1000c298c376ab180787eb73d0a0fdb740e0'
+git = 'https://github.com/threefoldtech/tfchain_pallets'
+branch = "development"
 
 [dependencies]
 hex-literal = { optional = true, version = '0.3.1' }
@@ -102,6 +109,8 @@ sp-version = { default-features = false, version = '3.0.0' }
 pallet-scheduler = { default-features = false, version = '3.0.0' }
 sp-staking = { default-features = false, version = '3.0.0' }
 pallet-session = { default-features = false, version = '3.0.0', features = ['historical'] }
+pallet-collective = { version = "3.0.0", default-features = false }
+pallet-membership = { version = "3.0.0", default-features = false }
 pallet-authorship = { version = "3.0.0", default-features = false }
 
 [features]
@@ -152,5 +161,8 @@ std = [
     'pallet-session/std',
     'validatorset/std',
     'pallet-burning/std',
+    'pallet-runtime-upgrade/std',
+    'pallet-collective/std',
+    'pallet-membership/std',
     'pallet-authorship/std'
 ]

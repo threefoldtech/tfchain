@@ -1,6 +1,6 @@
 use sp_core::{Pair, Public, sr25519, ed25519};
 use tfchain_runtime::{
-	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig,
+	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig, CouncilConfig,
 	SudoConfig, SystemConfig, WASM_BINARY, Signature, TfgridModuleConfig, TFTBridgeModuleConfig, ValidatorSetConfig, SessionConfig,
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -276,6 +276,7 @@ fn testnet_genesis(
 			fee_account: bridge_fee_account,
 			deposit_fee: 10000000,
 			withdraw_fee: 10000000
-		})
+		}),
+		pallet_collective_Instance1: Some(CouncilConfig::default()),
 	}
 }

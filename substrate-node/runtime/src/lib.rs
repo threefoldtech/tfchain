@@ -37,6 +37,10 @@ pub use frame_support::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 	},
 };
+use frame_system::{EnsureOneOf, EnsureRoot};
+pub use pallet_collective;
+use sp_core::u32_trait::{_3, _5};
+
 use pallet_transaction_payment::CurrencyAdapter;
 
 pub mod impls;
@@ -55,6 +59,8 @@ pub use pallet_session;
 pub use pallet_burning;
 
 pub use pallet_kvstore;
+
+pub use pallet_runtime_upgrade;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -128,7 +134,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("substrate-threefold"),
 	impl_name: create_runtime_str!("substrate-threefold"),
 	authoring_version: 1,
-	spec_version: 24,
+	spec_version: 26,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -298,6 +304,7 @@ impl pallet_sudo::Config for Runtime {
 impl pallet_tfgrid::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
+	type RestrictedOrigin = EnsureRootOrCouncilApproval;
 }
 
 parameter_types! {
@@ -321,6 +328,7 @@ impl pallet_tft_bridge::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type Burn = ();
+	type RestrictedOrigin = EnsureRootOrCouncilApproval;
 }
 
 impl pallet_burning::Config for Runtime {
@@ -343,6 +351,7 @@ impl pallet_tft_price::Config for Runtime {
 
 impl validatorset::Config for Runtime {
 	type Event = Event;
+	type AddRemoveOrigin = EnsureRootOrCouncilApproval;
 }
 
 /// Special `FullIdentificationOf` implementation that is returning for every input `Some(Default::default())`.
@@ -446,6 +455,35 @@ impl pallet_scheduler::Config for Runtime {
     type WeightInfo = ();
 }
 
+parameter_types! {
+	pub const CouncilMotionDuration: BlockNumber = 7 * DAYS;
+	pub const CouncilMaxProposals: u32 = 100;
+	pub const CouncilMaxMembers: u32 = 100;
+}
+
+type CouncilCollective = pallet_collective::Instance1;
+impl pallet_collective::Config<CouncilCollective> for Runtime {
+	type Origin = Origin;
+	type Proposal = Call;
+	type Event = Event;
+	type MotionDuration = CouncilMotionDuration;
+	type MaxProposals = CouncilMaxProposals;
+	type MaxMembers = CouncilMaxMembers;
+	type DefaultVote = pallet_collective::PrimeDefaultVote;
+	type WeightInfo = ();
+}
+
+type EnsureRootOrCouncilApproval = EnsureOneOf<
+	AccountId,
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionAtLeast<_3, _5, AccountId, CouncilCollective>
+>;
+
+impl pallet_runtime_upgrade::Config for Runtime {
+	type Event = Event;
+	type SetCodeOrigin = EnsureRootOrCouncilApproval;
+}
+
 pub struct AuraAccountAdapter;
 use sp_runtime::ConsensusEngineId;
 
@@ -499,6 +537,8 @@ construct_runtime!(
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 		BurningModule: pallet_burning::{Module, Call, Storage, Event<T>},
 		TFKVStore: pallet_kvstore::{Module, Call, Storage, Event<T>},
+        Council: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		RuntimeUpgrade: pallet_runtime_upgrade::{Module, Call, Event},
 	}
 );
 
