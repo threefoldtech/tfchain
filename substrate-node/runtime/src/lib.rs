@@ -302,7 +302,7 @@ impl pallet_sudo::Config for Runtime {
 impl pallet_tfgrid::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
-	type CouncilOrigin = EnsureRootOrHalfCouncil;
+	type RestrictedOrigin = EnsureRootOrHalfCouncil;
 }
 
 parameter_types! {
@@ -326,7 +326,7 @@ impl pallet_tft_bridge::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type Burn = ();
-	type CouncilOrigin = EnsureRootOrHalfCouncil;
+	type RestrictedOrigin = EnsureRootOrHalfCouncil;
 }
 
 impl pallet_burning::Config for Runtime {
@@ -454,7 +454,7 @@ impl pallet_scheduler::Config for Runtime {
 }
 
 parameter_types! {
-	pub const CouncilMotionDuration: BlockNumber = 3 * MINUTES;
+	pub const CouncilMotionDuration: BlockNumber = 7 * DAYS;
 	pub const CouncilMaxProposals: u32 = 100;
 	pub const CouncilMaxMembers: u32 = 100;
 }

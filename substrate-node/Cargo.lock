@@ -3687,7 +3687,7 @@ dependencies = [
 [[package]]
 name = "pallet-burning"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=feat_runtime_upgrade_pallet#4700ab16778215437f5271253aab673115194bf5"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#c34ed2226eab682839d352e22d99d4a91839157c"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3743,7 +3743,7 @@ dependencies = [
 [[package]]
 name = "pallet-kvstore"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=feat_runtime_upgrade_pallet#4700ab16778215437f5271253aab673115194bf5"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#c34ed2226eab682839d352e22d99d4a91839157c"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3787,7 +3787,7 @@ dependencies = [
 [[package]]
 name = "pallet-runtime-upgrade"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=feat_runtime_upgrade_pallet#11bd5b86a09de091c44513d8450cc2f3f47c516c"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#c34ed2226eab682839d352e22d99d4a91839157c"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3834,7 +3834,7 @@ dependencies = [
 [[package]]
 name = "pallet-smart-contract"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=feat_runtime_upgrade_pallet#4700ab16778215437f5271253aab673115194bf5"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#c34ed2226eab682839d352e22d99d4a91839157c"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3872,7 +3872,7 @@ dependencies = [
 [[package]]
 name = "pallet-tfgrid"
 version = "3.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=feat_runtime_upgrade_pallet#4700ab16778215437f5271253aab673115194bf5"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#c34ed2226eab682839d352e22d99d4a91839157c"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3892,7 +3892,7 @@ dependencies = [
 [[package]]
 name = "pallet-tft-bridge"
 version = "1.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_tft?branch=allow_others_than_root#847c64e4dd40c1bce86dc78aa987d51aa75fa85f"
+source = "git+https://github.com/threefoldtech/tfchain_tft?branch=main#e13c8d3bef116889e986781e39271f816bbed25a"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3910,7 +3910,7 @@ dependencies = [
 [[package]]
 name = "pallet-tft-price"
 version = "1.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_tft?branch=main#5422636461f8b1d74e37a7b0ad2616c8281bf4fe"
+source = "git+https://github.com/threefoldtech/tfchain_tft?branch=main#e13c8d3bef116889e986781e39271f816bbed25a"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7214,7 +7214,7 @@ dependencies = [
 [[package]]
 name = "substrate-validator-set"
 version = "3.0.0"
-source = "git+https://github.com/dylanverstraete/substrate-validator-set.git?branch=allow_others_then_root#8b80401284aee95144aa7184872841e4174482c0"
+source = "git+https://github.com/threefoldtech/tfchain_pallets?branch=development#c34ed2226eab682839d352e22d99d4a91839157c"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7905,7 +7905,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.7.3",
+ "rand 0.3.23",
  "static_assertions",
 ]
 
