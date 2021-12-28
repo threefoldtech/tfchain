@@ -44,7 +44,8 @@
     "public_config": "Option<PublicConfig>",
     "created": "u64",
     "farming_policy_id": "u32",
-    "interfaces": "Vec<Interface>"
+    "interfaces": "Vec<Interface>",
+    "certification_type": "CertificationType"
   },
   "PublicConfig": {
     "ipv4": "Vec<u8>",
@@ -193,10 +194,18 @@
     "discount_level": "DiscountLevel",
     "amount_billed": "u128"
   },
+  "PalletStorageVersion": {
+    "_enum": [
+      "V1",
+      "V2",
+      "V3"
+    ]
+  },
   "StorageVersion": {
     "_enum": [
       "V1Struct",
-      "V2Struct"
+      "V2Struct",
+      "V3Struct"
     ]
   },
   "Address": "MultiAddress",
