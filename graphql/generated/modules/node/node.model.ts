@@ -5,6 +5,7 @@ import {
   Model,
   ManyToOne,
   OneToMany,
+  EnumField,
   StringField,
   JSONField,
 } from '@subsquid/warthog';
@@ -15,6 +16,9 @@ import { Location } from '../location/location.model';
 import { Interfaces } from '../interfaces/interfaces.model';
 
 import * as jsonTypes from '../jsonfields/jsonfields.model';
+
+import { CertificationType } from '../enums/enums';
+export { CertificationType };
 
 @Model({ api: {} })
 export class Node extends BaseModel {
@@ -113,6 +117,9 @@ export class Node extends BaseModel {
     propertyName: 'interfaces',
   })
   interfaces?: Interfaces[];
+
+  @EnumField('CertificationType', CertificationType, {})
+  certificationType!: CertificationType;
 
   constructor(init?: Partial<Node>) {
     super();

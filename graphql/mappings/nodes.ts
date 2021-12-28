@@ -1,4 +1,4 @@
-import { Node, Location, PublicConfig, UptimeEvent, Interfaces } from '../generated/model'
+import { Node, Location, PublicConfig, UptimeEvent, Interfaces, CertificationType } from '../generated/model'
 import { TfgridModule } from '../chain'
 import { hex2a } from './util'
 
@@ -50,6 +50,22 @@ export async function nodeStored({
 
     await store.save<PublicConfig>(pubConfig)
     newNode.publicConfig = pubConfig
+  }
+
+  if (node.certification_type) {
+    const certificationTypeAsString = node.certification_type.toString()
+    let certType = CertificationType.Diy
+    switch (certificationTypeAsString) {
+      case 'Diy': 
+        certType = CertificationType.Diy
+        break
+      case 'Certified': 
+        certType = CertificationType.Certified
+        break
+    }
+    newNode.certificationType = certType
+  } else {
+    newNode.certificationType = CertificationType.Diy
   }
 
   newNode.twinId = node.twin_id.toNumber()
@@ -113,6 +129,22 @@ export async function nodeUpdated({
     pubConfig.domain = hex2a(parsedConfig.domain.toString()) || ''
 
     savedNode.publicConfig = pubConfig
+  }
+
+  if (node.certification_type) {
+    const certificationTypeAsString = node.certification_type.toString()
+    let certType = CertificationType.Diy
+    switch (certificationTypeAsString) {
+      case 'Diy': 
+        certType = CertificationType.Diy
+        break
+      case 'Certified': 
+        certType = CertificationType.Certified
+        break
+    }
+    savedNode.certificationType = certType
+  } else {
+    savedNode.certificationType = CertificationType.Diy
   }
 
   savedNode.twinId = node.twin_id.toNumber()

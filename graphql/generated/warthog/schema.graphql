@@ -1874,6 +1874,7 @@ type Node implements BaseGraphQLObject {
   created: Int!
   farmingPolicyId: Int!
   interfaces: [Interfaces!]!
+  certificationType: CertificationType!
 }
 
 type NodeConnection {
@@ -2049,6 +2050,7 @@ input NodeCreateInput {
   uptime: Float
   created: Float!
   farmingPolicyId: Float!
+  certificationType: CertificationType!
 }
 
 type NodeEdge {
@@ -2091,6 +2093,8 @@ enum NodeOrderByInput {
   created_DESC
   farmingPolicyId_ASC
   farmingPolicyId_DESC
+  certificationType_ASC
+  certificationType_DESC
 }
 
 input NodeUpdateInput {
@@ -2109,6 +2113,7 @@ input NodeUpdateInput {
   uptime: Float
   created: Float
   farmingPolicyId: Float
+  certificationType: CertificationType
 }
 
 input NodeWhereInput {
@@ -2213,6 +2218,8 @@ input NodeWhereInput {
   farmingPolicyId_lt: Int
   farmingPolicyId_lte: Int
   farmingPolicyId_in: [Int!]
+  certificationType_eq: CertificationType
+  certificationType_in: [CertificationType!]
   location: LocationWhereInput
   interfaces_none: InterfacesWhereInput
   interfaces_some: InterfacesWhereInput

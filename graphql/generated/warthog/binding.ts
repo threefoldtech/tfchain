@@ -414,7 +414,9 @@ export type NodeOrderByInput =   'createdAt_ASC' |
   'created_ASC' |
   'created_DESC' |
   'farmingPolicyId_ASC' |
-  'farmingPolicyId_DESC'
+  'farmingPolicyId_DESC' |
+  'certificationType_ASC' |
+  'certificationType_DESC'
 
 export type PricingPolicyOrderByInput =   'createdAt_ASC' |
   'createdAt_DESC' |
@@ -1711,6 +1713,7 @@ export interface NodeCreateInput {
   uptime?: Float | null
   created: Float
   farmingPolicyId: Float
+  certificationType: CertificationType
 }
 
 export interface NodeUpdateInput {
@@ -1729,6 +1732,7 @@ export interface NodeUpdateInput {
   uptime?: Float | null
   created?: Float | null
   farmingPolicyId?: Float | null
+  certificationType?: CertificationType | null
 }
 
 export interface NodeWhereInput {
@@ -1833,6 +1837,8 @@ export interface NodeWhereInput {
   farmingPolicyId_lt?: Int | null
   farmingPolicyId_lte?: Int | null
   farmingPolicyId_in?: Int[] | Int | null
+  certificationType_eq?: CertificationType | null
+  certificationType_in?: CertificationType[] | CertificationType | null
   location?: LocationWhereInput | null
   interfaces_none?: InterfacesWhereInput | null
   interfaces_some?: InterfacesWhereInput | null
@@ -2808,6 +2814,7 @@ export interface Node extends BaseGraphQLObject {
   created: Int
   farmingPolicyId: Int
   interfaces: Array<Interfaces>
+  certificationType: CertificationType
 }
 
 export interface NodeConnection {

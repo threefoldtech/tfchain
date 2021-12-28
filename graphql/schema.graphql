@@ -70,6 +70,7 @@ type Node @entity {
   created: Int!
   farming_policy_id: Int!
   interfaces: [Interfaces!] @derivedFrom(field: "node")
+  certificationType: CertificationType!
 }
 
 type Interfaces @entity {

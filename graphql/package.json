@@ -21,7 +21,7 @@
     "@subsquid/hydra-cli": "4.2.0-alpha.0",
     "@subsquid/hydra-processor": "4.2.0-alpha.0",
     "@subsquid/hydra-typegen": "4.2.0-alpha.0",
-    "substrate-tfgrid-ts-types": "^0.1.4",
+    "substrate-tfgrid-ts-types": "^0.1.6",
     "tslib": "^2.0.0"
   }
 }

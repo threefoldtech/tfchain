@@ -3976,6 +3976,9 @@ export enum NodeOrderByEnum {
 
   farmingPolicyId_ASC = "farmingPolicyId_ASC",
   farmingPolicyId_DESC = "farmingPolicyId_DESC",
+
+  certificationType_ASC = "certificationType_ASC",
+  certificationType_DESC = "certificationType_DESC",
 }
 
 registerEnumType(NodeOrderByEnum, {
@@ -4287,6 +4290,12 @@ export class NodeWhereInput {
   @TypeGraphQLField(() => [Int], { nullable: true })
   farmingPolicyId_in?: number[];
 
+  @TypeGraphQLField(() => CertificationType, { nullable: true })
+  certificationType_eq?: CertificationType;
+
+  @TypeGraphQLField(() => [CertificationType], { nullable: true })
+  certificationType_in?: CertificationType[];
+
   @TypeGraphQLField(() => LocationWhereInput, { nullable: true })
   location?: LocationWhereInput;
 
@@ -4358,6 +4367,9 @@ export class NodeCreateInput {
 
   @TypeGraphQLField()
   farmingPolicyId!: number;
+
+  @TypeGraphQLField(() => CertificationType)
+  certificationType!: CertificationType;
 }
 
 @TypeGraphQLInputType()
@@ -4406,6 +4418,9 @@ export class NodeUpdateInput {
 
   @TypeGraphQLField({ nullable: true })
   farmingPolicyId?: number;
+
+  @TypeGraphQLField(() => CertificationType, { nullable: true })
+  certificationType?: CertificationType;
 }
 
 @ArgsType()

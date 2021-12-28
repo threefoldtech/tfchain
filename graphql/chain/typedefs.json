@@ -44,7 +44,8 @@
     "public_config": "Option<PublicConfig>",
     "created": "u64",
     "farming_policy_id": "u32",
-    "interfaces": "Vec<Interface>"
+    "interfaces": "Vec<Interface>",
+    "certification_type": "CertificationType"
   },
   "PublicConfig": {
     "ipv4": "Vec<u8>",
@@ -100,7 +101,7 @@
     "foundation_account": "AccountId",
     "certified_sales_account": "AccountId"
   },
-  "Policy":{
+  "Policy": {
     "value": "u32",
     "unit": "Unit"
   },
@@ -127,7 +128,7 @@
     }
   },
   "NodeContract": {
-	  "node_id": "u32",
+    "node_id": "u32",
     "deployment_data": "Vec<u8>",
     "deployment_hash": "Vec<u8>",
     "public_ips": "u32",
@@ -142,9 +143,14 @@
     "amount_unbilled": "u64"
   },
   "ContractState": {
+    "_enum": {
+      "Created": null,
+      "Deleted": "Cause"
+    }
+  },
+  "Cause": {
     "_enum": [
-      "Created",
-      "Deleted",
+      "CanceledByUser",
       "OutOfFunds"
     ]
   },
@@ -188,10 +194,18 @@
     "discount_level": "DiscountLevel",
     "amount_billed": "u128"
   },
+  "PalletStorageVersion": {
+    "_enum": [
+      "V1",
+      "V2",
+      "V3"
+    ]
+  },
   "StorageVersion": {
     "_enum": [
       "V1Struct",
-      "V2Struct"
+      "V2Struct",
+      "V3Struct"
     ]
   },
   "Address": "MultiAddress",
@@ -199,6 +213,7 @@
   "BalanceOf": "Balance",
   "Public": "[u8;32]",
   "U16F16": "[u8; 4]",
+  "BufferIndex": "u32",
   "VestingInfo": {
     "locked": "Balance",
     "perBlock": "Balance",
@@ -234,6 +249,15 @@
   "StellarSignature": {
     "signature": "Vec<u8>",
     "stellar_pubkey": "Vec<u8>"
+  },
+  "Burn": {
+    "target": "AccountId",
+    "amount": "BalanceOf",
+    "block": "BlockNumber",
+    "message": "Vec<u8>"
+  },
+  "ValueStruct": {
+    "value": "U16F16"
   },
   "AccountInfo": "AccountInfoWithProviders"
 }
