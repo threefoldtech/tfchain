@@ -259,5 +259,8 @@
   "ValueStruct": {
     "value": "U16F16"
   },
-  "AccountInfo": "AccountInfoWithProviders"
+  "AccountInfo": "AccountInfoWithProviders",
+  "Keys": "SessionKeys2",
+  "SessionKeys1": "(AccountId)",
+  "SessionKeys2": "(AccountId, AccountId)"
 }
