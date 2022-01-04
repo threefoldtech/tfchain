@@ -1,4 +1,0 @@
-name: tfchainindexer
-description: Helm Chart for the tfchain hydra indexer
-version: 0.0.12
-apiVersion: v2
