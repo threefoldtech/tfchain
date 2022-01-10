@@ -22,31 +22,19 @@ version = '2.0.0'
 
 [dependencies.pallet-tfgrid]
 default-features = false
-git = "https://github.com/threefoldtech/tfchain_pallets"
-package = "pallet-tfgrid"
-branch = "development"
-#path = "../../../tfchain_pallets/pallet-tfgrid"
+path = "../../pallets/pallet-tfgrid"
 
 [dependencies.pallet-smart-contract]
 default-features = false
-git = "https://github.com/threefoldtech/tfchain_pallets"
-package = "pallet-smart-contract"
-branch = "development"
-#path = "../../../tfchain_pallets/pallet-smart-contract"
+path = "../../pallets/pallet-smart-contract"
 
 [dependencies.pallet-burning]
 default-features = false
-git = "https://github.com/threefoldtech/tfchain_pallets"
-package = "pallet-burning"
-branch = "development"
-#path = "../../../tfchain_pallets/pallet-burning"
+path = "../../pallets/pallet-burning"
 
 [dependencies.pallet-kvstore]
 default-features = false
-git = "https://github.com/threefoldtech/tfchain_pallets"
-package = "pallet-kvstore"
-branch = "development"
-#path = "../../../tfchain_pallets/pallet-kvstore"
+path = "../../pallets/pallet-kvstore"
 
 [dependencies.pallet-tft-bridge]
 default-features = false
@@ -64,16 +52,12 @@ branch = "main"
 
 [dependencies.pallet-runtime-upgrade]
 default-features = false
-git = "https://github.com/threefoldtech/tfchain_pallets"
-package = "pallet-runtime-upgrade"
-branch = "development"
-#path = "../../../tfchain_pallets/pallet-runtime-upgrade"
+path = "../../pallets/pallet-runtime-upgrade"
 
 [dependencies.validatorset]
 default-features = false
-package = 'substrate-validator-set'
-git = 'https://github.com/threefoldtech/tfchain_pallets'
-branch = "development"
+package = "substrate-validator-set"
+path = "../../pallets/substrate-validator-set"
 
 [dependencies]
 hex-literal = { optional = true, version = '0.3.1' }
