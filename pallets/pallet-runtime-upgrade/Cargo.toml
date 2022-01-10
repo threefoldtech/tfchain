@@ -1,0 +1,32 @@
+[package]
+authors = ['Threefoldtech <https://github.com/threefoldtech>']
+description = 'Substrate TFchain runtime upgrade pallet'
+edition = '2018'
+homepage = 'https://threefold.io'
+license = 'Apache'
+name = 'pallet-runtime-upgrade'
+repository = 'https://github.com/threefoldtech/tfchain_pallets'
+version = '3.0.0'
+
+[package.metadata.docs.rs]
+targets = ['x86_64-unknown-linux-gnu']
+
+# alias "parity-scale-code" to "codec"
+[dependencies.codec]
+default-features = false
+features = ['derive']
+package = 'parity-scale-codec'
+version = '2.0.0'
+
+[dependencies]
+# Substrate packages
+
+frame-support = { version = '3.0.0', default-features = false }
+frame-system = { version = '3.0.0', default-features = false }
+
+[features]
+default = ['std']
+std = [
+	'frame-support/std',
+	'frame-system/std',
+]

@@ -1,0 +1,43 @@
+[package]
+authors = ['Threefoldtech <https://github.com/threefoldtech>']
+description = 'Threefold key-value store'
+edition = '2018'
+homepage = 'https://threefold.io'
+license = 'Apache'
+name = 'pallet-kvstore'
+repository = 'https://github.com/threefoldtech/tfchain_pallets'
+version = '3.0.0'
+
+[package.metadata.docs.rs]
+targets = ['x86_64-unknown-linux-gnu']
+
+
+[dependencies]
+# Substrate packages
+frame-support = { version = '3.0.0', default-features = false }
+frame-system = { version = '3.0.0', default-features = false }
+sp-core = { version = '3.0.0', default-features = false }
+sp-runtime = { version = '3.0.0', default-features = false }
+sp-std = { version = '3.0.0', default-features = false }
+sp-io = { version = '3.0.0', default-features = false }
+sp-storage = { version = '3.0.0', default-features = false }
+
+# alias "parity-scale-code" to "codec"
+[dependencies.codec]
+default-features = false
+features = ['derive']
+package = 'parity-scale-codec'
+version = '2.0.0'
+[dev-dependencies]
+serde = '1.0'
+
+[features]
+default = ['std']
+std = [
+    'codec/std',
+    'frame-support/std',
+    'frame-system/std',
+    'sp-runtime/std',
+    'sp-std/std',
+    'sp-storage/std',
+]
