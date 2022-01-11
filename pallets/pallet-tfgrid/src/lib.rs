@@ -272,46 +272,6 @@ decl_module! {
         fn deposit_event() = default;
 
         #[weight = 10 + T::DbWeight::get().writes(1)]
-        pub fn user_accept_tc(origin, document_link: Vec<u8>, document_hash: Vec<u8>) -> dispatch::DispatchResult {
-            let account_id = ensure_signed(origin)?;
-            
-            let timestamp = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
-
-            let t_and_c = types::TermsAndConditions {
-                account_id: account_id.clone(),
-                timestamp,
-                document_link,
-                document_hash
-            };
-
-            let mut users_terms_and_condition = UsersTermsAndConditions::<T>::get(account_id.clone());
-            users_terms_and_condition.push(t_and_c);
-            UsersTermsAndConditions::<T>::insert(account_id, users_terms_and_condition);
-
-            Ok(())
-        }
-
-        #[weight = 10 + T::DbWeight::get().writes(1)]
-        pub fn farmer_accept_tc(origin, document_link: Vec<u8>, document_hash: Vec<u8>) -> dispatch::DispatchResult {
-            let account_id = ensure_signed(origin)?;
-            
-            let timestamp = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
-
-            let t_and_c = types::TermsAndConditions {
-                account_id: account_id.clone(),
-                timestamp,
-                document_link,
-                document_hash
-            };
-
-            let mut users_terms_and_condition = FarmersTermsAndConditions::<T>::get(account_id.clone());
-            users_terms_and_condition.push(t_and_c);
-            FarmersTermsAndConditions::<T>::insert(account_id, users_terms_and_condition);
-
-            Ok(())
-        }
-
-        #[weight = 10 + T::DbWeight::get().writes(1)]
         pub fn create_farm(origin, name: Vec<u8>, public_ips: Vec<types::PublicIP>) -> dispatch::DispatchResult {
             let address = ensure_signed(origin)?;
 
@@ -579,27 +539,6 @@ decl_module! {
 
             // refund node wallet if needed
             Self::fund_node_wallet(node_id);
-
-            Ok(())
-        }
-
-        #[weight = 10 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(4)]
-        pub fn delete_node_farm(origin, node_id: u32) -> dispatch::DispatchResult {
-            let account_id = ensure_signed(origin)?;
-
-            ensure!(TwinIdByAccountID::<T>::contains_key(&account_id), Error::<T>::TwinNotExists);
-            ensure!(Nodes::contains_key(&node_id), Error::<T>::NodeNotExists);
-
-            // check if the farmer twin is authorized
-            let farm_twin_id = TwinIdByAccountID::<T>::get(&account_id);
-            // check if the ndode belong to said farm
-            let node = Nodes::get(&node_id);
-            let farm = Farms::get(node.farm_id);
-            let farm_twin = Twins::<T>::get(farm.twin_id);
-            ensure!(farm_twin_id == farm_twin.id, Error::<T>::FarmerNotAuthorized);
-
-
-            Nodes::remove(node_id);
 
             Ok(())
         }
@@ -1089,6 +1028,67 @@ decl_module! {
                     Ok(())
                 }
             }
+        }
+
+        #[weight = 10 + T::DbWeight::get().writes(1)]
+        pub fn user_accept_tc(origin, document_link: Vec<u8>, document_hash: Vec<u8>) -> dispatch::DispatchResult {
+            let account_id = ensure_signed(origin)?;
+            
+            let timestamp = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+
+            let t_and_c = types::TermsAndConditions {
+                account_id: account_id.clone(),
+                timestamp,
+                document_link,
+                document_hash
+            };
+
+            let mut users_terms_and_condition = UsersTermsAndConditions::<T>::get(account_id.clone());
+            users_terms_and_condition.push(t_and_c);
+            UsersTermsAndConditions::<T>::insert(account_id, users_terms_and_condition);
+
+            Ok(())
+        }
+
+        #[weight = 10 + T::DbWeight::get().writes(1)]
+        pub fn farmer_accept_tc(origin, document_link: Vec<u8>, document_hash: Vec<u8>) -> dispatch::DispatchResult {
+            let account_id = ensure_signed(origin)?;
+            
+            let timestamp = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+
+            let t_and_c = types::TermsAndConditions {
+                account_id: account_id.clone(),
+                timestamp,
+                document_link,
+                document_hash
+            };
+
+            let mut users_terms_and_condition = FarmersTermsAndConditions::<T>::get(account_id.clone());
+            users_terms_and_condition.push(t_and_c);
+            FarmersTermsAndConditions::<T>::insert(account_id, users_terms_and_condition);
+
+            Ok(())
+        }
+
+        #[weight = 10 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(4)]
+        pub fn delete_node_farm(origin, node_id: u32) -> dispatch::DispatchResult {
+            let account_id = ensure_signed(origin)?;
+
+            ensure!(TwinIdByAccountID::<T>::contains_key(&account_id), Error::<T>::TwinNotExists);
+            ensure!(Nodes::contains_key(&node_id), Error::<T>::NodeNotExists);
+
+            // check if the farmer twin is authorized
+            let farm_twin_id = TwinIdByAccountID::<T>::get(&account_id);
+            // check if the ndode belong to said farm
+            let node = Nodes::get(&node_id);
+            let farm = Farms::get(node.farm_id);
+            let farm_twin = Twins::<T>::get(farm.twin_id);
+            ensure!(farm_twin_id == farm_twin.id, Error::<T>::FarmerNotAuthorized);
+
+
+            Nodes::remove(node_id);
+
+            Ok(())
         }
     }
 }
