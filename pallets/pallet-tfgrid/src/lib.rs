@@ -1085,8 +1085,10 @@ decl_module! {
             let farm_twin = Twins::<T>::get(farm.twin_id);
             ensure!(farm_twin_id == farm_twin.id, Error::<T>::FarmerNotAuthorized);
 
-
             Nodes::remove(node_id);
+            NodeIdByTwinID::remove(node.twin_id);
+
+            Self::deposit_event(RawEvent::NodeDeleted(node_id));
 
             Ok(())
         }
