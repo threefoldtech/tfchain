@@ -3,6 +3,8 @@
 use frame_support::{
     debug, decl_error, decl_event, decl_module, decl_storage, ensure,
     traits::{Currency, ExistenceRequirement::KeepAlive, Vec, Get},
+    weights::{Pays, DispatchClass},
+    dispatch::DispatchResultWithPostInfo,
 };
 use frame_system::{self as system, ensure_signed};
 use sp_runtime::{traits::SaturatedConversion, DispatchError, DispatchResult, Perbill};
@@ -120,10 +122,10 @@ decl_module! {
             Self::_cancel_contract(account_id, contract_id, types::Cause::CanceledByUser)?;
         }
 
-        #[weight = 10]
-        fn add_reports(origin, reports: Vec<types::Consumption>) {
+        #[weight = (10, DispatchClass::Operational)]
+        fn add_reports(origin, reports: Vec<types::Consumption>) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_compute_reports(account_id, reports)?;
+            Self::_compute_reports(account_id, reports)
         }
 
         #[weight = 10]
@@ -325,7 +327,7 @@ impl<T: Config> Module<T> {
     pub fn _compute_reports(
         source: T::AccountId,
         reports: Vec<types::Consumption>,
-    ) -> DispatchResult {
+    ) -> DispatchResultWithPostInfo {
         ensure!(
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
             Error::<T>::TwinNotExists
@@ -374,7 +376,7 @@ impl<T: Config> Module<T> {
             Self::deposit_event(RawEvent::ConsumptionReportReceived(report));
         }
 
-        Ok(())
+        Ok(Pays::No.into())
     }
 
     // Calculates the total cost of a report.

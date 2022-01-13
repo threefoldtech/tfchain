@@ -6,9 +6,10 @@ use codec::Encode;
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
 use frame_support::{
-    debug, decl_error, decl_event, decl_module, decl_storage, dispatch, ensure,
+    decl_error, decl_event, decl_module, decl_storage, dispatch, ensure,
     traits::Get,
-    traits::{Currency, ExistenceRequirement::KeepAlive, EnsureOrigin},
+    traits::{Currency, EnsureOrigin},
+    weights::{Pays, DispatchClass},
 };
 use frame_system::{self as system, ensure_signed, RawOrigin};
 use hex::FromHex;
@@ -510,8 +511,8 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
-        pub fn update_node(origin, node_id: u32, farm_id: u32, resources: types::Resources, location: types::Location, country: Vec<u8>, city: Vec<u8>, interfaces: Vec<types::Interface>) -> dispatch::DispatchResult {
+        #[weight = (10 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(3), DispatchClass::Operational)]
+        pub fn update_node(origin, node_id: u32, farm_id: u32, resources: types::Resources, location: types::Location, country: Vec<u8>, city: Vec<u8>, interfaces: Vec<types::Interface>) -> dispatch::DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
             ensure!(Nodes::contains_key(&node_id), Error::<T>::NodeNotExists);
@@ -537,10 +538,7 @@ decl_module! {
 
             Self::deposit_event(RawEvent::NodeUpdated(stored_node));
 
-            // refund node wallet if needed
-            Self::fund_node_wallet(node_id);
-
-            Ok(())
+            Ok(Pays::No.into())
         }
 
         #[weight = 10 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1)]
@@ -560,8 +558,8 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
-        pub fn report_uptime(origin, uptime: u64) -> dispatch::DispatchResult {
+        #[weight = (10 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(3), DispatchClass::Operational)]
+        pub fn report_uptime(origin, uptime: u64) -> dispatch::DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
             ensure!(TwinIdByAccountID::<T>::contains_key(&account_id), Error::<T>::TwinNotExists);
@@ -576,10 +574,7 @@ decl_module! {
 
             Self::deposit_event(RawEvent::NodeUptimeReported(node_id, now, uptime));
 
-            // refund node wallet if needed
-            Self::fund_node_wallet(node_id);
-
-            Ok(())
+            Ok(Pays::No.into())
         }
 
         #[weight = 10 + T::DbWeight::get().writes(1)]
@@ -602,9 +597,6 @@ decl_module! {
             Nodes::insert(node_id, node);
 
             Self::deposit_event(RawEvent::NodePublicConfigStored(node_id, public_config));
-
-            // refund node wallet if needed
-            Self::fund_node_wallet(node_id);
 
             Ok(())
         }
@@ -1104,49 +1096,5 @@ impl<T: Config> Module<T> {
         let ed25519_pubkey = sp_core::ed25519::Public::from_raw(bytes);
 
         return ed25519_pubkey;
-    }
-
-    pub fn fund_node_wallet(node_id: u32) {
-        if !Nodes::contains_key(&node_id) {
-            return;
-        }
-
-        let node = Nodes::get(node_id);
-        if !Farms::contains_key(node.farm_id) {
-            return;
-        }
-        let farm = Farms::get(node.farm_id);
-
-        let node_twin = Twins::<T>::get(node.twin_id);
-        let farm_twin = Twins::<T>::get(farm.twin_id);
-
-        let node_twin_balance: BalanceOf<T> = T::Currency::free_balance(&node_twin.account_id);
-        let minimal_balance = BalanceOf::<T>::saturated_from(1000000 as u128);
-
-        if node_twin_balance <= minimal_balance {
-            let farmer_twin_balance: BalanceOf<T> =
-                T::Currency::free_balance(&farm_twin.account_id);
-            let balance_to_transfer = BalanceOf::<T>::saturated_from(10000000 as u128);
-
-            if farmer_twin_balance <= balance_to_transfer {
-                debug::info!("farmer does not have enough balance to transfer");
-                return;
-            }
-
-            debug::info!(
-                "Transfering: {:?} from farmer twin {:?} to node twin {:?}",
-                &balance_to_transfer,
-                &farm_twin.account_id,
-                &node_twin.account_id
-            );
-            if let Err(_) = T::Currency::transfer(
-                &farm_twin.account_id,
-                &node_twin.account_id,
-                balance_to_transfer,
-                KeepAlive,
-            ) {
-                debug::error!("Can't make transfer from farmer twin to node twin");
-            };
-        }
     }
 }
