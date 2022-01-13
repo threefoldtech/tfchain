@@ -532,7 +532,7 @@ fn node_report_uptime_works() {
         create_node();
 
         Timestamp::set_timestamp(1628082000);
-        assert_ok!(TfgridModule::report_uptime(Origin::signed(alice()), 500, super::types::Resources::default()));
+        assert_ok!(TfgridModule::report_uptime(Origin::signed(alice()), 500));
     });
 }
 
@@ -731,14 +731,14 @@ fn test_node_fund() {
         let balances_as_u128: u128 = b.saturated_into::<u128>();
         assert_eq!(balances_as_u128, 190000);
 
-        assert_ok!(TfgridModule::report_uptime(Origin::signed(bob()), 100, super::types::Resources::default()));
+        assert_ok!(TfgridModule::report_uptime(Origin::signed(bob()), 100));
 
         let twin = TfgridModule::twins(1);
         let b = Balances::free_balance(&twin.account_id);
         let balances_as_u128: u128 = b.saturated_into::<u128>();
         assert_eq!(balances_as_u128, 10190000);
 
-        assert_ok!(TfgridModule::report_uptime(Origin::signed(bob()), 100, super::types::Resources::default()));
+        assert_ok!(TfgridModule::report_uptime(Origin::signed(bob()), 100));
 
         let twin = TfgridModule::twins(1);
         let b = Balances::free_balance(&twin.account_id);

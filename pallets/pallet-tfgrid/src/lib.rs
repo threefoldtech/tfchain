@@ -195,7 +195,6 @@ decl_event!(
         NodeUpdated(types::Node),
         NodeDeleted(u32),
         NodeUptimeReported(u32, u64, u64),
-        NodeUsedResourcesReported(types::Resources),
         NodePublicConfigStored(u32, types::PublicConfig),
 
         EntityStored(types::Entity<AccountId>),
@@ -560,7 +559,7 @@ decl_module! {
         }
 
         #[weight = (10 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(3), DispatchClass::Operational)]
-        pub fn report_uptime(origin, uptime: u64, used_resources: types::Resources) -> dispatch::DispatchResultWithPostInfo {
+        pub fn report_uptime(origin, uptime: u64) -> dispatch::DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
             ensure!(TwinIdByAccountID::<T>::contains_key(&account_id), Error::<T>::TwinNotExists);
@@ -574,7 +573,6 @@ decl_module! {
             let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
 
             Self::deposit_event(RawEvent::NodeUptimeReported(node_id, now, uptime));
-            Self::deposit_event(RawEvent::NodeUsedResourcesReported(used_resources));
 
             Ok(Pays::No.into())
         }
