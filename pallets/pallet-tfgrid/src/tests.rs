@@ -1,7 +1,6 @@
 use crate::{mock::*, Error};
 use frame_support::{assert_noop, assert_ok};
 use frame_system::RawOrigin;
-use sp_runtime::traits::SaturatedConversion;
 
 #[test]
 fn test_create_entity_works() {
@@ -294,15 +293,6 @@ fn test_create_farm_with_double_ip_fails() {
             gateway: "1.1.1.1".as_bytes().to_vec(),
             contract_id: 0,
         });
-
-        let document = "some_link".as_bytes().to_vec();
-        let hash = "some_hash".as_bytes().to_vec();
-    
-        assert_ok!(TfgridModule::farmer_accept_tc(
-            Origin::signed(alice()),
-            document,
-            hash,
-        ));
 
         assert_noop!(
             TfgridModule::create_farm(Origin::signed(alice()), farm_name, pub_ips),
@@ -719,35 +709,6 @@ fn node_auto_attach_farming_policy() {
 }
 
 #[test]
-fn test_node_fund() {
-    new_test_ext().execute_with(|| {
-        create_twin_bob();
-        create_twin();
-        create_farm();
-        create_node_bob();
-
-        let twin = TfgridModule::twins(1);
-        let b = Balances::free_balance(&twin.account_id);
-        let balances_as_u128: u128 = b.saturated_into::<u128>();
-        assert_eq!(balances_as_u128, 190000);
-
-        assert_ok!(TfgridModule::report_uptime(Origin::signed(bob()), 100));
-
-        let twin = TfgridModule::twins(1);
-        let b = Balances::free_balance(&twin.account_id);
-        let balances_as_u128: u128 = b.saturated_into::<u128>();
-        assert_eq!(balances_as_u128, 10190000);
-
-        assert_ok!(TfgridModule::report_uptime(Origin::signed(bob()), 100));
-
-        let twin = TfgridModule::twins(1);
-        let b = Balances::free_balance(&twin.account_id);
-        let balances_as_u128: u128 = b.saturated_into::<u128>();
-        assert_eq!(balances_as_u128, 10190000);
-    });
-}
-
-#[test]
 fn test_create_and_update_policy() {
     new_test_ext().execute_with(|| {
         let su_policy = super::types::Policy {
@@ -935,15 +896,6 @@ fn create_twin_bob() {
 }
 
 fn create_farm() {
-    let document = "some_link".as_bytes().to_vec();
-    let hash = "some_hash".as_bytes().to_vec();
-
-    assert_ok!(TfgridModule::farmer_accept_tc(
-        Origin::signed(alice()),
-        document,
-        hash,
-    ));
-
     let farm_name = "test_farm".as_bytes().to_vec();
     let mut pub_ips = Vec::new();
     pub_ips.push(super::types::PublicIP {
@@ -977,34 +929,6 @@ fn create_node() {
 
     assert_ok!(TfgridModule::create_node(
         Origin::signed(alice()),
-        1,
-        resources,
-        location,
-        country,
-        city,
-        Vec::new()
-    ));
-}
-
-fn create_node_bob() {
-    let country = "Belgium".as_bytes().to_vec();
-    let city = "Ghent".as_bytes().to_vec();
-
-    // random location
-    let location = super::types::Location {
-        longitude: "12.233213231".as_bytes().to_vec(),
-        latitude: "32.323112123".as_bytes().to_vec(),
-    };
-
-    let resources = super::types::Resources {
-        hru: 1,
-        sru: 1,
-        cru: 1,
-        mru: 1,
-    };
-
-    assert_ok!(TfgridModule::create_node(
-        Origin::signed(bob()),
         1,
         resources,
         location,

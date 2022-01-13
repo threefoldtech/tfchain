@@ -930,14 +930,6 @@ fn prepare_farm_and_node() {
     )
     .unwrap();
 
-    let document = "some_link".as_bytes().to_vec();
-    let hash = "some_hash".as_bytes().to_vec();
-
-    assert_ok!(TfgridModule::farmer_accept_tc(
-        Origin::signed(alice()),
-        document,
-        hash,
-    ));
     TfgridModule::create_farm(
         Origin::signed(alice()),
         farm_name.as_bytes().to_vec(),
