@@ -601,7 +601,6 @@ impl<T: Config> Module<T> {
 
         // If total balance exceeds the twin's balance, we can decomission contract
         if decomission {
-            let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
             return Self::_cancel_contract(
                 twin.account_id,
                 contract.contract_id,
