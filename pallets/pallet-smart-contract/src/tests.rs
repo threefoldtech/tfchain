@@ -553,6 +553,50 @@ fn test_contract_billing_loop() {
 }
 
 #[test]
+fn test_multiple_contracts_billing_loop() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(bob()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            1
+        ));
+        assert_ok!(SmartContractModule::create_name_contract(
+            Origin::signed(bob()),
+            "some_name".as_bytes().to_vec(),
+        ));
+
+        let contract_to_bill_at_block = SmartContractModule::contract_to_bill_at_block(11);
+        assert_eq!(contract_to_bill_at_block.len(), 2);
+
+        push_report_for_contract(1, 11);
+        run_to_block(12);
+
+        // Test that the expected events were emitted
+        let our_events = System::events()
+        .into_iter()
+        .map(|r| r.event)
+        .filter_map(|e| {
+            if let Event::pallet_smart_contract(inner) = e {
+                Some(inner)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+        
+        for event in our_events {
+            println!("\nevent: {:?}", event);
+        }
+    })
+}
+
+#[test]
 fn test_node_contract_billing() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
@@ -785,6 +829,25 @@ fn push_report(block_number: u64) {
     ));
 }
 
+fn push_report_for_contract(contract_id: u64, block_number: u64) {
+    let gigabyte = 1000 * 1000 * 1000;
+    let mut consumption_reports = Vec::new();
+    consumption_reports.push(super::types::Consumption {
+        contract_id,
+        cru: 2,
+        hru: 0,
+        mru: 2 * gigabyte,
+        sru: 60 * gigabyte,
+        nru: 3 * gigabyte,
+        timestamp: 1628082000 + (6*block_number),
+    });
+
+    assert_ok!(SmartContractModule::add_reports(
+        Origin::signed(alice()),
+        consumption_reports
+    ));
+}
+
 fn check_report_cost(index: usize, amount_billed: u128, block_number: u64, discount_level: types::DiscountLevel) {
     // Test that the expected events were emitted
     let our_events = System::events()
@@ -846,12 +909,12 @@ fn test_name_contract_billing() {
         let contract_bill_event = types::ContractBill {
             contract_id: 1,
             timestamp: 1628082072,
-            discount_level: types::DiscountLevel::None,
-            amount_billed: 277983,
+            discount_level: types::DiscountLevel::Gold,
+            amount_billed: 2032,
         };
         let expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
             vec![RawEvent::ContractBilled(contract_bill_event)];
-        assert_eq!(our_events[1], expected_events[0]);
+        assert_eq!(our_events[2], expected_events[0]);
     });
 }
 
