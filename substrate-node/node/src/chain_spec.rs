@@ -1,6 +1,6 @@
 use sp_core::{Pair, Public, sr25519, ed25519};
 use tfchain_runtime::{
-	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig, CouncilConfig,
+	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig, CouncilConfig, CouncilMembershipConfig,
 	SudoConfig, SystemConfig, WASM_BINARY, Signature, TfgridModuleConfig, TFTBridgeModuleConfig, ValidatorSetConfig, SessionConfig,
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -278,5 +278,13 @@ fn testnet_genesis(
 			withdraw_fee: 10000000
 		}),
 		pallet_collective_Instance1: Some(CouncilConfig::default()),
+		pallet_membership_Instance1: Some(CouncilMembershipConfig {
+			members: vec![
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				get_account_id_from_seed::<sr25519::Public>("Bob"),
+				get_account_id_from_seed::<sr25519::Public>("Eve"),
+			],
+			phantom: Default::default(),
+		}), 
 	}
 }

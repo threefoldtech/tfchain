@@ -26,8 +26,6 @@ use sp_version::NativeVersion;
 // A few exports that help ease life for downstream crates.
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
-pub use pallet_timestamp::Call as TimestampCall;
-pub use pallet_balances::Call as BalancesCall;
 pub use sp_runtime::{Permill, Perbill};
 pub use frame_support::{
 	construct_runtime, debug, parameter_types, StorageValue,
@@ -39,6 +37,8 @@ pub use frame_support::{
 };
 use frame_system::{EnsureOneOf, EnsureRoot};
 pub use pallet_collective;
+pub use pallet_membership;
+
 use sp_core::u32_trait::{_3, _5};
 
 use pallet_transaction_payment::CurrencyAdapter;
@@ -352,6 +352,7 @@ impl pallet_tft_price::Config for Runtime {
 impl validatorset::Config for Runtime {
 	type Event = Event;
 	type AddRemoveOrigin = EnsureRootOrCouncilApproval;
+	type MembershipChanged = MembershipChangedGroup;
 }
 
 /// Special `FullIdentificationOf` implementation that is returning for every input `Some(Default::default())`.
@@ -473,6 +474,31 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type WeightInfo = ();
 }
 
+impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
+	type Event = Event;
+	type AddOrigin = EnsureRootOrCouncilApproval;
+	type RemoveOrigin = EnsureRootOrCouncilApproval;
+	type SwapOrigin = EnsureRootOrCouncilApproval;
+	type ResetOrigin = EnsureRootOrCouncilApproval;
+	type PrimeOrigin = EnsureRootOrCouncilApproval;
+	type MembershipInitialized = Council;
+	type MembershipChanged = MembershipChangedGroup;
+}
+
+use frame_support::traits::ChangeMembers;
+
+pub struct MembershipChangedGroup;
+impl ChangeMembers<AccountId> for MembershipChangedGroup {
+	fn change_members_sorted(
+		incoming: &[AccountId],
+		outgoing: &[AccountId],
+		sorted_new: &[AccountId],
+	) {
+		Council::change_members_sorted(incoming, outgoing, sorted_new);
+		ValidatorSet::change_members_sorted(incoming, outgoing, sorted_new);
+	}
+}
+
 type EnsureRootOrCouncilApproval = EnsureOneOf<
 	AccountId,
 	EnsureRoot<AccountId>,
@@ -538,6 +564,7 @@ construct_runtime!(
 		BurningModule: pallet_burning::{Module, Call, Storage, Event<T>},
 		TFKVStore: pallet_kvstore::{Module, Call, Storage, Event<T>},
         Council: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		CouncilMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
 		RuntimeUpgrade: pallet_runtime_upgrade::{Module, Call, Event},
 	}
 );

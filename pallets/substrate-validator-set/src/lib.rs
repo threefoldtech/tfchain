@@ -8,17 +8,20 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use sp_std::prelude::*;
+use frame_support::traits::{ChangeMembers, InitializeMembers};
+use pallet_session::Module as Session;
 use sp_runtime::traits::Convert;
-use pallet_session::{Module as Session};
+use sp_std::prelude::*;
 
 pub use pallet::*;
 
+mod types;
+
 #[frame_support::pallet]
 pub mod pallet {
+	use super::*;
 	use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
 	use frame_system::pallet_prelude::*;
-	use super::*;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -27,7 +30,10 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// Origin for adding or removing a validator.
-		type AddRemoveOrigin: EnsureOrigin<Self::Origin>;
+		type AddRemoveOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+
+		/// The receiver of the signal for when the membership has changed.
+		type MembershipChanged: ChangeMembers<Self::AccountId>;
 	}
 
 	#[pallet::pallet]
@@ -37,11 +43,21 @@ pub mod pallet {
 	// The pallet's runtime storage items.
 	#[pallet::storage]
 	#[pallet::getter(fn validators)]
-	pub type Validators<T: Config> =  StorageValue<_, Vec<T::AccountId>>;
+	pub type Validators<T: Config> = StorageValue<_, Vec<T::AccountId>>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn flag)]
-	pub type Flag<T: Config> =  StorageValue<_, bool>;
+	pub type Flag<T: Config> = StorageValue<_, bool>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn validator_requests)]
+	pub type ValidatorRequest<T: Config> =
+		StorageMap<_, Identity, u32, types::ValidatorRequest<T::AccountId>, OptionQuery>;
+
+	/// Proposals so far.
+	#[pallet::storage]
+	#[pallet::getter(fn request_count)]
+	pub type RequestCount<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::metadata(T::AccountId = "AccountId")]
@@ -52,6 +68,9 @@ pub mod pallet {
 
 		// Validator removed.
 		ValidatorRemoved(T::AccountId),
+
+		// Validator request created
+		ValidatorRequestCreated(types::ValidatorRequest<T::AccountId>),
 	}
 
 	// Errors inform users that something went wrong.
@@ -71,7 +90,9 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self { validators: Vec::new() }
+			Self {
+				validators: Vec::new(),
+			}
 		}
 	}
 
@@ -83,24 +104,18 @@ pub mod pallet {
 	}
 
 	#[pallet::call]
-	impl<T:Config> Pallet<T> {
+	impl<T: Config> Pallet<T> {
 		/// Add a new validator using root/sudo privileges.
 		///
 		/// New validator's session keys should be set in session module before calling this.
 		#[pallet::weight(0)]
-		pub fn add_validator(origin: OriginFor<T>, validator_id: T::AccountId) -> DispatchResultWithPostInfo {
+		pub fn add_validator(
+			origin: OriginFor<T>,
+			validator_id: T::AccountId,
+		) -> DispatchResultWithPostInfo {
 			T::AddRemoveOrigin::ensure_origin(origin)?;
 
-			let mut validators: Vec<T::AccountId>;
-
-			if <Validators<T>>::get().is_none() {
-				validators = vec![validator_id.clone()];
-			} else {
-				validators = <Validators<T>>::get().unwrap();
-				validators.push(validator_id.clone());
-			}
-
-			<Validators<T>>::put(validators);
+			Self::do_add(validator_id.clone());
 
 			// Calling rotate_session to queue the new session keys.
 			Session::<T>::rotate_session();
@@ -112,7 +127,10 @@ pub mod pallet {
 
 		/// Remove a validator using root/sudo privileges.
 		#[pallet::weight(0)]
-		pub fn remove_validator(origin: OriginFor<T>, validator_id: T::AccountId) -> DispatchResultWithPostInfo {
+		pub fn remove_validator(
+			origin: OriginFor<T>,
+			validator_id: T::AccountId,
+		) -> DispatchResultWithPostInfo {
 			T::AddRemoveOrigin::ensure_origin(origin)?;
 			let mut validators = <Validators<T>>::get().ok_or(Error::<T>::NoValidators)?;
 
@@ -135,6 +153,24 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(0)]
+		pub fn create_validator_request(
+			origin: OriginFor<T>,
+			mut request: types::ValidatorRequest<T::AccountId>,
+		) -> DispatchResultWithPostInfo {
+			ensure_signed(origin.clone())?;
+
+			let index = Self::request_count();
+			<RequestCount<T>>::mutate(|i| *i += 1);
+
+			request.id = index;
+			// Create a validator request object
+			<ValidatorRequest<T>>::insert(index, &request);
+			Self::deposit_event(Event::ValidatorRequestCreated(request.clone()));
+
+			Ok(().into())
+		}
+
+		#[pallet::weight(0)]
 		pub fn force_change_session(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			T::AddRemoveOrigin::ensure_origin(origin)?;
 			<pallet_session::Module<T>>::rotate_session();
@@ -145,11 +181,48 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
+	fn do_add(validator_id: T::AccountId) {
+		let mut validators: Vec<T::AccountId>;
+
+		if <Validators<T>>::get().is_none() {
+			validators = vec![validator_id.clone()];
+		} else {
+			validators = <Validators<T>>::get().unwrap();
+			validators.push(validator_id.clone());
+		}
+
+		<Validators<T>>::put(validators);
+	}
+}
+
+impl<T: Config> ChangeMembers<T::AccountId> for Pallet<T> {
+    fn change_members_sorted(
+        _incoming: &[T::AccountId],
+        _outgoing: &[T::AccountId],
+        new: &[T::AccountId],
+    ) {
+		for val in new {
+			Self::do_add(val.clone());
+		}
+    }
+}
+
+impl<T: Config> InitializeMembers<T::AccountId> for Pallet<T> {
+    fn initialize_members(init: &[T::AccountId]) {
+        <Validators<T>>::put(init);
+        // Shouldn't need a flag update here as this should happen at genesis
+    }
+}
+
+impl<T: Config> Pallet<T> {
 	fn initialize_validators(validators: &[T::AccountId]) {
-			if !validators.is_empty() {
-				assert!(<Validators<T>>::get().is_none(), "Validators are already initialized!");
-				<Validators<T>>::put(validators);
-			}
+		if !validators.is_empty() {
+			assert!(
+				<Validators<T>>::get().is_none(),
+				"Validators are already initialized!"
+			);
+			<Validators<T>>::put(validators);
+		}
 	}
 }
 
@@ -196,4 +269,3 @@ impl<T: Config> Convert<T::AccountId, Option<T::AccountId>> for ValidatorOf<T> {
 		Some(account)
 	}
 }
-
