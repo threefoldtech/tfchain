@@ -116,12 +116,11 @@ pub mod pallet {
 			T::AddRemoveOrigin::ensure_origin(origin)?;
 
 			Self::do_add(validator_id.clone());
-
 			// Calling rotate_session to queue the new session keys.
 			Session::<T>::rotate_session();
-			Self::deposit_event(Event::ValidatorAdded(validator_id));
 			// Triggering rotate session again for the queued keys to take effect.
 			Flag::<T>::put(true);
+
 			Ok(().into())
 		}
 
@@ -188,7 +187,11 @@ impl<T: Config> Pallet<T> {
 			validators = vec![validator_id.clone()];
 		} else {
 			validators = <Validators<T>>::get().unwrap();
-			validators.push(validator_id.clone());
+			// insert the validator if it does not exist yet in the list
+			if !validators.contains(&validator_id.clone()) {
+				validators.push(validator_id.clone());
+				Self::deposit_event(Event::ValidatorAdded(validator_id));
+			}
 		}
 
 		<Validators<T>>::put(validators);
@@ -204,6 +207,10 @@ impl<T: Config> ChangeMembers<T::AccountId> for Pallet<T> {
 		for val in new {
 			Self::do_add(val.clone());
 		}
+		// Calling rotate_session to queue the new session keys.
+		Session::<T>::rotate_session();
+		// Triggering rotate session again for the queued keys to take effect.
+		Flag::<T>::put(true);
     }
 }
 
