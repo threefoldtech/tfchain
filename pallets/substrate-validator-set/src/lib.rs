@@ -20,7 +20,7 @@ mod types;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
+	use frame_support::{dispatch::{DispatchResultWithPostInfo, DispatchError}, pallet_prelude::*};
 	use frame_system::pallet_prelude::*;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
@@ -52,7 +52,12 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn validator_requests)]
 	pub type ValidatorRequest<T: Config> =
-		StorageMap<_, Identity, u32, types::ValidatorRequest<T::AccountId>, OptionQuery>;
+		StorageMap<_, Identity, u32, types::ValidatorRequest<T::AccountId>>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn executed_validator_requests)]
+	pub type ExecutedValidatorRequest<T: Config> =
+		StorageMap<_, Identity, u32, types::ValidatorRequest<T::AccountId>>;
 
 	/// Proposals so far.
 	#[pallet::storage]
@@ -71,12 +76,14 @@ pub mod pallet {
 
 		// Validator request created
 		ValidatorRequestCreated(types::ValidatorRequest<T::AccountId>),
+		ValidatorRequestExecuted(types::ValidatorRequest<T::AccountId>),
 	}
 
 	// Errors inform users that something went wrong.
 	#[pallet::error]
 	pub enum Error<T> {
 		NoValidators,
+		UnauthorizedToActivateValidator,
 	}
 
 	#[pallet::hooks]
@@ -152,18 +159,61 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(0)]
+		pub fn activate_validator(
+			origin: OriginFor<T>,
+			validator_request_id: u32,
+		) -> DispatchResultWithPostInfo {
+			let address = ensure_signed(origin)?;
+
+			let validator_request = <ValidatorRequest<T>>::get(validator_request_id)
+				.ok_or(DispatchError::from(Error::<T>::UnauthorizedToActivateValidator))?;
+
+			ensure!(validator_request.approved, Error::<T>::UnauthorizedToActivateValidator);
+			ensure!(validator_request.council_account == address, Error::<T>::UnauthorizedToActivateValidator);
+
+			// Remove the request from the original map
+			<ValidatorRequest<T>>::remove(validator_request_id);
+			// Insert the request into the executed ones, this way this council member cannot 
+			// do this call more than once
+			<ExecutedValidatorRequest<T>>::insert(validator_request_id, &validator_request);
+
+			Self::do_add(validator_request.validator_account);
+			// Calling rotate_session to queue the new session keys.
+			Session::<T>::rotate_session();
+			// Triggering rotate session again for the queued keys to take effect.
+			Flag::<T>::put(true);
+
+			Ok(().into())
+		}
+
+		#[pallet::weight(0)]
 		pub fn create_validator_request(
 			origin: OriginFor<T>,
-			mut request: types::ValidatorRequest<T::AccountId>,
+			validator_account: T::AccountId,
+			stash_account: T::AccountId,
+			description: Vec<u8>,
+			tf_connect_id: u64,
+			info: Vec<u8>
 		) -> DispatchResultWithPostInfo {
-			ensure_signed(origin.clone())?;
+			let address = ensure_signed(origin.clone())?;
 
-			let index = Self::request_count();
+			let id = Self::request_count();
+			
+			let request = types::ValidatorRequest {
+				id,
+				council_account: address,
+				validator_account,
+				stash_account,
+				description,
+				tf_connect_id,
+				info,
+				approved: false,
+			};
+
 			<RequestCount<T>>::mutate(|i| *i += 1);
 
-			request.id = index;
 			// Create a validator request object
-			<ValidatorRequest<T>>::insert(index, &request);
+			<ValidatorRequest<T>>::insert(id, &request);
 			Self::deposit_event(Event::ValidatorRequestCreated(request.clone()));
 
 			Ok(().into())
@@ -196,6 +246,16 @@ impl<T: Config> Pallet<T> {
 
 		<Validators<T>>::put(validators);
 	}
+
+	fn do_approve_request(validator_id: T::AccountId) {
+		let validator_requests = <ValidatorRequest<T>>::iter();
+		for (id, mut req) in validator_requests {
+			if req.council_account == validator_id {
+				req.approved = true;
+				<ValidatorRequest<T>>::insert(id, req);
+			}
+		}
+	}
 }
 
 impl<T: Config> ChangeMembers<T::AccountId> for Pallet<T> {
@@ -204,13 +264,9 @@ impl<T: Config> ChangeMembers<T::AccountId> for Pallet<T> {
         _outgoing: &[T::AccountId],
         new: &[T::AccountId],
     ) {
-		for val in new {
-			Self::do_add(val.clone());
+		for council_member in new {
+			Self::do_approve_request(council_member.clone());
 		}
-		// Calling rotate_session to queue the new session keys.
-		Session::<T>::rotate_session();
-		// Triggering rotate session again for the queued keys to take effect.
-		Flag::<T>::put(true);
     }
 }
 
