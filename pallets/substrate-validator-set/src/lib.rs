@@ -20,7 +20,10 @@ mod types;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{dispatch::{DispatchResultWithPostInfo, DispatchError}, pallet_prelude::*};
+	use frame_support::{
+		dispatch::{DispatchError, DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
+		pallet_prelude::*,
+	};
 	use frame_system::pallet_prelude::*;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
@@ -74,8 +77,9 @@ pub mod pallet {
 		// Validator removed.
 		ValidatorRemoved(T::AccountId),
 
-		// Validator request created
+		// Validator requests
 		ValidatorRequestCreated(types::ValidatorRequest<T::AccountId>),
+		ValidatorRequestApproved(types::ValidatorRequest<T::AccountId>),
 		ValidatorRequestExecuted(types::ValidatorRequest<T::AccountId>),
 	}
 
@@ -83,7 +87,10 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		NoValidators,
+		DuplicateValidatorRequest,
 		UnauthorizedToActivateValidator,
+		ValidatorRequestNotFound,
+		ValidatorRequestNotApproved,
 	}
 
 	#[pallet::hooks]
@@ -159,6 +166,18 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(0)]
+		pub fn force_change_session(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+			T::AddRemoveOrigin::ensure_origin(origin)?;
+			<pallet_session::Module<T>>::rotate_session();
+			Flag::<T>::put(true);
+			Ok(().into())
+		}
+
+		// Activate Validator takes in a validator request ID
+		// Based on that ID, it can fetch the validator request from storage
+		// check if the signer is mentioned as the council address from the request (this way we know if the signer is an active council member)
+		// if true, then we add the validator account from the request to the list of validators
+		#[pallet::weight(0)]
 		pub fn activate_validator(
 			origin: OriginFor<T>,
 			validator_request_id: u32,
@@ -166,14 +185,20 @@ pub mod pallet {
 			let address = ensure_signed(origin)?;
 
 			let validator_request = <ValidatorRequest<T>>::get(validator_request_id)
-				.ok_or(DispatchError::from(Error::<T>::UnauthorizedToActivateValidator))?;
+				.ok_or(DispatchError::from(Error::<T>::ValidatorRequestNotFound))?;
 
-			ensure!(validator_request.approved, Error::<T>::UnauthorizedToActivateValidator);
-			ensure!(validator_request.council_account == address, Error::<T>::UnauthorizedToActivateValidator);
+			ensure!(
+				validator_request.approved,
+				Error::<T>::ValidatorRequestNotApproved
+			);
+			ensure!(
+				validator_request.council_account == address,
+				Error::<T>::UnauthorizedToActivateValidator
+			);
 
 			// Remove the request from the original map
 			<ValidatorRequest<T>>::remove(validator_request_id);
-			// Insert the request into the executed ones, this way this council member cannot 
+			// Insert the request into the executed ones, this way this council member cannot
 			// do this call more than once
 			<ExecutedValidatorRequest<T>>::insert(validator_request_id, &validator_request);
 
@@ -186,6 +211,13 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		// create a request to become a validator
+		// Validator account: the account of the validator
+		// Stash account: the "bank" account of the validator (where rewards should be sent to)
+		// Description: why someone wants to become a validator
+		// Tf Connect ID: the threefold connect ID of the persion who wants to become a validator
+		// Info: some public info about the validator (website link, blog link, ..)
+		// A user can only have 1 validator request at a time
 		#[pallet::weight(0)]
 		pub fn create_validator_request(
 			origin: OriginFor<T>,
@@ -193,12 +225,20 @@ pub mod pallet {
 			stash_account: T::AccountId,
 			description: Vec<u8>,
 			tf_connect_id: u64,
-			info: Vec<u8>
+			info: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
 			let address = ensure_signed(origin.clone())?;
 
+			let validator_requests = <ValidatorRequest<T>>::iter();
+			for (_, req) in validator_requests {
+				if req.council_account == address {
+					return Err(DispatchErrorWithPostInfo::from(
+						Error::<T>::DuplicateValidatorRequest,
+					));
+				}
+			}
+
 			let id = Self::request_count();
-			
 			let request = types::ValidatorRequest {
 				id,
 				council_account: address,
@@ -219,11 +259,23 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		// Approve a validator request by ID
 		#[pallet::weight(0)]
-		pub fn force_change_session(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+		pub fn approve_validator_request(
+			origin: OriginFor<T>,
+			validator_request_id: u32,
+		) -> DispatchResultWithPostInfo {
 			T::AddRemoveOrigin::ensure_origin(origin)?;
-			<pallet_session::Module<T>>::rotate_session();
-			Flag::<T>::put(true);
+
+			let validator_requests = <ValidatorRequest<T>>::iter();
+			for (id, mut req) in validator_requests {
+				if req.id == validator_request_id {
+					req.approved = true;
+					<ValidatorRequest<T>>::insert(id, &req);
+					Self::deposit_event(Event::ValidatorRequestApproved(req));
+				}
+			}
+
 			Ok(().into())
 		}
 	}
@@ -247,34 +299,35 @@ impl<T: Config> Pallet<T> {
 		<Validators<T>>::put(validators);
 	}
 
-	fn do_approve_request(validator_id: T::AccountId) {
+	fn do_approve_request(council_address: T::AccountId) {
 		let validator_requests = <ValidatorRequest<T>>::iter();
 		for (id, mut req) in validator_requests {
-			if req.council_account == validator_id {
+			if req.council_account == council_address {
 				req.approved = true;
-				<ValidatorRequest<T>>::insert(id, req);
+				<ValidatorRequest<T>>::insert(id, &req);
+				Self::deposit_event(Event::ValidatorRequestApproved(req));
 			}
 		}
 	}
 }
 
 impl<T: Config> ChangeMembers<T::AccountId> for Pallet<T> {
-    fn change_members_sorted(
-        _incoming: &[T::AccountId],
-        _outgoing: &[T::AccountId],
-        new: &[T::AccountId],
-    ) {
+	fn change_members_sorted(
+		_incoming: &[T::AccountId],
+		_outgoing: &[T::AccountId],
+		new: &[T::AccountId],
+	) {
 		for council_member in new {
 			Self::do_approve_request(council_member.clone());
 		}
-    }
+	}
 }
 
 impl<T: Config> InitializeMembers<T::AccountId> for Pallet<T> {
-    fn initialize_members(init: &[T::AccountId]) {
-        <Validators<T>>::put(init);
-        // Shouldn't need a flag update here as this should happen at genesis
-    }
+	fn initialize_members(init: &[T::AccountId]) {
+		<Validators<T>>::put(init);
+		// Shouldn't need a flag update here as this should happen at genesis
+	}
 }
 
 impl<T: Config> Pallet<T> {
