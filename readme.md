@@ -14,7 +14,7 @@ Wasm toolchain:
 
 Now you can build.
 
-```
+```sh
 cd substrate-node
 make build-debug
 ```
@@ -37,7 +37,7 @@ You can use the client to interact with the chain, [read more](./cli-tool/readme
 
 If you want to query the data inside the blockchain with graphql you can set this up locally.
 
-```
+```sh
 cd graphql
 
 yarn
@@ -54,9 +54,9 @@ docker-compose up
 
 Now browse to localhost:4000/graphql
 
-Example query: 
+Example query:
 
-```
+```graphql
 query {
     entities(limit: 5) {
         name
