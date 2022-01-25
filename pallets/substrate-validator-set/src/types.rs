@@ -10,5 +10,12 @@ pub struct ValidatorRequest<AccountId> {
     pub description: Vec<u8>,
     pub tf_connect_id: u64,
     pub info: Vec<u8>,
-    pub approved: bool,
+    pub state: ValidatorRequestState
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
+pub enum ValidatorRequestState {
+    Created,
+    Approved,
+    Executed
 }

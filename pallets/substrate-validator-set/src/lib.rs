@@ -57,11 +57,6 @@ pub mod pallet {
 	pub type ValidatorRequest<T: Config> =
 		StorageMap<_, Identity, u32, types::ValidatorRequest<T::AccountId>>;
 
-	#[pallet::storage]
-	#[pallet::getter(fn executed_validator_requests)]
-	pub type ExecutedValidatorRequest<T: Config> =
-		StorageMap<_, Identity, u32, types::ValidatorRequest<T::AccountId>>;
-
 	/// Proposals so far.
 	#[pallet::storage]
 	#[pallet::getter(fn request_count)]
@@ -184,11 +179,11 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let address = ensure_signed(origin)?;
 
-			let validator_request = <ValidatorRequest<T>>::get(validator_request_id)
+			let mut validator_request = <ValidatorRequest<T>>::get(validator_request_id)
 				.ok_or(DispatchError::from(Error::<T>::ValidatorRequestNotFound))?;
 
 			ensure!(
-				validator_request.approved,
+				validator_request.state == types::ValidatorRequestState::Approved,
 				Error::<T>::ValidatorRequestNotApproved
 			);
 			ensure!(
@@ -196,11 +191,9 @@ pub mod pallet {
 				Error::<T>::UnauthorizedToActivateValidator
 			);
 
-			// Remove the request from the original map
-			<ValidatorRequest<T>>::remove(validator_request_id);
-			// Insert the request into the executed ones, this way this council member cannot
-			// do this call more than once
-			<ExecutedValidatorRequest<T>>::insert(validator_request_id, &validator_request);
+			// Update the validator request
+			validator_request.state = types::ValidatorRequestState::Executed;
+			<ValidatorRequest<T>>::insert(validator_request_id, &validator_request);
 
 			Self::do_add(validator_request.validator_account);
 			// Calling rotate_session to queue the new session keys.
@@ -247,7 +240,7 @@ pub mod pallet {
 				description,
 				tf_connect_id,
 				info,
-				approved: false,
+				state: types::ValidatorRequestState::Created,
 			};
 
 			<RequestCount<T>>::mutate(|i| *i += 1);
@@ -270,7 +263,7 @@ pub mod pallet {
 			let validator_requests = <ValidatorRequest<T>>::iter();
 			for (id, mut req) in validator_requests {
 				if req.id == validator_request_id {
-					req.approved = true;
+					req.state = types::ValidatorRequestState::Approved;
 					<ValidatorRequest<T>>::insert(id, &req);
 					Self::deposit_event(Event::ValidatorRequestApproved(req));
 				}
@@ -303,7 +296,7 @@ impl<T: Config> Pallet<T> {
 		let validator_requests = <ValidatorRequest<T>>::iter();
 		for (id, mut req) in validator_requests {
 			if req.council_account == council_address {
-				req.approved = true;
+				req.state = types::ValidatorRequestState::Approved;
 				<ValidatorRequest<T>>::insert(id, &req);
 				Self::deposit_event(Event::ValidatorRequestApproved(req));
 			}
