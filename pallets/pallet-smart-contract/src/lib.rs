@@ -417,7 +417,12 @@ impl<T: Config> Module<T> {
 
         let mru_used = mru / 4;
         let cru_used = U64F64::from_num(report.cru) / 2;
-        let max = std::cmp::max(mru_used, cru_used);
+        let max = if mru_used > cru_used {
+            mru_used
+        } else {
+            cru_used
+        };
+
         let cu_cost = (U64F64::from_num(pricing_policy.cu.value) / 3600)
             * U64F64::from_num(seconds_elapsed)
             * max;
