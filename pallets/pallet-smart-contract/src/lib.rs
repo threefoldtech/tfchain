@@ -407,7 +407,7 @@ impl<T: Config> Module<T> {
         let sru = U64F64::from_num(report.sru) / pricing_policy.su.factor();
         let mru = U64F64::from_num(report.mru) / pricing_policy.cu.factor();
 
-        let su_used = hru / 1200 + sru / 300;
+        let su_used = hru / 1200 + sru / 200;
         // the pricing policy su cost value is expressed in 1 hours or 3600 seconds.
         // we bill every 3600 seconds but here we need to calculate the cost per second and multiply it by the seconds elapsed since last report.
         let su_cost = (U64F64::from_num(pricing_policy.su.value) / 3600)
@@ -417,14 +417,10 @@ impl<T: Config> Module<T> {
 
         let mru_used = mru / 4;
         let cru_used = U64F64::from_num(report.cru) / 2;
-        let min = if mru_used < cru_used {
-            mru_used
-        } else {
-            cru_used
-        };
+        let max = std::cmp::max(mru_used, cru_used);
         let cu_cost = (U64F64::from_num(pricing_policy.cu.value) / 3600)
             * U64F64::from_num(seconds_elapsed)
-            * min;
+            * max;
         debug::info!("cu cost: {:?}", cu_cost);
 
         let mut used_nru = U64F64::from_num(report.nru) / pricing_policy.nu.factor();
