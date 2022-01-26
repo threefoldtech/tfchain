@@ -186,7 +186,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
         .build_storage::<TestRuntime>()
         .unwrap();
     let genesis = pallet_balances::GenesisConfig::<TestRuntime> {
-        balances: vec![(alice(), 1000000000000), (bob(), 2500000000), (charlie(), 100000)],
+        balances: vec![(alice(), 1000000000000), (bob(), 2500000000), (charlie(), 150000)],
     };
     genesis.assimilate_storage(&mut t).unwrap();
     t.into()
