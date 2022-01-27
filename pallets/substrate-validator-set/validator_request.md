@@ -4,9 +4,9 @@ See: [flow diagram](./validator_request_flow.md)
 
 ## Flow explained
 
-A Used can create a request to be a validator, the object looks as following:
+Any user can create a request to become a validator, the object looks as following:
 
-```
+```rust
 pub struct ValidatorRequest<AccountId> {
     pub id: u32,
     pub council_account: AccountId,
@@ -26,7 +26,7 @@ If the motion is closed, two things happen:
 - the account id provided is added as a council member
 - the validator request (if any) goes to an approved state
 
-Now that the validator request is in an `Approved` state, the newly added council member can call `(ValidatorSet -> ActivateValidator(requestID))`. 
+Now that the validator request is in an `Approved` state, the newly added council member can call `(ValidatorSet -> ActivateValidator(requestID))`.
 
 Following things happen when this is executed:
 
