@@ -72,6 +72,7 @@ pub mod pallet {
 		// Validator removed.
 		ValidatorRemoved(T::AccountId),
 
+		StashAccountBound(u32, T::AccountId),
 		// Validator requests
 		ValidatorRequestCreated(types::ValidatorRequest<T::AccountId>),
 		ValidatorRequestApproved(types::ValidatorRequest<T::AccountId>),
@@ -86,6 +87,7 @@ pub mod pallet {
 		UnauthorizedToActivateValidator,
 		ValidatorRequestNotFound,
 		ValidatorRequestNotApproved,
+		StashAccountNotBound,
 	}
 
 	#[pallet::hooks]
@@ -190,6 +192,10 @@ pub mod pallet {
 				validator_request.council_account == address,
 				Error::<T>::UnauthorizedToActivateValidator
 			);
+			ensure!(
+				validator_request.stash_account != T::AccountId::default(),
+				Error::<T>::StashAccountNotBound
+			);
 
 			// Update the validator request
 			validator_request.state = types::ValidatorRequestState::Executed;
@@ -215,7 +221,6 @@ pub mod pallet {
 		pub fn create_validator_request(
 			origin: OriginFor<T>,
 			validator_account: T::AccountId,
-			stash_account: T::AccountId,
 			description: Vec<u8>,
 			tf_connect_id: u64,
 			info: Vec<u8>,
@@ -236,7 +241,7 @@ pub mod pallet {
 				id,
 				council_account: address,
 				validator_account,
-				stash_account,
+				stash_account: T::AccountId::default(),
 				description,
 				tf_connect_id,
 				info,
@@ -248,6 +253,28 @@ pub mod pallet {
 			// Create a validator request object
 			<ValidatorRequest<T>>::insert(id, &request);
 			Self::deposit_event(Event::ValidatorRequestCreated(request.clone()));
+
+			Ok(().into())
+		}
+
+		// Bind a stash account to a validator request
+		// This needs to be called before a user can call activate_validator
+		#[pallet::weight(0)]
+		pub fn bind_stash_account(
+			origin: OriginFor<T>,
+			validator_request_id: u32,
+		) -> DispatchResultWithPostInfo {
+			let address = ensure_signed(origin.clone())?;
+
+			// TODO check if address has X enough balance?
+
+			let mut validator_request = <ValidatorRequest<T>>::get(validator_request_id)
+				.ok_or(DispatchError::from(Error::<T>::ValidatorRequestNotFound))?;
+			validator_request.stash_account = address.clone();
+
+			<ValidatorRequest<T>>::insert(validator_request_id, validator_request);
+
+			Self::deposit_event(Event::StashAccountBound(validator_request_id, address.clone()));
 
 			Ok(().into())
 		}
