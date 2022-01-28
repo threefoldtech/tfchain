@@ -4,7 +4,10 @@ See: [flow diagram](./validator_request_flow.md)
 
 ## Flow explained
 
-Any user can create a request to become a validator, the object looks as following:
+Anyone can apply to become a validator by calling the `create_validator_request` extrinsic on the `substrate-validator-set` pallet.
+This call must be signed by the account that wants to become a member of the DAO Council.
+
+The object looks as following:
 
 ```rust
 pub struct ValidatorRequest<AccountId> {
