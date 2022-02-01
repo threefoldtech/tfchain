@@ -156,6 +156,12 @@ pub fn test_ed25519() -> AccountId {
     )
 }
 
+pub fn test_sr25519() -> AccountId {
+    get_account_id_from_seed_string::<sr25519::Public>(
+        "industry dismiss casual gym gap music pave gasp sick owner dumb cost",
+    )
+}
+
 pub fn bob() -> AccountId {
     get_account_id_from_seed::<sr25519::Public>("Bob")
 }
@@ -184,6 +190,22 @@ pub fn sign_add_entity_to_twin(entity_id: u32, twin_id: u32) -> Vec<u8> {
     let mut message = vec![];
     message.extend_from_slice(&entity_id.to_be_bytes());
     message.extend_from_slice(&twin_id.to_be_bytes());
+
+    let signature = pair.sign(&message);
+
+    // hex encode signature
+    hex::encode(signature.0.to_vec()).into()
+}
+
+pub fn sign_create_entity_sr(name: Vec<u8>, country: Vec<u8>, city: Vec<u8>) -> Vec<u8> {
+    let seed =
+        hex::decode("59336423ee7af732b2d4a76e440651e33e5ba51540e5633535b9030492c2a6f6").unwrap();
+    let pair = sr25519::Pair::from_seed_slice(&seed).unwrap();
+
+    let mut message = vec![];
+    message.extend_from_slice(&name);
+    message.extend_from_slice(&country);
+    message.extend_from_slice(&city);
 
     let signature = pair.sign(&message);
 

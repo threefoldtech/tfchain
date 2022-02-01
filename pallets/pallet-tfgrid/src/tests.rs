@@ -9,6 +9,14 @@ fn test_create_entity_works() {
     });
 }
 
+
+#[test]
+fn test_create_entity_sr_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity_sr();
+    });
+}
+
 #[test]
 fn test_update_entity_works() {
     ExternalityBuilder::build().execute_with(|| {
@@ -854,6 +862,22 @@ fn create_entity() {
     assert_ok!(TfgridModule::create_entity(
         Origin::signed(alice()),
         test_ed25519(),
+        name,
+        country,
+        city,
+        signature.clone()
+    ));
+}
+
+fn create_entity_sr() {
+    let name = "foobar".as_bytes().to_vec();
+    let country = "Belgium".as_bytes().to_vec();
+    let city = "Ghent".as_bytes().to_vec();
+
+    let signature = sign_create_entity_sr(name.clone(), country.clone(), city.clone());
+    assert_ok!(TfgridModule::create_entity(
+        Origin::signed(alice()),
+        test_sr25519(),
         name,
         country,
         city,

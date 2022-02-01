@@ -618,35 +618,35 @@ fn test_node_contract_billing() {
 
         push_report(11);
         run_to_block(12);
-        check_report_cost(3, 36070, 12, types::DiscountLevel::Gold);
+        check_report_cost(3, 88542, 12, types::DiscountLevel::Silver);
 
         // check the contract owners address to see if it got balance credited
         let twin = TfgridModule::twins(2);
         let b = Balances::free_balance(&twin.account_id);
         let balances_as_u128: u128 = b.saturated_into::<u128>();
 
-        let twin2_balance_should_be = 2500000000 - 36070 as u128;
+        let twin2_balance_should_be = 2500000000 - 88542 as u128;
         assert_eq!(balances_as_u128, twin2_balance_should_be);
         
         let staking_pool_account_balance = Balances::free_balance(&get_staking_pool_account());
         let staking_pool_account_balance_as_u128: u128 = staking_pool_account_balance.saturated_into::<u128>();
         // equal to 5%
-        assert_eq!(staking_pool_account_balance_as_u128, 1803);
+        assert_eq!(staking_pool_account_balance_as_u128, 4427);
 
         let pricing_policy = TfgridModule::pricing_policies(1);
         let foundation_account_balance = Balances::free_balance(&pricing_policy.foundation_account);
         let foundation_account_balance_as_u128: u128 = foundation_account_balance.saturated_into::<u128>();
         // equal to 10%
-        assert_eq!(foundation_account_balance_as_u128, 3607);
+        assert_eq!(foundation_account_balance_as_u128, 8854);
 
         let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
         let sales_account_balance_as_u128: u128 = sales_account_balance.saturated_into::<u128>();
         // equal to 50%
-        assert_eq!(sales_account_balance_as_u128, 18035);
+        assert_eq!(sales_account_balance_as_u128, 44271);
 
         let total_issuance = Balances::total_issuance();
         // total issueance is now previous total - amount burned from contract billed (35%)
-        assert_eq!(total_issuance, initial_total_issuance - 12625);
+        assert_eq!(total_issuance, initial_total_issuance - 30990);
 
         // amount unbilled should have been reset after a transfer between contract owner and farmer
         let contract_billing_info = SmartContractModule::contract_billing_information_by_id(1);
@@ -671,23 +671,23 @@ fn test_node_contract_billing_cycles() {
 
         push_report(11);
         run_to_block(12);
-        check_report_cost(3, 25895, 12, types::DiscountLevel::Gold);
+        check_report_cost(3, 73280, 12, types::DiscountLevel::Silver);
 
         push_report(21);
         run_to_block(22);
-        check_report_cost(6, 25559, 22, types::DiscountLevel::Gold);
+        check_report_cost(6, 72788, 22, types::DiscountLevel::Silver);
 
         push_report(31);
         run_to_block(32);
-        check_report_cost(9, 25559, 32, types::DiscountLevel::Gold);
+        check_report_cost(9, 72788, 32, types::DiscountLevel::Silver);
 
         push_report(41);
         run_to_block(42);
-        check_report_cost(12, 25559, 42, types::DiscountLevel::Gold);
+        check_report_cost(12, 72788, 42, types::DiscountLevel::Silver);
 
         push_report(51);
         run_to_block(52);
-        check_report_cost(15, 25559, 52, types::DiscountLevel::Gold);
+        check_report_cost(15, 72788, 52, types::DiscountLevel::Silver);
     });
 }
 
@@ -708,18 +708,18 @@ fn test_node_contract_billing_should_cancel_contract_when_out_of_funds() {
 
         push_report(11);
         run_to_block(12);
-        check_report_cost(3, 64736, 12, types::DiscountLevel::None);
+        check_report_cost(3, 122132, 12, types::DiscountLevel::None);
 
         let twin = TfgridModule::twins(3);
         let b = Balances::free_balance(&twin.account_id);
         let balances_as_u128: u128 = b.saturated_into::<u128>();
 
-        let twin2_balance_should_be = 100000 - 64736 as u128;
+        let twin2_balance_should_be = 150000 - 122132 as u128;
         assert_eq!(balances_as_u128, twin2_balance_should_be);
 
         push_report(21);
         run_to_block(22);
-        check_report_cost(6, 35264, 22, types::DiscountLevel::None);
+        check_report_cost(6, 27868, 22, types::DiscountLevel::None);
 
         let twin = TfgridModule::twins(3);
         let b = Balances::free_balance(&twin.account_id);
@@ -801,7 +801,7 @@ fn test_new_contract_bill() {
             contract_id: 1,
             timestamp: 1628082072,
             discount_level: types::DiscountLevel::Gold,
-            amount_billed: 42816
+            amount_billed: 76547
         };
         let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> = Vec::new();
         expected_events.push(RawEvent::ContractBilled(contract_bill_event));
