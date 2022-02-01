@@ -2,10 +2,10 @@
 
 ## Run
 
-Use Rust's native `cargo` command to build
+Use Rust's native `cargo` command to build and run
 
 ```sh
-cargo run --release -- --dev --tmp
+cargo run -- --dev --tmp
 ```
 
 ## Attach a UI
@@ -23,8 +23,7 @@ cargo build --release
 
 ## Embedded Docs
 
-Once the project has been built, the following command can be used to explore all parameters and
-subcommands:
+Once the project has been built, the following command can be used to explore all parameters and subcommands:
 
 ```sh
 ./target/release/tfchain -h
@@ -32,7 +31,7 @@ subcommands:
 
 ## Update the chain spec
 
-When the [tfchain_pallets](https://github.com/threefoldtech/tfchain_pallets) have been updated, the chainspec needs to be updated if you want to start a new chain.
+The [chainspecs](./chainspecs) need to be updated if you want to start a new chain.
 
 ## Single-Node Development Chain
 
@@ -40,20 +39,26 @@ The provided `cargo run` command will launch a temporary node and its state will
 you terminate the process. After the project has been built, there are other ways to launch the
 node.
 
+Build it in debug mode first:
+
+```sh
+cargo build 
+```
+
 This command will start the single-node development chain with persistent state:
 
-```bash
-./target/release/tfchain --dev
+```sh
+./target/debug/tfchain --dev
 ```
 
 Purge the development chain's state:
 
-```bash
-./target/release/tfchain purge-chain --dev
+```sh
+./target/debug/tfchain purge-chain --dev
 ```
 
 Start the development chain with detailed logging:
 
-```bash
-RUST_LOG=debug RUST_BACKTRACE=1 ./target/release/tfchain -lruntime=debug --dev
+```sh
+RUST_LOG=debug RUST_BACKTRACE=1 ./target/debug/tfchain -lruntime=debug --dev
 ```
