@@ -45,10 +45,7 @@ branch = "main"
 
 [dependencies.pallet-tft-price]
 default-features = false
-git = "https://github.com/threefoldtech/tfchain_tft"
-package = "pallet-tft-price"
-branch = "main"
-#path = "../../../tfchain_tft/pallet-tft-price"
+path = "../../pallets/pallet-tft-price"
 
 [dependencies.pallet-runtime-upgrade]
 default-features = false
