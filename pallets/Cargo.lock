@@ -1233,7 +1233,7 @@ dependencies = [
  "lite-json",
  "pallet-balances",
  "pallet-tfgrid",
- "pallet-tft-price 1.0.0 (git+https://github.com/threefoldtech/tfchain_tft.git?branch=main)",
+ "pallet-tft-price",
  "pallet-timestamp",
  "parity-scale-codec",
  "serde",
@@ -1268,26 +1268,6 @@ dependencies = [
 [[package]]
 name = "pallet-tft-price"
 version = "1.0.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "parking_lot",
- "serde",
- "serde_json",
- "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-keystore",
- "sp-runtime",
- "sp-std",
- "substrate-fixed",
-]
-
-[[package]]
-name = "pallet-tft-price"
-version = "1.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_tft.git?branch=main#f2b6800296397e3a781dcad02f7003a18691aaa5"
 dependencies = [
  "frame-support",
  "frame-system",
