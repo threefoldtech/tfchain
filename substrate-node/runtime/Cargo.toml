@@ -38,17 +38,14 @@ path = "../../pallets/pallet-kvstore"
 
 [dependencies.pallet-tft-bridge]
 default-features = false
-git = "https://github.com/threefoldtech/tfchain_tft"
+git = "https://github.com/threefoldtech/tfchain_tft_bridge"
 package = "pallet-tft-bridge"
 branch = "main"
 #path = "../../../tfchain_tft/pallet-tft-bridge"
 
 [dependencies.pallet-tft-price]
 default-features = false
-git = "https://github.com/threefoldtech/tfchain_tft"
-package = "pallet-tft-price"
-branch = "main"
-#path = "../../../tfchain_tft/pallet-tft-price"
+path = "../../pallets/pallet-tft-price"
 
 [dependencies.pallet-runtime-upgrade]
 default-features = false
