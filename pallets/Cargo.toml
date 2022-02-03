@@ -3,6 +3,7 @@
 members = [
     "pallet-tfgrid",
     "pallet-tft-price",
+    "pallet-validator",
     "pallet-smart-contract",
     "pallet-vesting-validator",
     "pallet-burning",
