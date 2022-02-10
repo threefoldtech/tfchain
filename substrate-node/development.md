@@ -5,7 +5,7 @@
 Use Rust's native `cargo` command to build and run
 
 ```sh
-cargo run -- --dev --tmp
+cargo run -- --dev --tmp --offchain-worker Never
 ```
 
 ## Attach a UI
