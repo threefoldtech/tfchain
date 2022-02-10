@@ -16,12 +16,12 @@ Now you can build.
 
 ```sh
 cd substrate-node
-make build-debug
+cargo build
 ```
 
-This will build the node binary in release mode, once built you can execute it by doing following:
+This will build the node binary in debug mode, once built you can execute it by doing following:
 
-`./target/release/tfchain --dev --tmp --ws-external`
+`./target/debug/tfchain --dev --ws-external`
 
 > You need the `ws-external` flag in order to connect from a zos node to substrate in a local setup.
 
