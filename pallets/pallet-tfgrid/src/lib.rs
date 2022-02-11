@@ -14,7 +14,7 @@ use frame_support::{
 use frame_system::{self as system, ensure_signed, RawOrigin};
 use hex::FromHex;
 use pallet_timestamp as timestamp;
-use sp_runtime::traits::SaturatedConversion;
+use sp_runtime::{traits::SaturatedConversion, DispatchError};
 use sp_std::prelude::*;
 
 #[cfg(test)]
@@ -262,6 +262,7 @@ decl_error! {
         UserDidNotSignTermsAndConditions,
         FarmerDidNotSignTermsAndConditions,
         FarmerNotAuthorized,
+        InvalidFarmName,
     }
 }
 
@@ -274,6 +275,16 @@ decl_module! {
         #[weight = 10 + T::DbWeight::get().writes(1)]
         pub fn create_farm(origin, name: Vec<u8>, public_ips: Vec<types::PublicIP>) -> dispatch::DispatchResult {
             let address = ensure_signed(origin)?;
+
+            ensure!(name.len() > 0, Error::<T>::InvalidFarmName);
+            for character in &name {
+                match character {
+                    c if *c == 43 => (),
+                    c if *c >= 45 && *c <= 57 => (),
+                    c if *c >= 65 && *c <= 122 => (),
+                    _ => return Err(DispatchError::from(Error::<T>::InvalidFarmName)),
+                }
+            }
 
             ensure!(!FarmIdByName::contains_key(name.clone()), Error::<T>::FarmExists);
             ensure!(TwinIdByAccountID::<T>::contains_key(&address), Error::<T>::TwinNotExists);
