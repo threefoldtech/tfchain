@@ -78,7 +78,6 @@ decl_storage! {
         // Token price
         pub TftPrice: U16F16;
         LastBlockSet: T::BlockNumber;
-        LastBlockAvgSet: T::BlockNumber;
         pub AverageTftPrice: U16F16;
         pub TftPriceHistory get(fn get_value): map hasher(twox_64_concat) BufferIndex => ValueStruct;
         BufferRange get(fn range): (BufferIndex, BufferIndex) = (0, 0);
@@ -131,16 +130,12 @@ struct PriceInfo {
 
 impl<T: Config> Module<T> {
     fn calculate_and_set_price(price: U16F16, block_number: T::BlockNumber) -> DispatchResult {
-        TftPrice::put(price);
-        LastBlockSet::<T>::put(block_number);
-        Self::deposit_event(RawEvent::PriceStored(price));
         debug::info!("price {:?}", price);
 
-        let last_block_avg_set: T::BlockNumber = LastBlockAvgSet::<T>::get();
-        // Store the average every 10 minutes
-        if block_number.saturated_into::<u64>() - last_block_avg_set.saturated_into::<u64>() < 100 {
-            return Ok(());
-        }
+        LastBlockSet::<T>::put(block_number);
+        TftPrice::put(price);
+        Self::deposit_event(RawEvent::PriceStored(price));
+
         debug::info!("storing average now");
         let mut queue = Self::queue_transient();
         queue.push(ValueStruct { value: price });
@@ -149,9 +144,6 @@ impl<T: Config> Module<T> {
         debug::info!("average price {:?}", average);
         AverageTftPrice::put(average);
 
-        // update last block set
-        LastBlockAvgSet::<T>::put(block_number);
-
         Ok(())
     }
 
@@ -159,23 +151,17 @@ impl<T: Config> Module<T> {
     fn fetch_price() -> Result<f64, http::Error> {
         let deadline = sp_io::offchain::timestamp().add(Duration::from_millis(2_000));
 
-        let request =
-            http::Request::get("https://min-api.cryptocompare.com/data/price?fsym=3ft&tsyms=USD");
+        let request = http::Request::get("https://tftprice.grid.tf/");
 
-        let pending = request
-            .deadline(deadline)
-            .send()
-            .map_err(|_| {
-                debug::error!("IO error");
-                http::Error::IoError
-            })?;
+        let pending = request.deadline(deadline).send().map_err(|_| {
+            debug::error!("IO error");
+            http::Error::IoError
+        })?;
 
-        let response = pending
-            .try_wait(deadline)
-            .map_err(|_| {
-                debug::error!("Deadline reached");
-                http::Error::DeadlineReached
-            })??;
+        let response = pending.try_wait(deadline).map_err(|_| {
+            debug::error!("Deadline reached");
+            http::Error::DeadlineReached
+        })??;
 
         // Let's check the status code before we proceed to reading the response.
         if response.code != 200 {
@@ -191,11 +177,10 @@ impl<T: Config> Module<T> {
             http::Error::Unknown
         })?;
 
-        let price_info: PriceInfo =
-            serde_json::from_str(&body_str).map_err(|_| {
-                debug::error!("Error while decoding");
-                http::Error::Unknown
-            })?;
+        let price_info: PriceInfo = serde_json::from_str(&body_str).map_err(|_| {
+            debug::error!("Error while decoding");
+            http::Error::Unknown
+        })?;
 
         Ok(price_info.price)
     }
@@ -210,8 +195,8 @@ impl<T: Config> Module<T> {
             Ok(v) => v,
             Err(err) => {
                 debug::error!("err while fetching price: {:?}", err);
-                return Err(<Error<T>>::ErrFetchingPrice)
-            },
+                return Err(<Error<T>>::ErrFetchingPrice);
+            }
         };
 
         let price_to_fixed = U16F16::from_num(price);
@@ -235,6 +220,7 @@ impl<T: Config> Module<T> {
         debug::error!("No local account available");
         return Err(<Error<T>>::OffchainSignedTxError);
     }
+
     fn queue_transient() -> Box<dyn RingBufferTrait<ValueStruct>> {
         Box::new(RingBufferTransient::<
             ValueStruct,
@@ -242,6 +228,7 @@ impl<T: Config> Module<T> {
             <Self as Store>::TftPriceHistory,
         >::new())
     }
+
     fn calc_avg() -> U16F16 {
         let mut sum: U16F16 = U16F16::from_num(0);
         let mut counter = U16F16::from_num(0);
