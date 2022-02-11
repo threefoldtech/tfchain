@@ -279,9 +279,16 @@ decl_module! {
             ensure!(name.len() > 0, Error::<T>::InvalidFarmName);
             for character in &name {
                 match character {
-                    c if *c == 43 => (),
-                    c if *c >= 45 && *c <= 57 => (),
-                    c if *c >= 65 && *c <= 122 => (),
+                    // 45 = -
+                    c if *c == 45 => (),
+                    // 95 = _
+                    c if *c == 95 => (),
+                    // 45 -> 57 = 0,1,2 ..
+                    c if *c >= 48 && *c <= 57 => (),
+                    // 65 -> 90 = A, B, C, ..
+                    c if *c >= 65 && *c <= 90 => (),
+                    // 97 -> 122 = a, b, c, ..
+                    c if *c >= 97 && *c <= 122 => (),
                     _ => return Err(DispatchError::from(Error::<T>::InvalidFarmName)),
                 }
             }
