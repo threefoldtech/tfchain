@@ -284,6 +284,44 @@ fn test_create_farm_works() {
 }
 
 #[test]
+fn test_create_farm_fails_invalid_name() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+
+        let farm_name = "test.farm".as_bytes().to_vec();
+
+        assert_noop!(
+            TfgridModule::create_farm(
+                Origin::signed(alice()),
+                farm_name,
+                Vec::new(),
+            ),
+            Error::<TestRuntime>::InvalidFarmName
+        );
+    });
+}
+
+#[test]
+fn test_create_farm_fails_empty_name() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+
+        let farm_name = "".as_bytes().to_vec();
+
+        assert_noop!(
+            TfgridModule::create_farm(
+                Origin::signed(alice()),
+                farm_name,
+                Vec::new(),
+            ),
+            Error::<TestRuntime>::InvalidFarmName
+        );
+    });
+}
+
+#[test]
 fn test_create_farm_with_double_ip_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
