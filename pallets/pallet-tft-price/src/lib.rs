@@ -151,7 +151,7 @@ impl<T: Config> Module<T> {
     fn fetch_price() -> Result<f64, http::Error> {
         let deadline = sp_io::offchain::timestamp().add(Duration::from_millis(2_000));
 
-        let request = http::Request::get("https://tftprice.grid.tf/");
+        let request = http::Request::get("https://min-api.cryptocompare.com/data/price?fsym=3ft&tsyms=USD");
 
         let pending = request.deadline(deadline).send().map_err(|_| {
             debug::error!("IO error");
