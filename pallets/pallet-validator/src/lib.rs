@@ -15,6 +15,7 @@ use sp_std::prelude::*;
 use sp_runtime::{
 	traits::{StaticLookup}
 };
+// use substrate_validator_set;
 
 pub mod types;
 
@@ -163,6 +164,10 @@ pub mod pallet {
 
 			// TODO
 			// Call substrate pallet validatorset and add the validator
+			// substrate_validator_set::Pallet::<T>::add_validator(
+			// 	frame_system::Origin::Root.into(),
+			// 	validator_account
+			// );
 
 			Ok(().into())
 		}
