@@ -1,5 +1,5 @@
 [package]
-name = "validator"
+name = "pallet-validator"
 version = "1.0.0"
 edition = "2018"
 

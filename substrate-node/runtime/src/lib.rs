@@ -62,6 +62,8 @@ pub use pallet_kvstore;
 
 pub use pallet_runtime_upgrade;
 
+pub use pallet_validator;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -349,10 +351,16 @@ impl pallet_tft_price::Config for Runtime {
 	type Event = Event;
 }
 
+impl pallet_validator::Config for Runtime {
+	type Event = Event;
+	type AddRemoveOrigin = EnsureRootOrCouncilApproval;
+	type Currency = Balances;
+	type MembershipChanged = MembershipChangedGroup;
+}
+
 impl validatorset::Config for Runtime {
 	type Event = Event;
 	type AddRemoveOrigin = EnsureRootOrCouncilApproval;
-	type MembershipChanged = MembershipChangedGroup;
 }
 
 /// Special `FullIdentificationOf` implementation that is returning for every input `Some(Default::default())`.
@@ -495,7 +503,7 @@ impl ChangeMembers<AccountId> for MembershipChangedGroup {
 		sorted_new: &[AccountId],
 	) {
 		Council::change_members_sorted(incoming, outgoing, sorted_new);
-		ValidatorSet::change_members_sorted(incoming, outgoing, sorted_new);
+		Validator::change_members_sorted(incoming, outgoing, sorted_new);
 	}
 }
 
@@ -566,6 +574,7 @@ construct_runtime!(
         Council: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		CouncilMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
 		RuntimeUpgrade: pallet_runtime_upgrade::{Module, Call, Event},
+		Validator: pallet_validator::{Module, Call, Storage, Event<T>},
 	}
 );
 

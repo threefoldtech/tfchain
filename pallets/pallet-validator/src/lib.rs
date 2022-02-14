@@ -18,11 +18,14 @@ use sp_runtime::{
 // use substrate_validator_set;
 
 pub mod types;
+pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
 	use frame_system::pallet_prelude::*;
+	pub type BalanceOf<T> =
+		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -33,9 +36,6 @@ pub mod pallet {
 		/// The receiver of the signal for when the membership has changed.
 		type MembershipChanged: ChangeMembers<Self::AccountId>;
 	}
-
-	pub type BalanceOf<T> =
-		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -56,6 +56,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		Bonded(T::AccountId),
 		ValidatorRequestCreated(T::AccountId, types::ValidatorRequest<T::AccountId>),
+		ValidatorRequestApproved(types::ValidatorRequest<T::AccountId>),
 	}
 
 	#[pallet::error]
@@ -242,6 +243,29 @@ pub mod pallet {
 				))
 			}
 
+		}
+
+		fn do_approve_request(council_address: T::AccountId) {
+			let validator_requests = <ValidatorRequest<T>>::iter();
+			for (id, mut req) in validator_requests {
+				if req.council_account == council_address {
+					req.state = types::ValidatorRequestState::Approved;
+					<ValidatorRequest<T>>::insert(id, &req);
+					Self::deposit_event(Event::ValidatorRequestApproved(req));
+				}
+			}
+		}
+	}
+
+	impl<T: Config> ChangeMembers<T::AccountId> for Pallet<T> {
+		fn change_members_sorted(
+			_incoming: &[T::AccountId],
+			_outgoing: &[T::AccountId],
+			new: &[T::AccountId],
+		) {
+			for council_member in new {
+				Self::do_approve_request(council_member.clone());
+			}
 		}
 	}
 }
