@@ -53,7 +53,7 @@ pub mod pallet {
 	#[pallet::metadata(T::AccountId = "AccountId")]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		Bonded(T::AccountId, BalanceOf<T>),
+		Bonded(T::AccountId),
 		ValidatorRequestCreated(T::AccountId, types::ValidatorRequest<T::AccountId>),
 	}
 
@@ -113,7 +113,7 @@ pub mod pallet {
 			// Request should not be a duplicate
 			ensure!(!<ValidatorRequest<T>>::contains_key(&validator_account), Error::<T>::DuplicateValidatorRequest);
 			// Request stash account should be bonded
-			ensure!(!<Bonded<T>>::contains_key(&stash_account), Error::<T>::StashNotBonded);
+			ensure!(<Bonded<T>>::contains_key(&stash_account), Error::<T>::StashNotBonded);
 
 			let request = types::ValidatorRequest {
 				council_account: address.clone(),
@@ -177,30 +177,22 @@ pub mod pallet {
 		pub fn bond(
 			origin: OriginFor<T>,
 			controller: <T::Lookup as StaticLookup>::Source,
-			value: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let stash = ensure_signed(origin.clone())?;
 
 			if <Bonded<T>>::contains_key(&stash) {
 				Err(Error::<T>::AlreadyBonded)?
 			}
-
-			// reject a bond which is considered to be _dust_.
-			if value < T::Currency::minimum_balance() {
-				Err(Error::<T>::InsufficientValue)?
-			}
 			
 			let controller = T::Lookup::lookup(controller)?;
 			<Bonded<T>>::insert(&stash, &controller);
 
-			let stash_balance = T::Currency::free_balance(&stash);
-			let value = value.min(stash_balance);
-			Self::deposit_event(Event::Bonded(stash.clone(), value));
+			Self::deposit_event(Event::Bonded(stash.clone()));
 
 			Ok(().into())
 		}
 
-		// Approve a validator request by ID
+		// Approve a validator request by validator account id
 		#[pallet::weight(0)]
 		pub fn approve_validator_request(
 			origin: OriginFor<T>,
