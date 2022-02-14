@@ -63,7 +63,7 @@ pub mod pallet {
 	pub enum Error<T> {
 		AlreadyBonded,
 		StashNotBonded,
-		StashBondedWithWrongController,
+		StashBondedWithWrongValidator,
 		InsufficientValue,
 		DuplicateValidatorRequest,
 		ValidatorRequestNotFound,
@@ -97,7 +97,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		// create a request to become a validator
 		// Validator account: the account of the validator
-		// Stash account: the "bank" account of the validator (where rewards should be sent to) the stash should be bonded to a controller
+		// Stash account: the "bank" account of the validator (where rewards should be sent to) the stash should be bonded to a validator
 		// Description: why someone wants to become a validator
 		// Tf Connect ID: the threefold connect ID of the persion who wants to become a validator
 		// Info: some public info about the validator (website link, blog link, ..)
@@ -173,7 +173,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Take the origin account as a stash and lock up `value` of its balance. `controller` will
+		/// Take the origin account as a stash and lock up `value` of its balance. `validator` will
 		/// be the account that controls it.
 		///
 		/// `value` must be more than the `minimum_balance` specified by `T::Currency`.
@@ -184,7 +184,7 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn bond(
 			origin: OriginFor<T>,
-			controller: <T::Lookup as StaticLookup>::Source,
+			validator: <T::Lookup as StaticLookup>::Source,
 		) -> DispatchResultWithPostInfo {
 			let stash = ensure_signed(origin.clone())?;
 
@@ -192,8 +192,8 @@ pub mod pallet {
 				Err(Error::<T>::AlreadyBonded)?
 			}
 			
-			let controller = T::Lookup::lookup(controller)?;
-			<Bonded<T>>::insert(&stash, &controller);
+			let validator = T::Lookup::lookup(validator)?;
+			<Bonded<T>>::insert(&stash, &validator);
 
 			Self::deposit_event(Event::Bonded(stash.clone()));
 
@@ -225,14 +225,14 @@ pub mod pallet {
 	}
 
 	impl <T:Config> Module<T> {
-		fn check_bond(stash_account: &T::AccountId, controller: &T::AccountId) -> DispatchResultWithPostInfo {
+		fn check_bond(stash_account: &T::AccountId, validator: &T::AccountId) -> DispatchResultWithPostInfo {
 			ensure!(<Bonded<T>>::contains_key(&stash_account), Error::<T>::StashNotBonded);
 			let bonded_account = <Bonded<T>>::get(&stash_account);
 			match bonded_account {
 				Some(acc) => {
-					if &acc != controller {
+					if &acc != validator {
 						return Err(DispatchErrorWithPostInfo::from(
-							Error::<T>::StashBondedWithWrongController,
+							Error::<T>::StashBondedWithWrongValidator,
 						))
 					} else {
 						Ok(().into())
