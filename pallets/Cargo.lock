@@ -1314,6 +1314,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "substrate-validator-set",
 ]
 
 [[package]]

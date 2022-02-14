@@ -15,7 +15,7 @@ use sp_std::prelude::*;
 use sp_runtime::{
 	traits::{StaticLookup}
 };
-// use substrate_validator_set;
+use substrate_validator_set;
 
 pub mod types;
 pub use pallet::*;
@@ -28,11 +28,11 @@ pub mod pallet {
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + substrate_validator_set::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		type Currency: Currency<Self::AccountId>;
-		type AddRemoveOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+		type CouncilOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 		/// The receiver of the signal for when the membership has changed.
 		type MembershipChanged: ChangeMembers<Self::AccountId>;
 	}
@@ -44,7 +44,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn validator_requests)]
 	pub type ValidatorRequest<T: Config> =
-		StorageMap<_, Twox64Concat, T::AccountId, types::ValidatorRequest<T::AccountId>>;
+		StorageMap<_, Twox64Concat, T::AccountId, types::Validator<T::AccountId>>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn bonded)]
@@ -55,8 +55,8 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		Bonded(T::AccountId),
-		ValidatorRequestCreated(T::AccountId, types::ValidatorRequest<T::AccountId>),
-		ValidatorRequestApproved(types::ValidatorRequest<T::AccountId>),
+		ValidatorRequestCreated(T::AccountId, types::Validator<T::AccountId>),
+		ValidatorRequestApproved(types::Validator<T::AccountId>),
 	}
 
 	#[pallet::error]
@@ -65,10 +65,12 @@ pub mod pallet {
 		StashNotBonded,
 		StashBondedWithWrongValidator,
 		InsufficientValue,
-		DuplicateValidatorRequest,
-		ValidatorRequestNotFound,
-		ValidatorRequestNotApproved,
+		DuplicateValidator,
+		ValidatorNotFound,
+		ValidatorNotApproved,
 		UnauthorizedToActivateValidator,
+		ValidatorValidatingAlready,
+		ValidatorNotValidating,
 	}
 
 	#[pallet::hooks]
@@ -103,9 +105,9 @@ pub mod pallet {
 		// Info: some public info about the validator (website link, blog link, ..)
 		// A user can only have 1 validator request at a time
 		#[pallet::weight(0)]
-		pub fn create_validator_request(
+		pub fn create_validator(
 			origin: OriginFor<T>,
-			validator_account: T::AccountId,
+			validator_node_account: T::AccountId,
 			stash_account: T::AccountId,
 			description: Vec<u8>,
 			tf_connect_id: u64,
@@ -114,14 +116,14 @@ pub mod pallet {
 			let address = ensure_signed(origin.clone())?;
 
 			// Request should not be a duplicate
-			ensure!(!<ValidatorRequest<T>>::contains_key(&validator_account), Error::<T>::DuplicateValidatorRequest);
+			ensure!(!<ValidatorRequest<T>>::contains_key(&validator_node_account), Error::<T>::DuplicateValidator);
 			// Request stash account should be bonded
 			ensure!(<Bonded<T>>::contains_key(&stash_account), Error::<T>::StashNotBonded);
-			Self::check_bond(&stash_account, &validator_account)?;
+			Self::check_bond(&stash_account, &validator_node_account)?;
 
-			let request = types::ValidatorRequest {
+			let request = types::Validator {
 				council_account: address.clone(),
-				validator_account: validator_account.clone(),
+				validator_node_account: validator_node_account.clone(),
 				stash_account,
 				description,
 				tf_connect_id,
@@ -130,7 +132,7 @@ pub mod pallet {
 			};
 
 			// Create a validator request object
-			<ValidatorRequest<T>>::insert(validator_account, &request);
+			<ValidatorRequest<T>>::insert(validator_node_account, &request);
 			Self::deposit_event(Event::ValidatorRequestCreated(address, request.clone()));
 
 			Ok(().into())
@@ -143,32 +145,74 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn activate_validator(
 			origin: OriginFor<T>,
-			validator_account: T::AccountId,
+			validator_node_account: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			let address = ensure_signed(origin)?;
 
-			let mut validator_request = <ValidatorRequest<T>>::get(&validator_account)
-				.ok_or(DispatchError::from(Error::<T>::ValidatorRequestNotFound))?;
+			let mut validator = <ValidatorRequest<T>>::get(&validator_node_account)
+				.ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
 
 			ensure!(
-				validator_request.state == types::ValidatorRequestState::Approved,
-				Error::<T>::ValidatorRequestNotApproved
+				validator.state != types::ValidatorRequestState::Validating,
+				Error::<T>::ValidatorValidatingAlready
 			);
 			ensure!(
-				validator_request.council_account == address,
+				validator.state == types::ValidatorRequestState::Approved,
+				Error::<T>::ValidatorNotApproved
+			);
+			ensure!(
+				validator.council_account == address,
 				Error::<T>::UnauthorizedToActivateValidator
 			);
 
 			// Update the validator request
-			validator_request.state = types::ValidatorRequestState::Executed;
-			<ValidatorRequest<T>>::insert(validator_account, &validator_request);
+			validator.state = types::ValidatorRequestState::Validating;
+			<ValidatorRequest<T>>::insert(validator_node_account.clone(), &validator);
 
-			// TODO
-			// Call substrate pallet validatorset and add the validator
-			// substrate_validator_set::Pallet::<T>::add_validator(
-			// 	frame_system::Origin::Root.into(),
-			// 	validator_account
-			// );
+			// Add the validator and rotate
+			substrate_validator_set::Pallet::<T>::add_validator(
+				frame_system::RawOrigin::Root.into(),
+				validator_node_account
+			)?;
+
+			Ok(().into())
+		}
+
+		#[pallet::weight(0)]
+		pub fn change_node_validator_account(
+			origin: OriginFor<T>,
+			old_node_validator_account: T::AccountId,
+			new_node_validator_account: T::AccountId,
+		) -> DispatchResultWithPostInfo {
+			let address = ensure_signed(origin)?;
+
+			let mut validator = <ValidatorRequest<T>>::get(&old_node_validator_account)
+				.ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
+
+			ensure!(
+				validator.state == types::ValidatorRequestState::Validating,
+				Error::<T>::ValidatorNotValidating
+			);
+			ensure!(
+				validator.council_account == address,
+				Error::<T>::UnauthorizedToActivateValidator
+			);
+
+			// Remove the old validator and rotate session
+			substrate_validator_set::Pallet::<T>::remove_validator(
+				frame_system::RawOrigin::Root.into(),
+				old_node_validator_account.clone()
+			)?;
+			// Add the validator and rotate session
+			substrate_validator_set::Pallet::<T>::add_validator(
+				frame_system::RawOrigin::Root.into(),
+				new_node_validator_account.clone()
+			)?;
+
+			<ValidatorRequest<T>>::remove(old_node_validator_account);
+
+			validator.validator_node_account = new_node_validator_account.clone();
+			<ValidatorRequest<T>>::insert(new_node_validator_account, validator);
 
 			Ok(().into())
 		}
@@ -202,11 +246,11 @@ pub mod pallet {
 
 		// Approve a validator request by validator account id
 		#[pallet::weight(0)]
-		pub fn approve_validator_request(
+		pub fn approve_validator(
 			origin: OriginFor<T>,
 			validator_account: T::AccountId,
 		) -> DispatchResultWithPostInfo {
-			T::AddRemoveOrigin::ensure_origin(origin)?;
+			T::CouncilOrigin::ensure_origin(origin)?;
 
 			let req = <ValidatorRequest<T>>::get(&validator_account);
 			match req {
@@ -217,7 +261,7 @@ pub mod pallet {
 				},
 				None => {
 					return Err(DispatchErrorWithPostInfo::from(
-						Error::<T>::ValidatorRequestNotFound,
+						Error::<T>::ValidatorNotFound,
 					))
 				}
 			}
