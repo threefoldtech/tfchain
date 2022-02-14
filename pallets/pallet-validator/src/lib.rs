@@ -61,6 +61,7 @@ pub mod pallet {
 	pub enum Error<T> {
 		AlreadyBonded,
 		StashNotBonded,
+		StashBondedWithWrongController,
 		InsufficientValue,
 		DuplicateValidatorRequest,
 		ValidatorRequestNotFound,
@@ -114,6 +115,7 @@ pub mod pallet {
 			ensure!(!<ValidatorRequest<T>>::contains_key(&validator_account), Error::<T>::DuplicateValidatorRequest);
 			// Request stash account should be bonded
 			ensure!(<Bonded<T>>::contains_key(&stash_account), Error::<T>::StashNotBonded);
+			Self::check_bond(&stash_account, &validator_account)?;
 
 			let request = types::ValidatorRequest {
 				council_account: address.clone(),
@@ -213,6 +215,28 @@ pub mod pallet {
 					))
 				}
 			}
+		}
+	}
+
+	impl <T:Config> Module<T> {
+		fn check_bond(stash_account: &T::AccountId, controller: &T::AccountId) -> DispatchResultWithPostInfo {
+			ensure!(<Bonded<T>>::contains_key(&stash_account), Error::<T>::StashNotBonded);
+			let bonded_account = <Bonded<T>>::get(&stash_account);
+			match bonded_account {
+				Some(acc) => {
+					if &acc != controller {
+						return Err(DispatchErrorWithPostInfo::from(
+							Error::<T>::StashBondedWithWrongController,
+						))
+					} else {
+						Ok(().into())
+					}
+				},
+				None => return Err(DispatchErrorWithPostInfo::from(
+					Error::<T>::StashNotBonded,
+				))
+			}
+
 		}
 	}
 }
