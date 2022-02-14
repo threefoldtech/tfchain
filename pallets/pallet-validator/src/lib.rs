@@ -6,7 +6,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support;
-use frame_support::traits::{ChangeMembers, Currency};
+use frame_support::traits::{Currency};
 use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
 	pallet_prelude::*,
@@ -28,13 +28,11 @@ pub mod pallet {
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + substrate_validator_set::Config {
+	pub trait Config: frame_system::Config + substrate_validator_set::Config + pallet_membership::Config<pallet_membership::Instance1> {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		type Currency: Currency<Self::AccountId>;
 		type CouncilOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
-		/// The receiver of the signal for when the membership has changed.
-		type MembershipChanged: ChangeMembers<Self::AccountId>;
 	}
 
 	#[pallet::pallet]
@@ -256,7 +254,11 @@ pub mod pallet {
 			match req {
 				Some(mut r) => {
 					r.state = types::ValidatorRequestState::Approved;
-					<ValidatorRequest<T>>::insert(validator_account, &r);
+					<ValidatorRequest<T>>::insert(validator_account.clone(), &r);
+					pallet_membership::Module::<T, pallet_membership::Instance1>::add_member(
+						frame_system::RawOrigin::Root.into(),
+						validator_account.clone()
+					)?;
 					Ok(().into())
 				},
 				None => {
@@ -287,29 +289,6 @@ pub mod pallet {
 				))
 			}
 
-		}
-
-		fn do_approve_request(council_address: T::AccountId) {
-			let validator_requests = <ValidatorRequest<T>>::iter();
-			for (id, mut req) in validator_requests {
-				if req.council_account == council_address {
-					req.state = types::ValidatorRequestState::Approved;
-					<ValidatorRequest<T>>::insert(id, &req);
-					Self::deposit_event(Event::ValidatorRequestApproved(req));
-				}
-			}
-		}
-	}
-
-	impl<T: Config> ChangeMembers<T::AccountId> for Pallet<T> {
-		fn change_members_sorted(
-			_incoming: &[T::AccountId],
-			_outgoing: &[T::AccountId],
-			new: &[T::AccountId],
-		) {
-			for council_member in new {
-				Self::do_approve_request(council_member.clone());
-			}
 		}
 	}
 }

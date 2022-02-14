@@ -3993,12 +3993,14 @@ version = "1.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "pallet-membership",
  "parity-scale-codec",
  "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "substrate-validator-set",
 ]
 
 [[package]]

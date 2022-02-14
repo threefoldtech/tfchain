@@ -353,9 +353,8 @@ impl pallet_tft_price::Config for Runtime {
 
 impl pallet_validator::Config for Runtime {
 	type Event = Event;
-	type AddRemoveOrigin = EnsureRootOrCouncilApproval;
+	type CouncilOrigin = EnsureRootOrCouncilApproval;
 	type Currency = Balances;
-	type MembershipChanged = MembershipChangedGroup;
 }
 
 impl validatorset::Config for Runtime {
@@ -503,7 +502,7 @@ impl ChangeMembers<AccountId> for MembershipChangedGroup {
 		sorted_new: &[AccountId],
 	) {
 		Council::change_members_sorted(incoming, outgoing, sorted_new);
-		Validator::change_members_sorted(incoming, outgoing, sorted_new);
+		// Validator::change_members_sorted(incoming, outgoing, sorted_new);
 	}
 }
 

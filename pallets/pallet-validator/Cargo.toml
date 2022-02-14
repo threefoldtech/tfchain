@@ -12,6 +12,7 @@ frame-support = { default-features = false, version = '3.0.0'}
 frame-system = { default-features = false, version = '3.0.0'}
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
 serde = { features = ['derive'], optional = true, version = '1.0.101'}
+pallet-membership = { version = "3.0.0", default-features = false }
 
 [dependencies.substrate-validator-set]
 default-features = false
@@ -28,5 +29,6 @@ std = [
     'sp-io/std',
     'serde',
     'frame-system/std',
-    'substrate-validator-set/std'
+    'substrate-validator-set/std',
+    'pallet-membership/std'
 ]
