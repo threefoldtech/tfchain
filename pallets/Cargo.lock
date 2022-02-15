@@ -1334,23 +1334,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-vesting-validator"
-version = "1.0.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "lite-json",
- "pallet-balances",
- "pallet-timestamp",
- "parity-scale-codec",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "sp-storage",
-]
-
-[[package]]
 name = "parity-scale-codec"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
