@@ -3,7 +3,6 @@ use frame_support::traits::Vec;
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub struct Validator<AccountId> {
-    pub council_account: AccountId,
     pub validator_node_account: AccountId,
     pub stash_account: AccountId,
     pub description: Vec<u8>,
