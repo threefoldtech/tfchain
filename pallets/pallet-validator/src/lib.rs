@@ -114,7 +114,7 @@ pub mod pallet {
 			let address = ensure_signed(origin.clone())?;
 
 			// Request should not be a duplicate
-			ensure!(!<ValidatorRequest<T>>::contains_key(&validator_node_account), Error::<T>::DuplicateValidator);
+			ensure!(!<ValidatorRequest<T>>::contains_key(&address), Error::<T>::DuplicateValidator);
 			// Request stash account should be bonded
 			ensure!(<Bonded<T>>::contains_key(&stash_account), Error::<T>::StashNotBonded);
 			Self::check_bond(&stash_account, &validator_node_account)?;
@@ -130,7 +130,7 @@ pub mod pallet {
 			};
 
 			// Create a validator request object
-			<ValidatorRequest<T>>::insert(validator_node_account, &request);
+			<ValidatorRequest<T>>::insert(&address, &request);
 			Self::deposit_event(Event::ValidatorRequestCreated(address, request.clone()));
 
 			Ok(().into())
@@ -142,12 +142,11 @@ pub mod pallet {
 		// if true, then we add the validator account from the request to the list of validators
 		#[pallet::weight(0)]
 		pub fn activate_validator(
-			origin: OriginFor<T>,
-			validator_node_account: T::AccountId,
+			origin: OriginFor<T>
 		) -> DispatchResultWithPostInfo {
 			let address = ensure_signed(origin)?;
 
-			let mut validator = <ValidatorRequest<T>>::get(&validator_node_account)
+			let mut validator = <ValidatorRequest<T>>::get(&address)
 				.ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
 
 			ensure!(
@@ -165,12 +164,12 @@ pub mod pallet {
 
 			// Update the validator request
 			validator.state = types::ValidatorRequestState::Validating;
-			<ValidatorRequest<T>>::insert(validator_node_account.clone(), &validator);
+			<ValidatorRequest<T>>::insert(validator.validator_node_account.clone(), &validator);
 
 			// Add the validator and rotate
 			substrate_validator_set::Pallet::<T>::add_validator(
 				frame_system::RawOrigin::Root.into(),
-				validator_node_account
+				validator.validator_node_account
 			)?;
 
 			Ok(().into())
@@ -179,12 +178,11 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn change_node_validator_account(
 			origin: OriginFor<T>,
-			old_node_validator_account: T::AccountId,
 			new_node_validator_account: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			let address = ensure_signed(origin)?;
 
-			let mut validator = <ValidatorRequest<T>>::get(&old_node_validator_account)
+			let validator = <ValidatorRequest<T>>::get(&address)
 				.ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
 
 			ensure!(
@@ -199,18 +197,13 @@ pub mod pallet {
 			// Remove the old validator and rotate session
 			substrate_validator_set::Pallet::<T>::remove_validator(
 				frame_system::RawOrigin::Root.into(),
-				old_node_validator_account.clone()
+				validator.validator_node_account.clone()
 			)?;
 			// Add the validator and rotate session
 			substrate_validator_set::Pallet::<T>::add_validator(
 				frame_system::RawOrigin::Root.into(),
 				new_node_validator_account.clone()
 			)?;
-
-			<ValidatorRequest<T>>::remove(old_node_validator_account);
-
-			validator.validator_node_account = new_node_validator_account.clone();
-			<ValidatorRequest<T>>::insert(new_node_validator_account, validator);
 
 			Ok(().into())
 		}
