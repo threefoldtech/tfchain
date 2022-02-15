@@ -99,13 +99,14 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		// create a request to become a validator
-		// Validator account: the account of the validator
-		// Stash account: the "bank" account of the validator (where rewards should be sent to) the stash should be bonded to a validator
-		// Description: why someone wants to become a validator
-		// Tf Connect ID: the threefold connect ID of the persion who wants to become a validator
-		// Info: some public info about the validator (website link, blog link, ..)
-		// A user can only have 1 validator request at a time
+		/// Create a request to become a validator
+		/// Validator account (signer): the account of the validator (this account will be added to the council)
+		/// Validator node account: the account that will validate on consensus layer
+		/// Stash account: the "bank" account of the validator (where rewards should be sent to) the stash should be bonded to a validator
+		/// Description: why someone wants to become a validator
+		/// Tf Connect ID: the threefold connect ID of the persion who wants to become a validator
+		/// Info: some public info about the validator (website link, blog link, ..)
+		/// A user can only have 1 validator request at a time
 		#[pallet::weight(100_000_000)]
 		pub fn create_validator(
 			origin: OriginFor<T>,
@@ -122,11 +123,8 @@ pub mod pallet {
 				!<Validator<T>>::contains_key(&address),
 				Error::<T>::DuplicateValidator
 			);
+
 			// Request stash account should be bonded
-			ensure!(
-				<Bonded<T>>::contains_key(&stash_account),
-				Error::<T>::StashNotBonded
-			);
 			Self::check_bond(&stash_account, &address)?;
 
 			let request = types::Validator {
@@ -140,15 +138,16 @@ pub mod pallet {
 
 			// Create a validator request object
 			<Validator<T>>::insert(&address, &request);
+
 			Self::deposit_event(Event::ValidatorCreated(address, request.clone()));
 
 			Ok(().into())
 		}
 
-		// Activate Validator takes in a validator request ID
-		// Based on that ID, it can fetch the validator request from storage
-		// check if the signer is mentioned as the council address from the request (this way we know if the signer is an active council member)
-		// if true, then we add the validator account from the request to the list of validators
+		/// Activate Validator 
+		/// Will activate the Validator node account on consensus level
+		/// A user can only call this if his request to be a validator is approved by the council
+		/// Should be called when his node is synced and ready to start validating
 		#[pallet::weight(100_000_000)]
 		pub fn activate_validator(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let address = ensure_signed(origin)?;
@@ -180,6 +179,10 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Change node validator account
+		/// In case the Validator wishes to change his validator node account
+		/// he can call this method with the new node validator account
+		/// this new account will be added as a new consensus validator
 		#[pallet::weight(100_000_000)]
 		pub fn change_node_validator_account(
 			origin: OriginFor<T>,
@@ -216,14 +219,8 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Take the origin account as a stash and lock up `value` of its balance. `validator` will
-		/// be the account that controls it.
-		///
-		/// `value` must be more than the `minimum_balance` specified by `T::Currency`.
-		///
-		/// The dispatch origin for this call must be _Signed_ by the stash account.
-		///
-		/// Emits `Bonded`.
+		/// Bond an account to to a validator account
+		/// Just proves that the stash account is indeed under control of the validator account
 		#[pallet::weight(100_000_000)]
 		pub fn bond(
 			origin: OriginFor<T>,
@@ -248,7 +245,9 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		// Approve a validator request by validator account id
+		/// Approve validator
+		/// Approves a validator to be added as a council member and
+		/// to participate in consensus
 		#[pallet::weight(100_000_000)]
 		pub fn approve_validator(
 			origin: OriginFor<T>,
@@ -259,6 +258,7 @@ pub mod pallet {
 			let mut validator = <Validator<T>>::get(&validator_account)
 				.ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
 
+			// Set state to approved
 			validator.state = types::ValidatorRequestState::Approved;
 			<Validator<T>>::insert(validator_account.clone(), &validator);
 
@@ -273,11 +273,12 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		// Removes a validator from:
-		// 1. Council
-		// 2. Storage
-		// 3. Consensus
-		// Can only be decided by the council
+		/// Remove validator
+		/// Removes a validator from:
+		/// 1. Council
+		/// 2. Storage
+		/// 3. Consensus
+		/// Can only be decided by the council
 		#[pallet::weight(100_000_000)]
 		pub fn remove_validator(
 			origin: OriginFor<T>,
