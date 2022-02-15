@@ -44,6 +44,12 @@ pub struct Farm {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+pub struct Boot {
+    pub secure: bool,
+    pub serial_number: Vec<u8>,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
 pub struct Node {
     pub version: u32,
     pub id: u32,
@@ -231,5 +237,5 @@ pub struct TermsAndConditions<AccountId> {
     pub account_id: AccountId,
     pub timestamp: u64,
     pub document_link: Vec<u8>,
-    pub document_hash: Vec<u8>
+    pub document_hash: Vec<u8>,
 }

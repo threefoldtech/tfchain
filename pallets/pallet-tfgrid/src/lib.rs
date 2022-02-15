@@ -53,6 +53,7 @@ decl_storage! {
 
         pub Nodes get(fn nodes): map hasher(blake2_128_concat) u32 => types::Node;
         pub NodeIdByTwinID get(fn node_by_twin_id): map hasher(blake2_128_concat) u32 => u32;
+        pub NodeBoot get(fn boots): map hasher(blake2_128_concat) u32 => types::Boot;
 
         pub Entities get(fn entities): map hasher(blake2_128_concat) u32 => types::Entity<T::AccountId>;
         pub EntityIdByAccountID get(fn entities_by_pubkey_id): map hasher(blake2_128_concat) T::AccountId => u32;
@@ -537,6 +538,23 @@ decl_module! {
             Nodes::insert(stored_node.id, &stored_node);
 
             Self::deposit_event(RawEvent::NodeUpdated(stored_node));
+
+            Ok(Pays::No.into())
+        }
+
+        #[weight = (10 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(3), DispatchClass::Operational)]
+        pub fn set_node_boot(origin, boot: types::Boot) -> dispatch::DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+
+            ensure!(TwinIdByAccountID::<T>::contains_key(&account_id), Error::<T>::TwinNotExists);
+            let twin_id = TwinIdByAccountID::<T>::get(account_id);
+
+            ensure!(NodeIdByTwinID::contains_key(twin_id), Error::<T>::TwinNotExists);
+            let node_id = NodeIdByTwinID::get(twin_id);
+
+            ensure!(Nodes::contains_key(node_id), Error::<T>::NodeNotExists);
+
+            NodeBoot::insert(node_id, &boot);
 
             Ok(Pays::No.into())
         }
@@ -1096,7 +1114,10 @@ impl<T: Config> Module<T> {
     }
 
     fn validate_farm_name(name: Vec<u8>) -> dispatch::DispatchResult {
-        ensure!(name.len() > 0 && name.len() <= 50, Error::<T>::InvalidFarmName);
+        ensure!(
+            name.len() > 0 && name.len() <= 50,
+            Error::<T>::InvalidFarmName
+        );
         for character in &name {
             match character {
                 // 45 = -
@@ -1113,6 +1134,6 @@ impl<T: Config> Module<T> {
             }
         }
 
-        return Ok(())
+        return Ok(());
     }
 }
