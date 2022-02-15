@@ -66,6 +66,7 @@ pub mod pallet {
 		AlreadyBonded,
 		StashNotBonded,
 		StashBondedWithWrongValidator,
+		CannotBondWithSameAccount,
 		DuplicateValidator,
 		ValidatorNotFound,
 		ValidatorNotApproved,
@@ -234,6 +235,12 @@ pub mod pallet {
 				Err(Error::<T>::AlreadyBonded)?
 			}
 			let validator = T::Lookup::lookup(validator)?;
+
+			// Cannot bond with yourself
+			if validator == stash {
+				Err(Error::<T>::CannotBondWithSameAccount)?
+			}
+
 			<Bonded<T>>::insert(&stash, &validator);
 
 			Self::deposit_event(Event::Bonded(stash.clone()));
