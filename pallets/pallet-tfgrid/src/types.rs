@@ -44,7 +44,7 @@ pub struct Farm {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
-pub struct Boot {
+pub struct NodeExtra {
     pub secure: bool,
     pub serial_number: Vec<u8>,
 }

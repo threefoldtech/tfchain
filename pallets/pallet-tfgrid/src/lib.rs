@@ -53,7 +53,7 @@ decl_storage! {
 
         pub Nodes get(fn nodes): map hasher(blake2_128_concat) u32 => types::Node;
         pub NodeIdByTwinID get(fn node_by_twin_id): map hasher(blake2_128_concat) u32 => u32;
-        pub NodeBoot get(fn boots): map hasher(blake2_128_concat) u32 => types::Boot;
+        pub NodeExtra get(fn node_extra): map hasher(blake2_128_concat) u32 => types::NodeExtra;
 
         pub Entities get(fn entities): map hasher(blake2_128_concat) u32 => types::Entity<T::AccountId>;
         pub EntityIdByAccountID get(fn entities_by_pubkey_id): map hasher(blake2_128_concat) T::AccountId => u32;
@@ -543,7 +543,7 @@ decl_module! {
         }
 
         #[weight = (10 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(3), DispatchClass::Operational)]
-        pub fn set_node_boot(origin, boot: types::Boot) -> dispatch::DispatchResultWithPostInfo {
+        pub fn set_node_extra(origin, extra: types::NodeExtra) -> dispatch::DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
             ensure!(TwinIdByAccountID::<T>::contains_key(&account_id), Error::<T>::TwinNotExists);
@@ -554,7 +554,7 @@ decl_module! {
 
             ensure!(Nodes::contains_key(node_id), Error::<T>::NodeNotExists);
 
-            NodeBoot::insert(node_id, &boot);
+            NodeExtra::insert(node_id, &extra);
 
             Ok(Pays::No.into())
         }
