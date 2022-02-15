@@ -106,7 +106,7 @@ pub mod pallet {
 		// Tf Connect ID: the threefold connect ID of the persion who wants to become a validator
 		// Info: some public info about the validator (website link, blog link, ..)
 		// A user can only have 1 validator request at a time
-		#[pallet::weight(0)]
+		#[pallet::weight(100_000_000)]
 		pub fn create_validator(
 			origin: OriginFor<T>,
 			validator_node_account: T::AccountId,
@@ -149,7 +149,7 @@ pub mod pallet {
 		// Based on that ID, it can fetch the validator request from storage
 		// check if the signer is mentioned as the council address from the request (this way we know if the signer is an active council member)
 		// if true, then we add the validator account from the request to the list of validators
-		#[pallet::weight(0)]
+		#[pallet::weight(100_000_000)]
 		pub fn activate_validator(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let address = ensure_signed(origin)?;
 
@@ -180,7 +180,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(0)]
+		#[pallet::weight(100_000_000)]
 		pub fn change_node_validator_account(
 			origin: OriginFor<T>,
 			new_node_validator_account: T::AccountId,
@@ -224,7 +224,7 @@ pub mod pallet {
 		/// The dispatch origin for this call must be _Signed_ by the stash account.
 		///
 		/// Emits `Bonded`.
-		#[pallet::weight(0)]
+		#[pallet::weight(100_000_000)]
 		pub fn bond(
 			origin: OriginFor<T>,
 			validator: <T::Lookup as StaticLookup>::Source,
@@ -249,7 +249,7 @@ pub mod pallet {
 		}
 
 		// Approve a validator request by validator account id
-		#[pallet::weight(0)]
+		#[pallet::weight(100_000_000)]
 		pub fn approve_validator(
 			origin: OriginFor<T>,
 			validator_account: T::AccountId,
@@ -278,7 +278,7 @@ pub mod pallet {
 		// 2. Storage
 		// 3. Consensus
 		// Can only be decided by the council
-		#[pallet::weight(0)]
+		#[pallet::weight(100_000_000)]
 		pub fn remove_validator(
 			origin: OriginFor<T>,
 			validator: T::AccountId,
