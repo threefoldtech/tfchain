@@ -9,7 +9,6 @@ fn test_create_entity_works() {
     });
 }
 
-
 #[test]
 fn test_create_entity_sr_works() {
     ExternalityBuilder::build().execute_with(|| {
@@ -128,7 +127,7 @@ fn test_create_twin_works() {
     ExternalityBuilder::build().execute_with(|| {
         let document = "some_link".as_bytes().to_vec();
         let hash = "some_hash".as_bytes().to_vec();
-    
+
         assert_ok!(TfgridModule::user_accept_tc(
             Origin::signed(test_ed25519()),
             document,
@@ -148,7 +147,7 @@ fn test_delete_twin_works() {
     ExternalityBuilder::build().execute_with(|| {
         let document = "some_link".as_bytes().to_vec();
         let hash = "some_hash".as_bytes().to_vec();
-    
+
         assert_ok!(TfgridModule::user_accept_tc(
             Origin::signed(alice()),
             document,
@@ -292,11 +291,7 @@ fn test_create_farm_fails_invalid_name() {
         let farm_name = "test.farm".as_bytes().to_vec();
 
         assert_noop!(
-            TfgridModule::create_farm(
-                Origin::signed(alice()),
-                farm_name,
-                Vec::new(),
-            ),
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name, Vec::new(),),
             Error::<TestRuntime>::InvalidFarmName
         );
     });
@@ -311,11 +306,7 @@ fn test_create_farm_fails_empty_name() {
         let farm_name = "".as_bytes().to_vec();
 
         assert_noop!(
-            TfgridModule::create_farm(
-                Origin::signed(alice()),
-                farm_name,
-                Vec::new(),
-            ),
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name, Vec::new(),),
             Error::<TestRuntime>::InvalidFarmName
         );
     });
@@ -468,7 +459,7 @@ fn test_update_twin_fails_if_signed_by_someone_else() {
     ExternalityBuilder::build().execute_with(|| {
         let document = "some_link".as_bytes().to_vec();
         let hash = "some_hash".as_bytes().to_vec();
-    
+
         assert_ok!(TfgridModule::user_accept_tc(
             Origin::signed(alice()),
             document,
@@ -549,13 +540,53 @@ fn set_certification_type_node_works() {
         create_farm();
         create_node();
 
-        assert_ok!(TfgridModule::set_node_certification(RawOrigin::Root.into(), 1, super::types::CertificationType::Certified));
+        assert_ok!(TfgridModule::set_node_certification(
+            RawOrigin::Root.into(),
+            1,
+            super::types::CertificationType::Certified
+        ));
         let node = TfgridModule::nodes(1);
-        assert_eq!(node.certification_type, super::types::CertificationType::Certified);
+        assert_eq!(
+            node.certification_type,
+            super::types::CertificationType::Certified
+        );
 
-        assert_ok!(TfgridModule::set_node_certification(RawOrigin::Root.into(), 1, super::types::CertificationType::Diy));
+        assert_ok!(TfgridModule::set_node_certification(
+            RawOrigin::Root.into(),
+            1,
+            super::types::CertificationType::Diy
+        ));
         let node = TfgridModule::nodes(1);
-        assert_eq!(node.certification_type, super::types::CertificationType::Diy);
+        assert_eq!(
+            node.certification_type,
+            super::types::CertificationType::Diy
+        );
+    });
+}
+
+#[test]
+fn set_node_extra_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        assert_ok!(TfgridModule::set_node_extra(
+            Origin::signed(alice()),
+            super::types::NodeExtra {
+                secure: true,
+                virtualized: false,
+                serial_number: "abcdefu".into()
+            },
+        ));
+        let node = TfgridModule::node_extra(1);
+        assert_eq!(node.secure, true);
+
+        assert_eq!(node.virtualized, false);
+
+        let ser: Vec<u8> = "abcdefu".into();
+        assert_eq!(node.serial_number, ser);
     });
 }
 
