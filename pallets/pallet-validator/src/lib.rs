@@ -126,7 +126,7 @@ pub mod pallet {
 				<Bonded<T>>::contains_key(&stash_account),
 				Error::<T>::StashNotBonded
 			);
-			Self::check_bond(&stash_account, &validator_node_account)?;
+			Self::check_bond(&stash_account, &address)?;
 
 			let request = types::Validator {
 				validator_node_account: validator_node_account.clone(),
@@ -166,7 +166,7 @@ pub mod pallet {
 
 			// Update the validator request
 			validator.state = types::ValidatorRequestState::Validating;
-			<Validator<T>>::insert(validator.validator_node_account.clone(), &validator);
+			<Validator<T>>::insert(address, &validator);
 
 			// Add the validator and rotate
 			substrate_validator_set::Pallet::<T>::add_validator(
