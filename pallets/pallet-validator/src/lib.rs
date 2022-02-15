@@ -144,7 +144,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Activate Validator 
+		/// Start participating in consensus
 		/// Will activate the Validator node account on consensus level
 		/// A user can only call this if his request to be a validator is approved by the council
 		/// Should be called when his node is synced and ready to start validating
@@ -245,7 +245,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Approve validator
+		/// Approve validator (council)
 		/// Approves a validator to be added as a council member and
 		/// to participate in consensus
 		#[pallet::weight(100_000_000)]
@@ -273,7 +273,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Remove validator
+		/// Remove validator (council)
 		/// Removes a validator from:
 		/// 1. Council
 		/// 2. Storage
