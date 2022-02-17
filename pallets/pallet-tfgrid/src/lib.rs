@@ -23,6 +23,8 @@ mod tests;
 #[cfg(test)]
 mod mock;
 
+mod migration;
+
 pub mod types;
 
 pub type BalanceOf<T> =
@@ -272,6 +274,10 @@ decl_module! {
 
         fn deposit_event() = default;
 
+        fn on_runtime_upgrade() -> frame_support::weights::Weight {
+			migration::migrate_to_v3::<T>()
+		}
+
         #[weight = 10 + T::DbWeight::get().writes(1)]
         pub fn set_storage_version(origin, version: types::StorageVersion) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
@@ -469,7 +475,17 @@ decl_module! {
         }
 
         #[weight = 10 + T::DbWeight::get().writes(1)]
-        pub fn create_node(origin, farm_id: u32, resources: types::Resources, location: types::Location, country: Vec<u8>, city: Vec<u8>, interfaces: Vec<types::Interface>) -> dispatch::DispatchResult {
+        pub fn create_node(origin,
+            farm_id: u32,
+            resources: types::Resources,
+            location: types::Location, 
+            country: Vec<u8>,
+            city: Vec<u8>,
+            interfaces: Vec<types::Interface>,
+            secure: bool,
+            virtualized: bool,
+            serial_number: Vec<u8>,
+        ) -> dispatch::DispatchResult {
             let account_id = ensure_signed(origin)?;
 
             ensure!(Farms::contains_key(farm_id), Error::<T>::FarmNotExists);
@@ -509,6 +525,9 @@ decl_module! {
                 farming_policy_id,
                 interfaces,
                 certification_type: types::CertificationType::default(),
+                secure,
+                virtualized,
+                serial_number
             };
 
             Nodes::insert(id, &new_node);
@@ -521,7 +540,18 @@ decl_module! {
         }
 
         #[weight = (10 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(3), DispatchClass::Operational)]
-        pub fn update_node(origin, node_id: u32, farm_id: u32, resources: types::Resources, location: types::Location, country: Vec<u8>, city: Vec<u8>, interfaces: Vec<types::Interface>) -> dispatch::DispatchResultWithPostInfo {
+        pub fn update_node(origin,
+            node_id: u32,
+            farm_id: u32,
+            resources: types::Resources,
+            location: types::Location,
+            country: Vec<u8>,
+            city: Vec<u8>,
+            interfaces: Vec<types::Interface>,
+            secure: bool,
+            virtualized: bool,
+            serial_number: Vec<u8>,
+        ) -> dispatch::DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
             ensure!(Nodes::contains_key(&node_id), Error::<T>::NodeNotExists);
@@ -541,6 +571,9 @@ decl_module! {
             stored_node.country = country;
             stored_node.city = city;
             stored_node.interfaces = interfaces;
+            stored_node.secure = secure;
+            stored_node.virtualized = virtualized;
+            stored_node.serial_number = serial_number;
 
             // override node in storage
             Nodes::insert(stored_node.id, &stored_node);
@@ -1105,7 +1138,10 @@ impl<T: Config> Module<T> {
     }
 
     fn validate_farm_name(name: Vec<u8>) -> dispatch::DispatchResult {
-        ensure!(name.len() > 0 && name.len() <= 50, Error::<T>::InvalidFarmName);
+        ensure!(
+            name.len() > 0 && name.len() <= 50,
+            Error::<T>::InvalidFarmName
+        );
         for character in &name {
             match character {
                 // 45 = -
@@ -1122,6 +1158,6 @@ impl<T: Config> Module<T> {
             }
         }
 
-        return Ok(())
+        return Ok(());
     }
 }
