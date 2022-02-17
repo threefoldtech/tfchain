@@ -65,6 +65,7 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
+		BadOrigin,
 		AlreadyBonded,
 		StashNotBonded,
 		StashBondedWithWrongValidator,
@@ -242,42 +243,6 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Remove validator
-		/// User callable extrinsic
-		/// Removes a validator from:
-		/// 1. Council
-		/// 2. Storage
-		/// 3. Consensus
-		/// Can only be decided by the council
-		#[pallet::weight(100_000_000)]
-		pub fn remove_validator_self(
-			origin: OriginFor<T>,
-		) -> DispatchResultWithPostInfo {
-			let address = ensure_signed(origin)?;
-
-			let validator = <Validator<T>>::get(&address)
-				.ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
-
-			// Remove the validator as a council member
-			pallet_membership::Module::<T, pallet_membership::Instance1>::remove_member(
-				frame_system::RawOrigin::Root.into(),
-				address.clone(),
-			)?;
-
-			// Remove the entry from the storage map
-			<Validator<T>>::remove(address);
-
-			// Remove the old validator and rotate session
-			substrate_validator_set::Pallet::<T>::remove_validator(
-				frame_system::RawOrigin::Root.into(),
-				validator.validator_node_account.clone(),
-			)?;
-
-			Self::deposit_event(Event::ValidatorRemoved(validator.clone()));
-
-			Ok(().into())
-		}
-
 		/// Approve validator (council)
 		/// Approves a validator to be added as a council member and
 		/// to participate in consensus
@@ -306,18 +271,20 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Remove validator (council)
+		/// Remove validator
 		/// Removes a validator from:
 		/// 1. Council
 		/// 2. Storage
 		/// 3. Consensus
-		/// Can only be decided by the council
+		/// Can only be called by the user or the council
 		#[pallet::weight(100_000_000)]
 		pub fn remove_validator(
 			origin: OriginFor<T>,
 			validator: T::AccountId,
 		) -> DispatchResultWithPostInfo {
-			T::CouncilOrigin::ensure_origin(origin)?;
+			if !(ensure_signed(origin.clone())? == validator || T::CouncilOrigin::ensure_origin(origin).is_ok()) {
+				Err(Error::<T>::BadOrigin)?
+			}
 
 			let v = <Validator<T>>::get(&validator)
 				.ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
