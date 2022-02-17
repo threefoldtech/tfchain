@@ -59,7 +59,7 @@ pub struct Node {
     pub farming_policy_id: u32,
     pub interfaces: Vec<Interface>,
     pub certification_type: CertificationType,
-    pub secure: bool,
+    pub secure_boot: bool,
     pub virtualized: bool,
     pub serial_number: Vec<u8>,
 }

@@ -482,7 +482,7 @@ decl_module! {
             country: Vec<u8>,
             city: Vec<u8>,
             interfaces: Vec<types::Interface>,
-            secure: bool,
+            secure_boot: bool,
             virtualized: bool,
             serial_number: Vec<u8>,
         ) -> dispatch::DispatchResult {
@@ -525,7 +525,7 @@ decl_module! {
                 farming_policy_id,
                 interfaces,
                 certification_type: types::CertificationType::default(),
-                secure,
+                secure_boot,
                 virtualized,
                 serial_number
             };
@@ -548,7 +548,7 @@ decl_module! {
             country: Vec<u8>,
             city: Vec<u8>,
             interfaces: Vec<types::Interface>,
-            secure: bool,
+            secure_boot: bool,
             virtualized: bool,
             serial_number: Vec<u8>,
         ) -> dispatch::DispatchResultWithPostInfo {
@@ -571,7 +571,7 @@ decl_module! {
             stored_node.country = country;
             stored_node.city = city;
             stored_node.interfaces = interfaces;
-            stored_node.secure = secure;
+            stored_node.secure_boot = secure_boot;
             stored_node.virtualized = virtualized;
             stored_node.serial_number = serial_number;
 

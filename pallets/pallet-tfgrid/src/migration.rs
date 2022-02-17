@@ -60,7 +60,7 @@ pub fn migrate_to_v3<T: Config>() -> frame_support::weights::Weight {
                     farming_policy_id: node.farming_policy_id,
                     interfaces: node.interfaces,
                     certification_type: super::types::CertificationType::Diy,
-                    secure: false,
+                    secure_boot: false,
                     virtualized: false,
                     serial_number: Vec::new(),
                 };
