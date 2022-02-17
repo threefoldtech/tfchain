@@ -59,6 +59,8 @@ pub mod pallet {
 		ValidatorApproved(types::Validator<T::AccountId>),
 		ValidatorActivated(types::Validator<T::AccountId>),
 		ValidatorRemoved(types::Validator<T::AccountId>),
+		NodeValidatorChanged(T::AccountId),
+		NodeValidatorRemoved(T::AccountId),
 	}
 
 	#[pallet::error]
@@ -149,7 +151,7 @@ pub mod pallet {
 		/// A user can only call this if his request to be a validator is approved by the council
 		/// Should be called when his node is synced and ready to start validating
 		#[pallet::weight(100_000_000)]
-		pub fn activate_validator(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+		pub fn activate_validator_node(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let address = ensure_signed(origin)?;
 
 			let mut validator = <Validator<T>>::get(&address)
@@ -179,12 +181,12 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Change node validator account
+		/// Change validator node account
 		/// In case the Validator wishes to change his validator node account
 		/// he can call this method with the new node validator account
 		/// this new account will be added as a new consensus validator
 		#[pallet::weight(100_000_000)]
-		pub fn change_node_validator_account(
+		pub fn change_validator_node_account(
 			origin: OriginFor<T>,
 			new_node_validator_account: T::AccountId,
 		) -> DispatchResultWithPostInfo {
@@ -203,7 +205,7 @@ pub mod pallet {
 				frame_system::RawOrigin::Root.into(),
 				validator.validator_node_account.clone(),
 			)?;
-			Self::deposit_event(Event::ValidatorRemoved(validator.clone()));
+			Self::deposit_event(Event::NodeValidatorRemoved(validator.validator_node_account.clone()));
 
 			// Set the new validator node account on the validator struct
 			validator.validator_node_account = new_node_validator_account.clone();
@@ -214,7 +216,7 @@ pub mod pallet {
 				frame_system::RawOrigin::Root.into(),
 				new_node_validator_account.clone(),
 			)?;
-			Self::deposit_event(Event::ValidatorActivated(validator));
+			Self::deposit_event(Event::NodeValidatorChanged(new_node_validator_account));
 
 			Ok(().into())
 		}
@@ -233,14 +235,45 @@ pub mod pallet {
 			}
 			let validator = T::Lookup::lookup(validator)?;
 
-			// Cannot bond with yourself
-			if validator == stash {
-				Err(Error::<T>::CannotBondWithSameAccount)?
-			}
-
 			<Bonded<T>>::insert(&stash, &validator);
 
 			Self::deposit_event(Event::Bonded(stash.clone()));
+
+			Ok(().into())
+		}
+
+		/// Remove validator
+		/// User callable extrinsic
+		/// Removes a validator from:
+		/// 1. Council
+		/// 2. Storage
+		/// 3. Consensus
+		/// Can only be decided by the council
+		#[pallet::weight(100_000_000)]
+		pub fn remove_validator_self(
+			origin: OriginFor<T>,
+		) -> DispatchResultWithPostInfo {
+			let address = ensure_signed(origin)?;
+
+			let validator = <Validator<T>>::get(&address)
+				.ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
+
+			// Remove the validator as a council member
+			pallet_membership::Module::<T, pallet_membership::Instance1>::remove_member(
+				frame_system::RawOrigin::Root.into(),
+				address.clone(),
+			)?;
+
+			// Remove the entry from the storage map
+			<Validator<T>>::remove(address);
+
+			// Remove the old validator and rotate session
+			substrate_validator_set::Pallet::<T>::remove_validator(
+				frame_system::RawOrigin::Root.into(),
+				validator.validator_node_account.clone(),
+			)?;
+
+			Self::deposit_event(Event::ValidatorRemoved(validator.clone()));
 
 			Ok(().into())
 		}
