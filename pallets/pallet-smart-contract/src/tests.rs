@@ -1052,6 +1052,9 @@ fn prepare_farm_and_node() {
         country,
         city,
         Vec::new(),
+        false,
+        false,
+        "some_serial".as_bytes().to_vec()
     )
     .unwrap();
 }
