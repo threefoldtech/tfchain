@@ -17,7 +17,7 @@ pub struct Validator<AccountId> {
     pub validator_node_account: AccountId,
     pub stash_account: AccountId,
     pub description: Vec<u8>,
-    pub tf_connect_id: u64,
+    pub tf_connect_id: Vec<u8>,
     pub info: Vec<u8>,
     pub state: ValidatorRequestState(created, approved, executed),
 }
