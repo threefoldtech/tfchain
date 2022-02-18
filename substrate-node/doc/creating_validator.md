@@ -191,7 +191,7 @@ Information needed:
 
 If all information is filled in correctly. Click on `Submit transaction` and sign. If all goes well, the Council will approve your request.
 
-# 6: Start validating
+## Activate validator
 
 If your request is approved by the council AND your tfchain node is fully synced with the network you can activate your validator. This will kickstart block production.
 
@@ -217,7 +217,7 @@ yarn
 yarn start
 ```
 
-Browse to http://localhost:3000 and connect to the new node over it's public ip. Make sure to specify the port, like: ws://185.206.122.126:9944
+Browse to http://localhost:3000 and connect to the new node over it's public ip. Make sure to specify the port, like: ws://YOUR_MACHINE_PUBLIC_IP:9944
 
 Go to `Developer` -> `RPC calls` -> `author` -> `rotateKeys`, excecute it and take note of the output.
 
