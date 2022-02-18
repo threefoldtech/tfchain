@@ -185,7 +185,7 @@ pub mod pallet {
 		/// Change validator node account
 		/// In case the Validator wishes to change his validator node account
 		/// he can call this method with the new node validator account
-		/// this new account will be added as a new consensus validator
+		/// this new account will be added as a new consensus validator if he is validating already
 		#[pallet::weight(100_000_000)]
 		pub fn change_validator_node_account(
 			origin: OriginFor<T>,
@@ -196,28 +196,26 @@ pub mod pallet {
 			let mut validator = <Validator<T>>::get(&address)
 				.ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
 
-			ensure!(
-				validator.state == types::ValidatorRequestState::Validating,
-				Error::<T>::ValidatorNotValidating
-			);
-
-			// Remove the old validator and rotate session
-			substrate_validator_set::Pallet::<T>::remove_validator(
-				frame_system::RawOrigin::Root.into(),
-				validator.validator_node_account.clone(),
-			)?;
-			Self::deposit_event(Event::NodeValidatorRemoved(validator.validator_node_account.clone()));
-
 			// Set the new validator node account on the validator struct
 			validator.validator_node_account = new_node_validator_account.clone();
 			<Validator<T>>::insert(address, &validator);
 
-			// Add the new validator and rotate session
-			substrate_validator_set::Pallet::<T>::add_validator(
-				frame_system::RawOrigin::Root.into(),
-				new_node_validator_account.clone(),
-			)?;
-			Self::deposit_event(Event::NodeValidatorChanged(new_node_validator_account));
+			// if validator is validating, also remove old one from consensus and add new one.
+			if validator.state == types::ValidatorRequestState::Validating {
+				// Remove the old validator and rotate session
+				substrate_validator_set::Pallet::<T>::remove_validator(
+					frame_system::RawOrigin::Root.into(),
+					validator.validator_node_account.clone(),
+				)?;
+				Self::deposit_event(Event::NodeValidatorRemoved(validator.validator_node_account.clone()));
+
+				// Add the new validator and rotate session
+				substrate_validator_set::Pallet::<T>::add_validator(
+					frame_system::RawOrigin::Root.into(),
+					new_node_validator_account.clone(),
+				)?;
+				Self::deposit_event(Event::NodeValidatorChanged(new_node_validator_account));
+			}
 
 			Ok(().into())
 		}
