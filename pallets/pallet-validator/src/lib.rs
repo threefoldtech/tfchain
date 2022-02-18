@@ -116,7 +116,7 @@ pub mod pallet {
 			validator_node_account: T::AccountId,
 			stash_account: T::AccountId,
 			description: Vec<u8>,
-			tf_connect_id: u64,
+			tf_connect_id: Vec<u8>,
 			info: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
 			let address = ensure_signed(origin.clone())?;
