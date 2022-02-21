@@ -23,8 +23,6 @@ mod tests;
 #[cfg(test)]
 mod mock;
 
-mod migration;
-
 pub mod types;
 
 pub type BalanceOf<T> =
@@ -84,7 +82,7 @@ decl_storage! {
         FarmingPolicyID: u32;
 
         /// The current version of the pallet.
-        PalletVersion: types::StorageVersion = types::StorageVersion::V1Struct;
+        PalletVersion: types::StorageVersion = types::StorageVersion::V3Struct;
     }
 
     add_extra_genesis {
@@ -273,10 +271,6 @@ decl_module! {
         type Error = Error<T>;
 
         fn deposit_event() = default;
-
-        fn on_runtime_upgrade() -> frame_support::weights::Weight {
-			migration::migrate_to_v3::<T>()
-		}
 
         #[weight = 10 + T::DbWeight::get().writes(1)]
         pub fn set_storage_version(origin, version: types::StorageVersion) -> dispatch::DispatchResult {
