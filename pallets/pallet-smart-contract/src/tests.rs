@@ -947,34 +947,14 @@ fn test_cu_calculation() {
         assert_eq!(cu, 8);
     })
 }
-fn prepare_farm_and_node() {
-    let document = "some_link".as_bytes().to_vec();
-    let hash = "some_hash".as_bytes().to_vec();
 
-    assert_ok!(TfgridModule::user_accept_tc(
-        Origin::signed(alice()),
-        document.clone(),
-        hash.clone(),
-    ));
-    let ip = "10.2.3.3";
-    TfgridModule::create_twin(Origin::signed(alice()), ip.as_bytes().to_vec()).unwrap();
+pub fn prepare_twins() {
+    create_twin(alice());
+    create_twin(bob());
+    create_twin(charlie());
+}
 
-    let ip = "10.2.3.3";
-    assert_ok!(TfgridModule::user_accept_tc(
-        Origin::signed(bob()),
-        document.clone(),
-        hash.clone(),
-    ));
-    TfgridModule::create_twin(Origin::signed(bob()), ip.as_bytes().to_vec()).unwrap();
-
-    let ip = "10.2.3.3";
-    assert_ok!(TfgridModule::user_accept_tc(
-        Origin::signed(charlie()),
-        document,
-        hash,
-    ));
-    TfgridModule::create_twin(Origin::signed(charlie()), ip.as_bytes().to_vec()).unwrap();
-
+pub fn prepare_farm(source: AccountId) {
     let farm_name = "test_farm";
     let mut pub_ips = Vec::new();
     pub_ips.push(pallet_tfgrid_types::PublicIP {
@@ -1023,11 +1003,18 @@ fn prepare_farm_and_node() {
     .unwrap();
 
     TfgridModule::create_farm(
-        Origin::signed(alice()),
+        Origin::signed(source),
         farm_name.as_bytes().to_vec(),
         pub_ips.clone(),
     )
     .unwrap();
+}
+
+
+pub fn prepare_farm_and_node() {
+    prepare_twins();
+
+    prepare_farm(alice());
 
     // random location
     let location = pallet_tfgrid_types::Location {
@@ -1057,6 +1044,95 @@ fn prepare_farm_and_node() {
         "some_serial".as_bytes().to_vec()
     )
     .unwrap();
+}
+
+
+pub fn _prepare_farm_and_node(source: AccountId) {
+    create_twin(source.clone());
+    prepare_farm(source.clone());
+
+    // random location
+    let location = pallet_tfgrid_types::Location {
+        longitude: "12.233213231".as_bytes().to_vec(),
+        latitude: "32.323112123".as_bytes().to_vec(),
+    };
+
+    let resources = pallet_tfgrid_types::Resources {
+        hru: 1,
+        sru: 1,
+        cru: 1,
+        mru: 1,
+    };
+
+    let country = "Belgium".as_bytes().to_vec();
+    let city = "Ghent".as_bytes().to_vec();
+    TfgridModule::create_node(
+        Origin::signed(source),
+        1,
+        resources,
+        location,
+        country,
+        city,
+        Vec::new(),
+        false,
+        false,
+        "some_serial".as_bytes().to_vec()
+    )
+    .unwrap();
+}
+
+pub fn create_twin(origin: AccountId) {
+    let document = "some_link".as_bytes().to_vec();
+    let hash = "some_hash".as_bytes().to_vec();
+
+    assert_ok!(TfgridModule::user_accept_tc(
+        Origin::signed(origin.clone()),
+        document.clone(),
+        hash.clone(),
+    ));
+    let ip = "10.2.3.3";
+    TfgridModule::create_twin(Origin::signed(origin), ip.as_bytes().to_vec()).unwrap();
+}
+
+pub fn create_twin_and_node(origin: AccountId) {
+    create_twin(origin.clone());
+    let location = pallet_tfgrid_types::Location {
+        longitude: "12.233213231".as_bytes().to_vec(),
+        latitude: "32.323112123".as_bytes().to_vec(),
+    };
+
+    let resources = pallet_tfgrid_types::Resources {
+        hru: 1,
+        sru: 1,
+        cru: 1,
+        mru: 1,
+    };
+
+    let country = "Belgium".as_bytes().to_vec();
+    let city = "Ghent".as_bytes().to_vec();
+    TfgridModule::create_node(
+        Origin::signed(origin),
+        1,
+        resources,
+        location,
+        country,
+        city,
+        Vec::new(),
+        false,
+        false,
+        "some_serial".as_bytes().to_vec()
+    )
+    .unwrap();
+}
+
+pub fn create_contract_bob() {
+    assert_ok!(SmartContractModule::create_node_contract(
+        Origin::signed(bob()),
+        1,
+        "some_data123".as_bytes().to_vec(),
+        "hash123".as_bytes().to_vec(),
+        0
+    ));
 }
 
 fn run_to_block(n: u64) {

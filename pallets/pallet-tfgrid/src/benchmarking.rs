@@ -44,12 +44,6 @@ benchmarks! {
         assert_eq!(
             twin.id, 1  
         );
-		// Nothing happened since everything is still vested.
-		// assert_eq!(
-		// 	Vesting::<T>::vesting_balance(&caller),
-		// 	Some(100u32.into()),
-		// 	"Vesting schedule was removed",
-		// );
 	}
 }
 
