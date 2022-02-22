@@ -22,6 +22,7 @@ mod tests;
 
 #[cfg(test)]
 mod mock;
+mod benchmarking;
 
 pub mod types;
 

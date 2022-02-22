@@ -1,0 +1,43 @@
+Pallet: "pallet_tfgrid", Extrinsic: "create_twin", Lowest values: [], Highest values: [], Steps: [50], Repeat: 20
+extrinsic_time,storage_root_time,reads,repeat_reads,writes,repeat_writes
+109025,5310,3,4,3,2
+108254,2965,3,4,3,2
+112763,2876,3,4,3,2
+107894,2866,3,4,3,2
+110238,2906,3,4,3,2
+107523,2855,3,4,3,2
+108495,3446,3,4,3,2
+107242,2796,3,4,3,2
+107383,2865,3,4,3,2
+107743,2815,3,4,3,2
+107282,2826,3,4,3,2
+107563,2876,3,4,3,2
+107212,2765,3,4,3,2
+107222,2786,3,4,3,2
+107172,2845,3,4,3,2
+107834,2876,3,4,3,2
+107473,2815,3,4,3,2
+107292,2795,3,4,3,2
+107743,2786,3,4,3,2
+107623,2936,3,4,3,2
+
+Median Slopes Analysis
+========
+-- Extrinsic Time --
+
+Model:
+Time ~=    107.6
+              µs
+
+Reads = 3
+Writes = 3
+Min Squares Analysis
+========
+-- Extrinsic Time --
+
+Model:
+Time ~=    107.6
+              µs
+
+Reads = 3
+Writes = 3

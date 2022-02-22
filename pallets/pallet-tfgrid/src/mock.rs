@@ -32,7 +32,7 @@ construct_runtime!(
     {
         Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
         System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        TfgridModule: tfgridModule::{Module, Call, Storage, Event<T>},
+        TfgridModule: tfgridModule::{Module, Call, Storage, Config<T>, Event<T>},
         Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
     }
 );
