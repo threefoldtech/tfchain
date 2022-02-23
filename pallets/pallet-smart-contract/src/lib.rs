@@ -5,7 +5,7 @@ use frame_support::{
     dispatch::DispatchResultWithPostInfo,
     ensure,
     traits::{Currency, ExistenceRequirement::KeepAlive, Get, Vec},
-    weights::{DispatchClass, Pays},
+    weights::{Pays},
 };
 use frame_system::{self as system, ensure_signed};
 use sp_runtime::{traits::SaturatedConversion, DispatchError, DispatchResult, Perbill};
@@ -24,13 +24,17 @@ mod tests;
 
 mod benchmarking;
 
+pub mod weights;
 pub mod types;
+
+pub use weights::WeightInfo;
 
 pub trait Config: system::Config + pallet_tfgrid::Config + pallet_timestamp::Config {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
     type Currency: Currency<Self::AccountId>;
     type StakingPoolAccount: Get<Self::AccountId>;
     type BillingFrequency: Get<u64>;
+    type WeightInfo: WeightInfo;
 }
 
 pub const CONTRACT_VERSION: u32 = 1;
@@ -125,7 +129,7 @@ decl_module! {
             Self::_cancel_contract(account_id, contract_id, types::Cause::CanceledByUser)?;
         }
 
-        #[weight = (10, DispatchClass::Operational)]
+        #[weight = <T as Config>::WeightInfo::add_reports().saturating_mul(reports.len() as u64)]
         fn add_reports(origin, reports: Vec<types::Consumption>) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_compute_reports(account_id, reports)

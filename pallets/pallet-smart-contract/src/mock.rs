@@ -85,8 +85,8 @@ impl pallet_balances::Config for TestRuntime {
 
 impl pallet_tfgrid::Config for TestRuntime {
     type Event = Event;
-    type Currency = Balances;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
+    type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<TestRuntime>;
 }
 
 impl pallet_tft_price::Config for TestRuntime {
@@ -106,11 +106,13 @@ parameter_types! {
     pub const BillingFrequency: u64 = 10;
 }
 
+use weights;
 impl Config for TestRuntime {
     type Event = Event;
     type Currency = Balances;
     type StakingPoolAccount = StakingPoolAccount;
     type BillingFrequency = BillingFrequency;
+    type WeightInfo = weights::SubstrateWeight<TestRuntime>; 
 }
 
 type AccountPublic = <MultiSignature as Verify>::Signer;

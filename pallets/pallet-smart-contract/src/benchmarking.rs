@@ -54,18 +54,16 @@ benchmarks! {
 
         let mut reports = Vec::new();
 
-        for i in 0..10 {
-            let gigabyte = 1000 * 1000 * 1000;
-            reports.push(types::Consumption {
-                contract_id: 1,
-                cru: 2,
-                hru: 0,
-                mru: 8 * gigabyte,
-                sru: 25 * gigabyte,
-                nru: 0,
-                timestamp: 0,
-            });
-        }
+        let gigabyte = 1000 * 1000 * 1000;
+        reports.push(types::Consumption {
+            contract_id: 1,
+            cru: 2,
+            hru: 0,
+            mru: 8 * gigabyte,
+            sru: 25 * gigabyte,
+            nru: 0,
+            timestamp: 0,
+        });
 
     }: _ (RawOrigin::Signed(a1.clone()), reports)
     verify {

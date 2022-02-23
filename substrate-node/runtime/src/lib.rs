@@ -322,6 +322,7 @@ impl pallet_smart_contract::Config for Runtime {
 	type Currency = Balances;
 	type StakingPoolAccount = StakingPoolAccount;
 	type BillingFrequency = BillingFrequency;
+	type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_tft_bridge::Config for Runtime {
