@@ -55,12 +55,12 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	fn create_node_contract() -> Weight {
-		(333_940_000 as Weight)
+		(926_396_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(8 as Weight))
 			.saturating_add(T::DbWeight::get().writes(8 as Weight))
 	}
 	fn add_reports() -> Weight {
-		(303_181_000 as Weight)
+		(832_738_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(7 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
@@ -69,12 +69,12 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
 	fn create_node_contract() -> Weight {
-		(333_940_000 as Weight)
+		(926_396_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(8 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(8 as Weight))
 	}
 	fn add_reports() -> Weight {
-		(303_181_000 as Weight)
+		(832_738_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(7 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}

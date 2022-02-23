@@ -72,6 +72,18 @@ benchmarks! {
             node1.serial_number, "some_serial_2".as_bytes().to_vec()
         );
     }
+
+    report_uptime {
+        let a1: T::AccountId = account("Alice", 0, 0);
+        prepare_farm_and_node::<T>(a1.clone());
+
+
+        let country = "Belgium".as_bytes().to_vec();
+        let city = "Ghent".as_bytes().to_vec();
+    }: _ (
+        RawOrigin::Signed(a1.clone()),
+        0
+    )
 }
 
 #[cfg(test)]
@@ -85,6 +97,7 @@ mod tests {
         new_test_ext().execute_with(|| {
             assert_ok!(test_benchmark_create_twin::<TestRuntime>());
             assert_ok!(test_benchmark_update_node::<TestRuntime>());
+            assert_ok!(test_benchmark_report_uptime::<TestRuntime>());
         });
     }
 }
