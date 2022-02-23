@@ -31,12 +31,12 @@ use sp_std::marker::PhantomData;
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_smart_contract::WeightInfo for WeightInfo<T> {
 	fn create_node_contract() -> Weight {
-		(337_148_000 as Weight)
+		(337_709_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(8 as Weight))
 			.saturating_add(T::DbWeight::get().writes(8 as Weight))
 	}
 	fn add_reports() -> Weight {
-		(1_429_756_000 as Weight)
+		(1_435_925_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(7 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}

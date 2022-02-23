@@ -69,10 +69,11 @@ impl frame_system::Config for TestRuntime {
     type SS58Prefix = ();
 }
 
+use crate::weights;
 impl Config for TestRuntime {
     type Event = Event;
-    type Currency = Balances;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
+    type WeightInfo = weights::SubstrateWeight<TestRuntime>;
 }
 
 impl pallet_balances::Config for TestRuntime {

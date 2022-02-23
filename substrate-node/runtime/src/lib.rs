@@ -303,8 +303,8 @@ impl pallet_sudo::Config for Runtime {
 
 impl pallet_tfgrid::Config for Runtime {
 	type Event = Event;
-	type Currency = Balances;
 	type RestrictedOrigin = EnsureRootOrCouncilApproval;
+	type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {

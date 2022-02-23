@@ -8,7 +8,7 @@ use codec::Encode;
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, dispatch, ensure,
     traits::Get,
-    traits::{Currency, EnsureOrigin},
+    traits::{EnsureOrigin},
     weights::{DispatchClass, Pays},
 };
 use frame_system::{self as system, ensure_signed, RawOrigin};
@@ -24,17 +24,19 @@ mod tests;
 mod mock;
 mod benchmarking;
 
+pub mod weights;
+
 pub mod types;
 
-pub type BalanceOf<T> =
-    <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
+pub use weights::WeightInfo;
 
 pub trait Config: system::Config + timestamp::Config {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
-    type Currency: Currency<Self::AccountId>;
     /// Origin for restricted extrinsics
     /// Can be the root or another origin configured in the runtime
     type RestrictedOrigin: EnsureOrigin<Self::Origin>;
+    /// Weight information for extrinsics in this pallet.
+    type WeightInfo: WeightInfo;
 }
 
 // Version constant that referenced the struct version
@@ -534,7 +536,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = (10 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(3), DispatchClass::Operational)]
+        #[weight = <T as Config>::WeightInfo::update_node()]
         pub fn update_node(origin,
             node_id: u32,
             farm_id: u32,
@@ -750,7 +752,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = <T as Config>::WeightInfo::create_twin()]
         pub fn create_twin(origin, ip: Vec<u8>) -> dispatch::DispatchResult {
             let account_id = ensure_signed(origin)?;
 
