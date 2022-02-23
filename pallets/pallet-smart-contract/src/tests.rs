@@ -1047,7 +1047,8 @@ pub fn prepare_farm_and_node() {
 }
 
 
-pub fn _prepare_farm_and_node(source: AccountId) {
+use crate::mock;
+pub fn _prepare_farm_and_node(source: mock::AccountId) {
     create_twin(source.clone());
     prepare_farm(source.clone());
 
@@ -1092,47 +1093,6 @@ pub fn create_twin(origin: AccountId) {
     ));
     let ip = "10.2.3.3";
     TfgridModule::create_twin(Origin::signed(origin), ip.as_bytes().to_vec()).unwrap();
-}
-
-pub fn create_twin_and_node(origin: AccountId) {
-    create_twin(origin.clone());
-    let location = pallet_tfgrid_types::Location {
-        longitude: "12.233213231".as_bytes().to_vec(),
-        latitude: "32.323112123".as_bytes().to_vec(),
-    };
-
-    let resources = pallet_tfgrid_types::Resources {
-        hru: 1,
-        sru: 1,
-        cru: 1,
-        mru: 1,
-    };
-
-    let country = "Belgium".as_bytes().to_vec();
-    let city = "Ghent".as_bytes().to_vec();
-    TfgridModule::create_node(
-        Origin::signed(origin),
-        1,
-        resources,
-        location,
-        country,
-        city,
-        Vec::new(),
-        false,
-        false,
-        "some_serial".as_bytes().to_vec()
-    )
-    .unwrap();
-}
-
-pub fn create_contract_bob() {
-    assert_ok!(SmartContractModule::create_node_contract(
-        Origin::signed(bob()),
-        1,
-        "some_data123".as_bytes().to_vec(),
-        "hash123".as_bytes().to_vec(),
-        0
-    ));
 }
 
 fn run_to_block(n: u64) {
