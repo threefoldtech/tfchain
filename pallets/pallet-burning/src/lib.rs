@@ -66,7 +66,7 @@ decl_module! {
     pub struct Module<T: Config> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
 
-        #[weight = 10_000]
+        #[weight = 100_000_000]
         fn burn_tft(origin, amount: BalanceOf<T>, message: Vec<u8>){
             let target = ensure_signed(origin)?;
             Self::_burn_tft(target, amount, message)?;

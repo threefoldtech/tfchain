@@ -21,7 +21,7 @@ decl_module! {
     pub struct Module<T: Config> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
 
-        #[weight = 10]
+        #[weight = 100_000_000]
         pub fn set_code(origin, code: Vec<u8>) -> DispatchResultWithPostInfo {
             T::SetCodeOrigin::ensure_origin(origin)?;
 

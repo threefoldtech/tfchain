@@ -49,6 +49,8 @@ use sp_std::marker::PhantomData;
 /// Weight functions needed for pallet_tfgrid.
 pub trait WeightInfo {
 	fn create_twin() -> Weight;
+	fn create_farm() -> Weight;
+	fn create_node() -> Weight;
 	fn update_node() -> Weight;
 	fn report_uptime() -> Weight;
 }
@@ -59,6 +61,16 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	fn create_twin() -> Weight {
 		(307_952_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(3 as Weight))
+			.saturating_add(T::DbWeight::get().writes(3 as Weight))
+	}
+	fn create_farm() -> Weight {
+		(199_000_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(4 as Weight))
+			.saturating_add(T::DbWeight::get().writes(3 as Weight))
+	}
+	fn create_node() -> Weight {
+		(245_000_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(6 as Weight))
 			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}
 	fn update_node() -> Weight {
@@ -77,6 +89,16 @@ impl WeightInfo for () {
 	fn create_twin() -> Weight {
 		(307_952_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
+			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
+	}
+	fn create_farm() -> Weight {
+		(199_000_000 as Weight)
+			.saturating_add(RocksDbWeight::get().reads(4 as Weight))
+			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
+	}
+	fn create_node() -> Weight {
+		(245_000_000 as Weight)
+			.saturating_add(RocksDbWeight::get().reads(6 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
 	}
 	fn update_node() -> Weight {

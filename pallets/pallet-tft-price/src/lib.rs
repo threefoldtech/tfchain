@@ -105,7 +105,7 @@ decl_module! {
 
         fn deposit_event() = default;
 
-        #[weight = 10_000 + T::DbWeight::get().writes(3)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(3)]
         pub fn set_prices(origin, price: U16F16, block_number: T::BlockNumber){
             let _ = ensure_signed(origin)?;
             Self::calculate_and_set_price(price, block_number)?;

@@ -46,10 +46,48 @@ benchmarks! {
         );
     }
 
+    create_farm {
+        let name = "some_name".as_bytes().to_vec();
+
+        let caller: T::AccountId = whitelisted_caller();
+        prepare_twin::<T>(caller.clone());
+    }: _ (RawOrigin::Signed(caller.clone()), name, Vec::new())
+    verify {
+        let farm = TfgridModule::<T>::farms(1);
+        assert_eq!(
+            farm.id, 1
+        )
+    }
+
+    create_node {
+        let a1: T::AccountId = account("Alice", 0, 0);
+        prepare_twin::<T>(a1.clone());
+        prepare_farm::<T>(a1.clone());
+
+        let country = "Belgium".as_bytes().to_vec();
+        let city = "Ghent".as_bytes().to_vec();
+    }: _ (
+        RawOrigin::Signed(a1.clone()),
+        1,
+        types::Resources::default(),
+        types::Location::default(),
+        country,
+        city,
+        Vec::new(),
+        false,
+        false,
+        "some_serial_2".as_bytes().to_vec()
+    )
+    verify {
+        let node1 = TfgridModule::<T>::nodes(1);
+        assert_eq!(
+            node1.id, 1
+        );
+    }
+
     update_node {
         let a1: T::AccountId = account("Alice", 0, 0);
         prepare_farm_and_node::<T>(a1.clone());
-
 
         let country = "Belgium".as_bytes().to_vec();
         let city = "Ghent".as_bytes().to_vec();
@@ -96,13 +134,15 @@ mod tests {
     fn test_benchmarks() {
         new_test_ext().execute_with(|| {
             assert_ok!(test_benchmark_create_twin::<TestRuntime>());
+            assert_ok!(test_benchmark_create_farm::<TestRuntime>());
+            assert_ok!(test_benchmark_create_node::<TestRuntime>());
             assert_ok!(test_benchmark_update_node::<TestRuntime>());
             assert_ok!(test_benchmark_report_uptime::<TestRuntime>());
         });
     }
 }
 
-pub fn _create_twin<T: Config>(source: T::AccountId) {
+pub fn prepare_twin<T: Config>(source: T::AccountId) {
     let document = "some_link".as_bytes().to_vec();
     let hash = "some_hash".as_bytes().to_vec();
 
@@ -118,7 +158,7 @@ pub fn _create_twin<T: Config>(source: T::AccountId) {
 }
 
 pub fn prepare_farm_and_node<T: Config>(source: T::AccountId) {
-    _create_twin::<T>(source.clone());
+    prepare_twin::<T>(source.clone());
     prepare_farm::<T>(source.clone());
 
     // random location
