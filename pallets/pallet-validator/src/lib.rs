@@ -127,9 +127,6 @@ pub mod pallet {
 				Error::<T>::DuplicateValidator
 			);
 
-			// Request stash account should be bonded
-			Self::check_bond(&stash_account, &address)?;
-
 			let request = types::Validator {
 				validator_node_account: validator_node_account.clone(),
 				stash_account,
@@ -305,28 +302,6 @@ pub mod pallet {
 			Self::deposit_event(Event::ValidatorRemoved(v.clone()));
 
 			Ok(().into())
-		}
-	}
-
-	impl<T: Config> Module<T> {
-		fn check_bond(
-			stash_account: &T::AccountId,
-			validator: &T::AccountId,
-		) -> DispatchResultWithPostInfo {
-			ensure!(
-				<Bonded<T>>::contains_key(&stash_account),
-				Error::<T>::StashNotBonded
-			);
-			let bonded_account = <Bonded<T>>::get(&stash_account)
-				.ok_or(DispatchError::from(Error::<T>::StashNotBonded))?;
-
-			if &bonded_account != validator {
-				return Err(DispatchErrorWithPostInfo::from(
-					Error::<T>::StashBondedWithWrongValidator,
-				));
-			} else {
-				Ok(().into())
-			}
 		}
 	}
 }
