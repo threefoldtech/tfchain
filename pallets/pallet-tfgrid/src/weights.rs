@@ -59,27 +59,27 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	fn create_twin() -> Weight {
-		(307_952_000 as Weight)
+		(301_555_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(3 as Weight))
 			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}
 	fn create_farm() -> Weight {
-		(199_000_000 as Weight)
+		(433_860_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(4 as Weight))
 			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}
 	fn create_node() -> Weight {
-		(245_000_000 as Weight)
+		(535_924_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(6 as Weight))
 			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}
 	fn update_node() -> Weight {
-		(483_045_000 as Weight)
+		(478_710_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(3 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 	fn report_uptime() -> Weight {
-		(308_000_000 as Weight)
+		(247_084_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(4 as Weight))
 	}
 }
@@ -87,27 +87,27 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
 	fn create_twin() -> Weight {
-		(307_952_000 as Weight)
+		(301_555_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
 	}
 	fn create_farm() -> Weight {
-		(199_000_000 as Weight)
+		(433_860_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(4 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
 	}
 	fn create_node() -> Weight {
-		(245_000_000 as Weight)
+		(535_924_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(6 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
 	}
 	fn update_node() -> Weight {
-		(483_045_000 as Weight)
+		(478_710_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}
 	fn report_uptime() -> Weight {
-		(308_000_000 as Weight)
+		(247_084_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(4 as Weight))
 	}
 }
