@@ -597,7 +597,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = (10 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(3), DispatchClass::Operational)]
+        #[weight = <T as Config>::WeightInfo::report_uptime()]
         pub fn report_uptime(origin, uptime: u64) -> dispatch::DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
