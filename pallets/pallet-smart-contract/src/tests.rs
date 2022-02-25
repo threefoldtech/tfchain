@@ -5,7 +5,7 @@ use frame_support::{
     traits::{OnFinalize, OnInitialize},
 };
 use frame_system::RawOrigin;
-use sp_runtime::traits::SaturatedConversion;
+use sp_runtime::{traits::SaturatedConversion, Perbill};
 
 use super::types;
 use pallet_tfgrid::types as pallet_tfgrid_types;
@@ -603,6 +603,9 @@ fn test_node_contract_billing() {
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
+        let twin = TfgridModule::twins(2);
+        let initial_twin_balance = Balances::free_balance(&twin.account_id);
+
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
             1,
@@ -635,28 +638,32 @@ fn test_node_contract_billing() {
         let b = Balances::free_balance(&twin.account_id);
         let balances_as_u128: u128 = b.saturated_into::<u128>();
 
-        let twin2_balance_should_be = 2500000000 - amount_due_as_u128 as u128;
-        assert_eq!(balances_as_u128, twin2_balance_should_be);
+        let twin2_balance_should_be = initial_twin_balance - amount_due_as_u128 as u64;
+        assert_eq!(balances_as_u128, twin2_balance_should_be as u128);
         
         let staking_pool_account_balance = Balances::free_balance(&get_staking_pool_account());
         let staking_pool_account_balance_as_u128: u128 = staking_pool_account_balance.saturated_into::<u128>();
         // equal to 5%
-        assert_eq!(staking_pool_account_balance_as_u128, 4427);
+        let staking_pool_account_share = Perbill::from_percent(5) * amount_due_as_u128;
+        assert_eq!(staking_pool_account_balance_as_u128, staking_pool_account_share);
 
         let pricing_policy = TfgridModule::pricing_policies(1);
         let foundation_account_balance = Balances::free_balance(&pricing_policy.foundation_account);
         let foundation_account_balance_as_u128: u128 = foundation_account_balance.saturated_into::<u128>();
         // equal to 10%
-        assert_eq!(foundation_account_balance_as_u128, 8854);
+        let foundation_account_account_share = Perbill::from_percent(10) * amount_due_as_u128;
+        assert_eq!(foundation_account_balance_as_u128, foundation_account_account_share);
 
         let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
         let sales_account_balance_as_u128: u128 = sales_account_balance.saturated_into::<u128>();
         // equal to 50%
-        assert_eq!(sales_account_balance_as_u128, 44271);
+        let sales_account_account_share = Perbill::from_percent(50) * amount_due_as_u128;
+        assert_eq!(sales_account_balance_as_u128, sales_account_account_share);
 
         let total_issuance = Balances::total_issuance();
         // total issueance is now previous total - amount burned from contract billed (35%)
-        assert_eq!(total_issuance, initial_total_issuance - 30990);
+        let burned_amount = Perbill::from_percent(35) * amount_due_as_u128;
+        assert_eq!(total_issuance, initial_total_issuance - burned_amount as u64);
 
         // amount unbilled should have been reset after a transfer between contract owner and farmer
         let contract_billing_info = SmartContractModule::contract_billing_information_by_id(1);
@@ -923,6 +930,7 @@ fn test_cu_calculation() {
         assert_eq!(cu, 8);
     })
 }
+
 fn prepare_farm_and_node() {
     let document = "some_link".as_bytes().to_vec();
     let hash = "some_hash".as_bytes().to_vec();
