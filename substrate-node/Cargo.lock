@@ -3707,6 +3707,7 @@ version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe826f3bfb984b3dd8d6675d7d156ba4c0877ee562bf59d86a4e805b7737dcb1"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -3887,7 +3888,7 @@ dependencies = [
 [[package]]
 name = "pallet-tft-bridge"
 version = "1.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_tft?branch=main#e13c8d3bef116889e986781e39271f816bbed25a"
+source = "git+https://github.com/threefoldtech/tfchain_tft_bridge?branch=main#30fa117bd1b4780e3df4d7d88b1b07f3fce957c9"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3905,7 +3906,6 @@ dependencies = [
 [[package]]
 name = "pallet-tft-price"
 version = "1.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_tft?branch=main#7b2493a05e3124f9f47632c565559c6796991c2d"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3986,6 +3986,22 @@ dependencies = [
  "parity-scale-codec",
  "sp-api",
  "sp-runtime",
+]
+
+[[package]]
+name = "pallet-validator"
+version = "1.0.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-membership",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "substrate-validator-set",
 ]
 
 [[package]]
@@ -7391,6 +7407,7 @@ dependencies = [
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
+ "pallet-validator",
  "parity-scale-codec",
  "serde",
  "smallvec 1.6.1",

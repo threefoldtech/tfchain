@@ -59,6 +59,9 @@ pub struct Node {
     pub farming_policy_id: u32,
     pub interfaces: Vec<Interface>,
     pub certification_type: CertificationType,
+    pub secure_boot: bool,
+    pub virtualized: bool,
+    pub serial_number: Vec<u8>,
 }
 
 pub type IP = Vec<u8>;

@@ -406,6 +406,7 @@ impl<T: Config> Module<T> {
         let hru = U64F64::from_num(report.hru) / pricing_policy.su.factor();
         let sru = U64F64::from_num(report.sru) / pricing_policy.su.factor();
         let mru = U64F64::from_num(report.mru) / pricing_policy.cu.factor();
+        let cru = U64F64::from_num(report.cru);
 
         let su_used = hru / 1200 + sru / 200;
         // the pricing policy su cost value is expressed in 1 hours or 3600 seconds.
@@ -415,17 +416,11 @@ impl<T: Config> Module<T> {
             * su_used;
         debug::info!("su cost: {:?}", su_cost);
 
-        let mru_used = mru / 4;
-        let cru_used = U64F64::from_num(report.cru) / 2;
-        let max = if mru_used > cru_used {
-            mru_used
-        } else {
-            cru_used
-        };
+        let cu = Self::calculate_cu(cru, mru);
 
         let cu_cost = (U64F64::from_num(pricing_policy.cu.value) / 3600)
             * U64F64::from_num(seconds_elapsed)
-            * max;
+            * cu;
         debug::info!("cu cost: {:?}", cu_cost);
 
         let mut used_nru = U64F64::from_num(report.nru) / pricing_policy.nu.factor();
@@ -907,10 +902,48 @@ impl<T: Config> Module<T> {
         }
     }
 
-    // fn get_name_contract(contract: &types::Contract) -> Result<types::NameContract, DispatchError> {
-    // 	match contract.contract_type.clone() {
-    // 		types::ContractData::NameContract(c) => Ok(c),
-    // 		_ => return Err(DispatchError::from(Error::<T>::InvalidContractType)),
-    // 	}
-    // }
+    // cu1 = MAX(cru/2, mru/4)
+    // cu2 = MAX(cru, mru/8)
+    // cu3 = MAX(cru/4, mru/2)
+
+    // CU = MIN(cu1, cu2, cu3)
+    pub(crate) fn calculate_cu(cru: U64F64, mru: U64F64) -> U64F64 {
+        let mru_used_1 = mru / 4;
+        let cru_used_1 = cru / 2;
+        let cu1 = if mru_used_1 > cru_used_1 {
+            mru_used_1
+        } else {
+            cru_used_1
+        };
+
+        let mru_used_2 = mru / 8;
+        let cru_used_2 = cru;
+        let cu2 = if mru_used_2 > cru_used_2 {
+            mru_used_2
+        } else {
+            cru_used_2
+        };
+
+        let mru_used_3 = mru / 2;
+        let cru_used_3 = cru / 4;
+        let cu3 = if mru_used_3 > cru_used_3 {
+            mru_used_3
+        } else {
+            cru_used_3
+        };
+
+        let mut cu = if cu1 > cu2 {
+            cu2
+        } else {
+            cu1
+        };
+
+        cu = if cu > cu3 {
+            cu3
+        } else {
+            cu
+        };
+
+        cu
+    }
 }

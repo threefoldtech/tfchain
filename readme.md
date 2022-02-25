@@ -16,12 +16,12 @@ Now you can build.
 
 ```sh
 cd substrate-node
-make build-debug
+cargo build
 ```
 
-This will build the node binary in release mode, once built you can execute it by doing following:
+This will build the node binary in debug mode, once built you can execute it by doing following:
 
-`./target/release/tfchain --dev --tmp --ws-external`
+`./target/debug/tfchain --dev --ws-external`
 
 > You need the `ws-external` flag in order to connect from a zos node to substrate in a local setup.
 
@@ -47,34 +47,3 @@ See [process](./substrate-node/upgrade_process.md)
 ### Client
 
 You can use the client to interact with the chain, [read more](./cli-tool/readme.md)
-
-### Graphql (optional)
-
-If you want to query the data inside the blockchain with graphql you can set this up locally.
-
-```sh
-cd graphql
-
-yarn
-
-yarn build
-
-yarn db:up
-yarn db:prepare
-yarn db:migrate
-yarn db:init
-
-docker-compose up
-```
-
-Now browse to localhost:4000/graphql
-
-Example query:
-
-```graphql
-query {
-    entities(limit: 5) {
-        name
-    }
-}
-```

@@ -42,10 +42,7 @@ serde = { version = '1.0.100', default-features = false, features = ['derive'] }
 
 [dependencies.pallet-tft-price]
 default-features = false
-git = "https://github.com/threefoldtech/tfchain_tft.git"
-package = "pallet-tft-price"
-branch = "main"
-#path = "/home/dylan/Projects/tfchain_tft/pallet-tft-price"
+path = "../pallet-tft-price"
 
 [dev-dependencies]
 sp-core = { version = '3.0.0', default-features = false }

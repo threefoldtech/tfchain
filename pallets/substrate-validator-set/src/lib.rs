@@ -196,4 +196,3 @@ impl<T: Config> Convert<T::AccountId, Option<T::AccountId>> for ValidatorOf<T> {
 		Some(account)
 	}
 }
-

@@ -894,6 +894,35 @@ fn test_name_contract_billing() {
     });
 }
 
+#[test]
+fn test_cu_calculation() {
+    new_test_ext().execute_with(|| {
+        let cu = U64F64::from_num(4);
+        let mru = U64F64::from_num(1024);
+        let cu = SmartContractModule::calculate_cu(cu, mru);
+        assert_eq!(cu, 128);
+
+        let cu = U64F64::from_num(32);
+        let mru = U64F64::from_num(128);
+        let cu = SmartContractModule::calculate_cu(cu, mru);
+        assert_eq!(cu, 32);
+
+        let cu = U64F64::from_num(4);
+        let mru = U64F64::from_num(2);
+        let cu = SmartContractModule::calculate_cu(cu, mru);
+        assert_eq!(cu, 1);
+
+        let cu = U64F64::from_num(4);
+        let mru = U64F64::from_num(1);
+        let cu = SmartContractModule::calculate_cu(cu, mru);
+        assert_eq!(cu, 1);
+
+        let cu = U64F64::from_num(16);
+        let mru = U64F64::from_num(16);
+        let cu = SmartContractModule::calculate_cu(cu, mru);
+        assert_eq!(cu, 8);
+    })
+}
 fn prepare_farm_and_node() {
     let document = "some_link".as_bytes().to_vec();
     let hash = "some_hash".as_bytes().to_vec();
@@ -999,6 +1028,9 @@ fn prepare_farm_and_node() {
         country,
         city,
         Vec::new(),
+        false,
+        false,
+        "some_serial".as_bytes().to_vec()
     )
     .unwrap();
 }
