@@ -56,6 +56,10 @@ default-features = false
 package = "substrate-validator-set"
 path = "../../pallets/substrate-validator-set"
 
+[dependencies.pallet-validator]
+default-features = false
+path = "../../pallets/pallet-validator"
+
 [dependencies]
 hex-literal = { optional = true, version = '0.3.1' }
 serde = { features = ['derive'], optional = true, version = '1.0.119' }
@@ -146,5 +150,6 @@ std = [
     'pallet-runtime-upgrade/std',
     'pallet-collective/std',
     'pallet-membership/std',
-    'pallet-authorship/std'
+    'pallet-authorship/std',
+    'pallet-validator/std'
 ]
