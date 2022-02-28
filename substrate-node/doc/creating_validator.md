@@ -69,9 +69,13 @@ ntpd will be started automatically after install. You can query ntpd for status 
 
 ## TFchain Binary
 
-You will need to build the tfchain binary from the threefoldtech/tfchain repository on GitHub using the source code available in the 1.0.0 tag.
+You will need to build the tfchain binary from the threefoldtech/tfchain repository on GitHub.
 
-You should generally use the 1.0.0 tag. You should either review the output from the "git tag" command or visit the Releases to see a list of all the potential 1.0 releases.
+Release to use for different networks:
+
+- Mainnet: 1.0.0 (git checkout 1.0.0)
+- Testnet: 1.0.0-b1 (git cehckout 1.0.0-b1)
+- Devnet: 1.0.0-b9 (git checkout 1.0.0-b9)
 
 Note: If you prefer to use SSH rather than HTTPS, you can replace the first line of the below with git clone git@github.com:threefoldtech/tfchain.git.
 
@@ -105,7 +109,7 @@ cargo install --force --git https://github.com/paritytech/substrate subkey
 
 ## Synchronize Chain Data
 
-Note: By default, Validator nodes are in archive mode. If you've already synced the chain not in archive mode, you must first remove the database with polkadot purge-chain and then ensure that you run Polkadot with the --pruning=archive option.
+Note: By default, Validator nodes are in archive mode. If you've already synced the chain not in archive mode, you must first remove the database with `polkadot purge-chain` and then ensure that you run Polkadot with the 1--pruning=archive1 option.
 
 You may run a validator node in non-archive mode by adding the following flags: --unsafe-pruning --pruning <NUM OF BLOCKS>, a reasonable value being 1000. Note that an archive node and non-archive node's databases are not compatible with each other, and to switch you will need to purge the chain data.
 
@@ -117,7 +121,7 @@ Bootnodes examples:
 
 You can begin syncing your node by running the following command:
 
-`./target/release/tfchain --chain chainspecs/main/chainSpec.json --pruning=archive --bootnodes /ip4/185.206.122.83/tcp/30333/p2p/12D3KooWLtsdtQHswnXkLRH7e8vZJHktsh7gfuL5PoADV51JJ6wY
+`./target/release/tfchain --chain chainspecs/main/chainSpec.json --pruning=archive --bootnodes /ip4/185.206.122.83/tcp/30333/p2p/12D3KooWLtsdtQHswnXkLRH7e8vZJHktsh7gfuL5PoADV51JJ6wY`
 
 if you do not want to start in validator mode right away.
 
