@@ -8,7 +8,7 @@
 use frame_support;
 use frame_support::traits::Currency;
 use frame_support::{
-	dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
+	dispatch::{DispatchResultWithPostInfo},
 	pallet_prelude::*,
 };
 use sp_runtime::traits::StaticLookup;
