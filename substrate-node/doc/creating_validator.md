@@ -159,17 +159,21 @@ If you are interested in determining how much longer you have to go, your server
 
 ## Create a Validator object
 
-- dev: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.grid.tf#/explorer
-- test: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.test.grid.tf#/explorer
-- main: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.grid.tf#/explorer
+- dev: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.grid.tf#/accounts
+- test: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.test.grid.tf#/accounts
+- main: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.grid.tf#/accounts
 
 Open polkadot js link in the browser based on the network you want to validate on.
 
-Browse to accounts and click `Add Account`, generate an account. Take note of the mnemonic.
+- Browse to `accounts` and click `Add Account`, create an account and name it `VALIDATOR_ACCOUNT`. Take note of the mnemonic.
+This account will be your account that manages the Validator and manages your council membership (voting). Make sure to send some TFT to this account.
+- (Optional) Create another account and name it `ANYNAME_STASH`. This account will be your stash account.
+- Create one more account and call it `VALIDATOR_NODE_ACCOUNT`, this account will be used to participate in consensus.
 
-This account will be your account that manages the Validator and manages your council membership (voting).
-Create another account and name it `ANYNAME_STASH`. This account will be your stash account.
-Now you should have 2 accounts.
+You now should have 3 accounts.
+
+
+> Bonding an account is optional, you can skip this step and continue to the next step.
 
 Now go to `Developer` -> `Extrinsicis` and Select your `Stash` account. Now from the left dropdown (modules) search `validator`
 
@@ -179,21 +183,71 @@ Select `bond(validator)` and select the target account to be your account that m
 
 Now click `Submit Transaction`.
 
-To continue click on `bond(v..)` to select another method, in the list search for: `createValidator(...)`.
-
 ![create](./create_val.png)
 
-This call needs to be signed with your account that manages the Validator and manages your council membership (voting). (You previously created).
+Now go to `Developer` -> `Extrinsicis` and Select your `VALIDATOR_ACCOUNT` account. Now from the left dropdown (modules) search `validator` and select the method: `createValidator(...)`
+
+This call needs to be signed with your account (`VALIDATOR_ACCOUNT`) that manages the Validator and manages your council membership (voting). (You previously created).
 
 Information needed:
 
-- validator_node_account: Account ID generated from Step 1 (top of this document)
-- stash_account: Stash account (previously created)
+- validator_node_account: Account ID generated from previous step (`VALIDATOR_NODE_ACCOUNT`)
+- stash_account: Stash account, can be your `VALIDATOR_ACCOUNT`
 - description: Reason why I want to become a validator
 - tfconnectid: Your Threefold connect name
 - info: link to webpage or linked in profile
 
 If all information is filled in correctly. Click on `Submit transaction` and sign. If all goes well, the Council will approve your request.
+
+### Insert AURA/GRAN Keys
+
+Mnemonic: Words from the created account (`VALIDATOR_NODE_ACCOUNT`) created in a the previous steps.
+
+Transfer some balance to this account (you can see the address in the polkadot UI). (0.1 TFT should be enough). You can transfer the balance to this account from the polkadot UI.
+
+```
+./target/release/tfchain key insert --key-type aura --suri "<VALIDATOR_NODE_ACCOUNT_WORDS>" --chain chainspecs/main/chainSpecRaw.json
+./target/release/tfchain key insert --key-type gran --suri "<VALIDATOR_NODE_ACCOUNT_WORDS>" --chain chainspecs/main/chainSpecRaw.json
+```
+
+### Generate session key
+
+Restart tfchain with:
+
+```
+./target/release/tfchain ...otherArgs --ws-external --rpc-methods Unsafe --rpc-external
+```
+
+Connect to the new node deployed with polkadot js apps. You will need to install a local version of this application since you will have to connect over a not secured websocket.
+
+Source: https://github.com/polkadot-js/apps
+
+```
+git clone git@github.com:polkadot-js/apps.git
+cd apps
+yarn
+yarn start
+```
+
+Browse to http://localhost:3000 and connect to the new node over it's public ip. Make sure to specify the port, like: ws://YOUR_MACHINE_PUBLIC_IP:9944
+
+First insert the types: Go to `Settings` -> `Developer` -> Copy paste output of following [file](https://raw.githubusercontent.com/threefoldtech/tfchain_client_js/master/types.json)
+
+Go to `Developer` -> `RPC calls` -> `author` -> `rotateKeys`, excecute it and take note of the output.
+
+Go to `Extrinsics` -> `session` -> `setKeys` -> (make sure to use the created node account (`VALIDATOR_NODE_ACCOUNT`), created above) You will need to import this account into this local polkadot js apps UI. Make sure it has atleast 0.1 TFT.
+
+input:
+```
+keys: the key from rotate keys ouput
+proofs: 0
+```
+
+Now we can start the node in Validator mode:
+
+Restart tfchain and remove flags: `--ws-external --rpc-methods Unsafe --rpc-external` and replace that with `--validator`
+
+Your node is now running in validator mode. Next up you need to manually activate the validator.
 
 ## Activate validator
 
@@ -204,56 +258,3 @@ Now go to `Developer` -> `Extrinsicis` and Select your account that manages the 
 ![activate](./activate.png)
 
 Select `ActivateValidatorNode` and click Submit Transaction. 
-
-## Almost there
-
-Once your node is fully synced, stop the process by pressing Ctrl-C. At your terminal prompt, we will now first insert keys.
-
-### Generate session key
-
-Connect to the new node deployed with polkadot js apps. You will need to install a local version of this application since you will have to connect over a not secured websocket.
-
-Source: https://github.com/polkadot-js/apps
-
-```
-git clone git@github.com:polkadot-js/apps.git
-yarn
-yarn start
-```
-
-Browse to http://localhost:3000 and connect to the new node over it's public ip. Make sure to specify the port, like: ws://YOUR_MACHINE_PUBLIC_IP:9944
-
-Go to `Developer` -> `RPC calls` -> `author` -> `rotateKeys`, excecute it and take note of the output.
-
-Go to `accounts` -> `add account` -> use the mnemonic from 'subkey generate' -> give descriptive name -> save
-
-NOTE: !! make sure to use the generated node account, created above, using 'subkey generate' !!
-
-Go to `Extrinsics` -> `session` -> `setKeys` -> (make sure to use the generated node account, created above) -> 
-
-input:
-```
-keys: the key from rotate keys ouput
-proofs: 0
-```
-
-### Generate gran/aura key
-
-`subkey generate --scheme sr25519`
-
-Take note of the SS58 address.
-
-Transfer some balance to the new address. (0.1 TFT should be enough). You can transfer the balance to this account from the polkadot UI.
-
-```
-./target/release/tfchain key insert --key-type aura --suri "<mnemonic_generated_step_above>" --chain chainspecs/main/chainSpecRaw.json
-./target/release/tfchain key insert --key-type gran --suri "<mnemonic_generated_step_above>" --chain chainspecs/main/chainSpecRaw.json
-```
-
-Now we can start the node in Validator mode:
-
-```
-./target/release/tfchain --chain chainspecs/main/chainSpec.json --validator --name "name on telemetry" --bootnodes /ip4/185.206.122.83/tcp/30333/p2p/12D3KooWLtsdtQHswnXkLRH7e8vZJHktsh7gfuL5PoADV51JJ6wY
-```
-
-Your node is now running in validator mode and should be producing blocks
