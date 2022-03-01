@@ -293,13 +293,23 @@ pub mod pallet {
 			// Remove the entry from the storage map
 			<Validator<T>>::remove(validator);
 
-			// Remove the old validator and rotate session
-			substrate_validator_set::Pallet::<T>::remove_validator(
-				frame_system::RawOrigin::Root.into(),
-				v.validator_node_account.clone(),
-			)?;
-
-			Self::deposit_event(Event::ValidatorRemoved(v.clone()));
+			let node_validators = substrate_validator_set::Validators::<T>::get();
+			match node_validators {
+				Some(validators) => {
+					for (_, val) in validators.clone().into_iter().enumerate() {
+						if val == v.validator_node_account {
+							// Remove the old validator and rotate session
+							substrate_validator_set::Pallet::<T>::remove_validator(
+								frame_system::RawOrigin::Root.into(),
+								v.validator_node_account.clone(),
+							)?;
+				
+							Self::deposit_event(Event::ValidatorRemoved(v.clone()));
+						}
+					}
+				},
+				None => ()
+			}
 
 			Ok(().into())
 		}
