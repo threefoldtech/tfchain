@@ -258,3 +258,45 @@ Now go to `Developer` -> `Extrinsicis` and Select your account that manages the 
 ![activate](./activate.png)
 
 Select `ActivateValidatorNode` and click Submit Transaction. 
+
+
+## Managing TFChain with systemd
+
+Example systemd file:
+
+```
+[Unit]
+Description=TFchain service
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=user
+ExecStart=/home/user/tfchain/substrate-node/target/release/tfchain --chain /home/user/tfchain/substrate-node/chainspecs/dev/chainSpec.json --pruning=archive --bootnodes /ip4/185.206.122.7/tcp/30333/p2p/12D3KooWLcMLBg9itjQL1EXsAqkJFPhqESHqJKY7CBKmhhhL8fdp --validator
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Replace `user` by your username.
+
+`sudo vim /etc/systemd/system/tfchain.service` -> paste content.
+
+### Starting service
+
+`sudo systemctl start tfchain` 
+
+### Stopping service
+
+`sudo systemctl stop tfchain` 
+
+### Reload config
+
+`sudo systemctl stop tfchain` 
+
+Edit File
+
+`sudo systemctl start tfchain`
