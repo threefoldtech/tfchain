@@ -324,10 +324,6 @@ impl<T: Config> Module<T> {
             }
         };
 
-        // Cleanup contract billing information map
-        ContractBillingInformationByID::remove(contract_id);
-        ContractLastBilledAt::remove(contract_id);
-
         Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
 
         Ok(())
@@ -462,14 +458,11 @@ impl<T: Config> Module<T> {
         for contract_id in contracts {
             let mut contract = Contracts::get(contract_id);
 
-            // if the contract is in any other state then created,
-            // this contract will be removed from the billing cycle when this function returns
-            if contract.state != types::ContractState::Created {
+            // if the contract is in deleted by user state, this contract will be removed
+            // from billing cycle when this function returns
+            if contract.state == types::ContractState::Deleted(types::Cause::OutOfFunds) {
                 continue;
             }
-
-            // prepare the contract to be billed at the next billing cycle
-            Self::_reinsert_contract_to_bill(contract.contract_id);
 
             let result = Self::_bill_contract(&mut contract);
 
@@ -496,13 +489,6 @@ impl<T: Config> Module<T> {
     fn _bill_contract(contract: &mut types::Contract) -> DispatchResult {
         let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
         let mut contract_billing_info = ContractBillingInformationByID::get(contract.contract_id);
-
-        if matches!(contract.contract_type, types::ContractData::NodeContract(_)) {
-            if contract_billing_info.amount_unbilled == 0 {
-                ContractLastBilledAt::insert(contract.contract_id, now);
-                return Ok(())
-            }
-        }
 
         let mut pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
         let mut certification_type = pallet_tfgrid_types::CertificationType::Diy;
@@ -589,11 +575,18 @@ impl<T: Config> Module<T> {
         };
         Self::deposit_event(RawEvent::ContractBilled(contract_bill));
 
+        println!("contract state: {:?}", contract.state);
+        // If the contract is in state delete clean up storage maps
+        if contract.is_state_delete() {
+            println!("going to kill contract");
+            return Self::kill_contract(contract);
+        }
+
+
         // set the amount unbilled back to 0
         contract_billing_info.amount_unbilled = 0;
         ContractBillingInformationByID::insert(contract.contract_id, &contract_billing_info);
         ContractLastBilledAt::insert(contract.contract_id, now);
-
         // If total balance exceeds the twin's balance, we can decomission contract
         if decomission {
             return Self::_cancel_contract(
@@ -602,6 +595,18 @@ impl<T: Config> Module<T> {
                 types::Cause::OutOfFunds,
             );
         }
+
+        // prepare the contract to be billed at the next billing cycle
+        Self::_reinsert_contract_to_bill(contract.contract_id);
+
+        Ok(())
+    }
+
+    pub fn kill_contract(contract: &mut types::Contract) -> DispatchResult {
+        contract.state = types::ContractState::Deleted(types::Cause::Killed);
+        ContractBillingInformationByID::remove(contract.contract_id);
+        ContractLastBilledAt::remove(contract.contract_id);
+        Contracts::insert(contract.contract_id, contract.clone());
 
         Ok(())
     }
