@@ -5,7 +5,7 @@ use frame_support::{
     traits::{OnFinalize, OnInitialize},
 };
 use frame_system::RawOrigin;
-use sp_runtime::traits::SaturatedConversion;
+use sp_runtime::{traits::SaturatedConversion, Perbill};
 
 use super::types;
 use pallet_tfgrid::types as pallet_tfgrid_types;
@@ -499,8 +499,8 @@ fn test_name_registration_fails_with_invalid_dns_name() {
 fn test_contract_billing_loop() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
-        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 1).unwrap();
         run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 1).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
@@ -603,6 +603,9 @@ fn test_node_contract_billing() {
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
+        let twin = TfgridModule::twins(2);
+        let initial_twin_balance = Balances::free_balance(&twin.account_id);
+
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
             1,
@@ -616,37 +619,51 @@ fn test_node_contract_billing() {
 
         let initial_total_issuance = Balances::total_issuance();
 
-        push_report(11);
+        let cru = 2;
+        let hru = 0;
+        let mru = 2;
+        let sru = 60;
+        let nru = 3;
+
+        let contract_id = 1;
+        let twin_id = 2;
+
+        push_report(11, cru, hru, mru, sru, nru);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 1);
         run_to_block(12);
-        check_report_cost(3, 88542, 12, types::DiscountLevel::Silver);
+        check_report_cost(3, amount_due_as_u128, 12, discount_received);
 
         // check the contract owners address to see if it got balance credited
         let twin = TfgridModule::twins(2);
         let b = Balances::free_balance(&twin.account_id);
         let balances_as_u128: u128 = b.saturated_into::<u128>();
 
-        let twin2_balance_should_be = 2500000000 - 88542 as u128;
-        assert_eq!(balances_as_u128, twin2_balance_should_be);
+        let twin2_balance_should_be = initial_twin_balance - amount_due_as_u128 as u64;
+        assert_eq!(balances_as_u128, twin2_balance_should_be as u128);
         
         let staking_pool_account_balance = Balances::free_balance(&get_staking_pool_account());
         let staking_pool_account_balance_as_u128: u128 = staking_pool_account_balance.saturated_into::<u128>();
         // equal to 5%
-        assert_eq!(staking_pool_account_balance_as_u128, 4427);
+        let staking_pool_account_share = Perbill::from_percent(5) * amount_due_as_u128;
+        assert_eq!(staking_pool_account_balance_as_u128, staking_pool_account_share);
 
         let pricing_policy = TfgridModule::pricing_policies(1);
         let foundation_account_balance = Balances::free_balance(&pricing_policy.foundation_account);
         let foundation_account_balance_as_u128: u128 = foundation_account_balance.saturated_into::<u128>();
         // equal to 10%
-        assert_eq!(foundation_account_balance_as_u128, 8854);
+        let foundation_account_account_share = Perbill::from_percent(10) * amount_due_as_u128;
+        assert_eq!(foundation_account_balance_as_u128, foundation_account_account_share);
 
         let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
         let sales_account_balance_as_u128: u128 = sales_account_balance.saturated_into::<u128>();
         // equal to 50%
-        assert_eq!(sales_account_balance_as_u128, 44271);
+        let sales_account_account_share = Perbill::from_percent(50) * amount_due_as_u128;
+        assert_eq!(sales_account_balance_as_u128, sales_account_account_share);
 
         let total_issuance = Balances::total_issuance();
         // total issueance is now previous total - amount burned from contract billed (35%)
-        assert_eq!(total_issuance, initial_total_issuance - 30990);
+        let burned_amount = Perbill::from_percent(35) * amount_due_as_u128;
+        assert_eq!(total_issuance, initial_total_issuance - burned_amount as u64);
 
         // amount unbilled should have been reset after a transfer between contract owner and farmer
         let contract_billing_info = SmartContractModule::contract_billing_information_by_id(1);
@@ -669,26 +686,62 @@ fn test_node_contract_billing_cycles() {
             0
         ));
 
-        push_report(11);
+        let cru = 2;
+        let hru = 0;
+        let mru = 2;
+        let sru = 60;
+        let nru = 3;
+
+        let contract_id = 1;
+        let twin_id = 2;
+        
+        push_report(11, cru, hru, mru, sru, nru);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 0);
         run_to_block(12);
-        check_report_cost(3, 73280, 12, types::DiscountLevel::Silver);
+        check_report_cost(3, amount_due_as_u128, 12, discount_received);
 
-        push_report(21);
+        push_report(21, cru, hru, mru, sru, nru);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 0);
         run_to_block(22);
-        check_report_cost(6, 72788, 22, types::DiscountLevel::Silver);
+        check_report_cost(6, amount_due_as_u128, 22, discount_received);
 
-        push_report(31);
+        push_report(31, cru, hru, mru, sru, nru);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 0);
         run_to_block(32);
-        check_report_cost(9, 72788, 32, types::DiscountLevel::Silver);
+        check_report_cost(9, amount_due_as_u128, 32, discount_received);
 
-        push_report(41);
+        push_report(41, cru, hru, mru, sru, nru);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 0);
         run_to_block(42);
-        check_report_cost(12, 72788, 42, types::DiscountLevel::Silver);
+        check_report_cost(12, amount_due_as_u128, 42, discount_received);
 
-        push_report(51);
+        push_report(51, cru, hru, mru, sru, nru);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 0);
         run_to_block(52);
-        check_report_cost(15, 72788, 52, types::DiscountLevel::Silver);
+        check_report_cost(15, amount_due_as_u128, 52, discount_received);
     });
+}
+
+fn calculate_tft_cost(contract_id: u64, twin_id: u32, number_of_ips: i64) -> (u128, types::DiscountLevel) {
+    let billing_info = SmartContractModule::contract_billing_information_by_id(contract_id);
+    let pricing_policy = TfgridModule::pricing_policies(1);
+    let mut total_ip_cost = 0;
+    if number_of_ips > 0 {
+        let ip_cost = U64F64::from_num(number_of_ips)
+            * (U64F64::from_num(pricing_policy.ipu.value) / 3600)
+            * 66;
+        total_ip_cost = ip_cost.to_num::<u64>();
+    }
+    let total_amount_unbilled = billing_info.amount_unbilled + total_ip_cost;
+    let tft_cost = SmartContractModule::calculate_cost_in_tft_from_musd(total_amount_unbilled).unwrap();
+    let twin = TfgridModule::twins(twin_id);
+    let b = Balances::free_balance(&twin.account_id);
+    let (amount_due, discount_received) =
+        SmartContractModule::calculate_discount(tft_cost, b, pallet_tfgrid_types::CertificationType::Diy);
+    // Convert amount due to u128
+    let amount_due_as_u128: u128 = amount_due.saturated_into::<u128>();
+    assert_ne!(amount_due_as_u128, 0);
+    (amount_due_as_u128, discount_received)
 }
 
 #[test]
@@ -706,24 +759,14 @@ fn test_node_contract_billing_should_cancel_contract_when_out_of_funds() {
             0
         ));
 
-        push_report(11);
+        // cycle 1
+        push_report(11, 2, 0, 2, 60, 3);
         run_to_block(12);
-        check_report_cost(3, 122132, 12, types::DiscountLevel::None);
 
-        let twin = TfgridModule::twins(3);
-        let b = Balances::free_balance(&twin.account_id);
-        let balances_as_u128: u128 = b.saturated_into::<u128>();
-
-        let twin2_balance_should_be = 150000 - 122132 as u128;
-        assert_eq!(balances_as_u128, twin2_balance_should_be);
-
-        push_report(21);
+        // cycle 2
+        // user does not have enough funds to pay for 2 cycles
+        push_report(21, 2, 0, 2, 60, 3);
         run_to_block(22);
-        check_report_cost(6, 27868, 22, types::DiscountLevel::None);
-
-        let twin = TfgridModule::twins(3);
-        let b = Balances::free_balance(&twin.account_id);
-        assert_eq!(b, 1);
 
         let c1 = SmartContractModule::contracts(1);
         assert_eq!(c1.state, types::ContractState::Deleted(types::Cause::OutOfFunds));
@@ -750,76 +793,16 @@ fn test_node_contract_billing_should_cancel_contract_when_out_of_funds() {
     });
 }
 
-#[test]
-fn test_new_contract_bill() {
-    new_test_ext().execute_with(|| {
-        prepare_farm_and_node();
-        run_to_block(1);
-        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.062), 101).unwrap();
-
-        assert_ok!(SmartContractModule::create_node_contract(
-            Origin::signed(alice()),
-            1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            1
-        ));
-
-        let gigabyte = 1000 * 1000 * 1000;
-        let mut consumption_reports = Vec::new();
-        consumption_reports.push(super::types::Consumption {
-            contract_id: 1,
-            cru: 2,
-            hru: 0,
-            mru: 8 * gigabyte,
-            sru: 25 * gigabyte,
-            nru: 0,
-            timestamp: 1628082000 + (11*6),
-        });
-    
-        assert_ok!(SmartContractModule::add_reports(
-            Origin::signed(alice()),
-            consumption_reports
-        ));
-
-        run_to_block(12);
-
-        // Test that the expected events were emitted
-        let our_events = System::events()
-        .into_iter()
-        .map(|r| r.event)
-        .filter_map(|e| {
-            if let Event::pallet_smart_contract(inner) = e {
-                Some(inner)
-            } else {
-                None
-            }
-        })
-        .collect::<Vec<_>>();
-
-        let contract_bill_event = types::ContractBill {
-            contract_id: 1,
-            timestamp: 1628082072,
-            discount_level: types::DiscountLevel::Gold,
-            amount_billed: 76547
-        };
-        let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> = Vec::new();
-        expected_events.push(RawEvent::ContractBilled(contract_bill_event));
-
-        assert_eq!(our_events[3], expected_events[0]);
-    })
-}
-
-fn push_report(block_number: u64) {
+fn push_report(block_number: u64, cru: u64, hru: u64, mru: u64, sru: u64, nru: u64) {
     let gigabyte = 1000 * 1000 * 1000;
     let mut consumption_reports = Vec::new();
     consumption_reports.push(super::types::Consumption {
         contract_id: 1,
-        cru: 2,
-        hru: 0,
-        mru: 2 * gigabyte,
-        sru: 60 * gigabyte,
-        nru: 3 * gigabyte,
+        cru,
+        hru,
+        mru: mru * gigabyte,
+        sru: sru * gigabyte,
+        nru: nru * gigabyte,
         timestamp: 1628082000 + (6*block_number),
     });
 
@@ -947,6 +930,7 @@ fn test_cu_calculation() {
         assert_eq!(cu, 8);
     })
 }
+
 fn prepare_farm_and_node() {
     let document = "some_link".as_bytes().to_vec();
     let hash = "some_hash".as_bytes().to_vec();

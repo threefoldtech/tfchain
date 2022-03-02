@@ -550,23 +550,14 @@ impl<T: Config> Module<T> {
             return Ok(());
         }
 
-        let tft_price_musd = U64F64::from_num(pallet_tft_price::AverageTftPrice::get()) * 1000;
-        if tft_price_musd <= U64F64::from_num(0) {
-            debug::info!("TFT price is zero");
-            return Err(DispatchError::from(Error::<T>::TFTPriceValueError));
-        }
-
-        let total_cost_musd = U64F64::from_num(total_cost) / 10000;
-
-        let total_cost_tft = (total_cost_musd / tft_price_musd) * U64F64::from_num(1e7);
-        let total_cost_tft_64 = U64F64::to_num(total_cost_tft);
+        let total_cost_tft_64 = Self::calculate_cost_in_tft_from_musd(total_cost)?;
 
         let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
         let balance: BalanceOf<T> = <T as Config>::Currency::free_balance(&twin.account_id);
 
         // Calculate the amount due and discount received based on the total_cost amount due
         let (amount_due, discount_received) =
-            Self::_calculate_discount(total_cost_tft_64, balance, certification_type);
+            Self::calculate_discount(total_cost_tft_64, balance, certification_type);
         // Convert amount due to u128
         let amount_due_as_u128: u128 = amount_due.saturated_into::<u128>();
         // Get current TFT price
@@ -613,6 +604,17 @@ impl<T: Config> Module<T> {
         }
 
         Ok(())
+    }
+
+    pub fn calculate_cost_in_tft_from_musd(total_cost_musd: u64) -> Result<u64, DispatchError> {
+        let tft_price_musd = U64F64::from_num(pallet_tft_price::AverageTftPrice::get()) * 1000;
+        ensure!(tft_price_musd > 0, Error::<T>::TFTPriceValueError);
+
+        let total_cost_musd = U64F64::from_num(total_cost_musd) / 10000;
+
+        let total_cost_tft = (total_cost_musd / tft_price_musd) * U64F64::from_num(1e7);
+        let total_cost_tft_64: u64 = U64F64::to_num(total_cost_tft);
+        return Ok(total_cost_tft_64)
     }
 
     // Following: https://library.threefold.me/info/threefold#/tfgrid/farming/threefold__proof_of_utilization
@@ -685,7 +687,7 @@ impl<T: Config> Module<T> {
     // Calculates the discount that will be applied to the billing of the contract
     // Returns an amount due as balance object and a static string indicating which kind of discount it received
     // (default, bronze, silver, gold or none)
-    fn _calculate_discount(
+    pub fn calculate_discount(
         amount_due: u64,
         balance: BalanceOf<T>,
         certification_type: pallet_tfgrid_types::CertificationType,
