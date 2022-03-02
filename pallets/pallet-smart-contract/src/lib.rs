@@ -324,6 +324,10 @@ impl<T: Config> Module<T> {
             }
         };
 
+        // Cleanup contract billing information map
+        ContractBillingInformationByID::remove(contract_id);
+        ContractLastBilledAt::remove(contract_id);
+
         Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
 
         Ok(())
@@ -457,13 +461,10 @@ impl<T: Config> Module<T> {
         let contracts = ContractsToBillAt::get(current_block_u64);
         for contract_id in contracts {
             let mut contract = Contracts::get(contract_id);
-            let contract_billing_info = ContractBillingInformationByID::get(contract_id);
 
             // if the contract is in any other state then created and it has no unbilled amounts left, skip it
             // this contract will be removed from the billing cycle when this function returns
-            if contract.state != types::ContractState::Created
-                && contract_billing_info.amount_unbilled == 0
-            {
+            if contract.state != types::ContractState::Created {
                 continue;
             }
 
@@ -493,18 +494,28 @@ impl<T: Config> Module<T> {
     }
 
     fn _bill_contract(contract: &mut types::Contract) -> DispatchResult {
+        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+        let mut contract_billing_info = ContractBillingInformationByID::get(contract.contract_id);
+
+        match contract.contract_type {
+            types::ContractData::NodeContract(_) => {
+                if contract_billing_info.amount_unbilled == 0 {
+                    ContractLastBilledAt::insert(contract.contract_id, now);
+                    return Ok(())
+                }
+            },
+            _ => ()
+        };
+
         let mut pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
         let mut certification_type = pallet_tfgrid_types::CertificationType::Diy;
 
-        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
         let mut seconds_elapsed = T::BillingFrequency::get() * 6;
 
         if ContractLastBilledAt::contains_key(contract.contract_id) {
             let contract_last_billed_at = ContractLastBilledAt::get(contract.contract_id);
             seconds_elapsed = now - contract_last_billed_at;
         }
-
-        let mut contract_billing_info = ContractBillingInformationByID::get(contract.contract_id);
 
         let total_cost = match &contract.contract_type {
             types::ContractData::NodeContract(node_contract) => {
@@ -930,17 +941,9 @@ impl<T: Config> Module<T> {
             cru_used_3
         };
 
-        let mut cu = if cu1 > cu2 {
-            cu2
-        } else {
-            cu1
-        };
+        let mut cu = if cu1 > cu2 { cu2 } else { cu1 };
 
-        cu = if cu > cu3 {
-            cu3
-        } else {
-            cu
-        };
+        cu = if cu > cu3 { cu3 } else { cu };
 
         cu
     }
