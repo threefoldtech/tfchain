@@ -462,7 +462,7 @@ impl<T: Config> Module<T> {
         for contract_id in contracts {
             let mut contract = Contracts::get(contract_id);
 
-            // if the contract is in any other state then created and it has no unbilled amounts left, skip it
+            // if the contract is in any other state then created,
             // this contract will be removed from the billing cycle when this function returns
             if contract.state != types::ContractState::Created {
                 continue;
@@ -497,15 +497,12 @@ impl<T: Config> Module<T> {
         let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
         let mut contract_billing_info = ContractBillingInformationByID::get(contract.contract_id);
 
-        match contract.contract_type {
-            types::ContractData::NodeContract(_) => {
-                if contract_billing_info.amount_unbilled == 0 {
-                    ContractLastBilledAt::insert(contract.contract_id, now);
-                    return Ok(())
-                }
-            },
-            _ => ()
-        };
+        if matches!(contract.contract_type, types::ContractData::NodeContract(_)) {
+            if contract_billing_info.amount_unbilled == 0 {
+                ContractLastBilledAt::insert(contract.contract_id, now);
+                return Ok(())
+            }
+        }
 
         let mut pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
         let mut certification_type = pallet_tfgrid_types::CertificationType::Diy;
