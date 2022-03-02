@@ -765,7 +765,7 @@ fn test_node_contract_billing_cycles_cancel_contract() {
         check_report_cost(10, amount_due_as_u128, 32, discount_received);
 
         let contract = SmartContractModule::contracts(1);
-        assert_eq!(contract.state, types::ContractState::Deleted(types::Cause::Killed));
+        assert_eq!(contract.state, types::ContractState::Killed);
 
         let billing_info = SmartContractModule::contract_billing_information_by_id(1);
         assert_eq!(billing_info.amount_unbilled, 0);

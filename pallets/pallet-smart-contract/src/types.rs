@@ -68,13 +68,13 @@ pub struct ContractBillingInformation {
 pub enum ContractState {
     Created,
     Deleted(Cause),
+    Killed
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
 pub enum Cause {
     CanceledByUser,
     OutOfFunds,
-    Killed,
 }
 
 impl Default for ContractState {

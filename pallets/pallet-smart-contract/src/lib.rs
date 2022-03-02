@@ -458,9 +458,8 @@ impl<T: Config> Module<T> {
         for contract_id in contracts {
             let mut contract = Contracts::get(contract_id);
 
-            // if the contract is in deleted by user state, this contract will be removed
-            // from billing cycle when this function returns
-            if contract.state == types::ContractState::Deleted(types::Cause::OutOfFunds) {
+            // if the contract is in killed state, remove it from the billing cycles
+            if contract.state == types::ContractState::Killed {
                 continue;
             }
 
@@ -575,18 +574,19 @@ impl<T: Config> Module<T> {
         };
         Self::deposit_event(RawEvent::ContractBilled(contract_bill));
 
-        println!("contract state: {:?}", contract.state);
-        // If the contract is in state delete clean up storage maps
-        if contract.is_state_delete() {
-            println!("going to kill contract");
+        // If the contract is in canceled by user state, set the contract in kill state (end state) 
+        if contract.state == types::ContractState::Deleted(types::Cause::CanceledByUser) {
             return Self::kill_contract(contract);
         }
-
 
         // set the amount unbilled back to 0
         contract_billing_info.amount_unbilled = 0;
         ContractBillingInformationByID::insert(contract.contract_id, &contract_billing_info);
         ContractLastBilledAt::insert(contract.contract_id, now);
+
+        // prepare the contract to be billed at the next billing cycle
+        Self::_reinsert_contract_to_bill(contract.contract_id);
+
         // If total balance exceeds the twin's balance, we can decomission contract
         if decomission {
             return Self::_cancel_contract(
@@ -596,14 +596,11 @@ impl<T: Config> Module<T> {
             );
         }
 
-        // prepare the contract to be billed at the next billing cycle
-        Self::_reinsert_contract_to_bill(contract.contract_id);
-
         Ok(())
     }
 
     pub fn kill_contract(contract: &mut types::Contract) -> DispatchResult {
-        contract.state = types::ContractState::Deleted(types::Cause::Killed);
+        contract.state = types::ContractState::Killed;
         ContractBillingInformationByID::remove(contract.contract_id);
         ContractLastBilledAt::remove(contract.contract_id);
         Contracts::insert(contract.contract_id, contract.clone());
