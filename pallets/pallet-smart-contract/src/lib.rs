@@ -479,9 +479,12 @@ impl<T: Config> Module<T> {
             }
 
             // If the contract is in canceled by user state, set the contract in kill state (end state)
-            if contract.state == types::ContractState::Deleted(types::Cause::CanceledByUser) {
+            if matches!(contract.state, types::ContractState::Deleted(types::Cause::CanceledByUser)) {
                 Self::kill_contract(&mut contract);
-            } else {
+                continue
+            }
+
+            if !matches!(contract.state, types::ContractState::Killed) {
                 // prepare the contract to be billed at the next billing cycle
                 Self::_reinsert_contract_to_bill(contract.contract_id);
             }
