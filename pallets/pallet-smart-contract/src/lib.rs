@@ -108,8 +108,8 @@ decl_module! {
         fn deposit_event() = default;
 
         fn on_runtime_upgrade() -> frame_support::weights::Weight {
-			migration::migrate_node_contracts::<T>()
-		}
+            migration::migrate_node_contracts::<T>()
+        }
 
         #[weight = 10]
         fn create_node_contract(origin, node_id: u32, data: Vec<u8>, deployment_hash: Vec<u8>, public_ips: u32){
@@ -491,10 +491,9 @@ impl<T: Config> Module<T> {
         Ok(())
     }
 
-    fn _bill_contract(contract: &mut types::Contract) -> DispatchResult {        
+    fn _bill_contract(contract: &mut types::Contract) -> DispatchResult {
         let mut pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
         let mut certification_type = pallet_tfgrid_types::CertificationType::Diy;
-        
         let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
         let mut seconds_elapsed = T::BillingFrequency::get() * 6;
 
@@ -579,7 +578,7 @@ impl<T: Config> Module<T> {
         };
         Self::deposit_event(RawEvent::ContractBilled(contract_bill));
 
-        // If the contract is in canceled by user state, set the contract in kill state (end state) 
+        // If the contract is in canceled by user state, set the contract in kill state (end state)
         if contract.state == types::ContractState::Deleted(types::Cause::CanceledByUser) {
             return Self::kill_contract(contract);
         }
@@ -621,7 +620,7 @@ impl<T: Config> Module<T> {
 
         let total_cost_tft = (total_cost_musd / tft_price_musd) * U64F64::from_num(1e7);
         let total_cost_tft_64: u64 = U64F64::to_num(total_cost_tft);
-        return Ok(total_cost_tft_64)
+        return Ok(total_cost_tft_64);
     }
 
     // Following: https://library.threefold.me/info/threefold#/tfgrid/farming/threefold__proof_of_utilization
