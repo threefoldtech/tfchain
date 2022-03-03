@@ -162,7 +162,7 @@ fn test_update_contract_works() {
             contract_id: 1,
             state: types::ContractState::Created,
             twin_id: 1,
-            version: 1,
+            version: 3,
             contract_type,
         };
 
@@ -253,7 +253,7 @@ fn test_cancel_contract_works() {
             contract_id: 1,
             state: types::ContractState::Deleted(types::Cause::CanceledByUser),
             twin_id: 1,
-            version: 1,
+            version: 3,
             contract_type,
         };
 
@@ -289,7 +289,7 @@ fn test_cancel_name_contract_works() {
             contract_id: 1,
             state: types::ContractState::Deleted(types::Cause::CanceledByUser),
             twin_id: 1,
-            version: 1,
+            version: 3,
             contract_type,
         };
 
