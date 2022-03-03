@@ -24,6 +24,8 @@ mod tests;
 
 pub mod types;
 
+mod migration;
+
 pub trait Config: system::Config + pallet_tfgrid::Config + pallet_timestamp::Config {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
     type Currency: Currency<Self::AccountId>;
@@ -31,7 +33,7 @@ pub trait Config: system::Config + pallet_tfgrid::Config + pallet_timestamp::Con
     type BillingFrequency: Get<u64>;
 }
 
-pub const CONTRACT_VERSION: u32 = 1;
+pub const CONTRACT_VERSION: u32 = 3;
 
 pub type BalanceOf<T> =
     <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
@@ -95,15 +97,16 @@ decl_storage! {
 
         // ID maps
         ContractID: u64;
-
-        /// The current version of the pallet.
-        PalletVersion: types::PalletStorageVersion = types::PalletStorageVersion::V1;
     }
 }
 
 decl_module! {
     pub struct Module<T: Config> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
+
+        fn on_runtime_upgrade() -> frame_support::weights::Weight {
+            migration::migrate_node_contracts::<T>()
+        }
 
         #[weight = 10]
         fn create_node_contract(origin, node_id: u32, data: Vec<u8>, deployment_hash: Vec<u8>, public_ips: u32){
@@ -457,22 +460,8 @@ impl<T: Config> Module<T> {
         let contracts = ContractsToBillAt::get(current_block_u64);
         for contract_id in contracts {
             let mut contract = Contracts::get(contract_id);
-            let contract_billing_info = ContractBillingInformationByID::get(contract_id);
 
-            // if the contract is in any other state then created and it has no unbilled amounts left, skip it
-            // this contract will be removed from the billing cycle when this function returns
-            if contract.state != types::ContractState::Created
-                && contract_billing_info.amount_unbilled == 0
-            {
-                continue;
-            }
-
-            // prepare the contract to be billed at the next billing cycle
-            Self::_reinsert_contract_to_bill(contract.contract_id);
-
-            let result = Self::_bill_contract(&mut contract);
-
-            match result {
+            match Self::_bill_contract(&mut contract) {
                 Ok(_) => {
                     debug::info!(
                         "billed contract with id {:?} at block {:?}",
@@ -488,6 +477,17 @@ impl<T: Config> Module<T> {
                     );
                 }
             }
+
+            // If the contract is in canceled by user state, set the contract in kill state (end state)
+            if matches!(contract.state, types::ContractState::Deleted(types::Cause::CanceledByUser)) {
+                Self::kill_contract(&mut contract);
+                continue
+            }
+
+            if !matches!(contract.state, types::ContractState::Killed) {
+                // prepare the contract to be billed at the next billing cycle
+                Self::_reinsert_contract_to_bill(contract.contract_id);
+            }
         }
         Ok(())
     }
@@ -495,7 +495,6 @@ impl<T: Config> Module<T> {
     fn _bill_contract(contract: &mut types::Contract) -> DispatchResult {
         let mut pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
         let mut certification_type = pallet_tfgrid_types::CertificationType::Diy;
-
         let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
         let mut seconds_elapsed = T::BillingFrequency::get() * 6;
 
@@ -505,7 +504,6 @@ impl<T: Config> Module<T> {
         }
 
         let mut contract_billing_info = ContractBillingInformationByID::get(contract.contract_id);
-
         let total_cost = match &contract.contract_type {
             types::ContractData::NodeContract(node_contract) => {
                 let node = pallet_tfgrid::Nodes::get(node_contract.node_id);
@@ -598,6 +596,13 @@ impl<T: Config> Module<T> {
         Ok(())
     }
 
+    pub fn kill_contract(contract: &mut types::Contract) {
+        contract.state = types::ContractState::Killed;
+        ContractBillingInformationByID::remove(contract.contract_id);
+        ContractLastBilledAt::remove(contract.contract_id);
+        Contracts::insert(contract.contract_id, contract.clone());
+    }
+
     pub fn calculate_cost_in_tft_from_musd(total_cost_musd: u64) -> Result<u64, DispatchError> {
         let tft_price_musd = U64F64::from_num(pallet_tft_price::AverageTftPrice::get()) * 1000;
         ensure!(tft_price_musd > 0, Error::<T>::TFTPriceValueError);
@@ -606,7 +611,7 @@ impl<T: Config> Module<T> {
 
         let total_cost_tft = (total_cost_musd / tft_price_musd) * U64F64::from_num(1e7);
         let total_cost_tft_64: u64 = U64F64::to_num(total_cost_tft);
-        return Ok(total_cost_tft_64)
+        Ok(total_cost_tft_64)
     }
 
     // Following: https://library.threefold.me/info/threefold#/tfgrid/farming/threefold__proof_of_utilization
@@ -932,17 +937,9 @@ impl<T: Config> Module<T> {
             cru_used_3
         };
 
-        let mut cu = if cu1 > cu2 {
-            cu2
-        } else {
-            cu1
-        };
+        let mut cu = if cu1 > cu2 { cu2 } else { cu1 };
 
-        cu = if cu > cu3 {
-            cu3
-        } else {
-            cu
-        };
+        cu = if cu > cu3 { cu3 } else { cu };
 
         cu
     }

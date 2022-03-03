@@ -162,7 +162,7 @@ fn test_update_contract_works() {
             contract_id: 1,
             state: types::ContractState::Created,
             twin_id: 1,
-            version: 1,
+            version: 3,
             contract_type,
         };
 
@@ -253,7 +253,7 @@ fn test_cancel_contract_works() {
             contract_id: 1,
             state: types::ContractState::Deleted(types::Cause::CanceledByUser),
             twin_id: 1,
-            version: 1,
+            version: 3,
             contract_type,
         };
 
@@ -289,7 +289,7 @@ fn test_cancel_name_contract_works() {
             contract_id: 1,
             state: types::ContractState::Deleted(types::Cause::CanceledByUser),
             twin_id: 1,
-            version: 1,
+            version: 3,
             contract_type,
         };
 
@@ -629,7 +629,7 @@ fn test_node_contract_billing() {
         let twin_id = 2;
 
         push_report(11, cru, hru, mru, sru, nru);
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 1);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(11, contract_id, twin_id, 1);
         run_to_block(12);
         check_report_cost(3, amount_due_as_u128, 12, discount_received);
 
@@ -696,40 +696,90 @@ fn test_node_contract_billing_cycles() {
         let twin_id = 2;
         
         push_report(11, cru, hru, mru, sru, nru);
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 0);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(11, contract_id, twin_id, 0);
         run_to_block(12);
         check_report_cost(3, amount_due_as_u128, 12, discount_received);
 
         push_report(21, cru, hru, mru, sru, nru);
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 0);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(11, contract_id, twin_id, 0);
         run_to_block(22);
         check_report_cost(6, amount_due_as_u128, 22, discount_received);
 
         push_report(31, cru, hru, mru, sru, nru);
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 0);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(11, contract_id, twin_id, 0);
         run_to_block(32);
         check_report_cost(9, amount_due_as_u128, 32, discount_received);
 
         push_report(41, cru, hru, mru, sru, nru);
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 0);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(11, contract_id, twin_id, 0);
         run_to_block(42);
         check_report_cost(12, amount_due_as_u128, 42, discount_received);
 
         push_report(51, cru, hru, mru, sru, nru);
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 0);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(11, contract_id, twin_id, 0);
         run_to_block(52);
         check_report_cost(15, amount_due_as_u128, 52, discount_received);
     });
 }
 
-fn calculate_tft_cost(contract_id: u64, twin_id: u32, number_of_ips: i64) -> (u128, types::DiscountLevel) {
+#[test]
+fn test_node_contract_billing_cycles_cancel_contract() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(bob()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            0
+        ));
+
+        let cru = 2;
+        let hru = 0;
+        let mru = 2;
+        let sru = 60;
+        let nru = 3;
+
+        let contract_id = 1;
+        let twin_id = 2;
+        
+        push_report(11, cru, hru, mru, sru, nru);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(11, contract_id, twin_id, 0);
+        run_to_block(12);
+        check_report_cost(3, amount_due_as_u128, 12, discount_received);
+
+        push_report(21, cru, hru, mru, sru, nru);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(11, contract_id, twin_id, 0);
+        run_to_block(22);
+        check_report_cost(6, amount_due_as_u128, 22, discount_received);
+
+        run_to_block(28);
+        assert_ok!(SmartContractModule::cancel_contract(Origin::signed(bob()), 1));
+        push_report(29, cru, hru, mru, sru, nru);
+
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(11, contract_id, twin_id, 0);
+        run_to_block(32);
+        check_report_cost(10, amount_due_as_u128, 32, discount_received);
+
+        let contract = SmartContractModule::contracts(1);
+        assert_eq!(contract.state, types::ContractState::Killed);
+
+        let billing_info = SmartContractModule::contract_billing_information_by_id(1);
+        assert_eq!(billing_info.amount_unbilled, 0);
+    });
+}
+
+fn calculate_tft_cost(number_of_blocks: u64, contract_id: u64, twin_id: u32, number_of_ips: i64) -> (u128, types::DiscountLevel) {
     let billing_info = SmartContractModule::contract_billing_information_by_id(contract_id);
     let pricing_policy = TfgridModule::pricing_policies(1);
     let mut total_ip_cost = 0;
     if number_of_ips > 0 {
         let ip_cost = U64F64::from_num(number_of_ips)
             * (U64F64::from_num(pricing_policy.ipu.value) / 3600)
-            * 66;
+            * U64F64::from_num(number_of_blocks * 6);
         total_ip_cost = ip_cost.to_num::<u64>();
     }
     let total_amount_unbilled = billing_info.amount_unbilled + total_ip_cost;
