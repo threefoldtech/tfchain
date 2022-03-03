@@ -491,13 +491,11 @@ impl<T: Config> Module<T> {
         Ok(())
     }
 
-    fn _bill_contract(contract: &mut types::Contract) -> DispatchResult {
-        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
-        let mut contract_billing_info = ContractBillingInformationByID::get(contract.contract_id);
-
+    fn _bill_contract(contract: &mut types::Contract) -> DispatchResult {        
         let mut pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
         let mut certification_type = pallet_tfgrid_types::CertificationType::Diy;
-
+        
+        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
         let mut seconds_elapsed = T::BillingFrequency::get() * 6;
 
         if ContractLastBilledAt::contains_key(contract.contract_id) {
@@ -505,6 +503,7 @@ impl<T: Config> Module<T> {
             seconds_elapsed = now - contract_last_billed_at;
         }
 
+        let mut contract_billing_info = ContractBillingInformationByID::get(contract.contract_id);
         let total_cost = match &contract.contract_type {
             types::ContractData::NodeContract(node_contract) => {
                 let node = pallet_tfgrid::Nodes::get(node_contract.node_id);

@@ -79,13 +79,11 @@ pub fn migrate_node_contracts<T: Config>() -> frame_support::weights::Weight {
     });
 
     frame_support::debug::info!(" >>> Starting clean up of contract billing infos");
-    for (ctr_id, mut contract) in Contracts::iter() {
+    for (ctr_id, contract) in Contracts::iter() {
         if matches!(contract.state, types::ContractState::Deleted(_)) {
             frame_support::debug::info!(" >>> Cleaning up contract billing information of deleted contract: {:?}", ctr_id);
-            contract.state = types::ContractState::Killed;
             ContractBillingInformationByID::remove(contract.contract_id);
             ContractLastBilledAt::remove(contract.contract_id);
-            Contracts::insert(contract.contract_id, contract.clone());
             read_writes+=5;
         }
     }
