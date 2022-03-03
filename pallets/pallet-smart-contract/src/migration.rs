@@ -1,9 +1,9 @@
 use super::*;
-use frame_support::weights::Weight;
 use codec::{Decode, Encode};
+use frame_support::weights::Weight;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
-pub struct ContractV4 {
+pub struct ContractV3 {
     pub version: u32,
     pub state: ContractState,
     pub contract_id: u64,
@@ -29,10 +29,9 @@ impl Default for ContractState {
     }
 }
 
-
 pub mod deprecated {
     use crate::Config;
-    use frame_support::{decl_module};
+    use frame_support::decl_module;
     use sp_std::prelude::*;
 
     decl_module! {
@@ -46,7 +45,7 @@ pub fn migrate_node_contracts<T: Config>() -> frame_support::weights::Weight {
     let contract_1 = Contracts::get(1);
     if contract_1.version == 3 {
         frame_support::debug::info!(" >>> Unused migration!");
-        return 0
+        return 0;
     }
 
     frame_support::debug::info!(" >>> Starting migration");
@@ -54,38 +53,38 @@ pub fn migrate_node_contracts<T: Config>() -> frame_support::weights::Weight {
     // save number of read writes
     let mut read_writes = 0;
 
-    Contracts::translate::<ContractV4, _>(
-        |k, ctr| {
-            frame_support::debug::info!("     Migrated contract for {:?}...", k);
+    Contracts::translate::<ContractV3, _>(|k, ctr| {
+        frame_support::debug::info!("     Migrated contract for {:?}...", k);
 
-            let new_state = match ctr.state {
-                ContractState::Created => super::types::ContractState::Created,
-                ContractState::Deleted(Cause::CanceledByUser) => super::types::ContractState::Deleted(super::types::Cause::CanceledByUser),
-                ContractState::Deleted(Cause::OutOfFunds) => super::types::ContractState::Deleted(super::types::Cause::OutOfFunds),
-            };
+        let new_state = match ctr.state {
+            ContractState::Created => super::types::ContractState::Created,
+            ContractState::Deleted(Cause::CanceledByUser) => {
+                super::types::ContractState::Deleted(super::types::Cause::CanceledByUser)
+            }
+            ContractState::Deleted(Cause::OutOfFunds) => {
+                super::types::ContractState::Deleted(super::types::Cause::OutOfFunds)
+            }
+        };
 
-            let new_contract = super::types::Contract {
-                version: 3,
-                state: new_state,
-                contract_id: ctr.contract_id,
-                twin_id: ctr.twin_id,
-                contract_type: ctr.contract_type
-            };
+        let new_contract = super::types::Contract {
+            version: 3,
+            state: new_state,
+            contract_id: ctr.contract_id,
+            twin_id: ctr.twin_id,
+            contract_type: ctr.contract_type,
+        };
 
-            read_writes+=1;
-            Some(new_contract)
+        frame_support::debug::info!(
+            " >>> Cleaning up contract billing information of deleted contract: {:?}",
+            ctr.contract_id
+        );
+        ContractBillingInformationByID::remove(ctr.contract_id);
+        ContractLastBilledAt::remove(ctr.contract_id);
+
+        read_writes += 3;
+        Some(new_contract)
     });
-
-    frame_support::debug::info!(" >>> Starting clean up of contract billing infos");
-    for (ctr_id, contract) in Contracts::iter() {
-        if matches!(contract.state, types::ContractState::Deleted(_)) {
-            frame_support::debug::info!(" >>> Cleaning up contract billing information of deleted contract: {:?}", ctr_id);
-            ContractBillingInformationByID::remove(contract.contract_id);
-            ContractLastBilledAt::remove(contract.contract_id);
-            read_writes+=5;
-        }
-    }
 
     // Return the weight consumed by the migration.
     T::DbWeight::get().reads_writes(read_writes as Weight + 1, read_writes as Weight + 1)
-} 
+}
