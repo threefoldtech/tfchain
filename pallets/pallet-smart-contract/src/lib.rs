@@ -611,7 +611,7 @@ impl<T: Config> Module<T> {
 
         let total_cost_tft = (total_cost_musd / tft_price_musd) * U64F64::from_num(1e7);
         let total_cost_tft_64: u64 = U64F64::to_num(total_cost_tft);
-        return Ok(total_cost_tft_64);
+        Ok(total_cost_tft_64)
     }
 
     // Following: https://library.threefold.me/info/threefold#/tfgrid/farming/threefold__proof_of_utilization
