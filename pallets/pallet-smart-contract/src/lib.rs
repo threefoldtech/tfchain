@@ -33,7 +33,7 @@ pub trait Config: system::Config + pallet_tfgrid::Config + pallet_timestamp::Con
     type BillingFrequency: Get<u64>;
 }
 
-pub const CONTRACT_VERSION: u32 = 1;
+pub const CONTRACT_VERSION: u32 = 3;
 
 pub type BalanceOf<T> =
     <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
@@ -97,9 +97,6 @@ decl_storage! {
 
         // ID maps
         ContractID: u64;
-
-        /// The current version of the pallet.
-        PalletVersion: types::PalletStorageVersion = types::PalletStorageVersion::V1;
     }
 }
 

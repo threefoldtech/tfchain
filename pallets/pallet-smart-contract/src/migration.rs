@@ -43,10 +43,8 @@ pub mod deprecated {
 pub fn migrate_node_contracts<T: Config>() -> frame_support::weights::Weight {
     frame_support::debug::RuntimeLogger::init();
 
-    let version = PalletVersion::get();
-    frame_support::debug::info!(" >>> Version: {:?}", version);
-
-    if version != types::PalletStorageVersion::V3 {
+    let contract_1 = Contracts::get(1);
+    if contract_1.version == 3 {
         frame_support::debug::info!(" >>> Unused migration!");
         return 0
     }
@@ -67,7 +65,7 @@ pub fn migrate_node_contracts<T: Config>() -> frame_support::weights::Weight {
             };
 
             let new_contract = super::types::Contract {
-                version: 2,
+                version: 3,
                 state: new_state,
                 contract_id: ctr.contract_id,
                 twin_id: ctr.twin_id,
@@ -87,9 +85,6 @@ pub fn migrate_node_contracts<T: Config>() -> frame_support::weights::Weight {
             read_writes+=5;
         }
     }
-
-    // Update pallet version to V4
-    PalletVersion::put(types::PalletStorageVersion::V4);
 
     // Return the weight consumed by the migration.
     T::DbWeight::get().reads_writes(read_writes as Weight + 1, read_writes as Weight + 1)
