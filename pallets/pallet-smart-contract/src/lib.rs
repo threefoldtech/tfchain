@@ -138,15 +138,6 @@ decl_module! {
             Self::_create_name_contract(account_id, name)?;
         }
 
-        #[weight = 10]
-        fn remove_contract_sudo(origin, contract_id: u64) {
-            ensure_root(origin)?;
-            ensure!(Contracts::contains_key(contract_id), Error::<T>::ContractNotExists);
-            let contract = Contracts::get(contract_id);
-            ensure!(contract.is_state_delete(), Error::<T>::ContractNotExists);
-            Self::remove_contract(contract_id);
-        }
-
         fn on_finalize(block: T::BlockNumber) {
             match Self::_bill_contracts_at_block(block) {
                 Ok(_) => {
