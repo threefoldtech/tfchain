@@ -388,9 +388,10 @@ impl<T: Config> Module<T> {
         report: &types::Consumption,
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
     ) -> DispatchResult {
-        if !ContractBillingInformationByID::contains_key(report.contract_id) {
-            return Ok(());
-        }
+        ensure!(
+            ContractBillingInformationByID::contains_key(report.contract_id),
+            Error::<T>::ContractNotExists
+        );
 
         let mut contract_billing_info = ContractBillingInformationByID::get(report.contract_id);
         if report.timestamp < contract_billing_info.last_updated {
