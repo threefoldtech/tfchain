@@ -361,21 +361,21 @@ impl<T: Config> Module<T> {
             if !Contracts::contains_key(report.contract_id) {
                 continue;
             }
+            if !ContractBillingInformationByID::contains_key(report.contract_id) {
+                continue;
+            }
+
+            // we know contract exists, fetch it
+            // if the node is trying to send garbage data we can throw an error here
             let contract = Contracts::get(report.contract_id);
             let node_contract = Self::get_node_contract(&contract)?;
             ensure!(
                 node_contract.node_id == node_id,
                 Error::<T>::NodeNotAuthorizedToComputeReport
             );
-            ensure!(
-                ContractBillingInformationByID::contains_key(report.contract_id),
-                Error::<T>::ContractNotExists
-            );
-        }
 
-        for report in reports {
-            Self::_calculate_report_cost(&report, &pricing_policy)?;
-            Self::deposit_event(RawEvent::ConsumptionReportReceived(report));
+            Self::_calculate_report_cost(&report, &pricing_policy);
+            Self::deposit_event(RawEvent::ConsumptionReportReceived(report.clone()));
         }
 
         Ok(Pays::No.into())
@@ -387,15 +387,10 @@ impl<T: Config> Module<T> {
     pub fn _calculate_report_cost(
         report: &types::Consumption,
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
-    ) -> DispatchResult {
-        ensure!(
-            ContractBillingInformationByID::contains_key(report.contract_id),
-            Error::<T>::ContractNotExists
-        );
-
+    ) {
         let mut contract_billing_info = ContractBillingInformationByID::get(report.contract_id);
         if report.timestamp < contract_billing_info.last_updated {
-            return Ok(());
+            return
         }
 
         let seconds_elapsed = report.timestamp - contract_billing_info.last_updated;
@@ -446,8 +441,6 @@ impl<T: Config> Module<T> {
         contract_billing_info.last_updated = report.timestamp;
 
         ContractBillingInformationByID::insert(report.contract_id, &contract_billing_info);
-
-        Ok(())
     }
 
     pub fn _bill_contracts_at_block(block: T::BlockNumber) -> DispatchResult {

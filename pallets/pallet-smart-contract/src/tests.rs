@@ -862,6 +862,79 @@ fn push_report(block_number: u64, cru: u64, hru: u64, mru: u64, sru: u64, nru: u
     ));
 }
 
+#[test]
+fn test_push_report() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(bob()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            0
+        ));
+
+        let contract_id = 1;
+
+        let gigabyte = 1000 * 1000 * 1000;
+        let mut consumption_reports = Vec::new();
+        consumption_reports.push(super::types::Consumption {
+            contract_id,
+            cru: 2,
+            hru: 0,
+            mru: 2 * gigabyte,
+            sru: 60 * gigabyte,
+            nru: 3 * gigabyte,
+            timestamp: 1628082000,
+        });
+        consumption_reports.push(super::types::Consumption {
+            contract_id: 2,
+            cru: 2,
+            hru: 0,
+            mru: 2 * gigabyte,
+            sru: 60 * gigabyte,
+            nru: 3 * gigabyte,
+            timestamp: 1628082000,
+        });
+        consumption_reports.push(super::types::Consumption {
+            contract_id: 21221,
+            cru: 2,
+            hru: 0,
+            mru: 2 * gigabyte,
+            sru: 60 * gigabyte,
+            nru: 3 * gigabyte,
+            timestamp: 1628082000,
+        });
+
+        assert_ok!(SmartContractModule::add_reports(
+            Origin::signed(alice()),
+            consumption_reports.clone()
+        ));
+
+        let our_events = System::events()
+        .into_iter()
+        .map(|r| r.event)
+        .filter_map(|e| {
+            if let Event::pallet_smart_contract(inner) = e {
+                Some(inner)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+
+        let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> = Vec::new();
+        expected_events.push(RawEvent::ConsumptionReportReceived(consumption_reports[0].clone()));
+    
+        assert_eq!(our_events.len(), 2);
+        assert_eq!(our_events[1], expected_events[0]);
+    })
+}
+
 fn push_report_for_contract(contract_id: u64, block_number: u64) {
     let gigabyte = 1000 * 1000 * 1000;
     let mut consumption_reports = Vec::new();
