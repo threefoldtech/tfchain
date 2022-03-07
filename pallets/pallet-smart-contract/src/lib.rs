@@ -24,8 +24,6 @@ mod tests;
 
 pub mod types;
 
-mod migration;
-
 pub trait Config: system::Config + pallet_tfgrid::Config + pallet_timestamp::Config {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
     type Currency: Currency<Self::AccountId>;
@@ -96,17 +94,13 @@ decl_storage! {
         pub ContractIDByNameRegistration get(fn contract_id_by_name_registration): map hasher(blake2_128_concat) Vec<u8> => u64;
 
         // ID maps
-        ContractID: u64;
+        pub ContractID: u64;
     }
 }
 
 decl_module! {
     pub struct Module<T: Config> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
-
-        fn on_runtime_upgrade() -> frame_support::weights::Weight {
-            migration::migrate_node_contracts::<T>()
-        }
 
         #[weight = 10]
         fn create_node_contract(origin, node_id: u32, data: Vec<u8>, deployment_hash: Vec<u8>, public_ips: u32){
@@ -478,16 +472,13 @@ impl<T: Config> Module<T> {
                 }
             }
 
-            // If the contract is in canceled by user state, set the contract in kill state (end state)
+            // If the contract is in canceled by user state, remove contract from storage (end state)
             if matches!(contract.state, types::ContractState::Deleted(types::Cause::CanceledByUser)) {
-                Self::kill_contract(&mut contract);
+                Self::remove_contract(contract.contract_id);
                 continue
             }
 
-            if !matches!(contract.state, types::ContractState::Killed) {
-                // prepare the contract to be billed at the next billing cycle
-                Self::_reinsert_contract_to_bill(contract.contract_id);
-            }
+            Self::_reinsert_contract_to_bill(contract.contract_id);
         }
         Ok(())
     }
@@ -596,11 +587,10 @@ impl<T: Config> Module<T> {
         Ok(())
     }
 
-    pub fn kill_contract(contract: &mut types::Contract) {
-        contract.state = types::ContractState::Killed;
-        ContractBillingInformationByID::remove(contract.contract_id);
-        ContractLastBilledAt::remove(contract.contract_id);
-        Contracts::insert(contract.contract_id, contract.clone());
+    pub fn remove_contract(contract_id: u64) {
+        ContractBillingInformationByID::remove(contract_id);
+        ContractLastBilledAt::remove(contract_id);
+        Contracts::remove(contract_id);
     }
 
     pub fn calculate_cost_in_tft_from_musd(total_cost_musd: u64) -> Result<u64, DispatchError> {

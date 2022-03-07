@@ -68,8 +68,7 @@ pub struct ContractBillingInformation {
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
 pub enum ContractState {
     Created,
-    Deleted(Cause),
-    Killed
+    Deleted(Cause)
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
