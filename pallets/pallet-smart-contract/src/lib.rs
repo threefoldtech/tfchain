@@ -388,10 +388,10 @@ impl<T: Config> Module<T> {
         report: &types::Consumption,
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
     ) -> DispatchResult {
-        ensure!(
-            ContractBillingInformationByID::contains_key(report.contract_id),
-            Error::<T>::ContractNotExists
-        );
+        if !ContractBillingInformationByID::contains_key(report.contract_id) {
+            return Ok(());
+        }
+
         let mut contract_billing_info = ContractBillingInformationByID::get(report.contract_id);
         if report.timestamp < contract_billing_info.last_updated {
             return Ok(());
@@ -473,9 +473,12 @@ impl<T: Config> Module<T> {
             }
 
             // If the contract is in canceled by user state, remove contract from storage (end state)
-            if matches!(contract.state, types::ContractState::Deleted(types::Cause::CanceledByUser)) {
+            if matches!(
+                contract.state,
+                types::ContractState::Deleted(types::Cause::CanceledByUser)
+            ) {
                 Self::remove_contract(contract.contract_id);
-                continue
+                continue;
             }
 
             Self::_reinsert_contract_to_bill(contract.contract_id);
