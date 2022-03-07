@@ -591,6 +591,14 @@ impl<T: Config> Module<T> {
     }
 
     pub fn remove_contract(contract_id: u64) {
+        // If the contract is node contract, remove from active node contracts map
+        let contract = Contracts::get(contract_id);
+        match Self::get_node_contract(&contract) {
+            Ok(node_contract) => {
+                ActiveNodeContracts::remove(node_contract.node_id);
+            }
+            Err(_) => (),
+        };
         ContractBillingInformationByID::remove(contract_id);
         ContractLastBilledAt::remove(contract_id);
         Contracts::remove(contract_id);
