@@ -111,7 +111,7 @@ decl_module! {
         fn deposit_event() = default;
 
         #[weight = 100_000_000]
-        fn create_node_contract(origin, node_id: u32, data: Vec<u8>, deployment_hash: Vec<u8>, public_ips: u32){
+        fn create_node_contract(origin, node_id: u32, data: Vec<u8>, deployment_hash: Vec<u8>, public_ips: u32, resources: pallet_tfgrid_types::Resources){
             let account_id = ensure_signed(origin)?;
             Self::_create_node_contract(account_id, node_id, data, deployment_hash, public_ips, resources)?;
         }
