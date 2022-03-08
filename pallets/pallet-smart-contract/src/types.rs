@@ -9,7 +9,8 @@ use pallet_tfgrid::types;
 pub enum PalletStorageVersion {
     V1,
     V2,
-    V3
+    V3,
+    V4
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
@@ -67,13 +68,13 @@ pub struct ContractBillingInformation {
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
 pub enum ContractState {
     Created,
-    Deleted(Cause),
+    Deleted(Cause)
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
 pub enum Cause {
     CanceledByUser,
-    OutOfFunds
+    OutOfFunds,
 }
 
 impl Default for ContractState {

@@ -37,7 +37,7 @@ pub trait Config: system::Config + pallet_tfgrid::Config + pallet_timestamp::Con
     type WeightInfo: WeightInfo;
 }
 
-pub const CONTRACT_VERSION: u32 = 1;
+pub const CONTRACT_VERSION: u32 = 3;
 
 pub type BalanceOf<T> =
     <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
@@ -100,10 +100,7 @@ decl_storage! {
         pub ContractIDByNameRegistration get(fn contract_id_by_name_registration): map hasher(blake2_128_concat) Vec<u8> => u64;
 
         // ID maps
-        ContractID: u64;
-
-        /// The current version of the pallet.
-        PalletVersion: types::PalletStorageVersion = types::PalletStorageVersion::V1;
+        pub ContractID: u64;
     }
 }
 
@@ -370,21 +367,21 @@ impl<T: Config> Module<T> {
             if !Contracts::contains_key(report.contract_id) {
                 continue;
             }
+            if !ContractBillingInformationByID::contains_key(report.contract_id) {
+                continue;
+            }
+
+            // we know contract exists, fetch it
+            // if the node is trying to send garbage data we can throw an error here
             let contract = Contracts::get(report.contract_id);
             let node_contract = Self::get_node_contract(&contract)?;
             ensure!(
                 node_contract.node_id == node_id,
                 Error::<T>::NodeNotAuthorizedToComputeReport
             );
-            ensure!(
-                ContractBillingInformationByID::contains_key(report.contract_id),
-                Error::<T>::ContractNotExists
-            );
-        }
 
-        for report in reports {
-            Self::_calculate_report_cost(&report, &pricing_policy)?;
-            Self::deposit_event(RawEvent::ConsumptionReportReceived(report));
+            Self::_calculate_report_cost(&report, &pricing_policy);
+            Self::deposit_event(RawEvent::ConsumptionReportReceived(report.clone()));
         }
 
         Ok(Pays::No.into())
@@ -396,14 +393,10 @@ impl<T: Config> Module<T> {
     pub fn _calculate_report_cost(
         report: &types::Consumption,
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
-    ) -> DispatchResult {
-        ensure!(
-            ContractBillingInformationByID::contains_key(report.contract_id),
-            Error::<T>::ContractNotExists
-        );
+    ) {
         let mut contract_billing_info = ContractBillingInformationByID::get(report.contract_id);
         if report.timestamp < contract_billing_info.last_updated {
-            return Ok(());
+            return
         }
 
         let seconds_elapsed = report.timestamp - contract_billing_info.last_updated;
@@ -454,8 +447,6 @@ impl<T: Config> Module<T> {
         contract_billing_info.last_updated = report.timestamp;
 
         ContractBillingInformationByID::insert(report.contract_id, &contract_billing_info);
-
-        Ok(())
     }
 
     pub fn _bill_contracts_at_block(block: T::BlockNumber) -> DispatchResult {
@@ -463,22 +454,8 @@ impl<T: Config> Module<T> {
         let contracts = ContractsToBillAt::get(current_block_u64);
         for contract_id in contracts {
             let mut contract = Contracts::get(contract_id);
-            let contract_billing_info = ContractBillingInformationByID::get(contract_id);
 
-            // if the contract is in any other state then created and it has no unbilled amounts left, skip it
-            // this contract will be removed from the billing cycle when this function returns
-            if contract.state != types::ContractState::Created
-                && contract_billing_info.amount_unbilled == 0
-            {
-                continue;
-            }
-
-            // prepare the contract to be billed at the next billing cycle
-            Self::_reinsert_contract_to_bill(contract.contract_id);
-
-            let result = Self::_bill_contract(&mut contract);
-
-            match result {
+            match Self::_bill_contract(&mut contract) {
                 Ok(_) => {
                     debug::info!(
                         "billed contract with id {:?} at block {:?}",
@@ -494,6 +471,17 @@ impl<T: Config> Module<T> {
                     );
                 }
             }
+
+            // If the contract is in canceled by user state, remove contract from storage (end state)
+            if matches!(
+                contract.state,
+                types::ContractState::Deleted(types::Cause::CanceledByUser)
+            ) {
+                Self::remove_contract(contract.contract_id);
+                continue;
+            }
+
+            Self::_reinsert_contract_to_bill(contract.contract_id);
         }
         Ok(())
     }
@@ -501,7 +489,6 @@ impl<T: Config> Module<T> {
     fn _bill_contract(contract: &mut types::Contract) -> DispatchResult {
         let mut pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
         let mut certification_type = pallet_tfgrid_types::CertificationType::Diy;
-
         let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
         let mut seconds_elapsed = T::BillingFrequency::get() * 6;
 
@@ -511,7 +498,6 @@ impl<T: Config> Module<T> {
         }
 
         let mut contract_billing_info = ContractBillingInformationByID::get(contract.contract_id);
-
         let total_cost = match &contract.contract_type {
             types::ContractData::NodeContract(node_contract) => {
                 let node = pallet_tfgrid::Nodes::get(node_contract.node_id);
@@ -548,23 +534,14 @@ impl<T: Config> Module<T> {
             return Ok(());
         }
 
-        let tft_price_musd = U64F64::from_num(pallet_tft_price::AverageTftPrice::get()) * 1000;
-        if tft_price_musd <= U64F64::from_num(0) {
-            debug::info!("TFT price is zero");
-            return Err(DispatchError::from(Error::<T>::TFTPriceValueError));
-        }
-
-        let total_cost_musd = U64F64::from_num(total_cost) / 10000;
-
-        let total_cost_tft = (total_cost_musd / tft_price_musd) * U64F64::from_num(1e7);
-        let total_cost_tft_64 = U64F64::to_num(total_cost_tft);
+        let total_cost_tft_64 = Self::calculate_cost_in_tft_from_musd(total_cost)?;
 
         let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
         let balance: BalanceOf<T> = <T as Config>::Currency::free_balance(&twin.account_id);
 
         // Calculate the amount due and discount received based on the total_cost amount due
         let (amount_due, discount_received) =
-            Self::_calculate_discount(total_cost_tft_64, balance, certification_type);
+            Self::calculate_discount(total_cost_tft_64, balance, certification_type);
         // Convert amount due to u128
         let amount_due_as_u128: u128 = amount_due.saturated_into::<u128>();
         // Get current TFT price
@@ -611,6 +588,31 @@ impl<T: Config> Module<T> {
         }
 
         Ok(())
+    }
+
+    pub fn remove_contract(contract_id: u64) {
+        // If the contract is node contract, remove from active node contracts map
+        let contract = Contracts::get(contract_id);
+        match Self::get_node_contract(&contract) {
+            Ok(node_contract) => {
+                ActiveNodeContracts::remove(node_contract.node_id);
+            }
+            Err(_) => (),
+        };
+        ContractBillingInformationByID::remove(contract_id);
+        ContractLastBilledAt::remove(contract_id);
+        Contracts::remove(contract_id);
+    }
+
+    pub fn calculate_cost_in_tft_from_musd(total_cost_musd: u64) -> Result<u64, DispatchError> {
+        let tft_price_musd = U64F64::from_num(pallet_tft_price::AverageTftPrice::get()) * 1000;
+        ensure!(tft_price_musd > 0, Error::<T>::TFTPriceValueError);
+
+        let total_cost_musd = U64F64::from_num(total_cost_musd) / 10000;
+
+        let total_cost_tft = (total_cost_musd / tft_price_musd) * U64F64::from_num(1e7);
+        let total_cost_tft_64: u64 = U64F64::to_num(total_cost_tft);
+        Ok(total_cost_tft_64)
     }
 
     // Following: https://library.threefold.me/info/threefold#/tfgrid/farming/threefold__proof_of_utilization
@@ -683,7 +685,7 @@ impl<T: Config> Module<T> {
     // Calculates the discount that will be applied to the billing of the contract
     // Returns an amount due as balance object and a static string indicating which kind of discount it received
     // (default, bronze, silver, gold or none)
-    fn _calculate_discount(
+    pub fn calculate_discount(
         amount_due: u64,
         balance: BalanceOf<T>,
         certification_type: pallet_tfgrid_types::CertificationType,
@@ -936,17 +938,9 @@ impl<T: Config> Module<T> {
             cru_used_3
         };
 
-        let mut cu = if cu1 > cu2 {
-            cu2
-        } else {
-            cu1
-        };
+        let mut cu = if cu1 > cu2 { cu2 } else { cu1 };
 
-        cu = if cu > cu3 {
-            cu3
-        } else {
-            cu
-        };
+        cu = if cu > cu3 { cu3 } else { cu };
 
         cu
     }

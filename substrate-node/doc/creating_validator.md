@@ -69,9 +69,13 @@ ntpd will be started automatically after install. You can query ntpd for status 
 
 ## TFchain Binary
 
-You will need to build the tfchain binary from the threefoldtech/tfchain repository on GitHub using the source code available in the 1.0.0 tag.
+You will need to build the tfchain binary from the threefoldtech/tfchain repository on GitHub.
 
-You should generally use the 1.0.0 tag. You should either review the output from the "git tag" command or visit the Releases to see a list of all the potential 1.0 releases.
+Release to use for different networks:
+
+- Mainnet: 1.0.0 (git checkout 1.0.0)
+- Testnet: 1.0.0-b1 (git cehckout 1.0.0-b1)
+- Devnet: 1.0.0-b9 (git checkout 1.0.0-b9)
 
 Note: If you prefer to use SSH rather than HTTPS, you can replace the first line of the below with git clone git@github.com:threefoldtech/tfchain.git.
 
@@ -105,7 +109,7 @@ cargo install --force --git https://github.com/paritytech/substrate subkey
 
 ## Synchronize Chain Data
 
-Note: By default, Validator nodes are in archive mode. If you've already synced the chain not in archive mode, you must first remove the database with polkadot purge-chain and then ensure that you run Polkadot with the --pruning=archive option.
+Note: By default, Validator nodes are in archive mode. If you've already synced the chain not in archive mode, you must first remove the database with `polkadot purge-chain` and then ensure that you run Polkadot with the 1--pruning=archive1 option.
 
 You may run a validator node in non-archive mode by adding the following flags: --unsafe-pruning --pruning <NUM OF BLOCKS>, a reasonable value being 1000. Note that an archive node and non-archive node's databases are not compatible with each other, and to switch you will need to purge the chain data.
 
@@ -117,7 +121,7 @@ Bootnodes examples:
 
 You can begin syncing your node by running the following command:
 
-`./target/release/tfchain --chain chainspecs/main/chainSpec.json --pruning=archive --bootnodes /ip4/185.206.122.83/tcp/30333/p2p/12D3KooWLtsdtQHswnXkLRH7e8vZJHktsh7gfuL5PoADV51JJ6wY
+`./target/release/tfchain --chain chainspecs/main/chainSpec.json --pruning=archive --bootnodes /ip4/185.206.122.83/tcp/30333/p2p/12D3KooWLtsdtQHswnXkLRH7e8vZJHktsh7gfuL5PoADV51JJ6wY`
 
 if you do not want to start in validator mode right away.
 
@@ -155,17 +159,21 @@ If you are interested in determining how much longer you have to go, your server
 
 ## Create a Validator object
 
-- dev: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.grid.tf#/explorer
-- test: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.test.grid.tf#/explorer
-- main: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.grid.tf#/explorer
+- dev: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.grid.tf#/accounts
+- test: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.test.grid.tf#/accounts
+- main: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.grid.tf#/accounts
 
 Open polkadot js link in the browser based on the network you want to validate on.
 
-Browse to accounts and click `Add Account`, generate an account. Take note of the mnemonic.
+- Browse to `accounts` and click `Add Account`, create an account and name it `VALIDATOR_ACCOUNT`. Take note of the mnemonic.
+This account will be your account that manages the Validator and manages your council membership (voting). Make sure to send some TFT to this account.
+- (Optional) Create another account and name it `ANYNAME_STASH`. This account will be your stash account.
+- Create one more account and call it `VALIDATOR_NODE_ACCOUNT`, this account will be used to participate in consensus.
 
-This account will be your account that manages the Validator and manages your council membership (voting).
-Create another account and name it `ANYNAME_STASH`. This account will be your stash account.
-Now you should have 2 accounts.
+You now should have 3 accounts.
+
+
+> Bonding an account is optional, you can skip this step and continue to the next step.
 
 Now go to `Developer` -> `Extrinsicis` and Select your `Stash` account. Now from the left dropdown (modules) search `validator`
 
@@ -175,21 +183,71 @@ Select `bond(validator)` and select the target account to be your account that m
 
 Now click `Submit Transaction`.
 
-To continue click on `bond(v..)` to select another method, in the list search for: `createValidator(...)`.
-
 ![create](./create_val.png)
 
-This call needs to be signed with your account that manages the Validator and manages your council membership (voting). (You previously created).
+Now go to `Developer` -> `Extrinsicis` and Select your `VALIDATOR_ACCOUNT` account. Now from the left dropdown (modules) search `validator` and select the method: `createValidator(...)`
+
+This call needs to be signed with your account (`VALIDATOR_ACCOUNT`) that manages the Validator and manages your council membership (voting). (You previously created).
 
 Information needed:
 
-- validator_node_account: Account ID generated from Step 1 (top of this document)
-- stash_account: Stash account (previously created)
+- validator_node_account: Account ID generated from previous step (`VALIDATOR_NODE_ACCOUNT`)
+- stash_account: Stash account, can be your `VALIDATOR_ACCOUNT`
 - description: Reason why I want to become a validator
 - tfconnectid: Your Threefold connect name
 - info: link to webpage or linked in profile
 
 If all information is filled in correctly. Click on `Submit transaction` and sign. If all goes well, the Council will approve your request.
+
+### Insert AURA/GRAN Keys
+
+Mnemonic: Words from the created account (`VALIDATOR_NODE_ACCOUNT`) created in a the previous steps.
+
+Transfer some balance to this account (you can see the address in the polkadot UI). (0.1 TFT should be enough). You can transfer the balance to this account from the polkadot UI.
+
+```
+./target/release/tfchain key insert --key-type aura --suri "<VALIDATOR_NODE_ACCOUNT_WORDS>" --chain chainspecs/main/chainSpecRaw.json
+./target/release/tfchain key insert --key-type gran --suri "<VALIDATOR_NODE_ACCOUNT_WORDS>" --chain chainspecs/main/chainSpecRaw.json
+```
+
+### Generate session key
+
+Restart tfchain with:
+
+```
+./target/release/tfchain ...otherArgs --ws-external --rpc-methods Unsafe --rpc-external
+```
+
+Connect to the new node deployed with polkadot js apps. You will need to install a local version of this application since you will have to connect over a not secured websocket.
+
+Source: https://github.com/polkadot-js/apps
+
+```
+git clone git@github.com:polkadot-js/apps.git
+cd apps
+yarn
+yarn start
+```
+
+Browse to http://localhost:3000 and connect to the new node over it's public ip. Make sure to specify the port, like: ws://YOUR_MACHINE_PUBLIC_IP:9944
+
+First insert the types: Go to `Settings` -> `Developer` -> Copy paste output of following [file](https://raw.githubusercontent.com/threefoldtech/tfchain_client_js/master/types.json)
+
+Go to `Developer` -> `RPC calls` -> `author` -> `rotateKeys`, excecute it and take note of the output.
+
+Go to `Extrinsics` -> `session` -> `setKeys` -> (make sure to use the created node account (`VALIDATOR_NODE_ACCOUNT`), created above) You will need to import this account into this local polkadot js apps UI. Make sure it has atleast 0.1 TFT.
+
+input:
+```
+keys: the key from rotate keys ouput
+proofs: 0
+```
+
+Now we can start the node in Validator mode:
+
+Restart tfchain and remove flags: `--ws-external --rpc-methods Unsafe --rpc-external` and replace that with `--validator`
+
+Your node is now running in validator mode. Next up you need to manually activate the validator.
 
 ## Activate validator
 
@@ -201,55 +259,44 @@ Now go to `Developer` -> `Extrinsicis` and Select your account that manages the 
 
 Select `ActivateValidatorNode` and click Submit Transaction. 
 
-## Almost there
 
-Once your node is fully synced, stop the process by pressing Ctrl-C. At your terminal prompt, we will now first insert keys.
+## Managing TFChain with systemd
 
-### Generate session key
-
-Connect to the new node deployed with polkadot js apps. You will need to install a local version of this application since you will have to connect over a not secured websocket.
-
-Source: https://github.com/polkadot-js/apps
+Example systemd file:
 
 ```
-git clone git@github.com:polkadot-js/apps.git
-yarn
-yarn start
+[Unit]
+Description=TFchain service
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=user
+ExecStart=/home/user/tfchain/substrate-node/target/release/tfchain --chain /home/user/tfchain/substrate-node/chainspecs/dev/chainSpec.json --pruning=archive --bootnodes /ip4/185.206.122.7/tcp/30333/p2p/12D3KooWLcMLBg9itjQL1EXsAqkJFPhqESHqJKY7CBKmhhhL8fdp --validator
+
+[Install]
+WantedBy=multi-user.target
 ```
 
-Browse to http://localhost:3000 and connect to the new node over it's public ip. Make sure to specify the port, like: ws://YOUR_MACHINE_PUBLIC_IP:9944
+Replace `user` by your username.
 
-Go to `Developer` -> `RPC calls` -> `author` -> `rotateKeys`, excecute it and take note of the output.
+`sudo vim /etc/systemd/system/tfchain.service` -> paste content.
 
-Go to `accounts` -> `add account` -> use the mnemonic from 'subkey generate' -> give descriptive name -> save
+### Starting service
 
-NOTE: !! make sure to use the generated node account, created above, using 'subkey generate' !!
+`sudo systemctl start tfchain` 
 
-Go to `Extrinsics` -> `session` -> `setKeys` -> (make sure to use the generated node account, created above) -> 
+### Stopping service
 
-input:
-```
-keys: the key from rotate keys ouput
-proofs: 0
-```
+`sudo systemctl stop tfchain` 
 
-### Generate gran/aura key
+### Reload config
 
-`subkey generate --scheme sr25519`
+`sudo systemctl stop tfchain` 
 
-Take note of the SS58 address.
+Edit File
 
-Transfer some balance to the new address. (0.1 TFT should be enough). You can transfer the balance to this account from the polkadot UI.
-
-```
-./target/release/tfchain key insert --key-type aura --suri "<mnemonic_generated_step_above>" --chain chainspecs/main/chainSpecRaw.json
-./target/release/tfchain key insert --key-type gran --suri "<mnemonic_generated_step_above>" --chain chainspecs/main/chainSpecRaw.json
-```
-
-Now we can start the node in Validator mode:
-
-```
-./target/release/tfchain --chain chainspecs/main/chainSpec.json --validator --name "name on telemetry" --bootnodes /ip4/185.206.122.83/tcp/30333/p2p/12D3KooWLtsdtQHswnXkLRH7e8vZJHktsh7gfuL5PoADV51JJ6wY
-```
-
-Your node is now running in validator mode and should be producing blocks
+`sudo systemctl start tfchain`
