@@ -305,8 +305,8 @@ impl pallet_sudo::Config for Runtime {
 
 impl pallet_tfgrid::Config for Runtime {
 	type Event = Event;
-	type Currency = Balances;
 	type RestrictedOrigin = EnsureRootOrCouncilApproval;
+	type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -324,6 +324,7 @@ impl pallet_smart_contract::Config for Runtime {
 	type Currency = Balances;
 	type StakingPoolAccount = StakingPoolAccount;
 	type BillingFrequency = BillingFrequency;
+	type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_tft_bridge::Config for Runtime {
@@ -776,6 +777,8 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
 			add_benchmark!(params, batches, pallet_balances, Balances);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
+			add_benchmark!(params, batches, pallet_tfgrid, TfgridModule);
+			add_benchmark!(params, batches, pallet_smart_contract, SmartContractModule);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

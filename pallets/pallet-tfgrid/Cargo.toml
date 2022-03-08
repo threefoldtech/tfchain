@@ -20,6 +20,7 @@ version = '2.0.0'
 
 [dependencies]
 # Substrate packages
+frame-benchmarking = { version = '3.0.0', default-features = false, optional = true }
 serde = { version = '1.0.100', default-features = false, features = ['derive'] }
 pallet-balances = { version = '3.0', default-features = false }
 frame-support = { version = '3.0.0', default-features = false }
@@ -51,4 +52,10 @@ std = [
     'pallet-timestamp/std',
 	'sp-io/std',
 	'lite-json/std',
+	'frame-benchmarking/std'
+]
+runtime-benchmarks = [
+	"frame-benchmarking",
+	"frame-support/runtime-benchmarks",
+	"frame-system/runtime-benchmarks",
 ]
