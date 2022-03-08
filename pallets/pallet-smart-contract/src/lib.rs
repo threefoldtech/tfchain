@@ -5,7 +5,7 @@ use frame_support::{
     dispatch::DispatchResultWithPostInfo,
     ensure,
     traits::{Currency, ExistenceRequirement::KeepAlive, Get, Vec},
-    weights::{Pays},
+    weights::Pays,
 };
 use frame_system::{self as system, ensure_signed};
 use sp_runtime::{traits::SaturatedConversion, DispatchError, DispatchResult, Perbill};
@@ -24,8 +24,8 @@ mod tests;
 
 mod benchmarking;
 
-pub mod weights;
 pub mod types;
+pub mod weights;
 
 pub use weights::WeightInfo;
 
@@ -82,7 +82,8 @@ decl_error! {
         NameNotValid,
         InvalidContractType,
         TFTPriceValueError,
-        NotEnoughResourcesOnNode
+        NotEnoughResourcesOnNode,
+        NodeNotAuthorizedToReportResources
     }
 }
 
@@ -91,7 +92,7 @@ decl_storage! {
         pub Contracts get(fn contracts): map hasher(blake2_128_concat) u64 => types::Contract;
         pub ContractBillingInformationByID get(fn contract_billing_information_by_id): map hasher(blake2_128_concat) u64 => types::ContractBillingInformation;
         pub ContractLastBilledAt get(fn contract_billed_at): map hasher(blake2_128_concat) u64 => u64;
-        pub NodeContractResources get(fn reserved_contract_resources): map hasher(blake2_128_concat) u64 => pallet_tfgrid_types::Resources;
+        pub NodeContractResources get(fn reserved_contract_resources): map hasher(blake2_128_concat) u64 => types::ContractResources;
 
         // ContractIDByNodeIDAndHash is a mapping for a contract ID by supplying a node_id and a deployment_hash
         // this combination makes a deployment for a user / node unique
@@ -138,6 +139,12 @@ decl_module! {
         fn create_name_contract(origin, name: Vec<u8>) {
             let account_id = ensure_signed(origin)?;
             Self::_create_name_contract(account_id, name)?;
+        }
+
+        #[weight = 100_000_000]
+        fn report_contract_resources(origin, contract_id: u64, used_resources: pallet_tfgrid_types::Resources) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_report_contract_resources(account_id, contract_id, used_resources)
         }
 
         fn on_finalize(block: T::BlockNumber) {
@@ -200,7 +207,7 @@ impl<T: Config> Module<T> {
             public_ips,
             public_ips_list: Vec::new(),
         };
-        
+
         // Create contract
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
         let contract = Self::_create_contract(
@@ -218,7 +225,11 @@ impl<T: Config> Module<T> {
         ActiveNodeContracts::insert(&node_contract.node_id, &node_contracts);
 
         // Insert resources for node contract
-        NodeContractResources::insert(id, resources);
+        let node_contract_resources = types::ContractResources {
+            reserved: resources,
+            used: pallet_tfgrid_types::Resources::default(),
+        };
+        NodeContractResources::insert(id, node_contract_resources);
 
         // Update Contract ID
         ContractID::put(id);
@@ -235,8 +246,9 @@ impl<T: Config> Module<T> {
         // Collect al reserved resources on a node
         let active_node_contracts = ActiveNodeContracts::get(node_id);
         for ctr_id in active_node_contracts {
-            resources = resources.add(&NodeContractResources::get(ctr_id));
-        };
+            let node_contract_resources = NodeContractResources::get(ctr_id);
+            resources = resources.add(&node_contract_resources.reserved);
+        }
 
         // Check if the new total resources exceeds the node's limit
         let node = pallet_tfgrid::Nodes::get(node_id);
@@ -372,6 +384,51 @@ impl<T: Config> Module<T> {
         Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
 
         Ok(())
+    }
+
+    pub fn _report_contract_resources(
+        source: T::AccountId,
+        contract_id: u64,
+        resources: pallet_tfgrid_types::Resources,
+    ) -> DispatchResultWithPostInfo {
+        ensure!(
+            Contracts::contains_key(contract_id),
+            Error::<T>::ContractNotExists
+        );
+        ensure!(
+            pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
+            Error::<T>::TwinNotExists
+        );
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source);
+        ensure!(
+            pallet_tfgrid::NodeIdByTwinID::contains_key(twin_id),
+            Error::<T>::NodeNotExists
+        );
+
+        // we know contract exists, fetch it
+        // if the node is trying to send garbage data we can throw an error here
+        let node_id = pallet_tfgrid::NodeIdByTwinID::get(&twin_id);
+        let contract = Contracts::get(contract_id);
+        let node_contract = Self::get_node_contract(&contract)?;
+        ensure!(
+            node_contract.node_id == node_id,
+            Error::<T>::NodeNotAuthorizedToReportResources
+        );
+
+        let mut node_contract_resources = types::ContractResources {
+            reserved: pallet_tfgrid_types::Resources::default(),
+            used: resources,
+        };
+
+        // If this object does not exists it means that it's a contract from
+        // a previous version of tfchain, allow the node to set reserved resources
+        if !NodeContractResources::contains_key(contract_id) {
+            node_contract_resources.reserved = resources;
+        }
+
+        NodeContractResources::insert(contract_id, node_contract_resources);
+
+        Ok(Pays::No.into())
     }
 
     pub fn _compute_reports(
@@ -937,9 +994,12 @@ impl<T: Config> Module<T> {
         // Get the Contract ID map and increment
         let mut id = ContractID::get();
         id = id + 1;
-        
-        let contract =
-            Self::_create_contract(id, twin_id, types::ContractData::NameContract(name_contract))?;
+
+        let contract = Self::_create_contract(
+            id,
+            twin_id,
+            types::ContractData::NameContract(name_contract),
+        )?;
 
         ContractIDByNameRegistration::insert(name, &contract.contract_id);
 

@@ -132,6 +132,6 @@ pub struct ContractBill {
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
 pub struct ContractResources {
-    pub limit: types::Resources,
+    pub reserved: types::Resources,
     pub used: types::Resources
 }
