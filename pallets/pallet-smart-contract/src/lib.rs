@@ -91,7 +91,6 @@ decl_storage! {
     trait Store for Module<T: Config> as SmartContractModule {
         pub Contracts get(fn contracts): map hasher(blake2_128_concat) u64 => types::Contract;
         pub ContractBillingInformationByID get(fn contract_billing_information_by_id): map hasher(blake2_128_concat) u64 => types::ContractBillingInformation;
-        pub ContractLastBilledAt get(fn contract_billed_at): map hasher(blake2_128_concat) u64 => u64;
         pub NodeContractResources get(fn reserved_contract_resources): map hasher(blake2_128_concat) u64 => types::ContractResources;
 
         // ContractIDByNodeIDAndHash is a mapping for a contract ID by supplying a node_id and a deployment_hash
@@ -298,7 +297,6 @@ impl<T: Config> Module<T> {
 
         Contracts::insert(id, &contract);
         ContractBillingInformationByID::insert(id, contract_billing_information);
-        ContractLastBilledAt::insert(id, now);
 
         Ok(contract)
     }
@@ -559,13 +557,7 @@ impl<T: Config> Module<T> {
     fn _bill_contract(contract: &mut types::Contract) -> DispatchResult {
         let mut pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
         let mut certification_type = pallet_tfgrid_types::CertificationType::Diy;
-        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
-        let mut seconds_elapsed = T::BillingFrequency::get() * 6;
-
-        if ContractLastBilledAt::contains_key(contract.contract_id) {
-            let contract_last_billed_at = ContractLastBilledAt::get(contract.contract_id);
-            seconds_elapsed = now - contract_last_billed_at;
-        }
+        let seconds_elapsed = T::BillingFrequency::get() * 6;
 
         let mut contract_billing_info = ContractBillingInformationByID::get(contract.contract_id);
         let total_cost = match &contract.contract_type {
@@ -637,7 +629,6 @@ impl<T: Config> Module<T> {
         // set the amount unbilled back to 0
         contract_billing_info.amount_unbilled = 0;
         ContractBillingInformationByID::insert(contract.contract_id, &contract_billing_info);
-        ContractLastBilledAt::insert(contract.contract_id, now);
 
         // If total balance exceeds the twin's balance, we can decomission contract
         if decomission {
@@ -658,17 +649,16 @@ impl<T: Config> Module<T> {
         pricing_policy: pallet_tfgrid_types::PricingPolicy<T::AccountId>,
     ) -> u64 {
         let node_contract_resources = NodeContractResources::get(contract.contract_id);
-
         let node_contract = if let Ok(node_contract) = Self::get_node_contract(&contract) {
             node_contract
         } else {
             return 0;
         };
 
-        let hru = U64F64::from_num(node_contract_resources.used.hru) / pricing_policy.su.factor();
-        let sru = U64F64::from_num(node_contract_resources.used.sru) / pricing_policy.su.factor();
-        let mru = U64F64::from_num(node_contract_resources.used.mru) / pricing_policy.cu.factor();
-        let cru = U64F64::from_num(node_contract_resources.used.cru);
+        let hru = U64F64::from_num(node_contract_resources.reserved.hru) / pricing_policy.su.factor();
+        let sru = U64F64::from_num(node_contract_resources.reserved.sru) / pricing_policy.su.factor();
+        let mru = U64F64::from_num(node_contract_resources.reserved.mru) / pricing_policy.cu.factor();
+        let cru = U64F64::from_num(node_contract_resources.reserved.cru);
 
         let su_used = hru / 1200 + sru / 200;
         // the pricing policy su cost value is expressed in 1 hours or 3600 seconds.
@@ -693,7 +683,6 @@ impl<T: Config> Module<T> {
         // save total
         let total = su_cost + cu_cost + total_ip_cost;
         let total = total.ceil().to_num::<u64>();
-        debug::info!("total cost: {:?}", total);
 
         return total;
     }
@@ -708,7 +697,6 @@ impl<T: Config> Module<T> {
             Err(_) => (),
         };
         ContractBillingInformationByID::remove(contract_id);
-        ContractLastBilledAt::remove(contract_id);
         Contracts::remove(contract_id);
     }
 
