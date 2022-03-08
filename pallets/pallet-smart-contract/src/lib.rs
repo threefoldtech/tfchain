@@ -204,6 +204,7 @@ impl<T: Config> Module<T> {
         // Create contract
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
         let contract = Self::_create_contract(
+            id,
             twin_id,
             types::ContractData::NodeContract(node_contract.clone()),
         )?;
@@ -218,6 +219,9 @@ impl<T: Config> Module<T> {
 
         // Insert resources for node contract
         NodeContractResources::insert(id, resources);
+
+        // Update Contract ID
+        ContractID::put(id);
 
         Self::deposit_event(RawEvent::ContractCreated(contract));
 
@@ -253,12 +257,10 @@ impl<T: Config> Module<T> {
     }
 
     fn _create_contract(
+        id: u64,
         twin_id: u32,
         mut contract_type: types::ContractData,
     ) -> Result<types::Contract, DispatchError> {
-        let mut id = ContractID::get();
-        id = id + 1;
-
         if let types::ContractData::NodeContract(ref mut nc) = contract_type {
             Self::_reserve_ip(id, nc)?;
         };
@@ -283,7 +285,6 @@ impl<T: Config> Module<T> {
         Self::_reinsert_contract_to_bill(contract.contract_id);
 
         Contracts::insert(id, &contract);
-        ContractID::put(id);
         ContractBillingInformationByID::insert(id, contract_billing_information);
         ContractLastBilledAt::insert(id, now);
 
@@ -932,10 +933,17 @@ impl<T: Config> Module<T> {
             }
         }
         let name_contract = types::NameContract { name: name.clone() };
+
+        // Get the Contract ID map and increment
+        let mut id = ContractID::get();
+        id = id + 1;
+        
         let contract =
-            Self::_create_contract(twin_id, types::ContractData::NameContract(name_contract))?;
+            Self::_create_contract(id, twin_id, types::ContractData::NameContract(name_contract))?;
 
         ContractIDByNameRegistration::insert(name, &contract.contract_id);
+
+        ContractID::put(id);
 
         Self::deposit_event(RawEvent::ContractCreated(contract));
 
