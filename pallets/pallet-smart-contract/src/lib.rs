@@ -5,7 +5,7 @@ use frame_support::{
     dispatch::DispatchResultWithPostInfo,
     ensure,
     traits::{Currency, ExistenceRequirement::KeepAlive, Get, Vec},
-    weights::{DispatchClass, Pays},
+    weights::{Pays},
 };
 use frame_system::{self as system, ensure_signed};
 use sp_runtime::{traits::SaturatedConversion, DispatchError, DispatchResult, Perbill};
@@ -22,13 +22,19 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+mod benchmarking;
+
+pub mod weights;
 pub mod types;
+
+pub use weights::WeightInfo;
 
 pub trait Config: system::Config + pallet_tfgrid::Config + pallet_timestamp::Config {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
     type Currency: Currency<Self::AccountId>;
     type StakingPoolAccount: Get<Self::AccountId>;
     type BillingFrequency: Get<u64>;
+    type WeightInfo: WeightInfo;
 }
 
 pub const CONTRACT_VERSION: u32 = 3;
@@ -104,31 +110,31 @@ decl_module! {
     pub struct Module<T: Config> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
 
-        #[weight = 10]
-        fn create_node_contract(origin, node_id: u32, data: Vec<u8>, deployment_hash: Vec<u8>, public_ips: u32, resources: pallet_tfgrid_types::Resources){
+        #[weight = 100_000_000]
+        fn create_node_contract(origin, node_id: u32, data: Vec<u8>, deployment_hash: Vec<u8>, public_ips: u32){
             let account_id = ensure_signed(origin)?;
             Self::_create_node_contract(account_id, node_id, data, deployment_hash, public_ips, resources)?;
         }
 
-        #[weight = 10]
+        #[weight = 100_000_000]
         fn update_node_contract(origin, contract_id: u64, data: Vec<u8>, deployment_hash: Vec<u8>){
             let account_id = ensure_signed(origin)?;
             Self::_update_node_contract(account_id, contract_id, data, deployment_hash)?;
         }
 
-        #[weight = 10]
+        #[weight = 100_000_000]
         fn cancel_contract(origin, contract_id: u64){
             let account_id = ensure_signed(origin)?;
             Self::_cancel_contract(account_id, contract_id, types::Cause::CanceledByUser)?;
         }
 
-        #[weight = (10, DispatchClass::Operational)]
+        #[weight = <T as Config>::WeightInfo::add_reports().saturating_mul(reports.len() as u64)]
         fn add_reports(origin, reports: Vec<types::Consumption>) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_compute_reports(account_id, reports)
         }
 
-        #[weight = 10]
+        #[weight = 100_000_000]
         fn create_name_contract(origin, name: Vec<u8>) {
             let account_id = ensure_signed(origin)?;
             Self::_create_name_contract(account_id, name)?;

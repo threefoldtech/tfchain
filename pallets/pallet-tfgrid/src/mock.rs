@@ -32,7 +32,7 @@ construct_runtime!(
     {
         Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
         System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        TfgridModule: tfgridModule::{Module, Call, Storage, Event<T>},
+        TfgridModule: tfgridModule::{Module, Call, Storage, Config<T>, Event<T>},
         Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
     }
 );
@@ -69,10 +69,11 @@ impl frame_system::Config for TestRuntime {
     type SS58Prefix = ();
 }
 
+use crate::weights;
 impl Config for TestRuntime {
     type Event = Event;
-    type Currency = Balances;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
+    type WeightInfo = weights::SubstrateWeight<TestRuntime>;
 }
 
 impl pallet_balances::Config for TestRuntime {
