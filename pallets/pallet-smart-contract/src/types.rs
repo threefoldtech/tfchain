@@ -10,7 +10,7 @@ pub enum PalletStorageVersion {
     V1,
     V2,
     V3,
-    V4
+    V4,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
@@ -68,7 +68,7 @@ pub struct ContractBillingInformation {
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
 pub enum ContractState {
     Created,
-    Deleted(Cause)
+    Deleted(Cause),
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
@@ -114,10 +114,7 @@ impl DiscountLevel {
 pub struct Consumption {
     pub contract_id: u64,
     pub timestamp: u64,
-    pub cru: u64,
-    pub sru: u64,
-    pub hru: u64,
-    pub mru: u64,
+    pub window: u64,
     pub nru: u64,
 }
 
@@ -129,9 +126,8 @@ pub struct ContractBill {
     pub amount_billed: u128,
 }
 
-
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
 pub struct ContractResources {
     pub reserved: types::Resources,
-    pub used: types::Resources
+    pub used: types::Resources,
 }

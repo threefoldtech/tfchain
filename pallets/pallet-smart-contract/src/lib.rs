@@ -487,7 +487,7 @@ impl<T: Config> Module<T> {
     }
 
     // Calculates the total cost of a report.
-    // Takes in a report, the contract's billing information and the linked farm's pricing policy.
+    // Takes in a report for NRU (network resource units)
     // Updates the contract's billing information in storage
     pub fn _calculate_report_cost(
         report: &types::Consumption,
@@ -498,53 +498,24 @@ impl<T: Config> Module<T> {
             return;
         }
 
-        let seconds_elapsed = report.timestamp - contract_billing_info.last_updated;
+        // seconds elapsed is the report.window
+        let seconds_elapsed = report.window;
         debug::info!("seconds elapsed: {:?}", seconds_elapsed);
 
-        let hru = U64F64::from_num(report.hru) / pricing_policy.su.factor();
-        let sru = U64F64::from_num(report.sru) / pricing_policy.su.factor();
-        let mru = U64F64::from_num(report.mru) / pricing_policy.cu.factor();
-        let cru = U64F64::from_num(report.cru);
-
-        let su_used = hru / 1200 + sru / 200;
-        // the pricing policy su cost value is expressed in 1 hours or 3600 seconds.
-        // we bill every 3600 seconds but here we need to calculate the cost per second and multiply it by the seconds elapsed since last report.
-        let su_cost = (U64F64::from_num(pricing_policy.su.value) / 3600)
-            * U64F64::from_num(seconds_elapsed)
-            * su_used;
-        debug::info!("su cost: {:?}", su_cost);
-
-        let cu = Self::calculate_cu(cru, mru);
-
-        let cu_cost = (U64F64::from_num(pricing_policy.cu.value) / 3600)
-            * U64F64::from_num(seconds_elapsed)
-            * cu;
-        debug::info!("cu cost: {:?}", cu_cost);
-
-        let mut used_nru = U64F64::from_num(report.nru) / pricing_policy.nu.factor();
-        let nu_cost = if used_nru > contract_billing_info.previous_nu_reported {
-            // calculate used nru by subtracting previous reported units minus what is reported now
-            // this is because nru is in a counter that increases only
-            used_nru -= U64F64::from_num(contract_billing_info.previous_nu_reported);
-
-            // calculate the cost for nru based on the used nru
-            used_nru * (U64F64::from_num(pricing_policy.nu.value) / 3600)
-        } else {
-            U64F64::from_num(0)
-        };
-
+        // calculate NRU used and the cost
+        let used_nru = U64F64::from_num(report.nru) / pricing_policy.nu.factor();
+        let nu_cost = used_nru
+            * (U64F64::from_num(pricing_policy.nu.value) / 3600)
+            * U64F64::from_num(seconds_elapsed);
         debug::info!("nu cost: {:?}", nu_cost);
 
         // save total
-        let total = su_cost + cu_cost + nu_cost;
-        let total = total.ceil().to_num::<u64>();
+        let total = nu_cost.ceil().to_num::<u64>();
         debug::info!("total cost: {:?}", total);
 
-        contract_billing_info.previous_nu_reported =
-            (U64F64::from_num(report.nru) / pricing_policy.nu.factor()).to_num::<u64>();
+        // update contract billing info
         contract_billing_info.amount_unbilled += total;
         contract_billing_info.last_updated = report.timestamp;
-
         ContractBillingInformationByID::insert(report.contract_id, &contract_billing_info);
     }
 
@@ -600,25 +571,16 @@ impl<T: Config> Module<T> {
         let total_cost = match &contract.contract_type {
             types::ContractData::NodeContract(node_contract) => {
                 let node = pallet_tfgrid::Nodes::get(node_contract.node_id);
-                ensure!(
-                    pallet_tfgrid::Farms::contains_key(&node.farm_id),
-                    Error::<T>::FarmNotExists
-                );
-
                 let farm = pallet_tfgrid::Farms::get(node.farm_id);
-                ensure!(
-                    pallet_tfgrid::PricingPolicies::<T>::contains_key(farm.pricing_policy_id),
-                    Error::<T>::PricingPolicyNotExists
-                );
                 certification_type = farm.certification_type;
-
                 pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(farm.pricing_policy_id);
-                // bill user for 1 hour ip usage (60 blocks * 60 seconds)
-                let total_ip_cost = U64F64::from_num(node_contract.public_ips)
-                    * (U64F64::from_num(pricing_policy.ipu.value) / 3600)
-                    * U64F64::from_num(seconds_elapsed);
 
-                total_ip_cost.to_num::<u64>() + contract_billing_info.amount_unbilled
+                let contract_cost = Self::_calculate_node_contract_cost(
+                    contract,
+                    seconds_elapsed,
+                    pricing_policy.clone(),
+                );
+                contract_cost + contract_billing_info.amount_unbilled
             }
             types::ContractData::NameContract(_) => {
                 // bill user for 1 hour name usage (60 blocks * 60 seconds)
@@ -687,6 +649,53 @@ impl<T: Config> Module<T> {
         }
 
         Ok(())
+    }
+
+    // Calculates the total cost of a contract.
+    pub fn _calculate_node_contract_cost(
+        contract: &types::Contract,
+        seconds_elapsed: u64,
+        pricing_policy: pallet_tfgrid_types::PricingPolicy<T::AccountId>,
+    ) -> u64 {
+        let node_contract_resources = NodeContractResources::get(contract.contract_id);
+
+        let node_contract = if let Ok(node_contract) = Self::get_node_contract(&contract) {
+            node_contract
+        } else {
+            return 0;
+        };
+
+        let hru = U64F64::from_num(node_contract_resources.used.hru) / pricing_policy.su.factor();
+        let sru = U64F64::from_num(node_contract_resources.used.sru) / pricing_policy.su.factor();
+        let mru = U64F64::from_num(node_contract_resources.used.mru) / pricing_policy.cu.factor();
+        let cru = U64F64::from_num(node_contract_resources.used.cru);
+
+        let su_used = hru / 1200 + sru / 200;
+        // the pricing policy su cost value is expressed in 1 hours or 3600 seconds.
+        // we bill every 3600 seconds but here we need to calculate the cost per second and multiply it by the seconds elapsed since last report.
+        let su_cost = (U64F64::from_num(pricing_policy.su.value) / 3600)
+            * U64F64::from_num(seconds_elapsed)
+            * su_used;
+        debug::info!("su cost: {:?}", su_cost);
+
+        let cu = Self::calculate_cu(cru, mru);
+
+        let cu_cost = (U64F64::from_num(pricing_policy.cu.value) / 3600)
+            * U64F64::from_num(seconds_elapsed)
+            * cu;
+        debug::info!("cu cost: {:?}", cu_cost);
+
+        // bill user for 1 hour ip usage (60 blocks * 60 seconds)
+        let total_ip_cost = U64F64::from_num(node_contract.public_ips)
+            * (U64F64::from_num(pricing_policy.ipu.value) / 3600)
+            * U64F64::from_num(seconds_elapsed);
+
+        // save total
+        let total = su_cost + cu_cost + total_ip_cost;
+        let total = total.ceil().to_num::<u64>();
+        debug::info!("total cost: {:?}", total);
+
+        return total;
     }
 
     pub fn remove_contract(contract_id: u64) {
