@@ -75,7 +75,8 @@ decl_error! {
         NameExists,
         NameNotValid,
         InvalidContractType,
-        TFTPriceValueError
+        TFTPriceValueError,
+        NotEnoughResourcesOnNode
     }
 }
 
@@ -84,6 +85,7 @@ decl_storage! {
         pub Contracts get(fn contracts): map hasher(blake2_128_concat) u64 => types::Contract;
         pub ContractBillingInformationByID get(fn contract_billing_information_by_id): map hasher(blake2_128_concat) u64 => types::ContractBillingInformation;
         pub ContractLastBilledAt get(fn contract_billed_at): map hasher(blake2_128_concat) u64 => u64;
+        pub NodeContractResources get(fn reserved_contract_resources): map hasher(blake2_128_concat) u64 => pallet_tfgrid_types::Resources;
 
         // ContractIDByNodeIDAndHash is a mapping for a contract ID by supplying a node_id and a deployment_hash
         // this combination makes a deployment for a user / node unique
@@ -103,9 +105,9 @@ decl_module! {
         fn deposit_event() = default;
 
         #[weight = 10]
-        fn create_node_contract(origin, node_id: u32, data: Vec<u8>, deployment_hash: Vec<u8>, public_ips: u32){
+        fn create_node_contract(origin, node_id: u32, data: Vec<u8>, deployment_hash: Vec<u8>, public_ips: u32, resources: pallet_tfgrid_types::Resources){
             let account_id = ensure_signed(origin)?;
-            Self::_create_node_contract(account_id, node_id, data, deployment_hash, public_ips)?;
+            Self::_create_node_contract(account_id, node_id, data, deployment_hash, public_ips, resources)?;
         }
 
         #[weight = 10]
@@ -155,6 +157,7 @@ impl<T: Config> Module<T> {
         deployment_data: Vec<u8>,
         deployment_hash: Vec<u8>,
         public_ips: u32,
+        resources: pallet_tfgrid_types::Resources,
     ) -> DispatchResult {
         ensure!(
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&account_id),
@@ -165,7 +168,7 @@ impl<T: Config> Module<T> {
             Error::<T>::NodeNotExists
         );
 
-        // if the contract with hash and node id exists and it's in any other state then
+        // If the contract with hash and node id exists and it's in any other state then
         // contractState::Deleted then we don't allow the creation of it.
         // If it exists we allow the user to "restore" this contract
         if ContractIDByNodeIDAndHash::contains_key(node_id, &deployment_hash) {
@@ -176,11 +179,14 @@ impl<T: Config> Module<T> {
             }
         }
 
+        // Check if we can deploy requested resources on the selected node
+        Self::can_deploy_resources_on_node(node_id, resources.clone())?;
+
+        // Get the Contract ID map and increment
         let mut id = ContractID::get();
         id = id + 1;
 
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
-
+        // Prepare NodeContract struct
         let node_contract = types::NodeContract {
             node_id,
             deployment_data,
@@ -188,19 +194,54 @@ impl<T: Config> Module<T> {
             public_ips,
             public_ips_list: Vec::new(),
         };
-
+        
+        // Create contract
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
         let contract = Self::_create_contract(
             twin_id,
             types::ContractData::NodeContract(node_contract.clone()),
         )?;
 
+        // Insert contract id by (node_id, hash)
         ContractIDByNodeIDAndHash::insert(node_id, deployment_hash, id);
 
+        // Insert contract into active contracts map
         let mut node_contracts = ActiveNodeContracts::get(&node_contract.node_id);
         node_contracts.push(id);
         ActiveNodeContracts::insert(&node_contract.node_id, &node_contracts);
 
+        // Insert resources for node contract
+        NodeContractResources::insert(id, resources);
+
         Self::deposit_event(RawEvent::ContractCreated(contract));
+
+        Ok(())
+    }
+
+    fn can_deploy_resources_on_node(
+        node_id: u32,
+        mut resources: pallet_tfgrid_types::Resources,
+    ) -> DispatchResult {
+        // Collect al reserved resources on a node
+        let active_node_contracts = ActiveNodeContracts::get(node_id);
+        for ctr_id in active_node_contracts {
+            resources = resources.add(&NodeContractResources::get(ctr_id));
+        };
+
+        // Check if the new total resources exceeds the node's limit
+        let node = pallet_tfgrid::Nodes::get(node_id);
+        if resources.cru > node.resources.cru {
+            return Err(DispatchError::from(Error::<T>::NotEnoughResourcesOnNode));
+        }
+        if resources.hru > node.resources.hru {
+            return Err(DispatchError::from(Error::<T>::NotEnoughResourcesOnNode));
+        }
+        if resources.sru > node.resources.sru {
+            return Err(DispatchError::from(Error::<T>::NotEnoughResourcesOnNode));
+        }
+        if resources.mru > node.resources.mru {
+            return Err(DispatchError::from(Error::<T>::NotEnoughResourcesOnNode));
+        }
 
         Ok(())
     }
@@ -390,7 +431,7 @@ impl<T: Config> Module<T> {
     ) {
         let mut contract_billing_info = ContractBillingInformationByID::get(report.contract_id);
         if report.timestamp < contract_billing_info.last_updated {
-            return
+            return;
         }
 
         let seconds_elapsed = report.timestamp - contract_billing_info.last_updated;

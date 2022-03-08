@@ -128,3 +128,10 @@ pub struct ContractBill {
     pub discount_level: DiscountLevel,
     pub amount_billed: u128,
 }
+
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+pub struct ContractResources {
+    pub limit: types::Resources,
+    pub used: types::Resources
+}
