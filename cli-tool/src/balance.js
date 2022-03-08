@@ -4,14 +4,11 @@ async function getBalance (args) {
   const { a: url, m: mnemonic, address } = args
   const client = await getClient(url, mnemonic)
 
-  let balance
-  if (address) {
-    balance = await client.getBalanceOf(address)
-  } else {
-    balance = await client.getBalance()
-  }
+  const target = address || client.key.address
 
-  console.log(balance)
+  const balance = await client.getBalanceOf(target)
+
+  console.log(`\nAddress ${target} has ${balance.free / 1e7} TFT`)
   process.exit(0)
 }
 
