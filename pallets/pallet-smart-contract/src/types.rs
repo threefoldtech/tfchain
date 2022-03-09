@@ -46,10 +46,16 @@ pub struct NameContract {
     pub name: Vec<u8>,
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+pub struct RentContract {
+    pub node_id: u32
+}
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
 pub enum ContractData {
     NodeContract(NodeContract),
     NameContract(NameContract),
+    RentContract(RentContract)
 }
 
 impl Default for ContractData {

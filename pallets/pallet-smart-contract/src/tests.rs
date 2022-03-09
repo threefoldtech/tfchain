@@ -541,6 +541,102 @@ fn test_multiple_contracts_billing_loop() {
 }
 
 #[test]
+fn test_create_rent_contract() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(bob()),
+            node_id
+        ));
+
+        let contract = SmartContractModule::contracts(1);
+        let rent_contract = types::RentContract{node_id};
+        assert_eq!(contract.contract_type, types::ContractData::RentContract(rent_contract));
+    });
+}
+
+#[test]
+fn test_create_rent_contract_cancel_works() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(bob()),
+            node_id
+        ));
+
+        let contract = SmartContractModule::contracts(1);
+        let rent_contract = types::RentContract{node_id};
+        assert_eq!(contract.contract_type, types::ContractData::RentContract(rent_contract));
+
+        assert_ok!(SmartContractModule::cancel_contract(
+            Origin::signed(bob()),
+            1
+        ));
+
+        let contract = SmartContractModule::contracts(1);
+        assert_eq!(contract.state, types::ContractState::Deleted(types::Cause::CanceledByUser));
+    });
+}
+
+#[test]
+fn test_create_node_contract_other_owner_when_rent_contract_active_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(bob()),
+            node_id
+        ));
+
+        let contract = SmartContractModule::contracts(1);
+        let rent_contract = types::RentContract{node_id};
+        assert_eq!(contract.contract_type, types::ContractData::RentContract(rent_contract));
+
+        assert_noop!(
+            SmartContractModule::create_node_contract(
+                Origin::signed(alice()),
+                1,
+                "some_data".as_bytes().to_vec(),
+                "hash".as_bytes().to_vec(),
+                1
+            ),
+            Error::<TestRuntime>::NodeHasRentContract
+        );
+    });
+}
+
+#[test]
+fn test_create_node_contract_same_owner_when_rent_contract_active_works() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(bob()),
+            node_id
+        ));
+
+        let contract = SmartContractModule::contracts(1);
+        let rent_contract = types::RentContract{node_id};
+        assert_eq!(contract.contract_type, types::ContractData::RentContract(rent_contract));
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(bob()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            1
+        ));
+    });
+}
+
+#[test]
 fn test_node_contract_billing() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
