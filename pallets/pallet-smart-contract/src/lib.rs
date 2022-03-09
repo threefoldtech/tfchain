@@ -111,9 +111,9 @@ decl_module! {
         fn deposit_event() = default;
 
         #[weight = 100_000_000]
-        fn create_node_contract(origin, node_id: u32, data: Vec<u8>, deployment_hash: Vec<u8>, public_ips: u32, resources: pallet_tfgrid_types::Resources){
+        fn create_node_contract(origin, node_id: u32, data: Vec<u8>, deployment_hash: Vec<u8>, public_ips: u32){
             let account_id = ensure_signed(origin)?;
-            Self::_create_node_contract(account_id, node_id, data, deployment_hash, public_ips, resources)?;
+            Self::_create_node_contract(account_id, node_id, data, deployment_hash, public_ips)?;
         }
 
         #[weight = 100_000_000]
@@ -169,7 +169,6 @@ impl<T: Config> Module<T> {
         deployment_data: Vec<u8>,
         deployment_hash: Vec<u8>,
         public_ips: u32,
-        resources: pallet_tfgrid_types::Resources,
     ) -> DispatchResult {
         ensure!(
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&account_id),
@@ -192,7 +191,7 @@ impl<T: Config> Module<T> {
         }
 
         // Check if we can deploy requested resources on the selected node
-        Self::can_deploy_resources_on_node(node_id, resources.clone())?;
+        // Self::can_deploy_resources_on_node(node_id, resources.clone())?;
 
         // Get the Contract ID map and increment
         let mut id = ContractID::get();
@@ -224,45 +223,13 @@ impl<T: Config> Module<T> {
         ActiveNodeContracts::insert(&node_contract.node_id, &node_contracts);
 
         // Insert resources for node contract
-        let node_contract_resources = types::ContractResources {
-            reserved: resources,
-            used: pallet_tfgrid_types::Resources::default(),
-        };
+        let node_contract_resources = types::ContractResources::default();
         NodeContractResources::insert(id, node_contract_resources);
 
         // Update Contract ID
         ContractID::put(id);
 
         Self::deposit_event(RawEvent::ContractCreated(contract));
-
-        Ok(())
-    }
-
-    fn can_deploy_resources_on_node(
-        node_id: u32,
-        mut resources: pallet_tfgrid_types::Resources,
-    ) -> DispatchResult {
-        // Collect al reserved resources on a node
-        let active_node_contracts = ActiveNodeContracts::get(node_id);
-        for ctr_id in active_node_contracts {
-            let node_contract_resources = NodeContractResources::get(ctr_id);
-            resources = resources.add(&node_contract_resources.reserved);
-        }
-
-        // Check if the new total resources exceeds the node's limit
-        let node = pallet_tfgrid::Nodes::get(node_id);
-        if resources.cru > node.resources.cru {
-            return Err(DispatchError::from(Error::<T>::NotEnoughResourcesOnNode));
-        }
-        if resources.hru > node.resources.hru {
-            return Err(DispatchError::from(Error::<T>::NotEnoughResourcesOnNode));
-        }
-        if resources.sru > node.resources.sru {
-            return Err(DispatchError::from(Error::<T>::NotEnoughResourcesOnNode));
-        }
-        if resources.mru > node.resources.mru {
-            return Err(DispatchError::from(Error::<T>::NotEnoughResourcesOnNode));
-        }
 
         Ok(())
     }
@@ -683,10 +650,10 @@ impl<T: Config> Module<T> {
             return 0;
         };
 
-        let hru = U64F64::from_num(node_contract_resources.reserved.hru) / pricing_policy.su.factor();
-        let sru = U64F64::from_num(node_contract_resources.reserved.sru) / pricing_policy.su.factor();
-        let mru = U64F64::from_num(node_contract_resources.reserved.mru) / pricing_policy.cu.factor();
-        let cru = U64F64::from_num(node_contract_resources.reserved.cru);
+        let hru = U64F64::from_num(node_contract_resources.used.hru) / pricing_policy.su.factor();
+        let sru = U64F64::from_num(node_contract_resources.used.sru) / pricing_policy.su.factor();
+        let mru = U64F64::from_num(node_contract_resources.used.mru) / pricing_policy.cu.factor();
+        let cru = U64F64::from_num(node_contract_resources.used.cru);
 
         let su_used = hru / 1200 + sru / 200;
         // the pricing policy su cost value is expressed in 1 hours or 3600 seconds.

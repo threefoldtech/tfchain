@@ -22,13 +22,7 @@ fn test_create_contract_works() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0,
-            pallet_tfgrid_types::Resources {
-                cru: 2,
-                sru: 60 * GIGABYTE,
-                hru: 20 * GIGABYTE,
-                mru: 4 * GIGABYTE,
-            }
+            0
         ));
     });
 }
@@ -43,13 +37,7 @@ fn test_create_node_contract_with_public_ips_works() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            1,
-            pallet_tfgrid_types::Resources {
-                cru: 2,
-                sru: 60 * GIGABYTE,
-                hru: 20 * GIGABYTE,
-                mru: 4 * GIGABYTE,
-            }
+            1
         ));
 
         let node_contract = SmartContractModule::contracts(1);
@@ -78,13 +66,7 @@ fn test_create_contract_with_undefined_node_fails() {
                 2,
                 "some_data".as_bytes().to_vec(),
                 "hash".as_bytes().to_vec(),
-                0,
-                pallet_tfgrid_types::Resources {
-                    cru: 2,
-                    sru: 60 * GIGABYTE,
-                    hru: 20 * GIGABYTE,
-                    mru: 4 * GIGABYTE,
-                }
+                0
             ),
             Error::<TestRuntime>::NodeNotExists
         );
@@ -101,13 +83,7 @@ fn test_create_contract_with_same_hash_and_node_fails() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0,
-            pallet_tfgrid_types::Resources {
-                cru: 2,
-                sru: 60 * GIGABYTE,
-                hru: 20 * GIGABYTE,
-                mru: 4 * GIGABYTE,
-            }
+            0
         ));
 
         assert_noop!(
@@ -116,13 +92,7 @@ fn test_create_contract_with_same_hash_and_node_fails() {
                 1,
                 "some_data".as_bytes().to_vec(),
                 "hash".as_bytes().to_vec(),
-                0,
-                pallet_tfgrid_types::Resources {
-                    cru: 2,
-                    sru: 60 * GIGABYTE,
-                    hru: 20 * GIGABYTE,
-                    mru: 4 * GIGABYTE,
-                }
+                0
             ),
             Error::<TestRuntime>::ContractIsNotUnique
         );
@@ -139,13 +109,7 @@ fn test_create_contract_which_was_canceled_before_works() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0,
-            pallet_tfgrid_types::Resources {
-                cru: 2,
-                sru: 60 * GIGABYTE,
-                hru: 20 * GIGABYTE,
-                mru: 4 * GIGABYTE,
-            }
+            0
         ));
         let contract_id = SmartContractModule::node_contract_by_hash(1, "hash".as_bytes().to_vec());
         assert_eq!(contract_id, 1);
@@ -160,13 +124,7 @@ fn test_create_contract_which_was_canceled_before_works() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0,
-            pallet_tfgrid_types::Resources {
-                cru: 2,
-                sru: 60 * GIGABYTE,
-                hru: 20 * GIGABYTE,
-                mru: 4 * GIGABYTE,
-            }
+            0
         ));
         let contract_id = SmartContractModule::node_contract_by_hash(1, "hash".as_bytes().to_vec());
         assert_eq!(contract_id, 2);
@@ -183,13 +141,7 @@ fn test_update_contract_works() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0,
-            pallet_tfgrid_types::Resources {
-                cru: 2,
-                sru: 60 * GIGABYTE,
-                hru: 20 * GIGABYTE,
-                mru: 4 * GIGABYTE,
-            }
+            0
         ));
 
         assert_ok!(SmartContractModule::update_node_contract(
@@ -257,13 +209,7 @@ fn test_update_contract_wrong_twins_fails() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0,
-            pallet_tfgrid_types::Resources {
-                cru: 2,
-                sru: 60 * GIGABYTE,
-                hru: 20 * GIGABYTE,
-                mru: 4 * GIGABYTE,
-            }
+            0
         ));
 
         assert_noop!(
@@ -288,13 +234,7 @@ fn test_cancel_contract_works() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0,
-            pallet_tfgrid_types::Resources {
-                cru: 2,
-                sru: 60 * GIGABYTE,
-                hru: 20 * GIGABYTE,
-                mru: 4 * GIGABYTE,
-            }
+            0
         ));
 
         assert_ok!(SmartContractModule::cancel_contract(
@@ -374,13 +314,7 @@ fn test_create_multiple_contracts_work() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash1".as_bytes().to_vec(),
-            0,
-            pallet_tfgrid_types::Resources {
-                cru: 2,
-                sru: 10 * GIGABYTE,
-                hru: 20 * GIGABYTE,
-                mru: 2 * GIGABYTE,
-            }
+            0
         ));
 
         assert_ok!(SmartContractModule::create_node_contract(
@@ -388,13 +322,7 @@ fn test_create_multiple_contracts_work() {
             1,
             "some_data2".as_bytes().to_vec(),
             "hash2".as_bytes().to_vec(),
-            0,
-            pallet_tfgrid_types::Resources {
-                cru: 2,
-                sru: 10 * GIGABYTE,
-                hru: 20 * GIGABYTE,
-                mru: 2 * GIGABYTE,
-            }
+            0
         ));
 
         assert_ok!(SmartContractModule::create_node_contract(
@@ -402,13 +330,7 @@ fn test_create_multiple_contracts_work() {
             1,
             "some_data3".as_bytes().to_vec(),
             "hash3".as_bytes().to_vec(),
-            0,
-            pallet_tfgrid_types::Resources {
-                cru: 2,
-                sru: 10 * GIGABYTE,
-                hru: 20 * GIGABYTE,
-                mru: 2 * GIGABYTE,
-            }
+            0
         ));
 
         let node_contracts = SmartContractModule::active_node_contracts(1);
@@ -435,13 +357,7 @@ fn test_cancel_contract_works_public_ips_frees_ip() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            1,
-            pallet_tfgrid_types::Resources {
-                cru: 2,
-                sru: 60 * GIGABYTE,
-                hru: 20 * GIGABYTE,
-                mru: 4 * GIGABYTE,
-            }
+            1
         ));
 
         let farm = TfgridModule::farms(1);
@@ -479,13 +395,7 @@ fn test_cancel_contract_wrong_twins_fails() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0,
-            pallet_tfgrid_types::Resources {
-                cru: 2,
-                sru: 60 * GIGABYTE,
-                hru: 20 * GIGABYTE,
-                mru: 4 * GIGABYTE,
-            }
+            0
         ));
 
         assert_noop!(
@@ -588,69 +498,6 @@ fn test_name_registration_fails_with_invalid_dns_name() {
 }
 
 #[test]
-fn test_contract_billing_loop() {
-    new_test_ext().execute_with(|| {
-        prepare_farm_and_node();
-        run_to_block(1);
-        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 1).unwrap();
-
-        assert_ok!(SmartContractModule::create_node_contract(
-            Origin::signed(bob()),
-            1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            1,
-            pallet_tfgrid_types::Resources {
-                cru: 2,
-                sru: 60 * GIGABYTE,
-                hru: 20 * GIGABYTE,
-                mru: 4 * GIGABYTE,
-            }
-        ));
-
-        let contract_to_bill_at_block = SmartContractModule::contract_to_bill_at_block(11);
-        assert_eq!(contract_to_bill_at_block.len(), 1);
-
-        run_to_block(12);
-        let contract_to_bill_at_block = SmartContractModule::contract_to_bill_at_block(21);
-        assert_eq!(contract_to_bill_at_block.len(), 1);
-
-        run_to_block(22);
-        let contract_to_bill_at_block = SmartContractModule::contract_to_bill_at_block(31);
-        assert_eq!(contract_to_bill_at_block.len(), 1);
-
-        run_to_block(31);
-        assert_ok!(SmartContractModule::create_name_contract(
-            Origin::signed(bob()),
-            "foobar".as_bytes().to_vec()
-        ));
-
-        run_to_block(32);
-        let contract_to_bill_at_block = SmartContractModule::contract_to_bill_at_block(41);
-        assert_eq!(contract_to_bill_at_block.len(), 2);
-
-        run_to_block(42);
-        let contract_to_bill_at_block = SmartContractModule::contract_to_bill_at_block(51);
-        assert_eq!(contract_to_bill_at_block.len(), 2);
-
-        run_to_block(52);
-        assert_ok!(SmartContractModule::cancel_contract(
-            Origin::signed(bob()),
-            2
-        ));
-
-        // after a canceling the second contract it should still be in the contract to be billed map
-        // but it should be removed from the next billing cycle since it's canceled and it does not have unbilled amounts
-        let contract_to_bill_at_block = SmartContractModule::contract_to_bill_at_block(61);
-        assert_eq!(contract_to_bill_at_block.len(), 2);
-
-        run_to_block(62);
-        let contract_to_bill_at_block = SmartContractModule::contract_to_bill_at_block(71);
-        assert_eq!(contract_to_bill_at_block.len(), 1);
-    })
-}
-
-#[test]
 fn test_multiple_contracts_billing_loop() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
@@ -662,13 +509,7 @@ fn test_multiple_contracts_billing_loop() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            1,
-            pallet_tfgrid_types::Resources {
-                cru: 2,
-                sru: 60 * GIGABYTE,
-                hru: 20 * GIGABYTE,
-                mru: 4 * GIGABYTE,
-            }
+            1
         ));
         assert_ok!(SmartContractModule::create_name_contract(
             Origin::signed(bob()),
@@ -714,14 +555,12 @@ fn test_node_contract_billing() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            1,
-            pallet_tfgrid_types::Resources {
-                cru: 2,
-                sru: 60 * GIGABYTE,
-                hru: 20 * GIGABYTE,
-                mru: 4 * GIGABYTE,
-            }
+            1
         ));
+
+        push_contract_resources_used();
+
+        push_nru_report_for_contract(1, 10);
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(11);
         assert_eq!(contract_to_bill, [1]);
@@ -731,6 +570,9 @@ fn test_node_contract_billing() {
         let contract_id = 1;
         let twin_id = 2;
 
+        let billing_info = SmartContractModule::contract_billing_information_by_id(1);
+        assert_ne!(billing_info.amount_unbilled, 0);
+
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, contract_id, twin_id);
         assert_ne!(amount_due_as_u128, 0);
 
@@ -739,7 +581,7 @@ fn test_node_contract_billing() {
             "amount due: {:?}, discount received: {:?}",
             amount_due_as_u128, discount_received
         );
-        check_report_cost(2, amount_due_as_u128, 12, discount_received);
+        check_report_cost(3, amount_due_as_u128, 12, discount_received);
 
         // check the contract owners address to see if it got balance credited
         let twin = TfgridModule::twins(2);
@@ -781,7 +623,7 @@ fn test_node_contract_billing() {
         let burned_amount = Perbill::from_percent(35) * amount_due_as_u128;
         assert_eq!(
             total_issuance,
-            initial_total_issuance - burned_amount as u64 - 1
+            initial_total_issuance - burned_amount as u64 -1
         );
 
         // amount unbilled should have been reset after a transfer between contract owner and farmer
@@ -802,16 +644,12 @@ fn test_node_contract_billing_cycles() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0,
-            pallet_tfgrid_types::Resources {
-                cru: 2,
-                sru: 60 * GIGABYTE,
-                hru: 20 * GIGABYTE,
-                mru: 4 * GIGABYTE,
-            }
+            0
         ));
         let contract_id = 1;
         let twin_id = 2;
+
+        push_contract_resources_used();
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, contract_id, twin_id);
         run_to_block(12);
@@ -835,55 +673,48 @@ fn test_node_contract_billing_cycles() {
     });
 }
 
-// #[test]
-// fn test_node_contract_billing_cycles_cancel_contract() {
-//     new_test_ext().execute_with(|| {
-//         prepare_farm_and_node();
-//         run_to_block(1);
-//         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+#[test]
+fn test_node_contract_billing_cycles_cancel_contract() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
-//         assert_ok!(SmartContractModule::create_node_contract(
-//             Origin::signed(bob()),
-//             1,
-//             "some_data".as_bytes().to_vec(),
-//             "hash".as_bytes().to_vec(),
-//             0
-//         ));
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(bob()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            0
+        ));
 
-//         let cru = 2;
-//         let hru = 0;
-//         let mru = 2;
-//         let sru = 60;
-//         let nru = 3;
+        let contract_id = 1;
+        let twin_id = 2;
 
-//         let contract_id = 1;
-//         let twin_id = 2;
+        push_contract_resources_used();
 
-//         push_report(11, cru, hru, mru, sru, nru);
-//         let (amount_due_as_u128, discount_received) = calculate_tft_cost(11, contract_id, twin_id, 0);
-//         run_to_block(12);
-//         check_report_cost(3, amount_due_as_u128, 12, discount_received);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, contract_id, twin_id);
+        run_to_block(12);
+        check_report_cost(2, amount_due_as_u128, 12, discount_received);
 
-//         push_report(21, cru, hru, mru, sru, nru);
-//         let (amount_due_as_u128, discount_received) = calculate_tft_cost(11, contract_id, twin_id, 0);
-//         run_to_block(22);
-//         check_report_cost(6, amount_due_as_u128, 22, discount_received);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, contract_id, twin_id);
+        run_to_block(22);
+        check_report_cost(4, amount_due_as_u128, 22, discount_received);
 
-//         run_to_block(28);
-//         assert_ok!(SmartContractModule::cancel_contract(Origin::signed(bob()), 1));
-//         push_report(29, cru, hru, mru, sru, nru);
+        run_to_block(28);
+        assert_ok!(SmartContractModule::cancel_contract(Origin::signed(bob()), 1));
 
-//         let (amount_due_as_u128, discount_received) = calculate_tft_cost(11, contract_id, twin_id, 0);
-//         run_to_block(32);
-//         check_report_cost(10, amount_due_as_u128, 32, discount_received);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, contract_id, twin_id);
+        run_to_block(32);
+        check_report_cost(7, amount_due_as_u128, 32, discount_received);
 
-//         let contract = SmartContractModule::contracts(1);
-//         assert_eq!(contract.contract_id, 0);
+        let contract = SmartContractModule::contracts(1);
+        assert_eq!(contract.contract_id, 0);
 
-//         let billing_info = SmartContractModule::contract_billing_information_by_id(1);
-//         assert_eq!(billing_info.amount_unbilled, 0);
-//     });
-// }
+        let billing_info = SmartContractModule::contract_billing_information_by_id(1);
+        assert_eq!(billing_info.amount_unbilled, 0);
+    });
+}
 
 fn calculate_tft_cost(
     number_of_blocks: u64,
@@ -903,6 +734,10 @@ fn calculate_tft_cost(
     let tft_cost =
         SmartContractModule::calculate_cost_in_tft_from_musd(total_amount_unbilled).unwrap();
 
+    if tft_cost == 0 {
+        return (0, types::DiscountLevel::default())
+    }
+
     let twin = TfgridModule::twins(twin_id);
     let b = Balances::free_balance(&twin.account_id);
     let (amount_due, discount_received) = SmartContractModule::calculate_discount(
@@ -917,165 +752,83 @@ fn calculate_tft_cost(
     (amount_due_as_u128, discount_received)
 }
 
-// #[test]
-// fn test_node_contract_billing_should_cancel_contract_when_out_of_funds() {
-//     new_test_ext().execute_with(|| {
-//         prepare_farm_and_node();
-//         run_to_block(1);
-//         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+#[test]
+fn test_node_contract_billing_should_cancel_contract_when_out_of_funds() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
-//         assert_ok!(SmartContractModule::create_node_contract(
-//             Origin::signed(charlie()),
-//             1,
-//             "some_data".as_bytes().to_vec(),
-//             "hash".as_bytes().to_vec(),
-//             0
-//         ));
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(charlie()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            0
+        ));
 
-//         // cycle 1
-//         push_report(11, 2, 0, 2, 60, 3);
-//         run_to_block(12);
+        push_contract_resources_used();
 
-//         // cycle 2
-//         // user does not have enough funds to pay for 2 cycles
-//         push_report(21, 2, 0, 2, 60, 3);
-//         run_to_block(22);
+        // cycle 1
+        run_to_block(12);
 
-//         let c1 = SmartContractModule::contracts(1);
-//         assert_eq!(c1.state, types::ContractState::Deleted(types::Cause::OutOfFunds));
+        // cycle 2
+        // user does not have enough funds to pay for 2 cycles
+        run_to_block(22);
 
-//         let contract_billing_info = SmartContractModule::contract_billing_information_by_id(1);
-//         assert_eq!(contract_billing_info.amount_unbilled, 0); //this amount in unit USD = 1/1e7
+        let c1 = SmartContractModule::contracts(1);
+        assert_eq!(c1.state, types::ContractState::Deleted(types::Cause::OutOfFunds));
 
-//         let our_events = System::events()
-//         .into_iter()
-//         .map(|r| r.event)
-//         .filter_map(|e| {
-//             if let Event::pallet_smart_contract(inner) = e {
-//                 Some(inner)
-//             } else {
-//                 None
-//             }
-//         })
-//         .collect::<Vec<_>>();
+        let contract_billing_info = SmartContractModule::contract_billing_information_by_id(1);
+        assert_eq!(contract_billing_info.amount_unbilled, 0); //this amount in unit USD = 1/1e7
 
-//         let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> = Vec::new();
-//         expected_events.push(RawEvent::NodeContractCanceled(1, 1, 3));
+        let our_events = System::events()
+        .into_iter()
+        .map(|r| r.event)
+        .filter_map(|e| {
+            if let Event::pallet_smart_contract(inner) = e {
+                Some(inner)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
 
-//         assert_eq!(our_events[7], expected_events[0]);
-//     });
-// }
+        let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> = Vec::new();
+        expected_events.push(RawEvent::NodeContractCanceled(1, 1, 3));
 
-// fn push_report(block_number: u64, cru: u64, hru: u64, mru: u64, sru: u64, nru: u64) {
-//     let gigabyte = 1000 * 1000 * 1000;
-//     let mut consumption_reports = Vec::new();
-//     consumption_reports.push(super::types::Consumption {
-//         contract_id: 1,
-//         cru,
-//         hru,
-//         mru: mru * gigabyte,
-//         sru: sru * gigabyte,
-//         nru: nru * gigabyte,
-//         timestamp: 1628082000 + (6*block_number),
-//     });
+        assert_eq!(our_events[5], expected_events[0]);
+    });
+}
 
-//     assert_ok!(SmartContractModule::add_reports(
-//         Origin::signed(alice()),
-//         consumption_reports
-//     ));
-// }
+fn push_nru_report_for_contract(contract_id: u64, block_number: u64) {
+    let gigabyte = 1000 * 1000 * 1000;
+    let mut consumption_reports = Vec::new();
+    consumption_reports.push(super::types::Consumption {
+        contract_id,
+        nru: 3 * gigabyte,
+        timestamp: 1628082000 + (6*block_number),
+        window: 6 * block_number,
+    });
 
-// #[test]
-// fn test_push_report() {
-//     new_test_ext().execute_with(|| {
-//         prepare_farm_and_node();
+    assert_ok!(SmartContractModule::add_reports(
+        Origin::signed(alice()),
+        consumption_reports
+    ));
+}
 
-//         run_to_block(1);
-//         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
-
-//         assert_ok!(SmartContractModule::create_node_contract(
-//             Origin::signed(bob()),
-//             1,
-//             "some_data".as_bytes().to_vec(),
-//             "hash".as_bytes().to_vec(),
-//             0
-//         ));
-
-//         let contract_id = 1;
-
-//         let gigabyte = 1000 * 1000 * 1000;
-//         let mut consumption_reports = Vec::new();
-//         consumption_reports.push(super::types::Consumption {
-//             contract_id,
-//             cru: 2,
-//             hru: 0,
-//             mru: 2 * gigabyte,
-//             sru: 60 * gigabyte,
-//             nru: 3 * gigabyte,
-//             timestamp: 1628082000,
-//         });
-//         consumption_reports.push(super::types::Consumption {
-//             contract_id: 2,
-//             cru: 2,
-//             hru: 0,
-//             mru: 2 * gigabyte,
-//             sru: 60 * gigabyte,
-//             nru: 3 * gigabyte,
-//             timestamp: 1628082000,
-//         });
-//         consumption_reports.push(super::types::Consumption {
-//             contract_id: 21221,
-//             cru: 2,
-//             hru: 0,
-//             mru: 2 * gigabyte,
-//             sru: 60 * gigabyte,
-//             nru: 3 * gigabyte,
-//             timestamp: 1628082000,
-//         });
-
-//         assert_ok!(SmartContractModule::add_reports(
-//             Origin::signed(alice()),
-//             consumption_reports.clone()
-//         ));
-
-//         let our_events = System::events()
-//         .into_iter()
-//         .map(|r| r.event)
-//         .filter_map(|e| {
-//             if let Event::pallet_smart_contract(inner) = e {
-//                 Some(inner)
-//             } else {
-//                 None
-//             }
-//         })
-//         .collect::<Vec<_>>();
-
-//         let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> = Vec::new();
-//         expected_events.push(RawEvent::ConsumptionReportReceived(consumption_reports[0].clone()));
-
-//         assert_eq!(our_events.len(), 2);
-//         assert_eq!(our_events[1], expected_events[0]);
-//     })
-// }
-
-// fn push_report_for_contract(contract_id: u64, block_number: u64) {
-//     let gigabyte = 1000 * 1000 * 1000;
-//     let mut consumption_reports = Vec::new();
-//     consumption_reports.push(super::types::Consumption {
-//         contract_id,
-//         cru: 2,
-//         hru: 0,
-//         mru: 2 * gigabyte,
-//         sru: 60 * gigabyte,
-//         nru: 3 * gigabyte,
-//         timestamp: 1628082000 + (6*block_number),
-//     });
-
-//     assert_ok!(SmartContractModule::add_reports(
-//         Origin::signed(alice()),
-//         consumption_reports
-//     ));
-// }
+fn push_contract_resources_used() {
+    assert_ok!(SmartContractModule::report_contract_resources(
+        Origin::signed(alice()),
+        1,
+        pallet_tfgrid_types::Resources{
+            cru: 2,
+            hru: 0,
+            mru: 2 * GIGABYTE,
+            sru: 60 * GIGABYTE,
+        }
+    ));
+}
 
 fn check_report_cost(
     index: usize,
@@ -1109,79 +862,79 @@ fn check_report_cost(
     assert_eq!(our_events[index], expected_events[0]);
 }
 
-// #[test]
-// fn test_name_contract_billing() {
-//     new_test_ext().execute_with(|| {
-//         prepare_farm_and_node();
-//         run_to_block(1);
-//         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+#[test]
+fn test_name_contract_billing() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
-//         assert_ok!(SmartContractModule::create_name_contract(
-//             Origin::signed(bob()),
-//             "foobar".as_bytes().to_vec()
-//         ));
+        assert_ok!(SmartContractModule::create_name_contract(
+            Origin::signed(bob()),
+            "foobar".as_bytes().to_vec()
+        ));
 
-//         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(11);
-//         assert_eq!(contract_to_bill, [1]);
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(11);
+        assert_eq!(contract_to_bill, [1]);
 
-//         // let mature 11 blocks
-//         // because we bill every 10 blocks
-//         run_to_block(12);
+        // let mature 11 blocks
+        // because we bill every 10 blocks
+        run_to_block(12);
 
-//         // Test that the expected events were emitted
-//         let our_events = System::events()
-//             .into_iter()
-//             .map(|r| r.event)
-//             .filter_map(|e| {
-//                 if let Event::pallet_smart_contract(inner) = e {
-//                     Some(inner)
-//                 } else {
-//                     None
-//                 }
-//             })
-//             .collect::<Vec<_>>();
+        // Test that the expected events were emitted
+        let our_events = System::events()
+            .into_iter()
+            .map(|r| r.event)
+            .filter_map(|e| {
+                if let Event::pallet_smart_contract(inner) = e {
+                    Some(inner)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
 
-//         let contract_bill_event = types::ContractBill {
-//             contract_id: 1,
-//             timestamp: 1628082072,
-//             discount_level: types::DiscountLevel::Gold,
-//             amount_billed: 2032,
-//         };
-//         let expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
-//             vec![RawEvent::ContractBilled(contract_bill_event)];
-//         assert_eq!(our_events[2], expected_events[0]);
-//     });
-// }
+        let contract_bill_event = types::ContractBill {
+            contract_id: 1,
+            timestamp: 1628082072,
+            discount_level: types::DiscountLevel::Gold,
+            amount_billed: 1848,
+        };
+        let expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
+            vec![RawEvent::ContractBilled(contract_bill_event)];
+        assert_eq!(our_events[2], expected_events[0]);
+    });
+}
 
-// #[test]
-// fn test_cu_calculation() {
-//     new_test_ext().execute_with(|| {
-//         let cu = U64F64::from_num(4);
-//         let mru = U64F64::from_num(1024);
-//         let cu = SmartContractModule::calculate_cu(cu, mru);
-//         assert_eq!(cu, 128);
+#[test]
+fn test_cu_calculation() {
+    new_test_ext().execute_with(|| {
+        let cu = U64F64::from_num(4);
+        let mru = U64F64::from_num(1024);
+        let cu = SmartContractModule::calculate_cu(cu, mru);
+        assert_eq!(cu, 128);
 
-//         let cu = U64F64::from_num(32);
-//         let mru = U64F64::from_num(128);
-//         let cu = SmartContractModule::calculate_cu(cu, mru);
-//         assert_eq!(cu, 32);
+        let cu = U64F64::from_num(32);
+        let mru = U64F64::from_num(128);
+        let cu = SmartContractModule::calculate_cu(cu, mru);
+        assert_eq!(cu, 32);
 
-//         let cu = U64F64::from_num(4);
-//         let mru = U64F64::from_num(2);
-//         let cu = SmartContractModule::calculate_cu(cu, mru);
-//         assert_eq!(cu, 1);
+        let cu = U64F64::from_num(4);
+        let mru = U64F64::from_num(2);
+        let cu = SmartContractModule::calculate_cu(cu, mru);
+        assert_eq!(cu, 1);
 
-//         let cu = U64F64::from_num(4);
-//         let mru = U64F64::from_num(1);
-//         let cu = SmartContractModule::calculate_cu(cu, mru);
-//         assert_eq!(cu, 1);
+        let cu = U64F64::from_num(4);
+        let mru = U64F64::from_num(1);
+        let cu = SmartContractModule::calculate_cu(cu, mru);
+        assert_eq!(cu, 1);
 
-//         let cu = U64F64::from_num(16);
-//         let mru = U64F64::from_num(16);
-//         let cu = SmartContractModule::calculate_cu(cu, mru);
-//         assert_eq!(cu, 8);
-//     })
-// }
+        let cu = U64F64::from_num(16);
+        let mru = U64F64::from_num(16);
+        let cu = SmartContractModule::calculate_cu(cu, mru);
+        assert_eq!(cu, 8);
+    })
+}
 
 pub fn prepare_twins() {
     create_twin(alice());
@@ -1279,41 +1032,6 @@ pub fn prepare_farm_and_node() {
     )
     .unwrap();
 }
-
-// use crate::mock;
-// pub fn _prepare_farm_and_node(source: mock::AccountId) {
-//     create_twin(source.clone());
-//     prepare_farm(source.clone());
-
-//     // random location
-//     let location = pallet_tfgrid_types::Location {
-//         longitude: "12.233213231".as_bytes().to_vec(),
-//         latitude: "32.323112123".as_bytes().to_vec(),
-//     };
-
-//     let resources = pallet_tfgrid_types::Resources {
-//         hru: 1,
-//         sru: 1,
-//         cru: 1,
-//         mru: 1,
-//     };
-
-//     let country = "Belgium".as_bytes().to_vec();
-//     let city = "Ghent".as_bytes().to_vec();
-//     TfgridModule::create_node(
-//         Origin::signed(source),
-//         1,
-//         resources,
-//         location,
-//         country,
-//         city,
-//         Vec::new(),
-//         false,
-//         false,
-//         "some_serial".as_bytes().to_vec()
-//     )
-//     .unwrap();
-// }
 
 pub fn create_twin(origin: AccountId) {
     let document = "some_link".as_bytes().to_vec();
