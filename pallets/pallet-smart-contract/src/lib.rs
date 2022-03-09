@@ -58,6 +58,7 @@ decl_event!(
         ConsumptionReportReceived(types::Consumption),
         ContractBilled(types::ContractBill),
         TokensBurned(u64, BalanceOf),
+        UpdatedUsedResources(u64, pallet_tfgrid_types::Resources),
     }
 );
 
@@ -380,18 +381,12 @@ impl<T: Config> Module<T> {
             Error::<T>::NodeNotAuthorizedToReportResources
         );
 
-        let mut node_contract_resources = types::ContractResources {
-            reserved: pallet_tfgrid_types::Resources::default(),
-            used: resources,
-        };
-
-        // If this object does not exists it means that it's a contract from
-        // a previous version of tfchain, allow the node to set reserved resources
-        if !NodeContractResources::contains_key(contract_id) {
-            node_contract_resources.reserved = resources;
-        }
-
+        // Do insert
+        let node_contract_resources = types::ContractResources { used: resources };
         NodeContractResources::insert(contract_id, node_contract_resources);
+
+        // deposit event
+        Self::deposit_event(RawEvent::UpdatedUsedResources(contract_id, resources));
 
         Ok(Pays::No.into())
     }
@@ -541,20 +536,20 @@ impl<T: Config> Module<T> {
             types::ContractData::NodeContract(node_contract) => {
                 // Get the node
                 if !pallet_tfgrid::Nodes::contains_key(node_contract.node_id) {
-                    return Err(DispatchError::from(Error::<T>::NodeNotExists))
+                    return Err(DispatchError::from(Error::<T>::NodeNotExists));
                 }
                 let node = pallet_tfgrid::Nodes::get(node_contract.node_id);
 
                 // Get the farm attachted to the node
                 if !pallet_tfgrid::Farms::contains_key(node.farm_id) {
-                    return Err(DispatchError::from(Error::<T>::NodeNotExists))
+                    return Err(DispatchError::from(Error::<T>::NodeNotExists));
                 }
                 let farm = pallet_tfgrid::Farms::get(node.farm_id);
                 certification_type = farm.certification_type;
 
                 // Get the pricing policy from the farm (could be a different one than the default)
                 if !pallet_tfgrid::PricingPolicies::<T>::contains_key(farm.pricing_policy_id) {
-                    return Err(DispatchError::from(Error::<T>::PricingPolicyNotExists))
+                    return Err(DispatchError::from(Error::<T>::PricingPolicyNotExists));
                 }
                 pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(farm.pricing_policy_id);
 
@@ -582,7 +577,7 @@ impl<T: Config> Module<T> {
         let total_cost_tft_64 = Self::calculate_cost_in_tft_from_musd(total_cost)?;
 
         if !pallet_tfgrid::Twins::<T>::contains_key(contract.twin_id) {
-            return Err(DispatchError::from(Error::<T>::TwinNotExists))
+            return Err(DispatchError::from(Error::<T>::TwinNotExists));
         }
         let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
         let balance: BalanceOf<T> = <T as Config>::Currency::free_balance(&twin.account_id);
