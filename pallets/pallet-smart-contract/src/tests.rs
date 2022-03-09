@@ -790,56 +790,50 @@ fn test_node_contract_billing() {
     });
 }
 
-// #[test]
-// fn test_node_contract_billing_cycles() {
-//     new_test_ext().execute_with(|| {
-//         prepare_farm_and_node();
-//         run_to_block(1);
-//         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+#[test]
+fn test_node_contract_billing_cycles() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
-//         assert_ok!(SmartContractModule::create_node_contract(
-//             Origin::signed(bob()),
-//             1,
-//             "some_data".as_bytes().to_vec(),
-//             "hash".as_bytes().to_vec(),
-//             0
-//         ));
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(bob()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            0,
+            pallet_tfgrid_types::Resources {
+                cru: 2,
+                sru: 60 * GIGABYTE,
+                hru: 20 * GIGABYTE,
+                mru: 4 * GIGABYTE,
+            }
+        ));
+        let contract_id = 1;
+        let twin_id = 2;
 
-//         let cru = 2;
-//         let hru = 0;
-//         let mru = 2;
-//         let sru = 60;
-//         let nru = 3;
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, contract_id, twin_id);
+        run_to_block(12);
+        check_report_cost(2, amount_due_as_u128, 12, discount_received);
 
-//         let contract_id = 1;
-//         let twin_id = 2;
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, contract_id, twin_id);
+        run_to_block(22);
+        check_report_cost(4, amount_due_as_u128, 22, discount_received);
 
-//         push_report(11, cru, hru, mru, sru, nru);
-//         let (amount_due_as_u128, discount_received) = calculate_tft_cost(11, contract_id, twin_id, 0);
-//         run_to_block(12);
-//         check_report_cost(3, amount_due_as_u128, 12, discount_received);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, contract_id, twin_id);
+        run_to_block(32);
+        check_report_cost(6, amount_due_as_u128, 32, discount_received);
 
-//         push_report(21, cru, hru, mru, sru, nru);
-//         let (amount_due_as_u128, discount_received) = calculate_tft_cost(11, contract_id, twin_id, 0);
-//         run_to_block(22);
-//         check_report_cost(6, amount_due_as_u128, 22, discount_received);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, contract_id, twin_id);
+        run_to_block(42);
+        check_report_cost(8, amount_due_as_u128, 42, discount_received);
 
-//         push_report(31, cru, hru, mru, sru, nru);
-//         let (amount_due_as_u128, discount_received) = calculate_tft_cost(11, contract_id, twin_id, 0);
-//         run_to_block(32);
-//         check_report_cost(9, amount_due_as_u128, 32, discount_received);
-
-//         push_report(41, cru, hru, mru, sru, nru);
-//         let (amount_due_as_u128, discount_received) = calculate_tft_cost(11, contract_id, twin_id, 0);
-//         run_to_block(42);
-//         check_report_cost(12, amount_due_as_u128, 42, discount_received);
-
-//         push_report(51, cru, hru, mru, sru, nru);
-//         let (amount_due_as_u128, discount_received) = calculate_tft_cost(11, contract_id, twin_id, 0);
-//         run_to_block(52);
-//         check_report_cost(15, amount_due_as_u128, 52, discount_received);
-//     });
-// }
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, contract_id, twin_id);
+        run_to_block(52);
+        check_report_cost(10, amount_due_as_u128, 52, discount_received);
+    });
+}
 
 // #[test]
 // fn test_node_contract_billing_cycles_cancel_contract() {

@@ -523,6 +523,7 @@ impl<T: Config> Module<T> {
         for contract_id in contracts {
             let mut contract = Contracts::get(contract_id);
 
+            // Try to bill contract
             match Self::_bill_contract(&mut contract) {
                 Ok(_) => {
                     debug::info!(
@@ -549,22 +550,45 @@ impl<T: Config> Module<T> {
                 continue;
             }
 
+            // Reinsert into the next billing frequency
             Self::_reinsert_contract_to_bill(contract.contract_id);
         }
         Ok(())
     }
 
+    // Bills a contract (NodeContract or NameContract)
+    // Calculates how much TFT is due by the user and distributes the rewards
+    // Will also cancel the contract if there is not enough funds on the users wallet
     fn _bill_contract(contract: &mut types::Contract) -> DispatchResult {
+        // Fetch the default pricing policy and certification type
         let mut pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
         let mut certification_type = pallet_tfgrid_types::CertificationType::Diy;
+
+        // The number of seconds elapsed since last contract bill is the frequency * block time (6 seconds)
         let seconds_elapsed = T::BillingFrequency::get() * 6;
 
+        // Get the contract billing info to view the amount unbilled for NRU (network resource units)
         let mut contract_billing_info = ContractBillingInformationByID::get(contract.contract_id);
         let total_cost = match &contract.contract_type {
+            // Calculate total cost for a node contract
             types::ContractData::NodeContract(node_contract) => {
+                // Get the node
+                if !pallet_tfgrid::Nodes::contains_key(node_contract.node_id) {
+                    return Err(DispatchError::from(Error::<T>::NodeNotExists))
+                }
                 let node = pallet_tfgrid::Nodes::get(node_contract.node_id);
+
+                // Get the farm attachted to the node
+                if !pallet_tfgrid::Farms::contains_key(node.farm_id) {
+                    return Err(DispatchError::from(Error::<T>::NodeNotExists))
+                }
                 let farm = pallet_tfgrid::Farms::get(node.farm_id);
                 certification_type = farm.certification_type;
+
+                // Get the pricing policy from the farm (could be a different one than the default)
+                if !pallet_tfgrid::PricingPolicies::<T>::contains_key(farm.pricing_policy_id) {
+                    return Err(DispatchError::from(Error::<T>::PricingPolicyNotExists))
+                }
                 pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(farm.pricing_policy_id);
 
                 let contract_cost = Self::_calculate_node_contract_cost(
@@ -574,6 +598,7 @@ impl<T: Config> Module<T> {
                 );
                 contract_cost + contract_billing_info.amount_unbilled
             }
+            // Calculate total cost for a name contract
             types::ContractData::NameContract(_) => {
                 // bill user for 1 hour name usage (60 blocks * 60 seconds)
                 let total_cost_u64f64 = (U64F64::from_num(pricing_policy.unique_name.value) / 3600)
@@ -589,6 +614,9 @@ impl<T: Config> Module<T> {
 
         let total_cost_tft_64 = Self::calculate_cost_in_tft_from_musd(total_cost)?;
 
+        if !pallet_tfgrid::Twins::<T>::contains_key(contract.twin_id) {
+            return Err(DispatchError::from(Error::<T>::TwinNotExists))
+        }
         let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
         let balance: BalanceOf<T> = <T as Config>::Currency::free_balance(&twin.account_id);
 
@@ -662,7 +690,7 @@ impl<T: Config> Module<T> {
 
         let su_used = hru / 1200 + sru / 200;
         // the pricing policy su cost value is expressed in 1 hours or 3600 seconds.
-        // we bill every 3600 seconds but here we need to calculate the cost per second and multiply it by the seconds elapsed since last report.
+        // we bill every 3600 seconds but here we need to calculate the cost per second and multiply it by the seconds elapsed.
         let su_cost = (U64F64::from_num(pricing_policy.su.value) / 3600)
             * U64F64::from_num(seconds_elapsed)
             * su_used;
@@ -675,14 +703,15 @@ impl<T: Config> Module<T> {
             * cu;
         debug::info!("cu cost: {:?}", cu_cost);
 
-        // bill user for 1 hour ip usage (60 blocks * 60 seconds)
         let total_ip_cost = U64F64::from_num(node_contract.public_ips)
             * (U64F64::from_num(pricing_policy.ipu.value) / 3600)
             * U64F64::from_num(seconds_elapsed);
+        debug::info!("ip cost: {:?}", total_ip_cost);
 
         // save total
         let total = su_cost + cu_cost + total_ip_cost;
         let total = total.ceil().to_num::<u64>();
+        debug::info!("total cost: {:?}", total);
 
         return total;
     }
@@ -696,6 +725,7 @@ impl<T: Config> Module<T> {
             }
             Err(_) => (),
         };
+        NodeContractResources::remove(contract_id);
         ContractBillingInformationByID::remove(contract_id);
         Contracts::remove(contract_id);
     }
