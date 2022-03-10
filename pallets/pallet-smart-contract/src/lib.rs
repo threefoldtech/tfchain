@@ -684,13 +684,8 @@ impl<T: Config> Module<T> {
             * cu;
         debug::info!("cu cost: {:?}", cu_cost);
 
-        let total_ip_cost = U64F64::from_num(node_contract.public_ips)
-            * (U64F64::from_num(pricing_policy.ipu.value) / 3600)
-            * U64F64::from_num(seconds_elapsed);
-        debug::info!("ip cost: {:?}", total_ip_cost);
-
         // save total
-        total_cost = su_cost + cu_cost + total_ip_cost;
+        total_cost = su_cost + cu_cost;
         let total = total_cost.ceil().to_num::<u64>();
         debug::info!("total cost: {:?}", total);
 
