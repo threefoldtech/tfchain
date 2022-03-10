@@ -4,13 +4,28 @@ use frame_support::{
     traits::{OnFinalize, OnInitialize},
 };
 use frame_system::RawOrigin;
-use sp_runtime::{traits::SaturatedConversion, Perbill};
+use sp_runtime::{traits::SaturatedConversion, Perbill, Percent};
 use substrate_fixed::types::{U16F16, U64F64};
 
 use super::types;
 use pallet_tfgrid::types as pallet_tfgrid_types;
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
+
+#[test]
+fn test_percent() {
+    let cost: u64 = 1000;
+    let new_cost = Percent::from_percent(25) * cost;
+    assert_eq!(new_cost, 250);
+
+    let cost: u64 = 1000;
+    let new_cost = Percent::from_percent(50) * cost;
+    assert_eq!(new_cost, 500);
+
+    let cost: u64 = 992;
+    let new_cost = Percent::from_percent(25) * cost;
+    assert_eq!(new_cost, 248);
+}
 
 #[test]
 fn test_create_contract_works() {
@@ -819,8 +834,13 @@ fn calculate_tft_cost(
 ) -> (u128, types::DiscountLevel) {
     let billing_info = SmartContractModule::contract_billing_information_by_id(contract_id);
 
-    let amount_to_bill = SmartContractModule::_calculate_node_contract_cost(
-        &SmartContractModule::contracts(1),
+    let contract_resources = SmartContractModule::node_contract_resources(1);
+    let contract = SmartContractModule::contracts(1);
+    let node_contract = SmartContractModule::get_node_contract(&contract).unwrap();
+
+    let amount_to_bill = SmartContractModule::calculate_resources_cost(
+        contract_resources.used,
+        node_contract.public_ips,
         number_of_blocks * 6,
         TfgridModule::pricing_policies(1),
     );
@@ -1090,6 +1110,7 @@ pub fn prepare_farm(source: AccountId) {
         domain_name_policy,
         ferdie(),
         eve(),
+        50,
     )
     .unwrap();
 

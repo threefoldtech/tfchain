@@ -801,6 +801,7 @@ fn test_create_and_update_policy() {
             domain_name_policy.clone(),
             bob(),
             bob(),
+            50,
         )
         .unwrap();
 
@@ -823,6 +824,7 @@ fn test_create_and_update_policy() {
             domain_name_policy.clone(),
             bob(),
             bob(),
+            50,
         )
         .unwrap();
         // Get policy and make sure it is updated
@@ -853,6 +855,7 @@ fn test_create_and_update_policy() {
             domain_name_policy.clone(),
             bob(),
             bob(),
+            50,
         )
         .unwrap();
         let policy = TfgridModule::pricing_policies(policy_id.clone());
@@ -877,6 +880,7 @@ fn test_create_and_update_policy() {
             domain_name_policy.clone(),
             bob(),
             bob(),
+            50,
         )
         .unwrap();
         let policy2_id = TfgridModule::pricing_policies_by_name_id(policy2_name.clone());
@@ -894,6 +898,7 @@ fn test_create_and_update_policy() {
                 domain_name_policy.clone(),
                 bob(),
                 bob(),
+                50,
             ),
             Error::<TestRuntime>::PricingPolicyWithDifferentIdExists
         );
