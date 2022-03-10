@@ -8,7 +8,7 @@ use frame_support::{
     weights::Pays,
 };
 use frame_system::{self as system, ensure_signed};
-use sp_runtime::{traits::SaturatedConversion, DispatchError, DispatchResult, Perbill};
+use sp_runtime::{traits::SaturatedConversion, DispatchError, DispatchResult, Perbill, Percent};
 
 use pallet_tfgrid;
 use pallet_tfgrid::types as pallet_tfgrid_types;
@@ -591,57 +591,16 @@ impl<T: Config> Module<T> {
     // Bills a contract (NodeContract or NameContract)
     // Calculates how much TFT is due by the user and distributes the rewards
     // Will also cancel the contract if there is not enough funds on the users wallet
-    fn bill_contract(contract: &mut types::Contract) -> DispatchResult {
+    fn bill_contract(contract: &types::Contract) -> DispatchResult {
         // Fetch the default pricing policy and certification type
         let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
         let certification_type = pallet_tfgrid_types::CertificationType::Diy;
 
-        // The number of seconds elapsed since last contract bill is the frequency * block time (6 seconds)
-        let seconds_elapsed = T::BillingFrequency::get() * 6;
-
-        // Get the contract billing info to view the amount unbilled for NRU (network resource units)
-        let mut contract_billing_info = ContractBillingInformationByID::get(contract.contract_id);
-        let total_cost = match &contract.contract_type {
-            // Calculate total cost for a node contract
-            types::ContractData::NodeContract(node_contract) => {
-                // Get the node
-                if !pallet_tfgrid::Nodes::contains_key(node_contract.node_id) {
-                    return Err(DispatchError::from(Error::<T>::NodeNotExists));
-                }
-
-                // We know the contract is using resources, now calculate the cost for each used resource
-                let node_contract_resources = NodeContractResources::get(contract.contract_id);
-
-                let contract_cost = Self::calculate_resources_cost(
-                    node_contract_resources.used,
-                    node_contract.public_ips,
-                    seconds_elapsed,
-                    pricing_policy.clone(),
-                );
-                contract_cost + contract_billing_info.amount_unbilled
-            }
-            types::ContractData::RentContract(rent_contract) => {
-                if !pallet_tfgrid::Nodes::contains_key(rent_contract.node_id) {
-                    return Err(DispatchError::from(Error::<T>::NodeNotExists));
-                }
-                let node = pallet_tfgrid::Nodes::get(rent_contract.node_id);
-
-                let contract_cost = Self::calculate_resources_cost(
-                    node.resources,
-                    0,
-                    seconds_elapsed,
-                    pricing_policy.clone(),
-                );
-                contract_cost + contract_billing_info.amount_unbilled
-            }
-            // Calculate total cost for a name contract
-            types::ContractData::NameContract(_) => {
-                // bill user for 1 hour name usage (60 blocks * 60 seconds)
-                let total_cost_u64f64 = (U64F64::from_num(pricing_policy.unique_name.value) / 3600)
-                    * U64F64::from_num(seconds_elapsed);
-                total_cost_u64f64.to_num::<u64>()
-            }
-        };
+        // Calculate the cost for a contract, can be any of:
+        // - NodeContract
+        // - RentContract
+        // - NameContract
+        let total_cost = Self::calculate_contract_cost(contract, &pricing_policy)?;
 
         // If cost is 0, reinsert to be billed at next interval
         if total_cost == 0 {
@@ -691,6 +650,7 @@ impl<T: Config> Module<T> {
         Self::deposit_event(RawEvent::ContractBilled(contract_bill));
 
         // set the amount unbilled back to 0
+        let mut contract_billing_info = ContractBillingInformationByID::get(contract.contract_id);
         contract_billing_info.amount_unbilled = 0;
         ContractBillingInformationByID::insert(contract.contract_id, &contract_billing_info);
 
@@ -704,6 +664,60 @@ impl<T: Config> Module<T> {
         }
 
         Ok(())
+    }
+
+    pub fn calculate_contract_cost(
+        contract: &types::Contract,
+        pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
+    ) -> Result<u64, DispatchError> {
+        // The number of seconds elapsed since last contract bill is the frequency * block time (6 seconds)
+        let seconds_elapsed = T::BillingFrequency::get() * 6;
+
+        // Get the contract billing info to view the amount unbilled for NRU (network resource units)
+        let contract_billing_info = ContractBillingInformationByID::get(contract.contract_id);
+        let total_cost = match &contract.contract_type {
+            // Calculate total cost for a node contract
+            types::ContractData::NodeContract(node_contract) => {
+                // Get the node
+                if !pallet_tfgrid::Nodes::contains_key(node_contract.node_id) {
+                    return Err(DispatchError::from(Error::<T>::NodeNotExists));
+                }
+
+                // We know the contract is using resources, now calculate the cost for each used resource
+                let node_contract_resources = NodeContractResources::get(contract.contract_id);
+
+                let contract_cost = Self::calculate_resources_cost(
+                    node_contract_resources.used,
+                    node_contract.public_ips,
+                    seconds_elapsed,
+                    pricing_policy.clone(),
+                );
+                contract_cost + contract_billing_info.amount_unbilled
+            }
+            types::ContractData::RentContract(rent_contract) => {
+                if !pallet_tfgrid::Nodes::contains_key(rent_contract.node_id) {
+                    return Err(DispatchError::from(Error::<T>::NodeNotExists));
+                }
+                let node = pallet_tfgrid::Nodes::get(rent_contract.node_id);
+
+                let contract_cost = Self::calculate_resources_cost(
+                    node.resources,
+                    0,
+                    seconds_elapsed,
+                    pricing_policy.clone(),
+                );
+                Percent::from_percent(pricing_policy.discount_for_dedication_nodes) * contract_cost
+            }
+            // Calculate total cost for a name contract
+            types::ContractData::NameContract(_) => {
+                // bill user for 1 hour name usage (60 blocks * 60 seconds)
+                let total_cost_u64f64 = (U64F64::from_num(pricing_policy.unique_name.value) / 3600)
+                    * U64F64::from_num(seconds_elapsed);
+                total_cost_u64f64.to_num::<u64>()
+            }
+        };
+
+        Ok(total_cost)
     }
 
     // Calculates the total cost of a node contract.
@@ -1069,7 +1083,9 @@ impl<T: Config> Module<T> {
         Ok(())
     }
 
-    pub fn get_node_contract(contract: &types::Contract) -> Result<types::NodeContract, DispatchError> {
+    pub fn get_node_contract(
+        contract: &types::Contract,
+    ) -> Result<types::NodeContract, DispatchError> {
         match contract.contract_type.clone() {
             types::ContractData::NodeContract(c) => Ok(c),
             _ => return Err(DispatchError::from(Error::<T>::InvalidContractType)),

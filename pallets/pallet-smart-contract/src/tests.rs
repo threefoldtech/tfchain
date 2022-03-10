@@ -13,21 +13,6 @@ use pallet_tfgrid::types as pallet_tfgrid_types;
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
 #[test]
-fn test_percent() {
-    let cost: u64 = 1000;
-    let new_cost = Percent::from_percent(25) * cost;
-    assert_eq!(new_cost, 250);
-
-    let cost: u64 = 1000;
-    let new_cost = Percent::from_percent(50) * cost;
-    assert_eq!(new_cost, 500);
-
-    let cost: u64 = 992;
-    let new_cost = Percent::from_percent(25) * cost;
-    assert_eq!(new_cost, 248);
-}
-
-#[test]
 fn test_create_contract_works() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
@@ -567,8 +552,11 @@ fn test_create_rent_contract() {
         ));
 
         let contract = SmartContractModule::contracts(1);
-        let rent_contract = types::RentContract{node_id};
-        assert_eq!(contract.contract_type, types::ContractData::RentContract(rent_contract));
+        let rent_contract = types::RentContract { node_id };
+        assert_eq!(
+            contract.contract_type,
+            types::ContractData::RentContract(rent_contract)
+        );
     });
 }
 
@@ -584,8 +572,11 @@ fn test_create_rent_contract_cancel_works() {
         ));
 
         let contract = SmartContractModule::contracts(1);
-        let rent_contract = types::RentContract{node_id};
-        assert_eq!(contract.contract_type, types::ContractData::RentContract(rent_contract));
+        let rent_contract = types::RentContract { node_id };
+        assert_eq!(
+            contract.contract_type,
+            types::ContractData::RentContract(rent_contract)
+        );
 
         assert_ok!(SmartContractModule::cancel_contract(
             Origin::signed(bob()),
@@ -593,7 +584,10 @@ fn test_create_rent_contract_cancel_works() {
         ));
 
         let contract = SmartContractModule::contracts(1);
-        assert_eq!(contract.state, types::ContractState::Deleted(types::Cause::CanceledByUser));
+        assert_eq!(
+            contract.state,
+            types::ContractState::Deleted(types::Cause::CanceledByUser)
+        );
     });
 }
 
@@ -609,8 +603,11 @@ fn test_create_node_contract_other_owner_when_rent_contract_active_fails() {
         ));
 
         let contract = SmartContractModule::contracts(1);
-        let rent_contract = types::RentContract{node_id};
-        assert_eq!(contract.contract_type, types::ContractData::RentContract(rent_contract));
+        let rent_contract = types::RentContract { node_id };
+        assert_eq!(
+            contract.contract_type,
+            types::ContractData::RentContract(rent_contract)
+        );
 
         assert_noop!(
             SmartContractModule::create_node_contract(
@@ -638,8 +635,11 @@ fn test_create_node_contract_same_owner_when_rent_contract_active_works() {
         ));
 
         let contract = SmartContractModule::contracts(1);
-        let rent_contract = types::RentContract{node_id};
-        assert_eq!(contract.contract_type, types::ContractData::RentContract(rent_contract));
+        let rent_contract = types::RentContract { node_id };
+        assert_eq!(
+            contract.contract_type,
+            types::ContractData::RentContract(rent_contract)
+        );
 
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
@@ -648,6 +648,46 @@ fn test_create_node_contract_same_owner_when_rent_contract_active_works() {
             "hash".as_bytes().to_vec(),
             1
         ));
+    });
+}
+
+#[test]
+fn test_create_rent_contract_billing() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(bob()),
+            node_id
+        ));
+
+        let contract = SmartContractModule::contracts(1);
+        let rent_contract = types::RentContract { node_id };
+        assert_eq!(
+            contract.contract_type,
+            types::ContractData::RentContract(rent_contract)
+        );
+
+        run_to_block(12);
+        // Test that the expected events were emitted
+        let our_events = System::events()
+            .into_iter()
+            .map(|r| r.event)
+            .filter_map(|e| {
+                if let Event::pallet_smart_contract(inner) = e {
+                    Some(inner)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        for event in our_events {
+            println!("event: {:?}", event);
+        }
     });
 }
 
@@ -734,7 +774,7 @@ fn test_node_contract_billing() {
         let burned_amount = Perbill::from_percent(35) * amount_due_as_u128;
         assert_eq!(
             total_issuance,
-            initial_total_issuance - burned_amount as u64 -1
+            initial_total_issuance - burned_amount as u64 - 1
         );
 
         // amount unbilled should have been reset after a transfer between contract owner and farmer
@@ -813,7 +853,10 @@ fn test_node_contract_billing_cycles_cancel_contract() {
         check_report_cost(5, amount_due_as_u128, 22, discount_received);
 
         run_to_block(28);
-        assert_ok!(SmartContractModule::cancel_contract(Origin::signed(bob()), 1));
+        assert_ok!(SmartContractModule::cancel_contract(
+            Origin::signed(bob()),
+            1
+        ));
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, contract_id, twin_id);
         run_to_block(32);
@@ -825,47 +868,6 @@ fn test_node_contract_billing_cycles_cancel_contract() {
         let billing_info = SmartContractModule::contract_billing_information_by_id(1);
         assert_eq!(billing_info.amount_unbilled, 0);
     });
-}
-
-fn calculate_tft_cost(
-    number_of_blocks: u64,
-    contract_id: u64,
-    twin_id: u32,
-) -> (u128, types::DiscountLevel) {
-    let billing_info = SmartContractModule::contract_billing_information_by_id(contract_id);
-
-    let contract_resources = SmartContractModule::node_contract_resources(1);
-    let contract = SmartContractModule::contracts(1);
-    let node_contract = SmartContractModule::get_node_contract(&contract).unwrap();
-
-    let amount_to_bill = SmartContractModule::calculate_resources_cost(
-        contract_resources.used,
-        node_contract.public_ips,
-        number_of_blocks * 6,
-        TfgridModule::pricing_policies(1),
-    );
-
-    let total_amount_unbilled = billing_info.amount_unbilled + amount_to_bill;
-
-    let tft_cost =
-        SmartContractModule::calculate_cost_in_tft_from_musd(total_amount_unbilled).unwrap();
-
-    if tft_cost == 0 {
-        return (0, types::DiscountLevel::default())
-    }
-
-    let twin = TfgridModule::twins(twin_id);
-    let b = Balances::free_balance(&twin.account_id);
-    let (amount_due, discount_received) = SmartContractModule::calculate_discount(
-        tft_cost,
-        b,
-        pallet_tfgrid_types::CertificationType::Diy,
-    );
-
-    // Convert amount due to u128
-    let amount_due_as_u128: u128 = amount_due.saturated_into::<u128>();
-    assert_ne!(amount_due_as_u128, 0);
-    (amount_due_as_u128, discount_received)
 }
 
 #[test]
@@ -893,96 +895,32 @@ fn test_node_contract_billing_should_cancel_contract_when_out_of_funds() {
         run_to_block(22);
 
         let c1 = SmartContractModule::contracts(1);
-        assert_eq!(c1.state, types::ContractState::Deleted(types::Cause::OutOfFunds));
+        assert_eq!(
+            c1.state,
+            types::ContractState::Deleted(types::Cause::OutOfFunds)
+        );
 
         let contract_billing_info = SmartContractModule::contract_billing_information_by_id(1);
         assert_eq!(contract_billing_info.amount_unbilled, 0); //this amount in unit USD = 1/1e7
 
         let our_events = System::events()
-        .into_iter()
-        .map(|r| r.event)
-        .filter_map(|e| {
-            if let Event::pallet_smart_contract(inner) = e {
-                Some(inner)
-            } else {
-                None
-            }
-        })
-        .collect::<Vec<_>>();
+            .into_iter()
+            .map(|r| r.event)
+            .filter_map(|e| {
+                if let Event::pallet_smart_contract(inner) = e {
+                    Some(inner)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
 
-        let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> = Vec::new();
+        let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
+            Vec::new();
         expected_events.push(RawEvent::NodeContractCanceled(1, 1, 3));
 
         assert_eq!(our_events[6], expected_events[0]);
     });
-}
-
-fn push_nru_report_for_contract(contract_id: u64, block_number: u64) {
-    let gigabyte = 1000 * 1000 * 1000;
-    let mut consumption_reports = Vec::new();
-    consumption_reports.push(super::types::Consumption {
-        contract_id,
-        nru: 3 * gigabyte,
-        timestamp: 1628082000 + (6*block_number),
-        window: 6 * block_number,
-    });
-
-    assert_ok!(SmartContractModule::add_reports(
-        Origin::signed(alice()),
-        consumption_reports
-    ));
-}
-
-fn push_contract_resources_used() {
-    let mut resources = Vec::new();
-    resources.push(
-        types::ContractResources{
-            contract_id: 1,
-            used: pallet_tfgrid_types::Resources{
-                cru: 2,
-                hru: 0,
-                mru: 2 * GIGABYTE,
-                sru: 60 * GIGABYTE,
-            }
-        }
-    );
-
-    assert_ok!(SmartContractModule::report_contract_resources(
-        Origin::signed(alice()),
-        resources
-    ));
-}
-
-fn check_report_cost(
-    index: usize,
-    amount_billed: u128,
-    block_number: u64,
-    discount_level: types::DiscountLevel,
-) {
-    // Test that the expected events were emitted
-    let our_events = System::events()
-        .into_iter()
-        .map(|r| r.event)
-        .filter_map(|e| {
-            if let Event::pallet_smart_contract(inner) = e {
-                Some(inner)
-            } else {
-                None
-            }
-        })
-        .collect::<Vec<_>>();
-
-    let contract_bill_event = types::ContractBill {
-        contract_id: 1,
-        timestamp: 1628082000 + (6 * block_number),
-        discount_level,
-        amount_billed,
-    };
-    let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
-        Vec::new();
-    expected_events.push(RawEvent::ContractBilled(contract_bill_event));
-
-    assert_eq!(our_events[index], expected_events[0]);
 }
 
 #[test]
@@ -1057,6 +995,132 @@ fn test_cu_calculation() {
         let cu = SmartContractModule::calculate_cu(cu, mru);
         assert_eq!(cu, 8);
     })
+}
+
+#[test]
+fn test_percent() {
+    let cost: u64 = 1000;
+    let new_cost = Percent::from_percent(25) * cost;
+    assert_eq!(new_cost, 250);
+
+    let cost: u64 = 1000;
+    let new_cost = Percent::from_percent(50) * cost;
+    assert_eq!(new_cost, 500);
+
+    let cost: u64 = 992;
+    let new_cost = Percent::from_percent(25) * cost;
+    assert_eq!(new_cost, 248);
+}
+
+// ***** HELPER FUNCTIONS ***** //
+// ---------------------------- //
+// ---------------------------- //
+
+fn push_nru_report_for_contract(contract_id: u64, block_number: u64) {
+    let gigabyte = 1000 * 1000 * 1000;
+    let mut consumption_reports = Vec::new();
+    consumption_reports.push(super::types::Consumption {
+        contract_id,
+        nru: 3 * gigabyte,
+        timestamp: 1628082000 + (6 * block_number),
+        window: 6 * block_number,
+    });
+
+    assert_ok!(SmartContractModule::add_reports(
+        Origin::signed(alice()),
+        consumption_reports
+    ));
+}
+
+fn push_contract_resources_used() {
+    let mut resources = Vec::new();
+    resources.push(types::ContractResources {
+        contract_id: 1,
+        used: pallet_tfgrid_types::Resources {
+            cru: 2,
+            hru: 0,
+            mru: 2 * GIGABYTE,
+            sru: 60 * GIGABYTE,
+        },
+    });
+
+    assert_ok!(SmartContractModule::report_contract_resources(
+        Origin::signed(alice()),
+        resources
+    ));
+}
+
+fn check_report_cost(
+    index: usize,
+    amount_billed: u128,
+    block_number: u64,
+    discount_level: types::DiscountLevel,
+) {
+    // Test that the expected events were emitted
+    let our_events = System::events()
+        .into_iter()
+        .map(|r| r.event)
+        .filter_map(|e| {
+            if let Event::pallet_smart_contract(inner) = e {
+                Some(inner)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let contract_bill_event = types::ContractBill {
+        contract_id: 1,
+        timestamp: 1628082000 + (6 * block_number),
+        discount_level,
+        amount_billed,
+    };
+    let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
+        Vec::new();
+    expected_events.push(RawEvent::ContractBilled(contract_bill_event));
+
+    assert_eq!(our_events[index], expected_events[0]);
+}
+
+fn calculate_tft_cost(
+    number_of_blocks: u64,
+    contract_id: u64,
+    twin_id: u32,
+) -> (u128, types::DiscountLevel) {
+    let billing_info = SmartContractModule::contract_billing_information_by_id(contract_id);
+
+    let contract_resources = SmartContractModule::node_contract_resources(1);
+    let contract = SmartContractModule::contracts(1);
+    let node_contract = SmartContractModule::get_node_contract(&contract).unwrap();
+
+    let amount_to_bill = SmartContractModule::calculate_resources_cost(
+        contract_resources.used,
+        node_contract.public_ips,
+        number_of_blocks * 6,
+        TfgridModule::pricing_policies(1),
+    );
+
+    let total_amount_unbilled = billing_info.amount_unbilled + amount_to_bill;
+
+    let tft_cost =
+        SmartContractModule::calculate_cost_in_tft_from_musd(total_amount_unbilled).unwrap();
+
+    if tft_cost == 0 {
+        return (0, types::DiscountLevel::default());
+    }
+
+    let twin = TfgridModule::twins(twin_id);
+    let b = Balances::free_balance(&twin.account_id);
+    let (amount_due, discount_received) = SmartContractModule::calculate_discount(
+        tft_cost,
+        b,
+        pallet_tfgrid_types::CertificationType::Diy,
+    );
+
+    // Convert amount due to u128
+    let amount_due_as_u128: u128 = amount_due.saturated_into::<u128>();
+    assert_ne!(amount_due_as_u128, 0);
+    (amount_due_as_u128, discount_received)
 }
 
 pub fn prepare_twins() {
