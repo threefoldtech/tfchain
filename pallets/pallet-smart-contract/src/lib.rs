@@ -58,7 +58,7 @@ decl_event!(
         ConsumptionReportReceived(types::Consumption),
         ContractBilled(types::ContractBill),
         TokensBurned(u64, BalanceOf),
-        UpdatedUsedResources(u64, pallet_tfgrid_types::Resources),
+        UpdatedUsedResources(types::ContractResources),
     }
 );
 
@@ -142,9 +142,9 @@ decl_module! {
         }
 
         #[weight = 100_000_000]
-        fn report_contract_resources(origin, contract_id: u64, used_resources: pallet_tfgrid_types::Resources) -> DispatchResultWithPostInfo {
+        fn report_contract_resources(origin, contract_resources: Vec<types::ContractResources>) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_report_contract_resources(account_id, contract_id, used_resources)
+            Self::_report_contract_resources(account_id, contract_resources)
         }
 
         fn on_finalize(block: T::BlockNumber) {
@@ -354,13 +354,8 @@ impl<T: Config> Module<T> {
 
     pub fn _report_contract_resources(
         source: T::AccountId,
-        contract_id: u64,
-        resources: pallet_tfgrid_types::Resources,
+        contract_resources: Vec<types::ContractResources>
     ) -> DispatchResultWithPostInfo {
-        ensure!(
-            Contracts::contains_key(contract_id),
-            Error::<T>::ContractNotExists
-        );
         ensure!(
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
             Error::<T>::TwinNotExists
@@ -371,22 +366,28 @@ impl<T: Config> Module<T> {
             Error::<T>::NodeNotExists
         );
 
-        // we know contract exists, fetch it
-        // if the node is trying to send garbage data we can throw an error here
-        let node_id = pallet_tfgrid::NodeIdByTwinID::get(&twin_id);
-        let contract = Contracts::get(contract_id);
-        let node_contract = Self::get_node_contract(&contract)?;
-        ensure!(
-            node_contract.node_id == node_id,
-            Error::<T>::NodeNotAuthorizedToReportResources
-        );
-
-        // Do insert
-        let node_contract_resources = types::ContractResources { used: resources };
-        NodeContractResources::insert(contract_id, node_contract_resources);
-
-        // deposit event
-        Self::deposit_event(RawEvent::UpdatedUsedResources(contract_id, resources));
+        for contract_resource in contract_resources {
+            ensure!(
+                Contracts::contains_key(contract_resource.contract_id),
+                Error::<T>::ContractNotExists
+            );
+    
+            // we know contract exists, fetch it
+            // if the node is trying to send garbage data we can throw an error here
+            let node_id = pallet_tfgrid::NodeIdByTwinID::get(&twin_id);
+            let contract = Contracts::get(contract_resource.contract_id);
+            let node_contract = Self::get_node_contract(&contract)?;
+            ensure!(
+                node_contract.node_id == node_id,
+                Error::<T>::NodeNotAuthorizedToReportResources
+            );
+    
+            // Do insert
+            NodeContractResources::insert(contract_resource.contract_id, &contract_resource);
+    
+            // deposit event
+            Self::deposit_event(RawEvent::UpdatedUsedResources(contract_resource));
+        }
 
         Ok(Pays::No.into())
     }

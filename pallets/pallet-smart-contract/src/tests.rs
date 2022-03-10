@@ -818,15 +818,22 @@ fn push_nru_report_for_contract(contract_id: u64, block_number: u64) {
 }
 
 fn push_contract_resources_used() {
+    let mut resources = Vec::new();
+    resources.push(
+        types::ContractResources{
+            contract_id: 1,
+            used: pallet_tfgrid_types::Resources{
+                cru: 2,
+                hru: 0,
+                mru: 2 * GIGABYTE,
+                sru: 60 * GIGABYTE,
+            }
+        }
+    );
+
     assert_ok!(SmartContractModule::report_contract_resources(
         Origin::signed(alice()),
-        1,
-        pallet_tfgrid_types::Resources{
-            cru: 2,
-            hru: 0,
-            mru: 2 * GIGABYTE,
-            sru: 60 * GIGABYTE,
-        }
+        resources
     ));
 }
 
