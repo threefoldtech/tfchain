@@ -115,6 +115,16 @@ pub struct Resources {
     pub mru: u64,
 }
 
+impl Resources {
+    pub fn add(mut self, other: &Resources) -> Resources {
+        self.cru += other.cru;
+        self.sru += other.sru;
+        self.hru += other.hru;
+        self.mru += other.mru;
+        self
+    }
+}
+
 // Store Location long and lat as string
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
 pub struct Location {

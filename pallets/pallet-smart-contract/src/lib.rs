@@ -748,6 +748,9 @@ impl<T: Config> Module<T> {
             * cu;
         debug::info!("cu cost: {:?}", cu_cost);
 
+        if ipu > 0 {
+
+        }
         // save total
         let mut total_cost = su_cost + cu_cost;
 
