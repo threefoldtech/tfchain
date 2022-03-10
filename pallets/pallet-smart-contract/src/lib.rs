@@ -596,12 +596,14 @@ impl<T: Config> Module<T> {
         let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
         let certification_type = pallet_tfgrid_types::CertificationType::Diy;
 
+        // The number of seconds elapsed since last contract bill is the frequency * block time (6 seconds)
+        let seconds_elapsed = T::BillingFrequency::get() * 6;
+
         // Calculate the cost for a contract, can be any of:
         // - NodeContract
         // - RentContract
         // - NameContract
-        let total_cost = Self::calculate_contract_cost(contract, &pricing_policy)?;
-
+        let total_cost = Self::calculate_contract_cost(contract, &pricing_policy, seconds_elapsed)?;
         // If cost is 0, reinsert to be billed at next interval
         if total_cost == 0 {
             return Ok(());
@@ -618,6 +620,7 @@ impl<T: Config> Module<T> {
         // Calculate the amount due and discount received based on the total_cost amount due
         let (amount_due, discount_received) =
             Self::calculate_discount(total_cost_tft_64, balance, certification_type);
+
         // Convert amount due to u128
         let amount_due_as_u128: u128 = amount_due.saturated_into::<u128>();
         // Get current TFT price
@@ -669,10 +672,8 @@ impl<T: Config> Module<T> {
     pub fn calculate_contract_cost(
         contract: &types::Contract,
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
+        seconds_elapsed: u64,
     ) -> Result<u64, DispatchError> {
-        // The number of seconds elapsed since last contract bill is the frequency * block time (6 seconds)
-        let seconds_elapsed = T::BillingFrequency::get() * 6;
-
         // Get the contract billing info to view the amount unbilled for NRU (network resource units)
         let contract_billing_info = ContractBillingInformationByID::get(contract.contract_id);
         let total_cost = match &contract.contract_type {
@@ -710,7 +711,7 @@ impl<T: Config> Module<T> {
             }
             // Calculate total cost for a name contract
             types::ContractData::NameContract(_) => {
-                // bill user for 1 hour name usage (60 blocks * 60 seconds)
+                // bill user for name usage for number of seconds elapsed
                 let total_cost_u64f64 = (U64F64::from_num(pricing_policy.unique_name.value) / 3600)
                     * U64F64::from_num(seconds_elapsed);
                 total_cost_u64f64.to_num::<u64>()

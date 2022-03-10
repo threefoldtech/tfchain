@@ -672,6 +672,11 @@ fn test_create_rent_contract_billing() {
         );
 
         run_to_block(12);
+
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, 1, 2);
+        assert_ne!(amount_due_as_u128, 0);
+        check_report_cost(2, amount_due_as_u128, 12, discount_received);
+
         // Test that the expected events were emitted
         let our_events = System::events()
             .into_iter()
@@ -1087,23 +1092,14 @@ fn calculate_tft_cost(
     contract_id: u64,
     twin_id: u32,
 ) -> (u128, types::DiscountLevel) {
-    let billing_info = SmartContractModule::contract_billing_information_by_id(contract_id);
-
-    let contract_resources = SmartContractModule::node_contract_resources(1);
-    let contract = SmartContractModule::contracts(1);
-    let node_contract = SmartContractModule::get_node_contract(&contract).unwrap();
-
-    let amount_to_bill = SmartContractModule::calculate_resources_cost(
-        contract_resources.used,
-        node_contract.public_ips,
-        number_of_blocks * 6,
-        TfgridModule::pricing_policies(1),
-    );
-
-    let total_amount_unbilled = billing_info.amount_unbilled + amount_to_bill;
+    let contract = SmartContractModule::contracts(contract_id);
+    let pricing_policy = TfgridModule::pricing_policies(1);
+    let cost = SmartContractModule::calculate_contract_cost(&contract, &pricing_policy, number_of_blocks * 6).unwrap();
+    println!("musd cost: {:?}", cost);
 
     let tft_cost =
-        SmartContractModule::calculate_cost_in_tft_from_musd(total_amount_unbilled).unwrap();
+        SmartContractModule::calculate_cost_in_tft_from_musd(cost).unwrap();
+    println!("tft cost: {:?}", tft_cost);
 
     if tft_cost == 0 {
         return (0, types::DiscountLevel::default());
@@ -1119,7 +1115,8 @@ fn calculate_tft_cost(
 
     // Convert amount due to u128
     let amount_due_as_u128: u128 = amount_due.saturated_into::<u128>();
-    assert_ne!(amount_due_as_u128, 0);
+    println!("due: {:?}", amount_due_as_u128);
+
     (amount_due_as_u128, discount_received)
 }
 
