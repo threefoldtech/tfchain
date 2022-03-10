@@ -58,7 +58,7 @@ decl_event!(
         ConsumptionReportReceived(types::Consumption),
         ContractBilled(types::ContractBill),
         TokensBurned(u64, BalanceOf),
-        UpdatedUsedResources(u64, pallet_tfgrid_types::Resources),
+        UpdatedUsedResources(types::ContractResources),
         RentContractCanceled(u64),
     }
 );
@@ -146,9 +146,9 @@ decl_module! {
         }
 
         #[weight = 100_000_000]
-        fn report_contract_resources(origin, contract_id: u64, used_resources: pallet_tfgrid_types::Resources) -> DispatchResultWithPostInfo {
+        fn report_contract_resources(origin, contract_resources: Vec<types::ContractResources>) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_report_contract_resources(account_id, contract_id, used_resources)
+            Self::_report_contract_resources(account_id, contract_resources)
         }
 
         #[weight = 100_000_000]
@@ -242,10 +242,6 @@ impl<T: Config> Module<T> {
         let mut node_contracts = ActiveNodeContracts::get(&node_contract.node_id);
         node_contracts.push(id);
         ActiveNodeContracts::insert(&node_contract.node_id, &node_contracts);
-
-        // Insert resources for node contract
-        let node_contract_resources = types::ContractResources::default();
-        NodeContractResources::insert(id, node_contract_resources);
 
         // Update Contract ID
         ContractID::put(id);
@@ -421,13 +417,8 @@ impl<T: Config> Module<T> {
 
     pub fn _report_contract_resources(
         source: T::AccountId,
-        contract_id: u64,
-        resources: pallet_tfgrid_types::Resources,
+        contract_resources: Vec<types::ContractResources>,
     ) -> DispatchResultWithPostInfo {
-        ensure!(
-            Contracts::contains_key(contract_id),
-            Error::<T>::ContractNotExists
-        );
         ensure!(
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
             Error::<T>::TwinNotExists
@@ -437,23 +428,35 @@ impl<T: Config> Module<T> {
             pallet_tfgrid::NodeIdByTwinID::contains_key(twin_id),
             Error::<T>::NodeNotExists
         );
+        let node_id = pallet_tfgrid::NodeIdByTwinID::get(twin_id);
 
-        // we know contract exists, fetch it
-        // if the node is trying to send garbage data we can throw an error here
-        let node_id = pallet_tfgrid::NodeIdByTwinID::get(&twin_id);
-        let contract = Contracts::get(contract_id);
-        let node_contract = Self::get_node_contract(&contract)?;
-        ensure!(
-            node_contract.node_id == node_id,
-            Error::<T>::NodeNotAuthorizedToReportResources
-        );
+        for contract_resource in contract_resources {
+            if !Contracts::contains_key(contract_resource.contract_id) {
+                continue;
+            }
+            // we know contract exists, fetch it
+            // if the node is trying to send garbage data we can throw an error here
+            let contract = Contracts::get(contract_resource.contract_id);
+            let node_contract = Self::get_node_contract(&contract)?;
+            ensure!(
+                node_contract.node_id == node_id,
+                Error::<T>::NodeNotAuthorizedToComputeReport
+            );
 
-        // Do insert
-        let node_contract_resources = types::ContractResources { used: resources };
-        NodeContractResources::insert(contract_id, node_contract_resources);
-
-        // deposit event
-        Self::deposit_event(RawEvent::UpdatedUsedResources(contract_id, resources));
+            // we know contract exists, fetch it
+            // if the node is trying to send garbage data we can throw an error here
+            let node_id = pallet_tfgrid::NodeIdByTwinID::get(&twin_id);
+            let contract = Contracts::get(contract_resource.contract_id);
+            let node_contract = Self::get_node_contract(&contract)?;
+            ensure!(
+                node_contract.node_id == node_id,
+                Error::<T>::NodeNotAuthorizedToReportResources
+            );
+            // Do insert
+            NodeContractResources::insert(contract_resource.contract_id, &contract_resource);
+            // deposit event
+            Self::deposit_event(RawEvent::UpdatedUsedResources(contract_resource));
+        }
 
         Ok(Pays::No.into())
     }
@@ -703,18 +706,34 @@ impl<T: Config> Module<T> {
         Ok(())
     }
 
-    // Calculates the total cost of a contract.
+    // Calculates the total cost of a node contract.
     pub fn _calculate_node_contract_cost(
         contract: &types::Contract,
         seconds_elapsed: u64,
         pricing_policy: pallet_tfgrid_types::PricingPolicy<T::AccountId>,
     ) -> u64 {
-        let node_contract_resources = NodeContractResources::get(contract.contract_id);
+        // parse contract to node contract
         let node_contract = if let Ok(node_contract) = Self::get_node_contract(&contract) {
             node_contract
         } else {
             return 0;
         };
+
+        let mut total_cost = U64F64::from_num(0);
+        // First calculate total IP cost
+        let total_ip_cost = U64F64::from_num(node_contract.public_ips)
+            * (U64F64::from_num(pricing_policy.ipu.value) / 3600)
+            * U64F64::from_num(seconds_elapsed);
+        debug::info!("ip cost: {:?}", total_ip_cost);
+        total_cost += total_ip_cost;
+
+        // If the node contract is not using any resources, return here
+        if !NodeContractResources::contains_key(contract.contract_id) {
+            return total_cost.ceil().to_num::<u64>();
+        }
+
+        // We know the contract is using resources, now calculate the cost for each used resource
+        let node_contract_resources = NodeContractResources::get(contract.contract_id);
 
         let hru = U64F64::from_num(node_contract_resources.used.hru) / pricing_policy.su.factor();
         let sru = U64F64::from_num(node_contract_resources.used.sru) / pricing_policy.su.factor();
@@ -742,8 +761,8 @@ impl<T: Config> Module<T> {
         debug::info!("ip cost: {:?}", total_ip_cost);
 
         // save total
-        let total = su_cost + cu_cost + total_ip_cost;
-        let total = total.ceil().to_num::<u64>();
+        total_cost = su_cost + cu_cost + total_ip_cost;
+        let total = total_cost.ceil().to_num::<u64>();
         debug::info!("total cost: {:?}", total);
 
         return total;

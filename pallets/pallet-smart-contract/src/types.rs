@@ -134,5 +134,6 @@ pub struct ContractBill {
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
 pub struct ContractResources {
+    pub contract_id: u64,
     pub used: types::Resources,
 }
