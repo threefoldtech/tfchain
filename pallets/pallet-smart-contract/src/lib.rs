@@ -5,7 +5,7 @@ use frame_support::{
     dispatch::DispatchResultWithPostInfo,
     ensure,
     traits::{Currency, ExistenceRequirement::KeepAlive, Get, Vec},
-    weights::{Pays},
+    weights::Pays,
 };
 use frame_system::{self as system, ensure_signed};
 use sp_runtime::{traits::SaturatedConversion, DispatchError, DispatchResult, Perbill};
@@ -24,8 +24,8 @@ mod tests;
 
 mod benchmarking;
 
-pub mod weights;
 pub mod types;
+pub mod weights;
 
 pub use weights::WeightInfo;
 
@@ -58,6 +58,7 @@ decl_event!(
         ConsumptionReportReceived(types::Consumption),
         ContractBilled(types::ContractBill),
         TokensBurned(u64, BalanceOf),
+        UpdatedUsedResources(types::ContractResources),
     }
 );
 
@@ -81,7 +82,9 @@ decl_error! {
         NameExists,
         NameNotValid,
         InvalidContractType,
-        TFTPriceValueError
+        TFTPriceValueError,
+        NotEnoughResourcesOnNode,
+        NodeNotAuthorizedToReportResources
     }
 }
 
@@ -89,7 +92,7 @@ decl_storage! {
     trait Store for Module<T: Config> as SmartContractModule {
         pub Contracts get(fn contracts): map hasher(blake2_128_concat) u64 => types::Contract;
         pub ContractBillingInformationByID get(fn contract_billing_information_by_id): map hasher(blake2_128_concat) u64 => types::ContractBillingInformation;
-        pub ContractLastBilledAt get(fn contract_billed_at): map hasher(blake2_128_concat) u64 => u64;
+        pub NodeContractResources get(fn reserved_contract_resources): map hasher(blake2_128_concat) u64 => types::ContractResources;
 
         // ContractIDByNodeIDAndHash is a mapping for a contract ID by supplying a node_id and a deployment_hash
         // this combination makes a deployment for a user / node unique
@@ -138,6 +141,12 @@ decl_module! {
             Self::_create_name_contract(account_id, name)?;
         }
 
+        #[weight = 100_000_000]
+        fn report_contract_resources(origin, contract_resources: Vec<types::ContractResources>) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_report_contract_resources(account_id, contract_resources)
+        }
+
         fn on_finalize(block: T::BlockNumber) {
             match Self::_bill_contracts_at_block(block) {
                 Ok(_) => {
@@ -171,7 +180,7 @@ impl<T: Config> Module<T> {
             Error::<T>::NodeNotExists
         );
 
-        // if the contract with hash and node id exists and it's in any other state then
+        // If the contract with hash and node id exists and it's in any other state then
         // contractState::Deleted then we don't allow the creation of it.
         // If it exists we allow the user to "restore" this contract
         if ContractIDByNodeIDAndHash::contains_key(node_id, &deployment_hash) {
@@ -182,11 +191,14 @@ impl<T: Config> Module<T> {
             }
         }
 
+        // Check if we can deploy requested resources on the selected node
+        // Self::can_deploy_resources_on_node(node_id, resources.clone())?;
+
+        // Get the Contract ID map and increment
         let mut id = ContractID::get();
         id = id + 1;
 
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
-
+        // Prepare NodeContract struct
         let node_contract = types::NodeContract {
             node_id,
             deployment_data,
@@ -195,16 +207,24 @@ impl<T: Config> Module<T> {
             public_ips_list: Vec::new(),
         };
 
+        // Create contract
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
         let contract = Self::_create_contract(
+            id,
             twin_id,
             types::ContractData::NodeContract(node_contract.clone()),
         )?;
 
+        // Insert contract id by (node_id, hash)
         ContractIDByNodeIDAndHash::insert(node_id, deployment_hash, id);
 
+        // Insert contract into active contracts map
         let mut node_contracts = ActiveNodeContracts::get(&node_contract.node_id);
         node_contracts.push(id);
         ActiveNodeContracts::insert(&node_contract.node_id, &node_contracts);
+
+        // Update Contract ID
+        ContractID::put(id);
 
         Self::deposit_event(RawEvent::ContractCreated(contract));
 
@@ -212,12 +232,10 @@ impl<T: Config> Module<T> {
     }
 
     fn _create_contract(
+        id: u64,
         twin_id: u32,
         mut contract_type: types::ContractData,
     ) -> Result<types::Contract, DispatchError> {
-        let mut id = ContractID::get();
-        id = id + 1;
-
         if let types::ContractData::NodeContract(ref mut nc) = contract_type {
             Self::_reserve_ip(id, nc)?;
         };
@@ -242,9 +260,7 @@ impl<T: Config> Module<T> {
         Self::_reinsert_contract_to_bill(contract.contract_id);
 
         Contracts::insert(id, &contract);
-        ContractID::put(id);
         ContractBillingInformationByID::insert(id, contract_billing_information);
-        ContractLastBilledAt::insert(id, now);
 
         Ok(contract)
     }
@@ -332,6 +348,52 @@ impl<T: Config> Module<T> {
         Ok(())
     }
 
+    pub fn _report_contract_resources(
+        source: T::AccountId,
+        contract_resources: Vec<types::ContractResources>,
+    ) -> DispatchResultWithPostInfo {
+        ensure!(
+            pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
+            Error::<T>::TwinNotExists
+        );
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source);
+        ensure!(
+            pallet_tfgrid::NodeIdByTwinID::contains_key(twin_id),
+            Error::<T>::NodeNotExists
+        );
+        let node_id = pallet_tfgrid::NodeIdByTwinID::get(twin_id);
+
+        for contract_resource in contract_resources {
+            if !Contracts::contains_key(contract_resource.contract_id) {
+                continue;
+            }
+            // we know contract exists, fetch it
+            // if the node is trying to send garbage data we can throw an error here
+            let contract = Contracts::get(contract_resource.contract_id);
+            let node_contract = Self::get_node_contract(&contract)?;
+            ensure!(
+                node_contract.node_id == node_id,
+                Error::<T>::NodeNotAuthorizedToComputeReport
+            );
+
+            // we know contract exists, fetch it
+            // if the node is trying to send garbage data we can throw an error here
+            let node_id = pallet_tfgrid::NodeIdByTwinID::get(&twin_id);
+            let contract = Contracts::get(contract_resource.contract_id);
+            let node_contract = Self::get_node_contract(&contract)?;
+            ensure!(
+                node_contract.node_id == node_id,
+                Error::<T>::NodeNotAuthorizedToReportResources
+            );
+            // Do insert
+            NodeContractResources::insert(contract_resource.contract_id, &contract_resource);
+            // deposit event
+            Self::deposit_event(RawEvent::UpdatedUsedResources(contract_resource));
+        }
+
+        Ok(Pays::No.into())
+    }
+
     pub fn _compute_reports(
         source: T::AccountId,
         reports: Vec<types::Consumption>,
@@ -388,7 +450,7 @@ impl<T: Config> Module<T> {
     }
 
     // Calculates the total cost of a report.
-    // Takes in a report, the contract's billing information and the linked farm's pricing policy.
+    // Takes in a report for NRU (network resource units)
     // Updates the contract's billing information in storage
     pub fn _calculate_report_cost(
         report: &types::Consumption,
@@ -396,56 +458,27 @@ impl<T: Config> Module<T> {
     ) {
         let mut contract_billing_info = ContractBillingInformationByID::get(report.contract_id);
         if report.timestamp < contract_billing_info.last_updated {
-            return
+            return;
         }
 
-        let seconds_elapsed = report.timestamp - contract_billing_info.last_updated;
+        // seconds elapsed is the report.window
+        let seconds_elapsed = report.window;
         debug::info!("seconds elapsed: {:?}", seconds_elapsed);
 
-        let hru = U64F64::from_num(report.hru) / pricing_policy.su.factor();
-        let sru = U64F64::from_num(report.sru) / pricing_policy.su.factor();
-        let mru = U64F64::from_num(report.mru) / pricing_policy.cu.factor();
-        let cru = U64F64::from_num(report.cru);
-
-        let su_used = hru / 1200 + sru / 200;
-        // the pricing policy su cost value is expressed in 1 hours or 3600 seconds.
-        // we bill every 3600 seconds but here we need to calculate the cost per second and multiply it by the seconds elapsed since last report.
-        let su_cost = (U64F64::from_num(pricing_policy.su.value) / 3600)
-            * U64F64::from_num(seconds_elapsed)
-            * su_used;
-        debug::info!("su cost: {:?}", su_cost);
-
-        let cu = Self::calculate_cu(cru, mru);
-
-        let cu_cost = (U64F64::from_num(pricing_policy.cu.value) / 3600)
-            * U64F64::from_num(seconds_elapsed)
-            * cu;
-        debug::info!("cu cost: {:?}", cu_cost);
-
-        let mut used_nru = U64F64::from_num(report.nru) / pricing_policy.nu.factor();
-        let nu_cost = if used_nru > contract_billing_info.previous_nu_reported {
-            // calculate used nru by subtracting previous reported units minus what is reported now
-            // this is because nru is in a counter that increases only
-            used_nru -= U64F64::from_num(contract_billing_info.previous_nu_reported);
-
-            // calculate the cost for nru based on the used nru
-            used_nru * (U64F64::from_num(pricing_policy.nu.value) / 3600)
-        } else {
-            U64F64::from_num(0)
-        };
-
+        // calculate NRU used and the cost
+        let used_nru = U64F64::from_num(report.nru) / pricing_policy.nu.factor();
+        let nu_cost = used_nru
+            * (U64F64::from_num(pricing_policy.nu.value) / 3600)
+            * U64F64::from_num(seconds_elapsed);
         debug::info!("nu cost: {:?}", nu_cost);
 
         // save total
-        let total = su_cost + cu_cost + nu_cost;
-        let total = total.ceil().to_num::<u64>();
+        let total = nu_cost.ceil().to_num::<u64>();
         debug::info!("total cost: {:?}", total);
 
-        contract_billing_info.previous_nu_reported =
-            (U64F64::from_num(report.nru) / pricing_policy.nu.factor()).to_num::<u64>();
+        // update contract billing info
         contract_billing_info.amount_unbilled += total;
         contract_billing_info.last_updated = report.timestamp;
-
         ContractBillingInformationByID::insert(report.contract_id, &contract_billing_info);
     }
 
@@ -455,6 +488,7 @@ impl<T: Config> Module<T> {
         for contract_id in contracts {
             let mut contract = Contracts::get(contract_id);
 
+            // Try to bill contract
             match Self::_bill_contract(&mut contract) {
                 Ok(_) => {
                     debug::info!(
@@ -481,46 +515,55 @@ impl<T: Config> Module<T> {
                 continue;
             }
 
+            // Reinsert into the next billing frequency
             Self::_reinsert_contract_to_bill(contract.contract_id);
         }
         Ok(())
     }
 
+    // Bills a contract (NodeContract or NameContract)
+    // Calculates how much TFT is due by the user and distributes the rewards
+    // Will also cancel the contract if there is not enough funds on the users wallet
     fn _bill_contract(contract: &mut types::Contract) -> DispatchResult {
+        // Fetch the default pricing policy and certification type
         let mut pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
         let mut certification_type = pallet_tfgrid_types::CertificationType::Diy;
-        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
-        let mut seconds_elapsed = T::BillingFrequency::get() * 6;
 
-        if ContractLastBilledAt::contains_key(contract.contract_id) {
-            let contract_last_billed_at = ContractLastBilledAt::get(contract.contract_id);
-            seconds_elapsed = now - contract_last_billed_at;
-        }
+        // The number of seconds elapsed since last contract bill is the frequency * block time (6 seconds)
+        let seconds_elapsed = T::BillingFrequency::get() * 6;
 
+        // Get the contract billing info to view the amount unbilled for NRU (network resource units)
         let mut contract_billing_info = ContractBillingInformationByID::get(contract.contract_id);
         let total_cost = match &contract.contract_type {
+            // Calculate total cost for a node contract
             types::ContractData::NodeContract(node_contract) => {
+                // Get the node
+                if !pallet_tfgrid::Nodes::contains_key(node_contract.node_id) {
+                    return Err(DispatchError::from(Error::<T>::NodeNotExists));
+                }
                 let node = pallet_tfgrid::Nodes::get(node_contract.node_id);
-                ensure!(
-                    pallet_tfgrid::Farms::contains_key(&node.farm_id),
-                    Error::<T>::FarmNotExists
-                );
 
+                // Get the farm attachted to the node
+                if !pallet_tfgrid::Farms::contains_key(node.farm_id) {
+                    return Err(DispatchError::from(Error::<T>::NodeNotExists));
+                }
                 let farm = pallet_tfgrid::Farms::get(node.farm_id);
-                ensure!(
-                    pallet_tfgrid::PricingPolicies::<T>::contains_key(farm.pricing_policy_id),
-                    Error::<T>::PricingPolicyNotExists
-                );
                 certification_type = farm.certification_type;
 
+                // Get the pricing policy from the farm (could be a different one than the default)
+                if !pallet_tfgrid::PricingPolicies::<T>::contains_key(farm.pricing_policy_id) {
+                    return Err(DispatchError::from(Error::<T>::PricingPolicyNotExists));
+                }
                 pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(farm.pricing_policy_id);
-                // bill user for 1 hour ip usage (60 blocks * 60 seconds)
-                let total_ip_cost = U64F64::from_num(node_contract.public_ips)
-                    * (U64F64::from_num(pricing_policy.ipu.value) / 3600)
-                    * U64F64::from_num(seconds_elapsed);
 
-                total_ip_cost.to_num::<u64>() + contract_billing_info.amount_unbilled
+                let contract_cost = Self::_calculate_node_contract_cost(
+                    contract,
+                    seconds_elapsed,
+                    pricing_policy.clone(),
+                );
+                contract_cost + contract_billing_info.amount_unbilled
             }
+            // Calculate total cost for a name contract
             types::ContractData::NameContract(_) => {
                 // bill user for 1 hour name usage (60 blocks * 60 seconds)
                 let total_cost_u64f64 = (U64F64::from_num(pricing_policy.unique_name.value) / 3600)
@@ -536,6 +579,9 @@ impl<T: Config> Module<T> {
 
         let total_cost_tft_64 = Self::calculate_cost_in_tft_from_musd(total_cost)?;
 
+        if !pallet_tfgrid::Twins::<T>::contains_key(contract.twin_id) {
+            return Err(DispatchError::from(Error::<T>::TwinNotExists));
+        }
         let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
         let balance: BalanceOf<T> = <T as Config>::Currency::free_balance(&twin.account_id);
 
@@ -576,7 +622,6 @@ impl<T: Config> Module<T> {
         // set the amount unbilled back to 0
         contract_billing_info.amount_unbilled = 0;
         ContractBillingInformationByID::insert(contract.contract_id, &contract_billing_info);
-        ContractLastBilledAt::insert(contract.contract_id, now);
 
         // If total balance exceeds the twin's balance, we can decomission contract
         if decomission {
@@ -590,6 +635,63 @@ impl<T: Config> Module<T> {
         Ok(())
     }
 
+    // Calculates the total cost of a node contract.
+    pub fn _calculate_node_contract_cost(
+        contract: &types::Contract,
+        seconds_elapsed: u64,
+        pricing_policy: pallet_tfgrid_types::PricingPolicy<T::AccountId>,
+    ) -> u64 {
+        // parse contract to node contract
+        let node_contract = if let Ok(node_contract) = Self::get_node_contract(&contract) {
+            node_contract
+        } else {
+            return 0;
+        };
+
+        let mut total_cost = U64F64::from_num(0);
+        // First calculate total IP cost
+        let total_ip_cost = U64F64::from_num(node_contract.public_ips)
+            * (U64F64::from_num(pricing_policy.ipu.value) / 3600)
+            * U64F64::from_num(seconds_elapsed);
+        debug::info!("ip cost: {:?}", total_ip_cost);
+        total_cost += total_ip_cost;
+
+        // If the node contract is not using any resources, return here
+        if !NodeContractResources::contains_key(contract.contract_id) {
+            return total_cost.ceil().to_num::<u64>();
+        }
+
+        // We know the contract is using resources, now calculate the cost for each used resource
+        let node_contract_resources = NodeContractResources::get(contract.contract_id);
+
+        let hru = U64F64::from_num(node_contract_resources.used.hru) / pricing_policy.su.factor();
+        let sru = U64F64::from_num(node_contract_resources.used.sru) / pricing_policy.su.factor();
+        let mru = U64F64::from_num(node_contract_resources.used.mru) / pricing_policy.cu.factor();
+        let cru = U64F64::from_num(node_contract_resources.used.cru);
+
+        let su_used = hru / 1200 + sru / 200;
+        // the pricing policy su cost value is expressed in 1 hours or 3600 seconds.
+        // we bill every 3600 seconds but here we need to calculate the cost per second and multiply it by the seconds elapsed.
+        let su_cost = (U64F64::from_num(pricing_policy.su.value) / 3600)
+            * U64F64::from_num(seconds_elapsed)
+            * su_used;
+        debug::info!("su cost: {:?}", su_cost);
+
+        let cu = Self::calculate_cu(cru, mru);
+
+        let cu_cost = (U64F64::from_num(pricing_policy.cu.value) / 3600)
+            * U64F64::from_num(seconds_elapsed)
+            * cu;
+        debug::info!("cu cost: {:?}", cu_cost);
+
+        // save total
+        total_cost = su_cost + cu_cost;
+        let total = total_cost.ceil().to_num::<u64>();
+        debug::info!("total cost: {:?}", total);
+
+        return total;
+    }
+
     pub fn remove_contract(contract_id: u64) {
         // If the contract is node contract, remove from active node contracts map
         let contract = Contracts::get(contract_id);
@@ -599,8 +701,8 @@ impl<T: Config> Module<T> {
             }
             Err(_) => (),
         };
+        NodeContractResources::remove(contract_id);
         ContractBillingInformationByID::remove(contract_id);
-        ContractLastBilledAt::remove(contract_id);
         Contracts::remove(contract_id);
     }
 
@@ -891,10 +993,20 @@ impl<T: Config> Module<T> {
             }
         }
         let name_contract = types::NameContract { name: name.clone() };
-        let contract =
-            Self::_create_contract(twin_id, types::ContractData::NameContract(name_contract))?;
+
+        // Get the Contract ID map and increment
+        let mut id = ContractID::get();
+        id = id + 1;
+
+        let contract = Self::_create_contract(
+            id,
+            twin_id,
+            types::ContractData::NameContract(name_contract),
+        )?;
 
         ContractIDByNameRegistration::insert(name, &contract.contract_id);
+
+        ContractID::put(id);
 
         Self::deposit_event(RawEvent::ContractCreated(contract));
 
