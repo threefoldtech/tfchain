@@ -365,13 +365,21 @@ impl<T: Config> Module<T> {
             pallet_tfgrid::NodeIdByTwinID::contains_key(twin_id),
             Error::<T>::NodeNotExists
         );
+        let node_id = pallet_tfgrid::NodeIdByTwinID::get(twin_id);
 
         for contract_resource in contract_resources {
+            if !Contracts::contains_key(contract_resource.contract_id) {
+                continue;
+            }
+            // we know contract exists, fetch it
+            // if the node is trying to send garbage data we can throw an error here
+            let contract = Contracts::get(contract_resource.contract_id);
+            let node_contract = Self::get_node_contract(&contract)?;
             ensure!(
-                Contracts::contains_key(contract_resource.contract_id),
-                Error::<T>::ContractNotExists
+                node_contract.node_id == node_id,
+                Error::<T>::NodeNotAuthorizedToComputeReport
             );
-    
+
             // we know contract exists, fetch it
             // if the node is trying to send garbage data we can throw an error here
             let node_id = pallet_tfgrid::NodeIdByTwinID::get(&twin_id);
