@@ -407,8 +407,8 @@ impl<T: Config> Module<T> {
         // override values
         contract.contract_type = types::ContractData::NodeContract(node_contract);
 
-        let state = contract.state.clone();
-        Self::update_contract_state(&mut contract, &state)?;
+        // Update contract
+        Contracts::insert(contract_id, &contract);
 
         Self::deposit_event(RawEvent::ContractUpdated(contract));
 
