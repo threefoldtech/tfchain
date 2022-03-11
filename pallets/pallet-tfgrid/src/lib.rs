@@ -28,6 +28,8 @@ pub mod weights;
 
 pub mod types;
 
+mod migration;
+
 pub use weights::WeightInfo;
 
 pub trait Config: system::Config + timestamp::Config {
@@ -44,7 +46,7 @@ pub const TFGRID_ENTITY_VERSION: u32 = 1;
 pub const TFGRID_FARM_VERSION: u32 = 1;
 pub const TFGRID_TWIN_VERSION: u32 = 1;
 pub const TFGRID_NODE_VERSION: u32 = 3;
-pub const TFGRID_PRICING_POLICY_VERSION: u32 = 1;
+pub const TFGRID_PRICING_POLICY_VERSION: u32 = 2;
 pub const TFGRID_CERTIFICATION_CODE_VERSION: u32 = 1;
 pub const TFGRID_FARMING_POLICY_VERSION: u32 = 1;
 
@@ -277,6 +279,10 @@ decl_module! {
         type Error = Error<T>;
 
         fn deposit_event() = default;
+
+        fn on_runtime_upgrade() -> frame_support::weights::Weight {
+            migration::migrate_policies::<T>()
+        }
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(1)]
         pub fn set_storage_version(origin, version: types::StorageVersion) -> dispatch::DispatchResult {
