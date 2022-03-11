@@ -521,6 +521,9 @@ fn test_multiple_contracts_billing_loop() {
 
         run_to_block(12);
 
+        let contracts = SmartContractModule::active_node_contracts(1);
+        assert_eq!(contracts.len(), 1);
+
         // Test that the expected events were emitted
         let our_events = System::events()
             .into_iter()
@@ -670,6 +673,9 @@ fn test_node_contract_billing_cycles() {
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, contract_id, twin_id);
         run_to_block(52);
         check_report_cost(11, amount_due_as_u128, 52, discount_received);
+
+        let contracts = SmartContractModule::active_node_contracts(1);
+        assert_eq!(contracts.len(), 1);
     });
 }
 

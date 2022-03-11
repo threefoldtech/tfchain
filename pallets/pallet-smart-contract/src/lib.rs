@@ -697,7 +697,7 @@ impl<T: Config> Module<T> {
         let contract = Contracts::get(contract_id);
         match Self::get_node_contract(&contract) {
             Ok(node_contract) => {
-                ActiveNodeContracts::remove(node_contract.node_id);
+                Self::remove_active_node_contract(node_contract.node_id, contract_id);
             }
             Err(_) => (),
         };
@@ -881,6 +881,19 @@ impl<T: Config> Module<T> {
         ActiveNodeContracts::insert(&node_contract.node_id, &contracts);
 
         Ok(())
+    }
+    
+    fn remove_active_node_contract(node_id: u32, contract_id: u64) {
+        let mut contracts = ActiveNodeContracts::get(&node_id);
+
+        match contracts.iter().position(|id| id == &contract_id) {
+            Some(index) => {
+                contracts.remove(index);
+            }
+            None => ()
+        };
+
+        ActiveNodeContracts::insert(&node_id, &contracts);
     }
 
     pub fn _reserve_ip(
