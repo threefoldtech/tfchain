@@ -561,6 +561,34 @@ fn test_create_rent_contract() {
 }
 
 #[test]
+fn test_create_rent_contract_double_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(bob()),
+            node_id
+        ));
+
+        let contract = SmartContractModule::contracts(1);
+        let rent_contract = types::RentContract { node_id };
+        assert_eq!(
+            contract.contract_type,
+            types::ContractData::RentContract(rent_contract)
+        );
+
+        assert_noop!(
+            SmartContractModule::create_rent_contract(
+                Origin::signed(bob()),
+                node_id
+            ),
+            Error::<TestRuntime>::NodeHasRentContract
+        );
+    });
+}
+
+#[test]
 fn test_create_rent_contract_cancel_works() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();

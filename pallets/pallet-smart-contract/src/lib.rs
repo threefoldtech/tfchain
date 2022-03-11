@@ -136,7 +136,7 @@ decl_module! {
         #[weight = <T as Config>::WeightInfo::add_reports().saturating_mul(reports.len() as u64)]
         fn add_reports(origin, reports: Vec<types::Consumption>) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_compute_reports(account_id, reports)
+            Self::_add_reports(account_id, reports)
         }
 
         #[weight = 100_000_000]
@@ -158,7 +158,7 @@ decl_module! {
         }
 
         fn on_finalize(block: T::BlockNumber) {
-            match Self::_bill_contracts_at_block(block) {
+            match Self::bill_contracts_at_block(block) {
                 Ok(_) => {
                     debug::info!("types::NodeContract billed successfully at block: {:?}", block);
                 },
@@ -261,6 +261,11 @@ impl<T: Config> Module<T> {
             Error::<T>::NodeNotExists
         );
 
+        ensure!(
+            !ActiveRentContractForNode::contains_key(node_id),
+            Error::<T>::NodeHasRentContract
+        );
+
         let active_node_contracts = ActiveNodeContracts::get(node_id);
         ensure!(
             active_node_contracts.len() == 0,
@@ -291,13 +296,57 @@ impl<T: Config> Module<T> {
         Ok(())
     }
 
+        // Registers a DNS name for a Twin
+    // Ensures uniqueness and also checks if it's a valid DNS name
+    pub fn _create_name_contract(source: T::AccountId, name: Vec<u8>) -> DispatchResult {
+        ensure!(
+            pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
+            Error::<T>::TwinNotExists
+        );
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source);
+
+        // Validate name uniqueness
+        ensure!(
+            !ContractIDByNameRegistration::contains_key(&name),
+            Error::<T>::NameExists
+        );
+
+        for character in &name {
+            match character {
+                c if *c == 45 => (),
+                c if *c >= 48 && *c <= 57 => (),
+                c if *c >= 65 && *c <= 122 => (),
+                _ => return Err(DispatchError::from(Error::<T>::NameNotValid)),
+            }
+        }
+        let name_contract = types::NameContract { name: name.clone() };
+
+        // Get the Contract ID map and increment
+        let mut id = ContractID::get();
+        id = id + 1;
+
+        let contract = Self::_create_contract(
+            id,
+            twin_id,
+            types::ContractData::NameContract(name_contract),
+        )?;
+
+        ContractIDByNameRegistration::insert(name, &contract.contract_id);
+
+        ContractID::put(id);
+
+        Self::deposit_event(RawEvent::ContractCreated(contract));
+
+        Ok(())
+    }
+
     fn _create_contract(
         id: u64,
         twin_id: u32,
         mut contract_type: types::ContractData,
     ) -> Result<types::Contract, DispatchError> {
         if let types::ContractData::NodeContract(ref mut nc) = contract_type {
-            Self::_reserve_ip(id, nc)?;
+            Self::reserve_ip(id, nc)?;
         };
 
         let contract = types::Contract {
@@ -319,7 +368,7 @@ impl<T: Config> Module<T> {
 
         // Start billing frequency loop
         // Will always be block now + frequency
-        Self::_reinsert_contract_to_bill(contract.contract_id);
+        Self::reinsert_contract_to_bill(contract.contract_id);
 
         // insert into contracts map
         Contracts::insert(id, &contract);
@@ -359,7 +408,7 @@ impl<T: Config> Module<T> {
         contract.contract_type = types::ContractData::NodeContract(node_contract);
 
         let state = contract.state.clone();
-        Self::_update_contract_state(&mut contract, &state)?;
+        Self::update_contract_state(&mut contract, &state)?;
 
         Self::deposit_event(RawEvent::ContractUpdated(contract));
 
@@ -386,7 +435,7 @@ impl<T: Config> Module<T> {
         match contract.contract_type.clone() {
             types::ContractData::NodeContract(mut node_contract) => {
                 if node_contract.public_ips > 0 {
-                    Self::_free_ip(contract_id, &mut node_contract)?
+                    Self::free_ip(contract_id, &mut node_contract)?
                 }
 
                 // remove the contract by hash from storage
@@ -410,7 +459,7 @@ impl<T: Config> Module<T> {
             }
         };
 
-        Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
+        Self::update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
 
         Ok(())
     }
@@ -461,7 +510,7 @@ impl<T: Config> Module<T> {
         Ok(Pays::No.into())
     }
 
-    pub fn _compute_reports(
+    pub fn _add_reports(
         source: T::AccountId,
         reports: Vec<types::Consumption>,
     ) -> DispatchResultWithPostInfo {
@@ -509,7 +558,7 @@ impl<T: Config> Module<T> {
                 Error::<T>::NodeNotAuthorizedToComputeReport
             );
 
-            Self::_calculate_report_cost(&report, &pricing_policy);
+            Self::calculate_report_cost(&report, &pricing_policy);
             Self::deposit_event(RawEvent::ConsumptionReportReceived(report.clone()));
         }
 
@@ -519,7 +568,7 @@ impl<T: Config> Module<T> {
     // Calculates the total cost of a report.
     // Takes in a report for NRU (network resource units)
     // Updates the contract's billing information in storage
-    pub fn _calculate_report_cost(
+    pub fn calculate_report_cost(
         report: &types::Consumption,
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
     ) {
@@ -549,7 +598,7 @@ impl<T: Config> Module<T> {
         ContractBillingInformationByID::insert(report.contract_id, &contract_billing_info);
     }
 
-    pub fn _bill_contracts_at_block(block: T::BlockNumber) -> DispatchResult {
+    pub fn bill_contracts_at_block(block: T::BlockNumber) -> DispatchResult {
         let current_block_u64: u64 = block.saturated_into::<u64>();
         let contracts = ContractsToBillAt::get(current_block_u64);
         for contract_id in contracts {
@@ -583,7 +632,7 @@ impl<T: Config> Module<T> {
             }
 
             // Reinsert into the next billing frequency
-            Self::_reinsert_contract_to_bill(contract.contract_id);
+            Self::reinsert_contract_to_bill(contract.contract_id);
         }
         Ok(())
     }
@@ -639,7 +688,7 @@ impl<T: Config> Module<T> {
         }
 
         // Distribute cultivation rewards
-        match Self::_distribute_cultivation_rewards(&contract, &pricing_policy, amount_due) {
+        match Self::distribute_cultivation_rewards(&contract, &pricing_policy, amount_due) {
             Ok(_) => (),
             Err(err) => debug::info!("error while distributing cultivation rewards {:?}", err),
         };
@@ -791,7 +840,7 @@ impl<T: Config> Module<T> {
     }
 
     // Following: https://library.threefold.me/info/threefold#/tfgrid/farming/threefold__proof_of_utilization
-    fn _distribute_cultivation_rewards(
+    fn distribute_cultivation_rewards(
         contract: &types::Contract,
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
         amount: BalanceOf<T>,
@@ -901,7 +950,7 @@ impl<T: Config> Module<T> {
     }
 
     // Reinserts a contract by id at the next interval we need to bill the contract
-    pub fn _reinsert_contract_to_bill(contract_id: u64) {
+    fn reinsert_contract_to_bill(contract_id: u64) {
         let now = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
         // Save the contract to be billed in now + BILLING_FREQUENCY_IN_BLOCKS
         let future_block = now + T::BillingFrequency::get();
@@ -916,7 +965,7 @@ impl<T: Config> Module<T> {
     }
 
     // Helper function that updates the contract state and manages storage accordingly
-    pub fn _update_contract_state(
+    fn update_contract_state(
         contract: &mut types::Contract,
         state: &types::ContractState,
     ) -> DispatchResult {
@@ -957,7 +1006,7 @@ impl<T: Config> Module<T> {
         Ok(())
     }
 
-    pub fn _reserve_ip(
+    pub fn reserve_ip(
         contract_id: u64,
         node_contract: &mut types::NodeContract,
     ) -> DispatchResult {
@@ -1013,7 +1062,7 @@ impl<T: Config> Module<T> {
         Ok(())
     }
 
-    pub fn _free_ip(contract_id: u64, node_contract: &mut types::NodeContract) -> DispatchResult {
+    pub fn free_ip(contract_id: u64, node_contract: &mut types::NodeContract) -> DispatchResult {
         let node = pallet_tfgrid::Nodes::get(node_contract.node_id);
 
         ensure!(
@@ -1039,50 +1088,6 @@ impl<T: Config> Module<T> {
 
         // Emit an event containing the IP's freed for this contract
         Self::deposit_event(RawEvent::IPsFreed(contract_id, ips_freed));
-
-        Ok(())
-    }
-
-    // Registers a DNS name for a Twin
-    // Ensures uniqueness and also checks if it's a valid DNS name
-    pub fn _create_name_contract(source: T::AccountId, name: Vec<u8>) -> DispatchResult {
-        ensure!(
-            pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
-            Error::<T>::TwinNotExists
-        );
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source);
-
-        // Validate name uniqueness
-        ensure!(
-            !ContractIDByNameRegistration::contains_key(&name),
-            Error::<T>::NameExists
-        );
-
-        for character in &name {
-            match character {
-                c if *c == 45 => (),
-                c if *c >= 48 && *c <= 57 => (),
-                c if *c >= 65 && *c <= 122 => (),
-                _ => return Err(DispatchError::from(Error::<T>::NameNotValid)),
-            }
-        }
-        let name_contract = types::NameContract { name: name.clone() };
-
-        // Get the Contract ID map and increment
-        let mut id = ContractID::get();
-        id = id + 1;
-
-        let contract = Self::_create_contract(
-            id,
-            twin_id,
-            types::ContractData::NameContract(name_contract),
-        )?;
-
-        ContractIDByNameRegistration::insert(name, &contract.contract_id);
-
-        ContractID::put(id);
-
-        Self::deposit_event(RawEvent::ContractCreated(contract));
 
         Ok(())
     }
