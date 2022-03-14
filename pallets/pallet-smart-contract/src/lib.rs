@@ -229,6 +229,7 @@ impl<T: Config> Module<T> {
         };
 
         // Create contract
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
         let contract = Self::_create_contract(
             id,
             twin_id,
@@ -604,6 +605,7 @@ impl<T: Config> Module<T> {
         // - RentContract
         // - NameContract
         let total_cost = Self::calculate_contract_cost(contract, &pricing_policy, seconds_elapsed)?;
+
         // If cost is 0, reinsert to be billed at next interval
         if total_cost == 0 {
             return Ok(());
@@ -767,7 +769,7 @@ impl<T: Config> Module<T> {
         let contract = Contracts::get(contract_id);
         match Self::get_node_contract(&contract) {
             Ok(node_contract) => {
-                ActiveNodeContracts::remove(node_contract.node_id);
+                Self::remove_active_node_contract(node_contract.node_id, contract_id);
             }
             Err(_) => (),
         };
@@ -952,6 +954,19 @@ impl<T: Config> Module<T> {
         ActiveNodeContracts::insert(&node_contract.node_id, &contracts);
 
         Ok(())
+    }
+    
+    fn remove_active_node_contract(node_id: u32, contract_id: u64) {
+        let mut contracts = ActiveNodeContracts::get(&node_id);
+
+        match contracts.iter().position(|id| id == &contract_id) {
+            Some(index) => {
+                contracts.remove(index);
+            }
+            None => ()
+        };
+
+        ActiveNodeContracts::insert(&node_id, &contracts);
     }
 
     pub fn _reserve_ip(
