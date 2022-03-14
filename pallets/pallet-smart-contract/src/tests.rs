@@ -810,14 +810,14 @@ fn test_node_contract_billing_should_cancel_contract_when_out_of_funds() {
 fn push_nru_report_for_contract(contract_id: u64, block_number: u64) {
     let gigabyte = 1000 * 1000 * 1000;
     let mut consumption_reports = Vec::new();
-    consumption_reports.push(super::types::Consumption {
+    consumption_reports.push(super::types::NruConsumption {
         contract_id,
         nru: 3 * gigabyte,
         timestamp: 1628082000 + (6*block_number),
         window: 6 * block_number,
     });
 
-    assert_ok!(SmartContractModule::add_reports(
+    assert_ok!(SmartContractModule::add_nru_reports(
         Origin::signed(alice()),
         consumption_reports
     ));

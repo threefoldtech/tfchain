@@ -55,10 +55,12 @@ decl_event!(
         IPsReserved(u64, Vec<pallet_tfgrid_types::PublicIP>),
         IPsFreed(u64, Vec<Vec<u8>>),
         ContractDeployed(u64, AccountId),
+        // Deprecated
         ConsumptionReportReceived(types::Consumption),
         ContractBilled(types::ContractBill),
         TokensBurned(u64, BalanceOf),
         UpdatedUsedResources(types::ContractResources),
+        NruConsumptionReportReceived(types::NruConsumption),
     }
 );
 
@@ -84,7 +86,8 @@ decl_error! {
         InvalidContractType,
         TFTPriceValueError,
         NotEnoughResourcesOnNode,
-        NodeNotAuthorizedToReportResources
+        NodeNotAuthorizedToReportResources,
+        MethodIsDeprecated
     }
 }
 
@@ -129,16 +132,23 @@ decl_module! {
             Self::_cancel_contract(account_id, contract_id, types::Cause::CanceledByUser)?;
         }
 
-        #[weight = <T as Config>::WeightInfo::add_reports().saturating_mul(reports.len() as u64)]
-        fn add_reports(origin, reports: Vec<types::Consumption>) -> DispatchResultWithPostInfo {
-            let account_id = ensure_signed(origin)?;
-            Self::_compute_reports(account_id, reports)
+        // DEPRECATED
+        #[weight = <T as Config>::WeightInfo::add_reports().saturating_mul(_reports.len() as u64)]
+        fn add_reports(_origin, _reports: Vec<types::Consumption>) -> DispatchResultWithPostInfo {
+            // return error
+            Err(DispatchError::from(Error::<T>::MethodIsDeprecated).into())
         }
 
         #[weight = 100_000_000]
         fn create_name_contract(origin, name: Vec<u8>) {
             let account_id = ensure_signed(origin)?;
             Self::_create_name_contract(account_id, name)?;
+        }
+
+        #[weight = <T as Config>::WeightInfo::add_reports().saturating_mul(reports.len() as u64)]
+        fn add_nru_reports(origin, reports: Vec<types::NruConsumption>) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_compute_reports(account_id, reports)
         }
 
         #[weight = 100_000_000]
@@ -396,7 +406,7 @@ impl<T: Config> Module<T> {
 
     pub fn _compute_reports(
         source: T::AccountId,
-        reports: Vec<types::Consumption>,
+        reports: Vec<types::NruConsumption>,
     ) -> DispatchResultWithPostInfo {
         ensure!(
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
@@ -443,7 +453,7 @@ impl<T: Config> Module<T> {
             );
 
             Self::_calculate_report_cost(&report, &pricing_policy);
-            Self::deposit_event(RawEvent::ConsumptionReportReceived(report.clone()));
+            Self::deposit_event(RawEvent::NruConsumptionReportReceived(report.clone()));
         }
 
         Ok(Pays::No.into())
@@ -453,7 +463,7 @@ impl<T: Config> Module<T> {
     // Takes in a report for NRU (network resource units)
     // Updates the contract's billing information in storage
     pub fn _calculate_report_cost(
-        report: &types::Consumption,
+        report: &types::NruConsumption,
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
     ) {
         let mut contract_billing_info = ContractBillingInformationByID::get(report.contract_id);

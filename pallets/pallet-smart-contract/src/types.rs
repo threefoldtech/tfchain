@@ -114,6 +114,17 @@ impl DiscountLevel {
 pub struct Consumption {
     pub contract_id: u64,
     pub timestamp: u64,
+    pub cru: u64,
+    pub sru: u64,
+    pub hru: u64,
+    pub mru: u64,
+    pub nru: u64,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+pub struct NruConsumption {
+    pub contract_id: u64,
+    pub timestamp: u64,
     pub window: u64,
     pub nru: u64,
 }
