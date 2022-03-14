@@ -215,10 +215,6 @@ impl<T: Config> Module<T> {
         // Check if we can deploy requested resources on the selected node
         // Self::can_deploy_resources_on_node(node_id, resources.clone())?;
 
-        // Get the Contract ID map and increment
-        let mut id = ContractID::get();
-        id = id + 1;
-
         // Prepare NodeContract struct
         let node_contract = types::NodeContract {
             node_id,
@@ -231,21 +227,25 @@ impl<T: Config> Module<T> {
         // Create contract
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
         let contract = Self::_create_contract(
-            id,
             twin_id,
             types::ContractData::NodeContract(node_contract.clone()),
         )?;
 
+        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+        let contract_billing_information = types::ContractBillingInformation {
+            last_updated: now,
+            amount_unbilled: 0,
+            previous_nu_reported: 0,
+        };
+        ContractBillingInformationByID::insert(contract.contract_id, contract_billing_information);
+
         // Insert contract id by (node_id, hash)
-        ContractIDByNodeIDAndHash::insert(node_id, deployment_hash, id);
+        ContractIDByNodeIDAndHash::insert(node_id, deployment_hash, contract.contract_id);
 
         // Insert contract into active contracts map
         let mut node_contracts = ActiveNodeContracts::get(&node_contract.node_id);
-        node_contracts.push(id);
+        node_contracts.push(contract.contract_id);
         ActiveNodeContracts::insert(&node_contract.node_id, &node_contracts);
-
-        // Update Contract ID
-        ContractID::put(id);
 
         Self::deposit_event(RawEvent::ContractCreated(contract));
 
@@ -268,21 +268,13 @@ impl<T: Config> Module<T> {
             Error::<T>::NodeHasActiveContracts
         );
 
-        // Get the Contract ID map and increment
-        let mut id = ContractID::get();
-        id = id + 1;
-
         let rent_contract = types::RentContract { node_id };
 
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
         let contract = Self::_create_contract(
-            id,
             twin_id,
             types::ContractData::RentContract(rent_contract.clone()),
         )?;
-
-        // Update Contract ID
-        ContractID::put(id);
 
         // Insert active rent contract for node
         ActiveRentContractForNode::insert(node_id, contract.clone());
@@ -292,11 +284,49 @@ impl<T: Config> Module<T> {
         Ok(())
     }
 
+    // Registers a DNS name for a Twin
+    // Ensures uniqueness and also checks if it's a valid DNS name
+    pub fn _create_name_contract(source: T::AccountId, name: Vec<u8>) -> DispatchResult {
+        ensure!(
+            pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
+            Error::<T>::TwinNotExists
+        );
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source);
+
+        // Validate name uniqueness
+        ensure!(
+            !ContractIDByNameRegistration::contains_key(&name),
+            Error::<T>::NameExists
+        );
+
+        for character in &name {
+            match character {
+                c if *c == 45 => (),
+                c if *c >= 48 && *c <= 57 => (),
+                c if *c >= 65 && *c <= 122 => (),
+                _ => return Err(DispatchError::from(Error::<T>::NameNotValid)),
+            }
+        }
+        let name_contract = types::NameContract { name: name.clone() };
+
+        let contract =
+            Self::_create_contract(twin_id, types::ContractData::NameContract(name_contract))?;
+
+        ContractIDByNameRegistration::insert(name, &contract.contract_id);
+
+        Self::deposit_event(RawEvent::ContractCreated(contract));
+
+        Ok(())
+    }
+
     fn _create_contract(
-        id: u64,
         twin_id: u32,
         mut contract_type: types::ContractData,
     ) -> Result<types::Contract, DispatchError> {
+        // Get the Contract ID map and increment
+        let mut id = ContractID::get();
+        id = id + 1;
+
         if let types::ContractData::NodeContract(ref mut nc) = contract_type {
             Self::_reserve_ip(id, nc)?;
         };
@@ -309,22 +339,15 @@ impl<T: Config> Module<T> {
             contract_type,
         };
 
-        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
-        let contract_billing_information = types::ContractBillingInformation {
-            last_updated: now,
-            amount_unbilled: 0,
-            previous_nu_reported: 0,
-        };
-
-        println!("info: {:?}", contract_billing_information);
-
         // Start billing frequency loop
         // Will always be block now + frequency
         Self::_reinsert_contract_to_bill(contract.contract_id);
 
         // insert into contracts map
         Contracts::insert(id, &contract);
-        ContractBillingInformationByID::insert(id, contract_billing_information);
+
+        // Update Contract ID
+        ContractID::put(id);
 
         Ok(contract)
     }
@@ -955,7 +978,7 @@ impl<T: Config> Module<T> {
 
         Ok(())
     }
-    
+
     fn remove_active_node_contract(node_id: u32, contract_id: u64) {
         let mut contracts = ActiveNodeContracts::get(&node_id);
 
@@ -963,7 +986,7 @@ impl<T: Config> Module<T> {
             Some(index) => {
                 contracts.remove(index);
             }
-            None => ()
+            None => (),
         };
 
         ActiveNodeContracts::insert(&node_id, &contracts);
@@ -1051,50 +1074,6 @@ impl<T: Config> Module<T> {
 
         // Emit an event containing the IP's freed for this contract
         Self::deposit_event(RawEvent::IPsFreed(contract_id, ips_freed));
-
-        Ok(())
-    }
-
-    // Registers a DNS name for a Twin
-    // Ensures uniqueness and also checks if it's a valid DNS name
-    pub fn _create_name_contract(source: T::AccountId, name: Vec<u8>) -> DispatchResult {
-        ensure!(
-            pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
-            Error::<T>::TwinNotExists
-        );
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source);
-
-        // Validate name uniqueness
-        ensure!(
-            !ContractIDByNameRegistration::contains_key(&name),
-            Error::<T>::NameExists
-        );
-
-        for character in &name {
-            match character {
-                c if *c == 45 => (),
-                c if *c >= 48 && *c <= 57 => (),
-                c if *c >= 65 && *c <= 122 => (),
-                _ => return Err(DispatchError::from(Error::<T>::NameNotValid)),
-            }
-        }
-        let name_contract = types::NameContract { name: name.clone() };
-
-        // Get the Contract ID map and increment
-        let mut id = ContractID::get();
-        id = id + 1;
-
-        let contract = Self::_create_contract(
-            id,
-            twin_id,
-            types::ContractData::NameContract(name_contract),
-        )?;
-
-        ContractIDByNameRegistration::insert(name, &contract.contract_id);
-
-        ContractID::put(id);
-
-        Self::deposit_event(RawEvent::ContractCreated(contract));
 
         Ok(())
     }
