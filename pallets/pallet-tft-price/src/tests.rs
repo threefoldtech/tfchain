@@ -8,7 +8,7 @@ use sp_core::{
         testing::{self, OffchainState, PoolState},
         OffchainExt, TransactionPoolExt,
     },
-    sr25519::{self, Signature},
+    sr25519::{self},
     H256,
 };
 use sp_io::TestExternalities;
@@ -17,11 +17,15 @@ use sp_runtime::{
     testing::{Header, TestXt},
     traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentifyAccount, IdentityLookup, Verify},
 };
+use frame_system::EnsureRoot;
+use frame_support::{assert_noop, assert_ok};
 
 type Extrinsic = TestXt<Call, ()>;
 type UncheckedExtrinsic = mocking::MockUncheckedExtrinsic<TestRuntime>;
 type Block = mocking::MockBlock<TestRuntime>;
-type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
+use sp_runtime::MultiSignature;
+pub type Signature = MultiSignature;
+pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 
 // For testing the module, we construct a mock runtime.
 construct_runtime!(
@@ -31,7 +35,7 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        TFTPriceModule: pallet_tft_price::{Module, Call, Storage, Event<T>},
+        TFTPriceModule: pallet_tft_price::{Module, Call, Storage, Config<T>, Event<T>},
     }
 );
 
@@ -50,7 +54,7 @@ impl frame_system::Config for TestRuntime {
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = sr25519::Public;
+    type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
     type Event = Event;
@@ -72,6 +76,7 @@ impl Config for TestRuntime {
     type AuthorityId = pallet_tft_price::crypto::AuthId;
     type Call = Call;
     type Event = Event;
+    type RestrictedOrigin = EnsureRoot<Self::AccountId>;
 }
 
 impl frame_system::offchain::SigningTypes for TestRuntime {
@@ -101,6 +106,33 @@ where
     }
 }
 
+use sp_core::{Pair, Public};
+type AccountPublic = <MultiSignature as Verify>::Signer;
+
+// industry dismiss casual gym gap music pave gasp sick owner dumb cost
+/// Helper function to generate a crypto pair from seed
+fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
+    TPublic::Pair::from_string(&format!("//{}", seed), None)
+        .expect("static values are valid; qed")
+        .public()
+}
+
+/// Helper function to generate an account ID from seed
+fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
+where
+    AccountPublic: From<<TPublic::Pair as Pair>::Public>,
+{
+    AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
+}
+
+pub fn alice() -> AccountId {
+    get_account_id_from_seed::<sr25519::Public>("Alice")
+}
+
+pub fn bob() -> AccountId {
+    get_account_id_from_seed::<sr25519::Public>("Bob")
+}
+
 struct ExternalityBuilder;
 
 impl ExternalityBuilder {
@@ -119,9 +151,14 @@ impl ExternalityBuilder {
             .sr25519_generate_new(KEY_TYPE, Some(&format!("{}/hunter1", PHRASE)))
             .unwrap();
 
-        let storage = frame_system::GenesisConfig::default()
+        let mut storage = frame_system::GenesisConfig::default()
             .build_storage::<TestRuntime>()
             .unwrap();
+
+        let genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
+            allowed_origin: alice()
+        };
+        genesis.assimilate_storage(&mut storage).unwrap();
 
         let mut t = TestExternalities::from(storage);
         t.register_extension(OffchainExt::new(offchain));
@@ -136,12 +173,12 @@ impl ExternalityBuilder {
 fn test_set_prices() {
     let (mut t, _, _) = ExternalityBuilder::build();
     t.execute_with(|| {
-        let acct: <TestRuntime as frame_system::Config>::AccountId = Default::default();
+        // let acct: <TestRuntime as frame_system::Config>::AccountId = Default::default();
         for i in 1..1441 {
             let target_block = i * 100; // we set the price every 100 blocks
             run_to_block(target_block);
             match TFTPriceModule::set_prices(
-                Origin::signed(acct),
+                Origin::signed(alice()),
                 U16F16::from_num(0.5),
                 target_block,
             ) {
@@ -152,6 +189,35 @@ fn test_set_prices() {
         let queue = TFTPriceModule::queue_transient();
         let items = queue.get_all_values();
         assert_eq!(items.len(), 1440);
+    })
+}
+
+#[test]
+fn test_set_price() {
+    let (mut t, _, _) = ExternalityBuilder::build();
+    t.execute_with(|| {
+        assert_ok!(
+            TFTPriceModule::set_prices(
+                Origin::signed(alice()),
+                U16F16::from_num(0.5),
+                1
+            )
+        );
+    })
+}
+
+#[test]
+fn test_set_price_wrong_origin() {
+    let (mut t, _, _) = ExternalityBuilder::build();
+    t.execute_with(|| {
+        assert_noop!(
+            TFTPriceModule::set_prices(
+                Origin::signed(bob()),
+                U16F16::from_num(0.5),
+                1
+            ),
+            Error::<TestRuntime>::AccountUnauthorizedToSetPrice
+        );
     })
 }
 
