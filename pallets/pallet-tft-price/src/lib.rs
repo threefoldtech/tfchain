@@ -3,7 +3,13 @@
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
-use frame_support::{debug, decl_error, decl_event, decl_module, decl_storage, traits::Get};
+use frame_support::{
+    debug, decl_error, decl_event, decl_module, decl_storage,
+    ensure,
+    traits::{Get, EnsureOrigin}, 
+    weights::{Pays},
+    dispatch::DispatchResultWithPostInfo,
+};
 use frame_system::{
     self as system, ensure_signed,
     offchain::{AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer},
@@ -13,10 +19,7 @@ use sp_std::prelude::*;
 
 use codec::{Decode, Encode};
 use sp_runtime::traits::SaturatedConversion;
-use sp_runtime::{
-    offchain::{http, Duration},
-    DispatchResult,
-};
+use sp_runtime::offchain::{http, Duration};
 
 use substrate_fixed::types::U16F16;
 mod ringbuffer;
@@ -71,7 +74,9 @@ pub trait Config: system::Config + CreateSignedTransaction<Call<Self>> {
     // Add other types and constants required to configure this pallet.
     type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
     type Call: From<Call<Self>>;
-}
+    /// Origin for restricted extrinsics
+    /// Can be the root or another origin configured in the runtime
+    type RestrictedOrigin: EnsureOrigin<Self::Origin>;}
 
 decl_storage! {
     trait Store for Module<T: Config> as TFTPriceModule {
@@ -81,6 +86,15 @@ decl_storage! {
         pub AverageTftPrice: U16F16;
         pub TftPriceHistory get(fn get_value): map hasher(twox_64_concat) BufferIndex => ValueStruct;
         BufferRange get(fn range): (BufferIndex, BufferIndex) = (0, 0);
+        pub AllowedOrigin get(fn allowed_origin): T::AccountId;
+    }
+
+    add_extra_genesis {
+        config(allowed_origin): T::AccountId;
+
+        build(|_config| {
+            AllowedOrigin::<T>::set(_config.allowed_origin.clone());
+        });
     }
 }
 
@@ -95,7 +109,8 @@ decl_error! {
     pub enum Error for Module<T: Config> {
         ErrFetchingPrice,
         OffchainSignedTxError,
-        NoLocalAcctForSigning
+        NoLocalAcctForSigning,
+        AccountUnauthorizedToSetPrice,
     }
 }
 
@@ -106,14 +121,21 @@ decl_module! {
         fn deposit_event() = default;
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(3)]
-        pub fn set_prices(origin, price: U16F16, block_number: T::BlockNumber){
-            let _ = ensure_signed(origin)?;
-            Self::calculate_and_set_price(price, block_number)?;
+        pub fn set_prices(origin, price: U16F16, block_number: T::BlockNumber) -> DispatchResultWithPostInfo {
+            let address = ensure_signed(origin)?;
+            ensure!(AllowedOrigin::<T>::get() == address, Error::<T>::AccountUnauthorizedToSetPrice);
+            Self::calculate_and_set_price(price, block_number)
+        }
+
+        #[weight = 100_000_000 + T::DbWeight::get().writes(3)]
+        pub fn set_allowed_origin(origin, target: T::AccountId) {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+            AllowedOrigin::<T>::set(target);
         }
 
         fn offchain_worker(block_number: T::BlockNumber) {
             match Self::offchain_signed_tx(block_number) {
-                Ok(_) => debug::info!("worker executed"),
+                Ok(_) => debug::info!("offchain worker done."),
                 Err(err) => debug::info!("err: {:?}", err)
             }
         }
@@ -129,7 +151,7 @@ struct PriceInfo {
 }
 
 impl<T: Config> Module<T> {
-    fn calculate_and_set_price(price: U16F16, block_number: T::BlockNumber) -> DispatchResult {
+    fn calculate_and_set_price(price: U16F16, block_number: T::BlockNumber) -> DispatchResultWithPostInfo {
         debug::info!("price {:?}", price);
 
         LastBlockSet::<T>::put(block_number);
@@ -144,7 +166,7 @@ impl<T: Config> Module<T> {
         debug::info!("average price {:?}", average);
         AverageTftPrice::put(average);
 
-        Ok(())
+        Ok(Pays::No.into())
     }
 
     /// Fetch current price and return the result in cents.

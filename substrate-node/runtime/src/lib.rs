@@ -350,6 +350,7 @@ impl pallet_tft_price::Config for Runtime {
 	type AuthorityId = pallet_tft_price::crypto::AuthId;
 	type Call = Call;
 	type Event = Event;
+	type RestrictedOrigin = EnsureRootOrCouncilApproval;
 }
 
 impl pallet_validator::Config for Runtime {
@@ -567,7 +568,7 @@ construct_runtime!(
 		TfgridModule: pallet_tfgrid::{Module, Call, Config<T>, Storage, Event<T>},
 		SmartContractModule: pallet_smart_contract::{Module, Call, Storage, Event<T>},
 		TFTBridgeModule: pallet_tft_bridge::{Module, Call, Config<T>, Storage, Event<T>},
-		TFTPriceModule: pallet_tft_price::{Module, Call, Storage, Event<T>},
+		TFTPriceModule: pallet_tft_price::{Module, Call, Storage, Config<T>, Event<T>},
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 		BurningModule: pallet_burning::{Module, Call, Storage, Event<T>},
 		TFKVStore: pallet_kvstore::{Module, Call, Storage, Event<T>},

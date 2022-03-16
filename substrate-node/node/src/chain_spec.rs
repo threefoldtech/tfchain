@@ -2,6 +2,7 @@ use sp_core::{Pair, Public, sr25519, ed25519};
 use tfchain_runtime::{
 	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig, CouncilConfig, CouncilMembershipConfig,
 	SudoConfig, SystemConfig, WASM_BINARY, Signature, TfgridModuleConfig, TFTBridgeModuleConfig, ValidatorSetConfig, SessionConfig,
+	TFTPriceModuleConfig
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_finality_grandpa::AuthorityId as GrandpaId;
@@ -117,6 +118,8 @@ pub fn development_config() -> Result<ChainSpec, String> {
 			],
 			// Bridge fee account
 			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+			// TFT price pallet allow account
+			get_account_id_from_seed::<sr25519::Public>("Alice"),
 		),
 		// Bootnodes
 		vec![],
@@ -195,6 +198,8 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 			],
 			// Bridge fee account
 			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+			// TFT price pallet allow account
+			get_account_id_from_seed::<sr25519::Public>("Alice"),
 		),
 		// Bootnodes
 		vec![],
@@ -220,6 +225,7 @@ fn testnet_genesis(
 	_enable_println: bool,
 	bridge_validator_accounts: Vec<AccountId>,
 	bridge_fee_account: AccountId,
+	tft_price_allowed_account: AccountId
 ) -> GenesisConfig {
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -285,6 +291,10 @@ fn testnet_genesis(
 				get_account_id_from_seed::<sr25519::Public>("Eve"),
 			],
 			phantom: Default::default(),
-		}), 
+		}),
+		// just some default for development
+		pallet_tft_price: Some(TFTPriceModuleConfig {
+			allowed_origin: tft_price_allowed_account
+		})
 	}
 }
