@@ -275,7 +275,8 @@ fn testnet_genesis(
 			farming_policy_certified_cu: 200000000,
 			farming_policy_certified_su: 120000000,
 			farming_policy_certified_nu: 3000000,
-			farming_policy_certified_ipu: 1000000
+			farming_policy_certified_ipu: 1000000,
+			discount_for_dedication_nodes: 50,
 		}),
 		pallet_tft_bridge: Some(TFTBridgeModuleConfig{
 			validator_accounts: bridge_validator_accounts,
