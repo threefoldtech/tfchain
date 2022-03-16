@@ -60,8 +60,8 @@ decl_event!(
         ContractBilled(types::ContractBill),
         TokensBurned(u64, BalanceOf),
         UpdatedUsedResources(types::ContractResources),
-        RentContractCanceled(u64),
         NruConsumptionReportReceived(types::NruConsumption),
+        RentContractCanceled(u64),
     }
 );
 
@@ -88,9 +88,9 @@ decl_error! {
         TFTPriceValueError,
         NotEnoughResourcesOnNode,
         NodeNotAuthorizedToReportResources,
+        MethodIsDeprecated,
         NodeHasActiveContracts,
         NodeHasRentContract,
-        MethodIsDeprecated
     }
 }
 
