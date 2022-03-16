@@ -109,10 +109,15 @@ where
 use sp_core::{Pair, Public};
 type AccountPublic = <MultiSignature as Verify>::Signer;
 
-// industry dismiss casual gym gap music pave gasp sick owner dumb cost
 /// Helper function to generate a crypto pair from seed
 fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
     TPublic::Pair::from_string(&format!("//{}", seed), None)
+        .expect("static values are valid; qed")
+        .public()
+}
+
+fn get_from_seed_string<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
+    TPublic::Pair::from_string(&format!("{}", seed), None)
         .expect("static values are valid; qed")
         .public()
 }
@@ -125,8 +130,17 @@ where
     AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
-pub fn alice() -> AccountId {
-    get_account_id_from_seed::<sr25519::Public>("Alice")
+fn get_account_id_from_seed_string<TPublic: Public>(seed: &str) -> AccountId
+where
+    AccountPublic: From<<TPublic::Pair as Pair>::Public>,
+{
+    AccountPublic::from(get_from_seed_string::<TPublic>(seed)).into_account()
+}
+
+pub fn allowed_account() -> AccountId {
+    get_account_id_from_seed_string::<sr25519::Public>(
+        "expire stage crawl shell boss any story swamp skull yellow bamboo copy",
+    )
 }
 
 pub fn bob() -> AccountId {
@@ -156,7 +170,7 @@ impl ExternalityBuilder {
             .unwrap();
 
         let genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
-            allowed_origin: alice()
+            allowed_origin: allowed_account()
         };
         genesis.assimilate_storage(&mut storage).unwrap();
 
@@ -173,12 +187,12 @@ impl ExternalityBuilder {
 fn test_set_prices() {
     let (mut t, _, _) = ExternalityBuilder::build();
     t.execute_with(|| {
-        // let acct: <TestRuntime as frame_system::Config>::AccountId = Default::default();
+        let acct = allowed_account();
         for i in 1..1441 {
             let target_block = i * 100; // we set the price every 100 blocks
             run_to_block(target_block);
             match TFTPriceModule::set_prices(
-                Origin::signed(alice()),
+                Origin::signed(acct.clone()),
                 U16F16::from_num(0.5),
                 target_block,
             ) {
@@ -196,9 +210,10 @@ fn test_set_prices() {
 fn test_set_price() {
     let (mut t, _, _) = ExternalityBuilder::build();
     t.execute_with(|| {
+        let acct = allowed_account();
         assert_ok!(
             TFTPriceModule::set_prices(
-                Origin::signed(alice()),
+                Origin::signed(acct),
                 U16F16::from_num(0.5),
                 1
             )
