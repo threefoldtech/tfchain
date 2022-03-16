@@ -101,6 +101,7 @@ decl_storage! {
         config(domain_name_price_value): u32;
         config(foundation_account): T::AccountId;
         config(sales_account): T::AccountId;
+        config(discount_for_dedication_nodes): u8;
 
         config(farming_policy_diy_cu): u32;
         config(farming_policy_diy_nu): u32;
@@ -111,6 +112,7 @@ decl_storage! {
         config(farming_policy_certified_nu): u32;
         config(farming_policy_certified_su): u32;
         config(farming_policy_certified_ipu): u32;
+
 
         build(|_config| {
             let foundation_account = _config.foundation_account.clone();
@@ -156,7 +158,8 @@ decl_storage! {
                 unique_name_price,
                 domain_name_price,
                 foundation_account,
-                sales_account
+                sales_account,
+                _config.discount_for_dedication_nodes
             );
 
             let _ = <Module<T>>::create_farming_policy(
@@ -895,7 +898,8 @@ decl_module! {
             unique_name: types::Policy,
             domain_name: types::Policy,
             foundation_account: T::AccountId,
-            certified_sales_account: T::AccountId
+            certified_sales_account: T::AccountId,
+            discount_for_dedication_nodes: u8,
         ) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
@@ -917,6 +921,7 @@ decl_module! {
                 domain_name,
                 foundation_account,
                 certified_sales_account,
+                discount_for_dedication_nodes,
             };
 
             PricingPolicies::<T>::insert(&id, &new_policy);
@@ -939,7 +944,8 @@ decl_module! {
             unique_name: types::Policy,
             domain_name: types::Policy,
             foundation_account: T::AccountId,
-            certified_sales_account: T::AccountId
+            certified_sales_account: T::AccountId,
+            discount_for_dedication_nodes: u8
         ) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
@@ -966,6 +972,7 @@ decl_module! {
             pricing_policy.domain_name = domain_name;
             pricing_policy.foundation_account = foundation_account;
             pricing_policy.certified_sales_account = certified_sales_account;
+            pricing_policy.discount_for_dedication_nodes = discount_for_dedication_nodes;
 
             PricingPolicies::<T>::insert(&id, &pricing_policy);
             PricingPolicyIdByName::insert(&pricing_policy.name, &id);
