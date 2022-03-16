@@ -93,6 +93,7 @@ impl pallet_tft_price::Config for TestRuntime {
     type Event = Event;
     type AuthorityId = pallet_tft_price::crypto::AuthId;
     type Call = Call;
+    type RestrictedOrigin = EnsureRoot<Self::AccountId>;
 }
 
 impl pallet_timestamp::Config for TestRuntime {
@@ -191,5 +192,11 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
         balances: vec![(alice(), 1000000000000), (bob(), 2500000000), (charlie(), 150000)],
     };
     genesis.assimilate_storage(&mut t).unwrap();
+
+    let genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
+        allowed_origin: bob()
+    };
+    genesis.assimilate_storage(&mut t).unwrap();
+
     t.into()
 }
