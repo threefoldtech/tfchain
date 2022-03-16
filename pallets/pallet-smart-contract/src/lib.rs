@@ -513,6 +513,9 @@ impl<T: Config> Module<T> {
                         contract_id,
                         err
                     );
+                    // If billing the contract failed, we should delete the contract and clean up storage
+                    Self::remove_contract(contract.contract_id);
+                    continue;
                 }
             }
 
