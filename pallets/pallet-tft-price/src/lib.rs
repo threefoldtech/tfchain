@@ -135,7 +135,7 @@ decl_module! {
 
         fn offchain_worker(block_number: T::BlockNumber) {
             match Self::offchain_signed_tx(block_number) {
-                Ok(_) => debug::info!("price set"),
+                Ok(_) => debug::info!("offchain worker done."),
                 Err(err) => debug::info!("err: {:?}", err)
             }
         }
