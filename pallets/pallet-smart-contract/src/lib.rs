@@ -4,7 +4,9 @@ use frame_support::{
     debug, decl_error, decl_event, decl_module, decl_storage,
     dispatch::DispatchResultWithPostInfo,
     ensure,
-    traits::{Currency, ExistenceRequirement::KeepAlive, Get, Vec},
+    traits::{
+        Currency, ExistenceRequirement::KeepAlive, Get, LockableCurrency, Vec, WithdrawReasons,
+    },
     weights::Pays,
 };
 use frame_system::{self as system, ensure_signed};
@@ -31,7 +33,7 @@ pub use weights::WeightInfo;
 
 pub trait Config: system::Config + pallet_tfgrid::Config + pallet_timestamp::Config {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
-    type Currency: Currency<Self::AccountId>;
+    type Currency: LockableCurrency<Self::AccountId>;
     type StakingPoolAccount: Get<Self::AccountId>;
     type BillingFrequency: Get<u64>;
     type WeightInfo: WeightInfo;
@@ -91,6 +93,7 @@ decl_error! {
         MethodIsDeprecated,
         NodeHasActiveContracts,
         NodeHasRentContract,
+        NotEnoughBalance,
     }
 }
 
@@ -278,13 +281,33 @@ impl<T: Config> Module<T> {
             Error::<T>::NodeHasActiveContracts
         );
 
+        // Create a temp contract object and calculate the contract cost for 1 cycle
         let rent_contract = types::RentContract { node_id };
+        let mut temp_contract = types::Contract::default();
+        temp_contract.contract_type = types::ContractData::RentContract(rent_contract.clone());
+        let balance: BalanceOf<T> = <T as Config>::Currency::free_balance(&account_id);
+        let (amount_due, _) = Self::calculate_contract_cost_tft(&temp_contract, balance)?;
 
+        // If the balance of the requestor is cannot cover the cost of 1 billing cycle we return an error
+        if amount_due > balance {
+            return Err(DispatchError::from(Error::<T>::NotEnoughBalance));
+        }
+
+        // Continue creating the contract
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
         let contract = Self::_create_contract(
             twin_id,
             types::ContractData::RentContract(rent_contract.clone()),
         )?;
+
+        // Lock the amount that represents the cost of one billing cycle
+        let lock_id = contract.contract_id.to_be_bytes();
+        <T as Config>::Currency::set_lock(
+            lock_id,
+            &account_id,
+            amount_due.into(),
+            WithdrawReasons::RESERVE,
+        );
 
         // Insert active rent contract for node
         ActiveRentContractForNode::insert(node_id, contract.clone());
@@ -629,44 +652,32 @@ impl<T: Config> Module<T> {
     // Calculates how much TFT is due by the user and distributes the rewards
     // Will also cancel the contract if there is not enough funds on the users wallet
     fn bill_contract(contract: &types::Contract) -> DispatchResult {
-        // Fetch the default pricing policy and certification type
-        let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
-        let certification_type = pallet_tfgrid_types::CertificationType::Diy;
-
-        // The number of seconds elapsed since last contract bill is the frequency * block time (6 seconds)
-        let seconds_elapsed = T::BillingFrequency::get() * 6;
-
-        // Calculate the cost for a contract, can be any of:
-        // - NodeContract
-        // - RentContract
-        // - NameContract
-        let total_cost = Self::calculate_contract_cost(contract, &pricing_policy, seconds_elapsed)?;
-
-        // If cost is 0, reinsert to be billed at next interval
-        if total_cost == 0 {
-            return Ok(());
-        }
-
-        let total_cost_tft_64 = Self::calculate_cost_in_tft_from_musd(total_cost)?;
-
         if !pallet_tfgrid::Twins::<T>::contains_key(contract.twin_id) {
             return Err(DispatchError::from(Error::<T>::TwinNotExists));
         }
         let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
+
+        // If the contract is in cancel state, which means that this is the last billing cycle
+        // remove the lock on the funds so they become free and we can bill these if needed
+        if matches!(
+            contract.state,
+            types::ContractState::Deleted(types::Cause::CanceledByUser)
+        ) {
+            let lock_id = contract.contract_id.to_be_bytes();
+            <T as Config>::Currency::remove_lock(lock_id, &twin.account_id);
+        }
+        
         let balance: BalanceOf<T> = <T as Config>::Currency::free_balance(&twin.account_id);
 
-        // Calculate the amount due and discount received based on the total_cost amount due
-        let (amount_due, discount_received) =
-            Self::calculate_discount(total_cost_tft_64, balance, certification_type);
+        let (mut amount_due, discount_received) =
+            Self::calculate_contract_cost_tft(contract, balance)?;
 
-        // Convert amount due to u128
-        let amount_due_as_u128: u128 = amount_due.saturated_into::<u128>();
-        // Get current TFT price
+        if amount_due == BalanceOf::<T>::saturated_from(0 as u128) {
+            return Ok(());
+        };
 
         // if the total amount due exceeds the twin's balance, decomission contract
         // but first drain the account with the amount equal to the balance of that twin
-        let mut amount_due: BalanceOf<T> = BalanceOf::<T>::saturated_from(amount_due_as_u128);
-
         let mut decomission = false;
         if amount_due >= balance {
             debug::info!(
@@ -675,6 +686,9 @@ impl<T: Config> Module<T> {
             amount_due = balance;
             decomission = true;
         }
+
+        // Fetch the default pricing policy
+        let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
 
         // Distribute cultivation rewards
         match Self::_distribute_cultivation_rewards(&contract, &pricing_policy, amount_due) {
@@ -707,16 +721,51 @@ impl<T: Config> Module<T> {
         Ok(())
     }
 
+    fn calculate_contract_cost_tft(
+        contract: &types::Contract,
+        balance: BalanceOf<T>,
+    ) -> Result<(BalanceOf<T>, types::DiscountLevel), DispatchError> {
+        // Fetch the default pricing policy and certification type
+        let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
+        let certification_type = pallet_tfgrid_types::CertificationType::Diy;
+
+        // The number of seconds elapsed since last contract bill is the frequency * block time (6 seconds)
+        let seconds_elapsed = T::BillingFrequency::get() * 6;
+
+        // Calculate the cost for a contract, can be any of:
+        // - NodeContract
+        // - RentContract
+        // - NameContract
+        let total_cost = Self::calculate_contract_cost(contract, &pricing_policy, seconds_elapsed)?;
+
+        // If cost is 0, reinsert to be billed at next interval
+        if total_cost == 0 {
+            return Ok((
+                BalanceOf::<T>::saturated_from(0 as u128),
+                types::DiscountLevel::None,
+            ));
+        }
+
+        let total_cost_tft_64 = Self::calculate_cost_in_tft_from_musd(total_cost)?;
+
+        // Calculate the amount due and discount received based on the total_cost amount due
+        let (amount_due, discount_received) =
+            Self::calculate_discount(total_cost_tft_64, balance, certification_type);
+
+        return Ok((amount_due, discount_received));
+    }
+
     pub fn calculate_contract_cost(
         contract: &types::Contract,
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
         seconds_elapsed: u64,
     ) -> Result<u64, DispatchError> {
-        // Get the contract billing info to view the amount unbilled for NRU (network resource units)
-        let contract_billing_info = ContractBillingInformationByID::get(contract.contract_id);
         let total_cost = match &contract.contract_type {
             // Calculate total cost for a node contract
             types::ContractData::NodeContract(node_contract) => {
+                // Get the contract billing info to view the amount unbilled for NRU (network resource units)
+                let contract_billing_info =
+                    ContractBillingInformationByID::get(contract.contract_id);
                 // Get the node
                 if !pallet_tfgrid::Nodes::contains_key(node_contract.node_id) {
                     return Err(DispatchError::from(Error::<T>::NodeNotExists));

@@ -544,6 +544,8 @@ fn test_multiple_contracts_billing_loop() {
 fn test_create_rent_contract() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -564,6 +566,8 @@ fn test_create_rent_contract() {
 fn test_create_rent_contract_cancel_works() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -595,6 +599,8 @@ fn test_create_rent_contract_cancel_works() {
 fn test_create_node_contract_other_owner_when_rent_contract_active_fails() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -627,6 +633,7 @@ fn test_create_node_contract_same_owner_when_rent_contract_active_works() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
