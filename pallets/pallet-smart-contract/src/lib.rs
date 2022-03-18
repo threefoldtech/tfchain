@@ -5,7 +5,7 @@ use frame_support::{
     dispatch::DispatchResultWithPostInfo,
     ensure,
     traits::{
-        Currency, ExistenceRequirement::KeepAlive, Get, LockableCurrency, Vec, WithdrawReasons,
+        Currency, ExistenceRequirement::KeepAlive, Get, ReservableCurrency, Vec,
     },
     weights::Pays,
 };
@@ -33,7 +33,7 @@ pub use weights::WeightInfo;
 
 pub trait Config: system::Config + pallet_tfgrid::Config + pallet_timestamp::Config {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
-    type Currency: LockableCurrency<Self::AccountId>;
+    type Currency: ReservableCurrency<Self::AccountId>;
     type StakingPoolAccount: Get<Self::AccountId>;
     type BillingFrequency: Get<u64>;
     type WeightInfo: WeightInfo;
@@ -289,9 +289,8 @@ impl<T: Config> Module<T> {
         let (amount_due, _) = Self::calculate_contract_cost_tft(&temp_contract, balance)?;
 
         // If the balance of the requestor is cannot cover the cost of 1 billing cycle we return an error
-        if amount_due > balance {
-            return Err(DispatchError::from(Error::<T>::NotEnoughBalance));
-        }
+        // Reserve the amount that represents the cost of one billing cycle
+        <T as Config>::Currency::reserve(&account_id, amount_due.into())?;
 
         // Continue creating the contract
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
@@ -300,14 +299,6 @@ impl<T: Config> Module<T> {
             types::ContractData::RentContract(rent_contract.clone()),
         )?;
 
-        // Lock the amount that represents the cost of one billing cycle
-        let lock_id = contract.contract_id.to_be_bytes();
-        <T as Config>::Currency::set_lock(
-            lock_id,
-            &account_id,
-            amount_due.into(),
-            WithdrawReasons::RESERVE,
-        );
 
         // Insert active rent contract for node
         ActiveRentContractForNode::insert(node_id, contract.clone());
@@ -657,16 +648,6 @@ impl<T: Config> Module<T> {
         }
         let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
 
-        // If the contract is in cancel state, which means that this is the last billing cycle
-        // remove the lock on the funds so they become free and we can bill these if needed
-        if matches!(
-            contract.state,
-            types::ContractState::Deleted(types::Cause::CanceledByUser)
-        ) {
-            let lock_id = contract.contract_id.to_be_bytes();
-            <T as Config>::Currency::remove_lock(lock_id, &twin.account_id);
-        }
-        
         let balance: BalanceOf<T> = <T as Config>::Currency::free_balance(&twin.account_id);
 
         let (mut amount_due, discount_received) =
@@ -675,6 +656,15 @@ impl<T: Config> Module<T> {
         if amount_due == BalanceOf::<T>::saturated_from(0 as u128) {
             return Ok(());
         };
+
+        // If the contract is in cancel state, which means that this is the last billing cycle
+        // remove the lock on the funds so they become free and we can bill these if needed
+        if matches!(
+            contract.state,
+            types::ContractState::Deleted(types::Cause::CanceledByUser)
+        ) {
+            <T as Config>::Currency::unreserve(&twin.account_id, amount_due);
+        }
 
         // if the total amount due exceeds the twin's balance, decomission contract
         // but first drain the account with the amount equal to the balance of that twin

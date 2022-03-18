@@ -559,6 +559,16 @@ fn test_create_rent_contract() {
             contract.contract_type,
             types::ContractData::RentContract(rent_contract)
         );
+
+        let twin = TfgridModule::twins(2);
+        let reserved_balance = Balances::reserved_balance(&twin.account_id);
+        assert_ne!(reserved_balance, 0);
+
+        let (amount_due_as_u128, _) = calculate_tft_cost(10, 1, 2);
+        assert_ne!(amount_due_as_u128, 0);
+
+        // check if the reserved balance is equal to the amount due for 1 cycle
+        assert_eq!(reserved_balance as u128, amount_due_as_u128);
     });
 }
 
