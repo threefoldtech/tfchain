@@ -564,11 +564,11 @@ fn test_create_rent_contract() {
         let reserved_balance = Balances::reserved_balance(&twin.account_id);
         assert_ne!(reserved_balance, 0);
 
-        let (amount_due_as_u128, _) = calculate_tft_cost(10, 1, 2);
+        let (amount_due_as_u128, _) = calculate_tft_cost(1, 2);
         assert_ne!(amount_due_as_u128, 0);
 
         // check if the reserved balance is equal to the amount due for 1 cycle
-        assert_eq!(reserved_balance as u128, amount_due_as_u128);
+        assert_eq!(reserved_balance, amount_due_as_u128);
     });
 }
 
@@ -690,9 +690,65 @@ fn test_create_rent_contract_billing() {
 
         run_to_block(12);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, 1, 2);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2);
         assert_ne!(amount_due_as_u128, 0);
         check_report_cost(1, 2, amount_due_as_u128, 12, discount_received);
+    });
+}
+
+#[test]
+fn test_create_rent_contract_billing_cancel_should_bill_reserved_balance() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(bob()),
+            node_id
+        ));
+
+        let contract = SmartContractModule::contracts(1);
+        let rent_contract = types::RentContract { node_id };
+        assert_eq!(
+            contract.contract_type,
+            types::ContractData::RentContract(rent_contract)
+        );
+
+        run_to_block(12);
+
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2);
+        assert_ne!(amount_due_as_u128, 0);
+        check_report_cost(1, 2, amount_due_as_u128, 12, discount_received.clone());
+
+        let twin = TfgridModule::twins(2);
+        let reserved_balance = Balances::reserved_balance(&twin.account_id);
+        assert_ne!(reserved_balance, 0);
+
+        // check if the reserved balance is equal to the amount due for 1 cycle
+        assert_eq!(reserved_balance, amount_due_as_u128);
+
+        run_to_block(14);
+        // cancel contract
+        assert_ok!(SmartContractModule::cancel_contract(
+            Origin::signed(bob()),
+            1
+        ));
+
+        let twin = TfgridModule::twins(2);
+        let free_balance = Balances::free_balance(&twin.account_id);
+        assert_ne!(free_balance, 0);
+        Balances::transfer(Origin::signed(bob()), alice(), free_balance).unwrap();
+
+        run_to_block(22);
+
+        // Last amount due is the same as the first one
+        assert_ne!(amount_due_as_u128, 0);
+        check_report_cost(1, 5, amount_due_as_u128, 22, types::DiscountLevel::None);
+
+        let new_reserved_balance = Balances::reserved_balance(&twin.account_id);
+        assert_eq!(new_reserved_balance, 0);
     });
 }
 
@@ -719,7 +775,7 @@ fn test_create_rent_contract_and_free_node_contract() {
 
         run_to_block(12);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, 1, 2);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2);
         assert_ne!(amount_due_as_u128, 0);
         check_report_cost(1, 3, amount_due_as_u128, 12, discount_received);
 
@@ -768,12 +824,12 @@ fn test_create_rent_contract_and_node_contract_with_ip() {
         run_to_block(12);
 
         // check contract 1 costs (Rent Contract)
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, 1, 2);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2);
         assert_ne!(amount_due_as_u128, 0);
         check_report_cost(1, 3, amount_due_as_u128, 12, discount_received);
         
         // check contract 2 costs (Node Contract)
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, 2, 2);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(2, 2);
         assert_ne!(amount_due_as_u128, 0);
         check_report_cost(2, 5, amount_due_as_u128, 12, discount_received);
 
@@ -832,7 +888,7 @@ fn test_node_contract_billing() {
         let billing_info = SmartContractModule::contract_billing_information_by_id(1);
         assert_ne!(billing_info.amount_unbilled, 0);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, contract_id, twin_id);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id);
         assert_ne!(amount_due_as_u128, 0);
 
         run_to_block(12);
@@ -857,7 +913,7 @@ fn test_node_contract_billing() {
         let staking_pool_account_share = Perbill::from_percent(5) * amount_due_as_u128;
         assert_eq!(
             staking_pool_account_balance_as_u128,
-            staking_pool_account_share
+            staking_pool_account_share as u128
         );
 
         let pricing_policy = TfgridModule::pricing_policies(1);
@@ -868,14 +924,14 @@ fn test_node_contract_billing() {
         let foundation_account_account_share = Perbill::from_percent(10) * amount_due_as_u128;
         assert_eq!(
             foundation_account_balance_as_u128,
-            foundation_account_account_share
+            foundation_account_account_share as u128
         );
 
         let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
         let sales_account_balance_as_u128: u128 = sales_account_balance.saturated_into::<u128>();
         // equal to 50%
         let sales_account_account_share = Perbill::from_percent(50) * amount_due_as_u128;
-        assert_eq!(sales_account_balance_as_u128, sales_account_account_share);
+        assert_eq!(sales_account_balance_as_u128, sales_account_account_share as u128);
 
         let total_issuance = Balances::total_issuance();
         // total issueance is now previous total - amount burned from contract billed (35%)
@@ -910,23 +966,23 @@ fn test_node_contract_billing_cycles() {
 
         push_contract_resources_used();
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, contract_id, twin_id);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id);
         run_to_block(12);
         check_report_cost(1, 3, amount_due_as_u128, 12, discount_received);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, contract_id, twin_id);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id);
         run_to_block(22);
         check_report_cost(1, 5, amount_due_as_u128, 22, discount_received);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, contract_id, twin_id);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id);
         run_to_block(32);
         check_report_cost(1, 7, amount_due_as_u128, 32, discount_received);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, contract_id, twin_id);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id);
         run_to_block(42);
         check_report_cost(1, 9, amount_due_as_u128, 42, discount_received);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, contract_id, twin_id);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id);
         run_to_block(52);
         check_report_cost(1, 11, amount_due_as_u128, 52, discount_received);
     });
@@ -952,11 +1008,11 @@ fn test_node_contract_billing_cycles_cancel_contract() {
 
         push_contract_resources_used();
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, contract_id, twin_id);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id);
         run_to_block(12);
         check_report_cost(1, 3, amount_due_as_u128, 12, discount_received);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, contract_id, twin_id);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id);
         run_to_block(22);
         check_report_cost(1, 5, amount_due_as_u128, 22, discount_received);
 
@@ -966,7 +1022,7 @@ fn test_node_contract_billing_cycles_cancel_contract() {
             1
         ));
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(10, contract_id, twin_id);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id);
         run_to_block(32);
         check_report_cost(1, 8, amount_due_as_u128, 32, discount_received);
 
@@ -1161,7 +1217,7 @@ fn push_contract_resources_used() {
 fn check_report_cost(
     contract_id: u64,
     index: usize,
-    amount_billed: u128,
+    amount_billed: u64,
     block_number: u64,
     discount_level: types::DiscountLevel,
 ) {
@@ -1182,50 +1238,31 @@ fn check_report_cost(
         contract_id,
         timestamp: 1628082000 + (6 * block_number),
         discount_level,
-        amount_billed,
+        amount_billed: amount_billed as u128,
     };
     let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
         Vec::new();
     expected_events.push(RawEvent::ContractBilled(contract_bill_event));
 
+    for event in our_events.clone().iter() {
+        println!("event: {:?}", event);
+    };
+
     assert_eq!(our_events[index], expected_events[0]);
 }
 
 fn calculate_tft_cost(
-    number_of_blocks: u64,
     contract_id: u64,
     twin_id: u32,
-) -> (u128, types::DiscountLevel) {
-    let contract = SmartContractModule::contracts(contract_id);
-    let pricing_policy = TfgridModule::pricing_policies(1);
-    let cost = SmartContractModule::calculate_contract_cost(
-        &contract,
-        &pricing_policy,
-        number_of_blocks * 6,
-    )
-    .unwrap();
-    println!("musd cost: {:?}", cost);
-
-    let tft_cost = SmartContractModule::calculate_cost_in_tft_from_musd(cost).unwrap();
-    println!("tft cost: {:?}", tft_cost);
-
-    if tft_cost == 0 {
-        return (0, types::DiscountLevel::default());
-    }
-
+) -> (u64, types::DiscountLevel) {
     let twin = TfgridModule::twins(twin_id);
     let b = Balances::free_balance(&twin.account_id);
-    let (amount_due, discount_received) = SmartContractModule::calculate_discount(
-        tft_cost,
-        b,
-        pallet_tfgrid_types::CertificationType::Diy,
-    );
+    let contract = SmartContractModule::contracts(contract_id);
 
-    // Convert amount due to u128
-    let amount_due_as_u128: u128 = amount_due.saturated_into::<u128>();
-    println!("due: {:?}", amount_due_as_u128);
+    println!("contract: {:?}", contract);
+    let (amount_due, discount_received) = SmartContractModule::calculate_contract_cost_tft(&contract, b).unwrap();
 
-    (amount_due_as_u128, discount_received)
+    (amount_due, discount_received)
 }
 
 pub fn prepare_twins() {
