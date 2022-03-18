@@ -93,7 +93,6 @@ decl_error! {
         MethodIsDeprecated,
         NodeHasActiveContracts,
         NodeHasRentContract,
-        NotEnoughBalance,
     }
 }
 
