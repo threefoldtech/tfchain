@@ -662,12 +662,8 @@ impl<T: Config> Module<T> {
             contract.state,
             types::ContractState::Deleted(types::Cause::CanceledByUser)
         ) {
-            println!("unreserving currency");
             <T as Config>::Currency::unreserve(&twin.account_id, amount_due);
             balance = <T as Config>::Currency::free_balance(&twin.account_id);
-            println!("balance now: {:?}", balance);
-            println!("amount due: {:?}", amount_due);
-
         }
 
         // if the total amount due exceeds the twin's balance, decomission contract
