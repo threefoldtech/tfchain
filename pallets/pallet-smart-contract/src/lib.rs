@@ -298,7 +298,6 @@ impl<T: Config> Module<T> {
             types::ContractData::RentContract(rent_contract.clone()),
         )?;
 
-
         // Insert active rent contract for node
         ActiveRentContractForNode::insert(node_id, contract.clone());
 
@@ -666,15 +665,19 @@ impl<T: Config> Module<T> {
             balance = <T as Config>::Currency::free_balance(&twin.account_id);
         }
 
-        // if the total amount due exceeds the twin's balance, decomission contract
-        // but first drain the account with the amount equal to the balance of that twin
+        // if the total amount due exceeds the twin's balance, first try to unreserve the balance
+        // if the total balance after unreserving can't still cover the amount due, decomission the contract
         let mut decomission = false;
         if amount_due >= balance {
-            debug::info!(
-                "decomissioning contract because balance on twin account is lower than amount due"
-            );
-            amount_due = balance;
-            decomission = true;
+            <T as Config>::Currency::unreserve(&twin.account_id, amount_due);
+            balance = <T as Config>::Currency::free_balance(&twin.account_id);
+
+            // if the free balance + reserved balance is still not enough to cover the costs
+            // take whatever is left on the account and decomission the workload
+            if amount_due >= balance {
+                amount_due = balance;
+                decomission = true;
+            }
         }
 
         // Fetch the default pricing policy
