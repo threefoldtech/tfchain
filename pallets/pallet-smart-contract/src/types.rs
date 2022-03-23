@@ -148,3 +148,10 @@ pub struct ContractResources {
     pub contract_id: u64,
     pub used: types::Resources,
 }
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+pub struct ContractLock<BalanceOf> {
+    pub amount_locked: BalanceOf,
+    pub lock_updated: u64,
+    pub cycles: u16,
+}
