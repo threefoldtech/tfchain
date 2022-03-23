@@ -673,11 +673,13 @@ impl<T: Config> Module<T> {
             balance = <T as Config>::Currency::free_balance(&twin.account_id);
 
             // if the free balance + reserved balance is still not enough to cover the costs
-            // take whatever is left on the account and decomission the workload
+            // take whatever is left on the account
             if amount_due >= balance {
                 amount_due = balance;
-                decomission = true;
             }
+
+            // decomission the workload
+            decomission = true;
         }
 
         // Fetch the default pricing policy
