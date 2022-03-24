@@ -12,6 +12,7 @@ use frame_support::{
 use frame_system::{self as system, ensure_signed};
 use sp_runtime::{traits::SaturatedConversion, DispatchError, DispatchResult, Perbill, Percent};
 
+use pallet_balances;
 use pallet_tfgrid;
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_tft_price;
@@ -31,7 +32,7 @@ pub mod weights;
 
 pub use weights::WeightInfo;
 
-pub trait Config: system::Config + pallet_tfgrid::Config + pallet_timestamp::Config {
+pub trait Config: system::Config + pallet_tfgrid::Config + pallet_timestamp::Config + pallet_balances::Config {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
     type Currency: LockableCurrency<Self::AccountId>;
     type StakingPoolAccount: Get<Self::AccountId>;
@@ -651,10 +652,12 @@ impl<T: Config> Module<T> {
         }
         let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
         // Get the twins balance
-        let balance: BalanceOf<T> = <T as Config>::Currency::free_balance(&twin.account_id);
-
+        let balance = pallet_balances::pallet::Pallet::<T>::usable_balance(&twin.account_id);
+        let b = balance.saturated_into::<u128>();
+        let b_converted = BalanceOf::<T>::saturated_from(b);
+        
         let (mut amount_due, discount_received) =
-            Self::calculate_contract_cost_tft(contract, balance)?;
+            Self::calculate_contract_cost_tft(contract, b_converted)?;
 
         if amount_due == BalanceOf::<T>::saturated_from(0 as u128) {
             return Ok(());
@@ -667,9 +670,9 @@ impl<T: Config> Module<T> {
 
         // if the total amount due exceeds the twin's balance we must decomission the contract
         let mut decomission = false;
-        if amount_due >= balance {
+        if amount_due >= b_converted {
             decomission = true;
-            amount_due = balance;
+            amount_due = b_converted;
         }
 
         let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
@@ -683,6 +686,10 @@ impl<T: Config> Module<T> {
             );
             // get reserved amount on account
             let total_amount_due = contract_lock.amount_locked + amount_due;
+            println!("contract lock: {:?}", contract_lock.amount_locked);
+            println!("amount due: {:?}", amount_due);
+
+            println!("total amount due: {:?}", total_amount_due);
             // Fetch the default pricing policy
             let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
             // Distribute cultivation rewards
