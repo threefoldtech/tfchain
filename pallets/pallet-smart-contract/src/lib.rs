@@ -228,9 +228,6 @@ impl<T: Config> Module<T> {
             }
         }
 
-        // Check if we can deploy requested resources on the selected node
-        // Self::can_deploy_resources_on_node(node_id, resources.clone())?;
-
         // Prepare NodeContract struct
         let node_contract = types::NodeContract {
             node_id,
@@ -289,33 +286,43 @@ impl<T: Config> Module<T> {
             Error::<T>::NodeHasActiveContracts
         );
 
-        // Create a temp contract object and calculate the contract cost for 1 cycle
-        let rent_contract = types::RentContract { node_id };
-        let mut temp_contract = types::Contract::default();
-        temp_contract.contract_type = types::ContractData::RentContract(rent_contract.clone());
-        let balance: BalanceOf<T> = <T as Config>::Currency::free_balance(&account_id);
-        let seconds_elapsed = T::BillingFrequency::get() * 6;
-        let (amount_due, _) = Self::calculate_contract_cost_tft(&temp_contract, balance, seconds_elapsed)?;
-        // Continue creating the contract
+        ensure!(
+            !ActiveRentContractForNode::contains_key(node_id),
+            Error::<T>::NodeHasRentContract
+        );
+
+        // Create contract
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
         let contract = Self::_create_contract(
             twin_id,
-            types::ContractData::RentContract(rent_contract.clone()),
+            types::ContractData::RentContract(types::RentContract { node_id }),
         )?;
 
-        // If the balance of the requestor is cannot cover the cost of 1 billing cycle we return an error
-        // Reserve the amount that represents the cost of one billing cycle
-        <T as Config>::Currency::set_lock(
-            contract.contract_id.to_be_bytes(),
-            &account_id,
-            amount_due.into(),
-            WithdrawReasons::RESERVE,
-        );
-        let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
-        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
-        contract_lock.lock_updated = now;
-        contract_lock.amount_locked = amount_due;
-        ContractLock::<T>::insert(contract.contract_id, contract_lock);
+        // Calculate how much
+        let balance: BalanceOf<T> = <T as Config>::Currency::free_balance(&account_id);
+        let seconds_elapsed = T::BillingFrequency::get() * 6;
+        match Self::calculate_contract_cost_tft(&contract, balance, seconds_elapsed) {
+            Ok((amount_due, _)) => {
+                // Reserve the amount that represents the cost of one billing cycle
+                <T as Config>::Currency::set_lock(
+                    contract.contract_id.to_be_bytes(),
+                    &account_id,
+                    amount_due.into(),
+                    WithdrawReasons::RESERVE,
+                );
+                let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
+                let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+                contract_lock.lock_updated = now;
+                contract_lock.amount_locked = amount_due;
+                ContractLock::<T>::insert(contract.contract_id, contract_lock);
+            }
+            Err(err) => {
+                // If something goes wrong calculating contract cost
+                // (node not exists, twin not enough balance, ...) clean up storage and return error
+                Self::remove_contract(contract.contract_id);
+                return Err(err);
+            }
+        }
 
         // Insert active rent contract for node
         ActiveRentContractForNode::insert(node_id, contract.clone());
@@ -481,13 +488,12 @@ impl<T: Config> Module<T> {
         };
 
         Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
-        
         // Bill contract
         Self::bill_contract(&contract)?;
 
         // TODO, WHAT TO DO HERE???
         // if matches!(cause, types::Cause::OutOfFunds) {
-            // return Ok(())
+        // return Ok(())
         // }
 
         Self::remove_contract(contract.contract_id);
@@ -672,6 +678,7 @@ impl<T: Config> Module<T> {
         let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
         let usable_balance = Self::get_usable_balance(&twin.account_id);
 
+        // Calculate amount of seconds elapsed based on the contract lock struct
         let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
         let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
         let seconds_elapsed = now - contract_lock.lock_updated;
@@ -690,9 +697,12 @@ impl<T: Config> Module<T> {
             amount_due = usable_balance;
         }
 
-        let is_rent_contract = matches!(contract.contract_type, types::ContractData::RentContract(_));
+        // If it's a rent contract and it's the first cycle, remove the lock and initialize it again later
+        // We do this because we initially lock some amount of tokens for a rent contract, if the user does
+        // not cancel within 1 cycle of contract creation, it's safer to delete the lock and create a now one
+        let is_rent_contract =
+            matches!(contract.contract_type, types::ContractData::RentContract(_));
         if is_rent_contract && contract_lock.cycles == 0 {
-            println!("----module unlocking---");
             <T as Config>::Currency::remove_lock(
                 contract.contract_id.to_be_bytes(),
                 &twin.account_id,
@@ -775,14 +785,11 @@ impl<T: Config> Module<T> {
     fn calculate_contract_cost_tft(
         contract: &types::Contract,
         balance: BalanceOf<T>,
-        seconds_elapsed: u64
+        seconds_elapsed: u64,
     ) -> Result<(BalanceOf<T>, types::DiscountLevel), DispatchError> {
         // Fetch the default pricing policy and certification type
         let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
         let certification_type = pallet_tfgrid_types::CertificationType::Diy;
-
-        // The number of seconds elapsed since last contract bill is the frequency * block time (6 seconds)
-        // let seconds_elapsed = T::BillingFrequency::get() * 6;
 
         // Calculate the cost for a contract, can be any of:
         // - NodeContract
