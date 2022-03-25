@@ -4,7 +4,7 @@ use frame_support::{
     traits::{OnFinalize, OnInitialize},
 };
 use frame_system::RawOrigin;
-use sp_runtime::{traits::SaturatedConversion, Perbill, Percent};
+use sp_runtime::{Perbill, Percent};
 use substrate_fixed::types::{U16F16, U64F64};
 
 use super::types;
@@ -851,7 +851,7 @@ fn test_node_contract_billing() {
 
         push_contract_resources_used();
 
-        // push_nru_report_for_contract(1, 10);
+        push_nru_report_for_contract(1, 10);
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(10);
         assert_eq!(contract_to_bill, [1]);
@@ -892,7 +892,7 @@ fn test_node_contract_billing() {
         let burned_amount = Perbill::from_percent(35) * total_amount_billed;
         assert_eq!(
             total_issuance,
-            initial_total_issuance - burned_amount as u64
+            initial_total_issuance - burned_amount as u64 - 1
         );
 
         // amount unbilled should have been reset after a transfer between contract owner and farmer
