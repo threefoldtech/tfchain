@@ -32,7 +32,9 @@ pub mod weights;
 
 pub use weights::WeightInfo;
 
-pub trait Config: system::Config + pallet_tfgrid::Config + pallet_timestamp::Config + pallet_balances::Config {
+pub trait Config:
+    system::Config + pallet_tfgrid::Config + pallet_timestamp::Config + pallet_balances::Config
+{
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
     type Currency: LockableCurrency<Self::AccountId>;
     type StakingPoolAccount: Get<Self::AccountId>;
@@ -651,13 +653,17 @@ impl<T: Config> Module<T> {
             return Err(DispatchError::from(Error::<T>::TwinNotExists));
         }
         let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
-        // Get the twins balance
+        // Get the twin usable balance
         let balance = pallet_balances::pallet::Pallet::<T>::usable_balance(&twin.account_id);
         let b = balance.saturated_into::<u128>();
-        let b_converted = BalanceOf::<T>::saturated_from(b);
-        
+        let usable_balance = BalanceOf::<T>::saturated_from(b);
+        // Get twin free balance
+        let free_balance = <T as Config>::Currency::free_balance(&twin.account_id);
+        // Locked balance = free balance - usable balance
+        let locked_balance = free_balance - usable_balance;
+
         let (mut amount_due, discount_received) =
-            Self::calculate_contract_cost_tft(contract, b_converted)?;
+            Self::calculate_contract_cost_tft(contract, usable_balance)?;
 
         if amount_due == BalanceOf::<T>::saturated_from(0 as u128) {
             return Ok(());
@@ -670,26 +676,36 @@ impl<T: Config> Module<T> {
 
         // if the total amount due exceeds the twin's balance we must decomission the contract
         let mut decomission = false;
-        if amount_due >= b_converted {
+        if amount_due >= usable_balance {
             decomission = true;
-            amount_due = b_converted;
+            amount_due = usable_balance;
         }
 
         let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
+        // Update lock for contract and ContractLock in storage
+        <T as Config>::Currency::extend_lock(
+            contract.contract_id.to_be_bytes(),
+            &twin.account_id,
+            locked_balance + amount_due.into(),
+            WithdrawReasons::RESERVE,
+        );
+        // increment cycles billed
+        contract_lock.lock_updated = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+        contract_lock.cycles += 1;
+        contract_lock.amount_locked = contract_lock.amount_locked + amount_due;
+        ContractLock::<T>::insert(contract.contract_id, &contract_lock);
+
         // When the cultivation rewards are ready to be distributed or we have to decomission the contract (due to out of funds) or it's canceled by the user
         // Unlock all reserved balance and distribute
-        if contract_lock.cycles == 23 || decomission || is_canceled {
+        if contract_lock.cycles == 24 || decomission || is_canceled {
             // Remove lock
             <T as Config>::Currency::remove_lock(
                 contract.contract_id.to_be_bytes(),
                 &twin.account_id,
             );
             // get reserved amount on account
-            let total_amount_due = contract_lock.amount_locked + amount_due;
-            println!("contract lock: {:?}", contract_lock.amount_locked);
-            println!("amount due: {:?}", amount_due);
+            let total_amount_due = contract_lock.amount_locked;
 
-            println!("total amount due: {:?}", total_amount_due);
             // Fetch the default pricing policy
             let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
             // Distribute cultivation rewards
@@ -706,21 +722,8 @@ impl<T: Config> Module<T> {
                 <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
             contract_lock.amount_locked = BalanceOf::<T>::saturated_from(0 as u128);
             contract_lock.cycles = 0;
-        } else {
-            // Update lock for contract and ContractLock in storage
-            <T as Config>::Currency::set_lock(
-                contract.contract_id.to_be_bytes(),
-                &twin.account_id,
-                amount_due.into(),
-                WithdrawReasons::RESERVE,
-            );
-            // increment cycles billed
-            contract_lock.lock_updated =
-                <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
-            contract_lock.cycles += 1;
-            contract_lock.amount_locked = contract_lock.amount_locked + amount_due;
+            ContractLock::<T>::insert(contract.contract_id, &contract_lock);
         }
-        ContractLock::<T>::insert(contract.contract_id, &contract_lock);
 
         let contract_bill = types::ContractBill {
             contract_id: contract.contract_id,
@@ -763,7 +766,6 @@ impl<T: Config> Module<T> {
         // - RentContract
         // - NameContract
         let total_cost = Self::calculate_contract_cost(contract, &pricing_policy, seconds_elapsed)?;
-
         // If cost is 0, reinsert to be billed at next interval
         if total_cost == 0 {
             return Ok((
