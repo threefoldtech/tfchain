@@ -255,6 +255,11 @@ impl<T: Config> Module<T> {
         };
         ContractBillingInformationByID::insert(contract.contract_id, contract_billing_information);
 
+        // Create contract lock object
+        let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
+        contract_lock.lock_updated = now;
+        ContractLock::<T>::insert(contract.contract_id, contract_lock);
+
         // Insert contract id by (node_id, hash)
         ContractIDByNodeIDAndHash::insert(node_id, deployment_hash, contract.contract_id);
 
@@ -289,7 +294,8 @@ impl<T: Config> Module<T> {
         let mut temp_contract = types::Contract::default();
         temp_contract.contract_type = types::ContractData::RentContract(rent_contract.clone());
         let balance: BalanceOf<T> = <T as Config>::Currency::free_balance(&account_id);
-        let (amount_due, _) = Self::calculate_contract_cost_tft(&temp_contract, balance)?;
+        let seconds_elapsed = T::BillingFrequency::get() * 6;
+        let (amount_due, _) = Self::calculate_contract_cost_tft(&temp_contract, balance, seconds_elapsed)?;
         // Continue creating the contract
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
         let contract = Self::_create_contract(
@@ -305,6 +311,11 @@ impl<T: Config> Module<T> {
             amount_due.into(),
             WithdrawReasons::RESERVE,
         );
+        let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
+        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+        contract_lock.lock_updated = now;
+        contract_lock.amount_locked = amount_due;
+        ContractLock::<T>::insert(contract.contract_id, contract_lock);
 
         // Insert active rent contract for node
         ActiveRentContractForNode::insert(node_id, contract.clone());
@@ -343,6 +354,11 @@ impl<T: Config> Module<T> {
             Self::_create_contract(twin_id, types::ContractData::NameContract(name_contract))?;
 
         ContractIDByNameRegistration::insert(name, &contract.contract_id);
+
+        let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
+        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+        contract_lock.lock_updated = now;
+        ContractLock::<T>::insert(contract.contract_id, contract_lock);
 
         Self::deposit_event(RawEvent::ContractCreated(contract));
 
@@ -465,6 +481,16 @@ impl<T: Config> Module<T> {
         };
 
         Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
+        
+        // Bill contract
+        Self::bill_contract(&contract)?;
+
+        // TODO, WHAT TO DO HERE???
+        // if matches!(cause, types::Cause::OutOfFunds) {
+            // return Ok(())
+        // }
+
+        Self::remove_contract(contract.contract_id);
 
         Ok(())
     }
@@ -630,15 +656,6 @@ impl<T: Config> Module<T> {
                 }
             }
 
-            // If the contract is in canceled by user state, remove contract from storage (end state)
-            if matches!(
-                contract.state,
-                types::ContractState::Deleted(types::Cause::CanceledByUser)
-            ) {
-                Self::remove_contract(contract.contract_id);
-                continue;
-            }
-
             // Reinsert into the next billing frequency
             Self::_reinsert_contract_to_bill(contract.contract_id);
         }
@@ -653,26 +670,18 @@ impl<T: Config> Module<T> {
             return Err(DispatchError::from(Error::<T>::TwinNotExists));
         }
         let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
-        // Get the twin usable balance
-        let balance = pallet_balances::pallet::Pallet::<T>::usable_balance(&twin.account_id);
-        let b = balance.saturated_into::<u128>();
-        let usable_balance = BalanceOf::<T>::saturated_from(b);
-        // Get twin free balance
-        let free_balance = <T as Config>::Currency::free_balance(&twin.account_id);
-        // Locked balance = free balance - usable balance
-        let locked_balance = free_balance - usable_balance;
+        let usable_balance = Self::get_usable_balance(&twin.account_id);
+
+        let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
+        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+        let seconds_elapsed = now - contract_lock.lock_updated;
 
         let (mut amount_due, discount_received) =
-            Self::calculate_contract_cost_tft(contract, usable_balance)?;
+            Self::calculate_contract_cost_tft(contract, usable_balance, seconds_elapsed)?;
 
         if amount_due == BalanceOf::<T>::saturated_from(0 as u128) {
             return Ok(());
         };
-
-        let is_canceled = matches!(
-            contract.state,
-            types::ContractState::Deleted(types::Cause::CanceledByUser)
-        );
 
         // if the total amount due exceeds the twin's balance we must decomission the contract
         let mut decomission = false;
@@ -681,7 +690,22 @@ impl<T: Config> Module<T> {
             amount_due = usable_balance;
         }
 
-        let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
+        let is_rent_contract = matches!(contract.contract_type, types::ContractData::RentContract(_));
+        if is_rent_contract && contract_lock.cycles == 0 {
+            println!("----module unlocking---");
+            <T as Config>::Currency::remove_lock(
+                contract.contract_id.to_be_bytes(),
+                &twin.account_id,
+            );
+        }
+
+        // Refetch usable balance
+        let usable_balance = Self::get_usable_balance(&twin.account_id);
+        // Get twin free balance
+        let free_balance = <T as Config>::Currency::free_balance(&twin.account_id);
+        // Locked balance = free balance - usable balance
+        let locked_balance = free_balance - usable_balance;
+
         // Update lock for contract and ContractLock in storage
         <T as Config>::Currency::extend_lock(
             contract.contract_id.to_be_bytes(),
@@ -695,6 +719,7 @@ impl<T: Config> Module<T> {
         contract_lock.amount_locked = contract_lock.amount_locked + amount_due;
         ContractLock::<T>::insert(contract.contract_id, &contract_lock);
 
+        let is_canceled = matches!(contract.state, types::ContractState::Deleted(_));
         // When the cultivation rewards are ready to be distributed or we have to decomission the contract (due to out of funds) or it's canceled by the user
         // Unlock all reserved balance and distribute
         if contract_lock.cycles == 24 || decomission || is_canceled {
@@ -703,16 +728,13 @@ impl<T: Config> Module<T> {
                 contract.contract_id.to_be_bytes(),
                 &twin.account_id,
             );
-            // get reserved amount on account
-            let total_amount_due = contract_lock.amount_locked;
-
             // Fetch the default pricing policy
             let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
             // Distribute cultivation rewards
             match Self::_distribute_cultivation_rewards(
                 &contract,
                 &pricing_policy,
-                total_amount_due,
+                contract_lock.amount_locked,
             ) {
                 Ok(_) => (),
                 Err(err) => debug::info!("error while distributing cultivation rewards {:?}", err),
@@ -753,13 +775,14 @@ impl<T: Config> Module<T> {
     fn calculate_contract_cost_tft(
         contract: &types::Contract,
         balance: BalanceOf<T>,
+        seconds_elapsed: u64
     ) -> Result<(BalanceOf<T>, types::DiscountLevel), DispatchError> {
         // Fetch the default pricing policy and certification type
         let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
         let certification_type = pallet_tfgrid_types::CertificationType::Diy;
 
         // The number of seconds elapsed since last contract bill is the frequency * block time (6 seconds)
-        let seconds_elapsed = T::BillingFrequency::get() * 6;
+        // let seconds_elapsed = T::BillingFrequency::get() * 6;
 
         // Calculate the cost for a contract, can be any of:
         // - NodeContract
@@ -1176,6 +1199,12 @@ impl<T: Config> Module<T> {
             types::ContractData::NodeContract(c) => Ok(c),
             _ => return Err(DispatchError::from(Error::<T>::InvalidContractType)),
         }
+    }
+
+    fn get_usable_balance(account_id: &T::AccountId) -> BalanceOf<T> {
+        let balance = pallet_balances::pallet::Pallet::<T>::usable_balance(account_id);
+        let b = balance.saturated_into::<u128>();
+        BalanceOf::<T>::saturated_from(b)
     }
 
     // cu1 = MAX(cru/2, mru/4)
