@@ -707,6 +707,8 @@ impl<T: Config> Module<T> {
                 contract.contract_id.to_be_bytes(),
                 &twin.account_id,
             );
+            contract_lock.amount_locked = BalanceOf::<T>::saturated_from(0 as u128);
+            ContractLock::<T>::insert(contract.contract_id, &contract_lock);
         }
 
         // Refetch usable balance

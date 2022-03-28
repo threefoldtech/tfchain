@@ -729,6 +729,54 @@ fn test_create_rent_contract_billing_cancel_should_bill_reserved_balance() {
 }
 
 #[test]
+fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(bob()),
+            node_id
+        ));
+
+        let contract = SmartContractModule::contracts(1);
+        let rent_contract = types::RentContract { node_id };
+        assert_eq!(
+            contract.contract_type,
+            types::ContractData::RentContract(rent_contract)
+        );
+
+        let twin = TfgridModule::twins(2);
+        let usable_balance = Balances::usable_balance(&twin.account_id);
+        let free_balance = Balances::free_balance(&twin.account_id);
+
+        let locked_balance = free_balance - usable_balance;
+        println!("locked balance: {:?}", locked_balance);
+
+        run_to_block(8);
+        // cancel rent contract at block 8
+        assert_ok!(SmartContractModule::cancel_contract(
+            Origin::signed(bob()),
+            1
+        ));
+        
+        // Calculate the cost for 7 blocks of runtime (created a block 1, canceled at block 8)
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 7);
+        assert_ne!(amount_due_as_u128, 0);
+        
+        check_report_cost(1, 3, amount_due_as_u128, 8, discount_received.clone());
+
+        // Twin should have no more locked balance
+        let twin = TfgridModule::twins(2);
+        let usable_balance = Balances::usable_balance(&twin.account_id);
+        let free_balance = Balances::free_balance(&twin.account_id);
+        assert_eq!(usable_balance, free_balance);
+    });
+}
+
+#[test]
 fn test_create_rent_contract_and_free_node_contract() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
