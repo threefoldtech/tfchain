@@ -893,7 +893,7 @@ fn test_node_contract_billing() {
             1
         ));
 
-        push_contract_resources_used();
+        push_contract_resources_used(1);
 
         push_nru_report_for_contract(1, 10);
 
@@ -962,7 +962,7 @@ fn test_node_contract_billing_cycles() {
         let contract_id = 1;
         let twin_id = 2;
 
-        push_contract_resources_used();
+        push_contract_resources_used(1);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 11);
         run_to_block(12);
@@ -1004,7 +1004,7 @@ fn test_node_contract_billing_cycles_cancel_contract() {
         let contract_id = 1;
         let twin_id = 2;
 
-        push_contract_resources_used();
+        push_contract_resources_used(1);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 11);
         run_to_block(12);
@@ -1047,7 +1047,7 @@ fn test_node_contract_billing_should_cancel_contract_when_out_of_funds() {
             0
         ));
 
-        push_contract_resources_used();
+        push_contract_resources_used(1);
 
         // cycle 1
         run_to_block(12);
@@ -1194,10 +1194,10 @@ fn push_nru_report_for_contract(contract_id: u64, block_number: u64) {
     ));
 }
 
-fn push_contract_resources_used() {
+fn push_contract_resources_used(contract_id: u64) {
     let mut resources = Vec::new();
     resources.push(types::ContractResources {
-        contract_id: 1,
+        contract_id,
         used: pallet_tfgrid_types::Resources {
             cru: 2,
             hru: 0,
