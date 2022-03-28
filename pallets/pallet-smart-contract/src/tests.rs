@@ -698,10 +698,6 @@ fn test_create_rent_contract_billing_cancel_should_bill_reserved_balance() {
         let usable_balance = Balances::usable_balance(&twin.account_id);
         let free_balance = Balances::free_balance(&twin.account_id);
         assert_ne!(usable_balance, free_balance);
-        
-        // check if the reserved balance is equal to the amount due for 1 cycle
-        let locked_balance = free_balance - usable_balance;
-        assert_eq!(locked_balance, amount_due_as_u128);
 
         run_to_block(14);
         // cancel contract

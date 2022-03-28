@@ -697,20 +697,6 @@ impl<T: Config> Module<T> {
             amount_due = usable_balance;
         }
 
-        // If it's a rent contract and it's the first cycle, remove the lock and initialize it again later
-        // We do this because we initially lock some amount of tokens for a rent contract, if the user does
-        // not cancel within 1 cycle of contract creation, it's safer to delete the lock and create a now one
-        let is_rent_contract =
-            matches!(contract.contract_type, types::ContractData::RentContract(_));
-        if is_rent_contract && contract_lock.cycles == 0 {
-            <T as Config>::Currency::remove_lock(
-                contract.contract_id.to_be_bytes(),
-                &twin.account_id,
-            );
-            contract_lock.amount_locked = BalanceOf::<T>::saturated_from(0 as u128);
-            ContractLock::<T>::insert(contract.contract_id, &contract_lock);
-        }
-
         // Refetch usable balance
         let usable_balance = Self::get_usable_balance(&twin.account_id);
         // Get twin free balance
@@ -963,6 +949,12 @@ impl<T: Config> Module<T> {
         // TODO: send 5% to the staking pool account
         let staking_pool_share = Perbill::from_percent(5) * amount;
         let staking_pool_account = T::StakingPoolAccount::get();
+        debug::info!(
+            "Transfering: {:?} from contract twin {:?} to staking pool account {:?}",
+            &staking_pool_share,
+            &twin.account_id,
+            &staking_pool_account,
+        );
         <T as Config>::Currency::transfer(
             &twin.account_id,
             &staking_pool_account,
@@ -974,7 +966,7 @@ impl<T: Config> Module<T> {
         // Send 50% to the sales channel
         let sales_share = Perbill::from_percent(50) * amount;
         debug::info!(
-            "Transfering: {:?} from contract twin {:?} to foundation account {:?}",
+            "Transfering: {:?} from contract twin {:?} to sales account {:?}",
             &sales_share,
             &twin.account_id,
             &pricing_policy.certified_sales_account
