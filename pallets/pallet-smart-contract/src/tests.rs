@@ -752,14 +752,14 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
         println!("locked balance: {:?}", locked_balance);
 
         run_to_block(8);
+        // Calculate the cost for 7 blocks of runtime (created a block 1, canceled at block 8)
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 7);
         // cancel rent contract at block 8
         assert_ok!(SmartContractModule::cancel_contract(
             Origin::signed(bob()),
             1
         ));
         
-        // Calculate the cost for 7 blocks of runtime (created a block 1, canceled at block 8)
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 7);
         assert_ne!(amount_due_as_u128, 0);
         
         check_report_cost(1, 3, amount_due_as_u128, 8, discount_received.clone());
