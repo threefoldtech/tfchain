@@ -28,6 +28,8 @@ pub mod weights;
 
 pub mod types;
 
+mod migration;
+
 pub use weights::WeightInfo;
 
 pub trait Config: system::Config + timestamp::Config {
@@ -41,7 +43,7 @@ pub trait Config: system::Config + timestamp::Config {
 
 // Version constant that referenced the struct version
 pub const TFGRID_ENTITY_VERSION: u32 = 1;
-pub const TFGRID_FARM_VERSION: u32 = 1;
+pub const TFGRID_FARM_VERSION: u32 = 2;
 pub const TFGRID_TWIN_VERSION: u32 = 1;
 pub const TFGRID_NODE_VERSION: u32 = 3;
 pub const TFGRID_PRICING_POLICY_VERSION: u32 = 1;
@@ -53,6 +55,7 @@ decl_storage! {
         pub Farms get(fn farms): map hasher(blake2_128_concat) u32 => types::Farm;
         pub FarmIdByName get(fn farms_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u32;
         pub FarmPayoutV2AddressByFarmID get(fn farm_payout_address_by_farm_id): map hasher(blake2_128_concat) u32 => Vec<u8>;
+        pub DedicatedFarms get(fn dedicated_farms): Vec<u32>;
 
         pub Nodes get(fn nodes): map hasher(blake2_128_concat) u32 => types::Node;
         pub NodeIdByTwinID get(fn node_by_twin_id): map hasher(blake2_128_concat) u32 => u32;
@@ -217,6 +220,7 @@ decl_event!(
         CertificationCodeStored(types::CertificationCodes),
         FarmingPolicyStored(types::FarmingPolicy),
         FarmPayoutV2AddressRegistered(u32, Vec<u8>),
+        FarmMarkedAsDedicated(u32),
     }
 );
 
@@ -278,6 +282,10 @@ decl_module! {
 
         fn deposit_event() = default;
 
+        fn on_runtime_upgrade() -> frame_support::weights::Weight {
+			migration::migrate_to_version_2::<T>()
+		}
+
         #[weight = 100_000_000 + T::DbWeight::get().writes(1)]
         pub fn set_storage_version(origin, version: types::StorageVersion) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
@@ -327,6 +335,7 @@ decl_module! {
                 pricing_policy_id: 1,
                 certification_type: types::CertificationType::Diy,
                 public_ips: pub_ips,
+                dedicated_farm: false,
             };
 
             Farms::insert(id, &new_farm);
@@ -1092,6 +1101,21 @@ decl_module! {
             NodeIdByTwinID::remove(node.twin_id);
 
             Self::deposit_event(RawEvent::NodeDeleted(node_id));
+
+            Ok(())
+        }
+
+        #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2)]
+        pub fn set_farm_dedicated(origin, farm_id: u32, dedicated: bool) -> dispatch::DispatchResult {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+
+            ensure!(Farms::contains_key(farm_id), Error::<T>::FarmNotExists);
+
+            let mut farm = Farms::get(farm_id);
+            farm.dedicated_farm = dedicated;
+            Farms::insert(farm_id, &farm);
+
+            Self::deposit_event(RawEvent::FarmUpdated(farm));
 
             Ok(())
         }
