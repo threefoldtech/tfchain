@@ -116,7 +116,7 @@ You may run a validator node in non-archive mode by adding the following flags: 
 Bootnodes examples:
 
 - Devnet bootnode: `/ip4/185.206.122.7/tcp/30333/p2p/12D3KooWLcMLBg9itjQL1EXsAqkJFPhqESHqJKY7CBKmhhhL8fdp`
-- Testnet bootnode: `/ip4/51.68.204.40/tcp/30333/p2p/12D3KooWQv76DZxtZGb7XYXYFGN5xePoDeiMnnp17roJokhsbVSe`
+- Testnet bootnode: `/ip4/51.68.204.40/tcp/30333/p2p/12D3KooWHe8Wbn6dDbyxXietaXSRTZJfykPRgrkJDjXh9xZ4383k`
 - Mainnet bootnode: `/ip4/185.206.122.83/tcp/30333/p2p/12D3KooWLtsdtQHswnXkLRH7e8vZJHktsh7gfuL5PoADV51JJ6wY`
 
 You can begin syncing your node by running the following command:
