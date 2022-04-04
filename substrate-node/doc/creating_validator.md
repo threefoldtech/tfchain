@@ -121,7 +121,7 @@ Bootnodes examples:
 
 You can begin syncing your node by running the following command:
 
-`./target/release/tfchain --chain chainspecs/main/chainSpec.json --pruning=archive --bootnodes /ip4/185.206.122.83/tcp/30333/p2p/12D3KooWLtsdtQHswnXkLRH7e8vZJHktsh7gfuL5PoADV51JJ6wY`
+`./target/release/tfchain --chain chainspecs/main/chainSpec.json --pruning=archive --bootnodes /ip4/185.206.122.83/tcp/30333/p2p/12D3KooWLtsdtQHswnXkLRH7e8vZJHktsh7gfuL5PoADV51JJ6wY --telemetry-url 'wss://shard1.telemetry.tfchain.grid.tf/submit 1'`
 
 if you do not want to start in validator mode right away.
 
@@ -215,7 +215,7 @@ Transfer some balance to this account (you can see the address in the polkadot U
 Restart tfchain with:
 
 ```
-./target/release/tfchain ...otherArgs --ws-external --rpc-methods Unsafe --rpc-external
+./target/release/tfchain ...otherArgs --ws-external --rpc-methods Unsafe --rpc-external --telemetry-url 'wss://shard1.telemetry.tfchain.grid.tf/submit 1'
 ```
 
 Connect to the new node deployed with polkadot js apps. You will need to install a local version of this application since you will have to connect over a not secured websocket.
@@ -275,7 +275,7 @@ Type=simple
 Restart=always
 RestartSec=1
 User=user
-ExecStart=/home/user/tfchain/substrate-node/target/release/tfchain --chain /home/user/tfchain/substrate-node/chainspecs/dev/chainSpec.json --pruning=archive --bootnodes /ip4/185.206.122.7/tcp/30333/p2p/12D3KooWLcMLBg9itjQL1EXsAqkJFPhqESHqJKY7CBKmhhhL8fdp --validator
+ExecStart=/home/user/tfchain/substrate-node/target/release/tfchain --chain /home/user/tfchain/substrate-node/chainspecs/dev/chainSpec.json --pruning=archive --bootnodes /ip4/185.206.122.7/tcp/30333/p2p/12D3KooWLcMLBg9itjQL1EXsAqkJFPhqESHqJKY7CBKmhhhL8fdp --validator --telemetry-url 'wss://shard1.telemetry.tfchain.grid.tf/submit 1'
 
 [Install]
 WantedBy=multi-user.target
