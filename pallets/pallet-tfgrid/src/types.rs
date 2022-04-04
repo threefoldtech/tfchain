@@ -41,6 +41,7 @@ pub struct Farm {
     pub pricing_policy_id: u32,
     pub certification_type: CertificationType,
     pub public_ips: Vec<PublicIP>,
+    pub dedicated_farm: bool
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
