@@ -445,6 +445,49 @@ fn test_adding_ip_duplicate_to_farm_fails() {
 }
 
 #[test]
+fn test_set_farm_dedicated() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+
+        assert_ok!(TfgridModule::set_farm_dedicated(
+            RawOrigin::Root.into(),
+            1,
+            true
+        ));
+
+        let farm = TfgridModule::farms(1);
+        assert_eq!(farm.dedicated_farm, true);
+    })
+}
+
+#[test]
+fn test_toggle_farm_dedicated() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+
+        assert_ok!(TfgridModule::set_farm_dedicated(
+            RawOrigin::Root.into(),
+            1,
+            true
+        ));
+
+        let farm = TfgridModule::farms(1);
+        assert_eq!(farm.dedicated_farm, true);
+
+        assert_ok!(TfgridModule::set_farm_dedicated(
+            RawOrigin::Root.into(),
+            1,
+            false
+        ));
+
+        let farm = TfgridModule::farms(1);
+        assert_eq!(farm.dedicated_farm, false);
+    })
+}
+
+#[test]
 fn test_update_twin_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
