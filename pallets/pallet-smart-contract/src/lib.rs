@@ -96,7 +96,7 @@ decl_error! {
         MethodIsDeprecated,
         NodeHasActiveContracts,
         NodeHasRentContract,
-        NodeIsNotDedicated
+        NodeIsNotDedicated,
     }
 }
 
@@ -440,6 +440,16 @@ impl<T: Config> Module<T> {
             twin.account_id == account_id,
             Error::<T>::TwinNotAuthorizedToCancelContract
         );
+
+        // If it's a rent contract and it still has active workloads, don't allow cancellation.
+        if matches!(&contract.contract_type, types::ContractData::RentContract(_)) {
+            let rent_contract = Self::get_rent_contract(&contract)?;
+            let active_node_contracts = ActiveNodeContracts::get(rent_contract.node_id);
+            ensure!(
+                active_node_contracts.len() == 0,
+                Error::<T>::NodeHasActiveContracts
+            );
+        }
 
         // Update state
         Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
@@ -1179,6 +1189,15 @@ impl<T: Config> Module<T> {
     ) -> Result<types::NodeContract, DispatchError> {
         match contract.contract_type.clone() {
             types::ContractData::NodeContract(c) => Ok(c),
+            _ => return Err(DispatchError::from(Error::<T>::InvalidContractType)),
+        }
+    }
+
+    pub fn get_rent_contract(
+        contract: &types::Contract,
+    ) -> Result<types::RentContract, DispatchError> {
+        match contract.contract_type.clone() {
+            types::ContractData::RentContract(c) => Ok(c),
             _ => return Err(DispatchError::from(Error::<T>::InvalidContractType)),
         }
     }

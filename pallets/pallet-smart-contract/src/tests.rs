@@ -864,6 +864,37 @@ fn test_create_rent_contract_and_node_contract_with_ip() {
 }
 
 #[test]
+fn test_cannot_cancel_rent_contract_with_active_node_contracts() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(bob()),
+            node_id
+        ));
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(bob()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            1
+        ));
+
+        assert_noop!(
+            SmartContractModule::cancel_contract(
+                Origin::signed(bob()),
+                1,
+            ),
+            Error::<TestRuntime>::NodeHasActiveContracts
+        );
+    });
+}
+
+#[test]
 fn test_node_contract_billing() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
