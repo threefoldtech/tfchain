@@ -96,6 +96,7 @@ decl_error! {
         MethodIsDeprecated,
         NodeHasActiveContracts,
         NodeHasRentContract,
+        NodeIsNotDedicated,
     }
 }
 
@@ -252,11 +253,6 @@ impl<T: Config> Module<T> {
         };
         ContractBillingInformationByID::insert(contract.contract_id, contract_billing_information);
 
-        // Create contract lock object
-        let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
-        contract_lock.lock_updated = now;
-        ContractLock::<T>::insert(contract.contract_id, contract_lock);
-
         // Insert contract id by (node_id, hash)
         ContractIDByNodeIDAndHash::insert(node_id, deployment_hash, contract.contract_id);
 
@@ -291,38 +287,23 @@ impl<T: Config> Module<T> {
             Error::<T>::NodeHasRentContract
         );
 
+        let node = pallet_tfgrid::Nodes::get(node_id);
+        ensure!(
+            pallet_tfgrid::Farms::contains_key(node.farm_id),
+            Error::<T>::FarmNotExists
+        );
+
+        let farm = pallet_tfgrid::Farms::get(node.farm_id);
+        ensure!(
+            farm.dedicated_farm == true, Error::<T>::NodeIsNotDedicated
+        );
+
         // Create contract
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
         let contract = Self::_create_contract(
             twin_id,
             types::ContractData::RentContract(types::RentContract { node_id }),
         )?;
-
-        // Calculate how much
-        let balance: BalanceOf<T> = <T as Config>::Currency::free_balance(&account_id);
-        let seconds_elapsed = T::BillingFrequency::get() * 6;
-        match Self::calculate_contract_cost_tft(&contract, balance, seconds_elapsed) {
-            Ok((amount_due, _)) => {
-                // Reserve the amount that represents the cost of one billing cycle
-                <T as Config>::Currency::set_lock(
-                    contract.contract_id.to_be_bytes(),
-                    &account_id,
-                    amount_due.into(),
-                    WithdrawReasons::RESERVE,
-                );
-                let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
-                let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
-                contract_lock.lock_updated = now;
-                contract_lock.amount_locked = amount_due;
-                ContractLock::<T>::insert(contract.contract_id, contract_lock);
-            }
-            Err(err) => {
-                // If something goes wrong calculating contract cost
-                // (node not exists, twin not enough balance, ...) clean up storage and return error
-                Self::remove_contract(contract.contract_id);
-                return Err(err);
-            }
-        }
 
         // Insert active rent contract for node
         ActiveRentContractForNode::insert(node_id, contract.clone());
@@ -362,11 +343,6 @@ impl<T: Config> Module<T> {
 
         ContractIDByNameRegistration::insert(name, &contract.contract_id);
 
-        let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
-        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
-        contract_lock.lock_updated = now;
-        ContractLock::<T>::insert(contract.contract_id, contract_lock);
-
         Self::deposit_event(RawEvent::ContractCreated(contract));
 
         Ok(())
@@ -394,13 +370,18 @@ impl<T: Config> Module<T> {
 
         // Start billing frequency loop
         // Will always be block now + frequency
-        Self::_reinsert_contract_to_bill(contract.contract_id);
+        Self::_reinsert_contract_to_bill(id);
 
         // insert into contracts map
         Contracts::insert(id, &contract);
 
         // Update Contract ID
         ContractID::put(id);
+
+        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+        let mut contract_lock = types::ContractLock::default();
+        contract_lock.lock_updated = now;
+        ContractLock::<T>::insert(id, contract_lock);
 
         Ok(contract)
     }
@@ -460,42 +441,21 @@ impl<T: Config> Module<T> {
             Error::<T>::TwinNotAuthorizedToCancelContract
         );
 
-        match contract.contract_type.clone() {
-            types::ContractData::NodeContract(mut node_contract) => {
-                if node_contract.public_ips > 0 {
-                    Self::_free_ip(contract_id, &mut node_contract)?
-                }
+        // If it's a rent contract and it still has active workloads, don't allow cancellation.
+        if matches!(&contract.contract_type, types::ContractData::RentContract(_)) {
+            let rent_contract = Self::get_rent_contract(&contract)?;
+            let active_node_contracts = ActiveNodeContracts::get(rent_contract.node_id);
+            ensure!(
+                active_node_contracts.len() == 0,
+                Error::<T>::NodeHasActiveContracts
+            );
+        }
 
-                // remove the contract by hash from storage
-                ContractIDByNodeIDAndHash::remove(
-                    node_contract.node_id,
-                    &node_contract.deployment_hash,
-                );
-                Self::deposit_event(RawEvent::NodeContractCanceled(
-                    contract_id,
-                    node_contract.node_id,
-                    contract.twin_id,
-                ));
-            }
-            types::ContractData::NameContract(name_contract) => {
-                ContractIDByNameRegistration::remove(name_contract.name);
-                Self::deposit_event(RawEvent::NameContractCanceled(contract_id));
-            }
-            types::ContractData::RentContract(rent_contract) => {
-                ActiveRentContractForNode::remove(rent_contract.node_id);
-                Self::deposit_event(RawEvent::RentContractCanceled(contract_id));
-            }
-        };
-
+        // Update state
         Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
         // Bill contract
         Self::bill_contract(&contract)?;
-
-        // TODO, WHAT TO DO HERE???
-        // if matches!(cause, types::Cause::OutOfFunds) {
-        // return Ok(())
-        // }
-
+        // Remove all associated storage
         Self::remove_contract(contract.contract_id);
 
         Ok(())
@@ -640,6 +600,9 @@ impl<T: Config> Module<T> {
         let contracts = ContractsToBillAt::get(current_block_u64);
         for contract_id in contracts {
             let mut contract = Contracts::get(contract_id);
+            if contract.contract_id == 0 {
+                continue
+            }
 
             // Try to bill contract
             match Self::bill_contract(&mut contract) {
@@ -896,16 +859,44 @@ impl<T: Config> Module<T> {
     }
 
     pub fn remove_contract(contract_id: u64) {
-        // If the contract is node contract, remove from active node contracts map
         let contract = Contracts::get(contract_id);
-        match Self::get_node_contract(&contract) {
-            Ok(node_contract) => {
+
+        match contract.contract_type.clone() {
+            types::ContractData::NodeContract(mut node_contract) => {
                 Self::remove_active_node_contract(node_contract.node_id, contract_id);
+                if node_contract.public_ips > 0 {
+                    match Self::_free_ip(contract_id, &mut node_contract) {
+                        Ok(_) => (),
+                        Err(e) => {
+                            debug::info!("error while freeing ips: {:?}", e);
+                        }
+                    }
+                }
+
+                // remove the contract by hash from storage
+                ContractIDByNodeIDAndHash::remove(
+                    node_contract.node_id,
+                    &node_contract.deployment_hash,
+                );
+                NodeContractResources::remove(contract_id);
+                ContractBillingInformationByID::remove(contract_id);
+
+                Self::deposit_event(RawEvent::NodeContractCanceled(
+                    contract_id,
+                    node_contract.node_id,
+                    contract.twin_id,
+                ));
             }
-            Err(_) => (),
+            types::ContractData::NameContract(name_contract) => {
+                ContractIDByNameRegistration::remove(name_contract.name);
+                Self::deposit_event(RawEvent::NameContractCanceled(contract_id));
+            }
+            types::ContractData::RentContract(rent_contract) => {
+                ActiveRentContractForNode::remove(rent_contract.node_id);
+                Self::deposit_event(RawEvent::RentContractCanceled(contract_id));
+            }
         };
-        NodeContractResources::remove(contract_id);
-        ContractBillingInformationByID::remove(contract_id);
+
         Contracts::remove(contract_id);
         ContractLock::<T>::remove(contract_id);
     }
@@ -1198,6 +1189,15 @@ impl<T: Config> Module<T> {
     ) -> Result<types::NodeContract, DispatchError> {
         match contract.contract_type.clone() {
             types::ContractData::NodeContract(c) => Ok(c),
+            _ => return Err(DispatchError::from(Error::<T>::InvalidContractType)),
+        }
+    }
+
+    pub fn get_rent_contract(
+        contract: &types::Contract,
+    ) -> Result<types::RentContract, DispatchError> {
+        match contract.contract_type.clone() {
+            types::ContractData::RentContract(c) => Ok(c),
             _ => return Err(DispatchError::from(Error::<T>::InvalidContractType)),
         }
     }

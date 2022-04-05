@@ -529,18 +529,6 @@ fn test_create_rent_contract() {
             contract.contract_type,
             types::ContractData::RentContract(rent_contract)
         );
-
-        let twin = TfgridModule::twins(2);
-        let usable_balance = Balances::usable_balance(&twin.account_id);
-        let free_balance = Balances::free_balance(&twin.account_id);
-        let locked_balance = free_balance - usable_balance;
-        assert_ne!(locked_balance, 0);
-
-        let (amount_due_as_u128, _) = calculate_tft_cost(1, 2, 10);
-        assert_ne!(amount_due_as_u128, 0);
-
-        // check if the locked balance balance is equal to the amount due for 1 cycle
-        assert_eq!(locked_balance, amount_due_as_u128);
     });
 }
 
@@ -716,7 +704,7 @@ fn test_create_rent_contract_billing_cancel_should_bill_reserved_balance() {
 
         // Last amount due is the same as the first one
         assert_ne!(amount_due_as_u128, 0);
-        check_report_cost(1, 4, amount_due_as_u128, 14, discount_received);
+        check_report_cost(1, 3, amount_due_as_u128, 14, discount_received);
 
         let usable_balance = Balances::usable_balance(&twin.account_id);
         let free_balance = Balances::free_balance(&twin.account_id);
@@ -762,7 +750,7 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
         
         assert_ne!(amount_due_as_u128, 0);
         
-        check_report_cost(1, 3, amount_due_as_u128, 8, discount_received.clone());
+        check_report_cost(1, 2, amount_due_as_u128, 8, discount_received.clone());
 
         // Twin should have no more locked balance
         let twin = TfgridModule::twins(2);
@@ -872,6 +860,37 @@ fn test_create_rent_contract_and_node_contract_with_ip() {
         // Event 3: Rent contract billed
         // Event 6: Node Contract billed
         assert_eq!(our_events.len(), 4);
+    });
+}
+
+#[test]
+fn test_cannot_cancel_rent_contract_with_active_node_contracts() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(bob()),
+            node_id
+        ));
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(bob()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            1
+        ));
+
+        assert_noop!(
+            SmartContractModule::cancel_contract(
+                Origin::signed(bob()),
+                1,
+            ),
+            Error::<TestRuntime>::NodeHasActiveContracts
+        );
     });
 }
 
@@ -1022,7 +1041,7 @@ fn test_node_contract_billing_cycles_cancel_contract() {
         ));
 
         run_to_block(32);
-        check_report_cost(1, 6, amount_due_as_u128, 28, discount_received);
+        check_report_cost(1, 5, amount_due_as_u128, 28, discount_received);
 
         let contract = SmartContractModule::contracts(1);
         assert_eq!(contract.contract_id, 0);
@@ -1242,9 +1261,9 @@ fn check_report_cost(
         Vec::new();
     expected_events.push(RawEvent::ContractBilled(contract_bill_event));
 
-    // for event in our_events.clone().iter() {
-    //     println!("event: {:?}", event);
-    // };
+    for event in our_events.clone().iter() {
+        println!("event: {:?}", event);
+    };
 
     assert_eq!(our_events[index], expected_events[0]);
 }
@@ -1321,6 +1340,13 @@ pub fn prepare_farm(source: AccountId) {
         Origin::signed(source),
         farm_name.as_bytes().to_vec(),
         pub_ips.clone(),
+    )
+    .unwrap();
+
+    TfgridModule::set_farm_dedicated(
+        RawOrigin::Root.into(),
+        1,
+        true
     )
     .unwrap();
 }
