@@ -29,6 +29,7 @@ pub mod weights;
 pub mod types;
 
 mod migration;
+mod pricing_migration;
 
 pub use weights::WeightInfo;
 
@@ -46,7 +47,7 @@ pub const TFGRID_ENTITY_VERSION: u32 = 1;
 pub const TFGRID_FARM_VERSION: u32 = 2;
 pub const TFGRID_TWIN_VERSION: u32 = 1;
 pub const TFGRID_NODE_VERSION: u32 = 3;
-pub const TFGRID_PRICING_POLICY_VERSION: u32 = 1;
+pub const TFGRID_PRICING_POLICY_VERSION: u32 = 2;
 pub const TFGRID_CERTIFICATION_CODE_VERSION: u32 = 1;
 pub const TFGRID_FARMING_POLICY_VERSION: u32 = 1;
 
@@ -283,7 +284,7 @@ decl_module! {
         fn deposit_event() = default;
 
         fn on_runtime_upgrade() -> frame_support::weights::Weight {
-			migration::migrate_to_version_2::<T>()
+			migration::migrate_to_version_2::<T>() + pricing_migration::migrate_policies::<T>()
 		}
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(1)]
