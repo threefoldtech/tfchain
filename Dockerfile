@@ -22,8 +22,9 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
 
 
 ARG PROFILE=release
-COPY substrate-node/ /tfchain
-COPY pallets/ /tfchain
+COPY . /tfchain
+
+WORKDIR /tfchain/substrate-node
 
 RUN export PATH="$PATH:$HOME/.cargo/bin" && \
 	cargo build "--$PROFILE"
@@ -38,8 +39,8 @@ ARG PROFILE=release
 RUN rm -rf /usr/share/* && \
 	mkdir -p /tfchain/.local
 
-COPY --from=builder /tfchain/target/$PROFILE/tfchain /usr/local/bin
-COPY chainspecs /etc/chainspecs/
+COPY --from=builder /tfchain/substrate-node/target/$PROFILE/tfchain /usr/local/bin
+COPY --from=builder /tfchain/substrate-node/chainspecs /etc/chainspecs/
 
 
 # checks	
