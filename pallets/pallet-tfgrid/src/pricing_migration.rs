@@ -14,8 +14,7 @@ pub struct PricingPolicyV2<AccountId> {
     pub unique_name: Policy,
     pub domain_name: Policy,
     pub foundation_account: AccountId,
-    pub certified_sales_account: AccountId,
-    pub discount_for_dedication_nodes: u8
+    pub certified_sales_account: AccountId
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
