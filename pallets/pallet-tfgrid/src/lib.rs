@@ -28,8 +28,6 @@ pub mod weights;
 
 pub mod types;
 
-mod pricing_migration;
-
 pub use weights::WeightInfo;
 
 pub trait Config: system::Config + timestamp::Config {
@@ -281,10 +279,6 @@ decl_module! {
         type Error = Error<T>;
 
         fn deposit_event() = default;
-
-        fn on_runtime_upgrade() -> frame_support::weights::Weight {
-			pricing_migration::migrate_policies::<T>()
-		}
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(1)]
         pub fn set_storage_version(origin, version: types::StorageVersion) -> dispatch::DispatchResult {
