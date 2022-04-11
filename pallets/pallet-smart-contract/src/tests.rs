@@ -1352,6 +1352,8 @@ pub fn prepare_farm(source: AccountId) {
 }
 
 pub fn prepare_farm_and_node() {
+    TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
     prepare_twins();
 
     prepare_farm(alice());
