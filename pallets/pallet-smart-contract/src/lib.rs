@@ -641,10 +641,16 @@ impl<T: Config> Module<T> {
         let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
         let usable_balance = Self::get_usable_balance(&twin.account_id);
 
+        let mut seconds_elapsed = T::BillingFrequency::get() * 6;
         // Calculate amount of seconds elapsed based on the contract lock struct
         let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
-        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
-        let seconds_elapsed = now - contract_lock.lock_updated;
+
+        // this will set the seconds elapsed to the default billing cycle duration in seconds
+        // https://github.com/threefoldtech/tfchain/issues/261
+        if contract_lock.lock_updated != 0 {
+            let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+            seconds_elapsed = now.checked_sub(contract_lock.lock_updated).unwrap_or(0);
+        }
 
         let (mut amount_due, discount_received) =
             Self::calculate_contract_cost_tft(contract, usable_balance, seconds_elapsed)?;
