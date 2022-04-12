@@ -63,6 +63,8 @@ pub struct Node {
     pub secure_boot: bool,
     pub virtualized: bool,
     pub serial_number: Vec<u8>,
+    pub zos_version: Vec<u8>,
+    pub hypervisor: Vec<u8>
 }
 
 pub type IP = Vec<u8>;

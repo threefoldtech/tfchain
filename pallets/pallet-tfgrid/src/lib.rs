@@ -28,6 +28,8 @@ pub mod weights;
 
 pub mod types;
 
+mod migration;
+
 pub use weights::WeightInfo;
 
 pub trait Config: system::Config + timestamp::Config {
@@ -43,7 +45,7 @@ pub trait Config: system::Config + timestamp::Config {
 pub const TFGRID_ENTITY_VERSION: u32 = 1;
 pub const TFGRID_FARM_VERSION: u32 = 2;
 pub const TFGRID_TWIN_VERSION: u32 = 1;
-pub const TFGRID_NODE_VERSION: u32 = 3;
+pub const TFGRID_NODE_VERSION: u32 = 4;
 pub const TFGRID_PRICING_POLICY_VERSION: u32 = 2;
 pub const TFGRID_CERTIFICATION_CODE_VERSION: u32 = 1;
 pub const TFGRID_FARMING_POLICY_VERSION: u32 = 1;
@@ -280,6 +282,10 @@ decl_module! {
 
         fn deposit_event() = default;
 
+        fn on_runtime_upgrade() -> frame_support::weights::Weight {
+			migration::migrate_nodes_to_v4::<T>()
+		}
+
         #[weight = 100_000_000 + T::DbWeight::get().writes(1)]
         pub fn set_storage_version(origin, version: types::StorageVersion) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
@@ -488,6 +494,8 @@ decl_module! {
             secure_boot: bool,
             virtualized: bool,
             serial_number: Vec<u8>,
+            zos_version: Vec<u8>,
+            hypervisor: Vec<u8>
         ) -> dispatch::DispatchResult {
             let account_id = ensure_signed(origin)?;
 
@@ -530,7 +538,9 @@ decl_module! {
                 certification_type: types::CertificationType::default(),
                 secure_boot,
                 virtualized,
-                serial_number
+                serial_number,
+                zos_version,
+                hypervisor
             };
 
             Nodes::insert(id, &new_node);
@@ -554,6 +564,8 @@ decl_module! {
             secure_boot: bool,
             virtualized: bool,
             serial_number: Vec<u8>,
+            zos_version: Vec<u8>,
+            hypervisor: Vec<u8>
         ) -> dispatch::DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -577,6 +589,8 @@ decl_module! {
             stored_node.secure_boot = secure_boot;
             stored_node.virtualized = virtualized;
             stored_node.serial_number = serial_number;
+            stored_node.zos_version = zos_version;
+            stored_node.hypervisor = hypervisor;
 
             // override node in storage
             Nodes::insert(stored_node.id, &stored_node);

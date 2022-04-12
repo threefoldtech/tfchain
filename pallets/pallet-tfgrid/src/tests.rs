@@ -706,7 +706,9 @@ fn create_node_with_same_pubkey_fails() {
                 Vec::new(),
                 true,
                 true,
-                "some_serial".as_bytes().to_vec()
+                "some_serial".as_bytes().to_vec(),
+                "some_zos_version".as_bytes().to_vec(),
+                "some_hypervisor".as_bytes().to_vec()
             ),
             Error::<TestRuntime>::NodeWithTwinIdExists
         );
@@ -1055,6 +1057,8 @@ fn create_node() {
         Vec::new(),
         true,
         true,
-        "some_serial".as_bytes().to_vec()
+        "some_serial".as_bytes().to_vec(),
+        "some_zos_version".as_bytes().to_vec(),
+        "some_hypervisor".as_bytes().to_vec()
     ));
 }
