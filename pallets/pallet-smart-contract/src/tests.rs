@@ -468,6 +468,91 @@ fn test_name_registration_fails_with_invalid_dns_name() {
 }
 
 #[test]
+fn test_create_rent_contract_on_non_dedicated_node_should_fail() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        assert_noop!(
+            SmartContractModule::create_rent_contract(
+                Origin::signed(bob()),
+                1,
+            ),
+            Error::<TestRuntime>::NodeIsNotDedicated
+        );
+    })
+}
+
+#[test]
+fn test_create_node_contract_on_dedicated_node_without_rent_contract_should_fail() {
+    new_test_ext().execute_with(|| {
+        prepare_dedicated_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        assert_noop!(
+            SmartContractModule::create_node_contract(
+                Origin::signed(bob()),
+                1,
+                "some_data".as_bytes().to_vec(),
+                "hash".as_bytes().to_vec(),
+                1
+            ),
+            Error::<TestRuntime>::NodeNotAvailableToDeploy
+        );
+    })
+}
+
+#[test]
+fn test_create_node_contract_on_dedicated_node_rent_contract_should_work() {
+    new_test_ext().execute_with(|| {
+        prepare_dedicated_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(bob()),
+            1,
+        ));
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(bob()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            1
+        ));
+    })
+}
+
+#[test]
+fn test_create_node_contract_on_dedicated_node_with_rent_contract_other_owner_should_fail() {
+    new_test_ext().execute_with(|| {
+        prepare_dedicated_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(bob()),
+            1,
+        ));
+
+        assert_noop!(
+            SmartContractModule::create_node_contract(
+                Origin::signed(alice()),
+                1,
+                "some_data".as_bytes().to_vec(),
+                "hash".as_bytes().to_vec(),
+                1
+            ),
+            Error::<TestRuntime>::NodeHasRentContract
+        );
+    })
+}
+
+
+#[test]
 fn test_multiple_contracts_billing_loop() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
@@ -513,7 +598,7 @@ fn test_multiple_contracts_billing_loop() {
 #[test]
 fn test_create_rent_contract() {
     new_test_ext().execute_with(|| {
-        prepare_farm_and_node();
+        prepare_dedicated_farm_and_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
@@ -535,7 +620,7 @@ fn test_create_rent_contract() {
 #[test]
 fn test_create_rent_contract_cancel_works() {
     new_test_ext().execute_with(|| {
-        prepare_farm_and_node();
+        prepare_dedicated_farm_and_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
@@ -568,7 +653,7 @@ fn test_create_rent_contract_cancel_works() {
 #[test]
 fn test_create_node_contract_other_owner_when_rent_contract_active_fails() {
     new_test_ext().execute_with(|| {
-        prepare_farm_and_node();
+        prepare_dedicated_farm_and_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
@@ -601,7 +686,7 @@ fn test_create_node_contract_other_owner_when_rent_contract_active_fails() {
 #[test]
 fn test_create_node_contract_same_owner_when_rent_contract_active_works() {
     new_test_ext().execute_with(|| {
-        prepare_farm_and_node();
+        prepare_dedicated_farm_and_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
@@ -631,7 +716,7 @@ fn test_create_node_contract_same_owner_when_rent_contract_active_works() {
 #[test]
 fn test_create_rent_contract_billing() {
     new_test_ext().execute_with(|| {
-        prepare_farm_and_node();
+        prepare_dedicated_farm_and_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
@@ -659,7 +744,7 @@ fn test_create_rent_contract_billing() {
 #[test]
 fn test_create_rent_contract_billing_cancel_should_bill_reserved_balance() {
     new_test_ext().execute_with(|| {
-        prepare_farm_and_node();
+        prepare_dedicated_farm_and_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
@@ -715,7 +800,7 @@ fn test_create_rent_contract_billing_cancel_should_bill_reserved_balance() {
 #[test]
 fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
     new_test_ext().execute_with(|| {
-        prepare_farm_and_node();
+        prepare_dedicated_farm_and_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
@@ -763,7 +848,7 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
 #[test]
 fn test_create_rent_contract_and_free_node_contract() {
     new_test_ext().execute_with(|| {
-        prepare_farm_and_node();
+        prepare_dedicated_farm_and_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
@@ -813,7 +898,7 @@ fn test_create_rent_contract_and_free_node_contract() {
 #[test]
 fn test_create_rent_contract_and_node_contract_with_ip() {
     new_test_ext().execute_with(|| {
-        prepare_farm_and_node();
+        prepare_dedicated_farm_and_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
@@ -866,7 +951,7 @@ fn test_create_rent_contract_and_node_contract_with_ip() {
 #[test]
 fn test_cannot_cancel_rent_contract_with_active_node_contracts() {
     new_test_ext().execute_with(|| {
-        prepare_farm_and_node();
+        prepare_dedicated_farm_and_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
@@ -1287,7 +1372,7 @@ pub fn prepare_twins() {
     create_twin(charlie());
 }
 
-pub fn prepare_farm(source: AccountId) {
+pub fn prepare_farm(source: AccountId, dedicated: bool) {
     let farm_name = "test_farm";
     let mut pub_ips = Vec::new();
     pub_ips.push(pallet_tfgrid_types::PublicIP {
@@ -1343,6 +1428,10 @@ pub fn prepare_farm(source: AccountId) {
     )
     .unwrap();
 
+    if !dedicated {
+        return
+    }
+
     TfgridModule::set_farm_dedicated(
         RawOrigin::Root.into(),
         1,
@@ -1356,7 +1445,44 @@ pub fn prepare_farm_and_node() {
 
     prepare_twins();
 
-    prepare_farm(alice());
+    prepare_farm(alice(), false);
+
+    // random location
+    let location = pallet_tfgrid_types::Location {
+        longitude: "12.233213231".as_bytes().to_vec(),
+        latitude: "32.323112123".as_bytes().to_vec(),
+    };
+
+    let resources = pallet_tfgrid_types::Resources {
+        hru: 1024 * GIGABYTE,
+        sru: 512 * GIGABYTE,
+        cru: 8,
+        mru: 16 * GIGABYTE,
+    };
+
+    let country = "Belgium".as_bytes().to_vec();
+    let city = "Ghent".as_bytes().to_vec();
+    TfgridModule::create_node(
+        Origin::signed(alice()),
+        1,
+        resources,
+        location,
+        country,
+        city,
+        Vec::new(),
+        false,
+        false,
+        "some_serial".as_bytes().to_vec(),
+    )
+    .unwrap();
+}
+
+pub fn prepare_dedicated_farm_and_node() {
+    TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+    prepare_twins();
+
+    prepare_farm(alice(), true);
 
     // random location
     let location = pallet_tfgrid_types::Location {

@@ -97,6 +97,7 @@ decl_error! {
         NodeHasActiveContracts,
         NodeHasRentContract,
         NodeIsNotDedicated,
+        NodeNotAvailableToDeploy
     }
 }
 
@@ -208,6 +209,17 @@ impl<T: Config> Module<T> {
             pallet_tfgrid::Nodes::contains_key(&node_id),
             Error::<T>::NodeNotExists
         );
+
+        let node = pallet_tfgrid::Nodes::get(node_id);
+        ensure!(
+            pallet_tfgrid::Farms::contains_key(node.farm_id),
+            Error::<T>::FarmNotExists
+        );
+        let farm = pallet_tfgrid::Farms::get(node.farm_id);
+
+        if farm.dedicated_farm && !ActiveRentContractForNode::contains_key(node_id) {
+            return Err(DispatchError::from(Error::<T>::NodeNotAvailableToDeploy));
+        }
 
         // If the user is trying to deploy on a node that has an active rent contract
         // only allow the user who created the rent contract to actually deploy a node contract on it
