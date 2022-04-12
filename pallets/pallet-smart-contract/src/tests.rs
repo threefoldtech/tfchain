@@ -1186,6 +1186,13 @@ fn test_node_contract_billing_should_cancel_contract_when_out_of_funds() {
         expected_events.push(RawEvent::NodeContractCanceled(1, 1, 3));
 
         assert_eq!(our_events[5], expected_events[0]);
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(31);
+        assert_eq!(contract_to_bill.len(), 0);
+        run_to_block(32);
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(41);
+        assert_eq!(contract_to_bill.len(), 0);
     });
 }
 

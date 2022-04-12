@@ -637,6 +637,15 @@ impl<T: Config> Module<T> {
                 }
             }
 
+            // https://github.com/threefoldtech/tfchain/issues/264
+            // if a contract is still in storage and actively getting billed whilst it is in state delete
+            // remove all associated storage and continue
+            let contract = Contracts::get(contract_id);
+            if contract.contract_id != 0 && contract.is_state_delete() {
+                Self::remove_contract(contract.contract_id);
+                continue;
+            }
+
             // Reinsert into the next billing frequency
             Self::_reinsert_contract_to_bill(contract.contract_id);
         }
@@ -658,6 +667,7 @@ impl<T: Config> Module<T> {
         let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
 
         // this will set the seconds elapsed to the default billing cycle duration in seconds
+        // if there is no contract lock object yet. A contract lock object will be created later in this function
         // https://github.com/threefoldtech/tfchain/issues/261
         if contract_lock.lock_updated != 0 {
             let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
@@ -1048,6 +1058,10 @@ impl<T: Config> Module<T> {
 
     // Reinserts a contract by id at the next interval we need to bill the contract
     pub fn _reinsert_contract_to_bill(contract_id: u64) {
+        if contract_id == 0 {
+            return
+        }
+
         let now = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
         // Save the contract to be billed in now + BILLING_FREQUENCY_IN_BLOCKS
         let future_block = now + T::BillingFrequency::get();
