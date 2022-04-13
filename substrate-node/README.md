@@ -10,6 +10,8 @@ Local builds and running a single node development chain is explained in the [de
 docker build -t tfchainnode:$(git describe --abbrev=0 --tags | sed 's/^v//') .
 ```
 
+On an Apple Silicon chip, add `--platform linux/amd64`.
+
 Add `--no-cache` if a newer rust toolchain is required.
 
 ## Multi-Node chain
