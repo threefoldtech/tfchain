@@ -85,14 +85,15 @@ impl pallet_balances::Config for TestRuntime {
 
 impl pallet_tfgrid::Config for TestRuntime {
     type Event = Event;
-    type Currency = Balances;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
+    type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<TestRuntime>;
 }
 
 impl pallet_tft_price::Config for TestRuntime {
     type Event = Event;
     type AuthorityId = pallet_tft_price::crypto::AuthId;
     type Call = Call;
+    type RestrictedOrigin = EnsureRoot<Self::AccountId>;
 }
 
 impl pallet_timestamp::Config for TestRuntime {
@@ -106,11 +107,13 @@ parameter_types! {
     pub const BillingFrequency: u64 = 10;
 }
 
+use weights;
 impl Config for TestRuntime {
     type Event = Event;
     type Currency = Balances;
     type StakingPoolAccount = StakingPoolAccount;
     type BillingFrequency = BillingFrequency;
+    type WeightInfo = weights::SubstrateWeight<TestRuntime>; 
 }
 
 type AccountPublic = <MultiSignature as Verify>::Signer;
@@ -186,8 +189,14 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
         .build_storage::<TestRuntime>()
         .unwrap();
     let genesis = pallet_balances::GenesisConfig::<TestRuntime> {
-        balances: vec![(alice(), 1000000000000), (bob(), 2500000000), (charlie(), 100000)],
+        balances: vec![(alice(), 1000000000000), (bob(), 2500000000), (charlie(), 150000)],
     };
     genesis.assimilate_storage(&mut t).unwrap();
+
+    let genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
+        allowed_origin: bob()
+    };
+    genesis.assimilate_storage(&mut t).unwrap();
+
     t.into()
 }

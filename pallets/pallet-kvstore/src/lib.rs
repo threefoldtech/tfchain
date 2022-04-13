@@ -55,7 +55,7 @@ decl_module! {
         fn deposit_event() = default;
 
         /// Set the value stored at a particular key
-        #[weight = 100]
+        #[weight = 100_000_000]
         fn set(origin, key: Vec<u8>, value: Vec<u8>) -> DispatchResult {
             // A user can only set their own entry
             ensure!(key.len()	<= 512, Error::<T>::KeyIsTooLarge);
@@ -68,7 +68,7 @@ decl_module! {
 
         /// Read the value stored at a particular key, while removing it from the map.
         /// Also emit the read value in an event
-        #[weight = 10_000]
+        #[weight = 100_000_000]
         fn delete(origin, key: Vec<u8>) -> DispatchResult {
             // A user can only take (delete) their own entry
             let user = ensure_signed(origin)?;

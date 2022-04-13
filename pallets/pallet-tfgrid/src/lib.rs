@@ -8,13 +8,13 @@ use codec::Encode;
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, dispatch, ensure,
     traits::Get,
-    traits::{Currency, EnsureOrigin},
-    weights::{Pays, DispatchClass},
+    traits::{EnsureOrigin},
+    weights::{Pays},
 };
 use frame_system::{self as system, ensure_signed, RawOrigin};
 use hex::FromHex;
 use pallet_timestamp as timestamp;
-use sp_runtime::traits::SaturatedConversion;
+use sp_runtime::{traits::SaturatedConversion, DispatchError};
 use sp_std::prelude::*;
 
 #[cfg(test)]
@@ -22,26 +22,29 @@ mod tests;
 
 #[cfg(test)]
 mod mock;
+mod benchmarking;
+
+pub mod weights;
 
 pub mod types;
 
-pub type BalanceOf<T> =
-    <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
+pub use weights::WeightInfo;
 
 pub trait Config: system::Config + timestamp::Config {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
-    type Currency: Currency<Self::AccountId>;
-	/// Origin for restricted extrinsics
-	/// Can be the root or another origin configured in the runtime
-	type RestrictedOrigin: EnsureOrigin<Self::Origin>;
+    /// Origin for restricted extrinsics
+    /// Can be the root or another origin configured in the runtime
+    type RestrictedOrigin: EnsureOrigin<Self::Origin>;
+    /// Weight information for extrinsics in this pallet.
+    type WeightInfo: WeightInfo;
 }
 
 // Version constant that referenced the struct version
 pub const TFGRID_ENTITY_VERSION: u32 = 1;
-pub const TFGRID_FARM_VERSION: u32 = 1;
+pub const TFGRID_FARM_VERSION: u32 = 2;
 pub const TFGRID_TWIN_VERSION: u32 = 1;
 pub const TFGRID_NODE_VERSION: u32 = 3;
-pub const TFGRID_PRICING_POLICY_VERSION: u32 = 1;
+pub const TFGRID_PRICING_POLICY_VERSION: u32 = 2;
 pub const TFGRID_CERTIFICATION_CODE_VERSION: u32 = 1;
 pub const TFGRID_FARMING_POLICY_VERSION: u32 = 1;
 
@@ -50,6 +53,7 @@ decl_storage! {
         pub Farms get(fn farms): map hasher(blake2_128_concat) u32 => types::Farm;
         pub FarmIdByName get(fn farms_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u32;
         pub FarmPayoutV2AddressByFarmID get(fn farm_payout_address_by_farm_id): map hasher(blake2_128_concat) u32 => Vec<u8>;
+        pub DedicatedFarms get(fn dedicated_farms): Vec<u32>;
 
         pub Nodes get(fn nodes): map hasher(blake2_128_concat) u32 => types::Node;
         pub NodeIdByTwinID get(fn node_by_twin_id): map hasher(blake2_128_concat) u32 => u32;
@@ -82,7 +86,7 @@ decl_storage! {
         FarmingPolicyID: u32;
 
         /// The current version of the pallet.
-        PalletVersion: types::StorageVersion = types::StorageVersion::V1Struct;
+        PalletVersion: types::StorageVersion = types::StorageVersion::V3Struct;
     }
 
     add_extra_genesis {
@@ -98,6 +102,7 @@ decl_storage! {
         config(domain_name_price_value): u32;
         config(foundation_account): T::AccountId;
         config(sales_account): T::AccountId;
+        config(discount_for_dedication_nodes): u8;
 
         config(farming_policy_diy_cu): u32;
         config(farming_policy_diy_nu): u32;
@@ -108,6 +113,7 @@ decl_storage! {
         config(farming_policy_certified_nu): u32;
         config(farming_policy_certified_su): u32;
         config(farming_policy_certified_ipu): u32;
+
 
         build(|_config| {
             let foundation_account = _config.foundation_account.clone();
@@ -153,7 +159,8 @@ decl_storage! {
                 unique_name_price,
                 domain_name_price,
                 foundation_account,
-                sales_account
+                sales_account,
+                _config.discount_for_dedication_nodes
             );
 
             let _ = <Module<T>>::create_farming_policy(
@@ -211,6 +218,7 @@ decl_event!(
         CertificationCodeStored(types::CertificationCodes),
         FarmingPolicyStored(types::FarmingPolicy),
         FarmPayoutV2AddressRegistered(u32, Vec<u8>),
+        FarmMarkedAsDedicated(u32),
     }
 );
 
@@ -262,6 +270,7 @@ decl_error! {
         UserDidNotSignTermsAndConditions,
         FarmerDidNotSignTermsAndConditions,
         FarmerNotAuthorized,
+        InvalidFarmName,
     }
 }
 
@@ -271,9 +280,20 @@ decl_module! {
 
         fn deposit_event() = default;
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(1)]
+        pub fn set_storage_version(origin, version: types::StorageVersion) -> dispatch::DispatchResult {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+
+            PalletVersion::set(version);
+            
+            Ok(())
+        }
+
+        #[weight = <T as Config>::WeightInfo::create_farm()]
         pub fn create_farm(origin, name: Vec<u8>, public_ips: Vec<types::PublicIP>) -> dispatch::DispatchResult {
             let address = ensure_signed(origin)?;
+
+            Self::validate_farm_name(name.clone())?;
 
             ensure!(!FarmIdByName::contains_key(name.clone()), Error::<T>::FarmExists);
             ensure!(TwinIdByAccountID::<T>::contains_key(&address), Error::<T>::TwinNotExists);
@@ -309,6 +329,7 @@ decl_module! {
                 pricing_policy_id: 1,
                 certification_type: types::CertificationType::Diy,
                 public_ips: pub_ips,
+                dedicated_farm: false,
             };
 
             Farms::insert(id, &new_farm);
@@ -320,7 +341,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2)]
         pub fn update_farm(origin, id: u32, name: Vec<u8>, pricing_policy_id: u32) -> dispatch::DispatchResult {
             let address = ensure_signed(origin)?;
 
@@ -347,7 +368,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2)]
         pub fn add_stellar_payout_v2address(origin, farm_id: u32, stellar_address: Vec<u8>) -> dispatch::DispatchResult {
             let address = ensure_signed(origin)?;
 
@@ -366,7 +387,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1)]
         pub fn set_farm_certification(origin, farm_id: u32, certification_type: types::CertificationType) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
@@ -380,7 +401,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2)]
         pub fn add_farm_ip(origin, id: u32, ip: Vec<u8>, gateway: Vec<u8>) -> dispatch::DispatchResult {
             let address = ensure_signed(origin)?;
 
@@ -407,7 +428,7 @@ decl_module! {
             };
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2)]
         pub fn remove_farm_ip(origin, id: u32, ip: Vec<u8>) -> dispatch::DispatchResult {
             let address = ensure_signed(origin)?;
 
@@ -428,7 +449,7 @@ decl_module! {
             }
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(2) + T::DbWeight::get().reads(2)]
         pub fn delete_farm(origin, id: u32) -> dispatch::DispatchResult {
             let address = ensure_signed(origin)?;
 
@@ -456,8 +477,18 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
-        pub fn create_node(origin, farm_id: u32, resources: types::Resources, location: types::Location, country: Vec<u8>, city: Vec<u8>, interfaces: Vec<types::Interface>) -> dispatch::DispatchResult {
+        #[weight = <T as Config>::WeightInfo::create_node()]
+        pub fn create_node(origin,
+            farm_id: u32,
+            resources: types::Resources,
+            location: types::Location, 
+            country: Vec<u8>,
+            city: Vec<u8>,
+            interfaces: Vec<types::Interface>,
+            secure_boot: bool,
+            virtualized: bool,
+            serial_number: Vec<u8>,
+        ) -> dispatch::DispatchResult {
             let account_id = ensure_signed(origin)?;
 
             ensure!(Farms::contains_key(farm_id), Error::<T>::FarmNotExists);
@@ -497,6 +528,9 @@ decl_module! {
                 farming_policy_id,
                 interfaces,
                 certification_type: types::CertificationType::default(),
+                secure_boot,
+                virtualized,
+                serial_number
             };
 
             Nodes::insert(id, &new_node);
@@ -508,8 +542,19 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = (10 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(3), DispatchClass::Operational)]
-        pub fn update_node(origin, node_id: u32, farm_id: u32, resources: types::Resources, location: types::Location, country: Vec<u8>, city: Vec<u8>, interfaces: Vec<types::Interface>) -> dispatch::DispatchResultWithPostInfo {
+        #[weight = <T as Config>::WeightInfo::update_node()]
+        pub fn update_node(origin,
+            node_id: u32,
+            farm_id: u32,
+            resources: types::Resources,
+            location: types::Location,
+            country: Vec<u8>,
+            city: Vec<u8>,
+            interfaces: Vec<types::Interface>,
+            secure_boot: bool,
+            virtualized: bool,
+            serial_number: Vec<u8>,
+        ) -> dispatch::DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
             ensure!(Nodes::contains_key(&node_id), Error::<T>::NodeNotExists);
@@ -529,6 +574,9 @@ decl_module! {
             stored_node.country = country;
             stored_node.city = city;
             stored_node.interfaces = interfaces;
+            stored_node.secure_boot = secure_boot;
+            stored_node.virtualized = virtualized;
+            stored_node.serial_number = serial_number;
 
             // override node in storage
             Nodes::insert(stored_node.id, &stored_node);
@@ -538,7 +586,7 @@ decl_module! {
             Ok(Pays::No.into())
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1)]
         pub fn set_node_certification(origin, node_id: u32, certification_type: types::CertificationType) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
@@ -555,7 +603,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = (10 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(3), DispatchClass::Operational)]
+        #[weight = <T as Config>::WeightInfo::report_uptime()]
         pub fn report_uptime(origin, uptime: u64) -> dispatch::DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -574,7 +622,7 @@ decl_module! {
             Ok(Pays::No.into())
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(3)]
         pub fn add_node_public_config(origin, farm_id: u32, node_id: u32, public_config: types::PublicConfig) -> dispatch::DispatchResult {
             let account_id = ensure_signed(origin)?;
 
@@ -598,7 +646,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2)]
         pub fn delete_node(origin, id: u32) -> dispatch::DispatchResult {
             let account_id = ensure_signed(origin)?;
 
@@ -615,27 +663,20 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(4) + T::DbWeight::get().reads(3)]
         pub fn create_entity(origin, target: T::AccountId, name: Vec<u8>, country: Vec<u8>, city: Vec<u8>, signature: Vec<u8>) -> dispatch::DispatchResult {
             let _ = ensure_signed(origin)?;
 
             ensure!(!EntityIdByName::contains_key(&name), Error::<T>::EntityWithNameExists);
             ensure!(!EntityIdByAccountID::<T>::contains_key(&target), Error::<T>::EntityWithPubkeyExists);
-
-            let entity_pubkey_ed25519 = Self::convert_account_to_ed25519(target.clone());
-
             ensure!(signature.len() == 128, Error::<T>::SignatureLenghtIsIncorrect);
             let decoded_signature_as_byteslice = <[u8; 64]>::from_hex(signature.clone()).expect("Decoding failed");
-
-            // Decode signature into a ed25519 signature
-            let ed25519_signature = sp_core::ed25519::Signature::from_raw(decoded_signature_as_byteslice);
-
             let mut message = Vec::new();
             message.extend_from_slice(&name);
             message.extend_from_slice(&country);
             message.extend_from_slice(&city);
 
-            ensure!(sp_io::crypto::ed25519_verify(&ed25519_signature, &message, &entity_pubkey_ed25519), Error::<T>::EntitySignatureDoesNotMatch);
+            ensure!(Self::verify_signature(decoded_signature_as_byteslice, &target, &message), Error::<T>::EntitySignatureDoesNotMatch);
 
             let mut id = EntityID::get();
             id = id+1;
@@ -658,8 +699,7 @@ decl_module! {
 
             Ok(())
         }
-
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(3)]
         pub fn update_entity(origin, name: Vec<u8>, country: Vec<u8>, city: Vec<u8>) -> dispatch::DispatchResult {
             let account_id = ensure_signed(origin)?;
 
@@ -692,7 +732,7 @@ decl_module! {
         }
 
         // TODO: delete all object that have an entity id reference?
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2)]
         pub fn delete_entity(origin) -> dispatch::DispatchResult {
             let account_id = ensure_signed(origin)?;
 
@@ -718,7 +758,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = <T as Config>::WeightInfo::create_twin()]
         pub fn create_twin(origin, ip: Vec<u8>) -> dispatch::DispatchResult {
             let account_id = ensure_signed(origin)?;
 
@@ -748,7 +788,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(3)]
         pub fn update_twin(origin, ip: Vec<u8>) -> dispatch::DispatchResult {
             let account_id = ensure_signed(origin)?;
 
@@ -768,7 +808,7 @@ decl_module! {
         }
 
         // Method for twins only
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2)]
         pub fn add_twin_entity(origin, twin_id: u32, entity_id: u32, signature: Vec<u8>) -> dispatch::DispatchResult {
             let account_id = ensure_signed(origin)?;
 
@@ -790,17 +830,11 @@ decl_module! {
 
             let decoded_signature_as_byteslice = <[u8; 64]>::from_hex(signature.clone()).expect("Decoding failed");
 
-            // Decode signature into a ed25519 signature
-            let ed25519_signature = sp_core::ed25519::Signature::from_raw(decoded_signature_as_byteslice);
-
-            let entity_pubkey_ed25519 = Self::convert_account_to_ed25519(stored_entity.account_id.clone());
-
             let mut message = Vec::new();
-
             message.extend_from_slice(&entity_id.to_be_bytes());
             message.extend_from_slice(&twin_id.to_be_bytes());
 
-            ensure!(sp_io::crypto::ed25519_verify(&ed25519_signature, &message, &entity_pubkey_ed25519), Error::<T>::EntitySignatureDoesNotMatch);
+            ensure!(Self::verify_signature(decoded_signature_as_byteslice, &stored_entity.account_id, &message), Error::<T>::EntitySignatureDoesNotMatch);
 
             // Store proof
             twin.entities.push(entity_proof);
@@ -813,7 +847,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1)]
         pub fn delete_twin_entity(origin, twin_id: u32, entity_id: u32) -> dispatch::DispatchResult {
             let account_id = ensure_signed(origin)?;
 
@@ -836,7 +870,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(2) + T::DbWeight::get().reads(1)]
         pub fn delete_twin(origin, twin_id: u32) -> dispatch::DispatchResult {
             let account_id = ensure_signed(origin)?;
 
@@ -856,7 +890,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2)]
         pub fn create_pricing_policy(
             origin,
             name: Vec<u8>,
@@ -867,7 +901,8 @@ decl_module! {
             unique_name: types::Policy,
             domain_name: types::Policy,
             foundation_account: T::AccountId,
-            certified_sales_account: T::AccountId
+            certified_sales_account: T::AccountId,
+            discount_for_dedication_nodes: u8,
         ) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
@@ -889,6 +924,7 @@ decl_module! {
                 domain_name,
                 foundation_account,
                 certified_sales_account,
+                discount_for_dedication_nodes,
             };
 
             PricingPolicies::<T>::insert(&id, &new_policy);
@@ -899,7 +935,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(4) + T::DbWeight::get().reads(2)]
         pub fn update_pricing_policy(
             origin,
             id: u32,
@@ -911,7 +947,8 @@ decl_module! {
             unique_name: types::Policy,
             domain_name: types::Policy,
             foundation_account: T::AccountId,
-            certified_sales_account: T::AccountId
+            certified_sales_account: T::AccountId,
+            discount_for_dedication_nodes: u8
         ) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
@@ -938,6 +975,7 @@ decl_module! {
             pricing_policy.domain_name = domain_name;
             pricing_policy.foundation_account = foundation_account;
             pricing_policy.certified_sales_account = certified_sales_account;
+            pricing_policy.discount_for_dedication_nodes = discount_for_dedication_nodes;
 
             PricingPolicies::<T>::insert(&id, &pricing_policy);
             PricingPolicyIdByName::insert(&pricing_policy.name, &id);
@@ -948,7 +986,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2)]
         pub fn create_certification_code(origin, name: Vec<u8>, description: Vec<u8>, certification_code_type: types::CertificationCodeType) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
@@ -974,7 +1012,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2)]
         pub fn create_farming_policy(origin, name: Vec<u8>, su: u32, cu: u32, nu: u32, ipv4: u32, certification_type: types::CertificationType) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
@@ -1019,10 +1057,9 @@ decl_module! {
             }
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2)]
         pub fn user_accept_tc(origin, document_link: Vec<u8>, document_hash: Vec<u8>) -> dispatch::DispatchResult {
             let account_id = ensure_signed(origin)?;
-            
             let timestamp = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
 
             let t_and_c = types::TermsAndConditions {
@@ -1039,7 +1076,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 10 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(4)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(2) + T::DbWeight::get().reads(5)]
         pub fn delete_node_farm(origin, node_id: u32) -> dispatch::DispatchResult {
             let account_id = ensure_signed(origin)?;
 
@@ -1061,17 +1098,88 @@ decl_module! {
 
             Ok(())
         }
+
+        #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2)]
+        pub fn set_farm_dedicated(origin, farm_id: u32, dedicated: bool) -> dispatch::DispatchResult {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+
+            ensure!(Farms::contains_key(farm_id), Error::<T>::FarmNotExists);
+
+            let mut farm = Farms::get(farm_id);
+            farm.dedicated_farm = dedicated;
+            Farms::insert(farm_id, &farm);
+
+            Self::deposit_event(RawEvent::FarmUpdated(farm));
+
+            Ok(())
+        }
     }
 }
 
 impl<T: Config> Module<T> {
-    pub fn convert_account_to_ed25519(account: T::AccountId) -> sp_core::ed25519::Public {
+    pub fn verify_signature(signature: [u8; 64], target: &T::AccountId, payload: &Vec<u8>) -> bool {
+        if Self::verify_ed_signature(signature, target, payload) {
+            return true;
+        } else if Self::verify_sr_signature(signature, target, payload) {
+            return true;
+        }
+
+        false
+    }
+
+    fn verify_ed_signature(signature: [u8; 64], target: &T::AccountId, payload: &Vec<u8>) -> bool {
+        let entity_pubkey_ed25519 = Self::convert_account_to_ed25519(target);
+        // Decode signature into a ed25519 signature
+        let ed25519_signature = sp_core::ed25519::Signature::from_raw(signature);
+
+        sp_io::crypto::ed25519_verify(&ed25519_signature, &payload, &entity_pubkey_ed25519)
+    }
+
+    fn verify_sr_signature(signature: [u8; 64], target: &T::AccountId, payload: &Vec<u8>) -> bool {
+        let entity_pubkey_sr25519 = Self::convert_account_to_sr25519(target);
+        // Decode signature into a sr25519 signature
+        let sr25519_signature = sp_core::sr25519::Signature::from_raw(signature);
+
+        sp_io::crypto::sr25519_verify(&sr25519_signature, &payload, &entity_pubkey_sr25519)
+    }
+
+    fn convert_account_to_ed25519(account: &T::AccountId) -> sp_core::ed25519::Public {
         // Decode entity's public key
         let account_vec = &account.encode();
         let mut bytes = [0u8; 32];
         bytes.copy_from_slice(&account_vec);
-        let ed25519_pubkey = sp_core::ed25519::Public::from_raw(bytes);
+        sp_core::ed25519::Public::from_raw(bytes)
+    }
 
-        return ed25519_pubkey;
+    fn convert_account_to_sr25519(account: &T::AccountId) -> sp_core::sr25519::Public {
+        // Decode entity's public key
+        let account_vec = &account.encode();
+        let mut bytes = [0u8; 32];
+        bytes.copy_from_slice(&account_vec);
+        sp_core::sr25519::Public::from_raw(bytes)
+    }
+
+    fn validate_farm_name(name: Vec<u8>) -> dispatch::DispatchResult {
+        ensure!(
+            name.len() > 0 && name.len() <= 50,
+            Error::<T>::InvalidFarmName
+        );
+        for character in &name {
+            match character {
+                // 45 = -
+                c if *c == 45 => (),
+                // 95 = _
+                c if *c == 95 => (),
+                // 45 -> 57 = 0,1,2 ..
+                c if *c >= 48 && *c <= 57 => (),
+                // 65 -> 90 = A, B, C, ..
+                c if *c >= 65 && *c <= 90 => (),
+                // 97 -> 122 = a, b, c, ..
+                c if *c >= 97 && *c <= 122 => (),
+                _ => return Err(DispatchError::from(Error::<T>::InvalidFarmName)),
+            }
+        }
+
+        return Ok(());
     }
 }

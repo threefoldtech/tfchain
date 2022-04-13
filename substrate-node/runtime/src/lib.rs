@@ -26,8 +26,6 @@ use sp_version::NativeVersion;
 // A few exports that help ease life for downstream crates.
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
-pub use pallet_timestamp::Call as TimestampCall;
-pub use pallet_balances::Call as BalancesCall;
 pub use sp_runtime::{Permill, Perbill};
 pub use frame_support::{
 	construct_runtime, debug, parameter_types, StorageValue,
@@ -39,6 +37,8 @@ pub use frame_support::{
 };
 use frame_system::{EnsureOneOf, EnsureRoot};
 pub use pallet_collective;
+pub use pallet_membership;
+
 use sp_core::u32_trait::{_3, _5};
 
 use pallet_transaction_payment::CurrencyAdapter;
@@ -61,6 +61,8 @@ pub use pallet_burning;
 pub use pallet_kvstore;
 
 pub use pallet_runtime_upgrade;
+
+pub use pallet_validator;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -134,7 +136,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("substrate-threefold"),
 	impl_name: create_runtime_str!("substrate-threefold"),
 	authoring_version: 1,
-	spec_version: 38,
+	spec_version: 54,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -303,8 +305,8 @@ impl pallet_sudo::Config for Runtime {
 
 impl pallet_tfgrid::Config for Runtime {
 	type Event = Event;
-	type Currency = Balances;
 	type RestrictedOrigin = EnsureRootOrCouncilApproval;
+	type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -322,6 +324,7 @@ impl pallet_smart_contract::Config for Runtime {
 	type Currency = Balances;
 	type StakingPoolAccount = StakingPoolAccount;
 	type BillingFrequency = BillingFrequency;
+	type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_tft_bridge::Config for Runtime {
@@ -347,6 +350,13 @@ impl pallet_tft_price::Config for Runtime {
 	type AuthorityId = pallet_tft_price::crypto::AuthId;
 	type Call = Call;
 	type Event = Event;
+	type RestrictedOrigin = EnsureRootOrCouncilApproval;
+}
+
+impl pallet_validator::Config for Runtime {
+	type Event = Event;
+	type CouncilOrigin = EnsureRootOrCouncilApproval;
+	type Currency = Balances;
 }
 
 impl validatorset::Config for Runtime {
@@ -473,6 +483,31 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type WeightInfo = ();
 }
 
+impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
+	type Event = Event;
+	type AddOrigin = EnsureRootOrCouncilApproval;
+	type RemoveOrigin = EnsureRootOrCouncilApproval;
+	type SwapOrigin = EnsureRootOrCouncilApproval;
+	type ResetOrigin = EnsureRootOrCouncilApproval;
+	type PrimeOrigin = EnsureRootOrCouncilApproval;
+	type MembershipInitialized = Council;
+	type MembershipChanged = MembershipChangedGroup;
+}
+
+use frame_support::traits::ChangeMembers;
+
+pub struct MembershipChangedGroup;
+impl ChangeMembers<AccountId> for MembershipChangedGroup {
+	fn change_members_sorted(
+		incoming: &[AccountId],
+		outgoing: &[AccountId],
+		sorted_new: &[AccountId],
+	) {
+		Council::change_members_sorted(incoming, outgoing, sorted_new);
+		// Validator::change_members_sorted(incoming, outgoing, sorted_new);
+	}
+}
+
 type EnsureRootOrCouncilApproval = EnsureOneOf<
 	AccountId,
 	EnsureRoot<AccountId>,
@@ -533,12 +568,14 @@ construct_runtime!(
 		TfgridModule: pallet_tfgrid::{Module, Call, Config<T>, Storage, Event<T>},
 		SmartContractModule: pallet_smart_contract::{Module, Call, Storage, Event<T>},
 		TFTBridgeModule: pallet_tft_bridge::{Module, Call, Config<T>, Storage, Event<T>},
-		TFTPriceModule: pallet_tft_price::{Module, Call, Storage, Event<T>},
+		TFTPriceModule: pallet_tft_price::{Module, Call, Storage, Config<T>, Event<T>},
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 		BurningModule: pallet_burning::{Module, Call, Storage, Event<T>},
 		TFKVStore: pallet_kvstore::{Module, Call, Storage, Event<T>},
         Council: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		CouncilMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
 		RuntimeUpgrade: pallet_runtime_upgrade::{Module, Call, Event},
+		Validator: pallet_validator::{Module, Call, Storage, Event<T>},
 	}
 );
 
@@ -741,6 +778,8 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
 			add_benchmark!(params, batches, pallet_balances, Balances);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
+			add_benchmark!(params, batches, pallet_tfgrid, TfgridModule);
+			add_benchmark!(params, batches, pallet_smart_contract, SmartContractModule);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

@@ -9,7 +9,8 @@ use pallet_tfgrid::types;
 pub enum PalletStorageVersion {
     V1,
     V2,
-    V3
+    V3,
+    V4,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
@@ -45,10 +46,16 @@ pub struct NameContract {
     pub name: Vec<u8>,
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+pub struct RentContract {
+    pub node_id: u32
+}
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
 pub enum ContractData {
     NodeContract(NodeContract),
     NameContract(NameContract),
+    RentContract(RentContract)
 }
 
 impl Default for ContractData {
@@ -73,7 +80,7 @@ pub enum ContractState {
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
 pub enum Cause {
     CanceledByUser,
-    OutOfFunds
+    OutOfFunds,
 }
 
 impl Default for ContractState {
@@ -121,9 +128,30 @@ pub struct Consumption {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+pub struct NruConsumption {
+    pub contract_id: u64,
+    pub timestamp: u64,
+    pub window: u64,
+    pub nru: u64,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
 pub struct ContractBill {
     pub contract_id: u64,
     pub timestamp: u64,
     pub discount_level: DiscountLevel,
     pub amount_billed: u128,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+pub struct ContractResources {
+    pub contract_id: u64,
+    pub used: types::Resources,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+pub struct ContractLock<BalanceOf> {
+    pub amount_locked: BalanceOf,
+    pub lock_updated: u64,
+    pub cycles: u16,
 }

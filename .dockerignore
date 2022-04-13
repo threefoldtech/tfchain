@@ -1,0 +1,5 @@
+**/target/*
+cli-tool
+ct_scripts
+k8s
+docs

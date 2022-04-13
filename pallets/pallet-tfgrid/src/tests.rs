@@ -10,6 +10,13 @@ fn test_create_entity_works() {
 }
 
 #[test]
+fn test_create_entity_sr_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity_sr();
+    });
+}
+
+#[test]
 fn test_update_entity_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
@@ -120,7 +127,7 @@ fn test_create_twin_works() {
     ExternalityBuilder::build().execute_with(|| {
         let document = "some_link".as_bytes().to_vec();
         let hash = "some_hash".as_bytes().to_vec();
-    
+
         assert_ok!(TfgridModule::user_accept_tc(
             Origin::signed(test_ed25519()),
             document,
@@ -140,7 +147,7 @@ fn test_delete_twin_works() {
     ExternalityBuilder::build().execute_with(|| {
         let document = "some_link".as_bytes().to_vec();
         let hash = "some_hash".as_bytes().to_vec();
-    
+
         assert_ok!(TfgridModule::user_accept_tc(
             Origin::signed(alice()),
             document,
@@ -272,6 +279,36 @@ fn test_create_farm_works() {
         create_entity();
         create_twin();
         create_farm();
+    });
+}
+
+#[test]
+fn test_create_farm_fails_invalid_name() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+
+        let farm_name = "test.farm".as_bytes().to_vec();
+
+        assert_noop!(
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name, Vec::new(),),
+            Error::<TestRuntime>::InvalidFarmName
+        );
+    });
+}
+
+#[test]
+fn test_create_farm_fails_empty_name() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+
+        let farm_name = "".as_bytes().to_vec();
+
+        assert_noop!(
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name, Vec::new(),),
+            Error::<TestRuntime>::InvalidFarmName
+        );
     });
 }
 
@@ -408,6 +445,49 @@ fn test_adding_ip_duplicate_to_farm_fails() {
 }
 
 #[test]
+fn test_set_farm_dedicated() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+
+        assert_ok!(TfgridModule::set_farm_dedicated(
+            RawOrigin::Root.into(),
+            1,
+            true
+        ));
+
+        let farm = TfgridModule::farms(1);
+        assert_eq!(farm.dedicated_farm, true);
+    })
+}
+
+#[test]
+fn test_toggle_farm_dedicated() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+
+        assert_ok!(TfgridModule::set_farm_dedicated(
+            RawOrigin::Root.into(),
+            1,
+            true
+        ));
+
+        let farm = TfgridModule::farms(1);
+        assert_eq!(farm.dedicated_farm, true);
+
+        assert_ok!(TfgridModule::set_farm_dedicated(
+            RawOrigin::Root.into(),
+            1,
+            false
+        ));
+
+        let farm = TfgridModule::farms(1);
+        assert_eq!(farm.dedicated_farm, false);
+    })
+}
+
+#[test]
 fn test_update_twin_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
@@ -422,7 +502,7 @@ fn test_update_twin_fails_if_signed_by_someone_else() {
     ExternalityBuilder::build().execute_with(|| {
         let document = "some_link".as_bytes().to_vec();
         let hash = "some_hash".as_bytes().to_vec();
-    
+
         assert_ok!(TfgridModule::user_accept_tc(
             Origin::signed(alice()),
             document,
@@ -503,13 +583,27 @@ fn set_certification_type_node_works() {
         create_farm();
         create_node();
 
-        assert_ok!(TfgridModule::set_node_certification(RawOrigin::Root.into(), 1, super::types::CertificationType::Certified));
+        assert_ok!(TfgridModule::set_node_certification(
+            RawOrigin::Root.into(),
+            1,
+            super::types::CertificationType::Certified
+        ));
         let node = TfgridModule::nodes(1);
-        assert_eq!(node.certification_type, super::types::CertificationType::Certified);
+        assert_eq!(
+            node.certification_type,
+            super::types::CertificationType::Certified
+        );
 
-        assert_ok!(TfgridModule::set_node_certification(RawOrigin::Root.into(), 1, super::types::CertificationType::Diy));
+        assert_ok!(TfgridModule::set_node_certification(
+            RawOrigin::Root.into(),
+            1,
+            super::types::CertificationType::Diy
+        ));
         let node = TfgridModule::nodes(1);
-        assert_eq!(node.certification_type, super::types::CertificationType::Diy);
+        assert_eq!(
+            node.certification_type,
+            super::types::CertificationType::Diy
+        );
     });
 }
 
@@ -609,7 +703,10 @@ fn create_node_with_same_pubkey_fails() {
                 location,
                 country,
                 city,
-                Vec::new()
+                Vec::new(),
+                true,
+                true,
+                "some_serial".as_bytes().to_vec()
             ),
             Error::<TestRuntime>::NodeWithTwinIdExists
         );
@@ -747,6 +844,7 @@ fn test_create_and_update_policy() {
             domain_name_policy.clone(),
             bob(),
             bob(),
+            50,
         )
         .unwrap();
 
@@ -769,6 +867,7 @@ fn test_create_and_update_policy() {
             domain_name_policy.clone(),
             bob(),
             bob(),
+            50,
         )
         .unwrap();
         // Get policy and make sure it is updated
@@ -799,6 +898,7 @@ fn test_create_and_update_policy() {
             domain_name_policy.clone(),
             bob(),
             bob(),
+            50,
         )
         .unwrap();
         let policy = TfgridModule::pricing_policies(policy_id.clone());
@@ -823,6 +923,7 @@ fn test_create_and_update_policy() {
             domain_name_policy.clone(),
             bob(),
             bob(),
+            50,
         )
         .unwrap();
         let policy2_id = TfgridModule::pricing_policies_by_name_id(policy2_name.clone());
@@ -840,6 +941,7 @@ fn test_create_and_update_policy() {
                 domain_name_policy.clone(),
                 bob(),
                 bob(),
+                50,
             ),
             Error::<TestRuntime>::PricingPolicyWithDifferentIdExists
         );
@@ -854,6 +956,22 @@ fn create_entity() {
     assert_ok!(TfgridModule::create_entity(
         Origin::signed(alice()),
         test_ed25519(),
+        name,
+        country,
+        city,
+        signature.clone()
+    ));
+}
+
+fn create_entity_sr() {
+    let name = "foobar".as_bytes().to_vec();
+    let country = "Belgium".as_bytes().to_vec();
+    let city = "Ghent".as_bytes().to_vec();
+
+    let signature = sign_create_entity_sr(name.clone(), country.clone(), city.clone());
+    assert_ok!(TfgridModule::create_entity(
+        Origin::signed(alice()),
+        test_sr25519(),
         name,
         country,
         city,
@@ -934,6 +1052,9 @@ fn create_node() {
         location,
         country,
         city,
-        Vec::new()
+        Vec::new(),
+        true,
+        true,
+        "some_serial".as_bytes().to_vec()
     ));
 }

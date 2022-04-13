@@ -1,7 +1,8 @@
 use sp_core::{Pair, Public, sr25519, ed25519};
 use tfchain_runtime::{
-	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig, CouncilConfig,
+	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig, CouncilConfig, CouncilMembershipConfig,
 	SudoConfig, SystemConfig, WASM_BINARY, Signature, TfgridModuleConfig, TFTBridgeModuleConfig, ValidatorSetConfig, SessionConfig,
+	TFTPriceModuleConfig
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_finality_grandpa::AuthorityId as GrandpaId;
@@ -100,23 +101,25 @@ pub fn development_config() -> Result<ChainSpec, String> {
 				get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 				get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 				// bridge validator dev key 1
-				get_account_id_from_seed_string::<ed25519::Public>("quarter between satisfy three sphere six soda boss cute decade old trend"),
+				get_account_id_from_seed_string::<sr25519::Public>("quarter between satisfy three sphere six soda boss cute decade old trend"),
 				// bridge validator dev key 2
-				get_account_id_from_seed_string::<ed25519::Public>("employ split promote annual couple elder remain cricket company fitness senior fiscal"),
+				get_account_id_from_seed_string::<sr25519::Public>("employ split promote annual couple elder remain cricket company fitness senior fiscal"),
 				// bridge validator dev key 3
-				get_account_id_from_seed_string::<ed25519::Public>("remind bird banner word spread volume card keep want faith insect mind"),
+				get_account_id_from_seed_string::<sr25519::Public>("remind bird banner word spread volume card keep want faith insect mind"),
 			],
 			true,
 			vec![
 				// bridge validator dev key 1
-				get_account_id_from_seed_string::<ed25519::Public>("quarter between satisfy three sphere six soda boss cute decade old trend"),
+				get_account_id_from_seed_string::<sr25519::Public>("quarter between satisfy three sphere six soda boss cute decade old trend"),
 				// // bridge validator dev key 2
-				// get_account_id_from_seed_string::<ed25519::Public>("employ split promote annual couple elder remain cricket company fitness senior fiscal"),
+				// get_account_id_from_seed_string::<sr25519::Public>("employ split promote annual couple elder remain cricket company fitness senior fiscal"),
 				// // bridge validator dev key 3
-				// get_account_id_from_seed_string::<ed25519::Public>("remind bird banner word spread volume card keep want faith insect mind"),
+				// get_account_id_from_seed_string::<sr25519::Public>("remind bird banner word spread volume card keep want faith insect mind"),
 			],
 			// Bridge fee account
 			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+			// TFT price pallet allow account
+			get_account_id_from_seed::<sr25519::Public>("Alice"),
 		),
 		// Bootnodes
 		vec![],
@@ -187,14 +190,16 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 			true,
 			vec![
 				// bridge validator dev key 1
-				get_account_id_from_seed_string::<ed25519::Public>("quarter between satisfy three sphere six soda boss cute decade old trend"),
+				get_account_id_from_seed_string::<sr25519::Public>("quarter between satisfy three sphere six soda boss cute decade old trend"),
 				// bridge validator dev key 2
-				get_account_id_from_seed_string::<ed25519::Public>("employ split promote annual couple elder remain cricket company fitness senior fiscal"),
+				get_account_id_from_seed_string::<sr25519::Public>("employ split promote annual couple elder remain cricket company fitness senior fiscal"),
 				// bridge validator dev key 3
-				get_account_id_from_seed_string::<ed25519::Public>("remind bird banner word spread volume card keep want faith insect mind"),
+				get_account_id_from_seed_string::<sr25519::Public>("remind bird banner word spread volume card keep want faith insect mind"),
 			],
 			// Bridge fee account
 			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+			// TFT price pallet allow account
+			get_account_id_from_seed::<sr25519::Public>("Alice"),
 		),
 		// Bootnodes
 		vec![],
@@ -220,6 +225,7 @@ fn testnet_genesis(
 	_enable_println: bool,
 	bridge_validator_accounts: Vec<AccountId>,
 	bridge_fee_account: AccountId,
+	tft_price_allowed_account: AccountId
 ) -> GenesisConfig {
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -269,7 +275,8 @@ fn testnet_genesis(
 			farming_policy_certified_cu: 200000000,
 			farming_policy_certified_su: 120000000,
 			farming_policy_certified_nu: 3000000,
-			farming_policy_certified_ipu: 1000000
+			farming_policy_certified_ipu: 1000000,
+			discount_for_dedication_nodes: 50,
 		}),
 		pallet_tft_bridge: Some(TFTBridgeModuleConfig{
 			validator_accounts: bridge_validator_accounts,
@@ -278,5 +285,17 @@ fn testnet_genesis(
 			withdraw_fee: 10000000
 		}),
 		pallet_collective_Instance1: Some(CouncilConfig::default()),
+		pallet_membership_Instance1: Some(CouncilMembershipConfig {
+			members: vec![
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				get_account_id_from_seed::<sr25519::Public>("Bob"),
+				get_account_id_from_seed::<sr25519::Public>("Eve"),
+			],
+			phantom: Default::default(),
+		}),
+		// just some default for development
+		pallet_tft_price: Some(TFTPriceModuleConfig {
+			allowed_origin: tft_price_allowed_account
+		})
 	}
 }

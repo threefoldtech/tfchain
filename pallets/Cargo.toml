@@ -2,8 +2,9 @@
 
 members = [
     "pallet-tfgrid",
+    "pallet-tft-price",
+    "pallet-validator",
     "pallet-smart-contract",
-    "pallet-vesting-validator",
     "pallet-burning",
     "pallet-kvstore",
     "pallet-runtime-upgrade",

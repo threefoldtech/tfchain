@@ -24,9 +24,8 @@ path = "../pallet-tfgrid"
 
 [dependencies]
 # Substrate packages
-
 substrate-fixed = { git = 'https://github.com/encointer/substrate-fixed.git', rev = "b33d186888c60f38adafcfc0ec3a21aab263aef1" }
-
+frame-benchmarking = { version = '3.0.0', default-features = false, optional = true }
 pallet-balances = { version = '3.0', default-features = false }
 frame-support = { version = '3.0.0', default-features = false }
 frame-system = { version = '3.0.0', default-features = false }
@@ -42,10 +41,7 @@ serde = { version = '1.0.100', default-features = false, features = ['derive'] }
 
 [dependencies.pallet-tft-price]
 default-features = false
-git = "https://github.com/threefoldtech/tfchain_tft.git"
-package = "pallet-tft-price"
-branch = "main"
-#path = "/home/dylan/Projects/tfchain_tft/pallet-tft-price"
+path = "../pallet-tft-price"
 
 [dev-dependencies]
 sp-core = { version = '3.0.0', default-features = false }
@@ -67,4 +63,9 @@ std = [
 	'lite-json/std',
 	'pallet-tfgrid/std',
 	'pallet-tft-price/std'
+]
+runtime-benchmarks = [
+	"frame-benchmarking",
+	"frame-support/runtime-benchmarks",
+	"frame-system/runtime-benchmarks",
 ]
