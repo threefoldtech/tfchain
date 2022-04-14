@@ -36,10 +36,9 @@ pub mod deprecated {
 pub fn migrate_nodes_to_v4<T: Config>() -> frame_support::weights::Weight {
     frame_support::debug::RuntimeLogger::init();
 
-    let node_1 = Nodes::get(1);
-
-    if node_1.version == 4 {
-        frame_support::debug::info!(" >>> Unused migration!");
+    let pallet_version = PalletVersion::get();
+    if matches!(pallet_version, types::StorageVersion::V4Struct) {
+        frame_support::debug::info!(" >>> Migration executed already, exiting now ...");
         return 0
     }
 
@@ -81,6 +80,10 @@ pub fn migrate_nodes_to_v4<T: Config>() -> frame_support::weights::Weight {
     );
 
     frame_support::debug::info!(" <<< Node storage updated! Migrated {} nodes ✅", migrated_count);
+
+    // Update pallet storage version
+    PalletVersion::set(types::StorageVersion::V4Struct);
+    frame_support::debug::info!(" <<< Storage version upgraded");
 
     // Return the weight consumed by the migration.
     T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)

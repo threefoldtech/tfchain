@@ -88,7 +88,7 @@ decl_storage! {
         FarmingPolicyID: u32;
 
         /// The current version of the pallet.
-        PalletVersion: types::StorageVersion = types::StorageVersion::V3Struct;
+        PalletVersion: types::StorageVersion = types::StorageVersion::V4Struct;
     }
 
     add_extra_genesis {
