@@ -22,19 +22,19 @@ version = '2.0.0'
 
 [dependencies.pallet-tfgrid]
 default-features = false
-path = "../../pallets/pallet-tfgrid"
+path = "../pallets/pallet-tfgrid"
 
 [dependencies.pallet-smart-contract]
 default-features = false
-path = "../../pallets/pallet-smart-contract"
+path = "../pallets/pallet-smart-contract"
 
 [dependencies.pallet-burning]
 default-features = false
-path = "../../pallets/pallet-burning"
+path = "../pallets/pallet-burning"
 
 [dependencies.pallet-kvstore]
 default-features = false
-path = "../../pallets/pallet-kvstore"
+path = "../pallets/pallet-kvstore"
 
 [dependencies.pallet-tft-bridge]
 default-features = false
@@ -45,20 +45,20 @@ branch = "main"
 
 [dependencies.pallet-tft-price]
 default-features = false
-path = "../../pallets/pallet-tft-price"
+path = "../pallets/pallet-tft-price"
 
 [dependencies.pallet-runtime-upgrade]
 default-features = false
-path = "../../pallets/pallet-runtime-upgrade"
+path = "../pallets/pallet-runtime-upgrade"
 
 [dependencies.validatorset]
 default-features = false
 package = "substrate-validator-set"
-path = "../../pallets/substrate-validator-set"
+path = "../pallets/substrate-validator-set"
 
 [dependencies.pallet-validator]
 default-features = false
-path = "../../pallets/pallet-validator"
+path = "../pallets/pallet-validator"
 
 [dependencies]
 hex-literal = { optional = true, version = '0.3.1' }
