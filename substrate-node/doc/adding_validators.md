@@ -101,6 +101,10 @@ ingress:
 
 install the helm-chart located at `substrate-node/charts/substrate-node` in this repository using the custom values.yaml file.
 
+## Sync
+
+Wait until you are synced with the network, you can see the last synced (best) and finalized blocks in the logs and highest block on the network as target.
+
 ## Contact admin to insert the key into the validator set
 
 An admin with access to the sudo key can call following extrinsic to insert the new node as a validator:
