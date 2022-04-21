@@ -37,7 +37,7 @@ Insert Aura and Grandpa key for this new node.
 
 #### Insert a key in the session
 
-Connect to the new node deployed with polkadot js apps. You will need to install a local version of this application since you will have to connect over a not secured websocket.
+Connect to the new node deployed with polkadot js apps. You will need to install a local version of this application since you will have to connect over an unsecured websocket.
 
 ```sh
 git clone git@github.com:polkadot-js/apps.git
@@ -47,7 +47,7 @@ yarn start
 
 Browse to <http://localhost:3000> and connect to the new node over it's public ip.
 
-Go to `rpc` -> `session` -> `rotateKeys`, excecute it and take note of the output.
+Go to `rpc` -> `session` -> `rotateKeys`, execute it and take note of the output.
 
 On the same new node, go to `extrinsics` -> `session` -> `setKeys`, Make sure you execute it this with the newly generated keypair.
 
