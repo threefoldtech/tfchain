@@ -28,13 +28,14 @@ use sp_version::NativeVersion;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Permill, Perbill};
 pub use frame_support::{
-	construct_runtime, debug, parameter_types, StorageValue,
+	construct_runtime, parameter_types, StorageValue,
 	traits::{KeyOwnerProofSystem, Randomness, FindAuthor},
 	weights::{
 		Weight, IdentityFee,
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 	},
 };
+use log;
 use frame_system::{EnsureOneOf, EnsureRoot};
 pub use pallet_collective;
 pub use pallet_membership;
@@ -136,10 +137,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("substrate-threefold"),
 	impl_name: create_runtime_str!("substrate-threefold"),
 	authoring_version: 1,
-	spec_version: 54,
+	spec_version: 55,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 1,
+	transaction_version: 2,
 };
 
 
@@ -233,6 +234,8 @@ impl frame_system::Config for Runtime {
 	type SystemWeightInfo = ();
 	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
 	type SS58Prefix = SS58Prefix;
+	/// The set code logic, just the default since we're not a parachain.
+	type OnSetCode = ();
 }
 
 impl pallet_aura::Config for Runtime {
@@ -359,9 +362,14 @@ impl pallet_validator::Config for Runtime {
 	type Currency = Balances;
 }
 
+parameter_types! {
+	pub MinAuthorities: u32 = 1;
+}
+
 impl validatorset::Config for Runtime {
 	type Event = Event;
 	type AddRemoveOrigin = EnsureRootOrCouncilApproval;
+	type MinAuthorities = MinAuthorities;
 }
 
 /// Special `FullIdentificationOf` implementation that is returning for every input `Some(Default::default())`.
@@ -385,17 +393,22 @@ impl sp_runtime::traits::Convert<AccountId, Option<AccountId>> for ValidatorIdOf
 	}
 }
 
+parameter_types! {
+	pub const Period: u32 = 60 * MINUTES;
+	pub const Offset: u32 = 0;
+}
+
 impl pallet_session::Config for Runtime {
-	type SessionHandler = <opaque::SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
-	type ShouldEndSession = ValidatorSet;
-	type SessionManager = ValidatorSet;
-	type Event = Event;
-	type Keys = opaque::SessionKeys;
-	type NextSessionRotation = ValidatorSet;
 	type ValidatorId = <Self as frame_system::Config>::AccountId;
 	type ValidatorIdOf = validatorset::ValidatorOf<Self>;
-	type DisabledValidatorsThreshold = ();
+	type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
+	type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
+	type SessionManager = ValidatorSet;
+	type SessionHandler = <opaque::SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
+	type Keys = opaque::SessionKeys;
 	type WeightInfo = ();
+	type Event = Event;
+	type DisabledValidatorsThreshold = ();
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
@@ -429,7 +442,7 @@ where
 		#[cfg_attr(not(feature = "std"), allow(unused_variables))]
 		let raw_payload = SignedPayload::new(call, extra)
 			.map_err(|e| {
-				debug::native::info!("SignedPayload error: {:?}", e);
+				log::info!("SignedPayload error: {:?}", e);
 			})
 			.ok()?;
 
@@ -492,6 +505,8 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
 	type PrimeOrigin = EnsureRootOrCouncilApproval;
 	type MembershipInitialized = Council;
 	type MembershipChanged = MembershipChangedGroup;
+	type MaxMembers = CouncilMaxMembers;
+    type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
 use frame_support::traits::ChangeMembers;
@@ -527,8 +542,8 @@ impl FindAuthor<AccountId> for AuraAccountAdapter {
     where
         I: 'a + IntoIterator<Item = (ConsensusEngineId, &'a [u8])>,
     {
-        if let Some(index) = pallet_aura::Module::<Runtime>::find_author(digests) {
-            let validator = pallet_session::Module::<Runtime>::validators()[index as usize].clone();
+        if let Some(index) = pallet_aura::Pallet::<Runtime>::find_author(digests) {
+            let validator = pallet_session::Pallet::<Runtime>::validators()[index as usize].clone();
             Some(validator)
         } else {
             None
@@ -558,8 +573,8 @@ construct_runtime!(
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage},
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
 		ValidatorSet: validatorset::{Pallet, Call, Storage, Event<T>, Config<T>},
+		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
 		Aura: pallet_aura::{Pallet, Config<T>},
 		Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event},
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
@@ -654,9 +669,9 @@ impl_runtime_apis! {
 			data.check_extrinsics(&block)
 		}
 
-		fn random_seed() -> <Block as BlockT>::Hash {
-			RandomnessCollectiveFlip::random_seed()
-		}
+		// fn random_seed() -> <Block as BlockT>::Hash {
+		// 	RandomnessCollectiveFlip::random_seed().0
+		// }
 	}
 
 	impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
@@ -675,8 +690,8 @@ impl_runtime_apis! {
 	}
 
 	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
-		fn slot_duration() -> u64 {
-			Aura::slot_duration()
+		fn slot_duration() -> sp_consensus_aura::SlotDuration {
+			sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
 		}
 
 		fn authorities() -> Vec<AuraId> {

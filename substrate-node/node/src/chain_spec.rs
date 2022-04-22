@@ -44,22 +44,15 @@ fn get_from_seed_string<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>:
 		.public()
 }
 
-fn session_keys(
-	aura: AuraId,
-	grandpa: GrandpaId,
-) -> SessionKeys {
+fn session_keys(aura: AuraId, grandpa: GrandpaId) -> SessionKeys {
 	SessionKeys { aura, grandpa }
 }
 
-pub fn authority_keys_from_seed(seed: &str) -> (
-	AccountId,
-	AuraId,
-	GrandpaId
-) {
+pub fn authority_keys_from_seed(s: &str) -> (AccountId, AuraId, GrandpaId) {
 	(
-		get_account_id_from_seed::<sr25519::Public>(seed),
-		get_from_seed::<AuraId>(seed),
-		get_from_seed::<GrandpaId>(seed)
+		get_account_id_from_seed::<sr25519::Public>(s),
+		get_from_seed::<AuraId>(s),
+		get_from_seed::<GrandpaId>(s)
 	)
 }
 
@@ -228,34 +221,34 @@ fn testnet_genesis(
 	tft_price_allowed_account: AccountId
 ) -> GenesisConfig {
 	GenesisConfig {
-		frame_system: Some(SystemConfig {
+		frame_system: SystemConfig {
 			// Add Wasm runtime to storage.
 			code: wasm_binary.to_vec(),
 			changes_trie_config: Default::default(),
-		}),
-		pallet_balances: Some(BalancesConfig {
+		},
+		pallet_balances: BalancesConfig {
 			// Configure endowed accounts with initial balance of 1 << 60.
 			balances: endowed_accounts.iter().cloned().map(|k|(k, 1 << 60)).collect(),
-		}),
-		validatorset: Some(ValidatorSetConfig {
-			validators: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
-		}),
-		pallet_session: Some(SessionConfig {
+		},
+		validatorset: ValidatorSetConfig {
+			initial_validators: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+		},
+		pallet_session: SessionConfig {
 			keys: initial_authorities.iter().map(|x| {
 				(x.0.clone(), x.0.clone(), session_keys(x.1.clone(), x.2.clone()))
 			}).collect::<Vec<_>>(),
-		}),
-		pallet_aura: Some(AuraConfig {
+		},
+		pallet_aura: AuraConfig {
 			authorities: vec![],
-		}),
-		pallet_grandpa: Some(GrandpaConfig {
+		},
+		pallet_grandpa: GrandpaConfig {
 			authorities: vec![],
-		}),
-		pallet_sudo: Some(SudoConfig {
+		},
+		pallet_sudo: SudoConfig {
 			// Assign network admin rights.
 			key: root_key,
-		}),
-		pallet_tfgrid: Some(TfgridModuleConfig {
+		},
+		pallet_tfgrid: TfgridModuleConfig {
 			su_price_value: 300000,
 			su_price_unit: 4,
 			nu_price_value: 2000,
@@ -277,25 +270,25 @@ fn testnet_genesis(
 			farming_policy_certified_nu: 3000000,
 			farming_policy_certified_ipu: 1000000,
 			discount_for_dedication_nodes: 50,
-		}),
-		pallet_tft_bridge: Some(TFTBridgeModuleConfig{
+		},
+		pallet_tft_bridge: TFTBridgeModuleConfig{
 			validator_accounts: bridge_validator_accounts,
 			fee_account: bridge_fee_account,
 			deposit_fee: 10000000,
 			withdraw_fee: 10000000
-		}),
-		pallet_collective_Instance1: Some(CouncilConfig::default()),
-		pallet_membership_Instance1: Some(CouncilMembershipConfig {
+		},
+		pallet_collective_Instance1: CouncilConfig::default(),
+		pallet_membership_Instance1: CouncilMembershipConfig {
 			members: vec![
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				get_account_id_from_seed::<sr25519::Public>("Bob"),
 				get_account_id_from_seed::<sr25519::Public>("Eve"),
 			],
 			phantom: Default::default(),
-		}),
+		},
 		// just some default for development
-		pallet_tft_price: Some(TFTPriceModuleConfig {
+		pallet_tft_price: TFTPriceModuleConfig {
 			allowed_origin: tft_price_allowed_account
-		})
+		}
 	}
 }

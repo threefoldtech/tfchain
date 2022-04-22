@@ -26,7 +26,7 @@
 use core::marker::PhantomData;
 use frame_support::storage::{IterableStorageMap, StorageValue};
 use codec::{Codec, EncodeLike};
-use sp_std::vec::Vec;
+use sp_std::prelude::*;
 
 /// Trait object presenting the ringbuffer interface.
 const MAX_LENGTH: u16 = 1440;
