@@ -3,8 +3,9 @@
 use codec::{Decode, Encode};
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, ensure,
-    traits::{Currency, OnUnbalanced, ReservableCurrency, Vec},
+    traits::{Currency, OnUnbalanced, ReservableCurrency},
 };
+use sp_std::prelude::*;
 use frame_system::{self as system, ensure_signed};
 use sp_runtime::DispatchResult;
 
@@ -88,7 +89,7 @@ impl<T: Config> Module<T> {
         let imbalance = T::Currency::slash(&target, amount).0;
         T::Burn::on_unbalanced(imbalance);
 
-        let block = <frame_system::Module<T>>::block_number();
+        let block = <frame_system::Pallet<T>>::block_number();
 
         // Save historical burns
         let mut burns = Burns::<T>::get();

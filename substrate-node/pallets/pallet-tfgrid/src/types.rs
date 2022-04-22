@@ -1,5 +1,5 @@
 use codec::{Decode, Encode};
-use frame_support::traits::Vec;
+use sp_std::prelude::*;
 
 /// Utility type for managing upgrades/migrations.
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]

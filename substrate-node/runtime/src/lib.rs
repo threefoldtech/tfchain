@@ -56,7 +56,7 @@ pub use pallet_tft_price;
 
 pub use pallet_session;
 
-pub use pallet_burning;
+// pub use pallet_burning;
 
 pub use pallet_kvstore;
 
@@ -334,11 +334,11 @@ impl pallet_tft_bridge::Config for Runtime {
 	type RestrictedOrigin = EnsureRootOrCouncilApproval;
 }
 
-impl pallet_burning::Config for Runtime {
-	type Event = Event;
-	type Currency = Balances;
-	type Burn = ();
-}
+// impl pallet_burning::Config for Runtime {
+// 	type Event = Event;
+// 	type Currency = Balances;
+// 	type Burn = ();
+// }
 
 impl pallet_kvstore::Config for Runtime {
 	type Event = Event;
@@ -554,28 +554,28 @@ construct_runtime!(
 		NodeBlock = opaque::Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
-		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
-		ValidatorSet: validatorset::{Module, Call, Storage, Event<T>, Config<T>},
-		Aura: pallet_aura::{Module, Config<T>},
-		Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
-		TransactionPayment: pallet_transaction_payment::{Module, Storage},
-		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
-		Authorship: pallet_authorship::{Module, Call, Storage, Inherent},
-		TfgridModule: pallet_tfgrid::{Module, Call, Config<T>, Storage, Event<T>},
-		SmartContractModule: pallet_smart_contract::{Module, Call, Storage, Event<T>},
-		TFTBridgeModule: pallet_tft_bridge::{Module, Call, Config<T>, Storage, Event<T>},
-		TFTPriceModule: pallet_tft_price::{Module, Call, Storage, Config<T>, Event<T>},
-		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
-		BurningModule: pallet_burning::{Module, Call, Storage, Event<T>},
-		TFKVStore: pallet_kvstore::{Module, Call, Storage, Event<T>},
-        Council: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
-		CouncilMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
-		RuntimeUpgrade: pallet_runtime_upgrade::{Module, Call, Event},
-		Validator: pallet_validator::{Module, Call, Storage, Event<T>},
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage},
+		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
+		ValidatorSet: validatorset::{Pallet, Call, Storage, Event<T>, Config<T>},
+		Aura: pallet_aura::{Pallet, Config<T>},
+		Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event},
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
+		Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
+		TfgridModule: pallet_tfgrid::{Pallet, Call, Config<T>, Storage, Event<T>},
+		SmartContractModule: pallet_smart_contract::{Pallet, Call, Storage, Event<T>},
+		TFTBridgeModule: pallet_tft_bridge::{Pallet, Call, Config<T>, Storage, Event<T>},
+		TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Config<T>, Event<T>},
+		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>},
+		// BurningModule: pallet_burning::{Pallet, Call, Storage, Event<T>},
+		TFKVStore: pallet_kvstore::{Pallet, Call, Storage, Event<T>},
+        Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		CouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
+		RuntimeUpgrade: pallet_runtime_upgrade::{Pallet, Call, Event},
+		Validator: pallet_validator::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -609,7 +609,7 @@ pub type Executive = frame_executive::Executive<
 	Block,
 	frame_system::ChainContext<Runtime>,
 	Runtime,
-	AllModules,
+	AllPallets,
 >;
 
 impl_runtime_apis! {

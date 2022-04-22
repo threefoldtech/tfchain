@@ -1,5 +1,5 @@
 use codec::{Decode, Encode};
-use frame_support::traits::Vec;
+use sp_std::prelude::*;
 use substrate_fixed::types::U64F64;
 
 use pallet_tfgrid::types;

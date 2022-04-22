@@ -512,7 +512,7 @@ decl_module! {
                 farming_policy_id = farming_policies[farming_policies.len() -1];
             }
 
-            let created = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+            let created = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
             let new_node = types::Node {
                 version: TFGRID_NODE_VERSION,
@@ -615,7 +615,7 @@ decl_module! {
 
             ensure!(Nodes::contains_key(node_id), Error::<T>::NodeNotExists);
 
-            let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+            let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
             Self::deposit_event(RawEvent::NodeUptimeReported(node_id, now, uptime));
 
@@ -1021,7 +1021,7 @@ decl_module! {
 
             let mut farming_policies = FarmingPolicies::get();
 
-            let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+            let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
             let new_policy = types::FarmingPolicy {
                 version: TFGRID_FARMING_POLICY_VERSION,
@@ -1060,7 +1060,7 @@ decl_module! {
         #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2)]
         pub fn user_accept_tc(origin, document_link: Vec<u8>, document_hash: Vec<u8>) -> dispatch::DispatchResult {
             let account_id = ensure_signed(origin)?;
-            let timestamp = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+            let timestamp = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
             let t_and_c = types::TermsAndConditions {
                 account_id: account_id.clone(),

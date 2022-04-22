@@ -4,7 +4,7 @@
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
 use frame_support::{
-    debug, decl_error, decl_event, decl_module, decl_storage,
+    decl_error, decl_event, decl_module, decl_storage,
     ensure,
     traits::{Get, EnsureOrigin}, 
     weights::{Pays},
@@ -14,6 +14,7 @@ use frame_system::{
     self as system, ensure_signed,
     offchain::{AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer},
 };
+use log;
 
 use sp_std::prelude::*;
 
@@ -135,8 +136,8 @@ decl_module! {
 
         fn offchain_worker(block_number: T::BlockNumber) {
             match Self::offchain_signed_tx(block_number) {
-                Ok(_) => debug::info!("offchain worker done."),
-                Err(err) => debug::info!("err: {:?}", err)
+                Ok(_) => log::info!("offchain worker done."),
+                Err(err) => log::info!("err: {:?}", err)
             }
         }
     }
@@ -152,18 +153,18 @@ struct PriceInfo {
 
 impl<T: Config> Module<T> {
     fn calculate_and_set_price(price: U16F16, block_number: T::BlockNumber) -> DispatchResultWithPostInfo {
-        debug::info!("price {:?}", price);
+        log::info!("price {:?}", price);
 
         LastBlockSet::<T>::put(block_number);
         TftPrice::put(price);
         Self::deposit_event(RawEvent::PriceStored(price));
 
-        debug::info!("storing average now");
+        log::info!("storing average now");
         let mut queue = Self::queue_transient();
         queue.push(ValueStruct { value: price });
         let average = Self::calc_avg();
 
-        debug::info!("average price {:?}", average);
+        log::info!("average price {:?}", average);
         AverageTftPrice::put(average);
 
         Ok(Pays::No.into())
@@ -176,18 +177,18 @@ impl<T: Config> Module<T> {
         let request = http::Request::get("https://min-api.cryptocompare.com/data/price?fsym=3ft&tsyms=USD");
 
         let pending = request.deadline(deadline).send().map_err(|_| {
-            debug::error!("IO error");
+            log::error!("IO error");
             http::Error::IoError
         })?;
 
         let response = pending.try_wait(deadline).map_err(|_| {
-            debug::error!("Deadline reached");
+            log::error!("Deadline reached");
             http::Error::DeadlineReached
         })??;
 
         // Let's check the status code before we proceed to reading the response.
         if response.code != 200 {
-            debug::error!("Unexpected status code: {}", response.code);
+            log::error!("Unexpected status code: {}", response.code);
             return Err(http::Error::Unknown);
         }
 
@@ -195,12 +196,12 @@ impl<T: Config> Module<T> {
 
         // Create a str slice from the body.
         let body_str = sp_std::str::from_utf8(&body).map_err(|_| {
-            debug::error!("No UTF8 body");
+            log::error!("No UTF8 body");
             http::Error::Unknown
         })?;
 
         let price_info: PriceInfo = serde_json::from_str(&body_str).map_err(|_| {
-            debug::error!("Error while decoding");
+            log::error!("Error while decoding");
             http::Error::Unknown
         })?;
 
@@ -216,7 +217,7 @@ impl<T: Config> Module<T> {
         let price = match Self::fetch_price() {
             Ok(v) => v,
             Err(err) => {
-                debug::error!("err while fetching price: {:?}", err);
+                log::error!("err while fetching price: {:?}", err);
                 return Err(<Error<T>>::ErrFetchingPrice);
             }
         };
@@ -232,14 +233,14 @@ impl<T: Config> Module<T> {
         // Display error if the signed tx fails.
         if let Some((acc, res)) = result {
             if res.is_err() {
-                debug::error!("failure: offchain_signed_tx: tx sent: {:?}", acc.id);
+                log::error!("failure: offchain_signed_tx: tx sent: {:?}", acc.id);
                 return Err(<Error<T>>::OffchainSignedTxError);
             }
             // Transaction is sent successfully
             return Ok(());
         }
         // The case of `None`: no account is available for sending
-        debug::error!("No local account available");
+        log::error!("No local account available");
         return Err(<Error<T>>::OffchainSignedTxError);
     }
 
