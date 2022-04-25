@@ -91,6 +91,9 @@ pub type Hash = sp_core::H256;
 /// Digest item type.
 pub type DigestItem = generic::DigestItem<Hash>;
 
+mod migrations;
+use self::migrations::*;
+
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
@@ -137,7 +140,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("substrate-threefold"),
 	impl_name: create_runtime_str!("substrate-threefold"),
 	authoring_version: 1,
-	spec_version: 55,
+	spec_version: 100,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 2,
@@ -625,6 +628,9 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPallets,
+	(
+		SystemToDualRefCount,
+	)
 >;
 
 impl_runtime_apis! {
