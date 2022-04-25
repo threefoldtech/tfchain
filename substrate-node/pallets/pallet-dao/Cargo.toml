@@ -1,0 +1,55 @@
+[package]
+name = "pallet-dao"
+version = "3.0.0"
+description = "FRAME pallet template for defining custom runtime logic."
+authors = ["Substrate DevHub <https://github.com/substrate-developer-hub>"]
+homepage = "https://substrate.io/"
+edition = "2018"
+license = "Unlicense"
+publish = false
+repository = "https://github.com/substrate-developer-hub/substrate-node-template/"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+# alias "parity-scale-code" to "codec"
+[dependencies.codec]
+default-features = false
+features = ['derive']
+package = 'parity-scale-codec'
+version = '2.0.0'
+
+[dependencies]
+frame-support = { default-features = false, version = "3.0.0" }
+frame-system = { default-features = false, version = "3.0.0"  }
+frame-benchmarking = { default-features = false, version = "3.0.0" , optional = true }
+pallet-membership = { version = "3.0.0", default-features = false }
+sp-runtime = { default-features = false, version = "3.0.0" }
+sp-std = { default-features = false, version = "3.0.0" }
+
+[dev-dependencies]
+sp-core = { default-features = false, version = "3.0.0" }
+sp-io = { default-features = false, version = "3.0.0" }
+
+[dependencies.pallet-tfgrid]
+default-features = false
+path = "../pallet-tfgrid"
+
+[features]
+default = ["std"]
+std = [
+	"codec/std",
+	"frame-support/std",
+	"frame-system/std",
+	"frame-benchmarking/std",
+	"sp-runtime/std",
+	"sp-std/std",
+	"pallet-membership/std",
+	"pallet-tfgrid/std"
+]
+
+runtime-benchmarks = [
+	"frame-benchmarking",
+	"frame-support/runtime-benchmarks",
+	"frame-system/runtime-benchmarks",
+]

@@ -64,6 +64,8 @@ pub use pallet_runtime_upgrade;
 
 pub use pallet_validator;
 
+pub use template;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -364,6 +366,10 @@ impl validatorset::Config for Runtime {
 	type AddRemoveOrigin = EnsureRootOrCouncilApproval;
 }
 
+impl pallet_dao::Config for Runtime {
+	type Event = Event;
+}
+
 /// Special `FullIdentificationOf` implementation that is returning for every input `Some(Default::default())`.
 pub struct FullIdentificationOf;
 impl sp_runtime::traits::Convert<AccountId, Option<()>> for FullIdentificationOf {
@@ -576,6 +582,7 @@ construct_runtime!(
 		CouncilMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
 		RuntimeUpgrade: pallet_runtime_upgrade::{Module, Call, Event},
 		Validator: pallet_validator::{Module, Call, Storage, Event<T>},
+		Dao: pallet_dao::{Module, Call, Storage, Event<T>},
 	}
 );
 

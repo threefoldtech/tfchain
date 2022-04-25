@@ -60,6 +60,10 @@ path = "../pallets/substrate-validator-set"
 default-features = false
 path = "../pallets/pallet-validator"
 
+[dependencies.pallet-dao]
+default-features = false
+path = "../pallets/pallet-dao"
+
 [dependencies]
 hex-literal = { optional = true, version = '0.3.1' }
 serde = { features = ['derive'], optional = true, version = '1.0.119' }
@@ -153,5 +157,6 @@ std = [
     'pallet-collective/std',
     'pallet-membership/std',
     'pallet-authorship/std',
-    'pallet-validator/std'
+    'pallet-validator/std',
+    'pallet-dao/std'
 ]
