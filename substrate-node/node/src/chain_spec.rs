@@ -1,8 +1,7 @@
 use sp_core::{Pair, Public, sr25519, ed25519};
 use tfchain_runtime::{
 	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig, CouncilConfig, CouncilMembershipConfig,
-	SudoConfig, SystemConfig, WASM_BINARY, Signature, TfgridModuleConfig, TFTBridgeModuleConfig, ValidatorSetConfig, SessionConfig,
-	TFTPriceModuleConfig
+	SudoConfig, SystemConfig, WASM_BINARY, Signature, ValidatorSetConfig, SessionConfig
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_finality_grandpa::AuthorityId as GrandpaId;
@@ -221,64 +220,64 @@ fn testnet_genesis(
 	tft_price_allowed_account: AccountId
 ) -> GenesisConfig {
 	GenesisConfig {
-		frame_system: SystemConfig {
+		system: SystemConfig {
 			// Add Wasm runtime to storage.
 			code: wasm_binary.to_vec(),
 			changes_trie_config: Default::default(),
 		},
-		pallet_balances: BalancesConfig {
+		balances: BalancesConfig {
 			// Configure endowed accounts with initial balance of 1 << 60.
 			balances: endowed_accounts.iter().cloned().map(|k|(k, 1 << 60)).collect(),
 		},
-		validatorset: ValidatorSetConfig {
+		validator_set: ValidatorSetConfig {
 			initial_validators: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 		},
-		pallet_session: SessionConfig {
+		session: SessionConfig {
 			keys: initial_authorities.iter().map(|x| {
 				(x.0.clone(), x.0.clone(), session_keys(x.1.clone(), x.2.clone()))
 			}).collect::<Vec<_>>(),
 		},
-		pallet_aura: AuraConfig {
+		aura: AuraConfig {
 			authorities: vec![],
 		},
-		pallet_grandpa: GrandpaConfig {
+		grandpa: GrandpaConfig {
 			authorities: vec![],
 		},
-		pallet_sudo: SudoConfig {
+		sudo: SudoConfig {
 			// Assign network admin rights.
 			key: root_key,
 		},
-		pallet_tfgrid: TfgridModuleConfig {
-			su_price_value: 300000,
-			su_price_unit: 4,
-			nu_price_value: 2000,
-			nu_price_unit: 4,
-			cu_price_value: 600000,
-			cu_price_unit: 4,
-			ipu_price_value: 100000,
-			ipu_price_unit: 4,
-			unique_name_price_value: 20000,
-			domain_name_price_value: 40000,
-			foundation_account,
-			sales_account,
-			farming_policy_diy_cu: 160000000,
-			farming_policy_diy_su: 100000000,
-			farming_policy_diy_nu: 2000000,
-			farming_policy_diy_ipu: 800000,
-			farming_policy_certified_cu: 200000000,
-			farming_policy_certified_su: 120000000,
-			farming_policy_certified_nu: 3000000,
-			farming_policy_certified_ipu: 1000000,
-			discount_for_dedication_nodes: 50,
-		},
-		pallet_tft_bridge: TFTBridgeModuleConfig{
-			validator_accounts: bridge_validator_accounts,
-			fee_account: bridge_fee_account,
-			deposit_fee: 10000000,
-			withdraw_fee: 10000000
-		},
-		pallet_collective_Instance1: CouncilConfig::default(),
-		pallet_membership_Instance1: CouncilMembershipConfig {
+		// pallet_tfgrid: TfgridModuleConfig {
+		// 	su_price_value: 300000,
+		// 	su_price_unit: 4,
+		// 	nu_price_value: 2000,
+		// 	nu_price_unit: 4,
+		// 	cu_price_value: 600000,
+		// 	cu_price_unit: 4,
+		// 	ipu_price_value: 100000,
+		// 	ipu_price_unit: 4,
+		// 	unique_name_price_value: 20000,
+		// 	domain_name_price_value: 40000,
+		// 	foundation_account,
+		// 	sales_account,
+		// 	farming_policy_diy_cu: 160000000,
+		// 	farming_policy_diy_su: 100000000,
+		// 	farming_policy_diy_nu: 2000000,
+		// 	farming_policy_diy_ipu: 800000,
+		// 	farming_policy_certified_cu: 200000000,
+		// 	farming_policy_certified_su: 120000000,
+		// 	farming_policy_certified_nu: 3000000,
+		// 	farming_policy_certified_ipu: 1000000,
+		// 	discount_for_dedication_nodes: 50,
+		// },
+		// pallet_tft_bridge: TFTBridgeModuleConfig{
+		// 	validator_accounts: bridge_validator_accounts,
+		// 	fee_account: bridge_fee_account,
+		// 	deposit_fee: 10000000,
+		// 	withdraw_fee: 10000000
+		// },
+		council: CouncilConfig::default(),
+		council_membership: CouncilMembershipConfig {
 			members: vec![
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -287,8 +286,8 @@ fn testnet_genesis(
 			phantom: Default::default(),
 		},
 		// just some default for development
-		pallet_tft_price: TFTPriceModuleConfig {
-			allowed_origin: tft_price_allowed_account
-		}
+		// pallet_tft_price: TFTPriceModuleConfig {
+		// 	allowed_origin: tft_price_allowed_account
+		// }
 	}
 }

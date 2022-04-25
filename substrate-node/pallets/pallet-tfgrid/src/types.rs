@@ -1,15 +1,21 @@
 use codec::{Decode, Encode};
-use sp_std::prelude::*;
+use scale_info::TypeInfo;
+use sp_std::vec::Vec;
+use frame_support::{
+	pallet_prelude::{BoundedVec, MaxEncodedLen},
+	traits::Get,
+};
+use sp_runtime::RuntimeDebug;
 
 /// Utility type for managing upgrades/migrations.
-#[derive(Encode, Decode, Clone, Debug, PartialEq)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, TypeInfo)]
 pub enum StorageVersion {
     V1Struct,
     V2Struct,
     V3Struct,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug, Encode, Decode, Default)]
+#[derive(Encode, Decode, Default, PartialEq, Eq, TypeInfo, Clone)]
 pub struct Entity<AccountId> {
     pub version: u32,
     pub id: u32,
@@ -20,7 +26,7 @@ pub struct Entity<AccountId> {
 }
 
 //digital twin
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(Clone, Encode, Decode, Eq, PartialEq, Default, TypeInfo, RuntimeDebug)]
 pub struct Twin<AccountId> {
     pub version: u32,
     pub id: u32,
@@ -32,7 +38,7 @@ pub struct Twin<AccountId> {
     pub entities: Vec<EntityProof>,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct Farm {
     pub version: u32,
     pub id: u32,
@@ -44,7 +50,7 @@ pub struct Farm {
     pub dedicated_farm: bool
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct Node {
     pub version: u32,
     pub id: u32,
@@ -67,21 +73,21 @@ pub struct Node {
 
 pub type IP = Vec<u8>;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct Interface {
     pub name: Vec<u8>,
     pub mac: Vec<u8>,
     pub ips: Vec<IP>,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct PublicIP {
     pub ip: Vec<u8>,
     pub gateway: Vec<u8>,
     pub contract_id: u64,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct PublicConfig {
     pub ipv4: Vec<u8>,
     pub ipv6: Vec<u8>,
@@ -90,7 +96,7 @@ pub struct PublicConfig {
     pub domain: Vec<u8>,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct Gateway<AccountId> {
     pub version: u32,
     pub id: u32,
@@ -102,13 +108,13 @@ pub struct Gateway<AccountId> {
     pub account_id: AccountId,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct EntityProof {
     pub entity_id: u32,
     pub signature: Vec<u8>,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, Copy)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, Copy, TypeInfo)]
 pub struct Resources {
     pub hru: u64,
     pub sru: u64,
@@ -127,13 +133,13 @@ impl Resources {
 }
 
 // Store Location long and lat as string
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct Location {
     pub longitude: Vec<u8>,
     pub latitude: Vec<u8>,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct PricingPolicy<AccountId> {
     pub version: u32,
     pub id: u32,
@@ -149,7 +155,7 @@ pub struct PricingPolicy<AccountId> {
     pub discount_for_dedication_nodes: u8
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct Policy {
     pub value: u32,
     pub unit: Unit,
@@ -167,7 +173,7 @@ impl Policy {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
 pub enum Unit {
     Bytes,
     Kilobytes,
@@ -195,7 +201,7 @@ impl Default for Unit {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct CertificationCodes {
     pub version: u32,
     pub id: u32,
@@ -204,7 +210,7 @@ pub struct CertificationCodes {
     pub certification_code_type: CertificationCodeType,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
 pub enum CertificationCodeType {
     Farm,
     Entity,
@@ -216,7 +222,7 @@ impl Default for CertificationCodeType {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, Copy)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, Copy, TypeInfo)]
 pub enum CertificationType {
     Diy,
     Certified,
@@ -228,7 +234,7 @@ impl Default for CertificationType {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct FarmingPolicy {
     pub version: u32,
     pub id: u32,
@@ -241,10 +247,10 @@ pub struct FarmingPolicy {
     pub certification_type: CertificationType,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct TermsAndConditions<AccountId> {
     pub account_id: AccountId,
     pub timestamp: u64,
     pub document_link: Vec<u8>,
-    pub document_hash: Vec<u8>
+    pub document_hash: Vec<u8>,
 }

@@ -273,7 +273,7 @@ impl<T: Config> EstimateNextSessionRotation<T::BlockNumber> for Pallet<T> {
 
 	fn estimate_current_session_progress(
 		_now: T::BlockNumber,
-	) -> (Option<sp_runtime::Percent>, frame_support::dispatch::Weight) {
+	) -> (Option<sp_runtime::Permill>, frame_support::dispatch::Weight) {
 		(None, Zero::zero())
 	}
 
