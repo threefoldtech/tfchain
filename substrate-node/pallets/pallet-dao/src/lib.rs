@@ -47,7 +47,7 @@ pub mod pallet {
 		type CouncilOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
 		/// The outer call dispatch type.
-		type ProposalCall: Parameter
+		type Proposal: Parameter
 			+ Dispatchable<Origin = Self::Origin, PostInfo = PostDispatchInfo>
 			+ From<frame_system::Call<Self>>
 			+ GetDispatchInfo;
@@ -76,13 +76,13 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn proposal_list)]
 	pub type Proposals<T: Config> =
-		StorageMap<_, Identity, T::Hash, proposal::Proposal<ProposalIndex>, OptionQuery>;
+		StorageMap<_, Identity, T::Hash, proposal::DaoProposal<ProposalIndex>, OptionQuery>;
 
 	// Actual proposal for a given hash, if it's current.
 	#[pallet::storage]
 	#[pallet::getter(fn proposal_of)]
 	pub type ProposalOf<T: Config> =
-		StorageMap<_, Identity, T::Hash, <T as Config>::ProposalCall, OptionQuery>;
+		StorageMap<_, Identity, T::Hash, <T as Config>::Proposal, OptionQuery>;
 
 	/// Votes on a given proposal, if it is ongoing.
 	#[pallet::storage]
@@ -146,7 +146,7 @@ pub mod pallet {
 		pub fn propose(
 			origin: OriginFor<T>,
 			#[pallet::compact] threshold: u32,
-			action: Box<<T as Config>::ProposalCall>,
+			action: Box<<T as Config>::Proposal>,
 			description: Vec<u8>,
 			link: Vec<u8>,
 			#[pallet::compact] length_bound: u32,
@@ -168,7 +168,7 @@ pub mod pallet {
 			<ProposalCount<T>>::mutate(|i| *i += 1);
 			<ProposalOf<T>>::insert(proposal_hash, *action);
 			
-			let p = proposal::Proposal {
+			let p = proposal::DaoProposal {
 				index,
 				description,
 				link
@@ -369,7 +369,7 @@ impl<T: Config> Pallet<T> {
 		hash: &T::Hash,
 		length_bound: u32,
 		weight_bound: Weight,
-	) -> Result<<T as Config>::ProposalCall, DispatchError> {
+	) -> Result<<T as Config>::Proposal, DispatchError> {
 		let key = ProposalOf::<T>::hashed_key_for(hash);
 		// read the length of the proposal storage entry directly
 		let proposal_len =
@@ -398,7 +398,7 @@ impl<T: Config> Pallet<T> {
 	fn do_approve_proposal(
 		yes_votes: u32,
 		proposal_hash: T::Hash,
-		proposal: <T as Config>::ProposalCall,
+		proposal: <T as Config>::Proposal,
 	) -> Weight {
 		Self::deposit_event(Event::Approved { proposal_hash });
 

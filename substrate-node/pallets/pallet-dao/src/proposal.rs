@@ -2,7 +2,7 @@ use codec::{Decode, Encode};
 use frame_support::traits::Vec;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug, Encode, Decode, Default)]
-pub struct Proposal<ProposalIndex> {
+pub struct DaoProposal<ProposalIndex> {
     pub index: ProposalIndex,
     pub description: Vec<u8>,
     pub link: Vec<u8>,

@@ -374,7 +374,7 @@ parameter_types! {
 impl pallet_dao::Config for Runtime {
 	type Event = Event;
 	type CouncilOrigin = EnsureRootOrCouncilApproval;
-	type ProposalCall = Call;
+	type Proposal = Call;
 	type MotionDuration = DaoMotionDuration;
 	type MaxProposals = DaoMaxProposals;
 }
