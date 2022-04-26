@@ -2,17 +2,23 @@ use codec::{Decode, Encode};
 use frame_support::traits::Vec;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug, Encode, Decode, Default)]
-pub struct Proposal<P> {
-    pub action: Option<P>,
-    pub description: Option<Vec<u8>>,
-    pub link: Option<Vec<u8>>,
+pub struct Proposal<ProposalIndex> {
+    pub index: ProposalIndex,
+    pub description: Vec<u8>,
+    pub link: Vec<u8>,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug, Encode, Decode, Default)]
 pub struct Votes<ProposalIndex, AccountId, BlockNumber> {
     pub index: ProposalIndex,
-    pub treshold: u32,
-    pub ayes: Vec<AccountId>,
-    pub nays: Vec<AccountId>,
+    pub threshold: u32,
+    pub ayes: Vec<VoteWeight<AccountId>>,
+    pub nays: Vec<VoteWeight<AccountId>>,
     pub end: BlockNumber
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug, Encode, Decode, Default)]
+pub struct VoteWeight<AccountId> {
+    pub who: AccountId,
+    pub weight: u32,
 }

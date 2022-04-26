@@ -3719,6 +3719,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-dao"
+version = "3.0.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-membership",
+ "pallet-tfgrid",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-grandpa"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7326,22 +7342,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "template"
-version = "3.0.0"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "pallet-membership",
- "pallet-tfgrid",
- "parity-scale-codec",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "termcolor"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7413,6 +7413,7 @@ dependencies = [
  "pallet-balances",
  "pallet-burning",
  "pallet-collective",
+ "pallet-dao",
  "pallet-grandpa",
  "pallet-kvstore",
  "pallet-membership",
@@ -7446,7 +7447,6 @@ dependencies = [
  "sp-version",
  "substrate-validator-set",
  "substrate-wasm-builder",
- "template",
 ]
 
 [[package]]

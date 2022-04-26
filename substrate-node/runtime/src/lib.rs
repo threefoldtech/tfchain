@@ -64,7 +64,7 @@ pub use pallet_runtime_upgrade;
 
 pub use pallet_validator;
 
-pub use template;
+pub use pallet_dao;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -366,8 +366,17 @@ impl validatorset::Config for Runtime {
 	type AddRemoveOrigin = EnsureRootOrCouncilApproval;
 }
 
+parameter_types! {
+	pub const DaoMotionDuration: BlockNumber = 7 * DAYS;
+	pub const DaoMaxProposals: u32 = 100;
+}
+
 impl pallet_dao::Config for Runtime {
 	type Event = Event;
+	type CouncilOrigin = EnsureRootOrCouncilApproval;
+	type ProposalCall = Call;
+	type MotionDuration = DaoMotionDuration;
+	type MaxProposals = DaoMaxProposals;
 }
 
 /// Special `FullIdentificationOf` implementation that is returning for every input `Some(Default::default())`.
