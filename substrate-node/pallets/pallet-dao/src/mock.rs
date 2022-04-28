@@ -140,5 +140,30 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	};
     genesis.assimilate_storage(&mut t).unwrap();
 
+	let genesis = pallet_tfgrid::GenesisConfig::<Test> {
+		su_price_value: 300000,
+		su_price_unit: 4,
+		nu_price_value: 2000,
+		nu_price_unit: 4,
+		cu_price_value: 600000,
+		cu_price_unit: 4,
+		ipu_price_value: 100000,
+		ipu_price_unit: 4,
+		unique_name_price_value: 20000,
+		domain_name_price_value: 40000,
+		foundation_account: 101,
+		sales_account: 100,
+		farming_policy_diy_cu: 160000000,
+		farming_policy_diy_su: 100000000,
+		farming_policy_diy_nu: 2000000,
+		farming_policy_diy_ipu: 800000,
+		farming_policy_certified_cu: 200000000,
+		farming_policy_certified_su: 120000000,
+		farming_policy_certified_nu: 3000000,
+		farming_policy_certified_ipu: 1000000,
+		discount_for_dedication_nodes: 50,
+	};
+    genesis.assimilate_storage(&mut t).unwrap();
+
     t.into()
 }
