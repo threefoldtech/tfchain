@@ -273,8 +273,8 @@ pub mod pallet {
 			let voting = Self::voting(&proposal_hash).ok_or(Error::<T>::ProposalMissing)?;
 			ensure!(voting.index == proposal_index, Error::<T>::WrongIndex);
 
-			let mut no_votes = voting.nays.len() as u32;
-			let mut yes_votes = voting.ayes.len() as u32;
+			let no_votes = voting.nays.len() as u32;
+			let yes_votes = voting.ayes.len() as u32;
 			// let seats = Self::members().len() as u32;
 
 			let total_aye_weight: u32 = voting.ayes.iter().map(|y| Self::get_vote_weight(&y.who)).sum();
@@ -292,8 +292,8 @@ pub mod pallet {
 					proposal_weight_bound,
 				)?;
 				Self::deposit_event(Event::Closed { proposal_hash, yes: yes_votes, no: no_votes });
-				let proposal_weight =
-					Self::do_approve_proposal(yes_votes, proposal_hash, proposal);
+				let _proposal_weight =
+					Self::do_approve_proposal(proposal_hash, proposal);
 				return Ok(Pays::No.into())
 			} else if disapproved {
 				Self::deposit_event(Event::Closed { proposal_hash, yes: yes_votes, no: no_votes });
@@ -396,7 +396,6 @@ impl<T: Config> Pallet<T> {
 	/// Computation and i/o `O(P)` where:
 	/// - `P` is number of active proposals
 	fn do_approve_proposal(
-		yes_votes: u32,
 		proposal_hash: T::Hash,
 		proposal: <T as Config>::Proposal,
 	) -> Weight {
