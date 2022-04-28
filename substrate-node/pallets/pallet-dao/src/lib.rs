@@ -139,7 +139,8 @@ pub mod pallet {
 		WrongIndex,
 		DuplicateVote,
 		WrongProposalWeight,
-		TooEarly
+		TooEarly,
+		TimeLimitReached,
 	}
 
 	#[pallet::call]
@@ -218,6 +219,12 @@ pub mod pallet {
 			let mut voting = Self::voting(proposal_hash).ok_or(Error::<T>::ProposalMissing)?;
 			ensure!(voting.index == stored_proposal.index, Error::<T>::WrongIndex);
 
+			// Don't allow votes after the time limit reached
+			ensure!(
+				frame_system::Pallet::<T>::block_number() <= voting.end,
+				Error::<T>::TimeLimitReached
+			);
+
 			let position_yes = voting.ayes.iter().position(|a| a.who == who);
 			let position_no = voting.nays.iter().position(|a| a.who == who);
 
@@ -281,41 +288,20 @@ pub mod pallet {
 
 			let voting = Self::voting(&proposal_hash).ok_or(Error::<T>::ProposalMissing)?;
 			ensure!(voting.index == proposal_index, Error::<T>::WrongIndex);
-
-			let no_votes = voting.nays.len() as u32;
-			let yes_votes = voting.ayes.len() as u32;
-			// let seats = Self::members().len() as u32;
-
-			let total_aye_weight: u32 = voting.ayes.iter().map(|y| Self::get_vote_weight(&y.who)).sum();
-			let total_naye_weight: u32 = voting.nays.iter().map(|y| Self::get_vote_weight(&y.who)).sum();
-
-			let approved = total_aye_weight >= voting.threshold;
-			let disapproved = total_naye_weight >= voting.threshold;
-			// let approved = yes_votes >= voting.threshold;
-			// let disapproved = seats.saturating_sub(no_votes) < voting.threshold;
-			// Allow (dis-)approving the proposal as soon as there are enough votes.
-			if approved {
-				let proposal = Self::validate_and_get_proposal(
-					&proposal_hash,
-					length_bound,
-					proposal_weight_bound,
-				)?;
-				Self::deposit_event(Event::Closed { proposal_hash, yes: yes_votes, no: no_votes });
-				let _proposal_weight =
-					Self::do_approve_proposal(proposal_hash, proposal);
-				return Ok(Pays::No.into())
-			} else if disapproved {
-				Self::deposit_event(Event::Closed { proposal_hash, yes: yes_votes, no: no_votes });
-				Self::do_disapprove_proposal(proposal_hash);
-				return Ok(Pays::No.into())
-			}
-
+			
 			// Only allow actual closing of the proposal after the voting period has ended.
 			ensure!(
 				frame_system::Pallet::<T>::block_number() >= voting.end,
 				Error::<T>::TooEarly
 			);
 
+			let no_votes = voting.nays.len() as u32;
+			let yes_votes = voting.ayes.len() as u32;
+
+			let total_aye_weight: u32 = voting.ayes.iter().map(|y| Self::get_vote_weight(&y.who)).sum();
+
+			let approved = total_aye_weight >= voting.threshold;
+
 			if approved {
 				let proposal = Self::validate_and_get_proposal(
 					&proposal_hash,
@@ -325,12 +311,12 @@ pub mod pallet {
 				Self::deposit_event(Event::Closed { proposal_hash, yes: yes_votes, no: no_votes });
 				let _proposal_weight =
 					Self::do_approve_proposal(proposal_hash, proposal);
-				return Ok(Pays::Yes.into())
-			} else {
-				Self::deposit_event(Event::Closed { proposal_hash, yes: yes_votes, no: no_votes });
-				Self::do_disapprove_proposal(proposal_hash);
 				return Ok(Pays::No.into())
 			}
+
+			Self::deposit_event(Event::Closed { proposal_hash, yes: yes_votes, no: no_votes });
+			Self::do_disapprove_proposal(proposal_hash);
+			return Ok(Pays::No.into())
 		}
 	}
 }
@@ -347,6 +333,8 @@ fn get_result_weight(result: DispatchResultWithPostInfo) -> Option<Weight> {
 
 impl<T: Config> Pallet<T> {
 	pub fn get_vote_weight(_who: &T::AccountId) -> u32 {
+		// TODO
+		// Get weight based on the amount of CU/SU the farmer has for all his nodes combined
 		1
 	}
 

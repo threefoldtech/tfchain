@@ -44,6 +44,7 @@ fn it_works_for_default_value() {
 #[test]
 fn farmers_vote_proposal_works() {
 	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
 		let proposal = make_proposal("some_remark".as_bytes().to_vec());
 		let proposal_len: u32 = proposal.using_encoded(|p| p.len() as u32);
 		let _proposal_weight = proposal.get_dispatch_info().weight;
@@ -214,7 +215,7 @@ fn motion_approval_works() {
 		let f1 = TfgridModule::farms(1);
 		assert_eq!(f1.certification_type, pallet_tfgrid_types::CertificationType::Diy);
 
-		// System::set_block_number(5);
+		System::set_block_number(5);
 		assert_ok!(DaoModule::close(Origin::signed(4), hash.clone(), 0, proposal_weight, proposal_len));
 
 		let e = System::events();
