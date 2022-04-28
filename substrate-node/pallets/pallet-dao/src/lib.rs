@@ -316,13 +316,6 @@ pub mod pallet {
 				Error::<T>::TooEarly
 			);
 
-			// let abstentions = seats - (yes_votes + no_votes);
-			// match default {
-			// 	true => yes_votes += abstentions,
-			// 	false => no_votes += abstentions,
-			// }
-			// let approved = yes_votes >= voting.threshold;
-
 			if approved {
 				let proposal = Self::validate_and_get_proposal(
 					&proposal_hash,

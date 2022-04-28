@@ -166,6 +166,102 @@ fn close_works() {
 	});
 }
 
+
+#[test]
+fn motion_approval_works() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_farm_certification(
+			1,
+			pallet_tfgrid_types::CertificationType::Certified
+		));
+		let proposal_len: u32 = proposal.using_encoded(|p| p.len() as u32);
+		let proposal_weight = proposal.get_dispatch_info().weight;
+		let hash = BlakeTwo256::hash_of(&proposal);
+
+		assert_ok!(DaoModule::propose(
+			Origin::signed(1),
+			2,
+			Box::new(proposal.clone()),
+			"some_description".as_bytes().to_vec(),
+			"some_link".as_bytes().to_vec(),
+			proposal_len
+		));
+
+		// Farmer 1 votes yes
+		prepare_twin_farm_and_node(10, "f1".as_bytes().to_vec(), 1);
+		assert_ok!(
+			DaoModule::vote(
+				Origin::signed(10),
+				1,
+				hash.clone(),
+				true
+			)
+		);
+
+		// Farmer 2 votes yes
+		prepare_twin_farm_and_node(11, "f2".as_bytes().to_vec(), 2);
+		assert_ok!(
+			DaoModule::vote(
+				Origin::signed(11),
+				2,
+				hash.clone(),
+				true
+			)
+		);
+
+		// Check farm certification type before we close
+		let f1 = TfgridModule::farms(1);
+		assert_eq!(f1.certification_type, pallet_tfgrid_types::CertificationType::Diy);
+
+		// System::set_block_number(5);
+		assert_ok!(DaoModule::close(Origin::signed(4), hash.clone(), 0, proposal_weight, proposal_len));
+
+		let e = System::events();
+		assert_eq!(e[0], record(MockEvent::pallet_dao(DaoEvent::Proposed {
+			account: 1,
+			proposal_index: 0,
+			proposal_hash: hash,
+			threshold: 2
+		})));
+
+		assert_eq!(e[4], record(MockEvent::pallet_dao(DaoEvent::Voted {
+			account: 10,
+			proposal_hash: hash,
+			voted: true,
+			yes: 1,
+			no: 0
+		})));
+
+		assert_eq!(e[8], record(MockEvent::pallet_dao(DaoEvent::Voted {
+			account: 11,
+			proposal_hash: hash,
+			voted: true,
+			yes: 2,
+			no: 0
+		})));
+
+		assert_eq!(e[9], record(MockEvent::pallet_dao(DaoEvent::Closed {
+			proposal_hash: hash,
+			yes: 2,
+			no: 0
+		})));
+
+		assert_eq!(e[10], record(MockEvent::pallet_dao(DaoEvent::Approved {
+			proposal_hash: hash,
+		})));
+
+		assert_eq!(e[11], record(MockEvent::pallet_dao(DaoEvent::Executed {
+			proposal_hash: hash,
+			result: Ok(())
+		})));
+
+		// Certification type of farm should be set to certified.
+		let f1 = TfgridModule::farms(1);
+		assert_eq!(f1.certification_type, pallet_tfgrid_types::CertificationType::Certified);
+	});
+}
+
 fn record(event: Event) -> EventRecord<Event, H256> {
 	EventRecord { phase: Phase::Initialization, event, topics: vec![] }
 }
