@@ -60,18 +60,11 @@ impl system::Config for Test {
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
-	// type OnSetCode = ();
-	// type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
-// Time is measured by number of blocks.
-pub const MILLISECS_PER_BLOCK: u64 = 6000;
-pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
-pub const HOURS: BlockNumber = MINUTES * 60;
-pub const DAYS: BlockNumber = HOURS * 24;
 pub type BlockNumber = u32;
 parameter_types! {
-	pub const DaoMotionDuration: BlockNumber = 7 * DAYS;
+	pub const DaoMotionDuration: BlockNumber = 4;
 	pub const DaoMaxProposals: u32 = 100;
 }
 
@@ -97,12 +90,12 @@ impl pallet_timestamp::Config for Test {
 }
 
 parameter_types! {
-	pub const CouncilMotionDuration: BlockNumber = 7 * DAYS;
+	pub const CouncilMotionDuration: BlockNumber = 4;
 	pub const CouncilMaxProposals: u32 = 100;
 	pub const CouncilMaxMembers: u32 = 100;
 }
 
-type CouncilCollective = pallet_collective::Instance1;
+pub type CouncilCollective = pallet_collective::Instance1;
 impl pallet_collective::Config<CouncilCollective> for Test {
 	type Origin = Origin;
 	type Proposal = Call;

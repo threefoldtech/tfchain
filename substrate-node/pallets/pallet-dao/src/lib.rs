@@ -109,6 +109,7 @@ pub mod pallet {
 		/// `MemberCount`).
 		Proposed {
 			account: T::AccountId,
+			proposal_index: ProposalIndex,
 			proposal_hash: T::Hash,
 			threshold: u32,
 		},
@@ -137,7 +138,8 @@ pub mod pallet {
 		ProposalMissing,
 		WrongIndex,
 		DuplicateVote,
-		WrongProposalWeight
+		WrongProposalWeight,
+		TooEarly
 	}
 
 	#[pallet::call]
@@ -184,6 +186,13 @@ pub mod pallet {
 			let mut active_proposal_hashes = <ProposalList<T>>::get();
 			active_proposal_hashes.push(proposal_hash);
 			<ProposalList<T>>::set(active_proposal_hashes);
+
+			Self::deposit_event(Event::Proposed {
+				account: who,
+				proposal_index: index,
+				proposal_hash,
+				threshold,
+			});
 
 			Ok(().into())
 		}
@@ -301,16 +310,11 @@ pub mod pallet {
 				return Ok(Pays::No.into())
 			}
 
-			// // Only allow actual closing of the proposal after the voting period has ended.
-			// ensure!(
-			// 	frame_system::Pallet::<T>::block_number() >= voting.end,
-			// 	Error::<T>::TooEarly
-			// );
-
-			// let prime_vote = Self::prime().map(|who| voting.ayes.iter().any(|a| a == &who));
-
-			// // default voting strategy.
-			// let default = T::DefaultVote::default_vote(prime_vote, yes_votes, no_votes, seats);
+			// Only allow actual closing of the proposal after the voting period has ended.
+			ensure!(
+				frame_system::Pallet::<T>::block_number() >= voting.end,
+				Error::<T>::TooEarly
+			);
 
 			// let abstentions = seats - (yes_votes + no_votes);
 			// match default {
@@ -319,29 +323,21 @@ pub mod pallet {
 			// }
 			// let approved = yes_votes >= voting.threshold;
 
-			// if approved {
-			// 	let (proposal, len) = Self::validate_and_get_proposal(
-			// 		&proposal_hash,
-			// 		length_bound,
-			// 		proposal_weight_bound,
-			// 	)?;
-			// 	Self::deposit_event(Event::Closed { proposal_hash, yes: yes_votes, no: no_votes });
-			// 	let (proposal_weight, proposal_count) =
-			// 		Self::do_approve_proposal(seats, yes_votes, proposal_hash, proposal);
-			// 	Ok((
-			// 		Some(
-			// 			T::WeightInfo::close_approved(len as u32, seats, proposal_count)
-			// 				.saturating_add(proposal_weight),
-			// 		),
-			// 		Pays::Yes,
-			// 	)
-			// 		.into())
-			// } else {
-			// 	Self::deposit_event(Event::Closed { proposal_hash, yes: yes_votes, no: no_votes });
-			// 	let proposal_count = Self::do_disapprove_proposal(proposal_hash);
-			// 	Ok((Some(T::WeightInfo::close_disapproved(seats, proposal_count)), Pays::No).into())
-			// }
-			Ok(().into())
+			if approved {
+				let proposal = Self::validate_and_get_proposal(
+					&proposal_hash,
+					length_bound,
+					proposal_weight_bound,
+				)?;
+				Self::deposit_event(Event::Closed { proposal_hash, yes: yes_votes, no: no_votes });
+				let _proposal_weight =
+					Self::do_approve_proposal(proposal_hash, proposal);
+				return Ok(Pays::Yes.into())
+			} else {
+				Self::deposit_event(Event::Closed { proposal_hash, yes: yes_votes, no: no_votes });
+				Self::do_disapprove_proposal(proposal_hash);
+				return Ok(Pays::No.into())
+			}
 		}
 	}
 }
