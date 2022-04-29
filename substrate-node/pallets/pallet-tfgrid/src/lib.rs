@@ -45,7 +45,7 @@ pub trait Config: system::Config + timestamp::Config {
 pub const TFGRID_ENTITY_VERSION: u32 = 1;
 pub const TFGRID_FARM_VERSION: u32 = 2;
 pub const TFGRID_TWIN_VERSION: u32 = 1;
-pub const TFGRID_NODE_VERSION: u32 = 3;
+pub const TFGRID_NODE_VERSION: u32 = 4;
 pub const TFGRID_PRICING_POLICY_VERSION: u32 = 2;
 pub const TFGRID_CERTIFICATION_CODE_VERSION: u32 = 1;
 pub const TFGRID_FARMING_POLICY_VERSION: u32 = 1;
@@ -78,6 +78,9 @@ decl_storage! {
         pub FarmingPolicyIDsByCertificationType get (fn farming_policies_by_certification_type): map hasher(blake2_128_concat) types::CertificationType => Vec<u32>;
 
         pub UsersTermsAndConditions get(fn users_terms_and_condition): map hasher(blake2_128_concat) T::AccountId => Vec<types::TermsAndConditions<T::AccountId>>;
+
+        // Connection price
+        pub ConnectionPrice: u32;
 
         // ID maps
         FarmID: u32;
@@ -117,6 +120,7 @@ decl_storage! {
         config(farming_policy_certified_su): u32;
         config(farming_policy_certified_ipu): u32;
 
+        config(connection_price): u32;
 
         build(|_config| {
             let foundation_account = _config.foundation_account.clone();
@@ -186,6 +190,10 @@ decl_storage! {
                 types::CertificationType::Certified,
             );
 
+            let _ = <Module<T>>::set_connection_price(
+                RawOrigin::Root.into(),
+                _config.connection_price
+            );
         });
     }
 
@@ -222,6 +230,7 @@ decl_event!(
         FarmingPolicyStored(types::FarmingPolicy),
         FarmPayoutV2AddressRegistered(u32, Vec<u8>),
         FarmMarkedAsDedicated(u32),
+        ConnectionPriceSet(u32),
     }
 );
 
@@ -284,7 +293,7 @@ decl_module! {
         fn deposit_event() = default;
 
         fn on_runtime_upgrade() -> frame_support::weights::Weight {
-			migration::add_node_ids_to_farm_id_map::<T>()
+			migration::add_node_ids_to_farm_id_map::<T>() + migration::add_connection_price_to_nodes::<T>()
 		}
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(1)]
@@ -537,7 +546,8 @@ decl_module! {
                 certification_type: types::CertificationType::default(),
                 secure_boot,
                 virtualized,
-                serial_number
+                serial_number,
+                connection_price: ConnectionPrice::get()
             };
 
             Nodes::insert(id, &new_node);
@@ -1133,6 +1143,17 @@ decl_module! {
             Farms::insert(farm_id, &farm);
 
             Self::deposit_event(RawEvent::FarmUpdated(farm));
+
+            Ok(())
+        }
+
+        #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2)]
+        pub fn set_connection_price(origin, price: u32) -> dispatch::DispatchResult {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+            
+            ConnectionPrice::set(price.clone());
+        
+            Self::deposit_event(RawEvent::ConnectionPriceSet(price));
 
             Ok(())
         }

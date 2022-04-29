@@ -8,6 +8,7 @@ pub enum StorageVersion {
     V2Struct,
     V3Struct,
     V4Struct,
+    V5Struct
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug, Encode, Decode, Default)]
@@ -64,6 +65,7 @@ pub struct Node {
     pub secure_boot: bool,
     pub virtualized: bool,
     pub serial_number: Vec<u8>,
+    pub connection_price: u32,
 }
 
 pub type IP = Vec<u8>;
