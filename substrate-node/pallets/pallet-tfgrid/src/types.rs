@@ -7,6 +7,7 @@ pub enum StorageVersion {
     V1Struct,
     V2Struct,
     V3Struct,
+    V4Struct,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug, Encode, Decode, Default)]

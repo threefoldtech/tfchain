@@ -28,6 +28,8 @@ pub mod weights;
 
 pub mod types;
 
+pub mod migration;
+
 pub use weights::WeightInfo;
 
 pub trait Config: system::Config + timestamp::Config {
@@ -57,6 +59,7 @@ decl_storage! {
 
         pub Nodes get(fn nodes): map hasher(blake2_128_concat) u32 => types::Node;
         pub NodeIdByTwinID get(fn node_by_twin_id): map hasher(blake2_128_concat) u32 => u32;
+        pub NodeIdsByFarmID get(fn node_ids_by_farm_id): map hasher(blake2_128_concat) u32 => Vec<u32>;
 
         pub Entities get(fn entities): map hasher(blake2_128_concat) u32 => types::Entity<T::AccountId>;
         pub EntityIdByAccountID get(fn entities_by_pubkey_id): map hasher(blake2_128_concat) T::AccountId => u32;
@@ -279,6 +282,10 @@ decl_module! {
         type Error = Error<T>;
 
         fn deposit_event() = default;
+
+        fn on_runtime_upgrade() -> frame_support::weights::Weight {
+			migration::add_node_ids_to_farm_id_map::<T>()
+		}
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(1)]
         pub fn set_storage_version(origin, version: types::StorageVersion) -> dispatch::DispatchResult {
@@ -536,6 +543,10 @@ decl_module! {
             Nodes::insert(id, &new_node);
             NodeID::put(id);
             NodeIdByTwinID::insert(twin_id, new_node.id);
+            
+            let mut node_ids_by_farm = NodeIdsByFarmID::get(farm_id);
+            node_ids_by_farm.push(id);
+            NodeIdsByFarmID::insert(farm_id, node_ids_by_farm);
 
             Self::deposit_event(RawEvent::NodeStored(new_node));
 
@@ -567,6 +578,18 @@ decl_module! {
             ensure!(Farms::contains_key(farm_id), Error::<T>::FarmNotExists);
 
             let mut stored_node = Nodes::get(node_id);
+
+            if stored_node.farm_id != farm_id {
+                // if the farm changed, remove the node id from previous farm map
+                let mut node_ids_by_farm = NodeIdsByFarmID::get(stored_node.farm_id);
+                node_ids_by_farm.retain(|&id| id != node_id);
+                NodeIdsByFarmID::insert(farm_id, node_ids_by_farm);
+
+                // insert in the new farm map
+                let mut node_ids_by_farm = NodeIdsByFarmID::get(farm_id);
+                node_ids_by_farm.push(node_id);
+                NodeIdsByFarmID::insert(farm_id, node_ids_by_farm);
+            }
 
             stored_node.farm_id = farm_id;
             stored_node.resources = resources;
