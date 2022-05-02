@@ -92,7 +92,7 @@ fn close_works() {
 
 		assert_ok!(DaoModule::propose(
 			Origin::signed(1),
-			3,
+			2,
 			Box::new(proposal.clone()),
 			"some_description".as_bytes().to_vec(),
 			"some_link".as_bytes().to_vec(),
@@ -135,7 +135,7 @@ fn close_works() {
 			account: 1,
 			proposal_index: 0,
 			proposal_hash: hash,
-			threshold: 3
+			threshold: 2
 		})));
 
 		assert_eq!(e[4], record(MockEvent::pallet_dao(DaoEvent::Voted {
@@ -160,8 +160,7 @@ fn close_works() {
 			no: 0
 		})));
 
-		// Needed 3 yes votes in order to pass
-		assert_eq!(e[10], record(MockEvent::pallet_dao(DaoEvent::Disapproved {
+		assert_eq!(e[10], record(MockEvent::pallet_dao(DaoEvent::Approved {
 			proposal_hash: hash,
 		})));
 	});

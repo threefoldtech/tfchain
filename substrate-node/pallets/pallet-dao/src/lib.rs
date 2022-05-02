@@ -13,6 +13,8 @@ use frame_support::{
 	},
 	weights::{GetDispatchInfo, Weight},
 };
+use pallet_tfgrid::types as pallet_tfgrid_types;
+use substrate_fixed::types::U64F64;
 
 pub use pallet::*;
 
@@ -141,6 +143,7 @@ pub mod pallet {
 		WrongProposalWeight,
 		TooEarly,
 		TimeLimitReached,
+		VoteThresholdNotMet
 	}
 
 	#[pallet::call]
@@ -235,7 +238,7 @@ pub mod pallet {
 				if position_yes.is_none() {
 					voting.ayes.push(proposal::VoteWeight{
 						who: who.clone(),
-						weight: Self::get_vote_weight(&who)
+						weight: Self::get_vote_weight(farm.id)
 					});
 				} else {
 					return Err(Error::<T>::DuplicateVote.into())
@@ -247,7 +250,7 @@ pub mod pallet {
 				if position_no.is_none() {
 					voting.nays.push(proposal::VoteWeight{
 						who: who.clone(),
-						weight: Self::get_vote_weight(&who)
+						weight: Self::get_vote_weight(farm.id)
 					});
 				} else {
 					return Err(Error::<T>::DuplicateVote.into())
@@ -298,9 +301,15 @@ pub mod pallet {
 			let no_votes = voting.nays.len() as u32;
 			let yes_votes = voting.ayes.len() as u32;
 
-			let total_aye_weight: u32 = voting.ayes.iter().map(|y| Self::get_vote_weight(&y.who)).sum();
+			ensure!(
+				(no_votes + yes_votes) >= voting.threshold,
+				Error::<T>::VoteThresholdNotMet
+			);
 
-			let approved = total_aye_weight >= voting.threshold;
+			let total_aye_weight: u64 = voting.ayes.iter().map(|y| y.weight).sum();
+			let total_naye_weight: u64 = voting.nays.iter().map(|y| y.weight).sum();
+
+			let approved = total_aye_weight > total_naye_weight;
 
 			if approved {
 				let proposal = Self::validate_and_get_proposal(
@@ -332,10 +341,21 @@ fn get_result_weight(result: DispatchResultWithPostInfo) -> Option<Weight> {
 }
 
 impl<T: Config> Pallet<T> {
-	pub fn get_vote_weight(_who: &T::AccountId) -> u32 {
-		// TODO
-		// Get weight based on the amount of CU/SU the farmer has for all his nodes combined
-		1
+	pub fn get_vote_weight(farm_id: u32) -> u64 {
+		let nodes_ids = pallet_tfgrid::Module::<T>::node_ids_by_farm_id(farm_id);
+		let farm = pallet_tfgrid::Module::<T>::farms(farm_id);
+		let pricing_policy = pallet_tfgrid::Module::<T>::pricing_policies(farm.pricing_policy_id);
+		let mut total_weight = 1;
+
+		for id in nodes_ids {
+			let node = pallet_tfgrid::Module::<T>::nodes(id);
+			let cu = Self::get_cu(node.resources, &pricing_policy);
+			let su = 0;
+
+			total_weight += 2*cu + su 
+		}
+
+		total_weight
 	}
 
 	/// Ensure that the right proposal bounds were passed and get the proposal from storage.
@@ -404,4 +424,47 @@ impl<T: Config> Pallet<T> {
 		ProposalOf::<T>::remove(&proposal_hash);
 		Voting::<T>::remove(&proposal_hash);
 	}
+
+	pub fn get_cu(resources: pallet_tfgrid_types::Resources, pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>) -> u64 {
+        let mru = U64F64::from_num(resources.mru) / pricing_policy.cu.factor();
+        let cru = U64F64::from_num(resources.cru);
+
+        let mru_used_1 = mru / 4;
+        let cru_used_1 = cru / 2;
+        let cu1 = if mru_used_1 > cru_used_1 {
+            mru_used_1
+        } else {
+            cru_used_1
+        };
+
+        let mru_used_2 = mru / 8;
+        let cru_used_2 = cru;
+        let cu2 = if mru_used_2 > cru_used_2 {
+            mru_used_2
+        } else {
+            cru_used_2
+        };
+
+        let mru_used_3 = mru / 2;
+        let cru_used_3 = cru / 4;
+        let cu3 = if mru_used_3 > cru_used_3 {
+            mru_used_3
+        } else {
+            cru_used_3
+        };
+
+        let mut cu = if cu1 > cu2 { cu2 } else { cu1 };
+
+        cu = if cu > cu3 { cu3 } else { cu };
+
+        cu.ceil().to_num::<u64>()
+    }
+
+	// fn get_su(hru: u64, sru: u64) -> u64 {
+	// 	let pricing_policy = pallet_tfgrid::Module::<T>::pricing_policies(1);
+	// 	let hru = hru as u128 / pricing_policy.su.factor();
+    //     let sru = sru as u128 / pricing_policy.su.factor();
+
+	// 	(hru / 1200 + sru / 200).try_into().unwrap_or(0)
+	// }
 }

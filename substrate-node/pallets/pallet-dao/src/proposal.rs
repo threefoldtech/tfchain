@@ -20,5 +20,5 @@ pub struct Votes<ProposalIndex, AccountId, BlockNumber> {
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug, Encode, Decode, Default)]
 pub struct VoteWeight<AccountId> {
     pub who: AccountId,
-    pub weight: u32,
+    pub weight: u64,
 }

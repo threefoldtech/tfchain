@@ -155,6 +155,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		farming_policy_certified_nu: 3000000,
 		farming_policy_certified_ipu: 1000000,
 		discount_for_dedication_nodes: 50,
+		connection_price: 80,
 	};
     genesis.assimilate_storage(&mut t).unwrap();
 
