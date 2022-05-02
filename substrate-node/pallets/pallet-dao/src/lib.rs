@@ -14,7 +14,6 @@ use frame_support::{
 	weights::{GetDispatchInfo, Weight},
 };
 use pallet_tfgrid::types as pallet_tfgrid_types;
-use substrate_fixed::types::U64F64;
 
 pub use pallet::*;
 
@@ -340,19 +339,22 @@ fn get_result_weight(result: DispatchResultWithPostInfo) -> Option<Weight> {
 	}
 }
 
+const ONE_THOUSAND: u128 = 1_000;
+const GIB: u128 = 1024 * 1024 * 1024;
+
 impl<T: Config> Pallet<T> {
 	pub fn get_vote_weight(farm_id: u32) -> u64 {
 		let nodes_ids = pallet_tfgrid::Module::<T>::node_ids_by_farm_id(farm_id);
-		let farm = pallet_tfgrid::Module::<T>::farms(farm_id);
-		let pricing_policy = pallet_tfgrid::Module::<T>::pricing_policies(farm.pricing_policy_id);
 		let mut total_weight = 1;
 
 		for id in nodes_ids {
 			let node = pallet_tfgrid::Module::<T>::nodes(id);
-			let cu = Self::get_cu(node.resources, &pricing_policy);
-			let su = 0;
-
-			total_weight += 2*cu + su 
+			let cu = Self::get_cu(node.resources);
+			let su = Self::get_su(node.resources);
+			
+			let calculated_cu = 2*(cu as u128 / GIB/ ONE_THOUSAND);
+			let calculated_su = su as u128 / ONE_THOUSAND;
+			total_weight += calculated_cu as u64 + calculated_su as u64;
 		}
 
 		total_weight
@@ -425,46 +427,25 @@ impl<T: Config> Pallet<T> {
 		Voting::<T>::remove(&proposal_hash);
 	}
 
-	pub fn get_cu(resources: pallet_tfgrid_types::Resources, pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>) -> u64 {
-        let mru = U64F64::from_num(resources.mru) / pricing_policy.cu.factor();
-        let cru = U64F64::from_num(resources.cru);
+	pub fn get_cu(resources: pallet_tfgrid_types::Resources) -> u64 {
+        let cru_min = resources.cru as u128 * 2 * GIB * ONE_THOUSAND;
+		let mru_min = (resources.mru as u128 - 1 * GIB) * ONE_THOUSAND / 4;
+		let sru_min = resources.sru as u128 * ONE_THOUSAND / 50;
 
-        let mru_used_1 = mru / 4;
-        let cru_used_1 = cru / 2;
-        let cu1 = if mru_used_1 > cru_used_1 {
-            mru_used_1
-        } else {
-            cru_used_1
-        };
-
-        let mru_used_2 = mru / 8;
-        let cru_used_2 = cru;
-        let cu2 = if mru_used_2 > cru_used_2 {
-            mru_used_2
-        } else {
-            cru_used_2
-        };
-
-        let mru_used_3 = mru / 2;
-        let cru_used_3 = cru / 4;
-        let cu3 = if mru_used_3 > cru_used_3 {
-            mru_used_3
-        } else {
-            cru_used_3
-        };
-
-        let mut cu = if cu1 > cu2 { cu2 } else { cu1 };
-
-        cu = if cu > cu3 { cu3 } else { cu };
-
-        cu.ceil().to_num::<u64>()
+		if cru_min < mru_min && cru_min < sru_min {
+			cru_min as u64
+		} else if mru_min < cru_min && mru_min < sru_min {
+			mru_min as u64
+		} else if sru_min < cru_min && sru_min < mru_min {
+			sru_min as u64
+		} else {
+			0
+		}
     }
 
-	// fn get_su(hru: u64, sru: u64) -> u64 {
-	// 	let pricing_policy = pallet_tfgrid::Module::<T>::pricing_policies(1);
-	// 	let hru = hru as u128 / pricing_policy.su.factor();
-    //     let sru = sru as u128 / pricing_policy.su.factor();
-
-	// 	(hru / 1200 + sru / 200).try_into().unwrap_or(0)
-	// }
+	pub fn get_su(resources: pallet_tfgrid_types::Resources) -> u64 {
+		let su = resources.hru as u128 * ONE_THOUSAND / 1200 + resources.sru as u128 * ONE_THOUSAND / 250;
+		let calculated_su = su / GIB;
+		calculated_su as u64
+	}
 }
