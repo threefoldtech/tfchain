@@ -89,7 +89,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn voting)]
 	pub type Voting<T: Config> =
-		StorageMap<_, Identity, T::Hash, proposal::Votes<ProposalIndex, T::AccountId, T::BlockNumber>, OptionQuery>;
+		StorageMap<_, Identity, T::Hash, proposal::Votes<ProposalIndex, T::BlockNumber>, OptionQuery>;
 
 	/// Proposals so far.
 	#[pallet::storage]
@@ -227,8 +227,8 @@ pub mod pallet {
 				Error::<T>::TimeLimitReached
 			);
 
-			let position_yes = voting.ayes.iter().position(|a| a.who == who);
-			let position_no = voting.nays.iter().position(|a| a.who == who);
+			let position_yes = voting.ayes.iter().position(|a| a.farm_id == farm.id);
+			let position_no = voting.nays.iter().position(|a| a.farm_id == farm.id);
 
 			// Detects first vote of the member in the motion
 			let is_account_voting_first_time = position_yes.is_none() && position_no.is_none();
@@ -236,7 +236,7 @@ pub mod pallet {
 			if approve {
 				if position_yes.is_none() {
 					voting.ayes.push(proposal::VoteWeight{
-						who: who.clone(),
+						farm_id: farm.id,
 						weight: Self::get_vote_weight(farm.id)
 					});
 				} else {
@@ -248,7 +248,7 @@ pub mod pallet {
 			} else {
 				if position_no.is_none() {
 					voting.nays.push(proposal::VoteWeight{
-						who: who.clone(),
+						farm_id: farm.id,
 						weight: Self::get_vote_weight(farm.id)
 					});
 				} else {

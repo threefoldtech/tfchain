@@ -9,16 +9,16 @@ pub struct DaoProposal<ProposalIndex> {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug, Encode, Decode, Default)]
-pub struct Votes<ProposalIndex, AccountId, BlockNumber> {
+pub struct Votes<ProposalIndex, BlockNumber> {
     pub index: ProposalIndex,
     pub threshold: u32,
-    pub ayes: Vec<VoteWeight<AccountId>>,
-    pub nays: Vec<VoteWeight<AccountId>>,
+    pub ayes: Vec<VoteWeight>,
+    pub nays: Vec<VoteWeight>,
     pub end: BlockNumber
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug, Encode, Decode, Default)]
-pub struct VoteWeight<AccountId> {
-    pub who: AccountId,
+pub struct VoteWeight {
+    pub farm_id: u32,
     pub weight: u64,
 }
