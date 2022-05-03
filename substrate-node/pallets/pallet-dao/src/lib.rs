@@ -120,8 +120,6 @@ pub mod pallet {
 		Disapproved { proposal_hash: T::Hash },
 		/// A motion was executed; result will be `Ok` if it returned without error.
 		Executed { proposal_hash: T::Hash, result: DispatchResult },
-		/// A single member did some action; result will be `Ok` if it returned without error.
-		MemberExecuted { proposal_hash: T::Hash, result: DispatchResult },
 		/// A proposal_hash was closed because its threshold was reached or after its duration was up.
 		Closed { proposal_hash: T::Hash, yes: u32, no: u32 },
 	}
@@ -425,6 +423,10 @@ impl<T: Config> Pallet<T> {
 		// remove proposal and vote
 		ProposalOf::<T>::remove(&proposal_hash);
 		Voting::<T>::remove(&proposal_hash);
+		Proposals::<T>::remove(&proposal_hash);
+		let mut active_proposals = ProposalList::<T>::get();
+		active_proposals.retain(|hash| hash != &proposal_hash);
+		ProposalList::<T>::set(active_proposals);
 	}
 
 	pub fn get_cu(resources: pallet_tfgrid_types::Resources) -> u64 {

@@ -163,6 +163,9 @@ fn close_works() {
 		assert_eq!(e[10], record(MockEvent::pallet_dao(DaoEvent::Approved {
 			proposal_hash: hash,
 		})));
+
+		let proposals = DaoModule::proposals_list_hashes();
+		assert_eq!(proposals.len(), 0);
 	});
 }
 
