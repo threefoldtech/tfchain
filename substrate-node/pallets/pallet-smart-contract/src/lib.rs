@@ -853,28 +853,28 @@ impl<T: Config> Module<T> {
         pricing_policy: pallet_tfgrid_types::PricingPolicy<T::AccountId>,
         bill_resources: bool
     ) -> u64 {
-        let hru = U64F64::from_num(resources.hru) / pricing_policy.su.factor();
-        let sru = U64F64::from_num(resources.sru) / pricing_policy.su.factor();
-        let mru = U64F64::from_num(resources.mru) / pricing_policy.cu.factor();
-        let cru = U64F64::from_num(resources.cru);
-
-        let su_used = hru / 1200 + sru / 200;
-        // the pricing policy su cost value is expressed in 1 hours or 3600 seconds.
-        // we bill every 3600 seconds but here we need to calculate the cost per second and multiply it by the seconds elapsed.
-        let su_cost = (U64F64::from_num(pricing_policy.su.value) / 3600)
-            * U64F64::from_num(seconds_elapsed)
-            * su_used;
-        debug::info!("su cost: {:?}", su_cost);
-
-        let cu = Self::calculate_cu(cru, mru);
-
-        let cu_cost = (U64F64::from_num(pricing_policy.cu.value) / 3600)
-            * U64F64::from_num(seconds_elapsed)
-            * cu;
-        debug::info!("cu cost: {:?}", cu_cost);
-
         let mut total_cost = U64F64::from_num(0);
+        
         if bill_resources {
+            let hru = U64F64::from_num(resources.hru) / pricing_policy.su.factor();
+            let sru = U64F64::from_num(resources.sru) / pricing_policy.su.factor();
+            let mru = U64F64::from_num(resources.mru) / pricing_policy.cu.factor();
+            let cru = U64F64::from_num(resources.cru);
+    
+            let su_used = hru / 1200 + sru / 200;
+            // the pricing policy su cost value is expressed in 1 hours or 3600 seconds.
+            // we bill every 3600 seconds but here we need to calculate the cost per second and multiply it by the seconds elapsed.
+            let su_cost = (U64F64::from_num(pricing_policy.su.value) / 3600)
+                * U64F64::from_num(seconds_elapsed)
+                * su_used;
+            debug::info!("su cost: {:?}", su_cost);
+    
+            let cu = Self::calculate_cu(cru, mru);
+    
+            let cu_cost = (U64F64::from_num(pricing_policy.cu.value) / 3600)
+                * U64F64::from_num(seconds_elapsed)
+                * cu;
+            debug::info!("cu cost: {:?}", cu_cost);
             total_cost = su_cost + cu_cost;
         }
 
