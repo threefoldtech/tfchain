@@ -802,11 +802,19 @@ impl<T: Config> Module<T> {
                 // We know the contract is using resources, now calculate the cost for each used resource
                 let node_contract_resources = NodeContractResources::get(contract.contract_id);
 
+                let mut bill_resources = true;
+                // If this node contract is deployed on a node which has a rent contract
+                // We can ignore billing for the resources used by this node contract
+                if ActiveRentContractForNode::contains_key(node_contract.node_id) {
+                    bill_resources = false
+                }
+
                 let contract_cost = Self::calculate_resources_cost(
                     node_contract_resources.used,
                     node_contract.public_ips,
                     seconds_elapsed,
                     pricing_policy.clone(),
+                    bill_resources
                 );
                 contract_cost + contract_billing_info.amount_unbilled
             }
@@ -821,6 +829,7 @@ impl<T: Config> Module<T> {
                     0,
                     seconds_elapsed,
                     pricing_policy.clone(),
+                    true
                 );
                 Percent::from_percent(pricing_policy.discount_for_dedication_nodes) * contract_cost
             }
@@ -842,6 +851,7 @@ impl<T: Config> Module<T> {
         ipu: u32,
         seconds_elapsed: u64,
         pricing_policy: pallet_tfgrid_types::PricingPolicy<T::AccountId>,
+        bill_resources: bool
     ) -> u64 {
         let hru = U64F64::from_num(resources.hru) / pricing_policy.su.factor();
         let sru = U64F64::from_num(resources.sru) / pricing_policy.su.factor();
@@ -863,8 +873,10 @@ impl<T: Config> Module<T> {
             * cu;
         debug::info!("cu cost: {:?}", cu_cost);
 
-        // save total
-        let mut total_cost = su_cost + cu_cost;
+        let mut total_cost = U64F64::from_num(0);
+        if bill_resources {
+            total_cost = su_cost + cu_cost;
+        }
 
         if ipu > 0 {
             let total_ip_cost = U64F64::from_num(ipu)
