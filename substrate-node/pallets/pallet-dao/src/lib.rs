@@ -14,6 +14,7 @@ use frame_support::{
 	weights::{GetDispatchInfo, Weight},
 };
 use pallet_tfgrid::types as pallet_tfgrid_types;
+use pallet_tfgrid::traits::Tfgrid;
 
 pub use pallet::*;
 
@@ -58,6 +59,8 @@ pub mod pallet {
 
 		/// Maximum number of proposals allowed to be active in parallel.
 		type MaxProposals: Get<ProposalIndex>;
+
+		type Tfgrid: Tfgrid<Self::AccountId>;
 	}
 
 	#[pallet::pallet]
@@ -207,6 +210,10 @@ pub mod pallet {
 			approve: bool
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+
+			let f = T::Tfgrid::get_farm(farm_id);
+			println!("farm: {:?}", f);
+			println!("farm: {:?}", f.id);
 
 			let farm = pallet_tfgrid::Module::<T>::farms(farm_id);
 			ensure!(farm.id != 0, Error::<T>::FarmNotExists);

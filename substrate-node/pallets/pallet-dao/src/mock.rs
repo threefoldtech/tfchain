@@ -74,6 +74,7 @@ impl pallet_dao::Config for Test {
 	type Proposal = Call;
 	type MotionDuration = DaoMotionDuration;
 	type MaxProposals = DaoMaxProposals;
+	type Tfgrid = TfgridModule;
 }
 
 impl pallet_tfgrid::Config for Test {

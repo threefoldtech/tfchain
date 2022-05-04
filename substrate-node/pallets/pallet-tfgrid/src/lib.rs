@@ -30,6 +30,8 @@ pub mod types;
 
 pub mod migration;
 
+pub mod traits;
+
 pub use weights::WeightInfo;
 
 pub trait Config: system::Config + timestamp::Config {
@@ -1225,5 +1227,18 @@ impl<T: Config> Module<T> {
         }
 
         return Ok(());
+    }
+}
+
+impl <T: Config> traits::Tfgrid<T::AccountId> for Module<T> {
+    type Farm = types::Farm;
+    type Twin = types::Twin<T::AccountId>;
+
+    fn get_farm(farm_id: u32) -> types::Farm {
+        Farms::get(farm_id)
+    }
+
+    fn get_twin(twin_id: u32) -> types::Twin<T::AccountId> {
+        Twins::<T>::get(twin_id)
     }
 }

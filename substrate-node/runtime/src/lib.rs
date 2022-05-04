@@ -377,6 +377,7 @@ impl pallet_dao::Config for Runtime {
 	type Proposal = Call;
 	type MotionDuration = DaoMotionDuration;
 	type MaxProposals = DaoMaxProposals;
+	type Tfgrid = TfgridModule;
 }
 
 /// Special `FullIdentificationOf` implementation that is returning for every input `Some(Default::default())`.
