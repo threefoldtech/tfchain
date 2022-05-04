@@ -82,6 +82,41 @@ fn farmers_vote_proposal_works() {
 }
 
 #[test]
+fn farmers_vote_proposal_if_no_nodes_fails() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		let proposal = make_proposal("some_remark".as_bytes().to_vec());
+		let proposal_len: u32 = proposal.using_encoded(|p| p.len() as u32);
+		let _proposal_weight = proposal.get_dispatch_info().weight;
+		let hash = BlakeTwo256::hash_of(&proposal);
+
+		assert_ok!(DaoModule::propose(
+			Origin::signed(1),
+			1,
+			Box::new(proposal.clone()),
+			"some_description".as_bytes().to_vec(),
+			"some_link".as_bytes().to_vec(),
+			proposal_len
+		));
+
+		prepare_twin(10);
+		prepare_farm(10, "f1".as_bytes().to_vec());
+		assert_noop!(
+			DaoModule::vote(
+				Origin::signed(10),
+				1,
+				hash.clone(),
+				true
+			),
+			Error::<Test>::FarmHasNoNodes
+		);
+
+		let votes = DaoModule::voting(hash).unwrap();
+		assert_eq!(votes.ayes.len(), 0);
+	});
+}
+
+#[test]
 fn close_works() {
 	new_test_ext().execute_with(|| {
 		System::set_block_number(1);

@@ -140,7 +140,8 @@ pub mod pallet {
 		WrongProposalWeight,
 		TooEarly,
 		TimeLimitReached,
-		VoteThresholdNotMet
+		VoteThresholdNotMet,
+		FarmHasNoNodes,
 	}
 
 	#[pallet::call]
@@ -235,7 +236,7 @@ pub mod pallet {
 				if position_yes.is_none() {
 					voting.ayes.push(proposal::VoteWeight{
 						farm_id: farm.id,
-						weight: Self::get_vote_weight(farm.id)
+						weight: Self::get_vote_weight(farm.id)?
 					});
 				} else {
 					return Err(Error::<T>::DuplicateVote.into())
@@ -247,7 +248,7 @@ pub mod pallet {
 				if position_no.is_none() {
 					voting.nays.push(proposal::VoteWeight{
 						farm_id: farm.id,
-						weight: Self::get_vote_weight(farm.id)
+						weight: Self::get_vote_weight(farm.id)?
 					});
 				} else {
 					return Err(Error::<T>::DuplicateVote.into())
@@ -341,10 +342,12 @@ const ONE_THOUSAND: u128 = 1_000;
 const GIB: u128 = 1024 * 1024 * 1024;
 
 impl<T: Config> Pallet<T> {
-	pub fn get_vote_weight(farm_id: u32) -> u64 {
+	// If a farmer does not have any nodes attached to it's farm, an error is returned
+	pub fn get_vote_weight(farm_id: u32) -> Result<u64, DispatchError> {
 		let nodes_ids = pallet_tfgrid::Module::<T>::node_ids_by_farm_id(farm_id);
-		let mut total_weight = 1;
+		ensure!(nodes_ids.len() > 0, Error::<T>::FarmHasNoNodes);
 
+		let mut total_weight = 0;
 		for id in nodes_ids {
 			let node = pallet_tfgrid::Module::<T>::nodes(id);
 			let cu = Self::get_cu(node.resources);
@@ -355,7 +358,7 @@ impl<T: Config> Pallet<T> {
 			total_weight += calculated_cu as u64 + calculated_su as u64;
 		}
 
-		total_weight
+		Ok(total_weight)
 	}
 
 	/// Ensure that the right proposal bounds were passed and get the proposal from storage.
