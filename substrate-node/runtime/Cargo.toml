@@ -115,7 +115,8 @@ runtime-benchmarks = [
     'sp-runtime/runtime-benchmarks',
     'pallet-collective/runtime-benchmarks',
     'pallet-tfgrid/runtime-benchmarks',
-    'pallet-smart-contract/runtime-benchmarks'
+    'pallet-smart-contract/runtime-benchmarks',
+    'pallet-dao/runtime-benchmarks'
 ]
 std = [
     'codec/std',
