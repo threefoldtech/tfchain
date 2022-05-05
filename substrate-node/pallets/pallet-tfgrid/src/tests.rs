@@ -1,6 +1,7 @@
 use crate::{mock::*, Error};
 use frame_support::{assert_noop, assert_ok};
 use frame_system::RawOrigin;
+use tfchain_support;
 
 #[test]
 fn test_create_entity_works() {
@@ -320,12 +321,12 @@ fn test_create_farm_with_double_ip_fails() {
 
         let farm_name = "test_farm".as_bytes().to_vec();
         let mut pub_ips = Vec::new();
-        pub_ips.push(super::types::PublicIP {
+        pub_ips.push(tfchain_support::farms::PublicIP {
             ip: "1.1.1.0".as_bytes().to_vec(),
             gateway: "1.1.1.1".as_bytes().to_vec(),
             contract_id: 0,
         });
-        pub_ips.push(super::types::PublicIP {
+        pub_ips.push(tfchain_support::farms::PublicIP {
             ip: "1.1.1.0".as_bytes().to_vec(),
             gateway: "1.1.1.1".as_bytes().to_vec(),
             contract_id: 0,
@@ -529,7 +530,7 @@ fn test_create_farm_with_same_name_fails() {
 
         let farm_name = "test_farm".as_bytes().to_vec();
         let mut pub_ips = Vec::new();
-        pub_ips.push(super::types::PublicIP {
+        pub_ips.push(tfchain_support::farms::PublicIP {
             ip: "1.1.1.0".as_bytes().to_vec(),
             gateway: "1.1.1.1".as_bytes().to_vec(),
             contract_id: 0,
@@ -725,7 +726,7 @@ fn create_farming_policy_works() {
             15,
             10,
             8,
-            super::types::CertificationType::Diy
+            tfchain_support::farms::CertificationType::Diy
         ));
     });
 }
@@ -742,7 +743,7 @@ fn create_farming_policy_certified_works() {
             15,
             10,
             8,
-            super::types::CertificationType::Certified
+            tfchain_support::farms::CertificationType::Certified
         ));
     });
 }
@@ -763,7 +764,7 @@ fn node_auto_attach_farming_policy() {
             15,
             10,
             8,
-            super::types::CertificationType::Diy
+            tfchain_support::farms::CertificationType::Diy
         ));
         let name = "c1_test".as_bytes().to_vec();
         assert_ok!(TfgridModule::create_farming_policy(
@@ -773,7 +774,7 @@ fn node_auto_attach_farming_policy() {
             15,
             10,
             8,
-            super::types::CertificationType::Certified
+            tfchain_support::farms::CertificationType::Certified
         ));
         let name = "d2_test".as_bytes().to_vec();
         assert_ok!(TfgridModule::create_farming_policy(
@@ -783,7 +784,7 @@ fn node_auto_attach_farming_policy() {
             15,
             10,
             8,
-            super::types::CertificationType::Diy
+            tfchain_support::farms::CertificationType::Diy
         ));
         let name = "c2_test".as_bytes().to_vec();
         assert_ok!(TfgridModule::create_farming_policy(
@@ -793,7 +794,7 @@ fn node_auto_attach_farming_policy() {
             15,
             10,
             8,
-            super::types::CertificationType::Certified
+            tfchain_support::farms::CertificationType::Certified
         ));
 
         create_node();
@@ -1016,7 +1017,7 @@ fn create_twin_bob() {
 fn create_farm() {
     let farm_name = "test_farm".as_bytes().to_vec();
     let mut pub_ips = Vec::new();
-    pub_ips.push(super::types::PublicIP {
+    pub_ips.push(tfchain_support::farms::PublicIP {
         ip: "1.1.1.0".as_bytes().to_vec(),
         gateway: "1.1.1.1".as_bytes().to_vec(),
         contract_id: 0,

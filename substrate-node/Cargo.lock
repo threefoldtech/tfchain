@@ -3735,6 +3735,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "tfchain-support",
 ]
 
 [[package]]
@@ -3907,6 +3908,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-storage",
+ "tfchain-support",
 ]
 
 [[package]]
@@ -7450,6 +7452,18 @@ dependencies = [
  "sp-version",
  "substrate-validator-set",
  "substrate-wasm-builder",
+]
+
+[[package]]
+name = "tfchain-support"
+version = "1.0.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]

@@ -1,5 +1,6 @@
 use codec::{Decode, Encode};
 use frame_support::traits::Vec;
+use tfchain_support;
 
 /// Utility type for managing upgrades/migrations.
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
@@ -241,7 +242,7 @@ pub struct FarmingPolicy {
     pub nu: u32,
     pub ipv4: u32,
     pub timestamp: u64,
-    pub certification_type: CertificationType,
+    pub certification_type: tfchain_support::farms::CertificationType,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]

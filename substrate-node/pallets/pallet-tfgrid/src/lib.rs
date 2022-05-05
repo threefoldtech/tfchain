@@ -16,6 +16,7 @@ use hex::FromHex;
 use pallet_timestamp as timestamp;
 use sp_runtime::{traits::SaturatedConversion, DispatchError};
 use sp_std::prelude::*;
+use tfchain_support;
 
 #[cfg(test)]
 mod tests;
@@ -29,8 +30,6 @@ pub mod weights;
 pub mod types;
 
 pub mod migration;
-
-pub mod traits;
 
 pub use weights::WeightInfo;
 
@@ -54,7 +53,7 @@ pub const TFGRID_FARMING_POLICY_VERSION: u32 = 1;
 
 decl_storage! {
     trait Store for Module<T: Config> as TfgridModule {
-        pub Farms get(fn farms): map hasher(blake2_128_concat) u32 => types::Farm;
+        pub Farms get(fn farms): map hasher(blake2_128_concat) u32 => tfchain_support::farms::Farm;
         pub FarmIdByName get(fn farms_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u32;
         pub FarmPayoutV2AddressByFarmID get(fn farm_payout_address_by_farm_id): map hasher(blake2_128_concat) u32 => Vec<u8>;
         pub DedicatedFarms get(fn dedicated_farms): Vec<u32>;
@@ -77,7 +76,7 @@ decl_storage! {
         pub CertificationCodeIdByName get(fn certification_codes_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u32;
 
         pub FarmingPolicies get(fn farming_policies): Vec<types::FarmingPolicy>;
-        pub FarmingPolicyIDsByCertificationType get (fn farming_policies_by_certification_type): map hasher(blake2_128_concat) types::CertificationType => Vec<u32>;
+        pub FarmingPolicyIDsByCertificationType get (fn farming_policies_by_certification_type): map hasher(blake2_128_concat) tfchain_support::farms::CertificationType => Vec<u32>;
 
         pub UsersTermsAndConditions get(fn users_terms_and_condition): map hasher(blake2_128_concat) T::AccountId => Vec<types::TermsAndConditions<T::AccountId>>;
 
@@ -179,7 +178,7 @@ decl_storage! {
                 _config.farming_policy_diy_cu,
                 _config.farming_policy_diy_nu,
                 _config.farming_policy_diy_ipu,
-                types::CertificationType::Diy,
+                tfchain_support::farms::CertificationType::Diy,
             );
 
             let _ = <Module<T>>::create_farming_policy(
@@ -189,7 +188,7 @@ decl_storage! {
                 _config.farming_policy_certified_cu,
                 _config.farming_policy_certified_nu,
                 _config.farming_policy_certified_ipu,
-                types::CertificationType::Certified,
+                tfchain_support::farms::CertificationType::Certified,
             );
 
             let _ = <Module<T>>::set_connection_price(
@@ -206,8 +205,8 @@ decl_event!(
     where
         AccountId = <T as frame_system::Config>::AccountId,
     {
-        FarmStored(types::Farm),
-        FarmUpdated(types::Farm),
+        FarmStored(tfchain_support::farms::Farm),
+        FarmUpdated(tfchain_support::farms::Farm),
         FarmDeleted(u32),
 
         NodeStored(types::Node),
@@ -308,7 +307,7 @@ decl_module! {
         }
 
         #[weight = <T as Config>::WeightInfo::create_farm()]
-        pub fn create_farm(origin, name: Vec<u8>, public_ips: Vec<types::PublicIP>) -> dispatch::DispatchResult {
+        pub fn create_farm(origin, name: Vec<u8>, public_ips: Vec<tfchain_support::farms::PublicIP>) -> dispatch::DispatchResult {
             let address = ensure_signed(origin)?;
 
             Self::validate_farm_name(name.clone())?;
@@ -325,12 +324,12 @@ decl_module! {
             // reset all public ip contract id's
             // just a safeguard
             // filter out doubles
-            let mut pub_ips: Vec<types::PublicIP> = Vec::new();
+            let mut pub_ips: Vec<tfchain_support::farms::PublicIP> = Vec::new();
             for ip in public_ips {
                 match pub_ips.iter().position(|pub_ip| pub_ip.ip == ip.ip) {
                     Some(_) => return Err(Error::<T>::IpExists.into()),
                     None => {
-                        pub_ips.push(types::PublicIP{
+                        pub_ips.push(tfchain_support::farms::PublicIP{
                             ip: ip.ip,
                             gateway: ip.gateway,
                             contract_id: 0
@@ -339,13 +338,13 @@ decl_module! {
                 };
             };
 
-            let new_farm = types::Farm {
+            let new_farm = tfchain_support::farms::Farm {
                 version: TFGRID_FARM_VERSION,
                 id,
                 twin_id,
                 name,
                 pricing_policy_id: 1,
-                certification_type: types::CertificationType::Diy,
+                certification_type: tfchain_support::farms::CertificationType::Diy,
                 public_ips: pub_ips,
                 dedicated_farm: false,
             };
@@ -406,7 +405,7 @@ decl_module! {
         }
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1)]
-        pub fn set_farm_certification(origin, farm_id: u32, certification_type: types::CertificationType) -> dispatch::DispatchResult {
+        pub fn set_farm_certification(origin, farm_id: u32, certification_type: tfchain_support::farms::CertificationType) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
             ensure!(Farms::contains_key(farm_id), Error::<T>::FarmNotExists);
@@ -429,7 +428,7 @@ decl_module! {
             let twin = Twins::<T>::get(stored_farm.twin_id);
             ensure!(twin.account_id == address, Error::<T>::CannotUpdateFarmWrongTwin);
 
-            let new_ip = types::PublicIP {
+            let new_ip = tfchain_support::farms::PublicIP {
                 ip,
                 gateway,
                 contract_id: 0
@@ -1048,7 +1047,7 @@ decl_module! {
         }
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2)]
-        pub fn create_farming_policy(origin, name: Vec<u8>, su: u32, cu: u32, nu: u32, ipv4: u32, certification_type: types::CertificationType) -> dispatch::DispatchResult {
+        pub fn create_farming_policy(origin, name: Vec<u8>, su: u32, cu: u32, nu: u32, ipv4: u32, certification_type: tfchain_support::farms::CertificationType) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
             let mut id = FarmingPolicyID::get();
@@ -1230,15 +1229,8 @@ impl<T: Config> Module<T> {
     }
 }
 
-impl <T: Config> traits::Tfgrid<T::AccountId> for Module<T> {
-    type Farm = types::Farm;
-    type Twin = types::Twin<T::AccountId>;
-
-    fn get_farm(farm_id: u32) -> types::Farm {
+impl <T: Config> tfchain_support::traits::Tfgrid<T::AccountId> for Module<T> {
+    fn get_farm(farm_id: u32) -> tfchain_support::farms::Farm {
         Farms::get(farm_id)
-    }
-
-    fn get_twin(twin_id: u32) -> types::Twin<T::AccountId> {
-        Twins::<T>::get(twin_id)
     }
 }

@@ -11,6 +11,7 @@ use pallet_tfgrid::types as pallet_tfgrid_types;
 use frame_system::{EventRecord, Phase};
 use super::{Event as DaoEvent};
 use sp_core::H256;
+use tfchain_support;
 
 #[test]
 fn it_works_for_default_value() {
@@ -211,7 +212,7 @@ fn motion_approval_works() {
 		System::set_block_number(1);
 		let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_farm_certification(
 			1,
-			pallet_tfgrid_types::CertificationType::Certified
+			tfchain_support::farms::CertificationType::Certified
 		));
 		let proposal_len: u32 = proposal.using_encoded(|p| p.len() as u32);
 		let proposal_weight = proposal.get_dispatch_info().weight;
@@ -250,7 +251,7 @@ fn motion_approval_works() {
 
 		// Check farm certification type before we close
 		let f1 = TfgridModule::farms(1);
-		assert_eq!(f1.certification_type, pallet_tfgrid_types::CertificationType::Diy);
+		assert_eq!(f1.certification_type, tfchain_support::farms::CertificationType::Diy);
 
 		System::set_block_number(5);
 		assert_ok!(DaoModule::close(Origin::signed(4), hash.clone(), 0, proposal_weight, proposal_len));
@@ -296,7 +297,7 @@ fn motion_approval_works() {
 
 		// Certification type of farm should be set to certified.
 		let f1 = TfgridModule::farms(1);
-		assert_eq!(f1.certification_type, pallet_tfgrid_types::CertificationType::Certified);
+		assert_eq!(f1.certification_type, tfchain_support::farms::CertificationType::Certified);
 	});
 }
 
@@ -306,7 +307,7 @@ fn weighted_voting_works() {
 		System::set_block_number(1);
 		let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_farm_certification(
 			1,
-			pallet_tfgrid_types::CertificationType::Certified
+			tfchain_support::farms::CertificationType::Certified
 		));
 		let proposal_len: u32 = proposal.using_encoded(|p| p.len() as u32);
 		let proposal_weight = proposal.get_dispatch_info().weight;
@@ -345,7 +346,7 @@ fn weighted_voting_works() {
 
 		// Check farm certification type before we close
 		let f1 = TfgridModule::farms(1);
-		assert_eq!(f1.certification_type, pallet_tfgrid_types::CertificationType::Diy);
+		assert_eq!(f1.certification_type, tfchain_support::farms::CertificationType::Diy);
 
 		System::set_block_number(5);
 		assert_ok!(DaoModule::close(Origin::signed(4), hash.clone(), 0, proposal_weight, proposal_len));
@@ -388,7 +389,7 @@ fn weighted_voting_works() {
 
 		// Certification type of farm should still be the same.
 		let f1 = TfgridModule::farms(1);
-		assert_eq!(f1.certification_type, pallet_tfgrid_types::CertificationType::Diy);
+		assert_eq!(f1.certification_type, tfchain_support::farms::CertificationType::Diy);
 	});
 }
 
@@ -585,7 +586,7 @@ fn prepare_big_node(account_id: u64, farm_id: u32) {
 
 pub fn prepare_farm(account_id: u64, farm_name: Vec<u8>) {
     let mut pub_ips = Vec::new();
-    pub_ips.push(pallet_tfgrid_types::PublicIP {
+    pub_ips.push(tfchain_support::farms::PublicIP {
         ip: "1.1.1.0".as_bytes().to_vec(),
         gateway: "1.1.1.1".as_bytes().to_vec(),
         contract_id: 0,

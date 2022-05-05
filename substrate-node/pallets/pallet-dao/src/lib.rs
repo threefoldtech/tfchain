@@ -14,7 +14,7 @@ use frame_support::{
 	weights::{GetDispatchInfo, Weight},
 };
 use pallet_tfgrid::types as pallet_tfgrid_types;
-use pallet_tfgrid::traits::Tfgrid;
+use tfchain_support::traits::Tfgrid;
 
 pub use pallet::*;
 
@@ -211,7 +211,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			let f = T::Tfgrid::get_farm(farm_id);
+			let f = <T as Config>::Tfgrid::get_farm(farm_id);
 			println!("farm: {:?}", f);
 			println!("farm: {:?}", f.id);
 
