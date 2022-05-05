@@ -458,7 +458,8 @@ impl<T: Config> Pallet<T> {
 }
 
 impl <T: Config> ChangeNode for Module<T> {
-	fn node_changed(node: &Node, new_node: &Node) {
+	fn node_changed(old_node: &Node, new_node: &Node) {
+		println!("old node: {:?}", old_node);
 		println!("new node: {:?}", new_node);
 	}
 }

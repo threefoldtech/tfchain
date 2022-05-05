@@ -18,7 +18,10 @@ use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_tft_price;
 use pallet_timestamp as timestamp;
 use substrate_fixed::types::U64F64;
-use tfchain_support::types::{PublicIP, Resources, CertificationType};
+use tfchain_support::{
+    traits::ChangeNode,
+    types::{PublicIP, Resources, CertificationType}
+};
 
 #[cfg(test)]
 mod mock;
@@ -41,6 +44,7 @@ pub trait Config:
     type StakingPoolAccount: Get<Self::AccountId>;
     type BillingFrequency: Get<u64>;
     type WeightInfo: WeightInfo;
+    type NodeChanged: ChangeNode;
 }
 
 pub const CONTRACT_VERSION: u32 = 3;

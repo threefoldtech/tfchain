@@ -9,6 +9,7 @@ use substrate_fixed::types::{U16F16, U64F64};
 
 use super::types;
 use pallet_tfgrid::types as pallet_tfgrid_types;
+use tfchain_support::types::{Location, PublicIP, Resources};
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -1292,7 +1293,7 @@ fn push_contract_resources_used(contract_id: u64) {
     let mut resources = Vec::new();
     resources.push(types::ContractResources {
         contract_id,
-        used: pallet_tfgrid_types::Resources {
+        used: Resources {
             cru: 2,
             hru: 0,
             mru: 2 * GIGABYTE,
@@ -1362,7 +1363,7 @@ pub fn prepare_twins() {
 pub fn prepare_farm(source: AccountId, dedicated: bool) {
     let farm_name = "test_farm";
     let mut pub_ips = Vec::new();
-    pub_ips.push(pallet_tfgrid_types::PublicIP {
+    pub_ips.push(PublicIP {
         ip: "1.1.1.0".as_bytes().to_vec(),
         gateway: "1.1.1.1".as_bytes().to_vec(),
         contract_id: 0,
@@ -1430,12 +1431,12 @@ pub fn prepare_farm_and_node() {
     prepare_farm(alice(), false);
 
     // random location
-    let location = pallet_tfgrid_types::Location {
+    let location = Location {
         longitude: "12.233213231".as_bytes().to_vec(),
         latitude: "32.323112123".as_bytes().to_vec(),
     };
 
-    let resources = pallet_tfgrid_types::Resources {
+    let resources = Resources {
         hru: 1024 * GIGABYTE,
         sru: 512 * GIGABYTE,
         cru: 8,
@@ -1467,12 +1468,12 @@ pub fn prepare_dedicated_farm_and_node() {
     prepare_farm(alice(), true);
 
     // random location
-    let location = pallet_tfgrid_types::Location {
+    let location = Location {
         longitude: "12.233213231".as_bytes().to_vec(),
         latitude: "32.323112123".as_bytes().to_vec(),
     };
 
-    let resources = pallet_tfgrid_types::Resources {
+    let resources = Resources {
         hru: 1024 * GIGABYTE,
         sru: 512 * GIGABYTE,
         cru: 8,

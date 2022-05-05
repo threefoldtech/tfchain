@@ -20,6 +20,7 @@ use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use pallet_grandpa::fg_primitives;
 use sp_version::RuntimeVersion;
+use tfchain_support::traits::ChangeNode;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 
@@ -305,10 +306,21 @@ impl pallet_sudo::Config for Runtime {
 	type Call = Call;
 }
 
+pub struct NodeChanged;
+impl ChangeNode for NodeChanged {
+	fn node_changed(
+		old_node: &Node,
+		new_node: &Node,
+	) {
+		Dao::node_changed(old_node, new_node)
+	}
+}
+
 impl pallet_tfgrid::Config for Runtime {
 	type Event = Event;
 	type RestrictedOrigin = EnsureRootOrCouncilApproval;
 	type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Runtime>;
+	type NodeChanged = NodeChanged;
 }
 
 parameter_types! {
@@ -327,6 +339,7 @@ impl pallet_smart_contract::Config for Runtime {
 	type StakingPoolAccount = StakingPoolAccount;
 	type BillingFrequency = BillingFrequency;
 	type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
+	type Tfgrid = TfgridModule;
 }
 
 impl pallet_tft_bridge::Config for Runtime {

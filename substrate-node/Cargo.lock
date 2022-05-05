@@ -7453,6 +7453,7 @@ dependencies = [
  "sp-version",
  "substrate-validator-set",
  "substrate-wasm-builder",
+ "tfchain-support",
 ]
 
 [[package]]
