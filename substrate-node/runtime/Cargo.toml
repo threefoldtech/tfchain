@@ -118,8 +118,6 @@ runtime-benchmarks = [
     'pallet-tfgrid/runtime-benchmarks',
     'pallet-smart-contract/runtime-benchmarks',
     'pallet-dao/runtime-benchmarks',
-    'tfchain-support',
-    'tfchain-support/runtime-benchmarks'
 ]
 std = [
     'codec/std',
