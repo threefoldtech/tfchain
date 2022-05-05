@@ -564,7 +564,7 @@ decl_module! {
             node_ids_by_farm.push(id);
             NodeIdsByFarmID::insert(farm_id, node_ids_by_farm);
 
-            T::NodeChanged::node_changed(&new_node, &new_node);
+            T::NodeChanged::node_changed(None, &new_node);
 
             Self::deposit_event(RawEvent::NodeStored(new_node));
 
@@ -623,7 +623,7 @@ decl_module! {
             // override node in storage
             Nodes::insert(stored_node.id, &stored_node);
 
-            T::NodeChanged::node_changed(&old_node, &stored_node);
+            T::NodeChanged::node_changed(Some(&old_node), &stored_node);
 
             Self::deposit_event(RawEvent::NodeUpdated(stored_node));
 

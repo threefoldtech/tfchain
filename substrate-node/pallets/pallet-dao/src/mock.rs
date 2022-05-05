@@ -75,7 +75,7 @@ parameter_types! {
 pub struct NodeChanged;
 impl ChangeNode for NodeChanged {
 	fn node_changed(
-		old_node: &Node,
+		old_node: Option<&Node>,
 		new_node: &Node,
 	) {
 		DaoModule::node_changed(old_node, new_node)

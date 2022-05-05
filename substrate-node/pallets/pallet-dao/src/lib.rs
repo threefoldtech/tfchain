@@ -101,6 +101,10 @@ pub mod pallet {
 	#[pallet::getter(fn proposal_count)]
 	pub type ProposalCount<T> = StorageValue<_, u32, ValueQuery>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn farm_weight)]
+	pub type FarmWeight<T> = StorageMap<_, Identity, u32, u64, ValueQuery>;
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
@@ -345,22 +349,9 @@ const GIB: u128 = 1024 * 1024 * 1024;
 impl<T: Config> Pallet<T> {
 	// If a farmer does not have any nodes attached to it's farm, an error is returned
 	pub fn get_vote_weight(farm_id: u32) -> Result<u64, DispatchError> {
-		// let nodes_ids = pallet_tfgrid::Module::<T>::node_ids_by_farm_id(farm_id);
-		// ensure!(nodes_ids.len() > 0, Error::<T>::FarmHasNoNodes);
-
-		// let mut total_weight = 0;
-		// for id in nodes_ids {
-		// 	let node = pallet_tfgrid::Module::<T>::nodes(id);
-		// 	let cu = Self::get_cu(node.resources);
-		// 	let su = Self::get_su(node.resources);
-			
-		// 	let calculated_cu = 2*(cu as u128 / GIB/ ONE_THOUSAND);
-		// 	let calculated_su = su as u128 / ONE_THOUSAND;
-		// 	total_weight += calculated_cu as u64 + calculated_su as u64;
-		// }
-
-		// Ok(total_weight)
-		Ok(1)
+		let farm_weight = FarmWeight::<T>::get(farm_id);
+		ensure!(farm_weight > 0, Error::<T>::FarmHasNoNodes);
+		Ok(farm_weight)
 	}
 
 	/// Ensure that the right proposal bounds were passed and get the proposal from storage.
@@ -455,11 +446,47 @@ impl<T: Config> Pallet<T> {
 		let calculated_su = su / GIB;
 		calculated_su as u64
 	}
+
+	pub fn get_node_weight(resources: Resources) -> u64 {
+		let cu = Self::get_cu(resources);
+		let su = Self::get_su(resources);
+		let calculated_cu = 2*(cu as u128 / GIB/ ONE_THOUSAND);
+		let calculated_su = su as u128 / ONE_THOUSAND;
+		calculated_cu as u64 + calculated_su as u64
+	}
 }
 
 impl <T: Config> ChangeNode for Module<T> {
-	fn node_changed(old_node: &Node, new_node: &Node) {
-		println!("old node: {:?}", old_node);
-		println!("new node: {:?}", new_node);
+	fn node_changed(old_node: Option<&Node>, new_node: &Node) {
+		let new_node_weight = Self::get_node_weight(new_node.resources);
+
+		match old_node {
+			Some(node) => {
+				let old_node_weight = Self::get_node_weight(node.resources);
+
+				if node.farm_id != new_node.farm_id {
+					let mut old_farm_weight = FarmWeight::<T>::get(node.farm_id);
+					old_farm_weight = old_farm_weight.checked_sub(old_node_weight).unwrap_or(0);
+					FarmWeight::<T>::insert(node.farm_id, old_farm_weight);
+		
+					let mut new_farm_weight = FarmWeight::<T>::get(new_node.farm_id);
+					new_farm_weight += new_node_weight;
+					FarmWeight::<T>::insert(new_node.farm_id, new_farm_weight);
+				} else {
+					// Node got updated
+					let mut farm_weight = FarmWeight::<T>::get(node.farm_id);
+					farm_weight = farm_weight.checked_sub(old_node_weight).unwrap_or(0);
+					farm_weight += new_node_weight;
+					FarmWeight::<T>::insert(node.farm_id, farm_weight);
+				}
+			
+			},
+			None => {
+				// New node got added, just add the weight to the farmweight
+				let mut farm_weight = FarmWeight::<T>::get(new_node.farm_id);
+				farm_weight += new_node_weight;
+				FarmWeight::<T>::insert(new_node.farm_id, farm_weight);
+			}
+		};
 	}
 }

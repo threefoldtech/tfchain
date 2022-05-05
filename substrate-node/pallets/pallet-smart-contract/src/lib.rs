@@ -19,7 +19,7 @@ use pallet_tft_price;
 use pallet_timestamp as timestamp;
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
-    traits::ChangeNode,
+    traits::Tfgrid,
     types::{PublicIP, Resources, CertificationType}
 };
 
@@ -44,7 +44,6 @@ pub trait Config:
     type StakingPoolAccount: Get<Self::AccountId>;
     type BillingFrequency: Get<u64>;
     type WeightInfo: WeightInfo;
-    type NodeChanged: ChangeNode;
 }
 
 pub const CONTRACT_VERSION: u32 = 3;

@@ -90,7 +90,7 @@ impl pallet_balances::Config for TestRuntime {
 pub struct NodeChanged;
 impl ChangeNode for NodeChanged {
 	fn node_changed(
-		_old_node: &Node,
+		_old_node: Option<&Node>,
 		_new_node: &Node,
 	) {}
 }

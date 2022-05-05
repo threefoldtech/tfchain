@@ -101,7 +101,7 @@ pallet-session = { default-features = false, version = '3.0.0', features = ['his
 pallet-collective = { version = "3.0.0", default-features = false }
 pallet-membership = { version = "3.0.0", default-features = false }
 pallet-authorship = { version = "3.0.0", default-features = false }
-tfchain-support = { path = "../support", default-features = false, optional = true }
+tfchain-support = { path = "../support", default-features = false }
 
 [features]
 default = ['std']
