@@ -7,6 +7,10 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
+use tfchain_support::{
+	types::{Node, Farm},
+	traits::{ChangeNode, Tfgrid},
+};
 use pallet_tfgrid;
 use pallet_timestamp;
 use pallet_collective;
@@ -68,6 +72,16 @@ parameter_types! {
 	pub const DaoMaxProposals: u32 = 100;
 }
 
+pub struct NodeChanged;
+impl ChangeNode for NodeChanged {
+	fn node_changed(
+		old_node: &Node,
+		new_node: &Node,
+	) {
+		DaoModule::node_changed(old_node, new_node)
+	}
+}
+
 impl pallet_dao::Config for Test {
 	type Event = Event;
 	type CouncilOrigin = EnsureRoot<Self::AccountId>;
@@ -75,12 +89,14 @@ impl pallet_dao::Config for Test {
 	type MotionDuration = DaoMotionDuration;
 	type MaxProposals = DaoMaxProposals;
 	type Tfgrid = TfgridModule;
+	type NodeChanged = NodeChanged;
 }
 
 impl pallet_tfgrid::Config for Test {
     type Event = Event;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Test>;
+	type NodeChanged = NodeChanged;
 }
 
 impl pallet_timestamp::Config for Test {

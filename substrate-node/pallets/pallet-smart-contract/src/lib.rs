@@ -18,6 +18,7 @@ use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_tft_price;
 use pallet_timestamp as timestamp;
 use substrate_fixed::types::U64F64;
+use tfchain_support::types::{PublicIP, Resources, CertificationType};
 
 #[cfg(test)]
 mod mock;
@@ -57,7 +58,7 @@ decl_event!(
         ContractUpdated(types::Contract),
         NodeContractCanceled(u64, u32, u32),
         NameContractCanceled(u64),
-        IPsReserved(u64, Vec<pallet_tfgrid_types::PublicIP>),
+        IPsReserved(u64, Vec<PublicIP>),
         IPsFreed(u64, Vec<Vec<u8>>),
         ContractDeployed(u64, AccountId),
         // Deprecated
@@ -759,7 +760,7 @@ impl<T: Config> Module<T> {
     ) -> Result<(BalanceOf<T>, types::DiscountLevel), DispatchError> {
         // Fetch the default pricing policy and certification type
         let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
-        let certification_type = pallet_tfgrid_types::CertificationType::Diy;
+        let certification_type = CertificationType::Diy;
 
         // Calculate the cost for a contract, can be any of:
         // - NodeContract
@@ -838,7 +839,7 @@ impl<T: Config> Module<T> {
 
     // Calculates the total cost of a node contract.
     pub fn calculate_resources_cost(
-        resources: pallet_tfgrid_types::Resources,
+        resources: Resources,
         ipu: u32,
         seconds_elapsed: u64,
         pricing_policy: pallet_tfgrid_types::PricingPolicy<T::AccountId>,
@@ -1010,7 +1011,7 @@ impl<T: Config> Module<T> {
     pub fn calculate_discount(
         amount_due: u64,
         balance: BalanceOf<T>,
-        certification_type: pallet_tfgrid_types::CertificationType,
+        certification_type: CertificationType,
     ) -> (BalanceOf<T>, types::DiscountLevel) {
         let balance_as_u128: u128 = balance.saturated_into::<u128>();
 
@@ -1036,7 +1037,7 @@ impl<T: Config> Module<T> {
         let mut amount_due = U64F64::from_num(amount_due) * discount_received.price_multiplier();
 
         // Certified capacity costs 25% more
-        if certification_type == pallet_tfgrid_types::CertificationType::Certified {
+        if certification_type == CertificationType::Certified {
             amount_due = amount_due * U64F64::from_num(1.25);
         }
 

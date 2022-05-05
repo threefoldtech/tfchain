@@ -13,6 +13,10 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 use frame_system::EnsureRoot;
+use tfchain_support::{
+    traits::ChangeNode,
+    types::Node,
+};
 
 pub type Signature = MultiSignature;
 
@@ -83,10 +87,19 @@ impl pallet_balances::Config for TestRuntime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<TestRuntime>;
 }
 
+pub struct NodeChanged;
+impl ChangeNode for NodeChanged {
+	fn node_changed(
+		_old_node: &Node,
+		_new_node: &Node,
+	) {}
+}
+
 impl pallet_tfgrid::Config for TestRuntime {
     type Event = Event;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<TestRuntime>;
+    type NodeChanged = NodeChanged;
 }
 
 impl pallet_tft_price::Config for TestRuntime {

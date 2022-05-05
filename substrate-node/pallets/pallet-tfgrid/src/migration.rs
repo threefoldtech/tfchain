@@ -6,6 +6,7 @@ pub mod deprecated {
     use crate::Config;
     use frame_support::{decl_module};
     use sp_std::prelude::*;
+    use tfchain_support::types::{CertificationType, Resources, Location, PublicConfig, Interface};
 
     #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
     pub struct NodeV3 {
@@ -13,16 +14,16 @@ pub mod deprecated {
         pub id: u32,
         pub farm_id: u32,
         pub twin_id: u32,
-        pub resources: super::types::Resources,
-        pub location: super::types::Location,
+        pub resources: Resources,
+        pub location: Location,
         pub country: Vec<u8>,
         pub city: Vec<u8>,
         // optional public config
-        pub public_config: Option<super::types::PublicConfig>,
+        pub public_config: Option<PublicConfig>,
         pub created: u64,
         pub farming_policy_id: u32,
-        pub interfaces: Vec<super::types::Interface>,
-        pub certification_type: super::types::CertificationType,
+        pub interfaces: Vec<Interface>,
+        pub certification_type: CertificationType,
         pub secure_boot: bool,
         pub virtualized: bool,
         pub serial_number: Vec<u8>,
@@ -86,7 +87,7 @@ pub fn add_connection_price_to_nodes<T: Config>() -> frame_support::weights::Wei
         |k, node| {
             frame_support::debug::info!("     Migrated node for {:?}...", k);
 
-            let new_node = super::types::Node {
+            let new_node = Node {
                 version: 4,
                 id: node.id,
                 farm_id: node.farm_id,
@@ -99,7 +100,7 @@ pub fn add_connection_price_to_nodes<T: Config>() -> frame_support::weights::Wei
                 created: node.created,
                 farming_policy_id: node.farming_policy_id,
                 interfaces: node.interfaces,
-                certification_type: super::types::CertificationType::Diy,
+                certification_type: node.certification_type,
                 secure_boot: node.secure_boot,
                 virtualized: node.virtualized,
                 serial_number: node.serial_number,

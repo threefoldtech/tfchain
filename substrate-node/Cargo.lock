@@ -3872,6 +3872,7 @@ dependencies = [
  "sp-std",
  "sp-storage",
  "substrate-fixed",
+ "tfchain-support",
 ]
 
 [[package]]

@@ -13,8 +13,10 @@ use frame_support::{
 	},
 	weights::{GetDispatchInfo, Weight},
 };
-use pallet_tfgrid::types as pallet_tfgrid_types;
-use tfchain_support::traits::Tfgrid;
+use tfchain_support::{
+	types::{Resources, Node},
+	traits::{Tfgrid, ChangeNode},
+};
 
 pub use pallet::*;
 
@@ -42,7 +44,6 @@ pub mod pallet {
 	pub trait Config:
 		frame_system::Config
 		+ pallet_membership::Config<pallet_membership::Instance1>
-		+ pallet_tfgrid::Config
 	{
 		/// Because this pallet emits events, it depends on the runtime's definition of an event
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -61,6 +62,7 @@ pub mod pallet {
 		type MaxProposals: Get<ProposalIndex>;
 
 		type Tfgrid: Tfgrid<Self::AccountId>;
+		type NodeChanged: ChangeNode;
 	}
 
 	#[pallet::pallet]
@@ -211,15 +213,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			let f = <T as Config>::Tfgrid::get_farm(farm_id);
-			println!("farm: {:?}", f);
-			println!("farm: {:?}", f.id);
-
-			let farm = pallet_tfgrid::Module::<T>::farms(farm_id);
-			ensure!(farm.id != 0, Error::<T>::FarmNotExists);
-
-			let twin = pallet_tfgrid::Module::<T>::twins(farm.twin_id);
-			ensure!(twin.account_id == who, Error::<T>::NotAuthorizedToVote);
+			ensure!(T::Tfgrid::is_farm_owner(farm_id, who.clone()), Error::<T>::NotAuthorizedToVote);
 
 			ensure!(<Proposals<T>>::contains_key(proposal_hash), Error::<T>::ProposalNotExists);
 			let stored_proposal = <Proposals<T>>::get(proposal_hash).ok_or(Error::<T>::ProposalMissing)?;
@@ -233,8 +227,8 @@ pub mod pallet {
 				Error::<T>::TimeLimitReached
 			);
 
-			let position_yes = voting.ayes.iter().position(|a| a.farm_id == farm.id);
-			let position_no = voting.nays.iter().position(|a| a.farm_id == farm.id);
+			let position_yes = voting.ayes.iter().position(|a| a.farm_id == farm_id);
+			let position_no = voting.nays.iter().position(|a| a.farm_id == farm_id);
 
 			// Detects first vote of the member in the motion
 			let is_account_voting_first_time = position_yes.is_none() && position_no.is_none();
@@ -242,8 +236,8 @@ pub mod pallet {
 			if approve {
 				if position_yes.is_none() {
 					voting.ayes.push(proposal::VoteWeight{
-						farm_id: farm.id,
-						weight: Self::get_vote_weight(farm.id)?
+						farm_id: farm_id,
+						weight: Self::get_vote_weight(farm_id)?
 					});
 				} else {
 					return Err(Error::<T>::DuplicateVote.into())
@@ -254,8 +248,8 @@ pub mod pallet {
 			} else {
 				if position_no.is_none() {
 					voting.nays.push(proposal::VoteWeight{
-						farm_id: farm.id,
-						weight: Self::get_vote_weight(farm.id)?
+						farm_id: farm_id,
+						weight: Self::get_vote_weight(farm_id)?
 					});
 				} else {
 					return Err(Error::<T>::DuplicateVote.into())
@@ -351,21 +345,22 @@ const GIB: u128 = 1024 * 1024 * 1024;
 impl<T: Config> Pallet<T> {
 	// If a farmer does not have any nodes attached to it's farm, an error is returned
 	pub fn get_vote_weight(farm_id: u32) -> Result<u64, DispatchError> {
-		let nodes_ids = pallet_tfgrid::Module::<T>::node_ids_by_farm_id(farm_id);
-		ensure!(nodes_ids.len() > 0, Error::<T>::FarmHasNoNodes);
+		// let nodes_ids = pallet_tfgrid::Module::<T>::node_ids_by_farm_id(farm_id);
+		// ensure!(nodes_ids.len() > 0, Error::<T>::FarmHasNoNodes);
 
-		let mut total_weight = 0;
-		for id in nodes_ids {
-			let node = pallet_tfgrid::Module::<T>::nodes(id);
-			let cu = Self::get_cu(node.resources);
-			let su = Self::get_su(node.resources);
+		// let mut total_weight = 0;
+		// for id in nodes_ids {
+		// 	let node = pallet_tfgrid::Module::<T>::nodes(id);
+		// 	let cu = Self::get_cu(node.resources);
+		// 	let su = Self::get_su(node.resources);
 			
-			let calculated_cu = 2*(cu as u128 / GIB/ ONE_THOUSAND);
-			let calculated_su = su as u128 / ONE_THOUSAND;
-			total_weight += calculated_cu as u64 + calculated_su as u64;
-		}
+		// 	let calculated_cu = 2*(cu as u128 / GIB/ ONE_THOUSAND);
+		// 	let calculated_su = su as u128 / ONE_THOUSAND;
+		// 	total_weight += calculated_cu as u64 + calculated_su as u64;
+		// }
 
-		Ok(total_weight)
+		// Ok(total_weight)
+		Ok(1)
 	}
 
 	/// Ensure that the right proposal bounds were passed and get the proposal from storage.
@@ -439,7 +434,7 @@ impl<T: Config> Pallet<T> {
 		ProposalList::<T>::set(active_proposals);
 	}
 
-	pub fn get_cu(resources: pallet_tfgrid_types::Resources) -> u64 {
+	pub fn get_cu(resources: Resources) -> u64 {
         let cru_min = resources.cru as u128 * 2 * GIB * ONE_THOUSAND;
 		let mru_min = (resources.mru as u128 - 1 * GIB) * ONE_THOUSAND / 4;
 		let sru_min = resources.sru as u128 * ONE_THOUSAND / 50;
@@ -455,9 +450,15 @@ impl<T: Config> Pallet<T> {
 		}
     }
 
-	pub fn get_su(resources: pallet_tfgrid_types::Resources) -> u64 {
+	pub fn get_su(resources: Resources) -> u64 {
 		let su = resources.hru as u128 * ONE_THOUSAND / 1200 + resources.sru as u128 * ONE_THOUSAND / 250;
 		let calculated_su = su / GIB;
 		calculated_su as u64
+	}
+}
+
+impl <T: Config> ChangeNode for Module<T> {
+	fn node_changed(node: &Node, new_node: &Node) {
+		println!("new node: {:?}", new_node);
 	}
 }

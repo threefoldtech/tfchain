@@ -7,14 +7,16 @@ use frame_support::{
 use sp_runtime::{
 	traits::{BlakeTwo256, Hash},
 };
-use pallet_tfgrid::types as pallet_tfgrid_types;
 use frame_system::{EventRecord, Phase};
 use super::{Event as DaoEvent};
 use sp_core::H256;
-use tfchain_support;
+use tfchain_support::{
+	types::{CertificationType, Resources, Location, PublicIP},
+	traits::Tfgrid
+};
 
 #[test]
-fn it_works_for_default_value() {
+fn farmers_vote_no_farm_fails() {
 	new_test_ext().execute_with(|| {
 		let proposal = make_proposal("some_remark".as_bytes().to_vec());
 		let proposal_len: u32 = proposal.using_encoded(|p| p.len() as u32);
@@ -37,7 +39,7 @@ fn it_works_for_default_value() {
 				hash.clone(),
 				true
 			),
-			Error::<Test>::FarmNotExists
+			Error::<Test>::NotAuthorizedToVote
 		);
 	});
 }
@@ -212,7 +214,7 @@ fn motion_approval_works() {
 		System::set_block_number(1);
 		let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_farm_certification(
 			1,
-			tfchain_support::farms::CertificationType::Certified
+			CertificationType::Certified
 		));
 		let proposal_len: u32 = proposal.using_encoded(|p| p.len() as u32);
 		let proposal_weight = proposal.get_dispatch_info().weight;
@@ -250,8 +252,8 @@ fn motion_approval_works() {
 		);
 
 		// Check farm certification type before we close
-		let f1 = TfgridModule::farms(1);
-		assert_eq!(f1.certification_type, tfchain_support::farms::CertificationType::Diy);
+		let f1 = Tfgrid::<AccountId>::get_farm(1);
+		assert_eq!(f1.certification_type, CertificationType::Diy);
 
 		System::set_block_number(5);
 		assert_ok!(DaoModule::close(Origin::signed(4), hash.clone(), 0, proposal_weight, proposal_len));
@@ -296,8 +298,8 @@ fn motion_approval_works() {
 		})));
 
 		// Certification type of farm should be set to certified.
-		let f1 = TfgridModule::farms(1);
-		assert_eq!(f1.certification_type, tfchain_support::farms::CertificationType::Certified);
+		let f1 = Tfgrid::<AccountId>::get_farm(1);
+		assert_eq!(f1.certification_type, CertificationType::Certified);
 	});
 }
 
@@ -307,7 +309,7 @@ fn weighted_voting_works() {
 		System::set_block_number(1);
 		let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_farm_certification(
 			1,
-			tfchain_support::farms::CertificationType::Certified
+			CertificationType::Certified
 		));
 		let proposal_len: u32 = proposal.using_encoded(|p| p.len() as u32);
 		let proposal_weight = proposal.get_dispatch_info().weight;
@@ -345,8 +347,8 @@ fn weighted_voting_works() {
 		);
 
 		// Check farm certification type before we close
-		let f1 = TfgridModule::farms(1);
-		assert_eq!(f1.certification_type, tfchain_support::farms::CertificationType::Diy);
+		let f1 = Tfgrid::<AccountId>::get_farm(1);
+		assert_eq!(f1.certification_type, CertificationType::Diy);
 
 		System::set_block_number(5);
 		assert_ok!(DaoModule::close(Origin::signed(4), hash.clone(), 0, proposal_weight, proposal_len));
@@ -388,8 +390,8 @@ fn weighted_voting_works() {
 		})));
 
 		// Certification type of farm should still be the same.
-		let f1 = TfgridModule::farms(1);
-		assert_eq!(f1.certification_type, tfchain_support::farms::CertificationType::Diy);
+		let f1 = Tfgrid::<AccountId>::get_farm(1);
+		assert_eq!(f1.certification_type, CertificationType::Diy);
 	});
 }
 
@@ -524,12 +526,12 @@ pub fn prepare_twin(account_id: u64) {
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 fn prepare_node(account_id: u64, farm_id: u32) {
 	// random location
-    let location = pallet_tfgrid_types::Location {
+    let location = Location {
         longitude: "12.233213231".as_bytes().to_vec(),
         latitude: "32.323112123".as_bytes().to_vec(),
     };
 
-    let resources = pallet_tfgrid_types::Resources {
+    let resources = Resources {
         hru: 1024 * GIGABYTE,
         sru: 512 * GIGABYTE,
         cru: 8,
@@ -555,12 +557,12 @@ fn prepare_node(account_id: u64, farm_id: u32) {
 
 fn prepare_big_node(account_id: u64, farm_id: u32) {
 	// random location
-    let location = pallet_tfgrid_types::Location {
+    let location = Location {
         longitude: "12.233213231".as_bytes().to_vec(),
         latitude: "32.323112123".as_bytes().to_vec(),
     };
 
-    let resources = pallet_tfgrid_types::Resources {
+    let resources = Resources {
         hru: 20024 * GIGABYTE,
         sru: 2024 * GIGABYTE,
         cru: 16,
@@ -586,7 +588,7 @@ fn prepare_big_node(account_id: u64, farm_id: u32) {
 
 pub fn prepare_farm(account_id: u64, farm_name: Vec<u8>) {
     let mut pub_ips = Vec::new();
-    pub_ips.push(tfchain_support::farms::PublicIP {
+    pub_ips.push(PublicIP {
         ip: "1.1.1.0".as_bytes().to_vec(),
         gateway: "1.1.1.1".as_bytes().to_vec(),
         contract_id: 0,
