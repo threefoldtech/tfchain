@@ -22,14 +22,14 @@
 
 use super::*;
 
+use super::Event as DaoEvent;
 use crate::Module as DaoModule;
-use frame_system::EventRecord;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::traits::{Box, Vec};
+use frame_system::EventRecord;
 use frame_system::RawOrigin;
-use sp_std::vec;
 use sp_std::mem::size_of;
-use super::{Event as DaoEvent};
+use sp_std::vec;
 
 use frame_system::Call as SystemCall;
 use frame_system::Module as System;
@@ -40,17 +40,17 @@ const MAX_BYTES: u32 = 1_024;
 
 benchmarks! {
     propose {
-		let b in 1 .. MAX_BYTES;
-		let bytes_in_storage = b + size_of::<u32>() as u32;
+        let b in 1 .. MAX_BYTES;
+        let bytes_in_storage = b + size_of::<u32>() as u32;
 
         let caller: T::AccountId = whitelisted_caller();
-		add_council_member::<T>(caller.clone());
+        add_council_member::<T>(caller.clone());
 
         let proposal: T::Proposal = SystemCall::<T>::remark(vec![1; b as usize]).into();
-		let threshold = 1;
+        let threshold = 1;
 
-		let description = "some_description".as_bytes().to_vec();
-		let link = "some_link".as_bytes().to_vec();
+        let description = "some_description".as_bytes().to_vec();
+        let link = "some_link".as_bytes().to_vec();
     }: _ (RawOrigin::Signed(caller.clone()), 1, Box::new(proposal.clone()), description, link, bytes_in_storage)
     verify {
         let proposal_hash = T::Hashing::hash_of(&proposal);
@@ -172,7 +172,7 @@ pub fn prepare_farm<T: Config>(source: T::AccountId) {
         domain_name_policy,
         x1,
         x2,
-        80
+        80,
     )
     .unwrap();
 
@@ -185,8 +185,5 @@ pub fn prepare_farm<T: Config>(source: T::AccountId) {
 }
 
 fn add_council_member<T: Config>(source: T::AccountId) {
-	pallet_membership::Module::<T, _>::add_member(
-		RawOrigin::Root.into(),
-		source
-	);
+    pallet_membership::Module::<T, _>::add_member(RawOrigin::Root.into(), source);
 }

@@ -14,7 +14,7 @@ pub struct Votes<ProposalIndex, BlockNumber> {
     pub threshold: u32,
     pub ayes: Vec<VoteWeight>,
     pub nays: Vec<VoteWeight>,
-    pub end: BlockNumber
+    pub end: BlockNumber,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug, Encode, Decode, Default)]
