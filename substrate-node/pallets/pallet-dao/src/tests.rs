@@ -1,6 +1,6 @@
 use super::Event as DaoEvent;
 use crate::{mock::Event as MockEvent, mock::*, Error};
-use frame_support::{assert_noop, assert_ok, pallet_prelude::*, weights::GetDispatchInfo};
+use frame_support::{assert_noop, assert_ok, weights::GetDispatchInfo};
 use frame_system::{EventRecord, Phase};
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Hash};
@@ -12,7 +12,6 @@ use tfchain_support::{
 fn farmers_vote_no_farm_fails() {
     new_test_ext().execute_with(|| {
         let proposal = make_proposal("some_remark".as_bytes().to_vec());
-        let proposal_len: u32 = proposal.using_encoded(|p| p.len() as u32);
         let _proposal_weight = proposal.get_dispatch_info().weight;
         let hash = BlakeTwo256::hash_of(&proposal);
 
@@ -22,7 +21,6 @@ fn farmers_vote_no_farm_fails() {
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
             "some_link".as_bytes().to_vec(),
-            proposal_len
         ));
 
         assert_noop!(
@@ -37,7 +35,6 @@ fn farmers_vote_proposal_works() {
     new_test_ext().execute_with(|| {
         System::set_block_number(1);
         let proposal = make_proposal("some_remark".as_bytes().to_vec());
-        let proposal_len: u32 = proposal.using_encoded(|p| p.len() as u32);
         let _proposal_weight = proposal.get_dispatch_info().weight;
         let hash = BlakeTwo256::hash_of(&proposal);
 
@@ -47,7 +44,6 @@ fn farmers_vote_proposal_works() {
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
             "some_link".as_bytes().to_vec(),
-            proposal_len
         ));
 
         prepare_twin_farm_and_node(10, "f1".as_bytes().to_vec(), 1);
@@ -63,7 +59,6 @@ fn farmers_vote_proposal_if_no_nodes_fails() {
     new_test_ext().execute_with(|| {
         System::set_block_number(1);
         let proposal = make_proposal("some_remark".as_bytes().to_vec());
-        let proposal_len: u32 = proposal.using_encoded(|p| p.len() as u32);
         let _proposal_weight = proposal.get_dispatch_info().weight;
         let hash = BlakeTwo256::hash_of(&proposal);
 
@@ -73,7 +68,6 @@ fn farmers_vote_proposal_if_no_nodes_fails() {
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
             "some_link".as_bytes().to_vec(),
-            proposal_len
         ));
 
         prepare_twin(10);
@@ -93,8 +87,6 @@ fn close_works() {
     new_test_ext().execute_with(|| {
         System::set_block_number(1);
         let proposal = make_proposal("some_remark".as_bytes().to_vec());
-        let proposal_len: u32 = proposal.using_encoded(|p| p.len() as u32);
-        let proposal_weight = proposal.get_dispatch_info().weight;
         let hash = BlakeTwo256::hash_of(&proposal);
 
         assert_ok!(DaoModule::propose(
@@ -103,7 +95,6 @@ fn close_works() {
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
             "some_link".as_bytes().to_vec(),
-            proposal_len
         ));
 
         // Farmer 1 votes yes
@@ -120,8 +111,6 @@ fn close_works() {
                 Origin::signed(4),
                 hash.clone(),
                 0,
-                proposal_weight,
-                proposal_len
             ),
             Error::<Test>::TooEarly
         );
@@ -131,8 +120,6 @@ fn close_works() {
             Origin::signed(4),
             hash.clone(),
             0,
-            proposal_weight,
-            proposal_len
         ));
 
         let e = System::events();
@@ -197,8 +184,6 @@ fn motion_approval_works() {
             1,
             CertificationType::Certified,
         ));
-        let proposal_len: u32 = proposal.using_encoded(|p| p.len() as u32);
-        let proposal_weight = proposal.get_dispatch_info().weight;
         let hash = BlakeTwo256::hash_of(&proposal);
 
         assert_ok!(DaoModule::propose(
@@ -207,7 +192,6 @@ fn motion_approval_works() {
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
             "some_link".as_bytes().to_vec(),
-            proposal_len
         ));
 
         // Farmer 1 votes yes
@@ -227,8 +211,6 @@ fn motion_approval_works() {
             Origin::signed(4),
             hash.clone(),
             0,
-            proposal_weight,
-            proposal_len
         ));
 
         let e = System::events();
@@ -302,8 +284,6 @@ fn weighted_voting_works() {
             1,
             CertificationType::Certified,
         ));
-        let proposal_len: u32 = proposal.using_encoded(|p| p.len() as u32);
-        let proposal_weight = proposal.get_dispatch_info().weight;
         let hash = BlakeTwo256::hash_of(&proposal);
 
         assert_ok!(DaoModule::propose(
@@ -312,7 +292,6 @@ fn weighted_voting_works() {
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
             "some_link".as_bytes().to_vec(),
-            proposal_len
         ));
 
         // Farmer 1 votes yes
@@ -332,8 +311,6 @@ fn weighted_voting_works() {
             Origin::signed(4),
             hash.clone(),
             0,
-            proposal_weight,
-            proposal_len
         ));
 
         let e = System::events();
@@ -398,8 +375,6 @@ fn voting_tfgridmodule_call_works() {
     new_test_ext().execute_with(|| {
         System::set_block_number(1);
         let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_connection_price(100));
-        let proposal_len: u32 = proposal.using_encoded(|p| p.len() as u32);
-        let proposal_weight = proposal.get_dispatch_info().weight;
         let hash = BlakeTwo256::hash_of(&proposal);
 
         assert_ok!(DaoModule::propose(
@@ -408,7 +383,6 @@ fn voting_tfgridmodule_call_works() {
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
             "some_link".as_bytes().to_vec(),
-            proposal_len
         ));
 
         // Farmer 1 votes yes
@@ -428,8 +402,6 @@ fn voting_tfgridmodule_call_works() {
             Origin::signed(4),
             hash.clone(),
             0,
-            proposal_weight,
-            proposal_len
         ));
 
         let e = System::events();

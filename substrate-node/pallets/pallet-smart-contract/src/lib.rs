@@ -19,7 +19,6 @@ use pallet_tft_price;
 use pallet_timestamp as timestamp;
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
-    traits::Tfgrid,
     types::{PublicIP, Resources, CertificationType}
 };
 

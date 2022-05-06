@@ -1,7 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "128"]
 
-use sp_io::storage;
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
@@ -172,7 +171,6 @@ pub mod pallet {
             action: Box<<T as Config>::Proposal>,
             description: Vec<u8>,
             link: Vec<u8>,
-            #[pallet::compact] length_bound: u32,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
@@ -180,11 +178,6 @@ pub mod pallet {
                 pallet_membership::Module::<T, pallet_membership::Instance1>::members();
             ensure!(council_members.contains(&who), Error::<T>::NotCouncilMember);
 
-            let proposal_len = action.using_encoded(|x| x.len());
-            ensure!(
-                proposal_len <= length_bound as usize,
-                Error::<T>::WrongProposalLength
-            );
             let proposal_hash = T::Hashing::hash_of(&action);
             ensure!(
                 !<ProposalOf<T>>::contains_key(proposal_hash),
@@ -317,8 +310,6 @@ pub mod pallet {
             origin: OriginFor<T>,
             proposal_hash: T::Hash,
             #[pallet::compact] proposal_index: ProposalIndex,
-            #[pallet::compact] proposal_weight_bound: Weight,
-            #[pallet::compact] length_bound: u32,
         ) -> DispatchResultWithPostInfo {
             let _ = ensure_signed(origin)?;
 
@@ -347,8 +338,6 @@ pub mod pallet {
             if approved {
                 let proposal = Self::validate_and_get_proposal(
                     &proposal_hash,
-                    length_bound,
-                    proposal_weight_bound,
                 )?;
                 Self::deposit_event(Event::Closed {
                     proposal_hash,
@@ -397,23 +386,8 @@ impl<T: Config> Pallet<T> {
     /// to the length.
     fn validate_and_get_proposal(
         hash: &T::Hash,
-        length_bound: u32,
-        weight_bound: Weight,
     ) -> Result<<T as Config>::Proposal, DispatchError> {
-        let key = ProposalOf::<T>::hashed_key_for(hash);
-        // read the length of the proposal storage entry directly
-        let proposal_len =
-            storage::read(&key, &mut [0; 0], 0).ok_or(Error::<T>::ProposalMissing)?;
-        ensure!(
-            proposal_len <= length_bound,
-            Error::<T>::WrongProposalLength
-        );
         let proposal = ProposalOf::<T>::get(hash).ok_or(Error::<T>::ProposalMissing)?;
-        let proposal_weight = proposal.get_dispatch_info().weight;
-        ensure!(
-            proposal_weight <= weight_bound,
-            Error::<T>::WrongProposalWeight
-        );
         Ok(proposal)
     }
 
