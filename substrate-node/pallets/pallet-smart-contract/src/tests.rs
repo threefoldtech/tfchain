@@ -1131,7 +1131,7 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
             Origin::signed(bob()),
             node_id
         ));
-
+        
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
             1,
@@ -1139,12 +1139,13 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
             "hash".as_bytes().to_vec(),
             0
         ));
+        push_contract_resources_used(2);
 
         run_to_block(12);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 11);
         assert_ne!(amount_due_as_u128, 0);
-        check_report_cost(1, 2, amount_due_as_u128, 12, discount_received);
+        check_report_cost(1, 3, amount_due_as_u128, 12, discount_received);
 
         let our_events = System::events()
             .into_iter()
@@ -1165,7 +1166,7 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
         // Event 2: Node Contract created
         // Event 4: Rent contract billed
         // => no Node Contract billed event
-        assert_eq!(our_events.len(), 3);
+        assert_eq!(our_events.len(), 4);
     });
 }
 

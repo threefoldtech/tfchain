@@ -16,6 +16,8 @@ Now you can build.
 
 ```sh
 cd substrate-node
+# make sure you run nightly
+rustup override set nightly
 cargo build
 ```
 
