@@ -28,6 +28,7 @@ use frame_support::traits::{Box, Vec};
 use frame_system::RawOrigin;
 use sp_std::vec;
 
+use tfchain_support::types::{Location, Resources, PublicIP};
 use pallet_tfgrid;
 
 benchmarks! {
@@ -113,12 +114,12 @@ pub fn prepare_farm_and_node<T: Config>(source: T::AccountId) {
     prepare_farm::<T>(source.clone());
 
     // random location
-    let location = pallet_tfgrid_types::Location {
+    let location = Location {
         longitude: "12.233213231".as_bytes().to_vec(),
         latitude: "32.323112123".as_bytes().to_vec(),
     };
 
-    let resources = pallet_tfgrid_types::Resources {
+    let resources = Resources {
         hru: 1,
         sru: 1,
         cru: 1,
@@ -145,7 +146,7 @@ pub fn prepare_farm_and_node<T: Config>(source: T::AccountId) {
 pub fn prepare_farm<T: Config>(source: T::AccountId) {
     let farm_name = "test_farm";
     let mut pub_ips = Vec::new();
-    pub_ips.push(pallet_tfgrid_types::PublicIP {
+    pub_ips.push(PublicIP {
         ip: "1.1.1.0".as_bytes().to_vec(),
         gateway: "1.1.1.1".as_bytes().to_vec(),
         contract_id: 0,

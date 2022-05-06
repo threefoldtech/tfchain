@@ -22,38 +22,62 @@
 
 use super::*;
 
-use super::Event as DaoEvent;
 use crate::Module as DaoModule;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::traits::{Box, Vec};
-use frame_system::EventRecord;
+use sp_runtime::traits::Bounded;
 use frame_system::RawOrigin;
-use sp_std::mem::size_of;
 use sp_std::vec;
 
 use frame_system::Call as SystemCall;
 use frame_system::Module as System;
 
-use pallet_tfgrid;
-
-const MAX_BYTES: u32 = 1_024;
+use tfchain_support::types::{Location, Resources};
 
 benchmarks! {
     propose {
-        let b in 1 .. MAX_BYTES;
-        let bytes_in_storage = b + size_of::<u32>() as u32;
-
         let caller: T::AccountId = whitelisted_caller();
         add_council_member::<T>(caller.clone());
 
-        let proposal: T::Proposal = SystemCall::<T>::remark(vec![1; b as usize]).into();
+        let remark = "remark".as_bytes().to_vec();
+        let proposal: T::Proposal = SystemCall::<T>::remark(remark).into();
         let threshold = 1;
 
         let description = "some_description".as_bytes().to_vec();
         let link = "some_link".as_bytes().to_vec();
-    }: _ (RawOrigin::Signed(caller.clone()), 1, Box::new(proposal.clone()), description, link, bytes_in_storage)
+    }: _ (RawOrigin::Signed(caller.clone()), 1, Box::new(proposal.clone()), description, link)
     verify {
-        let proposal_hash = T::Hashing::hash_of(&proposal);
+        assert_eq!(DaoModule::<T>::proposals_list_hashes().len(), 1);
+    }
+
+    vote {
+        let a1: T::AccountId = account("Alice", 0, 0);
+        prepare_farm_and_node::<T>(a1.clone());
+
+        let caller: T::AccountId = whitelisted_caller();
+        add_council_member::<T>(caller.clone());
+
+        let hash = create_proposal::<T>(caller.clone());
+    }: _ (RawOrigin::Signed(a1.clone()), 1, hash, true)
+    verify {
+        let voting = DaoModule::<T>::voting(&hash).ok_or("Proposal missing")?;
+        assert_eq!(voting.ayes.len(), 1);
+    }
+
+    close {
+        let a1: T::AccountId = account("Alice", 0, 0);
+        prepare_farm_and_node::<T>(a1.clone());
+
+        let caller: T::AccountId = whitelisted_caller();
+        add_council_member::<T>(caller.clone());
+
+        let hash = create_proposal::<T>(caller.clone());
+        vote_proposal::<T>(a1.clone(), 1, hash, true);
+
+        System::<T>::set_block_number(<T as frame_system::Config>::BlockNumber::max_value());
+    }: _ (RawOrigin::Signed(a1.clone()), hash, 0)
+    verify {
+
     }
 }
 
@@ -66,8 +90,8 @@ mod benchmarktests {
     #[test]
     fn test_benchmarks() {
         new_test_ext().execute_with(|| {
-            assert_ok!(test_benchmark_create_node_contract::<TestRuntime>());
-            assert_ok!(test_benchmark_add_reports::<TestRuntime>());
+            assert_ok!(test_benchmark_propose::<TestRuntime>());
+            assert_ok!(test_benchmark_vote::<TestRuntime>());
         });
     }
 }
@@ -95,16 +119,16 @@ pub fn prepare_farm_and_node<T: Config>(source: T::AccountId) {
     prepare_farm::<T>(source.clone());
 
     // random location
-    let location = pallet_tfgrid_types::Location {
+    let location = Location {
         longitude: "12.233213231".as_bytes().to_vec(),
         latitude: "32.323112123".as_bytes().to_vec(),
     };
 
-    let resources = pallet_tfgrid_types::Resources {
-        hru: 1,
-        sru: 1,
-        cru: 1,
-        mru: 1,
+    let resources = Resources {
+        hru: 9001778946048,
+        sru: 512110190592,
+        cru: 64,
+        mru: 202802909184,
     };
 
     let country = "Belgium".as_bytes().to_vec();
@@ -126,64 +150,42 @@ pub fn prepare_farm_and_node<T: Config>(source: T::AccountId) {
 
 pub fn prepare_farm<T: Config>(source: T::AccountId) {
     let farm_name = "test_farm";
-    let mut pub_ips = Vec::new();
-    pub_ips.push(pallet_tfgrid_types::PublicIP {
-        ip: "1.1.1.0".as_bytes().to_vec(),
-        gateway: "1.1.1.1".as_bytes().to_vec(),
-        contract_id: 0,
-    });
-
-    let su_policy = pallet_tfgrid_types::Policy {
-        value: 194400,
-        unit: pallet_tfgrid_types::Unit::Gigabytes,
-    };
-    let nu_policy = pallet_tfgrid_types::Policy {
-        value: 50000,
-        unit: pallet_tfgrid_types::Unit::Gigabytes,
-    };
-    let cu_policy = pallet_tfgrid_types::Policy {
-        value: 305600,
-        unit: pallet_tfgrid_types::Unit::Gigabytes,
-    };
-    let ipu_policy = pallet_tfgrid_types::Policy {
-        value: 69400,
-        unit: pallet_tfgrid_types::Unit::Gigabytes,
-    };
-    let unique_name_policy = pallet_tfgrid_types::Policy {
-        value: 13900,
-        unit: pallet_tfgrid_types::Unit::Gigabytes,
-    };
-    let domain_name_policy = pallet_tfgrid_types::Policy {
-        value: 27800,
-        unit: pallet_tfgrid_types::Unit::Gigabytes,
-    };
-
-    let x1 = account("ferdie", 0, 2);
-    let x2 = account("eve", 0, 3);
-
-    pallet_tfgrid::Module::<T>::create_pricing_policy(
-        RawOrigin::Root.into(),
-        "policy_1".as_bytes().to_vec(),
-        su_policy,
-        cu_policy,
-        nu_policy,
-        ipu_policy,
-        unique_name_policy,
-        domain_name_policy,
-        x1,
-        x2,
-        80,
-    )
-    .unwrap();
-
     pallet_tfgrid::Module::<T>::create_farm(
         RawOrigin::Signed(source).into(),
         farm_name.as_bytes().to_vec(),
-        pub_ips.clone(),
+        Vec::new(),
     )
     .unwrap();
 }
 
+pub fn create_proposal<T: Config>(source: T::AccountId) -> T::Hash {
+    let remark = "remark".as_bytes().to_vec();
+    let proposal: T::Proposal = SystemCall::<T>::remark(remark).into();
+    let threshold = 1;
+    let description = "some_description".as_bytes().to_vec();
+    let link = "some_link".as_bytes().to_vec();
+    let hash = T::Hashing::hash_of(&proposal);
+
+    DaoModule::<T>::propose(
+        RawOrigin::Signed(source).into(),
+        threshold,
+        Box::new(proposal),
+        description,
+        link
+    ).unwrap();
+
+    hash
+}
+
+pub fn vote_proposal<T: Config>(source: T::AccountId, farm_id: u32, hash: T::Hash, approve: bool) {
+    DaoModule::<T>::vote(
+        RawOrigin::Signed(source).into(),
+        farm_id,
+        hash,
+        approve
+    ).unwrap();
+}
+
 fn add_council_member<T: Config>(source: T::AccountId) {
-    pallet_membership::Module::<T, _>::add_member(RawOrigin::Root.into(), source);
+    pallet_membership::Module::<T, _>::add_member(RawOrigin::Root.into(), source).unwrap();
 }

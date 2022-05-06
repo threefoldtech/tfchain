@@ -30,18 +30,21 @@ mod benchmarking;
 
 mod proposal;
 
+pub mod weights;
+pub use weights::WeightInfo;
+
 /// Simple index type for proposal counting.
 pub type ProposalIndex = u32;
 
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::pallet_prelude::*;
+    use frame_support::{pallet_prelude::*, dispatch::WeighData};
     use frame_system::pallet_prelude::*;
 
     #[pallet::config]
     pub trait Config:
-        frame_system::Config + pallet_membership::Config<pallet_membership::Instance1>
+        frame_system::Config + pallet_membership::Config<pallet_membership::Instance1> + pallet_tfgrid::Config
     {
         /// Because this pallet emits events, it depends on the runtime's definition of an event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -55,9 +58,6 @@ pub mod pallet {
 
         /// The time-out for council motions.
         type MotionDuration: Get<Self::BlockNumber>;
-
-        /// Maximum number of proposals allowed to be active in parallel.
-        type MaxProposals: Get<ProposalIndex>;
 
         type Tfgrid: Tfgrid<Self::AccountId>;
         type NodeChanged: ChangeNode;

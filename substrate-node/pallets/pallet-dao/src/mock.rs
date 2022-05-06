@@ -69,7 +69,6 @@ impl system::Config for Test {
 pub type BlockNumber = u32;
 parameter_types! {
     pub const DaoMotionDuration: BlockNumber = 4;
-    pub const DaoMaxProposals: u32 = 100;
 }
 
 pub struct NodeChanged;
@@ -84,7 +83,6 @@ impl pallet_dao::Config for Test {
     type CouncilOrigin = EnsureRoot<Self::AccountId>;
     type Proposal = Call;
     type MotionDuration = DaoMotionDuration;
-    type MaxProposals = DaoMaxProposals;
     type Tfgrid = TfgridModule;
     type NodeChanged = NodeChanged;
 }

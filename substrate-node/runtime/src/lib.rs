@@ -384,7 +384,6 @@ impl validatorset::Config for Runtime {
 
 parameter_types! {
 	pub const DaoMotionDuration: BlockNumber = 7 * DAYS;
-	pub const DaoMaxProposals: u32 = 100;
 }
 
 impl pallet_dao::Config for Runtime {
@@ -392,7 +391,6 @@ impl pallet_dao::Config for Runtime {
 	type CouncilOrigin = EnsureRootOrCouncilApproval;
 	type Proposal = Call;
 	type MotionDuration = DaoMotionDuration;
-	type MaxProposals = DaoMaxProposals;
 	type Tfgrid = TfgridModule;
 	type NodeChanged = NodeChanged;
 }
