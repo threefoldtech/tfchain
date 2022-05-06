@@ -5,7 +5,6 @@ use frame_system::{EventRecord, Phase};
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Hash};
 use tfchain_support::{
-    traits::Tfgrid,
     types::{CertificationType, Location, PublicIP, Resources},
 };
 
@@ -220,8 +219,8 @@ fn motion_approval_works() {
         assert_ok!(DaoModule::vote(Origin::signed(11), 2, hash.clone(), true));
 
         // // Check farm certification type before we close
-        // let f1 = Tfgrid::<AccountId>::get_farm(1);
-        // assert_eq!(f1.certification_type, CertificationType::Diy);
+        let f1 = TfgridModule::farms(1);
+        assert_eq!(f1.certification_type, CertificationType::Diy);
 
         System::set_block_number(5);
         assert_ok!(DaoModule::close(
@@ -290,8 +289,8 @@ fn motion_approval_works() {
         );
 
         // // Certification type of farm should be set to certified.
-        // let f1 = Tfgrid::<AccountId>::get_farm(1);
-        // assert_eq!(f1.certification_type, CertificationType::Certified);
+        let f1 = TfgridModule::farms(1);
+        assert_eq!(f1.certification_type, CertificationType::Certified);
     });
 }
 
@@ -325,8 +324,8 @@ fn weighted_voting_works() {
         assert_ok!(DaoModule::vote(Origin::signed(11), 2, hash.clone(), false));
 
         // // Check farm certification type before we close
-        // let f1 = Tfgrid::<AccountId>::get_farm(1);
-        // assert_eq!(f1.certification_type, CertificationType::Diy);
+        let f1 = TfgridModule::farms(1);
+        assert_eq!(f1.certification_type, CertificationType::Diy);
 
         System::set_block_number(5);
         assert_ok!(DaoModule::close(
@@ -388,9 +387,9 @@ fn weighted_voting_works() {
             }))
         );
 
-        // // Certification type of farm should still be the same.
-        // let f1 = Tfgrid::<AccountId>::get_farm(1);
-        // assert_eq!(f1.certification_type, CertificationType::Diy);
+        // Certification type of farm should still be the same.
+        let f1 = TfgridModule::farms(1);
+        assert_eq!(f1.certification_type, CertificationType::Diy);
     });
 }
 

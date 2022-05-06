@@ -11,8 +11,8 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use tfchain_support::{
-    traits::{ChangeNode, Tfgrid},
-    types::{Farm, Node},
+    traits::{ChangeNode},
+    types::{Node},
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;

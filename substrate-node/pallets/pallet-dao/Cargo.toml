@@ -34,10 +34,7 @@ tfchain-support = { path = "../../support", default-features = false }
 
 [dev-dependencies]
 sp-core = { default-features = false, version = "3.0.0" }
-
-[dependencies.pallet-tfgrid]
-default-features = false
-path = "../pallet-tfgrid"
+pallet-tfgrid = { path = "../pallet-tfgrid" }
 
 [features]
 default = ["std"]
