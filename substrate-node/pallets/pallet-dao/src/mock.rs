@@ -1,4 +1,4 @@
-use crate as pallet_dao;
+use crate::{self as pallet_dao};
 use frame_support::{construct_runtime, parameter_types};
 use frame_system as system;
 use frame_system::EnsureRoot;
@@ -78,6 +78,7 @@ impl ChangeNode for NodeChanged {
     }
 }
 
+use super::weights;
 impl pallet_dao::Config for Test {
     type Event = Event;
     type CouncilOrigin = EnsureRoot<Self::AccountId>;
@@ -85,6 +86,7 @@ impl pallet_dao::Config for Test {
     type MotionDuration = DaoMotionDuration;
     type Tfgrid = TfgridModule;
     type NodeChanged = NodeChanged;
+    type WeightInfo = weights::SubstrateWeight<Test>;
 }
 
 impl pallet_tfgrid::Config for Test {

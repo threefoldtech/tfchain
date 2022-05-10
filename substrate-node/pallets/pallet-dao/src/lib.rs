@@ -27,10 +27,10 @@ mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+pub mod weights;
 
 mod proposal;
 
-pub mod weights;
 pub use weights::WeightInfo;
 
 /// Simple index type for proposal counting.
@@ -39,7 +39,7 @@ pub type ProposalIndex = u32;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::{pallet_prelude::*, dispatch::WeighData};
+    use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
 
     #[pallet::config]
@@ -61,6 +61,9 @@ pub mod pallet {
 
         type Tfgrid: Tfgrid<Self::AccountId>;
         type NodeChanged: ChangeNode;
+
+        /// Weight information for extrinsics in this pallet.
+		type WeightInfo: WeightInfo;
     }
 
     #[pallet::pallet]
@@ -164,7 +167,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight((<T as pallet::Config>::WeightInfo::propose(), DispatchClass::Operational))]
         pub fn propose(
             origin: OriginFor<T>,
             #[pallet::compact] threshold: u32,
@@ -221,7 +224,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight((<T as pallet::Config>::WeightInfo::vote(), DispatchClass::Operational))]
         pub fn vote(
             origin: OriginFor<T>,
             farm_id: u32,
@@ -305,7 +308,7 @@ pub mod pallet {
             }
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight((<T as pallet::Config>::WeightInfo::close(), DispatchClass::Operational))]
         pub fn close(
             origin: OriginFor<T>,
             proposal_hash: T::Hash,
