@@ -393,6 +393,7 @@ impl pallet_dao::Config for Runtime {
 	type MotionDuration = DaoMotionDuration;
 	type Tfgrid = TfgridModule;
 	type NodeChanged = NodeChanged;
+	type WeightInfo = pallet_dao::weights::SubstrateWeight<Runtime>;
 }
 
 /// Special `FullIdentificationOf` implementation that is returning for every input `Some(Default::default())`.
