@@ -696,8 +696,6 @@ impl<T: Config> Module<T> {
         contract_lock.amount_locked = new_amount_locked;
         ContractLock::<T>::insert(contract.contract_id, &contract_lock);
 
-        println!("amount locked: {:?}", contract_lock.amount_locked);
-
         let is_canceled = matches!(contract.state, types::ContractState::Deleted(_));
         // When the cultivation rewards are ready to be distributed or we have to decomission the contract (due to out of funds) or it's canceled by the user
         // Unlock all reserved balance and distribute
