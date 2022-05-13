@@ -657,11 +657,12 @@ impl<T: Config> Module<T> {
         // Calculate amount of seconds elapsed based on the contract lock struct
         let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
 
+        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+
         // this will set the seconds elapsed to the default billing cycle duration in seconds
         // if there is no contract lock object yet. A contract lock object will be created later in this function
         // https://github.com/threefoldtech/tfchain/issues/261
         if contract_lock.lock_updated != 0 {
-            let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
             seconds_elapsed = now.checked_sub(contract_lock.lock_updated).unwrap_or(0);
         }
 
@@ -679,25 +680,23 @@ impl<T: Config> Module<T> {
             amount_due = usable_balance;
         }
 
-        // Refetch usable balance
-        let usable_balance = Self::get_usable_balance(&twin.account_id);
-        // Get twin free balance
-        let free_balance = <T as Config>::Currency::free_balance(&twin.account_id);
-        // Locked balance = free balance - usable balance
-        let locked_balance = free_balance - usable_balance;
+
+        let new_amount_locked = contract_lock.amount_locked + amount_due;
 
         // Update lock for contract and ContractLock in storage
         <T as Config>::Currency::extend_lock(
             contract.contract_id.to_be_bytes(),
             &twin.account_id,
-            locked_balance + amount_due.into(),
+            new_amount_locked.into(),
             WithdrawReasons::RESERVE,
         );
         // increment cycles billed
-        contract_lock.lock_updated = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+        contract_lock.lock_updated = now;
         contract_lock.cycles += 1;
-        contract_lock.amount_locked = contract_lock.amount_locked + amount_due;
+        contract_lock.amount_locked = new_amount_locked;
         ContractLock::<T>::insert(contract.contract_id, &contract_lock);
+
+        println!("amount locked: {:?}", contract_lock.amount_locked);
 
         let is_canceled = matches!(contract.state, types::ContractState::Deleted(_));
         // When the cultivation rewards are ready to be distributed or we have to decomission the contract (due to out of funds) or it's canceled by the user
@@ -720,8 +719,7 @@ impl<T: Config> Module<T> {
                 Err(err) => debug::info!("error while distributing cultivation rewards {:?}", err),
             };
             // Reset values
-            contract_lock.lock_updated =
-                <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+            contract_lock.lock_updated = now;
             contract_lock.amount_locked = BalanceOf::<T>::saturated_from(0 as u128);
             contract_lock.cycles = 0;
             ContractLock::<T>::insert(contract.contract_id, &contract_lock);
