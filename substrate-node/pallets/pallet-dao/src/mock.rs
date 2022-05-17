@@ -76,6 +76,10 @@ impl ChangeNode for NodeChanged {
     fn node_changed(old_node: Option<&Node>, new_node: &Node) {
         DaoModule::node_changed(old_node, new_node)
     }
+
+    fn node_deleted(node: &Node) {
+        DaoModule::node_deleted(node);
+    }
 }
 
 use super::weights;

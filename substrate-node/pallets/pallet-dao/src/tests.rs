@@ -82,6 +82,36 @@ fn farmers_vote_proposal_if_no_nodes_fails() {
     });
 }
 
+
+#[test]
+fn farmer_weight_is_set_properly_when_node_is_added_works() {
+    new_test_ext().execute_with(|| {
+        System::set_block_number(1);
+
+        prepare_twin_farm_and_node(10, "f1".as_bytes().to_vec(), 1);
+
+        let weight = DaoModule::farm_weight(1);
+        assert_ne!(weight, 0);
+    });
+}
+
+#[test]
+fn farmer_weight_is_set_properly_when_node_is_added_and_removed_works() {
+    new_test_ext().execute_with(|| {
+        System::set_block_number(1);
+
+        prepare_twin_farm_and_node(10, "f1".as_bytes().to_vec(), 1);
+
+        let weight = DaoModule::farm_weight(1);
+        assert_ne!(weight, 0);
+
+        TfgridModule::delete_node_farm(Origin::signed(10), 1).unwrap();
+
+        let weight = DaoModule::farm_weight(1);
+        assert_eq!(weight, 0);
+    });
+}
+
 #[test]
 fn close_works() {
     new_test_ext().execute_with(|| {

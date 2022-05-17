@@ -506,4 +506,11 @@ impl<T: Config> ChangeNode for Module<T> {
             }
         };
     }
+
+    fn node_deleted(node: &Node) {
+        let node_weight = Self::get_node_weight(node.resources);
+        let mut farm_weight = FarmWeight::<T>::get(node.farm_id);
+        farm_weight = farm_weight.checked_sub(node_weight).unwrap_or(0);
+        FarmWeight::<T>::insert(node.farm_id, farm_weight);
+    }
 }

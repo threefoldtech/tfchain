@@ -687,6 +687,9 @@ decl_module! {
 
             Self::deposit_event(RawEvent::NodeDeleted(id));
 
+            // Call node deleted
+            T::NodeChanged::node_deleted(&stored_node);
+
             Ok(())
         }
 
@@ -726,6 +729,7 @@ decl_module! {
 
             Ok(())
         }
+
         #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(3)]
         pub fn update_entity(origin, name: Vec<u8>, country: Vec<u8>, city: Vec<u8>) -> dispatch::DispatchResult {
             let account_id = ensure_signed(origin)?;
@@ -1120,6 +1124,9 @@ decl_module! {
 
             Nodes::remove(node_id);
             NodeIdByTwinID::remove(node.twin_id);
+
+            // Call node deleted
+            T::NodeChanged::node_deleted(&node);
 
             Self::deposit_event(RawEvent::NodeDeleted(node_id));
 

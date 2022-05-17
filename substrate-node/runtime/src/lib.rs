@@ -317,6 +317,10 @@ impl ChangeNode for NodeChanged {
 	) {
 		Dao::node_changed(old_node, new_node)
 	}
+
+	fn node_deleted(node: &Node) {
+		Dao::node_deleted(node)
+	}
 }
 
 impl pallet_tfgrid::Config for Runtime {

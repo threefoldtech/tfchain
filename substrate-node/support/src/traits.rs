@@ -6,4 +6,5 @@ pub trait Tfgrid<AccountId> {
 
 pub trait ChangeNode {
     fn node_changed(node: Option<&super::types::Node>, new_node: &super::types::Node);
+    fn node_deleted(node: &super::types::Node);
 }
