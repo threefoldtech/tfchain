@@ -29,7 +29,7 @@ When the user creates a RentContract on a node, all subsequent NodeContracts (de
 
 ### Capacity planning
  
-In order to highly improve the usability of our decentralised internet we could do some capacity planning for the user. This implies that, based on the the workload the user wants to deploy, we suggest the most optimal location and node. This process can't be done on the chain itself because a when a contract is created the amount of resources the user wants to have is not specified, also the location is omitted. 
+In order to highly improve the usability of our decentralized internet we could do some capacity planning for the user. This implies that, based on the the workload the user wants to deploy, we suggest the most optimal location and node. This process can't be done on the chain itself because when a contract is created the amount of resources the user wants to have is not specified, also the location is omitted. 
 
 A separate service or client could be created for this specific use case, so that a user can ask the service for a suggestion of node(s) for a specific deployment. 
 
@@ -49,7 +49,7 @@ See [spec](https://github.com/threefoldtech/tfchain_tft_bridge/blob/main/specs/b
 
 ## TFT Bridge Module: What needs to be done:
 
-The bridge is not sufficiently stress tested and needs to be made more resilient. We also need to rethink how failed deposits and withdraws are handled. 
+The bridge is not sufficiently stress-tested and needs to be made more resilient. We also need to rethink how failed deposits and withdraws are handled. 
 
 ## New features:
 
