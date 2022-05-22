@@ -4,6 +4,8 @@ use substrate_fixed::types::U64F64;
 
 use pallet_tfgrid::types;
 
+pub type BlockNumber = u64;
+
 /// Utility type for managing upgrades/migrations.
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum PalletStorageVersion {
@@ -75,6 +77,7 @@ pub struct ContractBillingInformation {
 pub enum ContractState {
     Created,
     Deleted(Cause),
+    GracePeriod(BlockNumber)
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]

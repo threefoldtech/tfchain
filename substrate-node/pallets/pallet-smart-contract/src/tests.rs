@@ -876,7 +876,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
             1
         ));
 
-        run_to_block(32);
+        run_to_block(29);
         check_report_cost(1, 5, amount_due_as_u128, 28, discount_received);
 
         let contract = SmartContractModule::contracts(1);
@@ -888,7 +888,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
 }
 
 #[test]
-fn test_node_contract_billing_cycles_cancels_contract_when_out_of_funds_works() {
+fn test_node_contract_out_of_funds_should_move_state_to_graceperiod_works() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1);
@@ -912,10 +912,7 @@ fn test_node_contract_billing_cycles_cancels_contract_when_out_of_funds_works() 
         run_to_block(22);
 
         let c1 = SmartContractModule::contracts(1);
-        assert_eq!(c1, types::Contract::default());
-
-        let contract_billing_info = SmartContractModule::contract_billing_information_by_id(1);
-        assert_eq!(contract_billing_info.amount_unbilled, 0); //this amount in unit USD = 1/1e7
+        assert_eq!(c1.state, types::ContractState::GracePeriod(21));
 
         let our_events = System::events()
             .into_iter()
@@ -931,16 +928,93 @@ fn test_node_contract_billing_cycles_cancels_contract_when_out_of_funds_works() 
 
         let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
             Vec::new();
-        expected_events.push(RawEvent::NodeContractCanceled(1, 1, 3));
+        expected_events.push(RawEvent::ContractGracePeriodStarted(1, 21));
 
-        assert_eq!(our_events[5], expected_events[0]);
+        assert_eq!(our_events[3], expected_events[0]);
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(31);
-        assert_eq!(contract_to_bill.len(), 0);
+        assert_eq!(contract_to_bill.len(), 1);
         run_to_block(32);
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(41);
-        assert_eq!(contract_to_bill.len(), 0);
+        assert_eq!(contract_to_bill.len(), 1);
+        run_to_block(42);
+
+        Balances::transfer(Origin::signed(bob()), charlie(), 100000000).unwrap();
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(51);
+        assert_eq!(contract_to_bill.len(), 1);
+        run_to_block(52);
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(61);
+        assert_eq!(contract_to_bill.len(), 1);
+        run_to_block(62);
+
+        let c1 = SmartContractModule::contracts(1);
+        assert_eq!(c1.state, types::ContractState::Created);
+    });
+}
+
+
+#[test]
+fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(charlie()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            0
+        ));
+
+        push_contract_resources_used(1);
+
+        // cycle 1
+        run_to_block(12);
+
+        // cycle 2
+        // user does not have enough funds to pay for 2 cycles
+        run_to_block(22);
+
+        let c1 = SmartContractModule::contracts(1);
+        assert_eq!(c1.state, types::ContractState::GracePeriod(21));
+
+        let our_events = System::events()
+            .into_iter()
+            .map(|r| r.event)
+            .filter_map(|e| {
+                if let Event::pallet_smart_contract(inner) = e {
+                    Some(inner)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
+            Vec::new();
+        expected_events.push(RawEvent::ContractGracePeriodStarted(1, 21));
+
+        assert_eq!(our_events[3], expected_events[0]);
+
+        run_to_block(32);
+        run_to_block(42);
+        run_to_block(52);
+        run_to_block(62);
+        run_to_block(72);
+        run_to_block(82);
+        run_to_block(92);
+        run_to_block(102);
+        run_to_block(112);
+        run_to_block(122);
+        run_to_block(132);
+
+        let c1 = SmartContractModule::contracts(1);
+        assert_eq!(c1, types::Contract::default());
     });
 }
 
