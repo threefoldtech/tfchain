@@ -312,6 +312,8 @@ impl pallet_tfgrid::Config for Runtime {
 parameter_types! {
     pub StakingPoolAccount: AccountId = get_staking_pool_account();
 	pub BillingFrequency: u64 = 600;
+	pub GracePeriod: u64 = (14 * DAYS).into();
+	pub DistributionFrequency: u16 = 24;
 }
 
 pub fn get_staking_pool_account() -> AccountId {
@@ -324,6 +326,8 @@ impl pallet_smart_contract::Config for Runtime {
 	type Currency = Balances;
 	type StakingPoolAccount = StakingPoolAccount;
 	type BillingFrequency = BillingFrequency;
+	type DistributionFrequency = DistributionFrequency;
+	type GracePeriod = GracePeriod;
 	type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
 }
 

@@ -40,6 +40,7 @@ pub trait Config:
     type StakingPoolAccount: Get<Self::AccountId>;
     type BillingFrequency: Get<u64>;
     type DistributionFrequency: Get<u16>;
+    type GracePeriod: Get<u64>;
     type WeightInfo: WeightInfo;
 }
 
@@ -69,6 +70,7 @@ decl_event!(
         NruConsumptionReportReceived(types::NruConsumption),
         RentContractCanceled(u64),
         ContractGracePeriodStarted(u64, u64),
+        ContractGracePeriodEnded(u64),
     }
 );
 
@@ -118,7 +120,6 @@ decl_storage! {
         pub ContractLock get(fn contract_number_of_cylces_billed): map hasher(blake2_128_concat) u64 => types::ContractLock<BalanceOf<T>>;
         pub ContractIDByNameRegistration get(fn contract_id_by_name_registration): map hasher(blake2_128_concat) Vec<u8> => u64;
         pub ActiveRentContractForNode get(fn active_rent_contracts): map hasher(blake2_128_concat) u32 => types::Contract;
-        pub GracePeriod get(fn grace_period): u64;
 
         // ID maps
         pub ContractID: u64;
@@ -680,14 +681,15 @@ impl<T: Config> Module<T> {
         let current_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
 
         match contract.state {
-            types::ContractState::GracePeriod(grace_at) => {
+            types::ContractState::GracePeriod(grace_start) => {
                 // if the usable balance is recharged, we can move the contract to created state again
                 if usable_balance > amount_due {
                     Self::_update_contract_state(contract, &types::ContractState::Created)?;
+                    Self::deposit_event(RawEvent::ContractGracePeriodEnded(contract.contract_id))
                 } else {
-                    let diff = current_block - grace_at;
+                    let diff = current_block - grace_start;
                     // If the contract grace period ran out, we can decomission the contract
-                    if diff >= GracePeriod::get() {
+                    if diff >= T::GracePeriod::get() {
                         decomission = true;
                     }
                 }
@@ -701,13 +703,13 @@ impl<T: Config> Module<T> {
                     Self::_update_contract_state(contract, &types::ContractState::GracePeriod(current_block))?;
                     // We can't lock the amount due on the contract's lock because the user ran out of funds
                     Self::deposit_event(RawEvent::ContractGracePeriodStarted(contract.contract_id, current_block.saturated_into()));
-                    
                 }
             }
         }
 
         let new_amount_locked = contract_lock.amount_locked + amount_due;
 
+        // Only lock an amount from the user's balance if the contract is in create state
         if matches!(contract.state, types::ContractState::Created) {
             // Update lock for contract and ContractLock in storage
             <T as Config>::Currency::extend_lock(
@@ -718,7 +720,7 @@ impl<T: Config> Module<T> {
             );
         }
 
-        // increment cycles billed
+        // increment cycles billed and update the internal lock struct
         contract_lock.lock_updated = now;
         contract_lock.cycles += 1;
         contract_lock.amount_locked = new_amount_locked;
@@ -751,6 +753,7 @@ impl<T: Config> Module<T> {
             ContractLock::<T>::insert(contract.contract_id, &contract_lock);
         }
 
+        // Always emit a contract billed event
         let contract_bill = types::ContractBill {
             contract_id: contract.contract_id,
             timestamp: <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000,

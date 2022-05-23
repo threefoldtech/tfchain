@@ -116,6 +116,7 @@ impl Config for TestRuntime {
     type StakingPoolAccount = StakingPoolAccount;
     type BillingFrequency = BillingFrequency;
     type DistributionFrequency = DistributionFrequency;
+    type GracePeriod = GracePeriod;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>; 
 }
 
