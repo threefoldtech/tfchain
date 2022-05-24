@@ -69,8 +69,8 @@ decl_event!(
         UpdatedUsedResources(types::ContractResources),
         NruConsumptionReportReceived(types::NruConsumption),
         RentContractCanceled(u64),
-        ContractGracePeriodStarted(u32, u64, u64),
-        ContractGracePeriodEnded(u32, u64),
+        ContractGracePeriodStarted(u64, u32, u32, u64),
+        ContractGracePeriodEnded(u64, u32, u32),
     }
 );
 
@@ -686,7 +686,7 @@ impl<T: Config> Module<T> {
                 // if the usable balance is recharged, we can move the contract to created state again
                 if usable_balance > amount_due {
                     Self::_update_contract_state(contract, &types::ContractState::Created)?;
-                    Self::deposit_event(RawEvent::ContractGracePeriodEnded(node_id, contract.contract_id))
+                    Self::deposit_event(RawEvent::ContractGracePeriodEnded(contract.contract_id, node_id, contract.twin_id))
                 } else {
                     let diff = current_block - grace_start;
                     // If the contract grace period ran out, we can decomission the contract
@@ -703,7 +703,7 @@ impl<T: Config> Module<T> {
                 if amount_due >= usable_balance {
                     Self::_update_contract_state(contract, &types::ContractState::GracePeriod(current_block))?;
                     // We can't lock the amount due on the contract's lock because the user ran out of funds
-                    Self::deposit_event(RawEvent::ContractGracePeriodStarted(node_id, contract.contract_id, current_block.saturated_into()));
+                    Self::deposit_event(RawEvent::ContractGracePeriodStarted(contract.contract_id, node_id, contract.twin_id, current_block.saturated_into()));
                 }
             }
         }

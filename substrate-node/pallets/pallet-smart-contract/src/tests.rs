@@ -928,7 +928,7 @@ fn test_node_contract_out_of_funds_should_move_state_to_graceperiod_works() {
 
         let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
             Vec::new();
-        expected_events.push(RawEvent::ContractGracePeriodStarted(1, 1, 21));
+        expected_events.push(RawEvent::ContractGracePeriodStarted(1, 1, 3, 21));
 
         assert_eq!(our_events[3], expected_events[0]);
 
@@ -997,7 +997,7 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
 
         let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
             Vec::new();
-        expected_events.push(RawEvent::ContractGracePeriodStarted(1, 1, 21));
+        expected_events.push(RawEvent::ContractGracePeriodStarted(1, 1, 3, 21));
 
         assert_eq!(our_events[3], expected_events[0]);
 
