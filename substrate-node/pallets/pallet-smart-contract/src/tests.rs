@@ -1282,6 +1282,129 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
     });
 }
 
+#[test]
+fn test_toggle_billing() {
+    new_test_ext().execute_with(|| {
+        let disabled = SmartContractModule::billing_disabled();
+        assert_eq!(disabled, false);
+
+        assert_ok!(SmartContractModule::set_billing_disabled(
+            RawOrigin::Root.into(),
+            true
+        ));
+
+        let disabled = SmartContractModule::billing_disabled();
+        assert_eq!(disabled, true);
+    })
+}
+
+#[test]
+fn test_disable_billing_for_contracts() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(bob()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            1
+        ));
+
+        assert_ok!(SmartContractModule::set_billing_disabled(
+            RawOrigin::Root.into(),
+            true
+        ));
+
+        let contract_to_bill_at_block = SmartContractModule::contract_to_bill_at_block(11);
+        assert_eq!(contract_to_bill_at_block.len(), 1);
+
+        run_to_block(12);
+        run_to_block(22);
+
+        // Test that the expected events were emitted
+        let our_events = System::events()
+            .into_iter()
+            .map(|r| r.event)
+            .filter_map(|e| {
+                if let Event::pallet_smart_contract(inner) = e {
+                    Some(inner)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        for event in our_events.iter().clone() {
+            println!("\nevent: {:?}", event);
+        }
+
+        // 1: Contract Created (node contract)
+        // 2: Billing Disabled
+        assert_eq!(our_events.len(), 2);
+    })
+}
+
+#[test]
+fn test_toggle_disable_billing_for_contracts() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(bob()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            1
+        ));
+
+        assert_ok!(SmartContractModule::set_billing_disabled(
+            RawOrigin::Root.into(),
+            true
+        ));
+
+        let contract_to_bill_at_block = SmartContractModule::contract_to_bill_at_block(11);
+        assert_eq!(contract_to_bill_at_block.len(), 1);
+
+        run_to_block(12);
+        run_to_block(22);
+
+        assert_ok!(SmartContractModule::set_billing_disabled(
+            RawOrigin::Root.into(),
+            false
+        ));
+
+        run_to_block(32);
+
+        // Test that the expected events were emitted
+        let our_events = System::events()
+            .into_iter()
+            .map(|r| r.event)
+            .filter_map(|e| {
+                if let Event::pallet_smart_contract(inner) = e {
+                    Some(inner)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        for event in our_events.iter().clone() {
+            println!("\nevent: {:?}", event);
+        }
+
+        // 1: Contract Created (node contract)
+        // 2: Billing Disabled
+        // 3: Billing enabled
+        // 4: Contract billed
+        assert_eq!(our_events.len(), 4);
+    })
+}
+
 //  MODULE FUNCTION TESTS //
 // ---------------------- //
 

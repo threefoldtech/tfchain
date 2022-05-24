@@ -5,7 +5,7 @@ use frame_support::{
     dispatch::DispatchResultWithPostInfo,
     ensure,
     traits::{
-        Currency, ExistenceRequirement::KeepAlive, Get, LockableCurrency, Vec, WithdrawReasons,
+        Currency, ExistenceRequirement::KeepAlive, Get, LockableCurrency, Vec, WithdrawReasons, EnsureOrigin,
     },
     weights::Pays,
 };
@@ -39,6 +39,9 @@ pub trait Config:
     type Currency: LockableCurrency<Self::AccountId>;
     type StakingPoolAccount: Get<Self::AccountId>;
     type BillingFrequency: Get<u64>;
+    /// Origin for restricted extrinsics
+    /// Can be the root or another origin configured in the runtime
+    type RestrictedOrigin: EnsureOrigin<Self::Origin>;
     type WeightInfo: WeightInfo;
 }
 
@@ -67,6 +70,7 @@ decl_event!(
         UpdatedUsedResources(types::ContractResources),
         NruConsumptionReportReceived(types::NruConsumption),
         RentContractCanceled(u64),
+        BillingDisabled(bool),
     }
 );
 
@@ -116,6 +120,9 @@ decl_storage! {
         pub ContractLock get(fn contract_number_of_cylces_billed): map hasher(blake2_128_concat) u64 => types::ContractLock<BalanceOf<T>>;
         pub ContractIDByNameRegistration get(fn contract_id_by_name_registration): map hasher(blake2_128_concat) Vec<u8> => u64;
         pub ActiveRentContractForNode get(fn active_rent_contracts): map hasher(blake2_128_concat) u32 => types::Contract;
+
+        // If this is set to true, billing is disabled
+        pub BillingDisabled get(fn billing_disabled): bool;
 
         // ID maps
         pub ContractID: u64;
@@ -173,6 +180,15 @@ decl_module! {
         fn create_rent_contract(origin, node_id: u32) {
             let account_id = ensure_signed(origin)?;
             Self::_create_rent_contract(account_id, node_id)?;
+        }
+
+        #[weight = 100_000_000]
+        fn set_billing_disabled(origin, disabled: bool) {
+            <T as Config>::RestrictedOrigin::ensure_origin(origin)?;
+
+            BillingDisabled::put(disabled);
+
+            Self::deposit_event(RawEvent::BillingDisabled(disabled));
         }
 
         fn on_finalize(block: T::BlockNumber) {
@@ -605,6 +621,19 @@ impl<T: Config> Module<T> {
             let mut contract = Contracts::get(contract_id);
             if contract.contract_id == 0 {
                 continue
+            }
+
+            // If billing is disabled,
+            // Reinsert the contract to be billed in the next cycle and continue
+            if BillingDisabled::get() {
+                debug::info!(
+                    "skipped contract with id {:?} at block {:?} because billing is disabled",
+                    contract_id,
+                    block
+                );
+                // Reinsert into the next billing frequency
+                Self::_reinsert_contract_to_bill(contract.contract_id);
+                continue;
             }
 
             // Try to bill contract
