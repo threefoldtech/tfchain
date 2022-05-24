@@ -607,6 +607,22 @@ impl<T: Config> Module<T> {
                 continue
             }
 
+            let node_id = Self::get_node_id(&contract);
+            if node_id != 0 {
+                let node = pallet_tfgrid::Nodes::get(node_id);
+                let farm = pallet_tfgrid::Farms::get(node.farm_id);
+                if farm.dedicated_farm {
+                    let active_rent_contract = ActiveRentContractForNode::get(node_id);
+                    let active_node_contract = ActiveNodeContracts::get(node_id);
+                    if active_rent_contract == types::Contract::default() && active_node_contract.len() > 0 {
+                        // remove all active node contract
+                        for node_contract in active_node_contract {
+                            Self::remove_contract(node_contract);
+                        }
+                    }
+                }
+            }
+
             // Try to bill contract
             match Self::bill_contract(&mut contract) {
                 Ok(_) => {
@@ -1242,6 +1258,16 @@ impl<T: Config> Module<T> {
         let balance = pallet_balances::pallet::Pallet::<T>::usable_balance(account_id);
         let b = balance.saturated_into::<u128>();
         BalanceOf::<T>::saturated_from(b)
+    }
+
+    pub fn get_node_id(
+        contract: &types::Contract
+    ) -> u32 {
+        match contract.contract_type.clone() {
+            types::ContractData::RentContract(c) => c.node_id,
+            types::ContractData::NodeContract(c) => c.node_id,
+            types::ContractData::NameContract(_) => 0,
+        }
     }
 
     // cu1 = MAX(cru/2, mru/4)
