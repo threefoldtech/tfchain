@@ -1159,13 +1159,74 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
             .collect::<Vec<_>>();
 
         for e in our_events.clone().into_iter() {
-            println!("EVEEEENT: {:?}", e);
+            println!("event: {:?}", e);
         }
         // Event 1: Rent contract created
         // Event 2: Node Contract created
         // Event 4: Rent contract billed
         // => no Node Contract billed event
         assert_eq!(our_events.len(), 4);
+    });
+}
+
+#[test]
+fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_works() {
+    new_test_ext().execute_with(|| {
+        prepare_dedicated_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(charlie()),
+            node_id
+        ));
+        
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(charlie()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            0
+        ));
+        push_contract_resources_used(2);
+
+        run_to_block(12);
+
+        // let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 11);
+        // assert_ne!(amount_due_as_u128, 0);
+        // check_report_cost(1, 3, amount_due_as_u128, 12, discount_received);
+
+        let our_events = System::events()
+            .into_iter()
+            .map(|r| r.event)
+            .filter_map(|e| {
+                if let Event::pallet_smart_contract(inner) = e {
+                    Some(inner)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        for e in our_events.clone().into_iter() {
+            println!("event: {:?}", e);
+        }
+        // Event 1: Rent contract created
+        // Event 2: Node Contract created
+        // Event 3: Updated used resources
+        // Event 4: Tokens burned
+        // Event 5: Rent contract billed
+        // Event 6: Node contract canceled
+        // Event 7: Rent contract Canceled
+        // => no Node Contract billed event
+        assert_eq!(our_events.len(), 7);
+
+        let expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
+            vec![RawEvent::NodeContractCanceled(2, 1, 3), RawEvent::RentContractCanceled(1)];
+        
+        assert_eq!(our_events[5], expected_events[0]);
+        assert_eq!(our_events[6], expected_events[1]);
     });
 }
 
