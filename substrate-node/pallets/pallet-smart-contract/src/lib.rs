@@ -920,6 +920,11 @@ impl<T: Config> Module<T> {
             }
             types::ContractData::RentContract(rent_contract) => {
                 ActiveRentContractForNode::remove(rent_contract.node_id);
+                // Remove all associated active node contracts
+                let active_node_contracts = ActiveNodeContracts::get(rent_contract.node_id);
+                for node_contract in active_node_contracts {
+                    Self::remove_contract(node_contract);
+                }
                 Self::deposit_event(RawEvent::RentContractCanceled(contract_id));
             }
         };
