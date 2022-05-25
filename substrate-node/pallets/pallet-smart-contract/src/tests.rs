@@ -1313,6 +1313,17 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         push_contract_resources_used(2);
 
         run_to_block(12);
+        run_to_block(22);
+        run_to_block(32);
+        run_to_block(42);
+        run_to_block(52);
+        run_to_block(62);
+        run_to_block(72);
+        run_to_block(82);
+        run_to_block(92);
+        run_to_block(102);
+        run_to_block(112);
+        run_to_block(122);
 
         // let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 11);
         // assert_ne!(amount_due_as_u128, 0);
@@ -1336,18 +1347,18 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         // Event 1: Rent contract created
         // Event 2: Node Contract created
         // Event 3: Updated used resources
-        // Event 4: Tokens burned
-        // Event 5: Rent contract billed
-        // Event 6: Node contract canceled
-        // Event 7: Rent contract Canceled
+        // Event 4: Grace period started
+        // Event 5-15: Rent contract billed
+        // Event 16: Node contract canceled
+        // Event 17: Rent contract Canceled
         // => no Node Contract billed event
-        assert_eq!(our_events.len(), 7);
+        assert_eq!(our_events.len(), 17);
 
         let expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
             vec![RawEvent::NodeContractCanceled(2, 1, 3), RawEvent::RentContractCanceled(1)];
         
-        assert_eq!(our_events[5], expected_events[0]);
-        assert_eq!(our_events[6], expected_events[1]);
+        assert_eq!(our_events[15], expected_events[0]);
+        assert_eq!(our_events[16], expected_events[1]);
     });
 }
 

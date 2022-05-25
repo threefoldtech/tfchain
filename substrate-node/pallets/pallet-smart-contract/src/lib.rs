@@ -677,36 +677,8 @@ impl<T: Config> Module<T> {
             return Ok(());
         };
         
-        let mut decomission = false;
-        let current_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
-        let node_id = Self::get_node_id(contract);
-
-        match contract.state {
-            types::ContractState::GracePeriod(grace_start) => {
-                // if the usable balance is recharged, we can move the contract to created state again
-                if usable_balance > amount_due {
-                    Self::_update_contract_state(contract, &types::ContractState::Created)?;
-                    Self::deposit_event(RawEvent::ContractGracePeriodEnded(contract.contract_id, node_id, contract.twin_id))
-                } else {
-                    let diff = current_block - grace_start;
-                    // If the contract grace period ran out, we can decomission the contract
-                    if diff >= T::GracePeriod::get() {
-                        decomission = true;
-                    }
-                }
-            }
-            _ => {
-                // if the user ran out of funds, move the contract to be in a grace period
-                // dont lock the tokens because there is nothing to lock
-                // we can still update the internal contract lock object to figure out later how much was due
-                // whilst in grace period
-                if amount_due >= usable_balance {
-                    Self::_update_contract_state(contract, &types::ContractState::GracePeriod(current_block))?;
-                    // We can't lock the amount due on the contract's lock because the user ran out of funds
-                    Self::deposit_event(RawEvent::ContractGracePeriodStarted(contract.contract_id, node_id, contract.twin_id, current_block.saturated_into()));
-                }
-            }
-        }
+        // Handle grace
+        let contract = Self::handle_grace(contract, usable_balance, amount_due)?;
 
         let new_amount_locked = contract_lock.amount_locked + amount_due;
 
@@ -769,15 +741,47 @@ impl<T: Config> Module<T> {
         ContractBillingInformationByID::insert(contract.contract_id, &contract_billing_info);
 
         // If total balance exceeds the twin's balance, we can decomission contract
-        if decomission {
-            return Self::_cancel_contract(
-                twin.account_id,
+        if is_canceled {
+            Self::remove_contract(
                 contract.contract_id,
-                types::Cause::OutOfFunds,
             );
         }
 
         Ok(())
+    }
+
+    fn handle_grace(contract: &mut types::Contract, usable_balance: BalanceOf<T>, amount_due: BalanceOf<T>) -> Result<&mut types::Contract, DispatchError> {
+        let current_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
+        let node_id = Self::get_node_id(contract);
+
+        match contract.state {
+            types::ContractState::GracePeriod(grace_start) => {
+                // if the usable balance is recharged, we can move the contract to created state again
+                if usable_balance > amount_due {
+                    Self::_update_contract_state(contract, &types::ContractState::Created)?;
+                    Self::deposit_event(RawEvent::ContractGracePeriodEnded(contract.contract_id, node_id, contract.twin_id))
+                } else {
+                    let diff = current_block - grace_start;
+                    // If the contract grace period ran out, we can decomission the contract
+                    if diff >= T::GracePeriod::get() {
+                        Self::_update_contract_state(contract, &types::ContractState::Deleted(types::Cause::OutOfFunds))?;
+                    }
+                }
+            }
+            _ => {
+                // if the user ran out of funds, move the contract to be in a grace period
+                // dont lock the tokens because there is nothing to lock
+                // we can still update the internal contract lock object to figure out later how much was due
+                // whilst in grace period
+                if amount_due >= usable_balance {
+                    Self::_update_contract_state(contract, &types::ContractState::GracePeriod(current_block))?;
+                    // We can't lock the amount due on the contract's lock because the user ran out of funds
+                    Self::deposit_event(RawEvent::ContractGracePeriodStarted(contract.contract_id, node_id, contract.twin_id, current_block.saturated_into()));
+                }
+            }
+        }
+
+        Ok(contract)
     }
 
     fn calculate_contract_cost_tft(
