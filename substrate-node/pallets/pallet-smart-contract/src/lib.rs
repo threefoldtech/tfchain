@@ -649,7 +649,6 @@ impl<T: Config> Module<T> {
 
     // Bills a contract (NodeContract or NameContract)
     // Calculates how much TFT is due by the user and distributes the rewards
-    // Will also cancel the contract if there is not enough funds on the users wallet
     fn bill_contract(contract: &mut types::Contract) -> DispatchResult {
         if !pallet_tfgrid::Twins::<T>::contains_key(contract.twin_id) {
             return Err(DispatchError::from(Error::<T>::TwinNotExists));
@@ -659,13 +658,12 @@ impl<T: Config> Module<T> {
 
         let mut seconds_elapsed = T::BillingFrequency::get() * 6;
         // Calculate amount of seconds elapsed based on the contract lock struct
-        let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
 
         let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
-
         // this will set the seconds elapsed to the default billing cycle duration in seconds
         // if there is no contract lock object yet. A contract lock object will be created later in this function
         // https://github.com/threefoldtech/tfchain/issues/261
+        let contract_lock = ContractLock::<T>::get(contract.contract_id);
         if contract_lock.lock_updated != 0 {
             seconds_elapsed = now.checked_sub(contract_lock.lock_updated).unwrap_or(0);
         }
@@ -673,6 +671,7 @@ impl<T: Config> Module<T> {
         let (amount_due, discount_received) =
             Self::calculate_contract_cost_tft(contract, usable_balance, seconds_elapsed)?;
 
+        // If there is nothing to be paid, return
         if amount_due == BalanceOf::<T>::saturated_from(0 as u128) {
             return Ok(());
         };
@@ -680,51 +679,8 @@ impl<T: Config> Module<T> {
         // Handle grace
         let contract = Self::handle_grace(contract, usable_balance, amount_due)?;
 
-        let new_amount_locked = contract_lock.amount_locked + amount_due;
-
-        // Only lock an amount from the user's balance if the contract is in create state
-        if matches!(contract.state, types::ContractState::Created) {
-            // Update lock for contract and ContractLock in storage
-            <T as Config>::Currency::extend_lock(
-                contract.contract_id.to_be_bytes(),
-                &twin.account_id,
-                new_amount_locked.into(),
-                WithdrawReasons::RESERVE,
-            );
-        }
-
-        // increment cycles billed and update the internal lock struct
-        contract_lock.lock_updated = now;
-        contract_lock.cycles += 1;
-        contract_lock.amount_locked = new_amount_locked;
-        ContractLock::<T>::insert(contract.contract_id, &contract_lock);
-
-        let is_canceled = matches!(contract.state, types::ContractState::Deleted(_));
-        // When the cultivation rewards are ready to be distributed or it's canceled by the user
-        // Unlock all reserved balance and distribute
-        if contract_lock.cycles == 24 || is_canceled {
-            // Remove lock
-            <T as Config>::Currency::remove_lock(
-                contract.contract_id.to_be_bytes(),
-                &twin.account_id,
-            );
-            // Fetch the default pricing policy
-            let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
-            // Distribute cultivation rewards
-            match Self::_distribute_cultivation_rewards(
-                &contract,
-                &pricing_policy,
-                contract_lock.amount_locked,
-            ) {
-                Ok(_) => (),
-                Err(err) => debug::info!("error while distributing cultivation rewards {:?}", err),
-            };
-            // Reset values
-            contract_lock.lock_updated = now;
-            contract_lock.amount_locked = BalanceOf::<T>::saturated_from(0 as u128);
-            contract_lock.cycles = 0;
-            ContractLock::<T>::insert(contract.contract_id, &contract_lock);
-        }
+        // Handle contract lock operations
+        Self::handle_lock(contract, amount_due);
 
         // Always emit a contract billed event
         let contract_bill = types::ContractBill {
@@ -740,8 +696,8 @@ impl<T: Config> Module<T> {
         contract_billing_info.amount_unbilled = 0;
         ContractBillingInformationByID::insert(contract.contract_id, &contract_billing_info);
 
-        // If total balance exceeds the twin's balance, we can decomission contract
-        if is_canceled {
+        // If the contract is in delete state, remove all associated storage
+        if matches!(contract.state, types::ContractState::Deleted(_)) {
             Self::remove_contract(
                 contract.contract_id,
             );
@@ -782,6 +738,60 @@ impl<T: Config> Module<T> {
         }
 
         Ok(contract)
+    }
+
+    fn handle_lock(contract: &mut types::Contract, amount_due: BalanceOf<T>) {
+        if matches!(contract.state, types::ContractState::GracePeriod(_)) {
+            return
+        }
+
+        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
+        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+        let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
+        let new_amount_locked = contract_lock.amount_locked + amount_due;
+
+        // Only lock an amount from the user's balance if the contract is in create state
+        // Update lock for contract and ContractLock in storage
+        <T as Config>::Currency::extend_lock(
+            contract.contract_id.to_be_bytes(),
+            &twin.account_id,
+            new_amount_locked.into(),
+            WithdrawReasons::RESERVE,
+        );
+
+        // increment cycles billed and update the internal lock struct
+        contract_lock.lock_updated = now;
+        contract_lock.cycles += 1;
+        contract_lock.amount_locked = new_amount_locked;
+        ContractLock::<T>::insert(contract.contract_id, &contract_lock);
+
+        let is_canceled = matches!(contract.state, types::ContractState::Deleted(_));
+        let canceled_and_not_zero = is_canceled && contract_lock.amount_locked.saturated_into::<u64>() > 0;
+        // When the cultivation rewards are ready to be distributed or it's in delete state
+        // Unlock all reserved balance and distribute
+        if contract_lock.cycles == T::DistributionFrequency::get() || canceled_and_not_zero {
+            // Remove lock
+            <T as Config>::Currency::remove_lock(
+                contract.contract_id.to_be_bytes(),
+                &twin.account_id,
+            );
+            // Fetch the default pricing policy
+            let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
+            // Distribute cultivation rewards
+            match Self::_distribute_cultivation_rewards(
+                &contract,
+                &pricing_policy,
+                contract_lock.amount_locked,
+            ) {
+                Ok(_) => (),
+                Err(err) => debug::info!("error while distributing cultivation rewards {:?}", err),
+            };
+            // Reset values
+            contract_lock.lock_updated = now;
+            contract_lock.amount_locked = BalanceOf::<T>::saturated_from(0 as u128);
+            contract_lock.cycles = 0;
+            ContractLock::<T>::insert(contract.contract_id, &contract_lock);
+        }
     }
 
     fn calculate_contract_cost_tft(
