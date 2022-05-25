@@ -738,10 +738,8 @@ impl<T: Config> Module<T> {
 
         // If total balance exceeds the twin's balance, we can decomission contract
         if decomission {
-            return Self::_cancel_contract(
-                twin.account_id,
+            Self::remove_contract(
                 contract.contract_id,
-                types::Cause::OutOfFunds,
             );
         }
 
