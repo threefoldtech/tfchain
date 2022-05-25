@@ -752,7 +752,7 @@ impl<T: Config> Module<T> {
 
     fn handle_grace(contract: &mut types::Contract, usable_balance: BalanceOf<T>, amount_due: BalanceOf<T>) -> Result<&mut types::Contract, DispatchError> {
         let current_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
-        let node_id = Self::get_node_id(contract);
+        let node_id = contract.get_node_id();
 
         match contract.state {
             types::ContractState::GracePeriod(grace_start) => {
@@ -1271,16 +1271,6 @@ impl<T: Config> Module<T> {
         match contract.contract_type.clone() {
             types::ContractData::RentContract(c) => Ok(c),
             _ => return Err(DispatchError::from(Error::<T>::InvalidContractType)),
-        }
-    }
-
-    pub fn get_node_id(
-        contract: &types::Contract
-    ) -> u32 {
-        match contract.contract_type.clone() {
-            types::ContractData::RentContract(c) => c.node_id,
-            types::ContractData::NodeContract(c) => c.node_id,
-            types::ContractData::NameContract(_) => 0,
         }
     }
 

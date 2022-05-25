@@ -28,6 +28,14 @@ impl Contract {
     pub fn is_state_delete(&self) -> bool {
         matches!(self.state, ContractState::Deleted(_))
     }
+
+    pub fn get_node_id(&self) -> u32 {
+        match self.contract_type.clone() {
+            ContractData::RentContract(c) => c.node_id,
+            ContractData::NodeContract(c) => c.node_id,
+            ContractData::NameContract(_) => 0,
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
