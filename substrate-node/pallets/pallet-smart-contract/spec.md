@@ -64,6 +64,16 @@ Billing will be done in Database Tokens and will be send to the corresponding fa
 
 The main currency of this chain. More information on this is explained here: TODO
 
+## Grace period for contracts
+
+Implements a grace period state `GracePeriod(startBlockNumber)` for all contract types
+A grace period is a static amount of time defined by the runtime configuration.
+
+
+Grace period is triggered if the amount due for a billing cycle is larger than the user's balance. 
+A grace period is removed on a contract if the next billing cycles notices that the user reloaded the balance on his account. 
+If this happens, the contract is set back to created state. If a user ignores a graced-out contract, the contract is deleted after the time defined by Grace Period configuration trait.
+
 ## Footnote
 
 Sending the workloads encrypted to the chain makes sure that nobody except the destination Node can read the deployment's information as this can contain sensitive data. This way we also don't need to convert all the Zero OS primitive types to a Rust implementation and we can keep it relatively simple.
