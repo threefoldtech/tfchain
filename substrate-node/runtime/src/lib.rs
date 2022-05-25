@@ -312,7 +312,7 @@ impl pallet_tfgrid::Config for Runtime {
 parameter_types! {
     pub StakingPoolAccount: AccountId = get_staking_pool_account();
 	pub BillingFrequency: u64 = 600;
-	pub GracePeriod: u64 = (14 * DAYS).into();
+	pub GracePeriod: u64 = (6 * HOURS).into();
 	pub DistributionFrequency: u16 = 24;
 }
 
