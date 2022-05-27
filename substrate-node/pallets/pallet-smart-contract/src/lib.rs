@@ -101,7 +101,8 @@ decl_error! {
         NodeHasActiveContracts,
         NodeHasRentContract,
         NodeIsNotDedicated,
-        NodeNotAvailableToDeploy
+        NodeNotAvailableToDeploy,
+        CannotUpdateContractInGraceState
     }
 }
 
@@ -418,6 +419,13 @@ impl<T: Config> Module<T> {
         ensure!(
             twin.account_id == account_id,
             Error::<T>::TwinNotAuthorizedToUpdateContract
+        );
+
+        // Don't allow updates for contracts that are in grace state
+        let is_grace_state = matches!(contract.state, types::ContractState::GracePeriod(_));
+        ensure!(
+            !is_grace_state,
+            Error::<T>::CannotUpdateContractInGraceState
         );
 
         let mut node_contract = Self::get_node_contract(&contract.clone())?;
@@ -741,15 +749,22 @@ impl<T: Config> Module<T> {
     }
 
     fn handle_lock(contract: &mut types::Contract, amount_due: BalanceOf<T>) {
+        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+        let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
+        let new_amount_locked = contract_lock.amount_locked + amount_due;
+
+        // increment cycles billed and update the internal lock struct
+        contract_lock.lock_updated = now;
+        contract_lock.cycles += 1;
+        contract_lock.amount_locked = new_amount_locked;
+        ContractLock::<T>::insert(contract.contract_id, &contract_lock);
+
+        // Contract is in grace state, don't actually lock tokens or distribute rewards
         if matches!(contract.state, types::ContractState::GracePeriod(_)) {
             return
         }
 
         let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
-        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
-        let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
-        let new_amount_locked = contract_lock.amount_locked + amount_due;
-
         // Only lock an amount from the user's balance if the contract is in create state
         // Update lock for contract and ContractLock in storage
         <T as Config>::Currency::extend_lock(
@@ -759,17 +774,11 @@ impl<T: Config> Module<T> {
             WithdrawReasons::RESERVE,
         );
 
-        // increment cycles billed and update the internal lock struct
-        contract_lock.lock_updated = now;
-        contract_lock.cycles += 1;
-        contract_lock.amount_locked = new_amount_locked;
-        ContractLock::<T>::insert(contract.contract_id, &contract_lock);
-
         let is_canceled = matches!(contract.state, types::ContractState::Deleted(_));
         let canceled_and_not_zero = is_canceled && contract_lock.amount_locked.saturated_into::<u64>() > 0;
         // When the cultivation rewards are ready to be distributed or it's in delete state
         // Unlock all reserved balance and distribute
-        if contract_lock.cycles == T::DistributionFrequency::get() || canceled_and_not_zero {
+        if contract_lock.cycles >= T::DistributionFrequency::get() || canceled_and_not_zero {
             // Remove lock
             <T as Config>::Currency::remove_lock(
                 contract.contract_id.to_be_bytes(),
