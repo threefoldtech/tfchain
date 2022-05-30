@@ -683,12 +683,12 @@ decl_module! {
             let twin_id = TwinIdByAccountID::<T>::get(&account_id);
             ensure!(stored_node.twin_id == twin_id, Error::<T>::NodeUpdateNotAuthorized);
 
+            // Call node deleted
+            T::NodeChanged::node_deleted(&stored_node);
+
             Nodes::remove(id);
 
             Self::deposit_event(RawEvent::NodeDeleted(id));
-
-            // Call node deleted
-            T::NodeChanged::node_deleted(&stored_node);
 
             Ok(())
         }
@@ -1122,11 +1122,11 @@ decl_module! {
             let farm_twin = Twins::<T>::get(farm.twin_id);
             ensure!(farm_twin_id == farm_twin.id, Error::<T>::FarmerNotAuthorized);
 
-            Nodes::remove(node_id);
-            NodeIdByTwinID::remove(node.twin_id);
-
             // Call node deleted
             T::NodeChanged::node_deleted(&node);
+
+            Nodes::remove(node_id);
+            NodeIdByTwinID::remove(node.twin_id);
 
             Self::deposit_event(RawEvent::NodeDeleted(node_id));
 

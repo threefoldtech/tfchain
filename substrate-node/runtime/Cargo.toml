@@ -60,10 +60,6 @@ path = "../pallets/substrate-validator-set"
 default-features = false
 path = "../pallets/pallet-validator"
 
-[dependencies.pallet-dao]
-default-features = false
-path = "../pallets/pallet-dao"
-
 [dependencies]
 hex-literal = { optional = true, version = '0.3.1' }
 serde = { features = ['derive'], optional = true, version = '1.0.119' }
@@ -117,7 +113,6 @@ runtime-benchmarks = [
     'pallet-collective/runtime-benchmarks',
     'pallet-tfgrid/runtime-benchmarks',
     'pallet-smart-contract/runtime-benchmarks',
-    'pallet-dao/runtime-benchmarks',
 ]
 std = [
     'codec/std',
@@ -160,6 +155,5 @@ std = [
     'pallet-membership/std',
     'pallet-authorship/std',
     'pallet-validator/std',
-    'pallet-dao/std',
     'tfchain-support/std'
 ]

@@ -93,6 +93,10 @@ impl ChangeNode for NodeChanged {
 		_old_node: Option<&Node>,
 		_new_node: &Node,
 	) {}
+
+    fn node_deleted(node: &Node) {
+        SmartContractModule::node_deleted(node);
+    }
 }
 
 impl pallet_tfgrid::Config for TestRuntime {
@@ -127,6 +131,7 @@ impl Config for TestRuntime {
     type StakingPoolAccount = StakingPoolAccount;
     type BillingFrequency = BillingFrequency;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>; 
+    type NodeChanged = NodeChanged;
 }
 
 type AccountPublic = <MultiSignature as Verify>::Signer;

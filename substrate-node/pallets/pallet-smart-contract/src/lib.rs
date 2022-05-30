@@ -19,7 +19,8 @@ use pallet_tft_price;
 use pallet_timestamp as timestamp;
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
-    types::{PublicIP, Resources, CertificationType}
+    traits::ChangeNode,
+    types::{Node, PublicIP, Resources, CertificationType}
 };
 
 #[cfg(test)]
@@ -43,6 +44,7 @@ pub trait Config:
     type StakingPoolAccount: Get<Self::AccountId>;
     type BillingFrequency: Get<u64>;
     type WeightInfo: WeightInfo;
+    type NodeChanged: ChangeNode;
 }
 
 pub const CONTRACT_VERSION: u32 = 3;
@@ -1281,5 +1283,23 @@ impl<T: Config> Module<T> {
         cu = if cu > cu3 { cu3 } else { cu };
 
         cu
+    }
+}
+
+impl<T: Config> ChangeNode for Module<T> {
+    fn node_changed(_node: Option<&Node>, _new_node: &Node) {}
+
+    fn node_deleted(node: &Node) {
+        // First clean up rent contract if it exists
+        let rent_contract = ActiveRentContractForNode::get(node.id);
+        if rent_contract.contract_id != 0 {
+            Self::remove_contract(rent_contract.contract_id);
+        }
+
+        // Clean up all active contracts
+        let active_node_contracts = ActiveNodeContracts::get(node.id);
+        for node_contract_id in active_node_contracts {
+            Self::remove_contract(node_contract_id);
+        }
     }
 }
