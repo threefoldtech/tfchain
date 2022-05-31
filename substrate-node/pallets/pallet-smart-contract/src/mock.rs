@@ -122,6 +122,8 @@ impl pallet_timestamp::Config for TestRuntime {
 
 parameter_types! {
     pub const BillingFrequency: u64 = 10;
+    pub const GracePeriod: u64 = 100;
+    pub const DistributionFrequency: u16 = 24;
 }
 
 use weights;
@@ -130,6 +132,8 @@ impl Config for TestRuntime {
     type Currency = Balances;
     type StakingPoolAccount = StakingPoolAccount;
     type BillingFrequency = BillingFrequency;
+    type DistributionFrequency = DistributionFrequency;
+    type GracePeriod = GracePeriod;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>; 
     type NodeChanged = NodeChanged;
 }

@@ -3,6 +3,8 @@ use frame_support::traits::Vec;
 use substrate_fixed::types::U64F64;
 use tfchain_support::types::{PublicIP, Resources};
 
+pub type BlockNumber = u64;
+
 /// Utility type for managing upgrades/migrations.
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum PalletStorageVersion {
@@ -24,6 +26,14 @@ pub struct Contract {
 impl Contract {
     pub fn is_state_delete(&self) -> bool {
         matches!(self.state, ContractState::Deleted(_))
+    }
+
+    pub fn get_node_id(&self) -> u32 {
+        match self.contract_type.clone() {
+            ContractData::RentContract(c) => c.node_id,
+            ContractData::NodeContract(c) => c.node_id,
+            ContractData::NameContract(_) => 0,
+        }
     }
 }
 
@@ -74,6 +84,7 @@ pub struct ContractBillingInformation {
 pub enum ContractState {
     Created,
     Deleted(Cause),
+    GracePeriod(BlockNumber)
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
