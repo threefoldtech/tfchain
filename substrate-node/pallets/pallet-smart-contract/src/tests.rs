@@ -9,6 +9,7 @@ use substrate_fixed::types::{U16F16, U64F64};
 
 use super::types;
 use pallet_tfgrid::types as pallet_tfgrid_types;
+use tfchain_support::types::{Location, PublicIP, Resources};
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -802,6 +803,81 @@ fn test_node_contract_billing_cycles() {
 }
 
 #[test]
+fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(bob()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            1
+        ));
+        let contract_id = 1;
+        let twin_id = 2;
+
+        push_contract_resources_used(1);
+
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 11);
+        run_to_block(12);
+        check_report_cost(1, 2, amount_due_as_u128, 12, discount_received);
+
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        run_to_block(22);
+        check_report_cost(1, 3, amount_due_as_u128, 22, discount_received);
+
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        run_to_block(32);
+        check_report_cost(1, 4, amount_due_as_u128, 32, discount_received);
+
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        run_to_block(42);
+        check_report_cost(1, 5, amount_due_as_u128, 42, discount_received);
+
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        run_to_block(52);
+        check_report_cost(1, 6, amount_due_as_u128, 52, discount_received);
+
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 4);
+        run_to_block(56);
+        
+        // Delete node
+        TfgridModule::delete_node_farm(Origin::signed(alice()),1).unwrap();
+        
+        // After deleting a node, the contract gets billed before it's canceled
+        check_report_cost(1, 8, amount_due_as_u128, 56, discount_received);
+
+        let our_events = System::events()
+            .into_iter()
+            .map(|r| r.event)
+            .filter_map(|e| {
+                if let Event::pallet_smart_contract(inner) = e {
+                    Some(inner)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
+            Vec::new();
+            
+        let ip = "1.1.1.0".as_bytes().to_vec();
+        let mut ips = Vec::new();
+        ips.push(ip);
+
+        expected_events.push(RawEvent::IPsFreed(1, ips));
+        expected_events.push(RawEvent::NodeContractCanceled(1, 1, 2));
+
+        assert_eq!(our_events[9], expected_events[0]);
+        assert_eq!(our_events[10], expected_events[1]);
+    });
+}
+
+#[test]
 fn test_node_contract_only_public_ip_billing_cycles() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
@@ -1571,6 +1647,66 @@ fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works
     });
 }
 
+#[test]
+fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
+    new_test_ext().execute_with(|| {
+        prepare_dedicated_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(bob()),
+            node_id
+        ));
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(bob()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            0
+        ));
+        push_contract_resources_used(2);
+
+        run_to_block(12);
+
+        run_to_block(16);
+
+        // Delete node
+        TfgridModule::delete_node_farm(Origin::signed(alice()),1).unwrap();
+
+        let our_events = System::events()
+            .into_iter()
+            .map(|r| r.event)
+            .filter_map(|e| {
+                if let Event::pallet_smart_contract(inner) = e {
+                    Some(inner)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
+            Vec::new();
+
+        for e in our_events.clone().into_iter() {
+            println!("EVEEEENT: {:?}", e);
+        }
+
+        let ip = "1.1.1.0".as_bytes().to_vec();
+        let mut ips = Vec::new();
+        ips.push(ip);
+
+        expected_events.push(RawEvent::NodeContractCanceled(2, 1, 2));
+        expected_events.push(RawEvent::RentContractCanceled(1));
+
+        assert_eq!(our_events[4], expected_events[0]);
+        assert_eq!(our_events[7], expected_events[1]);
+    });
+}
+
 //  MODULE FUNCTION TESTS //
 // ---------------------- //
 
@@ -1643,7 +1779,7 @@ fn push_contract_resources_used(contract_id: u64) {
     let mut resources = Vec::new();
     resources.push(types::ContractResources {
         contract_id,
-        used: pallet_tfgrid_types::Resources {
+        used: Resources {
             cru: 2,
             hru: 0,
             mru: 2 * GIGABYTE,
@@ -1687,10 +1823,6 @@ fn check_report_cost(
         Vec::new();
     expected_events.push(RawEvent::ContractBilled(contract_bill_event));
 
-    for event in our_events.clone().iter() {
-        println!("event: {:?}", event);
-    }
-
     assert_eq!(our_events[index], expected_events[0]);
 }
 
@@ -1713,7 +1845,7 @@ pub fn prepare_twins() {
 pub fn prepare_farm(source: AccountId, dedicated: bool) {
     let farm_name = "test_farm";
     let mut pub_ips = Vec::new();
-    pub_ips.push(pallet_tfgrid_types::PublicIP {
+    pub_ips.push(PublicIP {
         ip: "1.1.1.0".as_bytes().to_vec(),
         gateway: "1.1.1.1".as_bytes().to_vec(),
         contract_id: 0,
@@ -1781,12 +1913,12 @@ pub fn prepare_farm_and_node() {
     prepare_farm(alice(), false);
 
     // random location
-    let location = pallet_tfgrid_types::Location {
+    let location = Location {
         longitude: "12.233213231".as_bytes().to_vec(),
         latitude: "32.323112123".as_bytes().to_vec(),
     };
 
-    let resources = pallet_tfgrid_types::Resources {
+    let resources = Resources {
         hru: 1024 * GIGABYTE,
         sru: 512 * GIGABYTE,
         cru: 8,
@@ -1818,12 +1950,12 @@ pub fn prepare_dedicated_farm_and_node() {
     prepare_farm(alice(), true);
 
     // random location
-    let location = pallet_tfgrid_types::Location {
+    let location = Location {
         longitude: "12.233213231".as_bytes().to_vec(),
         latitude: "32.323112123".as_bytes().to_vec(),
     };
 
-    let resources = pallet_tfgrid_types::Resources {
+    let resources = Resources {
         hru: 1024 * GIGABYTE,
         sru: 512 * GIGABYTE,
         cru: 8,

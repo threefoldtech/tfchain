@@ -6,6 +6,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use frame_system::EnsureRoot;
+use tfchain_support::types::Node;
 
 use sp_core::{ed25519, sr25519, Pair, Public, H256};
 
@@ -69,11 +70,22 @@ impl frame_system::Config for TestRuntime {
     type SS58Prefix = ();
 }
 
+pub struct NodeChanged;
+impl tfchain_support::traits::ChangeNode for NodeChanged {
+	fn node_changed(
+		_old_node: Option<&Node>,
+		_new_node: &Node,
+	) {}
+
+    fn node_deleted(_node: &tfchain_support::types::Node) {}
+}
+
 use crate::weights;
 impl Config for TestRuntime {
     type Event = Event;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
+    type NodeChanged = NodeChanged;
 }
 
 impl pallet_balances::Config for TestRuntime {

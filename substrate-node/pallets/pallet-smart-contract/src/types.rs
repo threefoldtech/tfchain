@@ -1,8 +1,7 @@
 use codec::{Decode, Encode};
 use frame_support::traits::Vec;
 use substrate_fixed::types::U64F64;
-
-use pallet_tfgrid::types;
+use tfchain_support::types::{PublicIP, Resources};
 
 pub type BlockNumber = u64;
 
@@ -48,7 +47,7 @@ pub struct NodeContract {
     // Hash of the deployment, set by the user
     pub deployment_hash: Vec<u8>,
     pub public_ips: u32,
-    pub public_ips_list: Vec<types::PublicIP>,
+    pub public_ips_list: Vec<PublicIP>,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
@@ -157,7 +156,7 @@ pub struct ContractBill {
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
 pub struct ContractResources {
     pub contract_id: u64,
-    pub used: types::Resources,
+    pub used: Resources,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]

@@ -97,6 +97,7 @@ pallet-session = { default-features = false, version = '3.0.0', features = ['his
 pallet-collective = { version = "3.0.0", default-features = false }
 pallet-membership = { version = "3.0.0", default-features = false }
 pallet-authorship = { version = "3.0.0", default-features = false }
+tfchain-support = { path = "../support", default-features = false }
 
 [features]
 default = ['std']
@@ -111,7 +112,7 @@ runtime-benchmarks = [
     'sp-runtime/runtime-benchmarks',
     'pallet-collective/runtime-benchmarks',
     'pallet-tfgrid/runtime-benchmarks',
-    'pallet-smart-contract/runtime-benchmarks'
+    'pallet-smart-contract/runtime-benchmarks',
 ]
 std = [
     'codec/std',
@@ -153,5 +154,6 @@ std = [
     'pallet-collective/std',
     'pallet-membership/std',
     'pallet-authorship/std',
-    'pallet-validator/std'
+    'pallet-validator/std',
+    'tfchain-support/std'
 ]

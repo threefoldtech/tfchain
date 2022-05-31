@@ -16,6 +16,10 @@ use hex::FromHex;
 use pallet_timestamp as timestamp;
 use sp_runtime::{traits::SaturatedConversion, DispatchError};
 use sp_std::prelude::*;
+use tfchain_support::{
+    traits::ChangeNode,
+    types::{Node, Farm, CertificationType, PublicIP, Resources, Location, Interface, PublicConfig}
+};
 
 #[cfg(test)]
 mod tests;
@@ -37,6 +41,8 @@ pub trait Config: system::Config + timestamp::Config {
     type RestrictedOrigin: EnsureOrigin<Self::Origin>;
     /// Weight information for extrinsics in this pallet.
     type WeightInfo: WeightInfo;
+
+    type NodeChanged: ChangeNode;
 }
 
 // Version constant that referenced the struct version
@@ -50,12 +56,12 @@ pub const TFGRID_FARMING_POLICY_VERSION: u32 = 1;
 
 decl_storage! {
     trait Store for Module<T: Config> as TfgridModule {
-        pub Farms get(fn farms): map hasher(blake2_128_concat) u32 => types::Farm;
+        pub Farms get(fn farms): map hasher(blake2_128_concat) u32 => Farm;
         pub FarmIdByName get(fn farms_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u32;
         pub FarmPayoutV2AddressByFarmID get(fn farm_payout_address_by_farm_id): map hasher(blake2_128_concat) u32 => Vec<u8>;
         pub DedicatedFarms get(fn dedicated_farms): Vec<u32>;
 
-        pub Nodes get(fn nodes): map hasher(blake2_128_concat) u32 => types::Node;
+        pub Nodes get(fn nodes): map hasher(blake2_128_concat) u32 => Node;
         pub NodeIdByTwinID get(fn node_by_twin_id): map hasher(blake2_128_concat) u32 => u32;
 
         pub Entities get(fn entities): map hasher(blake2_128_concat) u32 => types::Entity<T::AccountId>;
@@ -72,7 +78,7 @@ decl_storage! {
         pub CertificationCodeIdByName get(fn certification_codes_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u32;
 
         pub FarmingPolicies get(fn farming_policies): Vec<types::FarmingPolicy>;
-        pub FarmingPolicyIDsByCertificationType get (fn farming_policies_by_certification_type): map hasher(blake2_128_concat) types::CertificationType => Vec<u32>;
+        pub FarmingPolicyIDsByCertificationType get (fn farming_policies_by_certification_type): map hasher(blake2_128_concat) CertificationType => Vec<u32>;
 
         pub UsersTermsAndConditions get(fn users_terms_and_condition): map hasher(blake2_128_concat) T::AccountId => Vec<types::TermsAndConditions<T::AccountId>>;
 
@@ -113,7 +119,6 @@ decl_storage! {
         config(farming_policy_certified_nu): u32;
         config(farming_policy_certified_su): u32;
         config(farming_policy_certified_ipu): u32;
-
 
         build(|_config| {
             let foundation_account = _config.foundation_account.clone();
@@ -170,7 +175,7 @@ decl_storage! {
                 _config.farming_policy_diy_cu,
                 _config.farming_policy_diy_nu,
                 _config.farming_policy_diy_ipu,
-                types::CertificationType::Diy,
+                CertificationType::Diy,
             );
 
             let _ = <Module<T>>::create_farming_policy(
@@ -180,9 +185,8 @@ decl_storage! {
                 _config.farming_policy_certified_cu,
                 _config.farming_policy_certified_nu,
                 _config.farming_policy_certified_ipu,
-                types::CertificationType::Certified,
+                CertificationType::Certified,
             );
-
         });
     }
 
@@ -193,15 +197,15 @@ decl_event!(
     where
         AccountId = <T as frame_system::Config>::AccountId,
     {
-        FarmStored(types::Farm),
-        FarmUpdated(types::Farm),
+        FarmStored(Farm),
+        FarmUpdated(Farm),
         FarmDeleted(u32),
 
-        NodeStored(types::Node),
-        NodeUpdated(types::Node),
+        NodeStored(Node),
+        NodeUpdated(Node),
         NodeDeleted(u32),
         NodeUptimeReported(u32, u64, u64),
-        NodePublicConfigStored(u32, types::PublicConfig),
+        NodePublicConfigStored(u32, PublicConfig),
 
         EntityStored(types::Entity<AccountId>),
         EntityUpdated(types::Entity<AccountId>),
@@ -290,7 +294,7 @@ decl_module! {
         }
 
         #[weight = <T as Config>::WeightInfo::create_farm()]
-        pub fn create_farm(origin, name: Vec<u8>, public_ips: Vec<types::PublicIP>) -> dispatch::DispatchResult {
+        pub fn create_farm(origin, name: Vec<u8>, public_ips: Vec<PublicIP>) -> dispatch::DispatchResult {
             let address = ensure_signed(origin)?;
 
             Self::validate_farm_name(name.clone())?;
@@ -307,12 +311,12 @@ decl_module! {
             // reset all public ip contract id's
             // just a safeguard
             // filter out doubles
-            let mut pub_ips: Vec<types::PublicIP> = Vec::new();
+            let mut pub_ips: Vec<PublicIP> = Vec::new();
             for ip in public_ips {
                 match pub_ips.iter().position(|pub_ip| pub_ip.ip == ip.ip) {
                     Some(_) => return Err(Error::<T>::IpExists.into()),
                     None => {
-                        pub_ips.push(types::PublicIP{
+                        pub_ips.push(PublicIP{
                             ip: ip.ip,
                             gateway: ip.gateway,
                             contract_id: 0
@@ -321,13 +325,13 @@ decl_module! {
                 };
             };
 
-            let new_farm = types::Farm {
+            let new_farm = Farm {
                 version: TFGRID_FARM_VERSION,
                 id,
                 twin_id,
                 name,
                 pricing_policy_id: 1,
-                certification_type: types::CertificationType::Diy,
+                certification_type: CertificationType::Diy,
                 public_ips: pub_ips,
                 dedicated_farm: false,
             };
@@ -388,7 +392,7 @@ decl_module! {
         }
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1)]
-        pub fn set_farm_certification(origin, farm_id: u32, certification_type: types::CertificationType) -> dispatch::DispatchResult {
+        pub fn set_farm_certification(origin, farm_id: u32, certification_type: CertificationType) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
             ensure!(Farms::contains_key(farm_id), Error::<T>::FarmNotExists);
@@ -411,7 +415,7 @@ decl_module! {
             let twin = Twins::<T>::get(stored_farm.twin_id);
             ensure!(twin.account_id == address, Error::<T>::CannotUpdateFarmWrongTwin);
 
-            let new_ip = types::PublicIP {
+            let new_ip = PublicIP {
                 ip,
                 gateway,
                 contract_id: 0
@@ -480,11 +484,11 @@ decl_module! {
         #[weight = <T as Config>::WeightInfo::create_node()]
         pub fn create_node(origin,
             farm_id: u32,
-            resources: types::Resources,
-            location: types::Location, 
+            resources: Resources,
+            location: Location, 
             country: Vec<u8>,
             city: Vec<u8>,
-            interfaces: Vec<types::Interface>,
+            interfaces: Vec<Interface>,
             secure_boot: bool,
             virtualized: bool,
             serial_number: Vec<u8>,
@@ -514,7 +518,7 @@ decl_module! {
 
             let created = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
 
-            let new_node = types::Node {
+            let new_node = Node {
                 version: TFGRID_NODE_VERSION,
                 id,
                 farm_id,
@@ -527,15 +531,17 @@ decl_module! {
                 created,
                 farming_policy_id,
                 interfaces,
-                certification_type: types::CertificationType::default(),
+                certification_type: CertificationType::default(),
                 secure_boot,
                 virtualized,
-                serial_number
+                serial_number,
             };
 
             Nodes::insert(id, &new_node);
             NodeID::put(id);
             NodeIdByTwinID::insert(twin_id, new_node.id);
+            
+            T::NodeChanged::node_changed(None, &new_node);
 
             Self::deposit_event(RawEvent::NodeStored(new_node));
 
@@ -546,11 +552,11 @@ decl_module! {
         pub fn update_node(origin,
             node_id: u32,
             farm_id: u32,
-            resources: types::Resources,
-            location: types::Location,
+            resources: Resources,
+            location: Location,
             country: Vec<u8>,
             city: Vec<u8>,
-            interfaces: Vec<types::Interface>,
+            interfaces: Vec<Interface>,
             secure_boot: bool,
             virtualized: bool,
             serial_number: Vec<u8>,
@@ -566,6 +572,7 @@ decl_module! {
 
             ensure!(Farms::contains_key(farm_id), Error::<T>::FarmNotExists);
 
+            let old_node = Nodes::get(node_id);
             let mut stored_node = Nodes::get(node_id);
 
             stored_node.farm_id = farm_id;
@@ -581,13 +588,15 @@ decl_module! {
             // override node in storage
             Nodes::insert(stored_node.id, &stored_node);
 
+            T::NodeChanged::node_changed(Some(&old_node), &stored_node);
+
             Self::deposit_event(RawEvent::NodeUpdated(stored_node));
 
             Ok(Pays::No.into())
         }
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1)]
-        pub fn set_node_certification(origin, node_id: u32, certification_type: types::CertificationType) -> dispatch::DispatchResult {
+        pub fn set_node_certification(origin, node_id: u32, certification_type: CertificationType) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
             ensure!(Nodes::contains_key(&node_id), Error::<T>::NodeNotExists);
@@ -623,7 +632,7 @@ decl_module! {
         }
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(3)]
-        pub fn add_node_public_config(origin, farm_id: u32, node_id: u32, public_config: types::PublicConfig) -> dispatch::DispatchResult {
+        pub fn add_node_public_config(origin, farm_id: u32, node_id: u32, public_config: PublicConfig) -> dispatch::DispatchResult {
             let account_id = ensure_signed(origin)?;
 
             // check if this twin can update the farm with id passed
@@ -655,6 +664,9 @@ decl_module! {
             let stored_node = Nodes::get(id);
             let twin_id = TwinIdByAccountID::<T>::get(&account_id);
             ensure!(stored_node.twin_id == twin_id, Error::<T>::NodeUpdateNotAuthorized);
+
+            // Call node deleted
+            T::NodeChanged::node_deleted(&stored_node);
 
             Nodes::remove(id);
 
@@ -699,6 +711,7 @@ decl_module! {
 
             Ok(())
         }
+
         #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(3)]
         pub fn update_entity(origin, name: Vec<u8>, country: Vec<u8>, city: Vec<u8>) -> dispatch::DispatchResult {
             let account_id = ensure_signed(origin)?;
@@ -1013,7 +1026,7 @@ decl_module! {
         }
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2)]
-        pub fn create_farming_policy(origin, name: Vec<u8>, su: u32, cu: u32, nu: u32, ipv4: u32, certification_type: types::CertificationType) -> dispatch::DispatchResult {
+        pub fn create_farming_policy(origin, name: Vec<u8>, su: u32, cu: u32, nu: u32, ipv4: u32, certification_type: CertificationType) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
             let mut id = FarmingPolicyID::get();
@@ -1091,6 +1104,9 @@ decl_module! {
             let farm_twin = Twins::<T>::get(farm.twin_id);
             ensure!(farm_twin_id == farm_twin.id, Error::<T>::FarmerNotAuthorized);
 
+            // Call node deleted
+            T::NodeChanged::node_deleted(&node);
+
             Nodes::remove(node_id);
             NodeIdByTwinID::remove(node.twin_id);
 
@@ -1111,6 +1127,25 @@ decl_module! {
 
             Self::deposit_event(RawEvent::FarmUpdated(farm));
 
+            Ok(())
+        }
+
+        #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2)]
+        pub fn force_reset_farm_ip(origin, farm_id: u32, ip: Vec<u8>) -> dispatch::DispatchResult {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+
+            ensure!(Farms::contains_key(farm_id), Error::<T>::FarmNotExists);
+            let mut stored_farm = Farms::get(farm_id);
+
+            match stored_farm.public_ips.iter_mut().find(|pubip| pubip.ip == ip) {
+                Some(ip) => {
+                    ip.contract_id = 0;
+                },
+                None => return Err(Error::<T>::IpNotExists.into()),
+            };
+            
+            Farms::insert(stored_farm.id, &stored_farm);
+            Self::deposit_event(RawEvent::FarmUpdated(stored_farm));
             Ok(())
         }
     }
@@ -1181,5 +1216,22 @@ impl<T: Config> Module<T> {
         }
 
         return Ok(());
+    }
+}
+
+impl <T: Config> tfchain_support::traits::Tfgrid<T::AccountId> for Module<T> {
+    fn get_farm(farm_id: u32) -> Farm {
+        Farms::get(farm_id)
+    }
+
+    fn is_farm_owner(farm_id: u32, who: T::AccountId) -> bool {
+        let farm = Farms::get(farm_id);
+        let twin = Twins::<T>::get(farm.twin_id);
+        twin.account_id == who
+    }
+
+    fn is_twin_owner(twin_id: u32, who: T::AccountId) -> bool {
+        let twin = Twins::<T>::get(twin_id);
+        twin.account_id == who
     }
 }

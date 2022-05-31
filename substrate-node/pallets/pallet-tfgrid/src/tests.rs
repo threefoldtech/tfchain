@@ -1,6 +1,9 @@
 use crate::{mock::*, Error};
 use frame_support::{assert_noop, assert_ok};
 use frame_system::RawOrigin;
+use tfchain_support::{
+    types::{PublicConfig, PublicIP, Location, Resources, CertificationType}
+};
 
 #[test]
 fn test_create_entity_works() {
@@ -320,12 +323,12 @@ fn test_create_farm_with_double_ip_fails() {
 
         let farm_name = "test_farm".as_bytes().to_vec();
         let mut pub_ips = Vec::new();
-        pub_ips.push(super::types::PublicIP {
+        pub_ips.push(PublicIP {
             ip: "1.1.1.0".as_bytes().to_vec(),
             gateway: "1.1.1.1".as_bytes().to_vec(),
             contract_id: 0,
         });
-        pub_ips.push(super::types::PublicIP {
+        pub_ips.push(PublicIP {
             ip: "1.1.1.0".as_bytes().to_vec(),
             gateway: "1.1.1.1".as_bytes().to_vec(),
             contract_id: 0,
@@ -529,7 +532,7 @@ fn test_create_farm_with_same_name_fails() {
 
         let farm_name = "test_farm".as_bytes().to_vec();
         let mut pub_ips = Vec::new();
-        pub_ips.push(super::types::PublicIP {
+        pub_ips.push(PublicIP {
             ip: "1.1.1.0".as_bytes().to_vec(),
             gateway: "1.1.1.1".as_bytes().to_vec(),
             contract_id: 0,
@@ -586,23 +589,23 @@ fn set_certification_type_node_works() {
         assert_ok!(TfgridModule::set_node_certification(
             RawOrigin::Root.into(),
             1,
-            super::types::CertificationType::Certified
+            CertificationType::Certified
         ));
         let node = TfgridModule::nodes(1);
         assert_eq!(
             node.certification_type,
-            super::types::CertificationType::Certified
+            CertificationType::Certified
         );
 
         assert_ok!(TfgridModule::set_node_certification(
             RawOrigin::Root.into(),
             1,
-            super::types::CertificationType::Diy
+            CertificationType::Diy
         ));
         let node = TfgridModule::nodes(1);
         assert_eq!(
             node.certification_type,
-            super::types::CertificationType::Diy
+            CertificationType::Diy
         );
     });
 }
@@ -628,7 +631,7 @@ fn node_add_public_config_works() {
         create_farm();
         create_node();
 
-        let pub_config = super::types::PublicConfig {
+        let pub_config = PublicConfig {
             ipv4: "some_ip".as_bytes().to_vec(),
             ipv6: "some_ip".as_bytes().to_vec(),
             gw4: "some_ip".as_bytes().to_vec(),
@@ -656,7 +659,7 @@ fn node_add_public_config_fails_if_signature_incorrect() {
         create_farm();
         create_node();
 
-        let pub_config = super::types::PublicConfig {
+        let pub_config = PublicConfig {
             ipv4: "some_ip".as_bytes().to_vec(),
             ipv6: "some_ip".as_bytes().to_vec(),
             gw4: "some_ip".as_bytes().to_vec(),
@@ -680,12 +683,12 @@ fn create_node_with_same_pubkey_fails() {
         create_node();
 
         // random location
-        let location = super::types::Location {
+        let location = Location {
             longitude: "12.233213231".as_bytes().to_vec(),
             latitude: "32.323112123".as_bytes().to_vec(),
         };
 
-        let resources = super::types::Resources {
+        let resources = Resources {
             hru: 1,
             sru: 1,
             cru: 1,
@@ -725,7 +728,7 @@ fn create_farming_policy_works() {
             15,
             10,
             8,
-            super::types::CertificationType::Diy
+            CertificationType::Diy
         ));
     });
 }
@@ -742,7 +745,7 @@ fn create_farming_policy_certified_works() {
             15,
             10,
             8,
-            super::types::CertificationType::Certified
+            CertificationType::Certified
         ));
     });
 }
@@ -763,7 +766,7 @@ fn node_auto_attach_farming_policy() {
             15,
             10,
             8,
-            super::types::CertificationType::Diy
+            CertificationType::Diy
         ));
         let name = "c1_test".as_bytes().to_vec();
         assert_ok!(TfgridModule::create_farming_policy(
@@ -773,7 +776,7 @@ fn node_auto_attach_farming_policy() {
             15,
             10,
             8,
-            super::types::CertificationType::Certified
+            CertificationType::Certified
         ));
         let name = "d2_test".as_bytes().to_vec();
         assert_ok!(TfgridModule::create_farming_policy(
@@ -783,7 +786,7 @@ fn node_auto_attach_farming_policy() {
             15,
             10,
             8,
-            super::types::CertificationType::Diy
+            CertificationType::Diy
         ));
         let name = "c2_test".as_bytes().to_vec();
         assert_ok!(TfgridModule::create_farming_policy(
@@ -793,7 +796,7 @@ fn node_auto_attach_farming_policy() {
             15,
             10,
             8,
-            super::types::CertificationType::Certified
+            CertificationType::Certified
         ));
 
         create_node();
@@ -1016,7 +1019,7 @@ fn create_twin_bob() {
 fn create_farm() {
     let farm_name = "test_farm".as_bytes().to_vec();
     let mut pub_ips = Vec::new();
-    pub_ips.push(super::types::PublicIP {
+    pub_ips.push(PublicIP {
         ip: "1.1.1.0".as_bytes().to_vec(),
         gateway: "1.1.1.1".as_bytes().to_vec(),
         contract_id: 0,
@@ -1033,12 +1036,12 @@ fn create_node() {
     let city = "Ghent".as_bytes().to_vec();
 
     // random location
-    let location = super::types::Location {
+    let location = Location {
         longitude: "12.233213231".as_bytes().to_vec(),
         latitude: "32.323112123".as_bytes().to_vec(),
     };
 
-    let resources = super::types::Resources {
+    let resources = Resources {
         hru: 1,
         sru: 1,
         cru: 1,

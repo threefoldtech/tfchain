@@ -18,6 +18,10 @@ use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_tft_price;
 use pallet_timestamp as timestamp;
 use substrate_fixed::types::U64F64;
+use tfchain_support::{
+    traits::ChangeNode,
+    types::{Node, PublicIP, Resources, CertificationType}
+};
 
 #[cfg(test)]
 mod mock;
@@ -42,6 +46,7 @@ pub trait Config:
     type DistributionFrequency: Get<u16>;
     type GracePeriod: Get<u64>;
     type WeightInfo: WeightInfo;
+    type NodeChanged: ChangeNode;
 }
 
 pub const CONTRACT_VERSION: u32 = 3;
@@ -59,7 +64,7 @@ decl_event!(
         ContractUpdated(types::Contract),
         NodeContractCanceled(u64, u32, u32),
         NameContractCanceled(u64),
-        IPsReserved(u64, Vec<pallet_tfgrid_types::PublicIP>),
+        IPsReserved(u64, Vec<PublicIP>),
         IPsFreed(u64, Vec<Vec<u8>>),
         ContractDeployed(u64, AccountId),
         // Deprecated
@@ -810,7 +815,7 @@ impl<T: Config> Module<T> {
     ) -> Result<(BalanceOf<T>, types::DiscountLevel), DispatchError> {
         // Fetch the default pricing policy and certification type
         let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
-        let certification_type = pallet_tfgrid_types::CertificationType::Diy;
+        let certification_type = CertificationType::Diy;
 
         // Calculate the cost for a contract, can be any of:
         // - NodeContract
@@ -898,7 +903,7 @@ impl<T: Config> Module<T> {
 
     // Calculates the total cost of a node contract.
     pub fn calculate_resources_cost(
-        resources: pallet_tfgrid_types::Resources,
+        resources: Resources,
         ipu: u32,
         seconds_elapsed: u64,
         pricing_policy: pallet_tfgrid_types::PricingPolicy<T::AccountId>,
@@ -1078,7 +1083,7 @@ impl<T: Config> Module<T> {
     pub fn calculate_discount(
         amount_due: u64,
         balance: BalanceOf<T>,
-        certification_type: pallet_tfgrid_types::CertificationType,
+        certification_type: CertificationType,
     ) -> (BalanceOf<T>, types::DiscountLevel) {
         let balance_as_u128: u128 = balance.saturated_into::<u128>();
 
@@ -1104,7 +1109,7 @@ impl<T: Config> Module<T> {
         let mut amount_due = U64F64::from_num(amount_due) * discount_received.price_multiplier();
 
         // Certified capacity costs 25% more
-        if certification_type == pallet_tfgrid_types::CertificationType::Certified {
+        if certification_type == CertificationType::Certified {
             amount_due = amount_due * U64F64::from_num(1.25);
         }
 
@@ -1334,5 +1339,31 @@ impl<T: Config> Module<T> {
         cu = if cu > cu3 { cu3 } else { cu };
 
         cu
+    }
+}
+
+impl<T: Config> ChangeNode for Module<T> {
+    fn node_changed(_node: Option<&Node>, _new_node: &Node) {}
+
+    fn node_deleted(node: &Node) {
+        // Clean up all active contracts
+        let active_node_contracts = ActiveNodeContracts::get(node.id);
+        for node_contract_id in active_node_contracts {
+            let mut contract = Contracts::get(node_contract_id);
+            // Bill contract
+            let _ = Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(types::Cause::CanceledByUser));
+            let _ = Self::bill_contract(&mut contract);
+            Self::remove_contract(node_contract_id);
+        }
+
+        // First clean up rent contract if it exists
+        let mut rent_contract = ActiveRentContractForNode::get(node.id);
+        if rent_contract.contract_id != 0 {
+            // Bill contract
+            let _ = Self::_update_contract_state(&mut rent_contract, &types::ContractState::Deleted(types::Cause::CanceledByUser));
+            let _ = Self::bill_contract(&mut rent_contract);
+            Self::remove_contract(rent_contract.contract_id);
+        }
+
     }
 }
