@@ -1297,6 +1297,66 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
     });
 }
 
+#[test]
+fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
+    new_test_ext().execute_with(|| {
+        prepare_dedicated_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(bob()),
+            node_id
+        ));
+        
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(bob()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            0
+        ));
+        push_contract_resources_used(2);
+
+        run_to_block(12);
+
+        run_to_block(16);
+
+        // Delete node
+        TfgridModule::delete_node_farm(Origin::signed(alice()),1).unwrap();
+
+        let our_events = System::events()
+            .into_iter()
+            .map(|r| r.event)
+            .filter_map(|e| {
+                if let Event::pallet_smart_contract(inner) = e {
+                    Some(inner)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
+            Vec::new();
+
+        for e in our_events.clone().into_iter() {
+            println!("EVEEEENT: {:?}", e);
+        }
+        
+        let ip = "1.1.1.0".as_bytes().to_vec();
+        let mut ips = Vec::new();
+        ips.push(ip);
+
+        expected_events.push(RawEvent::RentContractCanceled(1));
+        expected_events.push(RawEvent::NodeContractCanceled(2, 1, 2));
+
+        assert_eq!(our_events[6], expected_events[0]);
+        assert_eq!(our_events[7], expected_events[1]);
+    });
+}
+
 //  MODULE FUNCTION TESTS //
 // ---------------------- //
 

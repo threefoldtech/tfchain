@@ -1291,12 +1291,14 @@ impl<T: Config> ChangeNode for Module<T> {
 
     fn node_deleted(node: &Node) {
         // First clean up rent contract if it exists
+        let mut was_rented = false;
         let mut rent_contract = ActiveRentContractForNode::get(node.id);
         if rent_contract.contract_id != 0 {
             // Bill contract
             let _ = Self::_update_contract_state(&mut rent_contract, &types::ContractState::Deleted(types::Cause::CanceledByUser));
             let _ = Self::bill_contract(&rent_contract);
             Self::remove_contract(rent_contract.contract_id);
+            was_rented = true;
         }
 
         // Clean up all active contracts
@@ -1305,7 +1307,9 @@ impl<T: Config> ChangeNode for Module<T> {
             let mut contract = Contracts::get(node_contract_id);
             // Bill contract
             let _ = Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(types::Cause::CanceledByUser));
-            let _ = Self::bill_contract(&contract);
+            if !was_rented {
+                let _ = Self::bill_contract(&contract);
+            }
             Self::remove_contract(node_contract_id);
         }
     }
