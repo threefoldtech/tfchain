@@ -1349,10 +1349,10 @@ fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
         let mut ips = Vec::new();
         ips.push(ip);
 
-        expected_events.push(RawEvent::RentContractCanceled(1));
         expected_events.push(RawEvent::NodeContractCanceled(2, 1, 2));
+        expected_events.push(RawEvent::RentContractCanceled(1));
 
-        assert_eq!(our_events[6], expected_events[0]);
+        assert_eq!(our_events[4], expected_events[0]);
         assert_eq!(our_events[7], expected_events[1]);
     });
 }
