@@ -848,7 +848,7 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
         TfgridModule::delete_node_farm(Origin::signed(alice()),1).unwrap();
         
         // After deleting a node, the contract gets billed before it's canceled
-        check_report_cost(1, 7, amount_due_as_u128, 56, discount_received);
+        check_report_cost(1, 8, amount_due_as_u128, 56, discount_received);
 
         let our_events = System::events()
             .into_iter()
@@ -872,8 +872,8 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
         expected_events.push(RawEvent::IPsFreed(1, ips));
         expected_events.push(RawEvent::NodeContractCanceled(1, 1, 2));
 
-        assert_eq!(our_events[8], expected_events[0]);
-        assert_eq!(our_events[9], expected_events[1]);
+        assert_eq!(our_events[9], expected_events[0]);
+        assert_eq!(our_events[10], expected_events[1]);
     });
 }
 
