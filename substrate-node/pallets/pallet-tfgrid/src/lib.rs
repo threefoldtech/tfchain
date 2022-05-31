@@ -683,6 +683,9 @@ decl_module! {
             let twin_id = TwinIdByAccountID::<T>::get(&account_id);
             ensure!(stored_node.twin_id == twin_id, Error::<T>::NodeUpdateNotAuthorized);
 
+            // Call node deleted
+            T::NodeChanged::node_deleted(&stored_node);
+
             Nodes::remove(id);
 
             Self::deposit_event(RawEvent::NodeDeleted(id));
@@ -1122,6 +1125,9 @@ decl_module! {
             let farm_twin = Twins::<T>::get(farm.twin_id);
             ensure!(farm_twin_id == farm_twin.id, Error::<T>::FarmerNotAuthorized);
 
+            // Call node deleted
+            T::NodeChanged::node_deleted(&node);
+
             Nodes::remove(node_id);
             NodeIdByTwinID::remove(node.twin_id);
 
@@ -1145,6 +1151,25 @@ decl_module! {
 
             Self::deposit_event(RawEvent::FarmUpdated(farm));
 
+            Ok(())
+        }
+
+        #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2)]
+        pub fn force_reset_farm_ip(origin, farm_id: u32, ip: Vec<u8>) -> dispatch::DispatchResult {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+
+            ensure!(Farms::contains_key(farm_id), Error::<T>::FarmNotExists);
+            let mut stored_farm = Farms::get(farm_id);
+
+            match stored_farm.public_ips.iter_mut().find(|pubip| pubip.ip == ip) {
+                Some(ip) => {
+                    ip.contract_id = 0;
+                },
+                None => return Err(Error::<T>::IpNotExists.into()),
+            };
+            
+            Farms::insert(stored_farm.id, &stored_farm);
+            Self::deposit_event(RawEvent::FarmUpdated(stored_farm));
             Ok(())
         }
 

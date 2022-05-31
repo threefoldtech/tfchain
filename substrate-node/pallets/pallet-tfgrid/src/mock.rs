@@ -76,6 +76,8 @@ impl tfchain_support::traits::ChangeNode for NodeChanged {
 		_old_node: Option<&Node>,
 		_new_node: &Node,
 	) {}
+
+    fn node_deleted(_node: &tfchain_support::types::Node) {}
 }
 
 use crate::weights;

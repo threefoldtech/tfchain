@@ -19,7 +19,8 @@ use pallet_tft_price;
 use pallet_timestamp as timestamp;
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
-    types::{PublicIP, Resources, CertificationType}
+    traits::ChangeNode,
+    types::{Node, PublicIP, Resources, CertificationType}
 };
 
 #[cfg(test)]
@@ -42,7 +43,10 @@ pub trait Config:
     type Currency: LockableCurrency<Self::AccountId>;
     type StakingPoolAccount: Get<Self::AccountId>;
     type BillingFrequency: Get<u64>;
+    type DistributionFrequency: Get<u16>;
+    type GracePeriod: Get<u64>;
     type WeightInfo: WeightInfo;
+    type NodeChanged: ChangeNode;
 }
 
 pub const CONTRACT_VERSION: u32 = 3;
@@ -70,6 +74,8 @@ decl_event!(
         UpdatedUsedResources(types::ContractResources),
         NruConsumptionReportReceived(types::NruConsumption),
         RentContractCanceled(u64),
+        ContractGracePeriodStarted(u64, u32, u32, u64),
+        ContractGracePeriodEnded(u64, u32, u32),
     }
 );
 
@@ -100,7 +106,8 @@ decl_error! {
         NodeHasActiveContracts,
         NodeHasRentContract,
         NodeIsNotDedicated,
-        NodeNotAvailableToDeploy
+        NodeNotAvailableToDeploy,
+        CannotUpdateContractInGraceState
     }
 }
 
@@ -419,6 +426,13 @@ impl<T: Config> Module<T> {
             Error::<T>::TwinNotAuthorizedToUpdateContract
         );
 
+        // Don't allow updates for contracts that are in grace state
+        let is_grace_state = matches!(contract.state, types::ContractState::GracePeriod(_));
+        ensure!(
+            !is_grace_state,
+            Error::<T>::CannotUpdateContractInGraceState
+        );
+
         let mut node_contract = Self::get_node_contract(&contract.clone())?;
 
         // remove and reinsert contract id by node id and hash because that hash can have changed
@@ -469,7 +483,7 @@ impl<T: Config> Module<T> {
         // Update state
         Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
         // Bill contract
-        Self::bill_contract(&contract)?;
+        Self::bill_contract(&mut contract)?;
         // Remove all associated storage
         Self::remove_contract(contract.contract_id);
 
@@ -648,8 +662,7 @@ impl<T: Config> Module<T> {
 
     // Bills a contract (NodeContract or NameContract)
     // Calculates how much TFT is due by the user and distributes the rewards
-    // Will also cancel the contract if there is not enough funds on the users wallet
-    fn bill_contract(contract: &types::Contract) -> DispatchResult {
+    fn bill_contract(contract: &mut types::Contract) -> DispatchResult {
         if !pallet_tfgrid::Twins::<T>::contains_key(contract.twin_id) {
             return Err(DispatchError::from(Error::<T>::TwinNotExists));
         }
@@ -658,54 +671,119 @@ impl<T: Config> Module<T> {
 
         let mut seconds_elapsed = T::BillingFrequency::get() * 6;
         // Calculate amount of seconds elapsed based on the contract lock struct
-        let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
 
+        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
         // this will set the seconds elapsed to the default billing cycle duration in seconds
         // if there is no contract lock object yet. A contract lock object will be created later in this function
         // https://github.com/threefoldtech/tfchain/issues/261
+        let contract_lock = ContractLock::<T>::get(contract.contract_id);
         if contract_lock.lock_updated != 0 {
-            let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
             seconds_elapsed = now.checked_sub(contract_lock.lock_updated).unwrap_or(0);
         }
 
-        let (mut amount_due, discount_received) =
+        let (amount_due, discount_received) =
             Self::calculate_contract_cost_tft(contract, usable_balance, seconds_elapsed)?;
 
+        // If there is nothing to be paid, return
         if amount_due == BalanceOf::<T>::saturated_from(0 as u128) {
             return Ok(());
         };
+        
+        // Handle grace
+        let contract = Self::handle_grace(contract, usable_balance, amount_due)?;
 
-        // if the total amount due exceeds the twin's balance we must decomission the contract
-        let mut decomission = false;
-        if amount_due >= usable_balance {
-            decomission = true;
-            amount_due = usable_balance;
+        // Handle contract lock operations
+        Self::handle_lock(contract, amount_due);
+
+        // Always emit a contract billed event
+        let contract_bill = types::ContractBill {
+            contract_id: contract.contract_id,
+            timestamp: <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000,
+            discount_level: discount_received.clone(),
+            amount_billed: amount_due.saturated_into::<u128>(),
+        };
+        Self::deposit_event(RawEvent::ContractBilled(contract_bill));
+
+        // set the amount unbilled back to 0
+        let mut contract_billing_info = ContractBillingInformationByID::get(contract.contract_id);
+        contract_billing_info.amount_unbilled = 0;
+        ContractBillingInformationByID::insert(contract.contract_id, &contract_billing_info);
+
+        // If the contract is in delete state, remove all associated storage
+        if matches!(contract.state, types::ContractState::Deleted(_)) {
+            Self::remove_contract(
+                contract.contract_id,
+            );
         }
 
-        // Refetch usable balance
-        let usable_balance = Self::get_usable_balance(&twin.account_id);
-        // Get twin free balance
-        let free_balance = <T as Config>::Currency::free_balance(&twin.account_id);
-        // Locked balance = free balance - usable balance
-        let locked_balance = free_balance - usable_balance;
+        Ok(())
+    }
 
+    fn handle_grace(contract: &mut types::Contract, usable_balance: BalanceOf<T>, amount_due: BalanceOf<T>) -> Result<&mut types::Contract, DispatchError> {
+        let current_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
+        let node_id = contract.get_node_id();
+
+        match contract.state {
+            types::ContractState::GracePeriod(grace_start) => {
+                // if the usable balance is recharged, we can move the contract to created state again
+                if usable_balance > amount_due {
+                    Self::_update_contract_state(contract, &types::ContractState::Created)?;
+                    Self::deposit_event(RawEvent::ContractGracePeriodEnded(contract.contract_id, node_id, contract.twin_id))
+                } else {
+                    let diff = current_block - grace_start;
+                    // If the contract grace period ran out, we can decomission the contract
+                    if diff >= T::GracePeriod::get() {
+                        Self::_update_contract_state(contract, &types::ContractState::Deleted(types::Cause::OutOfFunds))?;
+                    }
+                }
+            }
+            _ => {
+                // if the user ran out of funds, move the contract to be in a grace period
+                // dont lock the tokens because there is nothing to lock
+                // we can still update the internal contract lock object to figure out later how much was due
+                // whilst in grace period
+                if amount_due >= usable_balance {
+                    Self::_update_contract_state(contract, &types::ContractState::GracePeriod(current_block))?;
+                    // We can't lock the amount due on the contract's lock because the user ran out of funds
+                    Self::deposit_event(RawEvent::ContractGracePeriodStarted(contract.contract_id, node_id, contract.twin_id, current_block.saturated_into()));
+                }
+            }
+        }
+
+        Ok(contract)
+    }
+
+    fn handle_lock(contract: &mut types::Contract, amount_due: BalanceOf<T>) {
+        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+        let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
+        let new_amount_locked = contract_lock.amount_locked + amount_due;
+
+        // increment cycles billed and update the internal lock struct
+        contract_lock.lock_updated = now;
+        contract_lock.cycles += 1;
+        contract_lock.amount_locked = new_amount_locked;
+        ContractLock::<T>::insert(contract.contract_id, &contract_lock);
+
+        // Contract is in grace state, don't actually lock tokens or distribute rewards
+        if matches!(contract.state, types::ContractState::GracePeriod(_)) {
+            return
+        }
+
+        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
+        // Only lock an amount from the user's balance if the contract is in create state
         // Update lock for contract and ContractLock in storage
         <T as Config>::Currency::extend_lock(
             contract.contract_id.to_be_bytes(),
             &twin.account_id,
-            locked_balance + amount_due.into(),
+            new_amount_locked.into(),
             WithdrawReasons::RESERVE,
         );
-        // increment cycles billed
-        contract_lock.lock_updated = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
-        contract_lock.cycles += 1;
-        contract_lock.amount_locked = contract_lock.amount_locked + amount_due;
-        ContractLock::<T>::insert(contract.contract_id, &contract_lock);
 
         let is_canceled = matches!(contract.state, types::ContractState::Deleted(_));
-        // When the cultivation rewards are ready to be distributed or we have to decomission the contract (due to out of funds) or it's canceled by the user
+        let canceled_and_not_zero = is_canceled && contract_lock.amount_locked.saturated_into::<u64>() > 0;
+        // When the cultivation rewards are ready to be distributed or it's in delete state
         // Unlock all reserved balance and distribute
-        if contract_lock.cycles == 24 || decomission || is_canceled {
+        if contract_lock.cycles >= T::DistributionFrequency::get() || canceled_and_not_zero {
             // Remove lock
             <T as Config>::Currency::remove_lock(
                 contract.contract_id.to_be_bytes(),
@@ -723,36 +801,11 @@ impl<T: Config> Module<T> {
                 Err(err) => debug::info!("error while distributing cultivation rewards {:?}", err),
             };
             // Reset values
-            contract_lock.lock_updated =
-                <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+            contract_lock.lock_updated = now;
             contract_lock.amount_locked = BalanceOf::<T>::saturated_from(0 as u128);
             contract_lock.cycles = 0;
             ContractLock::<T>::insert(contract.contract_id, &contract_lock);
         }
-
-        let contract_bill = types::ContractBill {
-            contract_id: contract.contract_id,
-            timestamp: <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000,
-            discount_level: discount_received.clone(),
-            amount_billed: amount_due.saturated_into::<u128>(),
-        };
-        Self::deposit_event(RawEvent::ContractBilled(contract_bill));
-
-        // set the amount unbilled back to 0
-        let mut contract_billing_info = ContractBillingInformationByID::get(contract.contract_id);
-        contract_billing_info.amount_unbilled = 0;
-        ContractBillingInformationByID::insert(contract.contract_id, &contract_billing_info);
-
-        // If total balance exceeds the twin's balance, we can decomission contract
-        if decomission {
-            return Self::_cancel_contract(
-                twin.account_id,
-                contract.contract_id,
-                types::Cause::OutOfFunds,
-            );
-        }
-
-        Ok(())
     }
 
     fn calculate_contract_cost_tft(
@@ -927,6 +980,11 @@ impl<T: Config> Module<T> {
             }
             types::ContractData::RentContract(rent_contract) => {
                 ActiveRentContractForNode::remove(rent_contract.node_id);
+                // Remove all associated active node contracts
+                let active_node_contracts = ActiveNodeContracts::get(rent_contract.node_id);
+                for node_contract in active_node_contracts {
+                    Self::remove_contract(node_contract);
+                }
                 Self::deposit_event(RawEvent::RentContractCanceled(contract_id));
             }
         };
@@ -1281,5 +1339,31 @@ impl<T: Config> Module<T> {
         cu = if cu > cu3 { cu3 } else { cu };
 
         cu
+    }
+}
+
+impl<T: Config> ChangeNode for Module<T> {
+    fn node_changed(_node: Option<&Node>, _new_node: &Node) {}
+
+    fn node_deleted(node: &Node) {
+        // Clean up all active contracts
+        let active_node_contracts = ActiveNodeContracts::get(node.id);
+        for node_contract_id in active_node_contracts {
+            let mut contract = Contracts::get(node_contract_id);
+            // Bill contract
+            let _ = Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(types::Cause::CanceledByUser));
+            let _ = Self::bill_contract(&mut contract);
+            Self::remove_contract(node_contract_id);
+        }
+
+        // First clean up rent contract if it exists
+        let mut rent_contract = ActiveRentContractForNode::get(node.id);
+        if rent_contract.contract_id != 0 {
+            // Bill contract
+            let _ = Self::_update_contract_state(&mut rent_contract, &types::ContractState::Deleted(types::Cause::CanceledByUser));
+            let _ = Self::bill_contract(&mut rent_contract);
+            Self::remove_contract(rent_contract.contract_id);
+        }
+
     }
 }
