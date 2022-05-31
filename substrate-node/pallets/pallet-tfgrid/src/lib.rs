@@ -1131,21 +1131,22 @@ decl_module! {
         }
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2)]
-        pub fn force_remove_farm_ip(origin, farm_id: u32, ip: Vec<u8>) -> dispatch::DispatchResult {
+        pub fn force_reset_farm_ip(origin, farm_id: u32, ip: Vec<u8>) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
             ensure!(Farms::contains_key(farm_id), Error::<T>::FarmNotExists);
             let mut stored_farm = Farms::get(farm_id);
 
-            match stored_farm.public_ips.iter().position(|pubip| pubip.ip == ip) {
-                Some(index) => {
-                    stored_farm.public_ips.remove(index);
-                    Farms::insert(stored_farm.id, &stored_farm);
-                    Self::deposit_event(RawEvent::FarmUpdated(stored_farm));
-                    Ok(())
+            match stored_farm.public_ips.iter_mut().find(|pubip| pubip.ip == ip) {
+                Some(ip) => {
+                    ip.contract_id = 0;
                 },
-                None => Err(Error::<T>::IpNotExists.into()),
-            }
+                None => return Err(Error::<T>::IpNotExists.into()),
+            };
+            
+            Farms::insert(stored_farm.id, &stored_farm);
+            Self::deposit_event(RawEvent::FarmUpdated(stored_farm));
+            Ok(())
         }
     }
 }
