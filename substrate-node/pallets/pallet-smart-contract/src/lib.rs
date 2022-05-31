@@ -1293,12 +1293,17 @@ impl<T: Config> ChangeNode for Module<T> {
         // First clean up rent contract if it exists
         let rent_contract = ActiveRentContractForNode::get(node.id);
         if rent_contract.contract_id != 0 {
+            // Bill contract
+            let _ = Self::bill_contract(&rent_contract);
             Self::remove_contract(rent_contract.contract_id);
         }
 
         // Clean up all active contracts
         let active_node_contracts = ActiveNodeContracts::get(node.id);
         for node_contract_id in active_node_contracts {
+            let contract = Contracts::get(node_contract_id);
+            // Bill contract
+            let _ = Self::bill_contract(&contract);
             Self::remove_contract(node_contract_id);
         }
     }
