@@ -185,12 +185,18 @@ fn close_works() {
             }))
         );
 
+        let farm_1_weight = DaoModule::get_vote_weight(1).unwrap();
+        let farm_2_weight = DaoModule::get_vote_weight(2).unwrap();
+        let total_weight = farm_1_weight + farm_2_weight;
+
         assert_eq!(
             e[9],
             record(MockEvent::pallet_dao(DaoEvent::Closed {
                 proposal_hash: hash,
                 yes: 2,
-                no: 0
+                yes_weight: total_weight,
+                no: 0,
+                no_weight: 0,
             }))
         );
 
@@ -276,12 +282,18 @@ fn motion_approval_works() {
             }))
         );
 
+        let farm_1_weight = DaoModule::get_vote_weight(1).unwrap();
+        let farm_2_weight = DaoModule::get_vote_weight(2).unwrap();
+        let total_weight = farm_1_weight + farm_2_weight;
+
         assert_eq!(
             e[9],
             record(MockEvent::pallet_dao(DaoEvent::Closed {
                 proposal_hash: hash,
                 yes: 2,
-                no: 0
+                yes_weight: total_weight,
+                no: 0,
+                no_weight: 0,
             }))
         );
 
@@ -376,12 +388,17 @@ fn weighted_voting_works() {
             }))
         );
 
+        let farm_1_weight = DaoModule::get_vote_weight(1).unwrap();
+        let farm_2_weight = DaoModule::get_vote_weight(2).unwrap();
+
         assert_eq!(
             e[9],
             record(MockEvent::pallet_dao(DaoEvent::Closed {
                 proposal_hash: hash,
                 yes: 1,
-                no: 1
+                yes_weight: farm_1_weight,
+                no: 1,
+                no_weight: farm_2_weight,
             }))
         );
 
@@ -467,12 +484,18 @@ fn voting_tfgridmodule_call_works() {
             }))
         );
 
+        let farm_1_weight = DaoModule::get_vote_weight(1).unwrap();
+        let farm_2_weight = DaoModule::get_vote_weight(2).unwrap();
+        let total_weight = farm_1_weight + farm_2_weight;
+
         assert_eq!(
             e[9],
             record(MockEvent::pallet_dao(DaoEvent::Closed {
                 proposal_hash: hash,
                 yes: 2,
-                no: 0
+                yes_weight: total_weight,
+                no: 0,
+                no_weight: 0,
             }))
         );
 

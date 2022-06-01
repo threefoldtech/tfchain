@@ -141,7 +141,9 @@ pub mod pallet {
         Closed {
             proposal_hash: T::Hash,
             yes: u32,
+            yes_weight: u64,
             no: u32,
+            no_weight: u64,
         },
     }
 
@@ -345,7 +347,9 @@ pub mod pallet {
                 Self::deposit_event(Event::Closed {
                     proposal_hash,
                     yes: yes_votes,
+                    yes_weight: total_aye_weight,
                     no: no_votes,
+                    no_weight: total_naye_weight,
                 });
                 let _proposal_weight = Self::do_approve_proposal(proposal_hash, proposal);
                 return Ok(Pays::No.into());
@@ -354,7 +358,9 @@ pub mod pallet {
             Self::deposit_event(Event::Closed {
                 proposal_hash,
                 yes: yes_votes,
+                yes_weight: total_aye_weight,
                 no: no_votes,
+                no_weight: total_naye_weight,
             });
             Self::do_disapprove_proposal(proposal_hash);
             return Ok(Pays::No.into());
