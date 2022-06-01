@@ -579,6 +579,70 @@ fn create_node_works() {
 }
 
 #[test]
+fn add_node_certifier_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_ok!(TfgridModule::add_node_certifier(
+            RawOrigin::Root.into(),
+            alice()
+        ));
+
+        let node_certifiers = TfgridModule::allowed_node_certifiers();
+        assert_eq!(node_certifiers[0], alice());
+    });
+}
+
+#[test]
+fn add_node_certifier_double_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_ok!(TfgridModule::add_node_certifier(
+            RawOrigin::Root.into(),
+            alice()
+        ));
+        let node_certifiers = TfgridModule::allowed_node_certifiers();
+        assert_eq!(node_certifiers[0], alice());
+
+        assert_noop!(
+            TfgridModule::add_node_certifier(
+                RawOrigin::Root.into(),
+                alice()
+            ),
+            Error::<TestRuntime>::AlreadyCertifier
+        );
+    });
+}
+
+#[test]
+fn remove_node_certifier_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_ok!(TfgridModule::add_node_certifier(
+            RawOrigin::Root.into(),
+            alice()
+        ));
+
+        let node_certifiers = TfgridModule::allowed_node_certifiers();
+        assert_eq!(node_certifiers[0], alice());
+
+        assert_ok!(TfgridModule::remove_node_certifier(
+            RawOrigin::Root.into(),
+            alice()
+        ));
+    });
+}
+
+#[test]
+fn remove_node_certifier_not_exists_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_noop!(
+            TfgridModule::remove_node_certifier(
+                RawOrigin::Root.into(),
+                alice()
+            ),
+            Error::<TestRuntime>::NotCertifier
+        );
+    });
+}
+
+#[test]
 fn set_certification_type_node_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
@@ -586,8 +650,13 @@ fn set_certification_type_node_works() {
         create_farm();
         create_node();
 
-        assert_ok!(TfgridModule::set_node_certification(
+        assert_ok!(TfgridModule::add_node_certifier(
             RawOrigin::Root.into(),
+            alice()
+        ));
+
+        assert_ok!(TfgridModule::set_node_certification(
+            Origin::signed(alice()),
             1,
             CertificationType::Certified
         ));
@@ -598,7 +667,7 @@ fn set_certification_type_node_works() {
         );
 
         assert_ok!(TfgridModule::set_node_certification(
-            RawOrigin::Root.into(),
+            Origin::signed(alice()),
             1,
             CertificationType::Diy
         ));
