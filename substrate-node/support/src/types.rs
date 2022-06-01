@@ -8,7 +8,7 @@ pub struct Farm {
     pub name: Vec<u8>,
     pub twin_id: u32,
     pub pricing_policy_id: u32,
-    pub certification_type: CertificationType,
+    pub certification: Certification,
     pub public_ips: Vec<PublicIP>,
     pub dedicated_farm: bool
 }
@@ -21,14 +21,14 @@ pub struct PublicIP {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, Copy)]
-pub enum CertificationType {
-    Diy,
-    Certified,
+pub enum Certification {
+    NotCertified,
+    Gold,
 }
 
-impl Default for CertificationType {
-    fn default() -> CertificationType {
-        CertificationType::Diy
+impl Default for Certification {
+    fn default() -> Certification {
+        Certification::NotCertified
     }
 }
 
@@ -95,4 +95,16 @@ impl Resources {
 pub struct Location {
     pub longitude: Vec<u8>,
     pub latitude: Vec<u8>,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, Copy)]
+pub enum CertificationType {
+    Diy,
+    Certified,
+}
+
+impl Default for CertificationType {
+    fn default() -> CertificationType {
+        CertificationType::Diy
+    }
 }

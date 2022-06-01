@@ -18,7 +18,7 @@ use sp_runtime::{traits::SaturatedConversion, DispatchError};
 use sp_std::prelude::*;
 use tfchain_support::{
     traits::ChangeNode,
-    types::{Node, Farm, CertificationType, PublicIP, Resources, Location, Interface, PublicConfig}
+    types::{Node, Farm, CertificationType, PublicIP, Resources, Location, Interface, PublicConfig, Certification}
 };
 
 #[cfg(test)]
@@ -33,6 +33,7 @@ pub mod weights;
 pub mod types;
 
 pub mod migration;
+pub mod farm_migration;
 
 pub use weights::WeightInfo;
 
@@ -298,7 +299,7 @@ decl_module! {
         fn deposit_event() = default;
 
         fn on_runtime_upgrade() -> frame_support::weights::Weight {
-			migration::add_connection_price_to_nodes::<T>()
+			migration::add_connection_price_to_nodes::<T>() + farm_migration::rework_farm_certification::<T>()
 		}
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(1)]
@@ -348,7 +349,7 @@ decl_module! {
                 twin_id,
                 name,
                 pricing_policy_id: 1,
-                certification_type: CertificationType::Diy,
+                certification: Certification::NotCertified,
                 public_ips: pub_ips,
                 dedicated_farm: false,
             };
@@ -409,13 +410,13 @@ decl_module! {
         }
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1)]
-        pub fn set_farm_certification(origin, farm_id: u32, certification_type: CertificationType) -> dispatch::DispatchResult {
+        pub fn set_farm_certification(origin, farm_id: u32, certification: Certification) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
             ensure!(Farms::contains_key(farm_id), Error::<T>::FarmNotExists);
             let mut stored_farm = Farms::get(farm_id);
 
-            stored_farm.certification_type = certification_type;
+            stored_farm.certification = certification;
 
             Farms::insert(farm_id, &stored_farm);
 
@@ -527,11 +528,11 @@ decl_module! {
             // If there are policies set by us, attach the last on in the list
             // This list is updated with new policies when we change the farming rules, so we want new nodes
             // to always use the latest farming policy (last one in the list)
-            let farming_policies = FarmingPolicyIDsByCertificationType::get(farm.certification_type);
-            let mut farming_policy_id = 0;
-            if farming_policies.len() > 0 {
-                farming_policy_id = farming_policies[farming_policies.len() -1];
-            }
+            // let farming_policies = FarmingPolicyIDsByCertificationType::get(farm.certification_type);
+            // let mut farming_policy_id = 0;
+            // if farming_policies.len() > 0 {
+            //     farming_policy_id = farming_policies[farming_policies.len() -1];
+            // }
 
             let created = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
 
@@ -546,7 +547,8 @@ decl_module! {
                 city,
                 public_config: None,
                 created,
-                farming_policy_id,
+                // TODO get the correct farming policy from somewhere
+                farming_policy_id: 1,
                 interfaces,
                 certification_type: CertificationType::default(),
                 secure_boot,
