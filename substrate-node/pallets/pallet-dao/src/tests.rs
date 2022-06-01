@@ -319,6 +319,116 @@ fn motion_approval_works() {
 }
 
 #[test]
+fn motion_veto_works() {
+    new_test_ext().execute_with(|| {
+        System::set_block_number(1);
+        let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_farm_certification(
+            1,
+            CertificationType::Certified,
+        ));
+        let hash = BlakeTwo256::hash_of(&proposal);
+
+        assert_ok!(DaoModule::propose(
+            Origin::signed(1),
+            2,
+            Box::new(proposal.clone()),
+            "some_description".as_bytes().to_vec(),
+            "some_link".as_bytes().to_vec(),
+        ));
+
+        
+        assert_ok!(DaoModule::veto(
+            Origin::signed(2),
+            hash.clone()
+        ));
+        assert_ok!(DaoModule::veto(
+            Origin::signed(3),
+            hash.clone()
+        ));
+
+        System::set_block_number(5);
+
+        let e = System::events();
+        assert_eq!(
+            e[0],
+            record(MockEvent::pallet_dao(DaoEvent::Proposed {
+                account: 1,
+                proposal_index: 0,
+                proposal_hash: hash,
+                threshold: 2
+            }))
+        );
+
+        // for event in e {
+        //     println!("event: {:?}", event);
+        // }
+
+        assert_eq!(
+            e[1],
+            record(MockEvent::pallet_dao(DaoEvent::CouncilMemberVeto {
+                proposal_hash: hash,
+                who: 2,
+            }))
+        );
+        assert_eq!(
+            e[2],
+            record(MockEvent::pallet_dao(DaoEvent::CouncilMemberVeto {
+                proposal_hash: hash,
+                who: 3,
+            }))
+        );
+
+        assert_eq!(
+            e[3],
+            record(MockEvent::pallet_dao(DaoEvent::ClosedByCouncil {
+                proposal_hash: hash,
+                vetos: [2, 3].to_vec(),
+            }))
+        );
+
+        assert_eq!(
+            e[4],
+            record(MockEvent::pallet_dao(DaoEvent::Disapproved {
+                proposal_hash: hash,
+            }))
+        );
+
+        // assert_eq!(
+        //     e[8],
+        //     record(MockEvent::pallet_dao(DaoEvent::Voted {
+        //         account: 11,
+        //         proposal_hash: hash,
+        //         voted: true,
+        //         yes: 2,
+        //         no: 0
+        //     }))
+        // );
+
+        // let farm_1_weight = DaoModule::get_vote_weight(1).unwrap();
+        // let farm_2_weight = DaoModule::get_vote_weight(2).unwrap();
+        // let total_weight = farm_1_weight + farm_2_weight;
+
+        // assert_eq!(
+        //     e[9],
+        //     record(MockEvent::pallet_dao(DaoEvent::Closed {
+        //         proposal_hash: hash,
+        //         yes: 2,
+        //         yes_weight: total_weight,
+        //         no: 0,
+        //         no_weight: 0,
+        //     }))
+        // );
+
+        // assert_eq!(
+        //     e[10],
+        //     record(MockEvent::pallet_dao(DaoEvent::Approved {
+        //         proposal_hash: hash,
+        //     }))
+        // );
+    });
+}
+
+#[test]
 fn weighted_voting_works() {
     new_test_ext().execute_with(|| {
         System::set_block_number(1);
