@@ -9,7 +9,7 @@ use substrate_fixed::types::{U16F16, U64F64};
 
 use super::types;
 use pallet_tfgrid::types as pallet_tfgrid_types;
-use tfchain_support::types::{Location, PublicIP, Resources};
+use tfchain_support::types::{Location, PublicIP, Resources, Certification, CertificationType};
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -1907,6 +1907,8 @@ pub fn prepare_farm(source: AccountId, dedicated: bool) {
 
 pub fn prepare_farm_and_node() {
     TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+    
+    create_farming_policies();
 
     prepare_twins();
 
@@ -1944,6 +1946,7 @@ pub fn prepare_farm_and_node() {
 
 pub fn prepare_dedicated_farm_and_node() {
     TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+    create_farming_policies();
 
     prepare_twins();
 
@@ -2001,4 +2004,70 @@ fn run_to_block(n: u64) {
         System::on_initialize(System::block_number());
         SmartContractModule::on_initialize(System::block_number());
     }
+}
+
+fn create_farming_policies() {
+    let name = "f1".as_bytes().to_vec();
+    assert_ok!(TfgridModule::create_farming_policy(
+        RawOrigin::Root.into(),
+        name,
+        12,
+        15,
+        10,
+        8,
+        9999,
+        System::block_number() + 100,
+        true,
+        true,
+        CertificationType::Diy,
+        Certification::Gold,
+    ));
+
+    let name = "f2".as_bytes().to_vec();
+    assert_ok!(TfgridModule::create_farming_policy(
+        RawOrigin::Root.into(),
+        name,
+        12,
+        15,
+        10,
+        8,
+        9999,
+        System::block_number() + 100,
+        true,
+        true,
+        CertificationType::Diy,
+        Certification::NotCertified,
+    ));
+
+    let name = "f3".as_bytes().to_vec();
+    assert_ok!(TfgridModule::create_farming_policy(
+        RawOrigin::Root.into(),
+        name,
+        12,
+        15,
+        10,
+        8,
+        9999,
+        System::block_number() + 100,
+        true,
+        true,
+        CertificationType::Certified,
+        Certification::Gold,
+    ));
+
+    let name = "f1".as_bytes().to_vec();
+    assert_ok!(TfgridModule::create_farming_policy(
+        RawOrigin::Root.into(),
+        name,
+        12,
+        15,
+        10,
+        8,
+        9999,
+        System::block_number() + 100,
+        true,
+        true,
+        CertificationType::Certified,
+        Certification::NotCertified,
+    ));
 }

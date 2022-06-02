@@ -1,6 +1,7 @@
 use codec::{Decode, Encode};
 use frame_support::traits::Vec;
-use tfchain_support::types::{Certification};
+use tfchain_support::types::{Certification, CertificationType};
+use core::cmp::Ordering;
 
 /// Utility type for managing upgrades/migrations.
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
@@ -102,7 +103,7 @@ impl Default for Unit {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Default, Debug)]
 pub struct FarmingPolicy<BlockNumber> {
     pub version: u32,
     pub id: u32,
@@ -112,7 +113,7 @@ pub struct FarmingPolicy<BlockNumber> {
     pub nu: u32,
     pub ipv4: u32,
     // Minimal uptime in order to benefit from this uptime.
-    pub minimal_uptime: u8,
+    pub minimal_uptime: u16,
     pub policy_created: BlockNumber,
     // Indicated when this policy expires.
     pub policy_end: BlockNumber,
@@ -120,20 +121,24 @@ pub struct FarmingPolicy<BlockNumber> {
     pub immutable: bool,
     pub default: bool,
     // If a node needs to be certified or not to benefit from this policy
-    pub node_certification: bool,
+    pub node_certification: CertificationType,
     // Farm certification level
     pub farm_certification: Certification,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
-pub struct FarmingPolicyLimit<BlockNumber> {
-    pub version: u32,
-    pub id: u32,
-    pub farming_policy_id: u32,
-    pub cu: u32,
-    pub su: u32,
-    pub end: BlockNumber,
-    pub node_certification: bool
+impl<B> PartialOrd for FarmingPolicy<B> where B: Ord {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<B> Ord for FarmingPolicy<B> where B: Ord {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.farm_certification.cmp(&other.farm_certification) {
+            Ordering::Equal => self.node_certification.cmp(&other.node_certification),
+            ord => ord,
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]

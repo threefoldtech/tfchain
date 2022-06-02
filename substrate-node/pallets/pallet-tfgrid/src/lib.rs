@@ -18,7 +18,10 @@ use sp_runtime::{traits::SaturatedConversion, DispatchError};
 use sp_std::prelude::*;
 use tfchain_support::{
     traits::ChangeNode,
-    types::{Node, Farm, CertificationType, PublicIP, Resources, Location, Interface, PublicConfig, Certification}
+    types::{
+        Node, Farm, CertificationType, PublicIP, Resources,
+        Location, Interface, PublicConfig, Certification, FarmingPolicyLimit,
+    }
 };
 
 #[cfg(test)]
@@ -80,7 +83,9 @@ decl_storage! {
         // pub CertificationCodes get(fn certification_codes): map hasher(blake2_128_concat) u32 => types::CertificationCodes;
         // pub CertificationCodeIdByName get(fn certification_codes_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u32;
 
-        pub FarmingPolicies get(fn farming_policies): Vec<types::FarmingPolicy<T::BlockNumber>>;
+        // pub FarmingPolicies get(fn farming_policies): Vec<types::FarmingPolicy<T::BlockNumber>>;
+        pub FarmingPolicies get(fn farming_policies): map hasher(blake2_128_concat) u32 => types::FarmingPolicy<T::BlockNumber>;
+        
         pub FarmingPolicyIDsByCertificationType get (fn farming_policies_by_certification_type): map hasher(blake2_128_concat) CertificationType => Vec<u32>;
 
         pub UsersTermsAndConditions get(fn users_terms_and_condition): map hasher(blake2_128_concat) T::AccountId => Vec<types::TermsAndConditions<T::AccountId>>;
@@ -179,25 +184,25 @@ decl_storage! {
                 _config.discount_for_dedication_nodes
             );
 
-            let _ = <Module<T>>::create_farming_policy(
-                RawOrigin::Root.into(),
-                "threefold_default_diy_farming_policy".as_bytes().to_vec(),
-                _config.farming_policy_diy_su,
-                _config.farming_policy_diy_cu,
-                _config.farming_policy_diy_nu,
-                _config.farming_policy_diy_ipu,
-                CertificationType::Diy,
-            );
+            // let _ = <Module<T>>::create_farming_policy(
+            //     RawOrigin::Root.into(),
+            //     "threefold_default_diy_farming_policy".as_bytes().to_vec(),
+            //     _config.farming_policy_diy_su,
+            //     _config.farming_policy_diy_cu,
+            //     _config.farming_policy_diy_nu,
+            //     _config.farming_policy_diy_ipu,
+            //     CertificationType::Diy,
+            // );
 
-            let _ = <Module<T>>::create_farming_policy(
-                RawOrigin::Root.into(),
-                "threefold_default_certified_farming_policy".as_bytes().to_vec(),
-                _config.farming_policy_certified_su,
-                _config.farming_policy_certified_cu,
-                _config.farming_policy_certified_nu,
-                _config.farming_policy_certified_ipu,
-                CertificationType::Certified,
-            );
+            // let _ = <Module<T>>::create_farming_policy(
+            //     RawOrigin::Root.into(),
+            //     "threefold_default_certified_farming_policy".as_bytes().to_vec(),
+            //     _config.farming_policy_certified_su,
+            //     _config.farming_policy_certified_cu,
+            //     _config.farming_policy_certified_nu,
+            //     _config.farming_policy_certified_ipu,
+            //     CertificationType::Certified,
+            // );
 
             let _ = <Module<T>>::set_connection_price(
                 RawOrigin::Root.into(),
@@ -243,6 +248,7 @@ decl_event!(
         ConnectionPriceSet(u32),
         NodeCertifierAdded(AccountId),
         NodeCertifierRemoved(AccountId),
+        FarmingPolicyUpdated(types::FarmingPolicy<BlockNumber>),
     }
 );
 
@@ -299,6 +305,8 @@ decl_error! {
         AlreadyCertifier,
         NotCertifier,
         NotAllowedToCertifyNode,
+
+        FarmingPolicyNotExists,
     }
 }
 
@@ -362,6 +370,7 @@ decl_module! {
                 certification: Certification::NotCertified,
                 public_ips: pub_ips,
                 dedicated_farm: false,
+                farming_policy_limits: None,
             };
 
             Farms::insert(id, &new_farm);
@@ -524,7 +533,6 @@ decl_module! {
             let account_id = ensure_signed(origin)?;
 
             ensure!(Farms::contains_key(farm_id), Error::<T>::FarmNotExists);
-            let farm = Farms::get(farm_id);
             ensure!(TwinIdByAccountID::<T>::contains_key(&account_id), Error::<T>::TwinNotExists);
             let twin_id = TwinIdByAccountID::<T>::get(&account_id);
 
@@ -533,20 +541,9 @@ decl_module! {
             let mut id = NodeID::get();
             id = id+1;
 
-            // Attach a farming policy to a node
-            // We first filter on Policies by certification type of the farm
-            // If there are policies set by us, attach the last on in the list
-            // This list is updated with new policies when we change the farming rules, so we want new nodes
-            // to always use the latest farming policy (last one in the list)
-            // let farming_policies = FarmingPolicyIDsByCertificationType::get(farm.certification_type);
-            // let mut farming_policy_id = 0;
-            // if farming_policies.len() > 0 {
-            //     farming_policy_id = farming_policies[farming_policies.len() -1];
-            // }
-
             let created = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
 
-            let new_node = Node {
+            let mut new_node = Node {
                 version: TFGRID_NODE_VERSION,
                 id,
                 farm_id,
@@ -557,8 +554,7 @@ decl_module! {
                 city,
                 public_config: None,
                 created,
-                // TODO get the correct farming policy from somewhere
-                farming_policy_id: 1,
+                farming_policy_id: 0,
                 interfaces,
                 certification_type: CertificationType::default(),
                 secure_boot,
@@ -566,6 +562,9 @@ decl_module! {
                 serial_number,
                 connection_price: ConnectionPrice::get()
             };
+
+            let farming_policy = Self::get_farming_policy(&new_node)?;
+            new_node.farming_policy_id = farming_policy.id;
 
             Nodes::insert(id, &new_node);
             NodeID::put(id);
@@ -1035,16 +1034,27 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2)]
-        pub fn create_farming_policy(origin, name: Vec<u8>, su: u32, cu: u32, nu: u32, ipv4: u32, certification_type: CertificationType) -> dispatch::DispatchResult {
+        #[weight = 100_000_000 + T::DbWeight::get().writes(2) + T::DbWeight::get().reads(3)]
+        pub fn create_farming_policy(
+            origin, 
+            name: Vec<u8>, 
+            su: u32, 
+            cu: u32, 
+            nu: u32, 
+            ipv4: u32, 
+            minimal_uptime: u16,
+            policy_end: T::BlockNumber,
+            immutable: bool,
+            default: bool,
+            node_certification: CertificationType,
+            farm_certification: Certification
+        ) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
             let mut id = FarmingPolicyID::get();
             id = id+1;
 
-            let mut farming_policies = FarmingPolicies::get();
-
-            let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+            let now_block = system::Pallet::<T>::block_number();
 
             let new_policy = types::FarmingPolicy {
                 version: TFGRID_FARMING_POLICY_VERSION,
@@ -1054,30 +1064,21 @@ decl_module! {
                 cu,
                 nu,
                 ipv4,
-                timestamp: now,
-                certification_type,
+                minimal_uptime,
+                policy_created: now_block,
+                policy_end,
+                immutable,
+                default,
+                node_certification,
+                farm_certification,
             };
 
+            FarmingPolicies::<T>::insert(id, &new_policy);
+            FarmingPolicyID::put(id);
 
-            // We don't want to add duplicate farming_policies, so we check whether it exists, if so return error
-            match farming_policies.binary_search(&new_policy) {
-                Ok(_) => Err(Error::<T>::FarmingPolicyAlreadyExists.into()),
-                Err(index) => {
-                    // Object does not exists, save it
-                    farming_policies.insert(index, new_policy.clone());
-                    FarmingPolicies::put(farming_policies);
-                    FarmingPolicyID::put(id);
+            Self::deposit_event(RawEvent::FarmingPolicyStored(new_policy));
 
-                    // add in the map to quickly filter farming policy ids by certificationtype
-                    let mut farming_policy_ids_by_certification_type = FarmingPolicyIDsByCertificationType::get(certification_type);
-                    farming_policy_ids_by_certification_type.push(id);
-                    FarmingPolicyIDsByCertificationType::insert(certification_type, farming_policy_ids_by_certification_type);
-
-                    Self::deposit_event(RawEvent::FarmingPolicyStored(new_policy));
-
-                    Ok(())
-                }
-            }
+            Ok(())
         }
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2)]
@@ -1200,6 +1201,62 @@ decl_module! {
 
             Ok(())
         }
+
+        #[weight = 100_000_000 + T::DbWeight::get().writes(2) + T::DbWeight::get().reads(3)]
+        pub fn update_farming_policy(
+            origin, 
+            id: u32,
+            name: Vec<u8>, 
+            su: u32, 
+            cu: u32, 
+            nu: u32, 
+            ipv4: u32, 
+            minimal_uptime: u16,
+            policy_end: T::BlockNumber,
+            default: bool,
+            node_certification: CertificationType,
+            farm_certification: Certification
+        ) -> dispatch::DispatchResult {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+
+            ensure!(FarmingPolicies::<T>::contains_key(id), Error::<T>::FarmingPolicyNotExists);
+
+            let mut farming_policy = FarmingPolicies::<T>::get(id);
+
+            farming_policy.name = name;
+            farming_policy.su = su;
+            farming_policy.cu = cu;
+            farming_policy.nu = nu;
+            farming_policy.ipv4 = ipv4;
+            farming_policy.minimal_uptime = minimal_uptime;
+            farming_policy.policy_end = policy_end;
+            farming_policy.default = default;
+            farming_policy.node_certification = node_certification;
+            farming_policy.farm_certification = farm_certification;
+
+            FarmingPolicies::<T>::insert(id, &farming_policy);
+
+            Self::deposit_event(RawEvent::FarmingPolicyUpdated(farming_policy));
+
+            Ok(())
+        }
+
+        #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1)]
+        pub fn attach_policy_to_farm(
+            origin,
+            farm_id: u32,
+            limits: Option<FarmingPolicyLimit>
+        ) -> dispatch::DispatchResult {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+
+            ensure!(Farms::contains_key(farm_id), Error::<T>::FarmNotExists);
+
+            let mut farm = Farms::get(farm_id);
+            farm.farming_policy_limits = limits;
+            Farms::insert(farm_id, farm);
+
+            Ok(())
+        }
     }
 }
 
@@ -1269,6 +1326,35 @@ impl<T: Config> Module<T> {
 
         return Ok(());
     }
+
+    fn get_farming_policy(node: &Node) -> Result<types::FarmingPolicy<T::BlockNumber>, DispatchError> {
+        let farm = Farms::get(node.farm_id);
+
+        // If there is a farming policy defined on the 
+        // farm policy limits, use that one
+        // TODO: decrement values if needed (cu, su, nr of nodes)
+        match farm.farming_policy_limits {
+            Some(limits) => return Ok(FarmingPolicies::<T>::get(limits.farming_policy_id)),
+            None => ()
+        };
+        
+        let mut policies: Vec<types::FarmingPolicy<T::BlockNumber>> = FarmingPolicies::<T>::iter()
+            .map(|p| p.1)
+            .collect();
+
+        policies.sort();
+        policies.reverse();
+
+        let possible_policy = policies.into_iter().filter(|policy| {
+            policy.node_certification <= node.certification_type && policy.farm_certification <= farm.certification
+        }).take(1).next();
+
+        match possible_policy {
+            Some(policy) => Ok(policy),
+            None => return Err(DispatchError::from(Error::<T>::FarmingPolicyNotExists)),
+        }
+    }
+
 }
 
 impl <T: Config> tfchain_support::traits::Tfgrid<T::AccountId> for Module<T> {

@@ -48,7 +48,8 @@ pub fn rework_farm_certification<T: Config>() -> frame_support::weights::Weight 
                     pricing_policy_id: farm.pricing_policy_id,
                     certification: Certification::NotCertified,
                     public_ips: farm.public_ips,
-                    dedicated_farm: farm.dedicated_farm
+                    dedicated_farm: farm.dedicated_farm,
+                    farming_policy_limits: None
                 };
     
                 migrated_count+=1;

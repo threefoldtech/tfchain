@@ -1,5 +1,6 @@
 use codec::{Decode, Encode};
 use frame_support::traits::Vec;
+use core::cmp::{PartialOrd, Ord, Ordering};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
 pub struct Farm {
@@ -10,7 +11,8 @@ pub struct Farm {
     pub pricing_policy_id: u32,
     pub certification: Certification,
     pub public_ips: Vec<PublicIP>,
-    pub dedicated_farm: bool
+    pub dedicated_farm: bool,
+    pub farming_policy_limits: Option<FarmingPolicyLimit>
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
@@ -20,7 +22,7 @@ pub struct PublicIP {
     pub contract_id: u64,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, Copy)]
+#[derive(PartialEq, PartialOrd, Eq, Clone, Encode, Decode, Debug, Copy)]
 pub enum Certification {
     NotCertified,
     Gold,
@@ -30,6 +32,26 @@ impl Default for Certification {
     fn default() -> Certification {
         Certification::NotCertified
     }
+}
+
+impl Ord for Certification {
+    fn cmp(&self, other: &Self) -> Ordering {   
+        match self {
+            Certification::Gold if matches!(other, Certification::NotCertified) => Ordering::Greater,
+            Certification::NotCertified if matches!(other, Certification::Gold) => Ordering::Less,
+            _ => Ordering::Equal,
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+pub struct FarmingPolicyLimit {
+    pub farming_policy_id: u32,
+    pub cu: Option<u32>,
+    pub su: Option<u32>,
+    pub end: Option<i64>,
+    pub node_count: Option<u32>,
+    pub node_certification: bool
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
@@ -97,10 +119,26 @@ pub struct Location {
     pub latitude: Vec<u8>,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, Copy)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, Copy)]
 pub enum CertificationType {
     Diy,
     Certified,
+}
+
+impl Ord for CertificationType {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self {
+            CertificationType::Certified if matches!(other, CertificationType::Diy) => Ordering::Greater,
+            CertificationType::Diy if matches!(other, CertificationType::Certified) => Ordering::Less,
+            _ => Ordering::Equal, // technically this is unreachable but I don't care at this point
+        }
+    }
+}
+
+impl PartialOrd for CertificationType {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 impl Default for CertificationType {
