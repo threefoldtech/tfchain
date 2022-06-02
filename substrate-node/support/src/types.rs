@@ -1,6 +1,6 @@
 use codec::{Decode, Encode};
+use core::cmp::{Ord, Ordering, PartialOrd};
 use frame_support::traits::Vec;
-use core::cmp::{PartialOrd, Ord, Ordering};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
 pub struct Farm {
@@ -12,7 +12,7 @@ pub struct Farm {
     pub certification: Certification,
     pub public_ips: Vec<PublicIP>,
     pub dedicated_farm: bool,
-    pub farming_policy_limits: Option<FarmingPolicyLimit>
+    pub farming_policy_limits: Option<FarmingPolicyLimit>,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
@@ -35,9 +35,11 @@ impl Default for Certification {
 }
 
 impl Ord for Certification {
-    fn cmp(&self, other: &Self) -> Ordering {   
+    fn cmp(&self, other: &Self) -> Ordering {
         match self {
-            Certification::Gold if matches!(other, Certification::NotCertified) => Ordering::Greater,
+            Certification::Gold if matches!(other, Certification::NotCertified) => {
+                Ordering::Greater
+            }
             Certification::NotCertified if matches!(other, Certification::Gold) => Ordering::Less,
             _ => Ordering::Equal,
         }
@@ -47,11 +49,11 @@ impl Ord for Certification {
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
 pub struct FarmingPolicyLimit {
     pub farming_policy_id: u32,
-    pub cu: Option<u32>,
-    pub su: Option<u32>,
-    pub end: Option<i64>,
+    pub cu: Option<u64>,
+    pub su: Option<u64>,
+    pub end: Option<u64>,
     pub node_count: Option<u32>,
-    pub node_certification: bool
+    pub node_certification: bool,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
@@ -128,8 +130,12 @@ pub enum CertificationType {
 impl Ord for CertificationType {
     fn cmp(&self, other: &Self) -> Ordering {
         match self {
-            CertificationType::Certified if matches!(other, CertificationType::Diy) => Ordering::Greater,
-            CertificationType::Diy if matches!(other, CertificationType::Certified) => Ordering::Less,
+            CertificationType::Certified if matches!(other, CertificationType::Diy) => {
+                Ordering::Greater
+            }
+            CertificationType::Diy if matches!(other, CertificationType::Certified) => {
+                Ordering::Less
+            }
             _ => Ordering::Equal, // technically this is unreachable but I don't care at this point
         }
     }

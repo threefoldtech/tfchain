@@ -394,6 +394,7 @@ impl validatorset::Config for Runtime {
 
 parameter_types! {
 	pub const DaoMotionDuration: BlockNumber = 7 * DAYS;
+	pub const MinVetos: u32 = 3;
 }
 
 impl pallet_dao::Config for Runtime {
@@ -404,6 +405,7 @@ impl pallet_dao::Config for Runtime {
 	type Tfgrid = TfgridModule;
 	type NodeChanged = NodeChanged;
 	type WeightInfo = pallet_dao::weights::SubstrateWeight<Runtime>;
+	type MinVetos = MinVetos;
 }
 
 /// Special `FullIdentificationOf` implementation that is returning for every input `Some(Default::default())`.

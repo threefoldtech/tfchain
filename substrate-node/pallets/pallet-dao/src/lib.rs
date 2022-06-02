@@ -13,6 +13,8 @@ use frame_support::{
     weights::{GetDispatchInfo, Weight},
 };
 use tfchain_support::{
+    resources,
+    resources::{GIB, ONE_THOUSAND},
     traits::{ChangeNode, Tfgrid},
     types::{Node, Resources},
 };
@@ -44,7 +46,9 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config:
-        frame_system::Config + pallet_membership::Config<pallet_membership::Instance1> + pallet_tfgrid::Config
+        frame_system::Config
+        + pallet_membership::Config<pallet_membership::Instance1>
+        + pallet_tfgrid::Config
     {
         /// Because this pallet emits events, it depends on the runtime's definition of an event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -66,7 +70,7 @@ pub mod pallet {
         type NodeChanged: ChangeNode;
 
         /// Weight information for extrinsics in this pallet.
-		type WeightInfo: WeightInfo;
+        type WeightInfo: WeightInfo;
     }
 
     #[pallet::pallet]
@@ -150,12 +154,12 @@ pub mod pallet {
         },
         ClosedByCouncil {
             proposal_hash: T::Hash,
-            vetos: Vec<T::AccountId>
+            vetos: Vec<T::AccountId>,
         },
         CouncilMemberVeto {
             proposal_hash: T::Hash,
             who: T::AccountId,
-        }
+        },
     }
 
     #[pallet::error]
@@ -318,10 +322,7 @@ pub mod pallet {
         }
 
         #[pallet::weight((<T as pallet::Config>::WeightInfo::vote(), DispatchClass::Operational))]
-        pub fn veto(
-            origin: OriginFor<T>,
-            proposal_hash: T::Hash,
-        ) -> DispatchResultWithPostInfo {
+        pub fn veto(origin: OriginFor<T>, proposal_hash: T::Hash) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
             let council_members =
@@ -340,15 +341,12 @@ pub mod pallet {
             // push vote to vetos
             voting.vetos.push(who.clone());
 
-            Self::deposit_event(Event::CouncilMemberVeto {
-                proposal_hash,
-                who
-            });
+            Self::deposit_event(Event::CouncilMemberVeto { proposal_hash, who });
 
             if voting.vetos.len() as u32 >= T::MinVetos::get() {
                 Self::deposit_event(Event::ClosedByCouncil {
                     proposal_hash,
-                    vetos: voting.vetos
+                    vetos: voting.vetos,
                 });
                 Self::do_disapprove_proposal(proposal_hash);
                 return Ok(Pays::No.into());
@@ -390,9 +388,7 @@ pub mod pallet {
             let approved = total_aye_weight > total_naye_weight;
 
             if approved {
-                let proposal = Self::validate_and_get_proposal(
-                    &proposal_hash,
-                )?;
+                let proposal = Self::validate_and_get_proposal(&proposal_hash)?;
                 Self::deposit_event(Event::Closed {
                     proposal_hash,
                     yes: yes_votes,
@@ -427,9 +423,6 @@ fn get_result_weight(result: DispatchResultWithPostInfo) -> Option<Weight> {
     }
 }
 
-const ONE_THOUSAND: u128 = 1_000;
-const GIB: u128 = 1024 * 1024 * 1024;
-
 impl<T: Config> Pallet<T> {
     // If a farmer does not have any nodes attached to it's farm, an error is returned
     pub fn get_vote_weight(farm_id: u32) -> Result<u64, DispatchError> {
@@ -442,9 +435,7 @@ impl<T: Config> Pallet<T> {
     ///
     /// Checks the length in storage via `storage::read` which adds an extra `size_of::<u32>() == 4`
     /// to the length.
-    fn validate_and_get_proposal(
-        hash: &T::Hash,
-    ) -> Result<<T as Config>::Proposal, DispatchError> {
+    fn validate_and_get_proposal(hash: &T::Hash) -> Result<<T as Config>::Proposal, DispatchError> {
         let proposal = ProposalOf::<T>::get(hash).ok_or(Error::<T>::ProposalMissing)?;
         Ok(proposal)
     }
@@ -497,32 +488,9 @@ impl<T: Config> Pallet<T> {
         ProposalList::<T>::set(active_proposals);
     }
 
-    pub fn get_cu(resources: Resources) -> u64 {
-        let cru_min = resources.cru as u128 * 2 * GIB * ONE_THOUSAND;
-        let mru_min = (resources.mru as u128 - 1 * GIB) * ONE_THOUSAND / 4;
-        let sru_min = resources.sru as u128 * ONE_THOUSAND / 50;
-
-        if cru_min < mru_min && cru_min < sru_min {
-            cru_min as u64
-        } else if mru_min < cru_min && mru_min < sru_min {
-            mru_min as u64
-        } else if sru_min < cru_min && sru_min < mru_min {
-            sru_min as u64
-        } else {
-            0
-        }
-    }
-
-    pub fn get_su(resources: Resources) -> u64 {
-        let su = resources.hru as u128 * ONE_THOUSAND / 1200
-            + resources.sru as u128 * ONE_THOUSAND / 250;
-        let calculated_su = su / GIB;
-        calculated_su as u64
-    }
-
     pub fn get_node_weight(resources: Resources) -> u64 {
-        let cu = Self::get_cu(resources);
-        let su = Self::get_su(resources);
+        let cu = resources::get_cu(resources);
+        let su = resources::get_su(resources);
         let calculated_cu = 2 * (cu as u128 / GIB / ONE_THOUSAND);
         let calculated_su = su as u128 / ONE_THOUSAND;
         calculated_cu as u64 + calculated_su as u64

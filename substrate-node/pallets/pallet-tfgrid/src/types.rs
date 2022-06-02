@@ -119,6 +119,8 @@ pub struct FarmingPolicy<BlockNumber> {
     pub policy_end: BlockNumber,
     // If this policy is immutable or not. Immutable policies can never be changed again.
     pub immutable: bool,
+    // Indicates if the farming policy is a default one. Meaning it will be used when there is no
+    // Farming policy defined on the farm itself
     pub default: bool,
     // If a node needs to be certified or not to benefit from this policy
     pub node_certification: CertificationType,
