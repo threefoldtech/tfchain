@@ -59,6 +59,9 @@ pub mod pallet {
         /// The time-out for council motions.
         type MotionDuration: Get<Self::BlockNumber>;
 
+        /// The minimum amount of vetos to dissaprove a proposal
+        type MinVetos: Get<u32>;
+
         type Tfgrid: Tfgrid<Self::AccountId>;
         type NodeChanged: ChangeNode;
 
@@ -97,7 +100,7 @@ pub mod pallet {
         _,
         Identity,
         T::Hash,
-        proposal::Votes<ProposalIndex, T::BlockNumber>,
+        proposal::Votes<ProposalIndex, T::BlockNumber, T::AccountId>,
         OptionQuery,
     >;
 
@@ -141,8 +144,18 @@ pub mod pallet {
         Closed {
             proposal_hash: T::Hash,
             yes: u32,
+            yes_weight: u64,
             no: u32,
+            no_weight: u64,
         },
+        ClosedByCouncil {
+            proposal_hash: T::Hash,
+            vetos: Vec<T::AccountId>
+        },
+        CouncilMemberVeto {
+            proposal_hash: T::Hash,
+            who: T::AccountId,
+        }
     }
 
     #[pallet::error]
@@ -154,7 +167,6 @@ pub mod pallet {
         WrongProposalLength,
         DuplicateProposal,
         NotAuthorizedToVote,
-        ProposalNotExists,
         ProposalMissing,
         WrongIndex,
         DuplicateVote,
@@ -206,6 +218,7 @@ pub mod pallet {
                     ayes: vec![],
                     nays: vec![],
                     end,
+                    vetos: vec![],
                 }
             };
             <Voting<T>>::insert(proposal_hash, votes);
@@ -238,10 +251,6 @@ pub mod pallet {
                 Error::<T>::NotAuthorizedToVote
             );
 
-            ensure!(
-                <Proposals<T>>::contains_key(proposal_hash),
-                Error::<T>::ProposalNotExists
-            );
             let stored_proposal =
                 <Proposals<T>>::get(proposal_hash).ok_or(Error::<T>::ProposalMissing)?;
 
@@ -308,6 +317,48 @@ pub mod pallet {
             }
         }
 
+        #[pallet::weight((<T as pallet::Config>::WeightInfo::vote(), DispatchClass::Operational))]
+        pub fn veto(
+            origin: OriginFor<T>,
+            proposal_hash: T::Hash,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+
+            let council_members =
+                pallet_membership::Module::<T, pallet_membership::Instance1>::members();
+            ensure!(council_members.contains(&who), Error::<T>::NotCouncilMember);
+
+            let stored_proposal =
+                <Proposals<T>>::get(proposal_hash).ok_or(Error::<T>::ProposalMissing)?;
+
+            let mut voting = Self::voting(proposal_hash).ok_or(Error::<T>::ProposalMissing)?;
+            ensure!(
+                voting.index == stored_proposal.index,
+                Error::<T>::WrongIndex
+            );
+
+            // push vote to vetos
+            voting.vetos.push(who.clone());
+
+            Self::deposit_event(Event::CouncilMemberVeto {
+                proposal_hash,
+                who
+            });
+
+            if voting.vetos.len() as u32 >= T::MinVetos::get() {
+                Self::deposit_event(Event::ClosedByCouncil {
+                    proposal_hash,
+                    vetos: voting.vetos
+                });
+                Self::do_disapprove_proposal(proposal_hash);
+                return Ok(Pays::No.into());
+            }
+
+            Voting::<T>::insert(&proposal_hash, voting);
+
+            return Ok(Pays::No.into());
+        }
+
         #[pallet::weight((<T as pallet::Config>::WeightInfo::close(), DispatchClass::Operational))]
         pub fn close(
             origin: OriginFor<T>,
@@ -345,7 +396,9 @@ pub mod pallet {
                 Self::deposit_event(Event::Closed {
                     proposal_hash,
                     yes: yes_votes,
+                    yes_weight: total_aye_weight,
                     no: no_votes,
+                    no_weight: total_naye_weight,
                 });
                 let _proposal_weight = Self::do_approve_proposal(proposal_hash, proposal);
                 return Ok(Pays::No.into());
@@ -354,7 +407,9 @@ pub mod pallet {
             Self::deposit_event(Event::Closed {
                 proposal_hash,
                 yes: yes_votes,
+                yes_weight: total_aye_weight,
                 no: no_votes,
+                no_weight: total_naye_weight,
             });
             Self::do_disapprove_proposal(proposal_hash);
             return Ok(Pays::No.into());
