@@ -84,6 +84,9 @@ decl_storage! {
 
         pub UsersTermsAndConditions get(fn users_terms_and_condition): map hasher(blake2_128_concat) T::AccountId => Vec<types::TermsAndConditions<T::AccountId>>;
 
+        // Account that are allowed to mark nodes as certified
+        pub AllowedNodeCertifiers get(fn allowed_node_certifiers): Vec<T::AccountId>;
+
         // Connection price
         pub ConnectionPrice: u32;
 
@@ -236,6 +239,8 @@ decl_event!(
         FarmPayoutV2AddressRegistered(u32, Vec<u8>),
         FarmMarkedAsDedicated(u32),
         ConnectionPriceSet(u32),
+        NodeCertifierAdded(AccountId),
+        NodeCertifierRemoved(AccountId),
     }
 );
 
@@ -288,6 +293,10 @@ decl_error! {
         FarmerDidNotSignTermsAndConditions,
         FarmerNotAuthorized,
         InvalidFarmName,
+
+        AlreadyCertifier,
+        NotCertifier,
+        NotAllowedToCertifyNode,
     }
 }
 
@@ -615,7 +624,10 @@ decl_module! {
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1)]
         pub fn set_node_certification(origin, node_id: u32, certification_type: CertificationType) -> dispatch::DispatchResult {
-            T::RestrictedOrigin::ensure_origin(origin)?;
+            let account_id = ensure_signed(origin)?;
+
+            let certifiers = AllowedNodeCertifiers::<T>::get();
+            ensure!(certifiers.contains(&account_id), Error::<T>::NotAllowedToCertifyNode);
 
             ensure!(Nodes::contains_key(&node_id), Error::<T>::NodeNotExists);
             let mut stored_node = Nodes::get(node_id);
@@ -1180,6 +1192,34 @@ decl_module! {
             ConnectionPrice::set(price.clone());
         
             Self::deposit_event(RawEvent::ConnectionPriceSet(price));
+
+            Ok(())
+        }
+
+        #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2)]
+        pub fn add_node_certifier(origin, who: T::AccountId) -> dispatch::DispatchResult {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+            
+            let mut certifiers = AllowedNodeCertifiers::<T>::get();
+            let location = certifiers.binary_search(&who).err().ok_or(Error::<T>::AlreadyCertifier)?;
+			certifiers.insert(location, who.clone());
+            AllowedNodeCertifiers::<T>::put(certifiers);
+
+            Self::deposit_event(RawEvent::NodeCertifierAdded(who));
+
+            Ok(())
+        }
+
+        #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2)]
+        pub fn remove_node_certifier(origin, who: T::AccountId) -> dispatch::DispatchResult {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+            
+            let mut certifiers = AllowedNodeCertifiers::<T>::get();
+            let location = certifiers.binary_search(&who).ok().ok_or(Error::<T>::NotCertifier)?;
+			certifiers.remove(location);
+			AllowedNodeCertifiers::<T>::put(&certifiers);
+
+            Self::deposit_event(RawEvent::NodeCertifierRemoved(who));
 
             Ok(())
         }
