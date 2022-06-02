@@ -1,9 +1,11 @@
 use crate::{mock::*, Error};
 use frame_support::{assert_noop, assert_ok};
 use frame_system::RawOrigin;
-use tfchain_support::{
-    types::{PublicConfig, PublicIP, Location, Resources, CertificationType, Certification}
+use tfchain_support::types::{
+    Certification, CertificationType, FarmingPolicyLimit, Location, PublicConfig, PublicIP,
+    Resources,
 };
+const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
 #[test]
 fn test_create_entity_works() {
@@ -602,10 +604,7 @@ fn add_node_certifier_double_fails() {
         assert_eq!(node_certifiers[0], alice());
 
         assert_noop!(
-            TfgridModule::add_node_certifier(
-                RawOrigin::Root.into(),
-                alice()
-            ),
+            TfgridModule::add_node_certifier(RawOrigin::Root.into(), alice()),
             Error::<TestRuntime>::AlreadyCertifier
         );
     });
@@ -633,10 +632,7 @@ fn remove_node_certifier_works() {
 fn remove_node_certifier_not_exists_fails() {
     ExternalityBuilder::build().execute_with(|| {
         assert_noop!(
-            TfgridModule::remove_node_certifier(
-                RawOrigin::Root.into(),
-                alice()
-            ),
+            TfgridModule::remove_node_certifier(RawOrigin::Root.into(), alice()),
             Error::<TestRuntime>::NotCertifier
         );
     });
@@ -661,10 +657,7 @@ fn set_certification_type_node_works() {
             CertificationType::Certified
         ));
         let node = TfgridModule::nodes(1);
-        assert_eq!(
-            node.certification_type,
-            CertificationType::Certified
-        );
+        assert_eq!(node.certification_type, CertificationType::Certified);
 
         assert_ok!(TfgridModule::set_node_certification(
             Origin::signed(alice()),
@@ -672,10 +665,7 @@ fn set_certification_type_node_works() {
             CertificationType::Diy
         ));
         let node = TfgridModule::nodes(1);
-        assert_eq!(
-            node.certification_type,
-            CertificationType::Diy
-        );
+        assert_eq!(node.certification_type, CertificationType::Diy);
     });
 }
 
@@ -781,6 +771,123 @@ fn create_node_with_same_pubkey_fails() {
                 "some_serial".as_bytes().to_vec()
             ),
             Error::<TestRuntime>::NodeWithTwinIdExists
+        );
+    });
+}
+
+#[test]
+fn add_farm_limits_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+
+        let limit = FarmingPolicyLimit {
+            farming_policy_id: 1,
+            cu: Some(5),
+            su: Some(10),
+            end: Some(1654058949),
+            node_certification: false,
+            node_count: Some(10),
+        };
+
+        assert_ok!(TfgridModule::attach_policy_to_farm(
+            RawOrigin::Root.into(),
+            1,
+            Some(limit.clone())
+        ));
+
+        let f1 = TfgridModule::farms(1);
+        assert_eq!(f1.farming_policy_limits, Some(limit));
+    });
+}
+
+#[test]
+fn boot_node_when_farming_policy_has_limits_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+
+        let limit = FarmingPolicyLimit {
+            farming_policy_id: 1,
+            cu: Some(21),
+            su: Some(10),
+            end: Some(1654058949),
+            node_certification: false,
+            node_count: Some(10),
+        };
+
+        assert_ok!(TfgridModule::attach_policy_to_farm(
+            RawOrigin::Root.into(),
+            1,
+            Some(limit.clone())
+        ));
+
+        let f1 = TfgridModule::farms(1);
+        assert_eq!(f1.farming_policy_limits, Some(limit.clone()));
+
+        create_node();
+
+        let f1 = TfgridModule::farms(1);
+        assert_ne!(f1.farming_policy_limits, Some(limit));
+
+        println!("limit: {:?}", f1.farming_policy_limits);
+    });
+}
+
+#[test]
+fn boot_node_when_farming_policy_low_cu_limit_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+
+        let limit = FarmingPolicyLimit {
+            farming_policy_id: 1,
+            cu: Some(5),
+            su: Some(10),
+            end: Some(1654058949),
+            node_certification: false,
+            node_count: Some(10),
+        };
+
+        assert_ok!(TfgridModule::attach_policy_to_farm(
+            RawOrigin::Root.into(),
+            1,
+            Some(limit.clone())
+        ));
+
+        let f1 = TfgridModule::farms(1);
+        assert_eq!(f1.farming_policy_limits, Some(limit.clone()));
+
+        create_twin_bob();
+        let country = "Belgium".as_bytes().to_vec();
+        let city = "Ghent".as_bytes().to_vec();
+
+        // random location
+        let location = Location {
+            longitude: "12.233213231".as_bytes().to_vec(),
+            latitude: "32.323112123".as_bytes().to_vec(),
+        };
+
+        let resources = Resources {
+            hru: 1024 * GIGABYTE,
+            sru: 512 * GIGABYTE,
+            cru: 8,
+            mru: 16 * GIGABYTE,
+        };
+        assert_noop!(
+            TfgridModule::create_node(
+                Origin::signed(bob()),
+                1,
+                resources,
+                location,
+                country,
+                city,
+                Vec::new(),
+                true,
+                true,
+                "some_serial".as_bytes().to_vec()
+            ),
+            Error::<TestRuntime>::FarmingPolicyCuExceeded
         );
     });
 }
@@ -1188,10 +1295,10 @@ fn create_node() {
     };
 
     let resources = Resources {
-        hru: 1,
-        sru: 1,
-        cru: 1,
-        mru: 1,
+        hru: 1024 * GIGABYTE,
+        sru: 512 * GIGABYTE,
+        cru: 8,
+        mru: 16 * GIGABYTE,
     };
 
     assert_ok!(TfgridModule::create_node(

@@ -4,8 +4,14 @@ pub const ONE_THOUSAND: u128 = 1_000;
 pub const GIB: u128 = 1024 * 1024 * 1024;
 
 pub fn get_cu(resources: Resources) -> u64 {
+    let cu = calc_cu(resources);
+    let calculated_cu = 2 * (cu as u128 / GIB / ONE_THOUSAND);
+    calculated_cu as u64
+}
+
+pub fn calc_cu(resources: Resources) -> u64 {
     let cru_min = resources.cru as u128 * 2 * GIB * ONE_THOUSAND;
-    let mru_min = (resources.mru as u128 - 1 * GIB) * ONE_THOUSAND / 4;
+    let mru_min = ((resources.mru as u128).checked_sub(1).unwrap_or(0) * GIB) * ONE_THOUSAND / 4;
     let sru_min = resources.sru as u128 * ONE_THOUSAND / 50;
 
     if cru_min < mru_min && cru_min < sru_min {
@@ -23,5 +29,6 @@ pub fn get_su(resources: Resources) -> u64 {
     let su =
         resources.hru as u128 * ONE_THOUSAND / 1200 + resources.sru as u128 * ONE_THOUSAND / 250;
     let calculated_su = su / GIB;
-    calculated_su as u64
+    let result = calculated_su as u128 / ONE_THOUSAND;
+    result as u64
 }
