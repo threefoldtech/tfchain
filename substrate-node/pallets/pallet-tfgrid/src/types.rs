@@ -1,6 +1,6 @@
 use codec::{Decode, Encode};
 use frame_support::traits::Vec;
-use tfchain_support::types::{CertificationType};
+use tfchain_support::types::{Certification};
 
 /// Utility type for managing upgrades/migrations.
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
@@ -103,28 +103,7 @@ impl Default for Unit {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
-pub struct CertificationCodes {
-    pub version: u32,
-    pub id: u32,
-    pub name: Vec<u8>,
-    pub description: Vec<u8>,
-    pub certification_code_type: CertificationCodeType,
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
-pub enum CertificationCodeType {
-    Farm,
-    Entity,
-}
-
-impl Default for CertificationCodeType {
-    fn default() -> CertificationCodeType {
-        CertificationCodeType::Farm
-    }
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
-pub struct FarmingPolicy {
+pub struct FarmingPolicy<BlockNumber> {
     pub version: u32,
     pub id: u32,
     pub name: Vec<u8>,
@@ -132,8 +111,29 @@ pub struct FarmingPolicy {
     pub su: u32,
     pub nu: u32,
     pub ipv4: u32,
-    pub timestamp: u64,
-    pub certification_type: CertificationType,
+    // Minimal uptime in order to benefit from this uptime.
+    pub minimal_uptime: u8,
+    pub policy_created: BlockNumber,
+    // Indicated when this policy expires.
+    pub policy_end: BlockNumber,
+    // If this policy is immutable or not. Immutable policies can never be changed again.
+    pub immutable: bool,
+    pub default: bool,
+    // If a node needs to be certified or not to benefit from this policy
+    pub node_certification: bool,
+    // Farm certification level
+    pub farm_certification: Certification,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+pub struct FarmingPolicyLimit<BlockNumber> {
+    pub version: u32,
+    pub id: u32,
+    pub farming_policy_id: u32,
+    pub cu: u32,
+    pub su: u32,
+    pub end: BlockNumber,
+    pub node_certification: bool
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]

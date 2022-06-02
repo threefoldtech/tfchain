@@ -77,10 +77,10 @@ decl_storage! {
         pub PricingPolicies get(fn pricing_policies): map hasher(blake2_128_concat) u32 => types::PricingPolicy<T::AccountId>;
         pub PricingPolicyIdByName get(fn pricing_policies_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u32;
 
-        pub CertificationCodes get(fn certification_codes): map hasher(blake2_128_concat) u32 => types::CertificationCodes;
-        pub CertificationCodeIdByName get(fn certification_codes_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u32;
+        // pub CertificationCodes get(fn certification_codes): map hasher(blake2_128_concat) u32 => types::CertificationCodes;
+        // pub CertificationCodeIdByName get(fn certification_codes_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u32;
 
-        pub FarmingPolicies get(fn farming_policies): Vec<types::FarmingPolicy>;
+        pub FarmingPolicies get(fn farming_policies): Vec<types::FarmingPolicy<T::BlockNumber>>;
         pub FarmingPolicyIDsByCertificationType get (fn farming_policies_by_certification_type): map hasher(blake2_128_concat) CertificationType => Vec<u32>;
 
         pub UsersTermsAndConditions get(fn users_terms_and_condition): map hasher(blake2_128_concat) T::AccountId => Vec<types::TermsAndConditions<T::AccountId>>;
@@ -209,6 +209,7 @@ decl_event!(
     pub enum Event<T>
     where
         AccountId = <T as frame_system::Config>::AccountId,
+        BlockNumber = <T as frame_system::Config>::BlockNumber,
     {
         FarmStored(Farm),
         FarmUpdated(Farm),
@@ -232,8 +233,8 @@ decl_event!(
         TwinDeleted(u32),
 
         PricingPolicyStored(types::PricingPolicy<AccountId>),
-        CertificationCodeStored(types::CertificationCodes),
-        FarmingPolicyStored(types::FarmingPolicy),
+        // CertificationCodeStored(types::CertificationCodes),
+        FarmingPolicyStored(types::FarmingPolicy<BlockNumber>),
         FarmPayoutV2AddressRegistered(u32, Vec<u8>),
         FarmMarkedAsDedicated(u32),
         ConnectionPriceSet(u32),
@@ -1018,32 +1019,6 @@ decl_module! {
             PricingPolicyID::put(id);
 
             Self::deposit_event(RawEvent::PricingPolicyStored(pricing_policy));
-
-            Ok(())
-        }
-
-        #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2)]
-        pub fn create_certification_code(origin, name: Vec<u8>, description: Vec<u8>, certification_code_type: types::CertificationCodeType) -> dispatch::DispatchResult {
-            T::RestrictedOrigin::ensure_origin(origin)?;
-
-            ensure!(!CertificationCodeIdByName::contains_key(&name), Error::<T>::CertificationCodeExists);
-
-            let mut id = CertificationCodeID::get();
-            id = id+1;
-
-            let certification_code = types::CertificationCodes{
-                version: TFGRID_CERTIFICATION_CODE_VERSION,
-                id,
-                name: name.clone(),
-                description,
-                certification_code_type
-            };
-
-            CertificationCodes::insert(&id, &certification_code);
-            CertificationCodeIdByName::insert(&name, &id);
-            CertificationCodeID::put(id);
-
-            Self::deposit_event(RawEvent::CertificationCodeStored(certification_code));
 
             Ok(())
         }
