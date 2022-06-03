@@ -22,6 +22,16 @@ impl frame_support::traits::OnRuntimeUpgrade for OldFarmingPolicyRemoval {
         use frame_support::storage::migration;
         // Remove the storage value `FarmingPolicies` from removed pallet `TfgridModule`
         migration::remove_storage_prefix(b"TfgridModule", b"FarmingPolicies", b"");
+        // Remove unused FarmingPolicyIDsByCertificationType
+        migration::remove_storage_prefix(
+            b"TfgridModule",
+            b"FarmingPolicyIDsByCertificationType",
+            b"",
+        );
+        // Remove unused CertificationCodes
+        migration::remove_storage_prefix(b"TfgridModule", b"CertificationCodes", b"");
+        // Remove unused CertificationCodeIdByName
+        migration::remove_storage_prefix(b"TfgridModule", b"CertificationCodeIdByName", b"");
         <Runtime as frame_system::Config>::DbWeight::get().writes(1)
     }
 }
