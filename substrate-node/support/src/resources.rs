@@ -37,17 +37,29 @@ mod test {
     use super::*;
 
     #[test]
+    fn test_calc_cu_falsy_values() {
+        let resources = Resources {
+            hru: 0,
+            cru: 0,
+            mru: 0,
+            sru: 0,
+        };
+
+        let cu = get_cu(resources);
+        assert_eq!(cu, 0);
+    }
+
+    #[test]
     fn test_calc_cu() {
         let resources = Resources {
             hru: 4 * GIB as u64 * 1024,
             cru: 64,
-            mru: 64,
+            mru: 64 * GIB as u64 * 1024,
             sru: 12 * GIB as u64 * 1024,
         };
 
         let cu = get_cu(resources);
-        assert_eq!(cu, 30);
-        println!("{:?}", cu);
+        assert_eq!(cu, 256);
     }
 
     #[test]
