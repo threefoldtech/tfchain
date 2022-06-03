@@ -32,3 +32,86 @@ pub fn get_su(resources: Resources) -> u64 {
     let result = calculated_su as u128 / ONE_THOUSAND;
     result as u64
 }
+
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_calc_cu() {
+        let resources = Resources {
+            hru: 4 * GIB as u64 * 1024,
+            cru: 64,
+            mru: 64,
+            sru: 12 * GIB as u64 * 1024,
+        };
+
+        let cu = get_cu(resources);
+        assert_eq!(cu, 30);
+        println!("{:?}", cu);
+    }
+
+    #[test]
+    fn test_calc_cu_2() {
+        let resources = Resources {
+            hru: 4 * GIB as u64 * 1024,
+            cru: 4,
+            mru: 8,
+            sru: 12 * GIB as u64 * 1024,
+        };
+
+        let cu = get_cu(resources);
+        assert_eq!(cu, 2);
+    }
+
+    #[test]
+    fn test_calc_su() {
+        let resources = Resources {
+            hru: 4 * GIB as u64 * 1024,
+            cru: 64,
+            mru: 64,
+            sru: 12 * GIB as u64 * 1024,
+        };
+
+        let su = get_su(resources);
+        assert_eq!(su, 52);
+    }
+
+    #[test]
+    fn test_calc_su_2() {
+        let resources = Resources {
+            hru: 0,
+            cru: 64,
+            mru: 64,
+            sru: 12 * GIB as u64 * 1024,
+        };
+
+        let su = get_su(resources);
+        assert_eq!(su, 49);
+    }
+
+    #[test]
+    fn test_calc_su_3() {
+        let resources = Resources {
+            hru: 0,
+            cru: 64,
+            mru: 64,
+            sru: 0,
+        };
+
+        let su = get_su(resources);
+        assert_eq!(su, 0);
+    }
+
+    #[test]
+    fn test_calc_su_4() {
+        let resources = Resources {
+            hru: 4 * GIB as u64 * 1024,
+            cru: 64,
+            mru: 64,
+            sru: 0,
+        };
+
+        let su = get_su(resources);
+        assert_eq!(su, 3);
+    }
+}
