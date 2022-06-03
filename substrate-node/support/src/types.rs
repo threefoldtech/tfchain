@@ -9,7 +9,7 @@ pub struct Farm {
     pub name: Vec<u8>,
     pub twin_id: u32,
     pub pricing_policy_id: u32,
-    pub certification: Certification,
+    pub certification: FarmCertification,
     pub public_ips: Vec<PublicIP>,
     pub dedicated_farm: bool,
     pub farming_policy_limits: Option<FarmingPolicyLimit>,
@@ -23,24 +23,24 @@ pub struct PublicIP {
 }
 
 #[derive(PartialEq, PartialOrd, Eq, Clone, Encode, Decode, Debug, Copy)]
-pub enum Certification {
+pub enum FarmCertification {
     NotCertified,
     Gold,
 }
 
-impl Default for Certification {
-    fn default() -> Certification {
-        Certification::NotCertified
+impl Default for FarmCertification {
+    fn default() -> FarmCertification {
+        FarmCertification::NotCertified
     }
 }
 
-impl Ord for Certification {
+impl Ord for FarmCertification {
     fn cmp(&self, other: &Self) -> Ordering {
         match self {
-            Certification::Gold if matches!(other, Certification::NotCertified) => {
+            FarmCertification::Gold if matches!(other, FarmCertification::NotCertified) => {
                 Ordering::Greater
             }
-            Certification::NotCertified if matches!(other, Certification::Gold) => Ordering::Less,
+            FarmCertification::NotCertified if matches!(other, FarmCertification::Gold) => Ordering::Less,
             _ => Ordering::Equal,
         }
     }
@@ -71,7 +71,7 @@ pub struct Node {
     pub created: u64,
     pub farming_policy_id: u32,
     pub interfaces: Vec<Interface>,
-    pub certification_type: CertificationType,
+    pub certification_type: NodeCertification,
     pub secure_boot: bool,
     pub virtualized: bool,
     pub serial_number: Vec<u8>,
@@ -122,18 +122,18 @@ pub struct Location {
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, Copy)]
-pub enum CertificationType {
+pub enum NodeCertification {
     Diy,
     Certified,
 }
 
-impl Ord for CertificationType {
+impl Ord for NodeCertification {
     fn cmp(&self, other: &Self) -> Ordering {
         match self {
-            CertificationType::Certified if matches!(other, CertificationType::Diy) => {
+            NodeCertification::Certified if matches!(other, NodeCertification::Diy) => {
                 Ordering::Greater
             }
-            CertificationType::Diy if matches!(other, CertificationType::Certified) => {
+            NodeCertification::Diy if matches!(other, NodeCertification::Certified) => {
                 Ordering::Less
             }
             _ => Ordering::Equal, // technically this is unreachable but I don't care at this point
@@ -141,14 +141,14 @@ impl Ord for CertificationType {
     }
 }
 
-impl PartialOrd for CertificationType {
+impl PartialOrd for NodeCertification {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Default for CertificationType {
-    fn default() -> CertificationType {
-        CertificationType::Diy
+impl Default for NodeCertification {
+    fn default() -> NodeCertification {
+        NodeCertification::Diy
     }
 }

@@ -18,7 +18,7 @@ use tfchain_support::{
     resources,
     traits::ChangeNode,
     types::{
-        Certification, CertificationType, Farm, FarmingPolicyLimit, Interface, Location, Node,
+        Farm, FarmCertification, FarmingPolicyLimit, Interface, Location, Node, NodeCertification,
         PublicConfig, PublicIP, Resources,
     },
 };
@@ -183,7 +183,7 @@ decl_storage! {
             //     _config.farming_policy_diy_cu,
             //     _config.farming_policy_diy_nu,
             //     _config.farming_policy_diy_ipu,
-            //     CertificationType::Diy,
+            //     NodeCertification::Diy,
             // );
 
             // let _ = <Module<T>>::create_farming_policy(
@@ -193,7 +193,7 @@ decl_storage! {
             //     _config.farming_policy_certified_cu,
             //     _config.farming_policy_certified_nu,
             //     _config.farming_policy_certified_ipu,
-            //     CertificationType::Certified,
+            //     NodeCertification::Certified,
             // );
 
             let _ = <Module<T>>::set_connection_price(
@@ -367,7 +367,7 @@ decl_module! {
                 twin_id,
                 name,
                 pricing_policy_id: 1,
-                certification: Certification::NotCertified,
+                certification: FarmCertification::NotCertified,
                 public_ips: pub_ips,
                 dedicated_farm: false,
                 farming_policy_limits: None,
@@ -429,7 +429,7 @@ decl_module! {
         }
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1)]
-        pub fn set_farm_certification(origin, farm_id: u32, certification: Certification) -> dispatch::DispatchResult {
+        pub fn set_farm_certification(origin, farm_id: u32, certification: FarmCertification) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
             ensure!(Farms::contains_key(farm_id), Error::<T>::FarmNotExists);
@@ -556,7 +556,7 @@ decl_module! {
                 created,
                 farming_policy_id: 0,
                 interfaces,
-                certification_type: CertificationType::default(),
+                certification_type: NodeCertification::default(),
                 secure_boot,
                 virtualized,
                 serial_number,
@@ -625,7 +625,7 @@ decl_module! {
         }
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1)]
-        pub fn set_node_certification(origin, node_id: u32, certification_type: CertificationType) -> dispatch::DispatchResult {
+        pub fn set_node_certification(origin, node_id: u32, certification_type: NodeCertification) -> dispatch::DispatchResult {
             let account_id = ensure_signed(origin)?;
 
             let certifiers = AllowedNodeCertifiers::<T>::get();
@@ -1050,8 +1050,8 @@ decl_module! {
             policy_end: T::BlockNumber,
             immutable: bool,
             default: bool,
-            node_certification: CertificationType,
-            farm_certification: Certification
+            node_certification: NodeCertification,
+            farm_certification: FarmCertification
         ) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
@@ -1218,8 +1218,8 @@ decl_module! {
             minimal_uptime: u16,
             policy_end: T::BlockNumber,
             default: bool,
-            node_certification: CertificationType,
-            farm_certification: Certification
+            node_certification: NodeCertification,
+            farm_certification: FarmCertification
         ) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 

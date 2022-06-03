@@ -55,7 +55,6 @@ Twins are digital copies of humain beings that control:
 
 A Twin object has the following fields:
 
-
 ```js
 {
     "version": "gridVersion",
@@ -95,7 +94,7 @@ When this is submitted on chain, the chain will check reconstruct the message an
 
 Farmers are digital twins (Twin object) that control a physical Nodes Farm. Before one can construct a Farm object, a Twin must be created. With this Twin's keypair a Farm should be created, this way a Twin and a Farm will be linked to eachother.
 
-A Farmer thus has a digital representation on chain of his physical Farm and Nodes in real life. 
+A Farmer thus has a digital representation on chain of his physical Farm and Nodes in real life.
 
 A farmer can have multiple nodes and can set it's prices by linking to a Pricing Policy. (TODO: will be changed to be aligned with pricing policies in the wiki)
 
@@ -110,7 +109,7 @@ A Farm object looks like following on chain:
     "name": "FarmName",
     "twin_id": LinkedTwinNumericID,
     "pricing_policy_id" LinkedPricingPolicyNumericID,
-    "certification_type": CertificationType(None, Bronze, Silver) TODO ALIGN WITH WIKI,
+    "certification_type": NodeCertification(None, Bronze, Silver) TODO ALIGN WITH WIKI,
     "country_id": IdOfTheCountry,
     "city_id": IdOfTheCity
     "public_ips": [PublicIP]
@@ -217,7 +216,7 @@ https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fexplorer.devnet.grid.tf%2Fws#/extr
 
 ## Graphql
 
-We store every creation / update / deletion of above objects in a graphql database. An end user of any other application can query the objects from the substrate database without having to talk to the substrate nodes. 
+We store every creation / update / deletion of above objects in a graphql database. An end user of any other application can query the objects from the substrate database without having to talk to the substrate nodes.
 
 [example](./graphql.md)
 

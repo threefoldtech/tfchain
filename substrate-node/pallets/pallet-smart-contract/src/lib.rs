@@ -20,7 +20,7 @@ use pallet_timestamp as timestamp;
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
     traits::ChangeNode,
-    types::{Node, PublicIP, Resources, CertificationType}
+    types::{Node, NodeCertification, PublicIP, Resources},
 };
 
 #[cfg(test)]
@@ -316,9 +316,7 @@ impl<T: Config> Module<T> {
         );
 
         let farm = pallet_tfgrid::Farms::get(node.farm_id);
-        ensure!(
-            farm.dedicated_farm == true, Error::<T>::NodeIsNotDedicated
-        );
+        ensure!(farm.dedicated_farm == true, Error::<T>::NodeIsNotDedicated);
 
         // Create contract
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
@@ -471,7 +469,10 @@ impl<T: Config> Module<T> {
         );
 
         // If it's a rent contract and it still has active workloads, don't allow cancellation.
-        if matches!(&contract.contract_type, types::ContractData::RentContract(_)) {
+        if matches!(
+            &contract.contract_type,
+            types::ContractData::RentContract(_)
+        ) {
             let rent_contract = Self::get_rent_contract(&contract)?;
             let active_node_contracts = ActiveNodeContracts::get(rent_contract.node_id);
             ensure!(
@@ -621,7 +622,7 @@ impl<T: Config> Module<T> {
         for contract_id in contracts {
             let mut contract = Contracts::get(contract_id);
             if contract.contract_id == 0 {
-                continue
+                continue;
             }
 
             // Try to bill contract
@@ -688,7 +689,7 @@ impl<T: Config> Module<T> {
         if amount_due == BalanceOf::<T>::saturated_from(0 as u128) {
             return Ok(());
         };
-        
+
         // Handle grace
         let contract = Self::handle_grace(contract, usable_balance, amount_due)?;
 
@@ -711,15 +712,17 @@ impl<T: Config> Module<T> {
 
         // If the contract is in delete state, remove all associated storage
         if matches!(contract.state, types::ContractState::Deleted(_)) {
-            Self::remove_contract(
-                contract.contract_id,
-            );
+            Self::remove_contract(contract.contract_id);
         }
 
         Ok(())
     }
 
-    fn handle_grace(contract: &mut types::Contract, usable_balance: BalanceOf<T>, amount_due: BalanceOf<T>) -> Result<&mut types::Contract, DispatchError> {
+    fn handle_grace(
+        contract: &mut types::Contract,
+        usable_balance: BalanceOf<T>,
+        amount_due: BalanceOf<T>,
+    ) -> Result<&mut types::Contract, DispatchError> {
         let current_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
         let node_id = contract.get_node_id();
 
@@ -728,12 +731,19 @@ impl<T: Config> Module<T> {
                 // if the usable balance is recharged, we can move the contract to created state again
                 if usable_balance > amount_due {
                     Self::_update_contract_state(contract, &types::ContractState::Created)?;
-                    Self::deposit_event(RawEvent::ContractGracePeriodEnded(contract.contract_id, node_id, contract.twin_id))
+                    Self::deposit_event(RawEvent::ContractGracePeriodEnded(
+                        contract.contract_id,
+                        node_id,
+                        contract.twin_id,
+                    ))
                 } else {
                     let diff = current_block - grace_start;
                     // If the contract grace period ran out, we can decomission the contract
                     if diff >= T::GracePeriod::get() {
-                        Self::_update_contract_state(contract, &types::ContractState::Deleted(types::Cause::OutOfFunds))?;
+                        Self::_update_contract_state(
+                            contract,
+                            &types::ContractState::Deleted(types::Cause::OutOfFunds),
+                        )?;
                     }
                 }
             }
@@ -743,9 +753,17 @@ impl<T: Config> Module<T> {
                 // we can still update the internal contract lock object to figure out later how much was due
                 // whilst in grace period
                 if amount_due >= usable_balance {
-                    Self::_update_contract_state(contract, &types::ContractState::GracePeriod(current_block))?;
+                    Self::_update_contract_state(
+                        contract,
+                        &types::ContractState::GracePeriod(current_block),
+                    )?;
                     // We can't lock the amount due on the contract's lock because the user ran out of funds
-                    Self::deposit_event(RawEvent::ContractGracePeriodStarted(contract.contract_id, node_id, contract.twin_id, current_block.saturated_into()));
+                    Self::deposit_event(RawEvent::ContractGracePeriodStarted(
+                        contract.contract_id,
+                        node_id,
+                        contract.twin_id,
+                        current_block.saturated_into(),
+                    ));
                 }
             }
         }
@@ -766,7 +784,7 @@ impl<T: Config> Module<T> {
 
         // Contract is in grace state, don't actually lock tokens or distribute rewards
         if matches!(contract.state, types::ContractState::GracePeriod(_)) {
-            return
+            return;
         }
 
         let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
@@ -780,7 +798,8 @@ impl<T: Config> Module<T> {
         );
 
         let is_canceled = matches!(contract.state, types::ContractState::Deleted(_));
-        let canceled_and_not_zero = is_canceled && contract_lock.amount_locked.saturated_into::<u64>() > 0;
+        let canceled_and_not_zero =
+            is_canceled && contract_lock.amount_locked.saturated_into::<u64>() > 0;
         // When the cultivation rewards are ready to be distributed or it's in delete state
         // Unlock all reserved balance and distribute
         if contract_lock.cycles >= T::DistributionFrequency::get() || canceled_and_not_zero {
@@ -815,7 +834,7 @@ impl<T: Config> Module<T> {
     ) -> Result<(BalanceOf<T>, types::DiscountLevel), DispatchError> {
         // Fetch the default pricing policy and certification type
         let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
-        let certification_type = CertificationType::Diy;
+        let certification_type = NodeCertification::Diy;
 
         // Calculate the cost for a contract, can be any of:
         // - NodeContract
@@ -870,7 +889,7 @@ impl<T: Config> Module<T> {
                     node_contract.public_ips,
                     seconds_elapsed,
                     pricing_policy.clone(),
-                    bill_resources
+                    bill_resources,
                 );
                 contract_cost + contract_billing_info.amount_unbilled
             }
@@ -885,7 +904,7 @@ impl<T: Config> Module<T> {
                     0,
                     seconds_elapsed,
                     pricing_policy.clone(),
-                    true
+                    true,
                 );
                 Percent::from_percent(pricing_policy.discount_for_dedication_nodes) * contract_cost
             }
@@ -907,16 +926,16 @@ impl<T: Config> Module<T> {
         ipu: u32,
         seconds_elapsed: u64,
         pricing_policy: pallet_tfgrid_types::PricingPolicy<T::AccountId>,
-        bill_resources: bool
+        bill_resources: bool,
     ) -> u64 {
         let mut total_cost = U64F64::from_num(0);
-        
+
         if bill_resources {
             let hru = U64F64::from_num(resources.hru) / pricing_policy.su.factor();
             let sru = U64F64::from_num(resources.sru) / pricing_policy.su.factor();
             let mru = U64F64::from_num(resources.mru) / pricing_policy.cu.factor();
             let cru = U64F64::from_num(resources.cru);
-    
+
             let su_used = hru / 1200 + sru / 200;
             // the pricing policy su cost value is expressed in 1 hours or 3600 seconds.
             // we bill every 3600 seconds but here we need to calculate the cost per second and multiply it by the seconds elapsed.
@@ -924,9 +943,9 @@ impl<T: Config> Module<T> {
                 * U64F64::from_num(seconds_elapsed)
                 * su_used;
             debug::info!("su cost: {:?}", su_cost);
-    
+
             let cu = Self::calculate_cu(cru, mru);
-    
+
             let cu_cost = (U64F64::from_num(pricing_policy.cu.value) / 3600)
                 * U64F64::from_num(seconds_elapsed)
                 * cu;
@@ -1083,7 +1102,7 @@ impl<T: Config> Module<T> {
     pub fn calculate_discount(
         amount_due: u64,
         balance: BalanceOf<T>,
-        certification_type: CertificationType,
+        certification_type: NodeCertification,
     ) -> (BalanceOf<T>, types::DiscountLevel) {
         let balance_as_u128: u128 = balance.saturated_into::<u128>();
 
@@ -1109,7 +1128,7 @@ impl<T: Config> Module<T> {
         let mut amount_due = U64F64::from_num(amount_due) * discount_received.price_multiplier();
 
         // Certified capacity costs 25% more
-        if certification_type == CertificationType::Certified {
+        if certification_type == NodeCertification::Certified {
             amount_due = amount_due * U64F64::from_num(1.25);
         }
 
@@ -1123,7 +1142,7 @@ impl<T: Config> Module<T> {
     // Reinserts a contract by id at the next interval we need to bill the contract
     pub fn _reinsert_contract_to_bill(contract_id: u64) {
         if contract_id == 0 {
-            return
+            return;
         }
 
         let now = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
@@ -1351,7 +1370,10 @@ impl<T: Config> ChangeNode for Module<T> {
         for node_contract_id in active_node_contracts {
             let mut contract = Contracts::get(node_contract_id);
             // Bill contract
-            let _ = Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(types::Cause::CanceledByUser));
+            let _ = Self::_update_contract_state(
+                &mut contract,
+                &types::ContractState::Deleted(types::Cause::CanceledByUser),
+            );
             let _ = Self::bill_contract(&mut contract);
             Self::remove_contract(node_contract_id);
         }
@@ -1360,10 +1382,12 @@ impl<T: Config> ChangeNode for Module<T> {
         let mut rent_contract = ActiveRentContractForNode::get(node.id);
         if rent_contract.contract_id != 0 {
             // Bill contract
-            let _ = Self::_update_contract_state(&mut rent_contract, &types::ContractState::Deleted(types::Cause::CanceledByUser));
+            let _ = Self::_update_contract_state(
+                &mut rent_contract,
+                &types::ContractState::Deleted(types::Cause::CanceledByUser),
+            );
             let _ = Self::bill_contract(&mut rent_contract);
             Self::remove_contract(rent_contract.contract_id);
         }
-
     }
 }

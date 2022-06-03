@@ -6,7 +6,7 @@ pub mod deprecated {
     use codec::{Decode, Encode};
     use frame_support::decl_module;
     use sp_std::prelude::*;
-    use tfchain_support::types::{CertificationType, Interface, Location, PublicConfig, Resources};
+    use tfchain_support::types::{Interface, Location, PublicConfig, Resources};
 
     #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
     pub struct NodeV3 {
@@ -27,6 +27,18 @@ pub mod deprecated {
         pub secure_boot: bool,
         pub virtualized: bool,
         pub serial_number: Vec<u8>,
+    }
+
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
+    pub enum CertificationType {
+        Diy,
+        Certified,
+    }
+
+    impl Default for CertificationType {
+        fn default() -> CertificationType {
+            CertificationType::Diy
+        }
     }
 
     decl_module! {
@@ -63,7 +75,9 @@ pub fn add_connection_price_to_nodes<T: Config>() -> frame_support::weights::Wei
                 created: node.created,
                 farming_policy_id: node.farming_policy_id,
                 interfaces: node.interfaces,
-                certification_type: node.certification_type,
+                certification_type: node_certification_type_to_node_certification(
+                    node.certification_type,
+                ),
                 secure_boot: node.secure_boot,
                 virtualized: node.virtualized,
                 serial_number: node.serial_number,
@@ -91,5 +105,14 @@ pub fn add_connection_price_to_nodes<T: Config>() -> frame_support::weights::Wei
     } else {
         frame_support::debug::info!(" >>> Unused migration");
         return 0;
+    }
+}
+
+fn node_certification_type_to_node_certification(
+    cert_type: deprecated::CertificationType,
+) -> NodeCertification {
+    match cert_type {
+        deprecated::CertificationType::Diy => NodeCertification::Diy,
+        deprecated::CertificationType::Certified => NodeCertification::Certified,
     }
 }

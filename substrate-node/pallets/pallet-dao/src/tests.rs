@@ -4,9 +4,7 @@ use frame_support::{assert_noop, assert_ok, weights::GetDispatchInfo};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Hash};
-use tfchain_support::{
-    types::{Location, PublicIP, Resources, Certification, CertificationType},
-};
+use tfchain_support::types::{FarmCertification, Location, NodeCertification, PublicIP, Resources};
 
 #[test]
 fn farmers_vote_no_farm_fails() {
@@ -86,7 +84,6 @@ fn farmers_vote_proposal_if_no_nodes_fails() {
     });
 }
 
-
 #[test]
 fn farmer_weight_is_set_properly_when_node_is_added_works() {
     new_test_ext().execute_with(|| {
@@ -145,20 +142,12 @@ fn close_works() {
 
         System::set_block_number(4);
         assert_noop!(
-            DaoModule::close(
-                Origin::signed(4),
-                hash.clone(),
-                0,
-            ),
+            DaoModule::close(Origin::signed(4), hash.clone(), 0,),
             Error::<Test>::TooEarly
         );
 
         System::set_block_number(5);
-        assert_ok!(DaoModule::close(
-            Origin::signed(4),
-            hash.clone(),
-            0,
-        ));
+        assert_ok!(DaoModule::close(Origin::signed(4), hash.clone(), 0,));
 
         let e = System::events();
         assert_eq!(
@@ -228,7 +217,7 @@ fn motion_approval_works() {
 
         let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_farm_certification(
             1,
-            Certification::Gold,
+            FarmCertification::Gold,
         ));
         let hash = BlakeTwo256::hash_of(&proposal);
 
@@ -250,14 +239,10 @@ fn motion_approval_works() {
 
         // // Check farm certification type before we close
         let f1 = TfgridModule::farms(1);
-        assert_eq!(f1.certification, Certification::NotCertified);
+        assert_eq!(f1.certification, FarmCertification::NotCertified);
 
         System::set_block_number(5);
-        assert_ok!(DaoModule::close(
-            Origin::signed(4),
-            hash.clone(),
-            0,
-        ));
+        assert_ok!(DaoModule::close(Origin::signed(4), hash.clone(), 0,));
 
         let e = System::events();
         assert_eq!(
@@ -322,9 +307,9 @@ fn motion_approval_works() {
             }))
         );
 
-        // // Certification type of farm should be set to certified.
+        // // FarmCertification type of farm should be set to certified.
         let f1 = TfgridModule::farms(1);
-        assert_eq!(f1.certification, Certification::Gold);
+        assert_eq!(f1.certification, FarmCertification::Gold);
     });
 }
 
@@ -336,7 +321,7 @@ fn motion_veto_works() {
 
         let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_farm_certification(
             1,
-            Certification::Gold,
+            FarmCertification::Gold,
         ));
         let hash = BlakeTwo256::hash_of(&proposal);
 
@@ -348,15 +333,8 @@ fn motion_veto_works() {
             "some_link".as_bytes().to_vec(),
         ));
 
-        
-        assert_ok!(DaoModule::veto(
-            Origin::signed(2),
-            hash.clone()
-        ));
-        assert_ok!(DaoModule::veto(
-            Origin::signed(3),
-            hash.clone()
-        ));
+        assert_ok!(DaoModule::veto(Origin::signed(2), hash.clone()));
+        assert_ok!(DaoModule::veto(Origin::signed(3), hash.clone()));
 
         System::set_block_number(5);
 
@@ -448,7 +426,7 @@ fn weighted_voting_works() {
 
         let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_farm_certification(
             1,
-            Certification::Gold,
+            FarmCertification::Gold,
         ));
         let hash = BlakeTwo256::hash_of(&proposal);
 
@@ -470,14 +448,10 @@ fn weighted_voting_works() {
 
         // // Check farm certification type before we close
         let f1 = TfgridModule::farms(1);
-        assert_eq!(f1.certification, Certification::NotCertified);
+        assert_eq!(f1.certification, FarmCertification::NotCertified);
 
         System::set_block_number(5);
-        assert_ok!(DaoModule::close(
-            Origin::signed(4),
-            hash.clone(),
-            0,
-        ));
+        assert_ok!(DaoModule::close(Origin::signed(4), hash.clone(), 0,));
 
         let e = System::events();
         assert_eq!(
@@ -535,9 +509,9 @@ fn weighted_voting_works() {
             }))
         );
 
-        // Certification type of farm should still be the same.
+        // FarmCertification type of farm should still be the same.
         let f1 = TfgridModule::farms(1);
-        assert_eq!(f1.certification, Certification::NotCertified);
+        assert_eq!(f1.certification, FarmCertification::NotCertified);
     });
 }
 
@@ -571,11 +545,7 @@ fn voting_tfgridmodule_call_works() {
         assert_eq!(n1.connection_price, 80);
 
         System::set_block_number(5);
-        assert_ok!(DaoModule::close(
-            Origin::signed(4),
-            hash.clone(),
-            0,
-        ));
+        assert_ok!(DaoModule::close(Origin::signed(4), hash.clone(), 0,));
 
         let e = System::events();
         for (idx, event) in e.clone().iter().enumerate() {
@@ -762,7 +732,6 @@ pub fn prepare_farm(account_id: u64, farm_name: Vec<u8>) {
     TfgridModule::create_farm(Origin::signed(account_id), farm_name, pub_ips.clone()).unwrap();
 }
 
-
 fn create_farming_policies() {
     let name = "f1".as_bytes().to_vec();
     assert_ok!(TfgridModule::create_farming_policy(
@@ -776,8 +745,8 @@ fn create_farming_policies() {
         System::block_number() + 100,
         true,
         true,
-        CertificationType::Diy,
-        Certification::Gold,
+        NodeCertification::Diy,
+        FarmCertification::Gold,
     ));
 
     let name = "f2".as_bytes().to_vec();
@@ -792,8 +761,8 @@ fn create_farming_policies() {
         System::block_number() + 100,
         true,
         true,
-        CertificationType::Diy,
-        Certification::NotCertified,
+        NodeCertification::Diy,
+        FarmCertification::NotCertified,
     ));
 
     let name = "f3".as_bytes().to_vec();
@@ -808,8 +777,8 @@ fn create_farming_policies() {
         System::block_number() + 100,
         true,
         true,
-        CertificationType::Certified,
-        Certification::Gold,
+        NodeCertification::Certified,
+        FarmCertification::Gold,
     ));
 
     let name = "f1".as_bytes().to_vec();
@@ -824,7 +793,7 @@ fn create_farming_policies() {
         System::block_number() + 100,
         true,
         true,
-        CertificationType::Certified,
-        Certification::NotCertified,
+        NodeCertification::Certified,
+        FarmCertification::NotCertified,
     ));
 }

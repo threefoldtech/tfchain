@@ -9,7 +9,7 @@ use substrate_fixed::types::{U16F16, U64F64};
 
 use super::types;
 use pallet_tfgrid::types as pallet_tfgrid_types;
-use tfchain_support::types::{Location, PublicIP, Resources, Certification, CertificationType};
+use tfchain_support::types::{FarmCertification, Location, NodeCertification, PublicIP, Resources};
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -843,10 +843,10 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 4);
         run_to_block(56);
-        
+
         // Delete node
-        TfgridModule::delete_node_farm(Origin::signed(alice()),1).unwrap();
-        
+        TfgridModule::delete_node_farm(Origin::signed(alice()), 1).unwrap();
+
         // After deleting a node, the contract gets billed before it's canceled
         check_report_cost(1, 8, amount_due_as_u128, 56, discount_received);
 
@@ -864,7 +864,7 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
 
         let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
             Vec::new();
-            
+
         let ip = "1.1.1.0".as_bytes().to_vec();
         let mut ips = Vec::new();
         ips.push(ip);
@@ -1327,7 +1327,7 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
             Origin::signed(bob()),
             node_id
         ));
-        
+
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
             1,
@@ -1378,7 +1378,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
             Origin::signed(charlie()),
             node_id
         ));
-        
+
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(charlie()),
             1,
@@ -1430,9 +1430,11 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         // => no Node Contract billed event
         assert_eq!(our_events.len(), 17);
 
-        let expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
-            vec![RawEvent::NodeContractCanceled(2, 1, 3), RawEvent::RentContractCanceled(1)];
-        
+        let expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> = vec![
+            RawEvent::NodeContractCanceled(2, 1, 3),
+            RawEvent::RentContractCanceled(1),
+        ];
+
         assert_eq!(our_events[15], expected_events[0]);
         assert_eq!(our_events[16], expected_events[1]);
     });
@@ -1529,7 +1531,6 @@ fn test_rent_contract_out_of_funds_should_move_state_to_graceperiod_works() {
         assert_eq!(our_events[1], expected_events[0]);
     });
 }
-
 
 #[test]
 fn test_restore_rent_contract_in_grace_works() {
@@ -1674,7 +1675,7 @@ fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
         run_to_block(16);
 
         // Delete node
-        TfgridModule::delete_node_farm(Origin::signed(alice()),1).unwrap();
+        TfgridModule::delete_node_farm(Origin::signed(alice()), 1).unwrap();
 
         let our_events = System::events()
             .into_iter()
@@ -1907,7 +1908,7 @@ pub fn prepare_farm(source: AccountId, dedicated: bool) {
 
 pub fn prepare_farm_and_node() {
     TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
-    
+
     create_farming_policies();
 
     prepare_twins();
@@ -2019,8 +2020,8 @@ fn create_farming_policies() {
         System::block_number() + 100,
         true,
         true,
-        CertificationType::Diy,
-        Certification::Gold,
+        NodeCertification::Diy,
+        FarmCertification::Gold,
     ));
 
     let name = "f2".as_bytes().to_vec();
@@ -2035,8 +2036,8 @@ fn create_farming_policies() {
         System::block_number() + 100,
         true,
         true,
-        CertificationType::Diy,
-        Certification::NotCertified,
+        NodeCertification::Diy,
+        FarmCertification::NotCertified,
     ));
 
     let name = "f3".as_bytes().to_vec();
@@ -2051,8 +2052,8 @@ fn create_farming_policies() {
         System::block_number() + 100,
         true,
         true,
-        CertificationType::Certified,
-        Certification::Gold,
+        NodeCertification::Certified,
+        FarmCertification::Gold,
     ));
 
     let name = "f1".as_bytes().to_vec();
@@ -2067,7 +2068,7 @@ fn create_farming_policies() {
         System::block_number() + 100,
         true,
         true,
-        CertificationType::Certified,
-        Certification::NotCertified,
+        NodeCertification::Certified,
+        FarmCertification::NotCertified,
     ));
 }

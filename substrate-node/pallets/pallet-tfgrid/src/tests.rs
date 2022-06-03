@@ -2,7 +2,7 @@ use crate::{mock::*, Error};
 use frame_support::{assert_noop, assert_ok};
 use frame_system::RawOrigin;
 use tfchain_support::types::{
-    Certification, CertificationType, FarmingPolicyLimit, Location, PublicConfig, PublicIP,
+    FarmCertification, FarmingPolicyLimit, Location, NodeCertification, PublicConfig, PublicIP,
     Resources,
 };
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
@@ -654,18 +654,18 @@ fn set_certification_type_node_works() {
         assert_ok!(TfgridModule::set_node_certification(
             Origin::signed(alice()),
             1,
-            CertificationType::Certified
+            NodeCertification::Certified
         ));
         let node = TfgridModule::nodes(1);
-        assert_eq!(node.certification_type, CertificationType::Certified);
+        assert_eq!(node.certification_type, NodeCertification::Certified);
 
         assert_ok!(TfgridModule::set_node_certification(
             Origin::signed(alice()),
             1,
-            CertificationType::Diy
+            NodeCertification::Diy
         ));
         let node = TfgridModule::nodes(1);
-        assert_eq!(node.certification_type, CertificationType::Diy);
+        assert_eq!(node.certification_type, NodeCertification::Diy);
     });
 }
 
@@ -907,8 +907,8 @@ fn create_farming_policy_works() {
             System::block_number() + 100,
             true,
             true,
-            CertificationType::Diy,
-            Certification::Gold,
+            NodeCertification::Diy,
+            FarmCertification::Gold,
         ));
     });
 }
@@ -928,8 +928,8 @@ fn edit_farming_policy_works() {
             System::block_number() + 100,
             true,
             true,
-            CertificationType::Diy,
-            Certification::Gold,
+            NodeCertification::Diy,
+            FarmCertification::Gold,
         ));
 
         let name = "f1_updated".as_bytes().to_vec();
@@ -944,8 +944,8 @@ fn edit_farming_policy_works() {
             9999,
             System::block_number() + 100,
             true,
-            CertificationType::Diy,
-            Certification::NotCertified,
+            NodeCertification::Diy,
+            FarmCertification::NotCertified,
         ));
     });
 }
@@ -967,8 +967,8 @@ fn sort_policies() {
             policy_end: System::block_number() + 100,
             immutable: true,
             default: true,
-            node_certification: CertificationType::Diy,
-            farm_certification: Certification::Gold,
+            node_certification: NodeCertification::Diy,
+            farm_certification: FarmCertification::Gold,
         };
 
         let name = "f2".as_bytes().to_vec();
@@ -985,8 +985,8 @@ fn sort_policies() {
             policy_end: System::block_number() + 100,
             immutable: true,
             default: true,
-            node_certification: CertificationType::Diy,
-            farm_certification: Certification::NotCertified,
+            node_certification: NodeCertification::Diy,
+            farm_certification: FarmCertification::NotCertified,
         };
 
         let name = "f3".as_bytes().to_vec();
@@ -1003,8 +1003,8 @@ fn sort_policies() {
             policy_end: System::block_number() + 100,
             immutable: true,
             default: true,
-            node_certification: CertificationType::Certified,
-            farm_certification: Certification::Gold,
+            node_certification: NodeCertification::Certified,
+            farm_certification: FarmCertification::Gold,
         };
 
         let name = "f4".as_bytes().to_vec();
@@ -1021,8 +1021,8 @@ fn sort_policies() {
             policy_end: System::block_number() + 100,
             immutable: true,
             default: true,
-            node_certification: CertificationType::Certified,
-            farm_certification: Certification::NotCertified,
+            node_certification: NodeCertification::Certified,
+            farm_certification: FarmCertification::NotCertified,
         };
 
         println!("\nbefore sort");
@@ -1046,7 +1046,7 @@ fn sort_policies() {
         //     15,
         //     10,
         //     8,
-        //     CertificationType::Certified
+        //     NodeCertification::Certified
         // ));
 
         // create_node();
@@ -1328,8 +1328,8 @@ fn create_farming_policies() {
         System::block_number() + 100,
         true,
         true,
-        CertificationType::Diy,
-        Certification::Gold,
+        NodeCertification::Diy,
+        FarmCertification::Gold,
     ));
 
     let name = "f2".as_bytes().to_vec();
@@ -1344,8 +1344,8 @@ fn create_farming_policies() {
         System::block_number() + 100,
         true,
         true,
-        CertificationType::Diy,
-        Certification::NotCertified,
+        NodeCertification::Diy,
+        FarmCertification::NotCertified,
     ));
 
     let name = "f3".as_bytes().to_vec();
@@ -1360,8 +1360,8 @@ fn create_farming_policies() {
         System::block_number() + 100,
         true,
         true,
-        CertificationType::Certified,
-        Certification::Gold,
+        NodeCertification::Certified,
+        FarmCertification::Gold,
     ));
 
     let name = "f1".as_bytes().to_vec();
@@ -1376,7 +1376,7 @@ fn create_farming_policies() {
         System::block_number() + 100,
         true,
         true,
-        CertificationType::Certified,
-        Certification::NotCertified,
+        NodeCertification::Certified,
+        FarmCertification::NotCertified,
     ));
 }

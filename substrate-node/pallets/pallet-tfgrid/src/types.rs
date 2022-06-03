@@ -1,7 +1,7 @@
 use codec::{Decode, Encode};
 use core::cmp::Ordering;
 use frame_support::traits::Vec;
-use tfchain_support::types::{Certification, CertificationType};
+use tfchain_support::types::{FarmCertification, NodeCertification};
 
 /// Utility type for managing upgrades/migrations.
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
@@ -124,9 +124,9 @@ pub struct FarmingPolicy<BlockNumber> {
     // Farming policy defined on the farm itself
     pub default: bool,
     // If a node needs to be certified or not to benefit from this policy
-    pub node_certification: CertificationType,
+    pub node_certification: NodeCertification,
     // Farm certification level
-    pub farm_certification: Certification,
+    pub farm_certification: FarmCertification,
 }
 
 impl<B> PartialOrd for FarmingPolicy<B>
