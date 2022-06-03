@@ -35,7 +35,6 @@ pub mod weights;
 pub mod types;
 
 pub mod farm_migration;
-pub mod farming_policy_migration;
 pub mod node_migration;
 
 pub use weights::WeightInfo;
@@ -83,8 +82,7 @@ decl_storage! {
         // pub CertificationCodes get(fn certification_codes): map hasher(blake2_128_concat) u32 => types::CertificationCodes;
         // pub CertificationCodeIdByName get(fn certification_codes_by_name_id): map hasher(blake2_128_concat) Vec<u8> => u32;
 
-        // pub FarmingPolicies get(fn farming_policies): Vec<types::FarmingPolicy<T::BlockNumber>>;
-        pub FarmingPolicies get(fn farming_policies): map hasher(blake2_128_concat) u32 => types::FarmingPolicy<T::BlockNumber>;
+        pub FarmingPoliciesMap get(fn farming_policies_map): map hasher(blake2_128_concat) u32 => types::FarmingPolicy<T::BlockNumber>;
 
         pub FarmingPolicyIDsByCertificationType get (fn farming_policies_by_certification_type): map hasher(blake2_128_concat) CertificationType => Vec<u32>;
 
@@ -1078,7 +1076,7 @@ decl_module! {
                 farm_certification,
             };
 
-            FarmingPolicies::<T>::insert(id, &new_policy);
+            FarmingPoliciesMap::<T>::insert(id, &new_policy);
             FarmingPolicyID::put(id);
 
             Self::deposit_event(RawEvent::FarmingPolicyStored(new_policy));
@@ -1224,9 +1222,9 @@ decl_module! {
         ) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
-            ensure!(FarmingPolicies::<T>::contains_key(id), Error::<T>::FarmingPolicyNotExists);
+            ensure!(FarmingPoliciesMap::<T>::contains_key(id), Error::<T>::FarmingPolicyNotExists);
 
-            let mut farming_policy = FarmingPolicies::<T>::get(id);
+            let mut farming_policy = FarmingPoliciesMap::<T>::get(id);
 
             farming_policy.name = name;
             farming_policy.su = su;
@@ -1239,7 +1237,7 @@ decl_module! {
             farming_policy.node_certification = node_certification;
             farming_policy.farm_certification = farm_certification;
 
-            FarmingPolicies::<T>::insert(id, &farming_policy);
+            FarmingPoliciesMap::<T>::insert(id, &farming_policy);
 
             Self::deposit_event(RawEvent::FarmingPolicyUpdated(farming_policy));
 
@@ -1342,7 +1340,7 @@ impl<T: Config> Module<T> {
         match farm.farming_policy_limits {
             Some(mut limits) => {
                 ensure!(
-                    FarmingPolicies::<T>::contains_key(limits.farming_policy_id),
+                    FarmingPoliciesMap::<T>::contains_key(limits.farming_policy_id),
                     Error::<T>::FarmingPolicyNotExists
                 );
                 match limits.end {
@@ -1393,13 +1391,13 @@ impl<T: Config> Module<T> {
                 farm.farming_policy_limits = Some(limits.clone());
                 Farms::insert(node.farm_id, farm);
 
-                return Ok(FarmingPolicies::<T>::get(limits.farming_policy_id));
+                return Ok(FarmingPoliciesMap::<T>::get(limits.farming_policy_id));
             }
             None => (),
         };
 
         let mut policies: Vec<types::FarmingPolicy<T::BlockNumber>> =
-            FarmingPolicies::<T>::iter().map(|p| p.1).collect();
+            FarmingPoliciesMap::<T>::iter().map(|p| p.1).collect();
 
         policies.sort();
         policies.reverse();

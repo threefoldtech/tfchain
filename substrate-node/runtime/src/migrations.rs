@@ -16,10 +16,13 @@ impl frame_support::traits::OnRuntimeUpgrade for NodeMigration {
     }
 }
 
-pub struct FarmingPolicyMigration;
-impl frame_support::traits::OnRuntimeUpgrade for FarmingPolicyMigration {
+pub struct OldFarmingPolicyRemoval;
+impl frame_support::traits::OnRuntimeUpgrade for OldFarmingPolicyRemoval {
     fn on_runtime_upgrade() -> Weight {
-        pallet_tfgrid::farming_policy_migration::rework_farm_certification::<Runtime>()
+        use frame_support::storage::migration;
+        // Remove the storage value `FarmingPolicies` from removed pallet `TfgridModule`
+        migration::remove_storage_prefix(b"TfgridModule", b"FarmingPolicies", b"");
+        <Runtime as frame_system::Config>::DbWeight::get().writes(1)
     }
 }
 
@@ -39,10 +42,10 @@ impl OnRuntimeUpgrade for CustomOnRuntimeUpgrades {
         weight += <NodeMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::debug::info!("🚀 NodeMigration end");
 
-        // 3. FarmingPolicyMigration
-        frame_support::debug::info!("🔍️ FarmingPolicyMigration start");
-        weight += <FarmingPolicyMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
-        frame_support::debug::info!("🚀 FarmingPolicyMigration end");
+        // 3. OldFarmingPolicyRemoval
+        frame_support::debug::info!("🔍️ OldFarmingPolicyRemoval start");
+        weight += <OldFarmingPolicyRemoval as OnRuntimeUpgrade>::on_runtime_upgrade();
+        frame_support::debug::info!("🚀 OldFarmingPolicyRemoval end");
 
         weight
     }
