@@ -32,6 +32,8 @@ impl frame_support::traits::OnRuntimeUpgrade for OldFarmingPolicyRemoval {
         migration::remove_storage_prefix(b"TfgridModule", b"CertificationCodes", b"");
         // Remove unused CertificationCodeIdByName
         migration::remove_storage_prefix(b"TfgridModule", b"CertificationCodeIdByName", b"");
+        // Remove unused CertificationCodeID
+        migration::remove_storage_prefix(b"TfgridModule", b"CertificationCodeID", b"");
         <Runtime as frame_system::Config>::DbWeight::get().writes(1)
     }
 }

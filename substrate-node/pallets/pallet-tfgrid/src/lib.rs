@@ -95,7 +95,6 @@ decl_storage! {
         EntityID: u32;
         TwinID: u32;
         PricingPolicyID: u32;
-        CertificationCodeID: u32;
         FarmingPolicyID: u32;
 
         /// The current version of the pallet.
