@@ -35,7 +35,8 @@ pub mod weights;
 pub mod types;
 
 pub mod farm_migration;
-pub mod migration;
+pub mod farming_policy_migration;
+pub mod node_migration;
 
 pub use weights::WeightInfo;
 
@@ -319,10 +320,6 @@ decl_module! {
         type Error = Error<T>;
 
         fn deposit_event() = default;
-
-        fn on_runtime_upgrade() -> frame_support::weights::Weight {
-            migration::add_connection_price_to_nodes::<T>() + farm_migration::rework_farm_certification::<T>()
-        }
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(1)]
         pub fn set_storage_version(origin, version: types::StorageVersion) -> dispatch::DispatchResult {
