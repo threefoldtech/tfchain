@@ -238,9 +238,12 @@ decl_event!(
         FarmPayoutV2AddressRegistered(u32, Vec<u8>),
         FarmMarkedAsDedicated(u32),
         ConnectionPriceSet(u32),
+        NodeCertificationSet(u32, NodeCertification),
         NodeCertifierAdded(AccountId),
         NodeCertifierRemoved(AccountId),
         FarmingPolicyUpdated(types::FarmingPolicy<BlockNumber>),
+        FarmingPolicySet(u32, Option<FarmingPolicyLimit>),
+        FarmCertificationSet(u32, FarmCertification),
     }
 );
 
@@ -439,6 +442,8 @@ decl_module! {
 
             Farms::insert(farm_id, &stored_farm);
 
+            Self::deposit_event(RawEvent::FarmCertificationSet(farm_id, certification));
+
             Ok(())
         }
 
@@ -556,7 +561,7 @@ decl_module! {
                 created,
                 farming_policy_id: 0,
                 interfaces,
-                certification_type: NodeCertification::default(),
+                certification: NodeCertification::default(),
                 secure_boot,
                 virtualized,
                 serial_number,
@@ -625,7 +630,7 @@ decl_module! {
         }
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1)]
-        pub fn set_node_certification(origin, node_id: u32, certification_type: NodeCertification) -> dispatch::DispatchResult {
+        pub fn set_node_certification(origin, node_id: u32, node_certification: NodeCertification) -> dispatch::DispatchResult {
             let account_id = ensure_signed(origin)?;
 
             let certifiers = AllowedNodeCertifiers::<T>::get();
@@ -634,7 +639,7 @@ decl_module! {
             ensure!(Nodes::contains_key(&node_id), Error::<T>::NodeNotExists);
             let mut stored_node = Nodes::get(node_id);
 
-            stored_node.certification_type = certification_type;
+            stored_node.certification = node_certification;
 
             // Refetch farming policy and save it on the node
             let farming_policy = Self::get_farming_policy(&stored_node)?;
@@ -643,7 +648,7 @@ decl_module! {
             // override node in storage
             Nodes::insert(stored_node.id, &stored_node);
 
-            Self::deposit_event(RawEvent::NodeUpdated(stored_node));
+            Self::deposit_event(RawEvent::NodeCertificationSet(node_id, node_certification));
 
             Ok(())
         }
@@ -1164,6 +1169,7 @@ decl_module! {
 
             Farms::insert(stored_farm.id, &stored_farm);
             Self::deposit_event(RawEvent::FarmUpdated(stored_farm));
+
             Ok(())
         }
 
@@ -1256,8 +1262,9 @@ decl_module! {
             ensure!(Farms::contains_key(farm_id), Error::<T>::FarmNotExists);
 
             let mut farm = Farms::get(farm_id);
-            farm.farming_policy_limits = limits;
+            farm.farming_policy_limits = limits.clone();
             Farms::insert(farm_id, farm);
+            Self::deposit_event(RawEvent::FarmingPolicySet(farm_id, limits));
 
             Ok(())
         }
@@ -1406,7 +1413,7 @@ impl<T: Config> Module<T> {
         let possible_policy = policies
             .into_iter()
             .filter(|policy| {
-                policy.node_certification <= node.certification_type
+                policy.node_certification <= node.certification
                     && policy.farm_certification <= farm.certification
             })
             .take(1)

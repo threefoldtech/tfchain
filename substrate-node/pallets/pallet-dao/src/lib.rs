@@ -14,7 +14,6 @@ use frame_support::{
 };
 use tfchain_support::{
     resources,
-    resources::{GIB, ONE_THOUSAND},
     traits::{ChangeNode, Tfgrid},
     types::{Node, Resources},
 };
@@ -491,16 +490,13 @@ impl<T: Config> Pallet<T> {
     pub fn get_node_weight(resources: Resources) -> u64 {
         let cu = resources::get_cu(resources);
         let su = resources::get_su(resources);
-        let calculated_cu = 2 * (cu as u128 / GIB / ONE_THOUSAND);
-        let calculated_su = su as u128 / ONE_THOUSAND;
-        calculated_cu as u64 + calculated_su as u64
+        cu * 2 + su
     }
 }
 
 impl<T: Config> ChangeNode for Module<T> {
     fn node_changed(old_node: Option<&Node>, new_node: &Node) {
         let new_node_weight = Self::get_node_weight(new_node.resources);
-
         match old_node {
             Some(node) => {
                 let old_node_weight = Self::get_node_weight(node.resources);

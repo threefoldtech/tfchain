@@ -75,7 +75,7 @@ pub fn add_connection_price_to_nodes<T: Config>() -> frame_support::weights::Wei
                 created: node.created,
                 farming_policy_id: node.farming_policy_id,
                 interfaces: node.interfaces,
-                certification_type: node_certification_type_to_node_certification(
+                certification: node_certification_type_to_node_certification(
                     node.certification_type,
                 ),
                 secure_boot: node.secure_boot,

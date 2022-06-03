@@ -657,7 +657,7 @@ fn set_certification_type_node_works() {
             NodeCertification::Certified
         ));
         let node = TfgridModule::nodes(1);
-        assert_eq!(node.certification_type, NodeCertification::Certified);
+        assert_eq!(node.certification, NodeCertification::Certified);
 
         assert_ok!(TfgridModule::set_node_certification(
             Origin::signed(alice()),
@@ -665,7 +665,7 @@ fn set_certification_type_node_works() {
             NodeCertification::Diy
         ));
         let node = TfgridModule::nodes(1);
-        assert_eq!(node.certification_type, NodeCertification::Diy);
+        assert_eq!(node.certification, NodeCertification::Diy);
     });
 }
 

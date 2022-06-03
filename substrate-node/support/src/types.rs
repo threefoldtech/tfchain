@@ -40,7 +40,9 @@ impl Ord for FarmCertification {
             FarmCertification::Gold if matches!(other, FarmCertification::NotCertified) => {
                 Ordering::Greater
             }
-            FarmCertification::NotCertified if matches!(other, FarmCertification::Gold) => Ordering::Less,
+            FarmCertification::NotCertified if matches!(other, FarmCertification::Gold) => {
+                Ordering::Less
+            }
             _ => Ordering::Equal,
         }
     }
@@ -71,7 +73,7 @@ pub struct Node {
     pub created: u64,
     pub farming_policy_id: u32,
     pub interfaces: Vec<Interface>,
-    pub certification_type: NodeCertification,
+    pub certification: NodeCertification,
     pub secure_boot: bool,
     pub virtualized: bool,
     pub serial_number: Vec<u8>,

@@ -246,7 +246,7 @@ fn motion_approval_works() {
 
         let e = System::events();
         assert_eq!(
-            e[0],
+            e[4],
             record(MockEvent::pallet_dao(DaoEvent::Proposed {
                 account: 1,
                 proposal_index: 0,
@@ -256,7 +256,7 @@ fn motion_approval_works() {
         );
 
         assert_eq!(
-            e[4],
+            e[8],
             record(MockEvent::pallet_dao(DaoEvent::Voted {
                 account: 10,
                 proposal_hash: hash,
@@ -267,7 +267,7 @@ fn motion_approval_works() {
         );
 
         assert_eq!(
-            e[8],
+            e[12],
             record(MockEvent::pallet_dao(DaoEvent::Voted {
                 account: 11,
                 proposal_hash: hash,
@@ -282,7 +282,7 @@ fn motion_approval_works() {
         let total_weight = farm_1_weight + farm_2_weight;
 
         assert_eq!(
-            e[9],
+            e[13],
             record(MockEvent::pallet_dao(DaoEvent::Closed {
                 proposal_hash: hash,
                 yes: 2,
@@ -293,14 +293,14 @@ fn motion_approval_works() {
         );
 
         assert_eq!(
-            e[10],
+            e[14],
             record(MockEvent::pallet_dao(DaoEvent::Approved {
                 proposal_hash: hash,
             }))
         );
 
         assert_eq!(
-            e[11],
+            e[16],
             record(MockEvent::pallet_dao(DaoEvent::Executed {
                 proposal_hash: hash,
                 result: Ok(())
@@ -340,7 +340,7 @@ fn motion_veto_works() {
 
         let e = System::events();
         assert_eq!(
-            e[0],
+            e[4],
             record(MockEvent::pallet_dao(DaoEvent::Proposed {
                 account: 1,
                 proposal_index: 0,
@@ -349,19 +349,19 @@ fn motion_veto_works() {
             }))
         );
 
-        // for event in e {
-        //     println!("event: {:?}", event);
-        // }
+        for event in e.clone() {
+            println!("event: {:?}", event);
+        }
 
         assert_eq!(
-            e[1],
+            e[5],
             record(MockEvent::pallet_dao(DaoEvent::CouncilMemberVeto {
                 proposal_hash: hash,
                 who: 2,
             }))
         );
         assert_eq!(
-            e[2],
+            e[6],
             record(MockEvent::pallet_dao(DaoEvent::CouncilMemberVeto {
                 proposal_hash: hash,
                 who: 3,
@@ -369,7 +369,7 @@ fn motion_veto_works() {
         );
 
         assert_eq!(
-            e[3],
+            e[7],
             record(MockEvent::pallet_dao(DaoEvent::ClosedByCouncil {
                 proposal_hash: hash,
                 vetos: [2, 3].to_vec(),
@@ -377,7 +377,7 @@ fn motion_veto_works() {
         );
 
         assert_eq!(
-            e[4],
+            e[8],
             record(MockEvent::pallet_dao(DaoEvent::Disapproved {
                 proposal_hash: hash,
             }))
@@ -675,7 +675,7 @@ fn prepare_node(account_id: u64, farm_id: u32) {
 
     let country = "Belgium".as_bytes().to_vec();
     let city = "Ghent".as_bytes().to_vec();
-    TfgridModule::create_node(
+    assert_ok!(TfgridModule::create_node(
         Origin::signed(account_id),
         farm_id,
         resources,
@@ -686,8 +686,7 @@ fn prepare_node(account_id: u64, farm_id: u32) {
         false,
         false,
         "some_serial".as_bytes().to_vec(),
-    )
-    .unwrap();
+    ));
 }
 
 fn prepare_big_node(account_id: u64, farm_id: u32) {
@@ -706,7 +705,7 @@ fn prepare_big_node(account_id: u64, farm_id: u32) {
 
     let country = "Belgium".as_bytes().to_vec();
     let city = "Ghent".as_bytes().to_vec();
-    TfgridModule::create_node(
+    assert_ok!(TfgridModule::create_node(
         Origin::signed(account_id),
         farm_id,
         resources,
@@ -717,8 +716,7 @@ fn prepare_big_node(account_id: u64, farm_id: u32) {
         false,
         false,
         "some_serial".as_bytes().to_vec(),
-    )
-    .unwrap();
+    ));
 }
 
 pub fn prepare_farm(account_id: u64, farm_name: Vec<u8>) {
