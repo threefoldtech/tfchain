@@ -1,4 +1,4 @@
-use super::types::Resources;
+pub use super::types::Resources;
 
 pub const ONE_THOUSAND: u128 = 1_000;
 pub const GIB: u128 = 1024 * 1024 * 1024;
@@ -33,6 +33,7 @@ pub fn get_su(resources: Resources) -> u64 {
     result as u64
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
 
