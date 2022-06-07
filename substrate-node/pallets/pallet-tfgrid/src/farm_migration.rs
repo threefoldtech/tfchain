@@ -52,7 +52,7 @@ pub fn rework_farm_certification<T: Config>() -> frame_support::weights::Weight 
         let mut migrated_count = 0;
         // We transform the storage values from the old into the new format.
         Farms::translate::<deprecated::FarmV2, _>(|k, farm| {
-            frame_support::debug::info!("     Migrated node for {:?}...", k);
+            frame_support::debug::info!("     Migrated farm for {:?}...", k);
 
             let new_farm = Farm {
                 version: 3,
@@ -71,7 +71,7 @@ pub fn rework_farm_certification<T: Config>() -> frame_support::weights::Weight 
             Some(new_farm)
         });
         frame_support::debug::info!(
-            " <<< Node storage updated! Migrated {} farms ✅",
+            " <<< Farm storage updated! Migrated {} farms ✅",
             migrated_count
         );
 

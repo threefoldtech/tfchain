@@ -828,14 +828,15 @@ fn boot_node_when_farming_policy_has_limits_works() {
         create_node();
 
         let f1 = TfgridModule::farms(1);
-        assert_ne!(f1.farming_policy_limits, Some(limit));
+        assert_ne!(f1.farming_policy_limits, Some(limit.clone()));
 
-        println!("limit: {:?}", f1.farming_policy_limits);
+        let n1 = TfgridModule::nodes(1);
+        assert_eq!(n1.farming_policy_id, limit.farming_policy_id);
     });
 }
 
 #[test]
-fn boot_node_when_farming_policy_low_cu_limit_fails() {
+fn boot_node_when_farming_policy_low_cu_limit_should_fall_back_to_a_default_policy_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
         create_farm();
@@ -858,37 +859,11 @@ fn boot_node_when_farming_policy_low_cu_limit_fails() {
         let f1 = TfgridModule::farms(1);
         assert_eq!(f1.farming_policy_limits, Some(limit.clone()));
 
-        create_twin_bob();
-        let country = "Belgium".as_bytes().to_vec();
-        let city = "Ghent".as_bytes().to_vec();
+        create_node();
 
-        // random location
-        let location = Location {
-            longitude: "12.233213231".as_bytes().to_vec(),
-            latitude: "32.323112123".as_bytes().to_vec(),
-        };
-
-        let resources = Resources {
-            hru: 1024 * GIGABYTE,
-            sru: 512 * GIGABYTE,
-            cru: 8,
-            mru: 16 * GIGABYTE,
-        };
-        assert_noop!(
-            TfgridModule::create_node(
-                Origin::signed(bob()),
-                1,
-                resources,
-                location,
-                country,
-                city,
-                Vec::new(),
-                true,
-                true,
-                "some_serial".as_bytes().to_vec()
-            ),
-            Error::<TestRuntime>::FarmingPolicyCuExceeded
-        );
+        let n1 = TfgridModule::nodes(1);
+        let default_p = TfgridModule::farming_policies_map(n1.farming_policy_id);
+        assert_eq!(default_p.default, true);
     });
 }
 

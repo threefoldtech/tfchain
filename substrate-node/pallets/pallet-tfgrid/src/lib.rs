@@ -302,11 +302,6 @@ decl_error! {
         NotAllowedToCertifyNode,
 
         FarmingPolicyNotExists,
-
-        FarmingPolicyEndExceeded,
-        FarmingPolicyCuExceeded,
-        FarmingPolicySuExceeded,
-        FarmingPolicyNodeCountExceeded,
     }
 }
 
@@ -1355,7 +1350,7 @@ impl<T: Config> Module<T> {
                     Some(end_timestamp) => {
                         let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
                         if now > end_timestamp {
-                            return Err(DispatchError::from(Error::<T>::FarmingPolicyEndExceeded));
+                            return Self::get_default_farming_policy();
                         }
                     }
                     None => (),
@@ -1365,7 +1360,7 @@ impl<T: Config> Module<T> {
                     Some(cu_limit) => {
                         let cu = resources::get_cu(node.resources);
                         if cu > cu_limit {
-                            return Err(DispatchError::from(Error::<T>::FarmingPolicyCuExceeded));
+                            return Self::get_default_farming_policy();
                         }
                         limits.cu = Some(cu_limit - cu);
                     }
@@ -1376,7 +1371,7 @@ impl<T: Config> Module<T> {
                     Some(su_limit) => {
                         let su = resources::get_su(node.resources);
                         if su > su_limit {
-                            return Err(DispatchError::from(Error::<T>::FarmingPolicySuExceeded));
+                            return Self::get_default_farming_policy();
                         }
                         limits.su = Some(su_limit - su);
                     }
@@ -1386,9 +1381,7 @@ impl<T: Config> Module<T> {
                 match limits.node_count {
                     Some(node_count) => {
                         if node_count == 0 {
-                            return Err(DispatchError::from(
-                                Error::<T>::FarmingPolicyNodeCountExceeded,
-                            ));
+                            return Self::get_default_farming_policy();
                         }
                         limits.node_count = Some(node_count - 1);
                     }
@@ -1415,6 +1408,27 @@ impl<T: Config> Module<T> {
             .filter(|policy| {
                 policy.node_certification <= node.certification
                     && policy.farm_certification <= farm.certification
+            })
+            .take(1)
+            .next();
+
+        match possible_policy {
+            Some(policy) => Ok(policy),
+            None => return Err(DispatchError::from(Error::<T>::FarmingPolicyNotExists)),
+        }
+    }
+
+    fn get_default_farming_policy() -> Result<types::FarmingPolicy<T::BlockNumber>, DispatchError> {
+        let mut policies: Vec<types::FarmingPolicy<T::BlockNumber>> =
+            FarmingPoliciesMap::<T>::iter().map(|p| p.1).collect();
+
+        policies.sort();
+        policies.reverse();
+
+        let possible_policy = policies
+            .into_iter()
+            .filter(|policy| {
+                policy.default
             })
             .take(1)
             .next();
