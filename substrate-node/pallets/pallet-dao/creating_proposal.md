@@ -7,6 +7,8 @@ A council member can create a proposal for farmers to vote on. The proposal incl
 - Description: a small description of what the proposal is about.
 - Link: a link to a more elaborate explanation of the proposal.
 
+By default a proposal can be voted on for 7 days after being created. After this period it ends, it must be manually closed.
+
 ! Remark: Once a proposal is created it cannot be altered !
 
 ## Step 1
@@ -55,3 +57,14 @@ Define the proposal:
 Submit the proposal
 
 ![submit](./img/submit.png)
+
+## Step 5 
+
+Closing a proposal after the proposal ended. This will approve / disapprove the proposal and execute the call on chain. 
+
+Provided:
+
+- Proposal hash (can be found by listing active proposals)
+- Proposal index (can be found by listing active proposals)
+
+![close](./img/close.png)
