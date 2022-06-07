@@ -1148,7 +1148,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1)]
         pub fn force_reset_farm_ip(origin, farm_id: u32, ip: Vec<u8>) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
@@ -1163,23 +1163,24 @@ decl_module! {
             };
 
             Farms::insert(stored_farm.id, &stored_farm);
+
             Self::deposit_event(RawEvent::FarmUpdated(stored_farm));
 
             Ok(())
         }
 
-        #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1)]
         pub fn set_connection_price(origin, price: u32) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
-            ConnectionPrice::set(price.clone());
+            ConnectionPrice::set(price);
 
             Self::deposit_event(RawEvent::ConnectionPriceSet(price));
 
             Ok(())
         }
 
-        #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1)]
         pub fn add_node_certifier(origin, who: T::AccountId) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
@@ -1193,7 +1194,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1)]
         pub fn remove_node_certifier(origin, who: T::AccountId) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
@@ -1207,7 +1208,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 100_000_000 + T::DbWeight::get().writes(2) + T::DbWeight::get().reads(3)]
+        #[weight = 100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1)]
         pub fn update_farming_policy(
             origin,
             id: u32,
@@ -1259,6 +1260,7 @@ decl_module! {
             let mut farm = Farms::get(farm_id);
             farm.farming_policy_limits = limits.clone();
             Farms::insert(farm_id, farm);
+
             Self::deposit_event(RawEvent::FarmingPolicySet(farm_id, limits));
 
             Ok(())
