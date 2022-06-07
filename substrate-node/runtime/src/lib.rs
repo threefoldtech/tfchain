@@ -70,6 +70,9 @@ pub use pallet_validator;
 
 pub use pallet_dao;
 
+mod migrations;
+use self::migrations::*;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -654,6 +657,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllModules,
+    CustomOnRuntimeUpgrades,
 >;
 
 impl_runtime_apis! {

@@ -1,4 +1,5 @@
 use codec::{Decode, Encode};
+use core::cmp::{Ord, Ordering, PartialOrd};
 use frame_support::traits::Vec;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
@@ -8,9 +9,10 @@ pub struct Farm {
     pub name: Vec<u8>,
     pub twin_id: u32,
     pub pricing_policy_id: u32,
-    pub certification_type: CertificationType,
+    pub certification: FarmCertification,
     pub public_ips: Vec<PublicIP>,
-    pub dedicated_farm: bool
+    pub dedicated_farm: bool,
+    pub farming_policy_limits: Option<FarmingPolicyLimit>,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
@@ -20,16 +22,40 @@ pub struct PublicIP {
     pub contract_id: u64,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, Copy)]
-pub enum CertificationType {
-    Diy,
-    Certified,
+#[derive(PartialEq, PartialOrd, Eq, Clone, Encode, Decode, Debug, Copy)]
+pub enum FarmCertification {
+    NotCertified,
+    Gold,
 }
 
-impl Default for CertificationType {
-    fn default() -> CertificationType {
-        CertificationType::Diy
+impl Default for FarmCertification {
+    fn default() -> FarmCertification {
+        FarmCertification::NotCertified
     }
+}
+
+impl Ord for FarmCertification {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self {
+            FarmCertification::Gold if matches!(other, FarmCertification::NotCertified) => {
+                Ordering::Greater
+            }
+            FarmCertification::NotCertified if matches!(other, FarmCertification::Gold) => {
+                Ordering::Less
+            }
+            _ => Ordering::Equal,
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+pub struct FarmingPolicyLimit {
+    pub farming_policy_id: u32,
+    pub cu: Option<u64>,
+    pub su: Option<u64>,
+    pub end: Option<u64>,
+    pub node_count: Option<u32>,
+    pub node_certification: bool,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
@@ -47,7 +73,7 @@ pub struct Node {
     pub created: u64,
     pub farming_policy_id: u32,
     pub interfaces: Vec<Interface>,
-    pub certification_type: CertificationType,
+    pub certification: NodeCertification,
     pub secure_boot: bool,
     pub virtualized: bool,
     pub serial_number: Vec<u8>,
@@ -95,4 +121,36 @@ impl Resources {
 pub struct Location {
     pub longitude: Vec<u8>,
     pub latitude: Vec<u8>,
+}
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, Copy)]
+pub enum NodeCertification {
+    Diy,
+    Certified,
+}
+
+impl Ord for NodeCertification {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self {
+            NodeCertification::Certified if matches!(other, NodeCertification::Diy) => {
+                Ordering::Greater
+            }
+            NodeCertification::Diy if matches!(other, NodeCertification::Certified) => {
+                Ordering::Less
+            }
+            _ => Ordering::Equal, // technically this is unreachable but I don't care at this point
+        }
+    }
+}
+
+impl PartialOrd for NodeCertification {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Default for NodeCertification {
+    fn default() -> NodeCertification {
+        NodeCertification::Diy
+    }
 }

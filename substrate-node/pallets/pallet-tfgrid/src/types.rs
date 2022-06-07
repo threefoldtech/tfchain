@@ -1,6 +1,7 @@
 use codec::{Decode, Encode};
+use core::cmp::Ordering;
 use frame_support::traits::Vec;
-use tfchain_support::types::{CertificationType};
+use tfchain_support::types::{FarmCertification, NodeCertification};
 
 /// Utility type for managing upgrades/migrations.
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
@@ -9,6 +10,7 @@ pub enum StorageVersion {
     V2Struct,
     V3Struct,
     V4Struct,
+    V5Struct,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug, Encode, Decode, Default)]
@@ -53,7 +55,7 @@ pub struct PricingPolicy<AccountId> {
     pub domain_name: Policy,
     pub foundation_account: AccountId,
     pub certified_sales_account: AccountId,
-    pub discount_for_dedication_nodes: u8
+    pub discount_for_dedication_nodes: u8,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
@@ -102,29 +104,8 @@ impl Default for Unit {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
-pub struct CertificationCodes {
-    pub version: u32,
-    pub id: u32,
-    pub name: Vec<u8>,
-    pub description: Vec<u8>,
-    pub certification_code_type: CertificationCodeType,
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
-pub enum CertificationCodeType {
-    Farm,
-    Entity,
-}
-
-impl Default for CertificationCodeType {
-    fn default() -> CertificationCodeType {
-        CertificationCodeType::Farm
-    }
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
-pub struct FarmingPolicy {
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Default, Debug)]
+pub struct FarmingPolicy<BlockNumber> {
     pub version: u32,
     pub id: u32,
     pub name: Vec<u8>,
@@ -132,8 +113,41 @@ pub struct FarmingPolicy {
     pub su: u32,
     pub nu: u32,
     pub ipv4: u32,
-    pub timestamp: u64,
-    pub certification_type: CertificationType,
+    // Minimal uptime in order to benefit from this uptime.
+    pub minimal_uptime: u16,
+    pub policy_created: BlockNumber,
+    // Indicated when this policy expires.
+    pub policy_end: BlockNumber,
+    // If this policy is immutable or not. Immutable policies can never be changed again.
+    pub immutable: bool,
+    // Indicates if the farming policy is a default one. Meaning it will be used when there is no
+    // Farming policy defined on the farm itself
+    pub default: bool,
+    // If a node needs to be certified or not to benefit from this policy
+    pub node_certification: NodeCertification,
+    // Farm certification level
+    pub farm_certification: FarmCertification,
+}
+
+impl<B> PartialOrd for FarmingPolicy<B>
+where
+    B: Ord,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<B> Ord for FarmingPolicy<B>
+where
+    B: Ord,
+{
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.farm_certification.cmp(&other.farm_certification) {
+            Ordering::Equal => self.node_certification.cmp(&other.node_certification),
+            ord => ord,
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
@@ -141,5 +155,5 @@ pub struct TermsAndConditions<AccountId> {
     pub account_id: AccountId,
     pub timestamp: u64,
     pub document_link: Vec<u8>,
-    pub document_hash: Vec<u8>
+    pub document_hash: Vec<u8>,
 }
