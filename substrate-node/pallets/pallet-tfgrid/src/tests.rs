@@ -571,6 +571,24 @@ fn test_farm_add_stellar_payout_address() {
 }
 
 #[test]
+fn test_set_farm_certification_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+
+        assert_ok!(TfgridModule::set_farm_certification(
+            RawOrigin::Root.into(),
+            1,
+            FarmCertification::Gold
+        ));
+
+        let f1 = TfgridModule::farms(1);
+        assert_eq!(f1.certification, FarmCertification::Gold);
+    });
+}
+
+#[test]
 fn create_node_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
@@ -776,6 +794,64 @@ fn create_node_with_same_pubkey_fails() {
 }
 
 #[test]
+fn create_farming_policy_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        let name = "f1".as_bytes().to_vec();
+        assert_ok!(TfgridModule::create_farming_policy(
+            RawOrigin::Root.into(),
+            name,
+            12,
+            15,
+            10,
+            8,
+            9999,
+            System::block_number() + 100,
+            true,
+            true,
+            NodeCertification::Diy,
+            FarmCertification::Gold,
+        ));
+    });
+}
+
+#[test]
+fn edit_farming_policy_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        let name = "f1".as_bytes().to_vec();
+        assert_ok!(TfgridModule::create_farming_policy(
+            RawOrigin::Root.into(),
+            name,
+            12,
+            15,
+            10,
+            8,
+            9999,
+            System::block_number() + 100,
+            true,
+            true,
+            NodeCertification::Diy,
+            FarmCertification::Gold,
+        ));
+
+        let name = "f1_updated".as_bytes().to_vec();
+        assert_ok!(TfgridModule::update_farming_policy(
+            RawOrigin::Root.into(),
+            1,
+            name,
+            12,
+            15,
+            10,
+            8,
+            9999,
+            System::block_number() + 100,
+            true,
+            NodeCertification::Diy,
+            FarmCertification::NotCertified,
+        ));
+    });
+}
+
+#[test]
 fn add_farm_limits_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
@@ -868,60 +944,116 @@ fn boot_node_when_farming_policy_low_cu_limit_should_fall_back_to_a_default_poli
 }
 
 #[test]
-fn create_farming_policy_works() {
+fn node_switches_farming_policy_when_marked_as_certified_works() {
     ExternalityBuilder::build().execute_with(|| {
-        let name = "f1".as_bytes().to_vec();
-        assert_ok!(TfgridModule::create_farming_policy(
+        create_twin();
+        create_farm();
+
+        create_node();
+
+        let n1 = TfgridModule::nodes(1);
+        let assigned_policy = TfgridModule::farming_policies_map(n1.farming_policy_id);
+        assert_eq!(assigned_policy.node_certification, NodeCertification::Diy);
+
+        assert_ok!(TfgridModule::add_node_certifier(
             RawOrigin::Root.into(),
-            name,
-            12,
-            15,
-            10,
-            8,
-            9999,
-            System::block_number() + 100,
-            true,
-            true,
-            NodeCertification::Diy,
-            FarmCertification::Gold,
+            alice()
         ));
+        assert_ok!(TfgridModule::set_node_certification(
+            Origin::signed(alice()),
+            1,
+            NodeCertification::Certified,
+        ));
+
+        let n1 = TfgridModule::nodes(1);
+        let assigned_policy = TfgridModule::farming_policies_map(n1.farming_policy_id);
+        assert_eq!(
+            assigned_policy.node_certification,
+            NodeCertification::Certified
+        );
     });
 }
 
 #[test]
-fn edit_farming_policy_works() {
+fn node_switches_farming_policy_when_marked_as_certified_toggle_works() {
     ExternalityBuilder::build().execute_with(|| {
-        let name = "f1".as_bytes().to_vec();
-        assert_ok!(TfgridModule::create_farming_policy(
+        create_twin();
+        create_farm();
+
+        create_node();
+
+        let n1 = TfgridModule::nodes(1);
+        let assigned_policy = TfgridModule::farming_policies_map(n1.farming_policy_id);
+        assert_eq!(assigned_policy.node_certification, NodeCertification::Diy);
+
+        assert_ok!(TfgridModule::add_node_certifier(
             RawOrigin::Root.into(),
-            name,
-            12,
-            15,
-            10,
-            8,
-            9999,
-            System::block_number() + 100,
-            true,
-            true,
-            NodeCertification::Diy,
-            FarmCertification::Gold,
+            alice()
+        ));
+        assert_ok!(TfgridModule::set_node_certification(
+            Origin::signed(alice()),
+            1,
+            NodeCertification::Certified,
         ));
 
-        let name = "f1_updated".as_bytes().to_vec();
-        assert_ok!(TfgridModule::update_farming_policy(
+        let n1 = TfgridModule::nodes(1);
+        let assigned_policy = TfgridModule::farming_policies_map(n1.farming_policy_id);
+        assert_eq!(
+            assigned_policy.node_certification,
+            NodeCertification::Certified
+        );
+
+        assert_ok!(TfgridModule::set_node_certification(
+            Origin::signed(alice()),
+            1,
+            NodeCertification::Diy,
+        ));
+        let n1 = TfgridModule::nodes(1);
+        let assigned_policy = TfgridModule::farming_policies_map(n1.farming_policy_id);
+        assert_eq!(assigned_policy.node_certification, NodeCertification::Diy);
+    });
+}
+
+#[test]
+fn node_switches_farming_policy_when_marked_as_certified_and_gold_farm_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+
+        create_node();
+
+        let n1 = TfgridModule::nodes(1);
+        let assigned_policy = TfgridModule::farming_policies_map(n1.farming_policy_id);
+        assert_eq!(assigned_policy.node_certification, NodeCertification::Diy);
+        assert_eq!(
+            assigned_policy.farm_certification,
+            FarmCertification::NotCertified
+        );
+
+        // Mark farm as gold
+        assert_ok!(TfgridModule::set_farm_certification(
             RawOrigin::Root.into(),
             1,
-            name,
-            12,
-            15,
-            10,
-            8,
-            9999,
-            System::block_number() + 100,
-            true,
-            NodeCertification::Diy,
-            FarmCertification::NotCertified,
+            FarmCertification::Gold
         ));
+        assert_ok!(TfgridModule::add_node_certifier(
+            RawOrigin::Root.into(),
+            alice()
+        ));
+        // Mark node as certified
+        assert_ok!(TfgridModule::set_node_certification(
+            Origin::signed(alice()),
+            1,
+            NodeCertification::Certified,
+        ));
+
+        let n1 = TfgridModule::nodes(1);
+        let assigned_policy = TfgridModule::farming_policies_map(n1.farming_policy_id);
+        assert_eq!(
+            assigned_policy.node_certification,
+            NodeCertification::Certified
+        );
+        assert_eq!(assigned_policy.farm_certification, FarmCertification::Gold);
     });
 }
 
