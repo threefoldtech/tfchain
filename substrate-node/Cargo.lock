@@ -3915,7 +3915,7 @@ dependencies = [
 [[package]]
 name = "pallet-tft-bridge"
 version = "1.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_tft_bridge?branch=main#30fa117bd1b4780e3df4d7d88b1b07f3fce957c9"
+source = "git+https://github.com/threefoldtech/tfchain_tft_bridge?branch=main#27f55a39a40bc7b022806e6933bbee977de3898e"
 dependencies = [
  "frame-support",
  "frame-system",
