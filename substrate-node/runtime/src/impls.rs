@@ -1,5 +1,5 @@
-use frame_support::traits::{Currency, OnUnbalanced};
 use crate::*;
+use frame_support::traits::{Currency, OnUnbalanced};
 
 type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
 
