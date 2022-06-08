@@ -221,13 +221,7 @@ impl<T: Config> Module<T> {
         );
 
         let node = pallet_tfgrid::Nodes::get(node_id);
-        ensure!(
-            pallet_tfgrid::Farms::contains_key(node.farm_id),
-            Error::<T>::FarmNotExists
-        );
-        let farm = pallet_tfgrid::Farms::get(node.farm_id);
-
-        if farm.dedicated_farm && !ActiveRentContractForNode::contains_key(node_id) {
+        if node.dedicated && !ActiveRentContractForNode::contains_key(node_id) {
             return Err(DispatchError::from(Error::<T>::NodeNotAvailableToDeploy));
         }
 
@@ -310,13 +304,7 @@ impl<T: Config> Module<T> {
         );
 
         let node = pallet_tfgrid::Nodes::get(node_id);
-        ensure!(
-            pallet_tfgrid::Farms::contains_key(node.farm_id),
-            Error::<T>::FarmNotExists
-        );
-
-        let farm = pallet_tfgrid::Farms::get(node.farm_id);
-        ensure!(farm.dedicated_farm == true, Error::<T>::NodeIsNotDedicated);
+        ensure!(node.dedicated == true, Error::<T>::NodeIsNotDedicated);
 
         // Create contract
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
@@ -1359,14 +1347,10 @@ impl<T: Config> Module<T> {
 
         cu
     }
-}
 
-impl<T: Config> ChangeNode for Module<T> {
-    fn node_changed(_node: Option<&Node>, _new_node: &Node) {}
-
-    fn node_deleted(node: &Node) {
+    pub fn decomssion_workloads_on_node(node_id: u32) {
         // Clean up all active contracts
-        let active_node_contracts = ActiveNodeContracts::get(node.id);
+        let active_node_contracts = ActiveNodeContracts::get(node_id);
         for node_contract_id in active_node_contracts {
             let mut contract = Contracts::get(node_contract_id);
             // Bill contract
@@ -1379,7 +1363,7 @@ impl<T: Config> ChangeNode for Module<T> {
         }
 
         // First clean up rent contract if it exists
-        let mut rent_contract = ActiveRentContractForNode::get(node.id);
+        let mut rent_contract = ActiveRentContractForNode::get(node_id);
         if rent_contract.contract_id != 0 {
             // Bill contract
             let _ = Self::_update_contract_state(
@@ -1389,5 +1373,23 @@ impl<T: Config> ChangeNode for Module<T> {
             let _ = Self::bill_contract(&mut rent_contract);
             Self::remove_contract(rent_contract.contract_id);
         }
+    }
+}
+
+impl<T: Config> ChangeNode for Module<T> {
+    fn node_changed(node: Option<&Node>, new_node: &Node) {
+        // check if node dedicated is toggled, if so, decomission all workloads
+        match node {
+            Some(old_node) => {
+                if old_node.dedicated && !new_node.dedicated {
+                    Self::decomssion_workloads_on_node(old_node.id);
+                }
+            }
+            None => (),
+        }
+    }
+
+    fn node_deleted(node: &Node) {
+        Self::decomssion_workloads_on_node(node.id);
     }
 }

@@ -311,6 +311,7 @@ impl pallet_sudo::Config for Runtime {
 pub struct NodeChanged;
 impl ChangeNode for NodeChanged {
     fn node_changed(old_node: Option<&Node>, new_node: &Node) {
+        SmartContractModule::node_changed(old_node, new_node);
         Dao::node_changed(old_node, new_node)
     }
 

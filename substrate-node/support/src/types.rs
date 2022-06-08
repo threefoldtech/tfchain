@@ -11,7 +11,6 @@ pub struct Farm {
     pub pricing_policy_id: u32,
     pub certification: FarmCertification,
     pub public_ips: Vec<PublicIP>,
-    pub dedicated_farm: bool,
     pub farming_policy_limits: Option<FarmingPolicyLimit>,
 }
 
@@ -77,6 +76,7 @@ pub struct Node {
     pub secure_boot: bool,
     pub virtualized: bool,
     pub serial_number: Vec<u8>,
+    pub dedicated: bool,
     pub connection_price: u32,
 }
 

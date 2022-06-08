@@ -244,6 +244,7 @@ decl_event!(
         FarmingPolicyUpdated(types::FarmingPolicy<BlockNumber>),
         FarmingPolicySet(u32, Option<FarmingPolicyLimit>),
         FarmCertificationSet(u32, FarmCertification),
+        NodeMarkedAsDedicated(u32, bool),
     }
 );
 
@@ -367,7 +368,6 @@ decl_module! {
                 pricing_policy_id: 1,
                 certification: FarmCertification::NotCertified,
                 public_ips: pub_ips,
-                dedicated_farm: false,
                 farming_policy_limits: None,
             };
 
@@ -560,6 +560,7 @@ decl_module! {
                 secure_boot,
                 virtualized,
                 serial_number,
+                dedicated: false,
                 connection_price: ConnectionPrice::get()
             };
 
@@ -1125,26 +1126,13 @@ decl_module! {
             Nodes::remove(node_id);
             NodeIdByTwinID::remove(node.twin_id);
 
-            // Call node deleted
-            T::NodeChanged::node_deleted(&node);
-
             Self::deposit_event(RawEvent::NodeDeleted(node_id));
 
             Ok(())
         }
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2)]
-        pub fn set_farm_dedicated(origin, farm_id: u32, dedicated: bool) -> dispatch::DispatchResult {
-            T::RestrictedOrigin::ensure_origin(origin)?;
-
-            ensure!(Farms::contains_key(farm_id), Error::<T>::FarmNotExists);
-
-            let mut farm = Farms::get(farm_id);
-            farm.dedicated_farm = dedicated;
-            Farms::insert(farm_id, &farm);
-
-            Self::deposit_event(RawEvent::FarmUpdated(farm));
-
+        pub fn set_farm_dedicated(_origin, _farm_id: u32, _dedicated: bool) -> dispatch::DispatchResult {
             Ok(())
         }
 
@@ -1262,6 +1250,30 @@ decl_module! {
             Farms::insert(farm_id, farm);
 
             Self::deposit_event(RawEvent::FarmingPolicySet(farm_id, limits));
+
+            Ok(())
+        }
+
+        #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2)]
+        pub fn set_node_dedicated(origin, node_id: u32, dedicated: bool) -> dispatch::DispatchResult {
+            let account_id = ensure_signed(origin)?;
+
+            ensure!(Nodes::contains_key(node_id), Error::<T>::NodeNotExists);
+            let node = Nodes::get(node_id);
+
+            ensure!(Farms::contains_key(node.farm_id), Error::<T>::FarmNotExists);
+            let farm = Farms::get(node.farm_id);
+
+            let farm_twin = Twins::<T>::get(farm.twin_id);
+            ensure!(farm_twin.account_id == account_id, Error::<T>::NodeUpdateNotAuthorized);
+
+            let mut stored_node = Nodes::get(node_id);          
+            stored_node.dedicated = dedicated;
+            Nodes::insert(node_id, &stored_node);
+
+            T::NodeChanged::node_changed(Some(&node), &stored_node);
+
+            Self::deposit_event(RawEvent::NodeMarkedAsDedicated(node_id, dedicated));
 
             Ok(())
         }
@@ -1429,9 +1441,7 @@ impl<T: Config> Module<T> {
 
         let possible_policy = policies
             .into_iter()
-            .filter(|policy| {
-                policy.default
-            })
+            .filter(|policy| policy.default)
             .take(1)
             .next();
 

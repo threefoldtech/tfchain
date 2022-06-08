@@ -450,45 +450,47 @@ fn test_adding_ip_duplicate_to_farm_fails() {
 }
 
 #[test]
-fn test_set_farm_dedicated() {
+fn test_set_node_dedicated() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
         create_farm();
+        create_node();
 
-        assert_ok!(TfgridModule::set_farm_dedicated(
-            RawOrigin::Root.into(),
+        assert_ok!(TfgridModule::set_node_dedicated(
+            Origin::signed(alice()),
             1,
             true
         ));
 
-        let farm = TfgridModule::farms(1);
-        assert_eq!(farm.dedicated_farm, true);
+        let node = TfgridModule::nodes(1);
+        assert_eq!(node.dedicated, true);
     })
 }
 
 #[test]
-fn test_toggle_farm_dedicated() {
+fn test_toggle_node_dedicated() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
         create_farm();
+        create_node();
 
-        assert_ok!(TfgridModule::set_farm_dedicated(
-            RawOrigin::Root.into(),
+        assert_ok!(TfgridModule::set_node_dedicated(
+            Origin::signed(alice()),
             1,
             true
         ));
 
-        let farm = TfgridModule::farms(1);
-        assert_eq!(farm.dedicated_farm, true);
+        let node = TfgridModule::nodes(1);
+        assert_eq!(node.dedicated, true);
 
-        assert_ok!(TfgridModule::set_farm_dedicated(
-            RawOrigin::Root.into(),
+        assert_ok!(TfgridModule::set_node_dedicated(
+            Origin::signed(alice()),
             1,
             false
         ));
 
-        let farm = TfgridModule::farms(1);
-        assert_eq!(farm.dedicated_farm, false);
+        let node = TfgridModule::nodes(1);
+        assert_eq!(node.dedicated, false);
     })
 }
 

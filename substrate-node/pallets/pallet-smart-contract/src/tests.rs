@@ -480,7 +480,7 @@ fn test_create_name_contract_with_invalid_dns_name_fails() {
 #[test]
 fn test_create_rent_contract_works() {
     new_test_ext().execute_with(|| {
-        prepare_dedicated_farm_and_node();
+        prepare_farm_and_dedicated_node();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -500,7 +500,7 @@ fn test_create_rent_contract_works() {
 #[test]
 fn test_cancel_rent_contract_works() {
     new_test_ext().execute_with(|| {
-        prepare_dedicated_farm_and_node();
+        prepare_farm_and_dedicated_node();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -540,7 +540,7 @@ fn test_create_rent_contract_on_non_dedicated_node_fails() {
 #[test]
 fn test_create_node_contract_on_dedicated_node_without_rent_contract_fails() {
     new_test_ext().execute_with(|| {
-        prepare_dedicated_farm_and_node();
+        prepare_farm_and_dedicated_node();
 
         assert_noop!(
             SmartContractModule::create_node_contract(
@@ -558,7 +558,7 @@ fn test_create_node_contract_on_dedicated_node_without_rent_contract_fails() {
 #[test]
 fn test_create_node_contract_when_having_a_rentcontract_works() {
     new_test_ext().execute_with(|| {
-        prepare_dedicated_farm_and_node();
+        prepare_farm_and_dedicated_node();
 
         assert_ok!(SmartContractModule::create_rent_contract(
             Origin::signed(bob()),
@@ -578,7 +578,7 @@ fn test_create_node_contract_when_having_a_rentcontract_works() {
 #[test]
 fn test_create_node_contract_when_someone_else_has_rent_contract_fails() {
     new_test_ext().execute_with(|| {
-        prepare_dedicated_farm_and_node();
+        prepare_farm_and_dedicated_node();
 
         // create rent contract with bob
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -604,7 +604,7 @@ fn test_create_node_contract_when_someone_else_has_rent_contract_fails() {
 #[test]
 fn test_cancel_rent_contract_with_active_node_contracts_fails() {
     new_test_ext().execute_with(|| {
-        prepare_dedicated_farm_and_node();
+        prepare_farm_and_dedicated_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
@@ -1188,7 +1188,7 @@ fn test_name_contract_billing() {
 #[test]
 fn test_rent_contract_billing() {
     new_test_ext().execute_with(|| {
-        prepare_dedicated_farm_and_node();
+        prepare_farm_and_dedicated_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
@@ -1216,7 +1216,7 @@ fn test_rent_contract_billing() {
 #[test]
 fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
     new_test_ext().execute_with(|| {
-        prepare_dedicated_farm_and_node();
+        prepare_farm_and_dedicated_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
@@ -1272,7 +1272,7 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
 #[test]
 fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
     new_test_ext().execute_with(|| {
-        prepare_dedicated_farm_and_node();
+        prepare_farm_and_dedicated_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
@@ -1318,7 +1318,7 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
 #[test]
 fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billing_works() {
     new_test_ext().execute_with(|| {
-        prepare_dedicated_farm_and_node();
+        prepare_farm_and_dedicated_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
@@ -1369,7 +1369,7 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
 #[test]
 fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_works() {
     new_test_ext().execute_with(|| {
-        prepare_dedicated_farm_and_node();
+        prepare_farm_and_dedicated_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
@@ -1443,7 +1443,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
 #[test]
 fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
     new_test_ext().execute_with(|| {
-        prepare_dedicated_farm_and_node();
+        prepare_farm_and_dedicated_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
@@ -1495,7 +1495,7 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
 #[test]
 fn test_rent_contract_out_of_funds_should_move_state_to_graceperiod_works() {
     new_test_ext().execute_with(|| {
-        prepare_dedicated_farm_and_node();
+        prepare_farm_and_dedicated_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
@@ -1535,7 +1535,7 @@ fn test_rent_contract_out_of_funds_should_move_state_to_graceperiod_works() {
 #[test]
 fn test_restore_rent_contract_in_grace_works() {
     new_test_ext().execute_with(|| {
-        prepare_dedicated_farm_and_node();
+        prepare_farm_and_dedicated_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
@@ -1596,7 +1596,7 @@ fn test_restore_rent_contract_in_grace_works() {
 #[test]
 fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works() {
     new_test_ext().execute_with(|| {
-        prepare_dedicated_farm_and_node();
+        prepare_farm_and_dedicated_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
@@ -1651,7 +1651,7 @@ fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works
 #[test]
 fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
     new_test_ext().execute_with(|| {
-        prepare_dedicated_farm_and_node();
+        prepare_farm_and_dedicated_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
@@ -1843,7 +1843,7 @@ pub fn prepare_twins() {
     create_twin(charlie());
 }
 
-pub fn prepare_farm(source: AccountId, dedicated: bool) {
+pub fn prepare_farm(source: AccountId) {
     let farm_name = "test_farm";
     let mut pub_ips = Vec::new();
     pub_ips.push(PublicIP {
@@ -1898,12 +1898,6 @@ pub fn prepare_farm(source: AccountId, dedicated: bool) {
         pub_ips.clone(),
     )
     .unwrap();
-
-    if !dedicated {
-        return;
-    }
-
-    TfgridModule::set_farm_dedicated(RawOrigin::Root.into(), 1, true).unwrap();
 }
 
 pub fn prepare_farm_and_node() {
@@ -1913,7 +1907,7 @@ pub fn prepare_farm_and_node() {
 
     prepare_twins();
 
-    prepare_farm(alice(), false);
+    prepare_farm(alice());
 
     // random location
     let location = Location {
@@ -1945,13 +1939,13 @@ pub fn prepare_farm_and_node() {
     .unwrap();
 }
 
-pub fn prepare_dedicated_farm_and_node() {
+pub fn prepare_farm_and_dedicated_node() {
     TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
     create_farming_policies();
 
     prepare_twins();
 
-    prepare_farm(alice(), true);
+    prepare_farm(alice());
 
     // random location
     let location = Location {
@@ -1968,7 +1962,7 @@ pub fn prepare_dedicated_farm_and_node() {
 
     let country = "Belgium".as_bytes().to_vec();
     let city = "Ghent".as_bytes().to_vec();
-    TfgridModule::create_node(
+    assert_ok!(TfgridModule::create_node(
         Origin::signed(alice()),
         1,
         resources,
@@ -1979,8 +1973,13 @@ pub fn prepare_dedicated_farm_and_node() {
         false,
         false,
         "some_serial".as_bytes().to_vec(),
-    )
-    .unwrap();
+    ));
+
+    assert_ok!(TfgridModule::set_node_dedicated(
+        Origin::signed(alice()),
+        1,
+        true,
+    ));
 }
 
 pub fn create_twin(origin: AccountId) {

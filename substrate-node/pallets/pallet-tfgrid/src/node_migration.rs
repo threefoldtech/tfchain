@@ -81,6 +81,7 @@ pub fn add_connection_price_to_nodes<T: Config>() -> frame_support::weights::Wei
                 secure_boot: node.secure_boot,
                 virtualized: node.virtualized,
                 serial_number: node.serial_number,
+                dedicated: false,
                 connection_price: 800,
             };
 
