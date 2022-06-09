@@ -644,6 +644,7 @@ decl_module! {
             // override node in storage
             Nodes::insert(stored_node.id, &stored_node);
 
+            Self::deposit_event(RawEvent::NodeUpdated(stored_node));
             Self::deposit_event(RawEvent::NodeCertificationSet(node_id, node_certification));
 
             Ok(())
