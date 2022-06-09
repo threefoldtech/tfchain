@@ -304,7 +304,7 @@ impl<T: Config> Module<T> {
         );
 
         let node = pallet_tfgrid::Nodes::get(node_id);
-        ensure!(node.dedicated == true, Error::<T>::NodeIsNotDedicated);
+        ensure!(node.dedicated, Error::<T>::NodeIsNotDedicated);
 
         // Create contract
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
