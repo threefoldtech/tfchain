@@ -90,12 +90,12 @@ decl_storage! {
         pub ConnectionPrice: u32;
 
         // ID maps
-        FarmID: u32;
-        NodeID: u32;
-        EntityID: u32;
-        TwinID: u32;
-        PricingPolicyID: u32;
-        FarmingPolicyID: u32;
+        pub FarmID: u32;
+        pub NodeID: u32;
+        pub EntityID: u32;
+        pub TwinID: u32;
+        pub PricingPolicyID: u32;
+        pub FarmingPolicyID: u32;
 
         /// The current version of the pallet.
         PalletVersion: types::StorageVersion = types::StorageVersion::V3Struct;
