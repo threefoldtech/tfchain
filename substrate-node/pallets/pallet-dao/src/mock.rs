@@ -10,10 +10,7 @@ use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
-use tfchain_support::{
-    traits::{ChangeNode},
-    types::{Node},
-};
+use tfchain_support::{traits::ChangeNode, types::Node};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -170,10 +167,12 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
         farming_policy_diy_su: 100000000,
         farming_policy_diy_nu: 2000000,
         farming_policy_diy_ipu: 800000,
+        farming_policy_diy_minimal_uptime: 95,
         farming_policy_certified_cu: 200000000,
         farming_policy_certified_su: 120000000,
         farming_policy_certified_nu: 3000000,
         farming_policy_certified_ipu: 1000000,
+        farming_policy_certified_minimal_uptime: 95,
         discount_for_dedication_nodes: 50,
         connection_price: 80,
     };
