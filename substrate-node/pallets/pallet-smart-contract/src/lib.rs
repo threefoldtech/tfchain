@@ -76,6 +76,7 @@ decl_event!(
         RentContractCanceled(u64),
         ContractGracePeriodStarted(u64, u32, u32, u64),
         ContractGracePeriodEnded(u64, u32, u32),
+        NodeMarkedAsDedicated(u32, bool),
     }
 );
 
@@ -183,6 +184,12 @@ decl_module! {
         fn create_rent_contract(origin, node_id: u32) {
             let account_id = ensure_signed(origin)?;
             Self::_create_rent_contract(account_id, node_id)?;
+        }
+
+        #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2)]
+        pub fn set_node_dedicated(origin, node_id: u32, dedicated: bool) -> DispatchResult {
+            let account_id = ensure_signed(origin)?;
+            Self::_set_node_dedicated(account_id, node_id, dedicated)
         }
 
         fn on_finalize(block: T::BlockNumber) {
@@ -1374,20 +1381,62 @@ impl<T: Config> Module<T> {
             Self::remove_contract(rent_contract.contract_id);
         }
     }
+
+    pub fn _set_node_dedicated(
+        origin: T::AccountId,
+        node_id: u32,
+        mark_dedicated: bool,
+    ) -> DispatchResult {
+        // If the node is marked as dedicated check for active contracts and throw and error if there are
+        // This makes sure that a node is "empty" before it can be fully rented
+        if mark_dedicated {
+            ensure!(
+                !ActiveRentContractForNode::contains_key(node_id),
+                Error::<T>::NodeHasRentContract
+            );
+            let active_node_contracts = ActiveNodeContracts::get(node_id);
+            ensure!(
+                active_node_contracts.len() == 0,
+                Error::<T>::NodeHasActiveContracts
+            );
+        }
+
+        ensure!(
+            pallet_tfgrid::Nodes::contains_key(node_id),
+            pallet_tfgrid::Error::<T>::NodeNotExists
+        );
+        let node = pallet_tfgrid::Nodes::get(node_id);
+
+        ensure!(
+            pallet_tfgrid::Farms::contains_key(node.farm_id),
+            pallet_tfgrid::Error::<T>::FarmNotExists
+        );
+        let farm = pallet_tfgrid::Farms::get(node.farm_id);
+
+        let farm_twin = pallet_tfgrid::Twins::<T>::get(farm.twin_id);
+        ensure!(
+            farm_twin.account_id == origin,
+            pallet_tfgrid::Error::<T>::NodeUpdateNotAuthorized
+        );
+
+        let mut stored_node = pallet_tfgrid::Nodes::get(node_id);
+
+        // If the node is toggled from dedicated to non-dedicated -> make sure to delete all contracts
+        if stored_node.dedicated && !mark_dedicated {
+            Self::decomssion_workloads_on_node(node_id);
+        }
+
+        stored_node.dedicated = mark_dedicated;
+        pallet_tfgrid::Nodes::insert(node_id, &stored_node);
+
+        Self::deposit_event(RawEvent::NodeMarkedAsDedicated(node_id, mark_dedicated));
+
+        Ok(())
+    }
 }
 
 impl<T: Config> ChangeNode for Module<T> {
-    fn node_changed(node: Option<&Node>, new_node: &Node) {
-        // check if node dedicated is toggled, if so, decomission all workloads
-        match node {
-            Some(old_node) => {
-                if old_node.dedicated && !new_node.dedicated {
-                    Self::decomssion_workloads_on_node(old_node.id);
-                }
-            }
-            None => (),
-        }
-    }
+    fn node_changed(_node: Option<&Node>, _new_node: &Node) {}
 
     fn node_deleted(node: &Node) {
         Self::decomssion_workloads_on_node(node.id);

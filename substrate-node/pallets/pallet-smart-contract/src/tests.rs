@@ -1708,6 +1708,97 @@ fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
     });
 }
 
+//  Dedicated node tests //
+// ---------------------- //
+
+#[test]
+fn test_set_node_dedicated() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+
+        assert_ok!(SmartContractModule::set_node_dedicated(
+            Origin::signed(alice()),
+            1,
+            true
+        ));
+
+        let node = TfgridModule::nodes(1);
+        assert_eq!(node.dedicated, true);
+    })
+}
+
+#[test]
+fn test_toggle_node_dedicated() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+
+        assert_ok!(SmartContractModule::set_node_dedicated(
+            Origin::signed(alice()),
+            1,
+            true
+        ));
+
+        let node = TfgridModule::nodes(1);
+        assert_eq!(node.dedicated, true);
+
+        assert_ok!(SmartContractModule::set_node_dedicated(
+            Origin::signed(alice()),
+            1,
+            false
+        ));
+
+        let node = TfgridModule::nodes(1);
+        assert_eq!(node.dedicated, false);
+    })
+}
+
+#[test]
+fn test_rent_contract_canceled_if_dedicated_node_unmarked_works() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_dedicated_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(bob()),
+            node_id
+        ));
+
+        assert_ok!(SmartContractModule::set_node_dedicated(
+            Origin::signed(alice()),
+            1,
+            false
+        ));
+
+        let node = TfgridModule::nodes(1);
+        assert_eq!(node.dedicated, false);
+
+        let c1 = SmartContractModule::contracts(1);
+        assert_eq!(c1, types::Contract::default());
+    })
+}
+
+#[test]
+fn test_set_node_dedicated_fails_with_active_contracts_works() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(bob()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            1
+        ));
+
+        assert_noop!(
+            SmartContractModule::set_node_dedicated(Origin::signed(alice()), 1, true),
+            Error::<TestRuntime>::NodeHasActiveContracts
+        );
+    })
+}
+
 //  MODULE FUNCTION TESTS //
 // ---------------------- //
 
@@ -1975,7 +2066,7 @@ pub fn prepare_farm_and_dedicated_node() {
         "some_serial".as_bytes().to_vec(),
     ));
 
-    assert_ok!(TfgridModule::set_node_dedicated(
+    assert_ok!(SmartContractModule::set_node_dedicated(
         Origin::signed(alice()),
         1,
         true,

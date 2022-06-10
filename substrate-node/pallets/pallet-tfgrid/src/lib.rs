@@ -244,7 +244,6 @@ decl_event!(
         FarmingPolicyUpdated(types::FarmingPolicy<BlockNumber>),
         FarmingPolicySet(u32, Option<FarmingPolicyLimit>),
         FarmCertificationSet(u32, FarmCertification),
-        NodeMarkedAsDedicated(u32, bool),
     }
 );
 
@@ -1251,30 +1250,6 @@ decl_module! {
             Farms::insert(farm_id, farm);
 
             Self::deposit_event(RawEvent::FarmingPolicySet(farm_id, limits));
-
-            Ok(())
-        }
-
-        #[weight = 100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2)]
-        pub fn set_node_dedicated(origin, node_id: u32, dedicated: bool) -> dispatch::DispatchResult {
-            let account_id = ensure_signed(origin)?;
-
-            ensure!(Nodes::contains_key(node_id), Error::<T>::NodeNotExists);
-            let node = Nodes::get(node_id);
-
-            ensure!(Farms::contains_key(node.farm_id), Error::<T>::FarmNotExists);
-            let farm = Farms::get(node.farm_id);
-
-            let farm_twin = Twins::<T>::get(farm.twin_id);
-            ensure!(farm_twin.account_id == account_id, Error::<T>::NodeUpdateNotAuthorized);
-
-            let mut stored_node = Nodes::get(node_id);          
-            stored_node.dedicated = dedicated;
-            Nodes::insert(node_id, &stored_node);
-
-            T::NodeChanged::node_changed(Some(&node), &stored_node);
-
-            Self::deposit_event(RawEvent::NodeMarkedAsDedicated(node_id, dedicated));
 
             Ok(())
         }
