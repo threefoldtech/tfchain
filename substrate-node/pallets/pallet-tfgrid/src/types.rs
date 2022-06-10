@@ -109,9 +109,13 @@ pub struct FarmingPolicy<BlockNumber> {
     pub version: u32,
     pub id: u32,
     pub name: Vec<u8>,
+    // CU: expressed as mUSD / period
     pub cu: u32,
+    // SU: expressed as mUSD / period
     pub su: u32,
+    // NU: epxressed as mUSD
     pub nu: u32,
+    // IPV4: expressed as mUSD / hour
     pub ipv4: u32,
     // Minimal uptime in order to benefit from this uptime.
     pub minimal_uptime: u16,

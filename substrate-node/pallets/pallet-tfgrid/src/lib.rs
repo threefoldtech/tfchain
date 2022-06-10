@@ -12,7 +12,7 @@ use frame_support::{
 use frame_system::{self as system, ensure_signed, RawOrigin};
 use hex::FromHex;
 use pallet_timestamp as timestamp;
-use sp_runtime::{traits::SaturatedConversion, DispatchError};
+use sp_runtime::{traits::{SaturatedConversion, Bounded}, DispatchError};
 use sp_std::prelude::*;
 use tfchain_support::{
     resources,
@@ -90,12 +90,12 @@ decl_storage! {
         pub ConnectionPrice: u32;
 
         // ID maps
-        FarmID: u32;
-        NodeID: u32;
-        EntityID: u32;
-        TwinID: u32;
-        PricingPolicyID: u32;
-        FarmingPolicyID: u32;
+        pub FarmID: u32;
+        pub NodeID: u32;
+        pub EntityID: u32;
+        pub TwinID: u32;
+        pub PricingPolicyID: u32;
+        pub FarmingPolicyID: u32;
 
         /// The current version of the pallet.
         PalletVersion: types::StorageVersion = types::StorageVersion::V3Struct;
@@ -120,11 +120,13 @@ decl_storage! {
         config(farming_policy_diy_nu): u32;
         config(farming_policy_diy_su): u32;
         config(farming_policy_diy_ipu): u32;
+        config(farming_policy_diy_minimal_uptime): u16;
 
         config(farming_policy_certified_cu): u32;
         config(farming_policy_certified_nu): u32;
         config(farming_policy_certified_su): u32;
         config(farming_policy_certified_ipu): u32;
+        config(farming_policy_certified_minimal_uptime): u16;
 
         config(connection_price): u32;
 
@@ -176,25 +178,35 @@ decl_storage! {
                 _config.discount_for_dedication_nodes
             );
 
-            // let _ = <Module<T>>::create_farming_policy(
-            //     RawOrigin::Root.into(),
-            //     "threefold_default_diy_farming_policy".as_bytes().to_vec(),
-            //     _config.farming_policy_diy_su,
-            //     _config.farming_policy_diy_cu,
-            //     _config.farming_policy_diy_nu,
-            //     _config.farming_policy_diy_ipu,
-            //     NodeCertification::Diy,
-            // );
+            let _ = <Module<T>>::create_farming_policy(
+                RawOrigin::Root.into(),
+                "threefold_default_diy_farming_policy".as_bytes().to_vec(),
+                _config.farming_policy_diy_su,
+                _config.farming_policy_diy_cu,
+                _config.farming_policy_diy_nu,
+                _config.farming_policy_diy_ipu,
+                _config.farming_policy_diy_minimal_uptime,
+                T::BlockNumber::max_value(),
+                false,
+                true,
+                NodeCertification::Diy,
+                FarmCertification::NotCertified,
+            );
 
-            // let _ = <Module<T>>::create_farming_policy(
-            //     RawOrigin::Root.into(),
-            //     "threefold_default_certified_farming_policy".as_bytes().to_vec(),
-            //     _config.farming_policy_certified_su,
-            //     _config.farming_policy_certified_cu,
-            //     _config.farming_policy_certified_nu,
-            //     _config.farming_policy_certified_ipu,
-            //     NodeCertification::Certified,
-            // );
+            let _ = <Module<T>>::create_farming_policy(
+                RawOrigin::Root.into(),
+                "threefold_default_certified_farming_policy".as_bytes().to_vec(),
+                _config.farming_policy_certified_su,
+                _config.farming_policy_certified_cu,
+                _config.farming_policy_certified_nu,
+                _config.farming_policy_certified_ipu,
+                _config.farming_policy_certified_minimal_uptime,
+                T::BlockNumber::max_value(),
+                false,
+                true,
+                NodeCertification::Certified,
+                FarmCertification::NotCertified,
+            );
 
             let _ = <Module<T>>::set_connection_price(
                 RawOrigin::Root.into(),
