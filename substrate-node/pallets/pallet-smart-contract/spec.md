@@ -1,8 +1,8 @@
 # Smart Contract for IT on the blockchain
 
-## Proposed architecture
+## Architecture
 
-Two main components will play a role in achieving a decentralised consensus between a user and a farmer.
+Two main components will play a role in achieving a decentralised consensus between a user and a node.
 
 1: TFGrid Substrate Database [Pallet TFGrid](../pallet-tfgrid/readme.md)
 
@@ -12,67 +12,57 @@ The TFGrid Substrate Database will keep a record of all users, twins, nodes and 
 
 check flow diagram: [flow](./flow.png)
 
-The Smart Contract on Substrate will work as following:
+## Concepts
 
-## 1: The user wants to deploy a workload, he interacts with this smart contract pallet and calls: `create_contract` with the input being:
+### Node Contract
 
-The user must instruct his twin to create the contract. A contract will always belong to a twin and to a node. This relationship is important because only the user's twin can update the contract as well as only the target node can update as well.
+A `NodeContact` represents a workload that the user wants to deploy on a node. The `deployment_hash` and `deployment_data` holds the workload definition. A user needs to create a workload definition using one our tools ([Terraform](https://github.com/threefoldtech/terraform-provider-grid), [Client](https://github.com/threefoldtech/grid3_client_ts), ..) and sign it. It's important that the user checks up front if the node can host his deployment (also done with client tools), if the node can accept his deployment a contract can be created and this will be picked up by the node once he also sends his deployment data to the node using [RMB](https://github.com/threefoldtech/rmb-rs). A deployment can also have a Public IP (ipv4) which is also configurable on contract create.
 
-json
-```
-contract {
-    "workload": "encrypted_workload_data",
-    "node_address": "some_node_address",
-    "public_ips": NumberOfPublicIPS
-}
-```
-The `node_address` field is the target node's ss58 address. A user can do lookup for a node to find it's corresponding address.
+When the contract is deployed on the Node, the Node will report the used resources by that contract. From that moment on, billing for that contract is enabled.
 
-The workload data is encrypted by the user and contains the workload definition for the node.
+### Rent Contract
 
-If `public_ips` is specified, the contract will reserve the number of public ips requested on the node's corresponding farm. If there are not enough ips available an error will be returned. If the contract is canceled by either the user or the node, the ips for that contract will be freed.
+A contract between a user and node for renting an entire node. A user can only select nodes that are `dedicated`. A farmer can mark his nodes as dedicated by calling `set_node_dedicated` on this module. When a node is not dedicated and has active contracts an error will be returned. If the node is marked as dedicated and a farmer wants to mark at is non-dedicated, the same call will decomission all active node/rent contracts on that node.
 
-This pallet saves this data to storage and returns the user a `contract_id`.
+When a user creates a `RentContract` he pays for the entire capacity on that node. Any subsequent `NodeContract` he deploys on that node is free of charge (because he is already paying for the entire capacity).
 
-## 2: The user sends the contractID through the RMB to the destination Node.
+### Name Contract
 
-The Node reads from the [RMB](https://github.com/threefoldtech/rmb) and sees a deploy command, it reads the contractID and fetches that Contract from this pallet's storage. It decodes the workload and does validation before it deploys the contents. If successfull it sets the Contract to state `deployed` on the chain. Else the contract is removed.
+Is a contract to reserve a unique name that can be used on the Threefold Web Gateways. A name is unique and is bound to the creator.
 
-## 3: The Node sends consumption reports to the chain
+### Billing
 
-The Node periodically sends consumption reports back to the chain for each deployed contract. The chain will compute how much is being used and will bill the user based on the farmers prices (the chain can read these prices by quering the farmers storage and reading the pricing data). See [PricingPolicy](https://github.com/threefoldtech/substrate-pallets/blob/03a5823ce79200709d525ec182036b47a60952ef/pallet-tfgrid/src/types.rs#L120).
+Any contract type (NodeContract, RentContract, NameContract) when created is inserted in a billing loop. The frequency of which this contract gets billed is configurable by a trait `BillingFrequency` which stands for a number of blocks. When this amount of blocks pass the contract cost is calculated as following:
 
-A report looks like:
+- Amount of `resources in use * price for those resources * time passed`
+- Amount `NRU (network) used * price for network units * time passed`
 
-json
-```
-{
-	"contract_id": contractID,
-	"cru": cpus,
-	"sru": ssdInBytes,
-	"hru": hddInBytes,
-	"mru": memInBytes,
-	"nru": trafficInBytes
-}
-```
+Name contracts cost calculation is a static price \*
 
-The node can call `add_reports` on this module to submit reports in batches.
+The pricing for contracts is read from `PricingPolicy` defined in `pallet-tfgrid` and the cost is calculated in USD. The amount due is then calculated in TFT based on the current price of TFT and the amount due in USD (see [Pallet TFT Price](../pallet-tft-price/readme.md)). This amount is then locked on the user's account, the lock identifier being the contract ID for which the contract cost is calculated.
 
-Usage of SU, CU and NU will be computed based on the prices and the rules that Threefold set out for cloud pricing.
+Another configuration trait `DistributionFrequency` allows to set a frequency in block numbers where the contract rewards are distributed. This is done to not overload the system, say you put the `BillingFrequency` to 1 hour, you can put the `DistributionFrequency` to 24 hours.
 
-Billing will be done in Database Tokens and will be send to the corresponding farmer. If the user runs out of funds the chain will set the contract state to `canceled` or it will be removed from storage. The Node needs to act on this contact canceled event and decomission the workload. 
+Each contract where the rewards are distributed, are distributed to the following parties defined in `PricingPolicy` (see pallet-tfgrid).
 
-The main currency of this chain. More information on this is explained here: TODO
+- 5% To the validator staking pool (Rewards farmers that run TFChain 3.0 validator nodes in a later stage)
+- 10% to the Threefold foundation (Funds allocated to promote and grow the ThreeFold Grid)
+- 35% Burned (A mechanism used to maintain scarcity in the TFT economy)
+- 50% Solution providers & sales channel (Managed by the DAO)
 
-## Grace period for contracts
+When a contract is canceled before the `DistributionFrequency` or `BillingFrequency` the elapsed time is calculated and the user get's billed for that amount and the rewards are distributed.
 
-Implements a grace period state `GracePeriod(startBlockNumber)` for all contract types
-A grace period is a static amount of time defined by the runtime configuration.
+### Discounts
 
+A user will get discounts on Contracts when he holds X amount of tokens in his wallet. Discounts are defined here: https://library.threefold.me/info/threefold/#/cloud/threefold__pricing?id=discount-levels.
 
-Grace period is triggered if the amount due for a billing cycle is larger than the user's balance. 
-A grace period is removed on a contract if the next billing cycles notices that the user reloaded the balance on his account. 
-If this happens, the contract is set back to created state. If a user ignores a graced-out contract, the contract is deleted after the time defined by Grace Period configuration trait.
+### Grace period for contracts
+
+There is a configuration trait `GracePeriod` that enabled grace period for contracts that ran out of funds.
+
+Grace period is triggered if the amount due for a billing cycle is larger than the user's balance.
+A grace period is removed on a contract if the next billing cycles notices that the user reloaded the balance on his account.
+If this happens, the contract is set back to created state. If a user ignores a graced-out contract, the contract is deleted after the time defined by `GracePeriod` configuration trait.
 
 ## Footnote
 
