@@ -4,26 +4,37 @@
 
 ### Node
 
-You will need a specific version of rust nightly in order to compile:
+Ensure you have the following installed first (they can be installed using apt-get install): 
+- librocksdb-dev
+- libclang-dev
+- clang lldb lld
+- build-essential 
 
-`rustup install nightly`
-
-Wasm toolchain:
-
-`rustup target add wasm32-unknown-unknown --toolchain nightly`
+You will also need  rust and nightly installed. 
+To install Rust:
+```
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+To install nightly:
+```
+rustup install nightly-2021-06-09
+```
 
 Now you can build.
 
-```sh
+```
 cd substrate-node
-# make sure you run nightly
-rustup override set nightly
-cargo build
+
+rustup target add wasm32-unknown-unknown --toolchain nightly-2021-06-09
+
+cargo +nightly-2021-06-09 build --release
 ```
 
-This will build the node binary in debug mode, once built you can execute it by doing following:
+This will build the node binary in release mode, once built you can execute it by doing following:
 
-`./target/debug/tfchain --dev --ws-external`
+```
+./target/release/tfchain --ws-external --rpc-methods Unsafe --dev
+```
 
 > You need the `ws-external` flag in order to connect from a zos node to substrate in a local setup.
 
