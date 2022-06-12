@@ -2,9 +2,8 @@
 
 ## Installation
 
-### Node
-
-Ensure you have the following installed first (they can be installed using apt-get install): 
+#### Prerequisites:
+Ensure you have the following installed first: 
 - librocksdb-dev
 - libclang-dev
 - clang lldb lld
@@ -19,14 +18,20 @@ To install nightly:
 ```
 rustup install nightly-2021-06-09
 ```
-
-Now you can build.
+### Node
+Navigate to substrate node:
 
 ```
 cd substrate-node
+```
 
+Add Wasm toolchain:
+```
 rustup target add wasm32-unknown-unknown --toolchain nightly-2021-06-09
+```
 
+Now you can build:
+```
 cargo +nightly-2021-06-09 build --release
 ```
 
