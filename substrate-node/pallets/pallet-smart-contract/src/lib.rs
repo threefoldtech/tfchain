@@ -316,7 +316,7 @@ impl<T: Config> Module<T> {
         );
 
         let farm = pallet_tfgrid::Farms::get(node.farm_id);
-        ensure!(farm.dedicated_farm == true, Error::<T>::NodeIsNotDedicated);
+        ensure!(farm.dedicated_farm, Error::<T>::NodeIsNotDedicated);
 
         // Create contract
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
