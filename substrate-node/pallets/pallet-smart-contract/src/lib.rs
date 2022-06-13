@@ -349,7 +349,7 @@ impl<T: Config> Module<T> {
         );
 
         let farm = pallet_tfgrid::Farms::get(node.farm_id);
-        ensure!(farm.dedicated_farm == true, Error::<T>::NodeIsNotDedicated);
+        ensure!(farm.dedicated_farm, Error::<T>::NodeIsNotDedicated);
 
         // Create contract
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
@@ -1531,6 +1531,6 @@ impl<T: Config> ChangeNode for Module<T> {
     fn node_changed(_node: Option<&Node>, _new_node: &Node) {}
 
     fn node_deleted(node: &Node) {
-        Self::decomssion_workloads_on_node(node.id);
+        Self::decomssion_workloads_on_node(node.id);gin
     }
 }
