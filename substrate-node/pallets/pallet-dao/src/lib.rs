@@ -103,7 +103,7 @@ pub mod pallet {
         _,
         Identity,
         T::Hash,
-        proposal::Votes<ProposalIndex, T::BlockNumber, T::AccountId>,
+        proposal::DaoVotes<ProposalIndex, T::BlockNumber, T::AccountId>,
         OptionQuery,
     >;
 
@@ -215,7 +215,7 @@ pub mod pallet {
 
             let votes = {
                 let end = frame_system::Pallet::<T>::block_number() + T::MotionDuration::get();
-                proposal::Votes {
+                proposal::DaoVotes {
                     index,
                     threshold,
                     ayes: vec![],
