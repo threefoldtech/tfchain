@@ -1531,6 +1531,6 @@ impl<T: Config> ChangeNode for Module<T> {
     fn node_changed(_node: Option<&Node>, _new_node: &Node) {}
 
     fn node_deleted(node: &Node) {
-        Self::decomssion_workloads_on_node(node.id);gin
+        Self::decomssion_workloads_on_node(node.id);
     }
 }
