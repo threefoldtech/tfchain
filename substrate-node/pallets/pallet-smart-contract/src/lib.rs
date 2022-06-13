@@ -36,6 +36,7 @@ mod benchmarking;
 
 pub mod types;
 pub mod weights;
+pub mod contract_migration;
 
 pub use weights::WeightInfo;
 
@@ -144,6 +145,9 @@ decl_storage! {
         // ID maps
         pub ContractID: u64;
         pub SolutionProviderID: u64;
+
+        /// The current version of the pallet.
+        PalletVersion: types::PalletStorageVersion = types::PalletStorageVersion::V1;
     }
 }
 
