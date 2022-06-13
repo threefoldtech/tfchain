@@ -240,6 +240,7 @@ pub fn prepare_farm<T: Config>(source: T::AccountId) {
         domain_name_policy,
         x1,
         x2,
+        80
     )
     .unwrap();
 

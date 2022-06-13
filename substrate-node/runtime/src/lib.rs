@@ -68,6 +68,11 @@ pub use pallet_runtime_upgrade;
 
 pub use pallet_validator;
 
+pub use pallet_dao;
+
+mod migrations;
+use self::migrations::*;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -305,10 +310,13 @@ impl pallet_sudo::Config for Runtime {
 
 pub struct NodeChanged;
 impl ChangeNode for NodeChanged {
-    fn node_changed(_old_node: Option<&Node>, _new_node: &Node) {}
+    fn node_changed(old_node: Option<&Node>, new_node: &Node) {
+        Dao::node_changed(old_node, new_node)
+    }
 
     fn node_deleted(node: &Node) {
-        SmartContractModule::node_deleted(node)
+        SmartContractModule::node_deleted(node);
+        Dao::node_deleted(node);
     }
 }
 
@@ -381,6 +389,22 @@ impl pallet_validator::Config for Runtime {
 impl validatorset::Config for Runtime {
     type Event = Event;
     type AddRemoveOrigin = EnsureRootOrCouncilApproval;
+}
+
+parameter_types! {
+    pub const DaoMotionDuration: BlockNumber = 7 * DAYS;
+    pub const MinVetos: u32 = 3;
+}
+
+impl pallet_dao::Config for Runtime {
+    type Event = Event;
+    type CouncilOrigin = EnsureRootOrCouncilApproval;
+    type Proposal = Call;
+    type MotionDuration = DaoMotionDuration;
+    type Tfgrid = TfgridModule;
+    type NodeChanged = NodeChanged;
+    type WeightInfo = pallet_dao::weights::SubstrateWeight<Runtime>;
+    type MinVetos = MinVetos;
 }
 
 /// Special `FullIdentificationOf` implementation that is returning for every input `Some(Default::default())`.
@@ -598,6 +622,7 @@ construct_runtime!(
         CouncilMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
         RuntimeUpgrade: pallet_runtime_upgrade::{Module, Call, Event},
         Validator: pallet_validator::{Module, Call, Storage, Event<T>},
+        Dao: pallet_dao::{Module, Call, Storage, Event<T>},
     }
 );
 
@@ -632,6 +657,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllModules,
+    CustomOnRuntimeUpgrades,
 >;
 
 impl_runtime_apis! {
@@ -802,6 +828,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
             add_benchmark!(params, batches, pallet_tfgrid, TfgridModule);
             add_benchmark!(params, batches, pallet_smart_contract, SmartContractModule);
+            add_benchmark!(params, batches, pallet_dao, Dao);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)

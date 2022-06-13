@@ -3719,6 +3719,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-dao"
+version = "3.0.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-collective",
+ "pallet-membership",
+ "pallet-tfgrid",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "tfchain-support",
+]
+
+[[package]]
 name = "pallet-grandpa"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7399,6 +7419,7 @@ dependencies = [
  "pallet-balances",
  "pallet-burning",
  "pallet-collective",
+ "pallet-dao",
  "pallet-grandpa",
  "pallet-kvstore",
  "pallet-membership",
