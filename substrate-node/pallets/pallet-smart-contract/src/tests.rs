@@ -26,7 +26,8 @@ fn test_create_node_contract_works() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0
+            0,
+            None
         ));
     });
 }
@@ -41,7 +42,8 @@ fn test_create_node_contract_with_public_ips_works() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            1
+            1,
+            None
         ));
 
         let node_contract = SmartContractModule::contracts(1);
@@ -70,7 +72,8 @@ fn test_create_node_contract_with_undefined_node_fails() {
                 2,
                 "some_data".as_bytes().to_vec(),
                 "hash".as_bytes().to_vec(),
-                0
+                0,
+                None
             ),
             Error::<TestRuntime>::NodeNotExists
         );
@@ -87,7 +90,8 @@ fn test_create_node_contract_with_same_hash_and_node_fails() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0
+            0,
+            None
         ));
 
         assert_noop!(
@@ -96,7 +100,8 @@ fn test_create_node_contract_with_same_hash_and_node_fails() {
                 1,
                 "some_data".as_bytes().to_vec(),
                 "hash".as_bytes().to_vec(),
-                0
+                0,
+                None
             ),
             Error::<TestRuntime>::ContractIsNotUnique
         );
@@ -113,7 +118,8 @@ fn test_create_node_contract_which_was_canceled_before_works() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0
+            0,
+            None
         ));
         let contract_id = SmartContractModule::node_contract_by_hash(1, "hash".as_bytes().to_vec());
         assert_eq!(contract_id, 1);
@@ -128,7 +134,8 @@ fn test_create_node_contract_which_was_canceled_before_works() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0
+            0,
+            None
         ));
         let contract_id = SmartContractModule::node_contract_by_hash(1, "hash".as_bytes().to_vec());
         assert_eq!(contract_id, 2);
@@ -145,7 +152,8 @@ fn test_update_node_contract_works() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0
+            0,
+            None
         ));
 
         assert_ok!(SmartContractModule::update_node_contract(
@@ -170,6 +178,7 @@ fn test_update_node_contract_works() {
             twin_id: 1,
             version: 3,
             contract_type,
+            solution_provider_id: None,
         };
 
         let node_contract = SmartContractModule::contracts(1);
@@ -213,7 +222,8 @@ fn test_update_node_contract_wrong_twins_fails() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0
+            0,
+            None
         ));
 
         assert_noop!(
@@ -238,7 +248,8 @@ fn test_cancel_node_contract_works() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0
+            0,
+            None
         ));
 
         assert_ok!(SmartContractModule::cancel_contract(
@@ -264,7 +275,8 @@ fn test_create_multiple_node_contracts_works() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash1".as_bytes().to_vec(),
-            0
+            0,
+            None
         ));
 
         assert_ok!(SmartContractModule::create_node_contract(
@@ -272,7 +284,8 @@ fn test_create_multiple_node_contracts_works() {
             1,
             "some_data2".as_bytes().to_vec(),
             "hash2".as_bytes().to_vec(),
-            0
+            0,
+            None
         ));
 
         assert_ok!(SmartContractModule::create_node_contract(
@@ -280,7 +293,8 @@ fn test_create_multiple_node_contracts_works() {
             1,
             "some_data3".as_bytes().to_vec(),
             "hash3".as_bytes().to_vec(),
-            0
+            0,
+            None
         ));
 
         let node_contracts = SmartContractModule::active_node_contracts(1);
@@ -307,7 +321,8 @@ fn test_cancel_node_contract_frees_public_ips_works() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            1
+            1,
+            None
         ));
 
         let farm = TfgridModule::farms(1);
@@ -345,7 +360,8 @@ fn test_cancel_node_contract_wrong_twins_fails() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0
+            0,
+            None
         ));
 
         assert_noop!(
@@ -548,7 +564,8 @@ fn test_create_node_contract_on_dedicated_node_without_rent_contract_fails() {
                 1,
                 "some_data".as_bytes().to_vec(),
                 "hash".as_bytes().to_vec(),
-                1
+                1,
+                None
             ),
             Error::<TestRuntime>::NodeNotAvailableToDeploy
         );
@@ -570,7 +587,8 @@ fn test_create_node_contract_when_having_a_rentcontract_works() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            1
+            1,
+            None
         ));
     })
 }
@@ -594,7 +612,8 @@ fn test_create_node_contract_when_someone_else_has_rent_contract_fails() {
                 1,
                 "some_data".as_bytes().to_vec(),
                 "hash".as_bytes().to_vec(),
-                1
+                1,
+                None
             ),
             Error::<TestRuntime>::NodeHasRentContract
         );
@@ -619,7 +638,8 @@ fn test_cancel_rent_contract_with_active_node_contracts_fails() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            1
+            1,
+            None
         ));
 
         assert_noop!(
@@ -647,7 +667,8 @@ fn test_node_contract_billing_details() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            1
+            1,
+            None
         ));
 
         push_contract_resources_used(1);
@@ -724,7 +745,8 @@ fn test_multiple_contracts_billing_loop_works() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            1
+            1,
+            None
         ));
         assert_ok!(SmartContractModule::create_name_contract(
             Origin::signed(bob()),
@@ -773,7 +795,8 @@ fn test_node_contract_billing_cycles() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0
+            0,
+            None
         ));
         let contract_id = 1;
         let twin_id = 2;
@@ -814,7 +837,8 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            1
+            1,
+            None
         ));
         let contract_id = 1;
         let twin_id = 2;
@@ -889,7 +913,8 @@ fn test_node_contract_only_public_ip_billing_cycles() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            1
+            1,
+            None
         ));
         let contract_id = 1;
         let twin_id = 2;
@@ -929,7 +954,8 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0
+            0,
+            None
         ));
 
         let contract_id = 1;
@@ -975,7 +1001,8 @@ fn test_node_contract_out_of_funds_should_move_state_to_graceperiod_works() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0
+            0,
+            None
         ));
 
         push_contract_resources_used(1);
@@ -1022,7 +1049,8 @@ fn test_restore_node_contract_in_grace_works() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0
+            0,
+            None
         ));
 
         push_contract_resources_used(1);
@@ -1091,7 +1119,8 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0
+            0,
+            None
         ));
 
         push_contract_resources_used(1);
@@ -1333,7 +1362,8 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0
+            0,
+            None
         ));
         push_contract_resources_used(2);
 
@@ -1384,7 +1414,8 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0
+            0,
+            None
         ));
         push_contract_resources_used(2);
 
@@ -1458,7 +1489,8 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            1
+            1,
+            None
         ));
 
         run_to_block(12);
@@ -1666,7 +1698,8 @@ fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
             1,
             "some_data".as_bytes().to_vec(),
             "hash".as_bytes().to_vec(),
-            0
+            0,
+            None
         ));
         push_contract_resources_used(2);
 
@@ -1968,7 +2001,7 @@ pub fn prepare_dedicated_farm_and_node() {
 
     let country = "Belgium".as_bytes().to_vec();
     let city = "Ghent".as_bytes().to_vec();
-    TfgridModule::create_node(
+    assert_ok!(TfgridModule::create_node(
         Origin::signed(alice()),
         1,
         resources,
@@ -1979,8 +2012,7 @@ pub fn prepare_dedicated_farm_and_node() {
         false,
         false,
         "some_serial".as_bytes().to_vec(),
-    )
-    .unwrap();
+    ));
 }
 
 pub fn create_twin(origin: AccountId) {

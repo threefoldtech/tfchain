@@ -21,6 +21,7 @@ pub struct Contract {
     pub contract_id: u64,
     pub twin_id: u32,
     pub contract_type: ContractData,
+    pub solution_provider_id: Option<u64>,
 }
 
 impl Contract {
@@ -57,14 +58,14 @@ pub struct NameContract {
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
 pub struct RentContract {
-    pub node_id: u32
+    pub node_id: u32,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
 pub enum ContractData {
     NodeContract(NodeContract),
     NameContract(NameContract),
-    RentContract(RentContract)
+    RentContract(RentContract),
 }
 
 impl Default for ContractData {
@@ -84,7 +85,7 @@ pub struct ContractBillingInformation {
 pub enum ContractState {
     Created,
     Deleted(Cause),
-    GracePeriod(BlockNumber)
+    GracePeriod(BlockNumber),
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
@@ -164,4 +165,19 @@ pub struct ContractLock<BalanceOf> {
     pub amount_locked: BalanceOf,
     pub lock_updated: u64,
     pub cycles: u16,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+pub struct SolutionProvider<AccountId> {
+    pub solution_provider_id: u64,
+    pub providers: Vec<Provider<AccountId>>,
+    pub description: Vec<u8>,
+    pub link: Vec<u8>,
+    pub approved: bool,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+pub struct Provider<AccountId> {
+    pub who: AccountId,
+    pub take: u8,
 }
