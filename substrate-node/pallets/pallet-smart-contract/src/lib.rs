@@ -124,7 +124,7 @@ decl_error! {
         CannotUpdateContractInGraceState,
         InvalidProviderConfiguration,
         NoSuchSolutionProvider,
-        SolutionProviderNotApproved
+        SolutionProviderNotApproved,
         NumOverflow
     }
 }
@@ -874,13 +874,12 @@ impl<T: Config> Module<T> {
             // Fetch the default pricing policy
             let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
             // Distribute cultivation rewards
-            match Self::_distribute_cultivation_rewards(
+            if let Err(err) = Self::_distribute_cultivation_rewards(
                 &contract,
                 &pricing_policy,
                 contract_lock.amount_locked,
             ) {
-                Ok(_) => (),
-                Err(err) => debug::info!("error while distributing cultivation rewards {:?}", err),
+                debug::info!("error while distributing cultivation rewards {:?}", err);
             };
             // Reset values
             contract_lock.lock_updated = now;
@@ -1132,35 +1131,38 @@ impl<T: Config> Module<T> {
 
         let mut sales_share = 50;
 
-        let _ = match contract.solution_provider_id {
-            Some(provider_id) => {
-                let solution_provider = SolutionProviders::<T>::get(provider_id);
-                let total_take: u8 = solution_provider
-                    .providers
-                    .iter()
-                    .map(|provider| provider.take)
-                    .sum();
-                sales_share = sales_share - total_take;
+        if let Some(provider_id) = contract.solution_provider_id {
+            let solution_provider = SolutionProviders::<T>::get(provider_id);
+            let total_take: u8 = solution_provider
+                .providers
+                .iter()
+                .map(|provider| provider.take)
+                .sum();
+            sales_share -= total_take;
 
-                let _ = solution_provider.providers.iter().map(|provider| {
-                    let share = Perbill::from_percent(provider.take as u32) * amount;
-                    debug::info!(
-                        "Transfering: {:?} from contract twin {:?} to provider account {:?}",
-                        &share,
-                        &twin.account_id,
-                        &provider.who
-                    );
-                    <T as Config>::Currency::transfer(
-                        &twin.account_id,
-                        &provider.who,
-                        share,
-                        KeepAlive,
-                    )
-                    .unwrap_or(debug::info!("error"));
-                });
+            if !solution_provider.providers.iter().map(|provider| {
+                let share = Perbill::from_percent(provider.take as u32) * amount;
+                debug::info!(
+                    "Transfering: {:?} from contract twin {:?} to provider account {:?}",
+                    &share,
+                    &twin.account_id,
+                    &provider.who
+                );
+                <T as Config>::Currency::transfer(
+                    &twin.account_id,
+                    &provider.who,
+                    share,
+                    KeepAlive,
+                )
+            })
+            .filter(|result| result.is_err())
+            .collect::<Vec<DispatchResult>>()
+            .is_empty() {
+                return Err(DispatchError::from(Error::<T>::InvalidProviderConfiguration))
             }
-            None => (),
         };
+
+        println!("sales share: percentage {:?}", sales_share);
 
         if sales_share > 0 {
             let share = Perbill::from_percent(sales_share.into()) * amount;
