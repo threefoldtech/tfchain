@@ -323,13 +323,6 @@ decl_module! {
 
         fn deposit_event() = default;
 
-        fn on_runtime_upgrade() -> frame_support::weights::Weight {
-            frame_support::debug::info!("Resetting farming policy ID map...");
-            FarmingPolicyID::put(0);
-            frame_support::debug::info!("Resetting farming policy ID map done!");
-            100_000_000
-        }
-
         #[weight = 100_000_000 + T::DbWeight::get().writes(1)]
         pub fn set_storage_version(origin, version: types::StorageVersion) -> dispatch::DispatchResult {
             T::RestrictedOrigin::ensure_origin(origin)?;

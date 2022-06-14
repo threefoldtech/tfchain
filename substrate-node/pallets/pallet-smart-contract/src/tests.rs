@@ -1,7 +1,7 @@
 use crate::{mock::*, Error, RawEvent};
 use frame_support::{
     assert_noop, assert_ok,
-    traits::{OnFinalize, OnInitialize},
+    traits::{OnFinalize, OnInitialize, LockableCurrency, WithdrawReasons},
 };
 use frame_system::RawOrigin;
 use sp_runtime::{Perbill, Percent};
@@ -1771,6 +1771,25 @@ fn test_cu_calculation() {
         let mru = U64F64::from_num(16);
         let cu = SmartContractModule::calculate_cu(cu, mru);
         assert_eq!(cu, 8);
+    })
+}
+
+#[test]
+fn test_lock() {
+    new_test_ext().execute_with(|| {
+        let id: u64 = 1;
+        Balances::set_lock(
+            id.to_be_bytes(),
+            &bob(),
+            100,
+            WithdrawReasons::RESERVE,
+        );
+
+        let usable_balance = Balances::usable_balance(&bob());
+        let free_balance = Balances::free_balance(&bob());
+
+        let locked_balance = free_balance - usable_balance;
+        assert_eq!(locked_balance, 100);
     })
 }
 
