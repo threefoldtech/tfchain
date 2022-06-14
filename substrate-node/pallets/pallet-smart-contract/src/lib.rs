@@ -799,7 +799,7 @@ impl<T: Config> Module<T> {
             GRID_LOCK_ID,
             &twin.account_id,
             amount_due,
-            WithdrawReasons::RESERVE,
+            WithdrawReasons::all(),
         );
 
         let is_canceled = matches!(contract.state, types::ContractState::Deleted(_));
@@ -827,7 +827,7 @@ impl<T: Config> Module<T> {
                 GRID_LOCK_ID,
                 &twin.account_id,
                 new_locked_balance,
-                WithdrawReasons::RESERVE,
+                WithdrawReasons::all(),
             );
 
             // Fetch the default pricing policy
