@@ -1,7 +1,7 @@
 use crate::{mock::*, Error, RawEvent};
 use frame_support::{
     assert_noop, assert_ok,
-    traits::{OnFinalize, OnInitialize},
+    traits::{OnFinalize, OnInitialize, LockableCurrency, WithdrawReasons},
 };
 use frame_system::RawOrigin;
 use sp_runtime::{Perbill, Percent};
@@ -1741,11 +1741,6 @@ fn test_cu_calculation() {
     })
 }
 
-use frame_support::{
-    traits::{
-        LockableCurrency, WithdrawReasons,
-    },
-};
 #[test]
 fn test_lock() {
     new_test_ext().execute_with(|| {
