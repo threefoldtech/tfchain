@@ -1825,11 +1825,15 @@ fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
 #[test]
 fn test_create_solution_provider_works() {
     new_test_ext().execute_with(|| {
-        let provider = super::types::Provider {
+        let provider1 = super::types::Provider {
             take: 10,
             who: alice()
         };
-        let providers = vec![provider];
+        let provider2 = super::types::Provider {
+            take: 10,
+            who: bob()
+        };
+        let providers = vec![provider1, provider2];
         
         assert_ok!(SmartContractModule::create_solution_provider(
             Origin::signed(alice()),
