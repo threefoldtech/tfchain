@@ -33,24 +33,6 @@ fn test_create_node_contract_works() {
 }
 
 #[test]
-fn test_create_node_contract_with_solution_provider_works() {
-    new_test_ext().execute_with(|| {
-        prepare_farm_and_node();
-
-        prepare_solution_provider();
-
-        assert_ok!(SmartContractModule::create_node_contract(
-            Origin::signed(alice()),
-            1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            0,
-            Some(1)
-        ));
-    });
-}
-
-#[test]
 fn test_create_node_contract_with_public_ips_works() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
@@ -1835,6 +1817,103 @@ fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
 
         assert_eq!(our_events[4], expected_events[0]);
         assert_eq!(our_events[7], expected_events[1]);
+    });
+}
+
+//  SOLUTION PROVIDER TESTS //
+// ------------------------ //
+#[test]
+fn test_create_solution_provider_works() {
+    new_test_ext().execute_with(|| {
+        let provider = super::types::Provider {
+            take: 10,
+            who: alice()
+        };
+        let providers = vec![provider];
+        
+        assert_ok!(SmartContractModule::create_solution_provider(
+            Origin::signed(alice()),
+            "some_description".as_bytes().to_vec(),
+            "some_link".as_bytes().to_vec(),
+            providers
+        ));
+        
+        assert_ok!(SmartContractModule::approve_solution_provider(
+            RawOrigin::Root.into(),
+            1,
+            true
+        ));
+    })
+}
+
+#[test]
+fn test_create_solution_provider_fails_if_take_to_high() {
+    new_test_ext().execute_with(|| {
+        let provider = super::types::Provider {
+            take: 51,
+            who: alice()
+        };
+        let providers = vec![provider];
+        
+        assert_noop!(
+            SmartContractModule::create_solution_provider(
+                Origin::signed(alice()),
+                "some_description".as_bytes().to_vec(),
+                "some_link".as_bytes().to_vec(),
+                providers
+            ),
+            Error::<TestRuntime>::InvalidProviderConfiguration
+        );
+    })
+}
+
+#[test]
+fn test_create_node_contract_with_solution_provider_works() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+
+        prepare_solution_provider();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(alice()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            0,
+            Some(1)
+        ));
+    });
+}
+
+#[test]
+fn test_create_node_contract_with_solution_provider_fails_if_not_approved() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+
+        let provider = super::types::Provider {
+            take: 10,
+            who: alice()
+        };
+        let providers = vec![provider];
+        
+        assert_ok!(SmartContractModule::create_solution_provider(
+            Origin::signed(alice()),
+            "some_description".as_bytes().to_vec(),
+            "some_link".as_bytes().to_vec(),
+            providers
+        ));
+
+        assert_noop!(
+                SmartContractModule::create_node_contract(
+                Origin::signed(alice()),
+                1,
+                "some_data".as_bytes().to_vec(),
+                "hash".as_bytes().to_vec(),
+                0,
+                Some(1)
+            ),
+            Error::<TestRuntime>::SolutionProviderNotApproved
+        );
     });
 }
 
