@@ -526,13 +526,21 @@ fn test_cancel_rent_contract_works() {
 }
 
 #[test]
-fn test_create_rent_contract_on_non_dedicated_node_fails() {
+fn test_create_rent_contract_on_node_in_use_fails() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
 
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(alice()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            1
+        ));
+
         assert_noop!(
             SmartContractModule::create_rent_contract(Origin::signed(bob()), 1,),
-            Error::<TestRuntime>::NodeIsNotDedicated
+            Error::<TestRuntime>::NodeNotAvailableToDeploy
         );
     })
 }
