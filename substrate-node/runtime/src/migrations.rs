@@ -87,7 +87,14 @@ impl frame_support::traits::OnRuntimeUpgrade for InsertNewFarmingPolicies {
         pallet_tfgrid::FarmingPoliciesMap::<Runtime>::insert(2, farming_policy_2);
 
         // Update internal ID
+        frame_support::debug::info!("Resetting farming policy ID map...");
         pallet_tfgrid::FarmingPolicyID::put(2);
+        frame_support::debug::info!("Resetting farming policy ID map done!");
+
+        // Set default connection price
+        frame_support::debug::info!("Initializing default connection price...");
+        pallet_tfgrid::ConnectionPrice::put(80);
+        frame_support::debug::info!("Initializing default connection price done!");
 
         <Runtime as frame_system::Config>::DbWeight::get().writes(3)
     }
