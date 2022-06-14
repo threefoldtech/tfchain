@@ -31,6 +31,16 @@ If not, this command will fetch the latest version of Rust and install it.
 
 `curl https://sh.rustup.rs -sSf | sh -s -- -y`
 
+To install nightly:
+```
+rustup install nightly-2021-06-09
+```
+
+Add Wasm toolchain:
+```
+rustup target add wasm32-unknown-unknown --toolchain nightly-2021-06-09
+```
+
 > If you do not have "curl" installed, run "sudo apt install curl"
 
 To configure your shell, run the following command.
@@ -74,7 +84,7 @@ You will need to build the tfchain binary from the threefoldtech/tfchain reposit
 Release to use for different networks:
 
 - Mainnet: 1.0.0 (git checkout 1.0.0)
-- Testnet: 1.0.0-b1 (git cehckout 1.0.0-b1)
+- Testnet: 1.0.0-b1 (git checkout 1.0.0-b1)
 - Devnet: 1.0.0-b9 (git checkout 1.0.0-b9)
 
 Note: If you prefer to use SSH rather than HTTPS, you can replace the first line of the below with git clone git@github.com:threefoldtech/tfchain.git.
@@ -87,19 +97,13 @@ git checkout 1.0.0
 
 Now build the binary
 
-`cargo build --release`
-
-This step will take a while (generally 10 - 40 minutes, depending on your hardware).
-
-Note if you run into compile errors, you may have to switch to a less recent nightly. This can be done by running:
-
 ```
-rustup install nightly-2021-06-09
-rustup target add wasm32-unknown-unknown --toolchain nightly-2021-06-09
 cargo +nightly-2021-06-09 build --release
 ```
 
-You may also need to run the build more than once.
+This step will take a while (generally 10 - 40 minutes, depending on your hardware).
+
+## Key management
 
 If you are interested in generating keys locally, you can also install subkey from the same directory. You may then take the generated subkey executable and transfer it to an air-gapped machine for extra security.
 
@@ -109,9 +113,7 @@ cargo install --force --git https://github.com/paritytech/substrate subkey
 
 ## Synchronize Chain Data
 
-Note: By default, Validator nodes are in archive mode. If you've already synced the chain not in archive mode, you must first remove the database with `polkadot purge-chain` and then ensure that you run Polkadot with the 1--pruning=archive1 option.
-
-You may run a validator node in non-archive mode by adding the following flags: --unsafe-pruning --pruning <NUM OF BLOCKS>, a reasonable value being 1000. Note that an archive node and non-archive node's databases are not compatible with each other, and to switch you will need to purge the chain data.
+You can now start synchronising chain data.
 
 Bootnodes examples:
 
@@ -122,6 +124,8 @@ Bootnodes examples:
 You can begin syncing your node by running the following command:
 
 `./target/release/tfchain --chain chainspecs/main/chainSpec.json --pruning=archive --bootnodes /ip4/185.206.122.83/tcp/30333/p2p/12D3KooWLtsdtQHswnXkLRH7e8vZJHktsh7gfuL5PoADV51JJ6wY --telemetry-url 'wss://shard1.telemetry.tfchain.grid.tf/submit 1'`
+
+The `--chain chainspecs/network/chainSpec.json` flag is different for every network, see above (Tfchain Binary). If you want to sync with testnet for example you need to check out the git repository on `1.0.0-b1`.
 
 if you do not want to start in validator mode right away.
 
@@ -172,6 +176,7 @@ This account will be your account that manages the Validator and manages your co
 
 You now should have 3 accounts.
 
+Note: Both `VALIDATOR_ACCOUNT` and `VALIDATOR_NODE_ACCOUNT` need atleast 0.1 TFT in order to make a validator object.
 
 > Bonding an account is optional, you can skip this step and continue to the next step.
 
