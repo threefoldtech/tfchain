@@ -1741,6 +1741,30 @@ fn test_cu_calculation() {
     })
 }
 
+use frame_support::{
+    traits::{
+        LockableCurrency, WithdrawReasons,
+    },
+};
+#[test]
+fn test_lock() {
+    new_test_ext().execute_with(|| {
+        let id: u64 = 1;
+        Balances::set_lock(
+            id.to_be_bytes(),
+            &bob(),
+            100,
+            WithdrawReasons::RESERVE,
+        );
+
+        let usable_balance = Balances::usable_balance(&bob());
+        let free_balance = Balances::free_balance(&bob());
+
+        let locked_balance = free_balance - usable_balance;
+        assert_eq!(locked_balance, 100);
+    })
+}
+
 #[test]
 fn test_percent() {
     let cost: u64 = 1000;
