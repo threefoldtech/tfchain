@@ -19,6 +19,7 @@ fn farmers_vote_no_farm_fails() {
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
             "some_link".as_bytes().to_vec(),
+            None
         ));
 
         assert_noop!(
@@ -44,6 +45,7 @@ fn farmers_vote_proposal_works() {
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
             "some_link".as_bytes().to_vec(),
+            None
         ));
 
         prepare_twin_farm_and_node(10, "f1".as_bytes().to_vec(), 1);
@@ -70,6 +72,7 @@ fn farmers_vote_proposal_if_no_nodes_fails() {
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
             "some_link".as_bytes().to_vec(),
+            None
         ));
 
         prepare_twin(10);
@@ -130,6 +133,7 @@ fn close_works() {
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
             "some_link".as_bytes().to_vec(),
+            None
         ));
 
         // Farmer 1 votes yes
@@ -227,6 +231,7 @@ fn motion_approval_works() {
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
             "some_link".as_bytes().to_vec(),
+            None
         ));
 
         // Farmer 1 votes yes
@@ -331,6 +336,7 @@ fn motion_veto_works() {
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
             "some_link".as_bytes().to_vec(),
+            None
         ));
 
         assert_ok!(DaoModule::veto(Origin::signed(2), hash.clone()));
@@ -436,6 +442,7 @@ fn weighted_voting_works() {
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
             "some_link".as_bytes().to_vec(),
+            None
         ));
 
         // Farmer 1 votes yes
@@ -530,6 +537,7 @@ fn voting_tfgridmodule_call_works() {
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
             "some_link".as_bytes().to_vec(),
+            None
         ));
 
         // Farmer 1 votes yes
@@ -618,6 +626,43 @@ fn voting_tfgridmodule_call_works() {
         prepare_node(15, 1);
         let n3 = TfgridModule::nodes(3);
         assert_eq!(n3.connection_price, 100);
+    });
+}
+
+#[test]
+fn customize_proposal_duration_works() {
+    new_test_ext().execute_with(|| {
+        System::set_block_number(1);
+        create_farming_policies();
+
+        let proposal = make_proposal("some_remark".as_bytes().to_vec());
+        let hash = BlakeTwo256::hash_of(&proposal);
+
+        assert_ok!(DaoModule::propose(
+            Origin::signed(1),
+            2,
+            Box::new(proposal.clone()),
+            "some_description".as_bytes().to_vec(),
+            "some_link".as_bytes().to_vec(),
+            Some(10)
+        ));
+
+        // Farmer 1 votes yes
+        prepare_twin_farm_and_node(10, "f1".as_bytes().to_vec(), 1);
+        assert_ok!(DaoModule::vote(Origin::signed(10), 1, hash.clone(), true));
+
+        // Farmer 2 votes yes
+        prepare_twin_farm_and_node(11, "f2".as_bytes().to_vec(), 2);
+        assert_ok!(DaoModule::vote(Origin::signed(11), 2, hash.clone(), true));
+
+        System::set_block_number(9);
+        assert_noop!(
+            DaoModule::close(Origin::signed(4), hash.clone(), 0,),
+            Error::<Test>::TooEarly
+        );
+
+        System::set_block_number(11);
+        assert_ok!(DaoModule::close(Origin::signed(4), hash.clone(), 0,));
     });
 }
 
