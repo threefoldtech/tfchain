@@ -34,6 +34,8 @@ package = "substrate-validator-set"
 path = "../pallets/substrate-validator-set"
 
 [dependencies]
+getrandom = { version = "0.2", features = ["js"] }
+
 smallvec = "1.4.0"
 log = { version = "0.4.14", default-features = false }
 bitflags = {default-features = false, version = "1.3.2"}

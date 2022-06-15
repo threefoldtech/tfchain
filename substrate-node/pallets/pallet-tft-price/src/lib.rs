@@ -5,35 +5,28 @@
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
-    ensure,
-    traits::{Get, EnsureOrigin}, 
-    weights::{Pays},
     dispatch::DispatchResultWithPostInfo,
+    ensure,
+    traits::{EnsureOrigin, Get},
+    weights::Pays,
 };
+
 use frame_system::{
     self as system, ensure_signed,
     offchain::{AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer},
 };
+use lite_json::json::JsonValue;
 use log;
-
-use sp_std::prelude::*;
-
-use codec::{Decode, Encode};
-use sp_runtime::traits::SaturatedConversion;
 use sp_runtime::offchain::{http, Duration};
-
-use substrate_fixed::types::U16F16;
+use sp_runtime::traits::SaturatedConversion;
 mod ringbuffer;
 
 use ringbuffer::{RingBufferTrait, RingBufferTransient};
 use sp_core::crypto::KeyTypeId;
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"tft!");
-#[derive(Encode, Decode, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "std", derive(Debug))]
-pub struct ValueStruct {
-    value: U16F16,
-}
+
 type BufferIndex = u16;
+
 #[cfg(test)]
 mod tests;
 pub mod crypto {
@@ -77,15 +70,16 @@ pub trait Config: system::Config + CreateSignedTransaction<Call<Self>> {
     type Call: From<Call<Self>>;
     /// Origin for restricted extrinsics
     /// Can be the root or another origin configured in the runtime
-    type RestrictedOrigin: EnsureOrigin<Self::Origin>;}
+    type RestrictedOrigin: EnsureOrigin<Self::Origin>;
+}
 
 decl_storage! {
     trait Store for Module<T: Config> as TFTPriceModule {
         // Token price
-        pub TftPrice: U16F16;
+        pub TftPrice: u32;
         LastBlockSet: T::BlockNumber;
-        pub AverageTftPrice: U16F16;
-        pub TftPriceHistory get(fn get_value): map hasher(twox_64_concat) BufferIndex => ValueStruct;
+        pub AverageTftPrice: u32;
+        pub TftPriceHistory get(fn get_value): map hasher(twox_64_concat) BufferIndex => u32;
         BufferRange get(fn range): (BufferIndex, BufferIndex) = (0, 0);
         pub AllowedOrigin get(fn allowed_origin): T::AccountId;
     }
@@ -101,7 +95,7 @@ decl_storage! {
 
 decl_event! {
     pub enum Event<T> where AccountId = <T as frame_system::Config>::AccountId {
-        PriceStored(U16F16),
+        PriceStored(u32),
         OffchainWorkerExecuted(AccountId),
     }
 }
@@ -122,7 +116,7 @@ decl_module! {
         fn deposit_event() = default;
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(3)]
-        pub fn set_prices(origin, price: U16F16, block_number: T::BlockNumber) -> DispatchResultWithPostInfo {
+        pub fn set_prices(origin, price: u32, block_number: T::BlockNumber) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
             ensure!(AllowedOrigin::<T>::get() == address, Error::<T>::AccountUnauthorizedToSetPrice);
             Self::calculate_and_set_price(price, block_number)
@@ -143,16 +137,11 @@ decl_module! {
     }
 }
 
-use serde::Deserialize;
-
-#[derive(Deserialize, Default)]
-struct PriceInfo {
-    #[serde(rename = "USD")]
-    price: f64,
-}
-
 impl<T: Config> Module<T> {
-    fn calculate_and_set_price(price: U16F16, block_number: T::BlockNumber) -> DispatchResultWithPostInfo {
+    fn calculate_and_set_price(
+        price: u32,
+        block_number: T::BlockNumber,
+    ) -> DispatchResultWithPostInfo {
         log::info!("price {:?}", price);
 
         LastBlockSet::<T>::put(block_number);
@@ -161,7 +150,7 @@ impl<T: Config> Module<T> {
 
         log::info!("storing average now");
         let mut queue = Self::queue_transient();
-        queue.push(ValueStruct { value: price });
+        queue.push(price);
         let average = Self::calc_avg();
 
         log::info!("average price {:?}", average);
@@ -171,10 +160,11 @@ impl<T: Config> Module<T> {
     }
 
     /// Fetch current price and return the result in cents.
-    fn fetch_price() -> Result<f64, http::Error> {
+    fn fetch_price() -> Result<u32, http::Error> {
         let deadline = sp_io::offchain::timestamp().add(Duration::from_millis(2_000));
 
-        let request = http::Request::get("https://min-api.cryptocompare.com/data/price?fsym=3ft&tsyms=USD");
+        let request =
+            http::Request::get("https://min-api.cryptocompare.com/data/price?fsym=3ft&tsyms=USD");
 
         let pending = request.deadline(deadline).send().map_err(|_| {
             log::error!("IO error");
@@ -192,20 +182,28 @@ impl<T: Config> Module<T> {
             return Err(http::Error::Unknown);
         }
 
+        // Next we want to fully read the response body and collect it to a vector of bytes.
+        // Note that the return object allows you to read the body in chunks as well
+        // with a way to control the deadline.
         let body = response.body().collect::<Vec<u8>>();
 
         // Create a str slice from the body.
         let body_str = sp_std::str::from_utf8(&body).map_err(|_| {
-            log::error!("No UTF8 body");
+            log::warn!("No UTF8 body");
             http::Error::Unknown
         })?;
 
-        let price_info: PriceInfo = serde_json::from_str(&body_str).map_err(|_| {
-            log::error!("Error while decoding");
-            http::Error::Unknown
-        })?;
+        let price = match Self::parse_price(body_str) {
+            Some(price) => Ok(price),
+            None => {
+                log::warn!("Unable to extract price from the response: {:?}", body_str);
+                Err(http::Error::Unknown)
+            }
+        }?;
 
-        Ok(price_info.price)
+        log::warn!("Got price: {} cents", price);
+
+        Ok(price)
     }
 
     fn offchain_signed_tx(block_number: T::BlockNumber) -> Result<(), Error<T>> {
@@ -222,12 +220,12 @@ impl<T: Config> Module<T> {
             }
         };
 
-        let price_to_fixed = U16F16::from_num(price);
-
         let signer = Signer::<T, T::AuthorityId>::any_account();
 
-        let result =
-            signer.send_signed_transaction(|_acct| Call::set_prices(price_to_fixed, block_number));
+        let result = signer.send_signed_transaction(|_acct| Call::set_prices {
+            price,
+            block_number,
+        });
 
         // Display error if the signed tx fails.
         // Display error if the signed tx fails.
@@ -244,30 +242,39 @@ impl<T: Config> Module<T> {
         return Err(<Error<T>>::OffchainSignedTxError);
     }
 
-    fn queue_transient() -> Box<dyn RingBufferTrait<ValueStruct>> {
+    /// Parse the price from the given JSON string using `lite-json`.
+    ///
+    /// Returns `None` when parsing failed or `Some(price in cents)` when parsing is successful.
+    fn parse_price(price_str: &str) -> Option<u32> {
+        let val = lite_json::parse_json(price_str);
+        let price = match val.ok()? {
+            JsonValue::Object(obj) => {
+                let (_, v) = obj
+                    .into_iter()
+                    .find(|(k, _)| k.iter().copied().eq("USD".chars()))?;
+                match v {
+                    JsonValue::Number(number) => number,
+                    _ => return None,
+                }
+            }
+            _ => return None,
+        };
+
+        let exp = price.fraction_length.saturating_sub(2);
+        Some(price.integer as u32 * 100 + (price.fraction / 10_u64.pow(exp)) as u32)
+    }
+
+    fn queue_transient() -> Box<dyn RingBufferTrait<u32>> {
         Box::new(RingBufferTransient::<
-            ValueStruct,
+            u32,
             <Self as Store>::BufferRange,
             <Self as Store>::TftPriceHistory,
         >::new())
     }
 
-    fn calc_avg() -> U16F16 {
-        let mut sum: U16F16 = U16F16::from_num(0);
-        let mut counter = U16F16::from_num(0);
-
+    fn calc_avg() -> u32 {
         let queue = Self::queue_transient();
         let items = queue.get_all_values();
-        for item in items {
-            let ValueStruct { value } = item;
-            if value >= 0 {
-                sum += value;
-                counter += U16F16::from_num(1);
-            }
-        }
-        if counter == U16F16::from_num(0) {
-            return U16F16::from_num(0);
-        }
-        sum / counter
+        items.iter().fold(0_u32, |a, b| a.saturating_add(*b)) / items.len() as u32
     }
 }

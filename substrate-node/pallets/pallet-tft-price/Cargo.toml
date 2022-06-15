@@ -18,10 +18,11 @@ package = 'parity-scale-codec'
 version = '2.0.0'
 
 [dependencies]
-substrate-fixed = { git = 'https://github.com/encointer/substrate-fixed.git', rev = "b33d186888c60f38adafcfc0ec3a21aab263aef1" }
 serde = { version = "1.0.119", features = ["derive"], default-features = false }
 serde_json = { version = '1.0.45', default-features = false, features = ['alloc'] }
 log = { version = "0.4.14", default-features = false }
+lite-json = { version = "0.1", default-features = false }
+
 # Substrate packages
 
 frame-support =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
@@ -39,12 +40,12 @@ std = [
 	'codec/std',
 	'frame-support/std',
 	'frame-system/std',
+	'lite-json/std',
 	'sp-io/std',
 	'sp-runtime/std',
 	'sp-core/std',
 	'sp-std/std',
 	'sp-keystore',
-	'substrate-fixed/std',
 	'serde/std',
 	'log/std',
 	'serde_json/std',

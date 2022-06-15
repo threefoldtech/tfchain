@@ -37,7 +37,7 @@ tfchain-support = { path = "../../support", default-features = false }
 pallet-tfgrid = { path = "../pallet-tfgrid", default-features = false }
 
 [dev-dependencies]
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
+sp-core =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 
 [features]
 default = ["std"]
@@ -53,7 +53,7 @@ std = [
 	"pallet-collective/std",
 	"pallet-timestamp/std",
 	"pallet-tfgrid/std",
-	'tfchain-support/std'
+	"tfchain-support/std"
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

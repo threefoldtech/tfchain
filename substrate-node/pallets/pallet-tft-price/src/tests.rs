@@ -193,7 +193,7 @@ fn test_set_prices() {
             run_to_block(target_block);
             match TFTPriceModule::set_prices(
                 Origin::signed(acct.clone()),
-                U16F16::from_num(0.5),
+                500,
                 target_block,
             ) {
                 Ok(_) => (),

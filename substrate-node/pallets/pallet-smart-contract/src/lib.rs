@@ -1,11 +1,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{
-    debug, decl_error, decl_event, decl_module, decl_storage,
+    decl_error, decl_event, decl_module, decl_storage,
     dispatch::DispatchResultWithPostInfo,
-    ensure,
+    ensure, log,
     traits::{
-        Currency, ExistenceRequirement::KeepAlive, Get, LockIdentifier, LockableCurrency, Vec,
+        Currency, ExistenceRequirement::KeepAlive, Get, LockIdentifier, LockableCurrency,
         WithdrawReasons,
     },
     weights::Pays,
@@ -20,6 +20,7 @@ use sp_runtime::{
     traits::{CheckedSub, SaturatedConversion},
     DispatchError, DispatchResult, Perbill, Percent,
 };
+use sp_std::vec::Vec;
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
     traits::ChangeNode,
@@ -194,10 +195,10 @@ decl_module! {
         fn on_finalize(block: T::BlockNumber) {
             match Self::_bill_contracts_at_block(block) {
                 Ok(_) => {
-                    debug::info!("types::NodeContract billed successfully at block: {:?}", block);
+                    log::info!("types::NodeContract billed successfully at block: {:?}", block);
                 },
                 Err(err) => {
-                    debug::info!("types::NodeContract billed failed at block: {:?} with err {:?}", block, err);
+                    log::info!("types::NodeContract billed failed at block: {:?} with err {:?}", block, err);
                 }
             }
             // clean storage map for billed contracts at block
@@ -273,7 +274,7 @@ impl<T: Config> Module<T> {
             types::ContractData::NodeContract(node_contract.clone()),
         )?;
 
-        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+        let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
         let contract_billing_information = types::ContractBillingInformation {
             last_updated: now,
             amount_unbilled: 0,
@@ -404,7 +405,7 @@ impl<T: Config> Module<T> {
         // Update Contract ID
         ContractID::put(id);
 
-        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+        let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
         let mut contract_lock = types::ContractLock::default();
         contract_lock.lock_updated = now;
         ContractLock::<T>::insert(id, contract_lock);
@@ -603,18 +604,18 @@ impl<T: Config> Module<T> {
 
         // seconds elapsed is the report.window
         let seconds_elapsed = report.window;
-        debug::info!("seconds elapsed: {:?}", seconds_elapsed);
+        log::info!("seconds elapsed: {:?}", seconds_elapsed);
 
         // calculate NRU used and the cost
         let used_nru = U64F64::from_num(report.nru) / pricing_policy.nu.factor();
         let nu_cost = used_nru
             * (U64F64::from_num(pricing_policy.nu.value) / 3600)
             * U64F64::from_num(seconds_elapsed);
-        debug::info!("nu cost: {:?}", nu_cost);
+        log::info!("nu cost: {:?}", nu_cost);
 
         // save total
         let total = nu_cost.ceil().to_num::<u64>();
-        debug::info!("total cost: {:?}", total);
+        log::info!("total cost: {:?}", total);
 
         // update contract billing info
         contract_billing_info.amount_unbilled += total;
@@ -634,14 +635,14 @@ impl<T: Config> Module<T> {
             // Try to bill contract
             match Self::bill_contract(&mut contract) {
                 Ok(_) => {
-                    debug::info!(
+                    log::info!(
                         "billed contract with id {:?} at block {:?}",
                         contract_id,
                         block
                     );
                 }
                 Err(err) => {
-                    debug::info!(
+                    log::info!(
                         "error while billing contract with id {:?}: {:?}",
                         contract_id,
                         err
@@ -679,7 +680,7 @@ impl<T: Config> Module<T> {
         let mut seconds_elapsed = T::BillingFrequency::get() * 6;
         // Calculate amount of seconds elapsed based on the contract lock struct
 
-        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+        let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
         // this will set the seconds elapsed to the default billing cycle duration in seconds
         // if there is no contract lock object yet. A contract lock object will be created later in this function
         // https://github.com/threefoldtech/tfchain/issues/261
@@ -705,7 +706,7 @@ impl<T: Config> Module<T> {
         // Always emit a contract billed event
         let contract_bill = types::ContractBill {
             contract_id: contract.contract_id,
-            timestamp: <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000,
+            timestamp: <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000,
             discount_level: discount_received.clone(),
             amount_billed: amount_due.saturated_into::<u128>(),
         };
@@ -729,7 +730,7 @@ impl<T: Config> Module<T> {
         usable_balance: BalanceOf<T>,
         amount_due: BalanceOf<T>,
     ) -> Result<&mut types::Contract, DispatchError> {
-        let current_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
+        let current_block = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
         let node_id = contract.get_node_id();
 
         match contract.state {
@@ -778,7 +779,7 @@ impl<T: Config> Module<T> {
     }
 
     fn handle_lock(contract: &mut types::Contract, amount_due: BalanceOf<T>) -> DispatchResult {
-        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+        let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
         // increment cycles billed and update the internal lock struct
         let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
@@ -841,7 +842,7 @@ impl<T: Config> Module<T> {
                 contract_lock.amount_locked,
             ) {
                 Ok(_) => (),
-                Err(err) => debug::info!("error while distributing cultivation rewards {:?}", err),
+                Err(err) => log::info!("error while distributing cultivation rewards {:?}", err),
             };
             // Reset values
             contract_lock.lock_updated = now;
@@ -968,14 +969,14 @@ impl<T: Config> Module<T> {
             let su_cost = (U64F64::from_num(pricing_policy.su.value) / 3600)
                 * U64F64::from_num(seconds_elapsed)
                 * su_used;
-            debug::info!("su cost: {:?}", su_cost);
+            log::info!("su cost: {:?}", su_cost);
 
             let cu = Self::calculate_cu(cru, mru);
 
             let cu_cost = (U64F64::from_num(pricing_policy.cu.value) / 3600)
                 * U64F64::from_num(seconds_elapsed)
                 * cu;
-            debug::info!("cu cost: {:?}", cu_cost);
+            log::info!("cu cost: {:?}", cu_cost);
             total_cost = su_cost + cu_cost;
         }
 
@@ -983,7 +984,7 @@ impl<T: Config> Module<T> {
             let total_ip_cost = U64F64::from_num(ipu)
                 * (U64F64::from_num(pricing_policy.ipu.value) / 3600)
                 * U64F64::from_num(seconds_elapsed);
-            debug::info!("ip cost: {:?}", total_ip_cost);
+            log::info!("ip cost: {:?}", total_ip_cost);
             total_cost += total_ip_cost;
         }
 
@@ -1000,7 +1001,7 @@ impl<T: Config> Module<T> {
                     match Self::_free_ip(contract_id, &mut node_contract) {
                         Ok(_) => (),
                         Err(e) => {
-                            debug::info!("error while freeing ips: {:?}", e);
+                            log::info!("error while freeing ips: {:?}", e);
                         }
                     }
                 }
@@ -1060,7 +1061,7 @@ impl<T: Config> Module<T> {
 
         // Send 10% to the foundation
         let foundation_share = Perbill::from_percent(10) * amount;
-        debug::info!(
+        log::info!(
             "Transfering: {:?} from contract twin {:?} to foundation account {:?}",
             &foundation_share,
             &twin.account_id,
@@ -1077,7 +1078,7 @@ impl<T: Config> Module<T> {
         // TODO: send 5% to the staking pool account
         let staking_pool_share = Perbill::from_percent(5) * amount;
         let staking_pool_account = T::StakingPoolAccount::get();
-        debug::info!(
+        log::info!(
             "Transfering: {:?} from contract twin {:?} to staking pool account {:?}",
             &staking_pool_share,
             &twin.account_id,
@@ -1093,7 +1094,7 @@ impl<T: Config> Module<T> {
 
         // Send 50% to the sales channel
         let sales_share = Perbill::from_percent(50) * amount;
-        debug::info!(
+        log::info!(
             "Transfering: {:?} from contract twin {:?} to sales account {:?}",
             &sales_share,
             &twin.account_id,
@@ -1171,13 +1172,13 @@ impl<T: Config> Module<T> {
             return;
         }
 
-        let now = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
+        let now = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
         // Save the contract to be billed in now + BILLING_FREQUENCY_IN_BLOCKS
         let future_block = now + T::BillingFrequency::get();
         let mut contracts = ContractsToBillAt::get(future_block);
         contracts.push(contract_id);
         ContractsToBillAt::insert(future_block, &contracts);
-        debug::info!(
+        log::info!(
             "Insert contracts: {:?}, to be billed at block {:?}",
             contracts,
             future_block
@@ -1254,7 +1255,7 @@ impl<T: Config> Module<T> {
         );
         let mut farm = pallet_tfgrid::Farms::get(node.farm_id);
 
-        debug::info!(
+        log::info!(
             "Number of farm ips {:?}, number of ips to reserve: {:?}",
             farm.public_ips.len(),
             node_contract.public_ips as usize
