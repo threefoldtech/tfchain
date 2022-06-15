@@ -13,6 +13,10 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 use frame_system::EnsureRoot;
+use tfchain_support::{
+    traits::ChangeNode,
+    types::Node,
+};
 
 pub type Signature = MultiSignature;
 
@@ -83,10 +87,23 @@ impl pallet_balances::Config for TestRuntime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<TestRuntime>;
 }
 
+pub struct NodeChanged;
+impl ChangeNode for NodeChanged {
+	fn node_changed(
+		_old_node: Option<&Node>,
+		_new_node: &Node,
+	) {}
+
+    fn node_deleted(node: &Node) {
+        SmartContractModule::node_deleted(node);
+    }
+}
+
 impl pallet_tfgrid::Config for TestRuntime {
     type Event = Event;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<TestRuntime>;
+    type NodeChanged = NodeChanged;
 }
 
 impl pallet_tft_price::Config for TestRuntime {
@@ -105,6 +122,8 @@ impl pallet_timestamp::Config for TestRuntime {
 
 parameter_types! {
     pub const BillingFrequency: u64 = 10;
+    pub const GracePeriod: u64 = 100;
+    pub const DistributionFrequency: u16 = 24;
 }
 
 use weights;
@@ -113,7 +132,10 @@ impl Config for TestRuntime {
     type Currency = Balances;
     type StakingPoolAccount = StakingPoolAccount;
     type BillingFrequency = BillingFrequency;
+    type DistributionFrequency = DistributionFrequency;
+    type GracePeriod = GracePeriod;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>; 
+    type NodeChanged = NodeChanged;
 }
 
 type AccountPublic = <MultiSignature as Verify>::Signer;

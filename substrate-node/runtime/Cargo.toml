@@ -24,6 +24,10 @@ version = '2.0.0'
 default-features = false
 path = "../pallets/pallet-tfgrid"
 
+[dependencies.pallet-dao]
+default-features = false
+path = "../pallets/pallet-dao"
+
 [dependencies.validatorset]
 default-features = false
 package = "substrate-validator-set"
@@ -69,6 +73,8 @@ frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch =
 frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false, optional = true }
 frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false, optional = true }
 hex-literal = { version = "0.3.1", optional = true }
+
+tfchain-support = { path = "../support" }
 
 [features]
 default = ['std']
@@ -116,4 +122,6 @@ std = [
     'pallet-collective/std',
     'pallet-membership/std',
     'pallet-authorship/std',
+    'tfchain-support/std',
+    'pallet-dao/std',
 ]

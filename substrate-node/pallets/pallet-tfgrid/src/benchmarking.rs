@@ -24,6 +24,7 @@ use super::*;
 use crate::Module as TfgridModule;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_system::RawOrigin;
+use tfchain_support::types::{Location, Resources, PublicIP};
 
 benchmarks! {
     create_twin {
@@ -69,8 +70,8 @@ benchmarks! {
     }: _ (
         RawOrigin::Signed(a1.clone()),
         1,
-        types::Resources::default(),
-        types::Location::default(),
+        Resources::default(),
+        Location::default(),
         country,
         city,
         Vec::new(),
@@ -95,8 +96,8 @@ benchmarks! {
         RawOrigin::Signed(a1.clone()),
         1,
         1,
-        types::Resources::default(),
-        types::Location::default(),
+        Resources::default(),
+        Location::default(),
         country,
         city,
         Vec::new(),
@@ -162,12 +163,12 @@ pub fn prepare_farm_and_node<T: Config>(source: T::AccountId) {
     prepare_farm::<T>(source.clone());
 
     // random location
-    let location = types::Location {
+    let location = Location {
         longitude: "12.233213231".as_bytes().to_vec(),
         latitude: "32.323112123".as_bytes().to_vec(),
     };
 
-    let resources = types::Resources {
+    let resources = Resources {
         hru: 1,
         sru: 1,
         cru: 1,
@@ -194,7 +195,7 @@ pub fn prepare_farm_and_node<T: Config>(source: T::AccountId) {
 pub fn prepare_farm<T: Config>(source: T::AccountId) {
     let farm_name = "test_farm";
     let mut pub_ips = Vec::new();
-    pub_ips.push(types::PublicIP {
+    pub_ips.push(PublicIP {
         ip: "1.1.1.0".as_bytes().to_vec(),
         gateway: "1.1.1.1".as_bytes().to_vec(),
         contract_id: 0,
@@ -239,6 +240,7 @@ pub fn prepare_farm<T: Config>(source: T::AccountId) {
         domain_name_policy,
         x1,
         x2,
+        80
     )
     .unwrap();
 

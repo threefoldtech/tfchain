@@ -1,0 +1,36 @@
+[package]
+authors = ['Threefoldtech <https://github.com/threefoldtech>']
+description = "Shared traits and structs used across the TFChain pallets"
+edition = "2018"
+name = "tfchain-support"
+repository = 'https://github.com/threefoldtech/tfchain'
+version = "1.0.0"
+
+# alias "parity-scale-code" to "codec"
+[dependencies.codec]
+default-features = false
+features = ['derive']
+package = 'parity-scale-codec'
+version = '2.0.0'
+
+[dependencies]
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
+scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[features]
+default = ["std"]
+std = [
+  "codec/std",
+  "frame-support/std",
+  "frame-system/std",
+  "sp-core/std",
+  "sp-runtime/std",
+  "sp-std/std",
+]

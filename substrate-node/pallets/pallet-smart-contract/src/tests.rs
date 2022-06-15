@@ -1,7 +1,7 @@
 use crate::{mock::*, Error, RawEvent};
 use frame_support::{
     assert_noop, assert_ok,
-    traits::{OnFinalize, OnInitialize},
+    traits::{OnFinalize, OnInitialize, LockableCurrency, WithdrawReasons},
 };
 use frame_system::RawOrigin;
 use sp_runtime::{Perbill, Percent};
@@ -9,6 +9,7 @@ use substrate_fixed::types::{U16F16, U64F64};
 
 use super::types;
 use pallet_tfgrid::types as pallet_tfgrid_types;
+use tfchain_support::types::{FarmCertification, Location, NodeCertification, PublicIP, Resources};
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -802,6 +803,81 @@ fn test_node_contract_billing_cycles() {
 }
 
 #[test]
+fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(bob()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            1
+        ));
+        let contract_id = 1;
+        let twin_id = 2;
+
+        push_contract_resources_used(1);
+
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 11);
+        run_to_block(12);
+        check_report_cost(1, 2, amount_due_as_u128, 12, discount_received);
+
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        run_to_block(22);
+        check_report_cost(1, 3, amount_due_as_u128, 22, discount_received);
+
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        run_to_block(32);
+        check_report_cost(1, 4, amount_due_as_u128, 32, discount_received);
+
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        run_to_block(42);
+        check_report_cost(1, 5, amount_due_as_u128, 42, discount_received);
+
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        run_to_block(52);
+        check_report_cost(1, 6, amount_due_as_u128, 52, discount_received);
+
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 4);
+        run_to_block(56);
+
+        // Delete node
+        TfgridModule::delete_node_farm(Origin::signed(alice()), 1).unwrap();
+
+        // After deleting a node, the contract gets billed before it's canceled
+        check_report_cost(1, 8, amount_due_as_u128, 56, discount_received);
+
+        let our_events = System::events()
+            .into_iter()
+            .map(|r| r.event)
+            .filter_map(|e| {
+                if let Event::pallet_smart_contract(inner) = e {
+                    Some(inner)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
+            Vec::new();
+
+        let ip = "1.1.1.0".as_bytes().to_vec();
+        let mut ips = Vec::new();
+        ips.push(ip);
+
+        expected_events.push(RawEvent::IPsFreed(1, ips));
+        expected_events.push(RawEvent::NodeContractCanceled(1, 1, 2));
+
+        assert_eq!(our_events[9], expected_events[0]);
+        assert_eq!(our_events[10], expected_events[1]);
+    });
+}
+
+#[test]
 fn test_node_contract_only_public_ip_billing_cycles() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
@@ -876,7 +952,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
             1
         ));
 
-        run_to_block(32);
+        run_to_block(29);
         check_report_cost(1, 5, amount_due_as_u128, 28, discount_received);
 
         let contract = SmartContractModule::contracts(1);
@@ -888,7 +964,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
 }
 
 #[test]
-fn test_node_contract_billing_cycles_cancels_contract_when_out_of_funds_works() {
+fn test_node_contract_out_of_funds_should_move_state_to_graceperiod_works() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1);
@@ -912,10 +988,7 @@ fn test_node_contract_billing_cycles_cancels_contract_when_out_of_funds_works() 
         run_to_block(22);
 
         let c1 = SmartContractModule::contracts(1);
-        assert_eq!(c1, types::Contract::default());
-
-        let contract_billing_info = SmartContractModule::contract_billing_information_by_id(1);
-        assert_eq!(contract_billing_info.amount_unbilled, 0); //this amount in unit USD = 1/1e7
+        assert_eq!(c1.state, types::ContractState::GracePeriod(21));
 
         let our_events = System::events()
             .into_iter()
@@ -931,16 +1004,140 @@ fn test_node_contract_billing_cycles_cancels_contract_when_out_of_funds_works() 
 
         let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
             Vec::new();
-        expected_events.push(RawEvent::NodeContractCanceled(1, 1, 3));
+        expected_events.push(RawEvent::ContractGracePeriodStarted(1, 1, 3, 21));
 
-        assert_eq!(our_events[5], expected_events[0]);
+        assert_eq!(our_events[3], expected_events[0]);
+    });
+}
+
+#[test]
+fn test_restore_node_contract_in_grace_works() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(charlie()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            0
+        ));
+
+        push_contract_resources_used(1);
+
+        // cycle 1
+        run_to_block(12);
+
+        // cycle 2
+        // user does not have enough funds to pay for 2 cycles
+        run_to_block(22);
+
+        let c1 = SmartContractModule::contracts(1);
+        assert_eq!(c1.state, types::ContractState::GracePeriod(21));
+
+        let our_events = System::events()
+            .into_iter()
+            .map(|r| r.event)
+            .filter_map(|e| {
+                if let Event::pallet_smart_contract(inner) = e {
+                    Some(inner)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
+            Vec::new();
+        expected_events.push(RawEvent::ContractGracePeriodStarted(1, 1, 3, 21));
+
+        assert_eq!(our_events[3], expected_events[0]);
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(31);
-        assert_eq!(contract_to_bill.len(), 0);
+        assert_eq!(contract_to_bill.len(), 1);
         run_to_block(32);
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(41);
-        assert_eq!(contract_to_bill.len(), 0);
+        assert_eq!(contract_to_bill.len(), 1);
+        run_to_block(42);
+
+        // Transfer some balance to the owner of the contract to trigger the grace period to stop
+        Balances::transfer(Origin::signed(bob()), charlie(), 100000000).unwrap();
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(51);
+        assert_eq!(contract_to_bill.len(), 1);
+        run_to_block(52);
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(61);
+        assert_eq!(contract_to_bill.len(), 1);
+        run_to_block(62);
+
+        let c1 = SmartContractModule::contracts(1);
+        assert_eq!(c1.state, types::ContractState::Created);
+    });
+}
+
+#[test]
+fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(charlie()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            0
+        ));
+
+        push_contract_resources_used(1);
+
+        // cycle 1
+        run_to_block(12);
+
+        // cycle 2
+        // user does not have enough funds to pay for 2 cycles
+        run_to_block(22);
+
+        let c1 = SmartContractModule::contracts(1);
+        assert_eq!(c1.state, types::ContractState::GracePeriod(21));
+
+        let our_events = System::events()
+            .into_iter()
+            .map(|r| r.event)
+            .filter_map(|e| {
+                if let Event::pallet_smart_contract(inner) = e {
+                    Some(inner)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
+            Vec::new();
+        expected_events.push(RawEvent::ContractGracePeriodStarted(1, 1, 3, 21));
+
+        assert_eq!(our_events[3], expected_events[0]);
+
+        run_to_block(32);
+        run_to_block(42);
+        run_to_block(52);
+        run_to_block(62);
+        run_to_block(72);
+        run_to_block(82);
+        run_to_block(92);
+        run_to_block(102);
+        run_to_block(112);
+        run_to_block(122);
+        run_to_block(132);
+
+        let c1 = SmartContractModule::contracts(1);
+        assert_eq!(c1, types::Contract::default());
     });
 }
 
@@ -1138,12 +1335,13 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
             "hash".as_bytes().to_vec(),
             0
         ));
+        push_contract_resources_used(2);
 
         run_to_block(12);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 11);
         assert_ne!(amount_due_as_u128, 0);
-        check_report_cost(1, 2, amount_due_as_u128, 12, discount_received);
+        check_report_cost(1, 3, amount_due_as_u128, 12, discount_received);
 
         let our_events = System::events()
             .into_iter()
@@ -1158,13 +1356,87 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
             .collect::<Vec<_>>();
 
         for e in our_events.clone().into_iter() {
-            println!("EVEEEENT: {:?}", e);
+            println!("event: {:?}", e);
         }
         // Event 1: Rent contract created
         // Event 2: Node Contract created
         // Event 4: Rent contract billed
         // => no Node Contract billed event
-        assert_eq!(our_events.len(), 3);
+        assert_eq!(our_events.len(), 4);
+    });
+}
+
+#[test]
+fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_works() {
+    new_test_ext().execute_with(|| {
+        prepare_dedicated_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(charlie()),
+            node_id
+        ));
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(charlie()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            0
+        ));
+        push_contract_resources_used(2);
+
+        run_to_block(12);
+        run_to_block(22);
+        run_to_block(32);
+        run_to_block(42);
+        run_to_block(52);
+        run_to_block(62);
+        run_to_block(72);
+        run_to_block(82);
+        run_to_block(92);
+        run_to_block(102);
+        run_to_block(112);
+        run_to_block(122);
+
+        // let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 11);
+        // assert_ne!(amount_due_as_u128, 0);
+        // check_report_cost(1, 3, amount_due_as_u128, 12, discount_received);
+
+        let our_events = System::events()
+            .into_iter()
+            .map(|r| r.event)
+            .filter_map(|e| {
+                if let Event::pallet_smart_contract(inner) = e {
+                    Some(inner)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        for e in our_events.clone().into_iter() {
+            println!("event: {:?}", e);
+        }
+        // Event 1: Rent contract created
+        // Event 2: Node Contract created
+        // Event 3: Updated used resources
+        // Event 4: Grace period started
+        // Event 5-15: Rent contract billed
+        // Event 16: Node contract canceled
+        // Event 17: Rent contract Canceled
+        // => no Node Contract billed event
+        assert_eq!(our_events.len(), 17);
+
+        let expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> = vec![
+            RawEvent::NodeContractCanceled(2, 1, 3),
+            RawEvent::RentContractCanceled(1),
+        ];
+
+        assert_eq!(our_events[15], expected_events[0]);
+        assert_eq!(our_events[16], expected_events[1]);
     });
 }
 
@@ -1220,6 +1492,222 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
     });
 }
 
+#[test]
+fn test_rent_contract_out_of_funds_should_move_state_to_graceperiod_works() {
+    new_test_ext().execute_with(|| {
+        prepare_dedicated_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(charlie()),
+            node_id
+        ));
+
+        // cycle 1
+        // user does not have enough funds to pay for 1 cycle
+        run_to_block(12);
+
+        let c1 = SmartContractModule::contracts(1);
+        assert_eq!(c1.state, types::ContractState::GracePeriod(11));
+
+        let our_events = System::events()
+            .into_iter()
+            .map(|r| r.event)
+            .filter_map(|e| {
+                if let Event::pallet_smart_contract(inner) = e {
+                    Some(inner)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
+            Vec::new();
+        expected_events.push(RawEvent::ContractGracePeriodStarted(1, 1, 3, 11));
+
+        assert_eq!(our_events[1], expected_events[0]);
+    });
+}
+
+#[test]
+fn test_restore_rent_contract_in_grace_works() {
+    new_test_ext().execute_with(|| {
+        prepare_dedicated_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(charlie()),
+            node_id
+        ));
+
+        // cycle 1
+        run_to_block(12);
+
+        let c1 = SmartContractModule::contracts(1);
+        assert_eq!(c1.state, types::ContractState::GracePeriod(11));
+
+        let our_events = System::events()
+            .into_iter()
+            .map(|r| r.event)
+            .filter_map(|e| {
+                if let Event::pallet_smart_contract(inner) = e {
+                    Some(inner)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
+            Vec::new();
+        expected_events.push(RawEvent::ContractGracePeriodStarted(1, 1, 3, 11));
+
+        assert_eq!(our_events[1], expected_events[0]);
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(21);
+        assert_eq!(contract_to_bill.len(), 1);
+        run_to_block(22);
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(31);
+        assert_eq!(contract_to_bill.len(), 1);
+        run_to_block(32);
+
+        // Transfer some balance to the owner of the contract to trigger the grace period to stop
+        Balances::transfer(Origin::signed(bob()), charlie(), 100000000).unwrap();
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(41);
+        assert_eq!(contract_to_bill.len(), 1);
+        run_to_block(42);
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(51);
+        assert_eq!(contract_to_bill.len(), 1);
+        run_to_block(52);
+
+        let c1 = SmartContractModule::contracts(1);
+        assert_eq!(c1.state, types::ContractState::Created);
+    });
+}
+
+#[test]
+fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works() {
+    new_test_ext().execute_with(|| {
+        prepare_dedicated_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(charlie()),
+            node_id
+        ));
+
+        // cycle 1
+        run_to_block(12);
+
+        let c1 = SmartContractModule::contracts(1);
+        assert_eq!(c1.state, types::ContractState::GracePeriod(11));
+
+        let our_events = System::events()
+            .into_iter()
+            .map(|r| r.event)
+            .filter_map(|e| {
+                if let Event::pallet_smart_contract(inner) = e {
+                    Some(inner)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
+            Vec::new();
+        expected_events.push(RawEvent::ContractGracePeriodStarted(1, 1, 3, 11));
+
+        assert_eq!(our_events[1], expected_events[0]);
+
+        run_to_block(22);
+        run_to_block(32);
+        run_to_block(42);
+        run_to_block(52);
+        run_to_block(62);
+        run_to_block(72);
+        run_to_block(82);
+        run_to_block(92);
+        run_to_block(102);
+        run_to_block(112);
+        run_to_block(122);
+        run_to_block(132);
+
+        let c1 = SmartContractModule::contracts(1);
+        assert_eq!(c1, types::Contract::default());
+    });
+}
+
+#[test]
+fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
+    new_test_ext().execute_with(|| {
+        prepare_dedicated_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(bob()),
+            node_id
+        ));
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(bob()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            0
+        ));
+        push_contract_resources_used(2);
+
+        run_to_block(12);
+
+        run_to_block(16);
+
+        // Delete node
+        TfgridModule::delete_node_farm(Origin::signed(alice()), 1).unwrap();
+
+        let our_events = System::events()
+            .into_iter()
+            .map(|r| r.event)
+            .filter_map(|e| {
+                if let Event::pallet_smart_contract(inner) = e {
+                    Some(inner)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let mut expected_events: std::vec::Vec<RawEvent<AccountId, BalanceOf<TestRuntime>>> =
+            Vec::new();
+
+        for e in our_events.clone().into_iter() {
+            println!("EVEEEENT: {:?}", e);
+        }
+
+        let ip = "1.1.1.0".as_bytes().to_vec();
+        let mut ips = Vec::new();
+        ips.push(ip);
+
+        expected_events.push(RawEvent::NodeContractCanceled(2, 1, 2));
+        expected_events.push(RawEvent::RentContractCanceled(1));
+
+        assert_eq!(our_events[4], expected_events[0]);
+        assert_eq!(our_events[7], expected_events[1]);
+    });
+}
+
 //  MODULE FUNCTION TESTS //
 // ---------------------- //
 
@@ -1250,6 +1738,25 @@ fn test_cu_calculation() {
         let mru = U64F64::from_num(16);
         let cu = SmartContractModule::calculate_cu(cu, mru);
         assert_eq!(cu, 8);
+    })
+}
+
+#[test]
+fn test_lock() {
+    new_test_ext().execute_with(|| {
+        let id: u64 = 1;
+        Balances::set_lock(
+            id.to_be_bytes(),
+            &bob(),
+            100,
+            WithdrawReasons::RESERVE,
+        );
+
+        let usable_balance = Balances::usable_balance(&bob());
+        let free_balance = Balances::free_balance(&bob());
+
+        let locked_balance = free_balance - usable_balance;
+        assert_eq!(locked_balance, 100);
     })
 }
 
@@ -1292,7 +1799,7 @@ fn push_contract_resources_used(contract_id: u64) {
     let mut resources = Vec::new();
     resources.push(types::ContractResources {
         contract_id,
-        used: pallet_tfgrid_types::Resources {
+        used: Resources {
             cru: 2,
             hru: 0,
             mru: 2 * GIGABYTE,
@@ -1336,10 +1843,6 @@ fn check_report_cost(
         Vec::new();
     expected_events.push(RawEvent::ContractBilled(contract_bill_event));
 
-    for event in our_events.clone().iter() {
-        println!("event: {:?}", event);
-    }
-
     assert_eq!(our_events[index], expected_events[0]);
 }
 
@@ -1362,7 +1865,7 @@ pub fn prepare_twins() {
 pub fn prepare_farm(source: AccountId, dedicated: bool) {
     let farm_name = "test_farm";
     let mut pub_ips = Vec::new();
-    pub_ips.push(pallet_tfgrid_types::PublicIP {
+    pub_ips.push(PublicIP {
         ip: "1.1.1.0".as_bytes().to_vec(),
         gateway: "1.1.1.1".as_bytes().to_vec(),
         contract_id: 0,
@@ -1425,17 +1928,19 @@ pub fn prepare_farm(source: AccountId, dedicated: bool) {
 pub fn prepare_farm_and_node() {
     TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
 
+    create_farming_policies();
+
     prepare_twins();
 
     prepare_farm(alice(), false);
 
     // random location
-    let location = pallet_tfgrid_types::Location {
+    let location = Location {
         longitude: "12.233213231".as_bytes().to_vec(),
         latitude: "32.323112123".as_bytes().to_vec(),
     };
 
-    let resources = pallet_tfgrid_types::Resources {
+    let resources = Resources {
         hru: 1024 * GIGABYTE,
         sru: 512 * GIGABYTE,
         cru: 8,
@@ -1461,18 +1966,19 @@ pub fn prepare_farm_and_node() {
 
 pub fn prepare_dedicated_farm_and_node() {
     TFTPriceModule::set_prices(Origin::signed(bob()), U16F16::from_num(0.05), 101).unwrap();
+    create_farming_policies();
 
     prepare_twins();
 
     prepare_farm(alice(), true);
 
     // random location
-    let location = pallet_tfgrid_types::Location {
+    let location = Location {
         longitude: "12.233213231".as_bytes().to_vec(),
         latitude: "32.323112123".as_bytes().to_vec(),
     };
 
-    let resources = pallet_tfgrid_types::Resources {
+    let resources = Resources {
         hru: 1024 * GIGABYTE,
         sru: 512 * GIGABYTE,
         cru: 8,
@@ -1518,4 +2024,70 @@ fn run_to_block(n: u64) {
         System::on_initialize(System::block_number());
         SmartContractModule::on_initialize(System::block_number());
     }
+}
+
+fn create_farming_policies() {
+    let name = "f1".as_bytes().to_vec();
+    assert_ok!(TfgridModule::create_farming_policy(
+        RawOrigin::Root.into(),
+        name,
+        12,
+        15,
+        10,
+        8,
+        9999,
+        System::block_number() + 100,
+        true,
+        true,
+        NodeCertification::Diy,
+        FarmCertification::Gold,
+    ));
+
+    let name = "f2".as_bytes().to_vec();
+    assert_ok!(TfgridModule::create_farming_policy(
+        RawOrigin::Root.into(),
+        name,
+        12,
+        15,
+        10,
+        8,
+        9999,
+        System::block_number() + 100,
+        true,
+        true,
+        NodeCertification::Diy,
+        FarmCertification::NotCertified,
+    ));
+
+    let name = "f3".as_bytes().to_vec();
+    assert_ok!(TfgridModule::create_farming_policy(
+        RawOrigin::Root.into(),
+        name,
+        12,
+        15,
+        10,
+        8,
+        9999,
+        System::block_number() + 100,
+        true,
+        true,
+        NodeCertification::Certified,
+        FarmCertification::Gold,
+    ));
+
+    let name = "f1".as_bytes().to_vec();
+    assert_ok!(TfgridModule::create_farming_policy(
+        RawOrigin::Root.into(),
+        name,
+        12,
+        15,
+        10,
+        8,
+        9999,
+        System::block_number() + 100,
+        true,
+        true,
+        NodeCertification::Certified,
+        FarmCertification::NotCertified,
+    ));
 }

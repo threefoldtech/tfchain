@@ -1,8 +1,9 @@
 use codec::{Decode, Encode};
 use sp_std::prelude::*;
 use substrate_fixed::types::U64F64;
+use tfchain_support::types::{PublicIP, Resources};
 
-use pallet_tfgrid::types;
+pub type BlockNumber = u64;
 
 /// Utility type for managing upgrades/migrations.
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
@@ -26,6 +27,14 @@ impl Contract {
     pub fn is_state_delete(&self) -> bool {
         matches!(self.state, ContractState::Deleted(_))
     }
+
+    pub fn get_node_id(&self) -> u32 {
+        match self.contract_type.clone() {
+            ContractData::RentContract(c) => c.node_id,
+            ContractData::NodeContract(c) => c.node_id,
+            ContractData::NameContract(_) => 0,
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
@@ -38,7 +47,7 @@ pub struct NodeContract {
     // Hash of the deployment, set by the user
     pub deployment_hash: Vec<u8>,
     pub public_ips: u32,
-    pub public_ips_list: Vec<types::PublicIP>,
+    pub public_ips_list: Vec<PublicIP>,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
@@ -75,6 +84,7 @@ pub struct ContractBillingInformation {
 pub enum ContractState {
     Created,
     Deleted(Cause),
+    GracePeriod(BlockNumber)
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
@@ -146,7 +156,7 @@ pub struct ContractBill {
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
 pub struct ContractResources {
     pub contract_id: u64,
-    pub used: types::Resources,
+    pub used: Resources,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]

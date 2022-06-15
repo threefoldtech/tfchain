@@ -3515,6 +3515,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-dao"
+version = "3.0.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-collective",
+ "pallet-membership",
+ "pallet-tfgrid",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "tfchain-support",
+]
+
+[[package]]
 name = "pallet-grandpa"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.12#d76f39995315ec36980908e4b99709bd14927044"
@@ -3639,6 +3660,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-storage",
+ "tfchain-support",
 ]
 
 [[package]]
@@ -6690,6 +6712,7 @@ dependencies = [
  "pallet-authorship",
  "pallet-balances",
  "pallet-collective",
+ "pallet-dao",
  "pallet-grandpa",
  "pallet-membership",
  "pallet-randomness-collective-flip",
@@ -6716,6 +6739,20 @@ dependencies = [
  "sp-version",
  "substrate-validator-set",
  "substrate-wasm-builder",
+ "tfchain-support",
+]
+
+[[package]]
+name = "tfchain-support"
+version = "1.0.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]

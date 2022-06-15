@@ -40,6 +40,7 @@ sp-runtime =  { git = "https://github.com/paritytech/substrate", branch = "polka
 sp-std =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-timestamp =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+tfchain-support = { path = "../../support", default-features = false }
 
 # Benchmarking
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false, optional = true }
@@ -59,7 +60,8 @@ std = [
 	'pallet-tfgrid/std',
 	'pallet-tft-price/std',
 	'codec/std',
-	'log/std'
+	'log/std',
+	'tfchain-support/std'
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

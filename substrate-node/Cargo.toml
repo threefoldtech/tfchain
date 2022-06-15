@@ -6,4 +6,5 @@ members = [
     'node',
     'runtime',
 	'pallets/pallet-tfgrid',
+    'support'
 ]
