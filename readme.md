@@ -2,28 +2,44 @@
 
 ## Installation
 
+#### Prerequisites:
+Ensure you have the following installed first: 
+- librocksdb-dev
+- libclang-dev
+- clang lldb lld
+- build-essential 
+
+You will also need  rust and nightly installed. 
+To install Rust:
+```
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+To install nightly:
+```
+rustup install nightly-2021-06-09
+```
 ### Node
+Navigate to substrate node:
 
-You will need a specific version of rust nightly in order to compile:
-
-`rustup install nightly`
-
-Wasm toolchain:
-
-`rustup target add wasm32-unknown-unknown --toolchain nightly`
-
-Now you can build.
-
-```sh
+```
 cd substrate-node
-# make sure you run nightly
-rustup override set nightly
-cargo build
 ```
 
-This will build the node binary in debug mode, once built you can execute it by doing following:
+Add Wasm toolchain:
+```
+rustup target add wasm32-unknown-unknown --toolchain nightly-2021-06-09
+```
 
-`./target/debug/tfchain --dev --ws-external`
+Now you can build:
+```
+cargo +nightly-2021-06-09 build --release
+```
+
+This will build the node binary in release mode, once built you can execute it by doing following:
+
+```
+./target/release/tfchain --ws-external --dev
+```
 
 > You need the `ws-external` flag in order to connect from a zos node to substrate in a local setup.
 
@@ -49,3 +65,10 @@ See [process](./substrate-node/upgrade_process.md)
 ### Client
 
 You can use the client to interact with the chain, [read more](./cli-tool/readme.md)
+
+### Data Cleanup:
+To wipe data run:
+
+```
+./target/release/tfchain purge-chain --dev
+```
