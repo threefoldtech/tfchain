@@ -62,7 +62,8 @@ std = [
 	'codec/std',
 	'log/std',
 	'tfchain-support/std',
-	'scale-info/std'
+	'scale-info/std',
+	'frame-benchmarking/std',
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

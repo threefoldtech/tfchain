@@ -1,17 +1,13 @@
 use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{ed25519, sr25519, Pair, Public};
 use sp_core::{ed25519, sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
-use sp_finality_grandpa::AuthorityId as GrandpaId;
-use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use tfchain_runtime::opaque::SessionKeys;
 use tfchain_runtime::{
     AccountId, AuraConfig, BalancesConfig, CouncilConfig, CouncilMembershipConfig, GenesisConfig,
-    GrandpaConfig, SessionConfig, Signature, SudoConfig, SystemConfig, ValidatorSetConfig,
-    WASM_BINARY,
+    GrandpaConfig, SessionConfig, Signature, SudoConfig, SystemConfig, TFTBridgeModuleConfig,
+    TFTPriceModuleConfig, TfgridModuleConfig, ValidatorSetConfig, WASM_BINARY,
 };
 
 // The URL for the telemetry server.
@@ -274,35 +270,38 @@ fn testnet_genesis(
             // Assign network admin rights.
             key: root_key,
         },
-        // pallet_tfgrid: TfgridModuleConfig {
-        // 	su_price_value: 300000,
-        // 	su_price_unit: 4,
-        // 	nu_price_value: 2000,
-        // 	nu_price_unit: 4,
-        // 	cu_price_value: 600000,
-        // 	cu_price_unit: 4,
-        // 	ipu_price_value: 100000,
-        // 	ipu_price_unit: 4,
-        // 	unique_name_price_value: 20000,
-        // 	domain_name_price_value: 40000,
-        // 	foundation_account,
-        // 	sales_account,
-        // 	farming_policy_diy_cu: 160000000,
-        // 	farming_policy_diy_su: 100000000,
-        // 	farming_policy_diy_nu: 2000000,
-        // 	farming_policy_diy_ipu: 800000,
-        // 	farming_policy_certified_cu: 200000000,
-        // 	farming_policy_certified_su: 120000000,
-        // 	farming_policy_certified_nu: 3000000,
-        // 	farming_policy_certified_ipu: 1000000,
-        // 	discount_for_dedication_nodes: 50,
-        // },
-        // pallet_tft_bridge: TFTBridgeModuleConfig{
-        // 	validator_accounts: bridge_validator_accounts,
-        // 	fee_account: bridge_fee_account,
-        // 	deposit_fee: 10000000,
-        // 	withdraw_fee: 10000000
-        // },
+        tfgrid_module: TfgridModuleConfig {
+            su_price_value: 300000,
+            su_price_unit: 4,
+            nu_price_value: 2000,
+            nu_price_unit: 4,
+            cu_price_value: 600000,
+            cu_price_unit: 4,
+            ipu_price_value: 100000,
+            ipu_price_unit: 4,
+            unique_name_price_value: 20000,
+            domain_name_price_value: 40000,
+            foundation_account,
+            sales_account,
+            farming_policy_diy_cu: 160000000,
+            farming_policy_diy_su: 100000000,
+            farming_policy_diy_nu: 2000000,
+            farming_policy_diy_ipu: 800000,
+            farming_policy_diy_minimal_uptime: 95,
+            farming_policy_certified_cu: 200000000,
+            farming_policy_certified_su: 120000000,
+            farming_policy_certified_nu: 3000000,
+            farming_policy_certified_ipu: 1000000,
+            farming_policy_certified_minimal_uptime: 95,
+            discount_for_dedication_nodes: 50,
+            connection_price: 80,
+        },
+        tft_bridge_module: TFTBridgeModuleConfig {
+            validator_accounts: bridge_validator_accounts,
+            fee_account: bridge_fee_account,
+            deposit_fee: 10000000,
+            withdraw_fee: 10000000,
+        },
         council: CouncilConfig::default(),
         council_membership: CouncilMembershipConfig {
             members: vec![
@@ -313,8 +312,8 @@ fn testnet_genesis(
             phantom: Default::default(),
         },
         // just some default for development
-        // pallet_tft_price: TFTPriceModuleConfig {
-        // 	allowed_origin: tft_price_allowed_account
-        // }
+        tft_price_module: TFTPriceModuleConfig {
+            allowed_origin: tft_price_allowed_account,
+        },
     }
 }

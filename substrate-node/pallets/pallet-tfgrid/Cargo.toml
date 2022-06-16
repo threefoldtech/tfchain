@@ -53,7 +53,8 @@ std = [
 	'sp-io/std',
 	'frame-benchmarking/std',
 	'tfchain-support/std',
-	'scale-info/std'
+	'scale-info/std',
+	'hex/std',
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

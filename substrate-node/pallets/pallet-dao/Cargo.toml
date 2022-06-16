@@ -54,7 +54,8 @@ std = [
 	"pallet-timestamp/std",
 	"pallet-tfgrid/std",
 	"tfchain-support/std",
-	'scale-info/std'
+	'scale-info/std',
+	'serde/std',
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

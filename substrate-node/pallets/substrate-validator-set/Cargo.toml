@@ -42,5 +42,7 @@ std = [
     'serde',
     'frame-system/std',
     'pallet-session/std',
-    'sp-io/std'
+    'sp-io/std',
+    'scale-info/std',
+    'log/std'
 ]

@@ -71,9 +71,6 @@ pub use pallet_validator;
 
 pub use pallet_dao;
 
-mod migrations;
-use self::migrations::*;
-
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -347,7 +344,6 @@ impl pallet_tfgrid::Config for Runtime {
     type NodeChanged = NodeChanged;
 }
 
-
 parameter_types! {
     pub StakingPoolAccount: AccountId = get_staking_pool_account();
     pub BillingFrequency: u64 = 600;
@@ -356,8 +352,11 @@ parameter_types! {
 }
 
 pub fn get_staking_pool_account() -> AccountId {
-	// decoded public key from staking pool account 5CNposRewardAccount11111111111111111111111111FSU
-	AccountId::from([13, 209, 209, 166, 229, 163, 90, 168, 199, 245, 229, 126, 30, 221, 12, 63, 189, 106, 191, 46, 170, 142, 244, 37, 72, 152, 110, 84, 162, 86, 32, 0])
+    // decoded public key from staking pool account 5CNposRewardAccount11111111111111111111111111FSU
+    AccountId::from([
+        13, 209, 209, 166, 229, 163, 90, 168, 199, 245, 229, 126, 30, 221, 12, 63, 189, 106, 191,
+        46, 170, 142, 244, 37, 72, 152, 110, 84, 162, 86, 32, 0,
+    ])
 }
 
 impl pallet_smart_contract::Config for Runtime {
@@ -373,33 +372,33 @@ impl pallet_smart_contract::Config for Runtime {
 }
 
 impl pallet_tft_bridge::Config for Runtime {
-	type Event = Event;
-	type Currency = Balances;
-	type Burn = ();
-	type RestrictedOrigin = EnsureRootOrCouncilApproval;
+    type Event = Event;
+    type Currency = Balances;
+    type Burn = ();
+    type RestrictedOrigin = EnsureRootOrCouncilApproval;
 }
 
 impl pallet_burning::Config for Runtime {
-	type Event = Event;
-	type Currency = Balances;
-	type Burn = ();
+    type Event = Event;
+    type Currency = Balances;
+    type Burn = ();
 }
 
 impl pallet_kvstore::Config for Runtime {
-	type Event = Event;
+    type Event = Event;
 }
 
 impl pallet_tft_price::Config for Runtime {
-	type AuthorityId = pallet_tft_price::crypto::AuthId;
-	type Call = Call;
-	type Event = Event;
-	type RestrictedOrigin = EnsureRootOrCouncilApproval;
+    type AuthorityId = pallet_tft_price::crypto::AuthId;
+    type Call = Call;
+    type Event = Event;
+    type RestrictedOrigin = EnsureRootOrCouncilApproval;
 }
 
 impl pallet_validator::Config for Runtime {
-	type Event = Event;
-	type CouncilOrigin = EnsureRootOrCouncilApproval;
-	type Currency = Balances;
+    type Event = Event;
+    type CouncilOrigin = EnsureRootOrCouncilApproval;
+    type Currency = Balances;
 }
 
 parameter_types! {
@@ -410,6 +409,22 @@ impl validatorset::Config for Runtime {
     type Event = Event;
     type AddRemoveOrigin = EnsureRootOrCouncilApproval;
     type MinAuthorities = MinAuthorities;
+}
+
+parameter_types! {
+    pub const DaoMotionDuration: BlockNumber = 7 * DAYS;
+    pub const MinVetos: u32 = 3;
+}
+
+impl pallet_dao::Config for Runtime {
+    type Event = Event;
+    type CouncilOrigin = EnsureRootOrCouncilApproval;
+    type Proposal = Call;
+    type MotionDuration = DaoMotionDuration;
+    type Tfgrid = TfgridModule;
+    type NodeChanged = NodeChanged;
+    type WeightInfo = pallet_dao::weights::SubstrateWeight<Runtime>;
+    type MinVetos = MinVetos;
 }
 
 /// Special `FullIdentificationOf` implementation that is returning for every input `Some(Default::default())`.
@@ -573,10 +588,10 @@ type EnsureRootOrCouncilApproval = EnsureOneOf<
     pallet_collective::EnsureProportionAtLeast<_3, _5, AccountId, CouncilCollective>,
 >;
 
-// impl pallet_runtime_upgrade::Config for Runtime {
-// 	type Event = Event;
-// 	type SetCodeOrigin = EnsureRootOrCouncilApproval;
-// }
+impl pallet_runtime_upgrade::Config for Runtime {
+    type Event = Event;
+    type SetCodeOrigin = EnsureRootOrCouncilApproval;
+}
 
 pub struct AuraAccountAdapter;
 use sp_runtime::ConsensusEngineId;
@@ -626,17 +641,18 @@ construct_runtime!(
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
         Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
-        TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>},
-        // SmartContractModule: pallet_smart_contract::{Pallet, Call, Storage, Event<T>},
-        // TFTBridgeModule: pallet_tft_bridge::{Pallet, Call, Config<T>, Storage, Event<T>},
-        // TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Config<T>, Event<T>},
+        TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>, Config<T>},
+        SmartContractModule: pallet_smart_contract::{Pallet, Call, Storage, Event<T>},
+        TFTBridgeModule: pallet_tft_bridge::{Pallet, Call, Config<T>, Storage, Event<T>},
+        TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Config<T>, Event<T>},
         Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>},
-        // BurningModule: pallet_burning::{Pallet, Call, Storage, Event<T>},
-        // TFKVStore: pallet_kvstore::{Pallet, Call, Storage, Event<T>},
+        BurningModule: pallet_burning::{Pallet, Call, Storage, Event<T>},
+        TFKVStore: pallet_kvstore::{Pallet, Call, Storage, Event<T>},
         Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
         CouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
-        // RuntimeUpgrade: pallet_runtime_upgrade::{Pallet, Call, Event},
-        // Validator: pallet_validator::{Pallet, Call, Storage, Event<T>},
+        RuntimeUpgrade: pallet_runtime_upgrade::{Pallet, Call, Event},
+        Validator: pallet_validator::{Pallet, Call, Storage, Event<T>},
+        Dao: pallet_dao::{Pallet, Call, Storage, Event<T>},
     }
 );
 
