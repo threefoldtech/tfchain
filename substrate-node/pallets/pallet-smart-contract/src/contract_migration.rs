@@ -8,7 +8,7 @@ pub mod deprecated {
     use sp_std::prelude::*;
 
     #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
-    pub struct ContractV2 {
+    pub struct ContractV3 {
         pub version: u32,
         pub state: super::types::ContractState,
         pub contract_id: u64,
@@ -34,11 +34,11 @@ pub fn add_solution_provider_to_contract<T: Config>() -> frame_support::weights:
 
         let mut migrated_count = 0;
         // We transform the storage values from the old into the new format.
-        Contracts::translate::<deprecated::ContractV2, _>(|k, ctr| {
+        Contracts::translate::<deprecated::ContractV3, _>(|k, ctr| {
             frame_support::debug::info!("     Migrated contract for {:?}...", k);
 
             let new_contract = types::Contract {
-                version: 3,
+                version: 4,
                 state: ctr.state,
                 contract_id: ctr.contract_id,
                 twin_id: ctr.twin_id,

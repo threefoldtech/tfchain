@@ -176,7 +176,7 @@ fn test_update_node_contract_works() {
             contract_id: 1,
             state: types::ContractState::Created,
             twin_id: 1,
-            version: 3,
+            version: 4,
             contract_type,
             solution_provider_id: None,
         };

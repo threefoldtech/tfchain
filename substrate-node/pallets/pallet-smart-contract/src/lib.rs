@@ -60,7 +60,7 @@ pub trait Config:
     type RestrictedOrigin: EnsureOrigin<Self::Origin>;
 }
 
-pub const CONTRACT_VERSION: u32 = 3;
+pub const CONTRACT_VERSION: u32 = 4;
 
 pub type BalanceOf<T> =
     <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
@@ -87,7 +87,6 @@ decl_event!(
         RentContractCanceled(u64),
         ContractGracePeriodStarted(u64, u32, u32, u64),
         ContractGracePeriodEnded(u64, u32, u32),
-        NodeMarkedAsDedicated(u32, bool),
         SolutionProviderCreated(types::SolutionProvider<AccountId>),
         SolutionProviderApproved(u64, bool),
     }
@@ -1166,7 +1165,8 @@ impl<T: Config> Module<T> {
 
         if sales_share > 0 {
             let share = Perbill::from_percent(sales_share.into()) * amount;
-            // Send 50% to the sales channel
+            // Transfer the remaining share to the sales account
+            // By default it is 50%, if a contract has solution providers it can be less
             debug::info!(
                 "Transfering: {:?} from contract twin {:?} to sales account {:?}",
                 &sales_share,
@@ -1184,7 +1184,7 @@ impl<T: Config> Module<T> {
 
         // Burn 35%, to not have any imbalance in the system, subtract all previously send amounts with the initial
         let mut amount_to_burn =
-            amount - foundation_share - staking_pool_share - (Perbill::from_percent(50) * amount);
+            (Perbill::from_percent(50) * amount) - foundation_share - staking_pool_share;
 
         let existential_deposit_requirement = <T as Config>::Currency::minimum_balance();
         let free_balance = <T as Config>::Currency::free_balance(&twin.account_id);
@@ -1546,21 +1546,19 @@ impl<T: Config> Module<T> {
     }
 
     pub fn validate_solution_provider(solution_provider_id: Option<u64>) -> DispatchResult {
-        match solution_provider_id {
-            Some(provider_id) => {
-                ensure!(
-                    SolutionProviders::<T>::contains_key(provider_id),
-                    Error::<T>::NoSuchSolutionProvider
-                );
-                let solution_provider = SolutionProviders::<T>::get(provider_id);
-                ensure!(
-                    solution_provider.approved,
-                    Error::<T>::SolutionProviderNotApproved
-                );
-                return Ok(());
-            }
-            None => return Ok(()),
-        };
+        if let Some(provider_id) = solution_provider_id {
+            ensure!(
+                SolutionProviders::<T>::contains_key(provider_id),
+                Error::<T>::NoSuchSolutionProvider
+            );
+            let solution_provider = SolutionProviders::<T>::get(provider_id);
+            ensure!(
+                solution_provider.approved,
+                Error::<T>::SolutionProviderNotApproved
+            );
+            return Ok(());
+        }
+        Ok(())
     }
 }
 
