@@ -19,7 +19,6 @@ package = 'parity-scale-codec'
 version = '2.0.0'
 
 [dependencies]
-serde = { version = '1.0.100', default-features = false, features = ['derive'], optional = true }
 # Substrate packages
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
@@ -45,6 +44,6 @@ std = [
 	'sp-storage/std',
     'pallet-timestamp/std',
 	'codec/std',
-	'serde',
-	'sp-io/std'
+	'sp-io/std',
+	'scale-info/std'
 ]

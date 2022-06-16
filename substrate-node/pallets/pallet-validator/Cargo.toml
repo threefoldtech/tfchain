@@ -40,5 +40,6 @@ std = [
     'frame-system/std',
     'substrate-validator-set/std',
     'pallet-membership/std',
-    'sp-io/std'
+    'sp-io/std',
+	'scale-info/std'
 ]

@@ -24,14 +24,45 @@ version = '2.0.0'
 default-features = false
 path = "../pallets/pallet-tfgrid"
 
-[dependencies.pallet-dao]
+[dependencies.pallet-smart-contract]
 default-features = false
-path = "../pallets/pallet-dao"
+path = "../pallets/pallet-smart-contract"
+
+[dependencies.pallet-burning]
+default-features = false
+path = "../pallets/pallet-burning"
+
+[dependencies.pallet-kvstore]
+default-features = false
+path = "../pallets/pallet-kvstore"
+
+[dependencies.pallet-tft-bridge]
+default-features = false
+git = "https://github.com/threefoldtech/tfchain_tft_bridge"
+package = "pallet-tft-bridge"
+branch = "upgrade_to_polkadot_0_9_12"
+#path = "../../../tfchain_tft/pallet-tft-bridge"
+
+[dependencies.pallet-tft-price]
+default-features = false
+path = "../pallets/pallet-tft-price"
+
+[dependencies.pallet-runtime-upgrade]
+default-features = false
+path = "../pallets/pallet-runtime-upgrade"
 
 [dependencies.validatorset]
 default-features = false
 package = "substrate-validator-set"
 path = "../pallets/substrate-validator-set"
+
+[dependencies.pallet-validator]
+default-features = false
+path = "../pallets/pallet-validator"
+
+[dependencies.pallet-dao]
+default-features = false
+path = "../pallets/pallet-dao"
 
 [dependencies]
 getrandom = { version = "0.2", features = ["js"] }
@@ -94,6 +125,7 @@ runtime-benchmarks = [
 ]
 std = [
     'codec/std',
+    'scale-info/std',
     'frame-executive/std',
     'frame-support/std',
     'frame-system/std',
@@ -117,7 +149,6 @@ std = [
     'sp-std/std',
     'sp-transaction-pool/std',
     'sp-version/std',
-    'pallet-tfgrid/std',
     'pallet-scheduler/std',
     'pallet-session/std',
     'validatorset/std',
@@ -125,5 +156,12 @@ std = [
     'pallet-membership/std',
     'pallet-authorship/std',
     'tfchain-support/std',
+    'pallet-validator/std',
     'pallet-dao/std',
+    'pallet-burning/std',
+    'pallet-tfgrid/std',
+    'pallet-tft-bridge/std',
+    'pallet-tft-price/std',
+    'pallet-smart-contract/std',
+    'pallet-kvstore/std',
 ]

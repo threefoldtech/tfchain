@@ -61,7 +61,8 @@ std = [
 	'pallet-tft-price/std',
 	'codec/std',
 	'log/std',
-	'tfchain-support/std'
+	'tfchain-support/std',
+	'scale-info/std'
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

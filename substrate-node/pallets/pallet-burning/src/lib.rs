@@ -8,6 +8,8 @@ use frame_support::{
 use sp_std::prelude::*;
 use frame_system::{self as system, ensure_signed};
 use sp_runtime::DispatchResult;
+use scale_info::TypeInfo;
+use sp_std::vec::Vec;
 
 #[cfg(test)]
 mod tests;
@@ -49,7 +51,7 @@ decl_error! {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct Burn<AccountId, BalanceOf, BlockNumber> {
     pub target: AccountId,
     pub amount: BalanceOf,

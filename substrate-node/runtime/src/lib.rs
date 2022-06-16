@@ -53,21 +53,21 @@ pub mod impls;
 /// Import the template pallet.
 pub use pallet_tfgrid;
 
-// pub use pallet_smart_contract;
+pub use pallet_smart_contract;
 
-// pub use pallet_tft_bridge;
+pub use pallet_tft_bridge;
 
-// pub use pallet_tft_price;
+pub use pallet_tft_price;
 
-// pub use pallet_session;
+pub use pallet_session;
 
-// // pub use pallet_burning;
+pub use pallet_burning;
 
-// pub use pallet_kvstore;
+pub use pallet_kvstore;
 
-// pub use pallet_runtime_upgrade;
+pub use pallet_runtime_upgrade;
 
-// pub use pallet_validator;
+pub use pallet_validator;
 
 pub use pallet_dao;
 
@@ -342,57 +342,65 @@ impl ChangeNode for NodeChanged {
 
 impl pallet_tfgrid::Config for Runtime {
     type Event = Event;
-    // type RestrictedOrigin = EnsureRootOrCouncilApproval;
-    // type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Runtime>;
+    type RestrictedOrigin = EnsureRootOrCouncilApproval;
+    type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Runtime>;
+    type NodeChanged = NodeChanged;
 }
 
-// parameter_types! {
-//     pub StakingPoolAccount: AccountId = get_staking_pool_account();
-// 	pub BillingFrequency: u64 = 600;
-// }
 
-// pub fn get_staking_pool_account() -> AccountId {
-// 	// decoded public key from staking pool account 5CNposRewardAccount11111111111111111111111111FSU
-// 	AccountId::from([13, 209, 209, 166, 229, 163, 90, 168, 199, 245, 229, 126, 30, 221, 12, 63, 189, 106, 191, 46, 170, 142, 244, 37, 72, 152, 110, 84, 162, 86, 32, 0])
-// }
+parameter_types! {
+    pub StakingPoolAccount: AccountId = get_staking_pool_account();
+    pub BillingFrequency: u64 = 600;
+    pub GracePeriod: u64 = (6 * HOURS).into();
+    pub DistributionFrequency: u16 = 24;
+}
 
-// impl pallet_smart_contract::Config for Runtime {
-// 	type Event = Event;
-// 	type Currency = Balances;
-// 	type StakingPoolAccount = StakingPoolAccount;
-// 	type BillingFrequency = BillingFrequency;
-// 	type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
-// }
+pub fn get_staking_pool_account() -> AccountId {
+	// decoded public key from staking pool account 5CNposRewardAccount11111111111111111111111111FSU
+	AccountId::from([13, 209, 209, 166, 229, 163, 90, 168, 199, 245, 229, 126, 30, 221, 12, 63, 189, 106, 191, 46, 170, 142, 244, 37, 72, 152, 110, 84, 162, 86, 32, 0])
+}
 
-// impl pallet_tft_bridge::Config for Runtime {
-// 	type Event = Event;
-// 	type Currency = Balances;
-// 	type Burn = ();
-// 	type RestrictedOrigin = EnsureRootOrCouncilApproval;
-// }
+impl pallet_smart_contract::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type StakingPoolAccount = StakingPoolAccount;
+    type BillingFrequency = BillingFrequency;
+    type DistributionFrequency = DistributionFrequency;
+    type GracePeriod = GracePeriod;
+    type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
+    // type Tfgrid = TfgridModule;
+    type NodeChanged = NodeChanged;
+}
 
-// // impl pallet_burning::Config for Runtime {
-// // 	type Event = Event;
-// // 	type Currency = Balances;
-// // 	type Burn = ();
-// // }
+impl pallet_tft_bridge::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type Burn = ();
+	type RestrictedOrigin = EnsureRootOrCouncilApproval;
+}
 
-// impl pallet_kvstore::Config for Runtime {
-// 	type Event = Event;
-// }
+impl pallet_burning::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type Burn = ();
+}
 
-// impl pallet_tft_price::Config for Runtime {
-// 	type AuthorityId = pallet_tft_price::crypto::AuthId;
-// 	type Call = Call;
-// 	type Event = Event;
-// 	type RestrictedOrigin = EnsureRootOrCouncilApproval;
-// }
+impl pallet_kvstore::Config for Runtime {
+	type Event = Event;
+}
 
-// impl pallet_validator::Config for Runtime {
-// 	type Event = Event;
-// 	type CouncilOrigin = EnsureRootOrCouncilApproval;
-// 	type Currency = Balances;
-// }
+impl pallet_tft_price::Config for Runtime {
+	type AuthorityId = pallet_tft_price::crypto::AuthId;
+	type Call = Call;
+	type Event = Event;
+	type RestrictedOrigin = EnsureRootOrCouncilApproval;
+}
+
+impl pallet_validator::Config for Runtime {
+	type Event = Event;
+	type CouncilOrigin = EnsureRootOrCouncilApproval;
+	type Currency = Balances;
+}
 
 parameter_types! {
     pub MinAuthorities: u32 = 1;

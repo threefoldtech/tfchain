@@ -43,5 +43,6 @@ std = [
     'sp-std/std',
     'sp-storage/std',
     'serde',
-    'sp-io/std'
+    'sp-io/std',
+	'scale-info/std'
 ]
