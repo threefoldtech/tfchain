@@ -546,6 +546,19 @@ fn test_create_rent_contract_on_node_in_use_fails() {
 }
 
 #[test]
+fn test_create_rent_contract_non_dedicated_empty_node_works() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(bob()),
+            node_id
+        ));
+    })
+}
+
+#[test]
 fn test_create_node_contract_on_dedicated_node_without_rent_contract_fails() {
     new_test_ext().execute_with(|| {
         prepare_dedicated_farm_and_node();

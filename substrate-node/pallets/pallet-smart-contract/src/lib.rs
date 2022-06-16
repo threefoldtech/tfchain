@@ -316,7 +316,7 @@ impl<T: Config> Module<T> {
 
         let active_node_contracts = ActiveNodeContracts::get(node_id);
         let farm = pallet_tfgrid::Farms::get(node.farm_id);
-        ensure!(farm.dedicated_farm || active_node_contracts.len() == 0, Error::<T>::NodeNotAvailableToDeploy);
+        ensure!(farm.dedicated_farm || active_node_contracts.is_empty(), Error::<T>::NodeNotAvailableToDeploy);
 
         // Create contract
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
