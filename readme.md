@@ -38,7 +38,7 @@ cargo +nightly-2021-06-09 build --release
 This will build the node binary in release mode, once built you can execute it by doing following:
 
 ```
-./target/release/tfchain --ws-external --rpc-methods Unsafe --dev
+./target/release/tfchain --ws-external --dev
 ```
 
 > You need the `ws-external` flag in order to connect from a zos node to substrate in a local setup.
@@ -70,5 +70,5 @@ You can use the client to interact with the chain, [read more](./cli-tool/readme
 To wipe data run:
 
 ```
-rm -rf /home/<username>/.local/share/tfchain/chains/
+./target/release/tfchain purge-chain --dev
 ```
