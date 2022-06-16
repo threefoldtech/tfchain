@@ -16,6 +16,7 @@ use tfchain_support::{
     resources,
     traits::{ChangeNode, Tfgrid},
     types::{Node, Resources},
+    constants,
 };
 
 pub use pallet::*;
@@ -178,6 +179,7 @@ pub mod pallet {
         TimeLimitReached,
         VoteThresholdNotMet,
         FarmHasNoNodes,
+        InvalidProposalDuration,
     }
 
     #[pallet::call]
@@ -217,6 +219,10 @@ pub mod pallet {
             let now = frame_system::Pallet::<T>::block_number();
             let mut end = now + T::MotionDuration::get();
             if let Some(motion_duration) = duration {
+                ensure!(
+                    motion_duration < T::BlockNumber::from(constants::time::DAYS * 30),
+                    Error::<T>::InvalidProposalDuration
+                );
                 end = now + motion_duration;
             }
 

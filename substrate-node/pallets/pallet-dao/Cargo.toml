@@ -50,7 +50,7 @@ std = [
 	"pallet-collective/std",
 	"pallet-timestamp/std",
 	"pallet-tfgrid/std",
-	'tfchain-support/std'
+	"tfchain-support/std"
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

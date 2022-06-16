@@ -666,6 +666,38 @@ fn customize_proposal_duration_works() {
     });
 }
 
+#[test]
+fn customize_proposal_duration_out_of_bounds_fails() {
+    new_test_ext().execute_with(|| {
+        System::set_block_number(1);
+        create_farming_policies();
+        let proposal = make_proposal("some_remark".as_bytes().to_vec());
+        // assert_noop!(
+        //     DaoModule::propose(
+        //         Origin::signed(1),
+        //         2,
+        //         Box::new(proposal.clone()),
+        //         "some_description".as_bytes().to_vec(),
+        //         "some_link".as_bytes().to_vec(),
+        //         Some(1000000000)
+        //     ),
+        //     Error::<Test>::InvalidProposalDuration
+        // );
+
+        assert_noop!(
+            DaoModule::propose(
+                Origin::signed(1),
+                2,
+                Box::new(proposal.clone()),
+                "some_description".as_bytes().to_vec(),
+                "some_link".as_bytes().to_vec(),
+                Some(1000000000)
+            ),
+            Error::<Test>::InvalidProposalDuration
+        );
+    });
+}
+
 fn record(event: Event) -> EventRecord<Event, H256> {
     EventRecord {
         phase: Phase::Initialization,
