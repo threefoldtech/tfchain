@@ -22,12 +22,12 @@ construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        DaoModule: pallet_dao::{Module, Call, Storage, Event<T>},
-        TfgridModule: pallet_tfgrid::{Module, Call, Storage, Event<T>},
-        Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-        Council: pallet_collective::<Instance1>::{Module, Call, Origin<T>, Event<T>, Config<T>},
-        Membership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        DaoModule: pallet_dao::{Pallet, Call, Storage, Event<T>},
+        TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+        Council: pallet_collective::<Instance1>::{Pallet, Call, Origin<T>, Event<T>, Config<T>},
+        Membership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>},
     }
 );
 

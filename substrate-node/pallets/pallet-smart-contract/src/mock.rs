@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use super::*;
-use crate as pallet_smart_contract;
+use crate::{self as pallet_smart_contract};
 use frame_support::{construct_runtime, parameter_types};
 use sp_core::{sr25519, Pair, Public, H256, crypto::Ss58Codec};
 use sp_runtime::traits::{IdentifyAccount, Verify};
@@ -35,12 +35,12 @@ construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-        TfgridModule: pallet_tfgrid::{Module, Call, Storage, Event<T>},
-        Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-        SmartContractModule: pallet_smart_contract::{Module, Call, Event<T>},
-        TFTPriceModule: pallet_tft_price::{Module, Call, Storage, Event<T>}
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+        TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+        SmartContractModule: pallet_smart_contract::{Pallet, Call, Storage, Event<T>},
+        TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Event<T>}
     }
 );
 
@@ -53,7 +53,7 @@ parameter_types! {
 }
 
 impl frame_system::Config for TestRuntime {
-    type BaseCallFilter = ();
+    type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
     type Origin = Origin;
@@ -75,11 +75,21 @@ impl frame_system::Config for TestRuntime {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = ();
+    type OnSetCode = ();
+}
+
+parameter_types! {
+    pub const MaxLocks: u32 = 50;
+    pub const MaxReserves: u32 = 50;
 }
 
 impl pallet_balances::Config for TestRuntime {
-    type MaxLocks = ();
+    type MaxLocks = MaxLocks;
+    type MaxReserves = MaxReserves;
+    type ReserveIdentifier = [u8; 8];
+    /// The type for recording an account's balance.
     type Balance = u64;
+    /// The ubiquitous event type.
     type Event = Event;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
@@ -127,7 +137,7 @@ parameter_types! {
 }
 
 use weights;
-impl Config for TestRuntime {
+impl pallet_smart_contract::Config for TestRuntime {
     type Event = Event;
     type Currency = Balances;
     type StakingPoolAccount = StakingPoolAccount;
