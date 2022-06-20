@@ -1,3 +1,4 @@
+use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
 use crate::{self as pallet_dao};
 use frame_support::{construct_runtime, parameter_types};
 use frame_system::EnsureRoot;

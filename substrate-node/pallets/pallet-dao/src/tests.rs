@@ -156,7 +156,7 @@ fn close_works() {
         let e = System::events();
         assert_eq!(
             e[4],
-            record(MockEvent::pallet_dao(DaoEvent::Proposed {
+            record(MockEvent::DaoModule(DaoEvent::Proposed {
                 account: 1,
                 proposal_index: 0,
                 proposal_hash: hash,
@@ -166,7 +166,7 @@ fn close_works() {
 
         assert_eq!(
             e[8],
-            record(MockEvent::pallet_dao(DaoEvent::Voted {
+            record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 10,
                 proposal_hash: hash,
                 voted: true,
@@ -177,7 +177,7 @@ fn close_works() {
 
         assert_eq!(
             e[12],
-            record(MockEvent::pallet_dao(DaoEvent::Voted {
+            record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 11,
                 proposal_hash: hash,
                 voted: true,
@@ -192,7 +192,7 @@ fn close_works() {
 
         assert_eq!(
             e[13],
-            record(MockEvent::pallet_dao(DaoEvent::Closed {
+            record(MockEvent::DaoModule(DaoEvent::Closed {
                 proposal_hash: hash,
                 yes: 2,
                 yes_weight: total_weight,
@@ -203,7 +203,7 @@ fn close_works() {
 
         assert_eq!(
             e[14],
-            record(MockEvent::pallet_dao(DaoEvent::Approved {
+            record(MockEvent::DaoModule(DaoEvent::Approved {
                 proposal_hash: hash,
             }))
         );
@@ -219,10 +219,10 @@ fn motion_approval_works() {
         System::set_block_number(1);
         create_farming_policies();
 
-        let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_farm_certification(
-            1,
-            FarmCertification::Gold,
-        ));
+        let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_farm_certification {
+            farm_id: 1,
+            certification: FarmCertification::Gold,
+        });
         let hash = BlakeTwo256::hash_of(&proposal);
 
         assert_ok!(DaoModule::propose(
@@ -252,7 +252,7 @@ fn motion_approval_works() {
         let e = System::events();
         assert_eq!(
             e[4],
-            record(MockEvent::pallet_dao(DaoEvent::Proposed {
+            record(MockEvent::DaoModule(DaoEvent::Proposed {
                 account: 1,
                 proposal_index: 0,
                 proposal_hash: hash,
@@ -262,7 +262,7 @@ fn motion_approval_works() {
 
         assert_eq!(
             e[8],
-            record(MockEvent::pallet_dao(DaoEvent::Voted {
+            record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 10,
                 proposal_hash: hash,
                 voted: true,
@@ -273,7 +273,7 @@ fn motion_approval_works() {
 
         assert_eq!(
             e[12],
-            record(MockEvent::pallet_dao(DaoEvent::Voted {
+            record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 11,
                 proposal_hash: hash,
                 voted: true,
@@ -288,7 +288,7 @@ fn motion_approval_works() {
 
         assert_eq!(
             e[13],
-            record(MockEvent::pallet_dao(DaoEvent::Closed {
+            record(MockEvent::DaoModule(DaoEvent::Closed {
                 proposal_hash: hash,
                 yes: 2,
                 yes_weight: total_weight,
@@ -299,14 +299,14 @@ fn motion_approval_works() {
 
         assert_eq!(
             e[14],
-            record(MockEvent::pallet_dao(DaoEvent::Approved {
+            record(MockEvent::DaoModule(DaoEvent::Approved {
                 proposal_hash: hash,
             }))
         );
 
         assert_eq!(
             e[16],
-            record(MockEvent::pallet_dao(DaoEvent::Executed {
+            record(MockEvent::DaoModule(DaoEvent::Executed {
                 proposal_hash: hash,
                 result: Ok(())
             }))
@@ -324,10 +324,10 @@ fn motion_veto_works() {
         System::set_block_number(1);
         create_farming_policies();
 
-        let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_farm_certification(
-            1,
-            FarmCertification::Gold,
-        ));
+        let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_farm_certification {
+            farm_id: 1,
+            certification: FarmCertification::Gold,
+        });
         let hash = BlakeTwo256::hash_of(&proposal);
 
         assert_ok!(DaoModule::propose(
@@ -347,7 +347,7 @@ fn motion_veto_works() {
         let e = System::events();
         assert_eq!(
             e[4],
-            record(MockEvent::pallet_dao(DaoEvent::Proposed {
+            record(MockEvent::DaoModule(DaoEvent::Proposed {
                 account: 1,
                 proposal_index: 0,
                 proposal_hash: hash,
@@ -361,14 +361,14 @@ fn motion_veto_works() {
 
         assert_eq!(
             e[5],
-            record(MockEvent::pallet_dao(DaoEvent::CouncilMemberVeto {
+            record(MockEvent::DaoModule(DaoEvent::CouncilMemberVeto {
                 proposal_hash: hash,
                 who: 2,
             }))
         );
         assert_eq!(
             e[6],
-            record(MockEvent::pallet_dao(DaoEvent::CouncilMemberVeto {
+            record(MockEvent::DaoModule(DaoEvent::CouncilMemberVeto {
                 proposal_hash: hash,
                 who: 3,
             }))
@@ -376,7 +376,7 @@ fn motion_veto_works() {
 
         assert_eq!(
             e[7],
-            record(MockEvent::pallet_dao(DaoEvent::ClosedByCouncil {
+            record(MockEvent::DaoModule(DaoEvent::ClosedByCouncil {
                 proposal_hash: hash,
                 vetos: [2, 3].to_vec(),
             }))
@@ -384,14 +384,14 @@ fn motion_veto_works() {
 
         assert_eq!(
             e[8],
-            record(MockEvent::pallet_dao(DaoEvent::Disapproved {
+            record(MockEvent::DaoModule(DaoEvent::Disapproved {
                 proposal_hash: hash,
             }))
         );
 
         // assert_eq!(
         //     e[8],
-        //     record(MockEvent::pallet_dao(DaoEvent::Voted {
+        //     record(MockEvent::DaoModule(DaoEvent::Voted {
         //         account: 11,
         //         proposal_hash: hash,
         //         voted: true,
@@ -406,7 +406,7 @@ fn motion_veto_works() {
 
         // assert_eq!(
         //     e[9],
-        //     record(MockEvent::pallet_dao(DaoEvent::Closed {
+        //     record(MockEvent::DaoModule(DaoEvent::Closed {
         //         proposal_hash: hash,
         //         yes: 2,
         //         yes_weight: total_weight,
@@ -417,7 +417,7 @@ fn motion_veto_works() {
 
         // assert_eq!(
         //     e[10],
-        //     record(MockEvent::pallet_dao(DaoEvent::Approved {
+        //     record(MockEvent::DaoModule(DaoEvent::Approved {
         //         proposal_hash: hash,
         //     }))
         // );
@@ -430,10 +430,10 @@ fn weighted_voting_works() {
         System::set_block_number(1);
         create_farming_policies();
 
-        let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_farm_certification(
-            1,
-            FarmCertification::Gold,
-        ));
+        let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_farm_certification {
+            farm_id: 1,
+            certification: FarmCertification::Gold,
+        });
         let hash = BlakeTwo256::hash_of(&proposal);
 
         assert_ok!(DaoModule::propose(
@@ -463,7 +463,7 @@ fn weighted_voting_works() {
         let e = System::events();
         assert_eq!(
             e[4],
-            record(MockEvent::pallet_dao(DaoEvent::Proposed {
+            record(MockEvent::DaoModule(DaoEvent::Proposed {
                 account: 1,
                 proposal_index: 0,
                 proposal_hash: hash,
@@ -473,7 +473,7 @@ fn weighted_voting_works() {
 
         assert_eq!(
             e[8],
-            record(MockEvent::pallet_dao(DaoEvent::Voted {
+            record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 10,
                 proposal_hash: hash,
                 voted: true,
@@ -484,7 +484,7 @@ fn weighted_voting_works() {
 
         assert_eq!(
             e[12],
-            record(MockEvent::pallet_dao(DaoEvent::Voted {
+            record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 11,
                 proposal_hash: hash,
                 voted: false,
@@ -498,7 +498,7 @@ fn weighted_voting_works() {
 
         assert_eq!(
             e[13],
-            record(MockEvent::pallet_dao(DaoEvent::Closed {
+            record(MockEvent::DaoModule(DaoEvent::Closed {
                 proposal_hash: hash,
                 yes: 1,
                 yes_weight: farm_1_weight,
@@ -511,7 +511,7 @@ fn weighted_voting_works() {
         // has more stake in the network voted no
         assert_eq!(
             e[14],
-            record(MockEvent::pallet_dao(DaoEvent::Disapproved {
+            record(MockEvent::DaoModule(DaoEvent::Disapproved {
                 proposal_hash: hash,
             }))
         );
@@ -528,7 +528,7 @@ fn voting_tfgridmodule_call_works() {
         System::set_block_number(1);
         create_farming_policies();
 
-        let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_connection_price(100));
+        let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_connection_price { price: 100 });
         let hash = BlakeTwo256::hash_of(&proposal);
 
         assert_ok!(DaoModule::propose(
@@ -561,7 +561,7 @@ fn voting_tfgridmodule_call_works() {
         }
         assert_eq!(
             e[4],
-            record(MockEvent::pallet_dao(DaoEvent::Proposed {
+            record(MockEvent::DaoModule(DaoEvent::Proposed {
                 account: 1,
                 proposal_index: 0,
                 proposal_hash: hash,
@@ -571,7 +571,7 @@ fn voting_tfgridmodule_call_works() {
 
         assert_eq!(
             e[8],
-            record(MockEvent::pallet_dao(DaoEvent::Voted {
+            record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 10,
                 proposal_hash: hash,
                 voted: true,
@@ -582,7 +582,7 @@ fn voting_tfgridmodule_call_works() {
 
         assert_eq!(
             e[12],
-            record(MockEvent::pallet_dao(DaoEvent::Voted {
+            record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 11,
                 proposal_hash: hash,
                 voted: true,
@@ -597,7 +597,7 @@ fn voting_tfgridmodule_call_works() {
 
         assert_eq!(
             e[13],
-            record(MockEvent::pallet_dao(DaoEvent::Closed {
+            record(MockEvent::DaoModule(DaoEvent::Closed {
                 proposal_hash: hash,
                 yes: 2,
                 yes_weight: total_weight,
@@ -608,14 +608,14 @@ fn voting_tfgridmodule_call_works() {
 
         assert_eq!(
             e[14],
-            record(MockEvent::pallet_dao(DaoEvent::Approved {
+            record(MockEvent::DaoModule(DaoEvent::Approved {
                 proposal_hash: hash,
             }))
         );
 
         assert_eq!(
             e[16],
-            record(MockEvent::pallet_dao(DaoEvent::Executed {
+            record(MockEvent::DaoModule(DaoEvent::Executed {
                 proposal_hash: hash,
                 result: Ok(())
             }))
@@ -707,7 +707,7 @@ fn record(event: Event) -> EventRecord<Event, H256> {
 }
 
 fn make_proposal(value: Vec<u8>) -> Call {
-    Call::System(frame_system::Call::remark(value))
+    Call::System(frame_system::Call::remark { remark: value })
 }
 
 pub fn prepare_twin_farm_and_node(account_id: u64, farm_name: Vec<u8>, farm_id: u32) {
