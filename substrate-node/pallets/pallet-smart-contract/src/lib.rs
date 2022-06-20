@@ -1039,12 +1039,17 @@ impl<T: Config> Module<T> {
         ContractLock::<T>::remove(contract_id);
     }
 
-    pub fn calculate_cost_in_tft_from_musd(total_cost_musd: u64) -> Result<u64, DispatchError> {
-        let tft_price_musd = U64F64::from_num(pallet_tft_price::AverageTftPrice::get()) * 1000;
-        ensure!(tft_price_musd > 0, Error::<T>::TFTPriceValueError);
+    pub fn calculate_cost_in_tft_from_musd(total_cost: u64) -> Result<u64, DispatchError> {
+        let avg_tft_price = pallet_tft_price::AverageTftPrice::get();
+        ensure!(avg_tft_price > 0, Error::<T>::TFTPriceValueError);
 
-        let total_cost_musd = U64F64::from_num(total_cost_musd) / 10000;
+        // TFT Price is in cents, divide by 10 to get the price in musd
+        let tft_price_musd = U64F64::from_num(avg_tft_price / 10);
 
+        // Cost is expressed in units USD, divide by 10000 to get the price in musd
+        let total_cost_musd = U64F64::from_num(total_cost) / 10000;
+
+        // Now we have the price in musd and cost in musd, make the conversion to the amount of TFT's and multiply by the chain precision (7 decimals)
         let total_cost_tft = (total_cost_musd / tft_price_musd) * U64F64::from_num(1e7);
         let total_cost_tft_64: u64 = U64F64::to_num(total_cost_tft);
         Ok(total_cost_tft_64)
@@ -1131,6 +1136,13 @@ impl<T: Config> Module<T> {
         balance: BalanceOf<T>,
         certification_type: NodeCertification,
     ) -> (BalanceOf<T>, types::DiscountLevel) {
+        if amount_due == 0 {
+            return (
+                BalanceOf::<T>::saturated_from(0 as u128),
+                types::DiscountLevel::None,
+            );
+        }
+
         let balance_as_u128: u128 = balance.saturated_into::<u128>();
 
         // calculate amount due on a monthly basis

@@ -2,12 +2,12 @@ use super::Event as SmartContractEvent;
 use crate::{mock::Event as MockEvent, mock::*, Error};
 use frame_support::{
     assert_noop, assert_ok,
-    traits::{OnFinalize, OnInitialize, LockableCurrency, WithdrawReasons},
+    traits::{LockableCurrency, OnFinalize, OnInitialize, WithdrawReasons},
 };
-use sp_core::H256;
 use frame_system::{EventRecord, Phase, RawOrigin};
+use sp_core::H256;
 use sp_runtime::{Perbill, Percent};
-use substrate_fixed::types::{U16F16, U64F64};
+use substrate_fixed::types::U64F64;
 
 use super::types;
 use pallet_tfgrid::types as pallet_tfgrid_types;
@@ -705,7 +705,7 @@ fn test_node_contract_billing_details() {
         let burned_amount = Perbill::from_percent(35) * total_amount_billed;
         assert_eq!(
             total_issuance,
-            initial_total_issuance - burned_amount as u64 - 1
+            initial_total_issuance - burned_amount as u64
         );
 
         // amount unbilled should have been reset after a transfer between contract owner and farmer
@@ -745,7 +745,7 @@ fn test_multiple_contracts_billing_loop_works() {
         // 2: Contract created (name contract)
         // 3: Contract Billed (node contract)
         // 4: Contract Billed (name contract)
-        assert_eq!(our_events.len(), 4);
+        assert_eq!(our_events.len(), 5);
     })
 }
 
@@ -770,23 +770,23 @@ fn test_node_contract_billing_cycles() {
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 11);
         run_to_block(12);
-        check_report_cost(1, 2, amount_due_as_u128, 12, discount_received);
+        check_report_cost(1, amount_due_as_u128, 12, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(22);
-        check_report_cost(1, 3, amount_due_as_u128, 22, discount_received);
+        check_report_cost(1, amount_due_as_u128, 22, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(32);
-        check_report_cost(1, 4, amount_due_as_u128, 32, discount_received);
+        check_report_cost(1, amount_due_as_u128, 32, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(42);
-        check_report_cost(1, 5, amount_due_as_u128, 42, discount_received);
+        check_report_cost(1, amount_due_as_u128, 42, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(52);
-        check_report_cost(1, 6, amount_due_as_u128, 52, discount_received);
+        check_report_cost(1, amount_due_as_u128, 52, discount_received);
     });
 }
 
@@ -811,23 +811,23 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 11);
         run_to_block(12);
-        check_report_cost(1, 2, amount_due_as_u128, 12, discount_received);
+        check_report_cost(1, amount_due_as_u128, 12, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(22);
-        check_report_cost(1, 3, amount_due_as_u128, 22, discount_received);
+        check_report_cost(1, amount_due_as_u128, 22, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(32);
-        check_report_cost(1, 4, amount_due_as_u128, 32, discount_received);
+        check_report_cost(1, amount_due_as_u128, 32, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(42);
-        check_report_cost(1, 5, amount_due_as_u128, 42, discount_received);
+        check_report_cost(1, amount_due_as_u128, 42, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(52);
-        check_report_cost(1, 6, amount_due_as_u128, 52, discount_received);
+        check_report_cost(1, amount_due_as_u128, 52, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 4);
         run_to_block(56);
@@ -836,7 +836,7 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
         TfgridModule::delete_node_farm(Origin::signed(alice()), 1).unwrap();
 
         // After deleting a node, the contract gets billed before it's canceled
-        check_report_cost(1, 8, amount_due_as_u128, 56, discount_received);
+        check_report_cost(1, amount_due_as_u128, 56, discount_received);
 
         let our_events = System::events();
 
@@ -845,12 +845,16 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
         ips.push(ip);
 
         assert_eq!(
-            our_events[9],
-            record(MockEvent::SmartContractModule(SmartContractEvent::<TestRuntime>::IPsFreed(1, ips)))
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::IPsFreed(1, ips)
+            ))),
+            true
         );
         assert_eq!(
-            our_events[9],
-            record(MockEvent::SmartContractModule(SmartContractEvent::<TestRuntime>::NodeContractCanceled(1, 1, 2)))
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::NodeContractCanceled(1, 1, 2)
+            ))),
+            true
         );
     });
 }
@@ -875,23 +879,23 @@ fn test_node_contract_only_public_ip_billing_cycles() {
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 11);
         assert_ne!(amount_due_as_u128, 0);
         run_to_block(12);
-        check_report_cost(1, 1, amount_due_as_u128, 12, discount_received);
+        check_report_cost(1, amount_due_as_u128, 12, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(22);
-        check_report_cost(1, 2, amount_due_as_u128, 22, discount_received);
+        check_report_cost(1, amount_due_as_u128, 22, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(32);
-        check_report_cost(1, 3, amount_due_as_u128, 32, discount_received);
+        check_report_cost(1, amount_due_as_u128, 32, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(42);
-        check_report_cost(1, 4, amount_due_as_u128, 42, discount_received);
+        check_report_cost(1, amount_due_as_u128, 42, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(52);
-        check_report_cost(1, 5, amount_due_as_u128, 52, discount_received);
+        check_report_cost(1, amount_due_as_u128, 52, discount_received);
     });
 }
 
@@ -917,11 +921,11 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 11);
         run_to_block(12);
-        check_report_cost(1, 2, amount_due_as_u128, 12, discount_received);
+        check_report_cost(1, amount_due_as_u128, 12, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(22);
-        check_report_cost(1, 3, amount_due_as_u128, 22, discount_received);
+        check_report_cost(1, amount_due_as_u128, 22, discount_received);
 
         run_to_block(28);
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 6);
@@ -931,7 +935,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
         ));
 
         run_to_block(29);
-        check_report_cost(1, 5, amount_due_as_u128, 28, discount_received);
+        check_report_cost(1, amount_due_as_u128, 28, discount_received);
 
         let contract = SmartContractModule::contracts(1);
         assert_eq!(contract.contract_id, 0);
@@ -970,8 +974,10 @@ fn test_node_contract_out_of_funds_should_move_state_to_graceperiod_works() {
 
         let our_events = System::events();
         assert_eq!(
-            our_events[3],
-            record(MockEvent::SmartContractModule(SmartContractEvent::<TestRuntime>::ContractGracePeriodStarted(1, 1, 3, 21)))
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::ContractGracePeriodStarted(1, 1, 3, 21)
+            ))),
+            true
         );
     });
 }
@@ -1005,8 +1011,10 @@ fn test_restore_node_contract_in_grace_works() {
 
         let our_events = System::events();
         assert_eq!(
-            our_events[3],
-            record(MockEvent::SmartContractModule(SmartContractEvent::<TestRuntime>::ContractGracePeriodStarted(1, 1, 3, 21)))
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::ContractGracePeriodStarted(1, 1, 3, 21)
+            ))),
+            true
         );
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(31);
@@ -1062,8 +1070,10 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
 
         let our_events = System::events();
         assert_eq!(
-            our_events[3],
-            record(MockEvent::SmartContractModule(SmartContractEvent::<TestRuntime>::ContractGracePeriodStarted(1, 1, 3, 21)))
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::ContractGracePeriodStarted(1, 1, 3, 21)
+            ))),
+            true
         );
 
         run_to_block(32);
@@ -1108,10 +1118,16 @@ fn test_name_contract_billing() {
             discount_level: types::DiscountLevel::Gold,
             amount_billed: 2032,
         };
+
         let our_events = System::events();
+        println!("events: {:?}", our_events.clone());
         assert_eq!(
-            our_events[1],
-            record(MockEvent::SmartContractModule(SmartContractEvent::<TestRuntime>::ContractBilled(contract_bill_event)))
+            our_events[2],
+            record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ContractBilled(
+                contract_bill_event
+            )))
         );
     });
 }
@@ -1140,7 +1156,7 @@ fn test_rent_contract_billing() {
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 11);
         assert_ne!(amount_due_as_u128, 0);
-        check_report_cost(1, 1, amount_due_as_u128, 12, discount_received);
+        check_report_cost(1, amount_due_as_u128, 12, discount_received);
     });
 }
 
@@ -1168,7 +1184,7 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 11);
         assert_ne!(amount_due_as_u128, 0);
-        check_report_cost(1, 1, amount_due_as_u128, 12, discount_received.clone());
+        check_report_cost(1, amount_due_as_u128, 12, discount_received.clone());
 
         let twin = TfgridModule::twins(2);
         let usable_balance = Balances::usable_balance(&twin.account_id);
@@ -1192,7 +1208,7 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
 
         // Last amount due is the same as the first one
         assert_ne!(amount_due_as_u128, 0);
-        check_report_cost(1, 3, amount_due_as_u128, 14, discount_received);
+        check_report_cost(1, amount_due_as_u128, 14, discount_received);
 
         let usable_balance = Balances::usable_balance(&twin.account_id);
         let free_balance = Balances::free_balance(&twin.account_id);
@@ -1236,7 +1252,7 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
             1
         ));
         assert_ne!(amount_due_as_u128, 0);
-        check_report_cost(1, 2, amount_due_as_u128, 8, discount_received.clone());
+        check_report_cost(1, amount_due_as_u128, 8, discount_received.clone());
 
         // Twin should have no more locked balance
         let twin = TfgridModule::twins(2);
@@ -1272,14 +1288,14 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 11);
         assert_ne!(amount_due_as_u128, 0);
-        check_report_cost(1, 3, amount_due_as_u128, 12, discount_received);
+        check_report_cost(1, amount_due_as_u128, 12, discount_received);
 
         let our_events = System::events();
         // Event 1: Rent contract created
         // Event 2: Node Contract created
         // Event 4: Rent contract billed
         // => no Node Contract billed event
-        assert_eq!(our_events.len(), 4);
+        assert_eq!(our_events.len(), 5);
     });
 }
 
@@ -1331,15 +1347,23 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         // Event 16: Node contract canceled
         // Event 17: Rent contract Canceled
         // => no Node Contract billed event
-        assert_eq!(our_events.len(), 17);
-            
-        assert_eq!(
-            our_events[15],
-            record(MockEvent::SmartContractModule(SmartContractEvent::<TestRuntime>::NodeContractCanceled(2, 1, 3)))
-        );
+        assert_eq!(our_events.len(), 18);
+
         assert_eq!(
             our_events[16],
-            record(MockEvent::SmartContractModule(SmartContractEvent::<TestRuntime>::RentContractCanceled(1)))
+            record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::NodeContractCanceled(
+                2, 1, 3
+            )))
+        );
+        assert_eq!(
+            our_events[17],
+            record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::RentContractCanceled(
+                1
+            )))
         );
     });
 }
@@ -1370,18 +1394,19 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
         // check contract 1 costs (Rent Contract)
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 11);
         assert_ne!(amount_due_as_u128, 0);
-        check_report_cost(1, 2, amount_due_as_u128, 12, discount_received);
+        check_report_cost(1, amount_due_as_u128, 12, discount_received);
         // check contract 2 costs (Node Contract)
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(2, 2, 11);
         assert_ne!(amount_due_as_u128, 0);
-        check_report_cost(2, 3, amount_due_as_u128, 12, discount_received);
+        check_report_cost(2, amount_due_as_u128, 12, discount_received);
 
         let our_events = System::events();
-        // Event 1: Rent contract created
-        // Event 2: Node Contract created
-        // Event 3: Rent contract billed
-        // Event 6: Node Contract billed
-        assert_eq!(our_events.len(), 4);
+        // Event 1: Price Stored
+        // Event 2: Rent contract created
+        // Event 3: Node Contract created
+        // Event 4: Rent contract billed
+        // Event 5: Node Contract billed
+        assert_eq!(our_events.len(), 5);
     });
 }
 
@@ -1407,8 +1432,10 @@ fn test_rent_contract_out_of_funds_should_move_state_to_graceperiod_works() {
 
         let our_events = System::events();
         assert_eq!(
-            our_events[1],
-            record(MockEvent::SmartContractModule(SmartContractEvent::<TestRuntime>::ContractGracePeriodStarted(1, 1, 3, 21)))
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::ContractGracePeriodStarted(1, 1, 3, 11)
+            ))),
+            true
         );
     });
 }
@@ -1434,8 +1461,12 @@ fn test_restore_rent_contract_in_grace_works() {
 
         let our_events = System::events();
         assert_eq!(
-            our_events[1],
-            record(MockEvent::SmartContractModule(SmartContractEvent::<TestRuntime>::ContractGracePeriodStarted(1, 1, 3, 11)))
+            our_events[2],
+            record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ContractGracePeriodStarted(
+                1, 1, 3, 11
+            )))
         );
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(21);
@@ -1483,8 +1514,10 @@ fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works
 
         let our_events = System::events();
         assert_eq!(
-            our_events[1],
-            record(MockEvent::SmartContractModule(SmartContractEvent::<TestRuntime>::ContractGracePeriodStarted(1, 1, 3, 11)))
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::ContractGracePeriodStarted(1, 1, 3, 11)
+            ))),
+            true
         );
 
         run_to_block(22);
@@ -1535,18 +1568,22 @@ fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
         TfgridModule::delete_node_farm(Origin::signed(alice()), 1).unwrap();
 
         let our_events = System::events();
-        
+
         let ip = "1.1.1.0".as_bytes().to_vec();
         let mut ips = Vec::new();
         ips.push(ip);
-        
+
         assert_eq!(
-            our_events[4],
-            record(MockEvent::SmartContractModule(SmartContractEvent::<TestRuntime>::NodeContractCanceled(2, 1, 2)))
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::NodeContractCanceled(2, 1, 2)
+            ))),
+            true
         );
         assert_eq!(
-            our_events[7],
-            record(MockEvent::SmartContractModule(SmartContractEvent::<TestRuntime>::RentContractCanceled(1)))
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::RentContractCanceled(1)
+            ))),
+            true
         );
     });
 }
@@ -1588,12 +1625,7 @@ fn test_cu_calculation() {
 fn test_lock() {
     new_test_ext().execute_with(|| {
         let id: u64 = 1;
-        Balances::set_lock(
-            id.to_be_bytes(),
-            &bob(),
-            100,
-            WithdrawReasons::RESERVE,
-        );
+        Balances::set_lock(id.to_be_bytes(), &bob(), 100, WithdrawReasons::RESERVE);
 
         let usable_balance = Balances::usable_balance(&bob());
         let free_balance = Balances::free_balance(&bob());
@@ -1658,24 +1690,33 @@ fn push_contract_resources_used(contract_id: u64) {
 
 fn check_report_cost(
     contract_id: u64,
-    index: usize,
     amount_billed: u64,
     block_number: u64,
     discount_level: types::DiscountLevel,
 ) {
     let our_events = System::events();
-    
+
     let contract_bill_event = types::ContractBill {
         contract_id,
         timestamp: 1628082000 + (6 * block_number),
         discount_level,
         amount_billed: amount_billed as u128,
     };
-    
+
     assert_eq!(
-        our_events[index],
-        record(MockEvent::SmartContractModule(SmartContractEvent::<TestRuntime>::ContractBilled(contract_bill_event)))
+        our_events.contains(&record(MockEvent::SmartContractModule(
+            SmartContractEvent::<TestRuntime>::ContractBilled(contract_bill_event)
+        ))),
+        true
     );
+    // assert_eq!(
+    //     our_events[index],
+    //     record(MockEvent::SmartContractModule(SmartContractEvent::<
+    //         TestRuntime,
+    //     >::ContractBilled(
+    //         contract_bill_event
+    //     )))
+    // );
 }
 
 fn calculate_tft_cost(contract_id: u64, twin_id: u32, blocks: u64) -> (u64, types::DiscountLevel) {

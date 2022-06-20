@@ -3,26 +3,21 @@
 use super::*;
 use crate::{self as pallet_smart_contract};
 use frame_support::{construct_runtime, parameter_types};
-use sp_core::{sr25519, Pair, Public, H256, crypto::Ss58Codec};
+use frame_system::EnsureRoot;
+use sp_core::{crypto::Ss58Codec, sr25519, Pair, Public, H256};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::MultiSignature;
 use sp_runtime::{
-    AccountId32,
     testing::{Header, TestXt},
     traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentityLookup},
+    AccountId32,
 };
 use sp_std::prelude::*;
-use frame_system::EnsureRoot;
-use tfchain_support::{
-    traits::ChangeNode,
-    types::Node,
-};
+use tfchain_support::{traits::ChangeNode, types::Node};
 
 pub type Signature = MultiSignature;
 
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-pub type BalanceOf<T> =
-    <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
 pub type Moment = u64;
 
 type Extrinsic = TestXt<Call, ()>;
@@ -99,10 +94,7 @@ impl pallet_balances::Config for TestRuntime {
 
 pub struct NodeChanged;
 impl ChangeNode for NodeChanged {
-	fn node_changed(
-		_old_node: Option<&Node>,
-		_new_node: &Node,
-	) {}
+    fn node_changed(_old_node: Option<&Node>, _new_node: &Node) {}
 
     fn node_deleted(node: &Node) {
         SmartContractModule::node_deleted(node);
@@ -144,7 +136,7 @@ impl pallet_smart_contract::Config for TestRuntime {
     type BillingFrequency = BillingFrequency;
     type DistributionFrequency = DistributionFrequency;
     type GracePeriod = GracePeriod;
-    type WeightInfo = weights::SubstrateWeight<TestRuntime>; 
+    type WeightInfo = weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
 }
 
@@ -221,12 +213,16 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
         .build_storage::<TestRuntime>()
         .unwrap();
     let genesis = pallet_balances::GenesisConfig::<TestRuntime> {
-        balances: vec![(alice(), 1000000000000), (bob(), 2500000000), (charlie(), 150000)],
+        balances: vec![
+            (alice(), 1000000000000),
+            (bob(), 2500000000),
+            (charlie(), 150000),
+        ],
     };
     genesis.assimilate_storage(&mut t).unwrap();
 
     let genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
-        allowed_origin: bob()
+        allowed_origin: bob(),
     };
     genesis.assimilate_storage(&mut t).unwrap();
 
