@@ -305,12 +305,6 @@ impl<T: Config> Module<T> {
             Error::<T>::NodeNotExists
         );
 
-        let active_node_contracts = ActiveNodeContracts::get(node_id);
-        ensure!(
-            active_node_contracts.len() == 0,
-            Error::<T>::NodeHasActiveContracts
-        );
-
         ensure!(
             !ActiveRentContractForNode::contains_key(node_id),
             Error::<T>::NodeHasRentContract
@@ -322,8 +316,9 @@ impl<T: Config> Module<T> {
             Error::<T>::FarmNotExists
         );
 
+        let active_node_contracts = ActiveNodeContracts::get(node_id);
         let farm = pallet_tfgrid::Farms::get(node.farm_id);
-        ensure!(farm.dedicated_farm, Error::<T>::NodeIsNotDedicated);
+        ensure!(farm.dedicated_farm || active_node_contracts.is_empty(), Error::<T>::NodeNotAvailableToDeploy);
 
         // Create contract
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
