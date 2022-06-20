@@ -11,7 +11,6 @@ use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
-use sp_std::prelude::*;
 
 pub type Signature = MultiSignature;
 
@@ -26,9 +25,9 @@ construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-        BurningModule: pallet_burning::{Module, Call, Event<T>},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+        BurningModule: pallet_burning::{Pallet, Call, Event<T>},
     }
 );
 
@@ -40,7 +39,7 @@ parameter_types! {
 }
 
 impl frame_system::Config for TestRuntime {
-    type BaseCallFilter = ();
+    type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
     type Origin = Origin;
@@ -62,11 +61,21 @@ impl frame_system::Config for TestRuntime {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = ();
+    type OnSetCode = ();
+}
+
+parameter_types! {
+    pub const MaxLocks: u32 = 50;
+    pub const MaxReserves: u32 = 50;
 }
 
 impl pallet_balances::Config for TestRuntime {
-    type MaxLocks = ();
+    type MaxLocks = MaxLocks;
+    type MaxReserves = MaxReserves;
+    type ReserveIdentifier = [u8; 8];
+    /// The type for recording an account's balance.
     type Balance = u64;
+    /// The ubiquitous event type.
     type Event = Event;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;

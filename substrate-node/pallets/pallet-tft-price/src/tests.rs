@@ -1,12 +1,14 @@
 use crate::{self as pallet_tft_price, *};
 use codec::alloc::sync::Arc;
+use frame_support::{assert_noop, assert_ok};
 use frame_support::{construct_runtime, parameter_types};
+use frame_system::EnsureRoot;
 use frame_system::{limits, mocking};
 use parking_lot::RwLock;
 use sp_core::{
     offchain::{
         testing::{self, OffchainState, PoolState},
-        OffchainExt, TransactionPoolExt,
+        OffchainDbExt, TransactionPoolExt,
     },
     sr25519::{self},
     H256,
@@ -17,8 +19,6 @@ use sp_runtime::{
     testing::{Header, TestXt},
     traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentifyAccount, IdentityLookup, Verify},
 };
-use frame_system::EnsureRoot;
-use frame_support::{assert_noop, assert_ok};
 
 type Extrinsic = TestXt<Call, ()>;
 type UncheckedExtrinsic = mocking::MockUncheckedExtrinsic<TestRuntime>;
@@ -34,8 +34,8 @@ construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        TFTPriceModule: pallet_tft_price::{Module, Call, Storage, Config<T>, Event<T>},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Config<T>, Event<T>},
     }
 );
 
@@ -43,14 +43,14 @@ parameter_types! {
     pub const BlockHashCount: u64 = 250;
     pub BlockWeights: limits::BlockWeights = limits::BlockWeights::simple_max(1024);
 }
+
 impl frame_system::Config for TestRuntime {
-    type BaseCallFilter = ();
+    type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
-    type DbWeight = ();
     type Origin = Origin;
-    type Call = Call;
     type Index = u64;
+    type Call = Call;
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
@@ -59,6 +59,7 @@ impl frame_system::Config for TestRuntime {
     type Header = Header;
     type Event = Event;
     type BlockHashCount = BlockHashCount;
+    type DbWeight = ();
     type Version = ();
     type PalletInfo = PalletInfo;
     type AccountData = ();
@@ -66,6 +67,7 @@ impl frame_system::Config for TestRuntime {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = ();
+    type OnSetCode = ();
 }
 
 parameter_types! {
@@ -170,12 +172,12 @@ impl ExternalityBuilder {
             .unwrap();
 
         let genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
-            allowed_origin: allowed_account()
+            allowed_origin: allowed_account(),
         };
         genesis.assimilate_storage(&mut storage).unwrap();
 
         let mut t = TestExternalities::from(storage);
-        t.register_extension(OffchainExt::new(offchain));
+        t.register_extension(OffchainDbExt::new(offchain));
         t.register_extension(TransactionPoolExt::new(pool));
         t.register_extension(KeystoreExt(Arc::new(keystore)));
         t.execute_with(|| System::set_block_number(1));
@@ -191,11 +193,7 @@ fn test_set_prices() {
         for i in 1..1441 {
             let target_block = i * 100; // we set the price every 100 blocks
             run_to_block(target_block);
-            match TFTPriceModule::set_prices(
-                Origin::signed(acct.clone()),
-                500,
-                target_block,
-            ) {
+            match TFTPriceModule::set_prices(Origin::signed(acct.clone()), 500, target_block) {
                 Ok(_) => (),
                 Err(_) => panic!("Couldn't set tft_price"),
             }
@@ -211,13 +209,7 @@ fn test_set_price() {
     let (mut t, _, _) = ExternalityBuilder::build();
     t.execute_with(|| {
         let acct = allowed_account();
-        assert_ok!(
-            TFTPriceModule::set_prices(
-                Origin::signed(acct),
-                U16F16::from_num(0.5),
-                1
-            )
-        );
+        assert_ok!(TFTPriceModule::set_prices(Origin::signed(acct), 500, 1));
     })
 }
 
@@ -226,11 +218,7 @@ fn test_set_price_wrong_origin() {
     let (mut t, _, _) = ExternalityBuilder::build();
     t.execute_with(|| {
         assert_noop!(
-            TFTPriceModule::set_prices(
-                Origin::signed(bob()),
-                U16F16::from_num(0.5),
-                1
-            ),
+            TFTPriceModule::set_prices(Origin::signed(bob()), 500, 1),
             Error::<TestRuntime>::AccountUnauthorizedToSetPrice
         );
     })

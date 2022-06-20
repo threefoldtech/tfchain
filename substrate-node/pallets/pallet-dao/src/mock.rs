@@ -1,6 +1,5 @@
 use crate::{self as pallet_dao};
 use frame_support::{construct_runtime, parameter_types};
-use frame_system as system;
 use frame_system::EnsureRoot;
 use pallet_collective;
 use pallet_tfgrid;
@@ -38,14 +37,13 @@ parameter_types! {
     pub const ExistentialDeposit: u64 = 1;
 }
 
-impl system::Config for Test {
-    type BaseCallFilter = ();
-    type BlockWeights = BlockWeights;
+impl frame_system::Config for Test {
+    type BaseCallFilter = frame_support::traits::Everything;
+    type BlockWeights = ();
     type BlockLength = ();
-    type DbWeight = ();
     type Origin = Origin;
-    type Call = Call;
     type Index = u64;
+    type Call = Call;
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
@@ -54,6 +52,7 @@ impl system::Config for Test {
     type Header = Header;
     type Event = Event;
     type BlockHashCount = BlockHashCount;
+    type DbWeight = ();
     type Version = ();
     type PalletInfo = PalletInfo;
     type AccountData = ();
@@ -61,6 +60,7 @@ impl system::Config for Test {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = ();
+    type OnSetCode = ();
 }
 
 pub type BlockNumber = u32;
@@ -133,6 +133,8 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Test {
     type PrimeOrigin = EnsureRoot<Self::AccountId>;
     type MembershipInitialized = Council;
     type MembershipChanged = ();
+    type MaxMembers = CouncilMaxMembers;
+    type WeightInfo = pallet_membership::weights::SubstrateWeight<Test>;
 }
 
 // Build genesis storage according to the mock runtime.

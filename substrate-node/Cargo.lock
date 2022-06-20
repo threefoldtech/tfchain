@@ -3723,6 +3723,7 @@ dependencies = [
  "lite-json",
  "log",
  "parity-scale-codec",
+ "parking_lot",
  "scale-info",
  "serde",
  "sp-core",
