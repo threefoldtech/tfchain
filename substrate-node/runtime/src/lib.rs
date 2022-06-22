@@ -137,7 +137,6 @@ pub fn session_keys(aura: AuraId, grandpa: GrandpaId) -> SessionKeys {
 
 /// Constant values used within the runtime.
 pub mod constants;
-use constants::fee::*;
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
