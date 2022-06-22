@@ -1,13 +1,11 @@
 use crate::{self as pallet_tft_price, *};
 use codec::alloc::sync::Arc;
-use frame_support::{assert_noop, assert_ok};
-use frame_support::{construct_runtime, parameter_types};
+use frame_support::{construct_runtime, parameter_types, assert_noop, assert_ok, traits::ConstU32};
 use frame_system::EnsureRoot;
 use frame_system::{limits, mocking};
-use parking_lot::RwLock;
 use sp_core::{
     offchain::{
-        testing::{self, OffchainState, PoolState},
+        testing::{self},
         OffchainDbExt, TransactionPoolExt,
     },
     sr25519::{self},
@@ -68,6 +66,7 @@ impl frame_system::Config for TestRuntime {
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
+    type MaxConsumers = ConstU32<16>;
 }
 
 parameter_types! {
@@ -149,19 +148,15 @@ pub fn bob() -> AccountId {
     get_account_id_from_seed::<sr25519::Public>("Bob")
 }
 
-struct ExternalityBuilder;
+pub struct ExternalityBuilder;
 
 impl ExternalityBuilder {
-    pub fn build() -> (
-        TestExternalities,
-        Arc<RwLock<PoolState>>,
-        Arc<RwLock<OffchainState>>,
-    ) {
+    pub fn build() -> TestExternalities {
         const PHRASE: &str =
             "expire stage crawl shell boss any story swamp skull yellow bamboo copy";
 
-        let (offchain, offchain_state) = testing::TestOffchainExt::new();
-        let (pool, pool_state) = testing::TestTransactionPoolExt::new();
+        let (offchain, _) = testing::TestOffchainExt::new();
+        let (pool, _) = testing::TestTransactionPoolExt::new();
         let keystore = KeyStore::new();
         keystore
             .sr25519_generate_new(KEY_TYPE, Some(&format!("{}/hunter1", PHRASE)))
@@ -172,7 +167,7 @@ impl ExternalityBuilder {
             .unwrap();
 
         let genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
-            allowed_origin: allowed_account(),
+            allowed_origin: Some(allowed_account()),
         };
         genesis.assimilate_storage(&mut storage).unwrap();
 
@@ -181,13 +176,13 @@ impl ExternalityBuilder {
         t.register_extension(TransactionPoolExt::new(pool));
         t.register_extension(KeystoreExt(Arc::new(keystore)));
         t.execute_with(|| System::set_block_number(1));
-        (t, pool_state, offchain_state)
+        t
     }
 }
 
 #[test]
 fn test_set_prices() {
-    let (mut t, _, _) = ExternalityBuilder::build();
+    let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
         let acct = allowed_account();
         for i in 1..1441 {
@@ -206,7 +201,7 @@ fn test_set_prices() {
 
 #[test]
 fn test_set_price() {
-    let (mut t, _, _) = ExternalityBuilder::build();
+    let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
         let acct = allowed_account();
         assert_ok!(TFTPriceModule::set_prices(Origin::signed(acct), 500, 1));
@@ -215,7 +210,7 @@ fn test_set_price() {
 
 #[test]
 fn test_set_price_wrong_origin() {
-    let (mut t, _, _) = ExternalityBuilder::build();
+    let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
         assert_noop!(
             TFTPriceModule::set_prices(Origin::signed(bob()), 500, 1),

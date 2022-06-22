@@ -1,7 +1,7 @@
 [package]
 authors = ['Threefoldfoundation <https://github.com/threefoldfoundation>']
 description = 'TFT Price fetching pallet'
-edition = '2018'
+edition = '2021'
 homepage = 'threefold.io'
 license = 'Apache 2.0'
 name = 'pallet-tft-price'
@@ -11,12 +11,6 @@ version = '1.0.0'
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
-# alias "parity-scale-code" to "codec"
-[dependencies.codec]
-default-features = false
-package = 'parity-scale-codec'
-version = '2.0.0'
-
 [dependencies]
 serde = { version = "1.0.119", features = ["derive"], default-features = false }
 log = { version = "0.4.14", default-features = false }
@@ -24,15 +18,18 @@ lite-json = { version = "0.1", default-features = false }
 parking_lot = '0.11'
 
 # Substrate packages
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
+	"derive",
+] }
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 
-frame-support =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
-frame-system =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
-sp-runtime =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
-sp-std =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
-sp-keystore =  { version = "0.10.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", optional = true }
-sp-core =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
-sp-io =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
-scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+frame-support =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+frame-system =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+sp-runtime =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+sp-std =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+sp-keystore =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", optional = true }
+sp-core =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+sp-io =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
 
 [features]
 default = ['std']

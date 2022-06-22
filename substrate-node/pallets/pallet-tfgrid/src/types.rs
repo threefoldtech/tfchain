@@ -14,6 +14,12 @@ pub enum StorageVersion {
     V5Struct,
 }
 
+impl Default for StorageVersion {
+    fn default () -> StorageVersion {
+        StorageVersion::V1Struct
+    }
+}
+
 #[derive(Encode, Decode, Debug, Default, PartialEq, Eq, Clone, TypeInfo)]
 pub struct Entity<AccountId> {
     pub version: u32,

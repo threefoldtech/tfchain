@@ -14,7 +14,6 @@ use sp_std::{
     vec::Vec,
     boxed::Box,
 };
- 
 use frame_system::{
     self as system, ensure_signed,
     offchain::{AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer},
@@ -33,7 +32,9 @@ type BufferIndex = u16;
 
 #[cfg(test)]
 mod tests;
+
 pub mod crypto {
+    use sp_std::convert::TryFrom;
     use crate::KEY_TYPE;
     use sp_core::sr25519::Signature as Sr25519Signature;
     use sp_runtime::{
@@ -81,15 +82,15 @@ decl_storage! {
     trait Store for Module<T: Config> as TFTPriceModule {
         // Token price
         pub TftPrice: u32;
-        LastBlockSet: T::BlockNumber;
+        pub LastBlockSet: T::BlockNumber;
         pub AverageTftPrice: u32;
         pub TftPriceHistory get(fn get_value): map hasher(twox_64_concat) BufferIndex => u32;
         BufferRange get(fn range): (BufferIndex, BufferIndex) = (0, 0);
-        pub AllowedOrigin get(fn allowed_origin): T::AccountId;
+        pub AllowedOrigin get(fn allowed_origin): Option<T::AccountId>;
     }
 
     add_extra_genesis {
-        config(allowed_origin): T::AccountId;
+        config(allowed_origin): Option<T::AccountId>;
 
         build(|_config| {
             AllowedOrigin::<T>::set(_config.allowed_origin.clone());
@@ -122,14 +123,17 @@ decl_module! {
         #[weight = 100_000_000 + T::DbWeight::get().writes(3)]
         pub fn set_prices(origin, price: u32, block_number: T::BlockNumber) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
-            ensure!(AllowedOrigin::<T>::get() == address, Error::<T>::AccountUnauthorizedToSetPrice);
-            Self::calculate_and_set_price(price, block_number)
+            if let Some(allowed_origin) = AllowedOrigin::<T>::get() {
+                ensure!(allowed_origin == address, Error::<T>::AccountUnauthorizedToSetPrice);
+                Self::calculate_and_set_price(price, block_number)?;
+            }
+            Ok(().into())
         }
 
         #[weight = 100_000_000 + T::DbWeight::get().writes(3)]
         pub fn set_allowed_origin(origin, target: T::AccountId) {
             T::RestrictedOrigin::ensure_origin(origin)?;
-            AllowedOrigin::<T>::set(target);
+            AllowedOrigin::<T>::set(Some(target));
         }
 
         fn offchain_worker(block_number: T::BlockNumber) {

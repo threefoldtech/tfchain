@@ -1,5 +1,5 @@
 use crate::{self as tfgridModule, Config};
-use frame_support::{construct_runtime, parameter_types};
+use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::EnsureRoot;
 use sp_io::TestExternalities;
 use sp_runtime::{
@@ -69,6 +69,7 @@ impl frame_system::Config for TestRuntime {
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
+    type MaxConsumers = ConstU32<16>;
 }
 
 pub struct NodeChanged;

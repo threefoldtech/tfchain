@@ -606,7 +606,7 @@ fn add_node_certifier_works() {
             alice()
         ));
 
-        let node_certifiers = TfgridModule::allowed_node_certifiers();
+        let node_certifiers = TfgridModule::allowed_node_certifiers().unwrap();
         assert_eq!(node_certifiers[0], alice());
     });
 }
@@ -618,7 +618,7 @@ fn add_node_certifier_double_fails() {
             RawOrigin::Root.into(),
             alice()
         ));
-        let node_certifiers = TfgridModule::allowed_node_certifiers();
+        let node_certifiers = TfgridModule::allowed_node_certifiers().unwrap();
         assert_eq!(node_certifiers[0], alice());
 
         assert_noop!(
@@ -636,7 +636,7 @@ fn remove_node_certifier_works() {
             alice()
         ));
 
-        let node_certifiers = TfgridModule::allowed_node_certifiers();
+        let node_certifiers = TfgridModule::allowed_node_certifiers().unwrap();
         assert_eq!(node_certifiers[0], alice());
 
         assert_ok!(TfgridModule::remove_node_certifier(
@@ -1231,7 +1231,7 @@ fn test_create_and_update_policy() {
         )
         .unwrap();
         // Get policy and make sure it is updated
-        let policy = TfgridModule::pricing_policies(policy_id.clone());
+        let policy = TfgridModule::pricing_policies(policy_id.clone()).unwrap();
         assert_eq!(
             policy.name.clone(),
             name.clone(),
@@ -1261,7 +1261,7 @@ fn test_create_and_update_policy() {
             50,
         )
         .unwrap();
-        let policy = TfgridModule::pricing_policies(policy_id.clone());
+        let policy = TfgridModule::pricing_policies(policy_id.clone()).unwrap();
         assert_eq!(
             policy.name.clone(),
             new_name.clone(),
