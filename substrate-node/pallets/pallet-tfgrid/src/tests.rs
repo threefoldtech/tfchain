@@ -606,8 +606,9 @@ fn add_node_certifier_works() {
             alice()
         ));
 
-        let node_certifiers = TfgridModule::allowed_node_certifiers().unwrap();
-        assert_eq!(node_certifiers[0], alice());
+        if let Some(node_certifiers) = TfgridModule::allowed_node_certifiers() {
+            assert_eq!(node_certifiers[0], alice());
+        }
     });
 }
 
@@ -618,8 +619,9 @@ fn add_node_certifier_double_fails() {
             RawOrigin::Root.into(),
             alice()
         ));
-        let node_certifiers = TfgridModule::allowed_node_certifiers().unwrap();
-        assert_eq!(node_certifiers[0], alice());
+        if let Some(node_certifiers) = TfgridModule::allowed_node_certifiers() {
+            assert_eq!(node_certifiers[0], alice());
+        }
 
         assert_noop!(
             TfgridModule::add_node_certifier(RawOrigin::Root.into(), alice()),
@@ -636,8 +638,9 @@ fn remove_node_certifier_works() {
             alice()
         ));
 
-        let node_certifiers = TfgridModule::allowed_node_certifiers().unwrap();
-        assert_eq!(node_certifiers[0], alice());
+        if let Some(node_certifiers) = TfgridModule::allowed_node_certifiers() {
+            assert_eq!(node_certifiers[0], alice());
+        }
 
         assert_ok!(TfgridModule::remove_node_certifier(
             RawOrigin::Root.into(),
