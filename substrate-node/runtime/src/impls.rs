@@ -12,6 +12,8 @@ where
     <R as frame_system::Config>::Event: From<pallet_balances::Event<R>>,
 {
     fn on_nonzero_unbalanced(amount: NegativeImbalance) {
-        Balances::resolve_creating(&Authorship::author(), amount);
+        if let Some(author) = Authorship::author() {
+            Balances::resolve_creating(&author, amount);
+        }
     }
 }

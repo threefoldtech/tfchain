@@ -5,7 +5,7 @@
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
 use sp_std::prelude::*;
 
-use codec::{Decode, Encode};
+use codec::{Encode};
 use frame_support::dispatch::DispatchErrorWithPostInfo;
 use frame_support::{
     ensure,
@@ -45,7 +45,6 @@ pub mod pallet {
     use pallet_timestamp as timestamp;
     use sp_std::convert::TryInto;
     use tfchain_support::{
-        resources,
         traits::ChangeNode,
         types::{
             Farm, FarmCertification, FarmingPolicyLimit, Interface, Location, Node,
@@ -855,7 +854,6 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
-            println!("certifiers: {:?}", AllowedNodeCertifiers::<T>::get());
             if let Some(certifiers) = AllowedNodeCertifiers::<T>::get() {
                 ensure!(
                     certifiers.contains(&account_id),
@@ -1868,6 +1866,31 @@ impl<T: Config> Pallet<T> {
                     Error::<T>::FarmingPolicyNotExists,
                 ))
             }
+        }
+    }
+}
+
+impl<T: Config> tfchain_support::traits::Tfgrid<T::AccountId> for Module<T> {
+    fn get_farm(farm_id: u32) -> tfchain_support::types::Farm {
+        Farms::<T>::get(farm_id)
+    }
+
+    fn is_farm_owner(farm_id: u32, who: T::AccountId) -> bool {
+        let farm = Farms::<T>::get(farm_id);
+        match Twins::<T>::get(farm.twin_id) {
+            Some(twin) => {
+                twin.account_id == who
+            },
+            None => false
+        }
+    }
+
+    fn is_twin_owner(twin_id: u32, who: T::AccountId) -> bool {
+        match Twins::<T>::get(twin_id) {
+            Some(twin) => {
+                twin.account_id == who
+            },
+            None => false
         }
     }
 }

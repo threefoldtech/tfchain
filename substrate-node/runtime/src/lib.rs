@@ -15,36 +15,38 @@ use sp_runtime::traits::{
     AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, NumberFor, OpaqueKeys,
     SaturatedConversion, Verify,
 };
+use sp_std::{cmp::Ordering, prelude::*};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, MultiSignature,
 };
-use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use tfchain_support::{traits::ChangeNode, types::Node};
+use sp_std::convert::{TryInto, TryFrom};
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
     construct_runtime, parameter_types,
-    traits::{FindAuthor, KeyOwnerProofSystem, Randomness},
+    traits::{FindAuthor, KeyOwnerProofSystem, Randomness, EnsureOneOf, ConstU8, PrivilegeCmp},
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
         IdentityFee, Weight,
     },
     StorageValue,
 };
-use frame_system::{EnsureOneOf, EnsureRoot};
+pub use frame_system::Call as SystemCall;
+pub use pallet_balances::Call as BalancesCall;
+pub use pallet_timestamp::Call as TimestampCall;
+use frame_system::EnsureRoot;
 use log;
 pub use pallet_collective;
 pub use pallet_membership;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
-
-use sp_core::u32_trait::{_3, _5};
 
 use pallet_transaction_payment::CurrencyAdapter;
 
@@ -93,9 +95,6 @@ pub type Index = u32;
 
 /// A hash of some data used by the chain.
 pub type Hash = sp_core::H256;
-
-/// Digest item type.
-pub type DigestItem = generic::DigestItem<Hash>;
 
 mod migrations;
 use self::migrations::*;
@@ -146,6 +145,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
+    state_version: 0,
 };
 
 /// This determines the average expected block time that we are targeting.
@@ -187,6 +187,7 @@ parameter_types! {
 
     pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) * MaximumBlockWeight::get();
     pub const MaxScheduledPerBlock: u32 = 50;
+    pub const NoPreimagePostponement: Option<BlockNumber> = Some(10);
 }
 
 // Configure FRAME pallets to include in runtime.
@@ -240,6 +241,7 @@ impl frame_system::Config for Runtime {
     type SS58Prefix = SS58Prefix;
     /// The set code logic, just the default since we're not a parachain.
     type OnSetCode = ();
+    type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
@@ -301,21 +303,18 @@ impl pallet_balances::Config for Runtime {
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
-    type WeightInfo = ();
+	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
     pub const TransactionByteFee: Balance = 1;
-        /// This value increases the priority of `Operational` transactions by adding
-    /// a "virtual tip" that's equal to the `OperationalFeeMultiplier * final_fee`.
-    pub const OperationalFeeMultiplier: u8 = 5;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
     type OnChargeTransaction = CurrencyAdapter<Balances, impls::DealWithFees<Runtime>>;
-    type TransactionByteFee = TransactionByteFee;
-    type OperationalFeeMultiplier = OperationalFeeMultiplier;
+	type OperationalFeeMultiplier = ConstU8<5>;
     type WeightToFee = IdentityFee<Balance>;
+    type LengthToFee = IdentityFee<Balance>;
     type FeeMultiplierUpdate = ();
 }
 
@@ -348,6 +347,7 @@ parameter_types! {
     pub BillingFrequency: u64 = 600;
     pub GracePeriod: u64 = (6 * HOURS).into();
     pub DistributionFrequency: u16 = 24;
+    pub RetryInterval: u32 = 20;
 }
 
 pub fn get_staking_pool_account() -> AccountId {
@@ -366,15 +366,16 @@ impl pallet_smart_contract::Config for Runtime {
     type DistributionFrequency = DistributionFrequency;
     type GracePeriod = GracePeriod;
     type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
-    // type Tfgrid = TfgridModule;
     type NodeChanged = NodeChanged;
 }
+// type Tfgrid = TfgridModule;
 
 impl pallet_tft_bridge::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
     type Burn = ();
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
+    type RetryInterval = RetryInterval;
 }
 
 impl pallet_burning::Config for Runtime {
@@ -485,6 +486,7 @@ where
             .saturating_sub(1);
         let tip = 0;
         let extra: SignedExtra = (
+            frame_system::CheckNonZeroSender::<Runtime>::new(),
             frame_system::CheckSpecVersion::<Runtime>::new(),
             frame_system::CheckTxVersion::<Runtime>::new(),
             frame_system::CheckGenesis::<Runtime>::new(),
@@ -525,6 +527,29 @@ where
     type Extrinsic = UncheckedExtrinsic;
 }
 
+/// Used the compare the privilege of an origin inside the scheduler.
+pub struct OriginPrivilegeCmp;
+
+impl PrivilegeCmp<OriginCaller> for OriginPrivilegeCmp {
+	fn cmp_privilege(left: &OriginCaller, right: &OriginCaller) -> Option<Ordering> {
+		if left == right {
+			return Some(Ordering::Equal);
+		}
+
+		match (left, right) {
+			// Root is greater than anything.
+			(OriginCaller::system(frame_system::RawOrigin::Root), _) => Some(Ordering::Greater),
+			// Check which one has more yes votes.
+			(
+				OriginCaller::Council(pallet_collective::RawOrigin::Members(l_yes_votes, l_count)),
+				OriginCaller::Council(pallet_collective::RawOrigin::Members(r_yes_votes, r_count)),
+			) => Some((l_yes_votes * r_count).cmp(&(r_yes_votes * l_count))),
+			// For every other origin we don't care, as they are not used for `ScheduleOrigin`.
+			_ => None,
+		}
+	}
+}
+
 impl pallet_scheduler::Config for Runtime {
     type Event = Event;
     type Origin = Origin;
@@ -534,6 +559,9 @@ impl pallet_scheduler::Config for Runtime {
     type ScheduleOrigin = frame_system::EnsureRoot<AccountId>;
     type MaxScheduledPerBlock = MaxScheduledPerBlock;
     type WeightInfo = ();
+    type OriginPrivilegeCmp = OriginPrivilegeCmp;
+	type PreimageProvider = ();
+	type NoPreimagePostponement = NoPreimagePostponement;
 }
 
 parameter_types! {
@@ -581,11 +609,8 @@ impl ChangeMembers<AccountId> for MembershipChangedGroup {
     }
 }
 
-type EnsureRootOrCouncilApproval = EnsureOneOf<
-    AccountId,
-    EnsureRoot<AccountId>,
-    pallet_collective::EnsureProportionAtLeast<_3, _5, AccountId, CouncilCollective>,
->;
+type EnsureRootOrCouncilApproval =
+	EnsureOneOf<EnsureRoot<AccountId>, pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 5>>;
 
 impl pallet_runtime_upgrade::Config for Runtime {
     type Event = Event;
@@ -667,13 +692,14 @@ pub type SignedBlock = generic::SignedBlock<Block>;
 pub type BlockId = generic::BlockId<Block>;
 /// The SignedExtension to the basic transaction logic.
 pub type SignedExtra = (
-    frame_system::CheckSpecVersion<Runtime>,
-    frame_system::CheckTxVersion<Runtime>,
-    frame_system::CheckGenesis<Runtime>,
-    frame_system::CheckEra<Runtime>,
-    frame_system::CheckNonce<Runtime>,
-    frame_system::CheckWeight<Runtime>,
-    pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+	frame_system::CheckNonZeroSender<Runtime>,
+	frame_system::CheckSpecVersion<Runtime>,
+	frame_system::CheckTxVersion<Runtime>,
+	frame_system::CheckGenesis<Runtime>,
+	frame_system::CheckEra<Runtime>,
+	frame_system::CheckNonce<Runtime>,
+	frame_system::CheckWeight<Runtime>,
+	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
@@ -758,7 +784,7 @@ impl_runtime_apis! {
         }
 
         fn authorities() -> Vec<AuraId> {
-            Aura::authorities().to_vec()
+            Aura::authorities().into_inner()
         }
     }
 

@@ -125,6 +125,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
         None,
         // Protocol ID
         None,
+        None,
         // Properties
         properties,
         // Extensions
@@ -204,6 +205,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
         },
         // Bootnodes
         vec![],
+        None,
         // Telemetry
         None,
         // Protocol ID
@@ -232,7 +234,7 @@ fn testnet_genesis(
         system: SystemConfig {
             // Add Wasm runtime to storage.
             code: wasm_binary.to_vec(),
-            changes_trie_config: Default::default(),
+            // changes_trie_config: Default::default(),
         },
         balances: BalancesConfig {
             // Configure endowed accounts with initial balance of 1 << 60.
@@ -268,7 +270,7 @@ fn testnet_genesis(
         },
         sudo: SudoConfig {
             // Assign network admin rights.
-            key: root_key,
+            key: Some(root_key),
         },
         tfgrid_module: TfgridModuleConfig {
             su_price_value: 300000,
@@ -281,8 +283,9 @@ fn testnet_genesis(
             ipu_price_unit: 4,
             unique_name_price_value: 20000,
             domain_name_price_value: 40000,
-            foundation_account,
-            sales_account,
+            domain_name_price_unit: 4,
+            foundation_account: Some(foundation_account),
+            sales_account: Some(sales_account),
             farming_policy_diy_cu: 160000000,
             farming_policy_diy_su: 100000000,
             farming_policy_diy_nu: 2000000,
@@ -297,8 +300,8 @@ fn testnet_genesis(
             connection_price: 80,
         },
         tft_bridge_module: TFTBridgeModuleConfig {
-            validator_accounts: bridge_validator_accounts,
-            fee_account: bridge_fee_account,
+            validator_accounts: Some(bridge_validator_accounts),
+            fee_account: Some(bridge_fee_account),
             deposit_fee: 10000000,
             withdraw_fee: 10000000,
         },
@@ -313,7 +316,7 @@ fn testnet_genesis(
         },
         // just some default for development
         tft_price_module: TFTPriceModuleConfig {
-            allowed_origin: tft_price_allowed_account,
+            allowed_origin: Some(tft_price_allowed_account),
         },
     }
 }
