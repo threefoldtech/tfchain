@@ -26,6 +26,7 @@ use tfchain_support::{
     traits::ChangeNode,
     types::{Node, NodeCertification, PublicIP, Resources},
 };
+use sp_std::convert::TryInto;
 
 #[cfg(test)]
 mod mock;
@@ -220,19 +221,19 @@ impl<T: Config> Module<T> {
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&account_id),
             Error::<T>::TwinNotExists
         );
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id).unwrap();
 
         ensure!(
-            pallet_tfgrid::Nodes::contains_key(&node_id),
+            pallet_tfgrid::Nodes::<T>::contains_key(&node_id),
             Error::<T>::NodeNotExists
         );
 
-        let node = pallet_tfgrid::Nodes::get(node_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_id);
         ensure!(
-            pallet_tfgrid::Farms::contains_key(node.farm_id),
+            pallet_tfgrid::Farms::<T>::contains_key(node.farm_id),
             Error::<T>::FarmNotExists
         );
-        let farm = pallet_tfgrid::Farms::get(node.farm_id);
+        let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id);
 
         if farm.dedicated_farm && !ActiveRentContractForNode::contains_key(node_id) {
             return Err(DispatchError::from(Error::<T>::NodeNotAvailableToDeploy));
@@ -268,7 +269,6 @@ impl<T: Config> Module<T> {
         };
 
         // Create contract
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
         let contract = Self::_create_contract(
             twin_id,
             types::ContractData::NodeContract(node_contract.clone()),
@@ -301,7 +301,7 @@ impl<T: Config> Module<T> {
             Error::<T>::TwinNotExists
         );
         ensure!(
-            pallet_tfgrid::Nodes::contains_key(&node_id),
+            pallet_tfgrid::Nodes::<T>::contains_key(&node_id),
             Error::<T>::NodeNotExists
         );
 
@@ -310,18 +310,18 @@ impl<T: Config> Module<T> {
             Error::<T>::NodeHasRentContract
         );
 
-        let node = pallet_tfgrid::Nodes::get(node_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_id);
         ensure!(
-            pallet_tfgrid::Farms::contains_key(node.farm_id),
+            pallet_tfgrid::Farms::<T>::contains_key(node.farm_id),
             Error::<T>::FarmNotExists
         );
 
         let active_node_contracts = ActiveNodeContracts::get(node_id);
-        let farm = pallet_tfgrid::Farms::get(node.farm_id);
+        let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id);
         ensure!(farm.dedicated_farm || active_node_contracts.is_empty(), Error::<T>::NodeNotAvailableToDeploy);
 
         // Create contract
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id).unwrap();
         let contract = Self::_create_contract(
             twin_id,
             types::ContractData::RentContract(types::RentContract { node_id }),
@@ -342,7 +342,7 @@ impl<T: Config> Module<T> {
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
             Error::<T>::TwinNotExists
         );
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source);
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source).unwrap();
 
         // Validate name uniqueness
         ensure!(
@@ -418,9 +418,13 @@ impl<T: Config> Module<T> {
             Contracts::contains_key(contract_id),
             Error::<T>::ContractNotExists
         );
-
+        
         let mut contract = Contracts::get(contract_id);
-        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
+        ensure!(
+            pallet_tfgrid::Twins::<T>::contains_key(contract.twin_id),
+            Error::<T>::TwinNotExists
+        );
+        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id).unwrap();
         ensure!(
             twin.account_id == account_id,
             Error::<T>::TwinNotAuthorizedToUpdateContract
@@ -462,9 +466,12 @@ impl<T: Config> Module<T> {
             Contracts::contains_key(contract_id),
             Error::<T>::ContractNotExists
         );
-
         let mut contract = Contracts::get(contract_id);
-        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
+        ensure!(
+            pallet_tfgrid::Twins::<T>::contains_key(contract.twin_id),
+            Error::<T>::TwinNotExists
+        );
+        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id).unwrap();
         ensure!(
             twin.account_id == account_id,
             Error::<T>::TwinNotAuthorizedToCancelContract
@@ -501,12 +508,12 @@ impl<T: Config> Module<T> {
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
             Error::<T>::TwinNotExists
         );
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source);
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source).unwrap();
         ensure!(
-            pallet_tfgrid::NodeIdByTwinID::contains_key(twin_id),
+            pallet_tfgrid::NodeIdByTwinID::<T>::contains_key(twin_id),
             Error::<T>::NodeNotExists
         );
-        let node_id = pallet_tfgrid::NodeIdByTwinID::get(twin_id);
+        let node_id = pallet_tfgrid::NodeIdByTwinID::<T>::get(twin_id);
 
         for contract_resource in contract_resources {
             if !Contracts::contains_key(contract_resource.contract_id) {
@@ -538,27 +545,27 @@ impl<T: Config> Module<T> {
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
             Error::<T>::TwinNotExists
         );
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source);
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source).unwrap();
         ensure!(
-            pallet_tfgrid::NodeIdByTwinID::contains_key(twin_id),
+            pallet_tfgrid::NodeIdByTwinID::<T>::contains_key(twin_id),
             Error::<T>::NodeNotExists
         );
 
         // fetch the node from the source account (signee)
-        let node_id = pallet_tfgrid::NodeIdByTwinID::get(&twin_id);
-        let node = pallet_tfgrid::Nodes::get(node_id);
+        let node_id = pallet_tfgrid::NodeIdByTwinID::<T>::get(&twin_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_id);
 
         ensure!(
-            pallet_tfgrid::Farms::contains_key(&node.farm_id),
+            pallet_tfgrid::Farms::<T>::contains_key(&node.farm_id),
             Error::<T>::FarmNotExists
         );
-        let farm = pallet_tfgrid::Farms::get(node.farm_id);
+        let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id);
 
         ensure!(
             pallet_tfgrid::PricingPolicies::<T>::contains_key(farm.pricing_policy_id),
             Error::<T>::PricingPolicyNotExists
         );
-        let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(farm.pricing_policy_id);
+        let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(farm.pricing_policy_id).unwrap();
 
         // validation
         for report in &reports {
@@ -669,7 +676,7 @@ impl<T: Config> Module<T> {
         if !pallet_tfgrid::Twins::<T>::contains_key(contract.twin_id) {
             return Err(DispatchError::from(Error::<T>::TwinNotExists));
         }
-        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
+        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id).unwrap();
         let usable_balance = Self::get_usable_balance(&twin.account_id);
 
         let mut seconds_elapsed = T::BillingFrequency::get() * 6;
@@ -791,7 +798,7 @@ impl<T: Config> Module<T> {
         // Only lock an amount from the user's balance if the contract is in create state
         // The lock is specified on the user's account, since a user can have multiple contracts
         // Just extend the lock with the amount due for this contract billing period (lock will be created if not exists)
-        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
+        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id).unwrap();
         <T as Config>::Currency::extend_lock(
             GRID_LOCK_ID,
             &twin.account_id,
@@ -829,7 +836,7 @@ impl<T: Config> Module<T> {
             );
 
             // Fetch the default pricing policy
-            let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
+            let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1).unwrap();
             // Distribute cultivation rewards
             match Self::_distribute_cultivation_rewards(
                 &contract,
@@ -855,7 +862,7 @@ impl<T: Config> Module<T> {
         seconds_elapsed: u64,
     ) -> Result<(BalanceOf<T>, types::DiscountLevel), DispatchError> {
         // Fetch the default pricing policy and certification type
-        let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
+        let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1).unwrap();
         let certification_type = NodeCertification::Diy;
 
         // Calculate the cost for a contract, can be any of:
@@ -892,7 +899,7 @@ impl<T: Config> Module<T> {
                 let contract_billing_info =
                     ContractBillingInformationByID::get(contract.contract_id);
                 // Get the node
-                if !pallet_tfgrid::Nodes::contains_key(node_contract.node_id) {
+                if !pallet_tfgrid::Nodes::<T>::contains_key(node_contract.node_id) {
                     return Err(DispatchError::from(Error::<T>::NodeNotExists));
                 }
 
@@ -916,10 +923,10 @@ impl<T: Config> Module<T> {
                 contract_cost + contract_billing_info.amount_unbilled
             }
             types::ContractData::RentContract(rent_contract) => {
-                if !pallet_tfgrid::Nodes::contains_key(rent_contract.node_id) {
+                if !pallet_tfgrid::Nodes::<T>::contains_key(rent_contract.node_id) {
                     return Err(DispatchError::from(Error::<T>::NodeNotExists));
                 }
-                let node = pallet_tfgrid::Nodes::get(rent_contract.node_id);
+                let node = pallet_tfgrid::Nodes::<T>::get(rent_contract.node_id);
 
                 let contract_cost = Self::calculate_resources_cost(
                     node.resources,
@@ -1057,7 +1064,7 @@ impl<T: Config> Module<T> {
         amount: BalanceOf<T>,
     ) -> DispatchResult {
         // fetch source twin
-        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
+        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id).unwrap();
 
         // Send 10% to the foundation
         let foundation_share = Perbill::from_percent(10) * amount;
@@ -1254,13 +1261,13 @@ impl<T: Config> Module<T> {
         if node_contract.public_ips == 0 {
             return Ok(());
         }
-        let node = pallet_tfgrid::Nodes::get(node_contract.node_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id);
 
         ensure!(
-            pallet_tfgrid::Farms::contains_key(&node.farm_id),
+            pallet_tfgrid::Farms::<T>::contains_key(&node.farm_id),
             Error::<T>::FarmNotExists
         );
-        let mut farm = pallet_tfgrid::Farms::get(node.farm_id);
+        let mut farm = pallet_tfgrid::Farms::<T>::get(node.farm_id);
 
         log::info!(
             "Number of farm ips {:?}, number of ips to reserve: {:?}",
@@ -1296,7 +1303,7 @@ impl<T: Config> Module<T> {
         );
 
         // Update the farm with the reserved ips
-        pallet_tfgrid::Farms::insert(farm.id, farm);
+        pallet_tfgrid::Farms::<T>::insert(farm.id, farm);
 
         node_contract.public_ips_list = ips;
 
@@ -1304,13 +1311,13 @@ impl<T: Config> Module<T> {
     }
 
     pub fn _free_ip(contract_id: u64, node_contract: &mut types::NodeContract) -> DispatchResult {
-        let node = pallet_tfgrid::Nodes::get(node_contract.node_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id);
 
         ensure!(
-            pallet_tfgrid::Farms::contains_key(&node.farm_id),
+            pallet_tfgrid::Farms::<T>::contains_key(&node.farm_id),
             Error::<T>::FarmNotExists
         );
-        let mut farm = pallet_tfgrid::Farms::get(node.farm_id);
+        let mut farm = pallet_tfgrid::Farms::<T>::get(node.farm_id);
 
         let mut ips_freed = Vec::new();
         for i in 0..farm.public_ips.len() {
@@ -1325,7 +1332,7 @@ impl<T: Config> Module<T> {
             }
         }
 
-        pallet_tfgrid::Farms::insert(farm.id, farm);
+        pallet_tfgrid::Farms::<T>::insert(farm.id, farm);
 
         // Emit an event containing the IP's freed for this contract
         Self::deposit_event(RawEvent::IPsFreed(contract_id, ips_freed));
