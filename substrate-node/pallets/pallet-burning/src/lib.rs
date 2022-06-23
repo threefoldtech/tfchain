@@ -10,6 +10,7 @@ use frame_system::{self as system, ensure_signed};
 use sp_runtime::DispatchResult;
 use scale_info::TypeInfo;
 use sp_std::vec::Vec;
+use sp_std::convert::TryInto;
 
 #[cfg(test)]
 mod tests;
@@ -61,7 +62,7 @@ pub struct Burn<AccountId, BalanceOf, BlockNumber> {
 
 decl_storage! {
     trait Store for Module<T: Config> as TFTBridgeModule {
-        pub Burns get(fn burns): Vec<Burn<T::AccountId, BalanceOf<T>, T::BlockNumber>>;
+        pub Burns get(fn burns): Option<Vec<Burn<T::AccountId, BalanceOf<T>, T::BlockNumber>>>;
     }
 }
 
@@ -93,15 +94,24 @@ impl<T: Config> Module<T> {
 
         let block = <frame_system::Pallet<T>>::block_number();
 
-        // Save historical burns
-        let mut burns = Burns::<T>::get();
-        burns.push(Burn {
+        let burn = Burn {
             target: target.clone(),
             amount,
             block,
             message: message.clone(),
-        });
-        Burns::<T>::put(burns);
+        };
+
+        // Save historical burns
+        match Burns::<T>::get() {
+            Some(mut burns) => {
+                burns.push(burn);
+                Burns::<T>::put(burns);
+            },
+            None => {
+                let burns = vec![burn];
+                Burns::<T>::put(burns);
+            }
+        }
 
         // Desposit event
         Self::deposit_event(RawEvent::BurnTransactionCreated(

@@ -26,6 +26,7 @@ pub use pallet::*;
 use sp_runtime::traits::{Convert, Zero};
 use sp_staking::offence::{Offence, OffenceError, ReportOffence};
 use sp_std::{collections::btree_set::BTreeSet, prelude::*};
+use sp_std::convert::TryInto;
 
 pub const LOG_TARGET: &'static str = "runtime::validator-set";
 
@@ -51,6 +52,7 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
+	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
 	#[pallet::storage]

@@ -6,6 +6,7 @@ use frame_support::{
 };
 use frame_system::ensure_signed;
 use sp_std::prelude::*;
+use sp_std::convert::TryInto;
 
 #[cfg(test)]
 mod tests;

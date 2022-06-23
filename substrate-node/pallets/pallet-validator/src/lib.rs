@@ -11,6 +11,7 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
 use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
 use substrate_validator_set;
+use sp_std::convert::TryInto;
 
 pub mod types;
 pub use pallet::*;
@@ -36,6 +37,7 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     #[pallet::storage]
