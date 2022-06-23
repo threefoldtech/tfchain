@@ -20,6 +20,13 @@ impl frame_support::traits::OnRuntimeUpgrade for MigratePalletVersionToStorageVe
     }
 }
 
+pub struct SystemToTripleRefCount;
+impl frame_support::traits::OnRuntimeUpgrade for SystemToTripleRefCount {
+    fn on_runtime_upgrade() -> frame_support::weights::Weight {
+        frame_system::migrations::migrate_to_triple_ref_count::<Runtime>()
+    }
+}
+
 pub struct GrandpaStoragePrefixMigration;
 impl frame_support::traits::OnRuntimeUpgrade for GrandpaStoragePrefixMigration {
     fn on_runtime_upgrade() -> frame_support::weights::Weight {
@@ -112,13 +119,18 @@ impl OnRuntimeUpgrade for CustomOnRuntimeUpgrades {
         weight += <GrandpaStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 GrandpaStoragePrefixMigration end");
 
-        // 4. CouncilStoragePrefixMigration
+        // 4. SystemToTripleRefCount
+        frame_support::log::info!("🔍️ SystemToTripleRefCount start");
+        weight += <SystemToTripleRefCount as OnRuntimeUpgrade>::on_runtime_upgrade();
+        frame_support::log::info!("🚀 SystemToTripleRefCount end");
+        
+        // 5. CouncilStoragePrefixMigration
         frame_support::log::info!("🔍️ CouncilStoragePrefixMigration start");
         frame_support::traits::StorageVersion::new(0).put::<Council>();
         weight += <CouncilStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 CouncilStoragePrefixMigration end");
 
-        // 5. CouncilMembershipStoragePrefixMigration
+        // 6. CouncilMembershipStoragePrefixMigration
         frame_support::log::info!("🔍️ CouncilMembershipStoragePrefixMigration start");
         frame_support::traits::StorageVersion::new(0).put::<CouncilMembership>();
         weight +=
