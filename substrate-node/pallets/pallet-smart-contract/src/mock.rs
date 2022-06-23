@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::{self as pallet_smart_contract};
-use frame_support::{construct_runtime, parameter_types};
+use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::EnsureRoot;
 use sp_core::{crypto::Ss58Codec, sr25519, Pair, Public, H256};
 use sp_runtime::traits::{IdentifyAccount, Verify};
@@ -14,6 +14,7 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 use tfchain_support::{traits::ChangeNode, types::Node};
+use sp_std::convert::TryFrom;
 
 pub type Signature = MultiSignature;
 
@@ -71,6 +72,7 @@ impl frame_system::Config for TestRuntime {
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
+    type MaxConsumers = ConstU32<16>;
 }
 
 parameter_types! {
@@ -222,7 +224,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     genesis.assimilate_storage(&mut t).unwrap();
 
     let genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
-        allowed_origin: bob(),
+        allowed_origin: Some(bob()),
     };
     genesis.assimilate_storage(&mut t).unwrap();
 

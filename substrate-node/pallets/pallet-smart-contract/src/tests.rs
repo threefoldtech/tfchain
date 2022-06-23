@@ -662,7 +662,7 @@ fn test_node_contract_billing_details() {
         run_to_block(0);
         TFTPriceModule::set_prices(Origin::signed(bob()), 500, 101).unwrap();
 
-        let twin = TfgridModule::twins(2);
+        let twin = TfgridModule::twins(2).unwrap();
         let initial_twin_balance = Balances::free_balance(&twin.account_id);
 
         assert_ok!(SmartContractModule::create_node_contract(
@@ -707,7 +707,7 @@ fn test_node_contract_billing_details() {
         );
 
         // 10% is sent to the foundation account
-        let pricing_policy = TfgridModule::pricing_policies(1);
+        let pricing_policy = TfgridModule::pricing_policies(1).unwrap();
         let foundation_account_balance = Balances::free_balance(&pricing_policy.foundation_account);
         assert_eq!(
             foundation_account_balance,
@@ -1207,7 +1207,7 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
         assert_ne!(amount_due_as_u128, 0);
         check_report_cost(1, amount_due_as_u128, 12, discount_received.clone());
 
-        let twin = TfgridModule::twins(2);
+        let twin = TfgridModule::twins(2).unwrap();
         let usable_balance = Balances::usable_balance(&twin.account_id);
         let free_balance = Balances::free_balance(&twin.account_id);
         assert_ne!(usable_balance, free_balance);
@@ -1220,7 +1220,7 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
             1
         ));
 
-        let twin = TfgridModule::twins(2);
+        let twin = TfgridModule::twins(2).unwrap();
         let usable_balance = Balances::usable_balance(&twin.account_id);
         assert_ne!(usable_balance, 0);
         Balances::transfer(Origin::signed(bob()), alice(), usable_balance).unwrap();
@@ -1257,7 +1257,7 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
             types::ContractData::RentContract(rent_contract)
         );
 
-        let twin = TfgridModule::twins(2);
+        let twin = TfgridModule::twins(2).unwrap();
         let usable_balance = Balances::usable_balance(&twin.account_id);
         let free_balance = Balances::free_balance(&twin.account_id);
 
@@ -1276,7 +1276,7 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
         check_report_cost(1, amount_due_as_u128, 8, discount_received.clone());
 
         // Twin should have no more locked balance
-        let twin = TfgridModule::twins(2);
+        let twin = TfgridModule::twins(2).unwrap();
         let usable_balance = Balances::usable_balance(&twin.account_id);
         let free_balance = Balances::free_balance(&twin.account_id);
         assert_eq!(usable_balance, free_balance);
@@ -1741,7 +1741,7 @@ fn check_report_cost(
 }
 
 fn calculate_tft_cost(contract_id: u64, twin_id: u32, blocks: u64) -> (u64, types::DiscountLevel) {
-    let twin = TfgridModule::twins(twin_id);
+    let twin = TfgridModule::twins(twin_id).unwrap();
     let b = Balances::free_balance(&twin.account_id);
     let contract = SmartContractModule::contracts(contract_id);
     let (amount_due, discount_received) =
