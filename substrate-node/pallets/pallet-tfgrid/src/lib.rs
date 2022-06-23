@@ -855,6 +855,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
+            println!("certifiers: {:?}", AllowedNodeCertifiers::<T>::get());
             if let Some(certifiers) = AllowedNodeCertifiers::<T>::get() {
                 ensure!(
                     certifiers.contains(&account_id),
@@ -1584,16 +1585,23 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
-            if let Some(mut certifiers) = AllowedNodeCertifiers::<T>::get() {
-                let location = certifiers
-                    .binary_search(&who)
-                    .err()
-                    .ok_or(Error::<T>::AlreadyCertifier)?;
-                certifiers.insert(location, who.clone());
-                AllowedNodeCertifiers::<T>::put(certifiers);
-    
-                Self::deposit_event(Event::NodeCertifierAdded(who));
-            };
+            match AllowedNodeCertifiers::<T>::get() {
+                Some(mut certifiers) => {
+                    let location = certifiers
+                        .binary_search(&who)
+                        .err()
+                        .ok_or(Error::<T>::AlreadyCertifier)?;
+                    certifiers.insert(location, who.clone());
+                    AllowedNodeCertifiers::<T>::put(certifiers);
+        
+                    Self::deposit_event(Event::NodeCertifierAdded(who));
+                },
+                None => {
+                    let certifiers = vec![who.clone()];
+                    AllowedNodeCertifiers::<T>::put(certifiers);
+                    Self::deposit_event(Event::NodeCertifierAdded(who));
+                }
+            }
 
             Ok(().into())
         }
@@ -1614,8 +1622,7 @@ pub mod pallet {
                 AllowedNodeCertifiers::<T>::put(&certifiers);
 
                 Self::deposit_event(Event::NodeCertifierRemoved(who));
-            };
-
+            }
             Ok(().into())
         }
 

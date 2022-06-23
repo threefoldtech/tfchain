@@ -650,16 +650,6 @@ fn remove_node_certifier_works() {
 }
 
 #[test]
-fn remove_node_certifier_not_exists_fails() {
-    ExternalityBuilder::build().execute_with(|| {
-        assert_noop!(
-            TfgridModule::remove_node_certifier(RawOrigin::Root.into(), alice()),
-            Error::<TestRuntime>::NotCertifier
-        );
-    });
-}
-
-#[test]
 fn set_certification_type_node_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
