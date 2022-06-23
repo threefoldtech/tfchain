@@ -1,4 +1,5 @@
 use super::*;
+use frame_system::migrations::V2ToV3;
 
 pub struct RemoveCollectiveFlip;
 impl frame_support::traits::OnRuntimeUpgrade for RemoveCollectiveFlip {
@@ -20,10 +21,17 @@ impl frame_support::traits::OnRuntimeUpgrade for MigratePalletVersionToStorageVe
     }
 }
 
+impl frame_system::migrations::V2ToV3 for Runtime {
+    type Pallet = System;
+    type AccountId = AccountId;
+    type Index = Index;
+    type AccountData = pallet_balances::AccountData<Balance>;
+}
+
 pub struct SystemToTripleRefCount;
 impl frame_support::traits::OnRuntimeUpgrade for SystemToTripleRefCount {
     fn on_runtime_upgrade() -> frame_support::weights::Weight {
-        frame_system::migrations::migrate_to_triple_ref_count::<Runtime>()
+        frame_system::migrations::migrate_from_dual_to_triple_ref_count::<Runtime, Runtime>()
     }
 }
 
@@ -123,7 +131,7 @@ impl OnRuntimeUpgrade for CustomOnRuntimeUpgrades {
         frame_support::log::info!("🔍️ SystemToTripleRefCount start");
         weight += <SystemToTripleRefCount as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 SystemToTripleRefCount end");
-        
+
         // 5. CouncilStoragePrefixMigration
         frame_support::log::info!("🔍️ CouncilStoragePrefixMigration start");
         frame_support::traits::StorageVersion::new(0).put::<Council>();
