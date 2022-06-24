@@ -1870,7 +1870,7 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-impl<T: Config> tfchain_support::traits::Tfgrid<T::AccountId> for Module<T> {
+impl<T: Config> tfchain_support::traits::Tfgrid<T::AccountId> for Pallet<T> {
     fn get_farm(farm_id: u32) -> tfchain_support::types::Farm {
         Farms::<T>::get(farm_id)
     }

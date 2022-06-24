@@ -1,5 +1,4 @@
 use super::*;
-use frame_system::migrations::V2ToV3;
 
 pub struct RemoveCollectiveFlip;
 impl frame_support::traits::OnRuntimeUpgrade for RemoveCollectiveFlip {
