@@ -10,10 +10,6 @@ use frame_support::{
     traits::{EnsureOrigin, Get},
     weights::Pays,
 };
-use sp_std::{
-    vec::Vec,
-    boxed::Box,
-};
 use frame_system::{
     self as system, ensure_signed,
     offchain::{AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer},
@@ -22,6 +18,7 @@ use lite_json::json::JsonValue;
 use log;
 use sp_runtime::offchain::{http, Duration};
 use sp_runtime::traits::SaturatedConversion;
+use sp_std::{boxed::Box, vec::Vec};
 mod ringbuffer;
 
 use ringbuffer::{RingBufferTrait, RingBufferTransient};
@@ -34,7 +31,6 @@ type BufferIndex = u16;
 mod tests;
 
 pub mod crypto {
-    use sp_std::convert::TryFrom;
     use crate::KEY_TYPE;
     use sp_core::sr25519::Signature as Sr25519Signature;
     use sp_runtime::{
@@ -42,6 +38,7 @@ pub mod crypto {
         traits::Verify,
         MultiSignature, MultiSigner,
     };
+    use sp_std::convert::TryFrom;
 
     app_crypto!(sr25519, KEY_TYPE);
 
@@ -268,7 +265,7 @@ impl<T: Config> Module<T> {
             _ => return None,
         };
 
-        let exp = price.fraction_length.saturating_sub(2);
+        let exp = price.fraction_length.saturating_sub(4);
         Some(price.integer as u32 * 100 + (price.fraction / 10_u64.pow(exp)) as u32)
     }
 
