@@ -19,6 +19,7 @@ use tfchain_support::{
     types::{Node},
 };
 use hex::FromHex;
+use twin::TwinIp;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
@@ -32,6 +33,9 @@ mod tests;
 pub mod weights;
 
 pub mod types;
+
+pub mod twin;
+pub mod ipv6;
 
 // Definition of the pallet logic, to be aggregated at runtime definition
 // through `construct_runtime`.
@@ -104,7 +108,7 @@ pub mod pallet {
     pub type TwinIndex = u32;
     type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 	type TwinInfoOf<T> =
-		types::Twin<AccountIdOf<T>>;
+		types::Twin<T, AccountIdOf<T>>;
 
     #[pallet::storage]
     #[pallet::getter(fn twins)]
@@ -193,6 +197,9 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
 
         type NodeChanged: ChangeNode;
+
+        #[pallet::constant]
+        type MaxIpLength: Get<u32>;
     }
 
     #[pallet::event]
@@ -212,8 +219,8 @@ pub mod pallet {
         EntityUpdated(types::Entity<T::AccountId>),
         EntityDeleted(u32),
 
-        TwinStored(types::Twin<T::AccountId>),
-        TwinUpdated(types::Twin<T::AccountId>),
+        TwinStored(types::Twin<T, T::AccountId>),
+        TwinUpdated(types::Twin<T, T::AccountId>),
 
         TwinEntityStored(u32, u32, Vec<u8>),
         TwinEntityRemoved(u32, u32),
@@ -288,6 +295,10 @@ pub mod pallet {
         NotAllowedToCertifyNode,
 
         FarmingPolicyNotExists,
+
+        TwinIpTooShort,
+        TwinIpTooLong,
+        InvalidTwinIp,
     }
 
     #[pallet::genesis_config]
@@ -1867,6 +1878,12 @@ impl<T: Config> Pallet<T> {
                 ))
             }
         }
+    }
+
+    fn check_twin_ip(ip: Vec<u8>) -> Result<TwinIp<T>, DispatchErrorWithPostInfo> {
+        let ip = TwinIp::<T>::try_from(ip).map_err(DispatchErrorWithPostInfo::from)?;
+
+        Ok(ip)
     }
 }
 

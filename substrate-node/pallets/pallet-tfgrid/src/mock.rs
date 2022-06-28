@@ -79,12 +79,17 @@ impl tfchain_support::traits::ChangeNode for NodeChanged {
     fn node_deleted(_node: &tfchain_support::types::Node) {}
 }
 
+parameter_types! {
+    pub const MaxIpLength: u32 = 39;
+}
+
 use crate::weights;
 impl Config for TestRuntime {
     type Event = Event;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
+    type MaxIpLength = MaxIpLength;
 }
 
 parameter_types! {
