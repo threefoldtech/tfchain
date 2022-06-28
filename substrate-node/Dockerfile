@@ -22,6 +22,10 @@ COPY --from=builder /tfchain/chainspecs /etc/chainspecs/
 RUN ldd /usr/local/bin/tfchain && \
 	/usr/local/bin/tfchain --version
 
+# Install CA certificates not present in base image
+RUN apt-get update
+RUN apt-get install -y ca-certificates
+
 # Shrinking
 RUN rm -rf /usr/lib/python* && \
 	rm -rf /src && \
