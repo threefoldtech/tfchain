@@ -27,6 +27,9 @@ pub mod weights;
 
 pub mod types;
 
+pub mod ipv6;
+pub mod twin;
+
 // Definition of the pallet logic, to be aggregated at runtime definition
 // through `construct_runtime`.
 #[frame_support::pallet]
@@ -37,7 +40,7 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
     use pallet_timestamp as timestamp;
-    use sp_std::convert::TryInto;
+    use sp_std::{convert::TryInto, fmt::Debug, vec::Vec};
     use tfchain_support::{
         traits::ChangeNode,
         types::{
@@ -45,6 +48,8 @@ pub mod pallet {
             NodeCertification, PublicConfig, PublicIP, Resources,
         },
     };
+
+    use codec::FullCodec;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -97,7 +102,9 @@ pub mod pallet {
 
     pub type TwinIndex = u32;
     type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-    type TwinInfoOf<T> = types::Twin<AccountIdOf<T>>;
+    type TwinInfoOf<T> = types::Twin<<T as Config>::TwinIp, AccountIdOf<T>>;
+    pub type TwinIpInput<T> = BoundedVec<u8, <T as Config>::MaxIpLength>;
+    pub type TwinIpOf<T> = <T as Config>::TwinIp;
 
     #[pallet::storage]
     #[pallet::getter(fn twins)]
@@ -180,6 +187,18 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
 
         type NodeChanged: ChangeNode;
+
+        /// The type of a name.
+        type TwinIp: FullCodec
+            + Debug
+            + PartialEq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        #[pallet::constant]
+        type MaxIpLength: Get<u32>;
     }
 
     #[pallet::event]
@@ -199,8 +218,8 @@ pub mod pallet {
         EntityUpdated(types::Entity<T::AccountId>),
         EntityDeleted(u32),
 
-        TwinStored(types::Twin<T::AccountId>),
-        TwinUpdated(types::Twin<T::AccountId>),
+        TwinStored(types::Twin<T::TwinIp, T::AccountId>),
+        TwinUpdated(types::Twin<T::TwinIp, T::AccountId>),
 
         TwinEntityStored(u32, u32, Vec<u8>),
         TwinEntityRemoved(u32, u32),
@@ -275,6 +294,10 @@ pub mod pallet {
         NotAllowedToCertifyNode,
 
         FarmingPolicyNotExists,
+
+        TwinIpTooShort,
+        TwinIpTooLong,
+        InvalidTwinIp,
     }
 
     #[pallet::genesis_config]
@@ -1118,7 +1141,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(<T as Config>::WeightInfo::create_twin())]
-        pub fn create_twin(origin: OriginFor<T>, ip: Vec<u8>) -> DispatchResultWithPostInfo {
+        pub fn create_twin(origin: OriginFor<T>, ip: TwinIpInput<T>) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
             ensure!(
@@ -1134,12 +1157,14 @@ pub mod pallet {
             let mut twin_id = TwinID::<T>::get();
             twin_id = twin_id + 1;
 
-            let twin = types::Twin::<T::AccountId> {
+            let twin_ip = Self::check_twin_ip(ip)?;
+
+            let twin = types::Twin::<T::TwinIp, T::AccountId> {
                 version: TFGRID_TWIN_VERSION,
                 id: twin_id,
                 account_id: account_id.clone(),
                 entities: Vec::new(),
-                ip: ip.clone(),
+                ip: twin_ip,
             };
 
             Twins::<T>::insert(&twin_id, &twin);
@@ -1154,7 +1179,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(3))]
-        pub fn update_twin(origin: OriginFor<T>, ip: Vec<u8>) -> DispatchResultWithPostInfo {
+        pub fn update_twin(origin: OriginFor<T>, ip: TwinIpInput<T>) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
             ensure!(
@@ -1175,7 +1200,9 @@ pub mod pallet {
                 Error::<T>::UnauthorizedToUpdateTwin
             );
 
-            twin.ip = ip.clone();
+            let twin_ip = Self::check_twin_ip(ip)?;
+
+            twin.ip = twin_ip;
 
             Twins::<T>::insert(&twin_id, &twin);
 
@@ -1885,6 +1912,12 @@ impl<T: Config> Pallet<T> {
                 ))
             }
         }
+    }
+
+    fn check_twin_ip(ip: TwinIpInput<T>) -> Result<TwinIpOf<T>, DispatchErrorWithPostInfo> {
+        let ip = TwinIpOf::<T>::try_from(ip.to_vec()).map_err(DispatchErrorWithPostInfo::from)?;
+
+        Ok(ip)
     }
 }
 

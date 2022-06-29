@@ -139,10 +139,10 @@ fn test_create_twin_works() {
             hash,
         ));
 
-        let ip = "10.2.3.3";
+        let ip = get_twin_ip(b"::1");
         assert_ok!(TfgridModule::create_twin(
             Origin::signed(test_ed25519()),
-            ip.as_bytes().to_vec()
+            ip.clone().0
         ));
     });
 }
@@ -159,10 +159,10 @@ fn test_delete_twin_works() {
             hash,
         ));
 
-        let ip = "10.2.3.3";
+        let ip = get_twin_ip(b"::1");
         assert_ok!(TfgridModule::create_twin(
             Origin::signed(alice()),
-            ip.as_bytes().to_vec()
+            ip.clone().0
         ));
 
         let twin_id = 1;
@@ -270,9 +270,9 @@ fn test_create_twin_double_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
 
-        let ip = "10.2.3.3";
+        let ip = get_twin_ip(b"::1");
         assert_noop!(
-            TfgridModule::create_twin(Origin::signed(alice()), ip.as_bytes().to_vec()),
+            TfgridModule::create_twin(Origin::signed(alice()), ip.clone().0),
             Error::<TestRuntime>::TwinWithPubkeyExists
         );
     });
@@ -497,8 +497,11 @@ fn test_update_twin_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
 
-        let ip = "some_other_ip".as_bytes().to_vec();
-        assert_ok!(TfgridModule::update_twin(Origin::signed(alice()), ip));
+        let ip = get_twin_ip(b"::1");
+        assert_ok!(TfgridModule::update_twin(
+            Origin::signed(alice()),
+            ip.clone().0
+        ));
     });
 }
 
@@ -514,12 +517,15 @@ fn test_update_twin_fails_if_signed_by_someone_else() {
             hash,
         ));
 
-        let mut ip = "some_ip".as_bytes().to_vec();
-        assert_ok!(TfgridModule::create_twin(Origin::signed(alice()), ip));
+        let ip = get_twin_ip(b"::1");
+        assert_ok!(TfgridModule::create_twin(
+            Origin::signed(alice()),
+            ip.clone().0
+        ));
 
-        ip = "some_other_ip".as_bytes().to_vec();
+        let ip = get_twin_ip(b"::1");
         assert_noop!(
-            TfgridModule::update_twin(Origin::signed(bob()), ip),
+            TfgridModule::update_twin(Origin::signed(bob()), ip.clone().0),
             Error::<TestRuntime>::TwinNotExists
         );
     });
@@ -1343,10 +1349,10 @@ fn create_twin() {
         hash,
     ));
 
-    let ip = "10.2.3.3";
+    let ip = get_twin_ip(b"::1");
     assert_ok!(TfgridModule::create_twin(
         Origin::signed(alice()),
-        ip.as_bytes().to_vec()
+        ip.clone().0
     ));
 }
 
@@ -1360,10 +1366,10 @@ fn create_twin_bob() {
         hash,
     ));
 
-    let ip = "10.2.3.3";
+    let ip = get_twin_ip(b"::1");
     assert_ok!(TfgridModule::create_twin(
         Origin::signed(bob()),
-        ip.as_bytes().to_vec()
+        ip.clone().0
     ));
 }
 
