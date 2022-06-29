@@ -1,9 +1,8 @@
-use codec::{Decode, Encode, MaxEncodedLen};
+use codec::{Decode, Encode};
 use core::cmp::Ordering;
 use scale_info::TypeInfo;
 use sp_std::vec::Vec;
 use tfchain_support::types::{FarmCertification, NodeCertification};
-use super::twin::TwinIp;
 
 /// Utility type for managing upgrades/migrations.
 #[derive(Encode, Decode, Clone, Debug, PartialEq, TypeInfo)]
@@ -16,7 +15,7 @@ pub enum StorageVersion {
 }
 
 impl Default for StorageVersion {
-    fn default () -> StorageVersion {
+    fn default() -> StorageVersion {
         StorageVersion::V1Struct
     }
 }
@@ -32,16 +31,14 @@ pub struct Entity<AccountId> {
 }
 
 //digital twin
-#[derive(Clone, Encode, Decode, Debug, Eq, PartialEq, Default, TypeInfo, MaxEncodedLen)]
-#[scale_info(skip_type_params(T))]
-#[codec(mel_bound())]
-pub struct Twin<T: crate::Config, AccountId> {
+#[derive(Clone, Encode, Decode, Debug, Eq, PartialEq, Default, TypeInfo)]
+pub struct Twin<TwinIp, AccountId> {
     pub version: u32,
     pub id: u32,
     //substrate account id = public key (32 bytes)
     //also used by PAN network
     pub account_id: AccountId,
-    pub ip: TwinIp<T>,
+    pub ip: TwinIp,
     //link to person's or companies who own this twin
     pub entities: Vec<EntityProof>,
 }

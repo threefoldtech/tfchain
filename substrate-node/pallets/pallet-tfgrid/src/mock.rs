@@ -12,6 +12,8 @@ use sp_core::{ed25519, sr25519, Pair, Public, H256};
 
 use sp_std::prelude::*;
 
+use crate::twin::TwinIp;
+use crate::weights;
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::MultiSignature;
 
@@ -83,12 +85,14 @@ parameter_types! {
     pub const MaxIpLength: u32 = 39;
 }
 
-use crate::weights;
+pub(crate) type TestTwinIp = TwinIp<TestRuntime>;
+
 impl Config for TestRuntime {
     type Event = Event;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
+    type TwinIp = TestTwinIp;
     type MaxIpLength = MaxIpLength;
 }
 
@@ -141,6 +145,10 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     };
     genesis.assimilate_storage(&mut t).unwrap();
     t.into()
+}
+
+pub(crate) fn get_twin_ip(twin_ip_input: &[u8]) -> TestTwinIp {
+    TwinIp::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
 }
 
 // industry dismiss casual gym gap music pave gasp sick owner dumb cost
