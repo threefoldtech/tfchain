@@ -336,11 +336,17 @@ impl ChangeNode for NodeChanged {
     }
 }
 
+parameter_types! {
+    pub const MaxTwinIpLength: u32 = 37;
+}
+
 impl pallet_tfgrid::Config for Runtime {
     type Event = Event;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Runtime>;
     type NodeChanged = NodeChanged;
+    type MaxIpLength = MaxTwinIpLength;
+    type TwinIp = pallet_tfgrid::twin::TwinIp<Runtime>;
 }
 
 parameter_types! {
