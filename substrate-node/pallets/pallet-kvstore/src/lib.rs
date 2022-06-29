@@ -5,7 +5,8 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure,
 };
 use frame_system::ensure_signed;
-use sp_std::vec::Vec;
+use sp_std::prelude::*;
+use sp_std::convert::TryInto;
 
 #[cfg(test)]
 mod tests;

@@ -6,6 +6,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+use constants::fee::WeightToFee;
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use sp_api::impl_runtime_apis;
@@ -20,7 +21,8 @@ use sp_runtime::{
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, MultiSignature,
 };
-use sp_std::prelude::*;
+use sp_std::convert::{TryFrom, TryInto};
+use sp_std::{cmp::Ordering, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -28,22 +30,24 @@ use tfchain_support::{traits::ChangeNode, types::Node};
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
-    construct_runtime, debug, parameter_types,
-    traits::{FindAuthor, KeyOwnerProofSystem, Randomness},
+    construct_runtime, parameter_types,
+    traits::{ConstU8, EnsureOneOf, FindAuthor, KeyOwnerProofSystem, PrivilegeCmp, Randomness},
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
-        IdentityFee, Weight,
+        ConstantMultiplier, IdentityFee, Weight,
     },
     StorageValue,
 };
-use frame_system::{EnsureOneOf, EnsureRoot};
+pub use frame_system::Call as SystemCall;
+use frame_system::EnsureRoot;
+use log;
+pub use pallet_balances::Call as BalancesCall;
 pub use pallet_collective;
 pub use pallet_membership;
+pub use pallet_timestamp::Call as TimestampCall;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
-
-use sp_core::u32_trait::{_3, _5};
 
 use pallet_transaction_payment::CurrencyAdapter;
 
@@ -70,9 +74,6 @@ pub use pallet_validator;
 
 pub use pallet_dao;
 
-mod migrations;
-use self::migrations::*;
-
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -96,8 +97,8 @@ pub type Index = u32;
 /// A hash of some data used by the chain.
 pub type Hash = sp_core::H256;
 
-/// Digest item type.
-pub type DigestItem = generic::DigestItem<Hash>;
+mod migrations;
+use self::migrations::*;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -136,16 +137,16 @@ pub fn session_keys(aura: AuraId, grandpa: GrandpaId) -> SessionKeys {
 
 /// Constant values used within the runtime.
 pub mod constants;
-use constants::fee::*;
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 68,
+    spec_version: 102,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 1,
+    transaction_version: 2,
+    state_version: 0,
 };
 
 /// This determines the average expected block time that we are targeting.
@@ -187,13 +188,14 @@ parameter_types! {
 
     pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) * MaximumBlockWeight::get();
     pub const MaxScheduledPerBlock: u32 = 50;
+    pub const NoPreimagePostponement: Option<BlockNumber> = Some(10);
 }
 
 // Configure FRAME pallets to include in runtime.
 
 impl frame_system::Config for Runtime {
     /// The basic call filter to use in dispatchable.
-    type BaseCallFilter = ();
+    type BaseCallFilter = frame_support::traits::Everything;
     /// Block & extrinsics weights: base values and limits.
     type BlockWeights = BlockWeights;
     /// The maximum length of a block (in bytes).
@@ -238,10 +240,19 @@ impl frame_system::Config for Runtime {
     type SystemWeightInfo = ();
     /// This is used as an identifier of the chain. 42 is the generic substrate prefix.
     type SS58Prefix = SS58Prefix;
+    /// The set code logic, just the default since we're not a parachain.
+    type OnSetCode = ();
+    type MaxConsumers = frame_support::traits::ConstU32<16>;
+}
+
+parameter_types! {
+    pub const MaxAuthorities: u32  = 100;
 }
 
 impl pallet_aura::Config for Runtime {
     type AuthorityId = AuraId;
+    type DisabledValidators = ();
+    type MaxAuthorities = MaxAuthorities;
 }
 
 impl pallet_grandpa::Config for Runtime {
@@ -261,6 +272,7 @@ impl pallet_grandpa::Config for Runtime {
     type HandleEquivocation = ();
 
     type WeightInfo = ();
+    type MaxAuthorities = MaxAuthorities;
 }
 
 parameter_types! {
@@ -278,10 +290,13 @@ impl pallet_timestamp::Config for Runtime {
 parameter_types! {
     pub const ExistentialDeposit: u128 = 500;
     pub const MaxLocks: u32 = 50;
+    pub const MaxReserves: u32 = 50;
 }
 
 impl pallet_balances::Config for Runtime {
     type MaxLocks = MaxLocks;
+    type MaxReserves = MaxReserves;
+    type ReserveIdentifier = [u8; 8];
     /// The type for recording an account's balance.
     type Balance = Balance;
     /// The ubiquitous event type.
@@ -298,8 +313,9 @@ parameter_types! {
 
 impl pallet_transaction_payment::Config for Runtime {
     type OnChargeTransaction = CurrencyAdapter<Balances, impls::DealWithFees<Runtime>>;
-    type TransactionByteFee = TransactionByteFee;
+    type OperationalFeeMultiplier = ConstU8<5>;
     type WeightToFee = WeightToFee;
+    type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
     type FeeMultiplierUpdate = ();
 }
 
@@ -332,6 +348,7 @@ parameter_types! {
     pub BillingFrequency: u64 = 600;
     pub GracePeriod: u64 = (14 * DAYS).into();
     pub DistributionFrequency: u16 = 24;
+    pub RetryInterval: u32 = 20;
 }
 
 pub fn get_staking_pool_account() -> AccountId {
@@ -350,15 +367,16 @@ impl pallet_smart_contract::Config for Runtime {
     type DistributionFrequency = DistributionFrequency;
     type GracePeriod = GracePeriod;
     type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
-    // type Tfgrid = TfgridModule;
     type NodeChanged = NodeChanged;
 }
+// type Tfgrid = TfgridModule;
 
 impl pallet_tft_bridge::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
     type Burn = ();
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
+    type RetryInterval = RetryInterval;
 }
 
 impl pallet_burning::Config for Runtime {
@@ -370,8 +388,6 @@ impl pallet_burning::Config for Runtime {
 impl pallet_kvstore::Config for Runtime {
     type Event = Event;
 }
-
-pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
 
 impl pallet_tft_price::Config for Runtime {
     type AuthorityId = pallet_tft_price::crypto::AuthId;
@@ -386,9 +402,14 @@ impl pallet_validator::Config for Runtime {
     type Currency = Balances;
 }
 
+parameter_types! {
+    pub MinAuthorities: u32 = 1;
+}
+
 impl validatorset::Config for Runtime {
     type Event = Event;
     type AddRemoveOrigin = EnsureRootOrCouncilApproval;
+    type MinAuthorities = MinAuthorities;
 }
 
 parameter_types! {
@@ -428,19 +449,25 @@ impl sp_runtime::traits::Convert<AccountId, Option<AccountId>> for ValidatorIdOf
     }
 }
 
-impl pallet_session::Config for Runtime {
-    type SessionHandler = <opaque::SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
-    type ShouldEndSession = ValidatorSet;
-    type SessionManager = ValidatorSet;
-    type Event = Event;
-    type Keys = opaque::SessionKeys;
-    type NextSessionRotation = ValidatorSet;
-    type ValidatorId = <Self as frame_system::Config>::AccountId;
-    type ValidatorIdOf = validatorset::ValidatorOf<Self>;
-    type DisabledValidatorsThreshold = ();
-    type WeightInfo = ();
+parameter_types! {
+    pub const Period: u32 = 60 * MINUTES;
+    pub const Offset: u32 = 0;
 }
 
+impl pallet_session::Config for Runtime {
+    type ValidatorId = <Self as frame_system::Config>::AccountId;
+    type ValidatorIdOf = validatorset::ValidatorOf<Self>;
+    type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
+    type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
+    type SessionManager = ValidatorSet;
+    type SessionHandler = <opaque::SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
+    type Keys = opaque::SessionKeys;
+    type WeightInfo = ();
+    type Event = Event;
+    // type DisabledValidatorsThreshold = ();
+}
+
+pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
 where
     Call: From<LocalCall>,
@@ -460,6 +487,7 @@ where
             .saturating_sub(1);
         let tip = 0;
         let extra: SignedExtra = (
+            frame_system::CheckNonZeroSender::<Runtime>::new(),
             frame_system::CheckSpecVersion::<Runtime>::new(),
             frame_system::CheckTxVersion::<Runtime>::new(),
             frame_system::CheckGenesis::<Runtime>::new(),
@@ -472,7 +500,7 @@ where
         #[cfg_attr(not(feature = "std"), allow(unused_variables))]
         let raw_payload = SignedPayload::new(call, extra)
             .map_err(|e| {
-                debug::native::info!("SignedPayload error: {:?}", e);
+                log::info!("SignedPayload error: {:?}", e);
             })
             .ok()?;
 
@@ -500,6 +528,29 @@ where
     type Extrinsic = UncheckedExtrinsic;
 }
 
+/// Used the compare the privilege of an origin inside the scheduler.
+pub struct OriginPrivilegeCmp;
+
+impl PrivilegeCmp<OriginCaller> for OriginPrivilegeCmp {
+    fn cmp_privilege(left: &OriginCaller, right: &OriginCaller) -> Option<Ordering> {
+        if left == right {
+            return Some(Ordering::Equal);
+        }
+
+        match (left, right) {
+            // Root is greater than anything.
+            (OriginCaller::system(frame_system::RawOrigin::Root), _) => Some(Ordering::Greater),
+            // Check which one has more yes votes.
+            (
+                OriginCaller::Council(pallet_collective::RawOrigin::Members(l_yes_votes, l_count)),
+                OriginCaller::Council(pallet_collective::RawOrigin::Members(r_yes_votes, r_count)),
+            ) => Some((l_yes_votes * r_count).cmp(&(r_yes_votes * l_count))),
+            // For every other origin we don't care, as they are not used for `ScheduleOrigin`.
+            _ => None,
+        }
+    }
+}
+
 impl pallet_scheduler::Config for Runtime {
     type Event = Event;
     type Origin = Origin;
@@ -509,6 +560,9 @@ impl pallet_scheduler::Config for Runtime {
     type ScheduleOrigin = frame_system::EnsureRoot<AccountId>;
     type MaxScheduledPerBlock = MaxScheduledPerBlock;
     type WeightInfo = ();
+    type OriginPrivilegeCmp = OriginPrivilegeCmp;
+    type PreimageProvider = ();
+    type NoPreimagePostponement = NoPreimagePostponement;
 }
 
 parameter_types! {
@@ -538,6 +592,8 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
     type PrimeOrigin = EnsureRootOrCouncilApproval;
     type MembershipInitialized = Council;
     type MembershipChanged = MembershipChangedGroup;
+    type MaxMembers = CouncilMaxMembers;
+    type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
 use frame_support::traits::ChangeMembers;
@@ -555,9 +611,8 @@ impl ChangeMembers<AccountId> for MembershipChangedGroup {
 }
 
 type EnsureRootOrCouncilApproval = EnsureOneOf<
-    AccountId,
     EnsureRoot<AccountId>,
-    pallet_collective::EnsureProportionAtLeast<_3, _5, AccountId, CouncilCollective>,
+    pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 5>,
 >;
 
 impl pallet_runtime_upgrade::Config for Runtime {
@@ -573,8 +628,8 @@ impl FindAuthor<AccountId> for AuraAccountAdapter {
     where
         I: 'a + IntoIterator<Item = (ConsensusEngineId, &'a [u8])>,
     {
-        if let Some(index) = pallet_aura::Module::<Runtime>::find_author(digests) {
-            let validator = pallet_session::Module::<Runtime>::validators()[index as usize].clone();
+        if let Some(index) = pallet_aura::Pallet::<Runtime>::find_author(digests) {
+            let validator = pallet_session::Pallet::<Runtime>::validators()[index as usize].clone();
             Some(validator)
         } else {
             None
@@ -593,6 +648,8 @@ impl pallet_authorship::Config for Runtime {
     type EventHandler = ();
 }
 
+impl pallet_randomness_collective_flip::Config for Runtime {}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -600,29 +657,29 @@ construct_runtime!(
         NodeBlock = opaque::Block,
         UncheckedExtrinsic = UncheckedExtrinsic
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
-        Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-        Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
-        ValidatorSet: validatorset::{Module, Call, Storage, Event<T>, Config<T>},
-        Aura: pallet_aura::{Module, Config<T>},
-        Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
-        TransactionPayment: pallet_transaction_payment::{Module, Storage},
-        Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
-        Authorship: pallet_authorship::{Module, Call, Storage, Inherent},
-        TfgridModule: pallet_tfgrid::{Module, Call, Config<T>, Storage, Event<T>},
-        SmartContractModule: pallet_smart_contract::{Module, Call, Storage, Event<T>},
-        TFTBridgeModule: pallet_tft_bridge::{Module, Call, Config<T>, Storage, Event<T>},
-        TFTPriceModule: pallet_tft_price::{Module, Call, Storage, Config<T>, Event<T>},
-        Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
-        BurningModule: pallet_burning::{Module, Call, Storage, Event<T>},
-        TFKVStore: pallet_kvstore::{Module, Call, Storage, Event<T>},
-        Council: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
-        CouncilMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
-        RuntimeUpgrade: pallet_runtime_upgrade::{Module, Call, Event},
-        Validator: pallet_validator::{Module, Call, Storage, Event<T>},
-        Dao: pallet_dao::{Module, Call, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+        ValidatorSet: validatorset::{Pallet, Call, Storage, Event<T>, Config<T>},
+        Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
+        Aura: pallet_aura::{Pallet, Config<T>},
+        Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event},
+        TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
+        Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
+        Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
+        TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>, Config<T>},
+        SmartContractModule: pallet_smart_contract::{Pallet, Call, Storage, Event<T>},
+        TFTBridgeModule: pallet_tft_bridge::{Pallet, Call, Config<T>, Storage, Event<T>},
+        TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Config<T>, Event<T>},
+        Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>},
+        BurningModule: pallet_burning::{Pallet, Call, Storage, Event<T>},
+        TFKVStore: pallet_kvstore::{Pallet, Call, Storage, Event<T>},
+        Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
+        CouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
+        RuntimeUpgrade: pallet_runtime_upgrade::{Pallet, Call, Event},
+        Validator: pallet_validator::{Pallet, Call, Storage, Event<T>},
+        Dao: pallet_dao::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -638,6 +695,7 @@ pub type SignedBlock = generic::SignedBlock<Block>;
 pub type BlockId = generic::BlockId<Block>;
 /// The SignedExtension to the basic transaction logic.
 pub type SignedExtra = (
+    frame_system::CheckNonZeroSender<Runtime>,
     frame_system::CheckSpecVersion<Runtime>,
     frame_system::CheckTxVersion<Runtime>,
     frame_system::CheckGenesis<Runtime>,
@@ -656,7 +714,7 @@ pub type Executive = frame_executive::Executive<
     Block,
     frame_system::ChainContext<Runtime>,
     Runtime,
-    AllModules,
+    AllPalletsWithSystem,
     CustomOnRuntimeUpgrades,
 >;
 
@@ -677,7 +735,7 @@ impl_runtime_apis! {
 
     impl sp_api::Metadata<Block> for Runtime {
         fn metadata() -> OpaqueMetadata {
-            Runtime::metadata().into()
+            OpaqueMetadata::new(Runtime::metadata().into())
         }
     }
 
@@ -702,17 +760,18 @@ impl_runtime_apis! {
             data.check_extrinsics(&block)
         }
 
-        fn random_seed() -> <Block as BlockT>::Hash {
-            RandomnessCollectiveFlip::random_seed()
-        }
+        // fn random_seed() -> <Block as BlockT>::Hash {
+        // 	RandomnessCollectiveFlip::random_seed().0
+        // }
     }
 
     impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
         fn validate_transaction(
             source: TransactionSource,
             tx: <Block as BlockT>::Extrinsic,
+            block_hash: <Block as BlockT>::Hash,
         ) -> TransactionValidity {
-            Executive::validate_transaction(source, tx)
+            Executive::validate_transaction(source, tx, block_hash)
         }
     }
 
@@ -723,12 +782,12 @@ impl_runtime_apis! {
     }
 
     impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
-        fn slot_duration() -> u64 {
-            Aura::slot_duration()
+        fn slot_duration() -> sp_consensus_aura::SlotDuration {
+            sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
         }
 
         fn authorities() -> Vec<AuraId> {
-            Aura::authorities()
+            Aura::authorities().into_inner()
         }
     }
 
@@ -745,6 +804,10 @@ impl_runtime_apis! {
     }
 
     impl fg_primitives::GrandpaApi<Block> for Runtime {
+        fn current_set_id() -> fg_primitives::SetId {
+            Grandpa::current_set_id()
+        }
+
         fn grandpa_authorities() -> GrandpaAuthorityList {
             Grandpa::grandpa_authorities()
         }

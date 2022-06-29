@@ -1,6 +1,6 @@
+use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
 use crate::{self as pallet_dao};
-use frame_support::{construct_runtime, parameter_types};
-use frame_system as system;
+use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::EnsureRoot;
 use pallet_collective;
 use pallet_tfgrid;
@@ -22,12 +22,12 @@ construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        DaoModule: pallet_dao::{Module, Call, Storage, Event<T>},
-        TfgridModule: pallet_tfgrid::{Module, Call, Storage, Event<T>},
-        Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-        Council: pallet_collective::<Instance1>::{Module, Call, Origin<T>, Event<T>, Config<T>},
-        Membership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        DaoModule: pallet_dao::{Pallet, Call, Storage, Event<T>},
+        TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+        Council: pallet_collective::<Instance1>::{Pallet, Call, Origin<T>, Event<T>, Config<T>},
+        Membership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -38,14 +38,13 @@ parameter_types! {
     pub const ExistentialDeposit: u64 = 1;
 }
 
-impl system::Config for Test {
-    type BaseCallFilter = ();
-    type BlockWeights = BlockWeights;
+impl frame_system::Config for Test {
+    type BaseCallFilter = frame_support::traits::Everything;
+    type BlockWeights = ();
     type BlockLength = ();
-    type DbWeight = ();
     type Origin = Origin;
-    type Call = Call;
     type Index = u64;
+    type Call = Call;
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
@@ -54,6 +53,7 @@ impl system::Config for Test {
     type Header = Header;
     type Event = Event;
     type BlockHashCount = BlockHashCount;
+    type DbWeight = ();
     type Version = ();
     type PalletInfo = PalletInfo;
     type AccountData = ();
@@ -61,6 +61,8 @@ impl system::Config for Test {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = ();
+    type OnSetCode = ();
+    type MaxConsumers = ConstU32<16>;
 }
 
 pub type BlockNumber = u32;
@@ -133,6 +135,8 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Test {
     type PrimeOrigin = EnsureRoot<Self::AccountId>;
     type MembershipInitialized = Council;
     type MembershipChanged = ();
+    type MaxMembers = CouncilMaxMembers;
+    type WeightInfo = pallet_membership::weights::SubstrateWeight<Test>;
 }
 
 // Build genesis storage according to the mock runtime.

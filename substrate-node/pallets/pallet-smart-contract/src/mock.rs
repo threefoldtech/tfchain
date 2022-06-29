@@ -1,28 +1,24 @@
 #![cfg(test)]
 
 use super::*;
-use crate as pallet_smart_contract;
-use frame_support::{construct_runtime, parameter_types};
-use sp_core::{sr25519, Pair, Public, H256, crypto::Ss58Codec};
+use crate::{self as pallet_smart_contract};
+use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
+use frame_system::EnsureRoot;
+use sp_core::{crypto::Ss58Codec, sr25519, Pair, Public, H256};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::MultiSignature;
 use sp_runtime::{
-    AccountId32,
     testing::{Header, TestXt},
     traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentityLookup},
+    AccountId32,
 };
 use sp_std::prelude::*;
-use frame_system::EnsureRoot;
-use tfchain_support::{
-    traits::ChangeNode,
-    types::Node,
-};
+use tfchain_support::{traits::ChangeNode, types::Node};
+use sp_std::convert::TryFrom;
 
 pub type Signature = MultiSignature;
 
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-pub type BalanceOf<T> =
-    <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
 pub type Moment = u64;
 
 type Extrinsic = TestXt<Call, ()>;
@@ -35,12 +31,12 @@ construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-        TfgridModule: pallet_tfgrid::{Module, Call, Storage, Event<T>},
-        Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-        SmartContractModule: pallet_smart_contract::{Module, Call, Event<T>},
-        TFTPriceModule: pallet_tft_price::{Module, Call, Storage, Event<T>}
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+        TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+        SmartContractModule: pallet_smart_contract::{Pallet, Call, Storage, Event<T>},
+        TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Event<T>}
     }
 );
 
@@ -53,7 +49,7 @@ parameter_types! {
 }
 
 impl frame_system::Config for TestRuntime {
-    type BaseCallFilter = ();
+    type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
     type Origin = Origin;
@@ -75,11 +71,22 @@ impl frame_system::Config for TestRuntime {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = ();
+    type OnSetCode = ();
+    type MaxConsumers = ConstU32<16>;
+}
+
+parameter_types! {
+    pub const MaxLocks: u32 = 50;
+    pub const MaxReserves: u32 = 50;
 }
 
 impl pallet_balances::Config for TestRuntime {
-    type MaxLocks = ();
+    type MaxLocks = MaxLocks;
+    type MaxReserves = MaxReserves;
+    type ReserveIdentifier = [u8; 8];
+    /// The type for recording an account's balance.
     type Balance = u64;
+    /// The ubiquitous event type.
     type Event = Event;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
@@ -89,10 +96,7 @@ impl pallet_balances::Config for TestRuntime {
 
 pub struct NodeChanged;
 impl ChangeNode for NodeChanged {
-	fn node_changed(
-		_old_node: Option<&Node>,
-		_new_node: &Node,
-	) {}
+    fn node_changed(_old_node: Option<&Node>, _new_node: &Node) {}
 
     fn node_deleted(node: &Node) {
         SmartContractModule::node_deleted(node);
@@ -127,14 +131,14 @@ parameter_types! {
 }
 
 use weights;
-impl Config for TestRuntime {
+impl pallet_smart_contract::Config for TestRuntime {
     type Event = Event;
     type Currency = Balances;
     type StakingPoolAccount = StakingPoolAccount;
     type BillingFrequency = BillingFrequency;
     type DistributionFrequency = DistributionFrequency;
     type GracePeriod = GracePeriod;
-    type WeightInfo = weights::SubstrateWeight<TestRuntime>; 
+    type WeightInfo = weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
 }
 
@@ -211,12 +215,16 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
         .build_storage::<TestRuntime>()
         .unwrap();
     let genesis = pallet_balances::GenesisConfig::<TestRuntime> {
-        balances: vec![(alice(), 1000000000000), (bob(), 2500000000), (charlie(), 150000)],
+        balances: vec![
+            (alice(), 1000000000000),
+            (bob(), 2500000000),
+            (charlie(), 150000),
+        ],
     };
     genesis.assimilate_storage(&mut t).unwrap();
 
     let genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
-        allowed_origin: bob()
+        allowed_origin: Some(bob()),
     };
     genesis.assimilate_storage(&mut t).unwrap();
 

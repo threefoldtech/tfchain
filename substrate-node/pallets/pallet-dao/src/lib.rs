@@ -43,6 +43,7 @@ pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
+    use sp_std::convert::TryInto;
 
     #[pallet::config]
     pub trait Config:
@@ -75,6 +76,7 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     #[pallet::hooks]
@@ -196,7 +198,7 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
 
             let council_members =
-                pallet_membership::Module::<T, pallet_membership::Instance1>::members();
+                pallet_membership::Pallet::<T, pallet_membership::Instance1>::members();
             ensure!(council_members.contains(&who), Error::<T>::NotCouncilMember);
 
             let proposal_hash = T::Hashing::hash_of(&action);
@@ -337,7 +339,7 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
 
             let council_members =
-                pallet_membership::Module::<T, pallet_membership::Instance1>::members();
+                pallet_membership::Pallet::<T, pallet_membership::Instance1>::members();
             ensure!(council_members.contains(&who), Error::<T>::NotCouncilMember);
 
             let stored_proposal =
@@ -506,7 +508,7 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-impl<T: Config> ChangeNode for Module<T> {
+impl<T: Config> ChangeNode for Pallet<T> {
     fn node_changed(old_node: Option<&Node>, new_node: &Node) {
         let new_node_weight = Self::get_node_weight(new_node.resources);
         match old_node {
