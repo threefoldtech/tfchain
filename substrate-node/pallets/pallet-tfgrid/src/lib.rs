@@ -5,20 +5,14 @@
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
 use sp_std::prelude::*;
 
-use codec::{Encode};
+use codec::Encode;
 use frame_support::dispatch::DispatchErrorWithPostInfo;
-use frame_support::{
-    ensure,
-    traits::{EnsureOrigin},
-};
+use frame_support::{ensure, traits::EnsureOrigin};
 use frame_system::{self as system, ensure_signed};
-use pallet_timestamp as timestamp;
-use sp_runtime::{SaturatedConversion};
-use tfchain_support::{
-    resources,
-    types::{Node},
-};
 use hex::FromHex;
+use pallet_timestamp as timestamp;
+use sp_runtime::SaturatedConversion;
+use tfchain_support::{resources, types::Node};
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
@@ -103,18 +97,12 @@ pub mod pallet {
 
     pub type TwinIndex = u32;
     type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-	type TwinInfoOf<T> =
-		types::Twin<AccountIdOf<T>>;
+    type TwinInfoOf<T> = types::Twin<AccountIdOf<T>>;
 
     #[pallet::storage]
     #[pallet::getter(fn twins)]
-    pub type Twins<T: Config> = StorageMap
-    <   _, 
-        Blake2_128Concat, 
-        TwinIndex, 
-        TwinInfoOf<T>,
-        OptionQuery
-    >;
+    pub type Twins<T: Config> =
+        StorageMap<_, Blake2_128Concat, TwinIndex, TwinInfoOf<T>, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn twin_ids_by_pubkey)]
@@ -128,8 +116,7 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn pricing_policies_by_name_id)]
-    pub type PricingPolicyIdByName<T> =
-        StorageMap<_, Blake2_128Concat, Vec<u8>, u32, ValueQuery>;
+    pub type PricingPolicyIdByName<T> = StorageMap<_, Blake2_128Concat, Vec<u8>, u32, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn farming_policies_map)]
@@ -291,17 +278,17 @@ pub mod pallet {
     }
 
     #[pallet::genesis_config]
-	pub struct GenesisConfig<T: Config> {
-		pub su_price_value: u32,
+    pub struct GenesisConfig<T: Config> {
+        pub su_price_value: u32,
         pub su_price_unit: u32,
-		pub nu_price_value: u32,
-		pub nu_price_unit: u32,
-		pub ipu_price_value: u32,
-		pub ipu_price_unit: u32,
-		pub cu_price_value: u32,
-		pub cu_price_unit: u32,
-		pub domain_name_price_value: u32,
-		pub domain_name_price_unit: u32,
+        pub nu_price_value: u32,
+        pub nu_price_unit: u32,
+        pub ipu_price_value: u32,
+        pub ipu_price_unit: u32,
+        pub cu_price_value: u32,
+        pub cu_price_unit: u32,
+        pub domain_name_price_value: u32,
+        pub domain_name_price_unit: u32,
         pub unique_name_price_value: u32,
         pub foundation_account: Option<T::AccountId>,
         pub sales_account: Option<T::AccountId>,
@@ -317,13 +304,13 @@ pub mod pallet {
         pub farming_policy_certified_ipu: u32,
         pub farming_policy_certified_minimal_uptime: u16,
         pub connection_price: u32,
-	}
+    }
 
     // The default value for the genesis config type.
-	#[cfg(feature = "std")]
-	impl<T: Config> Default for GenesisConfig<T> {
-		fn default() -> Self {
-			Self { 
+    #[cfg(feature = "std")]
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            Self {
                 su_price_value: Default::default(),
                 su_price_unit: Default::default(),
                 nu_price_value: Default::default(),
@@ -350,105 +337,111 @@ pub mod pallet {
                 farming_policy_certified_minimal_uptime: Default::default(),
                 connection_price: Default::default(),
             }
-		}
-	}
+        }
+    }
 
-	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
-		fn build(&self) {
-            let su = types::Policy{
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+        fn build(&self) {
+            let su = types::Policy {
                 value: self.su_price_value,
                 unit: types::Unit::from_u32(self.su_price_unit),
             };
 
-            let cu = types::Policy{
+            let cu = types::Policy {
                 value: self.cu_price_value,
                 unit: types::Unit::from_u32(self.cu_price_unit),
             };
 
-            let nu = types::Policy{
+            let nu = types::Policy {
                 value: self.nu_price_value,
                 unit: types::Unit::from_u32(self.nu_price_unit),
             };
 
-            let ipu = types::Policy{
+            let ipu = types::Policy {
                 value: self.ipu_price_value,
                 unit: types::Unit::from_u32(self.ipu_price_unit),
             };
 
-            let unique_name = types::Policy{
+            let unique_name = types::Policy {
                 value: self.unique_name_price_value,
                 unit: types::Unit::default(),
             };
 
-            let domain_name = types::Policy{
+            let domain_name = types::Policy {
                 value: self.domain_name_price_value,
                 unit: types::Unit::default(),
             };
 
             match &self.foundation_account {
-                Some(foundation_account) => {
-                    match &self.sales_account {
-                        Some(certified_sales_account) => {
-                            let p_policy = types::PricingPolicy{
-                                version: 1,
-                                id: 1,
-                                name: "threefold_default_pricing_policy".as_bytes().to_vec(),
-                                su,
-                                cu,
-                                nu,
-                                ipu,
-                                unique_name,
-                                domain_name,
-                                foundation_account: foundation_account.clone(),
-                                certified_sales_account: certified_sales_account.clone(),
-                                discount_for_dedication_nodes: self.discount_for_dedication_nodes
-                            };
-                            PricingPolicies::<T>::insert(1, p_policy);
-                        },
-                        None => (),
+                Some(foundation_account) => match &self.sales_account {
+                    Some(certified_sales_account) => {
+                        let p_policy = types::PricingPolicy {
+                            version: 1,
+                            id: 1,
+                            name: "threefold_default_pricing_policy".as_bytes().to_vec(),
+                            su,
+                            cu,
+                            nu,
+                            ipu,
+                            unique_name,
+                            domain_name,
+                            foundation_account: foundation_account.clone(),
+                            certified_sales_account: certified_sales_account.clone(),
+                            discount_for_dedication_nodes: self.discount_for_dedication_nodes,
+                        };
+                        PricingPolicies::<T>::insert(1, p_policy);
                     }
+                    None => (),
                 },
                 None => (),
             };
 
-            FarmingPoliciesMap::<T>::insert(1, types::FarmingPolicy {
-                version: 1,
-                id: 1,
-                name: "threefold_default_diy_farming_policy".as_bytes().to_vec(),
-                su: self.farming_policy_diy_su,
-                cu: self.farming_policy_diy_cu,
-                nu: self.farming_policy_diy_nu,
-                ipv4: self.farming_policy_diy_ipu,
-                minimal_uptime: self.farming_policy_diy_minimal_uptime,
-                policy_created: T::BlockNumber::from(0 as u32),
-                policy_end: T::BlockNumber::from(0 as u32),
-                immutable: false,
-                default: true,
-                node_certification: NodeCertification::Diy,
-                farm_certification: FarmCertification::NotCertified,
-            });
+            FarmingPoliciesMap::<T>::insert(
+                1,
+                types::FarmingPolicy {
+                    version: 1,
+                    id: 1,
+                    name: "threefold_default_diy_farming_policy".as_bytes().to_vec(),
+                    su: self.farming_policy_diy_su,
+                    cu: self.farming_policy_diy_cu,
+                    nu: self.farming_policy_diy_nu,
+                    ipv4: self.farming_policy_diy_ipu,
+                    minimal_uptime: self.farming_policy_diy_minimal_uptime,
+                    policy_created: T::BlockNumber::from(0 as u32),
+                    policy_end: T::BlockNumber::from(0 as u32),
+                    immutable: false,
+                    default: true,
+                    node_certification: NodeCertification::Diy,
+                    farm_certification: FarmCertification::NotCertified,
+                },
+            );
 
-            FarmingPoliciesMap::<T>::insert(1, types::FarmingPolicy {
-                version: 1,
-                id: 2,
-                name: "threefold_default_certified_farming_policy".as_bytes().to_vec(),
-                su: self.farming_policy_certified_su,
-                cu: self.farming_policy_certified_cu,
-                nu: self.farming_policy_certified_nu,
-                ipv4: self.farming_policy_certified_ipu,
-                minimal_uptime: self.farming_policy_certified_minimal_uptime,
-                policy_created: T::BlockNumber::from(0 as u32),
-                policy_end: T::BlockNumber::from(0 as u32),
-                immutable: false,
-                default: true,
-                node_certification: NodeCertification::Certified,
-                farm_certification: FarmCertification::NotCertified,
-            });
+            FarmingPoliciesMap::<T>::insert(
+                1,
+                types::FarmingPolicy {
+                    version: 1,
+                    id: 2,
+                    name: "threefold_default_certified_farming_policy"
+                        .as_bytes()
+                        .to_vec(),
+                    su: self.farming_policy_certified_su,
+                    cu: self.farming_policy_certified_cu,
+                    nu: self.farming_policy_certified_nu,
+                    ipv4: self.farming_policy_certified_ipu,
+                    minimal_uptime: self.farming_policy_certified_minimal_uptime,
+                    policy_created: T::BlockNumber::from(0 as u32),
+                    policy_end: T::BlockNumber::from(0 as u32),
+                    immutable: false,
+                    default: true,
+                    node_certification: NodeCertification::Certified,
+                    farm_certification: FarmCertification::NotCertified,
+                },
+            );
 
             ConnectionPrice::<T>::put(self.connection_price)
-		}
-	}
+        }
+    }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -632,7 +625,10 @@ pub mod pallet {
             ensure!(Farms::<T>::contains_key(id), Error::<T>::FarmNotExists);
             let mut stored_farm = Farms::<T>::get(id);
 
-            ensure!(Twins::<T>::contains_key(stored_farm.twin_id), Error::<T>::TwinNotExists);
+            ensure!(
+                Twins::<T>::contains_key(stored_farm.twin_id),
+                Error::<T>::TwinNotExists
+            );
             let twin = Twins::<T>::get(stored_farm.twin_id).unwrap();
             ensure!(
                 twin.account_id == address,
@@ -671,7 +667,10 @@ pub mod pallet {
             ensure!(Farms::<T>::contains_key(id), Error::<T>::FarmNotExists);
             let mut stored_farm = Farms::<T>::get(id);
 
-            ensure!(Twins::<T>::contains_key(stored_farm.twin_id), Error::<T>::TwinNotExists);
+            ensure!(
+                Twins::<T>::contains_key(stored_farm.twin_id),
+                Error::<T>::TwinNotExists
+            );
             let twin = Twins::<T>::get(stored_farm.twin_id).unwrap();
             ensure!(
                 twin.account_id == address,
@@ -711,7 +710,10 @@ pub mod pallet {
                 }
             }
 
-            ensure!(Twins::<T>::contains_key(stored_farm.twin_id), Error::<T>::TwinNotExists);
+            ensure!(
+                Twins::<T>::contains_key(stored_farm.twin_id),
+                Error::<T>::TwinNotExists
+            );
             let twin = Twins::<T>::get(stored_farm.twin_id).unwrap();
             ensure!(
                 twin.account_id == address,
@@ -811,7 +813,10 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
-            ensure!(Nodes::<T>::contains_key(&node_id), Error::<T>::NodeNotExists);
+            ensure!(
+                Nodes::<T>::contains_key(&node_id),
+                Error::<T>::NodeNotExists
+            );
             ensure!(
                 TwinIdByAccountID::<T>::contains_key(&account_id),
                 Error::<T>::TwinNotExists
@@ -859,19 +864,22 @@ pub mod pallet {
                     certifiers.contains(&account_id),
                     Error::<T>::NotAllowedToCertifyNode
                 );
-    
-                ensure!(Nodes::<T>::contains_key(&node_id), Error::<T>::NodeNotExists);
+
+                ensure!(
+                    Nodes::<T>::contains_key(&node_id),
+                    Error::<T>::NodeNotExists
+                );
                 let mut stored_node = Nodes::<T>::get(node_id);
-    
+
                 stored_node.certification = node_certification;
-    
+
                 // Refetch farming policy and save it on the node
                 let farming_policy = Self::get_farming_policy(&stored_node)?;
                 stored_node.farming_policy_id = farming_policy.id;
-    
+
                 // override node in storage
                 Nodes::<T>::insert(stored_node.id, &stored_node);
-    
+
                 Self::deposit_event(Event::NodeUpdated(stored_node));
                 Self::deposit_event(Event::NodeCertificationSet(node_id, node_certification));
             }
@@ -917,7 +925,10 @@ pub mod pallet {
             ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
             let farm = Farms::<T>::get(farm_id);
 
-            ensure!(Twins::<T>::contains_key(farm.twin_id), Error::<T>::TwinNotExists);
+            ensure!(
+                Twins::<T>::contains_key(farm.twin_id),
+                Error::<T>::TwinNotExists
+            );
             let farm_twin = Twins::<T>::get(farm.twin_id).unwrap();
             ensure!(
                 farm_twin.account_id == account_id,
@@ -1470,7 +1481,8 @@ pub mod pallet {
                 document_hash,
             };
 
-            let mut users_terms_and_condition = UsersTermsAndConditions::<T>::get(account_id.clone()).unwrap_or(vec![]);
+            let mut users_terms_and_condition =
+                UsersTermsAndConditions::<T>::get(account_id.clone()).unwrap_or(vec![]);
             users_terms_and_condition.push(t_and_c);
             UsersTermsAndConditions::<T>::insert(account_id, users_terms_and_condition);
 
@@ -1485,7 +1497,10 @@ pub mod pallet {
                 TwinIdByAccountID::<T>::contains_key(&account_id),
                 Error::<T>::TwinNotExists
             );
-            ensure!(Nodes::<T>::contains_key(&node_id), Error::<T>::NodeNotExists);
+            ensure!(
+                Nodes::<T>::contains_key(&node_id),
+                Error::<T>::NodeNotExists
+            );
 
             // check if the farmer twin is authorized
             let farm_twin_id = TwinIdByAccountID::<T>::get(&account_id).unwrap();
@@ -1493,7 +1508,10 @@ pub mod pallet {
             let node = Nodes::<T>::get(&node_id);
             let farm = Farms::<T>::get(node.farm_id);
 
-            ensure!(Twins::<T>::contains_key(&farm.twin_id), Error::<T>::TwinNotExists);
+            ensure!(
+                Twins::<T>::contains_key(&farm.twin_id),
+                Error::<T>::TwinNotExists
+            );
             let farm_twin = Twins::<T>::get(farm.twin_id).unwrap();
             ensure!(
                 farm_twin_id == farm_twin.id,
@@ -1591,9 +1609,9 @@ pub mod pallet {
                         .ok_or(Error::<T>::AlreadyCertifier)?;
                     certifiers.insert(location, who.clone());
                     AllowedNodeCertifiers::<T>::put(certifiers);
-        
+
                     Self::deposit_event(Event::NodeCertifierAdded(who));
-                },
+                }
                 None => {
                     let certifiers = vec![who.clone()];
                     AllowedNodeCertifiers::<T>::put(certifiers);
@@ -1878,19 +1896,15 @@ impl<T: Config> tfchain_support::traits::Tfgrid<T::AccountId> for Pallet<T> {
     fn is_farm_owner(farm_id: u32, who: T::AccountId) -> bool {
         let farm = Farms::<T>::get(farm_id);
         match Twins::<T>::get(farm.twin_id) {
-            Some(twin) => {
-                twin.account_id == who
-            },
-            None => false
+            Some(twin) => twin.account_id == who,
+            None => false,
         }
     }
 
     fn is_twin_owner(twin_id: u32, who: T::AccountId) -> bool {
         match Twins::<T>::get(twin_id) {
-            Some(twin) => {
-                twin.account_id == who
-            },
-            None => false
+            Some(twin) => twin.account_id == who,
+            None => false,
         }
     }
 }
