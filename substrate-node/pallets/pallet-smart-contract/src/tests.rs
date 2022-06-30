@@ -824,6 +824,52 @@ fn test_node_contract_billing_cycles() {
 }
 
 #[test]
+fn test_node_multiple_contract_billing_cycles() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), 500, 101).unwrap();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(bob()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            0
+        ));
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(bob()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "other_hash".as_bytes().to_vec(),
+            0
+        ));
+        let twin_id = 2;
+
+        push_contract_resources_used(1);
+        push_contract_resources_used(2);
+
+        let (amount_due_contract_1, discount_received) = calculate_tft_cost(1, twin_id, 11);
+        run_to_block(12);
+        check_report_cost(1, amount_due_contract_1, 12, discount_received);
+
+        let (amount_due_contract_2, discount_received) = calculate_tft_cost(2, twin_id, 11);
+        run_to_block(12);
+        check_report_cost(2, amount_due_contract_2, 12, discount_received);
+
+        let twin = TfgridModule::twins(twin_id).unwrap();
+        let usable_balance = Balances::usable_balance(&twin.account_id);
+        let free_balance = Balances::free_balance(&twin.account_id);
+
+        let locked_balance = free_balance - usable_balance;
+        assert_eq!(
+            locked_balance.saturated_into::<u128>(),
+            amount_due_contract_1 as u128 + amount_due_contract_2 as u128
+        );
+    });
+}
+
+#[test]
 fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
