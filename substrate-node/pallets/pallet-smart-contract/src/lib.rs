@@ -20,13 +20,13 @@ use sp_runtime::{
     traits::{CheckedSub, SaturatedConversion},
     DispatchError, DispatchResult, Perbill, Percent,
 };
+use sp_std::convert::TryInto;
 use sp_std::vec::Vec;
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
     traits::ChangeNode,
     types::{Node, NodeCertification, PublicIP, Resources},
 };
-use sp_std::convert::TryInto;
 
 #[cfg(test)]
 mod mock;
@@ -318,7 +318,10 @@ impl<T: Config> Module<T> {
 
         let active_node_contracts = ActiveNodeContracts::get(node_id);
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id);
-        ensure!(farm.dedicated_farm || active_node_contracts.is_empty(), Error::<T>::NodeNotAvailableToDeploy);
+        ensure!(
+            farm.dedicated_farm || active_node_contracts.is_empty(),
+            Error::<T>::NodeNotAvailableToDeploy
+        );
 
         // Create contract
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id).unwrap();
@@ -418,7 +421,7 @@ impl<T: Config> Module<T> {
             Contracts::contains_key(contract_id),
             Error::<T>::ContractNotExists
         );
-        
+
         let mut contract = Contracts::get(contract_id);
         ensure!(
             pallet_tfgrid::Twins::<T>::contains_key(contract.twin_id),
@@ -565,7 +568,8 @@ impl<T: Config> Module<T> {
             pallet_tfgrid::PricingPolicies::<T>::contains_key(farm.pricing_policy_id),
             Error::<T>::PricingPolicyNotExists
         );
-        let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(farm.pricing_policy_id).unwrap();
+        let pricing_policy =
+            pallet_tfgrid::PricingPolicies::<T>::get(farm.pricing_policy_id).unwrap();
 
         // validation
         for report in &reports {
@@ -799,10 +803,12 @@ impl<T: Config> Module<T> {
         // The lock is specified on the user's account, since a user can have multiple contracts
         // Just extend the lock with the amount due for this contract billing period (lock will be created if not exists)
         let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id).unwrap();
+        let mut locked_balance = Self::get_locked_balance(&twin.account_id);
+        locked_balance += amount_due;
         <T as Config>::Currency::extend_lock(
             GRID_LOCK_ID,
             &twin.account_id,
-            amount_due,
+            locked_balance,
             WithdrawReasons::all(),
         );
 

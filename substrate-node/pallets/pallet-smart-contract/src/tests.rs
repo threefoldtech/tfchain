@@ -6,7 +6,7 @@ use frame_support::{
 };
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
-use sp_runtime::{Perbill, Percent};
+use sp_runtime::{traits::SaturatedConversion, Perbill, Percent};
 use substrate_fixed::types::U64F64;
 
 use super::types;
@@ -789,25 +789,37 @@ fn test_node_contract_billing_cycles() {
 
         push_contract_resources_used(1);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 11);
+        let (amount_due_1, discount_received) = calculate_tft_cost(contract_id, twin_id, 11);
         run_to_block(12);
-        check_report_cost(1, amount_due_as_u128, 12, discount_received);
+        check_report_cost(1, amount_due_1, 12, discount_received);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        let twin = TfgridModule::twins(twin_id).unwrap();
+        let usable_balance = Balances::usable_balance(&twin.account_id);
+        let free_balance = Balances::free_balance(&twin.account_id);
+
+        let locked_balance = free_balance - usable_balance;
+        assert_eq!(
+            locked_balance.saturated_into::<u128>(),
+            amount_due_1 as u128
+        );
+
+        let (amount_due_2, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(22);
-        check_report_cost(1, amount_due_as_u128, 22, discount_received);
+        check_report_cost(1, amount_due_2, 22, discount_received);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        let (amount_due_3, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(32);
-        check_report_cost(1, amount_due_as_u128, 32, discount_received);
+        check_report_cost(1, amount_due_3, 32, discount_received);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
-        run_to_block(42);
-        check_report_cost(1, amount_due_as_u128, 42, discount_received);
+        let twin = TfgridModule::twins(twin_id).unwrap();
+        let usable_balance = Balances::usable_balance(&twin.account_id);
+        let free_balance = Balances::free_balance(&twin.account_id);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
-        run_to_block(52);
-        check_report_cost(1, amount_due_as_u128, 52, discount_received);
+        let locked_balance = free_balance - usable_balance;
+        assert_eq!(
+            locked_balance.saturated_into::<u128>(),
+            amount_due_1 as u128 + amount_due_2 as u128 + amount_due_3 as u128
+        );
     });
 }
 
@@ -1646,13 +1658,20 @@ fn test_cu_calculation() {
 fn test_lock() {
     new_test_ext().execute_with(|| {
         let id: u64 = 1;
-        Balances::set_lock(id.to_be_bytes(), &bob(), 100, WithdrawReasons::RESERVE);
+        Balances::set_lock(id.to_be_bytes(), &bob(), 100, WithdrawReasons::all());
 
         let usable_balance = Balances::usable_balance(&bob());
         let free_balance = Balances::free_balance(&bob());
 
         let locked_balance = free_balance - usable_balance;
         assert_eq!(locked_balance, 100);
+
+        Balances::extend_lock(id.to_be_bytes(), &bob(), 200, WithdrawReasons::all());
+        let usable_balance = Balances::usable_balance(&bob());
+        let free_balance = Balances::free_balance(&bob());
+
+        let locked_balance = free_balance - usable_balance;
+        assert_eq!(locked_balance, 200);
     })
 }
 
