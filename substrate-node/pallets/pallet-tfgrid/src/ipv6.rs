@@ -39,8 +39,8 @@ pub fn valid_ipv6(input: &[u8]) -> bool {
         }
     }
 
-    // Ending in a colon is not allowed.
-    colons == 0
+    // Ending in a colon is not allowed. Also we need 8 sections or omitted sections.
+    colons == 0 && (sections == 8 || double_colon_seen)
 }
 
 #[cfg(test)]
@@ -48,6 +48,7 @@ mod tests {
     #[test]
     fn it_works() {
         assert!(super::valid_ipv6(b"::1"));
+        assert!(!super::valid_ipv6(b"123"));
         assert!(!super::valid_ipv6(b":1"));
         assert!(super::valid_ipv6(b"200::1"));
         assert!(super::valid_ipv6(b"200:3412:023::22:1"));
@@ -67,5 +68,6 @@ mod tests {
         assert!(!super::valid_ipv6(b"ffff::d::ac:0000:fffe"));
         assert!(!super::valid_ipv6(b"ffff::"));
         assert!(!super::valid_ipv6(b"ffff:"));
+        assert!(!super::valid_ipv6(b"123"));
     }
 }

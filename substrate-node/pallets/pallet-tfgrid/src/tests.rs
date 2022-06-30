@@ -1,5 +1,5 @@
 use crate::{mock::*, Error};
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, BoundedVec};
 use frame_system::RawOrigin;
 use tfchain_support::types::{
     FarmCertification, FarmingPolicyLimit, Location, NodeCertification, PublicConfig, PublicIP,
@@ -293,7 +293,7 @@ fn test_create_farm_fails_invalid_name() {
         create_entity();
         create_twin();
 
-        let farm_name = "test.farm".as_bytes().to_vec();
+        let farm_name = BoundedVec::try_from(b"test.farm".to_vec()).unwrap();
 
         assert_noop!(
             TfgridModule::create_farm(Origin::signed(alice()), farm_name, Vec::new(),),
@@ -308,7 +308,7 @@ fn test_create_farm_fails_empty_name() {
         create_entity();
         create_twin();
 
-        let farm_name = "".as_bytes().to_vec();
+        let farm_name = BoundedVec::try_from(b"10:1".to_vec()).unwrap();
 
         assert_noop!(
             TfgridModule::create_farm(Origin::signed(alice()), farm_name, Vec::new(),),
@@ -323,7 +323,7 @@ fn test_create_farm_with_double_ip_fails() {
         create_entity();
         create_twin();
 
-        let farm_name = "test_farm".as_bytes().to_vec();
+        let farm_name = get_farm_name(b"test_farm");
         let mut pub_ips = Vec::new();
         pub_ips.push(PublicIP {
             ip: "1.1.1.0".as_bytes().to_vec(),
@@ -337,7 +337,7 @@ fn test_create_farm_with_double_ip_fails() {
         });
 
         assert_noop!(
-            TfgridModule::create_farm(Origin::signed(alice()), farm_name, pub_ips),
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name.0.clone(), pub_ips),
             Error::<TestRuntime>::IpExists
         );
     });
@@ -538,7 +538,7 @@ fn test_create_farm_with_same_name_fails() {
         create_twin();
         create_farm();
 
-        let farm_name = "test_farm".as_bytes().to_vec();
+        let farm_name = get_farm_name(b"test_farm");
         let mut pub_ips = Vec::new();
         pub_ips.push(PublicIP {
             ip: "1.1.1.0".as_bytes().to_vec(),
@@ -547,7 +547,7 @@ fn test_create_farm_with_same_name_fails() {
         });
 
         assert_noop!(
-            TfgridModule::create_farm(Origin::signed(alice()), farm_name, pub_ips),
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name.0.clone(), pub_ips),
             Error::<TestRuntime>::FarmExists
         );
     });
@@ -1374,7 +1374,8 @@ fn create_twin_bob() {
 }
 
 fn create_farm() {
-    let farm_name = "test_farm".as_bytes().to_vec();
+    let farm_name = get_farm_name(b"test_farm");
+
     let mut pub_ips = Vec::new();
     pub_ips.push(PublicIP {
         ip: "1.1.1.0".as_bytes().to_vec(),
@@ -1383,7 +1384,7 @@ fn create_farm() {
     });
     assert_ok!(TfgridModule::create_farm(
         Origin::signed(alice()),
-        farm_name,
+        farm_name.0.clone(),
         pub_ips.clone()
     ));
 

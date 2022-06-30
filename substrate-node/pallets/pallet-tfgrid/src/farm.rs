@@ -1,0 +1,75 @@
+use sp_std::{marker::PhantomData, vec::Vec};
+
+use codec::{Decode, Encode, MaxEncodedLen};
+use frame_support::{ensure, sp_runtime::SaturatedConversion, BoundedVec, RuntimeDebug};
+use scale_info::TypeInfo;
+
+use crate::{Config, Error};
+
+/// A Farm name (ASCI Characters).
+///
+/// It is bounded in size (inclusive range [MinLength, MaxLength]) and must be a valid ipv6
+#[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(T, MinLength, MaxLength))]
+#[codec(mel_bound())]
+pub struct FarmName<T: Config>(
+    pub(crate) BoundedVec<u8, T::MaxFarmNameLength>,
+    PhantomData<(T, T::MaxFarmNameLength)>,
+);
+
+pub const MIN_FARM_NAME_LENGTH: u32 = 3;
+
+impl<T: Config> TryFrom<Vec<u8>> for FarmName<T> {
+    type Error = Error<T>;
+
+    /// Fallible initialization from a provided byte vector if it is below the
+    /// minimum or exceeds the maximum allowed length or contains invalid ASCII
+    /// characters.
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        ensure!(
+            value.len() >= MIN_FARM_NAME_LENGTH.saturated_into(),
+            Self::Error::FarmNameTooShort
+        );
+        let bounded_vec: BoundedVec<u8, T::MaxFarmNameLength> =
+            BoundedVec::try_from(value).map_err(|_| Self::Error::FarmNameTooLong)?;
+        ensure!(
+            validate_farm_name(&bounded_vec),
+            Self::Error::InvalidFarmName
+        );
+        Ok(Self(bounded_vec, PhantomData))
+    }
+}
+
+// FIXME: did not find a way to automatically implement this.
+impl<T: Config> PartialEq for FarmName<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+// FIXME: did not find a way to automatically implement this.
+impl<T: Config> Clone for FarmName<T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone(), self.1)
+    }
+}
+
+fn validate_farm_name(input: &[u8]) -> bool {
+    for character in input {
+        match character {
+            // 45 = -
+            c if *c == 45 => (),
+            // 95 = _
+            c if *c == 95 => (),
+            // 45 -> 57 = 0,1,2 ..
+            c if *c >= 48 && *c <= 57 => (),
+            // 65 -> 90 = A, B, C, ..
+            c if *c >= 65 && *c <= 90 => (),
+            // 97 -> 122 = a, b, c, ..
+            c if *c >= 97 && *c <= 122 => (),
+            _ => return false,
+        }
+    }
+
+    true
+}

@@ -27,6 +27,7 @@ pub mod weights;
 
 pub mod types;
 
+pub mod farm;
 pub mod ipv6;
 pub mod twin;
 
@@ -65,6 +66,8 @@ pub mod pallet {
     pub const TFGRID_CERTIFICATION_CODE_VERSION: u32 = 1;
     pub const TFGRID_FARMING_POLICY_VERSION: u32 = 2;
 
+    pub type FarmNameInput<T> = BoundedVec<u8, <T as Config>::MaxFarmNameLength>;
+    pub type FarmNameOf<T> = <T as Config>::FarmName;
     #[pallet::storage]
     #[pallet::getter(fn farms)]
     pub type Farms<T: Config> = StorageMap<_, Blake2_128Concat, u32, Farm, ValueQuery>;
@@ -199,6 +202,18 @@ pub mod pallet {
 
         #[pallet::constant]
         type MaxIpLength: Get<u32>;
+
+        /// The type of a name.
+        type FarmName: FullCodec
+            + Debug
+            + PartialEq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        #[pallet::constant]
+        type MaxFarmNameLength: Get<u32>;
     }
 
     #[pallet::event]
@@ -298,6 +313,9 @@ pub mod pallet {
         TwinIpTooShort,
         TwinIpTooLong,
         InvalidTwinIp,
+
+        FarmNameTooShort,
+        FarmNameTooLong,
     }
 
     #[pallet::genesis_config]
@@ -483,12 +501,13 @@ pub mod pallet {
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn create_farm(
             origin: OriginFor<T>,
-            name: Vec<u8>,
+            name: FarmNameInput<T>,
             public_ips: Vec<PublicIP>,
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
-            Self::validate_farm_name(name.clone())?;
+            let _ = FarmNameOf::<T>::try_from(name.to_vec())
+                .map_err(DispatchErrorWithPostInfo::from)?;
 
             ensure!(
                 !FarmIdByName::<T>::contains_key(name.clone()),
@@ -529,7 +548,7 @@ pub mod pallet {
                 version: TFGRID_FARM_VERSION,
                 id,
                 twin_id,
-                name,
+                name: name.to_vec(),
                 pricing_policy_id: 1,
                 certification: FarmCertification::NotCertified,
                 public_ips: pub_ips,
@@ -555,6 +574,9 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
+            let _ = FarmNameOf::<T>::try_from(name.to_vec())
+                .map_err(DispatchErrorWithPostInfo::from)?;
+
             ensure!(
                 TwinIdByAccountID::<T>::contains_key(&address),
                 Error::<T>::TwinNotExists
@@ -568,6 +590,14 @@ pub mod pallet {
                 farm.twin_id == twin_id,
                 Error::<T>::CannotUpdateFarmWrongTwin
             );
+
+            if FarmIdByName::<T>::contains_key(name.clone()) {
+                let farm_id_by_new_name = FarmIdByName::<T>::get(name.clone());
+                // if the user picks a new name but it is taken by another farmer, don't allow it
+                if farm_id_by_new_name != id {
+                    return Err(Error::<T>::InvalidFarmName.into());
+                }
+            }
 
             let mut stored_farm = Farms::<T>::get(id);
             // Remove stored farm by name and insert new one
@@ -1775,30 +1805,6 @@ impl<T: Config> Pallet<T> {
         let mut bytes = [0u8; 32];
         bytes.copy_from_slice(&account_vec);
         sp_core::sr25519::Public::from_raw(bytes)
-    }
-
-    fn validate_farm_name(name: Vec<u8>) -> DispatchResultWithPostInfo {
-        ensure!(
-            name.len() > 0 && name.len() <= 50,
-            Error::<T>::InvalidFarmName
-        );
-        for character in &name {
-            match character {
-                // 45 = -
-                c if *c == 45 => (),
-                // 95 = _
-                c if *c == 95 => (),
-                // 45 -> 57 = 0,1,2 ..
-                c if *c >= 48 && *c <= 57 => (),
-                // 65 -> 90 = A, B, C, ..
-                c if *c >= 65 && *c <= 90 => (),
-                // 97 -> 122 = a, b, c, ..
-                c if *c >= 97 && *c <= 122 => (),
-                _ => return Err(DispatchErrorWithPostInfo::from(Error::<T>::InvalidFarmName)),
-            }
-        }
-
-        return Ok(().into());
     }
 
     fn get_farming_policy(

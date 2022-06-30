@@ -338,6 +338,7 @@ impl ChangeNode for NodeChanged {
 
 parameter_types! {
     pub const MaxTwinIpLength: u32 = 37;
+    pub const MaxFarmNameLength: u32 = 40;
 }
 
 impl pallet_tfgrid::Config for Runtime {
@@ -347,6 +348,8 @@ impl pallet_tfgrid::Config for Runtime {
     type NodeChanged = NodeChanged;
     type MaxIpLength = MaxTwinIpLength;
     type TwinIp = pallet_tfgrid::twin::TwinIp<Runtime>;
+    type MaxFarmNameLength = MaxFarmNameLength;
+    type FarmName = pallet_tfgrid::farm::FarmName<Runtime>;
 }
 
 parameter_types! {
