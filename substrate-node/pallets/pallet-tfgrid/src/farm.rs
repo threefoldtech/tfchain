@@ -55,21 +55,7 @@ impl<T: Config> Clone for FarmName<T> {
 }
 
 fn validate_farm_name(input: &[u8]) -> bool {
-    for character in input {
-        match character {
-            // 45 = -
-            c if *c == 45 => (),
-            // 95 = _
-            c if *c == 95 => (),
-            // 45 -> 57 = 0,1,2 ..
-            c if *c >= 48 && *c <= 57 => (),
-            // 65 -> 90 = A, B, C, ..
-            c if *c >= 65 && *c <= 90 => (),
-            // 97 -> 122 = a, b, c, ..
-            c if *c >= 97 && *c <= 122 => (),
-            _ => return false,
-        }
-    }
-
-    true
+	input
+		.iter()
+		.all(|c| matches!(c, b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_'))
 }
