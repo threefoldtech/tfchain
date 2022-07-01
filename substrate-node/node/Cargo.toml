@@ -64,6 +64,7 @@ sp-runtime = {git = "https://github.com/paritytech/substrate", branch = "polkado
 sp-timestamp = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24"}
 sp-transaction-pool = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24"}
 frame-rpc-system = {package = "substrate-frame-rpc-system", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24"}
+sp-keystore = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24"}
 
 tfchain-runtime = { path = '../runtime' }
 

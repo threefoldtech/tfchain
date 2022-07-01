@@ -104,6 +104,36 @@ impl frame_support::traits::OnRuntimeUpgrade for CouncilMembershipStoragePrefixM
     }
 }
 
+pub struct PalletTftPriceStoragePrefixMigration;
+impl frame_support::traits::OnRuntimeUpgrade for PalletTftPriceStoragePrefixMigration {
+    fn on_runtime_upgrade() -> frame_support::weights::Weight {
+        use frame_support::storage::migration;
+
+        // Remove storage prefixes and all related items
+        // The storage for pallet tft price has changed from U64F64 to u32
+        migration::remove_storage_prefix(b"TftPriceModule", b"TftPrice", b"");
+        migration::remove_storage_prefix(b"TftPriceModule", b"AverageTftPrice", b"");
+
+        let price_history = migration::storage_iter::<u16>(b"TftPriceModule", b"TftPriceHistory");
+        for (price, _) in price_history {
+            frame_support::log::info!("history price key {:?}", price);
+            migration::remove_storage_prefix(b"TftPriceModule", b"TftPriceHistory", &price);
+        }
+
+        let buffer_range = migration::storage_iter::<(u16, u16)>(b"TftPriceModule", b"BufferRange");
+        for (buffer, _) in buffer_range {
+            frame_support::log::info!("buffer key {:?}", buffer);
+            migration::remove_storage_prefix(b"TftPriceModule", b"BufferRange", &buffer);
+        }
+
+        // Reinsert some default values
+        pallet_tft_price::TftPrice::put(45);
+        pallet_tft_price::AverageTftPrice::put(45);
+
+        <Runtime as frame_system::Config>::DbWeight::get().writes(2)
+    }
+}
+
 use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
 pub struct CustomOnRuntimeUpgrades;
 impl OnRuntimeUpgrade for CustomOnRuntimeUpgrades {
@@ -111,38 +141,44 @@ impl OnRuntimeUpgrade for CustomOnRuntimeUpgrades {
         let mut weight = 0;
 
         // 1. RemoveCollectiveFlip
-        frame_support::log::info!("🔍️ RemoveCollectiveFlip start");
+        frame_support::log::info!("\n🔍️ RemoveCollectiveFlip start");
         weight += <RemoveCollectiveFlip as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 RemoveCollectiveFlip end");
 
         // 2. MigratePalletVersionToStorageVersion
-        frame_support::log::info!("🔍️ MigratePalletVersionToStorageVersion start");
+        frame_support::log::info!("\n🔍️ MigratePalletVersionToStorageVersion start");
         weight += <MigratePalletVersionToStorageVersion as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 MigratePalletVersionToStorageVersion end");
 
         // 3. GrandpaStoragePrefixMigration
-        frame_support::log::info!("🔍️ GrandpaStoragePrefixMigration start");
+        frame_support::log::info!("\n🔍️ GrandpaStoragePrefixMigration start");
         frame_support::traits::StorageVersion::new(0).put::<Grandpa>();
         weight += <GrandpaStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 GrandpaStoragePrefixMigration end");
 
         // 4. SystemToTripleRefCount
-        frame_support::log::info!("🔍️ SystemToTripleRefCount start");
+        frame_support::log::info!("\n🔍️ SystemToTripleRefCount start");
         weight += <SystemToTripleRefCount as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 SystemToTripleRefCount end");
 
         // 5. CouncilStoragePrefixMigration
-        frame_support::log::info!("🔍️ CouncilStoragePrefixMigration start");
+        frame_support::log::info!("\n🔍️ CouncilStoragePrefixMigration start");
         frame_support::traits::StorageVersion::new(0).put::<Council>();
         weight += <CouncilStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 CouncilStoragePrefixMigration end");
 
         // 6. CouncilMembershipStoragePrefixMigration
-        frame_support::log::info!("🔍️ CouncilMembershipStoragePrefixMigration start");
+        frame_support::log::info!("\n🔍️ CouncilMembershipStoragePrefixMigration start");
         frame_support::traits::StorageVersion::new(0).put::<CouncilMembership>();
         weight +=
             <CouncilMembershipStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 CouncilMembershipStoragePrefixMigration end");
+
+        // 7. PalletTftPriceStoragePrefixMigration
+        frame_support::log::info!("\n🔍️ PalletTftPriceStoragePrefixMigration start");
+        weight +=
+            <PalletTftPriceStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
+        frame_support::log::info!("🚀 PalletTftPriceStoragePrefixMigration end");
 
         weight
     }
