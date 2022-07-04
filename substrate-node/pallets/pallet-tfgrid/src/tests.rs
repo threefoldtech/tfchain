@@ -1358,6 +1358,20 @@ fn test_create_and_update_policy() {
     });
 }
 
+#[test]
+fn test_set_zos_version() {
+    ExternalityBuilder::build().execute_with(|| {
+        let zos_version = "1.0.0".as_bytes().to_vec();
+        assert_ok!(TfgridModule::set_zos_version(
+            RawOrigin::Root.into(),
+            zos_version.clone(),
+        ));
+
+        let saved_zos_version = TfgridModule::zos_version();
+        assert_eq!(saved_zos_version, zos_version);
+    })
+}
+
 fn create_entity() {
     let name = "foobar".as_bytes().to_vec();
     let country = "Belgium".as_bytes().to_vec();
