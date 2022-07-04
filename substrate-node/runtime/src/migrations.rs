@@ -117,18 +117,6 @@ impl frame_support::traits::OnRuntimeUpgrade for PalletTftPriceStoragePrefixMigr
         pallet_tft_price::TftPriceHistory::remove_all(None);
         pallet_tft_price::BufferRange::put((0, 0));
 
-        // let price_history = migration::storage_iter::<u16>(b"TftPriceModule", b"TftPriceHistory");
-        // for (price, _) in price_history {
-        //     frame_support::log::info!("history price key {:?}", price);
-        //     migration::remove_storage_prefix(b"TftPriceModule", b"TftPriceHistory", &price);
-        // }
-
-        // let buffer_range = migration::storage_iter::<(u16, u16)>(b"TftPriceModule", b"BufferRange");
-        // for (buffer, _) in buffer_range {
-        //     frame_support::log::info!("buffer key {:?}", buffer);
-        //     migration::remove_storage_prefix(b"TftPriceModule", b"BufferRange", &buffer);
-        // }
-
         // Reinsert some default values
         pallet_tft_price::TftPrice::put(45);
         pallet_tft_price::AverageTftPrice::put(45);
