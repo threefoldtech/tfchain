@@ -132,41 +132,41 @@ impl OnRuntimeUpgrade for CustomOnRuntimeUpgrades {
         let mut weight = 0;
 
         // 1. RemoveCollectiveFlip
-        frame_support::log::info!("\n🔍️ RemoveCollectiveFlip start");
+        frame_support::log::info!("🔍️ RemoveCollectiveFlip start");
         weight += <RemoveCollectiveFlip as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 RemoveCollectiveFlip end");
 
         // 2. MigratePalletVersionToStorageVersion
-        frame_support::log::info!("\n🔍️ MigratePalletVersionToStorageVersion start");
+        frame_support::log::info!("🔍️ MigratePalletVersionToStorageVersion start");
         weight += <MigratePalletVersionToStorageVersion as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 MigratePalletVersionToStorageVersion end");
 
         // 3. GrandpaStoragePrefixMigration
-        frame_support::log::info!("\n🔍️ GrandpaStoragePrefixMigration start");
+        frame_support::log::info!("🔍️ GrandpaStoragePrefixMigration start");
         frame_support::traits::StorageVersion::new(0).put::<Grandpa>();
         weight += <GrandpaStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 GrandpaStoragePrefixMigration end");
 
         // 4. SystemToTripleRefCount
-        frame_support::log::info!("\n🔍️ SystemToTripleRefCount start");
+        frame_support::log::info!("🔍️ SystemToTripleRefCount start");
         weight += <SystemToTripleRefCount as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 SystemToTripleRefCount end");
 
         // 5. CouncilStoragePrefixMigration
-        frame_support::log::info!("\n🔍️ CouncilStoragePrefixMigration start");
+        frame_support::log::info!("🔍️ CouncilStoragePrefixMigration start");
         frame_support::traits::StorageVersion::new(0).put::<Council>();
         weight += <CouncilStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 CouncilStoragePrefixMigration end");
 
         // 6. CouncilMembershipStoragePrefixMigration
-        frame_support::log::info!("\n🔍️ CouncilMembershipStoragePrefixMigration start");
+        frame_support::log::info!("🔍️ CouncilMembershipStoragePrefixMigration start");
         frame_support::traits::StorageVersion::new(0).put::<CouncilMembership>();
         weight +=
             <CouncilMembershipStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 CouncilMembershipStoragePrefixMigration end");
 
         // 7. PalletTftPriceStoragePrefixMigration
-        frame_support::log::info!("\n🔍️ PalletTftPriceStoragePrefixMigration start");
+        frame_support::log::info!("🔍️ PalletTftPriceStoragePrefixMigration start");
         weight += <PalletTftPriceStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 PalletTftPriceStoragePrefixMigration end");
 
