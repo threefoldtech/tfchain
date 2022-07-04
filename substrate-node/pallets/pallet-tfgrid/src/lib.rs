@@ -569,7 +569,7 @@ pub mod pallet {
         pub fn update_farm(
             origin: OriginFor<T>,
             id: u32,
-            name: Vec<u8>,
+            name: FarmNameInput<T>,
             pricing_policy_id: u32,
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
@@ -603,7 +603,7 @@ pub mod pallet {
             // Remove stored farm by name and insert new one
             FarmIdByName::<T>::remove(stored_farm.name);
 
-            stored_farm.name = name.clone();
+            stored_farm.name = name.to_vec().clone();
             stored_farm.pricing_policy_id = pricing_policy_id;
 
             Farms::<T>::insert(id, &stored_farm);

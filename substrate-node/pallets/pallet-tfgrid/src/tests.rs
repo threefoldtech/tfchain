@@ -318,6 +318,57 @@ fn test_create_farm_fails_empty_name() {
 }
 
 #[test]
+fn test_update_farm_name_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+
+        create_twin_bob();
+        let farm_name = get_farm_name(b"bob_farm");
+        assert_ok!(TfgridModule::create_farm(
+            Origin::signed(bob()),
+            farm_name.0.clone(),
+            Vec::new()
+        ));
+
+        let farm_name = get_farm_name(b"bob_updated_farm");
+        assert_ok!(TfgridModule::update_farm(
+            Origin::signed(bob()),
+            2,
+            farm_name.0.clone(),
+            1
+        ));
+    });
+}
+
+#[test]
+fn test_update_farm_existing_name_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        let farm_name = get_farm_name(b"alice_farm");
+        assert_ok!(TfgridModule::create_farm(
+            Origin::signed(alice()),
+            farm_name.0.clone(),
+            Vec::new()
+        ));
+
+        create_twin_bob();
+        let farm_name = get_farm_name(b"bob_farm");
+        assert_ok!(TfgridModule::create_farm(
+            Origin::signed(bob()),
+            farm_name.0.clone(),
+            Vec::new()
+        ));
+
+        let farm_name = get_farm_name(b"alice_farm");
+        assert_noop!(
+            TfgridModule::update_farm(Origin::signed(bob()), 2, farm_name.0.clone(), 1),
+            Error::<TestRuntime>::InvalidFarmName
+        );
+    });
+}
+
+#[test]
 fn test_create_farm_with_double_ip_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
