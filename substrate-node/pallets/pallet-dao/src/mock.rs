@@ -10,6 +10,7 @@ use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
+use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::{traits::ChangeNode, types::Node};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -165,8 +166,8 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
         ipu_price_unit: 4,
         unique_name_price_value: 20000,
         domain_name_price_value: 40000,
-        foundation_account: 101,
-        sales_account: 100,
+        foundation_account: Some(101),
+        sales_account: Some(100),
         farming_policy_diy_cu: 160000000,
         farming_policy_diy_su: 100000000,
         farming_policy_diy_nu: 2000000,

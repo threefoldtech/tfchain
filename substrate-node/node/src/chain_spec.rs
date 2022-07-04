@@ -283,7 +283,6 @@ fn testnet_genesis(
             ipu_price_unit: 4,
             unique_name_price_value: 20000,
             domain_name_price_value: 40000,
-            domain_name_price_unit: 4,
             foundation_account: Some(foundation_account),
             sales_account: Some(sales_account),
             farming_policy_diy_cu: 160000000,
