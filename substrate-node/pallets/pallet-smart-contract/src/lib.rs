@@ -1051,8 +1051,8 @@ impl<T: Config> Module<T> {
         let avg_tft_price = pallet_tft_price::AverageTftPrice::get();
         ensure!(avg_tft_price > 0, Error::<T>::TFTPriceValueError);
 
-        // TFT Price is in cents, divide by 10 to get the price in musd
-        let tft_price_musd = U64F64::from_num(avg_tft_price / 10);
+        // TFT Price is in musd
+        let tft_price_musd = U64F64::from_num(avg_tft_price);
 
         // Cost is expressed in units USD, divide by 10000 to get the price in musd
         let total_cost_musd = U64F64::from_num(total_cost) / 10000;

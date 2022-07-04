@@ -82,7 +82,7 @@ decl_storage! {
         pub LastBlockSet: T::BlockNumber;
         pub AverageTftPrice: u32;
         pub TftPriceHistory get(fn get_value): map hasher(twox_64_concat) BufferIndex => u32;
-        BufferRange get(fn range): (BufferIndex, BufferIndex) = (0, 0);
+        pub BufferRange get(fn range): (BufferIndex, BufferIndex) = (0, 0);
         pub AllowedOrigin get(fn allowed_origin): Option<T::AccountId>;
     }
 
@@ -250,7 +250,7 @@ impl<T: Config> Module<T> {
     /// Parse the price from the given JSON string using `lite-json`.
     ///
     /// Returns `None` when parsing failed or `Some(price in cents)` when parsing is successful.
-    fn parse_price(price_str: &str) -> Option<u32> {
+    pub fn parse_price(price_str: &str) -> Option<u32> {
         let val = lite_json::parse_json(price_str);
         let price = match val.ok()? {
             JsonValue::Object(obj) => {
@@ -265,8 +265,8 @@ impl<T: Config> Module<T> {
             _ => return None,
         };
 
-        let exp = price.fraction_length.saturating_sub(4);
-        Some(price.integer as u32 * 100 + (price.fraction / 10_u64.pow(exp)) as u32)
+        let exp = price.fraction_length.saturating_sub(3);
+        Some(price.integer as u32 * 1000 + (price.fraction / 10_u64.pow(exp)) as u32)
     }
 
     fn queue_transient() -> Box<dyn RingBufferTrait<u32>> {

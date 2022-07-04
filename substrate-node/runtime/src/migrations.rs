@@ -1,4 +1,5 @@
 use super::*;
+use crate::sp_api_hidden_includes_construct_runtime::hidden_include::StoragePrefixedMap;
 
 pub struct RemoveCollectiveFlip;
 impl frame_support::traits::OnRuntimeUpgrade for RemoveCollectiveFlip {
@@ -104,6 +105,26 @@ impl frame_support::traits::OnRuntimeUpgrade for CouncilMembershipStoragePrefixM
     }
 }
 
+pub struct PalletTftPriceStoragePrefixMigration;
+impl frame_support::traits::OnRuntimeUpgrade for PalletTftPriceStoragePrefixMigration {
+    fn on_runtime_upgrade() -> frame_support::weights::Weight {
+        use frame_support::storage::migration;
+
+        // Remove storage prefixes and all related items
+        // The storage for pallet tft price has changed from U64F64 to u32
+        migration::remove_storage_prefix(b"TftPriceModule", b"TftPrice", b"");
+        migration::remove_storage_prefix(b"TftPriceModule", b"AverageTftPrice", b"");
+        pallet_tft_price::TftPriceHistory::remove_all(None);
+        pallet_tft_price::BufferRange::put((0, 0));
+
+        // Reinsert some default values
+        pallet_tft_price::TftPrice::put(45);
+        pallet_tft_price::AverageTftPrice::put(45);
+
+        <Runtime as frame_system::Config>::DbWeight::get().writes(2)
+    }
+}
+
 use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
 pub struct CustomOnRuntimeUpgrades;
 impl OnRuntimeUpgrade for CustomOnRuntimeUpgrades {
@@ -143,6 +164,11 @@ impl OnRuntimeUpgrade for CustomOnRuntimeUpgrades {
         weight +=
             <CouncilMembershipStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 CouncilMembershipStoragePrefixMigration end");
+
+        // 7. PalletTftPriceStoragePrefixMigration
+        frame_support::log::info!("🔍️ PalletTftPriceStoragePrefixMigration start");
+        weight += <PalletTftPriceStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
+        frame_support::log::info!("🚀 PalletTftPriceStoragePrefixMigration end");
 
         weight
     }
