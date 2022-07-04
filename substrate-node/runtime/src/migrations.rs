@@ -1,4 +1,5 @@
 use super::*;
+use crate::sp_api_hidden_includes_construct_runtime::hidden_include::StoragePrefixedMap;
 
 pub struct RemoveCollectiveFlip;
 impl frame_support::traits::OnRuntimeUpgrade for RemoveCollectiveFlip {
@@ -113,18 +114,20 @@ impl frame_support::traits::OnRuntimeUpgrade for PalletTftPriceStoragePrefixMigr
         // The storage for pallet tft price has changed from U64F64 to u32
         migration::remove_storage_prefix(b"TftPriceModule", b"TftPrice", b"");
         migration::remove_storage_prefix(b"TftPriceModule", b"AverageTftPrice", b"");
+        pallet_tft_price::TftPriceHistory::remove_all(None);
+        pallet_tft_price::BufferRange::put((0, 0));
 
-        let price_history = migration::storage_iter::<u16>(b"TftPriceModule", b"TftPriceHistory");
-        for (price, _) in price_history {
-            frame_support::log::info!("history price key {:?}", price);
-            migration::remove_storage_prefix(b"TftPriceModule", b"TftPriceHistory", &price);
-        }
+        // let price_history = migration::storage_iter::<u16>(b"TftPriceModule", b"TftPriceHistory");
+        // for (price, _) in price_history {
+        //     frame_support::log::info!("history price key {:?}", price);
+        //     migration::remove_storage_prefix(b"TftPriceModule", b"TftPriceHistory", &price);
+        // }
 
-        let buffer_range = migration::storage_iter::<(u16, u16)>(b"TftPriceModule", b"BufferRange");
-        for (buffer, _) in buffer_range {
-            frame_support::log::info!("buffer key {:?}", buffer);
-            migration::remove_storage_prefix(b"TftPriceModule", b"BufferRange", &buffer);
-        }
+        // let buffer_range = migration::storage_iter::<(u16, u16)>(b"TftPriceModule", b"BufferRange");
+        // for (buffer, _) in buffer_range {
+        //     frame_support::log::info!("buffer key {:?}", buffer);
+        //     migration::remove_storage_prefix(b"TftPriceModule", b"BufferRange", &buffer);
+        // }
 
         // Reinsert some default values
         pallet_tft_price::TftPrice::put(45);
@@ -176,8 +179,7 @@ impl OnRuntimeUpgrade for CustomOnRuntimeUpgrades {
 
         // 7. PalletTftPriceStoragePrefixMigration
         frame_support::log::info!("\n🔍️ PalletTftPriceStoragePrefixMigration start");
-        weight +=
-            <PalletTftPriceStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
+        weight += <PalletTftPriceStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 PalletTftPriceStoragePrefixMigration end");
 
         weight
