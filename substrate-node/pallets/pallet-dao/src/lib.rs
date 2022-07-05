@@ -16,6 +16,7 @@ use tfchain_support::{
     resources,
     traits::{ChangeNode, Tfgrid},
     types::{Node, Resources},
+    constants,
 };
 
 pub use pallet::*;
@@ -42,6 +43,7 @@ pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
+    use sp_std::convert::TryInto;
 
     #[pallet::config]
     pub trait Config:
@@ -74,6 +76,7 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     #[pallet::hooks]
@@ -178,6 +181,7 @@ pub mod pallet {
         TimeLimitReached,
         VoteThresholdNotMet,
         FarmHasNoNodes,
+        InvalidProposalDuration,
     }
 
     #[pallet::call]
@@ -189,11 +193,12 @@ pub mod pallet {
             action: Box<<T as Config>::Proposal>,
             description: Vec<u8>,
             link: Vec<u8>,
+            duration: Option<T::BlockNumber>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
             let council_members =
-                pallet_membership::Module::<T, pallet_membership::Instance1>::members();
+                pallet_membership::Pallet::<T, pallet_membership::Instance1>::members();
             ensure!(council_members.contains(&who), Error::<T>::NotCouncilMember);
 
             let proposal_hash = T::Hashing::hash_of(&action);
@@ -213,8 +218,17 @@ pub mod pallet {
             };
             <Proposals<T>>::insert(proposal_hash, p);
 
+            let now = frame_system::Pallet::<T>::block_number();
+            let mut end = now + T::MotionDuration::get();
+            if let Some(motion_duration) = duration {
+                ensure!(
+                    motion_duration < T::BlockNumber::from(constants::time::DAYS * 30),
+                    Error::<T>::InvalidProposalDuration
+                );
+                end = now + motion_duration;
+            }
+
             let votes = {
-                let end = frame_system::Pallet::<T>::block_number() + T::MotionDuration::get();
                 proposal::DaoVotes {
                     index,
                     threshold,
@@ -325,7 +339,7 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
 
             let council_members =
-                pallet_membership::Module::<T, pallet_membership::Instance1>::members();
+                pallet_membership::Pallet::<T, pallet_membership::Instance1>::members();
             ensure!(council_members.contains(&who), Error::<T>::NotCouncilMember);
 
             let stored_proposal =
@@ -494,7 +508,7 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-impl<T: Config> ChangeNode for Module<T> {
+impl<T: Config> ChangeNode for Pallet<T> {
     fn node_changed(old_node: Option<&Node>, new_node: &Node) {
         let new_node_weight = Self::get_node_weight(new_node.resources);
         match old_node {

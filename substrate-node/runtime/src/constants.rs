@@ -52,7 +52,7 @@ pub mod fee {
         WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
     };
     use smallvec::smallvec;
-    pub use sp_runtime::Perbill;
+    pub use sp_runtime::{Perbill, PerThing};
 
     /// The block saturation level. Fees will be updates based on this value.
     pub const TARGET_BLOCK_FULLNESS: Perbill = Perbill::from_percent(25);
@@ -77,7 +77,7 @@ pub mod fee {
             smallvec![WeightToFeeCoefficient {
                 degree: 1,
                 negative: false,
-                coeff_frac: Perbill::from_rational_approximation(p % q, q),
+                coeff_frac: PerThing::from_rational(p % q, q),
                 coeff_integer: p / q,
             }]
         }

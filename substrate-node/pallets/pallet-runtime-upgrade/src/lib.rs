@@ -2,9 +2,11 @@
 
 use frame_support::{
     weights::{Pays},
-    decl_module, decl_event, traits::{EnsureOrigin, Vec},
+    decl_module, decl_event, traits::{EnsureOrigin},
     dispatch::DispatchResultWithPostInfo,
 };
+
+use sp_std::prelude::*;
 
 pub trait Config: frame_system::Config {
     type Event: From<Event> + Into<<Self as frame_system::Config>::Event>;

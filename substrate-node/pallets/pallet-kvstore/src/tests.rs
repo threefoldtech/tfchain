@@ -1,5 +1,7 @@
-use crate::{self as pallet_kvstore, Config, RawEvent};
+use super::Event as KvStoreEvent;
+use crate::{self as pallet_kvstore, Config};
 use frame_support::{assert_ok, construct_runtime, parameter_types};
+use frame_system::{EventRecord, Phase};
 use sp_core::H256;
 use sp_io::TestExternalities;
 use sp_runtime::{
@@ -16,8 +18,8 @@ construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        TFKVStoreModule: pallet_kvstore::{Module, Call, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        TFKVStoreModule: pallet_kvstore::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -26,8 +28,9 @@ parameter_types! {
     pub BlockWeights: frame_system::limits::BlockWeights =
         frame_system::limits::BlockWeights::simple_max(1024);
 }
+
 impl frame_system::Config for TestRuntime {
-    type BaseCallFilter = ();
+    type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
     type Origin = Origin;
@@ -49,6 +52,7 @@ impl frame_system::Config for TestRuntime {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = ();
+    type OnSetCode = ();
 }
 
 impl Config for TestRuntime {
@@ -79,13 +83,19 @@ fn test_set_and_get() {
             key.as_bytes().to_vec(),
             value.as_bytes().to_vec()
         ));
-        let expected_event = Event::pallet_kvstore(RawEvent::EntrySet(
-            1,
-            key.as_bytes().to_vec(),
-            value.as_bytes().to_vec(),
-        ));
 
-        assert_eq!(System::events()[0].event, expected_event);
+        let our_events = System::events();
+
+        assert_eq!(
+            our_events.contains(&record(Event::TFKVStoreModule(
+                KvStoreEvent::<TestRuntime>::EntrySet(
+                    1,
+                    key.as_bytes().to_vec(),
+                    value.as_bytes().to_vec(),
+                )
+            ))),
+            true
+        );
 
         let entry_value = TFKVStoreModule::key_value_store(1, key.as_bytes().to_vec());
         assert_eq!(entry_value, value.as_bytes().to_vec());
@@ -102,29 +112,49 @@ fn test_delete() {
             key.as_bytes().to_vec(),
             value.as_bytes().to_vec()
         ));
-        let expected_event = Event::pallet_kvstore(RawEvent::EntrySet(
-            1,
-            key.as_bytes().to_vec(),
-            value.as_bytes().to_vec(),
-        ));
 
-        assert_eq!(System::events()[0].event, expected_event,);
+        let our_events = System::events();
+
+        assert_eq!(
+            our_events.contains(&record(Event::TFKVStoreModule(
+                KvStoreEvent::<TestRuntime>::EntrySet(
+                    1,
+                    key.as_bytes().to_vec(),
+                    value.as_bytes().to_vec(),
+                )
+            ))),
+            true
+        );
 
         assert_ok!(TFKVStoreModule::delete(
             Origin::signed(1),
             key.as_bytes().to_vec()
         ));
-        let expected_event = Event::pallet_kvstore(RawEvent::EntryTaken(
-            1,
-            key.as_bytes().to_vec(),
-            value.as_bytes().to_vec(),
-        ));
 
-        assert_eq!(System::events()[1].event, expected_event);
+        let our_events = System::events();
+
+        assert_eq!(
+            our_events.contains(&record(Event::TFKVStoreModule(
+                KvStoreEvent::<TestRuntime>::EntryTaken(
+                    1,
+                    key.as_bytes().to_vec(),
+                    value.as_bytes().to_vec(),
+                )
+            ))),
+            true
+        );
 
         // check if value get deleted
         let entry_value = TFKVStoreModule::key_value_store(1, key.as_bytes().to_vec());
         let expected_value = "".as_bytes().to_vec();
         assert_eq!(entry_value, expected_value);
     })
+}
+
+fn record(event: Event) -> EventRecord<Event, H256> {
+    EventRecord {
+        phase: Phase::Initialization,
+        event,
+        topics: vec![],
+    }
 }

@@ -3,25 +3,27 @@
 use std::u8;
 
 use frame_support::{
-    debug, decl_error, decl_event, decl_module, decl_storage,
+    decl_error, decl_event, decl_module, decl_storage,
     dispatch::DispatchResultWithPostInfo,
-    ensure,
+    ensure, log,
     traits::{
-        Currency, EnsureOrigin, ExistenceRequirement::KeepAlive, Get, LockableCurrency, Vec,
+        Currency, EnsureOrigin, ExistenceRequirement::KeepAlive, Get, LockableCurrency,
         WithdrawReasons, LockIdentifier,
     },
     weights::Pays,
 };
 use frame_system::{self as system, ensure_signed};
-use sp_runtime::{
-    traits::{SaturatedConversion, CheckedSub}, 
-    DispatchError, DispatchResult, Perbill, Percent
-};
 use pallet_balances;
 use pallet_tfgrid;
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_tft_price;
 use pallet_timestamp as timestamp;
+use sp_runtime::{
+    traits::{CheckedSub, SaturatedConversion},
+    DispatchError, DispatchResult, Perbill, Percent,
+};
+use sp_std::convert::TryInto;
+use sp_std::vec::Vec;
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
     traits::ChangeNode,
@@ -223,10 +225,10 @@ decl_module! {
         fn on_finalize(block: T::BlockNumber) {
             match Self::_bill_contracts_at_block(block) {
                 Ok(_) => {
-                    debug::info!("types::NodeContract billed successfully at block: {:?}", block);
+                    log::info!("types::NodeContract billed successfully at block: {:?}", block);
                 },
                 Err(err) => {
-                    debug::info!("types::NodeContract billed failed at block: {:?} with err {:?}", block, err);
+                    log::info!("types::NodeContract billed failed at block: {:?} with err {:?}", block, err);
                 }
             }
             // clean storage map for billed contracts at block
@@ -249,19 +251,19 @@ impl<T: Config> Module<T> {
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&account_id),
             Error::<T>::TwinNotExists
         );
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id).unwrap();
 
         ensure!(
-            pallet_tfgrid::Nodes::contains_key(&node_id),
+            pallet_tfgrid::Nodes::<T>::contains_key(&node_id),
             Error::<T>::NodeNotExists
         );
 
-        let node = pallet_tfgrid::Nodes::get(node_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_id);
         ensure!(
-            pallet_tfgrid::Farms::contains_key(node.farm_id),
+            pallet_tfgrid::Farms::<T>::contains_key(node.farm_id),
             Error::<T>::FarmNotExists
         );
-        let farm = pallet_tfgrid::Farms::get(node.farm_id);
+        let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id);
 
         if farm.dedicated_farm && !ActiveRentContractForNode::contains_key(node_id) {
             return Err(DispatchError::from(Error::<T>::NodeNotAvailableToDeploy));
@@ -297,14 +299,13 @@ impl<T: Config> Module<T> {
         };
 
         // Create contract
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
         let contract = Self::_create_contract(
             twin_id,
             types::ContractData::NodeContract(node_contract.clone()),
             solution_provider_id,
         )?;
 
-        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+        let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
         let contract_billing_information = types::ContractBillingInformation {
             last_updated: now,
             amount_unbilled: 0,
@@ -331,14 +332,8 @@ impl<T: Config> Module<T> {
             Error::<T>::TwinNotExists
         );
         ensure!(
-            pallet_tfgrid::Nodes::contains_key(&node_id),
+            pallet_tfgrid::Nodes::<T>::contains_key(&node_id),
             Error::<T>::NodeNotExists
-        );
-
-        let active_node_contracts = ActiveNodeContracts::get(node_id);
-        ensure!(
-            active_node_contracts.len() == 0,
-            Error::<T>::NodeHasActiveContracts
         );
 
         ensure!(
@@ -346,17 +341,21 @@ impl<T: Config> Module<T> {
             Error::<T>::NodeHasRentContract
         );
 
-        let node = pallet_tfgrid::Nodes::get(node_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_id);
         ensure!(
-            pallet_tfgrid::Farms::contains_key(node.farm_id),
+            pallet_tfgrid::Farms::<T>::contains_key(node.farm_id),
             Error::<T>::FarmNotExists
         );
 
-        let farm = pallet_tfgrid::Farms::get(node.farm_id);
-        ensure!(farm.dedicated_farm, Error::<T>::NodeIsNotDedicated);
+        let active_node_contracts = ActiveNodeContracts::get(node_id);
+        let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id);
+        ensure!(
+            farm.dedicated_farm || active_node_contracts.is_empty(),
+            Error::<T>::NodeNotAvailableToDeploy
+        );
 
         // Create contract
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id);
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id).unwrap();
         let contract = Self::_create_contract(
             twin_id,
             types::ContractData::RentContract(types::RentContract { node_id }),
@@ -378,7 +377,7 @@ impl<T: Config> Module<T> {
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
             Error::<T>::TwinNotExists
         );
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source);
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source).unwrap();
 
         // Validate name uniqueness
         ensure!(
@@ -443,7 +442,7 @@ impl<T: Config> Module<T> {
         // Update Contract ID
         ContractID::put(id);
 
-        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+        let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
         let mut contract_lock = types::ContractLock::default();
         contract_lock.lock_updated = now;
         ContractLock::<T>::insert(id, contract_lock);
@@ -463,7 +462,11 @@ impl<T: Config> Module<T> {
         );
 
         let mut contract = Contracts::get(contract_id);
-        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
+        ensure!(
+            pallet_tfgrid::Twins::<T>::contains_key(contract.twin_id),
+            Error::<T>::TwinNotExists
+        );
+        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id).unwrap();
         ensure!(
             twin.account_id == account_id,
             Error::<T>::TwinNotAuthorizedToUpdateContract
@@ -505,9 +508,12 @@ impl<T: Config> Module<T> {
             Contracts::contains_key(contract_id),
             Error::<T>::ContractNotExists
         );
-
         let mut contract = Contracts::get(contract_id);
-        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
+        ensure!(
+            pallet_tfgrid::Twins::<T>::contains_key(contract.twin_id),
+            Error::<T>::TwinNotExists
+        );
+        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id).unwrap();
         ensure!(
             twin.account_id == account_id,
             Error::<T>::TwinNotAuthorizedToCancelContract
@@ -544,12 +550,12 @@ impl<T: Config> Module<T> {
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
             Error::<T>::TwinNotExists
         );
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source);
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source).unwrap();
         ensure!(
-            pallet_tfgrid::NodeIdByTwinID::contains_key(twin_id),
+            pallet_tfgrid::NodeIdByTwinID::<T>::contains_key(twin_id),
             Error::<T>::NodeNotExists
         );
-        let node_id = pallet_tfgrid::NodeIdByTwinID::get(twin_id);
+        let node_id = pallet_tfgrid::NodeIdByTwinID::<T>::get(twin_id);
 
         for contract_resource in contract_resources {
             if !Contracts::contains_key(contract_resource.contract_id) {
@@ -581,27 +587,28 @@ impl<T: Config> Module<T> {
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
             Error::<T>::TwinNotExists
         );
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source);
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source).unwrap();
         ensure!(
-            pallet_tfgrid::NodeIdByTwinID::contains_key(twin_id),
+            pallet_tfgrid::NodeIdByTwinID::<T>::contains_key(twin_id),
             Error::<T>::NodeNotExists
         );
 
         // fetch the node from the source account (signee)
-        let node_id = pallet_tfgrid::NodeIdByTwinID::get(&twin_id);
-        let node = pallet_tfgrid::Nodes::get(node_id);
+        let node_id = pallet_tfgrid::NodeIdByTwinID::<T>::get(&twin_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_id);
 
         ensure!(
-            pallet_tfgrid::Farms::contains_key(&node.farm_id),
+            pallet_tfgrid::Farms::<T>::contains_key(&node.farm_id),
             Error::<T>::FarmNotExists
         );
-        let farm = pallet_tfgrid::Farms::get(node.farm_id);
+        let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id);
 
         ensure!(
             pallet_tfgrid::PricingPolicies::<T>::contains_key(farm.pricing_policy_id),
             Error::<T>::PricingPolicyNotExists
         );
-        let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(farm.pricing_policy_id);
+        let pricing_policy =
+            pallet_tfgrid::PricingPolicies::<T>::get(farm.pricing_policy_id).unwrap();
 
         // validation
         for report in &reports {
@@ -642,18 +649,18 @@ impl<T: Config> Module<T> {
 
         // seconds elapsed is the report.window
         let seconds_elapsed = report.window;
-        debug::info!("seconds elapsed: {:?}", seconds_elapsed);
+        log::info!("seconds elapsed: {:?}", seconds_elapsed);
 
         // calculate NRU used and the cost
         let used_nru = U64F64::from_num(report.nru) / pricing_policy.nu.factor();
         let nu_cost = used_nru
             * (U64F64::from_num(pricing_policy.nu.value) / 3600)
             * U64F64::from_num(seconds_elapsed);
-        debug::info!("nu cost: {:?}", nu_cost);
+        log::info!("nu cost: {:?}", nu_cost);
 
         // save total
         let total = nu_cost.ceil().to_num::<u64>();
-        debug::info!("total cost: {:?}", total);
+        log::info!("total cost: {:?}", total);
 
         // update contract billing info
         contract_billing_info.amount_unbilled += total;
@@ -673,14 +680,14 @@ impl<T: Config> Module<T> {
             // Try to bill contract
             match Self::bill_contract(&mut contract) {
                 Ok(_) => {
-                    debug::info!(
+                    log::info!(
                         "billed contract with id {:?} at block {:?}",
                         contract_id,
                         block
                     );
                 }
                 Err(err) => {
-                    debug::info!(
+                    log::info!(
                         "error while billing contract with id {:?}: {:?}",
                         contract_id,
                         err
@@ -712,13 +719,13 @@ impl<T: Config> Module<T> {
         if !pallet_tfgrid::Twins::<T>::contains_key(contract.twin_id) {
             return Err(DispatchError::from(Error::<T>::TwinNotExists));
         }
-        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
+        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id).unwrap();
         let usable_balance = Self::get_usable_balance(&twin.account_id);
 
         let mut seconds_elapsed = T::BillingFrequency::get() * 6;
         // Calculate amount of seconds elapsed based on the contract lock struct
 
-        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+        let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
         // this will set the seconds elapsed to the default billing cycle duration in seconds
         // if there is no contract lock object yet. A contract lock object will be created later in this function
         // https://github.com/threefoldtech/tfchain/issues/261
@@ -744,7 +751,7 @@ impl<T: Config> Module<T> {
         // Always emit a contract billed event
         let contract_bill = types::ContractBill {
             contract_id: contract.contract_id,
-            timestamp: <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000,
+            timestamp: <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000,
             discount_level: discount_received.clone(),
             amount_billed: amount_due.saturated_into::<u128>(),
         };
@@ -768,7 +775,7 @@ impl<T: Config> Module<T> {
         usable_balance: BalanceOf<T>,
         amount_due: BalanceOf<T>,
     ) -> Result<&mut types::Contract, DispatchError> {
-        let current_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
+        let current_block = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
         let node_id = contract.get_node_id();
 
         match contract.state {
@@ -817,7 +824,7 @@ impl<T: Config> Module<T> {
     }
 
     fn handle_lock(contract: &mut types::Contract, amount_due: BalanceOf<T>) -> DispatchResult {
-        let now = <timestamp::Module<T>>::get().saturated_into::<u64>() / 1000;
+        let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
         // increment cycles billed and update the internal lock struct
         let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
@@ -828,17 +835,19 @@ impl<T: Config> Module<T> {
 
         // Contract is in grace state, don't actually lock tokens or distribute rewards
         if matches!(contract.state, types::ContractState::GracePeriod(_)) {
-            return Ok(())
+            return Ok(());
         }
 
         // Only lock an amount from the user's balance if the contract is in create state
         // The lock is specified on the user's account, since a user can have multiple contracts
         // Just extend the lock with the amount due for this contract billing period (lock will be created if not exists)
-        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
+        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id).unwrap();
+        let mut locked_balance = Self::get_locked_balance(&twin.account_id);
+        locked_balance += amount_due;
         <T as Config>::Currency::extend_lock(
             GRID_LOCK_ID,
             &twin.account_id,
-            amount_due,
+            locked_balance,
             WithdrawReasons::all(),
         );
 
@@ -856,11 +865,12 @@ impl<T: Config> Module<T> {
                 &twin.account_id,
             );
 
-            // First remove the lock, calculate how much locked balance needs to be unlocked and re-lock the remaining locked balance 
-            let locked_balance = Self::get_locked_balance(&twin.account_id);            
-            let new_locked_balance= match locked_balance.checked_sub(&contract_lock.amount_locked) {
+            // First remove the lock, calculate how much locked balance needs to be unlocked and re-lock the remaining locked balance
+            let locked_balance = Self::get_locked_balance(&twin.account_id);
+            let new_locked_balance = match locked_balance.checked_sub(&contract_lock.amount_locked)
+            {
                 Some(b) => b,
-                None => BalanceOf::<T>::saturated_from(0 as u128)
+                None => BalanceOf::<T>::saturated_from(0 as u128),
             };
             <T as Config>::Currency::remove_lock(GRID_LOCK_ID, &twin.account_id);
             <T as Config>::Currency::set_lock(
@@ -871,14 +881,15 @@ impl<T: Config> Module<T> {
             );
 
             // Fetch the default pricing policy
-            let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
+            let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1).unwrap();
             // Distribute cultivation rewards
             if let Err(err) = Self::_distribute_cultivation_rewards(
                 &contract,
                 &pricing_policy,
                 contract_lock.amount_locked,
             ) {
-                debug::info!("error while distributing cultivation rewards {:?}", err);
+                Ok(_) => (),
+                Err(err) => log::info!("error while distributing cultivation rewards {:?}", err),
             };
             // Reset values
             contract_lock.lock_updated = now;
@@ -896,7 +907,7 @@ impl<T: Config> Module<T> {
         seconds_elapsed: u64,
     ) -> Result<(BalanceOf<T>, types::DiscountLevel), DispatchError> {
         // Fetch the default pricing policy and certification type
-        let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1);
+        let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1).unwrap();
         let certification_type = NodeCertification::Diy;
 
         // Calculate the cost for a contract, can be any of:
@@ -933,7 +944,7 @@ impl<T: Config> Module<T> {
                 let contract_billing_info =
                     ContractBillingInformationByID::get(contract.contract_id);
                 // Get the node
-                if !pallet_tfgrid::Nodes::contains_key(node_contract.node_id) {
+                if !pallet_tfgrid::Nodes::<T>::contains_key(node_contract.node_id) {
                     return Err(DispatchError::from(Error::<T>::NodeNotExists));
                 }
 
@@ -957,10 +968,10 @@ impl<T: Config> Module<T> {
                 contract_cost + contract_billing_info.amount_unbilled
             }
             types::ContractData::RentContract(rent_contract) => {
-                if !pallet_tfgrid::Nodes::contains_key(rent_contract.node_id) {
+                if !pallet_tfgrid::Nodes::<T>::contains_key(rent_contract.node_id) {
                     return Err(DispatchError::from(Error::<T>::NodeNotExists));
                 }
-                let node = pallet_tfgrid::Nodes::get(rent_contract.node_id);
+                let node = pallet_tfgrid::Nodes::<T>::get(rent_contract.node_id);
 
                 let contract_cost = Self::calculate_resources_cost(
                     node.resources,
@@ -1005,14 +1016,14 @@ impl<T: Config> Module<T> {
             let su_cost = (U64F64::from_num(pricing_policy.su.value) / 3600)
                 * U64F64::from_num(seconds_elapsed)
                 * su_used;
-            debug::info!("su cost: {:?}", su_cost);
+            log::info!("su cost: {:?}", su_cost);
 
             let cu = Self::calculate_cu(cru, mru);
 
             let cu_cost = (U64F64::from_num(pricing_policy.cu.value) / 3600)
                 * U64F64::from_num(seconds_elapsed)
                 * cu;
-            debug::info!("cu cost: {:?}", cu_cost);
+            log::info!("cu cost: {:?}", cu_cost);
             total_cost = su_cost + cu_cost;
         }
 
@@ -1020,7 +1031,7 @@ impl<T: Config> Module<T> {
             let total_ip_cost = U64F64::from_num(ipu)
                 * (U64F64::from_num(pricing_policy.ipu.value) / 3600)
                 * U64F64::from_num(seconds_elapsed);
-            debug::info!("ip cost: {:?}", total_ip_cost);
+            log::info!("ip cost: {:?}", total_ip_cost);
             total_cost += total_ip_cost;
         }
 
@@ -1037,7 +1048,7 @@ impl<T: Config> Module<T> {
                     match Self::_free_ip(contract_id, &mut node_contract) {
                         Ok(_) => (),
                         Err(e) => {
-                            debug::info!("error while freeing ips: {:?}", e);
+                            log::info!("error while freeing ips: {:?}", e);
                         }
                     }
                 }
@@ -1075,12 +1086,17 @@ impl<T: Config> Module<T> {
         ContractLock::<T>::remove(contract_id);
     }
 
-    pub fn calculate_cost_in_tft_from_musd(total_cost_musd: u64) -> Result<u64, DispatchError> {
-        let tft_price_musd = U64F64::from_num(pallet_tft_price::AverageTftPrice::get()) * 1000;
-        ensure!(tft_price_musd > 0, Error::<T>::TFTPriceValueError);
+    pub fn calculate_cost_in_tft_from_musd(total_cost: u64) -> Result<u64, DispatchError> {
+        let avg_tft_price = pallet_tft_price::AverageTftPrice::get();
+        ensure!(avg_tft_price > 0, Error::<T>::TFTPriceValueError);
 
-        let total_cost_musd = U64F64::from_num(total_cost_musd) / 10000;
+        // TFT Price is in musd
+        let tft_price_musd = U64F64::from_num(avg_tft_price);
 
+        // Cost is expressed in units USD, divide by 10000 to get the price in musd
+        let total_cost_musd = U64F64::from_num(total_cost) / 10000;
+
+        // Now we have the price in musd and cost in musd, make the conversion to the amount of TFT's and multiply by the chain precision (7 decimals)
         let total_cost_tft = (total_cost_musd / tft_price_musd) * U64F64::from_num(1e7);
         let total_cost_tft_64: u64 = U64F64::to_num(total_cost_tft);
         Ok(total_cost_tft_64)
@@ -1093,11 +1109,11 @@ impl<T: Config> Module<T> {
         amount: BalanceOf<T>,
     ) -> DispatchResult {
         // fetch source twin
-        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
+        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id).unwrap();
 
         // Send 10% to the foundation
         let foundation_share = Perbill::from_percent(10) * amount;
-        debug::info!(
+        log::info!(
             "Transfering: {:?} from contract twin {:?} to foundation account {:?}",
             &foundation_share,
             &twin.account_id,
@@ -1114,7 +1130,7 @@ impl<T: Config> Module<T> {
         // TODO: send 5% to the staking pool account
         let staking_pool_share = Perbill::from_percent(5) * amount;
         let staking_pool_account = T::StakingPoolAccount::get();
-        debug::info!(
+        log::info!(
             "Transfering: {:?} from contract twin {:?} to staking pool account {:?}",
             &staking_pool_share,
             &twin.account_id,
@@ -1141,7 +1157,7 @@ impl<T: Config> Module<T> {
 
             if !solution_provider.providers.iter().map(|provider| {
                 let share = Perbill::from_percent(provider.take as u32) * amount;
-                debug::info!(
+                frame_support::log::info!(
                     "Transfering: {:?} from contract twin {:?} to provider account {:?}",
                     &share,
                     &twin.account_id,
@@ -1167,7 +1183,7 @@ impl<T: Config> Module<T> {
             let share = Perbill::from_percent(sales_share.into()) * amount;
             // Transfer the remaining share to the sales account
             // By default it is 50%, if a contract has solution providers it can be less
-            debug::info!(
+            frame_support::log::info!(
                 "Transfering: {:?} from contract twin {:?} to sales account {:?}",
                 &sales_share,
                 &twin.account_id,
@@ -1206,6 +1222,13 @@ impl<T: Config> Module<T> {
         balance: BalanceOf<T>,
         certification_type: NodeCertification,
     ) -> (BalanceOf<T>, types::DiscountLevel) {
+        if amount_due == 0 {
+            return (
+                BalanceOf::<T>::saturated_from(0 as u128),
+                types::DiscountLevel::None,
+            );
+        }
+
         let balance_as_u128: u128 = balance.saturated_into::<u128>();
 
         // calculate amount due on a monthly basis
@@ -1247,13 +1270,13 @@ impl<T: Config> Module<T> {
             return;
         }
 
-        let now = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
+        let now = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
         // Save the contract to be billed in now + BILLING_FREQUENCY_IN_BLOCKS
         let future_block = now + T::BillingFrequency::get();
         let mut contracts = ContractsToBillAt::get(future_block);
         contracts.push(contract_id);
         ContractsToBillAt::insert(future_block, &contracts);
-        debug::info!(
+        log::info!(
             "Insert contracts: {:?}, to be billed at block {:?}",
             contracts,
             future_block
@@ -1322,15 +1345,15 @@ impl<T: Config> Module<T> {
         if node_contract.public_ips == 0 {
             return Ok(());
         }
-        let node = pallet_tfgrid::Nodes::get(node_contract.node_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id);
 
         ensure!(
-            pallet_tfgrid::Farms::contains_key(&node.farm_id),
+            pallet_tfgrid::Farms::<T>::contains_key(&node.farm_id),
             Error::<T>::FarmNotExists
         );
-        let mut farm = pallet_tfgrid::Farms::get(node.farm_id);
+        let mut farm = pallet_tfgrid::Farms::<T>::get(node.farm_id);
 
-        debug::info!(
+        log::info!(
             "Number of farm ips {:?}, number of ips to reserve: {:?}",
             farm.public_ips.len(),
             node_contract.public_ips as usize
@@ -1364,7 +1387,7 @@ impl<T: Config> Module<T> {
         );
 
         // Update the farm with the reserved ips
-        pallet_tfgrid::Farms::insert(farm.id, farm);
+        pallet_tfgrid::Farms::<T>::insert(farm.id, farm);
 
         node_contract.public_ips_list = ips;
 
@@ -1372,13 +1395,13 @@ impl<T: Config> Module<T> {
     }
 
     pub fn _free_ip(contract_id: u64, node_contract: &mut types::NodeContract) -> DispatchResult {
-        let node = pallet_tfgrid::Nodes::get(node_contract.node_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id);
 
         ensure!(
-            pallet_tfgrid::Farms::contains_key(&node.farm_id),
+            pallet_tfgrid::Farms::<T>::contains_key(&node.farm_id),
             Error::<T>::FarmNotExists
         );
-        let mut farm = pallet_tfgrid::Farms::get(node.farm_id);
+        let mut farm = pallet_tfgrid::Farms::<T>::get(node.farm_id);
 
         let mut ips_freed = Vec::new();
         for i in 0..farm.public_ips.len() {
@@ -1393,7 +1416,7 @@ impl<T: Config> Module<T> {
             }
         }
 
-        pallet_tfgrid::Farms::insert(farm.id, farm);
+        pallet_tfgrid::Farms::<T>::insert(farm.id, farm);
 
         // Emit an event containing the IP's freed for this contract
         Self::deposit_event(RawEvent::IPsFreed(contract_id, ips_freed));
@@ -1432,7 +1455,7 @@ impl<T: Config> Module<T> {
         let locked_balance = free_balance.checked_sub(&usable_balance);
         match locked_balance {
             Some(balance) => balance,
-            None => BalanceOf::<T>::saturated_from(0 as u128)
+            None => BalanceOf::<T>::saturated_from(0 as u128),
         }
     }
 

@@ -1,4 +1,4 @@
-FROM paritytech/ci-linux:c4f0daf3-20220110 as builder
+FROM paritytech/ci-linux@sha256:c75cee0971ca54e57a875fac8714eea2db754e621841cde702478783fc28ab90 as builder
 
 WORKDIR /tfchain
 
@@ -10,26 +10,26 @@ RUN cargo build --locked --release --features $FEATURES
 
 # ===== SECOND STAGE ======
 
-FROM phusion/baseimage:0.11
+FROM docker.io/library/ubuntu:20.04
 LABEL maintainer="dylan@threefold.tech"
 LABEL description="This is the 2nd stage: a very small image where we copy the tfchain binary."
 ARG PROFILE=release
 
-RUN rm -rf /usr/share/* && \
-	mkdir -p /tfchain/.local
-
 COPY --from=builder /tfchain/target/$PROFILE/tfchain /usr/local/bin
 COPY --from=builder /tfchain/chainspecs /etc/chainspecs/
-
 
 # checks	
 RUN ldd /usr/local/bin/tfchain && \
 	/usr/local/bin/tfchain --version
 
+# Install CA certificates not present in base image
+RUN apt-get update
+RUN apt-get install -y ca-certificates
+
 # Shrinking
 RUN rm -rf /usr/lib/python* && \
-	rm -rf /usr/bin /usr/sbin /usr/share/man && \
-	rm -rf /src
+	rm -rf /src && \
+	rm -rf /usr/bin /usr/sbin /usr/share/man
 
 EXPOSE 30333 9933 9944 9615
 VOLUME ["/tfchain"]

@@ -1,10 +1,11 @@
 use codec::{Decode, Encode};
 use core::cmp::Ordering;
-use frame_support::traits::Vec;
+use scale_info::TypeInfo;
+use sp_std::vec::Vec;
 use tfchain_support::types::{FarmCertification, NodeCertification};
 
 /// Utility type for managing upgrades/migrations.
-#[derive(Encode, Decode, Clone, Debug, PartialEq)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, TypeInfo)]
 pub enum StorageVersion {
     V1Struct,
     V2Struct,
@@ -13,7 +14,13 @@ pub enum StorageVersion {
     V5Struct,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug, Encode, Decode, Default)]
+impl Default for StorageVersion {
+    fn default () -> StorageVersion {
+        StorageVersion::V1Struct
+    }
+}
+
+#[derive(Encode, Decode, Debug, Default, PartialEq, Eq, Clone, TypeInfo)]
 pub struct Entity<AccountId> {
     pub version: u32,
     pub id: u32,
@@ -24,7 +31,7 @@ pub struct Entity<AccountId> {
 }
 
 //digital twin
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(Clone, Encode, Decode, Debug, Eq, PartialEq, Default, TypeInfo)]
 pub struct Twin<AccountId> {
     pub version: u32,
     pub id: u32,
@@ -36,13 +43,13 @@ pub struct Twin<AccountId> {
     pub entities: Vec<EntityProof>,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct EntityProof {
     pub entity_id: u32,
     pub signature: Vec<u8>,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct PricingPolicy<AccountId> {
     pub version: u32,
     pub id: u32,
@@ -58,7 +65,7 @@ pub struct PricingPolicy<AccountId> {
     pub discount_for_dedication_nodes: u8,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct Policy {
     pub value: u32,
     pub unit: Unit,
@@ -76,7 +83,7 @@ impl Policy {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
 pub enum Unit {
     Bytes,
     Kilobytes,
@@ -104,7 +111,7 @@ impl Default for Unit {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct FarmingPolicy<BlockNumber> {
     pub version: u32,
     pub id: u32,
@@ -154,7 +161,7 @@ where
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct TermsAndConditions<AccountId> {
     pub account_id: AccountId,
     pub timestamp: u64,

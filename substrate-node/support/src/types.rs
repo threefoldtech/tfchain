@@ -1,8 +1,9 @@
 use codec::{Decode, Encode};
 use core::cmp::{Ord, Ordering, PartialOrd};
-use frame_support::traits::Vec;
+use scale_info::TypeInfo;
+use sp_std::prelude::*;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct Farm {
     pub version: u32,
     pub id: u32,
@@ -15,14 +16,14 @@ pub struct Farm {
     pub farming_policy_limits: Option<FarmingPolicyLimit>,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct PublicIP {
     pub ip: Vec<u8>,
     pub gateway: Vec<u8>,
     pub contract_id: u64,
 }
 
-#[derive(PartialEq, PartialOrd, Eq, Clone, Encode, Decode, Debug, Copy)]
+#[derive(PartialEq, PartialOrd, Eq, Clone, Encode, Decode, Debug, Copy, TypeInfo)]
 pub enum FarmCertification {
     NotCertified,
     Gold,
@@ -48,7 +49,7 @@ impl Ord for FarmCertification {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct FarmingPolicyLimit {
     pub farming_policy_id: u32,
     pub cu: Option<u64>,
@@ -58,7 +59,7 @@ pub struct FarmingPolicyLimit {
     pub node_certification: bool,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct Node {
     pub version: u32,
     pub id: u32,
@@ -82,14 +83,14 @@ pub struct Node {
 
 pub type IP = Vec<u8>;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct Interface {
     pub name: Vec<u8>,
     pub mac: Vec<u8>,
     pub ips: Vec<IP>,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct PublicConfig {
     pub ipv4: Vec<u8>,
     pub ipv6: Vec<u8>,
@@ -98,7 +99,7 @@ pub struct PublicConfig {
     pub domain: Vec<u8>,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, Copy)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, Copy)]
 pub struct Resources {
     pub hru: u64,
     pub sru: u64,
@@ -117,13 +118,13 @@ impl Resources {
 }
 
 // Store Location long and lat as string
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct Location {
     pub longitude: Vec<u8>,
     pub latitude: Vec<u8>,
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, Copy)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, TypeInfo, Copy)]
 pub enum NodeCertification {
     Diy,
     Certified,

@@ -1,11 +1,11 @@
 use crate::{self as tfgridModule, Config};
-use frame_support::{construct_runtime, parameter_types};
+use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
+use frame_system::EnsureRoot;
 use sp_io::TestExternalities;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
-use frame_system::EnsureRoot;
 use tfchain_support::types::Node;
 
 use sp_core::{ed25519, sr25519, Pair, Public, H256};
@@ -31,10 +31,10 @@ construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        TfgridModule: tfgridModule::{Module, Call, Storage, Config<T>, Event<T>},
-        Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        TfgridModule: tfgridModule::{Pallet, Call, Storage, Config<T>, Event<T>},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
     }
 );
 
@@ -46,7 +46,7 @@ parameter_types! {
 }
 
 impl frame_system::Config for TestRuntime {
-    type BaseCallFilter = ();
+    type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
     type Origin = Origin;
@@ -68,14 +68,13 @@ impl frame_system::Config for TestRuntime {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = ();
+    type OnSetCode = ();
+    type MaxConsumers = ConstU32<16>;
 }
 
 pub struct NodeChanged;
 impl tfchain_support::traits::ChangeNode for NodeChanged {
-	fn node_changed(
-		_old_node: Option<&Node>,
-		_new_node: &Node,
-	) {}
+    fn node_changed(_old_node: Option<&Node>, _new_node: &Node) {}
 
     fn node_deleted(_node: &tfchain_support::types::Node) {}
 }
@@ -88,9 +87,18 @@ impl Config for TestRuntime {
     type NodeChanged = NodeChanged;
 }
 
+parameter_types! {
+    pub const MaxLocks: u32 = 50;
+    pub const MaxReserves: u32 = 50;
+}
+
 impl pallet_balances::Config for TestRuntime {
-    type MaxLocks = ();
+    type MaxLocks = MaxLocks;
+    type MaxReserves = MaxReserves;
+    type ReserveIdentifier = [u8; 8];
+    /// The type for recording an account's balance.
     type Balance = u64;
+    /// The ubiquitous event type.
     type Event = Event;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
