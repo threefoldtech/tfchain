@@ -1,33 +1,32 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-/// Edit this file to define custom logic or remove it if it is not needed.
-/// Learn more about FRAME and the core library of Substrate FRAME pallets:
-/// https://substrate.dev/docs/en/knowledgebase/runtime/frame
-use sp_std::prelude::*;
-
 use frame_support::{
-    ensure, traits::{
-        WithdrawReasons, ExistenceRequirement, Currency, LockableCurrency, Get,
-    }, 
+    decl_error, decl_event, decl_module, decl_storage,
+    dispatch::DispatchResultWithPostInfo,
+    ensure, log,
+    traits::{
+        Currency, ExistenceRequirement::KeepAlive, Get, LockIdentifier, LockableCurrency,
+        WithdrawReasons,
+    },
     weights::Pays,
-    dispatch::DispatchErrorWithPostInfo
 };
-use sp_runtime::{
-    traits::{CheckedSub, SaturatedConversion},
-    Perbill, Percent,
-};
-use frame_support::pallet_prelude::*;
 use frame_system::{self as system, ensure_signed};
-use pallet_timestamp as timestamp;
+use pallet_balances;
 use pallet_tfgrid;
 use pallet_tfgrid::types as pallet_tfgrid_types;
-use tfchain_support::{
-    types::{NodeCertification, Resources}
+use pallet_tft_price;
+use pallet_timestamp as timestamp;
+use sp_runtime::{
+    traits::{CheckedSub, SaturatedConversion},
+    DispatchError, DispatchResult, Perbill, Percent,
 };
+use sp_std::convert::TryInto;
+use sp_std::vec::Vec;
 use substrate_fixed::types::U64F64;
-
-// Re-export pallet items so that they can be accessed from the crate namespace.
-pub use pallet::*;
+use tfchain_support::{
+    traits::ChangeNode,
+    types::{Node, NodeCertification, PublicIP, Resources},
+};
 
 #[cfg(test)]
 mod mock;
@@ -35,124 +34,61 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub mod weights;
+mod benchmarking;
 
 pub mod types;
+pub mod weights;
 
-// Definition of the pallet logic, to be aggregated at runtime definition
-// through `construct_runtime`.
-#[frame_support::pallet]
-pub mod pallet {
-    // use hex::FromHex;
-    use super::types::*;
-    use super::weights::WeightInfo;
-    use super::*;
-    use frame_support::pallet_prelude::*;
-    use frame_system::pallet_prelude::*;
-    use sp_std::convert::TryInto;
-    use sp_std::vec::Vec;
-    use tfchain_support::{
-        traits::ChangeNode,
-        types::{
-            PublicIP,
-        },
-    };
-    use frame_support::{
-        dispatch::DispatchResultWithPostInfo,
-        log,
-        traits::{
-            Currency, Get, LockIdentifier, LockableCurrency,
-        },
-    };
+pub use weights::WeightInfo;
 
-    pub type BalanceOf<T> =
-        <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
+pub const GRID_LOCK_ID: LockIdentifier = *b"gridlock";
 
-    pub const GRID_LOCK_ID: LockIdentifier = *b"gridlock";
+pub trait Config:
+    system::Config + pallet_tfgrid::Config + pallet_timestamp::Config + pallet_balances::Config
+{
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
+    type Currency: LockableCurrency<Self::AccountId>;
+    type StakingPoolAccount: Get<Self::AccountId>;
+    type BillingFrequency: Get<u64>;
+    type DistributionFrequency: Get<u16>;
+    type GracePeriod: Get<u64>;
+    type WeightInfo: WeightInfo;
+    type NodeChanged: ChangeNode;
+}
 
-    #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
-    #[pallet::without_storage_info]
-    pub struct Pallet<T>(_);
+pub const CONTRACT_VERSION: u32 = 3;
 
-    // Version constant that referenced the struct version
-    pub const CONTRACT_VERSION: u32 = 3;
+pub type BalanceOf<T> =
+    <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
 
-    #[pallet::storage]
-    #[pallet::getter(fn contracts)]
-    pub type Contracts<T: Config> = StorageMap<_, Blake2_128Concat, u64, Contract, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn contract_billing_information_by_id)]
-    pub type ContractBillingInformationByID<T: Config> = StorageMap<_, Blake2_128Concat, u64, ContractBillingInformation, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn node_contract_resources)]
-    pub type NodeContractResources<T: Config> = StorageMap<_, Blake2_128Concat, u64, ContractResources, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn node_contract_by_hash)]
-    pub type ContractIDByNodeIDAndHash<T: Config> = StorageDoubleMap<_, Blake2_128Concat, u32, Blake2_128Concat, Vec<u8>, u64, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn active_node_contracts)]
-    pub type ActiveNodeContracts<T: Config> = StorageMap<_, Blake2_128Concat, u32, Vec<u64>, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn contract_to_bill_at_block)]
-    pub type ContractsToBillAt<T: Config> = StorageMap<_, Blake2_128Concat, u64, Vec<u64>, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn contract_number_of_cylces_billed)]
-    pub type ContractLock<T: Config> = StorageMap<_, Blake2_128Concat, u64, types::ContractLock<BalanceOf<T>>, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn contract_id_by_name_registration)]
-    pub type ContractIDByNameRegistration<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, u64, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn active_rent_contracts)]
-    pub type ActiveRentContractForNode<T: Config> = StorageMap<_, Blake2_128Concat, u32, Contract, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn contract_id)]
-    pub type ContractID<T> = StorageValue<_, u64, ValueQuery>;
-
-    #[pallet::config]
-    pub trait Config: frame_system::Config + pallet_timestamp::Config + pallet_balances::Config + pallet_tfgrid::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-        type Currency: LockableCurrency<Self::AccountId>;
-        type StakingPoolAccount: Get<Self::AccountId>;
-        type BillingFrequency: Get<u64>;
-        type DistributionFrequency: Get<u16>;
-        type GracePeriod: Get<u64>;
-        type WeightInfo: WeightInfo;
-        type NodeChanged: ChangeNode;
-    }
-
-    #[pallet::event]
-    #[pallet::generate_deposit(pub(super) fn deposit_event)]
-    pub enum Event<T: Config> {
+decl_event!(
+    pub enum Event<T>
+    where
+        AccountId = <T as frame_system::Config>::AccountId,
+        BalanceOf = BalanceOf<T>,
+    {
         ContractCreated(types::Contract),
         ContractUpdated(types::Contract),
         NodeContractCanceled(u64, u32, u32),
         NameContractCanceled(u64),
         IPsReserved(u64, Vec<PublicIP>),
         IPsFreed(u64, Vec<Vec<u8>>),
-        ContractDeployed(u64, T::AccountId),
+        ContractDeployed(u64, AccountId),
         // Deprecated
         ConsumptionReportReceived(types::Consumption),
         ContractBilled(types::ContractBill),
-        TokensBurned(u64, BalanceOf<T>),
+        TokensBurned(u64, BalanceOf),
         UpdatedUsedResources(types::ContractResources),
         NruConsumptionReportReceived(types::NruConsumption),
         RentContractCanceled(u64),
         ContractGracePeriodStarted(u64, u32, u32, u64),
         ContractGracePeriodEnded(u64, u32, u32),
     }
+);
 
-    #[pallet::error]
-    pub enum Error<T> {
+decl_error! {
+    /// Error for the smart contract module.
+    pub enum Error for Module<T: Config> {
         TwinNotExists,
         NodeNotExists,
         FarmNotExists,
@@ -179,63 +115,84 @@ pub mod pallet {
         NodeIsNotDedicated,
         NodeNotAvailableToDeploy,
         CannotUpdateContractInGraceState,
-        NumOverflow,
+        NumOverflow
     }
+}
 
-    #[pallet::call]
-    impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn create_node_contract(origin: OriginFor<T>, node_id: u32, data: Vec<u8>, deployment_hash: Vec<u8>, public_ips: u32) -> DispatchResultWithPostInfo {
+decl_storage! {
+    trait Store for Module<T: Config> as SmartContractModule {
+        pub Contracts get(fn contracts): map hasher(blake2_128_concat) u64 => types::Contract;
+        pub ContractBillingInformationByID get(fn contract_billing_information_by_id): map hasher(blake2_128_concat) u64 => types::ContractBillingInformation;
+        pub NodeContractResources get(fn node_contract_resources): map hasher(blake2_128_concat) u64 => types::ContractResources;
+
+        // ContractIDByNodeIDAndHash is a mapping for a contract ID by supplying a node_id and a deployment_hash
+        // this combination makes a deployment for a user / node unique
+        pub ContractIDByNodeIDAndHash get(fn node_contract_by_hash): double_map hasher(blake2_128_concat) u32, hasher(blake2_128_concat) Vec<u8> => u64;
+
+        pub ActiveNodeContracts get(fn active_node_contracts): map hasher(blake2_128_concat) u32 => Vec<u64>;
+        pub ContractsToBillAt get(fn contract_to_bill_at_block): map hasher(blake2_128_concat) u64 => Vec<u64>;
+        pub ContractLock get(fn contract_number_of_cylces_billed): map hasher(blake2_128_concat) u64 => types::ContractLock<BalanceOf<T>>;
+        pub ContractIDByNameRegistration get(fn contract_id_by_name_registration): map hasher(blake2_128_concat) Vec<u8> => u64;
+        pub ActiveRentContractForNode get(fn active_rent_contracts): map hasher(blake2_128_concat) u32 => types::Contract;
+
+        // ID maps
+        pub ContractID: u64;
+    }
+}
+
+decl_module! {
+    pub struct Module<T: Config> for enum Call where origin: T::Origin {
+        fn deposit_event() = default;
+
+        #[weight = 100_000_000]
+        fn create_node_contract(origin, node_id: u32, data: Vec<u8>, deployment_hash: Vec<u8>, public_ips: u32){
             let account_id = ensure_signed(origin)?;
-            Self::_create_node_contract(account_id, node_id, data, deployment_hash, public_ips)
+            Self::_create_node_contract(account_id, node_id, data, deployment_hash, public_ips)?;
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn update_node_contract(origin: OriginFor<T>, contract_id: u64, data: Vec<u8>, deployment_hash: Vec<u8>) -> DispatchResultWithPostInfo {
+        #[weight = 100_000_000]
+        fn update_node_contract(origin, contract_id: u64, data: Vec<u8>, deployment_hash: Vec<u8>){
             let account_id = ensure_signed(origin)?;
-            Self::_update_node_contract(account_id, contract_id, data, deployment_hash)
+            Self::_update_node_contract(account_id, contract_id, data, deployment_hash)?;
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn cancel_contract(origin: OriginFor<T>, contract_id: u64) -> DispatchResultWithPostInfo {
+        #[weight = 100_000_000]
+        fn cancel_contract(origin, contract_id: u64){
             let account_id = ensure_signed(origin)?;
-            Self::_cancel_contract(account_id, contract_id, types::Cause::CanceledByUser)
+            Self::_cancel_contract(account_id, contract_id, types::Cause::CanceledByUser)?;
         }
 
         // DEPRECATED
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn add_reports(_origin: OriginFor<T>, _reports: Vec<types::Consumption>) -> DispatchResultWithPostInfo {
+        #[weight = <T as Config>::WeightInfo::add_reports().saturating_mul(_reports.len() as u64)]
+        fn add_reports(_origin, _reports: Vec<types::Consumption>) -> DispatchResultWithPostInfo {
             // return error
-            Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
+            Err(DispatchError::from(Error::<T>::MethodIsDeprecated).into())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn create_name_contract(origin: OriginFor<T>, name: Vec<u8>) -> DispatchResultWithPostInfo {
+        #[weight = 100_000_000]
+        fn create_name_contract(origin, name: Vec<u8>) {
             let account_id = ensure_signed(origin)?;
-            Self::_create_name_contract(account_id, name)
+            Self::_create_name_contract(account_id, name)?;
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn add_nru_reports(origin: OriginFor<T>, reports: Vec<types::NruConsumption>) -> DispatchResultWithPostInfo {
+        #[weight = <T as Config>::WeightInfo::add_reports().saturating_mul(reports.len() as u64)]
+        fn add_nru_reports(origin, reports: Vec<types::NruConsumption>) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_compute_reports(account_id, reports)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn report_contract_resources(origin: OriginFor<T>, contract_resources: Vec<types::ContractResources>) -> DispatchResultWithPostInfo {
+        #[weight = 100_000_000]
+        fn report_contract_resources(origin, contract_resources: Vec<types::ContractResources>) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_report_contract_resources(account_id, contract_resources)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn create_rent_contract(origin: OriginFor<T>, node_id: u32) -> DispatchResultWithPostInfo {
+        #[weight = 100_000_000]
+        fn create_rent_contract(origin, node_id: u32) {
             let account_id = ensure_signed(origin)?;
-            Self::_create_rent_contract(account_id, node_id)
+            Self::_create_rent_contract(account_id, node_id)?;
         }
-    }
 
-    #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_finalize(block: T::BlockNumber) {
             match Self::_bill_contracts_at_block(block) {
                 Ok(_) => {
@@ -247,23 +204,21 @@ pub mod pallet {
             }
             // clean storage map for billed contracts at block
             let current_block_u64: u64 = block.saturated_into::<u64>();
-            ContractsToBillAt::<T>::remove(current_block_u64);
+            ContractsToBillAt::remove(current_block_u64);
         }
     }
 }
 
-use frame_support::pallet_prelude::DispatchResultWithPostInfo;
-// Internal functions of the pallet
-impl<T: Config> Pallet<T> {
+impl<T: Config> Module<T> {
     pub fn _create_node_contract(
         account_id: T::AccountId,
         node_id: u32,
         deployment_data: Vec<u8>,
         deployment_hash: Vec<u8>,
         public_ips: u32,
-    ) -> DispatchResultWithPostInfo {
+    ) -> DispatchResult {
         ensure!(
-            pallet_tfgrid::pallet::TwinIdByAccountID::<T>::contains_key(&account_id),
+            pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&account_id),
             Error::<T>::TwinNotExists
         );
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id).unwrap();
@@ -281,7 +236,7 @@ impl<T: Config> Pallet<T> {
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id);
 
         if farm.dedicated_farm && !ActiveRentContractForNode::contains_key(node_id) {
-            return Err(Error::<T>::NodeNotAvailableToDeploy.into());
+            return Err(DispatchError::from(Error::<T>::NodeNotAvailableToDeploy));
         }
 
         // If the user is trying to deploy on a node that has an active rent contract
@@ -289,18 +244,18 @@ impl<T: Config> Pallet<T> {
         if ActiveRentContractForNode::contains_key(node_id) {
             let contract = ActiveRentContractForNode::get(node_id);
             if contract.twin_id != twin_id {
-                return Err(Error::<T>::NodeHasRentContract.into());
+                return Err(DispatchError::from(Error::<T>::NodeHasRentContract));
             }
         }
 
         // If the contract with hash and node id exists and it's in any other state then
         // contractState::Deleted then we don't allow the creation of it.
         // If it exists we allow the user to "restore" this contract
-        if ContractIDByNodeIDAndHash::<T>::contains_key(node_id, &deployment_hash) {
-            let contract_id = ContractIDByNodeIDAndHash::<T>::get(node_id, &deployment_hash);
-            let contract = Contracts::<T>::get(contract_id);
+        if ContractIDByNodeIDAndHash::contains_key(node_id, &deployment_hash) {
+            let contract_id = ContractIDByNodeIDAndHash::get(node_id, &deployment_hash);
+            let contract = Contracts::get(contract_id);
             if !contract.is_state_delete() {
-                return Err(Error::<T>::ContractIsNotUnique.into());
+                return Err(DispatchError::from(Error::<T>::ContractIsNotUnique));
             }
         }
 
@@ -325,22 +280,22 @@ impl<T: Config> Pallet<T> {
             amount_unbilled: 0,
             previous_nu_reported: 0,
         };
-        ContractBillingInformationByID::<T>::insert(contract.contract_id, contract_billing_information);
+        ContractBillingInformationByID::insert(contract.contract_id, contract_billing_information);
 
         // Insert contract id by (node_id, hash)
-        ContractIDByNodeIDAndHash::<T>::insert(node_id, deployment_hash, contract.contract_id);
+        ContractIDByNodeIDAndHash::insert(node_id, deployment_hash, contract.contract_id);
 
         // Insert contract into active contracts map
-        let mut node_contracts = ActiveNodeContracts::<T>::get(&node_contract.node_id);
+        let mut node_contracts = ActiveNodeContracts::get(&node_contract.node_id);
         node_contracts.push(contract.contract_id);
-        ActiveNodeContracts::<T>::insert(&node_contract.node_id, &node_contracts);
+        ActiveNodeContracts::insert(&node_contract.node_id, &node_contracts);
 
-        Self::deposit_event(Event::ContractCreated(contract));
+        Self::deposit_event(RawEvent::ContractCreated(contract));
 
-        Ok(().into())
+        Ok(())
     }
 
-    pub fn _create_rent_contract(account_id: T::AccountId, node_id: u32) -> DispatchResultWithPostInfo {
+    pub fn _create_rent_contract(account_id: T::AccountId, node_id: u32) -> DispatchResult {
         ensure!(
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&account_id),
             Error::<T>::TwinNotExists
@@ -361,7 +316,7 @@ impl<T: Config> Pallet<T> {
             Error::<T>::FarmNotExists
         );
 
-        let active_node_contracts = ActiveNodeContracts::<T>::get(node_id);
+        let active_node_contracts = ActiveNodeContracts::get(node_id);
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id);
         ensure!(
             farm.dedicated_farm || active_node_contracts.is_empty(),
@@ -376,16 +331,16 @@ impl<T: Config> Pallet<T> {
         )?;
 
         // Insert active rent contract for node
-        ActiveRentContractForNode::<T>::insert(node_id, contract.clone());
+        ActiveRentContractForNode::insert(node_id, contract.clone());
 
-        Self::deposit_event(Event::ContractCreated(contract));
+        Self::deposit_event(RawEvent::ContractCreated(contract));
 
-        Ok(().into())
+        Ok(())
     }
 
     // Registers a DNS name for a Twin
     // Ensures uniqueness and also checks if it's a valid DNS name
-    pub fn _create_name_contract(source: T::AccountId, name: Vec<u8>) -> DispatchResultWithPostInfo {
+    pub fn _create_name_contract(source: T::AccountId, name: Vec<u8>) -> DispatchResult {
         ensure!(
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
             Error::<T>::TwinNotExists
@@ -394,7 +349,7 @@ impl<T: Config> Pallet<T> {
 
         // Validate name uniqueness
         ensure!(
-            !ContractIDByNameRegistration::<T>::contains_key(&name),
+            !ContractIDByNameRegistration::contains_key(&name),
             Error::<T>::NameExists
         );
 
@@ -403,7 +358,7 @@ impl<T: Config> Pallet<T> {
                 c if *c == 45 => (),
                 c if *c >= 48 && *c <= 57 => (),
                 c if *c >= 65 && *c <= 122 => (),
-                _ => return Err(Error::<T>::NameNotValid.into()),
+                _ => return Err(DispatchError::from(Error::<T>::NameNotValid)),
             }
         }
         let name_contract = types::NameContract { name: name.clone() };
@@ -411,19 +366,19 @@ impl<T: Config> Pallet<T> {
         let contract =
             Self::_create_contract(twin_id, types::ContractData::NameContract(name_contract))?;
 
-        ContractIDByNameRegistration::<T>::insert(name, &contract.contract_id);
+        ContractIDByNameRegistration::insert(name, &contract.contract_id);
 
-        Self::deposit_event(Event::ContractCreated(contract));
+        Self::deposit_event(RawEvent::ContractCreated(contract));
 
-        Ok(().into())
+        Ok(())
     }
 
     fn _create_contract(
         twin_id: u32,
         mut contract_type: types::ContractData,
-    ) -> Result<types::Contract, DispatchResultWithPostInfo> {
+    ) -> Result<types::Contract, DispatchError> {
         // Get the Contract ID map and increment
-        let mut id = ContractID::<T>::get();
+        let mut id = ContractID::get();
         id = id + 1;
 
         if let types::ContractData::NodeContract(ref mut nc) = contract_type {
@@ -461,13 +416,13 @@ impl<T: Config> Pallet<T> {
         contract_id: u64,
         deployment_data: Vec<u8>,
         deployment_hash: Vec<u8>,
-    ) -> DispatchResultWithPostInfo {
+    ) -> DispatchResult {
         ensure!(
-            Contracts::<T>::contains_key(contract_id),
+            Contracts::contains_key(contract_id),
             Error::<T>::ContractNotExists
         );
 
-        let mut contract = Contracts::<T>::get(contract_id);
+        let mut contract = Contracts::get(contract_id);
         ensure!(
             pallet_tfgrid::Twins::<T>::contains_key(contract.twin_id),
             Error::<T>::TwinNotExists
@@ -488,8 +443,8 @@ impl<T: Config> Pallet<T> {
         let mut node_contract = Self::get_node_contract(&contract.clone())?;
 
         // remove and reinsert contract id by node id and hash because that hash can have changed
-        ContractIDByNodeIDAndHash::<T>::remove(node_contract.node_id, node_contract.deployment_hash);
-        ContractIDByNodeIDAndHash::<T>::insert(node_contract.node_id, &deployment_hash, contract_id);
+        ContractIDByNodeIDAndHash::remove(node_contract.node_id, node_contract.deployment_hash);
+        ContractIDByNodeIDAndHash::insert(node_contract.node_id, &deployment_hash, contract_id);
 
         node_contract.deployment_data = deployment_data;
         node_contract.deployment_hash = deployment_hash;
@@ -500,21 +455,21 @@ impl<T: Config> Pallet<T> {
         let state = contract.state.clone();
         Self::_update_contract_state(&mut contract, &state)?;
 
-        Self::deposit_event(Event::ContractUpdated(contract));
+        Self::deposit_event(RawEvent::ContractUpdated(contract));
 
-        Ok(().into())
+        Ok(())
     }
 
     pub fn _cancel_contract(
         account_id: T::AccountId,
         contract_id: u64,
         cause: types::Cause,
-    ) -> DispatchResultWithPostInfo {
+    ) -> DispatchResult {
         ensure!(
-            Contracts::<T>::contains_key(contract_id),
+            Contracts::contains_key(contract_id),
             Error::<T>::ContractNotExists
         );
-        let mut contract = Contracts::<T>::get(contract_id);
+        let mut contract = Contracts::get(contract_id);
         ensure!(
             pallet_tfgrid::Twins::<T>::contains_key(contract.twin_id),
             Error::<T>::TwinNotExists
@@ -531,7 +486,7 @@ impl<T: Config> Pallet<T> {
             types::ContractData::RentContract(_)
         ) {
             let rent_contract = Self::get_rent_contract(&contract)?;
-            let active_node_contracts = ActiveNodeContracts::<T>::get(rent_contract.node_id);
+            let active_node_contracts = ActiveNodeContracts::get(rent_contract.node_id);
             ensure!(
                 active_node_contracts.len() == 0,
                 Error::<T>::NodeHasActiveContracts
@@ -545,7 +500,7 @@ impl<T: Config> Pallet<T> {
         // Remove all associated storage
         Self::remove_contract(contract.contract_id);
 
-        Ok(().into())
+        Ok(())
     }
 
     pub fn _report_contract_resources(
@@ -564,12 +519,12 @@ impl<T: Config> Pallet<T> {
         let node_id = pallet_tfgrid::NodeIdByTwinID::<T>::get(twin_id);
 
         for contract_resource in contract_resources {
-            if !Contracts::<T>::contains_key(contract_resource.contract_id) {
+            if !Contracts::contains_key(contract_resource.contract_id) {
                 continue;
             }
             // we know contract exists, fetch it
             // if the node is trying to send garbage data we can throw an error here
-            let contract = Contracts::<T>::get(contract_resource.contract_id);
+            let contract = Contracts::get(contract_resource.contract_id);
             let node_contract = Self::get_node_contract(&contract)?;
             ensure!(
                 node_contract.node_id == node_id,
@@ -577,9 +532,9 @@ impl<T: Config> Pallet<T> {
             );
 
             // Do insert
-            NodeContractResources::<T>::insert(contract_resource.contract_id, &contract_resource);
+            NodeContractResources::insert(contract_resource.contract_id, &contract_resource);
             // deposit event
-            Self::deposit_event(Event::UpdatedUsedResources(contract_resource));
+            Self::deposit_event(RawEvent::UpdatedUsedResources(contract_resource));
         }
 
         Ok(Pays::No.into())
@@ -618,16 +573,16 @@ impl<T: Config> Pallet<T> {
 
         // validation
         for report in &reports {
-            if !Contracts::<T>::contains_key(report.contract_id) {
+            if !Contracts::contains_key(report.contract_id) {
                 continue;
             }
-            if !ContractBillingInformationByID::<T>::contains_key(report.contract_id) {
+            if !ContractBillingInformationByID::contains_key(report.contract_id) {
                 continue;
             }
 
             // we know contract exists, fetch it
             // if the node is trying to send garbage data we can throw an error here
-            let contract = Contracts::<T>::get(report.contract_id);
+            let contract = Contracts::get(report.contract_id);
             let node_contract = Self::get_node_contract(&contract)?;
             ensure!(
                 node_contract.node_id == node_id,
@@ -635,7 +590,7 @@ impl<T: Config> Pallet<T> {
             );
 
             Self::_calculate_report_cost(&report, &pricing_policy);
-            Self::deposit_event(Event::NruConsumptionReportReceived(report.clone()));
+            Self::deposit_event(RawEvent::NruConsumptionReportReceived(report.clone()));
         }
 
         Ok(Pays::No.into())
@@ -648,7 +603,7 @@ impl<T: Config> Pallet<T> {
         report: &types::NruConsumption,
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
     ) {
-        let mut contract_billing_info = ContractBillingInformationByID::<T>::get(report.contract_id);
+        let mut contract_billing_info = ContractBillingInformationByID::get(report.contract_id);
         if report.timestamp < contract_billing_info.last_updated {
             return;
         }
@@ -671,14 +626,14 @@ impl<T: Config> Pallet<T> {
         // update contract billing info
         contract_billing_info.amount_unbilled += total;
         contract_billing_info.last_updated = report.timestamp;
-        ContractBillingInformationByID::<T>::insert(report.contract_id, &contract_billing_info);
+        ContractBillingInformationByID::insert(report.contract_id, &contract_billing_info);
     }
 
-    pub fn _bill_contracts_at_block(block: T::BlockNumber) -> DispatchResultWithPostInfo {
+    pub fn _bill_contracts_at_block(block: T::BlockNumber) -> DispatchResult {
         let current_block_u64: u64 = block.saturated_into::<u64>();
-        let contracts = ContractsToBillAt::<T>::get(current_block_u64);
+        let contracts = ContractsToBillAt::get(current_block_u64);
         for contract_id in contracts {
-            let mut contract = Contracts::<T>::get(contract_id);
+            let mut contract = Contracts::get(contract_id);
             if contract.contract_id == 0 {
                 continue;
             }
@@ -707,7 +662,7 @@ impl<T: Config> Pallet<T> {
             // https://github.com/threefoldtech/tfchain/issues/264
             // if a contract is still in storage and actively getting billed whilst it is in state delete
             // remove all associated storage and continue
-            let contract = Contracts::<T>::get(contract_id);
+            let contract = Contracts::get(contract_id);
             if contract.contract_id != 0 && contract.is_state_delete() {
                 Self::remove_contract(contract.contract_id);
                 continue;
@@ -716,14 +671,14 @@ impl<T: Config> Pallet<T> {
             // Reinsert into the next billing frequency
             Self::_reinsert_contract_to_bill(contract.contract_id);
         }
-        Ok(().into())
+        Ok(())
     }
 
     // Bills a contract (NodeContract or NameContract)
     // Calculates how much TFT is due by the user and distributes the rewards
-    fn bill_contract(contract: &mut types::Contract) -> DispatchResultWithPostInfo {
+    fn bill_contract(contract: &mut types::Contract) -> DispatchResult {
         if !pallet_tfgrid::Twins::<T>::contains_key(contract.twin_id) {
-            return Err(DispatchErrorWithPostInfo::from(Error::<T>::TwinNotExists));
+            return Err(DispatchError::from(Error::<T>::TwinNotExists));
         }
         let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id).unwrap();
         let usable_balance = Self::get_usable_balance(&twin.account_id);
@@ -745,7 +700,7 @@ impl<T: Config> Pallet<T> {
 
         // If there is nothing to be paid, return
         if amount_due == BalanceOf::<T>::saturated_from(0 as u128) {
-            return Ok(().into());
+            return Ok(());
         };
 
         // Handle grace
@@ -761,26 +716,26 @@ impl<T: Config> Pallet<T> {
             discount_level: discount_received.clone(),
             amount_billed: amount_due.saturated_into::<u128>(),
         };
-        Self::deposit_event(Event::ContractBilled(contract_bill));
+        Self::deposit_event(RawEvent::ContractBilled(contract_bill));
 
         // set the amount unbilled back to 0
-        let mut contract_billing_info = ContractBillingInformationByID::<T>::get(contract.contract_id);
+        let mut contract_billing_info = ContractBillingInformationByID::get(contract.contract_id);
         contract_billing_info.amount_unbilled = 0;
-        ContractBillingInformationByID::<T>::insert(contract.contract_id, &contract_billing_info);
+        ContractBillingInformationByID::insert(contract.contract_id, &contract_billing_info);
 
         // If the contract is in delete state, remove all associated storage
         if matches!(contract.state, types::ContractState::Deleted(_)) {
             Self::remove_contract(contract.contract_id);
         }
 
-        Ok(().into())
+        Ok(())
     }
 
     fn handle_grace(
         contract: &mut types::Contract,
         usable_balance: BalanceOf<T>,
         amount_due: BalanceOf<T>,
-    ) -> Result<&mut types::Contract, DispatchErrorWithPostInfo> {
+    ) -> Result<&mut types::Contract, DispatchError> {
         let current_block = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
         let node_id = contract.get_node_id();
 
@@ -789,7 +744,7 @@ impl<T: Config> Pallet<T> {
                 // if the usable balance is recharged, we can move the contract to created state again
                 if usable_balance > amount_due {
                     Self::_update_contract_state(contract, &types::ContractState::Created)?;
-                    Self::deposit_event(Event::ContractGracePeriodEnded(
+                    Self::deposit_event(RawEvent::ContractGracePeriodEnded(
                         contract.contract_id,
                         node_id,
                         contract.twin_id,
@@ -816,7 +771,7 @@ impl<T: Config> Pallet<T> {
                         &types::ContractState::GracePeriod(current_block),
                     )?;
                     // We can't lock the amount due on the contract's lock because the user ran out of funds
-                    Self::deposit_event(Event::ContractGracePeriodStarted(
+                    Self::deposit_event(RawEvent::ContractGracePeriodStarted(
                         contract.contract_id,
                         node_id,
                         contract.twin_id,
@@ -829,7 +784,7 @@ impl<T: Config> Pallet<T> {
         Ok(contract)
     }
 
-    fn handle_lock(contract: &mut types::Contract, amount_due: BalanceOf<T>) -> DispatchResultWithPostInfo {
+    fn handle_lock(contract: &mut types::Contract, amount_due: BalanceOf<T>) -> DispatchResult {
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
         // increment cycles billed and update the internal lock struct
@@ -841,7 +796,7 @@ impl<T: Config> Pallet<T> {
 
         // Contract is in grace state, don't actually lock tokens or distribute rewards
         if matches!(contract.state, types::ContractState::GracePeriod(_)) {
-            return Ok(().into());
+            return Ok(());
         }
 
         // Only lock an amount from the user's balance if the contract is in create state
@@ -904,14 +859,14 @@ impl<T: Config> Pallet<T> {
             ContractLock::<T>::insert(contract.contract_id, &contract_lock);
         }
 
-        Ok(().into())
+        Ok(())
     }
 
     fn calculate_contract_cost_tft(
         contract: &types::Contract,
         balance: BalanceOf<T>,
         seconds_elapsed: u64,
-    ) -> Result<(BalanceOf<T>, types::DiscountLevel), DispatchErrorWithPostInfo> {
+    ) -> Result<(BalanceOf<T>, types::DiscountLevel), DispatchError> {
         // Fetch the default pricing policy and certification type
         let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1).unwrap();
         let certification_type = NodeCertification::Diy;
@@ -942,25 +897,25 @@ impl<T: Config> Pallet<T> {
         contract: &types::Contract,
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
         seconds_elapsed: u64,
-    ) -> Result<u64, DispatchErrorWithPostInfo> {
+    ) -> Result<u64, DispatchError> {
         let total_cost = match &contract.contract_type {
             // Calculate total cost for a node contract
             types::ContractData::NodeContract(node_contract) => {
                 // Get the contract billing info to view the amount unbilled for NRU (network resource units)
                 let contract_billing_info =
-                    ContractBillingInformationByID::<T>::get(contract.contract_id);
+                    ContractBillingInformationByID::get(contract.contract_id);
                 // Get the node
                 if !pallet_tfgrid::Nodes::<T>::contains_key(node_contract.node_id) {
-                    return Err(DispatchErrorWithPostInfo::from(Error::<T>::NodeNotExists));
+                    return Err(DispatchError::from(Error::<T>::NodeNotExists));
                 }
 
                 // We know the contract is using resources, now calculate the cost for each used resource
-                let node_contract_resources = NodeContractResources::<T>::get(contract.contract_id);
+                let node_contract_resources = NodeContractResources::get(contract.contract_id);
 
                 let mut bill_resources = true;
                 // If this node contract is deployed on a node which has a rent contract
                 // We can ignore billing for the resources used by this node contract
-                if ActiveRentContractForNode::<T>::contains_key(node_contract.node_id) {
+                if ActiveRentContractForNode::contains_key(node_contract.node_id) {
                     bill_resources = false
                 }
 
@@ -975,7 +930,7 @@ impl<T: Config> Pallet<T> {
             }
             types::ContractData::RentContract(rent_contract) => {
                 if !pallet_tfgrid::Nodes::<T>::contains_key(rent_contract.node_id) {
-                    return Err(DispatchErrorWithPostInfo::from(Error::<T>::NodeNotExists));
+                    return Err(DispatchError::from(Error::<T>::NodeNotExists));
                 }
                 let node = pallet_tfgrid::Nodes::<T>::get(rent_contract.node_id);
 
@@ -1045,7 +1000,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn remove_contract(contract_id: u64) {
-        let contract = Contracts::<T>::get(contract_id);
+        let contract = Contracts::get(contract_id);
 
         match contract.contract_type.clone() {
             types::ContractData::NodeContract(mut node_contract) => {
@@ -1060,39 +1015,39 @@ impl<T: Config> Pallet<T> {
                 }
 
                 // remove the contract by hash from storage
-                ContractIDByNodeIDAndHash::<T>::remove(
+                ContractIDByNodeIDAndHash::remove(
                     node_contract.node_id,
                     &node_contract.deployment_hash,
                 );
-                NodeContractResources::<T>::remove(contract_id);
-                ContractBillingInformationByID::<T>::remove(contract_id);
+                NodeContractResources::remove(contract_id);
+                ContractBillingInformationByID::remove(contract_id);
 
-                Self::deposit_event(Event::NodeContractCanceled(
+                Self::deposit_event(RawEvent::NodeContractCanceled(
                     contract_id,
                     node_contract.node_id,
                     contract.twin_id,
                 ));
             }
             types::ContractData::NameContract(name_contract) => {
-                ContractIDByNameRegistration::<T>::remove(name_contract.name);
-                Self::deposit_event(Event::NameContractCanceled(contract_id));
+                ContractIDByNameRegistration::remove(name_contract.name);
+                Self::deposit_event(RawEvent::NameContractCanceled(contract_id));
             }
             types::ContractData::RentContract(rent_contract) => {
-                ActiveRentContractForNode::<T>::remove(rent_contract.node_id);
+                ActiveRentContractForNode::remove(rent_contract.node_id);
                 // Remove all associated active node contracts
-                let active_node_contracts = ActiveNodeContracts::<T>::get(rent_contract.node_id);
+                let active_node_contracts = ActiveNodeContracts::get(rent_contract.node_id);
                 for node_contract in active_node_contracts {
                     Self::remove_contract(node_contract);
                 }
-                Self::deposit_event(Event::RentContractCanceled(contract_id));
+                Self::deposit_event(RawEvent::RentContractCanceled(contract_id));
             }
         };
 
-        Contracts::<T>::remove(contract_id);
+        Contracts::remove(contract_id);
         ContractLock::<T>::remove(contract_id);
     }
 
-    pub fn calculate_cost_in_tft_from_musd(total_cost: u64) -> Result<u64, DispatchErrorWithPostInfo> {
+    pub fn calculate_cost_in_tft_from_musd(total_cost: u64) -> Result<u64, DispatchError> {
         let avg_tft_price = pallet_tft_price::AverageTftPrice::get();
         ensure!(avg_tft_price > 0, Error::<T>::TFTPriceValueError);
 
@@ -1113,7 +1068,7 @@ impl<T: Config> Pallet<T> {
         contract: &types::Contract,
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
         amount: BalanceOf<T>,
-    ) -> DispatchResultWithPostInfo {
+    ) -> DispatchResult {
         // fetch source twin
         let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id).unwrap();
 
@@ -1129,8 +1084,9 @@ impl<T: Config> Pallet<T> {
             &twin.account_id,
             &pricing_policy.foundation_account,
             foundation_share,
-            ExistenceRequirement::KeepAlive,
-        )?;
+            KeepAlive,
+        )
+        .map_err(|_| DispatchError::Other("Can't make foundation share transfer"))?;
 
         // TODO: send 5% to the staking pool account
         let staking_pool_share = Perbill::from_percent(5) * amount;
@@ -1145,8 +1101,9 @@ impl<T: Config> Pallet<T> {
             &twin.account_id,
             &staking_pool_account,
             staking_pool_share,
-            ExistenceRequirement::KeepAlive,
-        )?;
+            KeepAlive,
+        )
+        .map_err(|_| DispatchError::Other("Can't make staking pool share transfer"))?;
 
         // Send 50% to the sales channel
         let sales_share = Perbill::from_percent(50) * amount;
@@ -1160,8 +1117,9 @@ impl<T: Config> Pallet<T> {
             &twin.account_id,
             &pricing_policy.certified_sales_account,
             sales_share,
-            ExistenceRequirement::KeepAlive,
-        )?;
+            KeepAlive,
+        )
+        .map_err(|_| DispatchError::Other("Can't make sales share transfer"))?;
 
         // Burn 35%, to not have any imbalance in the system, subtract all previously send amounts with the initial
         let mut amount_to_burn = amount - foundation_share - staking_pool_share - sales_share;
@@ -1174,8 +1132,8 @@ impl<T: Config> Pallet<T> {
         }
 
         <T as Config>::Currency::slash(&twin.account_id, amount_to_burn);
-        Self::deposit_event(Event::TokensBurned(contract.contract_id, amount_to_burn));
-        Ok(().into())
+        Self::deposit_event(RawEvent::TokensBurned(contract.contract_id, amount_to_burn));
+        Ok(())
     }
 
     // Calculates the discount that will be applied to the billing of the contract
@@ -1237,9 +1195,9 @@ impl<T: Config> Pallet<T> {
         let now = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
         // Save the contract to be billed in now + BILLING_FREQUENCY_IN_BLOCKS
         let future_block = now + T::BillingFrequency::get();
-        let mut contracts = ContractsToBillAt::<T>::get(future_block);
+        let mut contracts = ContractsToBillAt::get(future_block);
         contracts.push(contract_id);
-        ContractsToBillAt::<T>::insert(future_block, &contracts);
+        ContractsToBillAt::insert(future_block, &contracts);
         log::info!(
             "Insert contracts: {:?}, to be billed at block {:?}",
             contracts,
@@ -1251,15 +1209,15 @@ impl<T: Config> Pallet<T> {
     pub fn _update_contract_state(
         contract: &mut types::Contract,
         state: &types::ContractState,
-    ) -> DispatchResultWithPostInfo {
+    ) -> DispatchResult {
         // update the state and save the contract
         contract.state = state.clone();
-        Contracts::<T>::insert(&contract.contract_id, contract.clone());
+        Contracts::insert(&contract.contract_id, contract.clone());
 
         // if the contract is a name contract, nothing to do left here
         match contract.contract_type {
-            types::ContractData::NameContract(_) => return Ok(().into()),
-            types::ContractData::RentContract(_) => return Ok(().into()),
+            types::ContractData::NameContract(_) => return Ok(()),
+            types::ContractData::RentContract(_) => return Ok(()),
             _ => (),
         };
 
@@ -1267,7 +1225,7 @@ impl<T: Config> Pallet<T> {
         // manage the ActiveNodeContracts map accordingly
         let node_contract = Self::get_node_contract(contract)?;
 
-        let mut contracts = ActiveNodeContracts::<T>::get(&node_contract.node_id);
+        let mut contracts = ActiveNodeContracts::get(&node_contract.node_id);
 
         match contracts.iter().position(|id| id == &contract.contract_id) {
             Some(index) => {
@@ -1284,13 +1242,13 @@ impl<T: Config> Pallet<T> {
             }
         };
 
-        ActiveNodeContracts::<T>::insert(&node_contract.node_id, &contracts);
+        ActiveNodeContracts::insert(&node_contract.node_id, &contracts);
 
-        Ok(().into())
+        Ok(())
     }
 
     fn remove_active_node_contract(node_id: u32, contract_id: u64) {
-        let mut contracts = ActiveNodeContracts::<T>::get(&node_id);
+        let mut contracts = ActiveNodeContracts::get(&node_id);
 
         match contracts.iter().position(|id| id == &contract_id) {
             Some(index) => {
@@ -1299,15 +1257,15 @@ impl<T: Config> Pallet<T> {
             None => (),
         };
 
-        ActiveNodeContracts::<T>::insert(&node_id, &contracts);
+        ActiveNodeContracts::insert(&node_id, &contracts);
     }
 
     pub fn _reserve_ip(
         contract_id: u64,
         node_contract: &mut types::NodeContract,
-    ) -> DispatchResultWithPostInfo {
+    ) -> DispatchResult {
         if node_contract.public_ips == 0 {
-            return Ok(().into());
+            return Ok(());
         }
         let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id);
 
@@ -1355,10 +1313,10 @@ impl<T: Config> Pallet<T> {
 
         node_contract.public_ips_list = ips;
 
-        Ok(().into())
+        Ok(())
     }
 
-    pub fn _free_ip(contract_id: u64, node_contract: &mut types::NodeContract) -> DispatchResultWithPostInfo {
+    pub fn _free_ip(contract_id: u64, node_contract: &mut types::NodeContract) -> DispatchResult {
         let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id);
 
         ensure!(
@@ -1383,26 +1341,26 @@ impl<T: Config> Pallet<T> {
         pallet_tfgrid::Farms::<T>::insert(farm.id, farm);
 
         // Emit an event containing the IP's freed for this contract
-        Self::deposit_event(Event::IPsFreed(contract_id, ips_freed));
+        Self::deposit_event(RawEvent::IPsFreed(contract_id, ips_freed));
 
-        Ok(().into())
+        Ok(())
     }
 
     pub fn get_node_contract(
         contract: &types::Contract,
-    ) -> Result<types::NodeContract, DispatchErrorWithPostInfo> {
+    ) -> Result<types::NodeContract, DispatchError> {
         match contract.contract_type.clone() {
             types::ContractData::NodeContract(c) => Ok(c),
-            _ => return Err(DispatchErrorWithPostInfo::from(Error::<T>::InvalidContractType)),
+            _ => return Err(DispatchError::from(Error::<T>::InvalidContractType)),
         }
     }
 
     pub fn get_rent_contract(
         contract: &types::Contract,
-    ) -> Result<types::RentContract, DispatchErrorWithPostInfo> {
+    ) -> Result<types::RentContract, DispatchError> {
         match contract.contract_type.clone() {
             types::ContractData::RentContract(c) => Ok(c),
-            _ => return Err(DispatchErrorWithPostInfo::from(Error::<T>::InvalidContractType)),
+            _ => return Err(DispatchError::from(Error::<T>::InvalidContractType)),
         }
     }
 
@@ -1458,5 +1416,36 @@ impl<T: Config> Pallet<T> {
         cu = if cu > cu3 { cu3 } else { cu };
 
         cu
+    }
+}
+
+impl<T: Config> ChangeNode for Module<T> {
+    fn node_changed(_node: Option<&Node>, _new_node: &Node) {}
+
+    fn node_deleted(node: &Node) {
+        // Clean up all active contracts
+        let active_node_contracts = ActiveNodeContracts::get(node.id);
+        for node_contract_id in active_node_contracts {
+            let mut contract = Contracts::get(node_contract_id);
+            // Bill contract
+            let _ = Self::_update_contract_state(
+                &mut contract,
+                &types::ContractState::Deleted(types::Cause::CanceledByUser),
+            );
+            let _ = Self::bill_contract(&mut contract);
+            Self::remove_contract(node_contract_id);
+        }
+
+        // First clean up rent contract if it exists
+        let mut rent_contract = ActiveRentContractForNode::get(node.id);
+        if rent_contract.contract_id != 0 {
+            // Bill contract
+            let _ = Self::_update_contract_state(
+                &mut rent_contract,
+                &types::ContractState::Deleted(types::Cause::CanceledByUser),
+            );
+            let _ = Self::bill_contract(&mut rent_contract);
+            Self::remove_contract(rent_contract.contract_id);
+        }
     }
 }
