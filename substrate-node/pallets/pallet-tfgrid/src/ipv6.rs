@@ -46,7 +46,7 @@ pub fn valid_ipv6(input: &[u8]) -> bool {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn it_works() {
+    fn test_ipv6_validation() {
         assert!(super::valid_ipv6(b"::1"));
         assert!(!super::valid_ipv6(b"123"));
         assert!(!super::valid_ipv6(b":1"));

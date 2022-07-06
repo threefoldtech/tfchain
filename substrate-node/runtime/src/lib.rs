@@ -337,7 +337,7 @@ impl ChangeNode for NodeChanged {
 }
 
 parameter_types! {
-    pub const MaxTwinIpLength: u32 = 37;
+    pub const MaxTwinIpLength: u32 = 39;
     pub const MaxFarmNameLength: u32 = 40;
 }
 
