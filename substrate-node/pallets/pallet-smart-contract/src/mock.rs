@@ -13,7 +13,6 @@ use sp_runtime::{
     AccountId32,
 };
 use sp_std::convert::{TryFrom, TryInto};
-use sp_std::prelude::*;
 use tfchain_support::{traits::ChangeNode, types::Node};
 
 pub type Signature = MultiSignature;

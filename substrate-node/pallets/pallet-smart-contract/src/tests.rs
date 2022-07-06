@@ -925,13 +925,20 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
 
         assert_eq!(
             our_events.contains(&record(MockEvent::SmartContractModule(
-                SmartContractEvent::<TestRuntime>::IPsFreed(1, ips)
+                SmartContractEvent::<TestRuntime>::IPsFreed {
+                    contract_id: 1,
+                    public_ips: ips
+                }
             ))),
             true
         );
         assert_eq!(
             our_events.contains(&record(MockEvent::SmartContractModule(
-                SmartContractEvent::<TestRuntime>::NodeContractCanceled(1, 1, 2)
+                SmartContractEvent::<TestRuntime>::NodeContractCanceled {
+                    contract_id: 1,
+                    node_id: 1,
+                    twin_id: 2
+                }
             ))),
             true
         );
@@ -1054,7 +1061,12 @@ fn test_node_contract_out_of_funds_should_move_state_to_graceperiod_works() {
         let our_events = System::events();
         assert_eq!(
             our_events.contains(&record(MockEvent::SmartContractModule(
-                SmartContractEvent::<TestRuntime>::ContractGracePeriodStarted(1, 1, 3, 21)
+                SmartContractEvent::<TestRuntime>::ContractGracePeriodStarted {
+                    contract_id: 1,
+                    node_id: 1,
+                    twin_id: 3,
+                    block_number: 21
+                }
             ))),
             true
         );
@@ -1091,7 +1103,12 @@ fn test_restore_node_contract_in_grace_works() {
         let our_events = System::events();
         assert_eq!(
             our_events.contains(&record(MockEvent::SmartContractModule(
-                SmartContractEvent::<TestRuntime>::ContractGracePeriodStarted(1, 1, 3, 21)
+                SmartContractEvent::<TestRuntime>::ContractGracePeriodStarted {
+                    contract_id: 1,
+                    node_id: 1,
+                    twin_id: 3,
+                    block_number: 21
+                }
             ))),
             true
         );
@@ -1150,7 +1167,12 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
         let our_events = System::events();
         assert_eq!(
             our_events.contains(&record(MockEvent::SmartContractModule(
-                SmartContractEvent::<TestRuntime>::ContractGracePeriodStarted(1, 1, 3, 21)
+                SmartContractEvent::<TestRuntime>::ContractGracePeriodStarted {
+                    contract_id: 1,
+                    node_id: 1,
+                    twin_id: 3,
+                    block_number: 21
+                }
             ))),
             true
         );
@@ -1432,17 +1454,19 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
             our_events[16],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
-            >::NodeContractCanceled(
-                2, 1, 3
-            )))
+            >::NodeContractCanceled {
+                contract_id: 2,
+                node_id: 1,
+                twin_id: 3
+            }))
         );
         assert_eq!(
             our_events[17],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
-            >::RentContractCanceled(
-                1
-            )))
+            >::RentContractCanceled {
+                contract_id: 1
+            }))
         );
     });
 }
@@ -1512,7 +1536,12 @@ fn test_rent_contract_out_of_funds_should_move_state_to_graceperiod_works() {
         let our_events = System::events();
         assert_eq!(
             our_events.contains(&record(MockEvent::SmartContractModule(
-                SmartContractEvent::<TestRuntime>::ContractGracePeriodStarted(1, 1, 3, 11)
+                SmartContractEvent::<TestRuntime>::ContractGracePeriodStarted {
+                    contract_id: 1,
+                    node_id: 1,
+                    twin_id: 3,
+                    block_number: 11
+                }
             ))),
             true
         );
@@ -1543,9 +1572,12 @@ fn test_restore_rent_contract_in_grace_works() {
             our_events[2],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
-            >::ContractGracePeriodStarted(
-                1, 1, 3, 11
-            )))
+            >::ContractGracePeriodStarted {
+                contract_id: 1,
+                node_id: 1,
+                twin_id: 3,
+                block_number: 11
+            }))
         );
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(21);
@@ -1594,7 +1626,12 @@ fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works
         let our_events = System::events();
         assert_eq!(
             our_events.contains(&record(MockEvent::SmartContractModule(
-                SmartContractEvent::<TestRuntime>::ContractGracePeriodStarted(1, 1, 3, 11)
+                SmartContractEvent::<TestRuntime>::ContractGracePeriodStarted {
+                    contract_id: 1,
+                    node_id: 1,
+                    twin_id: 3,
+                    block_number: 11
+                }
             ))),
             true
         );
@@ -1654,13 +1691,17 @@ fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
 
         assert_eq!(
             our_events.contains(&record(MockEvent::SmartContractModule(
-                SmartContractEvent::<TestRuntime>::NodeContractCanceled(2, 1, 2)
+                SmartContractEvent::<TestRuntime>::NodeContractCanceled {
+                    contract_id: 2,
+                    node_id: 1,
+                    twin_id: 2
+                }
             ))),
             true
         );
         assert_eq!(
             our_events.contains(&record(MockEvent::SmartContractModule(
-                SmartContractEvent::<TestRuntime>::RentContractCanceled(1)
+                SmartContractEvent::<TestRuntime>::RentContractCanceled { contract_id: 1 }
             ))),
             true
         );

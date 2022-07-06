@@ -1,8 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-/// Edit this file to define custom logic or remove it if it is not needed.
-/// Learn more about FRAME and the core library of Substrate FRAME pallets:
-/// https://substrate.dev/docs/en/knowledgebase/runtime/frame
 use sp_std::prelude::*;
 
 use frame_support::{
@@ -26,7 +23,6 @@ use tfchain_support::{
     types::{Node, NodeCertification, Resources},
 };
 
-// Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 
 #[cfg(test)]
@@ -39,11 +35,8 @@ pub mod weights;
 
 pub mod types;
 
-// Definition of the pallet logic, to be aggregated at runtime definition
-// through `construct_runtime`.
 #[frame_support::pallet]
 pub mod pallet {
-    // use hex::FromHex;
     use super::types::*;
     use super::weights::WeightInfo;
     use super::*;
@@ -139,22 +132,62 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
+        /// A contract got created
         ContractCreated(types::Contract),
+        /// A contract was updated
         ContractUpdated(types::Contract),
-        NodeContractCanceled(u64, u32, u32),
-        NameContractCanceled(u64),
-        IPsReserved(u64, Vec<PublicIP>),
-        IPsFreed(u64, Vec<Vec<u8>>),
+        /// A Node contract is canceled
+        NodeContractCanceled {
+            contract_id: u64,
+            node_id: u32,
+            twin_id: u32,
+        },
+        /// A Name contract is canceled
+        NameContractCanceled {
+            contract_id: u64,
+        },
+        /// IP got reserved by a Node contract
+        IPsReserved {
+            contract_id: u64,
+            public_ips: Vec<PublicIP>,
+        },
+        /// IP got freed by a Node contract
+        IPsFreed {
+            contract_id: u64,
+            // public ip as a string
+            public_ips: Vec<Vec<u8>>,
+        },
+        /// Deprecated event
         ContractDeployed(u64, T::AccountId),
-        // Deprecated
+        /// Deprecated event
         ConsumptionReportReceived(types::Consumption),
         ContractBilled(types::ContractBill),
-        TokensBurned(u64, BalanceOf<T>),
+        /// A certain amount of tokens got burned by a contract
+        TokensBurned {
+            contract_id: u64,
+            amount: BalanceOf<T>,
+        },
+        /// Contract resources got updated
         UpdatedUsedResources(types::ContractResources),
+        /// Network resources report received for contract
         NruConsumptionReportReceived(types::NruConsumption),
-        RentContractCanceled(u64),
-        ContractGracePeriodStarted(u64, u32, u32, u64),
-        ContractGracePeriodEnded(u64, u32, u32),
+        /// a Rent contract is canceled
+        RentContractCanceled {
+            contract_id: u64,
+        },
+        /// A Contract grace period is triggered
+        ContractGracePeriodStarted {
+            contract_id: u64,
+            node_id: u32,
+            twin_id: u32,
+            block_number: u64,
+        },
+        /// A Contract grace period was ended
+        ContractGracePeriodEnded {
+            contract_id: u64,
+            node_id: u32,
+            twin_id: u32,
+        },
     }
 
     #[pallet::error]
@@ -849,11 +882,11 @@ impl<T: Config> Pallet<T> {
                 // if the usable balance is recharged, we can move the contract to created state again
                 if usable_balance > amount_due {
                     Self::_update_contract_state(contract, &types::ContractState::Created)?;
-                    Self::deposit_event(Event::ContractGracePeriodEnded(
-                        contract.contract_id,
+                    Self::deposit_event(Event::ContractGracePeriodEnded {
+                        contract_id: contract.contract_id,
                         node_id,
-                        contract.twin_id,
-                    ))
+                        twin_id: contract.twin_id,
+                    })
                 } else {
                     let diff = current_block - grace_start;
                     // If the contract grace period ran out, we can decomission the contract
@@ -876,12 +909,12 @@ impl<T: Config> Pallet<T> {
                         &types::ContractState::GracePeriod(current_block),
                     )?;
                     // We can't lock the amount due on the contract's lock because the user ran out of funds
-                    Self::deposit_event(Event::ContractGracePeriodStarted(
-                        contract.contract_id,
+                    Self::deposit_event(Event::ContractGracePeriodStarted {
+                        contract_id: contract.contract_id,
                         node_id,
-                        contract.twin_id,
-                        current_block.saturated_into(),
-                    ));
+                        twin_id: contract.twin_id,
+                        block_number: current_block.saturated_into(),
+                    });
                 }
             }
         }
@@ -1130,15 +1163,15 @@ impl<T: Config> Pallet<T> {
                 NodeContractResources::<T>::remove(contract_id);
                 ContractBillingInformationByID::<T>::remove(contract_id);
 
-                Self::deposit_event(Event::NodeContractCanceled(
+                Self::deposit_event(Event::NodeContractCanceled {
                     contract_id,
-                    node_contract.node_id,
-                    contract.twin_id,
-                ));
+                    node_id: node_contract.node_id,
+                    twin_id: contract.twin_id,
+                });
             }
             types::ContractData::NameContract(name_contract) => {
                 ContractIDByNameRegistration::<T>::remove(name_contract.name);
-                Self::deposit_event(Event::NameContractCanceled(contract_id));
+                Self::deposit_event(Event::NameContractCanceled { contract_id });
             }
             types::ContractData::RentContract(rent_contract) => {
                 ActiveRentContractForNode::<T>::remove(rent_contract.node_id);
@@ -1147,7 +1180,7 @@ impl<T: Config> Pallet<T> {
                 for node_contract in active_node_contracts {
                     Self::remove_contract(node_contract);
                 }
-                Self::deposit_event(Event::RentContractCanceled(contract_id));
+                Self::deposit_event(Event::RentContractCanceled { contract_id });
             }
         };
 
@@ -1241,7 +1274,10 @@ impl<T: Config> Pallet<T> {
         }
 
         <T as Config>::Currency::slash(&twin.account_id, amount_to_burn);
-        Self::deposit_event(Event::TokensBurned(contract.contract_id, amount_to_burn));
+        Self::deposit_event(Event::TokensBurned {
+            contract_id: contract.contract_id,
+            amount: amount_to_burn,
+        });
         Ok(().into())
     }
 
@@ -1437,7 +1473,7 @@ impl<T: Config> Pallet<T> {
         );
         let mut farm = pallet_tfgrid::Farms::<T>::get(node.farm_id);
 
-        let mut ips_freed = Vec::new();
+        let mut public_ips = Vec::new();
         for i in 0..farm.public_ips.len() {
             let mut ip = farm.public_ips[i].clone();
 
@@ -1446,14 +1482,17 @@ impl<T: Config> Pallet<T> {
             if ip.contract_id == contract_id {
                 ip.contract_id = 0;
                 farm.public_ips[i] = ip.clone();
-                ips_freed.push(ip.ip);
+                public_ips.push(ip.ip);
             }
         }
 
         pallet_tfgrid::Farms::<T>::insert(farm.id, farm);
 
         // Emit an event containing the IP's freed for this contract
-        Self::deposit_event(Event::IPsFreed(contract_id, ips_freed));
+        Self::deposit_event(Event::IPsFreed {
+            contract_id,
+            public_ips,
+        });
 
         Ok(().into())
     }
