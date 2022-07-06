@@ -6,25 +6,25 @@
 use sp_std::prelude::*;
 
 use frame_support::{
-    ensure, traits::{
-        WithdrawReasons, ExistenceRequirement, Currency, LockableCurrency, Get,
-    }, 
+    dispatch::DispatchErrorWithPostInfo,
+    ensure,
+    traits::{Currency, ExistenceRequirement, Get, LockableCurrency, WithdrawReasons},
     weights::Pays,
-    dispatch::DispatchErrorWithPostInfo
 };
+use frame_system::{self as system, ensure_signed};
+use pallet_tfgrid;
+use pallet_tfgrid::types as pallet_tfgrid_types;
+use pallet_tft_price;
+use pallet_timestamp as timestamp;
 use sp_runtime::{
     traits::{CheckedSub, SaturatedConversion},
     Perbill, Percent,
 };
-use frame_support::pallet_prelude::*;
-use frame_system::{self as system, ensure_signed};
-use pallet_timestamp as timestamp;
-use pallet_tfgrid;
-use pallet_tfgrid::types as pallet_tfgrid_types;
-use tfchain_support::{
-    types::{NodeCertification, Resources}
-};
 use substrate_fixed::types::U64F64;
+use tfchain_support::{
+    traits::ChangeNode,
+    types::{Node, NodeCertification, Resources},
+};
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
@@ -48,22 +48,15 @@ pub mod pallet {
     use super::weights::WeightInfo;
     use super::*;
     use frame_support::pallet_prelude::*;
-    use frame_system::pallet_prelude::*;
-    use sp_std::convert::TryInto;
-    use sp_std::vec::Vec;
-    use tfchain_support::{
-        traits::ChangeNode,
-        types::{
-            PublicIP,
-        },
-    };
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         log,
-        traits::{
-            Currency, Get, LockIdentifier, LockableCurrency,
-        },
+        traits::{Currency, Get, LockIdentifier, LockableCurrency},
     };
+    use frame_system::pallet_prelude::*;
+    use sp_std::convert::TryInto;
+    use sp_std::vec::Vec;
+    use tfchain_support::{traits::ChangeNode, types::PublicIP};
 
     pub type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
@@ -84,42 +77,55 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn contract_billing_information_by_id)]
-    pub type ContractBillingInformationByID<T: Config> = StorageMap<_, Blake2_128Concat, u64, ContractBillingInformation, ValueQuery>;
+    pub type ContractBillingInformationByID<T: Config> =
+        StorageMap<_, Blake2_128Concat, u64, ContractBillingInformation, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn node_contract_resources)]
-    pub type NodeContractResources<T: Config> = StorageMap<_, Blake2_128Concat, u64, ContractResources, ValueQuery>;
+    pub type NodeContractResources<T: Config> =
+        StorageMap<_, Blake2_128Concat, u64, ContractResources, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn node_contract_by_hash)]
-    pub type ContractIDByNodeIDAndHash<T: Config> = StorageDoubleMap<_, Blake2_128Concat, u32, Blake2_128Concat, Vec<u8>, u64, ValueQuery>;
+    pub type ContractIDByNodeIDAndHash<T: Config> =
+        StorageDoubleMap<_, Blake2_128Concat, u32, Blake2_128Concat, Vec<u8>, u64, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn active_node_contracts)]
-    pub type ActiveNodeContracts<T: Config> = StorageMap<_, Blake2_128Concat, u32, Vec<u64>, ValueQuery>;
+    pub type ActiveNodeContracts<T: Config> =
+        StorageMap<_, Blake2_128Concat, u32, Vec<u64>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn contract_to_bill_at_block)]
-    pub type ContractsToBillAt<T: Config> = StorageMap<_, Blake2_128Concat, u64, Vec<u64>, ValueQuery>;
+    pub type ContractsToBillAt<T: Config> =
+        StorageMap<_, Blake2_128Concat, u64, Vec<u64>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn contract_number_of_cylces_billed)]
-    pub type ContractLock<T: Config> = StorageMap<_, Blake2_128Concat, u64, types::ContractLock<BalanceOf<T>>, ValueQuery>;
+    pub type ContractLock<T: Config> =
+        StorageMap<_, Blake2_128Concat, u64, types::ContractLock<BalanceOf<T>>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn contract_id_by_name_registration)]
-    pub type ContractIDByNameRegistration<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, u64, ValueQuery>;
+    pub type ContractIDByNameRegistration<T: Config> =
+        StorageMap<_, Blake2_128Concat, Vec<u8>, u64, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn active_rent_contracts)]
-    pub type ActiveRentContractForNode<T: Config> = StorageMap<_, Blake2_128Concat, u32, Contract, ValueQuery>;
+    pub type ActiveRentContractForNode<T: Config> =
+        StorageMap<_, Blake2_128Concat, u32, Contract, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn contract_id)]
     pub type ContractID<T> = StorageValue<_, u64, ValueQuery>;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + pallet_timestamp::Config + pallet_balances::Config + pallet_tfgrid::Config {
+    pub trait Config:
+        frame_system::Config
+        + pallet_timestamp::Config
+        + pallet_balances::Config
+        + pallet_tfgrid::Config
+    {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: LockableCurrency<Self::AccountId>;
         type StakingPoolAccount: Get<Self::AccountId>;
@@ -185,50 +191,79 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn create_node_contract(origin: OriginFor<T>, node_id: u32, data: Vec<u8>, deployment_hash: Vec<u8>, public_ips: u32) -> DispatchResultWithPostInfo {
+        pub fn create_node_contract(
+            origin: OriginFor<T>,
+            node_id: u32,
+            data: Vec<u8>,
+            deployment_hash: Vec<u8>,
+            public_ips: u32,
+        ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_create_node_contract(account_id, node_id, data, deployment_hash, public_ips)
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn update_node_contract(origin: OriginFor<T>, contract_id: u64, data: Vec<u8>, deployment_hash: Vec<u8>) -> DispatchResultWithPostInfo {
+        pub fn update_node_contract(
+            origin: OriginFor<T>,
+            contract_id: u64,
+            data: Vec<u8>,
+            deployment_hash: Vec<u8>,
+        ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_update_node_contract(account_id, contract_id, data, deployment_hash)
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn cancel_contract(origin: OriginFor<T>, contract_id: u64) -> DispatchResultWithPostInfo {
+        pub fn cancel_contract(
+            origin: OriginFor<T>,
+            contract_id: u64,
+        ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_cancel_contract(account_id, contract_id, types::Cause::CanceledByUser)
         }
 
         // DEPRECATED
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn add_reports(_origin: OriginFor<T>, _reports: Vec<types::Consumption>) -> DispatchResultWithPostInfo {
+        pub fn add_reports(
+            _origin: OriginFor<T>,
+            _reports: Vec<types::Consumption>,
+        ) -> DispatchResultWithPostInfo {
             // return error
             Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn create_name_contract(origin: OriginFor<T>, name: Vec<u8>) -> DispatchResultWithPostInfo {
+        pub fn create_name_contract(
+            origin: OriginFor<T>,
+            name: Vec<u8>,
+        ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_create_name_contract(account_id, name)
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn add_nru_reports(origin: OriginFor<T>, reports: Vec<types::NruConsumption>) -> DispatchResultWithPostInfo {
+        pub fn add_nru_reports(
+            origin: OriginFor<T>,
+            reports: Vec<types::NruConsumption>,
+        ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_compute_reports(account_id, reports)
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn report_contract_resources(origin: OriginFor<T>, contract_resources: Vec<types::ContractResources>) -> DispatchResultWithPostInfo {
+        pub fn report_contract_resources(
+            origin: OriginFor<T>,
+            contract_resources: Vec<types::ContractResources>,
+        ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_report_contract_resources(account_id, contract_resources)
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn create_rent_contract(origin: OriginFor<T>, node_id: u32) -> DispatchResultWithPostInfo {
+        pub fn create_rent_contract(
+            origin: OriginFor<T>,
+            node_id: u32,
+        ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_create_rent_contract(account_id, node_id)
         }
@@ -239,10 +274,17 @@ pub mod pallet {
         fn on_finalize(block: T::BlockNumber) {
             match Self::_bill_contracts_at_block(block) {
                 Ok(_) => {
-                    log::info!("types::NodeContract billed successfully at block: {:?}", block);
-                },
+                    log::info!(
+                        "types::NodeContract billed successfully at block: {:?}",
+                        block
+                    );
+                }
                 Err(err) => {
-                    log::info!("types::NodeContract billed failed at block: {:?} with err {:?}", block, err);
+                    log::info!(
+                        "types::NodeContract billed failed at block: {:?} with err {:?}",
+                        block,
+                        err
+                    );
                 }
             }
             // clean storage map for billed contracts at block
@@ -280,14 +322,14 @@ impl<T: Config> Pallet<T> {
         );
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id);
 
-        if farm.dedicated_farm && !ActiveRentContractForNode::contains_key(node_id) {
+        if farm.dedicated_farm && !ActiveRentContractForNode::<T>::contains_key(node_id) {
             return Err(Error::<T>::NodeNotAvailableToDeploy.into());
         }
 
         // If the user is trying to deploy on a node that has an active rent contract
         // only allow the user who created the rent contract to actually deploy a node contract on it
-        if ActiveRentContractForNode::contains_key(node_id) {
-            let contract = ActiveRentContractForNode::get(node_id);
+        if ActiveRentContractForNode::<T>::contains_key(node_id) {
+            let contract = ActiveRentContractForNode::<T>::get(node_id);
             if contract.twin_id != twin_id {
                 return Err(Error::<T>::NodeHasRentContract.into());
             }
@@ -325,7 +367,10 @@ impl<T: Config> Pallet<T> {
             amount_unbilled: 0,
             previous_nu_reported: 0,
         };
-        ContractBillingInformationByID::<T>::insert(contract.contract_id, contract_billing_information);
+        ContractBillingInformationByID::<T>::insert(
+            contract.contract_id,
+            contract_billing_information,
+        );
 
         // Insert contract id by (node_id, hash)
         ContractIDByNodeIDAndHash::<T>::insert(node_id, deployment_hash, contract.contract_id);
@@ -340,7 +385,10 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn _create_rent_contract(account_id: T::AccountId, node_id: u32) -> DispatchResultWithPostInfo {
+    pub fn _create_rent_contract(
+        account_id: T::AccountId,
+        node_id: u32,
+    ) -> DispatchResultWithPostInfo {
         ensure!(
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&account_id),
             Error::<T>::TwinNotExists
@@ -351,7 +399,7 @@ impl<T: Config> Pallet<T> {
         );
 
         ensure!(
-            !ActiveRentContractForNode::contains_key(node_id),
+            !ActiveRentContractForNode::<T>::contains_key(node_id),
             Error::<T>::NodeHasRentContract
         );
 
@@ -385,7 +433,10 @@ impl<T: Config> Pallet<T> {
 
     // Registers a DNS name for a Twin
     // Ensures uniqueness and also checks if it's a valid DNS name
-    pub fn _create_name_contract(source: T::AccountId, name: Vec<u8>) -> DispatchResultWithPostInfo {
+    pub fn _create_name_contract(
+        source: T::AccountId,
+        name: Vec<u8>,
+    ) -> DispatchResultWithPostInfo {
         ensure!(
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
             Error::<T>::TwinNotExists
@@ -421,7 +472,7 @@ impl<T: Config> Pallet<T> {
     fn _create_contract(
         twin_id: u32,
         mut contract_type: types::ContractData,
-    ) -> Result<types::Contract, DispatchResultWithPostInfo> {
+    ) -> Result<types::Contract, DispatchErrorWithPostInfo> {
         // Get the Contract ID map and increment
         let mut id = ContractID::<T>::get();
         id = id + 1;
@@ -443,10 +494,10 @@ impl<T: Config> Pallet<T> {
         Self::_reinsert_contract_to_bill(id);
 
         // insert into contracts map
-        Contracts::insert(id, &contract);
+        Contracts::<T>::insert(id, &contract);
 
         // Update Contract ID
-        ContractID::put(id);
+        ContractID::<T>::put(id);
 
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
         let mut contract_lock = types::ContractLock::default();
@@ -488,8 +539,15 @@ impl<T: Config> Pallet<T> {
         let mut node_contract = Self::get_node_contract(&contract.clone())?;
 
         // remove and reinsert contract id by node id and hash because that hash can have changed
-        ContractIDByNodeIDAndHash::<T>::remove(node_contract.node_id, node_contract.deployment_hash);
-        ContractIDByNodeIDAndHash::<T>::insert(node_contract.node_id, &deployment_hash, contract_id);
+        ContractIDByNodeIDAndHash::<T>::remove(
+            node_contract.node_id,
+            node_contract.deployment_hash,
+        );
+        ContractIDByNodeIDAndHash::<T>::insert(
+            node_contract.node_id,
+            &deployment_hash,
+            contract_id,
+        );
 
         node_contract.deployment_data = deployment_data;
         node_contract.deployment_hash = deployment_hash;
@@ -648,7 +706,8 @@ impl<T: Config> Pallet<T> {
         report: &types::NruConsumption,
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
     ) {
-        let mut contract_billing_info = ContractBillingInformationByID::<T>::get(report.contract_id);
+        let mut contract_billing_info =
+            ContractBillingInformationByID::<T>::get(report.contract_id);
         if report.timestamp < contract_billing_info.last_updated {
             return;
         }
@@ -764,7 +823,8 @@ impl<T: Config> Pallet<T> {
         Self::deposit_event(Event::ContractBilled(contract_bill));
 
         // set the amount unbilled back to 0
-        let mut contract_billing_info = ContractBillingInformationByID::<T>::get(contract.contract_id);
+        let mut contract_billing_info =
+            ContractBillingInformationByID::<T>::get(contract.contract_id);
         contract_billing_info.amount_unbilled = 0;
         ContractBillingInformationByID::<T>::insert(contract.contract_id, &contract_billing_info);
 
@@ -829,7 +889,10 @@ impl<T: Config> Pallet<T> {
         Ok(contract)
     }
 
-    fn handle_lock(contract: &mut types::Contract, amount_due: BalanceOf<T>) -> DispatchResultWithPostInfo {
+    fn handle_lock(
+        contract: &mut types::Contract,
+        amount_due: BalanceOf<T>,
+    ) -> DispatchResultWithPostInfo {
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
         // increment cycles billed and update the internal lock struct
@@ -1092,7 +1155,11 @@ impl<T: Config> Pallet<T> {
         ContractLock::<T>::remove(contract_id);
     }
 
-    pub fn calculate_cost_in_tft_from_musd(total_cost: u64) -> Result<u64, DispatchErrorWithPostInfo> {
+    pub fn calculate_cost_in_tft_from_musd(
+        total_cost: u64,
+    ) -> Result<u64, DispatchErrorWithPostInfo> {
+        // Todo fix me
+        use frame_support::StorageValue;
         let avg_tft_price = pallet_tft_price::AverageTftPrice::get();
         ensure!(avg_tft_price > 0, Error::<T>::TFTPriceValueError);
 
@@ -1103,7 +1170,7 @@ impl<T: Config> Pallet<T> {
         let total_cost_musd = U64F64::from_num(total_cost) / 10000;
 
         // Now we have the price in musd and cost in musd, make the conversion to the amount of TFT's and multiply by the chain precision (7 decimals)
-        let total_cost_tft = (total_cost_musd / tft_price_musd) * U64F64::from_num(1e7);
+        let total_cost_tft = (total_cost_musd / tft_price_musd) * U64F64::from_num(1e7 as u64);
         let total_cost_tft_64: u64 = U64F64::to_num(total_cost_tft);
         Ok(total_cost_tft_64)
     }
@@ -1358,7 +1425,10 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn _free_ip(contract_id: u64, node_contract: &mut types::NodeContract) -> DispatchResultWithPostInfo {
+    pub fn _free_ip(
+        contract_id: u64,
+        node_contract: &mut types::NodeContract,
+    ) -> DispatchResultWithPostInfo {
         let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id);
 
         ensure!(
@@ -1393,7 +1463,11 @@ impl<T: Config> Pallet<T> {
     ) -> Result<types::NodeContract, DispatchErrorWithPostInfo> {
         match contract.contract_type.clone() {
             types::ContractData::NodeContract(c) => Ok(c),
-            _ => return Err(DispatchErrorWithPostInfo::from(Error::<T>::InvalidContractType)),
+            _ => {
+                return Err(DispatchErrorWithPostInfo::from(
+                    Error::<T>::InvalidContractType,
+                ))
+            }
         }
     }
 
@@ -1402,7 +1476,11 @@ impl<T: Config> Pallet<T> {
     ) -> Result<types::RentContract, DispatchErrorWithPostInfo> {
         match contract.contract_type.clone() {
             types::ContractData::RentContract(c) => Ok(c),
-            _ => return Err(DispatchErrorWithPostInfo::from(Error::<T>::InvalidContractType)),
+            _ => {
+                return Err(DispatchErrorWithPostInfo::from(
+                    Error::<T>::InvalidContractType,
+                ))
+            }
         }
     }
 
@@ -1458,5 +1536,36 @@ impl<T: Config> Pallet<T> {
         cu = if cu > cu3 { cu3 } else { cu };
 
         cu
+    }
+}
+
+impl<T: Config> ChangeNode for Pallet<T> {
+    fn node_changed(_node: Option<&Node>, _new_node: &Node) {}
+
+    fn node_deleted(node: &Node) {
+        // Clean up all active contracts
+        let active_node_contracts = ActiveNodeContracts::<T>::get(node.id);
+        for node_contract_id in active_node_contracts {
+            let mut contract = Contracts::<T>::get(node_contract_id);
+            // Bill contract
+            let _ = Self::_update_contract_state(
+                &mut contract,
+                &types::ContractState::Deleted(types::Cause::CanceledByUser),
+            );
+            let _ = Self::bill_contract(&mut contract);
+            Self::remove_contract(node_contract_id);
+        }
+
+        // First clean up rent contract if it exists
+        let mut rent_contract = ActiveRentContractForNode::<T>::get(node.id);
+        if rent_contract.contract_id != 0 {
+            // Bill contract
+            let _ = Self::_update_contract_state(
+                &mut rent_contract,
+                &types::ContractState::Deleted(types::Cause::CanceledByUser),
+            );
+            let _ = Self::bill_contract(&mut rent_contract);
+            Self::remove_contract(rent_contract.contract_id);
+        }
     }
 }
