@@ -12,9 +12,8 @@ use sp_runtime::{
     traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentityLookup},
     AccountId32,
 };
-use sp_std::prelude::*;
+use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::{traits::ChangeNode, types::Node};
-use sp_std::convert::TryFrom;
 
 pub type Signature = MultiSignature;
 

@@ -80,7 +80,7 @@ decl_storage! {
         // Token price
         pub TftPrice: u32;
         pub LastBlockSet: T::BlockNumber;
-        pub AverageTftPrice: u32;
+        pub AverageTftPrice get(fn average_tft_price): u32;
         pub TftPriceHistory get(fn get_value): map hasher(twox_64_concat) BufferIndex => u32;
         pub BufferRange get(fn range): (BufferIndex, BufferIndex) = (0, 0);
         pub AllowedOrigin get(fn allowed_origin): Option<T::AccountId>;
