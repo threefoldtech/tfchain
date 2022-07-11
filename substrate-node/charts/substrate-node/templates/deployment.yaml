@@ -59,7 +59,7 @@ spec:
           - name: SUBSTRATE_RPC_METHODS
             value: {{ .Values.rpc_methods }}
           - name: TELEMETRY_URL
-            value: {{ .Values.telemetry_url }}
+            value: {{ .Values.telemetry_url | quote }}
           args: [
             "--name", "$(SUBSTRATE_NAME)",
             "--rpc-cors=all",
