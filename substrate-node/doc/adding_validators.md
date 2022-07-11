@@ -31,6 +31,7 @@ This will write the node adress on std err followed by the node private key on s
   --validator \
   --bootnodes IP_OF_BOOTNODE
   --node-key <node_key>
+  --telemetry-url 'wss://shard1.telemetry.tfchain.grid.tf/submit 1'
 ```
 
 Insert Aura and Grandpa key for this new node.
