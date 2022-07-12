@@ -58,8 +58,6 @@ spec:
             value: {{ .Values.ws_max_connections | quote }}
           - name: SUBSTRATE_RPC_METHODS
             value: {{ .Values.rpc_methods }}
-          - name: TELEMETRY_URL
-            value: {{ .Values.telemetry_url | quote }}
           args: [
             "--name", "$(SUBSTRATE_NAME)",
             "--rpc-cors=all",
@@ -85,7 +83,7 @@ spec:
             "--offchain-worker", "Never",
             {{ end }}
             {{ if .Values.telemetry_url }}
-            "--telemetry-url", "$($TELEMETRY_URL)",
+            "--telemetry-url", {{ .Values.telemetry_url | quote }},
             {{ end }}
           ]
           resources:
