@@ -83,7 +83,6 @@ impl tfchain_support::traits::ChangeNode for NodeChanged {
 }
 
 parameter_types! {
-    pub const MaxIpLength: u32 = 39;
     pub const MaxFarmNameLength: u32 = 40;
 }
 
@@ -96,7 +95,6 @@ impl Config for TestRuntime {
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
     type TwinIp = TestTwinIp;
-    type MaxIpLength = MaxIpLength;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
 }

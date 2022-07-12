@@ -49,6 +49,7 @@ pub mod pallet {
             NodeCertification, PublicConfig, PublicIP, Resources,
         },
     };
+    use frame_support::traits::ConstU32;
 
     use codec::FullCodec;
 
@@ -106,7 +107,7 @@ pub mod pallet {
     pub type TwinIndex = u32;
     type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     type TwinInfoOf<T> = types::Twin<<T as Config>::TwinIp, AccountIdOf<T>>;
-    pub type TwinIpInput<T> = BoundedVec<u8, <T as Config>::MaxIpLength>;
+    pub type TwinIpInput = BoundedVec<u8, ConstU32<39>>;
     pub type TwinIpOf<T> = <T as Config>::TwinIp;
 
     #[pallet::storage]
@@ -199,9 +200,6 @@ pub mod pallet {
             + TypeInfo
             + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
-
-        #[pallet::constant]
-        type MaxIpLength: Get<u32>;
 
         /// The type of a name.
         type FarmName: FullCodec
@@ -1171,7 +1169,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(<T as Config>::WeightInfo::create_twin())]
-        pub fn create_twin(origin: OriginFor<T>, ip: TwinIpInput<T>) -> DispatchResultWithPostInfo {
+        pub fn create_twin(origin: OriginFor<T>, ip: TwinIpInput) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
             ensure!(
@@ -1209,7 +1207,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(3))]
-        pub fn update_twin(origin: OriginFor<T>, ip: TwinIpInput<T>) -> DispatchResultWithPostInfo {
+        pub fn update_twin(origin: OriginFor<T>, ip: TwinIpInput) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
             ensure!(
@@ -1920,7 +1918,7 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    fn check_twin_ip(ip: TwinIpInput<T>) -> Result<TwinIpOf<T>, DispatchErrorWithPostInfo> {
+    fn check_twin_ip(ip: TwinIpInput) -> Result<TwinIpOf<T>, DispatchErrorWithPostInfo> {
         let ip = TwinIpOf::<T>::try_from(ip.to_vec()).map_err(DispatchErrorWithPostInfo::from)?;
 
         Ok(ip)

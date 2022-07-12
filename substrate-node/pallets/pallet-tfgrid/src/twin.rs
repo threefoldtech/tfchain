@@ -1,7 +1,7 @@
 use sp_std::{marker::PhantomData, vec::Vec};
 
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::{ensure, sp_runtime::SaturatedConversion, BoundedVec, RuntimeDebug};
+use frame_support::{ensure, sp_runtime::SaturatedConversion, BoundedVec, RuntimeDebug, traits::ConstU32};
 use scale_info::TypeInfo;
 
 use crate::ipv6;
@@ -14,8 +14,8 @@ use crate::{Config, Error};
 #[scale_info(skip_type_params(T, MinLength, MaxLength))]
 #[codec(mel_bound())]
 pub struct TwinIp<T: Config>(
-    pub(crate) BoundedVec<u8, T::MaxIpLength>,
-    PhantomData<(T, T::MaxIpLength)>,
+    pub(crate) BoundedVec<u8, ConstU32<39>>,
+    PhantomData<(T, ConstU32<39>)>,
 );
 
 pub const MIN_IP_LENGHT: u32 = 3;
@@ -31,7 +31,7 @@ impl<T: Config> TryFrom<Vec<u8>> for TwinIp<T> {
             value.len() >= MIN_IP_LENGHT.saturated_into(),
             Self::Error::TwinIpTooShort
         );
-        let bounded_vec: BoundedVec<u8, T::MaxIpLength> =
+        let bounded_vec: BoundedVec<u8, ConstU32<39>> =
             BoundedVec::try_from(value).map_err(|_| Self::Error::TwinIpTooLong)?;
         ensure!(ipv6::valid_ipv6(&bounded_vec), Self::Error::InvalidTwinIp);
         Ok(Self(bounded_vec, PhantomData))
