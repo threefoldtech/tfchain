@@ -7,6 +7,7 @@ use frame_support::{
     ensure,
     traits::{Currency, ExistenceRequirement, Get, LockableCurrency, WithdrawReasons},
     weights::Pays,
+    transactional
 };
 use frame_system::{self as system, ensure_signed};
 use pallet_tfgrid;
@@ -813,6 +814,7 @@ impl<T: Config> Pallet<T> {
 
     // Bills a contract (NodeContract or NameContract)
     // Calculates how much TFT is due by the user and distributes the rewards
+    #[transactional]
     fn bill_contract(contract: &mut types::Contract) -> DispatchResultWithPostInfo {
         if !pallet_tfgrid::Twins::<T>::contains_key(contract.twin_id) {
             return Err(DispatchErrorWithPostInfo::from(Error::<T>::TwinNotExists));
