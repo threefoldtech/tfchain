@@ -12,6 +12,7 @@ use substrate_fixed::types::U64F64;
 use super::types;
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use tfchain_support::types::{FarmCertification, Location, NodeCertification, PublicIP, Resources};
+use crate::contract_util;
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -766,7 +767,7 @@ fn test_multiple_contracts_billing_loop_works() {
         // 2: Contract created (name contract)
         // 3: Contract Billed (node contract)
         // 4: Contract Billed (name contract)
-        assert_eq!(our_events.len(), 5);
+        assert_eq!(our_events.len(), 6);
     })
 }
 
@@ -1223,7 +1224,7 @@ fn test_name_contract_billing() {
         let our_events = System::events();
         println!("events: {:?}", our_events.clone());
         assert_eq!(
-            our_events[2],
+            our_events[3],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::ContractBilled(
@@ -1396,7 +1397,7 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
         // Event 2: Node Contract created
         // Event 4: Rent contract billed
         // => no Node Contract billed event
-        assert_eq!(our_events.len(), 5);
+        assert_eq!(our_events.len(), 6);
     });
 }
 
@@ -1448,10 +1449,10 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         // Event 16: Node contract canceled
         // Event 17: Rent contract Canceled
         // => no Node Contract billed event
-        assert_eq!(our_events.len(), 18);
+        assert_eq!(our_events.len(), 19);
 
         assert_eq!(
-            our_events[16],
+            our_events[17],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::NodeContractCanceled {
@@ -1461,7 +1462,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
             }))
         );
         assert_eq!(
-            our_events[17],
+            our_events[18],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::RentContractCanceled {
@@ -1505,11 +1506,12 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
 
         let our_events = System::events();
         // Event 1: Price Stored
+        // Event 2: Avg price stored
         // Event 2: Rent contract created
         // Event 3: Node Contract created
         // Event 4: Rent contract billed
         // Event 5: Node Contract billed
-        assert_eq!(our_events.len(), 5);
+        assert_eq!(our_events.len(), 6);
     });
 }
 
@@ -1569,7 +1571,7 @@ fn test_restore_rent_contract_in_grace_works() {
 
         let our_events = System::events();
         assert_eq!(
-            our_events[2],
+            our_events[3],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::ContractGracePeriodStarted {
@@ -1716,27 +1718,27 @@ fn test_cu_calculation() {
     new_test_ext().execute_with(|| {
         let cu = U64F64::from_num(4);
         let mru = U64F64::from_num(1024);
-        let cu = SmartContractModule::calculate_cu(cu, mru);
+        let cu = contract_util::calculate_cu(cu, mru);
         assert_eq!(cu, 128);
 
         let cu = U64F64::from_num(32);
         let mru = U64F64::from_num(128);
-        let cu = SmartContractModule::calculate_cu(cu, mru);
+        let cu = contract_util::calculate_cu(cu, mru);
         assert_eq!(cu, 32);
 
         let cu = U64F64::from_num(4);
         let mru = U64F64::from_num(2);
-        let cu = SmartContractModule::calculate_cu(cu, mru);
+        let cu = contract_util::calculate_cu(cu, mru);
         assert_eq!(cu, 1);
 
         let cu = U64F64::from_num(4);
         let mru = U64F64::from_num(1);
-        let cu = SmartContractModule::calculate_cu(cu, mru);
+        let cu = contract_util::calculate_cu(cu, mru);
         assert_eq!(cu, 1);
 
         let cu = U64F64::from_num(16);
         let mru = U64F64::from_num(16);
-        let cu = SmartContractModule::calculate_cu(cu, mru);
+        let cu = contract_util::calculate_cu(cu, mru);
         assert_eq!(cu, 8);
     })
 }
@@ -1851,7 +1853,7 @@ fn calculate_tft_cost(contract_id: u64, twin_id: u32, blocks: u64) -> (u64, type
     let b = Balances::free_balance(&twin.account_id);
     let contract = SmartContractModule::contracts(contract_id);
     let (amount_due, discount_received) =
-        SmartContractModule::calculate_contract_cost_tft(&contract, b, blocks * 6).unwrap();
+        contract.calculate_contract_cost_tft::<TestRuntime>(b, blocks * 6).unwrap();
 
     (amount_due, discount_received)
 }
