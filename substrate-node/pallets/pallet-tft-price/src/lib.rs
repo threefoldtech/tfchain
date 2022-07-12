@@ -99,6 +99,7 @@ decl_event! {
     pub enum Event<T> where AccountId = <T as frame_system::Config>::AccountId {
         PriceStored(u32),
         OffchainWorkerExecuted(AccountId),
+        AveragePriceStored(u32),
     }
 }
 
@@ -160,6 +161,7 @@ impl<T: Config> Module<T> {
 
         log::info!("average price {:?}", average);
         AverageTftPrice::put(average);
+        Self::deposit_event(RawEvent::AveragePriceStored(average));
 
         Ok(Pays::No.into())
     }
