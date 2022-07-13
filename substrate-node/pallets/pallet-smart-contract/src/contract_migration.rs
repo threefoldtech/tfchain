@@ -99,7 +99,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                     };
 
                     // If it's a valid 32 byte hash, transform it as a H256 and save it on the node contract
-                    if node_contract.deployment_hash.len() == 36 {
+                    if node_contract.deployment_hash.len() == 32 {
                         new_node_contract.deployment_hash =
                             sp_core::H256::from_slice(&node_contract.deployment_hash);
                     };
