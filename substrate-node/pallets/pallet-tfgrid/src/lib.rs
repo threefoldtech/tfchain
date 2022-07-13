@@ -389,6 +389,7 @@ pub mod pallet {
                             discount_for_dedication_nodes: self.discount_for_dedication_nodes,
                         };
                         PricingPolicies::<T>::insert(1, p_policy);
+                        PricingPolicyID::<T>::put(1);
                     }
                     None => (),
                 },
@@ -416,7 +417,7 @@ pub mod pallet {
             );
 
             FarmingPoliciesMap::<T>::insert(
-                1,
+                2,
                 types::FarmingPolicy {
                     version: 1,
                     id: 2,
@@ -436,6 +437,7 @@ pub mod pallet {
                     farm_certification: FarmCertification::NotCertified,
                 },
             );
+            FarmingPolicyID::<T>::put(2);
 
             ConnectionPrice::<T>::put(self.connection_price)
         }
