@@ -48,6 +48,7 @@ pub mod pallet {
     use sp_std::convert::TryInto;
     use sp_std::vec::Vec;
     use tfchain_support::{traits::ChangeNode, types::PublicIP};
+    use sp_core::H256;
 
     pub type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
@@ -62,6 +63,7 @@ pub mod pallet {
     // Version constant that referenced the struct version
     pub const CONTRACT_VERSION: u32 = 3;
 
+    pub type DeploymentHash = H256;
     #[pallet::storage]
     #[pallet::getter(fn contracts)]
     pub type Contracts<T: Config> = StorageMap<_, Blake2_128Concat, u64, Contract, ValueQuery>;
@@ -78,8 +80,15 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn node_contract_by_hash)]
-    pub type ContractIDByNodeIDAndHash<T: Config> =
-        StorageDoubleMap<_, Blake2_128Concat, u32, Blake2_128Concat, Vec<u8>, u64, ValueQuery>;
+    pub type ContractIDByNodeIDAndHash<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        u32,
+        Blake2_128Concat,
+        DeploymentHash,
+        u64,
+        ValueQuery,
+    >;
 
     #[pallet::storage]
     #[pallet::getter(fn active_node_contracts)]
@@ -226,7 +235,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             node_id: u32,
             data: Vec<u8>,
-            deployment_hash: Vec<u8>,
+            deployment_hash: DeploymentHash,
             public_ips: u32,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
@@ -238,7 +247,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             contract_id: u64,
             data: Vec<u8>,
-            deployment_hash: Vec<u8>,
+            deployment_hash: DeploymentHash,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_update_node_contract(account_id, contract_id, data, deployment_hash)
@@ -332,7 +341,7 @@ impl<T: Config> Pallet<T> {
         account_id: T::AccountId,
         node_id: u32,
         deployment_data: Vec<u8>,
-        deployment_hash: Vec<u8>,
+        deployment_hash: DeploymentHash,
         public_ips: u32,
     ) -> DispatchResultWithPostInfo {
         ensure!(
@@ -542,7 +551,7 @@ impl<T: Config> Pallet<T> {
         account_id: T::AccountId,
         contract_id: u64,
         deployment_data: Vec<u8>,
-        deployment_hash: Vec<u8>,
+        deployment_hash: DeploymentHash,
     ) -> DispatchResultWithPostInfo {
         ensure!(
             Contracts::<T>::contains_key(contract_id),

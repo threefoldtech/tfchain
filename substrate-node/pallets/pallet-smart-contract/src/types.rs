@@ -1,3 +1,4 @@
+use crate::pallet::DeploymentHash;
 use codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
@@ -47,7 +48,8 @@ pub struct NodeContract {
     // this data part is read only by the user and can actually hold any information to help him reconstruct his deployment or can be left empty.
     pub deployment_data: Vec<u8>,
     // Hash of the deployment, set by the user
-    pub deployment_hash: Vec<u8>,
+    // Max 32 bytes
+    pub deployment_hash: DeploymentHash,
     pub public_ips: u32,
     pub public_ips_list: Vec<PublicIP>,
 }
