@@ -10,11 +10,17 @@ pub type BlockNumber = u64;
 
 /// Utility type for managing upgrades/migrations.
 #[derive(Encode, Decode, Clone, Debug, PartialEq, TypeInfo)]
-pub enum PalletStorageVersion {
+pub enum StorageVersion {
     V1,
     V2,
     V3,
     V4,
+}
+
+impl Default for StorageVersion {
+    fn default() -> StorageVersion {
+        StorageVersion::V3
+    }
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]

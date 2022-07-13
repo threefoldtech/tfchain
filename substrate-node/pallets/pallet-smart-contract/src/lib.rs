@@ -30,6 +30,7 @@ mod tests;
 
 pub mod weights;
 
+pub mod contract_migration;
 pub mod cost;
 pub mod types;
 
@@ -45,10 +46,11 @@ pub mod pallet {
         traits::{Currency, Get, LockIdentifier, LockableCurrency},
     };
     use frame_system::pallet_prelude::*;
+    use sp_core::H256;
     use sp_std::convert::TryInto;
     use sp_std::vec::Vec;
     use tfchain_support::{traits::ChangeNode, types::PublicIP};
-    use sp_core::H256;
+    use contract_migration;
 
     pub type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
@@ -118,6 +120,10 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn contract_id)]
     pub type ContractID<T> = StorageValue<_, u64, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn pallet_version)]
+    pub type PalletVersion<T> = StorageValue<_, types::StorageVersion, ValueQuery>;
 
     #[pallet::config]
     pub trait Config:
@@ -330,6 +336,10 @@ pub mod pallet {
             // clean storage map for billed contracts at block
             let current_block_u64: u64 = block.saturated_into::<u64>();
             ContractsToBillAt::<T>::remove(current_block_u64);
+        }
+
+        fn on_runtime_upgrade() -> Weight {
+            contract_migration::migrate_to_version_4::<T>()
         }
     }
 }
