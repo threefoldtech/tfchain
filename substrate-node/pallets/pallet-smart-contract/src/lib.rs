@@ -6,8 +6,8 @@ use frame_support::{
     dispatch::DispatchErrorWithPostInfo,
     ensure,
     traits::{Currency, ExistenceRequirement, Get, LockableCurrency, WithdrawReasons},
+    transactional,
     weights::Pays,
-    transactional
 };
 use frame_system::{self as system, ensure_signed};
 use pallet_tfgrid;
@@ -15,13 +15,10 @@ use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_timestamp as timestamp;
 use sp_runtime::{
     traits::{CheckedSub, SaturatedConversion},
-    Perbill
+    Perbill,
 };
 use substrate_fixed::types::U64F64;
-use tfchain_support::{
-    traits::ChangeNode,
-    types::Node,
-};
+use tfchain_support::{traits::ChangeNode, types::Node};
 
 pub use pallet::*;
 
@@ -33,8 +30,8 @@ mod tests;
 
 pub mod weights;
 
+pub mod cost;
 pub mod types;
-pub mod contract_util;
 
 #[frame_support::pallet]
 pub mod pallet {
