@@ -107,7 +107,18 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                     new_contract.contract_type =
                         types::ContractData::NodeContract(new_node_contract);
                 }
-                _ => (),
+                deprecated::ContractData::NameContract(nc) => {
+                    let name_c = types::NameContract {
+                        name: nc.name
+                    };
+                    new_contract.contract_type = types::ContractData::NameContract(name_c);
+                },
+                deprecated::ContractData::RentContract(rc) => {
+                    let rent_c = types::RentContract {
+                        node_id: rc.node_id
+                    };
+                    new_contract.contract_type = types::ContractData::RentContract(rent_c);
+                }
             };
 
             migrated_count += 1;
