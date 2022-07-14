@@ -49,10 +49,6 @@ impl Contract {
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct NodeContract {
     pub node_id: u32,
-    // deployment_data is the encrypted deployment body. This encrypted the deployment with the **USER** public key.
-    // So only the user can read this data later on (or any other key that he keeps safe).
-    // this data part is read only by the user and can actually hold any information to help him reconstruct his deployment or can be left empty.
-    pub deployment_data: Vec<u8>,
     // Hash of the deployment, set by the user
     // Max 32 bytes
     pub deployment_hash: DeploymentHash,

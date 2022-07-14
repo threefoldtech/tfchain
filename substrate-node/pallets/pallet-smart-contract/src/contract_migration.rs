@@ -92,7 +92,6 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                 deprecated::ContractData::NodeContract(node_contract) => {
                     let mut new_node_contract = types::NodeContract {
                         node_id: node_contract.node_id,
-                        deployment_data: node_contract.deployment_data,
                         deployment_hash: H256::zero(),
                         public_ips: node_contract.public_ips,
                         public_ips_list: node_contract.public_ips_list,

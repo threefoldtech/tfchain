@@ -240,23 +240,21 @@ pub mod pallet {
         pub fn create_node_contract(
             origin: OriginFor<T>,
             node_id: u32,
-            data: Vec<u8>,
             deployment_hash: DeploymentHash,
             public_ips: u32,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_create_node_contract(account_id, node_id, data, deployment_hash, public_ips)
+            Self::_create_node_contract(account_id, node_id, deployment_hash, public_ips)
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn update_node_contract(
             origin: OriginFor<T>,
             contract_id: u64,
-            data: Vec<u8>,
             deployment_hash: DeploymentHash,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_update_node_contract(account_id, contract_id, data, deployment_hash)
+            Self::_update_node_contract(account_id, contract_id, deployment_hash)
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
@@ -350,7 +348,6 @@ impl<T: Config> Pallet<T> {
     pub fn _create_node_contract(
         account_id: T::AccountId,
         node_id: u32,
-        deployment_data: Vec<u8>,
         deployment_hash: DeploymentHash,
         public_ips: u32,
     ) -> DispatchResultWithPostInfo {
@@ -399,7 +396,6 @@ impl<T: Config> Pallet<T> {
         // Prepare NodeContract struct
         let node_contract = types::NodeContract {
             node_id,
-            deployment_data,
             deployment_hash: deployment_hash.clone(),
             public_ips,
             public_ips_list: Vec::new(),
@@ -560,7 +556,6 @@ impl<T: Config> Pallet<T> {
     pub fn _update_node_contract(
         account_id: T::AccountId,
         contract_id: u64,
-        deployment_data: Vec<u8>,
         deployment_hash: DeploymentHash,
     ) -> DispatchResultWithPostInfo {
         ensure!(
@@ -599,7 +594,6 @@ impl<T: Config> Pallet<T> {
             contract_id,
         );
 
-        node_contract.deployment_data = deployment_data;
         node_contract.deployment_hash = deployment_hash;
 
         // override values
