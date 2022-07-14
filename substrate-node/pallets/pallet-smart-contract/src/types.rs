@@ -1,15 +1,16 @@
 use crate::pallet::DeploymentHash;
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
-use sp_std::vec::Vec;
 use substrate_fixed::types::U64F64;
 use tfchain_support::types::{PublicIP, Resources};
+use crate::Config;
+use frame_support::{BoundedVec, RuntimeDebugNoBound, traits::ConstU32};
 
 pub type BlockNumber = u64;
 
 /// Utility type for managing upgrades/migrations.
-#[derive(Encode, Decode, Clone, Debug, PartialEq, TypeInfo)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, TypeInfo, MaxEncodedLen)]
 pub enum StorageVersion {
     V1,
     V2,
@@ -23,16 +24,18 @@ impl Default for StorageVersion {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct Contract {
+#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(T))]
+#[codec(mel_bound())]
+pub struct Contract<T: Config> {
     pub version: u32,
     pub state: ContractState,
     pub contract_id: u64,
     pub twin_id: u32,
-    pub contract_type: ContractData,
+    pub contract_type: ContractData<T>,
 }
 
-impl Contract {
+impl<T: Config> Contract<T> {
     pub fn is_state_delete(&self) -> bool {
         matches!(self.state, ContractState::Deleted(_))
     }
@@ -46,54 +49,58 @@ impl Contract {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+#[derive(Clone, Eq, PartialEq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen)]
 pub struct NodeContract {
     pub node_id: u32,
     // Hash of the deployment, set by the user
     // Max 32 bytes
     pub deployment_hash: DeploymentHash,
     pub public_ips: u32,
-    pub public_ips_list: Vec<PublicIP>,
+    pub public_ips_list: BoundedVec<PublicIP, ConstU32<5>>,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct NameContract {
-    pub name: Vec<u8>,
+#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(T))]
+#[codec(mel_bound())]
+pub struct NameContract<T: Config> {
+    pub name: T::NameContractName,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
 pub struct RentContract {
     pub node_id: u32,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
-pub enum ContractData {
+#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(T))]
+#[codec(mel_bound())]
+pub enum ContractData<T: Config> {
     NodeContract(NodeContract),
-    NameContract(NameContract),
+    NameContract(NameContract<T>),
     RentContract(RentContract),
 }
 
-impl Default for ContractData {
-    fn default() -> ContractData {
-        ContractData::NodeContract(NodeContract::default())
+impl<T: Config> Default for ContractData<T> {
+    fn default() -> ContractData<T> {
+        ContractData::RentContract(RentContract::default())
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
 pub struct ContractBillingInformation {
     pub previous_nu_reported: u64,
     pub last_updated: u64,
     pub amount_unbilled: u64,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo, MaxEncodedLen)]
 pub enum ContractState {
     Created,
     Deleted(Cause),
     GracePeriod(BlockNumber),
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo, MaxEncodedLen)]
 pub enum Cause {
     CanceledByUser,
     OutOfFunds,
@@ -105,7 +112,7 @@ impl Default for ContractState {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo, MaxEncodedLen)]
 pub enum DiscountLevel {
     None,
     Default,
@@ -132,7 +139,7 @@ impl DiscountLevel {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
 pub struct Consumption {
     pub contract_id: u64,
     pub timestamp: u64,
@@ -143,7 +150,7 @@ pub struct Consumption {
     pub nru: u64,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
 pub struct NruConsumption {
     pub contract_id: u64,
     pub timestamp: u64,
@@ -151,7 +158,7 @@ pub struct NruConsumption {
     pub nru: u64,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
 pub struct ContractBill {
     pub contract_id: u64,
     pub timestamp: u64,
@@ -159,13 +166,13 @@ pub struct ContractBill {
     pub amount_billed: u128,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
 pub struct ContractResources {
     pub contract_id: u64,
     pub used: Resources,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
 pub struct ContractLock<BalanceOf> {
     pub amount_locked: BalanceOf,
     pub lock_updated: u64,

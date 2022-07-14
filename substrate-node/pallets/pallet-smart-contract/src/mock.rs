@@ -127,6 +127,7 @@ parameter_types! {
     pub const BillingFrequency: u64 = 10;
     pub const GracePeriod: u64 = 100;
     pub const DistributionFrequency: u16 = 24;
+    pub const MaxNameContractNameLength: u32 = 64;
 }
 
 use weights;
@@ -139,6 +140,7 @@ impl pallet_smart_contract::Config for TestRuntime {
     type GracePeriod = GracePeriod;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
+    type MaxNameContractNameLength = MaxNameContractNameLength;
 }
 
 type AccountPublic = <MultiSignature as Verify>::Signer;
