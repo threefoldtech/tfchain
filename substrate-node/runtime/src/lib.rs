@@ -333,11 +333,18 @@ impl ChangeNode for NodeChanged {
     }
 }
 
+parameter_types! {
+    pub const MaxFarmNameLength: u32 = 40;
+}
+
 impl pallet_tfgrid::Config for Runtime {
     type Event = Event;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Runtime>;
     type NodeChanged = NodeChanged;
+    type TwinIp = pallet_tfgrid::twin::TwinIp<Runtime>;
+    type MaxFarmNameLength = MaxFarmNameLength;
+    type FarmName = pallet_tfgrid::farm::FarmName<Runtime>;
 }
 
 parameter_types! {
