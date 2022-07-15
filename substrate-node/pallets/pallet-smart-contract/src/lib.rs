@@ -65,7 +65,7 @@ pub mod pallet {
     pub struct Pallet<T>(_);
 
     // Version constant that referenced the struct version
-    pub const CONTRACT_VERSION: u32 = 3;
+    pub const CONTRACT_VERSION: u32 = 4;
 
     pub type MaxNodeContractPublicIPs = ConstU32<5>;
 
