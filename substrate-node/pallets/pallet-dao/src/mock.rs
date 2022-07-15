@@ -12,6 +12,7 @@ use sp_runtime::{
 };
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::{traits::ChangeNode, types::Node};
+use pallet_tfgrid::{{farm::FarmName}, {twin::TwinIp}};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -95,11 +96,21 @@ impl pallet_dao::Config for Test {
     type WeightInfo = weights::SubstrateWeight<Test>;
 }
 
+parameter_types! {
+    pub const MaxFarmNameLength: u32 = 40;
+}
+
+pub(crate) type TestTwinIp = TwinIp<Test>;
+pub(crate) type TestFarmName = FarmName<Test>;
+
 impl pallet_tfgrid::Config for Test {
     type Event = Event;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Test>;
     type NodeChanged = NodeChanged;
+    type TwinIp = TestTwinIp;
+    type FarmName = TestFarmName;
+    type MaxFarmNameLength = MaxFarmNameLength;
 }
 
 impl pallet_timestamp::Config for Test {
@@ -138,6 +149,10 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Test {
     type MembershipChanged = ();
     type MaxMembers = CouncilMaxMembers;
     type WeightInfo = pallet_membership::weights::SubstrateWeight<Test>;
+}
+
+pub(crate) fn get_twin_ip(twin_ip_input: &[u8]) -> TestTwinIp {
+    TwinIp::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
 }
 
 // Build genesis storage according to the mock runtime.
