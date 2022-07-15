@@ -31,7 +31,7 @@ impl<T: Config> TryFrom<Vec<u8>> for NameContractName<T> {
         );
         let bounded_vec: BoundedVec<u8, T::MaxNameContractNameLength> =
             BoundedVec::try_from(value).map_err(|_| Self::Error::NameContractNameToLong)?;
-        ensure!(is_valid_name_contract_name(&bounded_vec), Self::Error::InvalidNameContractName);
+        ensure!(is_valid_name_contract_name(&bounded_vec), Self::Error::NameNotValid);
         Ok(Self(bounded_vec, PhantomData))
     }
 }

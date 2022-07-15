@@ -255,7 +255,6 @@ pub mod pallet {
         NumOverflow,
         NameContractNameToShort,
         NameContractNameToLong,
-        InvalidNameContractName,
     }
 
     #[pallet::call]
@@ -832,14 +831,16 @@ impl<T: Config> Pallet<T> {
             // https://github.com/threefoldtech/tfchain/issues/264
             // if a contract is still in storage and actively getting billed whilst it is in state delete
             // remove all associated storage and continue
-            let contract = Contracts::<T>::get(contract_id).unwrap();
-            if contract.contract_id != 0 && contract.is_state_delete() {
-                Self::remove_contract(contract.contract_id);
-                continue;
+            let ctr = Contracts::<T>::get(contract_id);
+            if let Some(contract) = ctr {
+                if contract.contract_id != 0 && contract.is_state_delete() {
+                    Self::remove_contract(contract.contract_id);
+                    continue;
+                }
+    
+                // Reinsert into the next billing frequency
+                Self::_reinsert_contract_to_bill(contract.contract_id);
             }
-
-            // Reinsert into the next billing frequency
-            Self::_reinsert_contract_to_bill(contract.contract_id);
         }
         Ok(().into())
     }
