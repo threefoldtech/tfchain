@@ -8,7 +8,7 @@ use sp_std::convert::TryFrom;
 use crate::{Config, Error};
 
 /// A Name Contract Name.
-#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[derive(Encode, Decode, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct NameContractName<T: Config>(
@@ -43,16 +43,18 @@ fn is_valid_name_contract_name(input: &[u8]) -> bool {
 		.all(|c| matches!(c, b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_'))
 }
 
-// // FIXME: did not find a way to automatically implement this.
-// impl<T: Config> PartialEq for NameContractName<T> {
-//     fn eq(&self, other: &Self) -> bool {
-//         self.0 == other.0
-//     }
-// }
+// FIXME: did not find a way to automatically implement this.
+impl<T: Config> PartialEq for NameContractName<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
 
-// // FIXME: did not find a way to automatically implement this.
-// impl<T: Config> Clone for NameContractName<T> {
-//     fn clone(&self) -> Self {
-//         Self(self.0.clone(), self.1)
-//     }
-// }
+impl<T: Config> Eq for NameContractName<T> {}
+
+// FIXME: did not find a way to automatically implement this.
+impl<T: Config> Clone for NameContractName<T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone(), self.1)
+    }
+}
