@@ -1,6 +1,8 @@
 use super::*;
-use frame_support::weights::Weight;
+use frame_support::{BoundedVec, weights::Weight, traits::ConstU32};
 use sp_core::H256;
+use sp_std::convert::{TryInto, TryFrom};
+use tfchain_support::types::PublicIP;
 
 pub mod deprecated {
     use crate::Config;
@@ -10,7 +12,6 @@ pub mod deprecated {
     use scale_info::TypeInfo;
     use super::types;
     use sp_std::vec::Vec;
-    use tfchain_support::types::{PublicIP};
 
     #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
     pub struct ContractV3 {
@@ -58,6 +59,13 @@ pub mod deprecated {
         }
     }
 
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo,)]
+    pub struct PublicIP {
+        pub ip: Vec<u8>,
+        pub gateway: Vec<u8>,
+        pub contract_id: u64,
+    }
+
     decl_module! {
         pub struct Module<T: Config> for enum Call where origin: T::Origin { }
     }
@@ -80,21 +88,48 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
         Contracts::<T>::translate::<deprecated::ContractV3, _>(|k, ctr| {
             frame_support::log::info!("     Migrated contract for {:?}...", k);
 
+            let rc = types::RentContract {
+                node_id: 0
+            };
+
             let mut new_contract = types::Contract {
                 version: 4,
                 state: ctr.state,
                 contract_id: ctr.contract_id,
                 twin_id: ctr.twin_id,
-                contract_type: types::ContractData::default(),
+                contract_type: types::ContractData::RentContract(rc),
             };
 
             match ctr.contract_type {
                 deprecated::ContractData::NodeContract(node_contract) => {
+                    let mut public_ips_list: BoundedVec<PublicIP, pallet::MaxNodeContractPublicIPs> = vec![].try_into().unwrap();
+
+                    if node_contract.public_ips_list.len() > 0 {
+                        for pub_ip in node_contract.public_ips_list {
+
+                            // TODO: don't throw error here
+
+                            let ip_vec: BoundedVec<u8, ConstU32<18>> =
+                                pub_ip.ip.clone().try_into().unwrap();
+
+                            let gateway_vec: BoundedVec<u8, ConstU32<18>> =
+                                pub_ip.gateway.clone().try_into().unwrap();
+
+                            let new_ip = PublicIP {
+                                ip: ip_vec,
+                                gateway: gateway_vec,
+                                contract_id: 0,
+                            };
+
+                            let _ = public_ips_list.try_push(new_ip);
+                        }
+                    }
+
                     let mut new_node_contract = types::NodeContract {
                         node_id: node_contract.node_id,
                         deployment_hash: H256::zero(),
                         public_ips: node_contract.public_ips,
-                        public_ips_list: node_contract.public_ips_list,
+                        public_ips_list,
                     };
 
                     // If it's a valid 32 byte hash, transform it as a H256 and save it on the node contract
@@ -107,8 +142,9 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                         types::ContractData::NodeContract(new_node_contract);
                 }
                 deprecated::ContractData::NameContract(nc) => {
+                    let name = super::NameContractNameOf::<T>::try_from(nc.name).unwrap();
                     let name_c = types::NameContract {
-                        name: nc.name
+                        name
                     };
                     new_contract.contract_type = types::ContractData::NameContract(name_c);
                 },

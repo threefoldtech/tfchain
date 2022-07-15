@@ -353,6 +353,7 @@ parameter_types! {
     pub GracePeriod: u64 = (14 * DAYS).into();
     pub DistributionFrequency: u16 = 24;
     pub RetryInterval: u32 = 20;
+    pub MaxNameContractNameLength: u32 = 64;
 }
 
 pub fn get_staking_pool_account() -> AccountId {
@@ -372,6 +373,8 @@ impl pallet_smart_contract::Config for Runtime {
     type GracePeriod = GracePeriod;
     type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
     type NodeChanged = NodeChanged;
+    type MaxNameContractNameLength = MaxNameContractNameLength;
+    type NameContractName = pallet_smart_contract::name_contract::NameContractName<Runtime>;
 }
 // type Tfgrid = TfgridModule;
 

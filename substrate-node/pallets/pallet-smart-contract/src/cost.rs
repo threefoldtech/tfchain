@@ -14,12 +14,12 @@ use crate::pallet::Error;
 use substrate_fixed::types::U64F64;
 use sp_runtime::Percent;
 
-impl Contract {
-    pub fn get_billing_info<T: Config>(&self) -> ContractBillingInformation {
+impl<T: Config> Contract<T> {
+    pub fn get_billing_info(&self) -> ContractBillingInformation {
         pallet::ContractBillingInformationByID::<T>::get(self.contract_id)
     }
 
-    pub fn calculate_contract_cost_tft<T: Config>(
+    pub fn calculate_contract_cost_tft(
         &self,
         balance: BalanceOf<T>,
         seconds_elapsed: u64,
@@ -32,7 +32,7 @@ impl Contract {
         // - NodeContract
         // - RentContract
         // - NameContract
-        let total_cost = self.calculate_contract_cost::<T>(&pricing_policy, seconds_elapsed)?;
+        let total_cost = self.calculate_contract_cost(&pricing_policy, seconds_elapsed)?;
         // If cost is 0, reinsert to be billed at next interval
         if total_cost == 0 {
             return Ok((
@@ -50,7 +50,7 @@ impl Contract {
         return Ok((amount_due, discount_received));
     }
 
-    pub fn calculate_contract_cost<T: Config>(
+    pub fn calculate_contract_cost(
         &self,
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
         seconds_elapsed: u64,
@@ -59,7 +59,7 @@ impl Contract {
             // Calculate total cost for a node contract
             types::ContractData::NodeContract(node_contract) => {
                 // Get the contract billing info to view the amount unbilled for NRU (network resource units)
-                let contract_billing_info = self.get_billing_info::<T>();
+                let contract_billing_info = self.get_billing_info();
                 // Get the node
                 if !pallet_tfgrid::Nodes::<T>::contains_key(node_contract.node_id) {
                     return Err(DispatchErrorWithPostInfo::from(Error::<T>::NodeNotExists));

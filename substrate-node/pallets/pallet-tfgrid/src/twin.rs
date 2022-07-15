@@ -14,7 +14,7 @@ use crate::{Config, Error};
 #[scale_info(skip_type_params(T, MinLength, MaxLength))]
 #[codec(mel_bound())]
 pub struct TwinIp<T: Config>(
-    pub(crate) BoundedVec<u8, ConstU32<39>>,
+    pub BoundedVec<u8, ConstU32<39>>,
     PhantomData<(T, ConstU32<39>)>,
 );
 

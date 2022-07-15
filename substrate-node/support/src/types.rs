@@ -1,7 +1,8 @@
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, MaxEncodedLen};
 use core::cmp::{Ord, Ordering, PartialOrd};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
+use frame_support::{BoundedVec, traits::ConstU32};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct Farm {
@@ -16,10 +17,10 @@ pub struct Farm {
     pub farming_policy_limits: Option<FarmingPolicyLimit>,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
 pub struct PublicIP {
-    pub ip: Vec<u8>,
-    pub gateway: Vec<u8>,
+    pub ip: BoundedVec<u8, ConstU32<18>>,
+    pub gateway: BoundedVec<u8, ConstU32<18>>,
     pub contract_id: u64,
 }
 
@@ -99,7 +100,7 @@ pub struct PublicConfig {
     pub domain: Vec<u8>,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, Copy)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, Copy, MaxEncodedLen)]
 pub struct Resources {
     pub hru: u64,
     pub sru: u64,

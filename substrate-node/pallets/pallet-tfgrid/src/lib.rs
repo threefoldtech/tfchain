@@ -49,7 +49,7 @@ pub mod pallet {
             NodeCertification, PublicConfig, PublicIP, Resources,
         },
     };
-    use frame_support::traits::ConstU32;
+    use frame_support::{{traits::ConstU32}, BoundedVec};
 
     use codec::FullCodec;
 
@@ -314,6 +314,8 @@ pub mod pallet {
 
         FarmNameTooShort,
         FarmNameTooLong,
+
+        InvalidPublicIP,
     }
 
     #[pallet::genesis_config]
@@ -686,9 +688,15 @@ pub mod pallet {
                 Error::<T>::CannotUpdateFarmWrongTwin
             );
 
+            let ip_vec: BoundedVec<u8, ConstU32<18>> =
+				ip.clone().try_into().map_err(|_| Error::<T>::InvalidPublicIP)?;
+
+            let gateway_vec: BoundedVec<u8, ConstU32<18>> =
+				gateway.clone().try_into().map_err(|_| Error::<T>::InvalidPublicIP)?;
+
             let new_ip = PublicIP {
-                ip,
-                gateway,
+                ip: ip_vec,
+                gateway: gateway_vec,
                 contract_id: 0,
             };
 

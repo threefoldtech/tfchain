@@ -377,13 +377,13 @@ fn test_create_farm_with_double_ip_fails() {
         let farm_name = get_farm_name(b"test_farm");
         let mut pub_ips = Vec::new();
         pub_ips.push(PublicIP {
-            ip: "1.1.1.0".as_bytes().to_vec(),
-            gateway: "1.1.1.1".as_bytes().to_vec(),
+            ip: "1.1.1.0".as_bytes().to_vec().try_into().unwrap(),
+            gateway: "1.1.1.1".as_bytes().to_vec().try_into().unwrap(),
             contract_id: 0,
         });
         pub_ips.push(PublicIP {
-            ip: "1.1.1.0".as_bytes().to_vec(),
-            gateway: "1.1.1.1".as_bytes().to_vec(),
+            ip: "1.1.1.0".as_bytes().to_vec().try_into().unwrap(),
+            gateway: "1.1.1.1".as_bytes().to_vec().try_into().unwrap(),
             contract_id: 0,
         });
 
@@ -592,8 +592,8 @@ fn test_create_farm_with_same_name_fails() {
         let farm_name = get_farm_name(b"test_farm");
         let mut pub_ips = Vec::new();
         pub_ips.push(PublicIP {
-            ip: "1.1.1.0".as_bytes().to_vec(),
-            gateway: "1.1.1.1".as_bytes().to_vec(),
+            ip: "1.1.1.0".as_bytes().to_vec().try_into().unwrap(),
+            gateway: "1.1.1.1".as_bytes().to_vec().try_into().unwrap(),
             contract_id: 0,
         });
 
@@ -1429,8 +1429,8 @@ fn create_farm() {
 
     let mut pub_ips = Vec::new();
     pub_ips.push(PublicIP {
-        ip: "1.1.1.0".as_bytes().to_vec(),
-        gateway: "1.1.1.1".as_bytes().to_vec(),
+        ip: "1.1.1.0".as_bytes().to_vec().try_into().unwrap(),
+        gateway: "1.1.1.1".as_bytes().to_vec().try_into().unwrap(),
         contract_id: 0,
     });
     assert_ok!(TfgridModule::create_farm(
