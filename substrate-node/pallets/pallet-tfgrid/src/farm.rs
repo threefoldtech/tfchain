@@ -3,6 +3,7 @@ use sp_std::{marker::PhantomData, vec::Vec};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{ensure, sp_runtime::SaturatedConversion, BoundedVec, RuntimeDebug};
 use scale_info::TypeInfo;
+use tfchain_support::types::Farm;
 
 use crate::{Config, Error};
 
@@ -10,7 +11,7 @@ use crate::{Config, Error};
 ///
 /// It is bounded in size (inclusive range [MinLength, MaxLength]) and must be a valid ipv6
 #[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-#[scale_info(skip_type_params(T, MinLength, MaxLength))]
+#[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct FarmName<T: Config>(
     pub(crate) BoundedVec<u8, T::MaxFarmNameLength>,
@@ -37,6 +38,12 @@ impl<T: Config> TryFrom<Vec<u8>> for FarmName<T> {
             Self::Error::InvalidFarmName
         );
         Ok(Self(bounded_vec, PhantomData))
+    }
+}
+
+impl<T: Config> From<FarmName<T>> for Vec<u8> {
+    fn from(value: FarmName<T>) -> Self {
+        value.0.to_vec()
     }
 }
 

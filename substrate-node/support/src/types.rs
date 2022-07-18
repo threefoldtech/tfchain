@@ -2,29 +2,29 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use core::cmp::{Ord, Ordering, PartialOrd};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
-use frame_support::{BoundedVec, traits::ConstU32};
+use frame_support::{BoundedVec, traits::{ConstU32}};
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct Farm {
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
+pub struct Farm<Name, Ip, Gateway> {
     pub version: u32,
     pub id: u32,
-    pub name: Vec<u8>,
+    pub name: Name,
     pub twin_id: u32,
     pub pricing_policy_id: u32,
     pub certification: FarmCertification,
-    pub public_ips: Vec<PublicIP>,
+    pub public_ips: BoundedVec<PublicIP<Ip, Gateway>, ConstU32<256>>,
     pub dedicated_farm: bool,
     pub farming_policy_limits: Option<FarmingPolicyLimit>,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
-pub struct PublicIP {
-    pub ip: BoundedVec<u8, ConstU32<18>>,
-    pub gateway: BoundedVec<u8, ConstU32<18>>,
+pub struct PublicIP<Ip, Gateway> {
+    pub ip: Ip,
+    pub gateway: Gateway,
     pub contract_id: u64,
 }
 
-#[derive(PartialEq, PartialOrd, Eq, Clone, Encode, Decode, Debug, Copy, TypeInfo)]
+#[derive(PartialEq, PartialOrd, Eq, Clone, Encode, Decode, Debug, Copy, TypeInfo, MaxEncodedLen)]
 pub enum FarmCertification {
     NotCertified,
     Gold,
@@ -50,7 +50,7 @@ impl Ord for FarmCertification {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
 pub struct FarmingPolicyLimit {
     pub farming_policy_id: u32,
     pub cu: Option<u64>,

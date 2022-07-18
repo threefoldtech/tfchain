@@ -28,7 +28,9 @@ pub mod weights;
 pub mod types;
 
 pub mod farm;
+pub mod ipv4;
 pub mod ipv6;
+pub mod pub_ip;
 pub mod twin;
 
 // Definition of the pallet logic, to be aggregated at runtime definition
@@ -39,6 +41,7 @@ pub mod pallet {
     use super::weights::WeightInfo;
     use super::*;
     use frame_support::pallet_prelude::*;
+    use frame_support::{traits::ConstU32, BoundedVec};
     use frame_system::pallet_prelude::*;
     use pallet_timestamp as timestamp;
     use sp_std::{convert::TryInto, fmt::Debug, vec::Vec};
@@ -49,7 +52,6 @@ pub mod pallet {
             NodeCertification, PublicConfig, PublicIP, Resources,
         },
     };
-    use frame_support::{{traits::ConstU32}, BoundedVec};
 
     use codec::FullCodec;
 
@@ -69,9 +71,11 @@ pub mod pallet {
 
     pub type FarmNameInput<T> = BoundedVec<u8, <T as Config>::MaxFarmNameLength>;
     pub type FarmNameOf<T> = <T as Config>::FarmName;
+    pub type FarmInfoOf<T> =
+        Farm<<T as Config>::FarmName, <T as Config>::PublicIP, <T as Config>::GatewayIP>;
     #[pallet::storage]
     #[pallet::getter(fn farms)]
-    pub type Farms<T: Config> = StorageMap<_, Blake2_128Concat, u32, Farm, ValueQuery>;
+    pub type Farms<T: Config> = StorageMap<_, Blake2_128Concat, u32, FarmInfoOf<T>, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn farms_by_name_id)]
@@ -208,17 +212,39 @@ pub mod pallet {
             + Clone
             + TypeInfo
             + TryFrom<Vec<u8>, Error = Error<Self>>
+            + Into<Vec<u8>>
+            + MaxEncodedLen;
+
+        /// The type of a name.
+        type PublicIP: FullCodec
+            + Debug
+            + PartialEq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        /// The type of a name.
+        type GatewayIP: FullCodec
+            + Debug
+            + PartialEq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
         #[pallet::constant]
         type MaxFarmNameLength: Get<u32>;
+
+        // #[pallet::constant]
+        // type MaxFarmIPs: Get<u32>;
     }
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        FarmStored(Farm),
-        FarmUpdated(Farm),
+        FarmStored(FarmInfoOf<T>),
+        FarmUpdated(FarmInfoOf<T>),
         FarmDeleted(u32),
 
         NodeStored(Node),
@@ -316,6 +342,10 @@ pub mod pallet {
         FarmNameTooLong,
 
         InvalidPublicIP,
+        PublicIPToShort,
+        PublicIPToLong,
+        GatewayIPToShort,
+        GatewayIPToLong,
     }
 
     #[pallet::genesis_config]
@@ -502,23 +532,19 @@ pub mod pallet {
         pub fn create_farm(
             origin: OriginFor<T>,
             name: FarmNameInput<T>,
-            public_ips: Vec<PublicIP>,
+            public_ips: Vec<PublicIP<T::PublicIP, T::GatewayIP>>,
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
-            let _ = FarmNameOf::<T>::try_from(name.to_vec())
+            let farm_name = FarmNameOf::<T>::try_from(name.to_vec())
                 .map_err(DispatchErrorWithPostInfo::from)?;
 
             ensure!(
                 !FarmIdByName::<T>::contains_key(name.clone()),
                 Error::<T>::FarmExists
             );
-            ensure!(
-                TwinIdByAccountID::<T>::contains_key(&address),
-                Error::<T>::TwinNotExists
-            );
-            let twin_id = TwinIdByAccountID::<T>::get(&address).unwrap();
-            let twin = Twins::<T>::get(twin_id).unwrap();
+            let twin_id = TwinIdByAccountID::<T>::get(&address).ok_or(Error::<T>::TwinNotExists)?;
+            let twin = Twins::<T>::get(twin_id).ok_or(Error::<T>::TwinNotExists)?;
             ensure!(
                 twin.account_id == address,
                 Error::<T>::CannotCreateFarmWrongTwin
@@ -530,16 +556,24 @@ pub mod pallet {
             // reset all public ip contract id's
             // just a safeguard
             // filter out doubles
-            let mut pub_ips: Vec<PublicIP> = Vec::new();
+            let mut public_ips_list: BoundedVec<
+                PublicIP<T::PublicIP, T::GatewayIP>,
+                ConstU32<256>,
+            > = vec![].try_into().unwrap();
+
             for ip in public_ips {
-                match pub_ips.iter().position(|pub_ip| pub_ip.ip == ip.ip) {
+                match public_ips_list.iter().position(|pub_ip| pub_ip.ip == ip.ip) {
                     Some(_) => return Err(Error::<T>::IpExists.into()),
                     None => {
-                        pub_ips.push(PublicIP {
+                        public_ips_list.try_push(PublicIP {
                             ip: ip.ip,
                             gateway: ip.gateway,
                             contract_id: 0,
-                        });
+                        }).or_else(|_|
+                            return Err(DispatchErrorWithPostInfo::from(
+                                Error::<T>::InvalidPublicIP,
+                            ))
+                        )?;
                     }
                 };
             }
@@ -548,16 +582,16 @@ pub mod pallet {
                 version: TFGRID_FARM_VERSION,
                 id,
                 twin_id,
-                name: name.to_vec(),
+                name: farm_name,
                 pricing_policy_id: 1,
                 certification: FarmCertification::NotCertified,
-                public_ips: pub_ips,
+                public_ips: public_ips_list,
                 dedicated_farm: false,
                 farming_policy_limits: None,
             };
 
             Farms::<T>::insert(id, &new_farm);
-            FarmIdByName::<T>::insert(new_farm.name.clone(), id);
+            FarmIdByName::<T>::insert(name.to_vec().clone(), id);
             FarmID::<T>::put(id);
 
             Self::deposit_event(Event::FarmStored(new_farm));
@@ -574,20 +608,15 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
-            let _ = FarmNameOf::<T>::try_from(name.to_vec())
+            let new_farm_name = FarmNameOf::<T>::try_from(name.to_vec())
                 .map_err(DispatchErrorWithPostInfo::from)?;
 
-            ensure!(
-                TwinIdByAccountID::<T>::contains_key(&address),
-                Error::<T>::TwinNotExists
-            );
-            let twin_id = TwinIdByAccountID::<T>::get(&address).unwrap();
+            let twin_id = TwinIdByAccountID::<T>::get(&address).ok_or(Error::<T>::TwinNotExists)?;
 
-            ensure!(Farms::<T>::contains_key(id), Error::<T>::FarmNotExists);
-            let farm = Farms::<T>::get(id);
+            let mut stored_farm = Farms::<T>::get(id).ok_or(Error::<T>::FarmNotExists)?;
 
             ensure!(
-                farm.twin_id == twin_id,
+                stored_farm.twin_id == twin_id,
                 Error::<T>::CannotUpdateFarmWrongTwin
             );
 
@@ -599,11 +628,11 @@ pub mod pallet {
                 }
             }
 
-            let mut stored_farm = Farms::<T>::get(id);
+            let name: Vec<u8> = stored_farm.name.into();
             // Remove stored farm by name and insert new one
-            FarmIdByName::<T>::remove(stored_farm.name);
+            FarmIdByName::<T>::remove(name.clone());
 
-            stored_farm.name = name.to_vec().clone();
+            stored_farm.name = new_farm_name;
             stored_farm.pricing_policy_id = pricing_policy_id;
 
             Farms::<T>::insert(id, &stored_farm);
@@ -622,14 +651,9 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
-            ensure!(
-                TwinIdByAccountID::<T>::contains_key(&address),
-                Error::<T>::TwinNotExists
-            );
-            let twin_id = TwinIdByAccountID::<T>::get(&address).unwrap();
+            let twin_id = TwinIdByAccountID::<T>::get(&address).ok_or(Error::<T>::TwinNotExists)?;
 
-            ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
-            let farm = Farms::<T>::get(farm_id);
+            let farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
             ensure!(
                 farm.twin_id == twin_id,
@@ -654,8 +678,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
-            ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
-            let mut stored_farm = Farms::<T>::get(farm_id);
+            let mut stored_farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
             stored_farm.certification = certification;
 
@@ -675,28 +698,23 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
-            ensure!(Farms::<T>::contains_key(id), Error::<T>::FarmNotExists);
-            let mut stored_farm = Farms::<T>::get(id);
+            let mut stored_farm = Farms::<T>::get(id).ok_or(Error::<T>::FarmNotExists)?;
 
-            ensure!(
-                Twins::<T>::contains_key(stored_farm.twin_id),
-                Error::<T>::TwinNotExists
-            );
-            let twin = Twins::<T>::get(stored_farm.twin_id).unwrap();
+            let twin = Twins::<T>::get(stored_farm.twin_id).ok_or(Error::<T>::TwinNotExists)?;
             ensure!(
                 twin.account_id == address,
                 Error::<T>::CannotUpdateFarmWrongTwin
             );
 
-            let ip_vec: BoundedVec<u8, ConstU32<18>> =
-				ip.clone().try_into().map_err(|_| Error::<T>::InvalidPublicIP)?;
+            let parsed_ip =
+                <T as Config>::PublicIP::try_from(ip).map_err(DispatchErrorWithPostInfo::from)?;
 
-            let gateway_vec: BoundedVec<u8, ConstU32<18>> =
-				gateway.clone().try_into().map_err(|_| Error::<T>::InvalidPublicIP)?;
+            let parsed_gateway = <T as Config>::GatewayIP::try_from(gateway)
+                .map_err(DispatchErrorWithPostInfo::from)?;
 
             let new_ip = PublicIP {
-                ip: ip_vec,
-                gateway: gateway_vec,
+                ip: parsed_ip,
+                gateway: parsed_gateway,
                 contract_id: 0,
             };
 
@@ -707,7 +725,11 @@ pub mod pallet {
             {
                 Some(_) => return Err(Error::<T>::IpExists.into()),
                 None => {
-                    stored_farm.public_ips.push(new_ip);
+                    stored_farm.public_ips.try_push(new_ip).or_else(|_|
+                        return Err(DispatchErrorWithPostInfo::from(
+                            Error::<T>::InvalidPublicIP,
+                        ))
+                    )?;
                     Farms::<T>::insert(stored_farm.id, &stored_farm);
                     Self::deposit_event(Event::FarmUpdated(stored_farm));
                     return Ok(().into());
@@ -723,23 +745,21 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
-            ensure!(Farms::<T>::contains_key(id), Error::<T>::FarmNotExists);
-            let mut stored_farm = Farms::<T>::get(id);
+            let mut stored_farm = Farms::<T>::get(id).ok_or(Error::<T>::FarmNotExists)?;
 
-            ensure!(
-                Twins::<T>::contains_key(stored_farm.twin_id),
-                Error::<T>::TwinNotExists
-            );
-            let twin = Twins::<T>::get(stored_farm.twin_id).unwrap();
+            let twin = Twins::<T>::get(stored_farm.twin_id).ok_or(Error::<T>::TwinNotExists)?;
             ensure!(
                 twin.account_id == address,
                 Error::<T>::CannotUpdateFarmWrongTwin
             );
 
+            let parsed_ip =
+                <T as Config>::PublicIP::try_from(ip).map_err(DispatchErrorWithPostInfo::from)?;
+
             match stored_farm
                 .public_ips
                 .iter()
-                .position(|pubip| pubip.ip == ip && pubip.contract_id == 0)
+                .position(|pubip| pubip.ip == parsed_ip && pubip.contract_id == 0)
             {
                 Some(index) => {
                     stored_farm.public_ips.remove(index);
@@ -755,8 +775,7 @@ pub mod pallet {
         pub fn delete_farm(origin: OriginFor<T>, id: u32) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
-            ensure!(Farms::<T>::contains_key(id), Error::<T>::FarmNotExists);
-            let stored_farm = Farms::<T>::get(id);
+            let stored_farm = Farms::<T>::get(id).ok_or(Error::<T>::FarmNotExists)?;
             // make sure farm doesn't have public ips assigned
             ensure!(
                 stored_farm.public_ips.len() == 0,
@@ -769,11 +788,7 @@ pub mod pallet {
                 }
             }
 
-            ensure!(
-                Twins::<T>::contains_key(stored_farm.twin_id),
-                Error::<T>::TwinNotExists
-            );
-            let twin = Twins::<T>::get(stored_farm.twin_id).unwrap();
+            let twin = Twins::<T>::get(stored_farm.twin_id).ok_or(Error::<T>::TwinNotExists)?;
             ensure!(
                 twin.account_id == address,
                 Error::<T>::CannotDeleteFarmWrongTwin
@@ -782,8 +797,9 @@ pub mod pallet {
             // delete farm
             Farms::<T>::remove(id);
 
+            let name: Vec<u8> = stored_farm.name.try_into().unwrap();
             // Remove stored farm by name and insert new one
-            FarmIdByName::<T>::remove(stored_farm.name);
+            FarmIdByName::<T>::remove(name);
 
             Self::deposit_event(Event::FarmDeleted(id));
 
@@ -810,7 +826,7 @@ pub mod pallet {
                 TwinIdByAccountID::<T>::contains_key(&account_id),
                 Error::<T>::TwinNotExists
             );
-            let twin_id = TwinIdByAccountID::<T>::get(&account_id).unwrap();
+            let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
 
             ensure!(
                 !NodeIdByTwinID::<T>::contains_key(twin_id),
@@ -881,7 +897,7 @@ pub mod pallet {
                 Error::<T>::TwinNotExists
             );
 
-            let twin_id = TwinIdByAccountID::<T>::get(&account_id).unwrap();
+            let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
             let node = Nodes::<T>::get(&node_id);
             ensure!(node.twin_id == twin_id, Error::<T>::NodeUpdateNotAuthorized);
 
@@ -950,11 +966,7 @@ pub mod pallet {
         pub fn report_uptime(origin: OriginFor<T>, uptime: u64) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
-            ensure!(
-                TwinIdByAccountID::<T>::contains_key(&account_id),
-                Error::<T>::TwinNotExists
-            );
-            let twin_id = TwinIdByAccountID::<T>::get(account_id).unwrap();
+            let twin_id = TwinIdByAccountID::<T>::get(account_id).ok_or(Error::<T>::TwinNotExists)?;
 
             ensure!(
                 NodeIdByTwinID::<T>::contains_key(twin_id),
@@ -981,14 +993,13 @@ pub mod pallet {
             let account_id = ensure_signed(origin)?;
 
             // check if this twin can update the farm with id passed
-            ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
-            let farm = Farms::<T>::get(farm_id);
+            let farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
             ensure!(
                 Twins::<T>::contains_key(farm.twin_id),
                 Error::<T>::TwinNotExists
             );
-            let farm_twin = Twins::<T>::get(farm.twin_id).unwrap();
+            let farm_twin = Twins::<T>::get(farm.twin_id).ok_or(Error::<T>::TwinNotExists)?;
             ensure!(
                 farm_twin.account_id == account_id,
                 Error::<T>::CannotUpdateFarmWrongTwin
@@ -1015,7 +1026,7 @@ pub mod pallet {
             ensure!(Nodes::<T>::contains_key(id), Error::<T>::NodeNotExists);
 
             let stored_node = Nodes::<T>::get(id);
-            let twin_id = TwinIdByAccountID::<T>::get(&account_id).unwrap();
+            let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
             ensure!(
                 stored_node.twin_id == twin_id,
                 Error::<T>::NodeUpdateNotAuthorized
@@ -1105,17 +1116,13 @@ pub mod pallet {
                 Error::<T>::EntityWithNameExists
             );
 
-            ensure!(
-                EntityIdByAccountID::<T>::contains_key(&account_id),
-                Error::<T>::EntityNotExists
-            );
-            let stored_entity_id = EntityIdByAccountID::<T>::get(&account_id).unwrap();
+            let stored_entity_id = EntityIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::EntityNotExists)?;
 
             ensure!(
                 Entities::<T>::contains_key(&stored_entity_id),
                 Error::<T>::EntityNotExists
             );
-            let mut stored_entity = Entities::<T>::get(stored_entity_id).unwrap();
+            let mut stored_entity = Entities::<T>::get(stored_entity_id).ok_or(Error::<T>::EntityNotExists)?;
 
             ensure!(
                 stored_entity.account_id == account_id,
@@ -1145,17 +1152,9 @@ pub mod pallet {
         pub fn delete_entity(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
-            ensure!(
-                EntityIdByAccountID::<T>::contains_key(&account_id),
-                Error::<T>::EntityNotExists
-            );
-            let stored_entity_id = EntityIdByAccountID::<T>::get(&account_id).unwrap();
+            let stored_entity_id = EntityIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::EntityNotExists)?;
 
-            ensure!(
-                Entities::<T>::contains_key(&stored_entity_id),
-                Error::<T>::EntityNotExists
-            );
-            let stored_entity = Entities::<T>::get(stored_entity_id).unwrap();
+            let stored_entity = Entities::<T>::get(stored_entity_id).ok_or(Error::<T>::EntityNotExists)?;
 
             ensure!(
                 stored_entity.account_id == account_id,
@@ -1218,17 +1217,9 @@ pub mod pallet {
         pub fn update_twin(origin: OriginFor<T>, ip: TwinIpInput) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
-            ensure!(
-                TwinIdByAccountID::<T>::contains_key(account_id.clone()),
-                Error::<T>::TwinNotExists
-            );
-            let twin_id = TwinIdByAccountID::<T>::get(account_id.clone()).unwrap();
+            let twin_id = TwinIdByAccountID::<T>::get(account_id.clone()).ok_or(Error::<T>::TwinNotExists)?;
 
-            ensure!(
-                Twins::<T>::contains_key(&twin_id),
-                Error::<T>::TwinNotExists
-            );
-            let mut twin = Twins::<T>::get(&twin_id).unwrap();
+            let mut twin = Twins::<T>::get(&twin_id).ok_or(Error::<T>::TwinNotExists)?;
 
             // Make sure only the owner of this twin can update his twin
             ensure!(
@@ -1256,18 +1247,9 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
-            ensure!(
-                Twins::<T>::contains_key(&twin_id),
-                Error::<T>::TwinNotExists
-            );
+            let stored_entity = Entities::<T>::get(entity_id).ok_or(Error::<T>::EntityNotExists)?;
 
-            ensure!(
-                Entities::<T>::contains_key(&entity_id),
-                Error::<T>::EntityNotExists
-            );
-            let stored_entity = Entities::<T>::get(entity_id).unwrap();
-
-            let mut twin = Twins::<T>::get(&twin_id).unwrap();
+            let mut twin = Twins::<T>::get(&twin_id).ok_or(Error::<T>::TwinNotExists)?;
             // Make sure only the owner of this twin can call this method
             ensure!(
                 twin.account_id == account_id,
@@ -1319,12 +1301,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
-            ensure!(
-                Twins::<T>::contains_key(&twin_id),
-                Error::<T>::TwinNotExists
-            );
-
-            let mut twin = Twins::<T>::get(&twin_id).unwrap();
+            let mut twin = Twins::<T>::get(&twin_id).ok_or(Error::<T>::TwinNotExists)?;
             // Make sure only the owner of this twin can call this method
             ensure!(
                 twin.account_id == account_id,
@@ -1355,12 +1332,7 @@ pub mod pallet {
         pub fn delete_twin(origin: OriginFor<T>, twin_id: u32) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
-            ensure!(
-                Twins::<T>::contains_key(&twin_id),
-                Error::<T>::TwinNotExists
-            );
-
-            let twin = Twins::<T>::get(&twin_id).unwrap();
+            let twin = Twins::<T>::get(&twin_id).ok_or(Error::<T>::TwinNotExists)?;
             // Make sure only the owner of this twin can call this method
             ensure!(
                 twin.account_id == account_id,
@@ -1442,10 +1414,7 @@ pub mod pallet {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
             // Ensure pricing policy with same id already exists
-            ensure!(
-                PricingPolicies::<T>::contains_key(&id),
-                Error::<T>::PricingPolicyNotExists
-            );
+            let mut pricing_policy = PricingPolicies::<T>::get(id).ok_or(Error::<T>::PricingPolicyNotExists)?;
 
             // if name exists ensure that it belongs to the same policy id
             if PricingPolicyIdByName::<T>::contains_key(&name) {
@@ -1455,7 +1424,6 @@ pub mod pallet {
                     Error::<T>::PricingPolicyWithDifferentIdExists
                 );
             }
-            let mut pricing_policy = PricingPolicies::<T>::get(id).unwrap();
 
             if name != pricing_policy.name {
                 PricingPolicyIdByName::<T>::remove(&pricing_policy.name);
@@ -1557,25 +1525,22 @@ pub mod pallet {
             let account_id = ensure_signed(origin)?;
 
             ensure!(
-                TwinIdByAccountID::<T>::contains_key(&account_id),
-                Error::<T>::TwinNotExists
-            );
-            ensure!(
                 Nodes::<T>::contains_key(&node_id),
                 Error::<T>::NodeNotExists
             );
 
             // check if the farmer twin is authorized
-            let farm_twin_id = TwinIdByAccountID::<T>::get(&account_id).unwrap();
+            let farm_twin_id =
+                TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
             // check if the ndode belong to said farm
             let node = Nodes::<T>::get(&node_id);
-            let farm = Farms::<T>::get(node.farm_id);
+            let farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
             ensure!(
                 Twins::<T>::contains_key(&farm.twin_id),
                 Error::<T>::TwinNotExists
             );
-            let farm_twin = Twins::<T>::get(farm.twin_id).unwrap();
+            let farm_twin = Twins::<T>::get(farm.twin_id).ok_or(Error::<T>::TwinNotExists)?;
             ensure!(
                 farm_twin_id == farm_twin.id,
                 Error::<T>::FarmerNotAuthorized
@@ -1603,9 +1568,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
-            ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
-
-            let mut farm = Farms::<T>::get(farm_id);
+            let mut farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
             farm.dedicated_farm = dedicated;
             Farms::<T>::insert(farm_id, &farm);
 
@@ -1623,12 +1586,15 @@ pub mod pallet {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
             ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
-            let mut stored_farm = Farms::<T>::get(farm_id);
+            let mut stored_farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
+
+            let parsed_ip =
+                <T as Config>::PublicIP::try_from(ip).map_err(DispatchErrorWithPostInfo::from)?;
 
             match stored_farm
                 .public_ips
                 .iter_mut()
-                .find(|pubip| pubip.ip == ip)
+                .find(|pubip| pubip.ip == parsed_ip)
             {
                 Some(ip) => {
                     ip.contract_id = 0;
@@ -1755,9 +1721,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
-            ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
-
-            let mut farm = Farms::<T>::get(farm_id);
+            let mut farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
             farm.farming_policy_limits = limits.clone();
             Farms::<T>::insert(farm_id, farm);
 
@@ -1816,7 +1780,7 @@ impl<T: Config> Pallet<T> {
     fn get_farming_policy(
         node: &Node,
     ) -> Result<types::FarmingPolicy<T::BlockNumber>, DispatchErrorWithPostInfo> {
-        let mut farm = Farms::<T>::get(node.farm_id);
+        let mut farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
         // If there is a farming policy defined on the
         // farm policy limits, use that one
@@ -1933,16 +1897,25 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-impl<T: Config> tfchain_support::traits::Tfgrid<T::AccountId> for Pallet<T> {
-    fn get_farm(farm_id: u32) -> tfchain_support::types::Farm {
+impl<T: Config>
+    tfchain_support::traits::Tfgrid<T::AccountId, T::FarmName, T::PublicIP, T::GatewayIP>
+    for Pallet<T>
+{
+    fn get_farm(
+        farm_id: u32,
+    ) -> Option<tfchain_support::types::Farm<T::FarmName, T::PublicIP, T::GatewayIP>> {
         Farms::<T>::get(farm_id)
     }
 
     fn is_farm_owner(farm_id: u32, who: T::AccountId) -> bool {
         let farm = Farms::<T>::get(farm_id);
-        match Twins::<T>::get(farm.twin_id) {
-            Some(twin) => twin.account_id == who,
-            None => false,
+        if let Some(f) = farm {
+            match Twins::<T>::get(f.twin_id) {
+                Some(twin) => twin.account_id == who,
+                None => false,
+            }
+        } else {
+            false
         }
     }
 

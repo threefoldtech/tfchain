@@ -14,6 +14,7 @@ use sp_std::prelude::*;
 
 use crate::farm::FarmName;
 use crate::twin::TwinIp;
+use crate::pub_ip::{PublicIP, GatewayIP};
 use crate::weights;
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::MultiSignature;
@@ -88,6 +89,8 @@ parameter_types! {
 
 pub(crate) type TestTwinIp = TwinIp<TestRuntime>;
 pub(crate) type TestFarmName = FarmName<TestRuntime>;
+pub(crate) type TestPublicIP = PublicIP<TestRuntime>;
+pub(crate) type TestGatewayIP = GatewayIP<TestRuntime>;
 
 impl Config for TestRuntime {
     type Event = Event;
@@ -97,6 +100,8 @@ impl Config for TestRuntime {
     type TwinIp = TestTwinIp;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
+    type PublicIP = TestPublicIP;
+    type GatewayIP = TestGatewayIP;
 }
 
 parameter_types! {
@@ -156,6 +161,14 @@ pub(crate) fn get_twin_ip(twin_ip_input: &[u8]) -> TestTwinIp {
 
 pub(crate) fn get_farm_name(farm_name_input: &[u8]) -> TestFarmName {
     FarmName::try_from(farm_name_input.to_vec()).expect("Invalid farm input.")
+}
+
+pub (crate) fn get_public_ip(public_ip_input: &[u8]) -> TestPublicIP {
+    PublicIP::try_from(public_ip_input.to_vec()).expect("Invalid public ip input")
+}
+
+pub (crate) fn get_gateway_ip(gateway_ip_input: &[u8]) -> TestGatewayIP {
+    GatewayIP::try_from(gateway_ip_input.to_vec()).expect("Invalid gateway ip input")
 }
 
 // industry dismiss casual gym gap music pave gasp sick owner dumb cost

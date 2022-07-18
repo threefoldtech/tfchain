@@ -11,7 +11,7 @@ use crate::{Config, Error};
 ///
 /// It is bounded in size (inclusive range [MinLength, MaxLength]) and must be a valid ipv6
 #[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-#[scale_info(skip_type_params(T, MinLength, MaxLength))]
+#[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct TwinIp<T: Config>(
     pub BoundedVec<u8, ConstU32<39>>,
