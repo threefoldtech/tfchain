@@ -28,7 +28,6 @@ pub mod weights;
 pub mod types;
 
 pub mod farm;
-pub mod ipv4;
 pub mod ipv6;
 pub mod pub_ip;
 pub mod twin;
