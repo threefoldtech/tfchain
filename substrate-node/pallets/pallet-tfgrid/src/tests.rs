@@ -724,7 +724,7 @@ fn set_certification_type_node_works() {
             1,
             NodeCertification::Certified
         ));
-        let node = TfgridModule::nodes(1);
+        let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(node.certification, NodeCertification::Certified);
 
         assert_ok!(TfgridModule::set_node_certification(
@@ -732,7 +732,7 @@ fn set_certification_type_node_works() {
             1,
             NodeCertification::Diy
         ));
-        let node = TfgridModule::nodes(1);
+        let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(node.certification, NodeCertification::Diy);
     });
 }
@@ -759,11 +759,11 @@ fn node_add_public_config_works() {
         create_node();
 
         let pub_config = PublicConfig {
-            ipv4: "some_ip".as_bytes().to_vec(),
-            ipv6: "some_ip".as_bytes().to_vec(),
-            gw4: "some_ip".as_bytes().to_vec(),
-            gw6: "some_ip".as_bytes().to_vec(),
-            domain: "some_domain".as_bytes().to_vec(),
+            ipv4: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
+            gw4: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+            ipv6: "::1".as_bytes().to_vec().try_into().unwrap(),
+            gw6: "::1".as_bytes().to_vec().try_into().unwrap(),
+            domain: "some_domain".as_bytes().to_vec().try_into().unwrap(),
         };
 
         assert_ok!(TfgridModule::add_node_public_config(
@@ -773,7 +773,7 @@ fn node_add_public_config_works() {
             pub_config.clone()
         ));
 
-        let node = TfgridModule::nodes(1);
+        let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(node.public_config, Some(pub_config));
     });
 }
@@ -787,11 +787,11 @@ fn node_add_public_config_fails_if_signature_incorrect() {
         create_node();
 
         let pub_config = PublicConfig {
-            ipv4: "some_ip".as_bytes().to_vec(),
-            ipv6: "some_ip".as_bytes().to_vec(),
-            gw4: "some_ip".as_bytes().to_vec(),
-            gw6: "some_ip".as_bytes().to_vec(),
-            domain: "some_domain".as_bytes().to_vec(),
+            ipv4: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
+            gw4: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+            ipv6: "::1".as_bytes().to_vec().try_into().unwrap(),
+            gw6: "::1".as_bytes().to_vec().try_into().unwrap(),
+            domain: "some_domain".as_bytes().to_vec().try_into().unwrap(),
         };
 
         assert_noop!(
@@ -956,7 +956,7 @@ fn boot_node_when_farming_policy_has_limits_works() {
         let f1 = TfgridModule::farms(1).unwrap();
         assert_ne!(f1.farming_policy_limits, Some(limit.clone()));
 
-        let n1 = TfgridModule::nodes(1);
+        let n1 = TfgridModule::nodes(1).unwrap();
         assert_eq!(n1.farming_policy_id, limit.farming_policy_id);
     });
 }
@@ -987,7 +987,7 @@ fn boot_node_when_farming_policy_low_cu_limit_should_fall_back_to_a_default_poli
 
         create_node();
 
-        let n1 = TfgridModule::nodes(1);
+        let n1 = TfgridModule::nodes(1).unwrap();
         let default_p = TfgridModule::farming_policies_map(n1.farming_policy_id);
         assert_eq!(default_p.default, true);
     });
@@ -1001,7 +1001,7 @@ fn node_switches_farming_policy_when_marked_as_certified_works() {
 
         create_node();
 
-        let n1 = TfgridModule::nodes(1);
+        let n1 = TfgridModule::nodes(1).unwrap();
         let assigned_policy = TfgridModule::farming_policies_map(n1.farming_policy_id);
         assert_eq!(assigned_policy.node_certification, NodeCertification::Diy);
 
@@ -1015,7 +1015,7 @@ fn node_switches_farming_policy_when_marked_as_certified_works() {
             NodeCertification::Certified,
         ));
 
-        let n1 = TfgridModule::nodes(1);
+        let n1 = TfgridModule::nodes(1).unwrap();
         let assigned_policy = TfgridModule::farming_policies_map(n1.farming_policy_id);
         assert_eq!(
             assigned_policy.node_certification,
@@ -1032,7 +1032,7 @@ fn node_switches_farming_policy_when_marked_as_certified_toggle_works() {
 
         create_node();
 
-        let n1 = TfgridModule::nodes(1);
+        let n1 = TfgridModule::nodes(1).unwrap();
         let assigned_policy = TfgridModule::farming_policies_map(n1.farming_policy_id);
         assert_eq!(assigned_policy.node_certification, NodeCertification::Diy);
 
@@ -1046,7 +1046,7 @@ fn node_switches_farming_policy_when_marked_as_certified_toggle_works() {
             NodeCertification::Certified,
         ));
 
-        let n1 = TfgridModule::nodes(1);
+        let n1 = TfgridModule::nodes(1).unwrap();
         let assigned_policy = TfgridModule::farming_policies_map(n1.farming_policy_id);
         assert_eq!(
             assigned_policy.node_certification,
@@ -1058,7 +1058,7 @@ fn node_switches_farming_policy_when_marked_as_certified_toggle_works() {
             1,
             NodeCertification::Diy,
         ));
-        let n1 = TfgridModule::nodes(1);
+        let n1 = TfgridModule::nodes(1).unwrap();
         let assigned_policy = TfgridModule::farming_policies_map(n1.farming_policy_id);
         assert_eq!(assigned_policy.node_certification, NodeCertification::Diy);
     });
@@ -1072,7 +1072,7 @@ fn node_switches_farming_policy_when_marked_as_certified_and_gold_farm_works() {
 
         create_node();
 
-        let n1 = TfgridModule::nodes(1);
+        let n1 = TfgridModule::nodes(1).unwrap();
         let assigned_policy = TfgridModule::farming_policies_map(n1.farming_policy_id);
         assert_eq!(assigned_policy.node_certification, NodeCertification::Diy);
         assert_eq!(
@@ -1097,7 +1097,7 @@ fn node_switches_farming_policy_when_marked_as_certified_and_gold_farm_works() {
             NodeCertification::Certified,
         ));
 
-        let n1 = TfgridModule::nodes(1);
+        let n1 = TfgridModule::nodes(1).unwrap();
         let assigned_policy = TfgridModule::farming_policies_map(n1.farming_policy_id);
         assert_eq!(
             assigned_policy.node_certification,
@@ -1208,7 +1208,7 @@ fn sort_policies() {
 
         // create_node();
 
-        // let node = TfgridModule::nodes(1);
+        // let node = TfgridModule::nodes(1).unwrap();
         // // farming policy set on the node should be 3
         // // as we created the last DIY policy with id 3
         // assert_eq!(node.farming_policy_id, 3);

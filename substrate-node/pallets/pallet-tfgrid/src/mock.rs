@@ -15,6 +15,7 @@ use sp_std::prelude::*;
 use crate::farm::FarmName;
 use crate::twin::TwinIp;
 use crate::pub_ip::{PublicIP, GatewayIP};
+use crate::pub_config::{IP4, GW4, IP6, GW6, Domain};
 use crate::weights;
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::MultiSignature;
@@ -76,11 +77,12 @@ impl frame_system::Config for TestRuntime {
     type MaxConsumers = ConstU32<16>;
 }
 
+pub(crate) type PubConfig = crate::PubConfigOf<TestRuntime>;
 pub struct NodeChanged;
-impl tfchain_support::traits::ChangeNode for NodeChanged {
-    fn node_changed(_old_node: Option<&Node>, _new_node: &Node) {}
+impl tfchain_support::traits::ChangeNode<PubConfig> for NodeChanged {
+    fn node_changed(_old_node: Option<&Node<PubConfig>>, _new_node: &Node<PubConfig>) {}
 
-    fn node_deleted(_node: &tfchain_support::types::Node) {}
+    fn node_deleted(_node: &tfchain_support::types::Node<PubConfig>) {}
 }
 
 parameter_types! {
@@ -92,6 +94,12 @@ pub(crate) type TestFarmName = FarmName<TestRuntime>;
 pub(crate) type TestPublicIP = PublicIP<TestRuntime>;
 pub(crate) type TestGatewayIP = GatewayIP<TestRuntime>;
 
+pub(crate) type TestIP4 = IP4<TestRuntime>;
+pub(crate) type TestGW4 = GW4<TestRuntime>;
+pub(crate) type TestIP6 = IP6<TestRuntime>;
+pub(crate) type TestGW6 = GW6<TestRuntime>;
+pub(crate) type TestDomain = Domain<TestRuntime>;
+
 impl Config for TestRuntime {
     type Event = Event;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
@@ -102,6 +110,11 @@ impl Config for TestRuntime {
     type MaxFarmNameLength = MaxFarmNameLength;
     type PublicIP = TestPublicIP;
     type GatewayIP = TestGatewayIP;
+    type IP4 = TestIP4;
+    type GW4 = TestGW4;
+    type IP6 = TestIP6;
+    type GW6 = TestGW6;
+    type Domain = TestDomain;
 }
 
 parameter_types! {

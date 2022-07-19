@@ -31,6 +31,7 @@ pub mod farm;
 pub mod ipv6;
 pub mod pub_ip;
 pub mod twin;
+pub mod pub_config;
 
 // Definition of the pallet logic, to be aggregated at runtime definition
 // through `construct_runtime`.
@@ -86,9 +87,17 @@ pub mod pallet {
     pub type FarmPayoutV2AddressByFarmID<T: Config> =
         StorageMap<_, Blake2_128Concat, u32, Vec<u8>, ValueQuery>;
 
+    pub type PubConfigOf<T> = PublicConfig<
+        <T as Config>::IP4,
+        <T as Config>::GW4,
+        <T as Config>::IP6,
+        <T as Config>::GW6,
+        <T as Config>::Domain
+    >;
+
     #[pallet::storage]
     #[pallet::getter(fn nodes)]
-    pub type Nodes<T> = StorageMap<_, Blake2_128Concat, u32, Node, ValueQuery>;
+    pub type Nodes<T> = StorageMap<_, Blake2_128Concat, u32, Node<PubConfigOf<T>>, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn node_by_twin_id)]
@@ -194,7 +203,7 @@ pub mod pallet {
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
 
-        type NodeChanged: ChangeNode;
+        type NodeChanged: ChangeNode<super::PubConfigOf<Self>>;
 
         /// The type of a name.
         type TwinIp: FullCodec
@@ -235,6 +244,56 @@ pub mod pallet {
             + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
+        /// The type of a name.
+        type IP4: FullCodec
+            + Debug
+            + PartialEq
+            + Eq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        /// The type of a name.
+        type GW4: FullCodec
+            + Debug
+            + PartialEq
+            + Eq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        /// The type of a name.
+        type IP6: FullCodec
+            + Debug
+            + PartialEq
+            + Eq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        /// The type of a name.
+        type GW6: FullCodec
+            + Debug
+            + PartialEq
+            + Eq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        /// The type of a name.
+        type Domain: FullCodec
+            + Debug
+            + PartialEq
+            + Eq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
         #[pallet::constant]
         type MaxFarmNameLength: Get<u32>;
 
@@ -249,11 +308,11 @@ pub mod pallet {
         FarmUpdated(FarmInfoOf<T>),
         FarmDeleted(u32),
 
-        NodeStored(Node),
-        NodeUpdated(Node),
+        NodeStored(Node<pallet::PubConfigOf<T>>),
+        NodeUpdated(Node<pallet::PubConfigOf<T>>),
         NodeDeleted(u32),
         NodeUptimeReported(u32, u64, u64),
-        NodePublicConfigStored(u32, PublicConfig),
+        NodePublicConfigStored(u32, pallet::PubConfigOf<T>),
 
         EntityStored(types::Entity<T::AccountId>),
         EntityUpdated(types::Entity<T::AccountId>),
@@ -348,6 +407,22 @@ pub mod pallet {
         PublicIPToLong,
         GatewayIPToShort,
         GatewayIPToLong,
+
+        IP4ToShort,
+        IP4ToLong,
+        InvalidIP4,
+        GW4ToShort,
+        GW4ToLong,
+        InvalidGW4,
+        IP6ToShort,
+        IP6ToLong,
+        InvalidIP6,
+        GW6ToShort,
+        GW6ToLong,
+        InvalidGW6,
+        DomainToShort,
+        DomainToLong,
+        InvalidDomain,
     }
 
     #[pallet::genesis_config]
@@ -890,23 +965,18 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
-            ensure!(
-                Nodes::<T>::contains_key(&node_id),
-                Error::<T>::NodeNotExists
-            );
+            let mut stored_node = Nodes::<T>::get(&node_id).ok_or(Error::<T>::NodeNotExists)?;
             ensure!(
                 TwinIdByAccountID::<T>::contains_key(&account_id),
                 Error::<T>::TwinNotExists
             );
 
             let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
-            let node = Nodes::<T>::get(&node_id);
-            ensure!(node.twin_id == twin_id, Error::<T>::NodeUpdateNotAuthorized);
+            ensure!(stored_node.twin_id == twin_id, Error::<T>::NodeUpdateNotAuthorized);
 
             ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
 
-            let old_node = Nodes::<T>::get(node_id);
-            let mut stored_node = Nodes::<T>::get(node_id);
+            let old_node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
 
             stored_node.farm_id = farm_id;
             stored_node.resources = resources;
@@ -946,7 +1016,7 @@ pub mod pallet {
                     Nodes::<T>::contains_key(&node_id),
                     Error::<T>::NodeNotExists
                 );
-                let mut stored_node = Nodes::<T>::get(node_id);
+                let mut stored_node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
 
                 stored_node.certification = node_certification;
 
@@ -990,7 +1060,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             farm_id: u32,
             node_id: u32,
-            public_config: PublicConfig,
+            public_config: pallet::PubConfigOf<T>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1008,8 +1078,7 @@ pub mod pallet {
             );
 
             // check if the node belong to the farm
-            ensure!(Nodes::<T>::contains_key(node_id), Error::<T>::NodeNotExists);
-            let mut node = Nodes::<T>::get(node_id);
+            let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
             ensure!(node.farm_id == farm_id, Error::<T>::NodeUpdateNotAuthorized);
 
             // update the public config and save
@@ -1025,9 +1094,7 @@ pub mod pallet {
         pub fn delete_node(origin: OriginFor<T>, id: u32) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
-            ensure!(Nodes::<T>::contains_key(id), Error::<T>::NodeNotExists);
-
-            let stored_node = Nodes::<T>::get(id);
+            let stored_node = Nodes::<T>::get(id).ok_or(Error::<T>::NodeNotExists)?;
             let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
             ensure!(
                 stored_node.twin_id == twin_id,
@@ -1526,16 +1593,11 @@ pub mod pallet {
         pub fn delete_node_farm(origin: OriginFor<T>, node_id: u32) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
-            ensure!(
-                Nodes::<T>::contains_key(&node_id),
-                Error::<T>::NodeNotExists
-            );
-
             // check if the farmer twin is authorized
             let farm_twin_id =
                 TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
             // check if the ndode belong to said farm
-            let node = Nodes::<T>::get(&node_id);
+            let node = Nodes::<T>::get(&node_id).ok_or(Error::<T>::NodeNotExists)?;
             let farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
             ensure!(
@@ -1780,7 +1842,7 @@ impl<T: Config> Pallet<T> {
     }
 
     fn get_farming_policy(
-        node: &Node,
+        node: &Node<pallet::PubConfigOf<T>>,
     ) -> Result<types::FarmingPolicy<T::BlockNumber>, DispatchErrorWithPostInfo> {
         let mut farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
