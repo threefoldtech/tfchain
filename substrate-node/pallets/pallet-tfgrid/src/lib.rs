@@ -218,6 +218,7 @@ pub mod pallet {
         type PublicIP: FullCodec
             + Debug
             + PartialEq
+            + Eq
             + Clone
             + TypeInfo
             + TryFrom<Vec<u8>, Error = Error<Self>>
@@ -227,6 +228,7 @@ pub mod pallet {
         type GatewayIP: FullCodec
             + Debug
             + PartialEq
+            + Eq
             + Clone
             + TypeInfo
             + TryFrom<Vec<u8>, Error = Error<Self>>

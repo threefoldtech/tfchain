@@ -12,7 +12,7 @@ use sp_runtime::{
 };
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::{traits::ChangeNode, types::Node};
-use pallet_tfgrid::{{farm::FarmName}, {twin::TwinIp}};
+use pallet_tfgrid::{{farm::FarmName}, {twin::TwinIp}, pub_ip::{GatewayIP, PublicIP}};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -102,6 +102,8 @@ parameter_types! {
 
 pub(crate) type TestTwinIp = TwinIp<Test>;
 pub(crate) type TestFarmName = FarmName<Test>;
+pub(crate) type TestPublicIP = PublicIP<Test>;
+pub(crate) type TestGatewayIP = GatewayIP<Test>;
 
 impl pallet_tfgrid::Config for Test {
     type Event = Event;
@@ -111,6 +113,8 @@ impl pallet_tfgrid::Config for Test {
     type TwinIp = TestTwinIp;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
+    type PublicIP = TestPublicIP;
+    type GatewayIP = TestGatewayIP;
 }
 
 impl pallet_timestamp::Config for Test {

@@ -1,16 +1,17 @@
 use super::*;
-use frame_support::{BoundedVec, weights::Weight, traits::ConstU32};
+use frame_support::{weights::Weight, BoundedVec};
+use pallet_tfgrid;
 use sp_core::H256;
-use sp_std::convert::{TryInto, TryFrom};
+use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::types::PublicIP;
 
 pub mod deprecated {
+    use super::types;
     use crate::Config;
     use codec::{Decode, Encode};
     use frame_support::decl_module;
-    use sp_std::prelude::*;
     use scale_info::TypeInfo;
-    use super::types;
+    use sp_std::prelude::*;
     use sp_std::vec::Vec;
 
     #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
@@ -59,7 +60,7 @@ pub mod deprecated {
         }
     }
 
-    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo,)]
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
     pub struct PublicIP {
         pub ip: Vec<u8>,
         pub gateway: Vec<u8>,
@@ -88,9 +89,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
         Contracts::<T>::translate::<deprecated::ContractV3, _>(|k, ctr| {
             frame_support::log::info!("     Migrated contract for {:?}...", k);
 
-            let rc = types::RentContract {
-                node_id: 0
-            };
+            let rc = types::RentContract { node_id: 0 };
 
             let mut new_contract = types::Contract {
                 version: 4,
@@ -102,22 +101,38 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
 
             match ctr.contract_type {
                 deprecated::ContractData::NodeContract(node_contract) => {
-                    let mut public_ips_list: BoundedVec<PublicIP, pallet::MaxNodeContractPublicIPs> = vec![].try_into().unwrap();
+                    let mut public_ips_list: BoundedVec<
+                        PublicIP<
+                            <T as pallet_tfgrid::Config>::PublicIP,
+                            <T as pallet_tfgrid::Config>::GatewayIP,
+                        >,
+                        pallet::MaxNodeContractPublicIPs,
+                    > = vec![].try_into().unwrap();
 
                     if node_contract.public_ips_list.len() > 0 {
                         for pub_ip in node_contract.public_ips_list {
-
                             // TODO: don't throw error here
 
-                            let ip_vec: BoundedVec<u8, ConstU32<18>> =
-                                pub_ip.ip.clone().try_into().unwrap();
-
-                            let gateway_vec: BoundedVec<u8, ConstU32<18>> =
-                                pub_ip.gateway.clone().try_into().unwrap();
+                            let parsed_ip_result = <T as pallet_tfgrid::Config>::PublicIP::try_from(pub_ip.ip.clone());
+                            match parsed_ip_result {
+                                Ok(_) => (),
+                                Err(_) => {
+                                    frame_support::log::info!("contract({:?}) ip {:?} cannot be parsed", ctr.contract_id, pub_ip.ip.clone());
+                                    continue
+                                }
+                            };
+                            let parsed_gateway_result = <T as pallet_tfgrid::Config>::GatewayIP::try_from(pub_ip.ip.clone());
+                            match parsed_gateway_result {
+                                Ok(_) => (),
+                                Err(_) => {
+                                    frame_support::log::info!("contract({:?}) gateway ip {:?} cannot be parsed", ctr.contract_id, pub_ip.ip.clone());
+                                    continue
+                                }
+                            };
 
                             let new_ip = PublicIP {
-                                ip: ip_vec,
-                                gateway: gateway_vec,
+                                ip: parsed_ip_result.unwrap(),
+                                gateway: parsed_gateway_result.unwrap(),
                                 contract_id: 0,
                             };
 
@@ -143,14 +158,12 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                 }
                 deprecated::ContractData::NameContract(nc) => {
                     let name = super::NameContractNameOf::<T>::try_from(nc.name).unwrap();
-                    let name_c = types::NameContract {
-                        name
-                    };
+                    let name_c = types::NameContract { name };
                     new_contract.contract_type = types::ContractData::NameContract(name_c);
-                },
+                }
                 deprecated::ContractData::RentContract(rc) => {
                     let rent_c = types::RentContract {
-                        node_id: rc.node_id
+                        node_id: rc.node_id,
                     };
                     new_contract.contract_type = types::ContractData::RentContract(rent_c);
                 }

@@ -345,6 +345,8 @@ impl pallet_tfgrid::Config for Runtime {
     type TwinIp = pallet_tfgrid::twin::TwinIp<Runtime>;
     type MaxFarmNameLength = MaxFarmNameLength;
     type FarmName = pallet_tfgrid::farm::FarmName<Runtime>;
+    type PublicIP = pallet_tfgrid::pub_ip::PublicIP<Runtime>;
+    type GatewayIP = pallet_tfgrid::pub_ip::GatewayIP<Runtime>;
 }
 
 parameter_types! {

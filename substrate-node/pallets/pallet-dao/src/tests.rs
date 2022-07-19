@@ -244,7 +244,7 @@ fn motion_approval_works() {
         assert_ok!(DaoModule::vote(Origin::signed(11), 2, hash.clone(), true));
 
         // // Check farm certification type before we close
-        let farm_1 = TfgridModule::farms(1);
+        let farm_1 = TfgridModule::farms(1).unwrap();
         assert_eq!(farm_1.certification, FarmCertification::NotCertified);
 
         System::set_block_number(5);
@@ -314,7 +314,7 @@ fn motion_approval_works() {
         );
 
         // // FarmCertification type of farm should be set to certified.
-        let farm_1 = TfgridModule::farms(1);
+        let farm_1 = TfgridModule::farms(1).unwrap();
         assert_eq!(farm_1.certification, FarmCertification::Gold);
     });
 }
@@ -455,7 +455,7 @@ fn weighted_voting_works() {
         assert_ok!(DaoModule::vote(Origin::signed(11), 2, hash.clone(), false));
 
         // // Check farm certification type before we close
-        let farm_1 = TfgridModule::farms(1);
+        let farm_1 = TfgridModule::farms(1).unwrap();
         assert_eq!(farm_1.certification, FarmCertification::NotCertified);
 
         System::set_block_number(5);
@@ -518,7 +518,7 @@ fn weighted_voting_works() {
         );
 
         // FarmCertification type of farm should still be the same.
-        let farm_1 = TfgridModule::farms(1);
+        let farm_1 = TfgridModule::farms(1).unwrap();
         assert_eq!(farm_1.certification, FarmCertification::NotCertified);
     });
 }
@@ -804,8 +804,8 @@ fn prepare_big_node(account_id: u64, farm_id: u32) {
 pub fn prepare_farm(account_id: u64, farm_name: Vec<u8>) {
     let mut pub_ips = Vec::new();
     pub_ips.push(PublicIP {
-        ip: "1.1.1.0".as_bytes().to_vec().try_into().unwrap(),
-        gateway: "1.1.1.1".as_bytes().to_vec().try_into().unwrap(),
+        ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
+        gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
         contract_id: 0,
     });
 

@@ -3900,6 +3900,7 @@ dependencies = [
  "sp-std",
  "sp-storage",
  "tfchain-support",
+ "valip",
 ]
 
 [[package]]
@@ -7818,6 +7819,12 @@ dependencies = [
  "matches",
  "percent-encoding",
 ]
+
+[[package]]
+name = "valip"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "009724c7f55981322ac193a19e008a4c4b4b1e6777563ede0b42e027772fb1b5"
 
 [[package]]
 name = "valuable"

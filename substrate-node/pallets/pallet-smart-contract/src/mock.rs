@@ -14,7 +14,7 @@ use sp_runtime::{
 };
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::{traits::ChangeNode, types::Node};
-use pallet_tfgrid::{{farm::FarmName}, {twin::TwinIp}};
+use pallet_tfgrid::{{farm::FarmName}, {twin::TwinIp}, pub_ip::{GatewayIP, PublicIP}};
 use crate::name_contract::NameContractName;
 
 pub type Signature = MultiSignature;
@@ -110,6 +110,8 @@ parameter_types! {
 
 pub(crate) type TestTwinIp = TwinIp<TestRuntime>;
 pub(crate) type TestFarmName = FarmName<TestRuntime>;
+pub(crate) type TestPublicIP = PublicIP<TestRuntime>;
+pub(crate) type TestGatewayIP = GatewayIP<TestRuntime>;
 
 impl pallet_tfgrid::Config for TestRuntime {
     type Event = Event;
@@ -119,6 +121,8 @@ impl pallet_tfgrid::Config for TestRuntime {
     type TwinIp = TestTwinIp;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
+    type PublicIP = TestPublicIP;
+    type GatewayIP = TestGatewayIP;
 }
 
 impl pallet_tft_price::Config for TestRuntime {
