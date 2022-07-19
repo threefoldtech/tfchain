@@ -46,6 +46,7 @@ pub mod pallet {
     use sp_std::convert::TryInto;
     use pallet_tfgrid::farm::FarmName;
     use pallet_tfgrid::pub_ip::{GatewayIP, PublicIP};
+    use tfchain_support::types::PublicIP as SupportPublicIP;
 
     #[pallet::config]
     pub trait Config:
@@ -69,7 +70,7 @@ pub mod pallet {
         /// The minimum amount of vetos to dissaprove a proposal
         type MinVetos: Get<u32>;
 
-        type Tfgrid: Tfgrid<Self::AccountId, FarmName<Self>, PublicIP<Self>, GatewayIP<Self>>;
+        type Tfgrid: Tfgrid<Self::AccountId, FarmName<Self>, SupportPublicIP<PublicIP<Self>, GatewayIP<Self>>>;
         type NodeChanged: ChangeNode;
 
         /// Weight information for extrinsics in this pallet.

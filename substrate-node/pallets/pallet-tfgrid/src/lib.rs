@@ -70,8 +70,9 @@ pub mod pallet {
 
     pub type FarmNameInput<T> = BoundedVec<u8, <T as Config>::MaxFarmNameLength>;
     pub type FarmNameOf<T> = <T as Config>::FarmName;
+    pub type PublicIpOf<T> = PublicIP<<T as Config>::PublicIP, <T as Config>::GatewayIP>;
     pub type FarmInfoOf<T> =
-        Farm<<T as Config>::FarmName, <T as Config>::PublicIP, <T as Config>::GatewayIP>;
+        Farm<<T as Config>::FarmName, PublicIpOf<T>>;
     #[pallet::storage]
     #[pallet::getter(fn farms)]
     pub type Farms<T: Config> = StorageMap<_, Blake2_128Concat, u32, FarmInfoOf<T>, OptionQuery>;
@@ -1899,12 +1900,12 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config>
-    tfchain_support::traits::Tfgrid<T::AccountId, T::FarmName, T::PublicIP, T::GatewayIP>
+    tfchain_support::traits::Tfgrid<T::AccountId, T::FarmName, pallet::PublicIpOf<T>>
     for Pallet<T>
 {
     fn get_farm(
         farm_id: u32,
-    ) -> Option<tfchain_support::types::Farm<T::FarmName, T::PublicIP, T::GatewayIP>> {
+    ) -> Option<tfchain_support::types::Farm<T::FarmName, pallet::PublicIpOf<T>>> {
         Farms::<T>::get(farm_id)
     }
 

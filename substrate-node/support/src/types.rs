@@ -5,14 +5,14 @@ use sp_std::prelude::*;
 use frame_support::{BoundedVec, traits::{ConstU32}};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
-pub struct Farm<Name, Ip, Gateway> {
+pub struct Farm<Name, PublicIP> {
     pub version: u32,
     pub id: u32,
     pub name: Name,
     pub twin_id: u32,
     pub pricing_policy_id: u32,
     pub certification: FarmCertification,
-    pub public_ips: BoundedVec<PublicIP<Ip, Gateway>, ConstU32<256>>,
+    pub public_ips: BoundedVec<PublicIP, ConstU32<256>>,
     pub dedicated_farm: bool,
     pub farming_policy_limits: Option<FarmingPolicyLimit>,
 }
