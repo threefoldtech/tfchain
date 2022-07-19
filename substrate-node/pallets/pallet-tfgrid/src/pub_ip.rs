@@ -3,8 +3,8 @@ use sp_std::{marker::PhantomData, vec::Vec};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{ensure, sp_runtime::SaturatedConversion, BoundedVec, RuntimeDebug, traits::ConstU32};
 use scale_info::TypeInfo;
+use valip::{{ip::IPv4}, {cidr::CIDR}};
 
-use crate::ipv4;
 use crate::{Config, Error};
 
 /// A Public IP.
@@ -33,7 +33,7 @@ impl<T: Config> TryFrom<Vec<u8>> for PublicIP<T> {
         );
         let bounded_vec: BoundedVec<u8, ConstU32<MAX_IP_LENGTH>> =
             BoundedVec::try_from(value).map_err(|_| Self::Error::PublicIPToLong)?;
-        ensure!(ipv4::parse_ip_cidr(&bounded_vec).is_ok(), Self::Error::InvalidPublicIP);
+        ensure!(CIDR::parse(&bounded_vec).is_ok(), Self::Error::InvalidPublicIP);
         Ok(Self(bounded_vec, PhantomData))
     }
 }
@@ -77,7 +77,7 @@ impl<T: Config> TryFrom<Vec<u8>> for GatewayIP<T> {
         );
         let bounded_vec: BoundedVec<u8, ConstU32<18>> =
             BoundedVec::try_from(value).map_err(|_| Self::Error::GatewayIPToLong)?;
-        ensure!(ipv4::parse_ipv4(&bounded_vec).is_ok(), Self::Error::InvalidPublicIP);
+        ensure!(IPv4::parse(&bounded_vec).is_ok(), Self::Error::InvalidPublicIP);
         Ok(Self(bounded_vec, PhantomData))
     }
 }

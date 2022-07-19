@@ -163,13 +163,13 @@ pub(crate) fn get_farm_name(farm_name_input: &[u8]) -> TestFarmName {
     FarmName::try_from(farm_name_input.to_vec()).expect("Invalid farm input.")
 }
 
-pub (crate) fn get_public_ip(public_ip_input: &[u8]) -> TestPublicIP {
-    PublicIP::try_from(public_ip_input.to_vec()).expect("Invalid public ip input")
-}
+// pub (crate) fn get_public_ip(public_ip_input: &[u8]) -> TestPublicIP {
+//     PublicIP::try_from(public_ip_input.to_vec()).expect("Invalid public ip input")
+// }
 
-pub (crate) fn get_gateway_ip(gateway_ip_input: &[u8]) -> TestGatewayIP {
-    GatewayIP::try_from(gateway_ip_input.to_vec()).expect("Invalid gateway ip input")
-}
+// pub (crate) fn get_gateway_ip(gateway_ip_input: &[u8]) -> TestGatewayIP {
+//     GatewayIP::try_from(gateway_ip_input.to_vec()).expect("Invalid gateway ip input")
+// }
 
 // industry dismiss casual gym gap music pave gasp sick owner dumb cost
 /// Helper function to generate a crypto pair from seed

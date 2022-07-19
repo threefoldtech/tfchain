@@ -3,7 +3,6 @@ use sp_std::{marker::PhantomData, vec::Vec};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{ensure, sp_runtime::SaturatedConversion, BoundedVec, RuntimeDebug};
 use scale_info::TypeInfo;
-use tfchain_support::types::Farm;
 
 use crate::{Config, Error};
 

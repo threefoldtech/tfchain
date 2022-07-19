@@ -377,13 +377,13 @@ fn test_create_farm_with_double_ip_fails() {
         let farm_name = get_farm_name(b"test_farm");
         let mut pub_ips = Vec::new();
         pub_ips.push(PublicIP {
-            ip: "1.1.1.0/16".as_bytes().to_vec().try_into().unwrap(),
-            gateway: "1.1.1.1".as_bytes().to_vec().try_into().unwrap(),
+            ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
+            gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
             contract_id: 0,
         });
         pub_ips.push(PublicIP {
-            ip: "1.1.1.0/16".as_bytes().to_vec().try_into().unwrap(),
-            gateway: "1.1.1.1".as_bytes().to_vec().try_into().unwrap(),
+            ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
+            gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
             contract_id: 0,
         });
 
@@ -404,8 +404,8 @@ fn test_adding_ip_to_farm_works() {
         assert_ok!(TfgridModule::add_farm_ip(
             Origin::signed(alice()),
             1,
-            "1.1.1.2/16".as_bytes().to_vec(),
-            "1.1.1.1".as_bytes().to_vec()
+            "185.206.122.125/16".as_bytes().to_vec(),
+            "185.206.122.1".as_bytes().to_vec()
         ));
     });
 }
@@ -432,7 +432,7 @@ fn test_delete_farm_without_publicips_works() {
         assert_ok!(TfgridModule::remove_farm_ip(
             Origin::signed(alice()),
             1,
-            "1.1.1.0/16".as_bytes().to_vec()
+            "185.206.122.33/24".as_bytes().to_vec()
         ));
         assert_ok!(TfgridModule::delete_farm(Origin::signed(alice()), 1));
     });
@@ -449,7 +449,7 @@ fn test_delete_farm_with_nodes_fails() {
         assert_ok!(TfgridModule::remove_farm_ip(
             Origin::signed(alice()),
             1,
-            "1.1.1.0/16".as_bytes().to_vec()
+            "185.206.122.33/24".as_bytes().to_vec()
         ));
         assert_noop!(
             TfgridModule::delete_farm(Origin::signed(alice()), 1),
@@ -468,7 +468,7 @@ fn test_delete_farm_without_nodes_works() {
         assert_ok!(TfgridModule::remove_farm_ip(
             Origin::signed(alice()),
             1,
-            "1.1.1.0/16".as_bytes().to_vec()
+            "185.206.122.33/24".as_bytes().to_vec()
         ));
         assert_ok!(TfgridModule::delete_farm(Origin::signed(alice()), 1));
     });
@@ -484,16 +484,16 @@ fn test_adding_ip_duplicate_to_farm_fails() {
         assert_ok!(TfgridModule::add_farm_ip(
             Origin::signed(alice()),
             1,
-            "1.1.1.2/16".as_bytes().to_vec(),
-            "1.1.1.1".as_bytes().to_vec()
+            "185.206.122.125/16".as_bytes().to_vec(),
+            "185.206.122.1".as_bytes().to_vec()
         ));
 
         assert_noop!(
             TfgridModule::add_farm_ip(
                 Origin::signed(alice()),
                 1,
-                "1.1.1.2/16".as_bytes().to_vec(),
-                "1.1.1.1".as_bytes().to_vec()
+                "185.206.122.125/16".as_bytes().to_vec(),
+                "185.206.122.1".as_bytes().to_vec()
             ),
             Error::<TestRuntime>::IpExists
         );
@@ -592,8 +592,8 @@ fn test_create_farm_with_same_name_fails() {
         let farm_name = get_farm_name(b"test_farm");
         let mut pub_ips = Vec::new();
         pub_ips.push(PublicIP {
-            ip: "1.1.1.0/16".as_bytes().to_vec().try_into().unwrap(),
-            gateway: "1.1.1.1".as_bytes().to_vec().try_into().unwrap(),
+            ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
+            gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
             contract_id: 0,
         });
 
@@ -1429,8 +1429,8 @@ fn create_farm() {
 
     let mut pub_ips = Vec::new();
     pub_ips.push(PublicIP {
-        ip: "1.1.1.0/16".as_bytes().to_vec().try_into().unwrap(),
-        gateway: "1.1.1.1".as_bytes().to_vec().try_into().unwrap(),
+        ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
+        gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
         contract_id: 0,
     });
     assert_ok!(TfgridModule::create_farm(
