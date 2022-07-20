@@ -322,12 +322,12 @@ impl pallet_sudo::Config for Runtime {
 }
 
 pub struct NodeChanged;
-impl ChangeNode for NodeChanged {
-    fn node_changed(old_node: Option<&Node>, new_node: &Node) {
+impl ChangeNode<pallet_tfgrid::pallet::PubConfigOf<Runtime>> for NodeChanged {
+    fn node_changed(old_node: Option<&Node<pallet_tfgrid::pallet::PubConfigOf<Runtime>>>, new_node: &Node<pallet_tfgrid::pallet::PubConfigOf<Runtime>>) {
         Dao::node_changed(old_node, new_node)
     }
 
-    fn node_deleted(node: &Node) {
+    fn node_deleted(node: &Node<pallet_tfgrid::pallet::PubConfigOf<Runtime>>) {
         SmartContractModule::node_deleted(node);
         Dao::node_deleted(node);
     }
@@ -347,6 +347,11 @@ impl pallet_tfgrid::Config for Runtime {
     type FarmName = pallet_tfgrid::farm::FarmName<Runtime>;
     type PublicIP = pallet_tfgrid::pub_ip::PublicIP<Runtime>;
     type GatewayIP = pallet_tfgrid::pub_ip::GatewayIP<Runtime>;
+    type IP4 = pallet_tfgrid::pub_config::IP4<Runtime>;
+    type GW4 = pallet_tfgrid::pub_config::GW4<Runtime>;
+    type IP6 = pallet_tfgrid::pub_config::IP6<Runtime>;
+    type GW6 = pallet_tfgrid::pub_config::GW6<Runtime>;
+    type Domain = pallet_tfgrid::pub_config::Domain<Runtime>;
 }
 
 parameter_types! {

@@ -86,10 +86,7 @@ impl<T: Config> Contract<T> {
                 contract_cost + contract_billing_info.amount_unbilled
             }
             types::ContractData::RentContract(rent_contract) => {
-                if !pallet_tfgrid::Nodes::<T>::contains_key(rent_contract.node_id) {
-                    return Err(DispatchErrorWithPostInfo::from(Error::<T>::NodeNotExists));
-                }
-                let node = pallet_tfgrid::Nodes::<T>::get(rent_contract.node_id);
+                let node = pallet_tfgrid::Nodes::<T>::get(rent_contract.node_id).ok_or(Error::<T>::NodeNotExists)?;
     
                 let contract_cost = calculate_resources_cost::<T>(
                     node.resources,

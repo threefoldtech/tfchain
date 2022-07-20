@@ -155,7 +155,7 @@ pub mod pallet {
         type DistributionFrequency: Get<u16>;
         type GracePeriod: Get<u64>;
         type WeightInfo: WeightInfo;
-        type NodeChanged: ChangeNode;
+        type NodeChanged: ChangeNode<pallet_tfgrid::pallet::PubConfigOf<Self>>;
 
         #[pallet::constant]
         type MaxNameContractNameLength: Get<u32>;
@@ -401,12 +401,7 @@ impl<T: Config> Pallet<T> {
         );
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id).unwrap();
 
-        ensure!(
-            pallet_tfgrid::Nodes::<T>::contains_key(&node_id),
-            Error::<T>::NodeNotExists
-        );
-
-        let node = pallet_tfgrid::Nodes::<T>::get(node_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
         if farm.dedicated_farm && !ActiveRentContractForNode::<T>::contains_key(node_id) {
@@ -487,16 +482,11 @@ impl<T: Config> Pallet<T> {
             Error::<T>::TwinNotExists
         );
         ensure!(
-            pallet_tfgrid::Nodes::<T>::contains_key(&node_id),
-            Error::<T>::NodeNotExists
-        );
-
-        ensure!(
             !ActiveRentContractForNode::<T>::contains_key(node_id),
             Error::<T>::NodeHasRentContract
         );
 
-        let node = pallet_tfgrid::Nodes::<T>::get(node_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
         ensure!(
             pallet_tfgrid::Farms::<T>::contains_key(node.farm_id),
             Error::<T>::FarmNotExists
@@ -747,8 +737,7 @@ impl<T: Config> Pallet<T> {
 
         // fetch the node from the source account (signee)
         let node_id = pallet_tfgrid::NodeIdByTwinID::<T>::get(&twin_id);
-        let node = pallet_tfgrid::Nodes::<T>::get(node_id);
-
+        let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
         ensure!(
@@ -1264,7 +1253,7 @@ impl<T: Config> Pallet<T> {
         if node_contract.public_ips == 0 {
             return Ok(().into());
         }
-        let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id).ok_or(Error::<T>::NodeNotExists)?;
 
         let mut farm =
             pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
@@ -1325,7 +1314,7 @@ impl<T: Config> Pallet<T> {
         contract_id: u64,
         node_contract: &mut types::NodeContract<T>,
     ) -> DispatchResultWithPostInfo {
-        let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id).ok_or(Error::<T>::NodeNotExists)?;
 
         let mut farm =
             pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
@@ -1406,10 +1395,10 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-impl<T: Config> ChangeNode for Pallet<T> {
-    fn node_changed(_node: Option<&Node>, _new_node: &Node) {}
+impl<T: Config> ChangeNode<pallet_tfgrid::pallet::PubConfigOf<T>> for Pallet<T> {
+    fn node_changed(_node: Option<&Node<pallet_tfgrid::pallet::PubConfigOf<T>>>, _new_node: &Node<pallet_tfgrid::pallet::PubConfigOf<T>>) {}
 
-    fn node_deleted(node: &Node) {
+    fn node_deleted(node: &Node<pallet_tfgrid::pallet::PubConfigOf<T>>) {
         // Clean up all active contracts
         let active_node_contracts = ActiveNodeContracts::<T>::get(node.id);
         for node_contract_id in active_node_contracts {
