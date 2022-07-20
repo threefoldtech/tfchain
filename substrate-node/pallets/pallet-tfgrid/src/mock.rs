@@ -13,9 +13,9 @@ use sp_core::{ed25519, sr25519, Pair, Public, H256};
 use sp_std::prelude::*;
 
 use crate::farm::FarmName;
+use crate::pub_config::{Domain, GW4, GW6, IP4, IP6};
+use crate::pub_ip::{GatewayIP, PublicIP};
 use crate::twin::TwinIp;
-use crate::pub_ip::{PublicIP, GatewayIP};
-use crate::pub_config::{IP4, GW4, IP6, GW6, Domain};
 use crate::weights;
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::MultiSignature;
@@ -176,10 +176,25 @@ pub(crate) fn get_farm_name(farm_name_input: &[u8]) -> TestFarmName {
     FarmName::try_from(farm_name_input.to_vec()).expect("Invalid farm input.")
 }
 
-// pub (crate) fn get_public_ip(public_ip_input: &[u8]) -> TestPublicIP {
-//     PublicIP::try_from(public_ip_input.to_vec()).expect("Invalid public ip input")
-// }
+pub(crate) fn get_public_config_ipv4(ipv4: &[u8]) -> TestIP4 {
+    IP4::try_from(ipv4.to_vec()).expect("Invalid public ip input")
+}
 
+pub(crate) fn get_public_config_gw4(gw4: &[u8]) -> TestGW4 {
+    GW4::try_from(gw4.to_vec()).expect("Invalid public ip input")
+}
+
+pub(crate) fn get_public_config_ipv6(ipv6: &[u8]) -> TestIP6 {
+    IP6::try_from(ipv6.to_vec()).expect("Invalid public ip input")
+}
+
+pub(crate) fn get_public_config_gw6(gw6: &[u8]) -> TestGW6 {
+    GW6::try_from(gw6.to_vec()).expect("Invalid public ip input")
+}
+
+pub(crate) fn get_public_config_domain(domain: &[u8]) -> TestDomain {
+    Domain::try_from(domain.to_vec()).expect("Invalid domain input")
+}
 // pub (crate) fn get_gateway_ip(gateway_ip_input: &[u8]) -> TestGatewayIP {
 //     GatewayIP::try_from(gateway_ip_input.to_vec()).expect("Invalid gateway ip input")
 // }

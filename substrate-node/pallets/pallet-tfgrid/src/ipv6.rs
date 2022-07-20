@@ -69,5 +69,7 @@ mod tests {
         assert!(!super::valid_ipv6(b"ffff::"));
         assert!(!super::valid_ipv6(b"ffff:"));
         assert!(!super::valid_ipv6(b"123"));
+        assert!(super::valid_ipv6(b"2a10:b600:1::0cc4:7a30:3a9c"));
+        assert!(super::valid_ipv6(b"2a10:b600:1::1"));
     }
 }

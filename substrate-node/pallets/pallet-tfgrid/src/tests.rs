@@ -758,19 +758,25 @@ fn node_add_public_config_works() {
         create_farm();
         create_node();
 
+        let ipv4 = get_public_config_ipv4(b"185.206.122.33/24");
+        let ipv6 = get_public_config_ipv6(b"::1");
+        let gw4 = get_public_config_gw4(b"185.206.122.1");
+        let gw6 = get_public_config_gw6(b"2a10:b600:1::1");
+        let domain = get_public_config_domain(b"gent01.test.grid.tf");
+
         let pub_config = PublicConfig {
-            ipv4: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
-            gw4: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
-            ipv6: "::1".as_bytes().to_vec().try_into().unwrap(),
-            gw6: "::1".as_bytes().to_vec().try_into().unwrap(),
-            domain: "some_domain".as_bytes().to_vec().try_into().unwrap(),
+            ipv4,
+            ipv6,
+            gw4,
+            gw6,
+            domain,
         };
 
         assert_ok!(TfgridModule::add_node_public_config(
             Origin::signed(alice()),
             1,
             1,
-            pub_config.clone()
+            Some(pub_config.clone())
         ));
 
         let node = TfgridModule::nodes(1).unwrap();
@@ -789,13 +795,21 @@ fn node_add_public_config_fails_if_signature_incorrect() {
         let pub_config = PublicConfig {
             ipv4: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
             gw4: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
-            ipv6: "::1".as_bytes().to_vec().try_into().unwrap(),
-            gw6: "::1".as_bytes().to_vec().try_into().unwrap(),
-            domain: "some_domain".as_bytes().to_vec().try_into().unwrap(),
+            ipv6: "2a10:b600:1::0cc4:7a30:3a9c"
+                .as_bytes()
+                .to_vec()
+                .try_into()
+                .unwrap(),
+            gw6: "2a10:b600:1::1".as_bytes().to_vec().try_into().unwrap(),
+            domain: "gent01.test.grid.tf"
+                .as_bytes()
+                .to_vec()
+                .try_into()
+                .unwrap(),
         };
 
         assert_noop!(
-            TfgridModule::add_node_public_config(Origin::signed(bob()), 1, 1, pub_config.clone()),
+            TfgridModule::add_node_public_config(Origin::signed(bob()), 1, 1, Some(pub_config)),
             Error::<TestRuntime>::CannotUpdateFarmWrongTwin
         );
     });

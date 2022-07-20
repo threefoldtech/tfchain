@@ -35,10 +35,7 @@ impl<T: Config> TryFrom<Vec<u8>> for IP4<T> {
         );
         let bounded_vec: BoundedVec<u8, ConstU32<MAX_IP_LENGTH>> =
             BoundedVec::try_from(value).map_err(|_| Self::Error::IP4ToLong)?;
-        ensure!(
-            CIDR::parse(&bounded_vec).is_ok(),
-            Self::Error::InvalidIP4
-        );
+        ensure!(CIDR::parse(&bounded_vec).is_ok(), Self::Error::InvalidIP4);
         Ok(Self(bounded_vec, PhantomData))
     }
 }
@@ -82,10 +79,7 @@ impl<T: Config> TryFrom<Vec<u8>> for GW4<T> {
         );
         let bounded_vec: BoundedVec<u8, ConstU32<18>> =
             BoundedVec::try_from(value).map_err(|_| Self::Error::GW4ToLong)?;
-        ensure!(
-            IPv4::parse(&bounded_vec).is_ok(),
-            Self::Error::InvalidGW4
-        );
+        ensure!(IPv4::parse(&bounded_vec).is_ok(), Self::Error::InvalidGW4);
         Ok(Self(bounded_vec, PhantomData))
     }
 }
@@ -123,6 +117,7 @@ impl<T: Config> TryFrom<Vec<u8>> for IP6<T> {
     /// minimum or exceeds the maximum allowed length or contains invalid ASCII
     /// characters.
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        println!("len: {:?}", value.clone().len());
         ensure!(
             value.len() >= MIN_IP6_LENGHT.saturated_into(),
             Self::Error::IP6ToShort
