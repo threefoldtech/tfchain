@@ -4,7 +4,9 @@
   "chainType": "Local",
   "bootNodes": [
     "/ip4/185.206.122.7/tcp/30333/p2p/12D3KooWLcMLBg9itjQL1EXsAqkJFPhqESHqJKY7CBKmhhhL8fdp",
-    "/ip4/185.206.122.126/tcp/30333/p2p/12D3KooWAnibsVN4yBcKNKnnRm8pxmHkEf3DUT65dpb3P252RpZK"
+    "/ip4/185.206.122.126/tcp/30333/p2p/12D3KooWAnibsVN4yBcKNKnnRm8pxmHkEf3DUT65dpb3P252RpZK",
+    "/ip4/185.206.122.127/tcp/30333/p2p/12D3KooWBkwH8LfJsz48Q8LHXSQnuqKJK8YdoQokDeS9wQX1j8mm",
+    "/ip4/185.206.122.128/tcp/30333/p2p/12D3KooWMPnWPkAi9UhVgGv9QmozXiPDE94rymPCsXLJ5EKynwta"
   ],
   "telemetryEndpoints": null,
   "protocolId": null,
