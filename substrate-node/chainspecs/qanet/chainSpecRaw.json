@@ -2,7 +2,10 @@
   "name": "TF Chain QAnet",
   "id": "tfchain_qa_net",
   "chainType": "Local",
-  "bootNodes": [],
+  "bootNodes": [
+    "/ip4/185.206.122.7/tcp/30334/p2p/12D3KooWSCFtAPQRRa5uw2QhwsC77NfCv1mxHJjWQhUrRANkoYyx",
+    "/ip4/185.206.122.221/tcp/30333/p2p/12D3KooWP77QXcz6DcSn98udtbrirgfefjLRE9w5t5sYUxZTz8WX"
+  ],
   "telemetryEndpoints": null,
   "protocolId": null,
   "properties": {
