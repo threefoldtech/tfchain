@@ -70,7 +70,7 @@ impl frame_support::traits::OnRuntimeUpgrade for InsertNewFarmingPolicies {
         let farming_policy_2: pallet_tfgrid::types::FarmingPolicy<BlockNumber> =
             pallet_tfgrid::types::FarmingPolicy {
                 version: 1,
-                id: 1,
+                id: 2,
                 name: "farming_policy_certified_nodes_default".as_bytes().to_vec(),
                 cu: 3000,
                 su: 1250,
