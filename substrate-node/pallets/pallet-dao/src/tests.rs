@@ -1,10 +1,11 @@
 use super::Event as DaoEvent;
 use crate::{mock::Event as MockEvent, mock::*, Error};
-use frame_support::{assert_noop, assert_ok, weights::GetDispatchInfo};
+use frame_support::{assert_noop, assert_ok, weights::GetDispatchInfo, BoundedVec, traits::ConstU32};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Hash};
 use tfchain_support::types::{FarmCertification, Location, NodeCertification, PublicIP, Resources};
+use std::convert::TryFrom;
 
 #[test]
 fn farmers_vote_no_farm_fails() {
@@ -732,7 +733,9 @@ pub fn prepare_twin(account_id: u64) {
         hash.clone(),
     ));
     let ip = "10.2.3.3";
-    TfgridModule::create_twin(Origin::signed(account_id), ip.as_bytes().to_vec()).unwrap();
+    let ip_v = ip.as_bytes().to_vec();
+    let ip_bv: BoundedVec<u8, ConstU32<39>> = BoundedVec::try_from(ip_v).unwrap();
+    TfgridModule::create_twin(Origin::signed(account_id), ip_bv).unwrap();
 }
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
@@ -804,7 +807,8 @@ pub fn prepare_farm(account_id: u64, farm_name: Vec<u8>) {
         contract_id: 0,
     });
 
-    TfgridModule::create_farm(Origin::signed(account_id), farm_name, pub_ips.clone()).unwrap();
+    let farm_name_bv = BoundedVec::try_from(farm_name).unwrap();
+    TfgridModule::create_farm(Origin::signed(account_id), farm_name_bv, pub_ips.clone()).unwrap();
 }
 
 fn create_farming_policies() {

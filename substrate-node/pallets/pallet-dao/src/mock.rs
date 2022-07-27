@@ -95,11 +95,18 @@ impl pallet_dao::Config for Test {
     type WeightInfo = weights::SubstrateWeight<Test>;
 }
 
+parameter_types! {
+    pub const MaxFarmNameLength: u32 = 40;
+}
+
 impl pallet_tfgrid::Config for Test {
     type Event = Event;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Test>;
     type NodeChanged = NodeChanged;
+    type TwinIp = pallet_tfgrid::twin::TwinIp<Test>;
+    type MaxFarmNameLength = MaxFarmNameLength;
+    type FarmName = pallet_tfgrid::farm::FarmName<Test>;
 }
 
 impl pallet_timestamp::Config for Test {
