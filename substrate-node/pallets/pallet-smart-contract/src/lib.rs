@@ -782,7 +782,7 @@ impl<T: Config> Pallet<T> {
         log::info!("seconds elapsed: {:?}", seconds_elapsed);
 
         // calculate NRU used and the cost
-        let used_nru = U64F64::from_num(report.nru) / pricing_policy.nu.factor();
+        let used_nru = U64F64::from_num(report.nru) / pricing_policy.nu.factor_base_1000();
         let nu_cost = used_nru
             * (U64F64::from_num(pricing_policy.nu.value) / 3600)
             * U64F64::from_num(seconds_elapsed);

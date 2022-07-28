@@ -131,7 +131,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                             };
 
                             match public_ips_list.try_push(new_ip) {
-                                Ok() => (),
+                                Ok(()) => (),
                                 Err(err) => {
                                     frame_support::log::info!("error while pushing ip to contract ip list: {:?}", err);
                                     continue;

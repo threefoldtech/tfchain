@@ -125,9 +125,9 @@ pub fn calculate_resources_cost<T: Config>(
     let mut total_cost = U64F64::from_num(0);
 
     if bill_resources {
-        let hru = U64F64::from_num(resources.hru) / pricing_policy.su.factor();
-        let sru = U64F64::from_num(resources.sru) / pricing_policy.su.factor();
-        let mru = U64F64::from_num(resources.mru) / pricing_policy.cu.factor();
+        let hru = U64F64::from_num(resources.hru) / pricing_policy.su.factor_base_1024();
+        let sru = U64F64::from_num(resources.sru) / pricing_policy.su.factor_base_1024();
+        let mru = U64F64::from_num(resources.mru) / pricing_policy.cu.factor_base_1024();
         let cru = U64F64::from_num(resources.cru);
 
         let su_used = hru / 1200 + sru / 200;
