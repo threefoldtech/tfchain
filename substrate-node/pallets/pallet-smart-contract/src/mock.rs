@@ -14,6 +14,7 @@ use sp_runtime::{
 };
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::{traits::ChangeNode, types::Node};
+use pallet_tfgrid::{{farm::FarmName}, {twin::TwinIp}};
 
 pub type Signature = MultiSignature;
 
@@ -102,11 +103,21 @@ impl ChangeNode for NodeChanged {
     }
 }
 
+parameter_types! {
+    pub const MaxFarmNameLength: u32 = 40;
+}
+
+pub(crate) type TestTwinIp = TwinIp<TestRuntime>;
+pub(crate) type TestFarmName = FarmName<TestRuntime>;
+
 impl pallet_tfgrid::Config for TestRuntime {
     type Event = Event;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
+    type TwinIp = TestTwinIp;
+    type FarmName = TestFarmName;
+    type MaxFarmNameLength = MaxFarmNameLength;
 }
 
 impl pallet_tft_price::Config for TestRuntime {
@@ -142,6 +153,10 @@ impl pallet_smart_contract::Config for TestRuntime {
 }
 
 type AccountPublic = <MultiSignature as Verify>::Signer;
+
+pub(crate) fn get_twin_ip(twin_ip_input: &[u8]) -> TestTwinIp {
+    TwinIp::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
+}
 
 /// Helper function to generate a crypto pair from seed
 fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
