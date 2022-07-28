@@ -177,9 +177,8 @@ pub mod pallet {
         WrongIndex,
         DuplicateVote,
         WrongProposalWeight,
-        TooEarly,
         TimeLimitReached,
-        VoteThresholdNotMet,
+        OngoingVoteAndTresholdStillNotMet,
         FarmHasNoNodes,
         InvalidProposalDuration,
     }
@@ -328,6 +327,7 @@ pub mod pallet {
             Voting::<T>::insert(&proposal_hash, voting);
 
             if is_account_voting_first_time {
+
                 Ok(Pays::No.into())
             } else {
                 Ok(Pays::Yes.into())
@@ -381,18 +381,13 @@ pub mod pallet {
             let voting = Self::voting(&proposal_hash).ok_or(Error::<T>::ProposalMissing)?;
             ensure!(voting.index == proposal_index, Error::<T>::WrongIndex);
 
-            // Only allow actual closing of the proposal after the voting period has ended.
-            ensure!(
-                frame_system::Pallet::<T>::block_number() >= voting.end,
-                Error::<T>::TooEarly
-            );
-
             let no_votes = voting.nays.len() as u32;
             let yes_votes = voting.ayes.len() as u32;
 
+            // Only allow actual closing of the proposal after the voting threshold is met or voting period has ended
             ensure!(
-                (no_votes + yes_votes) >= voting.threshold,
-                Error::<T>::VoteThresholdNotMet
+                (no_votes + yes_votes) >= voting.threshold || frame_system::Pallet::<T>::block_number() >= voting.end,
+                Error::<T>::OngoingVoteAndTresholdStillNotMet
             );
 
             let total_aye_weight: u64 = voting.ayes.iter().map(|y| y.weight).sum();
