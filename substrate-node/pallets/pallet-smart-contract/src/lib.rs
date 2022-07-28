@@ -52,7 +52,7 @@ pub mod pallet {
     use sp_core::H256;
     use sp_std::{convert::{TryInto, TryFrom}, fmt::Debug, vec::Vec};
     use tfchain_support::{traits::ChangeNode, types::PublicIP};
-    use contract_migration;
+    // use contract_migration;
 
     pub type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
@@ -127,7 +127,7 @@ pub mod pallet {
     pub type ContractID<T> = StorageValue<_, u64, ValueQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn pallet_version)]
+    #[pallet::getter(fn pallet_storage_version)]
     pub type PalletVersion<T> = StorageValue<_, types::StorageVersion, ValueQuery>;
 
     #[pallet::config]
@@ -359,9 +359,9 @@ pub mod pallet {
             ContractsToBillAt::<T>::remove(current_block_u64);
         }
 
-        fn on_runtime_upgrade() -> Weight {
-            contract_migration::migrate_to_version_4::<T>()
-        }
+        // fn on_runtime_upgrade() -> Weight {
+        //     contract_migration::migrate_to_version_4::<T>()
+        // }
     }
 }
 

@@ -71,6 +71,51 @@ pub mod deprecated {
     }
 }
 
+pub mod v4 {
+    use super::*;
+	use crate::{Config, Pallet};
+
+	// #[cfg(feature = "try-runtime")]
+	// use frame_support::traits::GetStorageVersion;
+
+    use frame_support::{
+		pallet_prelude::Weight,
+		traits::{OnRuntimeUpgrade},
+	};
+	use log::info;
+	use sp_std::marker::PhantomData;
+
+    pub struct ContractMigrationV4<T: Config>(PhantomData<T>);
+
+    impl<T: Config> OnRuntimeUpgrade for ContractMigrationV4<T> {
+        #[cfg(feature = "try-runtime")]
+		fn pre_upgrade() -> Result<(), &'static str> {
+            info!("do I get here?");
+            info!("pallet version: {:?}", PalletVersion::<T>::get());
+			assert!(PalletVersion::<T>::get() == types::StorageVersion::V3);
+
+			info!("👥  Smart Contract pallet to v4 passes PRE migrate checks ✅",);
+			Ok(())
+		}
+
+        fn on_runtime_upgrade() -> Weight {
+            migrate_to_version_4::<T>()
+        }
+
+        #[cfg(feature = "try-runtime")]
+        fn post_upgrade() -> Result<(), &'static str> {
+            assert!(PalletVersion::<T>::get() == types::StorageVersion::V4);
+            
+            info!(
+                "👥  Smart Contract pallet migration to {:?} passes POST migrate checks ✅",
+                Pallet::<T>::pallet_storage_version()
+            );
+            Ok(())
+        }
+    }
+}
+
+
 pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
     if PalletVersion::<T>::get() == types::StorageVersion::V3 {
         frame_support::log::info!(
@@ -131,7 +176,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                             };
 
                             match public_ips_list.try_push(new_ip) {
-                                Ok() => (),
+                                Ok(()) => (),
                                 Err(err) => {
                                     frame_support::log::info!("error while pushing ip to contract ip list: {:?}", err);
                                     continue;
