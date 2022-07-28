@@ -55,7 +55,7 @@ fn test_create_node_contract_with_public_ips_works() {
                 assert_eq!(farm.public_ips[0].contract_id, 1);
 
                 assert_eq!(c.public_ips, 1);
-                assert_eq!(c.public_ips_list[0].ip, "1.1.1.0".as_bytes().to_vec());
+                assert_eq!(c.public_ips_list[0].ip, "1.1.1.0/24".as_bytes().to_vec());
             }
             _ => (),
         }
@@ -901,7 +901,7 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
         }
 
         let public_ip = PublicIP {
-            ip: "1.1.1.0".as_bytes().to_vec().try_into().unwrap(),
+            ip: "1.1.1.0/24".as_bytes().to_vec().try_into().unwrap(),
             gateway: "1.1.1.1".as_bytes().to_vec().try_into().unwrap(),
             contract_id: 0
         };
@@ -1844,7 +1844,7 @@ pub fn prepare_farm(source: AccountId, dedicated: bool) {
     let farm_name = "test_farm";
     let mut pub_ips = Vec::new();
     pub_ips.push(PublicIP {
-        ip: "1.1.1.0".as_bytes().to_vec().try_into().unwrap(),
+        ip: "1.1.1.0/24".as_bytes().to_vec().try_into().unwrap(),
         gateway: "1.1.1.1".as_bytes().to_vec().try_into().unwrap(),
         contract_id: 0,
     });

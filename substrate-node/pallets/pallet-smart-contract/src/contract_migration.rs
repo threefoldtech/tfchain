@@ -88,6 +88,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
         Contracts::<T>::translate::<deprecated::ContractV3, _>(|k, ctr| {
             frame_support::log::info!("     Migrated contract for {:?}...", k);
 
+            // dummy default
             let rc = types::RentContract {
                 node_id: 0
             };
@@ -107,21 +108,35 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                     if node_contract.public_ips_list.len() > 0 {
                         for pub_ip in node_contract.public_ips_list {
 
-                            // TODO: don't throw error here
-
-                            let ip_vec: BoundedVec<u8, ConstU32<18>> =
-                                pub_ip.ip.clone().try_into().unwrap();
-
-                            let gateway_vec: BoundedVec<u8, ConstU32<18>> =
-                                pub_ip.gateway.clone().try_into().unwrap();
-
-                            let new_ip = PublicIP {
-                                ip: ip_vec,
-                                gateway: gateway_vec,
-                                contract_id: 0,
+                            let ip: BoundedVec<u8, ConstU32<18>> = match pub_ip.ip.clone().try_into() {
+                                Ok(x) => x,
+                                Err(err) => {
+                                    frame_support::log::info!("error while parsing ip: {:?}", err);
+                                    continue;
+                                }
                             };
 
-                            let _ = public_ips_list.try_push(new_ip);
+                            let gateway: BoundedVec<u8, ConstU32<18>> = match pub_ip.gateway.clone().try_into(){
+                                Ok(x) => x,
+                                Err(err) => {
+                                    frame_support::log::info!("error while parsing gateway: {:?}", err);
+                                    continue;
+                                }
+                            };
+
+                            let new_ip = PublicIP {
+                                ip,
+                                gateway,
+                                contract_id: pub_ip.contract_id,
+                            };
+
+                            match public_ips_list.try_push(new_ip) {
+                                Ok() => (),
+                                Err(err) => {
+                                    frame_support::log::info!("error while pushing ip to contract ip list: {:?}", err);
+                                    continue;
+                                }
+                            }
                         }
                     }
 
@@ -142,11 +157,17 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                         types::ContractData::NodeContract(new_node_contract);
                 }
                 deprecated::ContractData::NameContract(nc) => {
-                    let name = super::NameContractNameOf::<T>::try_from(nc.name).unwrap();
-                    let name_c = types::NameContract {
-                        name
+                    match super::NameContractNameOf::<T>::try_from(nc.name) {
+                        Ok(ctr_name) => {
+                            let name_c = types::NameContract {
+                                name: ctr_name
+                            };
+                            new_contract.contract_type = types::ContractData::NameContract(name_c);
+                        },
+                        Err(err) => {
+                            frame_support::log::info!("error while parsing contract name: {:?}", err);
+                        }
                     };
-                    new_contract.contract_type = types::ContractData::NameContract(name_c);
                 },
                 deprecated::ContractData::RentContract(rc) => {
                     let rent_c = types::RentContract {
