@@ -99,6 +99,7 @@ pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "
 
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false, optional = true }
 frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false, optional = true }
+try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false, optional = true }
 frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false, optional = true }
 hex-literal = { version = "0.3.1", optional = true }
 
@@ -118,6 +119,18 @@ runtime-benchmarks = [
     'pallet-collective/runtime-benchmarks',
     'pallet-tfgrid/runtime-benchmarks',
 ]
+try-runtime = [
+    "frame-executive/try-runtime",
+    "frame-try-runtime",
+    "frame-system/try-runtime",
+    "pallet-aura/try-runtime",
+    "pallet-balances/try-runtime",
+    "pallet-grandpa/try-runtime",
+    "pallet-randomness-collective-flip/try-runtime",
+    "pallet-sudo/try-runtime",
+    "pallet-timestamp/try-runtime",
+    "pallet-transaction-payment/try-runtime",
+]
 std = [
     'codec/std',
     'scale-info/std',
@@ -125,6 +138,7 @@ std = [
     'frame-support/std',
     'frame-system/std',
     'frame-system-rpc-runtime-api/std',
+    'frame-try-runtime/std',
     'pallet-aura/std',
     'pallet-balances/std',
     'pallet-grandpa/std',
