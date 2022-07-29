@@ -376,7 +376,11 @@ pub mod pallet {
             proposal_hash: T::Hash,
             #[pallet::compact] proposal_index: ProposalIndex,
         ) -> DispatchResultWithPostInfo {
-            let _ = ensure_signed(origin)?;
+            let who = ensure_signed(origin)?;
+
+            let council_members =
+                pallet_membership::Pallet::<T, pallet_membership::Instance1>::members();
+            ensure!(council_members.contains(&who), Error::<T>::NotCouncilMember);
 
             let voting = Self::voting(&proposal_hash).ok_or(Error::<T>::ProposalMissing)?;
             ensure!(voting.index == proposal_index, Error::<T>::WrongIndex);
