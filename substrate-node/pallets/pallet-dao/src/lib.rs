@@ -197,9 +197,10 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
-            let council_members =
-                pallet_membership::Pallet::<T, pallet_membership::Instance1>::members();
-            ensure!(council_members.contains(&who), Error::<T>::NotCouncilMember);
+            ensure!(
+                Self::is_council_member(who.clone()),
+                Error::<T>::NotCouncilMember,
+            );
 
             let proposal_hash = T::Hashing::hash_of(&action);
             ensure!(
@@ -338,9 +339,10 @@ pub mod pallet {
         pub fn veto(origin: OriginFor<T>, proposal_hash: T::Hash) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
-            let council_members =
-                pallet_membership::Pallet::<T, pallet_membership::Instance1>::members();
-            ensure!(council_members.contains(&who), Error::<T>::NotCouncilMember);
+            ensure!(
+                Self::is_council_member(who.clone()),
+                Error::<T>::NotCouncilMember,
+            );
 
             let stored_proposal =
                 <Proposals<T>>::get(proposal_hash).ok_or(Error::<T>::ProposalMissing)?;
@@ -378,9 +380,10 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
-            let council_members =
-                pallet_membership::Pallet::<T, pallet_membership::Instance1>::members();
-            ensure!(council_members.contains(&who), Error::<T>::NotCouncilMember);
+            ensure!(
+                Self::is_council_member(who),
+                Error::<T>::NotCouncilMember,
+            );
 
             let voting = Self::voting(&proposal_hash).ok_or(Error::<T>::ProposalMissing)?;
             ensure!(voting.index == proposal_index, Error::<T>::WrongIndex);
@@ -509,6 +512,12 @@ impl<T: Config> Pallet<T> {
         let cu = resources::get_cu(resources);
         let su = resources::get_su(resources);
         cu * 2 + su
+    }
+
+    fn is_council_member(who: T::AccountId) -> bool {
+        let council_members =
+            pallet_membership::Pallet::<T, pallet_membership::Instance1>::members();
+        council_members.contains(&who)
     }
 }
 
