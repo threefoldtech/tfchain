@@ -16,6 +16,7 @@ use crate::farm::FarmName;
 use crate::twin::TwinIp;
 use crate::pub_ip::{PublicIP, GatewayIP};
 use crate::pub_config::{IP4, GW4, IP6, GW6, Domain};
+use crate::interface::{InterfaceName, InterfaceMac, InterfaceIp};
 use crate::weights;
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::MultiSignature;
@@ -78,15 +79,18 @@ impl frame_system::Config for TestRuntime {
 }
 
 pub(crate) type PubConfig = crate::PubConfigOf<TestRuntime>;
-pub struct NodeChanged;
-impl tfchain_support::traits::ChangeNode<PubConfig> for NodeChanged {
-    fn node_changed(_old_node: Option<&Node<PubConfig>>, _new_node: &Node<PubConfig>) {}
+pub(crate) type Interface = crate::InterfaceOf<TestRuntime>;
 
-    fn node_deleted(_node: &tfchain_support::types::Node<PubConfig>) {}
+pub struct NodeChanged;
+impl tfchain_support::traits::ChangeNode<PubConfig, Interface> for NodeChanged {
+    fn node_changed(_old_node: Option<&Node<PubConfig, Interface>>, _new_node: &Node<PubConfig, Interface>) {}
+
+    fn node_deleted(_node: &tfchain_support::types::Node<PubConfig, Interface>) {}
 }
 
 parameter_types! {
     pub const MaxFarmNameLength: u32 = 40;
+    pub const MaxInterfaceIpsLength: u32 = 5;
 }
 
 pub(crate) type TestTwinIp = TwinIp<TestRuntime>;
@@ -99,6 +103,10 @@ pub(crate) type TestGW4 = GW4<TestRuntime>;
 pub(crate) type TestIP6 = IP6<TestRuntime>;
 pub(crate) type TestGW6 = GW6<TestRuntime>;
 pub(crate) type TestDomain = Domain<TestRuntime>;
+
+pub(crate) type TestInterfaceName = InterfaceName<TestRuntime>;
+pub(crate) type TestInterfaceMac = InterfaceMac<TestRuntime>;
+pub(crate) type TestInterfaceIp = InterfaceIp<TestRuntime>;
 
 impl Config for TestRuntime {
     type Event = Event;
@@ -115,6 +123,10 @@ impl Config for TestRuntime {
     type IP6 = TestIP6;
     type GW6 = TestGW6;
     type Domain = TestDomain;
+    type InterfaceName = TestInterfaceName;
+    type InterfaceMac = TestInterfaceMac;
+    type InterfaceIP = TestInterfaceIp;
+    type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
 }
 
 parameter_types! {

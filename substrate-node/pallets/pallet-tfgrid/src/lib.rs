@@ -31,6 +31,7 @@ pub mod farm;
 pub mod pub_config;
 pub mod pub_ip;
 pub mod twin;
+pub mod interface;
 pub mod grid_migration;
 
 // Definition of the pallet logic, to be aggregated at runtime definition
@@ -94,9 +95,18 @@ pub mod pallet {
         <T as Config>::Domain,
     >;
 
+    pub type InterfaceIp<T> = <T as Config>::InterfaceIP;
+    pub type InterfaceIpsOf<T> = BoundedVec<<T as Config>::InterfaceIP, <T as Config>::MaxInterfaceIpsLength>;
+    pub type InterfaceOf<T> = Interface<
+        <T as Config>::InterfaceName,
+        <T as Config>::InterfaceMac,
+        InterfaceIpsOf<T>
+    >;
+
     #[pallet::storage]
     #[pallet::getter(fn nodes)]
-    pub type Nodes<T> = StorageMap<_, Blake2_128Concat, u32, Node<PubConfigOf<T>>, OptionQuery>;
+    pub type Nodes<T> = StorageMap<_, Blake2_128Concat, u32, 
+    Node<PubConfigOf<T>, InterfaceOf<T>>, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn node_by_twin_id)]
@@ -202,7 +212,7 @@ pub mod pallet {
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
 
-        type NodeChanged: ChangeNode<super::PubConfigOf<Self>>;
+        type NodeChanged: ChangeNode<super::PubConfigOf<Self>, super::InterfaceOf<Self>>;
 
         /// The type of a name.
         type TwinIp: FullCodec
@@ -293,8 +303,41 @@ pub mod pallet {
             + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
+        /// The type of an interface name.
+        type InterfaceName: FullCodec
+            + Debug
+            + PartialEq
+            + Eq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        /// The type of an interface mac address.
+        type InterfaceMac: FullCodec
+            + Debug
+            + PartialEq
+            + Eq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        /// The type of an interface IP.
+        type InterfaceIP: FullCodec
+            + Debug
+            + PartialEq
+            + Eq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
         #[pallet::constant]
         type MaxFarmNameLength: Get<u32>;
+
+        #[pallet::constant]
+        type MaxInterfaceIpsLength: Get<u32>;
 
         // #[pallet::constant]
         // type MaxFarmIPs: Get<u32>;
@@ -307,8 +350,8 @@ pub mod pallet {
         FarmUpdated(FarmInfoOf<T>),
         FarmDeleted(u32),
 
-        NodeStored(Node<pallet::PubConfigOf<T>>),
-        NodeUpdated(Node<pallet::PubConfigOf<T>>),
+        NodeStored(Node<pallet::PubConfigOf<T>, pallet::InterfaceOf<T>>),
+        NodeUpdated(Node<pallet::PubConfigOf<T>, pallet::InterfaceOf<T>>),
         NodeDeleted(u32),
         NodeUptimeReported(u32, u64, u64),
         NodePublicConfigStored(u32, Option<pallet::PubConfigOf<T>>),
@@ -422,6 +465,15 @@ pub mod pallet {
         DomainToLong,
         InvalidDomain,
         MethodIsDeprecated,
+        InterfaceNameToShort,
+        InterfaceNameToLong,
+        InvalidInterfaceName,
+        InterfaceMacToShort,
+        InterfaceMacToLong,
+        InvalidMacAddress,
+        InterfaceIpToShort,
+        InterfaceIpToLong,
+        InvalidInterfaceIP
     }
 
     #[pallet::genesis_config]
@@ -860,7 +912,7 @@ pub mod pallet {
             location: Location,
             country: Vec<u8>,
             city: Vec<u8>,
-            interfaces: Vec<Interface>,
+            interfaces: Vec<pallet::InterfaceOf<T>>,
             secure_boot: bool,
             virtualized: bool,
             serial_number: Vec<u8>,
@@ -928,7 +980,7 @@ pub mod pallet {
             location: Location,
             country: Vec<u8>,
             city: Vec<u8>,
-            interfaces: Vec<Interface>,
+            interfaces: Vec<pallet::InterfaceOf<T>>,
             secure_boot: bool,
             virtualized: bool,
             serial_number: Vec<u8>,
@@ -1824,7 +1876,7 @@ impl<T: Config> Pallet<T> {
     }
 
     fn get_farming_policy(
-        node: &Node<pallet::PubConfigOf<T>>,
+        node: &Node<pallet::PubConfigOf<T>, pallet::InterfaceOf<T>>,
     ) -> Result<types::FarmingPolicy<T::BlockNumber>, DispatchErrorWithPostInfo> {
         let mut farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 

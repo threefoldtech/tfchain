@@ -2,7 +2,7 @@ use super::Config;
 use super::*;
 use frame_support::{traits::Get, weights::Weight};
 use log::info;
-use tfchain_support::types::PublicConfig;
+use tfchain_support::types::{PublicConfig, Interface};
 
 pub mod deprecated {
     use crate::Config;
@@ -14,7 +14,7 @@ pub mod deprecated {
     use sp_std::vec::Vec;
     use tfchain_support::resources::Resources;
     use tfchain_support::types::{
-        FarmCertification, FarmingPolicyLimit, Interface, Location, NodeCertification,
+        FarmCertification, FarmingPolicyLimit, Location, NodeCertification,
     };
 
     #[derive(PartialEq, Eq, Clone, Encode, Decode, Default, Debug, TypeInfo)]
@@ -61,12 +61,12 @@ pub mod deprecated {
 
     pub type IP = Vec<u8>;
 
-    // #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-    // pub struct Interface {
-    //     pub name: Vec<u8>,
-    //     pub mac: Vec<u8>,
-    //     pub ips: Vec<IP>,
-    // }
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+    pub struct Interface {
+        pub name: Vec<u8>,
+        pub mac: Vec<u8>,
+        pub ips: Vec<IP>,
+    }
 
     #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
     pub struct PublicConfig {
@@ -139,6 +139,11 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
             public_config = Some(config);
         };
 
+        let mut interfaces = Vec::new();
+        if let Ok(intfs) = get_interfaces::<T>(&node) {
+            interfaces = intfs;
+        }
+
         let new_node = Node {
             version: 5,
             id: node.id,
@@ -151,7 +156,7 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
             public_config,
             created: node.created,
             farming_policy_id: node.farming_policy_id,
-            interfaces: node.interfaces,
+            interfaces,
             certification: node.certification,
             secure_boot: node.secure_boot,
             virtualized: node.virtualized,
@@ -191,4 +196,33 @@ fn get_public_config<T: Config>(node: &deprecated::NodeV4) -> Result<PubConfigOf
         gw6,
         domain
     })
+}
+
+use super::{InterfaceOf, InterfaceIp};
+use frame_support::BoundedVec;
+fn get_interfaces<T: Config>(node: &deprecated::NodeV4) -> Result<Vec<InterfaceOf<T>>, Error<T>> {
+    let mut parsed_interfaces = Vec::new();
+
+    for intf in &node.interfaces {
+        let intf_name = <T as Config>::InterfaceName::try_from(intf.name.clone())?;
+        let intf_mac = <T as Config>::InterfaceMac::try_from(intf.mac.clone())?;
+
+        let mut parsed_interfaces_ips: BoundedVec<
+            InterfaceIp<T>,
+            <T as Config>::MaxInterfaceIpsLength,
+        > = vec![].try_into().unwrap();
+
+        for ip in &intf.ips {
+            let intf_ip = <T as Config>::InterfaceIP::try_from(ip.clone())?;
+            let _ = parsed_interfaces_ips.try_push(intf_ip);
+        }
+
+        parsed_interfaces.push(Interface {
+            name: intf_name,
+            mac: intf_mac,
+            ips: parsed_interfaces_ips
+        });
+    };
+
+    Ok(parsed_interfaces)
 }

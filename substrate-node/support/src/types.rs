@@ -2,7 +2,7 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use core::cmp::{Ord, Ordering, PartialOrd};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
-use frame_support::{BoundedVec, traits::{ConstU32}};
+use frame_support::{BoundedVec, traits::{ConstU32, Get}};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
 pub struct Farm<Name, PublicIP> {
@@ -61,7 +61,7 @@ pub struct FarmingPolicyLimit {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct Node<PubConfig> {
+pub struct Node<PubConfig, If> {
     pub version: u32,
     pub id: u32,
     pub farm_id: u32,
@@ -74,7 +74,7 @@ pub struct Node<PubConfig> {
     pub public_config: Option<PubConfig>,
     pub created: u64,
     pub farming_policy_id: u32,
-    pub interfaces: Vec<Interface>,
+    pub interfaces: Vec<If>,
     pub certification: NodeCertification,
     pub secure_boot: bool,
     pub virtualized: bool,
@@ -82,13 +82,11 @@ pub struct Node<PubConfig> {
     pub connection_price: u32,
 }
 
-pub type IP = Vec<u8>;
-
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct Interface {
-    pub name: Vec<u8>,
-    pub mac: Vec<u8>,
-    pub ips: Vec<IP>,
+pub struct Interface<Name, Mac, Ips> {
+    pub name: Name,
+    pub mac: Mac,
+    pub ips: Ips,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
