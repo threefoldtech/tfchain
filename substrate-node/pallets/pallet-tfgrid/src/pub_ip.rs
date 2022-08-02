@@ -3,7 +3,7 @@ use sp_std::{marker::PhantomData, vec::Vec};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{ensure, sp_runtime::SaturatedConversion, BoundedVec, RuntimeDebug, traits::ConstU32};
 use scale_info::TypeInfo;
-use valip::{{ip::IPv4}, {cidr::CIDR}};
+use valip::{{ip4::{ip::IPv4, cidr::CIDR}}};
 
 use crate::{Config, Error};
 

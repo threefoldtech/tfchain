@@ -28,7 +28,6 @@ pub mod weights;
 pub mod types;
 
 pub mod farm;
-pub mod ipv6;
 pub mod pub_ip;
 pub mod twin;
 pub mod pub_config;
@@ -89,8 +88,8 @@ pub mod pallet {
 
     pub type PubConfigOf<T> = PublicConfig<
         <T as Config>::IP4,
-        <T as Config>::GW4,
         <T as Config>::IP6,
+        <T as Config>::GW4,
         <T as Config>::GW6,
         <T as Config>::Domain
     >;

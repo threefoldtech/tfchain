@@ -376,14 +376,19 @@ fn test_create_farm_with_double_ip_fails() {
 
         let farm_name = get_farm_name(b"test_farm");
         let mut pub_ips = Vec::new();
+
+        let ip = get_public_ip_ip(&"185.206.122.33/24".as_bytes().to_vec());
+        let gateway = get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec());
+
         pub_ips.push(PublicIP {
-            ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
-            gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+            ip: ip.clone(),
+            gateway: gateway.clone(),
             contract_id: 0,
         });
+
         pub_ips.push(PublicIP {
-            ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
-            gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+            ip,
+            gateway,
             contract_id: 0,
         });
 
@@ -591,9 +596,13 @@ fn test_create_farm_with_same_name_fails() {
 
         let farm_name = get_farm_name(b"test_farm");
         let mut pub_ips = Vec::new();
+
+        let ip = get_public_ip_ip(&"185.206.122.33/24".as_bytes().to_vec());
+        let gateway = get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec());
+
         pub_ips.push(PublicIP {
-            ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
-            gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+            ip,
+            gateway,
             contract_id: 0,
         });
 
@@ -758,11 +767,16 @@ fn node_add_public_config_works() {
         create_farm();
         create_node();
 
+        let ipv4 = get_pub_config_ip4(&"185.206.122.33/24".as_bytes().to_vec());
+        let ipv6 = get_pub_config_ip6(&"2a10:b600:1::0cc4:7a30:65b5/64".as_bytes().to_vec());
+        let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
+        let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
+
         let pub_config = PublicConfig {
-            ipv4: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
-            gw4: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
-            ipv6: "::1".as_bytes().to_vec().try_into().unwrap(),
-            gw6: "::1".as_bytes().to_vec().try_into().unwrap(),
+            ipv4,
+            ipv6,
+            gw4,
+            gw6,
             domain: "some_domain".as_bytes().to_vec().try_into().unwrap(),
         };
 
@@ -786,11 +800,16 @@ fn node_add_public_config_fails_if_signature_incorrect() {
         create_farm();
         create_node();
 
+        let ipv4 = get_pub_config_ip4(&"185.206.122.33/24".as_bytes().to_vec());
+        let ipv6 = get_pub_config_ip6(&"2a10:b600:1::0cc4:7a30:65b5/64".as_bytes().to_vec());
+        let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
+        let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
+
         let pub_config = PublicConfig {
-            ipv4: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
-            gw4: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
-            ipv6: "::1".as_bytes().to_vec().try_into().unwrap(),
-            gw6: "::1".as_bytes().to_vec().try_into().unwrap(),
+            ipv4,
+            ipv6,
+            gw4,
+            gw6,
             domain: "some_domain".as_bytes().to_vec().try_into().unwrap(),
         };
 
@@ -1428,9 +1447,13 @@ fn create_farm() {
     let farm_name = get_farm_name(b"test_farm");
 
     let mut pub_ips = Vec::new();
+
+    let ip = get_public_ip_ip(&"185.206.122.33/24".as_bytes().to_vec());
+    let gateway = get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec());
+
     pub_ips.push(PublicIP {
-        ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
-        gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+        ip,
+        gateway,
         contract_id: 0,
     });
     assert_ok!(TfgridModule::create_farm(

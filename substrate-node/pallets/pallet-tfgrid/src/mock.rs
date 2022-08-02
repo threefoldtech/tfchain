@@ -176,13 +176,29 @@ pub(crate) fn get_farm_name(farm_name_input: &[u8]) -> TestFarmName {
     FarmName::try_from(farm_name_input.to_vec()).expect("Invalid farm input.")
 }
 
-// pub (crate) fn get_public_ip(public_ip_input: &[u8]) -> TestPublicIP {
-//     PublicIP::try_from(public_ip_input.to_vec()).expect("Invalid public ip input")
-// }
+pub (crate) fn get_pub_config_ip4(ip4: &[u8]) -> TestIP4 {
+    IP4::try_from(ip4.to_vec()).expect("Invalid ip4 input")
+}
 
-// pub (crate) fn get_gateway_ip(gateway_ip_input: &[u8]) -> TestGatewayIP {
-//     GatewayIP::try_from(gateway_ip_input.to_vec()).expect("Invalid gateway ip input")
-// }
+pub (crate) fn get_pub_config_gw4(gw4: &[u8]) -> TestGW4 {
+    GW4::try_from(gw4.to_vec()).expect("Invalid gw4 input")
+}
+
+pub (crate) fn get_pub_config_ip6(ip6: &[u8]) -> TestIP6 {
+    IP6::try_from(ip6.to_vec()).expect("Invalid ip6 input")
+}
+
+pub (crate) fn get_pub_config_gw6(gw6: &[u8]) -> TestGW6 {
+    GW6::try_from(gw6.to_vec()).expect("Invalid gw6 input")
+}
+
+pub (crate) fn get_public_ip_ip(ip: &[u8]) -> TestPublicIP {
+    PublicIP::try_from(ip.to_vec()).expect("Invalid public ip input")
+}
+
+pub (crate) fn get_public_ip_gateway(gw: &[u8]) -> TestGatewayIP {
+    GatewayIP::try_from(gw.to_vec()).expect("Invalid gateway ip input")
+}
 
 // industry dismiss casual gym gap music pave gasp sick owner dumb cost
 /// Helper function to generate a crypto pair from seed

@@ -7822,9 +7822,9 @@ dependencies = [
 
 [[package]]
 name = "valip"
-version = "0.1.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "009724c7f55981322ac193a19e008a4c4b4b1e6777563ede0b42e027772fb1b5"
+checksum = "975fb9f3a862d92c165eaf7eaf2da3cb0c9a8410ce56bbdc3229ea3cd052a132"
 
 [[package]]
 name = "valuable"

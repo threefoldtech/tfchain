@@ -1,13 +1,15 @@
 use sp_std::{marker::PhantomData, vec::Vec};
 
-use crate::ipv6::valid_ipv6;
 use crate::{Config, Error};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
 };
 use scale_info::TypeInfo;
-use valip::{cidr::CIDR, ip::IPv4};
+use valip::{
+    ip4::{ip::IPv4, cidr::CIDR},
+    ip6::{Ip as IPv6, CIDR as IPv6Cidr},
+};
 
 /// A Public IP.
 /// Needs to be valid format (ipv4 with cidr and in public range)
@@ -63,8 +65,8 @@ impl<T: Config> Clone for IP4<T> {
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct GW4<T: Config>(
-    pub BoundedVec<u8, ConstU32<18>>,
-    PhantomData<(T, ConstU32<18>)>,
+    pub BoundedVec<u8, ConstU32<13>>,
+    PhantomData<(T, ConstU32<13>)>,
 );
 
 pub const MIN_GATEWAY_LENGTH: u32 = 7;
@@ -80,7 +82,7 @@ impl<T: Config> TryFrom<Vec<u8>> for GW4<T> {
             value.len() >= MIN_GATEWAY_LENGTH.saturated_into(),
             Self::Error::GW4ToShort
         );
-        let bounded_vec: BoundedVec<u8, ConstU32<18>> =
+        let bounded_vec: BoundedVec<u8, ConstU32<13>> =
             BoundedVec::try_from(value).map_err(|_| Self::Error::GW4ToLong)?;
         ensure!(
             IPv4::parse(&bounded_vec).is_ok(),
@@ -104,8 +106,8 @@ impl<T: Config> Clone for GW4<T> {
     }
 }
 
-/// A Public IP.
-/// Needs to be valid format (ipv4 with cidr and in public range)
+/// Public Config IP6.
+/// Needs to be valid format (ipv6 with cidr and in public range)
 #[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
@@ -129,7 +131,7 @@ impl<T: Config> TryFrom<Vec<u8>> for IP6<T> {
         );
         let bounded_vec: BoundedVec<u8, ConstU32<39>> =
             BoundedVec::try_from(value).map_err(|_| Self::Error::IP6ToLong)?;
-        ensure!(valid_ipv6(&bounded_vec), Self::Error::InvalidIP6);
+        ensure!(IPv6Cidr::parse(&bounded_vec).is_ok(), Self::Error::InvalidIP6);
         Ok(Self(bounded_vec, PhantomData))
     }
 }
@@ -171,7 +173,7 @@ impl<T: Config> TryFrom<Vec<u8>> for GW6<T> {
         );
         let bounded_vec: BoundedVec<u8, ConstU32<39>> =
             BoundedVec::try_from(value).map_err(|_| Self::Error::GW6ToLong)?;
-        ensure!(valid_ipv6(&bounded_vec), Self::Error::InvalidGW6);
+        ensure!(IPv6::parse(&bounded_vec).is_ok(), Self::Error::InvalidGW6);
         Ok(Self(bounded_vec, PhantomData))
     }
 }

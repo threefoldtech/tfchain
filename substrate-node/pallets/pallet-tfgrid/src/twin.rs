@@ -3,9 +3,8 @@ use sp_std::{marker::PhantomData, vec::Vec};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{ensure, sp_runtime::SaturatedConversion, BoundedVec, RuntimeDebug, traits::ConstU32};
 use scale_info::TypeInfo;
-
-use crate::ipv6;
 use crate::{Config, Error};
+use valip::{{ip6::Ip}};
 
 /// A Twin planetary IP (ipv6).
 ///
@@ -33,7 +32,7 @@ impl<T: Config> TryFrom<Vec<u8>> for TwinIp<T> {
         );
         let bounded_vec: BoundedVec<u8, ConstU32<39>> =
             BoundedVec::try_from(value).map_err(|_| Self::Error::TwinIpTooLong)?;
-        ensure!(ipv6::valid_ipv6(&bounded_vec), Self::Error::InvalidTwinIp);
+        ensure!(Ip::parse(&bounded_vec).is_ok(), Self::Error::InvalidTwinIp);
         Ok(Self(bounded_vec, PhantomData))
     }
 }
