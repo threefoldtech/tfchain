@@ -1,6 +1,6 @@
 # Tft price
 
-We use the TFT Price to calculate how much TFT the user is due for a specific workload over time. On chain, there is no easy way to ad-hoc request the TFT Price, this is why we are using the [substrate offchain worker](https://docs.substrate.io/v3/concepts/off-chain-features/#:~:text=Off%2DChain%20Worker%20(OCW),%2Dchain%20data%2C%20etc.) to periodically fetch the price and store it in the runtime storage so that this is accesible by the runtime.
+We use the TFT Price to calculate how much TFT the user is due for a specific workload over time. On chain, there is no easy way to ad-hoc request the TFT Price, this is why we are using the [substrate offchain worker](https://docs.substrate.io/reference/how-to-guides/offchain-workers/) to periodically fetch the price and store it in the runtime storage so that this is accesible by the runtime.
 
 The Off-Chain worker is executed every 10 blocks, meaning every 1 minute. The worker does a HTTP request to following endpoint 
 
