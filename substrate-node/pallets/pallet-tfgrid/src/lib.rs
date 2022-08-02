@@ -31,6 +31,7 @@ pub mod farm;
 pub mod pub_config;
 pub mod pub_ip;
 pub mod twin;
+pub mod grid_migration;
 
 // Definition of the pallet logic, to be aggregated at runtime definition
 // through `construct_runtime`.
@@ -63,7 +64,7 @@ pub mod pallet {
     pub const TFGRID_ENTITY_VERSION: u32 = 1;
     pub const TFGRID_FARM_VERSION: u32 = 3;
     pub const TFGRID_TWIN_VERSION: u32 = 1;
-    pub const TFGRID_NODE_VERSION: u32 = 4;
+    pub const TFGRID_NODE_VERSION: u32 = 5;
     pub const TFGRID_PRICING_POLICY_VERSION: u32 = 2;
     pub const TFGRID_CERTIFICATION_CODE_VERSION: u32 = 1;
     pub const TFGRID_FARMING_POLICY_VERSION: u32 = 2;

@@ -11,6 +11,10 @@ version = '3.0.0'
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
+[dependencies.log]
+default-features = false
+version = '0.4.14'
+
 [dependencies]
 # Substrate packages
 hex = { version = "0.4", default-features = false }
@@ -52,6 +56,7 @@ std = [
 	'tfchain-support/std',
 	'scale-info/std',
 	'hex/std',
+	'log/std'
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
