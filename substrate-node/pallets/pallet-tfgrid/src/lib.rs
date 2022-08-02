@@ -399,7 +399,6 @@ pub mod pallet {
 
         FarmNameTooShort,
         FarmNameTooLong,
-
         InvalidPublicIP,
         PublicIPToShort,
         PublicIPToLong,

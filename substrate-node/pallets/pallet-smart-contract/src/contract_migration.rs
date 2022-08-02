@@ -89,7 +89,10 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
         Contracts::<T>::translate::<deprecated::ContractV3, _>(|k, ctr| {
             frame_support::log::info!("     Migrated contract for {:?}...", k);
 
-            let rc = types::RentContract { node_id: 0 };
+            // dummy default
+            let rc = types::RentContract {
+                node_id: 0
+            };
 
             let mut new_contract = types::Contract {
                 version: 4,
@@ -113,30 +116,35 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                         for pub_ip in node_contract.public_ips_list {
                             // TODO: don't throw error here
 
-                            let parsed_ip_result = <T as pallet_tfgrid::Config>::PublicIP::try_from(pub_ip.ip.clone());
-                            match parsed_ip_result {
-                                Ok(_) => (),
-                                Err(_) => {
-                                    frame_support::log::info!("contract({:?}) ip {:?} cannot be parsed", ctr.contract_id, pub_ip.ip.clone());
-                                    continue
+                            let ip = match <T as pallet_tfgrid::Config>::PublicIP::try_from(pub_ip.ip.clone()) {
+                                Ok(x) => x,
+                                Err(err) => {
+                                    frame_support::log::info!("error while parsing ip: {:?}", err);
+                                    continue;
                                 }
                             };
-                            let parsed_gateway_result = <T as pallet_tfgrid::Config>::GatewayIP::try_from(pub_ip.ip.clone());
-                            match parsed_gateway_result {
-                                Ok(_) => (),
-                                Err(_) => {
-                                    frame_support::log::info!("contract({:?}) gateway ip {:?} cannot be parsed", ctr.contract_id, pub_ip.ip.clone());
-                                    continue
+
+                            let gateway = match <T as pallet_tfgrid::Config>::GatewayIP::try_from(pub_ip.ip.clone()) {
+                                Ok(x) => x,
+                                Err(err) => {
+                                    frame_support::log::info!("error while parsing gateway: {:?}", err);
+                                    continue;
                                 }
                             };
 
                             let new_ip = PublicIP {
-                                ip: parsed_ip_result.unwrap(),
-                                gateway: parsed_gateway_result.unwrap(),
-                                contract_id: 0,
+                                ip,
+                                gateway,
+                                contract_id: pub_ip.contract_id,
                             };
 
-                            let _ = public_ips_list.try_push(new_ip);
+                            match public_ips_list.try_push(new_ip) {
+                                Ok(()) => (),
+                                Err(err) => {
+                                    frame_support::log::info!("error while pushing ip to contract ip list: {:?}", err);
+                                    continue;
+                                }
+                            }
                         }
                     }
 
@@ -157,13 +165,21 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                         types::ContractData::NodeContract(new_node_contract);
                 }
                 deprecated::ContractData::NameContract(nc) => {
-                    let name = super::NameContractNameOf::<T>::try_from(nc.name).unwrap();
-                    let name_c = types::NameContract { name };
-                    new_contract.contract_type = types::ContractData::NameContract(name_c);
-                }
+                    match super::NameContractNameOf::<T>::try_from(nc.name) {
+                        Ok(ctr_name) => {
+                            let name_c = types::NameContract {
+                                name: ctr_name
+                            };
+                            new_contract.contract_type = types::ContractData::NameContract(name_c);
+                        },
+                        Err(err) => {
+                            frame_support::log::info!("error while parsing contract name: {:?}", err);
+                        }
+                    };
+                },
                 deprecated::ContractData::RentContract(rc) => {
                     let rent_c = types::RentContract {
-                        node_id: rc.node_id,
+                        node_id: rc.node_id
                     };
                     new_contract.contract_type = types::ContractData::RentContract(rent_c);
                 }
