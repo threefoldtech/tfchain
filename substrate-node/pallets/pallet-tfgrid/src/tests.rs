@@ -733,7 +733,7 @@ fn node_add_public_config_works() {
             Origin::signed(alice()),
             1,
             1,
-            pub_config.clone()
+            Some(pub_config.clone())
         ));
 
         let node = TfgridModule::nodes(1).unwrap();
@@ -763,9 +763,57 @@ fn node_add_public_config_fails_if_signature_incorrect() {
         };
 
         assert_noop!(
-            TfgridModule::add_node_public_config(Origin::signed(bob()), 1, 1, pub_config.clone()),
+            TfgridModule::add_node_public_config(
+                Origin::signed(bob()),
+                1,
+                1,
+                Some(pub_config.clone())
+            ),
             Error::<TestRuntime>::CannotUpdateFarmWrongTwin
         );
+    });
+}
+
+#[test]
+fn test_unsetting_node_public_config_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        let ipv4 = get_pub_config_ip4(&"185.206.122.33/24".as_bytes().to_vec());
+        let ipv6 = get_pub_config_ip6(&"2a10:b600:1::0cc4:7a30:65b5/64".as_bytes().to_vec());
+        let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
+        let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
+
+        let pub_config = PublicConfig {
+            ipv4,
+            ipv6,
+            gw4,
+            gw6,
+            domain: "some_domain".as_bytes().to_vec().try_into().unwrap(),
+        };
+
+        assert_ok!(TfgridModule::add_node_public_config(
+            Origin::signed(alice()),
+            1,
+            1,
+            Some(pub_config.clone())
+        ));
+
+        let node = TfgridModule::nodes(1).unwrap();
+        assert_eq!(node.public_config, Some(pub_config));
+
+        assert_ok!(TfgridModule::add_node_public_config(
+            Origin::signed(alice()),
+            1,
+            1,
+            None
+        ));
+
+        let node = TfgridModule::nodes(1).unwrap();
+        assert_eq!(node.public_config, None);
     });
 }
 

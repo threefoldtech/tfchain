@@ -310,7 +310,7 @@ pub mod pallet {
         NodeUpdated(Node<pallet::PubConfigOf<T>>),
         NodeDeleted(u32),
         NodeUptimeReported(u32, u64, u64),
-        NodePublicConfigStored(u32, pallet::PubConfigOf<T>),
+        NodePublicConfigStored(u32, Option<pallet::PubConfigOf<T>>),
 
         EntityStored(types::Entity<T::AccountId>),
         EntityUpdated(types::Entity<T::AccountId>),
@@ -1034,7 +1034,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             farm_id: u32,
             node_id: u32,
-            public_config: pallet::PubConfigOf<T>,
+            public_config: Option<pallet::PubConfigOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1056,7 +1056,7 @@ pub mod pallet {
             ensure!(node.farm_id == farm_id, Error::<T>::NodeUpdateNotAuthorized);
 
             // update the public config and save
-            node.public_config = Some(public_config.clone());
+            node.public_config = public_config.clone();
             Nodes::<T>::insert(node_id, node);
 
             Self::deposit_event(Event::NodePublicConfigStored(node_id, public_config));
