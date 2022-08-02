@@ -2,29 +2,29 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use core::cmp::{Ord, Ordering, PartialOrd};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
-use frame_support::{BoundedVec, traits::ConstU32};
+use frame_support::{BoundedVec, traits::{ConstU32}};
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct Farm {
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
+pub struct Farm<Name, PublicIP> {
     pub version: u32,
     pub id: u32,
-    pub name: Vec<u8>,
+    pub name: Name,
     pub twin_id: u32,
     pub pricing_policy_id: u32,
     pub certification: FarmCertification,
-    pub public_ips: Vec<PublicIP>,
+    pub public_ips: BoundedVec<PublicIP, ConstU32<256>>,
     pub dedicated_farm: bool,
     pub farming_policy_limits: Option<FarmingPolicyLimit>,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
-pub struct PublicIP {
-    pub ip: BoundedVec<u8, ConstU32<18>>,
-    pub gateway: BoundedVec<u8, ConstU32<18>>,
+pub struct PublicIP<Ip, Gateway> {
+    pub ip: Ip,
+    pub gateway: Gateway,
     pub contract_id: u64,
 }
 
-#[derive(PartialEq, PartialOrd, Eq, Clone, Encode, Decode, Debug, Copy, TypeInfo)]
+#[derive(PartialEq, PartialOrd, Eq, Clone, Encode, Decode, Debug, Copy, TypeInfo, MaxEncodedLen)]
 pub enum FarmCertification {
     NotCertified,
     Gold,
@@ -50,7 +50,7 @@ impl Ord for FarmCertification {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
 pub struct FarmingPolicyLimit {
     pub farming_policy_id: u32,
     pub cu: Option<u64>,
@@ -61,7 +61,7 @@ pub struct FarmingPolicyLimit {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct Node {
+pub struct Node<PubConfig> {
     pub version: u32,
     pub id: u32,
     pub farm_id: u32,
@@ -71,7 +71,7 @@ pub struct Node {
     pub country: Vec<u8>,
     pub city: Vec<u8>,
     // optional public config
-    pub public_config: Option<PublicConfig>,
+    pub public_config: Option<PubConfig>,
     pub created: u64,
     pub farming_policy_id: u32,
     pub interfaces: Vec<Interface>,
@@ -92,12 +92,12 @@ pub struct Interface {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct PublicConfig {
-    pub ipv4: Vec<u8>,
-    pub ipv6: Vec<u8>,
-    pub gw4: Vec<u8>,
-    pub gw6: Vec<u8>,
-    pub domain: Vec<u8>,
+pub struct PublicConfig<IP4, IP6, GW4, GW6, Domain> {
+    pub ipv4: IP4,
+    pub ipv6: IP6,
+    pub gw4: GW4,
+    pub gw6: GW6,
+    pub domain: Domain,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, Copy, MaxEncodedLen)]

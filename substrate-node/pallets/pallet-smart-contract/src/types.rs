@@ -1,11 +1,12 @@
 use crate::pallet::DeploymentHash;
+use crate::Config;
 use codec::{Decode, Encode, MaxEncodedLen};
+use frame_support::{traits::ConstU32, BoundedVec, RuntimeDebugNoBound};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
 use substrate_fixed::types::U64F64;
-use tfchain_support::types::{PublicIP, Resources};
-use crate::Config;
-use frame_support::{BoundedVec, RuntimeDebugNoBound, traits::ConstU32};
+use tfchain_support::types::{Resources};
+use crate::pallet::ContractPublicIP;
 
 pub type BlockNumber = u64;
 
@@ -49,14 +50,19 @@ impl<T: Config> Contract<T> {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen)]
-pub struct NodeContract {
+#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(T))]
+#[codec(mel_bound())]
+pub struct NodeContract<T: Config> {
     pub node_id: u32,
     // Hash of the deployment, set by the user
     // Max 32 bytes
     pub deployment_hash: DeploymentHash,
     pub public_ips: u32,
-    pub public_ips_list: BoundedVec<PublicIP, ConstU32<5>>,
+    pub public_ips_list: BoundedVec<
+        ContractPublicIP<T>,
+        ConstU32<5>,
+    >,
 }
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
@@ -66,7 +72,19 @@ pub struct NameContract<T: Config> {
     pub name: T::NameContractName,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Clone,
+    Encode,
+    Decode,
+    Default,
+    RuntimeDebugNoBound,
+    TypeInfo,
+    MaxEncodedLen,
+)]
 pub struct RentContract {
     pub node_id: u32,
 }
@@ -75,7 +93,7 @@ pub struct RentContract {
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub enum ContractData<T: Config> {
-    NodeContract(NodeContract),
+    NodeContract(NodeContract<T>),
     NameContract(NameContract<T>),
     RentContract(RentContract),
 }
@@ -86,7 +104,9 @@ impl<T: Config> Default for ContractData<T> {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
+#[derive(
+    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
+)]
 pub struct ContractBillingInformation {
     pub previous_nu_reported: u64,
     pub last_updated: u64,
@@ -139,7 +159,9 @@ impl DiscountLevel {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
+#[derive(
+    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
+)]
 pub struct Consumption {
     pub contract_id: u64,
     pub timestamp: u64,
@@ -150,7 +172,9 @@ pub struct Consumption {
     pub nru: u64,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
+#[derive(
+    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
+)]
 pub struct NruConsumption {
     pub contract_id: u64,
     pub timestamp: u64,
@@ -158,7 +182,9 @@ pub struct NruConsumption {
     pub nru: u64,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
+#[derive(
+    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
+)]
 pub struct ContractBill {
     pub contract_id: u64,
     pub timestamp: u64,
@@ -166,13 +192,17 @@ pub struct ContractBill {
     pub amount_billed: u128,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
+#[derive(
+    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
+)]
 pub struct ContractResources {
     pub contract_id: u64,
     pub used: Resources,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
+#[derive(
+    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
+)]
 pub struct ContractLock<BalanceOf> {
     pub amount_locked: BalanceOf,
     pub lock_updated: u64,

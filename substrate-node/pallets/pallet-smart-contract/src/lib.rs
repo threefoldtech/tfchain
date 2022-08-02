@@ -8,7 +8,7 @@ use frame_support::{
     traits::{Currency, ExistenceRequirement, Get, LockableCurrency, WithdrawReasons},
     transactional,
     weights::Pays,
-    BoundedVec
+    BoundedVec,
 };
 use frame_system::{self as system, ensure_signed};
 use pallet_tfgrid;
@@ -20,6 +20,7 @@ use sp_runtime::{
 };
 use substrate_fixed::types::U64F64;
 use tfchain_support::{traits::ChangeNode, types::Node};
+use pallet_tfgrid::pallet::PubConfigOf;
 
 pub use pallet::*;
 
@@ -33,25 +34,30 @@ pub mod weights;
 
 pub mod contract_migration;
 pub mod cost;
-pub mod types;
 pub mod name_contract;
+pub mod types;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use codec::FullCodec;
     use super::types::*;
     use super::weights::WeightInfo;
     use super::*;
+    use codec::FullCodec;
     use frame_support::pallet_prelude::*;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         log,
-        traits::{Currency, Get, LockIdentifier, LockableCurrency, ConstU32},
+        traits::{ConstU32, Currency, Get, LockIdentifier, LockableCurrency},
     };
     use frame_system::pallet_prelude::*;
     use sp_core::H256;
-    use sp_std::{convert::{TryInto, TryFrom}, fmt::Debug, vec::Vec};
-    use tfchain_support::{traits::ChangeNode, types::PublicIP};
+    use sp_std::{
+        convert::{TryFrom, TryInto},
+        fmt::Debug,
+        vec::Vec,
+    };
+    use tfchain_support::{traits::ChangeNode};
+
     use contract_migration;
 
     pub type BalanceOf<T> =
@@ -71,6 +77,12 @@ pub mod pallet {
 
     pub type DeploymentHash = H256;
     pub type NameContractNameOf<T> = <T as Config>::NameContractName;
+    pub type ContractPublicIP<T> = 
+        PublicIP<
+            <T as pallet_tfgrid::Config>::PublicIP, 
+            <T as pallet_tfgrid::Config>::GatewayIP
+        >;
+
     #[pallet::storage]
     #[pallet::getter(fn contracts)]
     pub type Contracts<T: Config> = StorageMap<_, Blake2_128Concat, u64, Contract<T>, OptionQuery>;
@@ -144,7 +156,7 @@ pub mod pallet {
         type DistributionFrequency: Get<u16>;
         type GracePeriod: Get<u64>;
         type WeightInfo: WeightInfo;
-        type NodeChanged: ChangeNode;
+        type NodeChanged: ChangeNode<PubConfigOf<Self>>;
 
         #[pallet::constant]
         type MaxNameContractNameLength: Get<u32>;
@@ -183,13 +195,19 @@ pub mod pallet {
         /// IP got reserved by a Node contract
         IPsReserved {
             contract_id: u64,
-            public_ips: BoundedVec<PublicIP, MaxNodeContractPublicIPs>,
+            public_ips: BoundedVec<
+                ContractPublicIP<T>,
+                MaxNodeContractPublicIPs,
+            >,
         },
         /// IP got freed by a Node contract
         IPsFreed {
             contract_id: u64,
             // public ip as a string
-            public_ips: BoundedVec<PublicIP, MaxNodeContractPublicIPs>,
+            public_ips: BoundedVec<
+                ContractPublicIP<T>,
+                MaxNodeContractPublicIPs,
+            >,
         },
         /// Deprecated event
         ContractDeployed(u64, T::AccountId),
@@ -367,8 +385,9 @@ pub mod pallet {
 
 use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 use pallet::NameContractNameOf;
+// use pallet_tfgrid::pub_ip::{GatewayIP, PublicIP as PalletTfgridPublicIP};
+use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::types::PublicIP;
-use sp_std::convert::{TryInto, TryFrom};
 // Internal functions of the pallet
 impl<T: Config> Pallet<T> {
     pub fn _create_node_contract(
@@ -383,17 +402,8 @@ impl<T: Config> Pallet<T> {
         );
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id).unwrap();
 
-        ensure!(
-            pallet_tfgrid::Nodes::<T>::contains_key(&node_id),
-            Error::<T>::NodeNotExists
-        );
-
-        let node = pallet_tfgrid::Nodes::<T>::get(node_id);
-        ensure!(
-            pallet_tfgrid::Farms::<T>::contains_key(node.farm_id),
-            Error::<T>::FarmNotExists
-        );
-        let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+        let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
         if farm.dedicated_farm && !ActiveRentContractForNode::<T>::contains_key(node_id) {
             return Err(Error::<T>::NodeNotAvailableToDeploy.into());
@@ -419,7 +429,13 @@ impl<T: Config> Pallet<T> {
             }
         }
 
-        let public_ips_list: BoundedVec<PublicIP, MaxNodeContractPublicIPs> = vec![].try_into().unwrap();
+        let public_ips_list: BoundedVec<
+                PublicIP<
+                <T as pallet_tfgrid::Config>::PublicIP,
+                <T as pallet_tfgrid::Config>::GatewayIP,
+            >,
+            MaxNodeContractPublicIPs,
+        > = vec![].try_into().unwrap();
         // Prepare NodeContract struct
         let node_contract = types::NodeContract {
             node_id,
@@ -466,24 +482,20 @@ impl<T: Config> Pallet<T> {
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&account_id),
             Error::<T>::TwinNotExists
         );
-        ensure!(
-            pallet_tfgrid::Nodes::<T>::contains_key(&node_id),
-            Error::<T>::NodeNotExists
-        );
 
         ensure!(
             !ActiveRentContractForNode::<T>::contains_key(node_id),
             Error::<T>::NodeHasRentContract
         );
 
-        let node = pallet_tfgrid::Nodes::<T>::get(node_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
         ensure!(
             pallet_tfgrid::Farms::<T>::contains_key(node.farm_id),
             Error::<T>::FarmNotExists
         );
 
         let active_node_contracts = ActiveNodeContracts::<T>::get(node_id);
-        let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id);
+        let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
         ensure!(
             farm.dedicated_farm || active_node_contracts.is_empty(),
             Error::<T>::NodeNotAvailableToDeploy
@@ -516,15 +528,18 @@ impl<T: Config> Pallet<T> {
         );
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source).unwrap();
 
-        let valid_name = NameContractNameOf::<T>::try_from(name).map_err(DispatchErrorWithPostInfo::from)?;
-        
+        let valid_name =
+            NameContractNameOf::<T>::try_from(name).map_err(DispatchErrorWithPostInfo::from)?;
+
         // Validate name uniqueness
         ensure!(
             !ContractIDByNameRegistration::<T>::contains_key(&valid_name),
             Error::<T>::NameExists
         );
 
-        let name_contract = types::NameContract { name: valid_name.clone() };
+        let name_contract = types::NameContract {
+            name: valid_name.clone(),
+        };
 
         let contract =
             Self::_create_contract(twin_id, types::ContractData::NameContract(name_contract))?;
@@ -724,13 +739,9 @@ impl<T: Config> Pallet<T> {
 
         // fetch the node from the source account (signee)
         let node_id = pallet_tfgrid::NodeIdByTwinID::<T>::get(&twin_id);
-        let node = pallet_tfgrid::Nodes::<T>::get(node_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
 
-        ensure!(
-            pallet_tfgrid::Farms::<T>::contains_key(&node.farm_id),
-            Error::<T>::FarmNotExists
-        );
-        let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id);
+        let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
         ensure!(
             pallet_tfgrid::PricingPolicies::<T>::contains_key(farm.pricing_policy_id),
@@ -837,7 +848,7 @@ impl<T: Config> Pallet<T> {
                     Self::remove_contract(contract.contract_id);
                     continue;
                 }
-    
+
                 // Reinsert into the next billing frequency
                 Self::_reinsert_contract_to_bill(contract.contract_id);
             }
@@ -1041,7 +1052,7 @@ impl<T: Config> Pallet<T> {
     pub fn remove_contract(contract_id: u64) {
         let contract = Contracts::<T>::get(contract_id);
         if contract.is_none() {
-            return
+            return;
         }
 
         if let Some(contract) = contract {
@@ -1056,7 +1067,7 @@ impl<T: Config> Pallet<T> {
                             }
                         }
                     }
-    
+
                     // remove the contract by hash from storage
                     ContractIDByNodeIDAndHash::<T>::remove(
                         node_contract.node_id,
@@ -1064,7 +1075,7 @@ impl<T: Config> Pallet<T> {
                     );
                     NodeContractResources::<T>::remove(contract_id);
                     ContractBillingInformationByID::<T>::remove(contract_id);
-    
+
                     Self::deposit_event(Event::NodeContractCanceled {
                         contract_id,
                         node_id: node_contract.node_id,
@@ -1078,7 +1089,8 @@ impl<T: Config> Pallet<T> {
                 types::ContractData::RentContract(rent_contract) => {
                     ActiveRentContractForNode::<T>::remove(rent_contract.node_id);
                     // Remove all associated active node contracts
-                    let active_node_contracts = ActiveNodeContracts::<T>::get(rent_contract.node_id);
+                    let active_node_contracts =
+                        ActiveNodeContracts::<T>::get(rent_contract.node_id);
                     for node_contract in active_node_contracts {
                         Self::remove_contract(node_contract);
                     }
@@ -1239,18 +1251,15 @@ impl<T: Config> Pallet<T> {
 
     pub fn _reserve_ip(
         contract_id: u64,
-        node_contract: &mut types::NodeContract,
+        node_contract: &mut types::NodeContract<T>,
     ) -> DispatchResultWithPostInfo {
         if node_contract.public_ips == 0 {
             return Ok(().into());
         }
-        let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id).ok_or(Error::<T>::NodeNotExists)?;
 
-        ensure!(
-            pallet_tfgrid::Farms::<T>::contains_key(&node.farm_id),
-            Error::<T>::FarmNotExists
-        );
-        let mut farm = pallet_tfgrid::Farms::<T>::get(node.farm_id);
+        let mut farm =
+            pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
         log::info!(
             "Number of farm ips {:?}, number of ips to reserve: {:?}",
@@ -1262,7 +1271,13 @@ impl<T: Config> Pallet<T> {
             Error::<T>::FarmHasNotEnoughPublicIPs
         );
 
-        let mut ips: BoundedVec<PublicIP, MaxNodeContractPublicIPs> = vec![].try_into().unwrap();
+        let mut ips: BoundedVec<
+            PublicIP<
+                <T as pallet_tfgrid::Config>::PublicIP,
+                <T as pallet_tfgrid::Config>::GatewayIP,
+            >,
+            MaxNodeContractPublicIPs,
+        > = vec![].try_into().unwrap();
         // let mut ips = Vec::new();
         for i in 0..farm.public_ips.len() {
             let mut ip = farm.public_ips[i].clone();
@@ -1276,11 +1291,11 @@ impl<T: Config> Pallet<T> {
             if ip.contract_id == 0 {
                 ip.contract_id = contract_id;
                 farm.public_ips[i] = ip.clone();
-                ips.try_push(ip).or_else(|_|
+                ips.try_push(ip).or_else(|_| {
                     return Err(DispatchErrorWithPostInfo::from(
                         Error::<T>::FailedToReserveIP,
-                    ))
-                )?;
+                    ));
+                })?;
             }
         }
 
@@ -1293,24 +1308,27 @@ impl<T: Config> Pallet<T> {
         // Update the farm with the reserved ips
         pallet_tfgrid::Farms::<T>::insert(farm.id, farm);
 
-        node_contract.public_ips_list = ips;
+        node_contract.public_ips_list = ips.try_into().unwrap();
 
         Ok(().into())
     }
 
     pub fn _free_ip(
         contract_id: u64,
-        node_contract: &mut types::NodeContract,
+        node_contract: &mut types::NodeContract<T>,
     ) -> DispatchResultWithPostInfo {
-        let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id).ok_or(Error::<T>::NodeNotExists)?;
 
-        ensure!(
-            pallet_tfgrid::Farms::<T>::contains_key(&node.farm_id),
-            Error::<T>::FarmNotExists
-        );
-        let mut farm = pallet_tfgrid::Farms::<T>::get(node.farm_id);
+        let mut farm =
+            pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
-        let mut public_ips: BoundedVec<PublicIP, MaxNodeContractPublicIPs> = vec![].try_into().unwrap();
+        let mut public_ips: BoundedVec<
+            PublicIP<
+                <T as pallet_tfgrid::Config>::PublicIP,
+                <T as pallet_tfgrid::Config>::GatewayIP,
+            >,
+            MaxNodeContractPublicIPs,
+        > = vec![].try_into().unwrap();
         for i in 0..farm.public_ips.len() {
             let mut ip = farm.public_ips[i].clone();
 
@@ -1319,11 +1337,9 @@ impl<T: Config> Pallet<T> {
             if ip.contract_id == contract_id {
                 ip.contract_id = 0;
                 farm.public_ips[i] = ip.clone();
-                public_ips.try_push(ip).or_else(|_|
-                    return Err(DispatchErrorWithPostInfo::from(
-                        Error::<T>::FailedToFreeIPs,
-                    ))
-                )?;
+                public_ips.try_push(ip).or_else(|_| {
+                    return Err(DispatchErrorWithPostInfo::from(Error::<T>::FailedToFreeIPs));
+                })?;
             }
         }
 
@@ -1340,7 +1356,7 @@ impl<T: Config> Pallet<T> {
 
     pub fn get_node_contract(
         contract: &types::Contract<T>,
-    ) -> Result<types::NodeContract, DispatchErrorWithPostInfo> {
+    ) -> Result<types::NodeContract<T>, DispatchErrorWithPostInfo> {
         match contract.contract_type.clone() {
             types::ContractData::NodeContract(c) => Ok(c),
             _ => {
@@ -1382,10 +1398,10 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-impl<T: Config> ChangeNode for Pallet<T> {
-    fn node_changed(_node: Option<&Node>, _new_node: &Node) {}
+impl<T: Config> ChangeNode<PubConfigOf<T>> for Pallet<T> {
+    fn node_changed(_node: Option<&Node<PubConfigOf<T>>>, _new_node: &Node<PubConfigOf<T>>) {}
 
-    fn node_deleted(node: &Node) {
+    fn node_deleted(node: &Node<PubConfigOf<T>>) {
         // Clean up all active contracts
         let active_node_contracts = ActiveNodeContracts::<T>::get(node.id);
         for node_contract_id in active_node_contracts {

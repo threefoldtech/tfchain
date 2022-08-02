@@ -1,16 +1,17 @@
 use super::*;
-use frame_support::{BoundedVec, weights::Weight, traits::ConstU32};
+use frame_support::{weights::Weight, BoundedVec};
+use pallet_tfgrid;
 use sp_core::H256;
-use sp_std::convert::{TryInto, TryFrom};
+use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::types::PublicIP;
 
 pub mod deprecated {
+    use super::types;
     use crate::Config;
     use codec::{Decode, Encode};
     use frame_support::decl_module;
-    use sp_std::prelude::*;
     use scale_info::TypeInfo;
-    use super::types;
+    use sp_std::prelude::*;
     use sp_std::vec::Vec;
 
     #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
@@ -59,7 +60,7 @@ pub mod deprecated {
         }
     }
 
-    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo,)]
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
     pub struct PublicIP {
         pub ip: Vec<u8>,
         pub gateway: Vec<u8>,
@@ -103,12 +104,19 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
 
             match ctr.contract_type {
                 deprecated::ContractData::NodeContract(node_contract) => {
-                    let mut public_ips_list: BoundedVec<PublicIP, pallet::MaxNodeContractPublicIPs> = vec![].try_into().unwrap();
+                    let mut public_ips_list: BoundedVec<
+                        PublicIP<
+                            <T as pallet_tfgrid::Config>::PublicIP,
+                            <T as pallet_tfgrid::Config>::GatewayIP,
+                        >,
+                        pallet::MaxNodeContractPublicIPs,
+                    > = vec![].try_into().unwrap();
 
                     if node_contract.public_ips_list.len() > 0 {
                         for pub_ip in node_contract.public_ips_list {
+                            // TODO: don't throw error here
 
-                            let ip: BoundedVec<u8, ConstU32<18>> = match pub_ip.ip.clone().try_into() {
+                            let ip = match <T as pallet_tfgrid::Config>::PublicIP::try_from(pub_ip.ip.clone()) {
                                 Ok(x) => x,
                                 Err(err) => {
                                     frame_support::log::info!("error while parsing ip: {:?}", err);
@@ -116,7 +124,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                                 }
                             };
 
-                            let gateway: BoundedVec<u8, ConstU32<18>> = match pub_ip.gateway.clone().try_into(){
+                            let gateway = match <T as pallet_tfgrid::Config>::GatewayIP::try_from(pub_ip.ip.clone()) {
                                 Ok(x) => x,
                                 Err(err) => {
                                     frame_support::log::info!("error while parsing gateway: {:?}", err);

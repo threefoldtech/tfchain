@@ -89,7 +89,7 @@ impl<T: Config> Contract<T> {
                 if !pallet_tfgrid::Nodes::<T>::contains_key(rent_contract.node_id) {
                     return Err(DispatchErrorWithPostInfo::from(Error::<T>::NodeNotExists));
                 }
-                let node = pallet_tfgrid::Nodes::<T>::get(rent_contract.node_id);
+                let node = pallet_tfgrid::Nodes::<T>::get(rent_contract.node_id).unwrap();
     
                 let contract_cost = calculate_resources_cost::<T>(
                     node.resources,
