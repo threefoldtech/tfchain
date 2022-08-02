@@ -277,6 +277,7 @@ pub fn get_staking_pool_account() -> AccountId {
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
+    //TODO add offchain worker see pallet-tft-price impl ExternalityBuilder
     let mut t = frame_system::GenesisConfig::default()
         .build_storage::<TestRuntime>()
         .unwrap();
