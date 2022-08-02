@@ -12,7 +12,7 @@ use sp_runtime::{
 };
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::{traits::ChangeNode, types::Node};
-use pallet_tfgrid::{{farm::FarmName}, {twin::TwinIp}, pub_ip::{GatewayIP, PublicIP}};
+use pallet_tfgrid::{{farm::FarmName}, {twin::TwinIp}, pub_ip::{GatewayIP, PublicIP}, pub_config::{IP4, GW4, IP6, GW6, Domain}};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -73,13 +73,14 @@ parameter_types! {
     pub const MinVetos: u32 = 2;
 }
 
+pub(crate) type PubConfig = pallet_tfgrid::pallet::PubConfigOf<Test>;
 pub struct NodeChanged;
-impl ChangeNode for NodeChanged {
-    fn node_changed(old_node: Option<&Node>, new_node: &Node) {
+impl ChangeNode<PubConfig> for NodeChanged {
+    fn node_changed(old_node: Option<&Node<PubConfig>>, new_node: &Node<PubConfig>) {
         DaoModule::node_changed(old_node, new_node)
     }
 
-    fn node_deleted(node: &Node) {
+    fn node_deleted(node: &Node<PubConfig>) {
         DaoModule::node_deleted(node);
     }
 }
@@ -105,6 +106,12 @@ pub(crate) type TestFarmName = FarmName<Test>;
 pub(crate) type TestPublicIP = PublicIP<Test>;
 pub(crate) type TestGatewayIP = GatewayIP<Test>;
 
+pub(crate) type TestIP4 = IP4<Test>;
+pub(crate) type TestGW4 = GW4<Test>;
+pub(crate) type TestIP6 = IP6<Test>;
+pub(crate) type TestGW6 = GW6<Test>;
+pub(crate) type TestDomain = Domain<Test>;
+
 impl pallet_tfgrid::Config for Test {
     type Event = Event;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
@@ -115,6 +122,11 @@ impl pallet_tfgrid::Config for Test {
     type MaxFarmNameLength = MaxFarmNameLength;
     type PublicIP = TestPublicIP;
     type GatewayIP = TestGatewayIP;
+    type IP4 = TestIP4;
+    type GW4 = TestGW4;
+    type IP6 = TestIP6;
+    type GW6 = TestGW6;
+    type Domain = TestDomain;
 }
 
 impl pallet_timestamp::Config for Test {

@@ -550,7 +550,7 @@ fn voting_tfgridmodule_call_works() {
         assert_ok!(DaoModule::vote(Origin::signed(11), 2, hash.clone(), true));
 
         // Check connection price of node 1
-        let n1 = TfgridModule::nodes(1);
+        let n1 = TfgridModule::nodes(1).unwrap();
         assert_eq!(n1.connection_price, 80);
 
         System::set_block_number(5);
@@ -625,7 +625,7 @@ fn voting_tfgridmodule_call_works() {
         // Connection price should have been modified, any new node should have set the new price
         prepare_twin(15);
         prepare_node(15, 1);
-        let n3 = TfgridModule::nodes(3);
+        let n3 = TfgridModule::nodes(3).unwrap();
         assert_eq!(n3.connection_price, 100);
     });
 }

@@ -3,6 +3,7 @@
 
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
+use pallet_tfgrid::pallet::PubConfigOf;
 
 use frame_support::{
     dispatch::{
@@ -71,7 +72,7 @@ pub mod pallet {
         type MinVetos: Get<u32>;
 
         type Tfgrid: Tfgrid<Self::AccountId, FarmName<Self>, SupportPublicIP<PublicIP<Self>, GatewayIP<Self>>>;
-        type NodeChanged: ChangeNode;
+        type NodeChanged: ChangeNode<PubConfigOf<Self>>;
 
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
@@ -511,8 +512,8 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-impl<T: Config> ChangeNode for Pallet<T> {
-    fn node_changed(old_node: Option<&Node>, new_node: &Node) {
+impl<T: Config> ChangeNode<PubConfigOf<T>> for Pallet<T> {
+    fn node_changed(old_node: Option<&Node<PubConfigOf<T>>>, new_node: &Node<PubConfigOf<T>>) {
         let new_node_weight = Self::get_node_weight(new_node.resources);
         match old_node {
             Some(node) => {
@@ -543,7 +544,7 @@ impl<T: Config> ChangeNode for Pallet<T> {
         };
     }
 
-    fn node_deleted(node: &Node) {
+    fn node_deleted(node: &Node<PubConfigOf<T>>) {
         let node_weight = Self::get_node_weight(node.resources);
         let mut farm_weight = FarmWeight::<T>::get(node.farm_id);
         farm_weight = farm_weight.checked_sub(node_weight).unwrap_or(0);
