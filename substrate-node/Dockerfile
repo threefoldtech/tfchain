@@ -24,12 +24,13 @@ RUN ldd /usr/local/bin/tfchain && \
 
 # Install CA certificates not present in base image
 RUN apt-get update
+RUN apt-get install -y curl
 RUN apt-get install -y ca-certificates
 
 # Shrinking
 RUN rm -rf /usr/lib/python* && \
 	rm -rf /src && \
-	rm -rf /usr/bin /usr/sbin /usr/share/man
+	rm -rf /usr/share/man
 
 EXPOSE 30333 9933 9944 9615
 VOLUME ["/tfchain"]

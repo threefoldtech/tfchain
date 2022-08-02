@@ -14,7 +14,7 @@ use sp_runtime::{
 };
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::{traits::ChangeNode, types::Node};
-use pallet_tfgrid::{{farm::FarmName}, {twin::TwinIp}, pub_ip::{GatewayIP, PublicIP}};
+use pallet_tfgrid::{{farm::FarmName}, {twin::TwinIp}, pub_ip::{GatewayIP, PublicIP}, pub_config::{IP4, GW4, IP6, GW6, Domain}};
 use crate::name_contract::NameContractName;
 
 pub type Signature = MultiSignature;
@@ -95,11 +95,12 @@ impl pallet_balances::Config for TestRuntime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<TestRuntime>;
 }
 
+pub(crate) type PubConfig = pallet_tfgrid::pallet::PubConfigOf<TestRuntime>;
 pub struct NodeChanged;
-impl ChangeNode for NodeChanged {
-    fn node_changed(_old_node: Option<&Node>, _new_node: &Node) {}
+impl ChangeNode<PubConfig> for NodeChanged {
+    fn node_changed(_old_node: Option<&Node<PubConfig>>, _new_node: &Node<PubConfig>) {}
 
-    fn node_deleted(node: &Node) {
+    fn node_deleted(node: &Node<PubConfig>) {
         SmartContractModule::node_deleted(node);
     }
 }
@@ -113,6 +114,12 @@ pub(crate) type TestFarmName = FarmName<TestRuntime>;
 pub(crate) type TestPublicIP = PublicIP<TestRuntime>;
 pub(crate) type TestGatewayIP = GatewayIP<TestRuntime>;
 
+pub(crate) type TestIP4 = IP4<TestRuntime>;
+pub(crate) type TestGW4 = GW4<TestRuntime>;
+pub(crate) type TestIP6 = IP6<TestRuntime>;
+pub(crate) type TestGW6 = GW6<TestRuntime>;
+pub(crate) type TestDomain = Domain<TestRuntime>;
+
 impl pallet_tfgrid::Config for TestRuntime {
     type Event = Event;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
@@ -123,6 +130,11 @@ impl pallet_tfgrid::Config for TestRuntime {
     type MaxFarmNameLength = MaxFarmNameLength;
     type PublicIP = TestPublicIP;
     type GatewayIP = TestGatewayIP;
+    type IP4 = TestIP4;
+    type GW4 = TestGW4;
+    type IP6 = TestIP6;
+    type GW6 = TestGW6;
+    type Domain = TestDomain;
 }
 
 impl pallet_tft_price::Config for TestRuntime {

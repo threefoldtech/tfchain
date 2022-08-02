@@ -421,6 +421,7 @@ pub mod pallet {
         DomainToShort,
         DomainToLong,
         InvalidDomain,
+        MethodIsDeprecated,
     }
 
     #[pallet::genesis_config]
@@ -847,38 +848,8 @@ pub mod pallet {
         }
 
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2) + T::DbWeight::get().reads(2))]
-        pub fn delete_farm(origin: OriginFor<T>, id: u32) -> DispatchResultWithPostInfo {
-            let address = ensure_signed(origin)?;
-
-            let stored_farm = Farms::<T>::get(id).ok_or(Error::<T>::FarmNotExists)?;
-            // make sure farm doesn't have public ips assigned
-            ensure!(
-                stored_farm.public_ips.len() == 0,
-                Error::<T>::CannotDeleteFarmWithPublicIPs
-            );
-            // make sure farm doesn't have nodes assigned
-            for (_, node) in Nodes::<T>::iter() {
-                if node.farm_id == id {
-                    return Err(Error::<T>::CannotDeleteFarmWithNodesAssigned.into());
-                }
-            }
-
-            let twin = Twins::<T>::get(stored_farm.twin_id).ok_or(Error::<T>::TwinNotExists)?;
-            ensure!(
-                twin.account_id == address,
-                Error::<T>::CannotDeleteFarmWrongTwin
-            );
-
-            // delete farm
-            Farms::<T>::remove(id);
-
-            let name: Vec<u8> = stored_farm.name.try_into().unwrap();
-            // Remove stored farm by name and insert new one
-            FarmIdByName::<T>::remove(name);
-
-            Self::deposit_event(Event::FarmDeleted(id));
-
-            Ok(().into())
+        pub fn delete_farm(_origin: OriginFor<T>, _id: u32) -> DispatchResultWithPostInfo {
+            Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
         }
 
         #[pallet::weight(<T as Config>::WeightInfo::create_node())]

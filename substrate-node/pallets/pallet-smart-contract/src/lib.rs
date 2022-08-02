@@ -20,6 +20,7 @@ use sp_runtime::{
 };
 use substrate_fixed::types::U64F64;
 use tfchain_support::{traits::ChangeNode, types::Node};
+use pallet_tfgrid::pallet::PubConfigOf;
 
 pub use pallet::*;
 
@@ -155,7 +156,7 @@ pub mod pallet {
         type DistributionFrequency: Get<u16>;
         type GracePeriod: Get<u64>;
         type WeightInfo: WeightInfo;
-        type NodeChanged: ChangeNode;
+        type NodeChanged: ChangeNode<PubConfigOf<Self>>;
 
         #[pallet::constant]
         type MaxNameContractNameLength: Get<u32>;
@@ -401,12 +402,7 @@ impl<T: Config> Pallet<T> {
         );
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id).unwrap();
 
-        ensure!(
-            pallet_tfgrid::Nodes::<T>::contains_key(&node_id),
-            Error::<T>::NodeNotExists
-        );
-
-        let node = pallet_tfgrid::Nodes::<T>::get(node_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
         if farm.dedicated_farm && !ActiveRentContractForNode::<T>::contains_key(node_id) {
@@ -486,17 +482,13 @@ impl<T: Config> Pallet<T> {
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&account_id),
             Error::<T>::TwinNotExists
         );
-        ensure!(
-            pallet_tfgrid::Nodes::<T>::contains_key(&node_id),
-            Error::<T>::NodeNotExists
-        );
 
         ensure!(
             !ActiveRentContractForNode::<T>::contains_key(node_id),
             Error::<T>::NodeHasRentContract
         );
 
-        let node = pallet_tfgrid::Nodes::<T>::get(node_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
         ensure!(
             pallet_tfgrid::Farms::<T>::contains_key(node.farm_id),
             Error::<T>::FarmNotExists
@@ -747,7 +739,7 @@ impl<T: Config> Pallet<T> {
 
         // fetch the node from the source account (signee)
         let node_id = pallet_tfgrid::NodeIdByTwinID::<T>::get(&twin_id);
-        let node = pallet_tfgrid::Nodes::<T>::get(node_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
 
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
@@ -801,7 +793,7 @@ impl<T: Config> Pallet<T> {
         log::info!("seconds elapsed: {:?}", seconds_elapsed);
 
         // calculate NRU used and the cost
-        let used_nru = U64F64::from_num(report.nru) / pricing_policy.nu.factor();
+        let used_nru = U64F64::from_num(report.nru) / pricing_policy.nu.factor_base_1000();
         let nu_cost = used_nru
             * (U64F64::from_num(pricing_policy.nu.value) / 3600)
             * U64F64::from_num(seconds_elapsed);
@@ -1264,7 +1256,7 @@ impl<T: Config> Pallet<T> {
         if node_contract.public_ips == 0 {
             return Ok(().into());
         }
-        let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id).ok_or(Error::<T>::NodeNotExists)?;
 
         let mut farm =
             pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
@@ -1325,7 +1317,7 @@ impl<T: Config> Pallet<T> {
         contract_id: u64,
         node_contract: &mut types::NodeContract<T>,
     ) -> DispatchResultWithPostInfo {
-        let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id);
+        let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id).ok_or(Error::<T>::NodeNotExists)?;
 
         let mut farm =
             pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
@@ -1406,10 +1398,10 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-impl<T: Config> ChangeNode for Pallet<T> {
-    fn node_changed(_node: Option<&Node>, _new_node: &Node) {}
+impl<T: Config> ChangeNode<PubConfigOf<T>> for Pallet<T> {
+    fn node_changed(_node: Option<&Node<PubConfigOf<T>>>, _new_node: &Node<PubConfigOf<T>>) {}
 
-    fn node_deleted(node: &Node) {
+    fn node_deleted(node: &Node<PubConfigOf<T>>) {
         // Clean up all active contracts
         let active_node_contracts = ActiveNodeContracts::<T>::get(node.id);
         for node_contract_id in active_node_contracts {
