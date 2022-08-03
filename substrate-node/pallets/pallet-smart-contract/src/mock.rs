@@ -1,8 +1,7 @@
 #![cfg(test)]
 
-use super::*; 
+use super::*;
 use crate::name_contract::NameContractName;
-use parking_lot::RawRwLock;
 use crate::{self as pallet_smart_contract};
 use frame_support::{
     construct_runtime, parameter_types,
@@ -16,9 +15,19 @@ use pallet_tfgrid::{
     pub_ip::{GatewayIP, PublicIP},
     twin::TwinIp,
 };
-use sp_runtime::{traits::{IdentifyAccount, Verify}, offchain::testing::PoolState};
-use sp_runtime::MultiSignature;
+use sp_core::{
+    offchain::{
+        testing::{self},
+        OffchainDbExt, OffchainWorkerExt, TransactionPoolExt,
+    },
+    sr25519, Pair, Public, H256,
+};
 use sp_keystore::{testing::KeyStore, KeystoreExt, SyncCryptoStore};
+use sp_runtime::MultiSignature;
+use sp_runtime::{
+    offchain::testing::PoolState,
+    traits::{IdentifyAccount, Verify},
+};
 use sp_runtime::{
     testing::{Header, TestXt},
     traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentityLookup},
@@ -310,19 +319,19 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     };
     genesis.assimilate_storage(&mut storage).unwrap();
 
-
     let t = sp_io::TestExternalities::from(storage);
 
     t
 }
 
-pub fn offchainify(ext: &mut sp_io::TestExternalities, iterations: u32) -> Arc<RwLock<PoolState>> {
+pub fn offchainify(iterations: u32) -> (sp_io::TestExternalities, Arc<RwLock<PoolState>>) {
+    let mut ext = new_test_ext();
     let (offchain, offchain_state) = testing::TestOffchainExt::new();
     let (pool, pool_state) = testing::TestTransactionPoolExt::new();
     let keystore = KeyStore::new();
     keystore
-    .sr25519_generate_new(KEY_TYPE, Some(&format!("//Alice")))
-    .unwrap();
+        .sr25519_generate_new(KEY_TYPE, Some(&format!("//Alice")))
+        .unwrap();
 
     let mut seed = [0_u8; 32];
     seed[0..4].copy_from_slice(&iterations.to_le_bytes());
@@ -333,6 +342,5 @@ pub fn offchainify(ext: &mut sp_io::TestExternalities, iterations: u32) -> Arc<R
     ext.register_extension(TransactionPoolExt::new(pool));
     ext.register_extension(KeystoreExt(Arc::new(keystore)));
 
-
-    pool_state
+    (ext, pool_state)
 }

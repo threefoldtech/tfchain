@@ -2,7 +2,7 @@ use super::Event as SmartContractEvent;
 use crate::{mock::Event as MockEvent, mock::*, Error};
 use frame_support::{
     assert_noop, assert_ok, bounded_vec,
-    traits::{LockableCurrency, OnFinalize, OnInitialize, WithdrawReasons, OffchainWorker},
+    traits::{LockableCurrency, OffchainWorker, OnFinalize, OnInitialize, WithdrawReasons},
     BoundedVec,
 };
 use frame_system::{EventRecord, Phase, RawOrigin};
@@ -1381,7 +1381,8 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
 
 #[test]
 fn test_name_contract_billing() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, _) = offchainify(0);
+    ext.execute_with(|| {
         env_logger::init();
         prepare_farm_and_node();
         run_to_block(1);
