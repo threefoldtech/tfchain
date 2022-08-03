@@ -99,7 +99,7 @@ pub mod v6 {
     impl<T: Config> OnRuntimeUpgrade for GridMigration<T> {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<(), &'static str> {
-            assert!(PalletVersion::<T>::get() == types::StorageVersion::V5Struct);
+            assert!(PalletVersion::<T>::get() != types::StorageVersion::V5Struct);
 
             info!("👥  TFGrid pallet to v4 passes PRE migrate checks ✅",);
             Ok(())

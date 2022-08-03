@@ -47,7 +47,7 @@ pub mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         log,
-        traits::{ConstU32, Currency, Get, LockIdentifier, LockableCurrency},
+        traits::{ConstU32, Currency, Get, LockIdentifier, LockableCurrency, StorageVersion},
     };
     use frame_system::pallet_prelude::*;
     use sp_core::H256;
@@ -71,7 +71,9 @@ pub mod pallet {
     pub struct Pallet<T>(_);
 
     // Version constant that referenced the struct version
-    pub const CONTRACT_VERSION: u32 = 4;
+    pub const CONTRACT_VERSION: u32 = 3;
+    // Storage version is equal to the contract version
+    pub const STORAGE_VERSION: StorageVersion = StorageVersion::new(CONTRACT_VERSION as u16);
 
     pub type MaxNodeContractPublicIPs = ConstU32<5>;
 

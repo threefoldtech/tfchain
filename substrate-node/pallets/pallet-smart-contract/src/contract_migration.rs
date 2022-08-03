@@ -1,5 +1,5 @@
 use super::*;
-use frame_support::{weights::Weight, BoundedVec};
+use frame_support::{traits::GetStorageVersion, weights::Weight, BoundedVec};
 use log::info;
 use pallet_tfgrid;
 use sp_core::H256;
@@ -84,7 +84,19 @@ pub mod v4 {
     impl<T: Config> OnRuntimeUpgrade for ContractMigrationV4<T> {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<(), &'static str> {
-            assert!(PalletVersion::<T>::get() == types::StorageVersion::V3);
+            info!(
+                "chain version: {:?}",
+                Pallet::<T>::on_chain_storage_version()
+            );
+            info!(
+                "current version: {:?}",
+                Pallet::<T>::current_storage_version()
+            );
+
+            assert!(
+                Pallet::<T>::on_chain_storage_version() < Pallet::<T>::current_storage_version()
+                    || Pallet::<T>::on_chain_storage_version() == 0
+            );
 
             info!("👥  Smart Contract pallet to v4 passes PRE migrate checks ✅",);
             Ok(())
@@ -96,11 +108,22 @@ pub mod v4 {
 
         #[cfg(feature = "try-runtime")]
         fn post_upgrade() -> Result<(), &'static str> {
-            assert!(PalletVersion::<T>::get() == types::StorageVersion::V4);
+            info!(
+                "chain version after: {:?}",
+                Pallet::<T>::on_chain_storage_version()
+            );
+            info!(
+                "current version after: {:?}",
+                Pallet::<T>::current_storage_version()
+            );
+            assert_eq!(
+                Pallet::<T>::on_chain_storage_version(),
+                Pallet::<T>::current_storage_version()
+            );
 
             info!(
                 "👥  Smart Contract pallet to {:?} passes POST migrate checks ✅",
-                Pallet::<T>::pallet_version()
+                Pallet::<T>::on_chain_storage_version()
             );
 
             Ok(())
@@ -109,7 +132,9 @@ pub mod v4 {
 }
 
 pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
-    if PalletVersion::<T>::get() == types::StorageVersion::V3 {
+    if Pallet::<T>::on_chain_storage_version() < Pallet::<T>::current_storage_version()
+        || Pallet::<T>::on_chain_storage_version() == 0
+    {
         info!(
             " >>> Starting migration, pallet version: {:?}",
             PalletVersion::<T>::get()
