@@ -7,14 +7,14 @@ use frame_support::{
     weights::Pays,
     BoundedVec,
 };
-use frame_system::{EventRecord, Phase, RawOrigin};
+use frame_system::{EventRecord, Phase, RawOrigin, extrinsics_data_root};
 use log::info;
 use pallet_tfgrid::{
     types::{self as pallet_tfgrid_types, LocationInput},
     ResourcesInput,
 };
 use sp_core::H256;
-use sp_runtime::{assert_eq_error_rate, traits::SaturatedConversion, Perbill, Percent};
+use sp_runtime::{traits::{SaturatedConversion, BlockNumberProvider}, Perbill, Percent};
 use sp_std::convert::{TryFrom, TryInto};
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
