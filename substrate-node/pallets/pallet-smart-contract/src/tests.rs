@@ -1,13 +1,14 @@
 use super::Event as SmartContractEvent;
-use crate::{mock::Event as MockEvent, mock::*, Error};
+use crate::{mock::Extrinsic, mock::Event as MockEvent, mock::*, Error};
+use sp_core::Decode;
 use frame_support::{
     assert_noop, assert_ok, bounded_vec,
     traits::{LockableCurrency, OffchainWorker, OnFinalize, OnInitialize, WithdrawReasons},
     BoundedVec,
 };
-use frame_system::{EventRecord, Phase, RawOrigin};
+use frame_system::{EventRecord, Phase, RawOrigin, extrinsics_data_root};
 use sp_core::H256;
-use sp_runtime::{assert_eq_error_rate, traits::SaturatedConversion, Perbill, Percent};
+use sp_runtime::{traits::{SaturatedConversion, BlockNumberProvider}, Perbill, Percent};
 use substrate_fixed::types::U64F64;
 
 use super::types;
@@ -1381,7 +1382,7 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
 
 #[test]
 fn test_name_contract_billing() {
-    let (mut ext, _) = offchainify(0);
+    let (mut ext, pool_state) = offchainify(0);
     ext.execute_with(|| {
         env_logger::init();
         prepare_farm_and_node();
@@ -1400,13 +1401,28 @@ fn test_name_contract_billing() {
         // because we bill every 10 blocks
         run_to_block(12);
 
+        // TODO: move this out in a function so that we can reuse it
+        // the list of transactions should contain 1 transaction!
+        assert_eq!(pool_state.read().transactions.len(), 1);
+        let encoded = pool_state.read().transactions[0].clone();
+        let extrinsic: Extrinsic = Decode::decode(&mut &*encoded).unwrap();
+        assert_eq!(extrinsic.signature.unwrap().0, 0);
+        // the extrinsic call should be bill_contract_for_block with the arguments contract_id = contract_to_bill[0] and block_number = 11
+        assert_eq!(extrinsic.call, Call::SmartContractModule(crate::Call::bill_contract_for_block {contract_id : contract_to_bill[0], block_number: System::current_block_number()-1 }));
+        // now execute the call so that we can check the events
+        assert_ok!(SmartContractModule::bill_contract_for_block(
+            Origin::signed(bob()),
+            contract_to_bill[0],
+            System::current_block_number()-1
+        ));
+
+        // the contractbill event should look like:
         let contract_bill_event = types::ContractBill {
             contract_id: 1,
             timestamp: 1628082072,
             discount_level: types::DiscountLevel::Gold,
             amount_billed: 2032,
         };
-
         let our_events = System::events();
         println!("events: {:?}", our_events.clone());
         assert_eq!(
