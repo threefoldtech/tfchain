@@ -180,6 +180,10 @@ pub mod pallet {
     #[pallet::getter(fn pallet_version)]
     pub type PalletVersion<T> = StorageValue<_, types::StorageVersion, ValueQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn zos_version)]
+    pub type ZosVersion<T> = StorageValue<_, Vec<u8>, ValueQuery>;
+
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_timestamp::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -250,6 +254,8 @@ pub mod pallet {
         FarmingPolicyUpdated(types::FarmingPolicy<T::BlockNumber>),
         FarmingPolicySet(u32, Option<FarmingPolicyLimit>),
         FarmCertificationSet(u32, FarmCertification),
+
+        ZosVersionUpdated(Vec<u8>),
     }
 
     #[pallet::error]
@@ -315,6 +321,8 @@ pub mod pallet {
         FarmNameTooShort,
         FarmNameTooLong,
         MethodIsDeprecated,
+
+        InvalidZosVersion,
     }
 
     #[pallet::genesis_config]
@@ -1721,6 +1729,25 @@ pub mod pallet {
             Farms::<T>::insert(farm_id, farm);
 
             Self::deposit_event(Event::FarmingPolicySet(farm_id, limits));
+
+            Ok(().into())
+        }
+
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        pub fn set_zos_version(
+            origin: OriginFor<T>,
+            zos_version: Vec<u8>,
+        ) -> DispatchResultWithPostInfo {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+
+            ensure!(
+                ZosVersion::<T>::get() != zos_version,
+                Error::<T>::InvalidZosVersion
+            );
+
+            ZosVersion::<T>::put(&zos_version);
+
+            Self::deposit_event(Event::ZosVersionUpdated(zos_version));
 
             Ok(().into())
         }
