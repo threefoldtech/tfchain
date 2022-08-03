@@ -1,5 +1,8 @@
 use super::Config;
+use super::PubConfigOf;
 use super::*;
+use super::{InterfaceIp, InterfaceOf, PublicIpOf};
+use frame_support::BoundedVec;
 use frame_support::{
     traits::{ConstU32, Get},
     weights::Weight,
@@ -85,15 +88,15 @@ pub mod deprecated {
     }
 }
 
-pub mod v4 {
+pub mod v6 {
     use super::*;
     use crate::Config;
 
     use frame_support::{pallet_prelude::Weight, traits::OnRuntimeUpgrade};
     use sp_std::marker::PhantomData;
-    pub struct ContractMigrationV4<T: Config>(PhantomData<T>);
+    pub struct GridMigration<T: Config>(PhantomData<T>);
 
-    impl<T: Config> OnRuntimeUpgrade for ContractMigrationV4<T> {
+    impl<T: Config> OnRuntimeUpgrade for GridMigration<T> {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<(), &'static str> {
             assert!(PalletVersion::<T>::get() == types::StorageVersion::V5Struct);
@@ -112,7 +115,7 @@ pub mod v4 {
 
             info!(
                 "👥  TFGrid pallet migration to {:?} passes POST migrate checks ✅",
-                Pallet::<T>::pallet_storage_version()
+                Pallet::<T>::pallet_version()
             );
 
             let node_1 = Nodes::<T>::get(1).unwrap();
@@ -232,7 +235,6 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
     T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
 }
 
-use super::PubConfigOf;
 fn get_public_config<T: Config>(node: &deprecated::NodeV4) -> Result<PubConfigOf<T>, Error<T>> {
     let ipv4 = <T as Config>::IP4::try_from(node.public_config.ipv4.clone())?;
     let gw4 = <T as Config>::GW4::try_from(node.public_config.gw4.clone())?;
@@ -249,8 +251,6 @@ fn get_public_config<T: Config>(node: &deprecated::NodeV4) -> Result<PubConfigOf
     })
 }
 
-use super::{InterfaceIp, InterfaceOf, PublicIpOf};
-use frame_support::BoundedVec;
 fn get_interfaces<T: Config>(node: &deprecated::NodeV4) -> Result<Vec<InterfaceOf<T>>, Error<T>> {
     let mut parsed_interfaces = Vec::new();
 

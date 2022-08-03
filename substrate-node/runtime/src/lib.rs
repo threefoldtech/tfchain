@@ -139,7 +139,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 104,
+    spec_version: 105,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -322,13 +322,17 @@ impl pallet_sudo::Config for Runtime {
 }
 
 pub type PubConfig = pallet_tfgrid::pallet::PubConfigOf<Runtime>;
+pub type Interface = pallet_tfgrid::pallet::InterfaceOf<Runtime>;
 pub struct NodeChanged;
-impl ChangeNode<PubConfig> for NodeChanged {
-    fn node_changed(old_node: Option<&Node<PubConfig>>, new_node: &Node<PubConfig>) {
+impl ChangeNode<PubConfig, Interface> for NodeChanged {
+    fn node_changed(
+        old_node: Option<&Node<PubConfig, Interface>>,
+        new_node: &Node<PubConfig, Interface>,
+    ) {
         Dao::node_changed(old_node, new_node)
     }
 
-    fn node_deleted(node: &Node<PubConfig>) {
+    fn node_deleted(node: &Node<PubConfig, Interface>) {
         SmartContractModule::node_deleted(node);
         Dao::node_deleted(node);
     }
@@ -336,6 +340,7 @@ impl ChangeNode<PubConfig> for NodeChanged {
 
 parameter_types! {
     pub const MaxFarmNameLength: u32 = 40;
+    pub const MaxInterfaceIpsLength: u32 = 10;
 }
 
 impl pallet_tfgrid::Config for Runtime {
@@ -353,6 +358,10 @@ impl pallet_tfgrid::Config for Runtime {
     type IP6 = pallet_tfgrid::pub_config::IP6<Runtime>;
     type GW6 = pallet_tfgrid::pub_config::GW6<Runtime>;
     type Domain = pallet_tfgrid::pub_config::Domain<Runtime>;
+    type InterfaceName = pallet_tfgrid::interface::InterfaceName<Runtime>;
+    type InterfaceMac = pallet_tfgrid::interface::InterfaceMac<Runtime>;
+    type InterfaceIP = pallet_tfgrid::interface::InterfaceIp<Runtime>;
+    type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
 }
 
 parameter_types! {
@@ -730,6 +739,10 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
+    (
+        pallet_smart_contract::contract_migration::v4::ContractMigrationV4<Runtime>,
+        pallet_tfgrid::grid_migration::v6::GridMigration<Runtime>,
+    ),
 >;
 
 impl_runtime_apis! {

@@ -1,5 +1,6 @@
 use super::*;
 use frame_support::{weights::Weight, BoundedVec};
+use log::info;
 use pallet_tfgrid;
 use sp_core::H256;
 use sp_std::convert::{TryFrom, TryInto};
@@ -72,14 +73,49 @@ pub mod deprecated {
     }
 }
 
+pub mod v4 {
+    use super::*;
+    use crate::Config;
+
+    use frame_support::{pallet_prelude::Weight, traits::OnRuntimeUpgrade};
+    use sp_std::marker::PhantomData;
+    pub struct ContractMigrationV4<T: Config>(PhantomData<T>);
+
+    impl<T: Config> OnRuntimeUpgrade for ContractMigrationV4<T> {
+        #[cfg(feature = "try-runtime")]
+        fn pre_upgrade() -> Result<(), &'static str> {
+            assert!(PalletVersion::<T>::get() == types::StorageVersion::V3);
+
+            info!("👥  Smart Contract pallet to v4 passes PRE migrate checks ✅",);
+            Ok(())
+        }
+
+        fn on_runtime_upgrade() -> Weight {
+            migrate_to_version_4::<T>()
+        }
+
+        #[cfg(feature = "try-runtime")]
+        fn post_upgrade() -> Result<(), &'static str> {
+            assert!(PalletVersion::<T>::get() == types::StorageVersion::V4);
+
+            info!(
+                "👥  Smart Contract pallet to {:?} passes POST migrate checks ✅",
+                Pallet::<T>::pallet_version()
+            );
+
+            Ok(())
+        }
+    }
+}
+
 pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
     if PalletVersion::<T>::get() == types::StorageVersion::V3 {
-        frame_support::log::info!(
+        info!(
             " >>> Starting migration, pallet version: {:?}",
             PalletVersion::<T>::get()
         );
         let count = Contracts::<T>::iter().count();
-        frame_support::log::info!(
+        info!(
             " >>> Updating Contracts storage. Migrating {} Contracts...",
             count
         );
@@ -87,7 +123,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
         let mut migrated_count = 0;
         // We transform the storage values from the old into the new format.
         Contracts::<T>::translate::<deprecated::ContractV3, _>(|k, ctr| {
-            frame_support::log::info!("     Migrated contract for {:?}...", k);
+            info!("     Migrated contract for {:?}...", k);
 
             // dummy default
             let rc = types::RentContract { node_id: 0 };
@@ -120,7 +156,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                             ) {
                                 Ok(x) => x,
                                 Err(err) => {
-                                    frame_support::log::info!("error while parsing ip: {:?}", err);
+                                    info!("error while parsing ip: {:?}", err);
                                     continue;
                                 }
                             };
@@ -130,10 +166,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                             ) {
                                 Ok(x) => x,
                                 Err(err) => {
-                                    frame_support::log::info!(
-                                        "error while parsing gateway: {:?}",
-                                        err
-                                    );
+                                    info!("error while parsing gateway: {:?}", err);
                                     continue;
                                 }
                             };
@@ -147,10 +180,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                             match public_ips_list.try_push(new_ip) {
                                 Ok(()) => (),
                                 Err(err) => {
-                                    frame_support::log::info!(
-                                        "error while pushing ip to contract ip list: {:?}",
-                                        err
-                                    );
+                                    info!("error while pushing ip to contract ip list: {:?}", err);
                                     continue;
                                 }
                             }
@@ -180,10 +210,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                             new_contract.contract_type = types::ContractData::NameContract(name_c);
                         }
                         Err(err) => {
-                            frame_support::log::info!(
-                                "error while parsing contract name: {:?}",
-                                err
-                            );
+                            info!("error while parsing contract name: {:?}", err);
                         }
                     };
                 }
@@ -199,19 +226,19 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
 
             Some(new_contract)
         });
-        frame_support::log::info!(
+        info!(
             " <<< Contracts storage updated! Migrated {} Contracts ✅",
             migrated_count
         );
 
         // Update pallet storage version
         PalletVersion::<T>::set(types::StorageVersion::V4);
-        frame_support::log::info!(" <<< Storage version upgraded");
+        info!(" <<< Storage version upgraded");
 
         // Return the weight consumed by the migration.
         T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
     } else {
-        frame_support::log::info!(" >>> Unused migration");
+        info!(" >>> Unused migration");
         return 0;
     }
 }
