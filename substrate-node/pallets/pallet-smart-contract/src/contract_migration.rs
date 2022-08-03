@@ -90,9 +90,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
             frame_support::log::info!("     Migrated contract for {:?}...", k);
 
             // dummy default
-            let rc = types::RentContract {
-                node_id: 0
-            };
+            let rc = types::RentContract { node_id: 0 };
 
             let mut new_contract = types::Contract {
                 version: 4,
@@ -115,8 +113,11 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                     if node_contract.public_ips_list.len() > 0 {
                         for pub_ip in node_contract.public_ips_list {
                             // TODO: don't throw error here
+                            // TODO: if public ip parsing fails, we remove it from the contract and set the contract id back to 0 on the farm?
 
-                            let ip = match <T as pallet_tfgrid::Config>::PublicIP::try_from(pub_ip.ip.clone()) {
+                            let ip = match <T as pallet_tfgrid::Config>::PublicIP::try_from(
+                                pub_ip.ip.clone(),
+                            ) {
                                 Ok(x) => x,
                                 Err(err) => {
                                     frame_support::log::info!("error while parsing ip: {:?}", err);
@@ -124,10 +125,15 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                                 }
                             };
 
-                            let gateway = match <T as pallet_tfgrid::Config>::GatewayIP::try_from(pub_ip.ip.clone()) {
+                            let gateway = match <T as pallet_tfgrid::Config>::GatewayIP::try_from(
+                                pub_ip.ip.clone(),
+                            ) {
                                 Ok(x) => x,
                                 Err(err) => {
-                                    frame_support::log::info!("error while parsing gateway: {:?}", err);
+                                    frame_support::log::info!(
+                                        "error while parsing gateway: {:?}",
+                                        err
+                                    );
                                     continue;
                                 }
                             };
@@ -141,7 +147,10 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                             match public_ips_list.try_push(new_ip) {
                                 Ok(()) => (),
                                 Err(err) => {
-                                    frame_support::log::info!("error while pushing ip to contract ip list: {:?}", err);
+                                    frame_support::log::info!(
+                                        "error while pushing ip to contract ip list: {:?}",
+                                        err
+                                    );
                                     continue;
                                 }
                             }
@@ -167,19 +176,20 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                 deprecated::ContractData::NameContract(nc) => {
                     match super::NameContractNameOf::<T>::try_from(nc.name) {
                         Ok(ctr_name) => {
-                            let name_c = types::NameContract {
-                                name: ctr_name
-                            };
+                            let name_c = types::NameContract { name: ctr_name };
                             new_contract.contract_type = types::ContractData::NameContract(name_c);
-                        },
+                        }
                         Err(err) => {
-                            frame_support::log::info!("error while parsing contract name: {:?}", err);
+                            frame_support::log::info!(
+                                "error while parsing contract name: {:?}",
+                                err
+                            );
                         }
                     };
-                },
+                }
                 deprecated::ContractData::RentContract(rc) => {
                     let rent_c = types::RentContract {
-                        node_id: rc.node_id
+                        node_id: rc.node_id,
                     };
                     new_contract.contract_type = types::ContractData::RentContract(rent_c);
                 }

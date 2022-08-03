@@ -28,11 +28,11 @@ pub mod weights;
 pub mod types;
 
 pub mod farm;
+pub mod grid_migration;
+pub mod interface;
 pub mod pub_config;
 pub mod pub_ip;
 pub mod twin;
-pub mod interface;
-pub mod grid_migration;
 
 // Definition of the pallet logic, to be aggregated at runtime definition
 // through `construct_runtime`.
@@ -63,7 +63,7 @@ pub mod pallet {
 
     // Version constant that referenced the struct version
     pub const TFGRID_ENTITY_VERSION: u32 = 1;
-    pub const TFGRID_FARM_VERSION: u32 = 3;
+    pub const TFGRID_FARM_VERSION: u32 = 4;
     pub const TFGRID_TWIN_VERSION: u32 = 1;
     pub const TFGRID_NODE_VERSION: u32 = 5;
     pub const TFGRID_PRICING_POLICY_VERSION: u32 = 2;
@@ -96,17 +96,15 @@ pub mod pallet {
     >;
 
     pub type InterfaceIp<T> = <T as Config>::InterfaceIP;
-    pub type InterfaceIpsOf<T> = BoundedVec<<T as Config>::InterfaceIP, <T as Config>::MaxInterfaceIpsLength>;
-    pub type InterfaceOf<T> = Interface<
-        <T as Config>::InterfaceName,
-        <T as Config>::InterfaceMac,
-        InterfaceIpsOf<T>
-    >;
+    pub type InterfaceIpsOf<T> =
+        BoundedVec<<T as Config>::InterfaceIP, <T as Config>::MaxInterfaceIpsLength>;
+    pub type InterfaceOf<T> =
+        Interface<<T as Config>::InterfaceName, <T as Config>::InterfaceMac, InterfaceIpsOf<T>>;
 
     #[pallet::storage]
     #[pallet::getter(fn nodes)]
-    pub type Nodes<T> = StorageMap<_, Blake2_128Concat, u32, 
-    Node<PubConfigOf<T>, InterfaceOf<T>>, OptionQuery>;
+    pub type Nodes<T> =
+        StorageMap<_, Blake2_128Concat, u32, Node<PubConfigOf<T>, InterfaceOf<T>>, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn node_by_twin_id)]
@@ -473,7 +471,7 @@ pub mod pallet {
         InvalidMacAddress,
         InterfaceIpToShort,
         InterfaceIpToLong,
-        InvalidInterfaceIP
+        InvalidInterfaceIP,
     }
 
     #[pallet::genesis_config]

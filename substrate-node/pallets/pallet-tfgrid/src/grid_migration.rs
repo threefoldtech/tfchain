@@ -1,8 +1,11 @@
 use super::Config;
 use super::*;
-use frame_support::{traits::Get, weights::Weight};
+use frame_support::{
+    traits::{ConstU32, Get},
+    weights::Weight,
+};
 use log::info;
-use tfchain_support::types::{Interface, PublicConfig};
+use tfchain_support::types::{Farm, Interface, PublicConfig, PublicIP};
 
 pub mod deprecated {
     use crate::Config;
@@ -18,7 +21,7 @@ pub mod deprecated {
     };
 
     #[derive(PartialEq, Eq, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-    pub struct Farm {
+    pub struct FarmV3 {
         pub version: u32,
         pub id: u32,
         pub name: Vec<u8>,
@@ -86,13 +89,8 @@ pub mod v4 {
     use super::*;
     use crate::Config;
 
-    // #[cfg(feature = "try-runtime")]
-    // use frame_support::traits::GetStorageVersion;
-
     use frame_support::{pallet_prelude::Weight, traits::OnRuntimeUpgrade};
-    use log::info;
     use sp_std::marker::PhantomData;
-
     pub struct ContractMigrationV4<T: Config>(PhantomData<T>);
 
     impl<T: Config> OnRuntimeUpgrade for ContractMigrationV4<T> {
@@ -105,7 +103,7 @@ pub mod v4 {
         }
 
         fn on_runtime_upgrade() -> Weight {
-            migrate_nodes::<T>()
+            migrate_nodes::<T>() + migrate_farms::<T>()
         }
 
         #[cfg(feature = "try-runtime")]
@@ -116,12 +114,18 @@ pub mod v4 {
                 "👥  TFGrid pallet migration to {:?} passes POST migrate checks ✅",
                 Pallet::<T>::pallet_storage_version()
             );
+
+            let node_1 = Nodes::<T>::get(1).unwrap();
+            info!("Node 1 updated values: {:?}", node_1,);
+
+            let farm_1 = Farms::<T>::get(1).unwrap();
+            info!("Farm 1 updated values: {:?}", farm_1,);
+
             Ok(())
         }
     }
 }
 
-// use super::pallet::PubConfigOf;
 pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
     info!(" >>> Starting migration, pallet version",);
     let count = Nodes::<T>::iter().count();
@@ -173,6 +177,53 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
         migrated_count
     );
 
+    // Return the weight consumed by the migration.
+    T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
+}
+
+pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
+    info!(" >>> Starting migration, pallet version",);
+    let count = Farms::<T>::iter().count();
+    info!(" >>> Updating Farms storage. Migrating {} farms...", count);
+
+    let mut migrated_count = 0;
+    // We transform the storage values from the old into the new format.
+    Farms::<T>::translate::<deprecated::FarmV3, _>(|k, farm| {
+        info!("     Migrated farm for {:?}...", k);
+
+        let mut public_ips: BoundedVec<PublicIpOf<T>, ConstU32<256>> = vec![].try_into().unwrap();
+
+        if let Ok(parsed_public_ips) = get_public_ips::<T>(&farm) {
+            public_ips = parsed_public_ips;
+        }
+
+        let name = match <T as Config>::FarmName::try_from(farm.name) {
+            Ok(n) => n,
+            Err(_) => return None,
+        };
+
+        let new_farm = Farm {
+            version: 4,
+            id: farm.id,
+            name,
+            twin_id: farm.twin_id,
+            pricing_policy_id: farm.pricing_policy_id,
+            certification: farm.certification,
+            public_ips,
+            dedicated_farm: farm.dedicated_farm,
+            farming_policy_limits: farm.farming_policy_limits,
+        };
+
+        migrated_count += 1;
+
+        Some(new_farm)
+    });
+
+    info!(
+        " <<< Farm storage updated! Migrated {} Farms ✅",
+        migrated_count
+    );
+
     // Update pallet storage version
     PalletVersion::<T>::set(types::StorageVersion::V6Struct);
     info!(" <<< Storage version upgraded");
@@ -198,7 +249,7 @@ fn get_public_config<T: Config>(node: &deprecated::NodeV4) -> Result<PubConfigOf
     })
 }
 
-use super::{InterfaceIp, InterfaceOf};
+use super::{InterfaceIp, InterfaceOf, PublicIpOf};
 use frame_support::BoundedVec;
 fn get_interfaces<T: Config>(node: &deprecated::NodeV4) -> Result<Vec<InterfaceOf<T>>, Error<T>> {
     let mut parsed_interfaces = Vec::new();
@@ -225,4 +276,24 @@ fn get_interfaces<T: Config>(node: &deprecated::NodeV4) -> Result<Vec<InterfaceO
     }
 
     Ok(parsed_interfaces)
+}
+
+fn get_public_ips<T: Config>(
+    farm: &deprecated::FarmV3,
+) -> Result<BoundedVec<PublicIpOf<T>, ConstU32<256>>, Error<T>> {
+    let mut parsed_public_ips: BoundedVec<PublicIpOf<T>, ConstU32<256>> =
+        vec![].try_into().unwrap();
+
+    for pub_ip in &farm.public_ips {
+        let ip = <T as Config>::PublicIP::try_from(pub_ip.ip.clone())?;
+        let gateway = <T as Config>::GatewayIP::try_from(pub_ip.gateway.clone())?;
+
+        let _ = parsed_public_ips.try_push(PublicIP {
+            ip,
+            gateway,
+            contract_id: pub_ip.contract_id,
+        });
+    }
+
+    Ok(parsed_public_ips)
 }
