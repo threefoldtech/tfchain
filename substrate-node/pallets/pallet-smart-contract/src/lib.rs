@@ -447,6 +447,7 @@ pub mod pallet {
             contract_id: u64,
             block_number: T::BlockNumber
         ) -> DispatchResultWithPostInfo {
+            log::info!("do I get here?");
             let _account_id = ensure_signed(origin)?;
             Self::_bill_contract_for_block(contract_id, block_number)
         }
@@ -459,6 +460,10 @@ pub mod pallet {
             let contracts = ContractsToBillAt::<T>::get(current_block_u64);
             let mut failed_contract_ids: Vec<u64> = Vec::new();
 
+            log::info!(
+                "contracts to bill: {:?}",
+                contracts
+            );
             for contract_id in contracts {
                 match Self::offchain_signed_tx(block_number, contract_id) {
                     Ok(_) => (),
@@ -971,12 +976,14 @@ impl<T: Config> Pallet<T> {
             contract_id,
             block_number,
         });
-
+        
         if let Some((acc, res)) = result {
             if res.is_err() {
                 log::error!("failure: offchain_signed_tx: tx sent: {:?}", acc.id);
                 return Err(<Error<T>>::OffchainSignedTxError);
             }
+            log::info!("result for tx {:?}", res);
+
             // Transaction is sent successfully
             return Ok(());
         }

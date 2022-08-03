@@ -2,7 +2,7 @@ use super::Event as SmartContractEvent;
 use crate::{mock::Event as MockEvent, mock::*, Error};
 use frame_support::{
     assert_noop, assert_ok,
-    traits::{LockableCurrency, OnFinalize, OnInitialize, WithdrawReasons, Hooks},
+    traits::{LockableCurrency, OnFinalize, OnInitialize, WithdrawReasons, OffchainWorker},
     BoundedVec,
 };
 use frame_system::{EventRecord, Phase, RawOrigin};
@@ -2412,12 +2412,10 @@ pub fn create_twin(origin: AccountId) {
 fn run_to_block(n: u64) {
     Timestamp::set_timestamp((1628082000 * 1000) + (6000 * n));
     while System::block_number() < n {
-        SmartContractModule::on_finalize(System::block_number());
+        SmartContractModule::offchain_worker(System::block_number());
         System::on_finalize(System::block_number());
         System::set_block_number(System::block_number() + 1);
         System::on_initialize(System::block_number());
-        SmartContractModule::on_initialize(System::block_number());
-        SmartContractModule::offchain_worker(System::block_number());
     }
 }
 
