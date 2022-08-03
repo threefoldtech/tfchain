@@ -13,10 +13,10 @@ use sp_core::{ed25519, sr25519, Pair, Public, H256};
 use sp_std::prelude::*;
 
 use crate::farm::FarmName;
+use crate::interface::{InterfaceIp, InterfaceMac, InterfaceName};
+use crate::pub_config::{Domain, GW4, GW6, IP4, IP6};
+use crate::pub_ip::{GatewayIP, PublicIP};
 use crate::twin::TwinIp;
-use crate::pub_ip::{PublicIP, GatewayIP};
-use crate::pub_config::{IP4, GW4, IP6, GW6, Domain};
-use crate::interface::{InterfaceName, InterfaceMac, InterfaceIp};
 use crate::weights;
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::MultiSignature;
@@ -83,7 +83,11 @@ pub(crate) type Interface = crate::InterfaceOf<TestRuntime>;
 
 pub struct NodeChanged;
 impl tfchain_support::traits::ChangeNode<PubConfig, Interface> for NodeChanged {
-    fn node_changed(_old_node: Option<&Node<PubConfig, Interface>>, _new_node: &Node<PubConfig, Interface>) {}
+    fn node_changed(
+        _old_node: Option<&Node<PubConfig, Interface>>,
+        _new_node: &Node<PubConfig, Interface>,
+    ) {
+    }
 
     fn node_deleted(_node: &tfchain_support::types::Node<PubConfig, Interface>) {}
 }
@@ -188,28 +192,40 @@ pub(crate) fn get_farm_name(farm_name_input: &[u8]) -> TestFarmName {
     FarmName::try_from(farm_name_input.to_vec()).expect("Invalid farm input.")
 }
 
-pub (crate) fn get_pub_config_ip4(ip4: &[u8]) -> TestIP4 {
+pub(crate) fn get_pub_config_ip4(ip4: &[u8]) -> TestIP4 {
     IP4::try_from(ip4.to_vec()).expect("Invalid ip4 input")
 }
 
-pub (crate) fn get_pub_config_gw4(gw4: &[u8]) -> TestGW4 {
+pub(crate) fn get_pub_config_gw4(gw4: &[u8]) -> TestGW4 {
     GW4::try_from(gw4.to_vec()).expect("Invalid gw4 input")
 }
 
-pub (crate) fn get_pub_config_ip6(ip6: &[u8]) -> TestIP6 {
+pub(crate) fn get_pub_config_ip6(ip6: &[u8]) -> TestIP6 {
     IP6::try_from(ip6.to_vec()).expect("Invalid ip6 input")
 }
 
-pub (crate) fn get_pub_config_gw6(gw6: &[u8]) -> TestGW6 {
+pub(crate) fn get_pub_config_gw6(gw6: &[u8]) -> TestGW6 {
     GW6::try_from(gw6.to_vec()).expect("Invalid gw6 input")
 }
 
-pub (crate) fn get_public_ip_ip(ip: &[u8]) -> TestPublicIP {
+pub(crate) fn get_public_ip_ip(ip: &[u8]) -> TestPublicIP {
     PublicIP::try_from(ip.to_vec()).expect("Invalid public ip input")
 }
 
-pub (crate) fn get_public_ip_gateway(gw: &[u8]) -> TestGatewayIP {
+pub(crate) fn get_public_ip_gateway(gw: &[u8]) -> TestGatewayIP {
     GatewayIP::try_from(gw.to_vec()).expect("Invalid gateway ip input")
+}
+
+pub(crate) fn get_interface_name(name: &[u8]) -> TestInterfaceName {
+    InterfaceName::try_from(name.to_vec()).expect("Invalid interface name input")
+}
+
+pub(crate) fn get_interface_mac(mac: &[u8]) -> TestInterfaceMac {
+    InterfaceMac::try_from(mac.to_vec()).expect("Invalid interface mac input")
+}
+
+pub(crate) fn get_interface_ip(ip: &[u8]) -> TestInterfaceIp {
+    InterfaceIp::try_from(ip.to_vec()).expect("Invalid interface ip input")
 }
 
 // industry dismiss casual gym gap music pave gasp sick owner dumb cost

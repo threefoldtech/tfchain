@@ -68,11 +68,11 @@ impl<T: Config> Clone for InterfaceName<T> {
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct InterfaceMac<T: Config>(
-    pub BoundedVec<u8, ConstU32<11>>,
-    PhantomData<(T, ConstU32<11>)>,
+    pub BoundedVec<u8, ConstU32<17>>,
+    PhantomData<(T, ConstU32<17>)>,
 );
 
-pub const INTERFACE_MAC_LENGTH: u32 = 11;
+pub const INTERFACE_MAC_LENGTH: u32 = 17;
 
 impl<T: Config> TryFrom<Vec<u8>> for InterfaceMac<T> {
     type Error = Error<T>;
@@ -120,7 +120,7 @@ pub struct InterfaceIp<T: Config>(
 );
 
 pub const MAX_INTERFACE_IP_LENGTH: u32 = 39;
-pub const MIN_INTERFACE_IP_LENGTH: u32 = 9;
+pub const MIN_INTERFACE_IP_LENGTH: u32 = 7;
 
 impl<T: Config> TryFrom<Vec<u8>> for InterfaceIp<T> {
     type Error = Error<T>;

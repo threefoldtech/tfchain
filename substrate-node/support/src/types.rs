@@ -1,10 +1,12 @@
 use codec::{Decode, Encode, MaxEncodedLen};
 use core::cmp::{Ord, Ordering, PartialOrd};
+use frame_support::{traits::ConstU32, BoundedVec};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
-use frame_support::{BoundedVec, traits::{ConstU32, Get}};
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
+#[derive(
+    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
+)]
 pub struct Farm<Name, PublicIP> {
     pub version: u32,
     pub id: u32,
@@ -17,14 +19,18 @@ pub struct Farm<Name, PublicIP> {
     pub farming_policy_limits: Option<FarmingPolicyLimit>,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
+#[derive(
+    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
+)]
 pub struct PublicIP<Ip, Gateway> {
     pub ip: Ip,
     pub gateway: Gateway,
     pub contract_id: u64,
 }
 
-#[derive(PartialEq, PartialOrd, Eq, Clone, Encode, Decode, Debug, Copy, TypeInfo, MaxEncodedLen)]
+#[derive(
+    PartialEq, PartialOrd, Eq, Clone, Encode, Decode, Debug, Copy, TypeInfo, MaxEncodedLen,
+)]
 pub enum FarmCertification {
     NotCertified,
     Gold,
@@ -50,7 +56,9 @@ impl Ord for FarmCertification {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
+#[derive(
+    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
+)]
 pub struct FarmingPolicyLimit {
     pub farming_policy_id: u32,
     pub cu: Option<u64>,
@@ -98,7 +106,20 @@ pub struct PublicConfig<IP4, IP6, GW4, GW6, Domain> {
     pub domain: Domain,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, Copy, MaxEncodedLen)]
+#[derive(
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Clone,
+    Encode,
+    Decode,
+    Default,
+    Debug,
+    TypeInfo,
+    Copy,
+    MaxEncodedLen,
+)]
 pub struct Resources {
     pub hru: u64,
     pub sru: u64,

@@ -23,7 +23,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 ] }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 tfchain-support = { path = "../../support", default-features = false }
-valip = "0.3.0-rc1"
+valip = "0.3.0-rc2"
 
 frame-benchmarking =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false, optional = true }
 pallet-balances =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }

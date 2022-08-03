@@ -1,9 +1,17 @@
 #![cfg(test)]
 
 use super::*;
+use crate::name_contract::NameContractName;
 use crate::{self as pallet_smart_contract};
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::EnsureRoot;
+use pallet_tfgrid::{
+    farm::FarmName,
+    interface::{InterfaceIp, InterfaceMac, InterfaceName},
+    pub_config::{Domain, GW4, GW6, IP4, IP6},
+    pub_ip::{GatewayIP, PublicIP},
+    twin::TwinIp,
+};
 use sp_core::{crypto::Ss58Codec, sr25519, Pair, Public, H256};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::MultiSignature;
@@ -14,8 +22,6 @@ use sp_runtime::{
 };
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::{traits::ChangeNode, types::Node};
-use pallet_tfgrid::{{farm::FarmName}, {twin::TwinIp}, pub_ip::{GatewayIP, PublicIP}, pub_config::{IP4, GW4, IP6, GW6, Domain}};
-use crate::name_contract::NameContractName;
 
 pub type Signature = MultiSignature;
 
@@ -96,17 +102,24 @@ impl pallet_balances::Config for TestRuntime {
 }
 
 pub(crate) type PubConfig = pallet_tfgrid::pallet::PubConfigOf<TestRuntime>;
-pub struct NodeChanged;
-impl ChangeNode<PubConfig> for NodeChanged {
-    fn node_changed(_old_node: Option<&Node<PubConfig>>, _new_node: &Node<PubConfig>) {}
+pub(crate) type Interface = pallet_tfgrid::pallet::InterfaceOf<TestRuntime>;
 
-    fn node_deleted(node: &Node<PubConfig>) {
+pub struct NodeChanged;
+impl ChangeNode<PubConfig, Interface> for NodeChanged {
+    fn node_changed(
+        _old_node: Option<&Node<PubConfig, Interface>>,
+        _new_node: &Node<PubConfig, Interface>,
+    ) {
+    }
+
+    fn node_deleted(node: &Node<PubConfig, Interface>) {
         SmartContractModule::node_deleted(node);
     }
 }
 
 parameter_types! {
     pub const MaxFarmNameLength: u32 = 40;
+    pub const MaxInterfaceIpsLength: u32 = 5;
 }
 
 pub(crate) type TestTwinIp = TwinIp<TestRuntime>;
@@ -119,6 +132,10 @@ pub(crate) type TestGW4 = GW4<TestRuntime>;
 pub(crate) type TestIP6 = IP6<TestRuntime>;
 pub(crate) type TestGW6 = GW6<TestRuntime>;
 pub(crate) type TestDomain = Domain<TestRuntime>;
+
+pub(crate) type TestInterfaceName = InterfaceName<TestRuntime>;
+pub(crate) type TestInterfaceMac = InterfaceMac<TestRuntime>;
+pub(crate) type TestInterfaceIp = InterfaceIp<TestRuntime>;
 
 impl pallet_tfgrid::Config for TestRuntime {
     type Event = Event;
@@ -135,6 +152,10 @@ impl pallet_tfgrid::Config for TestRuntime {
     type IP6 = TestIP6;
     type GW6 = TestGW6;
     type Domain = TestDomain;
+    type InterfaceName = TestInterfaceName;
+    type InterfaceMac = TestInterfaceMac;
+    type InterfaceIP = TestInterfaceIp;
+    type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
 }
 
 impl pallet_tft_price::Config for TestRuntime {
@@ -158,7 +179,7 @@ parameter_types! {
     pub const MaxNameContractNameLength: u32 = 64;
 }
 
-pub (crate) type TestNameContractName = NameContractName<TestRuntime>;
+pub(crate) type TestNameContractName = NameContractName<TestRuntime>;
 
 use weights;
 impl pallet_smart_contract::Config for TestRuntime {

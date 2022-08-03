@@ -12,6 +12,7 @@ use frame_support::{
 };
 use frame_system::{self as system, ensure_signed};
 use pallet_tfgrid;
+use pallet_tfgrid::pallet::{InterfaceOf, PubConfigOf};
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_timestamp as timestamp;
 use sp_runtime::{
@@ -20,7 +21,6 @@ use sp_runtime::{
 };
 use substrate_fixed::types::U64F64;
 use tfchain_support::{traits::ChangeNode, types::Node};
-use pallet_tfgrid::pallet::PubConfigOf;
 
 pub use pallet::*;
 
@@ -56,7 +56,7 @@ pub mod pallet {
         fmt::Debug,
         vec::Vec,
     };
-    use tfchain_support::{traits::ChangeNode};
+    use tfchain_support::traits::ChangeNode;
 
     use contract_migration;
 
@@ -77,11 +77,8 @@ pub mod pallet {
 
     pub type DeploymentHash = H256;
     pub type NameContractNameOf<T> = <T as Config>::NameContractName;
-    pub type ContractPublicIP<T> = 
-        PublicIP<
-            <T as pallet_tfgrid::Config>::PublicIP, 
-            <T as pallet_tfgrid::Config>::GatewayIP
-        >;
+    pub type ContractPublicIP<T> =
+        PublicIP<<T as pallet_tfgrid::Config>::PublicIP, <T as pallet_tfgrid::Config>::GatewayIP>;
 
     #[pallet::storage]
     #[pallet::getter(fn contracts)]
@@ -156,7 +153,7 @@ pub mod pallet {
         type DistributionFrequency: Get<u16>;
         type GracePeriod: Get<u64>;
         type WeightInfo: WeightInfo;
-        type NodeChanged: ChangeNode<PubConfigOf<Self>>;
+        type NodeChanged: ChangeNode<PubConfigOf<Self>, InterfaceOf<Self>>;
 
         #[pallet::constant]
         type MaxNameContractNameLength: Get<u32>;
@@ -195,19 +192,13 @@ pub mod pallet {
         /// IP got reserved by a Node contract
         IPsReserved {
             contract_id: u64,
-            public_ips: BoundedVec<
-                ContractPublicIP<T>,
-                MaxNodeContractPublicIPs,
-            >,
+            public_ips: BoundedVec<ContractPublicIP<T>, MaxNodeContractPublicIPs>,
         },
         /// IP got freed by a Node contract
         IPsFreed {
             contract_id: u64,
             // public ip as a string
-            public_ips: BoundedVec<
-                ContractPublicIP<T>,
-                MaxNodeContractPublicIPs,
-            >,
+            public_ips: BoundedVec<ContractPublicIP<T>, MaxNodeContractPublicIPs>,
         },
         /// Deprecated event
         ContractDeployed(u64, T::AccountId),
@@ -430,7 +421,7 @@ impl<T: Config> Pallet<T> {
         }
 
         let public_ips_list: BoundedVec<
-                PublicIP<
+            PublicIP<
                 <T as pallet_tfgrid::Config>::PublicIP,
                 <T as pallet_tfgrid::Config>::GatewayIP,
             >,
@@ -1256,7 +1247,8 @@ impl<T: Config> Pallet<T> {
         if node_contract.public_ips == 0 {
             return Ok(().into());
         }
-        let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id).ok_or(Error::<T>::NodeNotExists)?;
+        let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id)
+            .ok_or(Error::<T>::NodeNotExists)?;
 
         let mut farm =
             pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
@@ -1317,7 +1309,8 @@ impl<T: Config> Pallet<T> {
         contract_id: u64,
         node_contract: &mut types::NodeContract<T>,
     ) -> DispatchResultWithPostInfo {
-        let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id).ok_or(Error::<T>::NodeNotExists)?;
+        let node = pallet_tfgrid::Nodes::<T>::get(node_contract.node_id)
+            .ok_or(Error::<T>::NodeNotExists)?;
 
         let mut farm =
             pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
@@ -1398,10 +1391,14 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-impl<T: Config> ChangeNode<PubConfigOf<T>> for Pallet<T> {
-    fn node_changed(_node: Option<&Node<PubConfigOf<T>>>, _new_node: &Node<PubConfigOf<T>>) {}
+impl<T: Config> ChangeNode<PubConfigOf<T>, InterfaceOf<T>> for Pallet<T> {
+    fn node_changed(
+        _node: Option<&Node<PubConfigOf<T>, InterfaceOf<T>>>,
+        _new_node: &Node<PubConfigOf<T>, InterfaceOf<T>>,
+    ) {
+    }
 
-    fn node_deleted(node: &Node<PubConfigOf<T>>) {
+    fn node_deleted(node: &Node<PubConfigOf<T>, InterfaceOf<T>>) {
         // Clean up all active contracts
         let active_node_contracts = ActiveNodeContracts::<T>::get(node.id);
         for node_contract_id in active_node_contracts {

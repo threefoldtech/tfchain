@@ -416,6 +416,25 @@ fn test_adding_ip_to_farm_works() {
 }
 
 #[test]
+fn test_adding_misformatted_ip_to_farm_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+
+        assert_noop!(
+            TfgridModule::add_farm_ip(
+                Origin::signed(alice()),
+                1,
+                "185.206.122.125".as_bytes().to_vec(),
+                "185.206.122.1".as_bytes().to_vec()
+            ),
+            Error::<TestRuntime>::InvalidPublicIP
+        );
+    });
+}
+
+#[test]
 fn test_delete_farm_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
@@ -610,6 +629,60 @@ fn create_node_works() {
         create_twin();
         create_farm();
         create_node();
+    });
+}
+
+#[test]
+fn create_node_with_interfaces_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+
+        let country = "Belgium".as_bytes().to_vec();
+        let city = "Ghent".as_bytes().to_vec();
+
+        // random location
+        let location = Location {
+            longitude: "12.233213231".as_bytes().to_vec(),
+            latitude: "32.323112123".as_bytes().to_vec(),
+        };
+
+        let resources = Resources {
+            hru: 1024 * GIGABYTE,
+            sru: 512 * GIGABYTE,
+            cru: 8,
+            mru: 16 * GIGABYTE,
+        };
+
+        let mut interface_ips = Vec::new();
+        let intf_ip_1 = get_interface_ip(&"10.2.3.3".as_bytes().to_vec());
+        interface_ips.push(intf_ip_1);
+
+        let name = get_interface_name(&"zos".as_bytes().to_vec());
+        let mac = get_interface_mac(&"00:00:5e:00:53:af".as_bytes().to_vec());
+
+        let interface = Interface {
+            name,
+            mac,
+            ips: interface_ips.try_into().unwrap(),
+        };
+
+        let mut interfaces = Vec::new();
+        interfaces.push(interface);
+
+        assert_ok!(TfgridModule::create_node(
+            Origin::signed(alice()),
+            1,
+            resources,
+            location,
+            country,
+            city,
+            interfaces,
+            true,
+            true,
+            "some_serial".as_bytes().to_vec()
+        ));
     });
 }
 

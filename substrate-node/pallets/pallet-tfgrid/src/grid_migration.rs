@@ -2,7 +2,7 @@ use super::Config;
 use super::*;
 use frame_support::{traits::Get, weights::Weight};
 use log::info;
-use tfchain_support::types::{PublicConfig, Interface};
+use tfchain_support::types::{Interface, PublicConfig};
 
 pub mod deprecated {
     use crate::Config;
@@ -194,11 +194,11 @@ fn get_public_config<T: Config>(node: &deprecated::NodeV4) -> Result<PubConfigOf
         gw4,
         ipv6,
         gw6,
-        domain
+        domain,
     })
 }
 
-use super::{InterfaceOf, InterfaceIp};
+use super::{InterfaceIp, InterfaceOf};
 use frame_support::BoundedVec;
 fn get_interfaces<T: Config>(node: &deprecated::NodeV4) -> Result<Vec<InterfaceOf<T>>, Error<T>> {
     let mut parsed_interfaces = Vec::new();
@@ -220,9 +220,9 @@ fn get_interfaces<T: Config>(node: &deprecated::NodeV4) -> Result<Vec<InterfaceO
         parsed_interfaces.push(Interface {
             name: intf_name,
             mac: intf_mac,
-            ips: parsed_interfaces_ips
+            ips: parsed_interfaces_ips,
         });
-    };
+    }
 
     Ok(parsed_interfaces)
 }
