@@ -111,7 +111,7 @@ pub mod v6 {
 
         #[cfg(feature = "try-runtime")]
         fn post_upgrade() -> Result<(), &'static str> {
-            assert!(PalletVersion::<T>::get() == types::StorageVersion::V6Struct);
+            assert!(PalletVersion::<T>::get() == types::StorageVersion::V7);
 
             info!(
                 "👥  TFGrid pallet migration to {:?} passes POST migrate checks ✅",
@@ -130,6 +130,10 @@ pub mod v6 {
 }
 
 pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
+    if PalletVersion::<T>::get() != types::StorageVersion::V5Struct {
+        return 0;
+    };
+
     info!(" >>> Starting migration, pallet version",);
     let count = Nodes::<T>::iter().count();
     info!(" >>> Updating Nodes storage. Migrating {} nodes...", count);
@@ -182,11 +186,19 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
         migrated_count
     );
 
+    // Update pallet storage version
+    PalletVersion::<T>::set(types::StorageVersion::V6);
+    info!(" <<< Storage version upgraded");
+
     // Return the weight consumed by the migration.
     T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
 }
 
 pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
+    if PalletVersion::<T>::get() != types::StorageVersion::V6 {
+        return 0;
+    };
+
     info!(" >>> Starting migration, pallet version",);
     let count = Farms::<T>::iter().count();
     info!(" >>> Updating Farms storage. Migrating {} farms...", count);
@@ -230,7 +242,7 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
     );
 
     // Update pallet storage version
-    PalletVersion::<T>::set(types::StorageVersion::V6Struct);
+    PalletVersion::<T>::set(types::StorageVersion::V7);
     info!(" <<< Storage version upgraded");
 
     // Return the weight consumed by the migration.

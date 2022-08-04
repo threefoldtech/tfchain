@@ -1,5 +1,5 @@
 use super::*;
-use frame_support::{traits::GetStorageVersion, weights::Weight, BoundedVec};
+use frame_support::{weights::Weight, BoundedVec};
 use log::info;
 use pallet_tfgrid;
 use sp_core::H256;
@@ -7,7 +7,6 @@ use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::types::PublicIP;
 
 pub mod deprecated {
-    use super::types;
     use crate::Config;
     use codec::{Decode, Encode};
     use frame_support::decl_module;
@@ -105,19 +104,8 @@ pub mod v4 {
     impl<T: Config> OnRuntimeUpgrade for ContractMigrationV4<T> {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<(), &'static str> {
-            info!(
-                "chain version: {:?}",
-                Pallet::<T>::on_chain_storage_version()
-            );
-            info!(
-                "current version: {:?}",
-                Pallet::<T>::current_storage_version()
-            );
-
-            assert!(
-                Pallet::<T>::on_chain_storage_version() < Pallet::<T>::current_storage_version()
-                    || Pallet::<T>::on_chain_storage_version() == 0
-            );
+            info!("current pallet version: {:?}", PalletVersion::<T>::get());
+            assert!(PalletVersion::<T>::get() == types::StorageVersion::V3);
 
             info!("👥  Smart Contract pallet to v4 passes PRE migrate checks ✅",);
             Ok(())
@@ -129,23 +117,16 @@ pub mod v4 {
 
         #[cfg(feature = "try-runtime")]
         fn post_upgrade() -> Result<(), &'static str> {
-            info!(
-                "chain version after: {:?}",
-                Pallet::<T>::on_chain_storage_version()
-            );
-            info!(
-                "current version after: {:?}",
-                Pallet::<T>::current_storage_version()
-            );
-            assert_eq!(
-                Pallet::<T>::on_chain_storage_version(),
-                Pallet::<T>::current_storage_version()
-            );
+            info!("current pallet version: {:?}", PalletVersion::<T>::get());
+            assert!(PalletVersion::<T>::get() == types::StorageVersion::V4);
 
             info!(
                 "👥  Smart Contract pallet to {:?} passes POST migrate checks ✅",
-                Pallet::<T>::on_chain_storage_version()
+                PalletVersion::<T>::get()
             );
+
+            let c1 = Contracts::<T>::get(2).unwrap();
+            info!("Contract 1 updated values: {:?}", c1.contract_id,);
 
             Ok(())
         }
@@ -153,9 +134,7 @@ pub mod v4 {
 }
 
 pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
-    if Pallet::<T>::on_chain_storage_version() < Pallet::<T>::current_storage_version()
-        || Pallet::<T>::on_chain_storage_version() == 0
-    {
+    if PalletVersion::<T>::get() == types::StorageVersion::V3 {
         info!(
             " >>> Starting contract pallet migration, pallet version: {:?}",
             PalletVersion::<T>::get()
@@ -184,6 +163,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
 
             match ctr.contract_type {
                 deprecated::ContractData::NodeContract(node_contract) => {
+                    info!("found node contract");
                     let mut public_ips_list: BoundedVec<
                         PublicIP<
                             <T as pallet_tfgrid::Config>::PublicIP,
@@ -194,6 +174,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
 
                     if node_contract.public_ips_list.len() > 0 {
                         for pub_ip in node_contract.public_ips_list {
+                            info!("trying to parse ip: {:?} {:?}", pub_ip.ip, pub_ip.gateway);
                             // TODO: don't throw error here
                             // TODO: if public ip parsing fails, we remove it from the contract and set the contract id back to 0 on the farm?
 
@@ -224,7 +205,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                             };
 
                             match public_ips_list.try_push(new_ip) {
-                                Ok(()) => (),
+                                Ok(()) => info!("new ip pushed to public ip list"),
                                 Err(err) => {
                                     info!("error while pushing ip to contract ip list: {:?}", err);
                                     continue;
@@ -257,6 +238,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                         }
                         Err(err) => {
                             info!("error while parsing contract name: {:?}", err);
+                            return None;
                         }
                     };
                 }
@@ -282,9 +264,6 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
         // Update pallet storage version
         PalletVersion::<T>::set(types::StorageVersion::V4);
         info!(" <<< Storage version upgraded");
-
-        Pallet::<T>::current_storage_version().put::<Pallet<T>>();
-        info!(" <<< Current storage version upgraded");
 
         // Return the weight consumed by the migration.
         T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)

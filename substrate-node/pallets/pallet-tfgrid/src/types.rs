@@ -12,12 +12,13 @@ pub enum StorageVersion {
     V3Struct,
     V4Struct,
     V5Struct,
-    V6Struct
+    V6,
+    V7,
 }
 
 impl Default for StorageVersion {
     fn default() -> StorageVersion {
-        StorageVersion::V6Struct
+        StorageVersion::V7
     }
 }
 
@@ -73,7 +74,7 @@ pub struct Policy {
 }
 
 impl Policy {
-    // Used for NRU 
+    // Used for NRU
     pub fn factor_base_1000(&self) -> u128 {
         match self.unit {
             Unit::Bytes => 1,
