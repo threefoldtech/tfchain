@@ -54,7 +54,7 @@ pub mod deprecated {
         pub country: Vec<u8>,
         pub city: Vec<u8>,
         // optional public config
-        pub public_config: PublicConfig,
+        pub public_config: Option<PublicConfig>,
         pub created: u64,
         pub farming_policy_id: u32,
         pub interfaces: Vec<Interface>,
@@ -142,9 +142,11 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
         // By default initialize the public config to None
         let mut public_config = None;
         // If the node has a valid public config we can assign it
-        if let Ok(config) = get_public_config::<T>(&node) {
-            public_config = Some(config);
-        };
+        if let Some(config) = &node.public_config {
+            if let Ok(config) = get_public_config::<T>(&config) {
+                public_config = Some(config);
+            };
+        }
 
         let mut interfaces = Vec::new();
         if let Ok(intfs) = get_interfaces::<T>(&node) {
@@ -235,12 +237,14 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
     T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
 }
 
-fn get_public_config<T: Config>(node: &deprecated::NodeV4) -> Result<PubConfigOf<T>, Error<T>> {
-    let ipv4 = <T as Config>::IP4::try_from(node.public_config.ipv4.clone())?;
-    let gw4 = <T as Config>::GW4::try_from(node.public_config.gw4.clone())?;
-    let ipv6 = <T as Config>::IP6::try_from(node.public_config.ipv6.clone())?;
-    let gw6 = <T as Config>::GW6::try_from(node.public_config.gw6.clone())?;
-    let domain = <T as Config>::Domain::try_from(node.public_config.domain.clone())?;
+fn get_public_config<T: Config>(
+    config: &deprecated::PublicConfig,
+) -> Result<PubConfigOf<T>, Error<T>> {
+    let ipv4 = <T as Config>::IP4::try_from(config.ipv4.clone())?;
+    let gw4 = <T as Config>::GW4::try_from(config.gw4.clone())?;
+    let ipv6 = <T as Config>::IP6::try_from(config.ipv6.clone())?;
+    let gw6 = <T as Config>::GW6::try_from(config.gw6.clone())?;
+    let domain = <T as Config>::Domain::try_from(config.domain.clone())?;
 
     Ok(PublicConfig {
         ipv4,

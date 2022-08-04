@@ -18,10 +18,38 @@ pub mod deprecated {
     #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
     pub struct ContractV3 {
         pub version: u32,
-        pub state: types::ContractState,
+        pub state: ContractState,
         pub contract_id: u64,
         pub twin_id: u32,
         pub contract_type: ContractData,
+    }
+
+    pub type BlockNumber = u64;
+
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
+    pub enum ContractState {
+        Created,
+        Deleted(Cause),
+        GracePeriod(BlockNumber),
+    }
+
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
+    pub enum Cause {
+        CanceledByUser,
+        OutOfFunds,
+    }
+
+    impl Default for ContractState {
+        fn default() -> ContractState {
+            ContractState::Created
+        }
+    }
+
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+    pub struct PublicIP {
+        pub ip: Vec<u8>,
+        pub gateway: Vec<u8>,
+        pub contract_id: u64,
     }
 
     #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
@@ -59,13 +87,6 @@ pub mod deprecated {
         fn default() -> ContractData {
             ContractData::NodeContract(NodeContract::default())
         }
-    }
-
-    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-    pub struct PublicIP {
-        pub ip: Vec<u8>,
-        pub gateway: Vec<u8>,
-        pub contract_id: u64,
     }
 
     decl_module! {
@@ -136,7 +157,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
         || Pallet::<T>::on_chain_storage_version() == 0
     {
         info!(
-            " >>> Starting migration, pallet version: {:?}",
+            " >>> Starting contract pallet migration, pallet version: {:?}",
             PalletVersion::<T>::get()
         );
         let count = Contracts::<T>::iter().count();
@@ -155,7 +176,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
 
             let mut new_contract = types::Contract {
                 version: 4,
-                state: ctr.state,
+                state: contract_deprecated_state_to_new_state(&ctr.state),
                 contract_id: ctr.contract_id,
                 twin_id: ctr.twin_id,
                 contract_type: types::ContractData::RentContract(rc),
@@ -187,7 +208,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                             };
 
                             let gateway = match <T as pallet_tfgrid::Config>::GatewayIP::try_from(
-                                pub_ip.ip.clone(),
+                                pub_ip.gateway.clone(),
                             ) {
                                 Ok(x) => x,
                                 Err(err) => {
@@ -249,6 +270,8 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
 
             migrated_count += 1;
 
+            info!("updated contract: {:?}", new_contract.clone());
+
             Some(new_contract)
         });
         info!(
@@ -260,10 +283,32 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
         PalletVersion::<T>::set(types::StorageVersion::V4);
         info!(" <<< Storage version upgraded");
 
+        Pallet::<T>::current_storage_version().put::<Pallet<T>>();
+        info!(" <<< Current storage version upgraded");
+
         // Return the weight consumed by the migration.
         T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
     } else {
         info!(" >>> Unused migration");
         return 0;
+    }
+}
+
+fn contract_deprecated_state_to_new_state(
+    state: &deprecated::ContractState,
+) -> types::ContractState {
+    match state {
+        deprecated::ContractState::Created => types::ContractState::Created,
+        deprecated::ContractState::Deleted(cause) => {
+            types::ContractState::Deleted(contract_deprecated_cause_to_new_cause(&cause))
+        }
+        deprecated::ContractState::GracePeriod(block) => types::ContractState::GracePeriod(*block),
+    }
+}
+
+fn contract_deprecated_cause_to_new_cause(cause: &deprecated::Cause) -> types::Cause {
+    match cause {
+        deprecated::Cause::CanceledByUser => types::Cause::CanceledByUser,
+        deprecated::Cause::OutOfFunds => types::Cause::OutOfFunds,
     }
 }
