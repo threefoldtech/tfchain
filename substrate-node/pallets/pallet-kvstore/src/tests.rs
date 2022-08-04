@@ -1,6 +1,6 @@
 use super::Event as KvStoreEvent;
 use crate::{self as pallet_kvstore, Config};
-use frame_support::{assert_ok, construct_runtime, parameter_types};
+use frame_support::{assert_ok, construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::{EventRecord, Phase};
 use sp_core::H256;
 use sp_io::TestExternalities;
@@ -8,6 +8,7 @@ use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
+use sp_std::convert::{TryFrom, TryInto};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime>;
 type Block = frame_system::mocking::MockBlock<TestRuntime>;
@@ -53,6 +54,7 @@ impl frame_system::Config for TestRuntime {
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
+    type MaxConsumers = ConstU32<16>;
 }
 
 impl Config for TestRuntime {
