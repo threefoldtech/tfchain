@@ -7,6 +7,7 @@ use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::types::PublicIP;
 
 pub mod deprecated {
+    use crate::types;
     use crate::Config;
     use codec::{Decode, Encode};
     use frame_support::decl_module;
@@ -17,31 +18,10 @@ pub mod deprecated {
     #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
     pub struct ContractV3 {
         pub version: u32,
-        pub state: ContractState,
+        pub state: types::ContractState,
         pub contract_id: u64,
         pub twin_id: u32,
         pub contract_type: ContractData,
-    }
-
-    pub type BlockNumber = u64;
-
-    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
-    pub enum ContractState {
-        Created,
-        Deleted(Cause),
-        GracePeriod(BlockNumber),
-    }
-
-    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
-    pub enum Cause {
-        CanceledByUser,
-        OutOfFunds,
-    }
-
-    impl Default for ContractState {
-        fn default() -> ContractState {
-            ContractState::Created
-        }
     }
 
     #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
@@ -126,7 +106,7 @@ pub mod v4 {
             );
 
             let c1 = Contracts::<T>::get(2).unwrap();
-            info!("Contract 1 updated values: {:?}", c1.contract_id,);
+            info!("Contract 2 updated values: {:?}", c1.contract_id,);
 
             Ok(())
         }
@@ -155,7 +135,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
 
             let mut new_contract = types::Contract {
                 version: 4,
-                state: contract_deprecated_state_to_new_state(&ctr.state),
+                state: ctr.state,
                 contract_id: ctr.contract_id,
                 twin_id: ctr.twin_id,
                 contract_type: types::ContractData::RentContract(rc),
@@ -172,18 +152,16 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                         pallet::MaxNodeContractPublicIPs,
                     > = vec![].try_into().unwrap();
 
+                    let mut should_free_ip = false;
                     if node_contract.public_ips_list.len() > 0 {
                         for pub_ip in node_contract.public_ips_list {
-                            info!("trying to parse ip: {:?} {:?}", pub_ip.ip, pub_ip.gateway);
-                            // TODO: don't throw error here
-                            // TODO: if public ip parsing fails, we remove it from the contract and set the contract id back to 0 on the farm?
-
                             let ip = match <T as pallet_tfgrid::Config>::PublicIP::try_from(
                                 pub_ip.ip.clone(),
                             ) {
                                 Ok(x) => x,
                                 Err(err) => {
                                     info!("error while parsing ip: {:?}", err);
+                                    should_free_ip = true;
                                     continue;
                                 }
                             };
@@ -194,6 +172,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                                 Ok(x) => x,
                                 Err(err) => {
                                     info!("error while parsing gateway: {:?}", err);
+                                    should_free_ip = true;
                                     continue;
                                 }
                             };
@@ -205,9 +184,10 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                             };
 
                             match public_ips_list.try_push(new_ip) {
-                                Ok(()) => info!("new ip pushed to public ip list"),
+                                Ok(()) => (),
                                 Err(err) => {
                                     info!("error while pushing ip to contract ip list: {:?}", err);
+                                    should_free_ip = true;
                                     continue;
                                 }
                             }
@@ -221,14 +201,21 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                         public_ips_list,
                     };
 
+                    if should_free_ip {
+                        match pallet::Pallet::<T>::_free_ip(k, &mut new_node_contract) {
+                            Ok(_) => info!("successfully freed ips for contract: {:?}", k),
+                            Err(err) => info!("error occurred while freeing ip {:?}", err),
+                        };
+                    };
+
                     // If it's a valid 32 byte hash, transform it as a H256 and save it on the node contract
                     if node_contract.deployment_hash.len() == 32 {
                         new_node_contract.deployment_hash =
                             sp_core::H256::from_slice(&node_contract.deployment_hash);
+                    } else {
+                        new_contract.contract_type =
+                            types::ContractData::NodeContract(new_node_contract);
                     };
-
-                    new_contract.contract_type =
-                        types::ContractData::NodeContract(new_node_contract);
                 }
                 deprecated::ContractData::NameContract(nc) => {
                     match super::NameContractNameOf::<T>::try_from(nc.name) {
@@ -238,6 +225,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                         }
                         Err(err) => {
                             info!("error while parsing contract name: {:?}", err);
+                            // If it's not a valid contract name, it's probably garbage. Cancel the contract
                             return None;
                         }
                     };
@@ -252,7 +240,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
 
             migrated_count += 1;
 
-            info!("updated contract: {:?}", new_contract.clone());
+            info!("Contract: {:?} succesfully migrated", k);
 
             Some(new_contract)
         });
@@ -270,24 +258,5 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
     } else {
         info!(" >>> Unused migration");
         return 0;
-    }
-}
-
-fn contract_deprecated_state_to_new_state(
-    state: &deprecated::ContractState,
-) -> types::ContractState {
-    match state {
-        deprecated::ContractState::Created => types::ContractState::Created,
-        deprecated::ContractState::Deleted(cause) => {
-            types::ContractState::Deleted(contract_deprecated_cause_to_new_cause(&cause))
-        }
-        deprecated::ContractState::GracePeriod(block) => types::ContractState::GracePeriod(*block),
-    }
-}
-
-fn contract_deprecated_cause_to_new_cause(cause: &deprecated::Cause) -> types::Cause {
-    match cause {
-        deprecated::Cause::CanceledByUser => types::Cause::CanceledByUser,
-        deprecated::Cause::OutOfFunds => types::Cause::OutOfFunds,
     }
 }
