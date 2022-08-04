@@ -11,12 +11,13 @@ Proposals can be created by members of the council. A proposal can include the f
 - Link to a webpage / github markdown / wiki file, ...
 - Threshold: amount of farmers that need to vote to have a valid proposal
 
-When a "generic" proposal needs to be executed, the extrsinic `system.setRemark` needs to be selected. The remark itself is up to the council member to choose.
+When a "generic" proposal needs to be executed, the extrinsic `system.setRemark` needs to be selected. The remark itself is up to the council member to choose.
 This is because a proposal needs to have an extrinsic attached.
+A proposal duration is set by the config trait `MotionDuration` on this pallet, this value needs to be expressed in number of blocks.
 
-A proposals duration is set by the config trait `MotionDuration` on this pallet, this value needs to be expressed in number of blocks.
-
-When a proposal's time limit is met, a proposal can be closed, based on the votes for that proposal it is either approved(executed) or dissaproved.
+A proposal can be closed either when threshold of votes is met or proposal duration ended.
+Only a council member can close a proposal.
+Based on the voting result the proposal can be either approved(executed) or dissaproved.
 
 ## Voting
 
