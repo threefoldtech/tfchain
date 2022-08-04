@@ -5,6 +5,7 @@ use sp_std::prelude::*;
 use frame_support::{
     dispatch::DispatchErrorWithPostInfo,
     ensure,
+    log::info,
     traits::{Currency, ExistenceRequirement, Get, LockableCurrency, WithdrawReasons},
     transactional,
     weights::Pays,
@@ -387,11 +388,8 @@ impl<T: Config> Pallet<T> {
         deployment_hash: DeploymentHash,
         public_ips: u32,
     ) -> DispatchResultWithPostInfo {
-        ensure!(
-            pallet_tfgrid::pallet::TwinIdByAccountID::<T>::contains_key(&account_id),
-            Error::<T>::TwinNotExists
-        );
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id).unwrap();
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
+            .ok_or(Error::<T>::TwinNotExists)?;
 
         let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
@@ -403,7 +401,8 @@ impl<T: Config> Pallet<T> {
         // If the user is trying to deploy on a node that has an active rent contract
         // only allow the user who created the rent contract to actually deploy a node contract on it
         if ActiveRentContractForNode::<T>::contains_key(node_id) {
-            let contract = ActiveRentContractForNode::<T>::get(node_id).unwrap();
+            let contract = ActiveRentContractForNode::<T>::get(node_id)
+                .ok_or(Error::<T>::ContractNotExists)?;
             if contract.twin_id != twin_id {
                 return Err(Error::<T>::NodeHasRentContract.into());
             }
@@ -414,7 +413,7 @@ impl<T: Config> Pallet<T> {
         // If it exists we allow the user to "restore" this contract
         if ContractIDByNodeIDAndHash::<T>::contains_key(node_id, &deployment_hash) {
             let contract_id = ContractIDByNodeIDAndHash::<T>::get(node_id, &deployment_hash);
-            let contract = Contracts::<T>::get(contract_id).unwrap();
+            let contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
             if !contract.is_state_delete() {
                 return Err(Error::<T>::ContractIsNotUnique.into());
             }
@@ -470,11 +469,6 @@ impl<T: Config> Pallet<T> {
         node_id: u32,
     ) -> DispatchResultWithPostInfo {
         ensure!(
-            pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&account_id),
-            Error::<T>::TwinNotExists
-        );
-
-        ensure!(
             !ActiveRentContractForNode::<T>::contains_key(node_id),
             Error::<T>::NodeHasRentContract
         );
@@ -493,7 +487,8 @@ impl<T: Config> Pallet<T> {
         );
 
         // Create contract
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id).unwrap();
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
+            .ok_or(Error::<T>::TwinNotExists)?;
         let contract = Self::_create_contract(
             twin_id,
             types::ContractData::RentContract(types::RentContract { node_id }),
@@ -517,7 +512,8 @@ impl<T: Config> Pallet<T> {
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
             Error::<T>::TwinNotExists
         );
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source).unwrap();
+        let twin_id =
+            pallet_tfgrid::TwinIdByAccountID::<T>::get(&source).ok_or(Error::<T>::TwinNotExists)?;
 
         let valid_name =
             NameContractNameOf::<T>::try_from(name).map_err(DispatchErrorWithPostInfo::from)?;
@@ -585,17 +581,9 @@ impl<T: Config> Pallet<T> {
         contract_id: u64,
         deployment_hash: DeploymentHash,
     ) -> DispatchResultWithPostInfo {
-        ensure!(
-            Contracts::<T>::contains_key(contract_id),
-            Error::<T>::ContractNotExists
-        );
-
-        let mut contract = Contracts::<T>::get(contract_id).unwrap();
-        ensure!(
-            pallet_tfgrid::Twins::<T>::contains_key(contract.twin_id),
-            Error::<T>::TwinNotExists
-        );
-        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id).unwrap();
+        let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+        let twin =
+            pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
         ensure!(
             twin.account_id == account_id,
             Error::<T>::TwinNotAuthorizedToUpdateContract
@@ -639,16 +627,9 @@ impl<T: Config> Pallet<T> {
         contract_id: u64,
         cause: types::Cause,
     ) -> DispatchResultWithPostInfo {
-        ensure!(
-            Contracts::<T>::contains_key(contract_id),
-            Error::<T>::ContractNotExists
-        );
-        let mut contract = Contracts::<T>::get(contract_id).unwrap();
-        ensure!(
-            pallet_tfgrid::Twins::<T>::contains_key(contract.twin_id),
-            Error::<T>::TwinNotExists
-        );
-        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id).unwrap();
+        let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+        let twin =
+            pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
         ensure!(
             twin.account_id == account_id,
             Error::<T>::TwinNotAuthorizedToCancelContract
@@ -685,7 +666,8 @@ impl<T: Config> Pallet<T> {
             pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
             Error::<T>::TwinNotExists
         );
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source).unwrap();
+        let twin_id =
+            pallet_tfgrid::TwinIdByAccountID::<T>::get(&source).ok_or(Error::<T>::TwinNotExists)?;
         ensure!(
             pallet_tfgrid::NodeIdByTwinID::<T>::contains_key(twin_id),
             Error::<T>::NodeNotExists
@@ -693,22 +675,23 @@ impl<T: Config> Pallet<T> {
         let node_id = pallet_tfgrid::NodeIdByTwinID::<T>::get(twin_id);
 
         for contract_resource in contract_resources {
-            if !Contracts::<T>::contains_key(contract_resource.contract_id) {
-                continue;
-            }
             // we know contract exists, fetch it
             // if the node is trying to send garbage data we can throw an error here
-            let contract = Contracts::<T>::get(contract_resource.contract_id).unwrap();
-            let node_contract = Self::get_node_contract(&contract)?;
-            ensure!(
-                node_contract.node_id == node_id,
-                Error::<T>::NodeNotAuthorizedToComputeReport
-            );
+            if let Some(contract) = Contracts::<T>::get(contract_resource.contract_id) {
+                let node_contract = Self::get_node_contract(&contract)?;
+                ensure!(
+                    node_contract.node_id == node_id,
+                    Error::<T>::NodeNotAuthorizedToComputeReport
+                );
 
-            // Do insert
-            NodeContractResources::<T>::insert(contract_resource.contract_id, &contract_resource);
-            // deposit event
-            Self::deposit_event(Event::UpdatedUsedResources(contract_resource));
+                // Do insert
+                NodeContractResources::<T>::insert(
+                    contract_resource.contract_id,
+                    &contract_resource,
+                );
+                // deposit event
+                Self::deposit_event(Event::UpdatedUsedResources(contract_resource));
+            }
         }
 
         Ok(Pays::No.into())
@@ -718,28 +701,16 @@ impl<T: Config> Pallet<T> {
         source: T::AccountId,
         reports: Vec<types::NruConsumption>,
     ) -> DispatchResultWithPostInfo {
-        ensure!(
-            pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
-            Error::<T>::TwinNotExists
-        );
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&source).unwrap();
-        ensure!(
-            pallet_tfgrid::NodeIdByTwinID::<T>::contains_key(twin_id),
-            Error::<T>::NodeNotExists
-        );
-
+        let twin_id =
+            pallet_tfgrid::TwinIdByAccountID::<T>::get(&source).ok_or(Error::<T>::TwinNotExists)?;
         // fetch the node from the source account (signee)
         let node_id = pallet_tfgrid::NodeIdByTwinID::<T>::get(&twin_id);
         let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
 
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
-        ensure!(
-            pallet_tfgrid::PricingPolicies::<T>::contains_key(farm.pricing_policy_id),
-            Error::<T>::PricingPolicyNotExists
-        );
-        let pricing_policy =
-            pallet_tfgrid::PricingPolicies::<T>::get(farm.pricing_policy_id).unwrap();
+        let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(farm.pricing_policy_id)
+            .ok_or(Error::<T>::PricingPolicyNotExists)?;
 
         // validation
         for report in &reports {
@@ -752,7 +723,8 @@ impl<T: Config> Pallet<T> {
 
             // we know contract exists, fetch it
             // if the node is trying to send garbage data we can throw an error here
-            let contract = Contracts::<T>::get(report.contract_id).unwrap();
+            let contract =
+                Contracts::<T>::get(report.contract_id).ok_or(Error::<T>::ContractNotExists)?;
             let node_contract = Self::get_node_contract(&contract)?;
             ensure!(
                 node_contract.node_id == node_id,
@@ -807,7 +779,8 @@ impl<T: Config> Pallet<T> {
             if !Contracts::<T>::contains_key(contract_id) {
                 continue;
             }
-            let mut contract = Contracts::<T>::get(contract_id).unwrap();
+            let mut contract =
+                Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
 
             // Try to bill contract
             match Self::bill_contract(&mut contract) {
@@ -851,10 +824,8 @@ impl<T: Config> Pallet<T> {
     // Calculates how much TFT is due by the user and distributes the rewards
     #[transactional]
     fn bill_contract(contract: &mut types::Contract<T>) -> DispatchResultWithPostInfo {
-        if !pallet_tfgrid::Twins::<T>::contains_key(contract.twin_id) {
-            return Err(DispatchErrorWithPostInfo::from(Error::<T>::TwinNotExists));
-        }
-        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id).unwrap();
+        let twin =
+            pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
         let usable_balance = Self::get_usable_balance(&twin.account_id);
 
         let mut seconds_elapsed = T::BillingFrequency::get() * 6;
@@ -980,7 +951,8 @@ impl<T: Config> Pallet<T> {
         // Only lock an amount from the user's balance if the contract is in create state
         // The lock is specified on the user's account, since a user can have multiple contracts
         // Just extend the lock with the amount due for this contract billing period (lock will be created if not exists)
-        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id).unwrap();
+        let twin =
+            pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
         let mut locked_balance = Self::get_locked_balance(&twin.account_id);
         locked_balance += amount_due;
         <T as Config>::Currency::extend_lock(
@@ -1020,7 +992,8 @@ impl<T: Config> Pallet<T> {
             );
 
             // Fetch the default pricing policy
-            let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1).unwrap();
+            let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1)
+                .ok_or(Error::<T>::PricingPolicyNotExists)?;
             // Distribute cultivation rewards
             match Self::_distribute_cultivation_rewards(
                 &contract,
@@ -1088,6 +1061,7 @@ impl<T: Config> Pallet<T> {
                     Self::deposit_event(Event::RentContractCanceled { contract_id });
                 }
             };
+            info!("removing contract");
             Contracts::<T>::remove(contract_id);
             ContractLock::<T>::remove(contract_id);
         }
@@ -1100,7 +1074,8 @@ impl<T: Config> Pallet<T> {
         amount: BalanceOf<T>,
     ) -> DispatchResultWithPostInfo {
         // fetch source twin
-        let twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id).unwrap();
+        let twin =
+            pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
 
         // Send 10% to the foundation
         let foundation_share = Perbill::from_percent(10) * amount;
@@ -1297,10 +1272,14 @@ impl<T: Config> Pallet<T> {
             Error::<T>::FarmHasNotEnoughPublicIPsFree
         );
 
+        node_contract.public_ips_list = ips.try_into().or_else(|_| {
+            return Err(DispatchErrorWithPostInfo::from(
+                Error::<T>::FailedToReserveIP,
+            ));
+        })?;
+
         // Update the farm with the reserved ips
         pallet_tfgrid::Farms::<T>::insert(farm.id, farm);
-
-        node_contract.public_ips_list = ips.try_into().unwrap();
 
         Ok(().into())
     }
@@ -1402,17 +1381,15 @@ impl<T: Config> ChangeNode<PubConfigOf<T>, InterfaceOf<T>> for Pallet<T> {
         // Clean up all active contracts
         let active_node_contracts = ActiveNodeContracts::<T>::get(node.id);
         for node_contract_id in active_node_contracts {
-            if !Contracts::<T>::contains_key(node_contract_id) {
-                continue;
+            if let Some(mut contract) = Contracts::<T>::get(node_contract_id) {
+                // Bill contract
+                let _ = Self::_update_contract_state(
+                    &mut contract,
+                    &types::ContractState::Deleted(types::Cause::CanceledByUser),
+                );
+                let _ = Self::bill_contract(&mut contract);
+                Self::remove_contract(node_contract_id);
             }
-            let mut contract = Contracts::<T>::get(node_contract_id).unwrap();
-            // Bill contract
-            let _ = Self::_update_contract_state(
-                &mut contract,
-                &types::ContractState::Deleted(types::Cause::CanceledByUser),
-            );
-            let _ = Self::bill_contract(&mut contract);
-            Self::remove_contract(node_contract_id);
         }
 
         // First clean up rent contract if it exists
