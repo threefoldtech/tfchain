@@ -105,9 +105,6 @@ pub mod v4 {
                 PalletVersion::<T>::get()
             );
 
-            let c1 = Contracts::<T>::get(2).unwrap();
-            info!("Contract 2 updated values: {:?}", c1.contract_id,);
-
             Ok(())
         }
     }
@@ -118,11 +115,6 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
         info!(
             " >>> Starting contract pallet migration, pallet version: {:?}",
             PalletVersion::<T>::get()
-        );
-        let count = Contracts::<T>::iter().count();
-        info!(
-            " >>> Updating Contracts storage. Migrating {} Contracts...",
-            count
         );
 
         let mut migrated_count = 0;
@@ -212,9 +204,10 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                     if node_contract.deployment_hash.len() == 32 {
                         new_node_contract.deployment_hash =
                             sp_core::H256::from_slice(&node_contract.deployment_hash);
-                    } else {
                         new_contract.contract_type =
                             types::ContractData::NodeContract(new_node_contract);
+                    } else {
+                        return None;
                     };
                 }
                 deprecated::ContractData::NameContract(nc) => {
