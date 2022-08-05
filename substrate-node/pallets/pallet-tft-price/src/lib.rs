@@ -4,15 +4,11 @@
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage,
     dispatch::DispatchResultWithPostInfo,
-    ensure,
-    traits::{EnsureOrigin, Get},
     weights::Pays,
 };
 use frame_system::{
-    self as system, ensure_signed,
-    offchain::{AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer},
+    offchain::{SendSignedTransaction, Signer},
 };
 use lite_json::json::JsonValue;
 use log;
@@ -25,12 +21,30 @@ use ringbuffer::{RingBufferTrait, RingBufferTransient};
 use sp_core::crypto::KeyTypeId;
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"tft!");
 
-type BufferIndex = u16;
+// type BufferIndex = u16;
 
 #[cfg(test)]
 mod tests;
 
-pub mod crypto {
+// Re-export pallet items so that they can be accessed from the crate namespace.
+pub use pallet::*;
+
+#[frame_support::pallet]
+pub mod pallet {
+
+    use frame_support::pallet_prelude::*;
+    use frame_system::pallet_prelude::*;
+
+    use frame_support::{
+        dispatch::DispatchResultWithPostInfo,
+        ensure,
+        traits::{EnsureOrigin,},
+    };
+    use frame_system::{
+        ensure_signed,
+        offchain::{AppCrypto, CreateSignedTransaction,},
+    };
+
     use crate::KEY_TYPE;
     use sp_core::sr25519::Signature as Sr25519Signature;
     use sp_runtime::{
@@ -42,6 +56,7 @@ pub mod crypto {
 
     app_crypto!(sr25519, KEY_TYPE);
 
+    type BufferIndex = u16;
     pub struct AuthId;
 
     // implemented for ocw-runtime
@@ -59,67 +74,85 @@ pub mod crypto {
         type GenericSignature = sp_core::sr25519::Signature;
         type GenericPublic = sp_core::sr25519::Public;
     }
-}
 
-// #[cfg(test)]
-// mod tests;
-
-pub trait Config: system::Config + CreateSignedTransaction<Call<Self>> {
-    type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
-
-    // Add other types and constants required to configure this pallet.
-    type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
-    type Call: From<Call<Self>>;
-    /// Origin for restricted extrinsics
-    /// Can be the root or another origin configured in the runtime
-    type RestrictedOrigin: EnsureOrigin<Self::Origin>;
-}
-
-decl_storage! {
-    trait Store for Module<T: Config> as TFTPriceModule {
-        // Token price
-        pub TftPrice: u32;
-        pub LastBlockSet: T::BlockNumber;
-        pub AverageTftPrice get(fn average_tft_price): u32;
-        pub TftPriceHistory get(fn get_value): map hasher(twox_64_concat) BufferIndex => u32;
-        pub BufferRange get(fn range): (BufferIndex, BufferIndex) = (0, 0);
-        pub AllowedOrigin get(fn allowed_origin): Option<T::AccountId>;
+	#[pallet::config]
+    pub trait Config: 
+        frame_system::Config 
+        + CreateSignedTransaction<Call<Self>>
+    {
+        // type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        // Add other types and constants required to configure this pallet.
+        type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
+        type Call: From<Call<Self>>;
+        /// Origin for restricted extrinsics
+        /// Can be the root or another origin configured in the runtime
+        type RestrictedOrigin: EnsureOrigin<Self::Origin>;
     }
 
-    add_extra_genesis {
-        config(allowed_origin): Option<T::AccountId>;
-
-        build(|_config| {
-            AllowedOrigin::<T>::set(_config.allowed_origin.clone());
-        });
-    }
-}
-
-decl_event! {
-    pub enum Event<T> where AccountId = <T as frame_system::Config>::AccountId {
+	#[pallet::event]
+    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    // pub enum Event<T> where AccountId = <T as frame_system::Config>::AccountId {
+    pub enum Event<T: Config> {
         PriceStored(u32),
-        OffchainWorkerExecuted(AccountId),
+        OffchainWorkerExecuted(T::AccountId),
         AveragePriceStored(u32),
     }
-}
 
-decl_error! {
-    pub enum Error for Module<T: Config> {
+	#[pallet::error]
+    // pub enum Error for Module<T: Config> {
+    pub enum Error<T> {
         ErrFetchingPrice,
         OffchainSignedTxError,
         NoLocalAcctForSigning,
         AccountUnauthorizedToSetPrice,
     }
-}
 
-decl_module! {
-    pub struct Module<T: Config> for enum Call where origin: T::Origin {
-        type Error = Error<T>;
+	#[pallet::pallet]
+	#[pallet::generate_store(pub(super) trait Store)]
+	pub struct Pallet<T>(_);
 
-        fn deposit_event() = default;
+    #[pallet::storage]
+    #[pallet::getter(fn tft_price)]
+    pub type TftPrice<T> = StorageValue<_, u32, ValueQuery>;
 
-        #[weight = 100_000_000 + T::DbWeight::get().writes(3)]
-        pub fn set_prices(origin, price: u32, block_number: T::BlockNumber) -> DispatchResultWithPostInfo {
+    #[pallet::storage]
+    #[pallet::getter(fn last_block_set)]
+    pub type LastBlockSet<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn average_tft_price)]
+    pub type AverageTftPrice<T> = StorageValue<_, u32, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn get_value)]
+    pub type TftPriceHistory<T> = StorageMap<_, Blake2_128Concat, BufferIndex, u32, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn range)]
+    pub type BufferRange<T> = StorageValue<_, (BufferIndex, BufferIndex), ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn allowed_origin)]
+    pub type AllowedOrigin<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
+
+    //TODO
+    // add_extra_genesis {
+    //     config(allowed_origin): Option<T::AccountId>;
+
+    //     build(|_config| {
+    //         AllowedOrigin::<T>::set(_config.allowed_origin.clone());
+    //     });
+    // }
+
+	#[pallet::call]   // <-- Step 6. code block will replace this.
+    impl<T: Config> Pallet<T> {
+        #[pallet::weight(0)]
+        pub fn set_prices(
+            origin: OriginFor<T>, 
+            price: u32,
+            block_number: T::BlockNumber,
+        ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
             if let Some(allowed_origin) = AllowedOrigin::<T>::get() {
                 ensure!(allowed_origin == address, Error::<T>::AccountUnauthorizedToSetPrice);
@@ -128,12 +161,19 @@ decl_module! {
             Ok(().into())
         }
 
-        #[weight = 100_000_000 + T::DbWeight::get().writes(3)]
-        pub fn set_allowed_origin(origin, target: T::AccountId) {
+        #[pallet::weight(0)]
+        pub fn set_allowed_origin(
+            origin: OriginFor<T>,
+            target: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
             AllowedOrigin::<T>::set(Some(target));
+            Ok(().into())
         }
+    }
 
+    #[pallet::hooks]
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn offchain_worker(block_number: T::BlockNumber) {
             match Self::offchain_signed_tx(block_number) {
                 Ok(_) => log::info!("offchain worker done."),
@@ -143,7 +183,7 @@ decl_module! {
     }
 }
 
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
     fn calculate_and_set_price(
         price: u32,
         block_number: T::BlockNumber,
@@ -151,8 +191,8 @@ impl<T: Config> Module<T> {
         log::info!("price {:?}", price);
 
         LastBlockSet::<T>::put(block_number);
-        TftPrice::put(price);
-        Self::deposit_event(RawEvent::PriceStored(price));
+        TftPrice::<T>::put(price);
+        Self::deposit_event(Event::PriceStored(price));
 
         log::info!("storing average now");
         let mut queue = Self::queue_transient();
@@ -160,8 +200,8 @@ impl<T: Config> Module<T> {
         let average = Self::calc_avg();
 
         log::info!("average price {:?}", average);
-        AverageTftPrice::put(average);
-        Self::deposit_event(RawEvent::AveragePriceStored(average));
+        AverageTftPrice::<T>::put(average);
+        Self::deposit_event(Event::AveragePriceStored(average));
 
         Ok(Pays::No.into())
     }
@@ -234,7 +274,6 @@ impl<T: Config> Module<T> {
             block_number,
         });
 
-        // Display error if the signed tx fails.
         // Display error if the signed tx fails.
         if let Some((acc, res)) = result {
             if res.is_err() {
