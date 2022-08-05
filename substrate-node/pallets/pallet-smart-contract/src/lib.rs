@@ -40,6 +40,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
+mod test_utils;
+
 pub mod crypto {
     use crate::KEY_TYPE;
     use sp_core::sr25519::Signature as Sr25519Signature;
@@ -447,7 +450,6 @@ pub mod pallet {
             contract_id: u64,
             block_number: T::BlockNumber
         ) -> DispatchResultWithPostInfo {
-            log::info!("do I get here?");
             let _account_id = ensure_signed(origin)?;
             Self::_bill_contract_for_block(contract_id, block_number)
         }
@@ -461,14 +463,10 @@ pub mod pallet {
 
             if contracts.is_empty() {
                 return;
-            }
+            }  
 
+            log::info!("{:?} contracts to bill at block {:?}", contracts, block_number);
             let mut failed_contract_ids: Vec<u64> = Vec::new();
-
-            log::info!(
-                "contracts to bill: {:?}",
-                contracts
-            );
             for contract_id in contracts {
                 match Self::offchain_signed_tx(block_number, contract_id) {
                     Ok(_) => (),
@@ -478,39 +476,17 @@ pub mod pallet {
 
             if failed_contract_ids.is_empty() {
                 log::info!(
-                    "types::NodeContract billed successfully at block: {:?}",
+                    "all contracts billed successfully at block: {:?}",
                     block_number
                 );
             } else {
                 log::info!(
-                    "types::NodeContract billed failed for some of the contracts in block: {:?}",
+                    "billing failed for some of the contracts at block: {:?}",
                     block_number
                 );
                 //TODO add for next run
             }
         }
-
-        // TODO remove
-        //fn on_finalize(block: T::BlockNumber) {
-        //     match Self::_bill_contracts_at_block(block) {
-        //         Ok(_) => {
-        //             log::info!(
-        //                 "types::NodeContract billed successfully at block: {:?}",
-        //                 block
-        //             );
-        //         }
-        //         Err(err) => {
-        //             log::info!(
-        //                 "types::NodeContract billed failed at block: {:?} with err {:?}",
-        //                 block,
-        //                 err
-        //             );
-        //         }
-        //     }
-        //     clean storage map for billed contracts at block
-        //     let current_block_u64: u64 = block.saturated_into::<u64>();
-        //     ContractsToBillAt::<T>::remove(current_block_u64);
-        // }
 
         fn on_runtime_upgrade() -> Weight {
             contract_migration::migrate_to_version_4::<T>()
@@ -946,7 +922,7 @@ impl<T: Config> Pallet<T> {
                 );
             }
             Err(err) => {
-                log::info!(
+                log::error!(
                     "error while billing contract with id {:?}: {:?}",
                     contract_id,
                     err
@@ -975,7 +951,6 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn offchain_signed_tx(block_number: T::BlockNumber, contract_id: u64) -> Result<(), Error<T>> {
-        log::info!("Billing contract {:?} from block {:?}", contract_id, block_number);
         let signer = Signer::<T, T::AuthorityId>::any_account();    
         let result = signer.send_signed_transaction(|_acct| Call::bill_contract_for_block {
             contract_id,
@@ -984,12 +959,10 @@ impl<T: Config> Pallet<T> {
         
         if let Some((acc, res)) = result {
             if res.is_err() {
-                log::error!("failure: offchain_signed_tx: tx sent: {:?}", acc.id);
+                log::error!("failed billing contract {:?} at block {:?} using account {:?} with error {:?}",
+                    contract_id, block_number, acc.id, res);
                 return Err(<Error<T>>::OffchainSignedTxError);
             }
-            log::info!("result for tx {:?}", res);
-            log::info!("acc for tx {:?}", acc.id);
-
             // Transaction is sent successfully
             return Ok(());
         }

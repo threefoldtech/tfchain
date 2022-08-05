@@ -18,7 +18,7 @@ use sp_core::{
         testing::{self},
         OffchainDbExt, OffchainWorkerExt, TransactionPoolExt,
     },
-    sr25519, Pair, Public, H256,
+    sr25519, Pair, Public, H256, 
 };
 use sp_keystore::{testing::KeyStore, KeystoreExt, SyncCryptoStore};
 use sp_runtime::MultiSignature;
@@ -33,6 +33,10 @@ use sp_runtime::{
 };
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::{traits::ChangeNode, types::Node};
+
+// set environment variable RUST_LOG=debug to see all logs when running the tests and call 
+// env_logger::init() at the beginning of the test
+use env_logger;
 
 pub type Signature = MultiSignature;
 
@@ -288,7 +292,9 @@ pub fn get_staking_pool_account() -> AccountId {
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-    //TODO add offchain worker see pallet-tft-price impl ExternalityBuilder
+    // for showing logs in tests
+    let _ = env_logger::try_init();
+
     let mut storage = frame_system::GenesisConfig::default()
         .build_storage::<TestRuntime>()
         .unwrap();
@@ -311,7 +317,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     t
 }
 
-pub fn offchainify(iterations: u32) -> (sp_io::TestExternalities, Arc<RwLock<PoolState>>) {
+pub fn new_test_ext_with_pool_state(iterations: u32) -> (sp_io::TestExternalities, Arc<RwLock<PoolState>>) {
     let mut ext = new_test_ext();
     let (offchain, offchain_state) = testing::TestOffchainExt::new();
     let (pool, pool_state) = testing::TestTransactionPoolExt::new();
