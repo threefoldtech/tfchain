@@ -7,15 +7,15 @@ use frame_support::{
     weights::Pays,
     BoundedVec,
 };
-use frame_system::{EventRecord, Phase, RawOrigin, extrinsics_data_root};
+use frame_system::{EventRecord, Phase, RawOrigin};
 use log::info;
 use pallet_tfgrid::{
     types::{self as pallet_tfgrid_types, LocationInput},
     ResourcesInput,
 };
 use sp_core::H256;
-use sp_runtime::{traits::{SaturatedConversion, BlockNumberProvider}, Perbill, Percent};
-use sp_std::convert::{TryFrom, TryInto};
+use sp_io::TestExternalities;
+use sp_runtime::{traits::{SaturatedConversion}, Perbill, Percent};
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
     resources::Resources,
@@ -23,8 +23,6 @@ use tfchain_support::{
 };
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
-
-use env_logger;
 
 //  NODE CONTRACT TESTS //
 // -------------------- //
@@ -2725,9 +2723,6 @@ pub fn create_twin(origin: AccountId) {
     let ip = get_twin_ip_input(b"::1");
     assert_ok!(TfgridModule::create_twin(Origin::signed(origin), ip));
 }
-        System::offchain_worker(System::block_number());
-        SmartContractModule::on_finalize(System::block_number());
-        SmartContractModule::on_initialize(System::block_number());
 
 fn create_farming_policies() {
     let name = "f1".as_bytes().to_vec();
