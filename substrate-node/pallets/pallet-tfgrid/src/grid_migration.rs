@@ -211,7 +211,10 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
 
         let name = match <T as Config>::FarmName::try_from(farm.name) {
             Ok(n) => n,
-            Err(_) => return None,
+            Err(_) => {
+                info!("invalid farm name, skipping updating farm {:?} ...", k);
+                return None;
+            }
         };
 
         let new_farm = Farm {

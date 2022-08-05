@@ -120,7 +120,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
         let mut migrated_count = 0;
         // We transform the storage values from the old into the new format.
         Contracts::<T>::translate::<deprecated::ContractV3, _>(|k, ctr| {
-            info!("     Migrated contract for {:?}...", k);
+            // info!("     Migrated contract for {:?}...", k);
 
             // dummy default
             let rc = types::RentContract { node_id: 0 };
