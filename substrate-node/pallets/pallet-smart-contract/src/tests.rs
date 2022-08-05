@@ -1,14 +1,15 @@
 use super::Event as SmartContractEvent;
-use crate::{mock::Extrinsic, mock::Event as MockEvent, mock::*, Error};
-use sp_core::Decode;
+use crate::{mock::Event as MockEvent, mock::*, Error, test_utils::*};
+
 use frame_support::{
     assert_noop, assert_ok, bounded_vec,
-    traits::{LockableCurrency, OffchainWorker, OnFinalize, OnInitialize, WithdrawReasons},
+    traits::{LockableCurrency, WithdrawReasons},
     BoundedVec,
 };
-use frame_system::{EventRecord, Phase, RawOrigin, extrinsics_data_root};
+use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
-use sp_runtime::{traits::{SaturatedConversion, BlockNumberProvider}, Perbill, Percent};
+use sp_io::TestExternalities;
+use sp_runtime::{traits::{SaturatedConversion}, Perbill, Percent};
 use substrate_fixed::types::U64F64;
 
 use super::types;
@@ -18,8 +19,6 @@ use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::types::{FarmCertification, Location, NodeCertification, PublicIP, Resources};
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
-
-use env_logger;
 
 //  NODE CONTRACT TESTS //
 // -------------------- //
@@ -702,9 +701,10 @@ fn test_cancel_rent_contract_with_active_node_contracts_fails() {
 
 #[test]
 fn test_node_contract_billing_details() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_farm_and_node();
-        run_to_block(0);
+        run_to_block_and_check_extrinsics(0, &mut pool_state);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let twin = TfgridModule::twins(2).unwrap();
@@ -731,7 +731,7 @@ fn test_node_contract_billing_details() {
         let mut i = 0;
         while i != 24 {
             i += 1;
-            run_to_block(i * 10 + 1);
+            run_to_block_and_check_extrinsics(i * 10 + 1, &mut pool_state);
         }
 
         let free_balance = Balances::free_balance(&twin.account_id);
@@ -831,9 +831,10 @@ fn test_node_contract_billing_details_with_solution_provider() {
 
 #[test]
 fn test_multiple_contracts_billing_loop_works() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_farm_and_node();
-        run_to_block(1);
+        run_to_block_and_check_extrinsics(1, &mut pool_state);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
@@ -849,10 +850,10 @@ fn test_multiple_contracts_billing_loop_works() {
             "some_name".as_bytes().to_vec(),
         ));
 
-        let contract_to_bill_at_block = SmartContractModule::contract_to_bill_at_block(11);
-        assert_eq!(contract_to_bill_at_block.len(), 2);
+        let contracts_to_bill_at_block = SmartContractModule::contract_to_bill_at_block(11);
+        assert_eq!(contracts_to_bill_at_block.len(), 2);
 
-        run_to_block(12);
+        run_to_block_and_check_extrinsics(12, &mut pool_state);
 
         // Test that the expected events were emitted
         let our_events = System::events();
@@ -867,9 +868,10 @@ fn test_multiple_contracts_billing_loop_works() {
 
 #[test]
 fn test_node_contract_billing_cycles() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_farm_and_node();
-        run_to_block(1);
+        run_to_block_and_check_extrinsics(1, &mut pool_state);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
@@ -886,7 +888,7 @@ fn test_node_contract_billing_cycles() {
         push_contract_resources_used(1);
 
         let (amount_due_1, discount_received) = calculate_tft_cost(contract_id, twin_id, 11);
-        run_to_block(12);
+        run_to_block_and_check_extrinsics(12, &mut pool_state);
         check_report_cost(1, amount_due_1, 12, discount_received);
 
         let twin = TfgridModule::twins(twin_id).unwrap();
@@ -900,11 +902,11 @@ fn test_node_contract_billing_cycles() {
         );
 
         let (amount_due_2, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
-        run_to_block(22);
+        run_to_block_and_check_extrinsics(22, &mut pool_state);
         check_report_cost(1, amount_due_2, 22, discount_received);
 
         let (amount_due_3, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
-        run_to_block(32);
+        run_to_block_and_check_extrinsics(32, &mut pool_state);
         check_report_cost(1, amount_due_3, 32, discount_received);
 
         let twin = TfgridModule::twins(twin_id).unwrap();
@@ -921,9 +923,10 @@ fn test_node_contract_billing_cycles() {
 
 #[test]
 fn test_node_multiple_contract_billing_cycles() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_farm_and_node();
-        run_to_block(1);
+        run_to_block_and_check_extrinsics(1, &mut pool_state);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
@@ -948,11 +951,11 @@ fn test_node_multiple_contract_billing_cycles() {
         push_contract_resources_used(2);
 
         let (amount_due_contract_1, discount_received) = calculate_tft_cost(1, twin_id, 11);
-        run_to_block(12);
+        run_to_block_and_check_extrinsics(12, &mut pool_state);
         check_report_cost(1, amount_due_contract_1, 12, discount_received);
 
         let (amount_due_contract_2, discount_received) = calculate_tft_cost(2, twin_id, 11);
-        run_to_block(12);
+        run_to_block_and_check_extrinsics(12, &mut pool_state);
         check_report_cost(2, amount_due_contract_2, 12, discount_received);
 
         let twin = TfgridModule::twins(twin_id).unwrap();
@@ -969,9 +972,10 @@ fn test_node_multiple_contract_billing_cycles() {
 
 #[test]
 fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_farm_and_node();
-        run_to_block(1);
+        run_to_block_and_check_extrinsics(1, &mut pool_state);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
@@ -988,27 +992,27 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
         push_contract_resources_used(1);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 11);
-        run_to_block(12);
+        run_to_block_and_check_extrinsics(12, &mut pool_state);
         check_report_cost(1, amount_due_as_u128, 12, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
-        run_to_block(22);
+        run_to_block_and_check_extrinsics(22, &mut pool_state);
         check_report_cost(1, amount_due_as_u128, 22, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
-        run_to_block(32);
+        run_to_block_and_check_extrinsics(32, &mut pool_state);
         check_report_cost(1, amount_due_as_u128, 32, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
-        run_to_block(42);
+        run_to_block_and_check_extrinsics(42, &mut pool_state);
         check_report_cost(1, amount_due_as_u128, 42, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
-        run_to_block(52);
+        run_to_block_and_check_extrinsics(52, &mut pool_state);
         check_report_cost(1, amount_due_as_u128, 52, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 4);
-        run_to_block(56);
+        run_to_block_and_check_extrinsics(56, &mut pool_state);
 
         // Delete node
         TfgridModule::delete_node_farm(Origin::signed(alice()), 1).unwrap();
@@ -1058,9 +1062,10 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
 
 #[test]
 fn test_node_contract_only_public_ip_billing_cycles() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_farm_and_node();
-        run_to_block(1);
+        run_to_block_and_check_extrinsics(1, &mut pool_state);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
@@ -1076,32 +1081,33 @@ fn test_node_contract_only_public_ip_billing_cycles() {
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 11);
         assert_ne!(amount_due_as_u128, 0);
-        run_to_block(12);
+        run_to_block_and_check_extrinsics(12, &mut pool_state);
         check_report_cost(1, amount_due_as_u128, 12, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
-        run_to_block(22);
+        run_to_block_and_check_extrinsics(22, &mut pool_state);
         check_report_cost(1, amount_due_as_u128, 22, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
-        run_to_block(32);
+        run_to_block_and_check_extrinsics(32, &mut pool_state);
         check_report_cost(1, amount_due_as_u128, 32, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
-        run_to_block(42);
+        run_to_block_and_check_extrinsics(42, &mut pool_state);
         check_report_cost(1, amount_due_as_u128, 42, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
-        run_to_block(52);
+        run_to_block_and_check_extrinsics(52, &mut pool_state);
         check_report_cost(1, amount_due_as_u128, 52, discount_received);
     });
 }
 
 #[test]
 fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_farm_and_node();
-        run_to_block(1);
+        run_to_block_and_check_extrinsics(1, &mut pool_state);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
@@ -1119,21 +1125,21 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
         push_contract_resources_used(1);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 11);
-        run_to_block(12);
+        run_to_block_and_check_extrinsics(12, &mut pool_state);
         check_report_cost(1, amount_due_as_u128, 12, discount_received);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
-        run_to_block(22);
+        run_to_block_and_check_extrinsics(22, &mut pool_state);
         check_report_cost(1, amount_due_as_u128, 22, discount_received);
 
-        run_to_block(28);
+        run_to_block_and_check_extrinsics(28, &mut pool_state);
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 6);
         assert_ok!(SmartContractModule::cancel_contract(
             Origin::signed(bob()),
             1
         ));
 
-        run_to_block(29);
+        run_to_block_and_check_extrinsics(29, &mut pool_state);
         check_report_cost(1, amount_due_as_u128, 28, discount_received);
 
         let contract = SmartContractModule::contracts(1);
@@ -1216,9 +1222,10 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
 
 #[test]
 fn test_node_contract_out_of_funds_should_move_state_to_graceperiod_works() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_farm_and_node();
-        run_to_block(1);
+        run_to_block_and_check_extrinsics(1, &mut pool_state);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
@@ -1233,11 +1240,11 @@ fn test_node_contract_out_of_funds_should_move_state_to_graceperiod_works() {
         push_contract_resources_used(1);
 
         // cycle 1
-        run_to_block(12);
+        run_to_block_and_check_extrinsics(12, &mut pool_state);
 
         // cycle 2
         // user does not have enough funds to pay for 2 cycles
-        run_to_block(22);
+        run_to_block_and_check_extrinsics(22, &mut pool_state);
 
         let c1 = SmartContractModule::contracts(1).unwrap();
         assert_eq!(c1.state, types::ContractState::GracePeriod(21));
@@ -1259,9 +1266,10 @@ fn test_node_contract_out_of_funds_should_move_state_to_graceperiod_works() {
 
 #[test]
 fn test_restore_node_contract_in_grace_works() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_farm_and_node();
-        run_to_block(1);
+        run_to_block_and_check_extrinsics(1, &mut pool_state);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
@@ -1276,11 +1284,11 @@ fn test_restore_node_contract_in_grace_works() {
         push_contract_resources_used(1);
 
         // cycle 1
-        run_to_block(12);
+        run_to_block_and_check_extrinsics(12, &mut pool_state);
 
         // cycle 2
         // user does not have enough funds to pay for 2 cycles
-        run_to_block(22);
+        run_to_block_and_check_extrinsics(22, &mut pool_state);
 
         let c1 = SmartContractModule::contracts(1).unwrap();
         assert_eq!(c1.state, types::ContractState::GracePeriod(21));
@@ -1300,22 +1308,22 @@ fn test_restore_node_contract_in_grace_works() {
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(31);
         assert_eq!(contract_to_bill.len(), 1);
-        run_to_block(32);
+        run_to_block_and_check_extrinsics(32, &mut pool_state);
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(41);
         assert_eq!(contract_to_bill.len(), 1);
-        run_to_block(42);
+        run_to_block_and_check_extrinsics(42, &mut pool_state);
 
         // Transfer some balance to the owner of the contract to trigger the grace period to stop
         Balances::transfer(Origin::signed(bob()), charlie(), 100000000).unwrap();
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(51);
         assert_eq!(contract_to_bill.len(), 1);
-        run_to_block(52);
+        run_to_block_and_check_extrinsics(52, &mut pool_state);
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(61);
         assert_eq!(contract_to_bill.len(), 1);
-        run_to_block(62);
+        run_to_block_and_check_extrinsics(62, &mut pool_state);
 
         let c1 = SmartContractModule::contracts(1).unwrap();
         assert_eq!(c1.state, types::ContractState::Created);
@@ -1324,9 +1332,10 @@ fn test_restore_node_contract_in_grace_works() {
 
 #[test]
 fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_farm_and_node();
-        run_to_block(1);
+        run_to_block_and_check_extrinsics(1, &mut pool_state);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
@@ -1341,11 +1350,11 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
         push_contract_resources_used(1);
 
         // cycle 1
-        run_to_block(12);
+        run_to_block_and_check_extrinsics(12, &mut pool_state);
 
         // cycle 2
         // user does not have enough funds to pay for 2 cycles
-        run_to_block(22);
+        run_to_block_and_check_extrinsics(22, &mut pool_state);
 
         let c1 = SmartContractModule::contracts(1).unwrap();
         assert_eq!(c1.state, types::ContractState::GracePeriod(21));
@@ -1363,17 +1372,17 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
             true
         );
 
-        run_to_block(32);
-        run_to_block(42);
-        run_to_block(52);
-        run_to_block(62);
-        run_to_block(72);
-        run_to_block(82);
-        run_to_block(92);
-        run_to_block(102);
-        run_to_block(112);
-        run_to_block(122);
-        run_to_block(132);
+        run_to_block_and_check_extrinsics(32, &mut pool_state);
+        run_to_block_and_check_extrinsics(42, &mut pool_state);
+        run_to_block_and_check_extrinsics(52, &mut pool_state);
+        run_to_block_and_check_extrinsics(62, &mut pool_state);
+        run_to_block_and_check_extrinsics(72, &mut pool_state);
+        run_to_block_and_check_extrinsics(82, &mut pool_state);
+        run_to_block_and_check_extrinsics(92, &mut pool_state);
+        run_to_block_and_check_extrinsics(102, &mut pool_state);
+        run_to_block_and_check_extrinsics(112, &mut pool_state);
+        run_to_block_and_check_extrinsics(122, &mut pool_state);
+        run_to_block_and_check_extrinsics(132, &mut pool_state);
 
         let c1 = SmartContractModule::contracts(1);
         assert_eq!(c1, None);
@@ -1382,11 +1391,10 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
 
 #[test]
 fn test_name_contract_billing() {
-    let (mut ext, pool_state) = offchainify(0);
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
-        env_logger::init();
         prepare_farm_and_node();
-        run_to_block(1);
+        run_to_block_and_check_extrinsics(1, &mut pool_state);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_name_contract(
@@ -1394,27 +1402,12 @@ fn test_name_contract_billing() {
             "foobar".as_bytes().to_vec()
         ));
 
-        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(11);
-        assert_eq!(contract_to_bill, [1]);
+        let contracts_to_bill = SmartContractModule::contract_to_bill_at_block(11);
+        assert_eq!(contracts_to_bill, [1]);
 
         // let mature 11 blocks
         // because we bill every 10 blocks
-        run_to_block(12);
-
-        // TODO: move this out in a function so that we can reuse it
-        // the list of transactions should contain 1 transaction!
-        assert_eq!(pool_state.read().transactions.len(), 1);
-        let encoded = pool_state.read().transactions[0].clone();
-        let extrinsic: Extrinsic = Decode::decode(&mut &*encoded).unwrap();
-        assert_eq!(extrinsic.signature.unwrap().0, 0);
-        // the extrinsic call should be bill_contract_for_block with the arguments contract_id = contract_to_bill[0] and block_number = 11
-        assert_eq!(extrinsic.call, Call::SmartContractModule(crate::Call::bill_contract_for_block {contract_id : contract_to_bill[0], block_number: System::current_block_number()-1 }));
-        // now execute the call so that we can check the events
-        assert_ok!(SmartContractModule::bill_contract_for_block(
-            Origin::signed(bob()),
-            contract_to_bill[0],
-            System::current_block_number()-1
-        ));
+        run_to_block_and_check_extrinsics(12, &mut pool_state);
 
         // the contractbill event should look like:
         let contract_bill_event = types::ContractBill {
@@ -1438,9 +1431,10 @@ fn test_name_contract_billing() {
 
 #[test]
 fn test_rent_contract_billing() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
-        run_to_block(1);
+        run_to_block_and_check_extrinsics(1, &mut pool_state);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
@@ -1457,7 +1451,7 @@ fn test_rent_contract_billing() {
             types::ContractData::RentContract(rent_contract)
         );
 
-        run_to_block(12);
+        run_to_block_and_check_extrinsics(12, &mut pool_state);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 11);
         assert_ne!(amount_due_as_u128, 0);
@@ -1467,9 +1461,10 @@ fn test_rent_contract_billing() {
 
 #[test]
 fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
-        run_to_block(1);
+        run_to_block_and_check_extrinsics(1, &mut pool_state);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
@@ -1486,7 +1481,7 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
             types::ContractData::RentContract(rent_contract)
         );
 
-        run_to_block(12);
+        run_to_block_and_check_extrinsics(12, &mut pool_state);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 11);
         assert_ne!(amount_due_as_u128, 0);
@@ -1497,7 +1492,7 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
         let free_balance = Balances::free_balance(&twin.account_id);
         assert_ne!(usable_balance, free_balance);
 
-        run_to_block(14);
+        run_to_block_and_check_extrinsics(14, &mut pool_state);
         // cancel contract
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 2);
         assert_ok!(SmartContractModule::cancel_contract(
@@ -1510,7 +1505,7 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
         assert_ne!(usable_balance, 0);
         Balances::transfer(Origin::signed(bob()), alice(), usable_balance).unwrap();
 
-        run_to_block(22);
+        run_to_block_and_check_extrinsics(22, &mut pool_state);
 
         // Last amount due is the same as the first one
         assert_ne!(amount_due_as_u128, 0);
@@ -1571,9 +1566,10 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
 
 #[test]
 fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billing_works() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
-        run_to_block(1);
+        run_to_block_and_check_extrinsics(1, &mut pool_state);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
@@ -1593,7 +1589,7 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
         ));
         push_contract_resources_used(2);
 
-        run_to_block(12);
+        run_to_block_and_check_extrinsics(12, &mut pool_state);
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 11);
         assert_ne!(amount_due_as_u128, 0);
@@ -1610,9 +1606,10 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
 
 #[test]
 fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_works() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
-        run_to_block(1);
+        run_to_block_and_check_extrinsics(1, &mut pool_state);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
@@ -1632,18 +1629,18 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         ));
         push_contract_resources_used(2);
 
-        run_to_block(12);
-        run_to_block(22);
-        run_to_block(32);
-        run_to_block(42);
-        run_to_block(52);
-        run_to_block(62);
-        run_to_block(72);
-        run_to_block(82);
-        run_to_block(92);
-        run_to_block(102);
-        run_to_block(112);
-        run_to_block(122);
+        run_to_block_and_check_extrinsics(12, &mut pool_state);
+        run_to_block_and_check_extrinsics(22, &mut pool_state);
+        run_to_block_and_check_extrinsics(32, &mut pool_state);
+        run_to_block_and_check_extrinsics(42, &mut pool_state);
+        run_to_block_and_check_extrinsics(52, &mut pool_state);
+        run_to_block_and_check_extrinsics(62, &mut pool_state);
+        run_to_block_and_check_extrinsics(72, &mut pool_state);
+        run_to_block_and_check_extrinsics(82, &mut pool_state);
+        run_to_block_and_check_extrinsics(92, &mut pool_state);
+        run_to_block_and_check_extrinsics(102, &mut pool_state);
+        run_to_block_and_check_extrinsics(112, &mut pool_state);
+        run_to_block_and_check_extrinsics(122, &mut pool_state);
 
         // let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 11);
         // assert_ne!(amount_due_as_u128, 0);
@@ -1707,9 +1704,10 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
 
 #[test]
 fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
-        run_to_block(1);
+        run_to_block_and_check_extrinsics(1, &mut pool_state);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
@@ -1728,7 +1726,7 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
             None
         ));
 
-        run_to_block(12);
+        run_to_block_and_check_extrinsics(12, &mut pool_state);
 
         // check contract 1 costs (Rent Contract)
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 11);
@@ -1752,9 +1750,10 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
 
 #[test]
 fn test_rent_contract_out_of_funds_should_move_state_to_graceperiod_works() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
-        run_to_block(1);
+        run_to_block_and_check_extrinsics(1, &mut pool_state);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
@@ -1766,7 +1765,7 @@ fn test_rent_contract_out_of_funds_should_move_state_to_graceperiod_works() {
 
         // cycle 1
         // user does not have enough funds to pay for 1 cycle
-        run_to_block(12);
+        run_to_block_and_check_extrinsics(12, &mut pool_state);
 
         let c1 = SmartContractModule::contracts(1).unwrap();
         assert_eq!(c1.state, types::ContractState::GracePeriod(11));
@@ -1788,9 +1787,10 @@ fn test_rent_contract_out_of_funds_should_move_state_to_graceperiod_works() {
 
 #[test]
 fn test_restore_rent_contract_in_grace_works() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
-        run_to_block(1);
+        run_to_block_and_check_extrinsics(1, &mut pool_state);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
@@ -1801,7 +1801,7 @@ fn test_restore_rent_contract_in_grace_works() {
         ));
 
         // cycle 1
-        run_to_block(12);
+        run_to_block_and_check_extrinsics(12, &mut pool_state);
 
         let c1 = SmartContractModule::contracts(1).unwrap();
         assert_eq!(c1.state, types::ContractState::GracePeriod(11));
@@ -1821,22 +1821,22 @@ fn test_restore_rent_contract_in_grace_works() {
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(21);
         assert_eq!(contract_to_bill.len(), 1);
-        run_to_block(22);
+        run_to_block_and_check_extrinsics(22, &mut pool_state);
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(31);
         assert_eq!(contract_to_bill.len(), 1);
-        run_to_block(32);
+        run_to_block_and_check_extrinsics(32, &mut pool_state);
 
         // Transfer some balance to the owner of the contract to trigger the grace period to stop
         Balances::transfer(Origin::signed(bob()), charlie(), 100000000).unwrap();
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(41);
         assert_eq!(contract_to_bill.len(), 1);
-        run_to_block(42);
+        run_to_block_and_check_extrinsics(42, &mut pool_state);
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(51);
         assert_eq!(contract_to_bill.len(), 1);
-        run_to_block(52);
+        run_to_block_and_check_extrinsics(52, &mut pool_state);
 
         let c1 = SmartContractModule::contracts(1).unwrap();
         assert_eq!(c1.state, types::ContractState::Created);
@@ -1944,9 +1944,10 @@ fn test_restore_rent_contract_and_node_contracts_in_grace_works() {
 
 #[test]
 fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
-        run_to_block(1);
+        run_to_block_and_check_extrinsics(1, &mut pool_state);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
@@ -1957,7 +1958,7 @@ fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works
         ));
 
         // cycle 1
-        run_to_block(12);
+        run_to_block_and_check_extrinsics(12, &mut pool_state);
 
         let c1 = SmartContractModule::contracts(1).unwrap();
         assert_eq!(c1.state, types::ContractState::GracePeriod(11));
@@ -1975,18 +1976,18 @@ fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works
             true
         );
 
-        run_to_block(22);
-        run_to_block(32);
-        run_to_block(42);
-        run_to_block(52);
-        run_to_block(62);
-        run_to_block(72);
-        run_to_block(82);
-        run_to_block(92);
-        run_to_block(102);
-        run_to_block(112);
-        run_to_block(122);
-        run_to_block(132);
+        run_to_block_and_check_extrinsics(22, &mut pool_state);
+        run_to_block_and_check_extrinsics(32, &mut pool_state);
+        run_to_block_and_check_extrinsics(42, &mut pool_state);
+        run_to_block_and_check_extrinsics(52, &mut pool_state);
+        run_to_block_and_check_extrinsics(62, &mut pool_state);
+        run_to_block_and_check_extrinsics(72, &mut pool_state);
+        run_to_block_and_check_extrinsics(82, &mut pool_state);
+        run_to_block_and_check_extrinsics(92, &mut pool_state);
+        run_to_block_and_check_extrinsics(102, &mut pool_state);
+        run_to_block_and_check_extrinsics(112, &mut pool_state);
+        run_to_block_and_check_extrinsics(122, &mut pool_state);
+        run_to_block_and_check_extrinsics(132, &mut pool_state);
 
         let c1 = SmartContractModule::contracts(1);
         assert_eq!(c1, None);
@@ -1995,9 +1996,10 @@ fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works
 
 #[test]
 fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
-        run_to_block(1);
+        run_to_block_and_check_extrinsics(1, &mut pool_state);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
@@ -2017,9 +2019,9 @@ fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
         ));
         push_contract_resources_used(2);
 
-        run_to_block(12);
+        run_to_block_and_check_extrinsics(12, &mut pool_state);
 
-        run_to_block(16);
+        run_to_block_and_check_extrinsics(16, &mut pool_state);
 
         // Delete node
         TfgridModule::delete_node_farm(Origin::signed(alice()), 1).unwrap();
@@ -2520,19 +2522,6 @@ pub fn create_twin(origin: AccountId) {
         Origin::signed(origin),
         ip.clone().0
     ));
-}
-
-fn run_to_block(n: u64) {
-    Timestamp::set_timestamp((1628082000 * 1000) + (6000 * n));
-    while System::block_number() < n {
-        System::offchain_worker(System::block_number());
-        SmartContractModule::offchain_worker(System::block_number());
-        SmartContractModule::on_finalize(System::block_number());
-        System::on_finalize(System::block_number());
-        System::set_block_number(System::block_number() + 1);
-        System::on_initialize(System::block_number());
-        SmartContractModule::on_initialize(System::block_number());
-    }
 }
 
 fn create_farming_policies() {
