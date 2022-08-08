@@ -15,7 +15,7 @@ pub enum StorageVersion {
 }
 
 impl Default for StorageVersion {
-    fn default () -> StorageVersion {
+    fn default() -> StorageVersion {
         StorageVersion::V1Struct
     }
 }
@@ -32,13 +32,13 @@ pub struct Entity<AccountId> {
 
 //digital twin
 #[derive(Clone, Encode, Decode, Debug, Eq, PartialEq, Default, TypeInfo)]
-pub struct Twin<AccountId> {
+pub struct Twin<TwinIp, AccountId> {
     pub version: u32,
     pub id: u32,
     //substrate account id = public key (32 bytes)
     //also used by PAN network
     pub account_id: AccountId,
-    pub ip: Vec<u8>,
+    pub ip: TwinIp,
     //link to person's or companies who own this twin
     pub entities: Vec<EntityProof>,
 }
@@ -72,13 +72,25 @@ pub struct Policy {
 }
 
 impl Policy {
-    pub fn factor(&self) -> u128 {
+    // Used for NRU 
+    pub fn factor_base_1000(&self) -> u128 {
         match self.unit {
             Unit::Bytes => 1,
             Unit::Kilobytes => 1000,
             Unit::Megabytes => 1000 * 1000,
             Unit::Gigabytes => 1000 * 1000 * 1000,
             Unit::Terrabytes => 1000 * 1000 * 1000 * 1000,
+        }
+    }
+
+    // Used for other units (sru, hru, mru)
+    pub fn factor_base_1024(&self) -> u128 {
+        match self.unit {
+            Unit::Bytes => 1,
+            Unit::Kilobytes => 1024,
+            Unit::Megabytes => 1024 * 1024,
+            Unit::Gigabytes => 1024 * 1024 * 1024,
+            Unit::Terrabytes => 1024 * 1024 * 1024 * 1024,
         }
     }
 }

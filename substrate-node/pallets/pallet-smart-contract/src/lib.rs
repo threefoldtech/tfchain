@@ -816,7 +816,7 @@ impl<T: Config> Pallet<T> {
         log::info!("seconds elapsed: {:?}", seconds_elapsed);
 
         // calculate NRU used and the cost
-        let used_nru = U64F64::from_num(report.nru) / pricing_policy.nu.factor();
+        let used_nru = U64F64::from_num(report.nru) / pricing_policy.nu.factor_base_1000();
         let nu_cost = used_nru
             * (U64F64::from_num(pricing_policy.nu.value) / 3600)
             * U64F64::from_num(seconds_elapsed);
@@ -1173,9 +1173,9 @@ impl<T: Config> Pallet<T> {
         let mut total_cost = U64F64::from_num(0);
 
         if bill_resources {
-            let hru = U64F64::from_num(resources.hru) / pricing_policy.su.factor();
-            let sru = U64F64::from_num(resources.sru) / pricing_policy.su.factor();
-            let mru = U64F64::from_num(resources.mru) / pricing_policy.cu.factor();
+            let hru = U64F64::from_num(resources.hru) / pricing_policy.su.factor_base_1024();
+            let sru = U64F64::from_num(resources.sru) / pricing_policy.su.factor_base_1024();
+            let mru = U64F64::from_num(resources.mru) / pricing_policy.cu.factor_base_1024();
             let cru = U64F64::from_num(resources.cru);
 
             let su_used = hru / 1200 + sru / 200;

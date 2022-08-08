@@ -13,10 +13,9 @@ use frame_support::{
     weights::{GetDispatchInfo, Weight},
 };
 use tfchain_support::{
-    resources,
+    constants, resources,
     traits::{ChangeNode, Tfgrid},
     types::{Node, Resources},
-    constants,
 };
 
 pub use pallet::*;
@@ -179,7 +178,7 @@ pub mod pallet {
         WrongProposalWeight,
         TooEarly,
         TimeLimitReached,
-        VoteThresholdNotMet,
+        OngoingVoteAndTresholdStillNotMet,
         FarmHasNoNodes,
         InvalidProposalDuration,
     }
@@ -197,9 +196,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
-            let council_members =
-                pallet_membership::Pallet::<T, pallet_membership::Instance1>::members();
-            ensure!(council_members.contains(&who), Error::<T>::NotCouncilMember);
+            Self::is_council_member(who.clone())?;
 
             let proposal_hash = T::Hashing::hash_of(&action);
             ensure!(
@@ -338,9 +335,7 @@ pub mod pallet {
         pub fn veto(origin: OriginFor<T>, proposal_hash: T::Hash) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
-            let council_members =
-                pallet_membership::Pallet::<T, pallet_membership::Instance1>::members();
-            ensure!(council_members.contains(&who), Error::<T>::NotCouncilMember);
+            Self::is_council_member(who.clone())?;
 
             let stored_proposal =
                 <Proposals<T>>::get(proposal_hash).ok_or(Error::<T>::ProposalMissing)?;
@@ -376,23 +371,21 @@ pub mod pallet {
             proposal_hash: T::Hash,
             #[pallet::compact] proposal_index: ProposalIndex,
         ) -> DispatchResultWithPostInfo {
-            let _ = ensure_signed(origin)?;
+            let who = ensure_signed(origin)?;
+
+            Self::is_council_member(who)?;
 
             let voting = Self::voting(&proposal_hash).ok_or(Error::<T>::ProposalMissing)?;
             ensure!(voting.index == proposal_index, Error::<T>::WrongIndex);
 
-            // Only allow actual closing of the proposal after the voting period has ended.
-            ensure!(
-                frame_system::Pallet::<T>::block_number() >= voting.end,
-                Error::<T>::TooEarly
-            );
-
             let no_votes = voting.nays.len() as u32;
             let yes_votes = voting.ayes.len() as u32;
 
+            // Only allow actual closing of the proposal after the voting threshold is met or voting period has ended
             ensure!(
-                (no_votes + yes_votes) >= voting.threshold,
-                Error::<T>::VoteThresholdNotMet
+                (no_votes + yes_votes) >= voting.threshold
+                    || frame_system::Pallet::<T>::block_number() >= voting.end,
+                Error::<T>::OngoingVoteAndTresholdStillNotMet
             );
 
             let total_aye_weight: u64 = voting.ayes.iter().map(|y| y.weight).sum();
@@ -505,6 +498,15 @@ impl<T: Config> Pallet<T> {
         let cu = resources::get_cu(resources);
         let su = resources::get_su(resources);
         cu * 2 + su
+    }
+
+    fn is_council_member(who: T::AccountId) -> DispatchResultWithPostInfo {
+        let council_members =
+            pallet_membership::Pallet::<T, pallet_membership::Instance1>::members();
+
+        ensure!(council_members.contains(&who), Error::<T>::NotCouncilMember,);
+
+        Ok(().into())
     }
 }
 

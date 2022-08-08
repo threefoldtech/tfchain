@@ -27,6 +27,10 @@ pub mod weights;
 
 pub mod types;
 
+pub mod farm;
+pub mod ipv6;
+pub mod twin;
+
 // Definition of the pallet logic, to be aggregated at runtime definition
 // through `construct_runtime`.
 #[frame_support::pallet]
@@ -37,7 +41,7 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
     use pallet_timestamp as timestamp;
-    use sp_std::convert::TryInto;
+    use sp_std::{convert::TryInto, fmt::Debug, vec::Vec};
     use tfchain_support::{
         traits::ChangeNode,
         types::{
@@ -45,6 +49,9 @@ pub mod pallet {
             NodeCertification, PublicConfig, PublicIP, Resources,
         },
     };
+    use frame_support::traits::ConstU32;
+
+    use codec::FullCodec;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -60,6 +67,8 @@ pub mod pallet {
     pub const TFGRID_CERTIFICATION_CODE_VERSION: u32 = 1;
     pub const TFGRID_FARMING_POLICY_VERSION: u32 = 2;
 
+    pub type FarmNameInput<T> = BoundedVec<u8, <T as Config>::MaxFarmNameLength>;
+    pub type FarmNameOf<T> = <T as Config>::FarmName;
     #[pallet::storage]
     #[pallet::getter(fn farms)]
     pub type Farms<T: Config> = StorageMap<_, Blake2_128Concat, u32, Farm, ValueQuery>;
@@ -97,7 +106,9 @@ pub mod pallet {
 
     pub type TwinIndex = u32;
     type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-    type TwinInfoOf<T> = types::Twin<AccountIdOf<T>>;
+    type TwinInfoOf<T> = types::Twin<<T as Config>::TwinIp, AccountIdOf<T>>;
+    pub type TwinIpInput = BoundedVec<u8, ConstU32<39>>;
+    pub type TwinIpOf<T> = <T as Config>::TwinIp;
 
     #[pallet::storage]
     #[pallet::getter(fn twins)]
@@ -180,6 +191,27 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
 
         type NodeChanged: ChangeNode;
+
+        /// The type of a name.
+        type TwinIp: FullCodec
+            + Debug
+            + PartialEq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        /// The type of a name.
+        type FarmName: FullCodec
+            + Debug
+            + PartialEq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        #[pallet::constant]
+        type MaxFarmNameLength: Get<u32>;
     }
 
     #[pallet::event]
@@ -199,8 +231,8 @@ pub mod pallet {
         EntityUpdated(types::Entity<T::AccountId>),
         EntityDeleted(u32),
 
-        TwinStored(types::Twin<T::AccountId>),
-        TwinUpdated(types::Twin<T::AccountId>),
+        TwinStored(types::Twin<T::TwinIp, T::AccountId>),
+        TwinUpdated(types::Twin<T::TwinIp, T::AccountId>),
 
         TwinEntityStored(u32, u32, Vec<u8>),
         TwinEntityRemoved(u32, u32),
@@ -275,6 +307,14 @@ pub mod pallet {
         NotAllowedToCertifyNode,
 
         FarmingPolicyNotExists,
+
+        TwinIpTooShort,
+        TwinIpTooLong,
+        InvalidTwinIp,
+
+        FarmNameTooShort,
+        FarmNameTooLong,
+        MethodIsDeprecated,
     }
 
     #[pallet::genesis_config]
@@ -389,6 +429,7 @@ pub mod pallet {
                             discount_for_dedication_nodes: self.discount_for_dedication_nodes,
                         };
                         PricingPolicies::<T>::insert(1, p_policy);
+                        PricingPolicyID::<T>::put(1);
                     }
                     None => (),
                 },
@@ -416,7 +457,7 @@ pub mod pallet {
             );
 
             FarmingPoliciesMap::<T>::insert(
-                1,
+                2,
                 types::FarmingPolicy {
                     version: 1,
                     id: 2,
@@ -436,6 +477,7 @@ pub mod pallet {
                     farm_certification: FarmCertification::NotCertified,
                 },
             );
+            FarmingPolicyID::<T>::put(2);
 
             ConnectionPrice::<T>::put(self.connection_price)
         }
@@ -458,12 +500,13 @@ pub mod pallet {
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn create_farm(
             origin: OriginFor<T>,
-            name: Vec<u8>,
+            name: FarmNameInput<T>,
             public_ips: Vec<PublicIP>,
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
-            Self::validate_farm_name(name.clone())?;
+            let _ = FarmNameOf::<T>::try_from(name.to_vec())
+                .map_err(DispatchErrorWithPostInfo::from)?;
 
             ensure!(
                 !FarmIdByName::<T>::contains_key(name.clone()),
@@ -504,7 +547,7 @@ pub mod pallet {
                 version: TFGRID_FARM_VERSION,
                 id,
                 twin_id,
-                name,
+                name: name.to_vec(),
                 pricing_policy_id: 1,
                 certification: FarmCertification::NotCertified,
                 public_ips: pub_ips,
@@ -525,10 +568,13 @@ pub mod pallet {
         pub fn update_farm(
             origin: OriginFor<T>,
             id: u32,
-            name: Vec<u8>,
+            name: FarmNameInput<T>,
             pricing_policy_id: u32,
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
+
+            let _ = FarmNameOf::<T>::try_from(name.to_vec())
+                .map_err(DispatchErrorWithPostInfo::from)?;
 
             ensure!(
                 TwinIdByAccountID::<T>::contains_key(&address),
@@ -544,11 +590,19 @@ pub mod pallet {
                 Error::<T>::CannotUpdateFarmWrongTwin
             );
 
+            if FarmIdByName::<T>::contains_key(name.clone()) {
+                let farm_id_by_new_name = FarmIdByName::<T>::get(name.clone());
+                // if the user picks a new name but it is taken by another farmer, don't allow it
+                if farm_id_by_new_name != id {
+                    return Err(Error::<T>::InvalidFarmName.into());
+                }
+            }
+
             let mut stored_farm = Farms::<T>::get(id);
             // Remove stored farm by name and insert new one
             FarmIdByName::<T>::remove(stored_farm.name);
 
-            stored_farm.name = name.clone();
+            stored_farm.name = name.to_vec().clone();
             stored_farm.pricing_policy_id = pricing_policy_id;
 
             Farms::<T>::insert(id, &stored_farm);
@@ -691,42 +745,8 @@ pub mod pallet {
         }
 
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2) + T::DbWeight::get().reads(2))]
-        pub fn delete_farm(origin: OriginFor<T>, id: u32) -> DispatchResultWithPostInfo {
-            let address = ensure_signed(origin)?;
-
-            ensure!(Farms::<T>::contains_key(id), Error::<T>::FarmNotExists);
-            let stored_farm = Farms::<T>::get(id);
-            // make sure farm doesn't have public ips assigned
-            ensure!(
-                stored_farm.public_ips.len() == 0,
-                Error::<T>::CannotDeleteFarmWithPublicIPs
-            );
-            // make sure farm doesn't have nodes assigned
-            for (_, node) in Nodes::<T>::iter() {
-                if node.farm_id == id {
-                    return Err(Error::<T>::CannotDeleteFarmWithNodesAssigned.into());
-                }
-            }
-
-            ensure!(
-                Twins::<T>::contains_key(stored_farm.twin_id),
-                Error::<T>::TwinNotExists
-            );
-            let twin = Twins::<T>::get(stored_farm.twin_id).unwrap();
-            ensure!(
-                twin.account_id == address,
-                Error::<T>::CannotDeleteFarmWrongTwin
-            );
-
-            // delete farm
-            Farms::<T>::remove(id);
-
-            // Remove stored farm by name and insert new one
-            FarmIdByName::<T>::remove(stored_farm.name);
-
-            Self::deposit_event(Event::FarmDeleted(id));
-
-            Ok(().into())
+        pub fn delete_farm(_origin: OriginFor<T>, _id: u32) -> DispatchResultWithPostInfo {
+            Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
         }
 
         #[pallet::weight(<T as Config>::WeightInfo::create_node())]
@@ -1116,7 +1136,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(<T as Config>::WeightInfo::create_twin())]
-        pub fn create_twin(origin: OriginFor<T>, ip: Vec<u8>) -> DispatchResultWithPostInfo {
+        pub fn create_twin(origin: OriginFor<T>, ip: TwinIpInput) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
             ensure!(
@@ -1132,12 +1152,14 @@ pub mod pallet {
             let mut twin_id = TwinID::<T>::get();
             twin_id = twin_id + 1;
 
-            let twin = types::Twin::<T::AccountId> {
+            let twin_ip = Self::check_twin_ip(ip)?;
+
+            let twin = types::Twin::<T::TwinIp, T::AccountId> {
                 version: TFGRID_TWIN_VERSION,
                 id: twin_id,
                 account_id: account_id.clone(),
                 entities: Vec::new(),
-                ip: ip.clone(),
+                ip: twin_ip,
             };
 
             Twins::<T>::insert(&twin_id, &twin);
@@ -1152,7 +1174,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(3))]
-        pub fn update_twin(origin: OriginFor<T>, ip: Vec<u8>) -> DispatchResultWithPostInfo {
+        pub fn update_twin(origin: OriginFor<T>, ip: TwinIpInput) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
             ensure!(
@@ -1173,7 +1195,9 @@ pub mod pallet {
                 Error::<T>::UnauthorizedToUpdateTwin
             );
 
-            twin.ip = ip.clone();
+            let twin_ip = Self::check_twin_ip(ip)?;
+
+            twin.ip = twin_ip;
 
             Twins::<T>::insert(&twin_id, &twin);
 
@@ -1748,30 +1772,6 @@ impl<T: Config> Pallet<T> {
         sp_core::sr25519::Public::from_raw(bytes)
     }
 
-    fn validate_farm_name(name: Vec<u8>) -> DispatchResultWithPostInfo {
-        ensure!(
-            name.len() > 0 && name.len() <= 50,
-            Error::<T>::InvalidFarmName
-        );
-        for character in &name {
-            match character {
-                // 45 = -
-                c if *c == 45 => (),
-                // 95 = _
-                c if *c == 95 => (),
-                // 45 -> 57 = 0,1,2 ..
-                c if *c >= 48 && *c <= 57 => (),
-                // 65 -> 90 = A, B, C, ..
-                c if *c >= 65 && *c <= 90 => (),
-                // 97 -> 122 = a, b, c, ..
-                c if *c >= 97 && *c <= 122 => (),
-                _ => return Err(DispatchErrorWithPostInfo::from(Error::<T>::InvalidFarmName)),
-            }
-        }
-
-        return Ok(().into());
-    }
-
     fn get_farming_policy(
         node: &Node,
     ) -> Result<types::FarmingPolicy<T::BlockNumber>, DispatchErrorWithPostInfo> {
@@ -1883,6 +1883,12 @@ impl<T: Config> Pallet<T> {
                 ))
             }
         }
+    }
+
+    fn check_twin_ip(ip: TwinIpInput) -> Result<TwinIpOf<T>, DispatchErrorWithPostInfo> {
+        let ip = TwinIpOf::<T>::try_from(ip.to_vec()).map_err(DispatchErrorWithPostInfo::from)?;
+
+        Ok(ip)
     }
 }
 

@@ -12,6 +12,7 @@ use substrate_fixed::types::U64F64;
 use super::types;
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use tfchain_support::types::{FarmCertification, Location, NodeCertification, PublicIP, Resources};
+use sp_std::convert::TryInto;
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -881,7 +882,7 @@ fn test_multiple_contracts_billing_loop_works() {
         // 2: Contract created (name contract)
         // 3: Contract Billed (node contract)
         // 4: Contract Billed (name contract)
-        assert_eq!(our_events.len(), 5);
+        assert_eq!(our_events.len(), 6);
     })
 }
 
@@ -1347,7 +1348,7 @@ fn test_name_contract_billing() {
         let our_events = System::events();
         println!("events: {:?}", our_events.clone());
         assert_eq!(
-            our_events[2],
+            our_events[3],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::ContractBilled(
@@ -1525,7 +1526,7 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
         // Event 2: Node Contract created
         // Event 4: Rent contract billed
         // => no Node Contract billed event
-        assert_eq!(our_events.len(), 5);
+        assert_eq!(our_events.len(), 6);
     });
 }
 
@@ -1579,10 +1580,10 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         // Event 16: Node contract canceled
         // Event 17: Rent contract Canceled
         // => no Node Contract billed event
-        assert_eq!(our_events.len(), 18);
+        assert_eq!(our_events.len(), 19);
 
         assert_eq!(
-            our_events[16],
+            our_events[17],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::NodeContractCanceled {
@@ -1592,7 +1593,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
             }))
         );
         assert_eq!(
-            our_events[17],
+            our_events[18],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::RentContractCanceled {
@@ -1642,7 +1643,7 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
         // Event 3: Node Contract created
         // Event 4: Rent contract billed
         // Event 5: Node Contract billed
-        assert_eq!(our_events.len(), 5);
+        assert_eq!(our_events.len(), 6);
     });
 }
 
@@ -1704,7 +1705,7 @@ fn test_restore_rent_contract_in_grace_works() {
 
         let our_events = System::events();
         assert_eq!(
-            our_events[2],
+            our_events[3],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::ContractGracePeriodStarted {
@@ -2152,7 +2153,7 @@ pub fn prepare_farm(source: AccountId, dedicated: bool) {
 
     TfgridModule::create_farm(
         Origin::signed(source),
-        farm_name.as_bytes().to_vec(),
+        farm_name.as_bytes().to_vec().try_into().unwrap(),
         pub_ips.clone(),
     )
     .unwrap();
@@ -2250,8 +2251,10 @@ pub fn create_twin(origin: AccountId) {
         document.clone(),
         hash.clone(),
     ));
-    let ip = "10.2.3.3";
-    TfgridModule::create_twin(Origin::signed(origin), ip.as_bytes().to_vec()).unwrap();
+    let ip = get_twin_ip(b"::1");
+    assert_ok!(
+        TfgridModule::create_twin(Origin::signed(origin), ip.clone().0)
+    );
 }
 
 fn run_to_block(n: u64) {

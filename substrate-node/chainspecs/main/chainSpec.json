@@ -10,7 +10,6 @@
     "tokenSymbol": "TFT"
   },
   "consensusEngine": null,
-  "lightSyncState": null,
   "genesis": {
     "runtime": {
       "frameSystem": {

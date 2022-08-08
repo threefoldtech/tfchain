@@ -12,6 +12,9 @@ use sp_core::{ed25519, sr25519, Pair, Public, H256};
 
 use sp_std::prelude::*;
 
+use crate::farm::FarmName;
+use crate::twin::TwinIp;
+use crate::weights;
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::MultiSignature;
 
@@ -79,12 +82,21 @@ impl tfchain_support::traits::ChangeNode for NodeChanged {
     fn node_deleted(_node: &tfchain_support::types::Node) {}
 }
 
-use crate::weights;
+parameter_types! {
+    pub const MaxFarmNameLength: u32 = 40;
+}
+
+pub(crate) type TestTwinIp = TwinIp<TestRuntime>;
+pub(crate) type TestFarmName = FarmName<TestRuntime>;
+
 impl Config for TestRuntime {
     type Event = Event;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
+    type TwinIp = TestTwinIp;
+    type FarmName = TestFarmName;
+    type MaxFarmNameLength = MaxFarmNameLength;
 }
 
 parameter_types! {
@@ -136,6 +148,14 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     };
     genesis.assimilate_storage(&mut t).unwrap();
     t.into()
+}
+
+pub(crate) fn get_twin_ip(twin_ip_input: &[u8]) -> TestTwinIp {
+    TwinIp::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
+}
+
+pub(crate) fn get_farm_name(farm_name_input: &[u8]) -> TestFarmName {
+    FarmName::try_from(farm_name_input.to_vec()).expect("Invalid farm input.")
 }
 
 // industry dismiss casual gym gap music pave gasp sick owner dumb cost
