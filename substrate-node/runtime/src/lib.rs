@@ -6,7 +6,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use constants::fee::WeightToFee;
+use constants::fee::WeightToFeeStruct;
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use sp_api::impl_runtime_apis;
@@ -311,7 +311,7 @@ parameter_types! {
 impl pallet_transaction_payment::Config for Runtime {
     type OnChargeTransaction = CurrencyAdapter<Balances, impls::DealWithFees<Runtime>>;
     type OperationalFeeMultiplier = ConstU8<5>;
-    type WeightToFee = WeightToFee;
+    type WeightToFee = WeightToFeeStruct;
     type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
     type FeeMultiplierUpdate = ();
 }
@@ -394,7 +394,7 @@ impl pallet_kvstore::Config for Runtime {
 }
 
 impl pallet_tft_price::Config for Runtime {
-    type AuthorityId = pallet_tft_price::crypto::AuthId;
+    type AuthorityId = pallet_tft_price::AuthId;
     type Call = Call;
     type Event = Event;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;

@@ -52,7 +52,7 @@ pub mod fee {
         WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
     };
     use smallvec::smallvec;
-    pub use sp_runtime::{Perbill, PerThing};
+    pub use sp_runtime::{PerThing, Perbill};
 
     /// The block saturation level. Fees will be updates based on this value.
     pub const TARGET_BLOCK_FULLNESS: Perbill = Perbill::from_percent(25);
@@ -67,8 +67,8 @@ pub mod fee {
     /// Yet, it can be used for any other sort of change to weight-fee. Some examples being:
     ///   - Setting it to `0` will essentially disable the weight fee.
     ///   - Setting it to `1` will cause the literal `#[weight = x]` values to be charged.
-    pub struct WeightToFee;
-    impl WeightToFeePolynomial for WeightToFee {
+    pub struct WeightToFeeStruct;
+    impl WeightToFeePolynomial for WeightToFeeStruct {
         type Balance = Balance;
         fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
             // in Westend, extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
@@ -87,17 +87,19 @@ pub mod fee {
 #[cfg(test)]
 mod tests {
     use super::currency::{CENTS, DOLLARS, MILLICENTS};
-    use super::fee::WeightToFee;
-    use frame_support::weights::WeightToFeePolynomial;
-    use runtime_common::{ExtrinsicBaseWeight, MaximumBlockWeight};
+    use super::fee::WeightToFeeStruct;
+    use crate::MaximumBlockWeight;
+    use frame_support::weights::constants::ExtrinsicBaseWeight;
+    use frame_support::weights::WeightToFee;
 
     #[test]
     // This function tests that the fee for `MaximumBlockWeight` of weight is correct
     fn full_block_fee_is_correct() {
         // A full block should cost 16 DOLLARS
         println!("Base: {}", ExtrinsicBaseWeight::get());
-        let x = WeightToFee::calc(&MaximumBlockWeight::get());
+        let x = WeightToFeeStruct::weight_to_fee(&MaximumBlockWeight::get());
         let y = 16 * DOLLARS;
+        println!("x: {}, y: {}", x, y);
         assert!(x.max(y) - x.min(y) < MILLICENTS);
     }
 
@@ -106,7 +108,7 @@ mod tests {
     fn extrinsic_base_fee_is_correct() {
         // `ExtrinsicBaseWeight` should cost 1/10 of a CENT
         println!("Base: {}", ExtrinsicBaseWeight::get());
-        let x = WeightToFee::calc(&ExtrinsicBaseWeight::get());
+        let x = WeightToFeeStruct::weight_to_fee(&ExtrinsicBaseWeight::get());
         let y = CENTS / 10;
         assert!(x.max(y) - x.min(y) < MILLICENTS);
     }

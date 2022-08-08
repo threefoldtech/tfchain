@@ -118,6 +118,7 @@ pub mod pallet {
         + pallet_timestamp::Config
         + pallet_balances::Config
         + pallet_tfgrid::Config
+        + pallet_tft_price::Config
     {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: LockableCurrency<Self::AccountId>;
@@ -1191,9 +1192,7 @@ impl<T: Config> Pallet<T> {
     pub fn calculate_cost_in_tft_from_musd(
         total_cost: u64,
     ) -> Result<u64, DispatchErrorWithPostInfo> {
-        // Todo fix me
-        use frame_support::StorageValue;
-        let avg_tft_price = pallet_tft_price::AverageTftPrice::get();
+        let avg_tft_price = pallet_tft_price::AverageTftPrice::<T>::get();
         ensure!(avg_tft_price > 0, Error::<T>::TFTPriceValueError);
 
         // TFT Price is in musd
