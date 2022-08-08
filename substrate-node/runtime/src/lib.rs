@@ -720,6 +720,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
+    pallet_smart_contract::contract_migration::v4::ContractMigrationV4<Runtime>,
 >;
 
 impl_runtime_apis! {
