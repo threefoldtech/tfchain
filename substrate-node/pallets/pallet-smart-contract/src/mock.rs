@@ -150,6 +150,7 @@ impl pallet_smart_contract::Config for TestRuntime {
     type GracePeriod = GracePeriod;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
+    type RestrictedOrigin = EnsureRoot<Self::AccountId>;
 }
 
 type AccountPublic = <MultiSignature as Verify>::Signer;

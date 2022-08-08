@@ -372,6 +372,7 @@ impl pallet_smart_contract::Config for Runtime {
     type GracePeriod = GracePeriod;
     type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
     type NodeChanged = NodeChanged;
+    type RestrictedOrigin = EnsureRootOrCouncilApproval;
 }
 // type Tfgrid = TfgridModule;
 
@@ -719,6 +720,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
+    pallet_smart_contract::contract_migration::v4::ContractMigrationV4<Runtime>,
 >;
 
 impl_runtime_apis! {
