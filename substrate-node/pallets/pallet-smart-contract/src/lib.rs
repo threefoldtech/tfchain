@@ -886,7 +886,13 @@ impl<T: Config> Pallet<T> {
                         contract_id: contract.contract_id,
                         node_id,
                         twin_id: contract.twin_id,
-                    })
+                    });
+                    // If the contract is a rent contract, also move state on associated node contracts
+                    Self::handle_grace_rent_contract(
+                        contract,
+                        types::ContractState::Created,
+                        current_block,
+                    )?;
                 } else {
                     let diff = current_block - grace_start;
                     // If the contract grace period ran out, we can decomission the contract
@@ -915,11 +921,55 @@ impl<T: Config> Pallet<T> {
                         twin_id: contract.twin_id,
                         block_number: current_block.saturated_into(),
                     });
+                    // If the contract is a rent contract, also move associated node contract to grace period
+                    Self::handle_grace_rent_contract(
+                        contract,
+                        types::ContractState::GracePeriod(current_block),
+                        current_block,
+                    )?;
                 }
             }
         }
 
         Ok(contract)
+    }
+
+    fn handle_grace_rent_contract(
+        contract: &mut types::Contract,
+        state: types::ContractState,
+        block_number: u64,
+    ) -> DispatchResultWithPostInfo {
+        match &contract.contract_type {
+            types::ContractData::RentContract(rc) => {
+                let active_node_contracts = ActiveNodeContracts::<T>::get(rc.node_id);
+                for ctr_id in active_node_contracts {
+                    let mut ctr = Contracts::<T>::get(ctr_id);
+                    Self::_update_contract_state(&mut ctr, &state)?;
+
+                    match state {
+                        types::ContractState::Created => {
+                            Self::deposit_event(Event::ContractGracePeriodEnded {
+                                contract_id: ctr.contract_id,
+                                node_id: rc.node_id,
+                                twin_id: ctr.twin_id,
+                            });
+                        }
+                        types::ContractState::GracePeriod(_) => {
+                            Self::deposit_event(Event::ContractGracePeriodStarted {
+                                contract_id: ctr.contract_id,
+                                node_id: rc.node_id,
+                                twin_id: ctr.twin_id,
+                                block_number,
+                            });
+                        }
+                        _ => (),
+                    };
+                }
+            }
+            _ => (),
+        };
+
+        Ok(().into())
     }
 
     fn handle_lock(

@@ -11,8 +11,8 @@ use substrate_fixed::types::U64F64;
 
 use super::types;
 use pallet_tfgrid::types as pallet_tfgrid_types;
-use tfchain_support::types::{FarmCertification, Location, NodeCertification, PublicIP, Resources};
 use sp_std::convert::TryInto;
+use tfchain_support::types::{FarmCertification, Location, NodeCertification, PublicIP, Resources};
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -1444,15 +1444,39 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         // Event 1: Rent contract created
         // Event 2: Node Contract created
         // Event 3: Updated used resources
-        // Event 4: Grace period started
-        // Event 5-15: Rent contract billed
-        // Event 16: Node contract canceled
-        // Event 17: Rent contract Canceled
+        // Event 4: Grace period started rent contract
+        // Event 5: Grace period started node contract
+        // Event 6-17: Rent contract billed
+        // Event 18: Node contract canceled
+        // Event 19: Rent contract Canceled
         // => no Node Contract billed event
-        assert_eq!(our_events.len(), 19);
+        assert_eq!(our_events.len(), 20);
 
         assert_eq!(
-            our_events[17],
+            our_events[5],
+            record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ContractGracePeriodStarted {
+                contract_id: 1,
+                node_id: 1,
+                twin_id: 3,
+                block_number: 11
+            }))
+        );
+        assert_eq!(
+            our_events[6],
+            record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ContractGracePeriodStarted {
+                contract_id: 2,
+                node_id: 1,
+                twin_id: 3,
+                block_number: 11
+            }))
+        );
+
+        assert_eq!(
+            our_events[18],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::NodeContractCanceled {
@@ -1462,7 +1486,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
             }))
         );
         assert_eq!(
-            our_events[18],
+            our_events[19],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::RentContractCanceled {
@@ -1602,6 +1626,103 @@ fn test_restore_rent_contract_in_grace_works() {
 
         let c1 = SmartContractModule::contracts(1);
         assert_eq!(c1.state, types::ContractState::Created);
+    });
+}
+
+#[test]
+fn test_restore_rent_contract_and_node_contracts_in_grace_works() {
+    new_test_ext().execute_with(|| {
+        prepare_dedicated_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(charlie()),
+            node_id
+        ));
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(charlie()),
+            1,
+            "some_data".as_bytes().to_vec(),
+            "hash".as_bytes().to_vec(),
+            0
+        ));
+        push_contract_resources_used(2);
+
+        // cycle 1
+        run_to_block(12);
+
+        let c1 = SmartContractModule::contracts(1);
+        assert_eq!(c1.state, types::ContractState::GracePeriod(11));
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events[5],
+            record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ContractGracePeriodStarted {
+                contract_id: 1,
+                node_id: 1,
+                twin_id: 3,
+                block_number: 11
+            }))
+        );
+        assert_eq!(
+            our_events[6],
+            record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ContractGracePeriodStarted {
+                contract_id: 2,
+                node_id: 1,
+                twin_id: 3,
+                block_number: 11
+            }))
+        );
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(21);
+        assert_eq!(contract_to_bill.len(), 2);
+        run_to_block(22);
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(31);
+        assert_eq!(contract_to_bill.len(), 2);
+        run_to_block(32);
+
+        // Transfer some balance to the owner of the contract to trigger the grace period to stop
+        Balances::transfer(Origin::signed(bob()), charlie(), 100000000).unwrap();
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(41);
+        assert_eq!(contract_to_bill.len(), 2);
+        run_to_block(42);
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(51);
+        assert_eq!(contract_to_bill.len(), 2);
+        run_to_block(52);
+
+        let c1 = SmartContractModule::contracts(1);
+        assert_eq!(c1.state, types::ContractState::Created);
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events[11],
+            record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ContractGracePeriodEnded {
+                contract_id: 1,
+                node_id: 1,
+                twin_id: 3,
+            }))
+        );
+        assert_eq!(
+            our_events[12],
+            record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ContractGracePeriodEnded {
+                contract_id: 2,
+                node_id: 1,
+                twin_id: 3,
+            }))
+        );
     });
 }
 
@@ -2013,9 +2134,10 @@ pub fn create_twin(origin: AccountId) {
         hash.clone(),
     ));
     let ip = get_twin_ip(b"::1");
-    assert_ok!(
-        TfgridModule::create_twin(Origin::signed(origin), ip.clone().0)
-    );
+    assert_ok!(TfgridModule::create_twin(
+        Origin::signed(origin),
+        ip.clone().0
+    ));
 }
 
 fn run_to_block(n: u64) {
