@@ -5,11 +5,12 @@ use sp_std::prelude::*;
 use frame_support::{
     dispatch::DispatchErrorWithPostInfo,
     ensure,
+    pallet_prelude::DispatchResult,
     traits::{
-        Currency, EnsureOrigin, ExistenceRequirement, Get, LockableCurrency, WithdrawReasons, ExistenceRequirement::KeepAlive
+        Currency, EnsureOrigin, ExistenceRequirement, ExistenceRequirement::KeepAlive, Get,
+        LockableCurrency, WithdrawReasons,
     },
     weights::Pays,
-    pallet_prelude::DispatchResult,
 };
 use frame_system::{self as system, ensure_signed};
 use pallet_tfgrid;
@@ -254,10 +255,17 @@ pub mod pallet {
             data: Vec<u8>,
             deployment_hash: Vec<u8>,
             public_ips: u32,
-            solution_provider_id: Option<u64>
+            solution_provider_id: Option<u64>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_create_node_contract(account_id, node_id, data, deployment_hash, public_ips, solution_provider_id)
+            Self::_create_node_contract(
+                account_id,
+                node_id,
+                data,
+                deployment_hash,
+                public_ips,
+                solution_provider_id,
+            )
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
@@ -321,7 +329,7 @@ pub mod pallet {
         pub fn create_rent_contract(
             origin: OriginFor<T>,
             node_id: u32,
-            solution_provider_id: Option<u64>
+            solution_provider_id: Option<u64>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_create_rent_contract(account_id, node_id, solution_provider_id)
@@ -543,8 +551,11 @@ impl<T: Config> Pallet<T> {
         }
         let name_contract = types::NameContract { name: name.clone() };
 
-        let contract =
-            Self::_create_contract(twin_id, types::ContractData::NameContract(name_contract), None)?;
+        let contract = Self::_create_contract(
+            twin_id,
+            types::ContractData::NameContract(name_contract),
+            None,
+        )?;
 
         ContractIDByNameRegistration::<T>::insert(name, &contract.contract_id);
 
@@ -1313,31 +1324,35 @@ impl<T: Config> Pallet<T> {
                     .map(|provider| provider.take)
                     .sum();
                 sales_share -= total_take;
-    
-                if !solution_provider.providers.iter().map(|provider| {
-                    let share = Perbill::from_percent(provider.take as u32) * amount;
-                    frame_support::log::info!(
-                        "Transfering: {:?} from contract twin {:?} to provider account {:?}",
-                        &share,
-                        &twin.account_id,
-                        &provider.who
-                    );
-                    <T as Config>::Currency::transfer(
-                        &twin.account_id,
-                        &provider.who,
-                        share,
-                        KeepAlive,
-                    )
-                })
-                .filter(|result| result.is_err())
-                .collect::<Vec<DispatchResult>>()
-                .is_empty() {
-                    return Err(DispatchErrorWithPostInfo::from(Error::<T>::InvalidProviderConfiguration))
+
+                if !solution_provider
+                    .providers
+                    .iter()
+                    .map(|provider| {
+                        let share = Perbill::from_percent(provider.take as u32) * amount;
+                        frame_support::log::info!(
+                            "Transfering: {:?} from contract twin {:?} to provider account {:?}",
+                            &share,
+                            &twin.account_id,
+                            &provider.who
+                        );
+                        <T as Config>::Currency::transfer(
+                            &twin.account_id,
+                            &provider.who,
+                            share,
+                            KeepAlive,
+                        )
+                    })
+                    .filter(|result| result.is_err())
+                    .collect::<Vec<DispatchResult>>()
+                    .is_empty()
+                {
+                    return Err(DispatchErrorWithPostInfo::from(
+                        Error::<T>::InvalidProviderConfiguration,
+                    ));
                 }
             }
         };
-
-        println!("sales share: percentage {:?}", sales_share);
 
         if sales_share > 0 {
             let share = Perbill::from_percent(sales_share.into()) * amount;
@@ -1699,7 +1714,10 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn _approve_solution_provider(solution_provider_id: u64, approve: bool) -> DispatchResultWithPostInfo {
+    pub fn _approve_solution_provider(
+        solution_provider_id: u64,
+        approve: bool,
+    ) -> DispatchResultWithPostInfo {
         ensure!(
             SolutionProviders::<T>::contains_key(solution_provider_id),
             Error::<T>::NoSuchSolutionProvider
@@ -1714,11 +1732,12 @@ impl<T: Config> Pallet<T> {
             ));
         }
 
-
         Ok(().into())
     }
 
-    pub fn validate_solution_provider(solution_provider_id: Option<u64>) -> DispatchResultWithPostInfo {
+    pub fn validate_solution_provider(
+        solution_provider_id: Option<u64>,
+    ) -> DispatchResultWithPostInfo {
         if let Some(provider_id) = solution_provider_id {
             ensure!(
                 SolutionProviders::<T>::contains_key(provider_id),
