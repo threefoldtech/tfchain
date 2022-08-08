@@ -204,11 +204,11 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                     if node_contract.deployment_hash.len() == 32 {
                         new_node_contract.deployment_hash =
                             sp_core::H256::from_slice(&node_contract.deployment_hash);
-                        new_contract.contract_type =
-                            types::ContractData::NodeContract(new_node_contract);
-                    } else {
-                        return None;
-                    };
+                    }
+
+                    // Save the contract data
+                    new_contract.contract_type =
+                        types::ContractData::NodeContract(new_node_contract);
                 }
                 deprecated::ContractData::NameContract(nc) => {
                     match super::NameContractNameOf::<T>::try_from(nc.name) {

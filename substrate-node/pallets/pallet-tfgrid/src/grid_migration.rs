@@ -118,12 +118,6 @@ pub mod v6 {
                 Pallet::<T>::pallet_version()
             );
 
-            let node_1 = Nodes::<T>::get(1).unwrap();
-            info!("Node 1 updated values: {:?}", node_1,);
-
-            let farm_1 = Farms::<T>::get(1).unwrap();
-            info!("Farm 1 updated values: {:?}", farm_1,);
-
             Ok(())
         }
     }
