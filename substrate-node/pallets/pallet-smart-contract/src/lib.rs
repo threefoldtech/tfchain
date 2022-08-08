@@ -888,11 +888,7 @@ impl<T: Config> Pallet<T> {
                         twin_id: contract.twin_id,
                     });
                     // If the contract is a rent contract, also move state on associated node contracts
-                    Self::handle_grace_rent_contract(
-                        contract,
-                        types::ContractState::Created,
-                        current_block,
-                    )?;
+                    Self::handle_grace_rent_contract(contract, types::ContractState::Created)?;
                 } else {
                     let diff = current_block - grace_start;
                     // If the contract grace period ran out, we can decomission the contract
@@ -925,7 +921,6 @@ impl<T: Config> Pallet<T> {
                     Self::handle_grace_rent_contract(
                         contract,
                         types::ContractState::GracePeriod(current_block),
-                        current_block,
                     )?;
                 }
             }
@@ -937,7 +932,6 @@ impl<T: Config> Pallet<T> {
     fn handle_grace_rent_contract(
         contract: &mut types::Contract,
         state: types::ContractState,
-        block_number: u64,
     ) -> DispatchResultWithPostInfo {
         match &contract.contract_type {
             types::ContractData::RentContract(rc) => {
@@ -949,14 +943,14 @@ impl<T: Config> Pallet<T> {
                     match state {
                         types::ContractState::Created => {
                             Self::deposit_event(Event::ContractGracePeriodEnded {
-                                contract_id: ctr.contract_id,
+                                contract_id: ctr_id,
                                 node_id: rc.node_id,
                                 twin_id: ctr.twin_id,
                             });
                         }
-                        types::ContractState::GracePeriod(_) => {
+                        types::ContractState::GracePeriod(block_number) => {
                             Self::deposit_event(Event::ContractGracePeriodStarted {
-                                contract_id: ctr.contract_id,
+                                contract_id: ctr_id,
                                 node_id: rc.node_id,
                                 twin_id: ctr.twin_id,
                                 block_number,
