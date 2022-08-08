@@ -3,13 +3,8 @@
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
-use frame_support::{
-    dispatch::DispatchResultWithPostInfo,
-    weights::Pays,
-};
-use frame_system::{
-    offchain::{SendSignedTransaction, Signer},
-};
+use frame_support::{dispatch::DispatchResultWithPostInfo, weights::Pays};
+use frame_system::offchain::{SendSignedTransaction, Signer};
 use lite_json::json::JsonValue;
 use log;
 use sp_runtime::offchain::{http, Duration};
@@ -35,14 +30,10 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
 
-    use frame_support::{
-        dispatch::DispatchResultWithPostInfo,
-        ensure,
-        traits::{EnsureOrigin,},
-    };
+    use frame_support::{dispatch::DispatchResultWithPostInfo, ensure, traits::EnsureOrigin};
     use frame_system::{
         ensure_signed,
-        offchain::{AppCrypto, CreateSignedTransaction,},
+        offchain::{AppCrypto, CreateSignedTransaction},
     };
 
     use crate::KEY_TYPE;
@@ -75,11 +66,8 @@ pub mod pallet {
         type GenericPublic = sp_core::sr25519::Public;
     }
 
-	#[pallet::config]
-    pub trait Config: 
-        frame_system::Config 
-        + CreateSignedTransaction<Call<Self>>
-    {
+    #[pallet::config]
+    pub trait Config: frame_system::Config + CreateSignedTransaction<Call<Self>> {
         // type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         // Add other types and constants required to configure this pallet.
@@ -90,7 +78,7 @@ pub mod pallet {
         type RestrictedOrigin: EnsureOrigin<Self::Origin>;
     }
 
-	#[pallet::event]
+    #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     // pub enum Event<T> where AccountId = <T as frame_system::Config>::AccountId {
     pub enum Event<T: Config> {
@@ -99,7 +87,7 @@ pub mod pallet {
         AveragePriceStored(u32),
     }
 
-	#[pallet::error]
+    #[pallet::error]
     // pub enum Error for Module<T: Config> {
     pub enum Error<T> {
         ErrFetchingPrice,
@@ -108,9 +96,9 @@ pub mod pallet {
         AccountUnauthorizedToSetPrice,
     }
 
-	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
-	pub struct Pallet<T>(_);
+    #[pallet::pallet]
+    #[pallet::generate_store(pub(super) trait Store)]
+    pub struct Pallet<T>(_);
 
     #[pallet::storage]
     #[pallet::getter(fn tft_price)]
@@ -136,26 +124,20 @@ pub mod pallet {
     #[pallet::getter(fn allowed_origin)]
     pub type AllowedOrigin<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
 
-    //TODO
-    // add_extra_genesis {
-    //     config(allowed_origin): Option<T::AccountId>;
-
-    //     build(|_config| {
-    //         AllowedOrigin::<T>::set(_config.allowed_origin.clone());
-    //     });
-    // }
-
-	#[pallet::call]   // <-- Step 6. code block will replace this.
+    #[pallet::call] // <-- Step 6. code block will replace this.
     impl<T: Config> Pallet<T> {
         #[pallet::weight(0)]
         pub fn set_prices(
-            origin: OriginFor<T>, 
+            origin: OriginFor<T>,
             price: u32,
             block_number: T::BlockNumber,
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
             if let Some(allowed_origin) = AllowedOrigin::<T>::get() {
-                ensure!(allowed_origin == address, Error::<T>::AccountUnauthorizedToSetPrice);
+                ensure!(
+                    allowed_origin == address,
+                    Error::<T>::AccountUnauthorizedToSetPrice
+                );
                 Self::calculate_and_set_price(price, block_number)?;
             }
             Ok(().into())
@@ -177,8 +159,29 @@ pub mod pallet {
         fn offchain_worker(block_number: T::BlockNumber) {
             match Self::offchain_signed_tx(block_number) {
                 Ok(_) => log::info!("offchain worker done."),
-                Err(err) => log::info!("err: {:?}", err)
+                Err(err) => log::info!("err: {:?}", err),
             }
+        }
+    }
+
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config> {
+        pub allowed_origin: Option<T::AccountId>,
+    }
+
+    #[cfg(feature = "std")]
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            Self {
+                allowed_origin: None,
+            }
+        }
+    }
+
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+        fn build(&self) {
+            AllowedOrigin::<T>::set(self.allowed_origin.clone());
         }
     }
 }

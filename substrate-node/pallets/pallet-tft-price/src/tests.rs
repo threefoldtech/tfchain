@@ -1,6 +1,7 @@
 use crate::{self as pallet_tft_price, *};
 use codec::alloc::sync::Arc;
-use frame_support::{construct_runtime, parameter_types, assert_noop, assert_ok, traits::ConstU32};
+use frame_support::traits::GenesisBuild;
+use frame_support::{assert_noop, assert_ok, construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::EnsureRoot;
 use frame_system::{limits, mocking};
 use sp_core::{
@@ -74,7 +75,7 @@ parameter_types! {
 }
 
 impl Config for TestRuntime {
-    type AuthorityId = pallet_tft_price::crypto::AuthId;
+    type AuthorityId = pallet_tft_price::AuthId;
     type Call = Call;
     type Event = Event;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
