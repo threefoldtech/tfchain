@@ -131,7 +131,7 @@ try-runtime = [
     "pallet-timestamp/try-runtime",
     "pallet-transaction-payment/try-runtime",
     "pallet-smart-contract/try-runtime",
-    "pallet-tfgrid/try-runtime",
+    "pallet-tfgrid/try-runtime"
 ]
 std = [
     'codec/std',

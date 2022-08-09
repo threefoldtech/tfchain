@@ -4,6 +4,12 @@ use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::EnsureRoot;
 use pallet_collective;
 use pallet_tfgrid;
+use pallet_tfgrid::{
+    farm::FarmName,
+    pub_config::{Domain, GW4, GW6, IP4, IP6},
+    pub_ip::{GatewayIP, PublicIP},
+    twin::TwinIp,
+};
 use pallet_timestamp;
 use sp_core::H256;
 use sp_runtime::{
@@ -12,7 +18,6 @@ use sp_runtime::{
 };
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::{traits::ChangeNode, types::Node};
-use pallet_tfgrid::{{farm::FarmName}, {twin::TwinIp}, pub_ip::{GatewayIP, PublicIP}, pub_config::{IP4, GW4, IP6, GW6, Domain}};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;

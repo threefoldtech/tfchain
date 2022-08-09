@@ -131,6 +131,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                 contract_id: ctr.contract_id,
                 twin_id: ctr.twin_id,
                 contract_type: types::ContractData::RentContract(rc),
+                solution_provider_id: None,
             };
 
             match ctr.contract_type {

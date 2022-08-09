@@ -6,7 +6,11 @@ use frame_support::{
     dispatch::DispatchErrorWithPostInfo,
     ensure,
     log::info,
-    traits::{Currency, ExistenceRequirement, Get, LockableCurrency, WithdrawReasons},
+    pallet_prelude::DispatchResult,
+    traits::{
+        Currency, EnsureOrigin, ExistenceRequirement, ExistenceRequirement::KeepAlive, Get,
+        LockableCurrency, WithdrawReasons,
+    },
     transactional,
     weights::Pays,
     BoundedVec,
@@ -59,8 +63,6 @@ pub mod pallet {
     };
     use tfchain_support::traits::ChangeNode;
 
-    use contract_migration;
-
     pub type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
 
@@ -72,7 +74,7 @@ pub mod pallet {
     pub struct Pallet<T>(_);
 
     // Version constant that referenced the struct version
-    pub const CONTRACT_VERSION: u32 = 3;
+    pub const CONTRACT_VERSION: u32 = 4;
 
     pub type MaxNodeContractPublicIPs = ConstU32<5>;
 
@@ -137,6 +139,15 @@ pub mod pallet {
     pub type ContractID<T> = StorageValue<_, u64, ValueQuery>;
 
     #[pallet::storage]
+    #[pallet::getter(fn solution_providers)]
+    pub type SolutionProviders<T: Config> =
+        StorageMap<_, Blake2_128Concat, u64, types::SolutionProvider<T::AccountId>, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn solution_provider_id)]
+    pub type SolutionProviderID<T> = StorageValue<_, u64, ValueQuery>;
+
+    #[pallet::storage]
     #[pallet::getter(fn pallet_version)]
     pub type PalletVersion<T> = StorageValue<_, types::StorageVersion, ValueQuery>;
 
@@ -169,6 +180,7 @@ pub mod pallet {
             + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
+        type RestrictedOrigin: EnsureOrigin<Self::Origin>;
         // #[pallet::constant]
         // type MaxNodeContractPublicIPs: Get<u32>;
     }
@@ -232,6 +244,8 @@ pub mod pallet {
             node_id: u32,
             twin_id: u32,
         },
+        SolutionProviderCreated(types::SolutionProvider<T::AccountId>),
+        SolutionProviderApproved(u64, bool),
     }
 
     #[pallet::error]
@@ -265,6 +279,9 @@ pub mod pallet {
         NumOverflow,
         NameContractNameToShort,
         NameContractNameToLong,
+        InvalidProviderConfiguration,
+        NoSuchSolutionProvider,
+        SolutionProviderNotApproved,
     }
 
     #[pallet::call]
@@ -275,9 +292,16 @@ pub mod pallet {
             node_id: u32,
             deployment_hash: DeploymentHash,
             public_ips: u32,
+            solution_provider_id: Option<u64>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_create_node_contract(account_id, node_id, deployment_hash, public_ips)
+            Self::_create_node_contract(
+                account_id,
+                node_id,
+                deployment_hash,
+                public_ips,
+                solution_provider_id,
+            )
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
@@ -340,9 +364,31 @@ pub mod pallet {
         pub fn create_rent_contract(
             origin: OriginFor<T>,
             node_id: u32,
+            solution_provider_id: Option<u64>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_create_rent_contract(account_id, node_id)
+            Self::_create_rent_contract(account_id, node_id, solution_provider_id)
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        pub fn create_solution_provider(
+            origin: OriginFor<T>,
+            description: Vec<u8>,
+            link: Vec<u8>,
+            providers: Vec<types::Provider<T::AccountId>>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_signed(origin)?;
+            Self::_create_solution_provider(description, link, providers)
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        pub fn approve_solution_provider(
+            origin: OriginFor<T>,
+            solution_provider_id: u64,
+            approve: bool,
+        ) -> DispatchResultWithPostInfo {
+            <T as Config>::RestrictedOrigin::ensure_origin(origin)?;
+            Self::_approve_solution_provider(solution_provider_id, approve)
         }
     }
 
@@ -387,6 +433,7 @@ impl<T: Config> Pallet<T> {
         node_id: u32,
         deployment_hash: DeploymentHash,
         public_ips: u32,
+        solution_provider_id: Option<u64>,
     ) -> DispatchResultWithPostInfo {
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
             .ok_or(Error::<T>::TwinNotExists)?;
@@ -437,7 +484,8 @@ impl<T: Config> Pallet<T> {
         // Create contract
         let contract = Self::_create_contract(
             twin_id,
-            types::ContractData::NodeContract((&node_contract).clone()),
+            types::ContractData::NodeContract(node_contract.clone()),
+            solution_provider_id,
         )?;
 
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
@@ -467,6 +515,7 @@ impl<T: Config> Pallet<T> {
     pub fn _create_rent_contract(
         account_id: T::AccountId,
         node_id: u32,
+        solution_provider_id: Option<u64>,
     ) -> DispatchResultWithPostInfo {
         ensure!(
             !ActiveRentContractForNode::<T>::contains_key(node_id),
@@ -492,6 +541,7 @@ impl<T: Config> Pallet<T> {
         let contract = Self::_create_contract(
             twin_id,
             types::ContractData::RentContract(types::RentContract { node_id }),
+            solution_provider_id,
         )?;
 
         // Insert active rent contract for node
@@ -528,8 +578,11 @@ impl<T: Config> Pallet<T> {
             name: valid_name.clone(),
         };
 
-        let contract =
-            Self::_create_contract(twin_id, types::ContractData::NameContract(name_contract))?;
+        let contract = Self::_create_contract(
+            twin_id,
+            types::ContractData::NameContract(name_contract),
+            None,
+        )?;
 
         ContractIDByNameRegistration::<T>::insert(valid_name, &contract.contract_id);
 
@@ -541,6 +594,7 @@ impl<T: Config> Pallet<T> {
     fn _create_contract(
         twin_id: u32,
         mut contract_type: types::ContractData<T>,
+        solution_provider_id: Option<u64>,
     ) -> Result<types::Contract<T>, DispatchErrorWithPostInfo> {
         // Get the Contract ID map and increment
         let mut id = ContractID::<T>::get();
@@ -550,12 +604,15 @@ impl<T: Config> Pallet<T> {
             Self::_reserve_ip(id, nc)?;
         };
 
+        Self::validate_solution_provider(solution_provider_id)?;
+
         let contract = types::Contract {
             version: CONTRACT_VERSION,
             twin_id,
             contract_id: id,
             state: types::ContractState::Created,
             contract_type,
+            solution_provider_id,
         };
 
         // Start billing frequency loop
@@ -894,7 +951,9 @@ impl<T: Config> Pallet<T> {
                         contract_id: contract.contract_id,
                         node_id,
                         twin_id: contract.twin_id,
-                    })
+                    });
+                    // If the contract is a rent contract, also move state on associated node contracts
+                    Self::handle_grace_rent_contract(contract, types::ContractState::Created)?;
                 } else {
                     let diff = current_block - grace_start;
                     // If the contract grace period ran out, we can decomission the contract
@@ -923,11 +982,54 @@ impl<T: Config> Pallet<T> {
                         twin_id: contract.twin_id,
                         block_number: current_block.saturated_into(),
                     });
+                    // If the contract is a rent contract, also move associated node contract to grace period
+                    Self::handle_grace_rent_contract(
+                        contract,
+                        types::ContractState::GracePeriod(current_block),
+                    )?;
                 }
             }
         }
 
         Ok(contract)
+    }
+
+    fn handle_grace_rent_contract(
+        contract: &mut types::Contract<T>,
+        state: types::ContractState,
+    ) -> DispatchResultWithPostInfo {
+        match &contract.contract_type {
+            types::ContractData::RentContract(rc) => {
+                let active_node_contracts = ActiveNodeContracts::<T>::get(rc.node_id);
+                for ctr_id in active_node_contracts {
+                    let mut ctr =
+                        Contracts::<T>::get(ctr_id).ok_or(Error::<T>::ContractNotExists)?;
+                    Self::_update_contract_state(&mut ctr, &state)?;
+
+                    match state {
+                        types::ContractState::Created => {
+                            Self::deposit_event(Event::ContractGracePeriodEnded {
+                                contract_id: ctr_id,
+                                node_id: rc.node_id,
+                                twin_id: ctr.twin_id,
+                            });
+                        }
+                        types::ContractState::GracePeriod(block_number) => {
+                            Self::deposit_event(Event::ContractGracePeriodStarted {
+                                contract_id: ctr_id,
+                                node_id: rc.node_id,
+                                twin_id: ctr.twin_id,
+                                block_number,
+                            });
+                        }
+                        _ => (),
+                    };
+                }
+            }
+            _ => (),
+        };
+
+        Ok(().into())
     }
 
     fn handle_lock(
@@ -1108,23 +1210,67 @@ impl<T: Config> Pallet<T> {
             ExistenceRequirement::KeepAlive,
         )?;
 
-        // Send 50% to the sales channel
-        let sales_share = Perbill::from_percent(50) * amount;
-        log::info!(
-            "Transfering: {:?} from contract twin {:?} to sales account {:?}",
-            &sales_share,
-            &twin.account_id,
-            &pricing_policy.certified_sales_account
-        );
-        <T as Config>::Currency::transfer(
-            &twin.account_id,
-            &pricing_policy.certified_sales_account,
-            sales_share,
-            ExistenceRequirement::KeepAlive,
-        )?;
+        let mut sales_share = 50;
+
+        if let Some(provider_id) = contract.solution_provider_id {
+            if let Some(solution_provider) = SolutionProviders::<T>::get(provider_id) {
+                let total_take: u8 = solution_provider
+                    .providers
+                    .iter()
+                    .map(|provider| provider.take)
+                    .sum();
+                sales_share -= total_take;
+
+                if !solution_provider
+                    .providers
+                    .iter()
+                    .map(|provider| {
+                        let share = Perbill::from_percent(provider.take as u32) * amount;
+                        frame_support::log::info!(
+                            "Transfering: {:?} from contract twin {:?} to provider account {:?}",
+                            &share,
+                            &twin.account_id,
+                            &provider.who
+                        );
+                        <T as Config>::Currency::transfer(
+                            &twin.account_id,
+                            &provider.who,
+                            share,
+                            KeepAlive,
+                        )
+                    })
+                    .filter(|result| result.is_err())
+                    .collect::<Vec<DispatchResult>>()
+                    .is_empty()
+                {
+                    return Err(DispatchErrorWithPostInfo::from(
+                        Error::<T>::InvalidProviderConfiguration,
+                    ));
+                }
+            }
+        };
+
+        if sales_share > 0 {
+            let share = Perbill::from_percent(sales_share.into()) * amount;
+            // Transfer the remaining share to the sales account
+            // By default it is 50%, if a contract has solution providers it can be less
+            frame_support::log::info!(
+                "Transfering: {:?} from contract twin {:?} to sales account {:?}",
+                &sales_share,
+                &twin.account_id,
+                &pricing_policy.certified_sales_account
+            );
+            <T as Config>::Currency::transfer(
+                &twin.account_id,
+                &pricing_policy.certified_sales_account,
+                share,
+                KeepAlive,
+            )?;
+        }
 
         // Burn 35%, to not have any imbalance in the system, subtract all previously send amounts with the initial
-        let mut amount_to_burn = amount - foundation_share - staking_pool_share - sales_share;
+        let mut amount_to_burn =
+            (Perbill::from_percent(50) * amount) - foundation_share - staking_pool_share;
 
         let existential_deposit_requirement = <T as Config>::Currency::minimum_balance();
         let free_balance = <T as Config>::Currency::free_balance(&twin.account_id);
@@ -1367,6 +1513,74 @@ impl<T: Config> Pallet<T> {
             Some(balance) => balance,
             None => BalanceOf::<T>::saturated_from(0 as u128),
         }
+    }
+
+    pub fn _create_solution_provider(
+        description: Vec<u8>,
+        link: Vec<u8>,
+        providers: Vec<types::Provider<T::AccountId>>,
+    ) -> DispatchResultWithPostInfo {
+        let total_take: u8 = providers.iter().map(|provider| provider.take).sum();
+        ensure!(total_take <= 50, Error::<T>::InvalidProviderConfiguration);
+
+        let mut id = SolutionProviderID::<T>::get();
+        id = id + 1;
+
+        let solution_provider = types::SolutionProvider {
+            solution_provider_id: id,
+            providers,
+            description,
+            link,
+            approved: false,
+        };
+
+        SolutionProviderID::<T>::put(id);
+        SolutionProviders::<T>::insert(id, &solution_provider);
+
+        Self::deposit_event(Event::SolutionProviderCreated(solution_provider));
+
+        Ok(().into())
+    }
+
+    pub fn _approve_solution_provider(
+        solution_provider_id: u64,
+        approve: bool,
+    ) -> DispatchResultWithPostInfo {
+        ensure!(
+            SolutionProviders::<T>::contains_key(solution_provider_id),
+            Error::<T>::NoSuchSolutionProvider
+        );
+
+        if let Some(mut solution_provider) = SolutionProviders::<T>::get(solution_provider_id) {
+            solution_provider.approved = approve;
+            SolutionProviders::<T>::insert(solution_provider_id, &solution_provider);
+            Self::deposit_event(Event::SolutionProviderApproved(
+                solution_provider_id,
+                approve,
+            ));
+        }
+
+        Ok(().into())
+    }
+
+    pub fn validate_solution_provider(
+        solution_provider_id: Option<u64>,
+    ) -> DispatchResultWithPostInfo {
+        if let Some(provider_id) = solution_provider_id {
+            ensure!(
+                SolutionProviders::<T>::contains_key(provider_id),
+                Error::<T>::NoSuchSolutionProvider
+            );
+
+            if let Some(solution_provider) = SolutionProviders::<T>::get(provider_id) {
+                ensure!(
+                    solution_provider.approved,
+                    Error::<T>::SolutionProviderNotApproved
+                );
+                return Ok(().into());
+            }
+        }
+        Ok(().into())
     }
 }
 

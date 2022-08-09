@@ -193,6 +193,7 @@ impl pallet_smart_contract::Config for TestRuntime {
     type NodeChanged = NodeChanged;
     type MaxNameContractNameLength = MaxNameContractNameLength;
     type NameContractName = TestNameContractName;
+    type RestrictedOrigin = EnsureRoot<Self::AccountId>;
 }
 
 type AccountPublic = <MultiSignature as Verify>::Signer;

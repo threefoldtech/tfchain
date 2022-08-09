@@ -34,6 +34,7 @@ pub struct Contract<T: Config> {
     pub contract_id: u64,
     pub twin_id: u32,
     pub contract_type: ContractData<T>,
+    pub solution_provider_id: Option<u64>,
 }
 
 impl<T: Config> Contract<T> {
@@ -204,4 +205,19 @@ pub struct ContractLock<BalanceOf> {
     pub amount_locked: BalanceOf,
     pub lock_updated: u64,
     pub cycles: u16,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+pub struct SolutionProvider<AccountId> {
+    pub solution_provider_id: u64,
+    pub providers: Vec<Provider<AccountId>>,
+    pub description: Vec<u8>,
+    pub link: Vec<u8>,
+    pub approved: bool,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+pub struct Provider<AccountId> {
+    pub who: AccountId,
+    pub take: u8,
 }
