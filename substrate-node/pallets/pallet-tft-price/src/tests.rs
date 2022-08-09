@@ -224,6 +224,16 @@ fn test_parse_price() {
 }
 
 #[test]
+fn test_parse_lowest_price_from_request() {
+    let mut t = ExternalityBuilder::build();
+    t.execute_with(|| {
+        let request_str = json_request_example();
+        let price = TFTPriceModule::parse_lowest_price_from_request(request_str).unwrap();
+        assert_eq!(price, 33);
+    })
+}
+
+#[test]
 fn test_set_price_wrong_origin() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
@@ -238,4 +248,60 @@ fn run_to_block(n: u64) {
     while System::block_number() < n {
         System::set_block_number(System::block_number() + 1);
     }
+}
+
+fn json_request_example() -> &'static str {
+    r#"
+    {
+        "_embedded": {
+          "records": [
+            {
+              "source_asset_type": "credit_alphanum4",
+              "source_asset_code": "USDC",
+              "source_asset_issuer": "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
+              "source_amount": "0.0330655",
+              "destination_asset_type": "credit_alphanum4",
+              "destination_asset_code": "TFT",
+              "destination_asset_issuer": "GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47",
+              "destination_amount": "1.0000000",
+              "path": [
+                {
+                  "asset_type": "native"
+                },
+                {
+                  "asset_type": "credit_alphanum4",
+                  "asset_code": "yXLM",
+                  "asset_issuer": "GARDNV3Q7YGT4AKSDF25LT32YSCCW4EV22Y2TV3I2PU2MMXJTEDL5T55"
+                }
+              ]
+            },
+            {
+              "source_asset_type": "credit_alphanum4",
+              "source_asset_code": "USDC",
+              "source_asset_issuer": "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
+              "source_amount": "0.0340713",
+              "destination_asset_type": "credit_alphanum4",
+              "destination_asset_code": "TFT",
+              "destination_asset_issuer": "GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47",
+              "destination_amount": "1.0000000",
+              "path": [
+                {
+                  "asset_type": "native"
+                }
+              ]
+            },
+            {
+              "source_asset_type": "credit_alphanum4",
+              "source_asset_code": "USDC",
+              "source_asset_issuer": "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
+              "source_amount": "0.0351812",
+              "destination_asset_type": "credit_alphanum4",
+              "destination_asset_code": "TFT",
+              "destination_asset_issuer": "GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47",
+              "destination_amount": "1.0000000",
+              "path": []
+            }
+          ]
+        }
+    }"#
 }

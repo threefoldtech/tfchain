@@ -16,6 +16,8 @@ use ringbuffer::{RingBufferTrait, RingBufferTransient};
 use sp_core::crypto::KeyTypeId;
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"tft!");
 
+use serde_json::Value;
+
 // type BufferIndex = u16;
 
 #[cfg(test)]
@@ -124,7 +126,7 @@ pub mod pallet {
     #[pallet::getter(fn allowed_origin)]
     pub type AllowedOrigin<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
 
-    #[pallet::call] // <-- Step 6. code block will replace this.
+    #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(0)]
         pub fn set_prices(
@@ -213,8 +215,19 @@ impl<T: Config> Pallet<T> {
     fn fetch_price() -> Result<u32, http::Error> {
         let deadline = sp_io::offchain::timestamp().add(Duration::from_millis(2_000));
 
-        let request =
-            http::Request::get("https://min-api.cryptocompare.com/data/price?fsym=3ft&tsyms=USD");
+        let src_code = "USDC";
+        let src_issuer = "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
+        let dst_type = "credit_alphanum4";
+        let dst_issuer = "GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47";
+        let dst_code = "TFT";
+        let dst_amount = "100";
+
+        let request_url = format!(
+            "https://horizon.stellar.org/paths/strict-receive?source_assets={}%3A{}&destination_asset_type={}&destination_asset_issuer={}&destination_asset_code={}&destination_amount={}",
+            src_code, src_issuer, dst_type, dst_code, dst_issuer, dst_amount,
+        );
+
+        let request = http::Request::get(request_url.as_str());
 
         let pending = request.deadline(deadline).send().map_err(|_| {
             log::error!("IO error");
@@ -311,6 +324,25 @@ impl<T: Config> Pallet<T> {
 
         let exp = price.fraction_length.saturating_sub(3);
         Some(price.integer as u32 * 1000 + (price.fraction / 10_u64.pow(exp)) as u32)
+    }
+
+    /// Parse the lowest price from the given JSON string using `serde_json`.
+    ///
+    /// Returns `None` when parsing failed or `Some(price in mili-currency)` when parsing is successful.
+    pub fn parse_lowest_price_from_request(price_str: &str) -> Option<u32> {
+        let data: Value = serde_json::from_str(price_str).ok()?;
+        let records_array = data.get("_embedded")?.get("records")?;
+
+        let mut prices = Vec::new();
+        for item in records_array.as_array().unwrap() {
+            let val = item.get("source_amount")?;
+            let str = val.as_str()?;
+            let price = str.parse::<f32>().ok()?;
+            prices.push(price);
+        }
+
+        let lowest = prices.into_iter().reduce(f32::min)?;
+        Some((lowest * 1000_f32) as u32)
     }
 
     fn queue_transient() -> Box<dyn RingBufferTrait<u32>> {
