@@ -215,8 +215,16 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
 
         let mut public_ips: BoundedVec<PublicIpOf<T>, ConstU32<256>> = vec![].try_into().unwrap();
 
-        if let Ok(parsed_public_ips) = get_public_ips::<T>(&farm) {
-            public_ips = parsed_public_ips;
+        match get_public_ips::<T>(&farm) {
+            Ok(ips) => {
+                public_ips = ips;
+            }
+            Err(e) => {
+                info!(
+                    "failed to parse public ips for farm: {:?}, error: {:?}",
+                    k, e
+                )
+            }
         }
 
         let replaced_farm_name = farm::replace_farm_name_spaces_with_underscores(&farm.name);

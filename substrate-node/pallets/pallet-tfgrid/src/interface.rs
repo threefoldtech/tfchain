@@ -14,8 +14,8 @@ use crate::{Config, Error};
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct InterfaceName<T: Config>(
-    pub BoundedVec<u8, ConstU32<20>>,
-    PhantomData<(T, ConstU32<20>)>,
+    pub BoundedVec<u8, ConstU32<MAX_INTF_NAME_LENGTH>>,
+    PhantomData<(T, ConstU32<MAX_INTF_NAME_LENGTH>)>,
 );
 
 pub const MIN_INTF_NAME_LENGHT: u32 = 3;
@@ -68,8 +68,8 @@ impl<T: Config> Clone for InterfaceName<T> {
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct InterfaceMac<T: Config>(
-    pub BoundedVec<u8, ConstU32<17>>,
-    PhantomData<(T, ConstU32<17>)>,
+    pub BoundedVec<u8, ConstU32<INTERFACE_MAC_LENGTH>>,
+    PhantomData<(T, ConstU32<INTERFACE_MAC_LENGTH>)>,
 );
 
 pub const INTERFACE_MAC_LENGTH: u32 = 17;
@@ -115,11 +115,11 @@ impl<T: Config> Clone for InterfaceMac<T> {
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct InterfaceIp<T: Config>(
-    pub BoundedVec<u8, ConstU32<39>>,
-    PhantomData<(T, ConstU32<39>)>,
+    pub BoundedVec<u8, ConstU32<MAX_INTERFACE_IP_LENGTH>>,
+    PhantomData<(T, ConstU32<MAX_INTERFACE_IP_LENGTH>)>,
 );
 
-pub const MAX_INTERFACE_IP_LENGTH: u32 = 39;
+pub const MAX_INTERFACE_IP_LENGTH: u32 = 42;
 pub const MIN_INTERFACE_IP_LENGTH: u32 = 7;
 
 impl<T: Config> TryFrom<Vec<u8>> for InterfaceIp<T> {
