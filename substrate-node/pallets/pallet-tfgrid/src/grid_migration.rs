@@ -145,14 +145,30 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
         let mut public_config = None;
         // If the node has a valid public config we can assign it
         if let Some(config) = &node.public_config {
-            if let Ok(config) = get_public_config::<T>(&config) {
-                public_config = Some(config);
-            };
+            match get_public_config::<T>(&config) {
+                Ok(config) => {
+                    public_config = Some(config);
+                }
+                Err(e) => {
+                    info!(
+                        "failed to parse pub config for node: {:?}, error: {:?}",
+                        k, e
+                    );
+                }
+            }
         }
 
         let mut interfaces = Vec::new();
-        if let Ok(intfs) = get_interfaces::<T>(&node) {
-            interfaces = intfs;
+        match get_interfaces::<T>(&node) {
+            Ok(intfs) => {
+                interfaces = intfs;
+            }
+            Err(e) => {
+                info!(
+                    "failed to parse interfaces for node: {:?}, error: {:?}",
+                    k, e
+                );
+            }
         }
 
         let new_node = Node {

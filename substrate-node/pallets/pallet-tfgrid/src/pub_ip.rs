@@ -1,9 +1,11 @@
 use sp_std::{marker::PhantomData, vec::Vec};
 
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::{ensure, sp_runtime::SaturatedConversion, BoundedVec, RuntimeDebug, traits::ConstU32};
+use frame_support::{
+    ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
+};
 use scale_info::TypeInfo;
-use valip::{{ip4::{ip::IPv4, cidr::CIDR}}};
+use valip::ip4::{cidr::CIDR, ip::IPv4};
 
 use crate::{Config, Error};
 
@@ -13,8 +15,8 @@ use crate::{Config, Error};
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct PublicIP<T: Config>(
-    pub BoundedVec<u8, ConstU32<18>>,
-    PhantomData<(T, ConstU32<18>)>,
+    pub BoundedVec<u8, ConstU32<MAX_IP_LENGTH>>,
+    PhantomData<(T, ConstU32<MAX_IP_LENGTH>)>,
 );
 
 pub const MIN_IP_LENGHT: u32 = 9;
@@ -33,7 +35,10 @@ impl<T: Config> TryFrom<Vec<u8>> for PublicIP<T> {
         );
         let bounded_vec: BoundedVec<u8, ConstU32<MAX_IP_LENGTH>> =
             BoundedVec::try_from(value).map_err(|_| Self::Error::PublicIPToLong)?;
-        ensure!(CIDR::parse(&bounded_vec).is_ok(), Self::Error::InvalidPublicIP);
+        ensure!(
+            CIDR::parse(&bounded_vec).is_ok(),
+            Self::Error::InvalidPublicIP
+        );
         Ok(Self(bounded_vec, PhantomData))
     }
 }
@@ -58,11 +63,12 @@ impl<T: Config> Clone for PublicIP<T> {
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct GatewayIP<T: Config>(
-    pub BoundedVec<u8, ConstU32<18>>,
-    PhantomData<(T, ConstU32<18>)>,
+    pub BoundedVec<u8, ConstU32<MAX_GATEWAY_LENGTH>>,
+    PhantomData<(T, ConstU32<MAX_GATEWAY_LENGTH>)>,
 );
 
 pub const MIN_GATEWAY_LENGTH: u32 = 7;
+pub const MAX_GATEWAY_LENGTH: u32 = 15;
 
 impl<T: Config> TryFrom<Vec<u8>> for GatewayIP<T> {
     type Error = Error<T>;
@@ -75,9 +81,12 @@ impl<T: Config> TryFrom<Vec<u8>> for GatewayIP<T> {
             value.len() >= MIN_GATEWAY_LENGTH.saturated_into(),
             Self::Error::GatewayIPToShort
         );
-        let bounded_vec: BoundedVec<u8, ConstU32<18>> =
+        let bounded_vec: BoundedVec<u8, ConstU32<MAX_GATEWAY_LENGTH>> =
             BoundedVec::try_from(value).map_err(|_| Self::Error::GatewayIPToLong)?;
-        ensure!(IPv4::parse(&bounded_vec).is_ok(), Self::Error::InvalidPublicIP);
+        ensure!(
+            IPv4::parse(&bounded_vec).is_ok(),
+            Self::Error::InvalidPublicIP
+        );
         Ok(Self(bounded_vec, PhantomData))
     }
 }

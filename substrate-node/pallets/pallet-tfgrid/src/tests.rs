@@ -801,7 +801,7 @@ fn node_add_public_config_works() {
             ipv6,
             gw4,
             gw6,
-            domain: "some_domain".as_bytes().to_vec().try_into().unwrap(),
+            domain: "some-domain".as_bytes().to_vec().try_into().unwrap(),
         };
 
         assert_ok!(TfgridModule::add_node_public_config(
@@ -834,7 +834,7 @@ fn node_add_public_config_fails_if_signature_incorrect() {
             ipv6,
             gw4,
             gw6,
-            domain: "some_domain".as_bytes().to_vec().try_into().unwrap(),
+            domain: "some-domain".as_bytes().to_vec().try_into().unwrap(),
         };
 
         assert_noop!(
@@ -867,7 +867,7 @@ fn test_unsetting_node_public_config_works() {
             ipv6,
             gw4,
             gw6,
-            domain: "some_domain".as_bytes().to_vec().try_into().unwrap(),
+            domain: "some-domain".as_bytes().to_vec().try_into().unwrap(),
         };
 
         assert_ok!(TfgridModule::add_node_public_config(
