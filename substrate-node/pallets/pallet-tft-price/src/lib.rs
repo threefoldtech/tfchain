@@ -16,9 +16,23 @@ use ringbuffer::{RingBufferTrait, RingBufferTransient};
 use sp_core::crypto::KeyTypeId;
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"tft!");
 
+use scale_info::prelude::format;
 use serde_json::Value;
 
-// type BufferIndex = u16;
+const SRC_CODE: &str = "USDC";
+const SRC_ISUER: &str = "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
+const DST_TYPE: &str = "credit_alphanum4";
+const DST_ISSUER: &str = "GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47";
+const DST_CODE: &str = "TFT";
+const DST_AMOUNT: &str = "100";
+
+pub const TFGRID_ENTITY_VERSION: u32 = 1;
+pub const TFGRID_FARM_VERSION: u32 = 3;
+pub const TFGRID_TWIN_VERSION: u32 = 1;
+pub const TFGRID_NODE_VERSION: u32 = 4;
+pub const TFGRID_PRICING_POLICY_VERSION: u32 = 2;
+pub const TFGRID_CERTIFICATION_CODE_VERSION: u32 = 1;
+pub const TFGRID_FARMING_POLICY_VERSION: u32 = 2;
 
 #[cfg(test)]
 mod tests;
@@ -215,16 +229,9 @@ impl<T: Config> Pallet<T> {
     fn fetch_price() -> Result<u32, http::Error> {
         let deadline = sp_io::offchain::timestamp().add(Duration::from_millis(2_000));
 
-        let src_code = "USDC";
-        let src_issuer = "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
-        let dst_type = "credit_alphanum4";
-        let dst_issuer = "GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47";
-        let dst_code = "TFT";
-        let dst_amount = "100";
-
         let request_url = format!(
             "https://horizon.stellar.org/paths/strict-receive?source_assets={}%3A{}&destination_asset_type={}&destination_asset_issuer={}&destination_asset_code={}&destination_amount={}",
-            src_code, src_issuer, dst_type, dst_code, dst_issuer, dst_amount,
+            SRC_CODE, SRC_ISUER, DST_TYPE, DST_CODE, DST_ISSUER, DST_AMOUNT,
         );
 
         let request = http::Request::get(request_url.as_str());
@@ -306,7 +313,7 @@ impl<T: Config> Pallet<T> {
 
     /// Parse the price from the given JSON string using `lite-json`.
     ///
-    /// Returns `None` when parsing failed or `Some(price in cents)` when parsing is successful.
+    /// Returns `None` when parsing failed or `Some(price in mUSD)` when parsing is successful.
     pub fn parse_price(price_str: &str) -> Option<u32> {
         let val = lite_json::parse_json(price_str);
         let price = match val.ok()? {
@@ -328,7 +335,7 @@ impl<T: Config> Pallet<T> {
 
     /// Parse the lowest price from the given JSON string using `serde_json`.
     ///
-    /// Returns `None` when parsing failed or `Some(price in mili-currency)` when parsing is successful.
+    /// Returns `None` when parsing failed or `Some(price in mUSD)` when parsing is successful.
     pub fn parse_lowest_price_from_request(price_str: &str) -> Option<u32> {
         let data: Value = serde_json::from_str(price_str).ok()?;
         let records_array = data.get("_embedded")?.get("records")?;

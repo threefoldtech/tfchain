@@ -99,7 +99,6 @@ mod tests {
         println!("Base: {}", ExtrinsicBaseWeight::get());
         let x = WeightToFeeStruct::weight_to_fee(&MaximumBlockWeight::get());
         let y = 16 * DOLLARS;
-        println!("x: {}, y: {}", x, y);
         assert!(x.max(y) - x.min(y) < MILLICENTS);
     }
 
