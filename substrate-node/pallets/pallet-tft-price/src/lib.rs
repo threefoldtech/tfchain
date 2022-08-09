@@ -20,19 +20,11 @@ use scale_info::prelude::format;
 use serde_json::Value;
 
 const SRC_CODE: &str = "USDC";
-const SRC_ISUER: &str = "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
+const SRC_ISSUER: &str = "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
 const DST_TYPE: &str = "credit_alphanum4";
 const DST_ISSUER: &str = "GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47";
 const DST_CODE: &str = "TFT";
 const DST_AMOUNT: &str = "100";
-
-pub const TFGRID_ENTITY_VERSION: u32 = 1;
-pub const TFGRID_FARM_VERSION: u32 = 3;
-pub const TFGRID_TWIN_VERSION: u32 = 1;
-pub const TFGRID_NODE_VERSION: u32 = 4;
-pub const TFGRID_PRICING_POLICY_VERSION: u32 = 2;
-pub const TFGRID_CERTIFICATION_CODE_VERSION: u32 = 1;
-pub const TFGRID_FARMING_POLICY_VERSION: u32 = 2;
 
 #[cfg(test)]
 mod tests;
@@ -231,7 +223,7 @@ impl<T: Config> Pallet<T> {
 
         let request_url = format!(
             "https://horizon.stellar.org/paths/strict-receive?source_assets={}%3A{}&destination_asset_type={}&destination_asset_issuer={}&destination_asset_code={}&destination_amount={}",
-            SRC_CODE, SRC_ISUER, DST_TYPE, DST_CODE, DST_ISSUER, DST_AMOUNT,
+            SRC_CODE, SRC_ISSUER, DST_TYPE, DST_ISSUER, DST_CODE, DST_AMOUNT,
         );
 
         let request = http::Request::get(request_url.as_str());
@@ -263,7 +255,7 @@ impl<T: Config> Pallet<T> {
             http::Error::Unknown
         })?;
 
-        let price = match Self::parse_price(body_str) {
+        let price = match Self::parse_lowest_price_from_request(body_str) {
             Some(price) => Ok(price),
             None => {
                 log::warn!("Unable to extract price from the response: {:?}", body_str);
@@ -340,13 +332,17 @@ impl<T: Config> Pallet<T> {
         let data: Value = serde_json::from_str(price_str).ok()?;
         let records_array = data.get("_embedded")?.get("records")?;
 
-        let mut prices = Vec::new();
-        for item in records_array.as_array().unwrap() {
-            let val = item.get("source_amount")?;
-            let str = val.as_str()?;
-            let price = str.parse::<f32>().ok()?;
-            prices.push(price);
-        }
+        let prices: Vec<f32> = records_array
+            .as_array()?
+            .into_iter()
+            .map(|item| {
+                let val = item.get("source_amount")?;
+                let str = val.as_str()?;
+                let p = str.parse::<f32>().ok()?;
+                Some(p)
+            })
+            .map(|x| if let Some(p) = x { p } else { f32::NAN })
+            .collect();
 
         let lowest = prices.into_iter().reduce(f32::min)?;
         Some((lowest * 1000_f32) as u32)
