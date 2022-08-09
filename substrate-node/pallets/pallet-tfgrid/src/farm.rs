@@ -71,8 +71,7 @@ pub fn replace_farm_name_spaces_with_underscores(input: &[u8]) -> Vec<u8> {
 }
 
 fn validate_farm_name(input: &[u8]) -> bool {
-    let replaced_input = replace_farm_name_spaces_with_underscores(input);
-    replaced_input
+    input
         .iter()
         .all(|c| matches!(c, b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_'))
 }

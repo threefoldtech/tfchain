@@ -288,31 +288,33 @@ fn test_create_farm_works() {
 }
 
 #[test]
-fn test_create_farm_fails_invalid_name() {
+fn test_create_farm_invalid_name_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
         create_twin();
 
         let farm_name = BoundedVec::try_from(b"test.farm".to_vec()).unwrap();
-
         assert_noop!(
             TfgridModule::create_farm(Origin::signed(alice()), farm_name, Vec::new(),),
             Error::<TestRuntime>::InvalidFarmName
         );
-    });
-}
 
-#[test]
-fn test_create_farm_fails_empty_name() {
-    ExternalityBuilder::build().execute_with(|| {
-        create_entity();
-        create_twin();
-
-        let farm_name = BoundedVec::try_from(b"10:1".to_vec()).unwrap();
-
+        let farm_name = BoundedVec::try_from(b"test farm".to_vec()).unwrap();
         assert_noop!(
             TfgridModule::create_farm(Origin::signed(alice()), farm_name, Vec::new(),),
             Error::<TestRuntime>::InvalidFarmName
+        );
+
+        let farm_name = BoundedVec::try_from(b"".to_vec()).unwrap();
+        assert_noop!(
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name, Vec::new(),),
+            Error::<TestRuntime>::FarmNameTooShort
+        );
+
+        let farm_name = BoundedVec::try_from(b"12".to_vec()).unwrap();
+        assert_noop!(
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name, Vec::new(),),
+            Error::<TestRuntime>::FarmNameTooShort
         );
     });
 }
@@ -887,6 +889,38 @@ fn test_unsetting_node_public_config_works() {
 
         let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(node.public_config, None);
+    });
+}
+
+#[test]
+#[should_panic(expected = "InvalidIP4")]
+fn test_validate_invalid_ip4_1() {
+    ExternalityBuilder::build().execute_with(|| {
+        TestIP4::try_from("185.206.122.33".as_bytes().to_vec()).expect("fails");
+    });
+}
+
+#[test]
+#[should_panic(expected = "IP4ToShort")]
+fn test_validate_invalid_ip4_2() {
+    ExternalityBuilder::build().execute_with(|| {
+        TestIP4::try_from("185.206".as_bytes().to_vec()).expect("fails");
+    });
+}
+
+#[test]
+#[should_panic(expected = "IP4ToLong")]
+fn test_validate_invalid_ip4_3() {
+    ExternalityBuilder::build().execute_with(|| {
+        TestIP4::try_from("185.206.12.12.1232123".as_bytes().to_vec()).expect("fails");
+    });
+}
+
+#[test]
+#[should_panic(expected = "InvalidIP4")]
+fn test_validate_invalid_ip4_4() {
+    ExternalityBuilder::build().execute_with(|| {
+        TestIP4::try_from("garbage data".as_bytes().to_vec()).expect("fails");
     });
 }
 

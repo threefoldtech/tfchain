@@ -203,7 +203,8 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
             public_ips = parsed_public_ips;
         }
 
-        let name = match <T as Config>::FarmName::try_from(farm.name) {
+        let replaced_farm_name = farm::replace_farm_name_spaces_with_underscores(&farm.name);
+        let name = match <T as Config>::FarmName::try_from(replaced_farm_name) {
             Ok(n) => n,
             Err(_) => {
                 info!("invalid farm name, skipping updating farm {:?} ...", k);
