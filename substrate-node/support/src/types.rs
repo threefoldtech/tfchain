@@ -98,12 +98,22 @@ pub struct Interface<Name, Mac, Ips> {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct PublicConfig<IP4, IP6, GW4, GW6, Domain> {
-    pub ipv4: IP4,
-    pub ipv6: IP6,
-    pub gw4: GW4,
-    pub gw6: GW6,
+pub struct PublicConfig<IP4, IP6, Domain> {
+    pub ip4: IP4,
+    pub ip6: IP6,
     pub domain: Domain,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+pub struct IP4<IPv4, Gw4> {
+    pub ipv4: IPv4,
+    pub gw4: Gw4,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+pub struct IP6<IPv6, Gw6> {
+    pub ipv6: IPv6,
+    pub gw6: Gw6,
 }
 
 #[derive(

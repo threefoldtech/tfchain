@@ -8,7 +8,7 @@ use frame_support::{
     weights::Weight,
 };
 use log::info;
-use tfchain_support::types::{Farm, Interface, PublicConfig, PublicIP};
+use tfchain_support::types::{Farm, Interface, PublicConfig, PublicIP, IP4, IP6};
 
 pub mod deprecated {
     use crate::Config;
@@ -133,8 +133,7 @@ pub fn migrate<T: Config>() -> frame_support::weights::Weight {
 }
 
 pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
-    let count = Nodes::<T>::iter().count();
-    info!(" >>> Updating Nodes storage. Migrating {} nodes...", count);
+    info!(" >>> Migrating nodes storage...");
 
     let mut migrated_count = 0;
     // We transform the storage values from the old into the new format.
@@ -205,8 +204,7 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
 }
 
 pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
-    let count = Farms::<T>::iter().count();
-    info!(" >>> Updating Farms storage. Migrating {} farms...", count);
+    info!(" >>> Migrating farms storage...");
 
     let mut migrated_count = 0;
     // We transform the storage values from the old into the new format.
@@ -271,17 +269,26 @@ fn get_public_config<T: Config>(
 ) -> Result<PubConfigOf<T>, Error<T>> {
     let ipv4 = <T as Config>::IP4::try_from(config.ipv4.clone())?;
     let gw4 = <T as Config>::GW4::try_from(config.gw4.clone())?;
-    let ipv6 = <T as Config>::IP6::try_from(config.ipv6.clone())?;
-    let gw6 = <T as Config>::GW6::try_from(config.gw6.clone())?;
-    let domain = <T as Config>::Domain::try_from(config.domain.clone())?;
 
-    Ok(PublicConfig {
-        ipv4,
-        gw4,
-        ipv6,
-        gw6,
-        domain,
-    })
+    let mut pub_config = PublicConfig {
+        ip4: IP4 { ipv4, gw4 },
+        ip6: None,
+        domain: None,
+    };
+
+    if !config.ipv6.is_empty() && !config.gw6.is_empty() {
+        let ipv6 = <T as Config>::IP6::try_from(config.ipv6.clone())?;
+        let gw6 = <T as Config>::GW6::try_from(config.gw6.clone())?;
+
+        pub_config.ip6 = Some(IP6 { ipv6, gw6 });
+    }
+
+    if !config.domain.is_empty() {
+        let domain = <T as Config>::Domain::try_from(config.domain.clone())?;
+        pub_config.domain = Some(domain)
+    }
+
+    Ok(pub_config)
 }
 
 fn get_interfaces<T: Config>(node: &deprecated::NodeV4) -> Result<Vec<InterfaceOf<T>>, Error<T>> {

@@ -239,5 +239,5 @@ impl<T: Config> Clone for Domain<T> {
 fn validate_domain_name(input: &[u8]) -> bool {
     input
         .iter()
-        .all(|c| matches!(c, b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.'))
+        .all(|c| matches!(c, b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'.'))
 }
