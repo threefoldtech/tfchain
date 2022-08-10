@@ -24,7 +24,7 @@ const SRC_ISSUER: &str = "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZ
 const DST_TYPE: &str = "credit_alphanum4";
 const DST_ISSUER: &str = "GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47";
 const DST_CODE: &str = "TFT";
-const DST_AMOUNT: &str = "100";
+const DST_AMOUNT: u32 = 1;
 
 #[cfg(test)]
 mod tests;
@@ -263,7 +263,7 @@ impl<T: Config> Pallet<T> {
             }
         }?;
 
-        log::warn!("Got price: {} cents", price);
+        log::warn!("Got price: {} mUSD", price);
 
         Ok(price)
     }
@@ -345,6 +345,7 @@ impl<T: Config> Pallet<T> {
             .collect();
 
         let lowest = prices.into_iter().reduce(f32::min)?;
+        // convert to mUSD
         Some((lowest * 1000_f32) as u32)
     }
 
