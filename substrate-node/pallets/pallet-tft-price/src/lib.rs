@@ -11,20 +11,20 @@ use sp_runtime::offchain::{http, Duration};
 use sp_runtime::traits::SaturatedConversion;
 use sp_std::{boxed::Box, vec::Vec};
 mod ringbuffer;
-
 use ringbuffer::{RingBufferTrait, RingBufferTransient};
-use sp_core::crypto::KeyTypeId;
-pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"tft!");
-
 use scale_info::prelude::format;
 use serde_json::Value;
+use sp_core::crypto::KeyTypeId;
+use substrate_fixed::types::U64F64;
+
+pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"tft!");
 
 const SRC_CODE: &str = "USDC";
 const SRC_ISSUER: &str = "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
 const DST_TYPE: &str = "credit_alphanum4";
 const DST_ISSUER: &str = "GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47";
 const DST_CODE: &str = "TFT";
-const DST_AMOUNT: u32 = 1;
+const DST_AMOUNT: u32 = 100;
 
 #[cfg(test)]
 mod tests;
@@ -217,7 +217,7 @@ impl<T: Config> Pallet<T> {
         Ok(Pays::No.into())
     }
 
-    /// Fetch current price and return the result in cents.
+    /// Fetch current price and return the result in mUSD.
     fn fetch_price() -> Result<u32, http::Error> {
         let deadline = sp_io::offchain::timestamp().add(Duration::from_millis(2_000));
 
@@ -263,9 +263,13 @@ impl<T: Config> Pallet<T> {
             }
         }?;
 
-        log::warn!("Got price: {} mUSD", price);
+        // Get price for 1 TFT in mUSD
+        let tft_usd = (U64F64::from_num(price) / U64F64::from_num(DST_AMOUNT))
+            .round()
+            .to_num::<u32>();
+        log::warn!("Got price: {} mUSD", tft_usd);
 
-        Ok(price)
+        Ok(tft_usd)
     }
 
     fn offchain_signed_tx(block_number: T::BlockNumber) -> Result<(), Error<T>> {
@@ -346,7 +350,7 @@ impl<T: Config> Pallet<T> {
 
         let lowest = prices.into_iter().reduce(f32::min)?;
         // convert to mUSD
-        Some((lowest * 1000_f32) as u32)
+        Some((U64F64::from_num(lowest) * 1000).round().to_num::<u32>())
     }
 
     fn queue_transient() -> Box<dyn RingBufferTrait<u32>> {

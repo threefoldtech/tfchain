@@ -259,7 +259,7 @@ fn json_request_example() -> &'static str {
               "source_asset_type": "credit_alphanum4",
               "source_asset_code": "USDC",
               "source_asset_issuer": "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
-              "source_amount": "0.0330655",
+              "source_amount": "0.0328655",
               "destination_asset_type": "credit_alphanum4",
               "destination_asset_code": "TFT",
               "destination_asset_issuer": "GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47",
