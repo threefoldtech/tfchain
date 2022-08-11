@@ -105,15 +105,9 @@ pub struct PublicConfig<IP4, IP6, Domain> {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct IP4<IPv4, Gw4> {
-    pub ipv4: IPv4,
-    pub gw4: Gw4,
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct IP6<IPv6, Gw6> {
-    pub ipv6: IPv6,
-    pub gw6: Gw6,
+pub struct IP<IpAddr, Gw> {
+    pub ip: IpAddr,
+    pub gw: Gw,
 }
 
 #[derive(

@@ -50,7 +50,7 @@ pub mod pallet {
         traits::ChangeNode,
         types::{
             Farm, FarmCertification, FarmingPolicyLimit, Interface, Location, Node,
-            NodeCertification, PublicConfig, PublicIP, Resources, IP4, IP6,
+            NodeCertification, PublicConfig, PublicIP, Resources, IP,
         },
     };
 
@@ -87,8 +87,8 @@ pub mod pallet {
     pub type FarmPayoutV2AddressByFarmID<T: Config> =
         StorageMap<_, Blake2_128Concat, u32, Vec<u8>, ValueQuery>;
 
-    pub type Ip4ConfigOf<T> = IP4<<T as Config>::IP4, <T as Config>::GW4>;
-    pub type Ip6ConfigOf<T> = IP6<<T as Config>::IP6, <T as Config>::GW6>;
+    pub type Ip4ConfigOf<T> = IP<<T as Config>::IP4, <T as Config>::GW4>;
+    pub type Ip6ConfigOf<T> = IP<<T as Config>::IP6, <T as Config>::GW6>;
 
     pub type PubConfigOf<T> =
         PublicConfig<Ip4ConfigOf<T>, Option<Ip6ConfigOf<T>>, Option<<T as Config>::Domain>>;

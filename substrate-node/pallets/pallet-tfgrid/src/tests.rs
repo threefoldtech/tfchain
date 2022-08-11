@@ -3,7 +3,7 @@ use frame_support::{assert_noop, assert_ok, BoundedVec};
 use frame_system::RawOrigin;
 use tfchain_support::types::{
     FarmCertification, FarmingPolicyLimit, Location, NodeCertification, PublicConfig, PublicIP,
-    Resources, IP4, IP6,
+    Resources, IP,
 };
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -797,8 +797,8 @@ fn node_add_public_config_works() {
         let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
 
         let pub_config = PublicConfig {
-            ip4: IP4 { ipv4, gw4 },
-            ip6: Some(IP6 { ipv6, gw6 }),
+            ip4: IP { ip: ipv4, gw: gw4 },
+            ip6: Some(IP { ip: ipv6, gw: gw6 }),
             domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
         };
 
@@ -826,7 +826,7 @@ fn node_add_public_config_without_ipv6_and_domain_works() {
         let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
 
         let pub_config = PublicConfig {
-            ip4: IP4 { ipv4, gw4 },
+            ip4: IP { ip: ipv4, gw: gw4 },
             ip6: None,
             domain: None,
         };
@@ -857,8 +857,8 @@ fn node_add_public_config_fails_if_signature_incorrect() {
         let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
 
         let pub_config = PublicConfig {
-            ip4: IP4 { ipv4, gw4 },
-            ip6: Some(IP6 { ipv6, gw6 }),
+            ip4: IP { ip: ipv4, gw: gw4 },
+            ip6: Some(IP { ip: ipv6, gw: gw6 }),
             domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
         };
 
@@ -888,8 +888,8 @@ fn test_unsetting_node_public_config_works() {
         let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
 
         let pub_config = PublicConfig {
-            ip4: IP4 { ipv4, gw4 },
-            ip6: Some(IP6 { ipv6, gw6 }),
+            ip4: IP { ip: ipv4, gw: gw4 },
+            ip6: Some(IP { ip: ipv6, gw: gw6 }),
             domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
         };
 

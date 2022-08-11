@@ -8,7 +8,7 @@ use frame_support::{
     weights::Weight,
 };
 use log::info;
-use tfchain_support::types::{Farm, Interface, PublicConfig, PublicIP, IP4, IP6};
+use tfchain_support::types::{Farm, Interface, PublicConfig, PublicIP, IP};
 
 pub mod deprecated {
     use crate::Config;
@@ -271,7 +271,7 @@ fn get_public_config<T: Config>(
     let gw4 = <T as Config>::GW4::try_from(config.gw4.clone())?;
 
     let mut pub_config = PublicConfig {
-        ip4: IP4 { ipv4, gw4 },
+        ip4: IP { ip: ipv4, gw: gw4 },
         ip6: None,
         domain: None,
     };
@@ -280,7 +280,7 @@ fn get_public_config<T: Config>(
         let ipv6 = <T as Config>::IP6::try_from(config.ipv6.clone())?;
         let gw6 = <T as Config>::GW6::try_from(config.gw6.clone())?;
 
-        pub_config.ip6 = Some(IP6 { ipv6, gw6 });
+        pub_config.ip6 = Some(IP { ip: ipv6, gw: gw6 });
     }
 
     if !config.domain.is_empty() {
