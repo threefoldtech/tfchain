@@ -112,7 +112,7 @@ pub struct IP6<T: Config>(
 );
 
 pub const MIN_IP6_LENGHT: u32 = 3;
-pub const MAX_IP6_LENGTH: u32 = 42;
+pub const MAX_IP6_LENGTH: u32 = 43;
 
 impl<T: Config> TryFrom<Vec<u8>> for IP6<T> {
     type Error = Error<T>;

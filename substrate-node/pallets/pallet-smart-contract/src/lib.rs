@@ -52,7 +52,7 @@ pub mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         log,
-        traits::{ConstU32, Currency, Get, LockIdentifier, LockableCurrency},
+        traits::{Currency, Get, LockIdentifier, LockableCurrency},
     };
     use frame_system::pallet_prelude::*;
     use sp_core::H256;
@@ -76,8 +76,9 @@ pub mod pallet {
     // Version constant that referenced the struct version
     pub const CONTRACT_VERSION: u32 = 4;
 
-    pub type MaxNodeContractPublicIPs = ConstU32<5>;
-
+    pub type MaxNodeContractPublicIPs<T> = <T as Config>::MaxNodeContractPublicIps;
+    pub type MaxDeploymentDataLength<T> = <T as Config>::MaxDeploymentDataLength;
+    pub type DeploymentDataInput<T> = BoundedVec<u8, MaxDeploymentDataLength<T>>;
     pub type DeploymentHash = H256;
     pub type NameContractNameOf<T> = <T as Config>::NameContractName;
     pub type ContractPublicIP<T> =
@@ -170,6 +171,12 @@ pub mod pallet {
         #[pallet::constant]
         type MaxNameContractNameLength: Get<u32>;
 
+        #[pallet::constant]
+        type MaxDeploymentDataLength: Get<u32>;
+
+        #[pallet::constant]
+        type MaxNodeContractPublicIps: Get<u32>;
+
         /// The type of a name contract name.
         type NameContractName: FullCodec
             + Debug
@@ -205,13 +212,13 @@ pub mod pallet {
         /// IP got reserved by a Node contract
         IPsReserved {
             contract_id: u64,
-            public_ips: BoundedVec<ContractPublicIP<T>, MaxNodeContractPublicIPs>,
+            public_ips: BoundedVec<ContractPublicIP<T>, MaxNodeContractPublicIPs<T>>,
         },
         /// IP got freed by a Node contract
         IPsFreed {
             contract_id: u64,
             // public ip as a string
-            public_ips: BoundedVec<ContractPublicIP<T>, MaxNodeContractPublicIPs>,
+            public_ips: BoundedVec<ContractPublicIP<T>, MaxNodeContractPublicIPs<T>>,
         },
         /// Deprecated event
         ContractDeployed(u64, T::AccountId),
@@ -291,6 +298,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             node_id: u32,
             deployment_hash: DeploymentHash,
+            deployment_data: DeploymentDataInput<T>,
             public_ips: u32,
             solution_provider_id: Option<u64>,
         ) -> DispatchResultWithPostInfo {
@@ -299,6 +307,7 @@ pub mod pallet {
                 account_id,
                 node_id,
                 deployment_hash,
+                deployment_data,
                 public_ips,
                 solution_provider_id,
             )
@@ -432,6 +441,7 @@ impl<T: Config> Pallet<T> {
         account_id: T::AccountId,
         node_id: u32,
         deployment_hash: DeploymentHash,
+        deployment_data: DeploymentDataInput<T>,
         public_ips: u32,
         solution_provider_id: Option<u64>,
     ) -> DispatchResultWithPostInfo {
@@ -471,12 +481,13 @@ impl<T: Config> Pallet<T> {
                 <T as pallet_tfgrid::Config>::PublicIP,
                 <T as pallet_tfgrid::Config>::GatewayIP,
             >,
-            MaxNodeContractPublicIPs,
+            MaxNodeContractPublicIPs<T>,
         > = vec![].try_into().unwrap();
         // Prepare NodeContract struct
         let node_contract = types::NodeContract {
             node_id,
             deployment_hash: deployment_hash.clone(),
+            deployment_data,
             public_ips,
             public_ips_list,
         };
@@ -1389,7 +1400,7 @@ impl<T: Config> Pallet<T> {
                 <T as pallet_tfgrid::Config>::PublicIP,
                 <T as pallet_tfgrid::Config>::GatewayIP,
             >,
-            MaxNodeContractPublicIPs,
+            MaxNodeContractPublicIPs<T>,
         > = vec![].try_into().unwrap();
         // let mut ips = Vec::new();
         for i in 0..farm.public_ips.len() {
@@ -1445,7 +1456,7 @@ impl<T: Config> Pallet<T> {
                 <T as pallet_tfgrid::Config>::PublicIP,
                 <T as pallet_tfgrid::Config>::GatewayIP,
             >,
-            MaxNodeContractPublicIPs,
+            MaxNodeContractPublicIPs<T>,
         > = vec![].try_into().unwrap();
         for i in 0..farm.public_ips.len() {
             let mut ip = farm.public_ips[i].clone();

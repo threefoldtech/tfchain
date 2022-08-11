@@ -1,8 +1,9 @@
-use crate::pallet::ContractPublicIP;
-use crate::pallet::DeploymentHash;
+use crate::pallet::{
+    ContractPublicIP, DeploymentHash, MaxDeploymentDataLength, MaxNodeContractPublicIPs,
+};
 use crate::Config;
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::{traits::ConstU32, BoundedVec, RuntimeDebugNoBound};
+use frame_support::{BoundedVec, RuntimeDebugNoBound};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
 use substrate_fixed::types::U64F64;
@@ -59,8 +60,9 @@ pub struct NodeContract<T: Config> {
     // Hash of the deployment, set by the user
     // Max 32 bytes
     pub deployment_hash: DeploymentHash,
+    pub deployment_data: BoundedVec<u8, MaxDeploymentDataLength<T>>,
     pub public_ips: u32,
-    pub public_ips_list: BoundedVec<ContractPublicIP<T>, ConstU32<5>>,
+    pub public_ips_list: BoundedVec<ContractPublicIP<T>, MaxNodeContractPublicIPs<T>>,
 }
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]

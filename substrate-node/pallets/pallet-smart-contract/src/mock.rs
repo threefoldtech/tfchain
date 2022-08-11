@@ -177,6 +177,8 @@ parameter_types! {
     pub const GracePeriod: u64 = 100;
     pub const DistributionFrequency: u16 = 24;
     pub const MaxNameContractNameLength: u32 = 64;
+    pub const MaxNodeContractPublicIPs: u32 = 1;
+    pub const MaxDeploymentDataLength: u32 = 512;
 }
 
 pub(crate) type TestNameContractName = NameContractName<TestRuntime>;
@@ -194,6 +196,8 @@ impl pallet_smart_contract::Config for TestRuntime {
     type MaxNameContractNameLength = MaxNameContractNameLength;
     type NameContractName = TestNameContractName;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
+    type MaxDeploymentDataLength = MaxDeploymentDataLength;
+    type MaxNodeContractPublicIps = MaxNodeContractPublicIPs;
 }
 
 type AccountPublic = <MultiSignature as Verify>::Signer;

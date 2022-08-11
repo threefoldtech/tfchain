@@ -13,7 +13,7 @@ use substrate_fixed::types::U64F64;
 use super::types;
 use crate::cost;
 use pallet_tfgrid::types as pallet_tfgrid_types;
-use sp_std::convert::TryInto;
+use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::types::{FarmCertification, Location, NodeCertification, PublicIP, Resources};
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
@@ -30,6 +30,7 @@ fn test_create_node_contract_works() {
             Origin::signed(alice()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             0,
             None
         ));
@@ -45,6 +46,7 @@ fn test_create_node_contract_with_public_ips_works() {
             Origin::signed(alice()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             1,
             None
         ));
@@ -81,6 +83,7 @@ fn test_create_node_contract_with_undefined_node_fails() {
                 Origin::signed(alice()),
                 2,
                 generate_deployment_hash(),
+                get_deployment_data(),
                 0,
                 None
             ),
@@ -99,12 +102,20 @@ fn test_create_node_contract_with_same_hash_and_node_fails() {
             Origin::signed(alice()),
             1,
             h,
+            get_deployment_data(),
             0,
             None
         ));
 
         assert_noop!(
-            SmartContractModule::create_node_contract(Origin::signed(alice()), 1, h, 0, None),
+            SmartContractModule::create_node_contract(
+                Origin::signed(alice()),
+                1,
+                h,
+                get_deployment_data(),
+                0,
+                None
+            ),
             Error::<TestRuntime>::ContractIsNotUnique
         );
     });
@@ -120,6 +131,7 @@ fn test_create_node_contract_which_was_canceled_before_works() {
             Origin::signed(alice()),
             1,
             h,
+            get_deployment_data(),
             0,
             None
         ));
@@ -136,6 +148,7 @@ fn test_create_node_contract_which_was_canceled_before_works() {
             Origin::signed(alice()),
             1,
             h,
+            get_deployment_data(),
             0,
             None
         ));
@@ -153,11 +166,13 @@ fn test_update_node_contract_works() {
             Origin::signed(alice()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             0,
             None
         ));
 
         let new_hash = generate_deployment_hash();
+        let deployment_data = get_deployment_data();
         assert_ok!(SmartContractModule::update_node_contract(
             Origin::signed(alice()),
             1,
@@ -167,6 +182,7 @@ fn test_update_node_contract_works() {
         let node_contract = types::NodeContract {
             node_id: 1,
             deployment_hash: new_hash,
+            deployment_data,
             public_ips: 0,
             public_ips_list: Vec::new().try_into().unwrap(),
         };
@@ -219,6 +235,7 @@ fn test_update_node_contract_wrong_twins_fails() {
             Origin::signed(alice()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             0,
             None
         ));
@@ -243,6 +260,7 @@ fn test_cancel_node_contract_works() {
             Origin::signed(alice()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             0,
             None
         ));
@@ -269,6 +287,7 @@ fn test_create_multiple_node_contracts_works() {
             Origin::signed(alice()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             0,
             None
         ));
@@ -277,6 +296,7 @@ fn test_create_multiple_node_contracts_works() {
             Origin::signed(alice()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             0,
             None
         ));
@@ -285,6 +305,7 @@ fn test_create_multiple_node_contracts_works() {
             Origin::signed(alice()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             0,
             None
         ));
@@ -312,6 +333,7 @@ fn test_cancel_node_contract_frees_public_ips_works() {
             Origin::signed(alice()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             1,
             None
         ));
@@ -350,6 +372,7 @@ fn test_cancel_node_contract_wrong_twins_fails() {
             Origin::signed(alice()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             0,
             None
         ));
@@ -543,6 +566,7 @@ fn test_create_rent_contract_on_node_in_use_fails() {
             Origin::signed(alice()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             1,
             None
         ));
@@ -578,6 +602,7 @@ fn test_create_node_contract_on_dedicated_node_without_rent_contract_fails() {
                 Origin::signed(bob()),
                 1,
                 generate_deployment_hash(),
+                get_deployment_data(),
                 1,
                 None
             ),
@@ -601,6 +626,7 @@ fn test_create_node_contract_when_having_a_rentcontract_works() {
             Origin::signed(bob()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             1,
             None
         ));
@@ -626,6 +652,7 @@ fn test_create_node_contract_when_someone_else_has_rent_contract_fails() {
                 Origin::signed(alice()),
                 1,
                 generate_deployment_hash(),
+                get_deployment_data(),
                 1,
                 None
             ),
@@ -652,6 +679,7 @@ fn test_cancel_rent_contract_with_active_node_contracts_fails() {
             Origin::signed(bob()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             1,
             None
         ));
@@ -680,6 +708,7 @@ fn test_node_contract_billing_details() {
             Origin::signed(bob()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             1,
             None
         ));
@@ -764,6 +793,7 @@ fn test_node_contract_billing_details_with_solution_provider() {
             Origin::signed(bob()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             1,
             Some(1)
         ));
@@ -843,6 +873,7 @@ fn test_multiple_contracts_billing_loop_works() {
             Origin::signed(bob()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             1,
             None
         ));
@@ -878,6 +909,7 @@ fn test_node_contract_billing_cycles() {
             Origin::signed(bob()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             0,
             None
         ));
@@ -931,6 +963,7 @@ fn test_node_multiple_contract_billing_cycles() {
             Origin::signed(bob()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             0,
             None
         ));
@@ -938,6 +971,7 @@ fn test_node_multiple_contract_billing_cycles() {
             Origin::signed(bob()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             0,
             None
         ));
@@ -977,6 +1011,7 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
             Origin::signed(bob()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             1,
             None
         ));
@@ -1028,7 +1063,7 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
 
         let mut ips: BoundedVec<
             PublicIP<TestPublicIP, TestGatewayIP>,
-            crate::MaxNodeContractPublicIPs,
+            crate::MaxNodeContractPublicIPs<TestRuntime>,
         > = vec![].try_into().unwrap();
         ips.try_push(public_ip).unwrap();
 
@@ -1065,6 +1100,7 @@ fn test_node_contract_only_public_ip_billing_cycles() {
             Origin::signed(bob()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             1,
             None
         ));
@@ -1105,6 +1141,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
             Origin::signed(bob()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             0,
             None
         ));
@@ -1151,6 +1188,7 @@ fn test_node_contract_out_of_funds_should_move_state_to_graceperiod_works() {
             Origin::signed(charlie()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             0,
             None
         ));
@@ -1193,6 +1231,7 @@ fn test_restore_node_contract_in_grace_works() {
             Origin::signed(charlie()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             0,
             None
         ));
@@ -1257,6 +1296,7 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
             Origin::signed(charlie()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             0,
             None
         ));
@@ -1493,6 +1533,7 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
             Origin::signed(bob()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             0,
             None
         ));
@@ -1531,6 +1572,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
             Origin::signed(charlie()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             0,
             None
         ));
@@ -1627,6 +1669,7 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
             Origin::signed(bob()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             1,
             None
         ));
@@ -1763,6 +1806,7 @@ fn test_restore_rent_contract_and_node_contracts_in_grace_works() {
             Origin::signed(charlie()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             0,
             None
         ));
@@ -1913,6 +1957,7 @@ fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
             Origin::signed(bob()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             0,
             None
         ));
@@ -2012,6 +2057,7 @@ fn test_create_node_contract_with_solution_provider_works() {
             Origin::signed(alice()),
             1,
             generate_deployment_hash(),
+            get_deployment_data(),
             0,
             Some(1)
         ));
@@ -2041,6 +2087,7 @@ fn test_create_node_contract_with_solution_provider_fails_if_not_approved() {
                 Origin::signed(alice()),
                 1,
                 generate_deployment_hash(),
+                get_deployment_data(),
                 0,
                 Some(1)
             ),
@@ -2467,4 +2514,11 @@ fn record(event: Event) -> EventRecord<Event, H256> {
 
 fn generate_deployment_hash() -> H256 {
     H256::random()
+}
+
+fn get_deployment_data() -> crate::DeploymentDataInput<TestRuntime> {
+    BoundedVec::<u8, crate::MaxDeploymentDataLength<TestRuntime>>::try_from(
+        "some_data".as_bytes().to_vec(),
+    )
+    .unwrap()
 }

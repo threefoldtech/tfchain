@@ -371,6 +371,8 @@ parameter_types! {
     pub DistributionFrequency: u16 = 24;
     pub RetryInterval: u32 = 20;
     pub MaxNameContractNameLength: u32 = 64;
+    pub MaxNodeContractPublicIPs: u32 = 1;
+    pub MaxDeploymentDataLength: u32 = 512;
 }
 
 pub fn get_staking_pool_account() -> AccountId {
@@ -393,6 +395,8 @@ impl pallet_smart_contract::Config for Runtime {
     type MaxNameContractNameLength = MaxNameContractNameLength;
     type NameContractName = pallet_smart_contract::name_contract::NameContractName<Runtime>;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
+    type MaxDeploymentDataLength = MaxDeploymentDataLength;
+    type MaxNodeContractPublicIps = MaxNodeContractPublicIPs;
 }
 // type Tfgrid = TfgridModule;
 

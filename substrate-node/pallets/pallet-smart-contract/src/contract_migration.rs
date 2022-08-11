@@ -142,7 +142,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                             <T as pallet_tfgrid::Config>::PublicIP,
                             <T as pallet_tfgrid::Config>::GatewayIP,
                         >,
-                        pallet::MaxNodeContractPublicIPs,
+                        pallet::MaxNodeContractPublicIPs<T>,
                     > = vec![].try_into().unwrap();
 
                     let mut should_free_ip = false;
@@ -187,12 +187,25 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                         }
                     }
 
+                    let deployment_data: BoundedVec<u8, pallet::MaxDeploymentDataLength<T>> =
+                        vec![].try_into().unwrap();
+
                     let mut new_node_contract = types::NodeContract {
                         node_id: node_contract.node_id,
                         deployment_hash: H256::zero(),
+                        deployment_data,
                         public_ips: node_contract.public_ips,
                         public_ips_list,
                     };
+
+                    match BoundedVec::<u8, pallet::MaxDeploymentDataLength<T>>::try_from(
+                        node_contract.deployment_data,
+                    ) {
+                        Ok(data) => {
+                            new_node_contract.deployment_data = data;
+                        }
+                        Err(e) => info!("error occurred while parsing deployment data: {:?}", e),
+                    }
 
                     if should_free_ip {
                         match pallet::Pallet::<T>::_free_ip(k, &mut new_node_contract) {
