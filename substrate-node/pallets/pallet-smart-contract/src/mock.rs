@@ -1,9 +1,10 @@
 #![cfg(test)]
+use std::panic;
 
 use super::*;
 use crate::name_contract::NameContractName;
 use crate::{self as pallet_smart_contract};
-use codec::alloc::sync::Arc;
+use codec::{alloc::sync::Arc, Decode};
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::EnsureRoot;
 use pallet_tfgrid::{
@@ -18,12 +19,11 @@ use sp_core::{
         testing::{self},
         OffchainDbExt, OffchainWorkerExt, TransactionPoolExt,
     },
-    sr25519, Pair, Public, H256, 
+    sr25519, Pair, Public, H256,
 };
 use sp_keystore::{testing::KeyStore, KeystoreExt, SyncCryptoStore};
-use sp_runtime::MultiSignature;
+use sp_runtime::{MultiSignature, offchain::TransactionPool};
 use sp_runtime::{
-    offchain::testing::PoolState,
     traits::{IdentifyAccount, Verify},
 };
 use sp_runtime::{
@@ -34,7 +34,7 @@ use sp_runtime::{
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::{traits::ChangeNode, types::Node};
 
-// set environment variable RUST_LOG=debug to see all logs when running the tests and call 
+// set environment variable RUST_LOG=debug to see all logs when running the tests and call
 // env_logger::init() at the beginning of the test
 use env_logger;
 
@@ -316,11 +316,78 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
     t
 }
+pub type TransactionCall = pallet_smart_contract::Call<TestRuntime>;
+
+#[derive(Default)]
+pub struct PoolState {
+	/// A vector of calls that we expect should be executed
+	pub expected_calls: Vec<(TransactionCall, Result<(), ()>)>,
+    pub calls_to_execute: Vec<(TransactionCall, Result<(), ()>)>,
+    pub i: usize,
+}
+
+impl PoolState {
+    pub fn should_call(&mut self, expected_call: TransactionCall, expected_result: Result<(), ()>) {
+        self.expected_calls.push((expected_call, expected_result));
+    }
+}
+
+impl Drop for PoolState{
+    fn drop(&mut self) {
+        if self.i < self.expected_calls.len() {
+            panic!("Not all expected calls have been executed! The following calls were still expected: {:?}", &self.expected_calls[self.i..]);
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct MockedTransactionPoolExt(Arc<RwLock<PoolState>>);
+
+impl MockedTransactionPoolExt {
+	/// Create new `TestTransactionPoolExt` and a reference to the internal state.
+	pub fn new() -> (Self, Arc<RwLock<PoolState>>) {
+		let ext = Self::default();
+		let state = ext.0.clone();
+		(ext, state)
+	}
+}
+
+impl TransactionPool for MockedTransactionPoolExt {
+	fn submit_transaction(&mut self, extrinsic: Vec<u8>) -> Result<(), ()> {
+        if self.0.read().expected_calls.is_empty() {
+            return Ok(());
+        }
+
+        let extrinsic_decoded: Extrinsic = Decode::decode(&mut &*extrinsic).unwrap();
+
+        if self.0.read().i < self.0.read().expected_calls.len() {
+            let i = self.0.read().i.clone();
+
+            log::info!("Call {:?}: {:?}", i, extrinsic_decoded.call);
+
+            // the extrinsic should match the expected call at position i
+            assert_eq!(extrinsic_decoded.call, Call::SmartContractModule(self.0.read().expected_calls[i].0.clone()));
+            // increment i for the next iteration
+            let call_to_execute = self.0.read().expected_calls[i].clone();
+            self.0.write().calls_to_execute.push(call_to_execute);
+            self.0.write().i = i+1;
+
+            // return the expected return value
+            return self.0.read().expected_calls[i].1;
+        }
+
+        // we should not end here as it would mean we did not expect any more calls
+        panic!("Did not expect any more calls! Still have the call {:?} left.", extrinsic_decoded.call);
+	}
+}
+
+
 
 pub fn new_test_ext_with_pool_state(iterations: u32) -> (sp_io::TestExternalities, Arc<RwLock<PoolState>>) {
     let mut ext = new_test_ext();
     let (offchain, offchain_state) = testing::TestOffchainExt::new();
-    let (pool, pool_state) = testing::TestTransactionPoolExt::new();
+    let (pool, pool_state) = MockedTransactionPoolExt::new();
+    testing::TestTransactionPoolExt::new();
     let keystore = KeyStore::new();
     keystore
         .sr25519_generate_new(KEY_TYPE, Some(&format!("//Alice")))
@@ -335,5 +402,6 @@ pub fn new_test_ext_with_pool_state(iterations: u32) -> (sp_io::TestExternalitie
     ext.register_extension(TransactionPoolExt::new(pool));
     ext.register_extension(KeystoreExt(Arc::new(keystore)));
 
+    //(ext, pool_state)
     (ext, pool_state)
 }
