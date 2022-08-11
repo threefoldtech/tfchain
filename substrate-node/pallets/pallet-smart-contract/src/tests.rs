@@ -14,8 +14,10 @@ use pallet_tfgrid::{
     ResourcesInput,
 };
 use sp_core::H256;
-use sp_io::TestExternalities;
-use sp_runtime::{traits::{SaturatedConversion}, Perbill, Percent};
+use sp_runtime::{
+    traits::SaturatedConversion, Perbill, Percent,
+};
+use sp_std::convert::TryInto;
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
     resources::Resources,
@@ -2642,6 +2644,45 @@ pub fn prepare_farm(source: AccountId, dedicated: bool) {
     }
 
     TfgridModule::set_farm_dedicated(RawOrigin::Root.into(), 1, true).unwrap();
+}
+
+pub fn prepare_farm_and_node_for_failing() {
+    TFTPriceModule::set_prices(Origin::signed(bob()), 0, 101).unwrap();
+
+    create_farming_policies();
+
+    prepare_twins();
+
+    prepare_farm(alice(), false);
+
+    // random location
+    let location = Location {
+        longitude: "12.233213231".as_bytes().to_vec(),
+        latitude: "32.323112123".as_bytes().to_vec(),
+    };
+
+    let resources = Resources {
+        hru: 1024 * GIGABYTE,
+        sru: 512 * GIGABYTE,
+        cru: 8,
+        mru: 16 * GIGABYTE,
+    };
+
+    let country = "Belgium".as_bytes().to_vec();
+    let city = "Ghent".as_bytes().to_vec();
+    TfgridModule::create_node(
+        Origin::signed(alice()),
+        1,
+        resources,
+        location,
+        country,
+        city,
+        Vec::new(),
+        false,
+        false,
+        "some_serial".as_bytes().to_vec(),
+    )
+    .unwrap();
 }
 
 pub fn prepare_farm_and_node() {

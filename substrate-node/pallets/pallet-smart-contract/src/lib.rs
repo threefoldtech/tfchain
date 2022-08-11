@@ -1,5 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use core::hash::Hasher;
+
 use sp_std::prelude::*;
 
 use frame_support::{
@@ -24,15 +26,21 @@ use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, PubConfigOf, SerialNumberOf
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_timestamp as timestamp;
 use sp_core::crypto::KeyTypeId;
+use sp_runtime::traits::BlockNumberProvider;
 use sp_runtime::{
+    offchain::{
+        storage::StorageValueRef,
+        storage_lock::{BlockAndTime, StorageLock, Time},
+        Duration,
+    },
     traits::{CheckedSub, SaturatedConversion},
     Perbill,
 };
 use substrate_fixed::types::U64F64;
-use tfchain_support::traits::ChangeNode;
-use sp_core::crypto::KeyTypeId;
-
-pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"smct");
+use tfchain_support::{
+    traits::ChangeNode,
+    types::{Node, NodeCertification, Resources},
+}
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"demo");
 
@@ -110,6 +118,12 @@ pub mod pallet {
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::NegativeImbalance;
 
     pub const GRID_LOCK_ID: LockIdentifier = *b"gridlock";
+
+    pub const FAILED_CONTRACTS_STORAGE_ID: [u8; 52] =
+        *b"pallet-smart-contract::failed-contracts-when-billing";
+    pub const FAILED_CONTRACTS_STORAGE_LOCK: [u8; 44] =
+        *b"pallet-smart-contract::failed-contracts-lock";
+    pub const FAILED_CONTRACTS_TIMEOUT: Duration = Duration::from_millis(60000);
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -493,7 +507,7 @@ pub mod pallet {
         pub fn bill_contract_for_block(
             origin: OriginFor<T>,
             contract_id: u64,
-            block_number: T::BlockNumber
+            block_number: T::BlockNumber,
         ) -> DispatchResultWithPostInfo {
             let _account_id = ensure_signed(origin)?;
             Self::_bill_contract_for_block(contract_id, block_number)
@@ -976,17 +990,23 @@ impl<T: Config> Pallet<T> {
         return Err(<Error<T>>::OffchainSignedTxError);
     }
 
-    pub fn offchain_signed_tx(block_number: T::BlockNumber, contract_id: u64) -> Result<(), Error<T>> {
-        let signer = Signer::<T, T::AuthorityId>::any_account();    
-        let result = signer.send_signed_transaction(|_acct| Call::bill_contract_for_block {
-            contract_id,
-            block_number,
-        });
-        
+    fn offchain_signed_tx(block_number: T::BlockNumber, contract_id: u64) -> Result<(), Error<T>> {
+        let signer = Signer::<T, T::AuthorityId>::any_account();
+        let result =
+            signer.send_signed_transaction(|_acct: &Account<T>| Call::bill_contract_for_block {
+                contract_id,
+                block_number,
+            });
+
         if let Some((acc, res)) = result {
             if res.is_err() {
-                log::error!("failed billing contract {:?} at block {:?} using account {:?} with error {:?}",
-                    contract_id, block_number, acc.id, res);
+                log::error!(
+                    "failed billing contract {:?} at block {:?} using account {:?} with error {:?}",
+                    contract_id,
+                    block_number,
+                    acc.id,
+                    res
+                );
                 return Err(<Error<T>>::OffchainSignedTxError);
             }
             // Transaction is sent successfully
@@ -997,51 +1017,31 @@ impl<T: Config> Pallet<T> {
         return Err(<Error<T>>::OffchainSignedTxError);
     }
 
-    // TO BE REMOVED:
-    // pub fn _bill_contracts_at_block(block: T::BlockNumber) -> DispatchResultWithPostInfo {
-    //     let current_block_u64: u64 = block.saturated_into::<u64>();
-    //     let contracts = ContractsToBillAt::<T>::get(current_block_u64);
-    //     for contract_id in contracts {
-    //         let mut contract = Contracts::<T>::get(contract_id);
-    //         if contract.contract_id == 0 {
-    //             continue;
-    //         }
+    fn save_failed_contract_ids_in_storage(failed_ids: Vec<u64>) {
+        log::info!("saving {:?} failed contracts", failed_ids);
+        let s_contracts =
+            StorageValueRef::persistent(b"pallet-smart-contract::failed-contracts-when-billing");
 
-    //         // Try to bill contract
-    //         match Self::bill_contract(&mut contract) {
-    //             Ok(_) => {
-    //                 log::info!(
-    //                     "billed contract with id {:?} at block {:?}",
-    //                     contract_id,
-    //                     block
-    //                 );
-    //             }
-    //             Err(err) => {
-    //                 log::info!(
-    //                     "error while billing contract with id {:?}: {:?}",
-    //                     contract_id,
-    //                     err
-    //                 );
-    //                 // If billing the contract failed, we should delete the contract and clean up storage
-    //                 Self::remove_contract(contract.contract_id);
-    //                 continue;
-    //             }
-    //         }
+        let mut lock = StorageLock::<BlockAndTime<frame_system::Pallet<T>>>::with_block_deadline(
+            &FAILED_CONTRACTS_STORAGE_LOCK,
+            5,
+        );
+        {
+            let _guard = lock.lock();
+            s_contracts.set(&failed_ids);
+        }
+    }
 
-    //         // https://github.com/threefoldtech/tfchain/issues/264
-    //         // if a contract is still in storage and actively getting billed whilst it is in state delete
-    //         // remove all associated storage and continue
-    //         let contract = Contracts::<T>::get(contract_id);
-    //         if contract.contract_id != 0 && contract.is_state_delete() {
-    //             Self::remove_contract(contract.contract_id);
-    //             continue;
-    //         }
+    fn get_failed_contract_ids_from_storage() -> Vec<u64> {
+        let s_contracts =
+            StorageValueRef::persistent(b"pallet-smart-contract::failed-contracts-when-billing");
 
-    //         // Reinsert into the next billing frequency
-    //         Self::_reinsert_contract_to_bill(contract.contract_id);
-    //     }
-    //     Ok(().into())
-    // }
+        if let Ok(Some(failed_contract_ids)) = s_contracts.get::<Vec<u64>>() {
+            return failed_contract_ids;
+        }
+
+        return Vec::new();
+    }
 
     // Bills a contract (NodeContract or NameContract)
     // Calculates how much TFT is due by the user and distributes the rewards
@@ -1371,6 +1371,7 @@ impl<T: Config> Pallet<T> {
             Contracts::<T>::remove(contract_id);
             ContractLock::<T>::remove(contract_id);
         }
+        log::info!("Average prise is {:?}", avg_tft_price);
     }
 
     // Following: https://library.threefold.me/info/threefold#/tfgrid/farming/threefold__proof_of_utilization
