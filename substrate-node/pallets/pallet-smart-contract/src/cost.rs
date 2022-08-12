@@ -1,18 +1,15 @@
-use crate::{Config};
-use crate::types::{Contract, ContractBillingInformation};
 use crate::pallet;
 use crate::pallet::BalanceOf;
-use crate::types;
-use tfchain_support::{
-    resources::Resources,
-    types::{NodeCertification}
-};
-use pallet_tfgrid::types as pallet_tfgrid_types;
-use frame_support::{ensure, {dispatch::DispatchErrorWithPostInfo}};
-use sp_runtime::SaturatedConversion;
 use crate::pallet::Error;
-use substrate_fixed::types::U64F64;
+use crate::types;
+use crate::types::{Contract, ContractBillingInformation};
+use crate::Config;
+use frame_support::{dispatch::DispatchErrorWithPostInfo, ensure};
+use pallet_tfgrid::types as pallet_tfgrid_types;
 use sp_runtime::Percent;
+use sp_runtime::SaturatedConversion;
+use substrate_fixed::types::U64F64;
+use tfchain_support::{resources::Resources, types::NodeCertification};
 
 impl<T: Config> Contract<T> {
     pub fn get_billing_info(&self) -> ContractBillingInformation {
@@ -64,23 +61,24 @@ impl<T: Config> Contract<T> {
                 if !pallet_tfgrid::Nodes::<T>::contains_key(node_contract.node_id) {
                     return Err(DispatchErrorWithPostInfo::from(Error::<T>::NodeNotExists));
                 }
-    
+
                 // We know the contract is using resources, now calculate the cost for each used resource
-                
-                let node_contract_resources = pallet::Pallet::<T>::node_contract_resources(self.contract_id);
-    
+
+                let node_contract_resources =
+                    pallet::Pallet::<T>::node_contract_resources(self.contract_id);
+
                 let mut bill_resources = true;
                 // If this node contract is deployed on a node which has a rent contract
                 // We can ignore billing for the resources used by this node contract
                 if pallet::ActiveRentContractForNode::<T>::contains_key(node_contract.node_id) {
                     bill_resources = false
                 }
-    
+
                 let contract_cost = calculate_resources_cost::<T>(
                     node_contract_resources.used,
                     node_contract.public_ips,
                     seconds_elapsed,
-                    pricing_policy.clone(),
+                    &pricing_policy,
                     bill_resources,
                 );
                 contract_cost + contract_billing_info.amount_unbilled
@@ -90,12 +88,12 @@ impl<T: Config> Contract<T> {
                     return Err(DispatchErrorWithPostInfo::from(Error::<T>::NodeNotExists));
                 }
                 let node = pallet_tfgrid::Nodes::<T>::get(rent_contract.node_id).unwrap();
-    
+
                 let contract_cost = calculate_resources_cost::<T>(
                     node.resources,
                     0,
                     seconds_elapsed,
-                    pricing_policy.clone(),
+                    &pricing_policy,
                     true,
                 );
                 Percent::from_percent(pricing_policy.discount_for_dedication_nodes) * contract_cost
@@ -108,18 +106,17 @@ impl<T: Config> Contract<T> {
                 total_cost_u64f64.to_num::<u64>()
             }
         };
-    
+
         Ok(total_cost)
     }
 }
-
 
 // Calculates the total cost of a node contract.
 pub fn calculate_resources_cost<T: Config>(
     resources: Resources,
     ipu: u32,
     seconds_elapsed: u64,
-    pricing_policy: pallet_tfgrid_types::PricingPolicy<T::AccountId>,
+    pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
     bill_resources: bool,
 ) -> u64 {
     let mut total_cost = U64F64::from_num(0);
@@ -136,14 +133,14 @@ pub fn calculate_resources_cost<T: Config>(
         let su_cost = (U64F64::from_num(pricing_policy.su.value) / 3600)
             * U64F64::from_num(seconds_elapsed)
             * su_used;
-        log::info!("su cost: {:?}", su_cost);
+        log::debug!("su cost: {:?}", su_cost);
 
         let cu = calculate_cu(cru, mru);
 
         let cu_cost = (U64F64::from_num(pricing_policy.cu.value) / 3600)
             * U64F64::from_num(seconds_elapsed)
             * cu;
-        log::info!("cu cost: {:?}", cu_cost);
+        log::debug!("cu cost: {:?}", cu_cost);
         total_cost = su_cost + cu_cost;
     }
 
@@ -151,7 +148,7 @@ pub fn calculate_resources_cost<T: Config>(
         let total_ip_cost = U64F64::from_num(ipu)
             * (U64F64::from_num(pricing_policy.ipu.value) / 3600)
             * U64F64::from_num(seconds_elapsed);
-        log::info!("ip cost: {:?}", total_ip_cost);
+        log::debug!("ip cost: {:?}", total_ip_cost);
         total_cost += total_ip_cost;
     }
 
@@ -216,8 +213,7 @@ pub fn calculate_discount<T: Config>(
     let amount_due_monthly = amount_due * 24 * 30;
 
     // see how many months a user can pay for this deployment given his balance
-    let discount_level =
-        U64F64::from_num(balance_as_u128) / U64F64::from_num(amount_due_monthly);
+    let discount_level = U64F64::from_num(balance_as_u128) / U64F64::from_num(amount_due_monthly);
 
     // predefined discount levels
     // https://wiki.threefold.io/#/threefold__grid_pricing

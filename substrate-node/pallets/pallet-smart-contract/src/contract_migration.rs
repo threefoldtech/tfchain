@@ -1,6 +1,6 @@
 use super::*;
 use frame_support::{weights::Weight, BoundedVec};
-use log::info;
+use log::{error, info};
 use pallet_tfgrid;
 use sp_core::H256;
 use sp_std::convert::{TryFrom, TryInto};
@@ -120,8 +120,6 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
         let mut migrated_count = 0;
         // We transform the storage values from the old into the new format.
         Contracts::<T>::translate::<deprecated::ContractV3, _>(|k, ctr| {
-            // info!("     Migrated contract for {:?}...", k);
-
             // dummy default
             let rc = types::RentContract { node_id: 0 };
 
@@ -153,7 +151,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                             ) {
                                 Ok(x) => x,
                                 Err(err) => {
-                                    info!("error while parsing ip: {:?}", err);
+                                    error!("error while parsing ip: {:?}", err);
                                     should_free_ip = true;
                                     continue;
                                 }
@@ -164,7 +162,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                             ) {
                                 Ok(x) => x,
                                 Err(err) => {
-                                    info!("error while parsing gateway: {:?}", err);
+                                    error!("error while parsing gateway: {:?}", err);
                                     should_free_ip = true;
                                     continue;
                                 }
@@ -179,7 +177,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                             match public_ips_list.try_push(new_ip) {
                                 Ok(()) => (),
                                 Err(err) => {
-                                    info!("error while pushing ip to contract ip list: {:?}", err);
+                                    error!("error while pushing ip to contract ip list: {:?}", err);
                                     should_free_ip = true;
                                     continue;
                                 }
@@ -204,13 +202,13 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                         Ok(data) => {
                             new_node_contract.deployment_data = data;
                         }
-                        Err(e) => info!("error occurred while parsing deployment data: {:?}", e),
+                        Err(e) => error!("error occurred while parsing deployment data: {:?}", e),
                     }
 
                     if should_free_ip {
                         match pallet::Pallet::<T>::_free_ip(k, &mut new_node_contract) {
                             Ok(_) => info!("successfully freed ips for contract: {:?}", k),
-                            Err(err) => info!("error occurred while freeing ip {:?}", err),
+                            Err(err) => error!("error occurred while freeing ip {:?}", err),
                         };
                     };
 
@@ -231,7 +229,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                             new_contract.contract_type = types::ContractData::NameContract(name_c);
                         }
                         Err(err) => {
-                            info!("error while parsing contract name: {:?}", err);
+                            error!("error while parsing contract name: {:?}", err);
                             // If it's not a valid contract name, it's probably garbage. Cancel the contract
                             return None;
                         }

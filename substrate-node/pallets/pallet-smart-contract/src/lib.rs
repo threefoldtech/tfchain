@@ -188,8 +188,6 @@ pub mod pallet {
             + MaxEncodedLen;
 
         type RestrictedOrigin: EnsureOrigin<Self::Origin>;
-        // #[pallet::constant]
-        // type MaxNodeContractPublicIPs: Get<u32>;
     }
 
     #[pallet::event]
@@ -556,7 +554,7 @@ impl<T: Config> Pallet<T> {
         )?;
 
         // Insert active rent contract for node
-        ActiveRentContractForNode::<T>::insert(node_id, contract.clone());
+        ActiveRentContractForNode::<T>::insert(node_id, &contract);
 
         Self::deposit_event(Event::ContractCreated(contract));
 
@@ -1402,17 +1400,16 @@ impl<T: Config> Pallet<T> {
             >,
             MaxNodeContractPublicIPs<T>,
         > = vec![].try_into().unwrap();
-        // let mut ips = Vec::new();
-        for i in 0..farm.public_ips.len() {
-            let mut ip = farm.public_ips[i].clone();
 
+        for i in 0..farm.public_ips.len() {
             if ips.len() == node_contract.public_ips as usize {
                 break;
             }
 
             // if an ip has contract id 0 it means it's not reserved
             // reserve it now
-            if ip.contract_id == 0 {
+            if farm.public_ips[i].contract_id == 0 {
+                let mut ip = farm.public_ips[i].clone();
                 ip.contract_id = contract_id;
                 farm.public_ips[i] = ip.clone();
                 ips.try_push(ip).or_else(|_| {
@@ -1459,11 +1456,10 @@ impl<T: Config> Pallet<T> {
             MaxNodeContractPublicIPs<T>,
         > = vec![].try_into().unwrap();
         for i in 0..farm.public_ips.len() {
-            let mut ip = farm.public_ips[i].clone();
-
             // if an ip has contract id 0 it means it's not reserved
             // reserve it now
-            if ip.contract_id == contract_id {
+            if farm.public_ips[i].contract_id == contract_id {
+                let mut ip = farm.public_ips[i].clone();
                 ip.contract_id = 0;
                 farm.public_ips[i] = ip.clone();
                 public_ips.try_push(ip).or_else(|_| {
