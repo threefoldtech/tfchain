@@ -14,9 +14,7 @@ use pallet_tfgrid::{
     ResourcesInput,
 };
 use sp_core::H256;
-use sp_runtime::{
-    traits::SaturatedConversion, Perbill, Percent,
-};
+use sp_runtime::{traits::SaturatedConversion, Perbill, Percent};
 use sp_std::convert::TryInto;
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
@@ -942,6 +940,7 @@ fn test_node_contract_billing_cycles() {
             .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11);
         run_to_block(11, Some(&mut pool_state));
         check_report_cost(1, amount_due_1, 11, discount_received);
+        pool_state.write().should_call_bill_contract(1, 11, Ok(()));
 
         let twin = TfgridModule::twins(twin_id).unwrap();
         let usable_balance = Balances::usable_balance(&twin.account_id);
