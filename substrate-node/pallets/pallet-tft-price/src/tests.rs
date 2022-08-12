@@ -227,9 +227,21 @@ fn test_parse_price() {
 fn test_parse_lowest_price_from_request() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
-        let request_str = json_request_example();
+        let request_str = json_stellar_price_request_valid();
         let price = TFTPriceModule::parse_lowest_price_from_request(request_str).unwrap();
         assert_eq!(price, 33);
+
+        let request_str = json_stellar_price_request_empty();
+        assert_eq!(
+            TFTPriceModule::parse_lowest_price_from_request(request_str),
+            None
+        );
+
+        let request_str = json_stellar_price_request_incomplete();
+        assert_eq!(
+            TFTPriceModule::parse_lowest_price_from_request(request_str),
+            None
+        );
     })
 }
 
@@ -250,7 +262,23 @@ fn run_to_block(n: u64) {
     }
 }
 
-fn json_request_example() -> &'static str {
+fn json_stellar_price_request_empty() -> &'static str {
+    r#"
+    {
+    }"#
+}
+
+fn json_stellar_price_request_incomplete() -> &'static str {
+    r#"
+    {
+        "_embedded": {
+          "records": [
+          ]
+        }
+    }"#
+}
+
+fn json_stellar_price_request_valid() -> &'static str {
     r#"
     {
         "_embedded": {
