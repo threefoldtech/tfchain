@@ -15,7 +15,7 @@ use ringbuffer::{RingBufferTrait, RingBufferTransient};
 use scale_info::prelude::format;
 use serde_json::Value;
 use sp_core::crypto::KeyTypeId;
-use substrate_fixed::types::U64F64;
+use substrate_fixed::types::U32F32;
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"tft!");
 
@@ -264,7 +264,7 @@ impl<T: Config> Pallet<T> {
         }?;
 
         // Get price for 1 TFT in mUSD
-        let tft_usd = (U64F64::from_num(price) / U64F64::from_num(DST_AMOUNT))
+        let tft_usd = (U32F32::from_num(price) / U32F32::from_num(DST_AMOUNT))
             .round()
             .to_num::<u32>();
         log::info!("Got price: {} mUSD", tft_usd);
@@ -336,21 +336,27 @@ impl<T: Config> Pallet<T> {
         let data: Value = serde_json::from_str(price_str).ok()?;
         let records_array = data.get("_embedded")?.get("records")?;
 
-        let prices: Vec<f32> = records_array
+        let prices: Vec<U32F32> = records_array
             .as_array()?
             .into_iter()
             .map(|item| {
                 let val = item.get("source_amount")?;
                 let str = val.as_str()?;
-                let p = str.parse::<f32>().ok()?;
+                let p = str.parse::<U32F32>().ok()?;
                 Some(p)
             })
-            .map(|x| if let Some(p) = x { p } else { f32::NAN })
+            .map(|x| {
+                if let Some(p) = x {
+                    p
+                } else {
+                    U32F32::from_num(f32::NAN)
+                }
+            })
             .collect();
 
-        let lowest = prices.into_iter().reduce(f32::min)?;
+        let lowest = prices.into_iter().reduce(U32F32::min)?;
         // convert to mUSD
-        Some((U64F64::from_num(lowest) * 1000).round().to_num::<u32>())
+        Some(((lowest) * 1000).round().to_num::<u32>())
     }
 
     fn queue_transient() -> Box<dyn RingBufferTrait<u32>> {
