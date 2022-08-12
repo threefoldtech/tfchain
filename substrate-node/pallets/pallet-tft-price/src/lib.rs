@@ -134,7 +134,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(0)]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
         pub fn set_prices(
             origin: OriginFor<T>,
             price: u32,
@@ -151,7 +151,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(0)]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1))]
         pub fn set_allowed_origin(
             origin: OriginFor<T>,
             target: T::AccountId,
