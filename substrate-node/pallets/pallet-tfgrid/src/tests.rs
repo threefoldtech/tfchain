@@ -1,6 +1,8 @@
-use crate::{mock::*, Error};
+use super::Event as TfgridEvent;
+use crate::{mock::Event as MockEvent, mock::*, Error};
 use frame_support::{assert_noop, assert_ok, BoundedVec};
-use frame_system::RawOrigin;
+use frame_system::{EventRecord, Phase, RawOrigin};
+use sp_core::H256;
 use tfchain_support::types::{
     FarmCertification, FarmingPolicyLimit, Location, NodeCertification, PublicConfig, PublicIP,
     Resources, IP,
@@ -1504,6 +1506,28 @@ fn test_create_and_update_policy() {
     });
 }
 
+#[test]
+ fn test_set_zos_version() {
+     ExternalityBuilder::build().execute_with(|| {
+         let zos_version = "1.0.0".as_bytes().to_vec();
+         assert_ok!(TfgridModule::set_zos_version(
+             RawOrigin::Root.into(),
+             zos_version.clone(),
+         ));
+
+         let saved_zos_version = TfgridModule::zos_version();
+         assert_eq!(saved_zos_version, zos_version);
+
+         let our_events = System::events();
+         assert_eq!(
+             our_events.contains(&record(MockEvent::TfgridModule(
+                 TfgridEvent::<TestRuntime>::ZosVersionUpdated(zos_version)
+             ))),
+             true
+         );
+     })
+ }
+
 fn create_entity() {
     let name = "foobar".as_bytes().to_vec();
     let country = "Belgium".as_bytes().to_vec();
@@ -1687,4 +1711,12 @@ fn create_farming_policies() {
         NodeCertification::Certified,
         FarmCertification::NotCertified,
     ));
+}
+
+fn record(event: Event) -> EventRecord<Event, H256> {
+    EventRecord {
+        phase: Phase::Initialization,
+        event,
+        topics: vec![],
+    }
 }

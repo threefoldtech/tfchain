@@ -3963,7 +3963,7 @@ dependencies = [
 [[package]]
 name = "pallet-tft-bridge"
 version = "1.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_tft_bridge?branch=upgrade_to_polkadot_0_9_24#cfe4627de0b72c86c275062b222aec59435379e7"
+source = "git+https://github.com/threefoldtech/tfchain_tft_bridge#7884ca7e69d63e0343b7c391aaeba0f5a30c90fc"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
