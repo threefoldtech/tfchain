@@ -26,11 +26,10 @@ use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, PubConfigOf, SerialNumberOf
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_timestamp as timestamp;
 use sp_core::crypto::KeyTypeId;
-use sp_runtime::traits::BlockNumberProvider;
 use sp_runtime::{
     offchain::{
         storage::StorageValueRef,
-        storage_lock::{BlockAndTime, StorageLock, Time},
+        storage_lock::{BlockAndTime, StorageLock},
         Duration,
     },
     traits::{CheckedSub, SaturatedConversion},
