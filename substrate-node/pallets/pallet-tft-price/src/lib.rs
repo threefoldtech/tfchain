@@ -167,7 +167,7 @@ pub mod pallet {
         fn offchain_worker(block_number: T::BlockNumber) {
             match Self::offchain_signed_tx(block_number) {
                 Ok(_) => log::info!("offchain worker done."),
-                Err(err) => log::info!("err: {:?}", err),
+                Err(err) => log::error!("{:?}", err),
             }
         }
     }
@@ -267,7 +267,7 @@ impl<T: Config> Pallet<T> {
         let tft_usd = (U64F64::from_num(price) / U64F64::from_num(DST_AMOUNT))
             .round()
             .to_num::<u32>();
-        log::warn!("Got price: {} mUSD", tft_usd);
+        log::info!("Got price: {} mUSD", tft_usd);
 
         Ok(tft_usd)
     }

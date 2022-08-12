@@ -314,7 +314,7 @@ pub mod pallet {
                     );
                 }
                 Err(err) => {
-                    log::info!(
+                    log::error!(
                         "types::NodeContract billed failed at block: {:?} with err {:?}",
                         block,
                         err
@@ -786,7 +786,7 @@ impl<T: Config> Pallet<T> {
                     );
                 }
                 Err(err) => {
-                    log::info!(
+                    log::error!(
                         "error while billing contract with id {:?}: {:?}",
                         contract_id,
                         err
@@ -992,7 +992,7 @@ impl<T: Config> Pallet<T> {
                 contract_lock.amount_locked,
             ) {
                 Ok(_) => (),
-                Err(err) => log::info!("error while distributing cultivation rewards {:?}", err),
+                Err(err) => log::error!("error while distributing cultivation rewards {:?}", err),
             };
             // Reset values
             contract_lock.lock_updated = now;

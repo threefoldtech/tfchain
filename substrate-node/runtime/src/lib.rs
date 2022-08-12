@@ -504,7 +504,7 @@ where
         #[cfg_attr(not(feature = "std"), allow(unused_variables))]
         let raw_payload = SignedPayload::new(call, extra)
             .map_err(|e| {
-                log::info!("SignedPayload error: {:?}", e);
+                log::error!("SignedPayload error: {:?}", e);
             })
             .ok()?;
 
@@ -909,7 +909,7 @@ impl_runtime_apis! {
             // have a backtrace here. If any of the pre/post migration checks fail, we shall stop
             // right here and right now.
             let weight = Executive::try_runtime_upgrade().map_err(|err|{
-                log::info!("try-runtime::on_runtime_upgrade failed with: {:?}", err);
+                log::error!("try-runtime::on_runtime_upgrade failed with: {:?}", err);
                 err
             }).unwrap();
             (weight, BlockWeights::get().max_block)
