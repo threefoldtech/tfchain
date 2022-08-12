@@ -1043,13 +1043,15 @@ impl<T: Config> Pallet<T> {
     }
 
     fn save_failed_contract_ids_in_storage(failed_ids: Vec<u64>) {
-        log::info!("saving {:?} failed contracts", failed_ids);
+        if !failed_ids.is_empty() {
+            log::info!("saving {:?} failed contracts", failed_ids);
+        }
         let s_contracts =
             StorageValueRef::persistent(b"pallet-smart-contract::failed-contracts-when-billing");
 
         let mut lock = StorageLock::<BlockAndTime<frame_system::Pallet<T>>>::with_block_deadline(
             &FAILED_CONTRACTS_STORAGE_LOCK,
-            5,
+            1,
         );
         {
             let _guard = lock.lock();
