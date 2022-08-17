@@ -112,6 +112,8 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn active_node_contracts)]
+    // A list of Contract ID's for a given node.
+    // In this list, all the active contracts are kept for a node.
     pub type ActiveNodeContracts<T: Config> =
         StorageMap<_, Blake2_128Concat, u32, Vec<u64>, ValueQuery>;
 
@@ -132,8 +134,10 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn active_rent_contracts)]
+    // A mapping between a Node ID and Contract ID
+    // If there is an active Rent Contract for a node, the value will be the contract ID
     pub type ActiveRentContractForNode<T: Config> =
-        StorageMap<_, Blake2_128Concat, u32, Contract<T>, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, u32, u64, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn contract_id)]
@@ -455,10 +459,10 @@ impl<T: Config> Pallet<T> {
 
         // If the user is trying to deploy on a node that has an active rent contract
         // only allow the user who created the rent contract to actually deploy a node contract on it
-        if ActiveRentContractForNode::<T>::contains_key(node_id) {
-            let contract = ActiveRentContractForNode::<T>::get(node_id)
-                .ok_or(Error::<T>::ContractNotExists)?;
-            if contract.twin_id != twin_id {
+        if let Some(contract_id) = ActiveRentContractForNode::<T>::get(node_id) {
+            let rent_contract =
+                Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+            if rent_contract.twin_id != twin_id {
                 return Err(Error::<T>::NodeHasRentContract.into());
             }
         }
@@ -554,7 +558,7 @@ impl<T: Config> Pallet<T> {
         )?;
 
         // Insert active rent contract for node
-        ActiveRentContractForNode::<T>::insert(node_id, &contract);
+        ActiveRentContractForNode::<T>::insert(node_id, contract.contract_id);
 
         Self::deposit_event(Event::ContractCreated(contract));
 
@@ -1614,15 +1618,16 @@ impl<T: Config> ChangeNode<PubConfigOf<T>, InterfaceOf<T>> for Pallet<T> {
         }
 
         // First clean up rent contract if it exists
-        let rent_contract = ActiveRentContractForNode::<T>::get(node.id);
-        if let Some(mut rc) = rent_contract {
-            // Bill contract
-            let _ = Self::_update_contract_state(
-                &mut rc,
-                &types::ContractState::Deleted(types::Cause::CanceledByUser),
-            );
-            let _ = Self::bill_contract(&mut rc);
-            Self::remove_contract(rc.contract_id);
+        if let Some(rc_id) = ActiveRentContractForNode::<T>::get(node.id) {
+            if let Some(mut contract) = Contracts::<T>::get(rc_id) {
+                // Bill contract
+                let _ = Self::_update_contract_state(
+                    &mut contract,
+                    &types::ContractState::Deleted(types::Cause::CanceledByUser),
+                );
+                let _ = Self::bill_contract(&mut contract);
+                Self::remove_contract(contract.contract_id);
+            }
         }
     }
 }

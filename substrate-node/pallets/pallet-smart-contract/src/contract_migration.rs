@@ -73,15 +73,15 @@ pub mod deprecated {
     }
 }
 
-pub mod v4 {
+pub mod v5 {
     use super::*;
     use crate::Config;
 
     use frame_support::{pallet_prelude::Weight, traits::OnRuntimeUpgrade};
     use sp_std::marker::PhantomData;
-    pub struct ContractMigrationV4<T: Config>(PhantomData<T>);
+    pub struct ContractMigrationV5<T: Config>(PhantomData<T>);
 
-    impl<T: Config> OnRuntimeUpgrade for ContractMigrationV4<T> {
+    impl<T: Config> OnRuntimeUpgrade for ContractMigrationV5<T> {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<(), &'static str> {
             info!("current pallet version: {:?}", PalletVersion::<T>::get());
@@ -92,13 +92,13 @@ pub mod v4 {
         }
 
         fn on_runtime_upgrade() -> Weight {
-            migrate_to_version_4::<T>()
+            migrate_to_version_4::<T>() + migrate_rent_contract_storage::<T>()
         }
 
         #[cfg(feature = "try-runtime")]
         fn post_upgrade() -> Result<(), &'static str> {
             info!("current pallet version: {:?}", PalletVersion::<T>::get());
-            assert!(PalletVersion::<T>::get() == types::StorageVersion::V4);
+            assert!(PalletVersion::<T>::get() == types::StorageVersion::V5);
 
             info!(
                 "👥  Smart Contract pallet to {:?} passes POST migrate checks ✅",
@@ -134,7 +134,6 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
 
             match ctr.contract_type {
                 deprecated::ContractData::NodeContract(node_contract) => {
-                    info!("found node contract");
                     let mut public_ips_list: BoundedVec<
                         PublicIP<
                             <T as pallet_tfgrid::Config>::PublicIP,
@@ -256,6 +255,33 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
 
         // Update pallet storage version
         PalletVersion::<T>::set(types::StorageVersion::V4);
+        info!(" <<< Storage version upgraded");
+
+        // Return the weight consumed by the migration.
+        T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
+    } else {
+        info!(" >>> Unused migration");
+        return 0;
+    }
+}
+
+pub fn migrate_rent_contract_storage<T: Config>() -> frame_support::weights::Weight {
+    if PalletVersion::<T>::get() == types::StorageVersion::V4 {
+        info!(
+            " >>> Starting active rent contract storage migration, pallet version: {:?}",
+            PalletVersion::<T>::get()
+        );
+
+        let mut migrated_count = 0;
+        // We transform the storage values from the old into the new format.
+        ActiveRentContractForNode::<T>::translate::<deprecated::ContractV3, _>(|_, rc| {
+            migrated_count += 1;
+            info!("Rent Contract: {:?} succesfully migrated", rc.contract_id);
+            Some(rc.contract_id)
+        });
+
+        // Update pallet storage version
+        PalletVersion::<T>::set(types::StorageVersion::V5);
         info!(" <<< Storage version upgraded");
 
         // Return the weight consumed by the migration.

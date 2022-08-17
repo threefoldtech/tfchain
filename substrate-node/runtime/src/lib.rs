@@ -745,7 +745,7 @@ pub type Executive = frame_executive::Executive<
     Runtime,
     AllPalletsWithSystem,
     (
-        pallet_smart_contract::contract_migration::v4::ContractMigrationV4<Runtime>,
+        pallet_smart_contract::contract_migration::v5::ContractMigrationV5<Runtime>,
         pallet_tfgrid::grid_migration::v6::GridMigration<Runtime>,
     ),
 >;
