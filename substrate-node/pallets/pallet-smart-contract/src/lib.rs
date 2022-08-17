@@ -1,7 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use core::hash::Hasher;
-
 use sp_std::prelude::*;
 
 use frame_support::{
@@ -42,7 +40,7 @@ use tfchain_support::{
     types::{Node, NodeCertification, Resources},
 }
 
-pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"demo");
+pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"smct");
 
 #[cfg(test)]
 mod mock;
@@ -485,8 +483,13 @@ pub mod pallet {
                 );
             }
             contracts.extend(ContractsToBillAt::<T>::get(current_block_u64));
+            // filter out the contracts that have been deleted in the meantime
+            contracts = contracts
+                .into_iter()
+                .filter(|contract_id| Contracts::<T>::get(contract_id).contract_id != 0).collect::<Vec<_>>();
 
             if contracts.is_empty() {
+                log::debug!("No contracts to bill at block {:?}", block_number);
                 return;
             }
 
@@ -808,10 +811,7 @@ impl<T: Config> Pallet<T> {
                 Error::<T>::NodeHasActiveContracts
             );
         }
-
-        // Update state
         Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
-        // Bill contract
         Self::bill_contract(&mut contract)?;
         // Remove all associated storage
         Self::remove_contract(contract.contract_id);
@@ -983,11 +983,10 @@ impl<T: Config> Pallet<T> {
 
     fn offchain_signed_tx(block_number: T::BlockNumber, contract_id: u64) -> Result<(), Error<T>> {
         let signer = Signer::<T, T::AuthorityId>::any_account();
-        let result =
-            signer.send_signed_transaction(|_acct: &Account<T>| Call::bill_contract_for_block {
-                contract_id,
-                block_number,
-            });
+        let result = signer.send_signed_transaction(|_acct| Call::bill_contract_for_block {
+            contract_id,
+            block_number,
+        });
 
         if let Some((acc, res)) = result {
             if res.is_err() {
@@ -996,7 +995,7 @@ impl<T: Config> Pallet<T> {
                     contract_id,
                     block_number,
                     acc.id,
-                    res
+                    res.err()
                 );
                 return Err(<Error<T>>::OffchainSignedTxError);
             }
@@ -1065,10 +1064,15 @@ impl<T: Config> Pallet<T> {
         };
 
         // Handle grace
+        let was_grace = matches!(contract.state, types::ContractState::GracePeriod(_));
         let contract = Self::handle_grace(contract, usable_balance, amount_due)?;
 
         // Handle contract lock operations
-        Self::handle_lock(contract, amount_due)?;
+        // not if the contract status was grace and changed to deleted because it means
+        // the grace period ended and there were still no funds
+        if !(was_grace && matches!(contract.state, types::ContractState::Deleted(_))) {
+            Self::handle_lock(contract, amount_due)?;
+        }
 
         // Always emit a contract billed event
         let contract_bill = types::ContractBill {
@@ -1130,6 +1134,7 @@ impl<T: Config> Pallet<T> {
                 // we can still update the internal contract lock object to figure out later how much was due
                 // whilst in grace period
                 if amount_due >= usable_balance {
+                    log::info!("Grace period started at block {:?} due to lack of funds", current_block);
                     Self::_update_contract_state(
                         contract,
                         &types::ContractState::GracePeriod(current_block),
@@ -1261,8 +1266,11 @@ impl<T: Config> Pallet<T> {
                 &pricing_policy,
                 contract_lock.amount_locked,
             ) {
-                Ok(_) => (),
-                Err(err) => log::info!("error while distributing cultivation rewards {:?}", err),
+                Ok(_) => {}
+                Err(err) => {
+                    log::error!("error while distributing cultivation rewards {:?}", err);
+                    return Err(err);
+                }
             };
             // Reset values
             contract_lock.lock_updated = now;

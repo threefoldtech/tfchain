@@ -1518,11 +1518,7 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
             types::ContractData::RentContract(rent_contract)
         );
 
-        for i in 0..2 {
-            pool_state
-                .write()
-                .should_call_bill_contract(1, 11 + i * 10, Ok(()));
-        }
+        pool_state.write().should_call_bill_contract(1, 11, Ok(()));
         run_to_block(12, Some(&mut pool_state));
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 11);
@@ -1536,6 +1532,8 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
 
         run_to_block(14, Some(&mut pool_state));
         // cancel contract
+        // it will bill before removing the contract and it should bill all
+        // reserverd balance
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 2);
         assert_ok!(SmartContractModule::cancel_contract(
             Origin::signed(bob()),
@@ -1547,6 +1545,9 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
         assert_ne!(usable_balance, 0);
         Balances::transfer(Origin::signed(bob()), alice(), usable_balance).unwrap();
 
+        // we do not call bill contract here as the contract is removed during 
+        // cancel_contract. The contract id will still be in ContractsToBillAt
+        // but the contract itself will no longer exist
         run_to_block(22, Some(&mut pool_state));
 
         // Last amount due is the same as the first one
