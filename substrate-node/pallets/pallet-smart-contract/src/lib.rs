@@ -1,7 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use core::hash::Hasher;
-
 use sp_std::prelude::*;
 
 use frame_support::{
@@ -41,7 +39,7 @@ use tfchain_support::{
     types::{Node, NodeCertification, Resources},
 }
 
-pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"demo");
+pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"smct");
 
 #[cfg(test)]
 mod mock;
@@ -520,6 +518,10 @@ pub mod pallet {
             // Index being current block number % (mod) Billing Frequency
             let current_index: u64 =
                 block_number.saturated_into::<u64>() % BillingFrequency::<T>::get();
+            // filter out the contracts that have been deleted in the meantime
+            contracts = contracts
+                .into_iter()
+                .filter(|contract_id| Contracts::<T>::get(contract_id).contract_id != 0).collect::<Vec<_>>();
 
             let contracts = ContractsToBillAt::<T>::get(current_index);
             if contracts.is_empty() {
@@ -835,7 +837,6 @@ impl<T: Config> Pallet<T> {
                 Error::<T>::NodeHasActiveContracts
             );
         }
-
         Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
         Self::bill_contract(contract.contract_id)?;
         // Remove all associated storage
@@ -991,11 +992,10 @@ impl<T: Config> Pallet<T> {
 
     fn offchain_signed_tx(block_number: T::BlockNumber, contract_id: u64) -> Result<(), Error<T>> {
         let signer = Signer::<T, T::AuthorityId>::any_account();
-        let result =
-            signer.send_signed_transaction(|_acct: &Account<T>| Call::bill_contract_for_block {
-                contract_id,
-                block_number,
-            });
+        let result = signer.send_signed_transaction(|_acct| Call::bill_contract_for_block {
+            contract_id,
+            block_number,
+        });
 
         if let Some((acc, res)) = result {
             if res.is_err() {
@@ -1004,7 +1004,7 @@ impl<T: Config> Pallet<T> {
                     contract_id,
                     block_number,
                     acc.id,
-                    res
+                    res.err()
                 );
                 return Err(<Error<T>>::OffchainSignedTxError);
             }
@@ -1100,7 +1100,11 @@ impl<T: Config> Pallet<T> {
         }
 
         // Handle contract lock operations
-        Self::handle_lock(contract, amount_due)?;
+        // not if the contract status was grace and changed to deleted because it means
+        // the grace period ended and there were still no funds
+        if !(was_grace && matches!(contract.state, types::ContractState::Deleted(_))) {
+            Self::handle_lock(contract, amount_due)?;
+        }
 
         // Always emit a contract billed event
         let contract_bill = types::ContractBill {
