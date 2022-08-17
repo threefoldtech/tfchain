@@ -296,8 +296,8 @@ fn motion_approval_works() {
         assert_ok!(DaoModule::vote(Origin::signed(11), 2, hash.clone(), true));
 
         // // Check farm certification type before we close
-        let f1 = TfgridModule::farms(1);
-        assert_eq!(f1.certification, FarmCertification::NotCertified);
+        let farm_1 = TfgridModule::farms(1).unwrap();
+        assert_eq!(farm_1.certification, FarmCertification::NotCertified);
 
         System::set_block_number(5);
         assert_ok!(DaoModule::close(Origin::signed(2), hash.clone(), 0,));
@@ -366,8 +366,8 @@ fn motion_approval_works() {
         );
 
         // // FarmCertification type of farm should be set to certified.
-        let f1 = TfgridModule::farms(1);
-        assert_eq!(f1.certification, FarmCertification::Gold);
+        let farm_1 = TfgridModule::farms(1).unwrap();
+        assert_eq!(farm_1.certification, FarmCertification::Gold);
     });
 }
 
@@ -507,8 +507,8 @@ fn weighted_voting_works() {
         assert_ok!(DaoModule::vote(Origin::signed(11), 2, hash.clone(), false));
 
         // // Check farm certification type before we close
-        let f1 = TfgridModule::farms(1);
-        assert_eq!(f1.certification, FarmCertification::NotCertified);
+        let farm_1 = TfgridModule::farms(1).unwrap();
+        assert_eq!(farm_1.certification, FarmCertification::NotCertified);
 
         System::set_block_number(5);
         assert_ok!(DaoModule::close(Origin::signed(2), hash.clone(), 0,));
@@ -570,8 +570,8 @@ fn weighted_voting_works() {
         );
 
         // FarmCertification type of farm should still be the same.
-        let f1 = TfgridModule::farms(1);
-        assert_eq!(f1.certification, FarmCertification::NotCertified);
+        let farm_1 = TfgridModule::farms(1).unwrap();
+        assert_eq!(farm_1.certification, FarmCertification::NotCertified);
     });
 }
 
@@ -602,7 +602,7 @@ fn voting_tfgridmodule_call_works() {
         assert_ok!(DaoModule::vote(Origin::signed(11), 2, hash.clone(), true));
 
         // Check connection price of node 1
-        let n1 = TfgridModule::nodes(1);
+        let n1 = TfgridModule::nodes(1).unwrap();
         assert_eq!(n1.connection_price, 80);
 
         System::set_block_number(5);
@@ -677,7 +677,7 @@ fn voting_tfgridmodule_call_works() {
         // Connection price should have been modified, any new node should have set the new price
         prepare_twin(15);
         prepare_node(15, 1);
-        let n3 = TfgridModule::nodes(3);
+        let n3 = TfgridModule::nodes(3).unwrap();
         assert_eq!(n3.connection_price, 100);
     });
 }
@@ -780,10 +780,12 @@ pub fn prepare_twin(account_id: u64) {
         document.clone(),
         hash.clone(),
     ));
-    let ip = "::1";
-    let ip_v = ip.as_bytes().to_vec();
-    let ip_bv: BoundedVec<u8, ConstU32<39>> = BoundedVec::try_from(ip_v).unwrap();
-    TfgridModule::create_twin(Origin::signed(account_id), ip_bv).unwrap();
+
+    let ip = get_twin_ip(b"::1");
+    assert_ok!(TfgridModule::create_twin(
+        Origin::signed(account_id),
+        ip.clone().0
+    ));
 }
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
@@ -850,17 +852,20 @@ fn prepare_big_node(account_id: u64, farm_id: u32) {
 pub fn prepare_farm(account_id: u64, farm_name: Vec<u8>) {
     let mut pub_ips = Vec::new();
     pub_ips.push(PublicIP {
-        ip: "1.1.1.0".as_bytes().to_vec(),
-        gateway: "1.1.1.1".as_bytes().to_vec(),
+        ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
+        gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
         contract_id: 0,
     });
 
-    let farm_name_bv = BoundedVec::try_from(farm_name).unwrap();
-    TfgridModule::create_farm(Origin::signed(account_id), farm_name_bv, pub_ips.clone()).unwrap();
+    assert_ok!(TfgridModule::create_farm(
+        Origin::signed(account_id),
+        farm_name.try_into().unwrap(),
+        pub_ips.clone(),
+    ));
 }
 
 fn create_farming_policies() {
-    let name = "farm1".as_bytes().to_vec();
+    let name = "farm_1".as_bytes().to_vec();
     assert_ok!(TfgridModule::create_farming_policy(
         RawOrigin::Root.into(),
         name,

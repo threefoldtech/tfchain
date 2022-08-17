@@ -40,12 +40,10 @@ pallet-timestamp =  { git = "https://github.com/paritytech/substrate", branch = 
 tfchain-support = { path = "../../support", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
 frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false, optional = true }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
 
 # Benchmarking
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false, optional = true }
-
-[dev-dependencies]
-sp-core =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
 
 [features]
 default = ['std']
@@ -65,6 +63,7 @@ std = [
 	'frame-benchmarking/std',
 	'sp-io/std',
 	'frame-try-runtime/std',
+	'sp-core/std'
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

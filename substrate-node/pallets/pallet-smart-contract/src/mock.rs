@@ -1,9 +1,17 @@
 #![cfg(test)]
 
 use super::*;
+use crate::name_contract::NameContractName;
 use crate::{self as pallet_smart_contract};
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::EnsureRoot;
+use pallet_tfgrid::{
+    farm::FarmName,
+    interface::{InterfaceIp, InterfaceMac, InterfaceName},
+    pub_config::{Domain, GW4, GW6, IP4, IP6},
+    pub_ip::{GatewayIP, PublicIP},
+    twin::TwinIp,
+};
 use sp_core::{crypto::Ss58Codec, sr25519, Pair, Public, H256};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::MultiSignature;
@@ -14,7 +22,6 @@ use sp_runtime::{
 };
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::{traits::ChangeNode, types::Node};
-use pallet_tfgrid::{{farm::FarmName}, {twin::TwinIp}};
 
 pub type Signature = MultiSignature;
 
@@ -94,21 +101,41 @@ impl pallet_balances::Config for TestRuntime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<TestRuntime>;
 }
 
-pub struct NodeChanged;
-impl ChangeNode for NodeChanged {
-    fn node_changed(_old_node: Option<&Node>, _new_node: &Node) {}
+pub(crate) type PubConfig = pallet_tfgrid::pallet::PubConfigOf<TestRuntime>;
+pub(crate) type Interface = pallet_tfgrid::pallet::InterfaceOf<TestRuntime>;
 
-    fn node_deleted(node: &Node) {
+pub struct NodeChanged;
+impl ChangeNode<PubConfig, Interface> for NodeChanged {
+    fn node_changed(
+        _old_node: Option<&Node<PubConfig, Interface>>,
+        _new_node: &Node<PubConfig, Interface>,
+    ) {
+    }
+
+    fn node_deleted(node: &Node<PubConfig, Interface>) {
         SmartContractModule::node_deleted(node);
     }
 }
 
 parameter_types! {
     pub const MaxFarmNameLength: u32 = 40;
+    pub const MaxInterfaceIpsLength: u32 = 5;
 }
 
 pub(crate) type TestTwinIp = TwinIp<TestRuntime>;
 pub(crate) type TestFarmName = FarmName<TestRuntime>;
+pub(crate) type TestPublicIP = PublicIP<TestRuntime>;
+pub(crate) type TestGatewayIP = GatewayIP<TestRuntime>;
+
+pub(crate) type TestIP4 = IP4<TestRuntime>;
+pub(crate) type TestGW4 = GW4<TestRuntime>;
+pub(crate) type TestIP6 = IP6<TestRuntime>;
+pub(crate) type TestGW6 = GW6<TestRuntime>;
+pub(crate) type TestDomain = Domain<TestRuntime>;
+
+pub(crate) type TestInterfaceName = InterfaceName<TestRuntime>;
+pub(crate) type TestInterfaceMac = InterfaceMac<TestRuntime>;
+pub(crate) type TestInterfaceIp = InterfaceIp<TestRuntime>;
 
 impl pallet_tfgrid::Config for TestRuntime {
     type Event = Event;
@@ -118,6 +145,17 @@ impl pallet_tfgrid::Config for TestRuntime {
     type TwinIp = TestTwinIp;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
+    type PublicIP = TestPublicIP;
+    type GatewayIP = TestGatewayIP;
+    type IP4 = TestIP4;
+    type GW4 = TestGW4;
+    type IP6 = TestIP6;
+    type GW6 = TestGW6;
+    type Domain = TestDomain;
+    type InterfaceName = TestInterfaceName;
+    type InterfaceMac = TestInterfaceMac;
+    type InterfaceIP = TestInterfaceIp;
+    type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
 }
 
 impl pallet_tft_price::Config for TestRuntime {
@@ -138,7 +176,12 @@ parameter_types! {
     pub const BillingFrequency: u64 = 10;
     pub const GracePeriod: u64 = 100;
     pub const DistributionFrequency: u16 = 24;
+    pub const MaxNameContractNameLength: u32 = 64;
+    pub const MaxNodeContractPublicIPs: u32 = 1;
+    pub const MaxDeploymentDataLength: u32 = 512;
 }
+
+pub(crate) type TestNameContractName = NameContractName<TestRuntime>;
 
 use weights;
 impl pallet_smart_contract::Config for TestRuntime {
@@ -150,10 +193,18 @@ impl pallet_smart_contract::Config for TestRuntime {
     type GracePeriod = GracePeriod;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
+    type MaxNameContractNameLength = MaxNameContractNameLength;
+    type NameContractName = TestNameContractName;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
+    type MaxDeploymentDataLength = MaxDeploymentDataLength;
+    type MaxNodeContractPublicIps = MaxNodeContractPublicIPs;
 }
 
 type AccountPublic = <MultiSignature as Verify>::Signer;
+
+pub(crate) fn get_name_contract_name(contract_name_input: &[u8]) -> TestNameContractName {
+    NameContractName::try_from(contract_name_input.to_vec()).expect("Invalid farm input.")
+}
 
 pub(crate) fn get_twin_ip(twin_ip_input: &[u8]) -> TestTwinIp {
     TwinIp::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")

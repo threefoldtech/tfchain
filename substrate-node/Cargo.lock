@@ -3943,8 +3943,10 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "frame-try-runtime",
  "hex",
  "hex-literal 0.3.4",
+ "log",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec 3.1.5",
@@ -3955,6 +3957,7 @@ dependencies = [
  "sp-std",
  "sp-storage",
  "tfchain-support",
+ "valip",
 ]
 
 [[package]]
@@ -7919,6 +7922,12 @@ dependencies = [
  "matches",
  "percent-encoding",
 ]
+
+[[package]]
+name = "valip"
+version = "0.3.0-rc2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4963d7dcb64348a5473a201d759b8342c32ecf5b72482b75d05e0c3ddefb18fe"
 
 [[package]]
 name = "valuable"

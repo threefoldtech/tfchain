@@ -4,6 +4,12 @@ use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::EnsureRoot;
 use pallet_collective;
 use pallet_tfgrid;
+use pallet_tfgrid::{
+    farm::FarmName,
+    pub_config::{Domain, GW4, GW6, IP4, IP6},
+    pub_ip::{GatewayIP, PublicIP},
+    twin::TwinIp,
+};
 use pallet_timestamp;
 use sp_core::H256;
 use sp_runtime::{
@@ -72,13 +78,14 @@ parameter_types! {
     pub const MinVetos: u32 = 2;
 }
 
+pub(crate) type PubConfig = pallet_tfgrid::pallet::PubConfigOf<Test>;
 pub struct NodeChanged;
-impl ChangeNode for NodeChanged {
-    fn node_changed(old_node: Option<&Node>, new_node: &Node) {
+impl ChangeNode<PubConfig> for NodeChanged {
+    fn node_changed(old_node: Option<&Node<PubConfig>>, new_node: &Node<PubConfig>) {
         DaoModule::node_changed(old_node, new_node)
     }
 
-    fn node_deleted(node: &Node) {
+    fn node_deleted(node: &Node<PubConfig>) {
         DaoModule::node_deleted(node);
     }
 }
@@ -99,14 +106,32 @@ parameter_types! {
     pub const MaxFarmNameLength: u32 = 40;
 }
 
+pub(crate) type TestTwinIp = TwinIp<Test>;
+pub(crate) type TestFarmName = FarmName<Test>;
+pub(crate) type TestPublicIP = PublicIP<Test>;
+pub(crate) type TestGatewayIP = GatewayIP<Test>;
+
+pub(crate) type TestIP4 = IP4<Test>;
+pub(crate) type TestGW4 = GW4<Test>;
+pub(crate) type TestIP6 = IP6<Test>;
+pub(crate) type TestGW6 = GW6<Test>;
+pub(crate) type TestDomain = Domain<Test>;
+
 impl pallet_tfgrid::Config for Test {
     type Event = Event;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Test>;
     type NodeChanged = NodeChanged;
-    type TwinIp = pallet_tfgrid::twin::TwinIp<Test>;
+    type TwinIp = TestTwinIp;
+    type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
-    type FarmName = pallet_tfgrid::farm::FarmName<Test>;
+    type PublicIP = TestPublicIP;
+    type GatewayIP = TestGatewayIP;
+    type IP4 = TestIP4;
+    type GW4 = TestGW4;
+    type IP6 = TestIP6;
+    type GW6 = TestGW6;
+    type Domain = TestDomain;
 }
 
 impl pallet_timestamp::Config for Test {
@@ -145,6 +170,10 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Test {
     type MembershipChanged = ();
     type MaxMembers = CouncilMaxMembers;
     type WeightInfo = pallet_membership::weights::SubstrateWeight<Test>;
+}
+
+pub(crate) fn get_twin_ip(twin_ip_input: &[u8]) -> TestTwinIp {
+    TwinIp::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
 }
 
 // Build genesis storage according to the mock runtime.

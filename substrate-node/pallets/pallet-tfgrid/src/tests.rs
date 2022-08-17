@@ -5,7 +5,7 @@ use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
 use tfchain_support::types::{
     FarmCertification, FarmingPolicyLimit, Location, NodeCertification, PublicConfig, PublicIP,
-    Resources,
+    Resources, IP,
 };
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -290,31 +290,33 @@ fn test_create_farm_works() {
 }
 
 #[test]
-fn test_create_farm_fails_invalid_name() {
+fn test_create_farm_invalid_name_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
         create_twin();
 
         let farm_name = BoundedVec::try_from(b"test.farm".to_vec()).unwrap();
-
         assert_noop!(
             TfgridModule::create_farm(Origin::signed(alice()), farm_name, Vec::new(),),
             Error::<TestRuntime>::InvalidFarmName
         );
-    });
-}
 
-#[test]
-fn test_create_farm_fails_empty_name() {
-    ExternalityBuilder::build().execute_with(|| {
-        create_entity();
-        create_twin();
-
-        let farm_name = BoundedVec::try_from(b"10:1".to_vec()).unwrap();
-
+        let farm_name = BoundedVec::try_from(b"test farm".to_vec()).unwrap();
         assert_noop!(
             TfgridModule::create_farm(Origin::signed(alice()), farm_name, Vec::new(),),
             Error::<TestRuntime>::InvalidFarmName
+        );
+
+        let farm_name = BoundedVec::try_from(b"".to_vec()).unwrap();
+        assert_noop!(
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name, Vec::new(),),
+            Error::<TestRuntime>::FarmNameTooShort
+        );
+
+        let farm_name = BoundedVec::try_from(b"12".to_vec()).unwrap();
+        assert_noop!(
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name, Vec::new(),),
+            Error::<TestRuntime>::FarmNameTooShort
         );
     });
 }
@@ -378,14 +380,19 @@ fn test_create_farm_with_double_ip_fails() {
 
         let farm_name = get_farm_name(b"test_farm");
         let mut pub_ips = Vec::new();
+
+        let ip = get_public_ip_ip(&"185.206.122.33/24".as_bytes().to_vec());
+        let gateway = get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec());
+
         pub_ips.push(PublicIP {
-            ip: "1.1.1.0".as_bytes().to_vec(),
-            gateway: "1.1.1.1".as_bytes().to_vec(),
+            ip: ip.clone(),
+            gateway: gateway.clone(),
             contract_id: 0,
         });
+
         pub_ips.push(PublicIP {
-            ip: "1.1.1.0".as_bytes().to_vec(),
-            gateway: "1.1.1.1".as_bytes().to_vec(),
+            ip,
+            gateway,
             contract_id: 0,
         });
 
@@ -406,9 +413,28 @@ fn test_adding_ip_to_farm_works() {
         assert_ok!(TfgridModule::add_farm_ip(
             Origin::signed(alice()),
             1,
-            "1.1.1.2".as_bytes().to_vec(),
-            "1.1.1.1".as_bytes().to_vec()
+            "185.206.122.125/16".as_bytes().to_vec(),
+            "185.206.122.1".as_bytes().to_vec()
         ));
+    });
+}
+
+#[test]
+fn test_adding_misformatted_ip_to_farm_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+
+        assert_noop!(
+            TfgridModule::add_farm_ip(
+                Origin::signed(alice()),
+                1,
+                "185.206.122.125".as_bytes().to_vec(),
+                "185.206.122.1".as_bytes().to_vec()
+            ),
+            Error::<TestRuntime>::InvalidPublicIP
+        );
     });
 }
 
@@ -425,7 +451,6 @@ fn test_delete_farm_fails() {
     });
 }
 
-
 #[test]
 fn test_adding_ip_duplicate_to_farm_fails() {
     ExternalityBuilder::build().execute_with(|| {
@@ -436,16 +461,16 @@ fn test_adding_ip_duplicate_to_farm_fails() {
         assert_ok!(TfgridModule::add_farm_ip(
             Origin::signed(alice()),
             1,
-            "1.1.1.2".as_bytes().to_vec(),
-            "1.1.1.1".as_bytes().to_vec()
+            "185.206.122.125/16".as_bytes().to_vec(),
+            "185.206.122.1".as_bytes().to_vec()
         ));
 
         assert_noop!(
             TfgridModule::add_farm_ip(
                 Origin::signed(alice()),
                 1,
-                "1.1.1.2".as_bytes().to_vec(),
-                "1.1.1.1".as_bytes().to_vec()
+                "185.206.122.125/16".as_bytes().to_vec(),
+                "185.206.122.1".as_bytes().to_vec()
             ),
             Error::<TestRuntime>::IpExists
         );
@@ -464,7 +489,7 @@ fn test_set_farm_dedicated() {
             true
         ));
 
-        let farm = TfgridModule::farms(1);
+        let farm = TfgridModule::farms(1).unwrap();
         assert_eq!(farm.dedicated_farm, true);
     })
 }
@@ -481,7 +506,7 @@ fn test_toggle_farm_dedicated() {
             true
         ));
 
-        let farm = TfgridModule::farms(1);
+        let farm = TfgridModule::farms(1).unwrap();
         assert_eq!(farm.dedicated_farm, true);
 
         assert_ok!(TfgridModule::set_farm_dedicated(
@@ -490,7 +515,7 @@ fn test_toggle_farm_dedicated() {
             false
         ));
 
-        let farm = TfgridModule::farms(1);
+        let farm = TfgridModule::farms(1).unwrap();
         assert_eq!(farm.dedicated_farm, false);
     })
 }
@@ -543,9 +568,13 @@ fn test_create_farm_with_same_name_fails() {
 
         let farm_name = get_farm_name(b"test_farm");
         let mut pub_ips = Vec::new();
+
+        let ip = get_public_ip_ip(&"185.206.122.33/24".as_bytes().to_vec());
+        let gateway = get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec());
+
         pub_ips.push(PublicIP {
-            ip: "1.1.1.0".as_bytes().to_vec(),
-            gateway: "1.1.1.1".as_bytes().to_vec(),
+            ip,
+            gateway,
             contract_id: 0,
         });
 
@@ -592,7 +621,7 @@ fn test_set_farm_certification_works() {
             FarmCertification::Gold
         ));
 
-        let f1 = TfgridModule::farms(1);
+        let f1 = TfgridModule::farms(1).unwrap();
         assert_eq!(f1.certification, FarmCertification::Gold);
     });
 }
@@ -604,6 +633,60 @@ fn create_node_works() {
         create_twin();
         create_farm();
         create_node();
+    });
+}
+
+#[test]
+fn create_node_with_interfaces_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+
+        let country = "Belgium".as_bytes().to_vec();
+        let city = "Ghent".as_bytes().to_vec();
+
+        // random location
+        let location = Location {
+            longitude: "12.233213231".as_bytes().to_vec(),
+            latitude: "32.323112123".as_bytes().to_vec(),
+        };
+
+        let resources = Resources {
+            hru: 1024 * GIGABYTE,
+            sru: 512 * GIGABYTE,
+            cru: 8,
+            mru: 16 * GIGABYTE,
+        };
+
+        let mut interface_ips = Vec::new();
+        let intf_ip_1 = get_interface_ip(&"10.2.3.3".as_bytes().to_vec());
+        interface_ips.push(intf_ip_1);
+
+        let name = get_interface_name(&"zos".as_bytes().to_vec());
+        let mac = get_interface_mac(&"00:00:5e:00:53:af".as_bytes().to_vec());
+
+        let interface = Interface {
+            name,
+            mac,
+            ips: interface_ips.try_into().unwrap(),
+        };
+
+        let mut interfaces = Vec::new();
+        interfaces.push(interface);
+
+        assert_ok!(TfgridModule::create_node(
+            Origin::signed(alice()),
+            1,
+            resources,
+            location,
+            country,
+            city,
+            interfaces,
+            true,
+            true,
+            "some_serial".as_bytes().to_vec()
+        ));
     });
 }
 
@@ -676,7 +759,7 @@ fn set_certification_type_node_works() {
             1,
             NodeCertification::Certified
         ));
-        let node = TfgridModule::nodes(1);
+        let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(node.certification, NodeCertification::Certified);
 
         assert_ok!(TfgridModule::set_node_certification(
@@ -684,7 +767,7 @@ fn set_certification_type_node_works() {
             1,
             NodeCertification::Diy
         ));
-        let node = TfgridModule::nodes(1);
+        let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(node.certification, NodeCertification::Diy);
     });
 }
@@ -710,22 +793,54 @@ fn node_add_public_config_works() {
         create_farm();
         create_node();
 
+        let ipv4 = get_pub_config_ip4(&"185.206.122.33/24".as_bytes().to_vec());
+        let ipv6 = get_pub_config_ip6(&"2a10:b600:1::0cc4:7a30:65b5/64".as_bytes().to_vec());
+        let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
+        let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
+
         let pub_config = PublicConfig {
-            ipv4: "some_ip".as_bytes().to_vec(),
-            ipv6: "some_ip".as_bytes().to_vec(),
-            gw4: "some_ip".as_bytes().to_vec(),
-            gw6: "some_ip".as_bytes().to_vec(),
-            domain: "some_domain".as_bytes().to_vec(),
+            ip4: IP { ip: ipv4, gw: gw4 },
+            ip6: Some(IP { ip: ipv6, gw: gw6 }),
+            domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
         };
 
         assert_ok!(TfgridModule::add_node_public_config(
             Origin::signed(alice()),
             1,
             1,
-            pub_config.clone()
+            Some(pub_config.clone())
         ));
 
-        let node = TfgridModule::nodes(1);
+        let node = TfgridModule::nodes(1).unwrap();
+        assert_eq!(node.public_config, Some(pub_config));
+    });
+}
+
+#[test]
+fn node_add_public_config_without_ipv6_and_domain_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        let ipv4 = get_pub_config_ip4(&"185.206.122.33/24".as_bytes().to_vec());
+        let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
+
+        let pub_config = PublicConfig {
+            ip4: IP { ip: ipv4, gw: gw4 },
+            ip6: None,
+            domain: None,
+        };
+
+        assert_ok!(TfgridModule::add_node_public_config(
+            Origin::signed(alice()),
+            1,
+            1,
+            Some(pub_config.clone())
+        ));
+
+        let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(node.public_config, Some(pub_config));
     });
 }
@@ -738,18 +853,99 @@ fn node_add_public_config_fails_if_signature_incorrect() {
         create_farm();
         create_node();
 
+        let ipv4 = get_pub_config_ip4(&"185.206.122.33/24".as_bytes().to_vec());
+        let ipv6 = get_pub_config_ip6(&"2a10:b600:1::0cc4:7a30:65b5/64".as_bytes().to_vec());
+        let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
+        let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
+
         let pub_config = PublicConfig {
-            ipv4: "some_ip".as_bytes().to_vec(),
-            ipv6: "some_ip".as_bytes().to_vec(),
-            gw4: "some_ip".as_bytes().to_vec(),
-            gw6: "some_ip".as_bytes().to_vec(),
-            domain: "some_domain".as_bytes().to_vec(),
+            ip4: IP { ip: ipv4, gw: gw4 },
+            ip6: Some(IP { ip: ipv6, gw: gw6 }),
+            domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
         };
 
         assert_noop!(
-            TfgridModule::add_node_public_config(Origin::signed(bob()), 1, 1, pub_config.clone()),
+            TfgridModule::add_node_public_config(
+                Origin::signed(bob()),
+                1,
+                1,
+                Some(pub_config.clone())
+            ),
             Error::<TestRuntime>::CannotUpdateFarmWrongTwin
         );
+    });
+}
+
+#[test]
+fn test_unsetting_node_public_config_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        let ipv4 = get_pub_config_ip4(&"185.206.122.33/24".as_bytes().to_vec());
+        let ipv6 = get_pub_config_ip6(&"2a10:b600:1::0cc4:7a30:65b5/64".as_bytes().to_vec());
+        let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
+        let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
+
+        let pub_config = PublicConfig {
+            ip4: IP { ip: ipv4, gw: gw4 },
+            ip6: Some(IP { ip: ipv6, gw: gw6 }),
+            domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
+        };
+
+        assert_ok!(TfgridModule::add_node_public_config(
+            Origin::signed(alice()),
+            1,
+            1,
+            Some(pub_config.clone())
+        ));
+
+        let node = TfgridModule::nodes(1).unwrap();
+        assert_eq!(node.public_config, Some(pub_config));
+
+        assert_ok!(TfgridModule::add_node_public_config(
+            Origin::signed(alice()),
+            1,
+            1,
+            None
+        ));
+
+        let node = TfgridModule::nodes(1).unwrap();
+        assert_eq!(node.public_config, None);
+    });
+}
+
+#[test]
+#[should_panic(expected = "InvalidIP4")]
+fn test_validate_invalid_ip4_1() {
+    ExternalityBuilder::build().execute_with(|| {
+        TestIP4::try_from("185.206.122.33".as_bytes().to_vec()).expect("fails");
+    });
+}
+
+#[test]
+#[should_panic(expected = "IP4ToShort")]
+fn test_validate_invalid_ip4_2() {
+    ExternalityBuilder::build().execute_with(|| {
+        TestIP4::try_from("185.206".as_bytes().to_vec()).expect("fails");
+    });
+}
+
+#[test]
+#[should_panic(expected = "IP4ToLong")]
+fn test_validate_invalid_ip4_3() {
+    ExternalityBuilder::build().execute_with(|| {
+        TestIP4::try_from("185.206.12.12.1232123".as_bytes().to_vec()).expect("fails");
+    });
+}
+
+#[test]
+#[should_panic(expected = "InvalidIP4")]
+fn test_validate_invalid_ip4_4() {
+    ExternalityBuilder::build().execute_with(|| {
+        TestIP4::try_from("garbage data".as_bytes().to_vec()).expect("fails");
     });
 }
 
@@ -874,7 +1070,7 @@ fn add_farm_limits_works() {
             Some(limit.clone())
         ));
 
-        let f1 = TfgridModule::farms(1);
+        let f1 = TfgridModule::farms(1).unwrap();
         assert_eq!(f1.farming_policy_limits, Some(limit));
     });
 }
@@ -900,15 +1096,15 @@ fn boot_node_when_farming_policy_has_limits_works() {
             Some(limit.clone())
         ));
 
-        let f1 = TfgridModule::farms(1);
+        let f1 = TfgridModule::farms(1).unwrap();
         assert_eq!(f1.farming_policy_limits, Some(limit.clone()));
 
         create_node();
 
-        let f1 = TfgridModule::farms(1);
+        let f1 = TfgridModule::farms(1).unwrap();
         assert_ne!(f1.farming_policy_limits, Some(limit.clone()));
 
-        let n1 = TfgridModule::nodes(1);
+        let n1 = TfgridModule::nodes(1).unwrap();
         assert_eq!(n1.farming_policy_id, limit.farming_policy_id);
     });
 }
@@ -934,12 +1130,12 @@ fn boot_node_when_farming_policy_low_cu_limit_should_fall_back_to_a_default_poli
             Some(limit.clone())
         ));
 
-        let f1 = TfgridModule::farms(1);
+        let f1 = TfgridModule::farms(1).unwrap();
         assert_eq!(f1.farming_policy_limits, Some(limit.clone()));
 
         create_node();
 
-        let n1 = TfgridModule::nodes(1);
+        let n1 = TfgridModule::nodes(1).unwrap();
         let default_p = TfgridModule::farming_policies_map(n1.farming_policy_id);
         assert_eq!(default_p.default, true);
     });
@@ -953,7 +1149,7 @@ fn node_switches_farming_policy_when_marked_as_certified_works() {
 
         create_node();
 
-        let n1 = TfgridModule::nodes(1);
+        let n1 = TfgridModule::nodes(1).unwrap();
         let assigned_policy = TfgridModule::farming_policies_map(n1.farming_policy_id);
         assert_eq!(assigned_policy.node_certification, NodeCertification::Diy);
 
@@ -967,7 +1163,7 @@ fn node_switches_farming_policy_when_marked_as_certified_works() {
             NodeCertification::Certified,
         ));
 
-        let n1 = TfgridModule::nodes(1);
+        let n1 = TfgridModule::nodes(1).unwrap();
         let assigned_policy = TfgridModule::farming_policies_map(n1.farming_policy_id);
         assert_eq!(
             assigned_policy.node_certification,
@@ -984,7 +1180,7 @@ fn node_switches_farming_policy_when_marked_as_certified_toggle_works() {
 
         create_node();
 
-        let n1 = TfgridModule::nodes(1);
+        let n1 = TfgridModule::nodes(1).unwrap();
         let assigned_policy = TfgridModule::farming_policies_map(n1.farming_policy_id);
         assert_eq!(assigned_policy.node_certification, NodeCertification::Diy);
 
@@ -998,7 +1194,7 @@ fn node_switches_farming_policy_when_marked_as_certified_toggle_works() {
             NodeCertification::Certified,
         ));
 
-        let n1 = TfgridModule::nodes(1);
+        let n1 = TfgridModule::nodes(1).unwrap();
         let assigned_policy = TfgridModule::farming_policies_map(n1.farming_policy_id);
         assert_eq!(
             assigned_policy.node_certification,
@@ -1010,7 +1206,7 @@ fn node_switches_farming_policy_when_marked_as_certified_toggle_works() {
             1,
             NodeCertification::Diy,
         ));
-        let n1 = TfgridModule::nodes(1);
+        let n1 = TfgridModule::nodes(1).unwrap();
         let assigned_policy = TfgridModule::farming_policies_map(n1.farming_policy_id);
         assert_eq!(assigned_policy.node_certification, NodeCertification::Diy);
     });
@@ -1024,7 +1220,7 @@ fn node_switches_farming_policy_when_marked_as_certified_and_gold_farm_works() {
 
         create_node();
 
-        let n1 = TfgridModule::nodes(1);
+        let n1 = TfgridModule::nodes(1).unwrap();
         let assigned_policy = TfgridModule::farming_policies_map(n1.farming_policy_id);
         assert_eq!(assigned_policy.node_certification, NodeCertification::Diy);
         assert_eq!(
@@ -1049,7 +1245,7 @@ fn node_switches_farming_policy_when_marked_as_certified_and_gold_farm_works() {
             NodeCertification::Certified,
         ));
 
-        let n1 = TfgridModule::nodes(1);
+        let n1 = TfgridModule::nodes(1).unwrap();
         let assigned_policy = TfgridModule::farming_policies_map(n1.farming_policy_id);
         assert_eq!(
             assigned_policy.node_certification,
@@ -1160,7 +1356,7 @@ fn sort_policies() {
 
         // create_node();
 
-        // let node = TfgridModule::nodes(1);
+        // let node = TfgridModule::nodes(1).unwrap();
         // // farming policy set on the node should be 3
         // // as we created the last DIY policy with id 3
         // assert_eq!(node.farming_policy_id, 3);
@@ -1402,9 +1598,13 @@ fn create_farm() {
     let farm_name = get_farm_name(b"test_farm");
 
     let mut pub_ips = Vec::new();
+
+    let ip = get_public_ip_ip(&"185.206.122.33/24".as_bytes().to_vec());
+    let gateway = get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec());
+
     pub_ips.push(PublicIP {
-        ip: "1.1.1.0".as_bytes().to_vec(),
-        gateway: "1.1.1.1".as_bytes().to_vec(),
+        ip,
+        gateway,
         contract_id: 0,
     });
     assert_ok!(TfgridModule::create_farm(
