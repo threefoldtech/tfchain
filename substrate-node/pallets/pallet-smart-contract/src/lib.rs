@@ -34,10 +34,7 @@ use sp_runtime::{
     Perbill,
 };
 use substrate_fixed::types::U64F64;
-use tfchain_support::{
-    traits::ChangeNode,
-    types::Node,
-};
+use tfchain_support::{traits::ChangeNode, types::Node};
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"smct");
 
@@ -518,10 +515,13 @@ pub mod pallet {
             // Index being current block number % (mod) Billing Frequency
             let current_index: u64 =
                 block_number.saturated_into::<u64>() % BillingFrequency::<T>::get();
+            Self::save_failed_contract_ids_in_storage(Vec::new());
             // filter out the contracts that have been deleted in the meantime
             contracts = contracts
                 .into_iter()
-                .filter(|contract_id| Contracts::<T>::contains_key(contract_id)).collect::<Vec<_>>();
+                .filter(|contract_id| Contracts::<T>::contains_key(contract_id))
+                .collect::<Vec<_>>();
+            contracts.dedup();
 
             let contracts = ContractsToBillAt::<T>::get(current_index);
             if contracts.is_empty() {
@@ -539,10 +539,6 @@ pub mod pallet {
                 block_number
             );
 
-            log::info!(
-                "contracts to bill: {:?}",
-                contracts
-            );
             for contract_id in contracts {
                 let _res = Self::bill_contract_using_signed_transaction(contract_id);
             }
@@ -1000,11 +996,10 @@ impl<T: Config> Pallet<T> {
         if let Some((acc, res)) = result {
             if res.is_err() {
                 log::error!(
-                    "failed billing contract {:?} at block {:?} using account {:?} with error {:?}",
+                    "signed transaction failed for billing contract {:?} at block {:?} using account {:?}",
                     contract_id,
                     block_number,
-                    acc.id,
-                    res.err()
+                    acc.id
                 );
                 return Err(<Error<T>>::OffchainSignedTxError);
             }
@@ -1014,6 +1009,13 @@ impl<T: Config> Pallet<T> {
         // The case of `None`: no account is available for sending
         log::error!("No local account available");
         return Err(<Error<T>>::OffchainSignedTxError);
+    }
+
+    fn append_failed_contract_ids_to_storage(failed_id: u64) {
+        let mut failed_ids = Self::get_failed_contract_ids_from_storage();
+        failed_ids.push(failed_id);
+
+        Self::save_failed_contract_ids_in_storage(failed_ids);
     }
 
     fn save_failed_contract_ids_in_storage(failed_ids: Vec<u64>) {
@@ -1100,7 +1102,7 @@ impl<T: Config> Pallet<T> {
         }
 
         // Handle contract lock operations
-        // not if the contract status was grace and changed to deleted because it means
+        // skip when the contract status was grace and changed to deleted because that means
         // the grace period ended and there were still no funds
         if !(was_grace && matches!(contract.state, types::ContractState::Deleted(_))) {
             Self::handle_lock(contract, amount_due)?;
