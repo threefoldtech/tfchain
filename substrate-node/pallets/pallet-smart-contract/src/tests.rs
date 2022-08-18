@@ -9,12 +9,11 @@ use frame_support::{
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
 use sp_runtime::{traits::SaturatedConversion, Perbill, Percent};
-use sp_std::convert::TryInto;
+use sp_std::convert::{TryFrom, TryInto};
 use substrate_fixed::types::U64F64;
 
 use crate::cost;
 use pallet_tfgrid::types as pallet_tfgrid_types;
-use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::types::{FarmCertification, Location, NodeCertification, PublicIP, Resources};
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
@@ -781,13 +780,14 @@ fn test_node_contract_billing_details() {
 
 #[test]
 fn test_node_contract_billing_details_with_solution_provider() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_farm_and_node();
 
         let alice_balance = Balances::free_balance(alice());
         prepare_solution_provider();
 
-        run_to_block(0);
+        run_to_block(0, Some(&mut pool_state));
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let twin = TfgridModule::twins(2).unwrap();
@@ -811,10 +811,11 @@ fn test_node_contract_billing_details_with_solution_provider() {
 
         let initial_total_issuance = Balances::total_issuance();
         // advance 25 cycles
-        let mut i = 0;
-        while i != 24 {
-            i += 1;
-            run_to_block(i * 10 + 1);
+        for i in 0..25 {
+            pool_state
+                .write()
+                .should_call_bill_contract(1, 10 + i * 10, Ok(()));
+            run_to_block(11 + i * 10, Some(&mut pool_state));
         }
 
         let free_balance = Balances::free_balance(&twin.account_id);
@@ -1223,9 +1224,10 @@ fn test_node_contract_billing_fails() {
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            1
+            generate_deployment_hash(),
+            get_deployment_data(),
+            1,
+            None
         ));
 
         let contracts_to_bill_at_block = SmartContractModule::contract_to_bill_at_block(11);
@@ -1545,7 +1547,7 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
         assert_ne!(usable_balance, 0);
         Balances::transfer(Origin::signed(bob()), alice(), usable_balance).unwrap();
 
-        // we do not call bill contract here as the contract is removed during 
+        // we do not call bill contract here as the contract is removed during
         // cancel_contract. The contract id will still be in ContractsToBillAt
         // but the contract itself will no longer exist
         run_to_block(22, Some(&mut pool_state));
@@ -1899,9 +1901,10 @@ fn test_restore_rent_contract_in_grace_works() {
 
 #[test]
 fn test_restore_rent_contract_and_node_contracts_in_grace_works() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
-        run_to_block(1);
+        run_to_block(1, None);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
@@ -1921,7 +1924,9 @@ fn test_restore_rent_contract_and_node_contracts_in_grace_works() {
         push_contract_resources_used(2);
 
         // cycle 1
-        run_to_block(12);
+        pool_state.write().should_call_bill_contract(1, 11, Ok(()));
+        pool_state.write().should_call_bill_contract(2, 11, Ok(()));
+        run_to_block(12, Some(&mut pool_state));
 
         let c1 = SmartContractModule::contracts(1).unwrap();
         assert_eq!(c1.state, types::ContractState::GracePeriod(11));
@@ -1952,22 +1957,30 @@ fn test_restore_rent_contract_and_node_contracts_in_grace_works() {
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(21);
         assert_eq!(contract_to_bill.len(), 2);
-        run_to_block(22);
+        pool_state.write().should_call_bill_contract(1, 21, Ok(()));
+        pool_state.write().should_call_bill_contract(2, 21, Ok(()));
+        run_to_block(22, Some(&mut pool_state));
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(31);
         assert_eq!(contract_to_bill.len(), 2);
-        run_to_block(32);
+        pool_state.write().should_call_bill_contract(1, 31, Ok(()));
+        pool_state.write().should_call_bill_contract(2, 31, Ok(()));
+        run_to_block(32, Some(&mut pool_state));
 
         // Transfer some balance to the owner of the contract to trigger the grace period to stop
         Balances::transfer(Origin::signed(bob()), charlie(), 100000000).unwrap();
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(41);
         assert_eq!(contract_to_bill.len(), 2);
-        run_to_block(42);
+        pool_state.write().should_call_bill_contract(1, 41, Ok(()));
+        pool_state.write().should_call_bill_contract(2, 41, Ok(()));
+        run_to_block(42, Some(&mut pool_state));
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(51);
         assert_eq!(contract_to_bill.len(), 2);
-        run_to_block(52);
+        pool_state.write().should_call_bill_contract(1, 51, Ok(()));
+        pool_state.write().should_call_bill_contract(2, 51, Ok(()));
+        run_to_block(52, Some(&mut pool_state));
 
         let c1 = SmartContractModule::contracts(1).unwrap();
         assert_eq!(c1.state, types::ContractState::Created);
