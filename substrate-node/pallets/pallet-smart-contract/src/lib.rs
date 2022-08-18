@@ -36,8 +36,8 @@ use sp_runtime::{
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
     traits::ChangeNode,
-    types::{Node, NodeCertification, Resources},
-}
+    types::Node,
+};
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"smct");
 
@@ -521,7 +521,7 @@ pub mod pallet {
             // filter out the contracts that have been deleted in the meantime
             contracts = contracts
                 .into_iter()
-                .filter(|contract_id| Contracts::<T>::get(contract_id).contract_id != 0).collect::<Vec<_>>();
+                .filter(|contract_id| Contracts::<T>::contains_key(contract_id)).collect::<Vec<_>>();
 
             let contracts = ContractsToBillAt::<T>::get(current_index);
             if contracts.is_empty() {
@@ -1376,7 +1376,6 @@ impl<T: Config> Pallet<T> {
             Contracts::<T>::remove(contract_id);
             ContractLock::<T>::remove(contract_id);
         }
-        log::info!("Average prise is {:?}", avg_tft_price);
     }
 
     // Following: https://library.threefold.me/info/threefold#/tfgrid/farming/threefold__proof_of_utilization
