@@ -35,10 +35,7 @@ use sp_runtime::{
     Perbill,
 };
 use substrate_fixed::types::U64F64;
-use tfchain_support::{
-    traits::ChangeNode,
-    types::Node,
-};
+use tfchain_support::{traits::ChangeNode, types::Node};
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"smct");
 
@@ -482,11 +479,14 @@ pub mod pallet {
                     contracts
                 );
             }
+            Self::save_failed_contract_ids_in_storage(Vec::new());
             contracts.extend(ContractsToBillAt::<T>::get(current_block_u64));
             // filter out the contracts that have been deleted in the meantime
             contracts = contracts
                 .into_iter()
-                .filter(|contract_id| Contracts::<T>::contains_key(contract_id)).collect::<Vec<_>>();
+                .filter(|contract_id| Contracts::<T>::contains_key(contract_id))
+                .collect::<Vec<_>>();
+            contracts.dedup();
 
             if contracts.is_empty() {
                 log::debug!("No contracts to bill at block {:?}", block_number);
@@ -511,13 +511,7 @@ pub mod pallet {
                     "all contracts billed successfully at block: {:?}",
                     block_number
                 );
-            } else {
-                log::info!(
-                    "billing failed for some of the contracts at block: {:?}",
-                    block_number
-                );
             }
-            Self::save_failed_contract_ids_in_storage(failed_contract_ids);
         }
 
         fn on_runtime_upgrade() -> Weight {
@@ -942,7 +936,11 @@ impl<T: Config> Pallet<T> {
         }
         let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
 
-        log::info!("billing contract with id {:?} at block {:?}", contract_id, block);
+        log::info!(
+            "billing contract with id {:?} at block {:?}",
+            contract_id,
+            block
+        );
         // Try to bill contract
         match Self::bill_contract(&mut contract) {
             Ok(_) => {
@@ -953,12 +951,15 @@ impl<T: Config> Pallet<T> {
                 );
             }
             Err(err) => {
+                // if billing failed append it to the failed ids in local storage
+                // billing will be retried at the next block
                 log::error!(
                     "error while billing contract with id {:?}: {:?}",
                     contract_id,
-                    err
+                    err.error
                 );
-                return Err(err);
+                Self::append_failed_contract_ids_to_storage(contract_id);
+                return Ok(().into());
             }
         }
 
@@ -975,7 +976,7 @@ impl<T: Config> Pallet<T> {
             // Reinsert into the next billing frequency
             Self::_reinsert_contract_to_bill(contract.contract_id);
         }
-        
+
         Ok(().into())
     }
 
@@ -989,11 +990,10 @@ impl<T: Config> Pallet<T> {
         if let Some((acc, res)) = result {
             if res.is_err() {
                 log::error!(
-                    "failed billing contract {:?} at block {:?} using account {:?} with error {:?}",
+                    "signed transaction failed for billing contract {:?} at block {:?} using account {:?}",
                     contract_id,
                     block_number,
-                    acc.id,
-                    res.err()
+                    acc.id
                 );
                 return Err(<Error<T>>::OffchainSignedTxError);
             }
@@ -1003,6 +1003,13 @@ impl<T: Config> Pallet<T> {
         // The case of `None`: no account is available for sending
         log::error!("No local account available");
         return Err(<Error<T>>::OffchainSignedTxError);
+    }
+
+    fn append_failed_contract_ids_to_storage(failed_id: u64) {
+        let mut failed_ids = Self::get_failed_contract_ids_from_storage();
+        failed_ids.push(failed_id);
+
+        Self::save_failed_contract_ids_in_storage(failed_ids);
     }
 
     fn save_failed_contract_ids_in_storage(failed_ids: Vec<u64>) {
@@ -1066,7 +1073,7 @@ impl<T: Config> Pallet<T> {
         let contract = Self::handle_grace(contract, usable_balance, amount_due)?;
 
         // Handle contract lock operations
-        // not if the contract status was grace and changed to deleted because it means
+        // skip when the contract status was grace and changed to deleted because that means
         // the grace period ended and there were still no funds
         if !(was_grace && matches!(contract.state, types::ContractState::Deleted(_))) {
             Self::handle_lock(contract, amount_due)?;
@@ -1132,7 +1139,10 @@ impl<T: Config> Pallet<T> {
                 // we can still update the internal contract lock object to figure out later how much was due
                 // whilst in grace period
                 if amount_due >= usable_balance {
-                    log::info!("Grace period started at block {:?} due to lack of funds", current_block);
+                    log::info!(
+                        "Grace period started at block {:?} due to lack of funds",
+                        current_block
+                    );
                     Self::_update_contract_state(
                         contract,
                         &types::ContractState::GracePeriod(current_block),
