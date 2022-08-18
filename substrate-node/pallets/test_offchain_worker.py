@@ -1,4 +1,4 @@
-from re import sub
+from random import randbytes
 from substrateinterface import SubstrateInterface, Keypair, KeypairType
 
 GIGABYTE = 1024*1024*1024
@@ -28,10 +28,8 @@ call_user_accept_tc = substrate.compose_call("TfgridModule",
 call_user_accept_tc_signed = substrate.create_signed_extrinsic(call_user_accept_tc, key_alice)
 
 response = substrate.submit_extrinsic(call_user_accept_tc_signed, wait_for_finalization=True)
-if not response.is_success:
-    print(response.error_message)
-    exit(-1)
-    
+if response.error_message:
+    print(response.error_message)    
 
 
 
@@ -42,9 +40,8 @@ call_create_twin = substrate.compose_call("TfgridModule",
                                              })
 call_create_twin_signed = substrate.create_signed_extrinsic(call_create_twin, key_alice)
 response = substrate.submit_extrinsic(call_create_twin_signed, wait_for_finalization=True)
-if not response.is_success:
+if response.error_message:
     print(response.error_message)
-    exit(-1)
     
 
 
@@ -56,9 +53,8 @@ call_create_farm = substrate.compose_call("TfgridModule",
                                              })
 call_create_farm_signed = substrate.create_signed_extrinsic(call_create_farm, key_alice)
 response = substrate.submit_extrinsic(call_create_farm_signed, wait_for_finalization=True)
-if not response.is_success:
+if response.error_message:
     print(response.error_message)
-    exit(-1)
     
 
 
@@ -84,22 +80,20 @@ call_create_node = substrate.compose_call("TfgridModule",
                                              })
 call_create_node_signed = substrate.create_signed_extrinsic(call_create_node, key_alice)
 response = substrate.submit_extrinsic(call_create_node_signed, wait_for_finalization=True)
-if not response.is_success:
+if response.error_message:
     print(response.error_message)
-    exit(-1)
-    
+
 
 call_create_contract = substrate.compose_call("SmartContractModule",
                                               "create_node_contract",
                                               {
                                                   "node_id": 1,
-                                                  "data": "garbage",
-                                                  "deployment_hash": "garbage",
-                                                  "public_ips": 0
+                                                  "deployment_data": randbytes(32),
+                                                  "deployment_hash": randbytes(32),
+                                                  "public_ips": 0,
+                                                  "solution_provider_id": None
                                               })
 call_create_contract_signed = substrate.create_signed_extrinsic(call_create_contract, key_alice)
 response = substrate.submit_extrinsic(call_create_contract_signed, wait_for_finalization=True)
-if not response.is_success:
-    print(response.error_message)
-    exit(-1)
-    
+if response.error_message:
+    print(response.error_message)    

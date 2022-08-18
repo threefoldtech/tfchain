@@ -1200,10 +1200,11 @@ fn test_node_contract_billing_fails() {
         // at block 11 billing should fail because of the value of tft being 0
         // the offchain worker should save the failed ids in local storage and try again
         // in subsequent blocks (which will also fail)
+        // TODO change description
         for i in 0..3 {
             pool_state
                 .write()
-                .should_call_bill_contract(1, 11 + i, Err(()));
+                .should_call_bill_contract(1, 11 + i, Ok(()));
             run_to_block(12 + i, Some(&mut pool_state));
         }
 

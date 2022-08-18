@@ -45,9 +45,11 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 # Benchmarking
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false, optional = true }
 
+[dev-dependencies]
 parking_lot = '0.12.1'
 sp-keystore =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
 env_logger = "*"
+
 [features]
 default = ['std']
 std = [
