@@ -224,19 +224,31 @@ fn test_parse_price() {
 }
 
 #[test]
-fn test_parse_lowest_price_from_request() {
+fn test_parse_lowest_price_from_valid_request_works() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
         let request_str = json_stellar_price_request_valid();
         let price = TFTPriceModule::parse_lowest_price_from_request(request_str).unwrap();
         assert_eq!(price, 33);
+    })
+}
 
+#[test]
+fn test_parse_lowest_price_from_empty_request_fails() {
+    let mut t = ExternalityBuilder::build();
+    t.execute_with(|| {
         let request_str = json_stellar_price_request_empty();
         assert_eq!(
             TFTPriceModule::parse_lowest_price_from_request(request_str),
             None
         );
+    })
+}
 
+#[test]
+fn test_parse_lowest_price_from_incomplete_request_fails() {
+    let mut t = ExternalityBuilder::build();
+    t.execute_with(|| {
         let request_str = json_stellar_price_request_incomplete();
         assert_eq!(
             TFTPriceModule::parse_lowest_price_from_request(request_str),
