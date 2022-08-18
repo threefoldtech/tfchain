@@ -1,7 +1,8 @@
 #![cfg(test)]
 
-use super::*;
+use super::*; 
 use crate::name_contract::NameContractName;
+use parking_lot::RawRwLock;
 use crate::{self as pallet_smart_contract};
 use codec::alloc::sync::Arc;
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
@@ -13,7 +14,7 @@ use pallet_tfgrid::{
     pub_ip::{GatewayIP, PublicIP},
     twin::TwinIp,
 };
-use sp_runtime::traits::{IdentifyAccount, Verify};
+use sp_runtime::{traits::{IdentifyAccount, Verify}, offchain::testing::PoolState};
 use sp_runtime::MultiSignature;
 use sp_keystore::{testing::KeyStore, KeystoreExt, SyncCryptoStore};
 use sp_runtime::{
@@ -296,19 +297,29 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     };
     genesis.assimilate_storage(&mut storage).unwrap();
 
-    let (offchain, _) = testing::TestOffchainExt::new();
-    let (pool, _) = testing::TestTransactionPoolExt::new();
+
+    let t = sp_io::TestExternalities::from(storage);
+
+    t
+}
+
+pub fn offchainify(ext: &mut sp_io::TestExternalities, iterations: u32) -> Arc<RwLock<PoolState>> {
+    let (offchain, offchain_state) = testing::TestOffchainExt::new();
+    let (pool, pool_state) = testing::TestTransactionPoolExt::new();
     let keystore = KeyStore::new();
     keystore
     .sr25519_generate_new(KEY_TYPE, Some(&format!("//Alice")))
     .unwrap();
 
-    let mut t = sp_io::TestExternalities::from(storage);
-    t.register_extension(OffchainWorkerExt::new(offchain));
-    t.register_extension(TransactionPoolExt::new(pool));
-    t.register_extension(KeystoreExt(Arc::new(keystore)));
+    let mut seed = [0_u8; 32];
+    seed[0..4].copy_from_slice(&iterations.to_le_bytes());
+    offchain_state.write().seed = seed;
 
-    t.execute_with(|| System::set_block_number(1));
+    ext.register_extension(OffchainWorkerExt::new(offchain.clone()));
+    ext.register_extension(OffchainDbExt::new(offchain));
+    ext.register_extension(TransactionPoolExt::new(pool));
+    ext.register_extension(KeystoreExt(Arc::new(keystore)));
 
-    t
+
+    pool_state
 }

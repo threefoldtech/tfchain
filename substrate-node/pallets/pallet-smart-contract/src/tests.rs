@@ -2412,10 +2412,13 @@ pub fn create_twin(origin: AccountId) {
 fn run_to_block(n: u64) {
     Timestamp::set_timestamp((1628082000 * 1000) + (6000 * n));
     while System::block_number() < n {
+        System::offchain_worker(System::block_number());
         SmartContractModule::offchain_worker(System::block_number());
+        SmartContractModule::on_finalize(System::block_number());
         System::on_finalize(System::block_number());
         System::set_block_number(System::block_number() + 1);
         System::on_initialize(System::block_number());
+        SmartContractModule::on_initialize(System::block_number());
     }
 }
 

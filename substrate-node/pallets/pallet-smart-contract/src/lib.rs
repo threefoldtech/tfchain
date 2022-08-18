@@ -458,6 +458,11 @@ pub mod pallet {
         fn offchain_worker(block_number: T::BlockNumber) {
             let current_block_u64: u64 = block_number.saturated_into::<u64>();
             let contracts = ContractsToBillAt::<T>::get(current_block_u64);
+
+            if contracts.is_empty() {
+                return;
+            }
+
             let mut failed_contract_ids: Vec<u64> = Vec::new();
 
             log::info!(
@@ -983,6 +988,7 @@ impl<T: Config> Pallet<T> {
                 return Err(<Error<T>>::OffchainSignedTxError);
             }
             log::info!("result for tx {:?}", res);
+            log::info!("acc for tx {:?}", acc.id);
 
             // Transaction is sent successfully
             return Ok(());
