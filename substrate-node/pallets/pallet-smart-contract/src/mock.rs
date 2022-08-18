@@ -1,8 +1,9 @@
 #![cfg(test)]
 use std::{panic, thread};
 
-use super::*;
+use super::*; 
 use crate::name_contract::NameContractName;
+use parking_lot::RawRwLock;
 use crate::{self as pallet_smart_contract};
 use codec::{alloc::sync::Arc, Decode};
 use frame_support::{
@@ -34,7 +35,6 @@ use sp_core::{
     sr25519, Pair, Public, H256,
 };
 use sp_keystore::{testing::KeyStore, KeystoreExt, SyncCryptoStore};
-use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::{offchain::TransactionPool, MultiSignature};
 use sp_keystore::{testing::KeyStore, KeystoreExt, SyncCryptoStore};
 use sp_runtime::{

@@ -2725,6 +2725,9 @@ pub fn create_twin(origin: AccountId) {
     let ip = get_twin_ip_input(b"::1");
     assert_ok!(TfgridModule::create_twin(Origin::signed(origin), ip));
 }
+        System::offchain_worker(System::block_number());
+        SmartContractModule::on_finalize(System::block_number());
+        SmartContractModule::on_initialize(System::block_number());
 
 fn create_farming_policies() {
     let name = "f1".as_bytes().to_vec();
