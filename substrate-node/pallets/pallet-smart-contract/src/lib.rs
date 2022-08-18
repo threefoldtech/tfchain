@@ -447,7 +447,6 @@ pub mod pallet {
             contract_id: u64,
             block_number: T::BlockNumber
         ) -> DispatchResultWithPostInfo {
-            //TODO needed?
             let _account_id = ensure_signed(origin)?;
             Self::_bill_contract_for_block(contract_id, block_number)
         }
@@ -456,8 +455,6 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn offchain_worker(block_number: T::BlockNumber) {
-            //println!("Offchain Worker!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-
             let current_block_u64: u64 = block_number.saturated_into::<u64>();
             let contracts = ContractsToBillAt::<T>::get(current_block_u64);
             let mut failed_contract_ids: Vec<u64> = Vec::new();
@@ -927,7 +924,8 @@ impl<T: Config> Pallet<T> {
         }
             let mut contract =
                 Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
-
+        
+        log::info!("billing contract with id {:?} at block {:?}", contract_id, block);
         // Try to bill contract
         match Self::bill_contract(&mut contract) {
             Ok(_) => {
@@ -967,6 +965,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn offchain_signed_tx(block_number: T::BlockNumber, contract_id: u64) -> Result<(), Error<T>> {
+        log::info!("Billing contract {:?} from block {:?}", contract_id, block_number);
         let signer = Signer::<T, T::AuthorityId>::any_account();    
         let result = signer.send_signed_transaction(|_acct| Call::bill_contract_for_block {
             contract_id,

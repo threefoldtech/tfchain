@@ -3,6 +3,7 @@
 use super::*;
 use crate::name_contract::NameContractName;
 use crate::{self as pallet_smart_contract};
+use codec::alloc::sync::Arc;
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::EnsureRoot;
 use pallet_tfgrid::{
@@ -12,9 +13,9 @@ use pallet_tfgrid::{
     pub_ip::{GatewayIP, PublicIP},
     twin::TwinIp,
 };
-use sp_core::{crypto::Ss58Codec, sr25519, Pair, Public, H256};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::MultiSignature;
+use sp_keystore::{testing::KeyStore, KeystoreExt, SyncCryptoStore};
 use sp_runtime::{
     testing::{Header, TestXt},
     traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentityLookup},
@@ -278,7 +279,7 @@ pub fn get_staking_pool_account() -> AccountId {
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
     //TODO add offchain worker see pallet-tft-price impl ExternalityBuilder
-    let mut t = frame_system::GenesisConfig::default()
+    let mut storage = frame_system::GenesisConfig::default()
         .build_storage::<TestRuntime>()
         .unwrap();
     let genesis = pallet_balances::GenesisConfig::<TestRuntime> {
@@ -288,12 +289,26 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
             (charlie(), 150000),
         ],
     };
-    genesis.assimilate_storage(&mut t).unwrap();
+    genesis.assimilate_storage(&mut storage).unwrap();
 
     let genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
         allowed_origin: Some(bob()),
     };
-    genesis.assimilate_storage(&mut t).unwrap();
+    genesis.assimilate_storage(&mut storage).unwrap();
 
-    t.into()
+    let (offchain, _) = testing::TestOffchainExt::new();
+    let (pool, _) = testing::TestTransactionPoolExt::new();
+    let keystore = KeyStore::new();
+    keystore
+    .sr25519_generate_new(KEY_TYPE, Some(&format!("//Alice")))
+    .unwrap();
+
+    let mut t = sp_io::TestExternalities::from(storage);
+    t.register_extension(OffchainWorkerExt::new(offchain));
+    t.register_extension(TransactionPoolExt::new(pool));
+    t.register_extension(KeystoreExt(Arc::new(keystore)));
+
+    t.execute_with(|| System::set_block_number(1));
+
+    t
 }
