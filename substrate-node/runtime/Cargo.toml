@@ -33,7 +33,6 @@ path = "../pallets/pallet-kvstore"
 default-features = false
 git = "https://github.com/threefoldtech/tfchain_tft_bridge"
 package = "pallet-tft-bridge"
-branch = "upgrade_to_polkadot_0_9_24"
 #path = "../../../tfchain_tft/pallet-tft-bridge"
 
 [dependencies.pallet-tft-price]
@@ -130,6 +129,8 @@ try-runtime = [
     "pallet-sudo/try-runtime",
     "pallet-timestamp/try-runtime",
     "pallet-transaction-payment/try-runtime",
+    "pallet-smart-contract/try-runtime",
+    "pallet-tfgrid/try-runtime"
 ]
 std = [
     'codec/std',

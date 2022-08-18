@@ -10,7 +10,7 @@ use crate::{Config, Error};
 ///
 /// It is bounded in size (inclusive range [MinLength, MaxLength]) and must be a valid ipv6
 #[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-#[scale_info(skip_type_params(T, MinLength, MaxLength))]
+#[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct FarmName<T: Config>(
     pub(crate) BoundedVec<u8, T::MaxFarmNameLength>,
@@ -40,6 +40,12 @@ impl<T: Config> TryFrom<Vec<u8>> for FarmName<T> {
     }
 }
 
+impl<T: Config> From<FarmName<T>> for Vec<u8> {
+    fn from(value: FarmName<T>) -> Self {
+        value.0.to_vec()
+    }
+}
+
 // FIXME: did not find a way to automatically implement this.
 impl<T: Config> PartialEq for FarmName<T> {
     fn eq(&self, other: &Self) -> bool {
@@ -54,8 +60,18 @@ impl<T: Config> Clone for FarmName<T> {
     }
 }
 
+pub fn replace_farm_name_spaces_with_underscores(input: &[u8]) -> Vec<u8> {
+    input
+        .iter()
+        .map(|c| match c {
+            b' ' => b'_',
+            _ => *c,
+        })
+        .collect()
+}
+
 fn validate_farm_name(input: &[u8]) -> bool {
-	input
-		.iter()
-		.all(|c| matches!(c, b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_'))
+    input
+        .iter()
+        .all(|c| matches!(c, b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_'))
 }
