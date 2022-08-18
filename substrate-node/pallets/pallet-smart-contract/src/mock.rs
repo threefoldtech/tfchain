@@ -16,7 +16,9 @@ use pallet_tfgrid::{
     pub_ip::{GatewayIP, PublicIP},
     twin::TwinIp,
 };
+use parking_lot::RwLock;
 use sp_core::{
+    crypto::Ss58Codec,
     offchain::{
         testing::{self},
         OffchainDbExt, OffchainWorkerExt, TransactionPoolExt,
@@ -218,6 +220,8 @@ impl pallet_smart_contract::Config for TestRuntime {
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type MaxDeploymentDataLength = MaxDeploymentDataLength;
     type MaxNodeContractPublicIps = MaxNodeContractPublicIPs;
+    type AuthorityId = pallet_smart_contract::crypto::AuthId;
+    type Call = Call;
 }
 
 type AccountPublic = <MultiSignature as Verify>::Signer;

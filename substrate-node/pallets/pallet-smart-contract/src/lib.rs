@@ -37,8 +37,8 @@ use sp_runtime::{
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
     traits::ChangeNode,
-    types::{Node, NodeCertification, Resources},
-}
+    types::Node,
+};
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"smct");
 
@@ -520,7 +520,7 @@ pub mod pallet {
             // filter out the contracts that have been deleted in the meantime
             contracts = contracts
                 .into_iter()
-                .filter(|contract_id| Contracts::<T>::get(contract_id).contract_id != 0).collect::<Vec<_>>();
+                .filter(|contract_id| Contracts::<T>::contains_key(contract_id)).collect::<Vec<_>>();
 
             if contracts.is_empty() {
                 log::debug!("No contracts to bill at block {:?}", block_number);
@@ -971,12 +971,10 @@ impl<T: Config> Pallet<T> {
         block: T::BlockNumber,
     ) -> DispatchResultWithPostInfo {
         if !Contracts::<T>::contains_key(contract_id) {
-
             return Ok(().into());
         }
-            let mut contract =
-                Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
-        
+        let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+
         log::info!("billing contract with id {:?} at block {:?}", contract_id, block);
         // Try to bill contract
         match Self::bill_contract(&mut contract) {
@@ -1000,17 +998,17 @@ impl<T: Config> Pallet<T> {
         // https://github.com/threefoldtech/tfchain/issues/264
         // if a contract is still in storage and actively getting billed whilst it is in state delete
         // remove all associated storage and continue
-            let ctr = Contracts::<T>::get(contract_id);
-            if let Some(contract) = ctr {
-                if contract.contract_id != 0 && contract.is_state_delete() {
-                    Self::remove_contract(contract.contract_id);
-                    return Ok(().into());
-                }
-
-                // Reinsert into the next billing frequency
-                Self::_reinsert_contract_to_bill(contract.contract_id);
+        let ctr = Contracts::<T>::get(contract_id);
+        if let Some(contract) = ctr {
+            if contract.contract_id != 0 && contract.is_state_delete() {
+                Self::remove_contract(contract.contract_id);
+                return Ok(().into());
             }
+
+            // Reinsert into the next billing frequency
+            Self::_reinsert_contract_to_bill(contract.contract_id);
         }
+        
         Ok(().into())
     }
 
@@ -1373,7 +1371,6 @@ impl<T: Config> Pallet<T> {
             Contracts::<T>::remove(contract_id);
             ContractLock::<T>::remove(contract_id);
         }
-        log::info!("Average prise is {:?}", avg_tft_price);
     }
 
     // Following: https://library.threefold.me/info/threefold#/tfgrid/farming/threefold__proof_of_utilization
