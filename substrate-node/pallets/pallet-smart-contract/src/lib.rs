@@ -991,6 +991,7 @@ impl<T: Config> Pallet<T> {
                 return Err(<Error<T>>::OffchainSignedTxError);
             }
             log::info!("result for tx {:?}", res);
+            log::info!("acc for tx {:?}", acc.id);
 
             // Transaction is sent successfully
             return Ok(());
