@@ -926,7 +926,7 @@ impl<T: Config> Pallet<T> {
         match Self::bill_contract(&mut contract) {
             Ok(_) => {
                 log::info!(
-                    "billed contract with id {:?} at block {:?}",
+                    "successfully billed contract with id {:?} at block {:?}",
                     contract_id,
                     block
                 );
