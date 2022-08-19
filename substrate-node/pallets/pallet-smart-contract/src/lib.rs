@@ -25,11 +25,7 @@ use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_timestamp as timestamp;
 use sp_core::crypto::KeyTypeId;
 use sp_runtime::{
-    offchain::{
-        storage::StorageValueRef,
-        storage_lock::{BlockAndTime, StorageLock},
-        Duration,
-    },
+    offchain::storage::StorageValueRef,
     traits::{CheckedSub, SaturatedConversion},
     Perbill,
 };
@@ -112,12 +108,6 @@ pub mod pallet {
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::NegativeImbalance;
 
     pub const GRID_LOCK_ID: LockIdentifier = *b"gridlock";
-
-    pub const FAILED_CONTRACTS_STORAGE_ID: [u8; 52] =
-        *b"pallet-smart-contract::failed-contracts-when-billing";
-    pub const FAILED_CONTRACTS_STORAGE_LOCK: [u8; 44] =
-        *b"pallet-smart-contract::failed-contracts-lock";
-    pub const FAILED_CONTRACTS_TIMEOUT: Duration = Duration::from_millis(60000);
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -515,6 +505,7 @@ pub mod pallet {
             // Index being current block number % (mod) Billing Frequency
             let current_index: u64 =
                 block_number.saturated_into::<u64>() % BillingFrequency::<T>::get();
+            //reset the failed contract ids for next run
             Self::save_failed_contract_ids_in_storage(Vec::new());
             // filter out the contracts that have been deleted in the meantime
             contracts = contracts
@@ -986,7 +977,10 @@ impl<T: Config> Pallet<T> {
         return Err(<Error<T>>::OffchainSignedTxError);
     }
 
-    fn offchain_signed_tx(block_number: T::BlockNumber, contract_id: u64) -> Result<(), Error<T>> {
+    fn bill_contract_using_signed_transaction(
+        block_number: T::BlockNumber,
+        contract_id: u64,
+    ) -> Result<(), Error<T>> {
         let signer = Signer::<T, T::AuthorityId>::any_account();
         let result = signer.send_signed_transaction(|_acct| Call::bill_contract_for_block {
             contract_id,
@@ -994,6 +988,10 @@ impl<T: Config> Pallet<T> {
         });
 
         if let Some((acc, res)) = result {
+            // if res is an error this means sending the transaction failed
+            // this means the transaction was already send before (probably by another node)
+            // unfortunately the error is always empty (substrate just logs the error and
+            // returns Err())
             if res.is_err() {
                 log::error!(
                     "signed transaction failed for billing contract {:?} at block {:?} using account {:?}",
@@ -1003,15 +1001,18 @@ impl<T: Config> Pallet<T> {
                 );
                 return Err(<Error<T>>::OffchainSignedTxError);
             }
-            // Transaction is sent successfully
             return Ok(());
         }
-        // The case of `None`: no account is available for sending
         log::error!("No local account available");
         return Err(<Error<T>>::OffchainSignedTxError);
     }
 
     fn append_failed_contract_ids_to_storage(failed_id: u64) {
+        log::info!(
+            "billing contract {:?} will be retried in the next block",
+            failed_id
+        );
+
         let mut failed_ids = Self::get_failed_contract_ids_from_storage();
         failed_ids.push(failed_id);
 
@@ -1019,20 +1020,10 @@ impl<T: Config> Pallet<T> {
     }
 
     fn save_failed_contract_ids_in_storage(failed_ids: Vec<u64>) {
-        if !failed_ids.is_empty() {
-            log::info!("saving {:?} failed contracts", failed_ids);
-        }
         let s_contracts =
             StorageValueRef::persistent(b"pallet-smart-contract::failed-contracts-when-billing");
 
-        let mut lock = StorageLock::<BlockAndTime<frame_system::Pallet<T>>>::with_block_deadline(
-            &FAILED_CONTRACTS_STORAGE_LOCK,
-            1,
-        );
-        {
-            let _guard = lock.lock();
-            s_contracts.set(&failed_ids);
-        }
+        s_contracts.set(&failed_ids);
     }
 
     fn get_failed_contract_ids_from_storage() -> Vec<u64> {
