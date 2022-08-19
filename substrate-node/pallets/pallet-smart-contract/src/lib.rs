@@ -978,7 +978,7 @@ impl<T: Config> Pallet<T> {
                     }
                 }
             }
-            _ => {
+            types::ContractState::Created => {
                 // if the user ran out of funds, move the contract to be in a grace period
                 // dont lock the tokens because there is nothing to lock
                 // we can still update the internal contract lock object to figure out later how much was due
@@ -1002,6 +1002,7 @@ impl<T: Config> Pallet<T> {
                     )?;
                 }
             }
+            _ => (),
         }
 
         Ok(contract)
@@ -1051,12 +1052,15 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
-        // increment cycles billed and update the internal lock struct
         let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
-        contract_lock.lock_updated = now;
-        contract_lock.cycles += 1;
-        contract_lock.amount_locked = contract_lock.amount_locked + amount_due;
-        ContractLock::<T>::insert(contract.contract_id, &contract_lock);
+        // Only update contract lock in state (Created, GracePeriod)
+        if !matches!(contract.state, types::ContractState::Deleted(_)) {
+            // increment cycles billed and update the internal lock struct
+            contract_lock.lock_updated = now;
+            contract_lock.cycles += 1;
+            contract_lock.amount_locked = contract_lock.amount_locked + amount_due;
+            ContractLock::<T>::insert(contract.contract_id, &contract_lock);
+        }
 
         // Contract is in grace state, don't actually lock tokens or distribute rewards
         if matches!(contract.state, types::ContractState::GracePeriod(_)) {
@@ -1068,14 +1072,16 @@ impl<T: Config> Pallet<T> {
         // Just extend the lock with the amount due for this contract billing period (lock will be created if not exists)
         let twin =
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
-        let mut locked_balance = Self::get_locked_balance(&twin.account_id);
-        locked_balance += amount_due;
-        <T as Config>::Currency::extend_lock(
-            GRID_LOCK_ID,
-            &twin.account_id,
-            locked_balance,
-            WithdrawReasons::all(),
-        );
+        if matches!(contract.state, types::ContractState::Created) {
+            let mut locked_balance = Self::get_locked_balance(&twin.account_id);
+            locked_balance += amount_due;
+            <T as Config>::Currency::extend_lock(
+                GRID_LOCK_ID,
+                &twin.account_id,
+                locked_balance,
+                WithdrawReasons::all(),
+            );
+        }
 
         let is_canceled = matches!(contract.state, types::ContractState::Deleted(_));
         let canceled_and_not_zero =

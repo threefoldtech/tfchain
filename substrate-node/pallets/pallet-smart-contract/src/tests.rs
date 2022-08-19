@@ -1178,6 +1178,80 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
 }
 
 #[test]
+fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balance_works() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+
+        let twin = TfgridModule::twins(2).unwrap();
+        let initial_balance = Balances::free_balance(&twin.account_id);
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(bob()),
+            1,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
+        ));
+
+        let contract_id = 1;
+        let twin_id = 2;
+
+        push_contract_resources_used(1);
+
+        let (amount_due_1, discount_received) = calculate_tft_cost(contract_id, twin_id, 11);
+        run_to_block(12);
+        check_report_cost(1, amount_due_1, 12, discount_received);
+
+        let (amount_due_2, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        run_to_block(22);
+        check_report_cost(1, amount_due_2, 22, discount_received);
+
+        // Run halfway ish next cycle and cancel
+        run_to_block(25);
+
+        let total_amount_due = amount_due_1 + amount_due_2;
+        let extrinsic_fee = 10000;
+
+        Balances::transfer(
+            Origin::signed(bob()),
+            alice(),
+            initial_balance - total_amount_due - extrinsic_fee,
+        )
+        .unwrap();
+
+        let usable_balance_before_canceling = Balances::usable_balance(&twin.account_id);
+        assert_ne!(usable_balance_before_canceling, 0);
+
+        assert_ok!(SmartContractModule::cancel_contract(
+            Origin::signed(bob()),
+            1
+        ));
+
+        run_to_block(29);
+
+        // After canceling contract, and not being able to pay for the remainder of the cycle
+        // where the cancel was excecuted, the remaining balance should still be the same
+        let usable_balance_after_canceling = Balances::usable_balance(&twin.account_id);
+        assert_eq!(
+            usable_balance_after_canceling,
+            usable_balance_before_canceling
+        );
+
+        // Check for validation that the actual distribution of rewards happened
+        // 10% is sent to the foundation account
+        let pricing_policy = TfgridModule::pricing_policies(1).unwrap();
+        let foundation_account_balance = Balances::free_balance(&pricing_policy.foundation_account);
+        assert_eq!(
+            foundation_account_balance,
+            Perbill::from_percent(10) * total_amount_due
+        );
+    });
+}
+
+#[test]
 fn test_node_contract_out_of_funds_should_move_state_to_graceperiod_works() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
