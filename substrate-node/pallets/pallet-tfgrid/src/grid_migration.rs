@@ -190,6 +190,11 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
             connection_price: node.connection_price,
         };
 
+        // Add index of farm - list (nodes)
+        let mut nodes_by_farm_id = NodesByFarmID::<T>::get(node.farm_id);
+        nodes_by_farm_id.push(node.id);
+        NodesByFarmID::<T>::insert(node.farm_id, nodes_by_farm_id);
+
         migrated_count += 1;
 
         Some(new_node)
