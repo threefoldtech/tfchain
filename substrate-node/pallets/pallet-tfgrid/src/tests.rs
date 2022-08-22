@@ -179,7 +179,14 @@ fn test_delete_node_works() {
         create_farm();
         create_node();
 
+        let nodes = TfgridModule::nodes_by_farm_id(1);
+        assert_eq!(nodes.len(), 1);
+        assert_eq!(nodes[0], 1);
+
         assert_ok!(TfgridModule::delete_node_farm(Origin::signed(alice()), 1));
+
+        let nodes = TfgridModule::nodes_by_farm_id(1);
+        assert_eq!(nodes.len(), 0);
     });
 }
 
@@ -633,6 +640,20 @@ fn create_node_works() {
         create_twin();
         create_farm();
         create_node();
+    });
+}
+
+#[test]
+fn create_node_added_to_farm_list_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        let nodes = TfgridModule::nodes_by_farm_id(1);
+        assert_eq!(nodes.len(), 1);
+        assert_eq!(nodes[0], 1);
     });
 }
 
@@ -1507,26 +1528,26 @@ fn test_create_and_update_policy() {
 }
 
 #[test]
- fn test_set_zos_version() {
-     ExternalityBuilder::build().execute_with(|| {
-         let zos_version = "1.0.0".as_bytes().to_vec();
-         assert_ok!(TfgridModule::set_zos_version(
-             RawOrigin::Root.into(),
-             zos_version.clone(),
-         ));
+fn test_set_zos_version() {
+    ExternalityBuilder::build().execute_with(|| {
+        let zos_version = "1.0.0".as_bytes().to_vec();
+        assert_ok!(TfgridModule::set_zos_version(
+            RawOrigin::Root.into(),
+            zos_version.clone(),
+        ));
 
-         let saved_zos_version = TfgridModule::zos_version();
-         assert_eq!(saved_zos_version, zos_version);
+        let saved_zos_version = TfgridModule::zos_version();
+        assert_eq!(saved_zos_version, zos_version);
 
-         let our_events = System::events();
-         assert_eq!(
-             our_events.contains(&record(MockEvent::TfgridModule(
-                 TfgridEvent::<TestRuntime>::ZosVersionUpdated(zos_version)
-             ))),
-             true
-         );
-     })
- }
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::TfgridModule(
+                TfgridEvent::<TestRuntime>::ZosVersionUpdated(zos_version)
+            ))),
+            true
+        );
+    })
+}
 
 fn create_entity() {
     let name = "foobar".as_bytes().to_vec();
