@@ -425,7 +425,6 @@ fn test_delete_farm_fails() {
     });
 }
 
-
 #[test]
 fn test_adding_ip_duplicate_to_farm_fails() {
     ExternalityBuilder::build().execute_with(|| {
@@ -1311,26 +1310,43 @@ fn test_create_and_update_policy() {
 }
 
 #[test]
- fn test_set_zos_version() {
-     ExternalityBuilder::build().execute_with(|| {
-         let zos_version = "1.0.0".as_bytes().to_vec();
-         assert_ok!(TfgridModule::set_zos_version(
-             RawOrigin::Root.into(),
-             zos_version.clone(),
-         ));
+fn test_set_valid_zos_version_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        let zos_version = "1.0.0".as_bytes().to_vec();
+        assert_ok!(TfgridModule::set_zos_version(
+            RawOrigin::Root.into(),
+            zos_version.clone(),
+        ));
 
-         let saved_zos_version = TfgridModule::zos_version();
-         assert_eq!(saved_zos_version, zos_version);
+        let saved_zos_version = TfgridModule::zos_version();
+        assert_eq!(saved_zos_version, zos_version);
 
-         let our_events = System::events();
-         assert_eq!(
-             our_events.contains(&record(MockEvent::TfgridModule(
-                 TfgridEvent::<TestRuntime>::ZosVersionUpdated(zos_version)
-             ))),
-             true
-         );
-     })
- }
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::TfgridModule(
+                TfgridEvent::<TestRuntime>::ZosVersionUpdated(zos_version)
+            ))),
+            true
+        );
+    })
+}
+
+#[test]
+fn test_set_invalid_zos_version_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        let zos_version = "1.0.0".as_bytes().to_vec();
+        assert_ok!(TfgridModule::set_zos_version(
+            RawOrigin::Root.into(),
+            zos_version.clone(),
+        ));
+
+        // try to set zos version with the same version that is already set
+        assert_noop!(
+            TfgridModule::set_zos_version(RawOrigin::Root.into(), TfgridModule::zos_version()),
+            Error::<TestRuntime>::InvalidZosVersion,
+        );
+    })
+}
 
 fn create_entity() {
     let name = "foobar".as_bytes().to_vec();
