@@ -3,6 +3,7 @@ use crate::{mock::Event as MockEvent, mock::*, Error};
 use frame_support::{
     assert_noop, assert_ok,
     traits::{LockableCurrency, OnFinalize, OnInitialize, WithdrawReasons},
+    BoundedVec,
 };
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
@@ -10,9 +11,10 @@ use sp_runtime::{traits::SaturatedConversion, Perbill, Percent};
 use substrate_fixed::types::U64F64;
 
 use super::types;
+use crate::cost;
 use pallet_tfgrid::types as pallet_tfgrid_types;
+use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::types::{FarmCertification, Location, NodeCertification, PublicIP, Resources};
-use sp_std::convert::TryInto;
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -27,9 +29,10 @@ fn test_create_node_contract_works() {
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(alice()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            0
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
         ));
     });
 }
@@ -42,20 +45,28 @@ fn test_create_node_contract_with_public_ips_works() {
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(alice()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            1
+            generate_deployment_hash(),
+            get_deployment_data(),
+            1,
+            None
         ));
 
-        let node_contract = SmartContractModule::contracts(1);
+        let node_contract = SmartContractModule::contracts(1).unwrap();
 
         match node_contract.contract_type.clone() {
             types::ContractData::NodeContract(c) => {
-                let farm = TfgridModule::farms(1);
+                let farm = TfgridModule::farms(1).unwrap();
                 assert_eq!(farm.public_ips[0].contract_id, 1);
 
                 assert_eq!(c.public_ips, 1);
-                assert_eq!(c.public_ips_list[0].ip, "1.1.1.0".as_bytes().to_vec());
+
+                let pub_ip = PublicIP {
+                    ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
+                    gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+                    contract_id: 1,
+                };
+
+                assert_eq!(c.public_ips_list[0], pub_ip);
             }
             _ => (),
         }
@@ -71,9 +82,10 @@ fn test_create_node_contract_with_undefined_node_fails() {
             SmartContractModule::create_node_contract(
                 Origin::signed(alice()),
                 2,
-                "some_data".as_bytes().to_vec(),
-                "hash".as_bytes().to_vec(),
-                0
+                generate_deployment_hash(),
+                get_deployment_data(),
+                0,
+                None
             ),
             Error::<TestRuntime>::NodeNotExists
         );
@@ -85,21 +97,24 @@ fn test_create_node_contract_with_same_hash_and_node_fails() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
 
+        let h = generate_deployment_hash();
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(alice()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            0
+            h,
+            get_deployment_data(),
+            0,
+            None
         ));
 
         assert_noop!(
             SmartContractModule::create_node_contract(
                 Origin::signed(alice()),
                 1,
-                "some_data".as_bytes().to_vec(),
-                "hash".as_bytes().to_vec(),
-                0
+                h,
+                get_deployment_data(),
+                0,
+                None
             ),
             Error::<TestRuntime>::ContractIsNotUnique
         );
@@ -111,14 +126,16 @@ fn test_create_node_contract_which_was_canceled_before_works() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
 
+        let h = generate_deployment_hash();
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(alice()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            0
+            h,
+            get_deployment_data(),
+            0,
+            None
         ));
-        let contract_id = SmartContractModule::node_contract_by_hash(1, "hash".as_bytes().to_vec());
+        let contract_id = SmartContractModule::node_contract_by_hash(1, h);
         assert_eq!(contract_id, 1);
 
         assert_ok!(SmartContractModule::cancel_contract(
@@ -126,14 +143,16 @@ fn test_create_node_contract_which_was_canceled_before_works() {
             1
         ));
 
+        let h = generate_deployment_hash();
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(alice()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            0
+            h,
+            get_deployment_data(),
+            0,
+            None
         ));
-        let contract_id = SmartContractModule::node_contract_by_hash(1, "hash".as_bytes().to_vec());
+        let contract_id = SmartContractModule::node_contract_by_hash(1, h);
         assert_eq!(contract_id, 2);
     });
 }
@@ -146,24 +165,27 @@ fn test_update_node_contract_works() {
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(alice()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            0
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
         ));
 
+        let new_hash = generate_deployment_hash();
+        let deployment_data = get_deployment_data();
         assert_ok!(SmartContractModule::update_node_contract(
             Origin::signed(alice()),
             1,
-            "no_data".as_bytes().to_vec(),
-            "some_other_hash".as_bytes().to_vec()
+            new_hash,
+            get_deployment_data()
         ));
 
         let node_contract = types::NodeContract {
             node_id: 1,
-            deployment_data: "no_data".as_bytes().to_vec(),
-            deployment_hash: "some_other_hash".as_bytes().to_vec(),
+            deployment_hash: new_hash,
+            deployment_data,
             public_ips: 0,
-            public_ips_list: Vec::new(),
+            public_ips_list: Vec::new().try_into().unwrap(),
         };
         let contract_type = types::ContractData::NodeContract(node_contract);
 
@@ -171,11 +193,12 @@ fn test_update_node_contract_works() {
             contract_id: 1,
             state: types::ContractState::Created,
             twin_id: 1,
-            version: 3,
+            version: crate::CONTRACT_VERSION,
             contract_type,
+            solution_provider_id: None,
         };
 
-        let node_contract = SmartContractModule::contracts(1);
+        let node_contract = SmartContractModule::contracts(1).unwrap();
         assert_eq!(node_contract, expected_contract_value);
 
         let contracts = SmartContractModule::active_node_contracts(1);
@@ -183,8 +206,7 @@ fn test_update_node_contract_works() {
 
         assert_eq!(contracts[0], 1);
 
-        let node_contract_id_by_hash =
-            SmartContractModule::node_contract_by_hash(1, "some_other_hash".as_bytes().to_vec());
+        let node_contract_id_by_hash = SmartContractModule::node_contract_by_hash(1, new_hash);
         assert_eq!(node_contract_id_by_hash, 1);
     });
 }
@@ -198,8 +220,8 @@ fn test_update_node_contract_not_exists_fails() {
             SmartContractModule::update_node_contract(
                 Origin::signed(alice()),
                 1,
-                "some_data".as_bytes().to_vec(),
-                "hash".as_bytes().to_vec()
+                generate_deployment_hash(),
+                get_deployment_data()
             ),
             Error::<TestRuntime>::ContractNotExists
         );
@@ -214,17 +236,18 @@ fn test_update_node_contract_wrong_twins_fails() {
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(alice()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            0
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
         ));
 
         assert_noop!(
             SmartContractModule::update_node_contract(
                 Origin::signed(bob()),
                 1,
-                "some_data".as_bytes().to_vec(),
-                "hash".as_bytes().to_vec()
+                generate_deployment_hash(),
+                get_deployment_data()
             ),
             Error::<TestRuntime>::TwinNotAuthorizedToUpdateContract
         );
@@ -239,9 +262,10 @@ fn test_cancel_node_contract_works() {
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(alice()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            0
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
         ));
 
         assert_ok!(SmartContractModule::cancel_contract(
@@ -250,7 +274,7 @@ fn test_cancel_node_contract_works() {
         ));
 
         let node_contract = SmartContractModule::contracts(1);
-        assert_eq!(node_contract, types::Contract::default());
+        assert_eq!(node_contract, None);
 
         let contracts = SmartContractModule::active_node_contracts(1);
         assert_eq!(contracts.len(), 0);
@@ -265,25 +289,28 @@ fn test_create_multiple_node_contracts_works() {
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(alice()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash1".as_bytes().to_vec(),
-            0
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
         ));
 
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(alice()),
             1,
-            "some_data2".as_bytes().to_vec(),
-            "hash2".as_bytes().to_vec(),
-            0
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
         ));
 
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(alice()),
             1,
-            "some_data3".as_bytes().to_vec(),
-            "hash3".as_bytes().to_vec(),
-            0
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
         ));
 
         let node_contracts = SmartContractModule::active_node_contracts(1);
@@ -308,12 +335,13 @@ fn test_cancel_node_contract_frees_public_ips_works() {
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(alice()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            1
+            generate_deployment_hash(),
+            get_deployment_data(),
+            1,
+            None
         ));
 
-        let farm = TfgridModule::farms(1);
+        let farm = TfgridModule::farms(1).unwrap();
         assert_eq!(farm.public_ips[0].contract_id, 1);
 
         assert_ok!(SmartContractModule::cancel_contract(
@@ -321,7 +349,7 @@ fn test_cancel_node_contract_frees_public_ips_works() {
             1
         ));
 
-        let farm = TfgridModule::farms(1);
+        let farm = TfgridModule::farms(1).unwrap();
         assert_eq!(farm.public_ips[0].contract_id, 0);
     });
 }
@@ -346,9 +374,10 @@ fn test_cancel_node_contract_wrong_twins_fails() {
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(alice()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            0
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
         ));
 
         assert_noop!(
@@ -389,10 +418,11 @@ fn test_cancel_name_contract_works() {
         ));
 
         let name_contract = SmartContractModule::contracts(1);
-        assert_eq!(name_contract, types::Contract::default());
+        assert_eq!(name_contract, None);
 
-        let contract_id =
-            SmartContractModule::contract_id_by_name_registration("some_name".as_bytes().to_vec());
+        let contract_id = SmartContractModule::contract_id_by_name_registration(
+            get_name_contract_name(&"some_name".as_bytes().to_vec()),
+        );
         assert_eq!(contract_id, 0);
     });
 }
@@ -488,10 +518,11 @@ fn test_create_rent_contract_works() {
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
             Origin::signed(bob()),
-            node_id
+            node_id,
+            None
         ));
 
-        let contract = SmartContractModule::contracts(1);
+        let contract = SmartContractModule::contracts(1).unwrap();
         let rent_contract = types::RentContract { node_id };
         assert_eq!(
             contract.contract_type,
@@ -508,10 +539,11 @@ fn test_cancel_rent_contract_works() {
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
             Origin::signed(bob()),
-            node_id
+            node_id,
+            None
         ));
 
-        let contract = SmartContractModule::contracts(1);
+        let contract = SmartContractModule::contracts(1).unwrap();
         let rent_contract = types::RentContract { node_id };
         assert_eq!(
             contract.contract_type,
@@ -524,7 +556,7 @@ fn test_cancel_rent_contract_works() {
         ));
 
         let contract = SmartContractModule::contracts(1);
-        assert_eq!(contract, types::Contract::default());
+        assert_eq!(contract, None);
     });
 }
 
@@ -536,13 +568,14 @@ fn test_create_rent_contract_on_node_in_use_fails() {
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(alice()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            1
+            generate_deployment_hash(),
+            get_deployment_data(),
+            1,
+            None
         ));
 
         assert_noop!(
-            SmartContractModule::create_rent_contract(Origin::signed(bob()), 1,),
+            SmartContractModule::create_rent_contract(Origin::signed(bob()), 1, None),
             Error::<TestRuntime>::NodeNotAvailableToDeploy
         );
     })
@@ -556,7 +589,8 @@ fn test_create_rent_contract_non_dedicated_empty_node_works() {
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
             Origin::signed(bob()),
-            node_id
+            node_id,
+            None
         ));
     })
 }
@@ -570,9 +604,10 @@ fn test_create_node_contract_on_dedicated_node_without_rent_contract_fails() {
             SmartContractModule::create_node_contract(
                 Origin::signed(bob()),
                 1,
-                "some_data".as_bytes().to_vec(),
-                "hash".as_bytes().to_vec(),
-                1
+                generate_deployment_hash(),
+                get_deployment_data(),
+                1,
+                None
             ),
             Error::<TestRuntime>::NodeNotAvailableToDeploy
         );
@@ -587,14 +622,16 @@ fn test_create_node_contract_when_having_a_rentcontract_works() {
         assert_ok!(SmartContractModule::create_rent_contract(
             Origin::signed(bob()),
             1,
+            None
         ));
 
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            1
+            generate_deployment_hash(),
+            get_deployment_data(),
+            1,
+            None
         ));
     })
 }
@@ -608,6 +645,7 @@ fn test_create_node_contract_when_someone_else_has_rent_contract_fails() {
         assert_ok!(SmartContractModule::create_rent_contract(
             Origin::signed(bob()),
             1,
+            None
         ));
 
         // try to create node contract with Alice
@@ -616,9 +654,10 @@ fn test_create_node_contract_when_someone_else_has_rent_contract_fails() {
             SmartContractModule::create_node_contract(
                 Origin::signed(alice()),
                 1,
-                "some_data".as_bytes().to_vec(),
-                "hash".as_bytes().to_vec(),
-                1
+                generate_deployment_hash(),
+                get_deployment_data(),
+                1,
+                None
             ),
             Error::<TestRuntime>::NodeHasRentContract
         );
@@ -635,15 +674,17 @@ fn test_cancel_rent_contract_with_active_node_contracts_fails() {
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
             Origin::signed(bob()),
-            node_id
+            node_id,
+            None
         ));
 
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            1
+            generate_deployment_hash(),
+            get_deployment_data(),
+            1,
+            None
         ));
 
         assert_noop!(
@@ -669,9 +710,10 @@ fn test_node_contract_billing_details() {
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            1
+            generate_deployment_hash(),
+            get_deployment_data(),
+            1,
+            None
         ));
 
         push_contract_resources_used(1);
@@ -737,6 +779,93 @@ fn test_node_contract_billing_details() {
 }
 
 #[test]
+fn test_node_contract_billing_details_with_solution_provider() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+
+        let alice_balance = Balances::free_balance(alice());
+        prepare_solution_provider();
+
+        run_to_block(0);
+        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+
+        let twin = TfgridModule::twins(2).unwrap();
+        let initial_twin_balance = Balances::free_balance(&twin.account_id);
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(bob()),
+            1,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            1,
+            Some(1)
+        ));
+
+        push_contract_resources_used(1);
+
+        push_nru_report_for_contract(1, 10);
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(10);
+        assert_eq!(contract_to_bill, [1]);
+
+        let initial_total_issuance = Balances::total_issuance();
+        // advance 25 cycles
+        let mut i = 0;
+        while i != 24 {
+            i += 1;
+            run_to_block(i * 10 + 1);
+        }
+
+        let free_balance = Balances::free_balance(&twin.account_id);
+        let total_amount_billed = initial_twin_balance - free_balance;
+
+        let staking_pool_account_balance = Balances::free_balance(&get_staking_pool_account());
+
+        // 5% is sent to the staking pool account
+        assert_eq!(
+            staking_pool_account_balance,
+            Perbill::from_percent(5) * total_amount_billed
+        );
+
+        // 10% is sent to the foundation account
+        let pricing_policy = TfgridModule::pricing_policies(1).unwrap();
+        let foundation_account_balance = Balances::free_balance(&pricing_policy.foundation_account);
+        assert_eq!(
+            foundation_account_balance,
+            Perbill::from_percent(10) * total_amount_billed
+        );
+
+        // 40% is sent to the sales account
+        let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
+        assert_eq!(
+            sales_account_balance,
+            Perbill::from_percent(40) * total_amount_billed
+        );
+
+        // 10% is sent to the solution provider
+        let solution_provider = SmartContractModule::solution_providers(1).unwrap();
+        let solution_provider_1_balance =
+            Balances::free_balance(solution_provider.providers[0].who.clone());
+        assert_eq!(
+            solution_provider_1_balance,
+            Perbill::from_percent(10) * total_amount_billed + alice_balance
+        );
+
+        let total_issuance = Balances::total_issuance();
+        // total issueance is now previous total - amount burned from contract billed (35%)
+        let burned_amount = Perbill::from_percent(35) * total_amount_billed;
+        assert_eq!(
+            total_issuance,
+            initial_total_issuance - burned_amount as u64
+        );
+
+        // amount unbilled should have been reset after a transfer between contract owner and farmer
+        let contract_billing_info = SmartContractModule::contract_billing_information_by_id(1);
+        assert_eq!(contract_billing_info.amount_unbilled, 0);
+    });
+}
+
+#[test]
 fn test_multiple_contracts_billing_loop_works() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
@@ -746,9 +875,10 @@ fn test_multiple_contracts_billing_loop_works() {
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            1
+            generate_deployment_hash(),
+            get_deployment_data(),
+            1,
+            None
         ));
         assert_ok!(SmartContractModule::create_name_contract(
             Origin::signed(bob()),
@@ -781,9 +911,10 @@ fn test_node_contract_billing_cycles() {
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            0
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
         ));
         let contract_id = 1;
         let twin_id = 2;
@@ -834,16 +965,18 @@ fn test_node_multiple_contract_billing_cycles() {
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            0
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
         ));
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "other_hash".as_bytes().to_vec(),
-            0
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
         ));
         let twin_id = 2;
 
@@ -880,9 +1013,10 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            1
+            generate_deployment_hash(),
+            get_deployment_data(),
+            1,
+            None
         ));
         let contract_id = 1;
         let twin_id = 2;
@@ -920,9 +1054,21 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
 
         let our_events = System::events();
 
-        let ip = "1.1.1.0".as_bytes().to_vec();
-        let mut ips = Vec::new();
-        ips.push(ip);
+        for e in our_events.clone().iter() {
+            println!("{:?}", e);
+        }
+
+        let public_ip = PublicIP {
+            ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
+            gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+            contract_id: 0,
+        };
+
+        let mut ips: BoundedVec<
+            PublicIP<TestPublicIP, TestGatewayIP>,
+            crate::MaxNodeContractPublicIPs<TestRuntime>,
+        > = vec![].try_into().unwrap();
+        ips.try_push(public_ip).unwrap();
 
         assert_eq!(
             our_events.contains(&record(MockEvent::SmartContractModule(
@@ -956,9 +1102,10 @@ fn test_node_contract_only_public_ip_billing_cycles() {
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            1
+            generate_deployment_hash(),
+            get_deployment_data(),
+            1,
+            None
         ));
         let contract_id = 1;
         let twin_id = 2;
@@ -996,9 +1143,10 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            0
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
         ));
 
         let contract_id = 1;
@@ -1025,7 +1173,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
         check_report_cost(1, amount_due_as_u128, 28, discount_received);
 
         let contract = SmartContractModule::contracts(1);
-        assert_eq!(contract.contract_id, 0);
+        assert_eq!(contract, None);
 
         let billing_info = SmartContractModule::contract_billing_information_by_id(1);
         assert_eq!(billing_info.amount_unbilled, 0);
@@ -1042,9 +1190,10 @@ fn test_node_contract_out_of_funds_should_move_state_to_graceperiod_works() {
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(charlie()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            0
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
         ));
 
         push_contract_resources_used(1);
@@ -1056,7 +1205,7 @@ fn test_node_contract_out_of_funds_should_move_state_to_graceperiod_works() {
         // user does not have enough funds to pay for 2 cycles
         run_to_block(22);
 
-        let c1 = SmartContractModule::contracts(1);
+        let c1 = SmartContractModule::contracts(1).unwrap();
         assert_eq!(c1.state, types::ContractState::GracePeriod(21));
 
         let our_events = System::events();
@@ -1084,9 +1233,10 @@ fn test_restore_node_contract_in_grace_works() {
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(charlie()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            0
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
         ));
 
         push_contract_resources_used(1);
@@ -1098,7 +1248,7 @@ fn test_restore_node_contract_in_grace_works() {
         // user does not have enough funds to pay for 2 cycles
         run_to_block(22);
 
-        let c1 = SmartContractModule::contracts(1);
+        let c1 = SmartContractModule::contracts(1).unwrap();
         assert_eq!(c1.state, types::ContractState::GracePeriod(21));
 
         let our_events = System::events();
@@ -1133,7 +1283,7 @@ fn test_restore_node_contract_in_grace_works() {
         assert_eq!(contract_to_bill.len(), 1);
         run_to_block(62);
 
-        let c1 = SmartContractModule::contracts(1);
+        let c1 = SmartContractModule::contracts(1).unwrap();
         assert_eq!(c1.state, types::ContractState::Created);
     });
 }
@@ -1148,9 +1298,10 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(charlie()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            0
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
         ));
 
         push_contract_resources_used(1);
@@ -1162,7 +1313,7 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
         // user does not have enough funds to pay for 2 cycles
         run_to_block(22);
 
-        let c1 = SmartContractModule::contracts(1);
+        let c1 = SmartContractModule::contracts(1).unwrap();
         assert_eq!(c1.state, types::ContractState::GracePeriod(21));
 
         let our_events = System::events();
@@ -1191,7 +1342,7 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
         run_to_block(132);
 
         let c1 = SmartContractModule::contracts(1);
-        assert_eq!(c1, types::Contract::default());
+        assert_eq!(c1, None);
     });
 }
 
@@ -1244,10 +1395,11 @@ fn test_rent_contract_billing() {
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
             Origin::signed(bob()),
-            node_id
+            node_id,
+            None
         ));
 
-        let contract = SmartContractModule::contracts(1);
+        let contract = SmartContractModule::contracts(1).unwrap();
         let rent_contract = types::RentContract { node_id };
         assert_eq!(
             contract.contract_type,
@@ -1272,10 +1424,11 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
             Origin::signed(bob()),
-            node_id
+            node_id,
+            None
         ));
 
-        let contract = SmartContractModule::contracts(1);
+        let contract = SmartContractModule::contracts(1).unwrap();
         let rent_contract = types::RentContract { node_id };
         assert_eq!(
             contract.contract_type,
@@ -1328,10 +1481,11 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
             Origin::signed(bob()),
-            node_id
+            node_id,
+            None
         ));
 
-        let contract = SmartContractModule::contracts(1);
+        let contract = SmartContractModule::contracts(1).unwrap();
         let rent_contract = types::RentContract { node_id };
         assert_eq!(
             contract.contract_type,
@@ -1374,15 +1528,17 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
             Origin::signed(bob()),
-            node_id
+            node_id,
+            None
         ));
 
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            0
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
         ));
         push_contract_resources_used(2);
 
@@ -1411,15 +1567,17 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
             Origin::signed(charlie()),
-            node_id
+            node_id,
+            None
         ));
 
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(charlie()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            0
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
         ));
         push_contract_resources_used(2);
 
@@ -1444,15 +1602,39 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         // Event 1: Rent contract created
         // Event 2: Node Contract created
         // Event 3: Updated used resources
-        // Event 4: Grace period started
-        // Event 5-15: Rent contract billed
-        // Event 16: Node contract canceled
-        // Event 17: Rent contract Canceled
+        // Event 4: Grace period started rent contract
+        // Event 5: Grace period started node contract
+        // Event 6-17: Rent contract billed
+        // Event 18: Node contract canceled
+        // Event 19: Rent contract Canceled
         // => no Node Contract billed event
-        assert_eq!(our_events.len(), 19);
+        assert_eq!(our_events.len(), 20);
 
         assert_eq!(
-            our_events[17],
+            our_events[5],
+            record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ContractGracePeriodStarted {
+                contract_id: 1,
+                node_id: 1,
+                twin_id: 3,
+                block_number: 11
+            }))
+        );
+        assert_eq!(
+            our_events[6],
+            record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ContractGracePeriodStarted {
+                contract_id: 2,
+                node_id: 1,
+                twin_id: 3,
+                block_number: 11
+            }))
+        );
+
+        assert_eq!(
+            our_events[18],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::NodeContractCanceled {
@@ -1462,7 +1644,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
             }))
         );
         assert_eq!(
-            our_events[18],
+            our_events[19],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::RentContractCanceled {
@@ -1482,15 +1664,17 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
             Origin::signed(bob()),
-            node_id
+            node_id,
+            None
         ));
 
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            1
+            generate_deployment_hash(),
+            get_deployment_data(),
+            1,
+            None
         ));
 
         run_to_block(12);
@@ -1506,6 +1690,7 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
 
         let our_events = System::events();
         // Event 1: Price Stored
+        // Event 2: Avg price stored
         // Event 2: Rent contract created
         // Event 3: Node Contract created
         // Event 4: Rent contract billed
@@ -1524,14 +1709,15 @@ fn test_rent_contract_out_of_funds_should_move_state_to_graceperiod_works() {
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
             Origin::signed(charlie()),
-            node_id
+            node_id,
+            None
         ));
 
         // cycle 1
         // user does not have enough funds to pay for 1 cycle
         run_to_block(12);
 
-        let c1 = SmartContractModule::contracts(1);
+        let c1 = SmartContractModule::contracts(1).unwrap();
         assert_eq!(c1.state, types::ContractState::GracePeriod(11));
 
         let our_events = System::events();
@@ -1559,13 +1745,14 @@ fn test_restore_rent_contract_in_grace_works() {
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
             Origin::signed(charlie()),
-            node_id
+            node_id,
+            None
         ));
 
         // cycle 1
         run_to_block(12);
 
-        let c1 = SmartContractModule::contracts(1);
+        let c1 = SmartContractModule::contracts(1).unwrap();
         assert_eq!(c1.state, types::ContractState::GracePeriod(11));
 
         let our_events = System::events();
@@ -1600,8 +1787,107 @@ fn test_restore_rent_contract_in_grace_works() {
         assert_eq!(contract_to_bill.len(), 1);
         run_to_block(52);
 
-        let c1 = SmartContractModule::contracts(1);
+        let c1 = SmartContractModule::contracts(1).unwrap();
         assert_eq!(c1.state, types::ContractState::Created);
+    });
+}
+
+#[test]
+fn test_restore_rent_contract_and_node_contracts_in_grace_works() {
+    new_test_ext().execute_with(|| {
+        prepare_dedicated_farm_and_node();
+        run_to_block(1);
+        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+
+        let node_id = 1;
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(charlie()),
+            node_id,
+            None
+        ));
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(charlie()),
+            1,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
+        ));
+        push_contract_resources_used(2);
+
+        // cycle 1
+        run_to_block(12);
+
+        let c1 = SmartContractModule::contracts(1).unwrap();
+        assert_eq!(c1.state, types::ContractState::GracePeriod(11));
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events[5],
+            record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ContractGracePeriodStarted {
+                contract_id: 1,
+                node_id: 1,
+                twin_id: 3,
+                block_number: 11
+            }))
+        );
+        assert_eq!(
+            our_events[6],
+            record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ContractGracePeriodStarted {
+                contract_id: 2,
+                node_id: 1,
+                twin_id: 3,
+                block_number: 11
+            }))
+        );
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(21);
+        assert_eq!(contract_to_bill.len(), 2);
+        run_to_block(22);
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(31);
+        assert_eq!(contract_to_bill.len(), 2);
+        run_to_block(32);
+
+        // Transfer some balance to the owner of the contract to trigger the grace period to stop
+        Balances::transfer(Origin::signed(bob()), charlie(), 100000000).unwrap();
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(41);
+        assert_eq!(contract_to_bill.len(), 2);
+        run_to_block(42);
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(51);
+        assert_eq!(contract_to_bill.len(), 2);
+        run_to_block(52);
+
+        let c1 = SmartContractModule::contracts(1).unwrap();
+        assert_eq!(c1.state, types::ContractState::Created);
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events[11],
+            record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ContractGracePeriodEnded {
+                contract_id: 1,
+                node_id: 1,
+                twin_id: 3,
+            }))
+        );
+        assert_eq!(
+            our_events[12],
+            record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ContractGracePeriodEnded {
+                contract_id: 2,
+                node_id: 1,
+                twin_id: 3,
+            }))
+        );
     });
 }
 
@@ -1615,13 +1901,14 @@ fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
             Origin::signed(charlie()),
-            node_id
+            node_id,
+            None
         ));
 
         // cycle 1
         run_to_block(12);
 
-        let c1 = SmartContractModule::contracts(1);
+        let c1 = SmartContractModule::contracts(1).unwrap();
         assert_eq!(c1.state, types::ContractState::GracePeriod(11));
 
         let our_events = System::events();
@@ -1651,7 +1938,7 @@ fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works
         run_to_block(132);
 
         let c1 = SmartContractModule::contracts(1);
-        assert_eq!(c1, types::Contract::default());
+        assert_eq!(c1, None);
     });
 }
 
@@ -1665,15 +1952,17 @@ fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
             Origin::signed(bob()),
-            node_id
+            node_id,
+            None
         ));
 
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
             1,
-            "some_data".as_bytes().to_vec(),
-            "hash".as_bytes().to_vec(),
-            0
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
         ));
         push_contract_resources_used(2);
 
@@ -1709,6 +1998,107 @@ fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
     });
 }
 
+//  SOLUTION PROVIDER TESTS //
+// ------------------------ //
+#[test]
+fn test_create_solution_provider_works() {
+    new_test_ext().execute_with(|| {
+        let provider1 = super::types::Provider {
+            take: 10,
+            who: alice(),
+        };
+        let provider2 = super::types::Provider {
+            take: 10,
+            who: bob(),
+        };
+        let providers = vec![provider1, provider2];
+
+        assert_ok!(SmartContractModule::create_solution_provider(
+            Origin::signed(alice()),
+            "some_description".as_bytes().to_vec(),
+            "some_link".as_bytes().to_vec(),
+            providers
+        ));
+
+        assert_ok!(SmartContractModule::approve_solution_provider(
+            RawOrigin::Root.into(),
+            1,
+            true
+        ));
+    })
+}
+
+#[test]
+fn test_create_solution_provider_fails_if_take_to_high() {
+    new_test_ext().execute_with(|| {
+        let provider = super::types::Provider {
+            take: 51,
+            who: alice(),
+        };
+        let providers = vec![provider];
+
+        assert_noop!(
+            SmartContractModule::create_solution_provider(
+                Origin::signed(alice()),
+                "some_description".as_bytes().to_vec(),
+                "some_link".as_bytes().to_vec(),
+                providers
+            ),
+            Error::<TestRuntime>::InvalidProviderConfiguration
+        );
+    })
+}
+
+#[test]
+fn test_create_node_contract_with_solution_provider_works() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+
+        prepare_solution_provider();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            Origin::signed(alice()),
+            1,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            Some(1)
+        ));
+    });
+}
+
+#[test]
+fn test_create_node_contract_with_solution_provider_fails_if_not_approved() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+
+        let provider = super::types::Provider {
+            take: 10,
+            who: alice(),
+        };
+        let providers = vec![provider];
+
+        assert_ok!(SmartContractModule::create_solution_provider(
+            Origin::signed(alice()),
+            "some_description".as_bytes().to_vec(),
+            "some_link".as_bytes().to_vec(),
+            providers
+        ));
+
+        assert_noop!(
+            SmartContractModule::create_node_contract(
+                Origin::signed(alice()),
+                1,
+                generate_deployment_hash(),
+                get_deployment_data(),
+                0,
+                Some(1)
+            ),
+            Error::<TestRuntime>::SolutionProviderNotApproved
+        );
+    });
+}
+
 //  MODULE FUNCTION TESTS //
 // ---------------------- //
 
@@ -1717,27 +2107,27 @@ fn test_cu_calculation() {
     new_test_ext().execute_with(|| {
         let cu = U64F64::from_num(4);
         let mru = U64F64::from_num(1024);
-        let cu = SmartContractModule::calculate_cu(cu, mru);
+        let cu = cost::calculate_cu(cu, mru);
         assert_eq!(cu, 128);
 
         let cu = U64F64::from_num(32);
         let mru = U64F64::from_num(128);
-        let cu = SmartContractModule::calculate_cu(cu, mru);
+        let cu = cost::calculate_cu(cu, mru);
         assert_eq!(cu, 32);
 
         let cu = U64F64::from_num(4);
         let mru = U64F64::from_num(2);
-        let cu = SmartContractModule::calculate_cu(cu, mru);
+        let cu = cost::calculate_cu(cu, mru);
         assert_eq!(cu, 1);
 
         let cu = U64F64::from_num(4);
         let mru = U64F64::from_num(1);
-        let cu = SmartContractModule::calculate_cu(cu, mru);
+        let cu = cost::calculate_cu(cu, mru);
         assert_eq!(cu, 1);
 
         let cu = U64F64::from_num(16);
         let mru = U64F64::from_num(16);
-        let cu = SmartContractModule::calculate_cu(cu, mru);
+        let cu = cost::calculate_cu(cu, mru);
         assert_eq!(cu, 8);
     })
 }
@@ -1850,9 +2240,9 @@ fn check_report_cost(
 fn calculate_tft_cost(contract_id: u64, twin_id: u32, blocks: u64) -> (u64, types::DiscountLevel) {
     let twin = TfgridModule::twins(twin_id).unwrap();
     let b = Balances::free_balance(&twin.account_id);
-    let contract = SmartContractModule::contracts(contract_id);
+    let contract = SmartContractModule::contracts(contract_id).unwrap();
     let (amount_due, discount_received) =
-        SmartContractModule::calculate_contract_cost_tft(&contract, b, blocks * 6).unwrap();
+        contract.calculate_contract_cost_tft(b, blocks * 6).unwrap();
 
     (amount_due, discount_received)
 }
@@ -1867,8 +2257,8 @@ pub fn prepare_farm(source: AccountId, dedicated: bool) {
     let farm_name = "test_farm";
     let mut pub_ips = Vec::new();
     pub_ips.push(PublicIP {
-        ip: "1.1.1.0".as_bytes().to_vec(),
-        gateway: "1.1.1.1".as_bytes().to_vec(),
+        ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
+        gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
         contract_id: 0,
     });
 
@@ -2013,9 +2403,10 @@ pub fn create_twin(origin: AccountId) {
         hash.clone(),
     ));
     let ip = get_twin_ip(b"::1");
-    assert_ok!(
-        TfgridModule::create_twin(Origin::signed(origin), ip.clone().0)
-    );
+    assert_ok!(TfgridModule::create_twin(
+        Origin::signed(origin),
+        ip.clone().0
+    ));
 }
 
 fn run_to_block(n: u64) {
@@ -2095,10 +2486,42 @@ fn create_farming_policies() {
     ));
 }
 
+fn prepare_solution_provider() {
+    let provider = super::types::Provider {
+        take: 10,
+        who: alice(),
+    };
+    let providers = vec![provider];
+
+    assert_ok!(SmartContractModule::create_solution_provider(
+        Origin::signed(alice()),
+        "some_description".as_bytes().to_vec(),
+        "some_link".as_bytes().to_vec(),
+        providers
+    ));
+
+    assert_ok!(SmartContractModule::approve_solution_provider(
+        RawOrigin::Root.into(),
+        1,
+        true
+    ));
+}
+
 fn record(event: Event) -> EventRecord<Event, H256> {
     EventRecord {
         phase: Phase::Initialization,
         event,
         topics: vec![],
     }
+}
+
+fn generate_deployment_hash() -> H256 {
+    H256::random()
+}
+
+fn get_deployment_data() -> crate::DeploymentDataInput<TestRuntime> {
+    BoundedVec::<u8, crate::MaxDeploymentDataLength<TestRuntime>>::try_from(
+        "some_data".as_bytes().to_vec(),
+    )
+    .unwrap()
 }

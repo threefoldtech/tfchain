@@ -11,6 +11,10 @@ version = '3.0.0'
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
+[dependencies.log]
+default-features = false
+version = '0.4.14'
+
 [dependencies]
 # Substrate packages
 hex = { version = "0.4", default-features = false }
@@ -19,6 +23,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 ] }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 tfchain-support = { path = "../../support", default-features = false }
+valip = "0.3.0-rc2"
 
 frame-benchmarking =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false, optional = true }
 pallet-balances =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
@@ -30,6 +35,7 @@ sp-storage =  { git = "https://github.com/paritytech/substrate", branch = "polka
 pallet-timestamp =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
 sp-core =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
 sp-io =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false, optional = true }
 
 [dev-dependencies]
 hex-literal = "0.3.1"
@@ -51,9 +57,14 @@ std = [
 	'tfchain-support/std',
 	'scale-info/std',
 	'hex/std',
+	'log/std',
+	'frame-try-runtime/std',
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
+]
+try-runtime = [
+	"frame-support/try-runtime"
 ]

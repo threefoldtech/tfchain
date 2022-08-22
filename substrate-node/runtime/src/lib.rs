@@ -6,7 +6,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use constants::fee::WeightToFee;
+use constants::fee::WeightToFeeStruct;
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use sp_api::impl_runtime_apis;
@@ -139,7 +139,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 104,
+    spec_version: 106,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -311,7 +311,7 @@ parameter_types! {
 impl pallet_transaction_payment::Config for Runtime {
     type OnChargeTransaction = CurrencyAdapter<Balances, impls::DealWithFees<Runtime>>;
     type OperationalFeeMultiplier = ConstU8<5>;
-    type WeightToFee = WeightToFee;
+    type WeightToFee = WeightToFeeStruct;
     type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
     type FeeMultiplierUpdate = ();
 }
@@ -321,13 +321,18 @@ impl pallet_sudo::Config for Runtime {
     type Call = Call;
 }
 
+pub type PubConfig = pallet_tfgrid::pallet::PubConfigOf<Runtime>;
+pub type Interface = pallet_tfgrid::pallet::InterfaceOf<Runtime>;
 pub struct NodeChanged;
-impl ChangeNode for NodeChanged {
-    fn node_changed(old_node: Option<&Node>, new_node: &Node) {
+impl ChangeNode<PubConfig, Interface> for NodeChanged {
+    fn node_changed(
+        old_node: Option<&Node<PubConfig, Interface>>,
+        new_node: &Node<PubConfig, Interface>,
+    ) {
         Dao::node_changed(old_node, new_node)
     }
 
-    fn node_deleted(node: &Node) {
+    fn node_deleted(node: &Node<PubConfig, Interface>) {
         SmartContractModule::node_deleted(node);
         Dao::node_deleted(node);
     }
@@ -335,6 +340,7 @@ impl ChangeNode for NodeChanged {
 
 parameter_types! {
     pub const MaxFarmNameLength: u32 = 40;
+    pub const MaxInterfaceIpsLength: u32 = 10;
 }
 
 impl pallet_tfgrid::Config for Runtime {
@@ -345,6 +351,17 @@ impl pallet_tfgrid::Config for Runtime {
     type TwinIp = pallet_tfgrid::twin::TwinIp<Runtime>;
     type MaxFarmNameLength = MaxFarmNameLength;
     type FarmName = pallet_tfgrid::farm::FarmName<Runtime>;
+    type PublicIP = pallet_tfgrid::pub_ip::PublicIP<Runtime>;
+    type GatewayIP = pallet_tfgrid::pub_ip::GatewayIP<Runtime>;
+    type IP4 = pallet_tfgrid::pub_config::IP4<Runtime>;
+    type GW4 = pallet_tfgrid::pub_config::GW4<Runtime>;
+    type IP6 = pallet_tfgrid::pub_config::IP6<Runtime>;
+    type GW6 = pallet_tfgrid::pub_config::GW6<Runtime>;
+    type Domain = pallet_tfgrid::pub_config::Domain<Runtime>;
+    type InterfaceName = pallet_tfgrid::interface::InterfaceName<Runtime>;
+    type InterfaceMac = pallet_tfgrid::interface::InterfaceMac<Runtime>;
+    type InterfaceIP = pallet_tfgrid::interface::InterfaceIp<Runtime>;
+    type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
 }
 
 parameter_types! {
@@ -353,6 +370,9 @@ parameter_types! {
     pub GracePeriod: u64 = (14 * DAYS).into();
     pub DistributionFrequency: u16 = 24;
     pub RetryInterval: u32 = 20;
+    pub MaxNameContractNameLength: u32 = 64;
+    pub MaxNodeContractPublicIPs: u32 = 1;
+    pub MaxDeploymentDataLength: u32 = 512;
 }
 
 pub fn get_staking_pool_account() -> AccountId {
@@ -372,6 +392,11 @@ impl pallet_smart_contract::Config for Runtime {
     type GracePeriod = GracePeriod;
     type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
     type NodeChanged = NodeChanged;
+    type MaxNameContractNameLength = MaxNameContractNameLength;
+    type NameContractName = pallet_smart_contract::name_contract::NameContractName<Runtime>;
+    type RestrictedOrigin = EnsureRootOrCouncilApproval;
+    type MaxDeploymentDataLength = MaxDeploymentDataLength;
+    type MaxNodeContractPublicIps = MaxNodeContractPublicIPs;
 }
 // type Tfgrid = TfgridModule;
 
@@ -394,7 +419,7 @@ impl pallet_kvstore::Config for Runtime {
 }
 
 impl pallet_tft_price::Config for Runtime {
-    type AuthorityId = pallet_tft_price::crypto::AuthId;
+    type AuthorityId = pallet_tft_price::AuthId;
     type Call = Call;
     type Event = Event;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
@@ -504,7 +529,7 @@ where
         #[cfg_attr(not(feature = "std"), allow(unused_variables))]
         let raw_payload = SignedPayload::new(call, extra)
             .map_err(|e| {
-                log::info!("SignedPayload error: {:?}", e);
+                log::error!("SignedPayload error: {:?}", e);
             })
             .ok()?;
 
@@ -719,6 +744,10 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
+    (
+        pallet_smart_contract::contract_migration::v5::ContractMigrationV5<Runtime>,
+        pallet_tfgrid::grid_migration::v6::GridMigration<Runtime>,
+    ),
 >;
 
 impl_runtime_apis! {
@@ -909,7 +938,7 @@ impl_runtime_apis! {
             // have a backtrace here. If any of the pre/post migration checks fail, we shall stop
             // right here and right now.
             let weight = Executive::try_runtime_upgrade().map_err(|err|{
-                log::info!("try-runtime::on_runtime_upgrade failed with: {:?}", err);
+                log::error!("try-runtime::on_runtime_upgrade failed with: {:?}", err);
                 err
             }).unwrap();
             (weight, BlockWeights::get().max_block)

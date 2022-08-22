@@ -1,6 +1,7 @@
 use crate::{self as pallet_tft_price, *};
 use codec::alloc::sync::Arc;
-use frame_support::{construct_runtime, parameter_types, assert_noop, assert_ok, traits::ConstU32};
+use frame_support::traits::GenesisBuild;
+use frame_support::{assert_noop, assert_ok, construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::EnsureRoot;
 use frame_system::{limits, mocking};
 use sp_core::{
@@ -74,7 +75,7 @@ parameter_types! {
 }
 
 impl Config for TestRuntime {
-    type AuthorityId = pallet_tft_price::crypto::AuthId;
+    type AuthorityId = pallet_tft_price::AuthId;
     type Call = Call;
     type Event = Event;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
@@ -223,6 +224,40 @@ fn test_parse_price() {
 }
 
 #[test]
+fn test_parse_lowest_price_from_valid_request_works() {
+    let mut t = ExternalityBuilder::build();
+    t.execute_with(|| {
+        let request_str = json_stellar_price_request_valid();
+        let price = TFTPriceModule::parse_lowest_price_from_request(request_str).unwrap();
+        assert_eq!(price, 33);
+    })
+}
+
+#[test]
+fn test_parse_lowest_price_from_empty_request_fails() {
+    let mut t = ExternalityBuilder::build();
+    t.execute_with(|| {
+        let request_str = json_stellar_price_request_empty();
+        assert_eq!(
+            TFTPriceModule::parse_lowest_price_from_request(request_str),
+            None
+        );
+    })
+}
+
+#[test]
+fn test_parse_lowest_price_from_incomplete_request_fails() {
+    let mut t = ExternalityBuilder::build();
+    t.execute_with(|| {
+        let request_str = json_stellar_price_request_incomplete();
+        assert_eq!(
+            TFTPriceModule::parse_lowest_price_from_request(request_str),
+            None
+        );
+    })
+}
+
+#[test]
 fn test_set_price_wrong_origin() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
@@ -237,4 +272,76 @@ fn run_to_block(n: u64) {
     while System::block_number() < n {
         System::set_block_number(System::block_number() + 1);
     }
+}
+
+fn json_stellar_price_request_empty() -> &'static str {
+    r#"
+    {
+    }"#
+}
+
+fn json_stellar_price_request_incomplete() -> &'static str {
+    r#"
+    {
+        "_embedded": {
+          "records": [
+          ]
+        }
+    }"#
+}
+
+fn json_stellar_price_request_valid() -> &'static str {
+    r#"
+    {
+        "_embedded": {
+          "records": [
+            {
+              "source_asset_type": "credit_alphanum4",
+              "source_asset_code": "USDC",
+              "source_asset_issuer": "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
+              "source_amount": "0.0328655",
+              "destination_asset_type": "credit_alphanum4",
+              "destination_asset_code": "TFT",
+              "destination_asset_issuer": "GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47",
+              "destination_amount": "1.0000000",
+              "path": [
+                {
+                  "asset_type": "native"
+                },
+                {
+                  "asset_type": "credit_alphanum4",
+                  "asset_code": "yXLM",
+                  "asset_issuer": "GARDNV3Q7YGT4AKSDF25LT32YSCCW4EV22Y2TV3I2PU2MMXJTEDL5T55"
+                }
+              ]
+            },
+            {
+              "source_asset_type": "credit_alphanum4",
+              "source_asset_code": "USDC",
+              "source_asset_issuer": "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
+              "source_amount": "0.0340713",
+              "destination_asset_type": "credit_alphanum4",
+              "destination_asset_code": "TFT",
+              "destination_asset_issuer": "GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47",
+              "destination_amount": "1.0000000",
+              "path": [
+                {
+                  "asset_type": "native"
+                }
+              ]
+            },
+            {
+              "source_asset_type": "credit_alphanum4",
+              "source_asset_code": "USDC",
+              "source_asset_issuer": "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
+              "source_amount": "0.0351812",
+              "destination_asset_type": "credit_alphanum4",
+              "destination_asset_code": "TFT",
+              "destination_asset_issuer": "GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47",
+              "destination_amount": "1.0000000",
+              "path": []
+            }
+          ]
+        }
+    }"#
 }

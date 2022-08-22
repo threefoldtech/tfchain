@@ -19,6 +19,7 @@ The Smart Contract on Substrate will work as following:
 The user must instruct his twin to create the contract. A contract will always belong to a twin and to a node. This relationship is important because only the user's twin can update the contract as well as only the target node can update as well.
 
 json
+
 ```
 contract {
     "workload": "encrypted_workload_data",
@@ -26,6 +27,7 @@ contract {
     "public_ips": NumberOfPublicIPS
 }
 ```
+
 The `node_address` field is the target node's ss58 address. A user can do lookup for a node to find it's corresponding address.
 
 The workload data is encrypted by the user and contains the workload definition for the node.
@@ -45,6 +47,7 @@ The Node periodically sends consumption reports back to the chain for each deplo
 A report looks like:
 
 json
+
 ```
 {
 	"contract_id": contractID,
@@ -60,7 +63,7 @@ The node can call `add_reports` on this module to submit reports in batches.
 
 Usage of SU, CU and NU will be computed based on the prices and the rules that Threefold set out for cloud pricing.
 
-Billing will be done in Database Tokens and will be send to the corresponding farmer. If the user runs out of funds the chain will set the contract state to `canceled` or it will be removed from storage. The Node needs to act on this contact canceled event and decomission the workload. 
+Billing will be done in Database Tokens and will be send to the corresponding farmer. If the user runs out of funds the chain will set the contract state to `canceled` or it will be removed from storage. The Node needs to act on this contact canceled event and decomission the workload.
 
 The main currency of this chain. More information on this is explained here: TODO
 
@@ -69,10 +72,13 @@ The main currency of this chain. More information on this is explained here: TOD
 Implements a grace period state `GracePeriod(startBlockNumber)` for all contract types
 A grace period is a static amount of time defined by the runtime configuration.
 
-
-Grace period is triggered if the amount due for a billing cycle is larger than the user's balance. 
-A grace period is removed on a contract if the next billing cycles notices that the user reloaded the balance on his account. 
+Grace period is triggered if the amount due for a billing cycle is larger than the user's balance.
+A grace period is removed on a contract if the next billing cycles notices that the user reloaded the balance on his account.
 If this happens, the contract is set back to created state. If a user ignores a graced-out contract, the contract is deleted after the time defined by Grace Period configuration trait.
+
+## Solution provider
+
+See [doc](./solution_provider.md)
 
 ## Footnote
 
