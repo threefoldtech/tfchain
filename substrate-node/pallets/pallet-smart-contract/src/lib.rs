@@ -320,9 +320,10 @@ pub mod pallet {
             origin: OriginFor<T>,
             contract_id: u64,
             deployment_hash: DeploymentHash,
+            deployment_data: DeploymentDataInput<T>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_update_node_contract(account_id, contract_id, deployment_hash)
+            Self::_update_node_contract(account_id, contract_id, deployment_hash, deployment_data)
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
@@ -650,6 +651,7 @@ impl<T: Config> Pallet<T> {
         account_id: T::AccountId,
         contract_id: u64,
         deployment_hash: DeploymentHash,
+        deployment_data: DeploymentDataInput<T>,
     ) -> DispatchResultWithPostInfo {
         let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
         let twin =
@@ -680,6 +682,7 @@ impl<T: Config> Pallet<T> {
         );
 
         node_contract.deployment_hash = deployment_hash;
+        node_contract.deployment_data = deployment_data;
 
         // override values
         contract.contract_type = types::ContractData::NodeContract(node_contract);
