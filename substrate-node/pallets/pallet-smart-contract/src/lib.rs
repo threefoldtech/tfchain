@@ -162,6 +162,7 @@ pub mod pallet {
         + pallet_timestamp::Config
         + pallet_balances::Config
         + pallet_tfgrid::Config
+        + pallet_tft_price::Config
     {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: LockableCurrency<Self::AccountId>;
@@ -415,7 +416,7 @@ pub mod pallet {
                     );
                 }
                 Err(err) => {
-                    log::info!(
+                    log::error!(
                         "types::NodeContract billed failed at block: {:?} with err {:?}",
                         block,
                         err
@@ -865,7 +866,7 @@ impl<T: Config> Pallet<T> {
                     );
                 }
                 Err(err) => {
-                    log::info!(
+                    log::error!(
                         "error while billing contract with id {:?}: {:?}",
                         contract_id,
                         err
@@ -1119,7 +1120,7 @@ impl<T: Config> Pallet<T> {
                 contract_lock.amount_locked,
             ) {
                 Ok(_) => (),
-                Err(err) => log::info!("error while distributing cultivation rewards {:?}", err),
+                Err(err) => log::error!("error while distributing cultivation rewards {:?}", err),
             };
             // Reset values
             contract_lock.lock_updated = now;
