@@ -7,7 +7,7 @@ use frame_support::{
 };
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
-use sp_runtime::{traits::SaturatedConversion, Perbill, Percent};
+use sp_runtime::{assert_eq_error_rate, traits::SaturatedConversion, Perbill, Percent};
 use substrate_fixed::types::U64F64;
 
 use super::types;
@@ -780,7 +780,6 @@ fn test_node_contract_billing_details_with_solution_provider() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
 
-        let alice_balance = Balances::free_balance(alice());
         prepare_solution_provider();
 
         run_to_block(0);
@@ -788,6 +787,7 @@ fn test_node_contract_billing_details_with_solution_provider() {
 
         let twin = TfgridModule::twins(2).unwrap();
         let initial_twin_balance = Balances::free_balance(&twin.account_id);
+        let initial_total_issuance = Balances::total_issuance();
 
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
@@ -805,7 +805,6 @@ fn test_node_contract_billing_details_with_solution_provider() {
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(10);
         assert_eq!(contract_to_bill, [1]);
 
-        let initial_total_issuance = Balances::total_issuance();
         // advance 25 cycles
         let mut i = 0;
         while i != 24 {
@@ -813,48 +812,10 @@ fn test_node_contract_billing_details_with_solution_provider() {
             run_to_block(i * 10 + 1);
         }
 
-        let free_balance = Balances::free_balance(&twin.account_id);
-        let total_amount_billed = initial_twin_balance - free_balance;
+        let usable_balance = Balances::usable_balance(&twin.account_id);
+        let total_amount_billed = initial_twin_balance - usable_balance;
 
-        let staking_pool_account_balance = Balances::free_balance(&get_staking_pool_account());
-
-        // 5% is sent to the staking pool account
-        assert_eq!(
-            staking_pool_account_balance,
-            Perbill::from_percent(5) * total_amount_billed
-        );
-
-        // 10% is sent to the foundation account
-        let pricing_policy = TfgridModule::pricing_policies(1).unwrap();
-        let foundation_account_balance = Balances::free_balance(&pricing_policy.foundation_account);
-        assert_eq!(
-            foundation_account_balance,
-            Perbill::from_percent(10) * total_amount_billed
-        );
-
-        // 40% is sent to the sales account
-        let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
-        assert_eq!(
-            sales_account_balance,
-            Perbill::from_percent(40) * total_amount_billed
-        );
-
-        // 10% is sent to the solution provider
-        let solution_provider = SmartContractModule::solution_providers(1).unwrap();
-        let solution_provider_1_balance =
-            Balances::free_balance(solution_provider.providers[0].who.clone());
-        assert_eq!(
-            solution_provider_1_balance,
-            Perbill::from_percent(10) * total_amount_billed + alice_balance
-        );
-
-        let total_issuance = Balances::total_issuance();
-        // total issueance is now previous total - amount burned from contract billed (35%)
-        let burned_amount = Perbill::from_percent(35) * total_amount_billed;
-        assert_eq!(
-            total_issuance,
-            initial_total_issuance - burned_amount as u64
-        );
+        validate_distribution_rewards(initial_total_issuance, total_amount_billed, true);
 
         // amount unbilled should have been reset after a transfer between contract owner and farmer
         let contract_billing_info = SmartContractModule::contract_billing_information_by_id(1);
@@ -1185,7 +1146,9 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let twin = TfgridModule::twins(2).unwrap();
-        let initial_balance = Balances::free_balance(&twin.account_id);
+        let initial_twin_balance = Balances::free_balance(&twin.account_id);
+        println!("initial twin balance: {:?}", initial_twin_balance);
+        let initial_total_issuance = Balances::total_issuance();
 
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
@@ -1212,13 +1175,14 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
         // Run halfway ish next cycle and cancel
         run_to_block(25);
 
-        let total_amount_due = amount_due_1 + amount_due_2;
-        let extrinsic_fee = 10000;
+        let usable_balance = Balances::usable_balance(&twin.account_id);
+        let total_amount_billed = initial_twin_balance - usable_balance;
 
+        let extrinsic_fee = 10000;
         Balances::transfer(
             Origin::signed(bob()),
             alice(),
-            initial_balance - total_amount_due - extrinsic_fee,
+            initial_twin_balance - total_amount_billed - extrinsic_fee,
         )
         .unwrap();
 
@@ -1240,14 +1204,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
             usable_balance_before_canceling
         );
 
-        // Check for validation that the actual distribution of rewards happened
-        // 10% is sent to the foundation account
-        let pricing_policy = TfgridModule::pricing_policies(1).unwrap();
-        let foundation_account_balance = Balances::free_balance(&pricing_policy.foundation_account);
-        assert_eq!(
-            foundation_account_balance,
-            Perbill::from_percent(10) * total_amount_due
-        );
+        validate_distribution_rewards(initial_total_issuance, total_amount_billed, false);
     });
 }
 
@@ -2243,6 +2200,69 @@ fn test_percent() {
 // ---------------------------- //
 // ---------------------------- //
 
+fn validate_distribution_rewards(
+    initial_total_issuance: u64,
+    total_amount_billed: u64,
+    had_solution_provider: bool,
+) {
+    println!("total locked balance {:?}", total_amount_billed);
+
+    let staking_pool_account_balance = Balances::free_balance(&get_staking_pool_account());
+    println!(
+        "staking pool account balance, {:?}",
+        staking_pool_account_balance
+    );
+
+    // 5% is sent to the staking pool account
+    assert_eq!(
+        staking_pool_account_balance,
+        Perbill::from_percent(5) * total_amount_billed
+    );
+
+    // 10% is sent to the foundation account
+    let pricing_policy = TfgridModule::pricing_policies(1).unwrap();
+    let foundation_account_balance = Balances::free_balance(&pricing_policy.foundation_account);
+    assert_eq!(
+        foundation_account_balance,
+        Perbill::from_percent(10) * total_amount_billed
+    );
+
+    if had_solution_provider {
+        // 40% is sent to the sales account
+        let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
+        assert_eq!(
+            sales_account_balance,
+            Perbill::from_percent(40) * total_amount_billed
+        );
+
+        // 10% is sent to the solution provider
+        let solution_provider = SmartContractModule::solution_providers(1).unwrap();
+        let solution_provider_1_balance =
+            Balances::free_balance(solution_provider.providers[0].who.clone());
+        println!("solution provider b: {:?}", solution_provider_1_balance);
+        assert_eq!(
+            solution_provider_1_balance,
+            Perbill::from_percent(10) * total_amount_billed
+        );
+    } else {
+        // 50% is sent to the sales account
+        let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
+        assert_eq!(
+            sales_account_balance,
+            Perbill::from_percent(50) * total_amount_billed
+        );
+    }
+
+    let total_issuance = Balances::total_issuance();
+    // total issueance is now previous total - amount burned from contract billed (35%)
+    let burned_amount = Perbill::from_percent(35) * total_amount_billed;
+    assert_eq_error_rate!(
+        total_issuance,
+        initial_total_issuance - burned_amount as u64,
+        1
+    );
+}
+
 fn push_nru_report_for_contract(contract_id: u64, block_number: u64) {
     let gigabyte = 1000 * 1000 * 1000;
     let mut consumption_reports = Vec::new();
@@ -2560,12 +2580,12 @@ fn create_farming_policies() {
 fn prepare_solution_provider() {
     let provider = super::types::Provider {
         take: 10,
-        who: alice(),
+        who: dave(),
     };
     let providers = vec![provider];
 
     assert_ok!(SmartContractModule::create_solution_provider(
-        Origin::signed(alice()),
+        Origin::signed(dave()),
         "some_description".as_bytes().to_vec(),
         "some_link".as_bytes().to_vec(),
         providers
