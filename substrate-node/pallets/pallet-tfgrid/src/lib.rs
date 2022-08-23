@@ -1827,6 +1827,7 @@ pub mod pallet {
                 let farming_policy = FarmingPoliciesMap::<T>::get(policy_limits.farming_policy_id);
                 let now = system::Pallet::<T>::block_number();
 
+                // Policy end is expressed in number of blocks
                 if now >= farming_policy.policy_created + farming_policy.policy_end {
                     return Err(DispatchErrorWithPostInfo::from(
                         Error::<T>::FarmingPolicyExpired,
@@ -1834,9 +1835,9 @@ pub mod pallet {
                 }
 
                 let mut farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
-                farm.farming_policy_limits = Some(policy_limits.clone());
-                Farms::<T>::insert(farm_id, farm);
-                Self::deposit_event(Event::FarmingPolicySet(farm_id, Some(policy_limits)));
+                farm.farming_policy_limits = Some(policy_limits);
+                Farms::<T>::insert(farm_id, &farm);
+                Self::deposit_event(Event::FarmingPolicySet(farm_id, farm.farming_policy_limits));
             }
 
             Ok(().into())
