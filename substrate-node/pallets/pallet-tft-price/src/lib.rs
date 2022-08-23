@@ -3,34 +3,47 @@
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
-use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage,
-    dispatch::DispatchResultWithPostInfo,
-    ensure,
-    traits::{EnsureOrigin, Get},
-    weights::Pays,
-};
-use frame_system::{
-    self as system, ensure_signed,
-    offchain::{AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer},
-};
+use frame_support::{dispatch::DispatchResultWithPostInfo, weights::Pays};
+use frame_system::offchain::{SendSignedTransaction, Signer};
 use lite_json::json::JsonValue;
 use log;
 use sp_runtime::offchain::{http, Duration};
 use sp_runtime::traits::SaturatedConversion;
 use sp_std::{boxed::Box, vec::Vec};
 mod ringbuffer;
-
 use ringbuffer::{RingBufferTrait, RingBufferTransient};
+use scale_info::prelude::format;
+use serde_json::Value;
 use sp_core::crypto::KeyTypeId;
+use substrate_fixed::types::U32F32;
+
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"tft!");
 
-type BufferIndex = u16;
+const SRC_CODE: &str = "USDC";
+const SRC_ISSUER: &str = "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
+const DST_TYPE: &str = "credit_alphanum4";
+const DST_ISSUER: &str = "GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47";
+const DST_CODE: &str = "TFT";
+const DST_AMOUNT: u32 = 100;
 
 #[cfg(test)]
 mod tests;
 
-pub mod crypto {
+// Re-export pallet items so that they can be accessed from the crate namespace.
+pub use pallet::*;
+
+#[frame_support::pallet]
+pub mod pallet {
+
+    use frame_support::pallet_prelude::*;
+    use frame_system::pallet_prelude::*;
+
+    use frame_support::{dispatch::DispatchResultWithPostInfo, ensure, traits::EnsureOrigin};
+    use frame_system::{
+        ensure_signed,
+        offchain::{AppCrypto, CreateSignedTransaction},
+    };
+
     use crate::KEY_TYPE;
     use sp_core::sr25519::Signature as Sr25519Signature;
     use sp_runtime::{
@@ -42,6 +55,7 @@ pub mod crypto {
 
     app_crypto!(sr25519, KEY_TYPE);
 
+    type BufferIndex = u16;
     pub struct AuthId;
 
     // implemented for ocw-runtime
@@ -59,91 +73,128 @@ pub mod crypto {
         type GenericSignature = sp_core::sr25519::Signature;
         type GenericPublic = sp_core::sr25519::Public;
     }
-}
 
-// #[cfg(test)]
-// mod tests;
-
-pub trait Config: system::Config + CreateSignedTransaction<Call<Self>> {
-    type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
-
-    // Add other types and constants required to configure this pallet.
-    type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
-    type Call: From<Call<Self>>;
-    /// Origin for restricted extrinsics
-    /// Can be the root or another origin configured in the runtime
-    type RestrictedOrigin: EnsureOrigin<Self::Origin>;
-}
-
-decl_storage! {
-    trait Store for Module<T: Config> as TFTPriceModule {
-        // Token price
-        pub TftPrice: u32;
-        pub LastBlockSet: T::BlockNumber;
-        pub AverageTftPrice get(fn average_tft_price): u32;
-        pub TftPriceHistory get(fn get_value): map hasher(twox_64_concat) BufferIndex => u32;
-        pub BufferRange get(fn range): (BufferIndex, BufferIndex) = (0, 0);
-        pub AllowedOrigin get(fn allowed_origin): Option<T::AccountId>;
+    #[pallet::config]
+    pub trait Config: frame_system::Config + CreateSignedTransaction<Call<Self>> {
+        // type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        // Add other types and constants required to configure this pallet.
+        type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
+        type Call: From<Call<Self>>;
+        /// Origin for restricted extrinsics
+        /// Can be the root or another origin configured in the runtime
+        type RestrictedOrigin: EnsureOrigin<Self::Origin>;
     }
 
-    add_extra_genesis {
-        config(allowed_origin): Option<T::AccountId>;
-
-        build(|_config| {
-            AllowedOrigin::<T>::set(_config.allowed_origin.clone());
-        });
-    }
-}
-
-decl_event! {
-    pub enum Event<T> where AccountId = <T as frame_system::Config>::AccountId {
+    #[pallet::event]
+    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    // pub enum Event<T> where AccountId = <T as frame_system::Config>::AccountId {
+    pub enum Event<T: Config> {
         PriceStored(u32),
-        OffchainWorkerExecuted(AccountId),
+        OffchainWorkerExecuted(T::AccountId),
         AveragePriceStored(u32),
     }
-}
 
-decl_error! {
-    pub enum Error for Module<T: Config> {
+    #[pallet::error]
+    // pub enum Error for Module<T: Config> {
+    pub enum Error<T> {
         ErrFetchingPrice,
         OffchainSignedTxError,
         NoLocalAcctForSigning,
         AccountUnauthorizedToSetPrice,
     }
-}
 
-decl_module! {
-    pub struct Module<T: Config> for enum Call where origin: T::Origin {
-        type Error = Error<T>;
+    #[pallet::pallet]
+    #[pallet::generate_store(pub(super) trait Store)]
+    pub struct Pallet<T>(_);
 
-        fn deposit_event() = default;
+    #[pallet::storage]
+    #[pallet::getter(fn tft_price)]
+    pub type TftPrice<T> = StorageValue<_, u32, ValueQuery>;
 
-        #[weight = 100_000_000 + T::DbWeight::get().writes(3)]
-        pub fn set_prices(origin, price: u32, block_number: T::BlockNumber) -> DispatchResultWithPostInfo {
+    #[pallet::storage]
+    #[pallet::getter(fn last_block_set)]
+    pub type LastBlockSet<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn average_tft_price)]
+    pub type AverageTftPrice<T> = StorageValue<_, u32, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn get_value)]
+    pub type TftPriceHistory<T> = StorageMap<_, Blake2_128Concat, BufferIndex, u32, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn range)]
+    pub type BufferRange<T> = StorageValue<_, (BufferIndex, BufferIndex), ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn allowed_origin)]
+    pub type AllowedOrigin<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
+
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        pub fn set_prices(
+            origin: OriginFor<T>,
+            price: u32,
+            block_number: T::BlockNumber,
+        ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
             if let Some(allowed_origin) = AllowedOrigin::<T>::get() {
-                ensure!(allowed_origin == address, Error::<T>::AccountUnauthorizedToSetPrice);
+                ensure!(
+                    allowed_origin == address,
+                    Error::<T>::AccountUnauthorizedToSetPrice
+                );
                 Self::calculate_and_set_price(price, block_number)?;
             }
             Ok(().into())
         }
 
-        #[weight = 100_000_000 + T::DbWeight::get().writes(3)]
-        pub fn set_allowed_origin(origin, target: T::AccountId) {
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1))]
+        pub fn set_allowed_origin(
+            origin: OriginFor<T>,
+            target: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
             AllowedOrigin::<T>::set(Some(target));
+            Ok(().into())
         }
+    }
 
+    #[pallet::hooks]
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn offchain_worker(block_number: T::BlockNumber) {
             match Self::offchain_signed_tx(block_number) {
                 Ok(_) => log::info!("offchain worker done."),
-                Err(err) => log::info!("err: {:?}", err)
+                Err(err) => log::error!("{:?}", err),
             }
+        }
+    }
+
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config> {
+        pub allowed_origin: Option<T::AccountId>,
+    }
+
+    #[cfg(feature = "std")]
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            Self {
+                allowed_origin: None,
+            }
+        }
+    }
+
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+        fn build(&self) {
+            AllowedOrigin::<T>::set(self.allowed_origin.clone());
         }
     }
 }
 
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
     fn calculate_and_set_price(
         price: u32,
         block_number: T::BlockNumber,
@@ -151,8 +202,8 @@ impl<T: Config> Module<T> {
         log::info!("price {:?}", price);
 
         LastBlockSet::<T>::put(block_number);
-        TftPrice::put(price);
-        Self::deposit_event(RawEvent::PriceStored(price));
+        TftPrice::<T>::put(price);
+        Self::deposit_event(Event::PriceStored(price));
 
         log::info!("storing average now");
         let mut queue = Self::queue_transient();
@@ -160,18 +211,22 @@ impl<T: Config> Module<T> {
         let average = Self::calc_avg();
 
         log::info!("average price {:?}", average);
-        AverageTftPrice::put(average);
-        Self::deposit_event(RawEvent::AveragePriceStored(average));
+        AverageTftPrice::<T>::put(average);
+        Self::deposit_event(Event::AveragePriceStored(average));
 
         Ok(Pays::No.into())
     }
 
-    /// Fetch current price and return the result in cents.
+    /// Fetch current price and return the result in mUSD.
     fn fetch_price() -> Result<u32, http::Error> {
         let deadline = sp_io::offchain::timestamp().add(Duration::from_millis(2_000));
 
-        let request =
-            http::Request::get("https://min-api.cryptocompare.com/data/price?fsym=3ft&tsyms=USD");
+        let request_url = format!(
+            "https://horizon.stellar.org/paths/strict-receive?source_assets={}%3A{}&destination_asset_type={}&destination_asset_issuer={}&destination_asset_code={}&destination_amount={}",
+            SRC_CODE, SRC_ISSUER, DST_TYPE, DST_ISSUER, DST_CODE, DST_AMOUNT,
+        );
+
+        let request = http::Request::get(request_url.as_str());
 
         let pending = request.deadline(deadline).send().map_err(|_| {
             log::error!("IO error");
@@ -200,7 +255,7 @@ impl<T: Config> Module<T> {
             http::Error::Unknown
         })?;
 
-        let price = match Self::parse_price(body_str) {
+        let price = match Self::parse_lowest_price_from_request(body_str) {
             Some(price) => Ok(price),
             None => {
                 log::warn!("Unable to extract price from the response: {:?}", body_str);
@@ -208,9 +263,13 @@ impl<T: Config> Module<T> {
             }
         }?;
 
-        log::warn!("Got price: {} cents", price);
+        // Get price for 1 TFT in mUSD
+        let tft_usd = (U32F32::from_num(price) / U32F32::from_num(DST_AMOUNT))
+            .round()
+            .to_num::<u32>();
+        log::info!("Got price: {} mUSD", tft_usd);
 
-        Ok(price)
+        Ok(tft_usd)
     }
 
     fn offchain_signed_tx(block_number: T::BlockNumber) -> Result<(), Error<T>> {
@@ -235,7 +294,6 @@ impl<T: Config> Module<T> {
         });
 
         // Display error if the signed tx fails.
-        // Display error if the signed tx fails.
         if let Some((acc, res)) = result {
             if res.is_err() {
                 log::error!("failure: offchain_signed_tx: tx sent: {:?}", acc.id);
@@ -251,7 +309,7 @@ impl<T: Config> Module<T> {
 
     /// Parse the price from the given JSON string using `lite-json`.
     ///
-    /// Returns `None` when parsing failed or `Some(price in cents)` when parsing is successful.
+    /// Returns `None` when parsing failed or `Some(price in mUSD)` when parsing is successful.
     pub fn parse_price(price_str: &str) -> Option<u32> {
         let val = lite_json::parse_json(price_str);
         let price = match val.ok()? {
@@ -269,6 +327,36 @@ impl<T: Config> Module<T> {
 
         let exp = price.fraction_length.saturating_sub(3);
         Some(price.integer as u32 * 1000 + (price.fraction / 10_u64.pow(exp)) as u32)
+    }
+
+    /// Parse the lowest price from the given JSON string using `serde_json`.
+    ///
+    /// Returns `None` when parsing failed or `Some(price in mUSD)` when parsing is successful.
+    pub fn parse_lowest_price_from_request(price_str: &str) -> Option<u32> {
+        let data: Value = serde_json::from_str(price_str).ok()?;
+        let records_array = data.get("_embedded")?.get("records")?;
+
+        let prices: Vec<U32F32> = records_array
+            .as_array()?
+            .into_iter()
+            .map(|item| {
+                let val = item.get("source_amount")?;
+                let str = val.as_str()?;
+                let p = str.parse::<U32F32>().ok()?;
+                Some(p)
+            })
+            .map(|x| {
+                if let Some(p) = x {
+                    p
+                } else {
+                    U32F32::from_num(f32::NAN)
+                }
+            })
+            .collect();
+
+        let lowest = prices.into_iter().reduce(U32F32::min)?;
+        // convert to mUSD
+        Some(((lowest) * 1000).round().to_num::<u32>())
     }
 
     fn queue_transient() -> Box<dyn RingBufferTrait<u32>> {

@@ -162,6 +162,7 @@ pub mod pallet {
         + pallet_timestamp::Config
         + pallet_balances::Config
         + pallet_tfgrid::Config
+        + pallet_tft_price::Config
     {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: LockableCurrency<Self::AccountId>;
@@ -320,9 +321,10 @@ pub mod pallet {
             origin: OriginFor<T>,
             contract_id: u64,
             deployment_hash: DeploymentHash,
+            deployment_data: DeploymentDataInput<T>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_update_node_contract(account_id, contract_id, deployment_hash)
+            Self::_update_node_contract(account_id, contract_id, deployment_hash, deployment_data)
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
@@ -414,7 +416,7 @@ pub mod pallet {
                     );
                 }
                 Err(err) => {
-                    log::info!(
+                    log::error!(
                         "types::NodeContract billed failed at block: {:?} with err {:?}",
                         block,
                         err
@@ -650,6 +652,7 @@ impl<T: Config> Pallet<T> {
         account_id: T::AccountId,
         contract_id: u64,
         deployment_hash: DeploymentHash,
+        deployment_data: DeploymentDataInput<T>,
     ) -> DispatchResultWithPostInfo {
         let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
         let twin =
@@ -680,6 +683,7 @@ impl<T: Config> Pallet<T> {
         );
 
         node_contract.deployment_hash = deployment_hash;
+        node_contract.deployment_data = deployment_data;
 
         // override values
         contract.contract_type = types::ContractData::NodeContract(node_contract);
@@ -862,7 +866,7 @@ impl<T: Config> Pallet<T> {
                     );
                 }
                 Err(err) => {
-                    log::info!(
+                    log::error!(
                         "error while billing contract with id {:?}: {:?}",
                         contract_id,
                         err
@@ -978,7 +982,7 @@ impl<T: Config> Pallet<T> {
                     }
                 }
             }
-            _ => {
+            types::ContractState::Created => {
                 // if the user ran out of funds, move the contract to be in a grace period
                 // dont lock the tokens because there is nothing to lock
                 // we can still update the internal contract lock object to figure out later how much was due
@@ -1002,6 +1006,7 @@ impl<T: Config> Pallet<T> {
                     )?;
                 }
             }
+            _ => (),
         }
 
         Ok(contract)
@@ -1051,12 +1056,15 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
-        // increment cycles billed and update the internal lock struct
         let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
-        contract_lock.lock_updated = now;
-        contract_lock.cycles += 1;
-        contract_lock.amount_locked = contract_lock.amount_locked + amount_due;
-        ContractLock::<T>::insert(contract.contract_id, &contract_lock);
+        // Only update contract lock in state (Created, GracePeriod)
+        if !matches!(contract.state, types::ContractState::Deleted(_)) {
+            // increment cycles billed and update the internal lock struct
+            contract_lock.lock_updated = now;
+            contract_lock.cycles += 1;
+            contract_lock.amount_locked = contract_lock.amount_locked + amount_due;
+            ContractLock::<T>::insert(contract.contract_id, &contract_lock);
+        }
 
         // Contract is in grace state, don't actually lock tokens or distribute rewards
         if matches!(contract.state, types::ContractState::GracePeriod(_)) {
@@ -1068,14 +1076,16 @@ impl<T: Config> Pallet<T> {
         // Just extend the lock with the amount due for this contract billing period (lock will be created if not exists)
         let twin =
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
-        let mut locked_balance = Self::get_locked_balance(&twin.account_id);
-        locked_balance += amount_due;
-        <T as Config>::Currency::extend_lock(
-            GRID_LOCK_ID,
-            &twin.account_id,
-            locked_balance,
-            WithdrawReasons::all(),
-        );
+        if matches!(contract.state, types::ContractState::Created) {
+            let mut locked_balance = Self::get_locked_balance(&twin.account_id);
+            locked_balance += amount_due;
+            <T as Config>::Currency::extend_lock(
+                GRID_LOCK_ID,
+                &twin.account_id,
+                locked_balance,
+                WithdrawReasons::all(),
+            );
+        }
 
         let is_canceled = matches!(contract.state, types::ContractState::Deleted(_));
         let canceled_and_not_zero =
@@ -1116,7 +1126,7 @@ impl<T: Config> Pallet<T> {
                 contract_lock.amount_locked,
             ) {
                 Ok(_) => (),
-                Err(err) => log::info!("error while distributing cultivation rewards {:?}", err),
+                Err(err) => log::error!("error while distributing cultivation rewards {:?}", err),
             };
             // Reset values
             contract_lock.lock_updated = now;
