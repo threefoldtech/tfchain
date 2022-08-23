@@ -29,8 +29,8 @@ pub mod types;
 
 pub mod farm;
 pub mod grid_migration;
-pub mod nodes_migration;
 pub mod interface;
+pub mod nodes_migration;
 pub mod pub_config;
 pub mod pub_ip;
 pub mod twin;
@@ -1850,6 +1850,18 @@ pub mod pallet {
             let mut farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
             farm.farming_policy_limits = limits.clone();
             Farms::<T>::insert(farm_id, farm);
+
+            // Give all the nodes in this farm the policy that is attached
+            for node_id in NodesByFarmID::<T>::get(farm_id) {
+                match Nodes::<T>::get(node_id) {
+                    Some(mut node) => {
+                        let policy = Self::get_farming_policy(&node)?;
+                        node.farming_policy_id = policy.id;
+                        Nodes::<T>::insert(node_id, node);
+                    }
+                    None => continue,
+                }
+            }
 
             Self::deposit_event(Event::FarmingPolicySet(farm_id, limits));
 
