@@ -3,15 +3,15 @@ use super::*;
 use frame_support::{traits::Get, weights::Weight};
 use log::info;
 
-pub mod v6 {
+pub mod v7patch {
     use super::*;
     use crate::Config;
 
     use frame_support::{pallet_prelude::Weight, traits::OnRuntimeUpgrade};
     use sp_std::marker::PhantomData;
-    pub struct GridMigration<T: Config>(PhantomData<T>);
+    pub struct NodesMigration<T: Config>(PhantomData<T>);
 
-    impl<T: Config> OnRuntimeUpgrade for GridMigration<T> {
+    impl<T: Config> OnRuntimeUpgrade for NodesMigration<T> {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<(), &'static str> {
             assert!(PalletVersion::<T>::get() == types::StorageVersion::V6Struct);
@@ -56,6 +56,10 @@ pub fn add_farm_nodes_index<T: Config>() -> frame_support::weights::Weight {
 
         reads += 1;
     }
+
+    // Update pallet storage version
+    PalletVersion::<T>::set(types::StorageVersion::V7Struct);
+    info!(" <<< Storage version upgraded");
 
     // Return the weight consumed by the migration.
     T::DbWeight::get().reads_writes(reads as Weight + 1, 0)

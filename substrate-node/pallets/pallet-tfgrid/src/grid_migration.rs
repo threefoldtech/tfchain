@@ -88,7 +88,7 @@ pub mod deprecated {
     }
 }
 
-pub mod v6 {
+pub mod v7 {
     use super::*;
     use crate::Config;
 
@@ -111,7 +111,7 @@ pub mod v6 {
 
         #[cfg(feature = "try-runtime")]
         fn post_upgrade() -> Result<(), &'static str> {
-            assert!(PalletVersion::<T>::get() == types::StorageVersion::V6Struct);
+            assert!(PalletVersion::<T>::get() == types::StorageVersion::V7Struct);
 
             info!(
                 "👥  TFGrid pallet migration to {:?} passes POST migrate checks ✅",
@@ -262,7 +262,7 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
     );
 
     // Update pallet storage version
-    PalletVersion::<T>::set(types::StorageVersion::V6Struct);
+    PalletVersion::<T>::set(types::StorageVersion::V7Struct);
     info!(" <<< Storage version upgraded");
 
     // Return the weight consumed by the migration.
