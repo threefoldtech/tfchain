@@ -1528,7 +1528,7 @@ fn test_create_and_update_policy() {
 }
 
 #[test]
-fn test_set_zos_version() {
+fn test_set_valid_zos_version_works() {
     ExternalityBuilder::build().execute_with(|| {
         let zos_version = "1.0.0".as_bytes().to_vec();
         assert_ok!(TfgridModule::set_zos_version(
@@ -1545,6 +1545,23 @@ fn test_set_zos_version() {
                 TfgridEvent::<TestRuntime>::ZosVersionUpdated(zos_version)
             ))),
             true
+        );
+    })
+}
+
+#[test]
+fn test_set_invalid_zos_version_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        let zos_version = "1.0.0".as_bytes().to_vec();
+        assert_ok!(TfgridModule::set_zos_version(
+            RawOrigin::Root.into(),
+            zos_version.clone(),
+        ));
+
+        // try to set zos version with the same version that is already set
+        assert_noop!(
+            TfgridModule::set_zos_version(RawOrigin::Root.into(), TfgridModule::zos_version()),
+            Error::<TestRuntime>::InvalidZosVersion,
         );
     })
 }
