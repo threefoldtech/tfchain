@@ -275,6 +275,10 @@ pub fn charlie() -> AccountId {
     get_account_id_from_seed::<sr25519::Public>("Charlie")
 }
 
+pub fn dave() -> AccountId {
+    get_account_id_from_seed::<sr25519::Public>("Dave")
+}
+
 pub fn get_staking_pool_account() -> AccountId {
     AccountId32::from_ss58check("5CNposRewardAccount11111111111111111111111111FSU").unwrap()
 }
