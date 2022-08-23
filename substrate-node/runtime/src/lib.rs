@@ -6,7 +6,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use constants::fee::WeightToFee;
+use constants::fee::WeightToFeeStruct;
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use sp_api::impl_runtime_apis;
@@ -139,7 +139,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 105,
+    spec_version: 106,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -311,7 +311,7 @@ parameter_types! {
 impl pallet_transaction_payment::Config for Runtime {
     type OnChargeTransaction = CurrencyAdapter<Balances, impls::DealWithFees<Runtime>>;
     type OperationalFeeMultiplier = ConstU8<5>;
-    type WeightToFee = WeightToFee;
+    type WeightToFee = WeightToFeeStruct;
     type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
     type FeeMultiplierUpdate = ();
 }
@@ -419,7 +419,7 @@ impl pallet_kvstore::Config for Runtime {
 }
 
 impl pallet_tft_price::Config for Runtime {
-    type AuthorityId = pallet_tft_price::crypto::AuthId;
+    type AuthorityId = pallet_tft_price::AuthId;
     type Call = Call;
     type Event = Event;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
@@ -529,7 +529,7 @@ where
         #[cfg_attr(not(feature = "std"), allow(unused_variables))]
         let raw_payload = SignedPayload::new(call, extra)
             .map_err(|e| {
-                log::info!("SignedPayload error: {:?}", e);
+                log::error!("SignedPayload error: {:?}", e);
             })
             .ok()?;
 
@@ -938,7 +938,7 @@ impl_runtime_apis! {
             // have a backtrace here. If any of the pre/post migration checks fail, we shall stop
             // right here and right now.
             let weight = Executive::try_runtime_upgrade().map_err(|err|{
-                log::info!("try-runtime::on_runtime_upgrade failed with: {:?}", err);
+                log::error!("try-runtime::on_runtime_upgrade failed with: {:?}", err);
                 err
             }).unwrap();
             (weight, BlockWeights::get().max_block)

@@ -176,7 +176,8 @@ fn test_update_node_contract_works() {
         assert_ok!(SmartContractModule::update_node_contract(
             Origin::signed(alice()),
             1,
-            new_hash
+            new_hash,
+            get_deployment_data()
         ));
 
         let node_contract = types::NodeContract {
@@ -219,7 +220,8 @@ fn test_update_node_contract_not_exists_fails() {
             SmartContractModule::update_node_contract(
                 Origin::signed(alice()),
                 1,
-                generate_deployment_hash()
+                generate_deployment_hash(),
+                get_deployment_data()
             ),
             Error::<TestRuntime>::ContractNotExists
         );
@@ -244,7 +246,8 @@ fn test_update_node_contract_wrong_twins_fails() {
             SmartContractModule::update_node_contract(
                 Origin::signed(bob()),
                 1,
-                generate_deployment_hash()
+                generate_deployment_hash(),
+                get_deployment_data()
             ),
             Error::<TestRuntime>::TwinNotAuthorizedToUpdateContract
         );
