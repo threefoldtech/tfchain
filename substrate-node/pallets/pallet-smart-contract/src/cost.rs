@@ -243,9 +243,7 @@ pub fn calculate_discount<T: Config>(
 pub fn calculate_cost_in_tft_from_musd<T: Config>(
     total_cost: u64,
 ) -> Result<u64, DispatchErrorWithPostInfo> {
-    // Todo fix me
-    use frame_support::StorageValue;
-    let avg_tft_price = pallet_tft_price::AverageTftPrice::get();
+    let avg_tft_price = pallet_tft_price::AverageTftPrice::<T>::get();
     ensure!(avg_tft_price > 0, Error::<T>::TFTPriceValueError);
 
     // TFT Price is in musd

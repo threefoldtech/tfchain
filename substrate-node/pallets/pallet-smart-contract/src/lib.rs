@@ -162,6 +162,7 @@ pub mod pallet {
         + pallet_timestamp::Config
         + pallet_balances::Config
         + pallet_tfgrid::Config
+        + pallet_tft_price::Config
     {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: LockableCurrency<Self::AccountId>;
@@ -320,9 +321,10 @@ pub mod pallet {
             origin: OriginFor<T>,
             contract_id: u64,
             deployment_hash: DeploymentHash,
+            deployment_data: DeploymentDataInput<T>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_update_node_contract(account_id, contract_id, deployment_hash)
+            Self::_update_node_contract(account_id, contract_id, deployment_hash, deployment_data)
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
@@ -414,7 +416,7 @@ pub mod pallet {
                     );
                 }
                 Err(err) => {
-                    log::info!(
+                    log::error!(
                         "types::NodeContract billed failed at block: {:?} with err {:?}",
                         block,
                         err
@@ -650,6 +652,7 @@ impl<T: Config> Pallet<T> {
         account_id: T::AccountId,
         contract_id: u64,
         deployment_hash: DeploymentHash,
+        deployment_data: DeploymentDataInput<T>,
     ) -> DispatchResultWithPostInfo {
         let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
         let twin =
@@ -680,6 +683,7 @@ impl<T: Config> Pallet<T> {
         );
 
         node_contract.deployment_hash = deployment_hash;
+        node_contract.deployment_data = deployment_data;
 
         // override values
         contract.contract_type = types::ContractData::NodeContract(node_contract);
@@ -862,7 +866,7 @@ impl<T: Config> Pallet<T> {
                     );
                 }
                 Err(err) => {
-                    log::info!(
+                    log::error!(
                         "error while billing contract with id {:?}: {:?}",
                         contract_id,
                         err
@@ -1122,7 +1126,7 @@ impl<T: Config> Pallet<T> {
                 contract_lock.amount_locked,
             ) {
                 Ok(_) => (),
-                Err(err) => log::info!("error while distributing cultivation rewards {:?}", err),
+                Err(err) => log::error!("error while distributing cultivation rewards {:?}", err),
             };
             // Reset values
             contract_lock.lock_updated = now;

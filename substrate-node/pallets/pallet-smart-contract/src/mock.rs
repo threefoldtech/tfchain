@@ -3,7 +3,10 @@
 use super::*;
 use crate::name_contract::NameContractName;
 use crate::{self as pallet_smart_contract};
-use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
+use frame_support::{
+    construct_runtime, parameter_types,
+    traits::{ConstU32, GenesisBuild},
+};
 use frame_system::EnsureRoot;
 use pallet_tfgrid::{
     farm::FarmName,
@@ -160,7 +163,7 @@ impl pallet_tfgrid::Config for TestRuntime {
 
 impl pallet_tft_price::Config for TestRuntime {
     type Event = Event;
-    type AuthorityId = pallet_tft_price::crypto::AuthId;
+    type AuthorityId = pallet_tft_price::AuthId;
     type Call = Call;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
 }

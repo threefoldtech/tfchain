@@ -3988,11 +3988,13 @@ dependencies = [
  "parking_lot 0.11.2",
  "scale-info",
  "serde",
+ "serde_json",
  "sp-core",
  "sp-io",
  "sp-keystore",
  "sp-runtime",
  "sp-std",
+ "substrate-fixed",
 ]
 
 [[package]]
