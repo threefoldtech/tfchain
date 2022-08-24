@@ -2,55 +2,19 @@
 
 use codec::{Decode, Encode};
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage, ensure,
-    traits::{Currency, OnUnbalanced, ReservableCurrency},
+    ensure,
+    traits::{Currency, OnUnbalanced},
 };
-use sp_std::prelude::*;
-use frame_system::{self as system, ensure_signed};
-use sp_runtime::DispatchResult;
 use scale_info::TypeInfo;
+use sp_runtime::DispatchResult;
+use sp_std::prelude::*;
 use sp_std::vec::Vec;
-use sp_std::convert::TryInto;
 
 #[cfg(test)]
 mod tests;
 
 #[cfg(test)]
 mod mock;
-
-// balance type using reservable currency type
-type BalanceOf<T> =
-    <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
-type NegativeImbalanceOf<T> =
-    <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::NegativeImbalance;
-
-pub trait Config: system::Config {
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
-
-    /// Currency type for this pallet.
-    type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
-
-    /// Handler for the unbalanced decrement when slashing (burning collateral)
-    type Burn: OnUnbalanced<NegativeImbalanceOf<Self>>;
-}
-
-decl_event!(
-    pub enum Event<T>
-    where
-        AccountId = <T as system::Config>::AccountId,
-        BlockNumber = <T as system::Config>::BlockNumber,
-        BalanceOf = BalanceOf<T>,
-    {
-        BurnTransactionCreated(AccountId, BalanceOf, BlockNumber, Vec<u8>),
-    }
-);
-
-decl_error! {
-    /// Error for the vesting module.
-    pub enum Error for Module<T: Config> {
-        NotEnoughBalanceToBurn,
-    }
-}
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct Burn<AccountId, BalanceOf, BlockNumber> {
@@ -60,25 +24,73 @@ pub struct Burn<AccountId, BalanceOf, BlockNumber> {
     pub message: Vec<u8>,
 }
 
-decl_storage! {
-    trait Store for Module<T: Config> as TFTBridgeModule {
-        pub Burns get(fn burns): Option<Vec<Burn<T::AccountId, BalanceOf<T>, T::BlockNumber>>>;
+// Re-export pallet items so that they can be accessed from the crate namespace.
+pub use pallet::*;
+
+#[frame_support::pallet]
+pub mod pallet {
+    use frame_support::{
+        pallet_prelude::*,
+        traits::{Currency, OnUnbalanced, ReservableCurrency},
+    };
+    use frame_system::{ensure_signed, pallet_prelude::*};
+    use sp_std::convert::TryInto;
+
+    use crate::{Burn, Vec};
+
+    // balance type using reservable currency type
+    pub type BalanceOf<T> =
+        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
+        <T as frame_system::Config>::AccountId,
+    >>::NegativeImbalance;
+
+    #[pallet::pallet]
+    #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
+    pub struct Pallet<T>(_);
+
+    #[pallet::config]
+    pub trait Config: frame_system::Config {
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        /// Currency type for this pallet.
+        type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
+        /// Handler for the unbalanced decrement when slashing (burning collateral)
+        type Burn: OnUnbalanced<NegativeImbalanceOf<Self>>;
     }
-}
 
-decl_module! {
-    pub struct Module<T: Config> for enum Call where origin: T::Origin {
-        fn deposit_event() = default;
+    #[pallet::event]
+    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    pub enum Event<T: Config> {
+        BurnTransactionCreated(T::AccountId, BalanceOf<T>, T::BlockNumber, Vec<u8>),
+    }
 
-        #[weight = 100_000_000]
-        fn burn_tft(origin, amount: BalanceOf<T>, message: Vec<u8>){
+    #[pallet::error]
+    pub enum Error<T> {
+        NotEnoughBalanceToBurn,
+    }
+
+    #[pallet::storage]
+    #[pallet::getter(fn burns)]
+    pub type Burns<T: Config> =
+        StorageValue<_, Vec<Burn<T::AccountId, BalanceOf<T>, T::BlockNumber>>, OptionQuery>;
+
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {
+        #[pallet::weight(100_000_000)]
+        pub fn burn_tft(
+            origin: OriginFor<T>,
+            amount: BalanceOf<T>,
+            message: Vec<u8>,
+        ) -> DispatchResultWithPostInfo {
             let target = ensure_signed(origin)?;
             Self::_burn_tft(target, amount, message)?;
+            Ok(().into())
         }
     }
 }
 
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
     pub fn _burn_tft(
         target: T::AccountId,
         amount: BalanceOf<T>,
@@ -106,7 +118,7 @@ impl<T: Config> Module<T> {
             Some(mut burns) => {
                 burns.push(burn);
                 Burns::<T>::put(burns);
-            },
+            }
             None => {
                 let burns = vec![burn];
                 Burns::<T>::put(burns);
@@ -114,7 +126,7 @@ impl<T: Config> Module<T> {
         }
 
         // Desposit event
-        Self::deposit_event(RawEvent::BurnTransactionCreated(
+        Self::deposit_event(Event::BurnTransactionCreated(
             target, amount, block, message,
         ));
 
