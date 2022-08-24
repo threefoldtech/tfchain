@@ -4,6 +4,7 @@ use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::EnsureRoot;
 use pallet_collective;
 use pallet_tfgrid;
+use pallet_tfgrid::interface::{InterfaceIp, InterfaceMac, InterfaceName};
 use pallet_tfgrid::{
     farm::FarmName,
     pub_config::{Domain, GW4, GW6, IP4, IP6},
@@ -79,13 +80,17 @@ parameter_types! {
 }
 
 pub(crate) type PubConfig = pallet_tfgrid::pallet::PubConfigOf<Test>;
+pub(crate) type Interface = pallet_tfgrid::pallet::InterfaceOf<Test>;
 pub struct NodeChanged;
-impl ChangeNode<PubConfig> for NodeChanged {
-    fn node_changed(old_node: Option<&Node<PubConfig>>, new_node: &Node<PubConfig>) {
+impl ChangeNode<PubConfig, Interface> for NodeChanged {
+    fn node_changed(
+        old_node: Option<&Node<PubConfig, Interface>>,
+        new_node: &Node<PubConfig, Interface>,
+    ) {
         DaoModule::node_changed(old_node, new_node)
     }
 
-    fn node_deleted(node: &Node<PubConfig>) {
+    fn node_deleted(node: &Node<PubConfig, Interface>) {
         DaoModule::node_deleted(node);
     }
 }
@@ -104,6 +109,7 @@ impl pallet_dao::Config for Test {
 
 parameter_types! {
     pub const MaxFarmNameLength: u32 = 40;
+    pub const MaxInterfaceIpsLength: u32 = 5;
 }
 
 pub(crate) type TestTwinIp = TwinIp<Test>;
@@ -116,6 +122,10 @@ pub(crate) type TestGW4 = GW4<Test>;
 pub(crate) type TestIP6 = IP6<Test>;
 pub(crate) type TestGW6 = GW6<Test>;
 pub(crate) type TestDomain = Domain<Test>;
+
+pub(crate) type TestInterfaceName = InterfaceName<Test>;
+pub(crate) type TestInterfaceMac = InterfaceMac<Test>;
+pub(crate) type TestInterfaceIp = InterfaceIp<Test>;
 
 impl pallet_tfgrid::Config for Test {
     type Event = Event;
@@ -132,6 +142,10 @@ impl pallet_tfgrid::Config for Test {
     type IP6 = TestIP6;
     type GW6 = TestGW6;
     type Domain = TestDomain;
+    type InterfaceName = TestInterfaceName;
+    type InterfaceMac = TestInterfaceMac;
+    type InterfaceIP = TestInterfaceIp;
+    type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
 }
 
 impl pallet_timestamp::Config for Test {

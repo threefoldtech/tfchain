@@ -1,12 +1,10 @@
 use super::Event as DaoEvent;
 use crate::{mock::Event as MockEvent, mock::*, Error};
-use frame_support::{
-    assert_noop, assert_ok, traits::ConstU32, weights::GetDispatchInfo, BoundedVec,
-};
+use frame_support::{assert_noop, assert_ok, weights::GetDispatchInfo};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Hash};
-use std::convert::TryFrom;
+use std::convert::TryInto;
 use tfchain_support::types::{FarmCertification, Location, NodeCertification, PublicIP, Resources};
 
 #[test]
