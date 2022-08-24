@@ -713,7 +713,7 @@ construct_runtime!(
         TFKVStore: pallet_kvstore::{Pallet, Call, Storage, Event<T>},
         Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
         CouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
-        RuntimeUpgrade: pallet_runtime_upgrade::{Pallet, Call, Event},
+        RuntimeUpgrade: pallet_runtime_upgrade::{Pallet, Call, Event<T>},
         Validator: pallet_validator::{Pallet, Call, Storage, Event<T>},
         Dao: pallet_dao::{Pallet, Call, Storage, Event<T>},
         Utility: pallet_utility::{Pallet, Call, Event},
