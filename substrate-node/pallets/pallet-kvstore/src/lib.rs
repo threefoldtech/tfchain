@@ -1,84 +1,91 @@
 //! A pallet for Threefold key-value store
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure,
-};
-use frame_system::ensure_signed;
-use sp_std::prelude::*;
-use sp_std::convert::TryInto;
-
 #[cfg(test)]
 mod tests;
-pub trait Config: frame_system::Config {
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
-}
 
-decl_storage! {
-    trait Store for Module<T: Config> as TFKVStore {
-        pub TFKVStore get(fn key_value_store):
-         double_map hasher(blake2_128_concat) T::AccountId,  hasher(blake2_128_concat) Vec<u8> => Vec<u8>;
+pub use pallet::*;
+
+#[frame_support::pallet]
+pub mod pallet {
+    use frame_support::{ensure, pallet_prelude::*, traits::IsType};
+    use frame_system::{ensure_signed, pallet_prelude::*};
+    use sp_std::convert::TryInto;
+    use sp_std::prelude::*;
+
+    #[pallet::pallet]
+    #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
+    pub struct Pallet<T>(_);
+
+    #[pallet::config]
+    pub trait Config: frame_system::Config {
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
-}
 
-decl_event!(
-    pub enum Event<T>
-    where
-        AccountId = <T as frame_system::Config>::AccountId,
-    {
+    #[pallet::event]
+    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    pub enum Event<T: Config> {
         /// A user has set their entry
-        EntrySet(AccountId, Vec<u8>, Vec<u8>),
-
+        EntrySet(T::AccountId, Vec<u8>, Vec<u8>),
         /// A user has read their entry, leaving it in storage
-        EntryGot(AccountId, Vec<u8>, Vec<u8>),
-
+        EntryGot(T::AccountId, Vec<u8>, Vec<u8>),
         /// A user has read their entry, removing it from storage
-        EntryTaken(AccountId, Vec<u8>, Vec<u8>),
+        EntryTaken(T::AccountId, Vec<u8>, Vec<u8>),
     }
-);
 
-decl_error! {
-    pub enum Error for Module<T: Config> {
+    #[pallet::error]
+    pub enum Error<T> {
         /// The requested user has not stored a value yet
         NoValueStored,
         KeyIsTooLarge,
         ValueIsTooLarge,
     }
-}
 
-decl_module! {
-    pub struct Module<T: Config> for enum Call where origin: T::Origin {
+    #[pallet::storage]
+    #[pallet::getter(fn key_value_store)]
+    pub type TFKVStore<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        T::AccountId,
+        Blake2_128Concat,
+        Vec<u8>,
+        Vec<u8>,
+        ValueQuery,
+    >;
 
-        // Initialize errors
-        type Error = Error<T>;
-
-        // Initialize events
-        fn deposit_event() = default;
-
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {
         /// Set the value stored at a particular key
-        #[weight = 100_000_000]
-        fn set(origin, key: Vec<u8>, value: Vec<u8>) -> DispatchResult {
+        #[pallet::weight(100_000_000)]
+        pub fn set(
+            origin: OriginFor<T>,
+            key: Vec<u8>,
+            value: Vec<u8>,
+        ) -> DispatchResultWithPostInfo {
             // A user can only set their own entry
-            ensure!(key.len()	<= 512, Error::<T>::KeyIsTooLarge);
+            ensure!(key.len() <= 512, Error::<T>::KeyIsTooLarge);
             ensure!(value.len() <= 2048, Error::<T>::ValueIsTooLarge);
             let user = ensure_signed(origin)?;
             <TFKVStore<T>>::insert(&user, &key, &value);
-            Self::deposit_event(RawEvent::EntrySet(user, key, value));
-            Ok(())
+            Self::deposit_event(Event::EntrySet(user, key, value));
+            Ok(().into())
         }
 
         /// Read the value stored at a particular key, while removing it from the map.
         /// Also emit the read value in an event
-        #[weight = 100_000_000]
-        fn delete(origin, key: Vec<u8>) -> DispatchResult {
+        #[pallet::weight(100_000_000)]
+        pub fn delete(origin: OriginFor<T>, key: Vec<u8>) -> DispatchResultWithPostInfo {
             // A user can only take (delete) their own entry
             let user = ensure_signed(origin)?;
 
-            ensure!(<TFKVStore<T>>::contains_key(&user, &key), Error::<T>::NoValueStored);
+            ensure!(
+                <TFKVStore<T>>::contains_key(&user, &key),
+                Error::<T>::NoValueStored
+            );
             let value = <TFKVStore<T>>::take(&user, &key);
-            Self::deposit_event(RawEvent::EntryTaken(user, key, value));
-            Ok(())
+            Self::deposit_event(Event::EntryTaken(user, key, value));
+            Ok(().into())
         }
-
     }
 }
