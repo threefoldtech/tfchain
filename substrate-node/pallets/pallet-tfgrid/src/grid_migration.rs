@@ -8,6 +8,7 @@ use frame_support::{
     weights::Weight,
 };
 use log::info;
+use sp_std::collections::btree_map::BTreeMap;
 use tfchain_support::types::{Farm, Interface, PublicConfig, PublicIP, IP};
 
 pub mod deprecated {
@@ -88,7 +89,7 @@ pub mod deprecated {
     }
 }
 
-pub mod v6 {
+pub mod v7 {
     use super::*;
     use crate::Config;
 
@@ -111,7 +112,7 @@ pub mod v6 {
 
         #[cfg(feature = "try-runtime")]
         fn post_upgrade() -> Result<(), &'static str> {
-            assert!(PalletVersion::<T>::get() == types::StorageVersion::V6Struct);
+            assert!(PalletVersion::<T>::get() == types::StorageVersion::V7Struct);
 
             info!(
                 "👥  TFGrid pallet migration to {:?} passes POST migrate checks ✅",
@@ -136,6 +137,9 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
     info!(" >>> Migrating nodes storage...");
 
     let mut migrated_count = 0;
+    let mut writes = 0;
+    let mut farms_with_nodes: BTreeMap<u32, Vec<u32>> = BTreeMap::new();
+
     // We transform the storage values from the old into the new format.
     Nodes::<T>::translate::<deprecated::NodeV4, _>(|k, node| {
         info!("     Migrated node for {:?}...", k);
@@ -191,9 +195,10 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
         };
 
         // Add index of farm - list (nodes)
-        let mut nodes_by_farm_id = NodesByFarmID::<T>::get(node.farm_id);
-        nodes_by_farm_id.push(node.id);
-        NodesByFarmID::<T>::insert(node.farm_id, nodes_by_farm_id);
+        farms_with_nodes
+            .entry(node.farm_id)
+            .or_insert(vec![])
+            .push(node.id);
 
         migrated_count += 1;
 
@@ -204,8 +209,16 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
         migrated_count
     );
 
+    for (farm_id, nodes) in farms_with_nodes.iter() {
+        NodesByFarmID::<T>::insert(farm_id, nodes);
+        writes += 1;
+    }
+
     // Return the weight consumed by the migration.
-    T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
+    T::DbWeight::get().reads_writes(
+        migrated_count as Weight + 1,
+        migrated_count + writes as Weight + 1,
+    )
 }
 
 pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
@@ -262,7 +275,7 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
     );
 
     // Update pallet storage version
-    PalletVersion::<T>::set(types::StorageVersion::V6Struct);
+    PalletVersion::<T>::set(types::StorageVersion::V7Struct);
     info!(" <<< Storage version upgraded");
 
     // Return the weight consumed by the migration.

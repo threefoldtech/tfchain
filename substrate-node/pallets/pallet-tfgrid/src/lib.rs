@@ -1145,8 +1145,7 @@ pub mod pallet {
             let mut nodes_by_farm = NodesByFarmID::<T>::get(stored_node.farm_id);
             let location = nodes_by_farm
                 .binary_search(&id)
-                .ok()
-                .ok_or(Error::<T>::NodeNotExists)?;
+                .or(Err(Error::<T>::NodeNotExists))?;
             nodes_by_farm.remove(location);
             NodesByFarmID::<T>::insert(stored_node.farm_id, nodes_by_farm);
 
@@ -1668,8 +1667,7 @@ pub mod pallet {
             let mut nodes_by_farm = NodesByFarmID::<T>::get(node.farm_id);
             let location = nodes_by_farm
                 .binary_search(&node_id)
-                .ok()
-                .ok_or(Error::<T>::NodeNotExists)?;
+                .or(Err(Error::<T>::NodeNotExists))?;
             nodes_by_farm.remove(location);
             NodesByFarmID::<T>::insert(node.farm_id, nodes_by_farm);
 
