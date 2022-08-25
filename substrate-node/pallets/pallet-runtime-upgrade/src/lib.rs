@@ -15,13 +15,9 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// Origin for runtime upgrades
         type SetCodeOrigin: EnsureOrigin<Self::Origin>;
     }
-
-    #[pallet::event]
-    pub enum Event<T> {}
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
