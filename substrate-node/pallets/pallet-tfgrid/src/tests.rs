@@ -1090,6 +1090,7 @@ fn add_farm_limits_on_expired_policy_fails() {
             node_count: Some(10),
         };
 
+        // Farming policies expire at block 101
         System::set_block_number(System::block_number() + 102);
         assert_noop!(
             TfgridModule::attach_policy_to_farm(RawOrigin::Root.into(), 1, Some(limit.clone())),
