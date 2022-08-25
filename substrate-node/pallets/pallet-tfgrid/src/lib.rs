@@ -1851,7 +1851,9 @@ pub mod pallet {
                 let now = system::Pallet::<T>::block_number();
 
                 // Policy end is expressed in number of blocks
-                if now >= farming_policy.policy_created + farming_policy.policy_end {
+                if farming_policy.policy_end != T::BlockNumber::from(0 as u32)
+                    && now >= farming_policy.policy_created + farming_policy.policy_end
+                {
                     return Err(DispatchErrorWithPostInfo::from(
                         Error::<T>::FarmingPolicyExpired,
                     ));
