@@ -2,6 +2,7 @@ use super::Config;
 use super::*;
 use frame_support::{traits::Get, weights::Weight};
 use log::info;
+use sp_std::collections::btree_map::BTreeMap;
 
 pub mod v7patch {
     use super::*;
@@ -47,14 +48,22 @@ pub fn add_farm_nodes_index<T: Config>() -> frame_support::weights::Weight {
     info!(" >>> Migrating nodes storage...");
 
     let mut reads = 0;
+    let mut writes = 0;
 
+    let mut farms_with_nodes: BTreeMap<u32, Vec<u32>> = BTreeMap::new();
     for (_, node) in Nodes::<T>::iter() {
         // Add index of farm - list (nodes)
-        let mut nodes_by_farm_id = NodesByFarmID::<T>::get(node.farm_id);
-        nodes_by_farm_id.push(node.id);
-        NodesByFarmID::<T>::insert(node.farm_id, nodes_by_farm_id);
+        farms_with_nodes
+            .entry(node.farm_id)
+            .or_insert(vec![])
+            .push(node.id);
 
         reads += 1;
+    }
+
+    for (farm_id, nodes) in farms_with_nodes.iter() {
+        NodesByFarmID::<T>::insert(farm_id, nodes);
+        writes += 1;
     }
 
     // Update pallet storage version
@@ -62,5 +71,5 @@ pub fn add_farm_nodes_index<T: Config>() -> frame_support::weights::Weight {
     info!(" <<< Storage version upgraded");
 
     // Return the weight consumed by the migration.
-    T::DbWeight::get().reads_writes(reads as Weight + 1, 0)
+    T::DbWeight::get().reads_writes(reads as Weight + 1, writes as Weight + 1)
 }
