@@ -9,11 +9,11 @@ substrate = SubstrateInterface(
     type_registry_preset='polkadot'
 )
 
-key_alice = Keypair.create_from_uri("//Alice")
+key_bob = Keypair.create_from_uri("//Bob")
 
-alice_insert_key_params = ["tft!", "//Alice", key_alice.public_key.hex()]
-substrate.rpc_request("author_insertKey", alice_insert_key_params)
+bob_insert_key_params = ["tft!", "//Bob", key_bob.public_key.hex()]
+substrate.rpc_request("author_insertKey", bob_insert_key_params)
 
-alice_insert_key_params = ["smct", "//Alice", key_alice.public_key.hex()]
-substrate.rpc_request("author_insertKey", alice_insert_key_params)
+bob_insert_key_params = ["smct", "//Bob", key_bob.public_key.hex()]
+substrate.rpc_request("author_insertKey", bob_insert_key_params)
 
