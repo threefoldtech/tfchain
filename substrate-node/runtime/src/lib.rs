@@ -679,6 +679,13 @@ impl pallet_authorship::Config for Runtime {
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
+impl pallet_utility::Config for Runtime {
+    type Event = Event;
+    type Call = Call;
+    type PalletsOrigin = OriginCaller;
+    type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -709,6 +716,7 @@ construct_runtime!(
         RuntimeUpgrade: pallet_runtime_upgrade::{Pallet, Call, Event},
         Validator: pallet_validator::{Pallet, Call, Storage, Event<T>},
         Dao: pallet_dao::{Pallet, Call, Storage, Event<T>},
+        Utility: pallet_utility::{Pallet, Call, Event},
     }
 );
 
