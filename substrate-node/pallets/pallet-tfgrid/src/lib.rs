@@ -482,6 +482,7 @@ pub mod pallet {
         InterfaceIpToLong,
         InvalidInterfaceIP,
         InvalidZosVersion,
+        FarmingPolicyExpired,
     }
 
     #[pallet::genesis_config]
@@ -1847,23 +1848,37 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
-            let mut farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
-            farm.farming_policy_limits = limits.clone();
-            Farms::<T>::insert(farm_id, farm);
+            if let Some(policy_limits) = limits {
+                let farming_policy = FarmingPoliciesMap::<T>::get(policy_limits.farming_policy_id);
+                let now = system::Pallet::<T>::block_number();
 
-            // Give all the nodes in this farm the policy that is attached
-            for node_id in NodesByFarmID::<T>::get(farm_id) {
-                match Nodes::<T>::get(node_id) {
-                    Some(mut node) => {
-                        let policy = Self::get_farming_policy(&node)?;
-                        node.farming_policy_id = policy.id;
-                        Nodes::<T>::insert(node_id, node);
-                    }
-                    None => continue,
+                // Policy end is expressed in number of blocks
+                if farming_policy.policy_end != T::BlockNumber::from(0 as u32)
+                    && now >= farming_policy.policy_created + farming_policy.policy_end
+                {
+                    return Err(DispatchErrorWithPostInfo::from(
+                        Error::<T>::FarmingPolicyExpired,
+                    ));
                 }
-            }
 
-            Self::deposit_event(Event::FarmingPolicySet(farm_id, limits));
+                let mut farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
+                farm.farming_policy_limits = Some(policy_limits);
+                Farms::<T>::insert(farm_id, &farm);
+
+                // Give all the nodes in this farm the policy that is attached
+                for node_id in NodesByFarmID::<T>::get(farm_id) {
+                    match Nodes::<T>::get(node_id) {
+                        Some(mut node) => {
+                            let policy = Self::get_farming_policy(&node)?;
+                            node.farming_policy_id = policy.id;
+                            Nodes::<T>::insert(node_id, node);
+                        }
+                        None => continue,
+                    }
+                }
+
+                Self::deposit_event(Event::FarmingPolicySet(farm_id, farm.farming_policy_limits));
+            }
 
             Ok(().into())
         }

@@ -1097,6 +1097,32 @@ fn add_farm_limits_works() {
 }
 
 #[test]
+fn add_farm_limits_on_expired_policy_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+
+        let limit = FarmingPolicyLimit {
+            farming_policy_id: 1,
+            cu: Some(5),
+            su: Some(10),
+            end: Some(1654058949),
+            node_certification: false,
+            node_count: Some(10),
+        };
+
+        System::set_block_number(System::block_number() + 102);
+        assert_noop!(
+            TfgridModule::attach_policy_to_farm(RawOrigin::Root.into(), 1, Some(limit.clone())),
+            Error::<TestRuntime>::FarmingPolicyExpired
+        );
+
+        let f1 = TfgridModule::farms(1).unwrap();
+        assert_eq!(f1.farming_policy_limits, None);
+    });
+}
+
+#[test]
 fn boot_node_when_farming_policy_has_limits_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
@@ -1545,6 +1571,23 @@ fn test_set_zos_version() {
                 TfgridEvent::<TestRuntime>::ZosVersionUpdated(zos_version)
             ))),
             true
+        );
+    })
+}
+
+#[test]
+fn test_set_invalid_zos_version_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        let zos_version = "1.0.0".as_bytes().to_vec();
+        assert_ok!(TfgridModule::set_zos_version(
+            RawOrigin::Root.into(),
+            zos_version.clone(),
+        ));
+
+        // try to set zos version with the same version that is already set
+        assert_noop!(
+            TfgridModule::set_zos_version(RawOrigin::Root.into(), TfgridModule::zos_version()),
+            Error::<TestRuntime>::InvalidZosVersion,
         );
     })
 }
