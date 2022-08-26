@@ -1,34 +1,30 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{
-    weights::{Pays},
-    decl_module, decl_event, traits::{EnsureOrigin},
-    dispatch::DispatchResultWithPostInfo,
-};
+pub use pallet::*;
 
-use sp_std::prelude::*;
+#[frame_support::pallet]
+pub mod pallet {
+    use frame_support::pallet_prelude::*;
+    use frame_system::pallet_prelude::*;
+    use sp_std::vec::Vec;
 
-pub trait Config: frame_system::Config {
-    type Event: From<Event> + Into<<Self as frame_system::Config>::Event>;
-    /// Origin for runtime upgrades
-    type SetCodeOrigin: EnsureOrigin<Self::Origin>;
-}
+    #[pallet::pallet]
+    #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
+    pub struct Pallet<T>(_);
 
-decl_event!(
-	pub enum Event {}
-);
+    #[pallet::config]
+    pub trait Config: frame_system::Config {
+        /// Origin for runtime upgrades
+        type SetCodeOrigin: EnsureOrigin<Self::Origin>;
+    }
 
-
-decl_module! {
-    pub struct Module<T: Config> for enum Call where origin: T::Origin {
-        fn deposit_event() = default;
-
-        #[weight = 100_000_000]
-        pub fn set_code(origin, code: Vec<u8>) -> DispatchResultWithPostInfo {
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {
+        #[pallet::weight(100_000_000)]
+        pub fn set_code(origin: OriginFor<T>, code: Vec<u8>) -> DispatchResultWithPostInfo {
             T::SetCodeOrigin::ensure_origin(origin)?;
-
             frame_system::Pallet::<T>::set_code(frame_system::RawOrigin::Root.into(), code)?;
-
             Ok(Pays::No.into())
         }
     }
