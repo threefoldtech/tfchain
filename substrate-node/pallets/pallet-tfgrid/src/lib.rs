@@ -1860,6 +1860,7 @@ pub mod pallet {
                 }
 
                 let mut farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
+                // Save the policy limits and farm certification on the Farm object
                 farm.farming_policy_limits = Some(policy_limits.clone());
                 farm.certification = farming_policy.farm_certification;
                 Farms::<T>::insert(farm_id, &farm);
@@ -1875,7 +1876,9 @@ pub mod pallet {
                             // because we wouldn't wanna override any existing non-default policies
                             if current_node_policy.default {
                                 let policy = Self::get_farming_policy(&node)?;
+                                // Save the new policy ID and certification on the Node object
                                 node.farming_policy_id = policy.id;
+                                node.certification = policy.node_certification;
                                 Nodes::<T>::insert(node_id, &node);
                                 Self::deposit_event(Event::NodeUpdated(node))
                             }
