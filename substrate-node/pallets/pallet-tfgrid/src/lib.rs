@@ -1860,9 +1860,11 @@ pub mod pallet {
                 }
 
                 let mut farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
-                farm.farming_policy_limits = Some(policy_limits);
+                farm.farming_policy_limits = Some(policy_limits.clone());
+                farm.certification = farming_policy.farm_certification;
                 Farms::<T>::insert(farm_id, &farm);
-                Self::deposit_event(Event::FarmingPolicySet(farm_id, farm.farming_policy_limits));
+                Self::deposit_event(Event::FarmingPolicySet(farm_id, Some(policy_limits)));
+                Self::deposit_event(Event::FarmUpdated(farm))
             }
 
             Ok(().into())
