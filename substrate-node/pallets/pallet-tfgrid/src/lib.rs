@@ -1059,7 +1059,8 @@ pub mod pallet {
 
                 stored_node.certification = node_certification;
 
-                let current_node_policy = FarmingPoliciesMap::<T>::get(node.farming_policy_id);
+                let current_node_policy =
+                    FarmingPoliciesMap::<T>::get(stored_node.farming_policy_id);
                 if current_node_policy.default {
                     // Refetch farming policy and save it on the node
                     let farming_policy = Self::get_farming_policy(&stored_node)?;
