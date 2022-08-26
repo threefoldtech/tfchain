@@ -1059,9 +1059,12 @@ pub mod pallet {
 
                 stored_node.certification = node_certification;
 
-                // Refetch farming policy and save it on the node
-                let farming_policy = Self::get_farming_policy(&stored_node)?;
-                stored_node.farming_policy_id = farming_policy.id;
+                let current_node_policy = FarmingPoliciesMap::<T>::get(node.farming_policy_id);
+                if current_node_policy.default {
+                    // Refetch farming policy and save it on the node
+                    let farming_policy = Self::get_farming_policy(&stored_node)?;
+                    stored_node.farming_policy_id = farming_policy.id;
+                }
 
                 // override node in storage
                 Nodes::<T>::insert(stored_node.id, &stored_node);
@@ -1860,8 +1863,11 @@ pub mod pallet {
                 }
 
                 let mut farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
-                farm.farming_policy_limits = Some(policy_limits);
+                // Save the policy limits and farm certification on the Farm object
+                farm.farming_policy_limits = Some(policy_limits.clone());
+                farm.certification = farming_policy.farm_certification;
                 Farms::<T>::insert(farm_id, &farm);
+                Self::deposit_event(Event::FarmUpdated(farm));
 
                 // Give all the nodes in this farm the policy that is attached
                 for node_id in NodesByFarmID::<T>::get(farm_id) {
@@ -1873,15 +1879,18 @@ pub mod pallet {
                             // because we wouldn't wanna override any existing non-default policies
                             if current_node_policy.default {
                                 let policy = Self::get_farming_policy(&node)?;
+                                // Save the new policy ID and certification on the Node object
                                 node.farming_policy_id = policy.id;
-                                Nodes::<T>::insert(node_id, node);
+                                node.certification = policy.node_certification;
+                                Nodes::<T>::insert(node_id, &node);
+                                Self::deposit_event(Event::NodeUpdated(node))
                             }
                         }
                         None => continue,
                     }
                 }
 
-                Self::deposit_event(Event::FarmingPolicySet(farm_id, farm.farming_policy_limits));
+                Self::deposit_event(Event::FarmingPolicySet(farm_id, Some(policy_limits)));
             }
 
             Ok(().into())
