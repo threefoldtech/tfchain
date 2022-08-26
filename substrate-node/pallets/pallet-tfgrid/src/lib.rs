@@ -1862,6 +1862,25 @@ pub mod pallet {
                 let mut farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
                 farm.farming_policy_limits = Some(policy_limits);
                 Farms::<T>::insert(farm_id, &farm);
+
+                // Give all the nodes in this farm the policy that is attached
+                for node_id in NodesByFarmID::<T>::get(farm_id) {
+                    match Nodes::<T>::get(node_id) {
+                        Some(mut node) => {
+                            let current_node_policy =
+                                FarmingPoliciesMap::<T>::get(node.farming_policy_id);
+                            // If the current policy attached to the node is default one, assign it the newly created policy
+                            // because we wouldn't wanna override any existing non-default policies
+                            if current_node_policy.default {
+                                let policy = Self::get_farming_policy(&node)?;
+                                node.farming_policy_id = policy.id;
+                                Nodes::<T>::insert(node_id, node);
+                            }
+                        }
+                        None => continue,
+                    }
+                }
+
                 Self::deposit_event(Event::FarmingPolicySet(farm_id, farm.farming_policy_limits));
             }
 
