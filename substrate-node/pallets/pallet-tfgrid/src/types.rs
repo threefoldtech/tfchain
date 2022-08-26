@@ -13,6 +13,7 @@ pub enum StorageVersion {
     V4Struct,
     V5Struct,
     V6Struct,
+    V7Struct
 }
 
 impl Default for StorageVersion {

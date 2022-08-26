@@ -179,7 +179,14 @@ fn test_delete_node_works() {
         create_farm();
         create_node();
 
+        let nodes = TfgridModule::nodes_by_farm_id(1);
+        assert_eq!(nodes.len(), 1);
+        assert_eq!(nodes[0], 1);
+
         assert_ok!(TfgridModule::delete_node_farm(Origin::signed(alice()), 1));
+
+        let nodes = TfgridModule::nodes_by_farm_id(1);
+        assert_eq!(nodes.len(), 0);
     });
 }
 
@@ -633,6 +640,20 @@ fn create_node_works() {
         create_twin();
         create_farm();
         create_node();
+    });
+}
+
+#[test]
+fn create_node_added_to_farm_list_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        let nodes = TfgridModule::nodes_by_farm_id(1);
+        assert_eq!(nodes.len(), 1);
+        assert_eq!(nodes[0], 1);
     });
 }
 

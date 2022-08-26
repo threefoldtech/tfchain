@@ -30,6 +30,7 @@ pub mod types;
 pub mod farm;
 pub mod grid_migration;
 pub mod interface;
+pub mod nodes_migration;
 pub mod pub_config;
 pub mod pub_ip;
 pub mod twin;
@@ -77,6 +78,10 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn farms)]
     pub type Farms<T: Config> = StorageMap<_, Blake2_128Concat, u32, FarmInfoOf<T>, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn nodes_by_farm_id)]
+    pub type NodesByFarmID<T: Config> = StorageMap<_, Blake2_128Concat, u32, Vec<u32>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn farms_by_name_id)]
@@ -968,6 +973,10 @@ pub mod pallet {
             NodeID::<T>::put(id);
             NodeIdByTwinID::<T>::insert(twin_id, new_node.id);
 
+            let mut nodes_by_farm = NodesByFarmID::<T>::get(farm_id);
+            nodes_by_farm.push(id);
+            NodesByFarmID::<T>::insert(farm_id, nodes_by_farm);
+
             T::NodeChanged::node_changed(None, &new_node);
 
             Self::deposit_event(Event::NodeStored(new_node));
@@ -1132,6 +1141,13 @@ pub mod pallet {
                 stored_node.twin_id == twin_id,
                 Error::<T>::NodeUpdateNotAuthorized
             );
+
+            let mut nodes_by_farm = NodesByFarmID::<T>::get(stored_node.farm_id);
+            let location = nodes_by_farm
+                .binary_search(&id)
+                .or(Err(Error::<T>::NodeNotExists))?;
+            nodes_by_farm.remove(location);
+            NodesByFarmID::<T>::insert(stored_node.farm_id, nodes_by_farm);
 
             // Call node deleted
             T::NodeChanged::node_deleted(&stored_node);
@@ -1647,6 +1663,13 @@ pub mod pallet {
                 farm_twin_id == farm_twin.id,
                 Error::<T>::FarmerNotAuthorized
             );
+
+            let mut nodes_by_farm = NodesByFarmID::<T>::get(node.farm_id);
+            let location = nodes_by_farm
+                .binary_search(&node_id)
+                .or(Err(Error::<T>::NodeNotExists))?;
+            nodes_by_farm.remove(location);
+            NodesByFarmID::<T>::insert(node.farm_id, nodes_by_farm);
 
             // Call node deleted
             T::NodeChanged::node_deleted(&node);
