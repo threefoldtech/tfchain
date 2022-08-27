@@ -2020,13 +2020,19 @@ impl<T: Config> Pallet<T> {
 
                 // Save limits when decrement is done
                 farm.farming_policy_limits = Some(limits.clone());
-                Farms::<T>::insert(node.farm_id, farm);
+                // Update farm in farms map
+                Farms::<T>::insert(node.farm_id, &farm);
+                Self::deposit_event(Event::FarmUpdated(farm));
 
-                return Ok(FarmingPoliciesMap::<T>::get(limits.farming_policy_id));
+                let farming_policy = FarmingPoliciesMap::<T>::get(limits.farming_policy_id);
+                return Ok(farming_policy);
             }
             None => (),
         };
 
+        // Set the farming policy as the last stored farming
+        // policy which certifications are not more qualified
+        // than the current node and farm certifications
         let mut policies: Vec<types::FarmingPolicy<T::BlockNumber>> =
             FarmingPoliciesMap::<T>::iter().map(|p| p.1).collect();
 
@@ -2052,6 +2058,7 @@ impl<T: Config> Pallet<T> {
         }
     }
 
+    // Set to se the default farming policy as the last stored default farming policy
     fn get_default_farming_policy(
     ) -> Result<types::FarmingPolicy<T::BlockNumber>, DispatchErrorWithPostInfo> {
         let mut policies: Vec<types::FarmingPolicy<T::BlockNumber>> =
