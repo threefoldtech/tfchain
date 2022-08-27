@@ -3,6 +3,7 @@ use crate::{mock::Event as MockEvent, mock::*, Error};
 use frame_support::{assert_noop, assert_ok, BoundedVec};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
+use tfchain_support::resources;
 use tfchain_support::types::{
     FarmCertification, FarmingPolicyLimit, Location, NodeCertification, PublicConfig, PublicIP,
     Resources, IP,
@@ -1067,6 +1068,97 @@ fn edit_farming_policy_works() {
             NodeCertification::Diy,
             FarmCertification::NotCertified,
         ));
+    });
+}
+
+#[test]
+fn attach_farming_policy_to_farm_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+
+        let fp_id = 3;
+        let f1_id = 1;
+        let n1_id = 1;
+
+        // Set limit with farming policy to be attached to farm
+        let fp = TfgridModule::farming_policies_map(fp_id);
+        let limit = FarmingPolicyLimit {
+            farming_policy_id: fp.id,
+            cu: Some(20),
+            su: Some(2),
+            end: Some(1654058949),
+            node_certification: false,
+            node_count: Some(10),
+        };
+
+        // farm 1 has no farming policy limits at this stage
+        let mut f1 = TfgridModule::farms(f1_id).unwrap();
+        assert_eq!(f1.farming_policy_limits.is_none(), true);
+
+        // farm 1 is 'not certified'
+        // node 1 is 'diy'
+        // So without farming policy attached to farm
+        // the auto-defined farming policy id for node is 2
+        // see fn get_farming_policy()
+        // and fn create_farming_policies()
+        let mut n1 = TfgridModule::nodes(n1_id).unwrap();
+        assert_eq!(n1.farming_policy_id, 2);
+        assert_eq!(n1.certification, NodeCertification::default());
+
+        // Provide enough CU and SU limits to avoid attaching default policy to node
+        // For node 1: [CU = 20; SU = 2]
+        assert_eq!(resources::get_cu(n1.resources) <= limit.cu.unwrap(), true);
+        assert_eq!(resources::get_su(n1.resources) <= limit.su.unwrap(), true);
+
+        // Link farming policy to farm 1
+        assert_ok!(TfgridModule::attach_policy_to_farm(
+            RawOrigin::Root.into(),
+            f1.id,
+            Some(limit.clone())
+        ));
+
+        // Get updated farm 1
+        f1 = TfgridModule::farms(f1_id).unwrap();
+        // Check updated farm 1 limits
+        let f1_limits = f1.clone().farming_policy_limits.unwrap();
+        assert_eq!(f1_limits.farming_policy_id, limit.farming_policy_id);
+        assert_eq!(f1_limits.cu, Some(0)); // No more CU available
+        assert_eq!(f1_limits.su, Some(0)); // No more SU available
+        assert_eq!(f1_limits.end, limit.end);
+        assert_eq!(f1_limits.node_certification, limit.node_certification);
+        assert_eq!(f1_limits.node_count, Some(9)); // Remains 9 spots for nodes
+        assert_eq!(f1.certification, fp.farm_certification);
+
+        // Get updated node 1
+        n1 = TfgridModule::nodes(n1_id).unwrap();
+        // farming policy id 2 is a default farming policy
+        // so it should have been overriden
+        // see attach_policy_to_farm()
+        assert_eq!(n1.farming_policy_id, fp.id);
+        assert_eq!(n1.certification, fp.node_certification);
+
+        // Check events sequence
+        let our_events = System::events();
+        assert_eq!(
+            our_events[our_events.len() - 3],
+            record(MockEvent::TfgridModule(
+                TfgridEvent::<TestRuntime>::FarmUpdated(f1.clone())
+            ))
+        );
+        assert_eq!(
+            our_events[our_events.len() - 2],
+            record(MockEvent::TfgridModule(
+                TfgridEvent::<TestRuntime>::NodeUpdated(n1)
+            ))
+        );
+        assert_eq!(
+            our_events[our_events.len() - 1],
+            record(MockEvent::TfgridModule(
+                TfgridEvent::<TestRuntime>::FarmingPolicySet(f1.id, Some(limit))
+            ))
+        );
     });
 }
 
