@@ -1,5 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use pub_config::IP4;
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
@@ -12,7 +13,10 @@ use frame_system::{self as system, ensure_signed};
 use hex::FromHex;
 use pallet_timestamp as timestamp;
 use sp_runtime::SaturatedConversion;
-use tfchain_support::{resources, types::Node};
+use tfchain_support::{
+    resources,
+    types::{Node, PublicConfig, IP},
+};
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
@@ -92,9 +96,24 @@ pub mod pallet {
     pub type FarmPayoutV2AddressByFarmID<T: Config> =
         StorageMap<_, Blake2_128Concat, u32, Vec<u8>, ValueQuery>;
 
+    // Input type for public config
+    pub type PubConfigIP4Input = IP<
+        BoundedVec<u8, ConstU32<{ pub_config::MAX_IP_LENGTH }>>,
+        BoundedVec<u8, ConstU32<{ pub_config::MAX_GATEWAY_LENGTH }>>,
+    >;
+    pub type PubConfigIP6Input = IP<
+        BoundedVec<u8, ConstU32<{ pub_config::MAX_IP6_LENGTH }>>,
+        BoundedVec<u8, ConstU32<{ pub_config::MAX_IP6_LENGTH }>>,
+    >;
+    pub type PubConfigInput = PublicConfig<
+        PubConfigIP4Input,
+        Option<PubConfigIP6Input>,
+        Option<BoundedVec<u8, ConstU32<{ pub_config::MAX_DOMAIN_NAME_LENGTH }>>>,
+    >;
+
+    // Exact public config type
     pub type Ip4ConfigOf<T> = IP<<T as Config>::IP4, <T as Config>::GW4>;
     pub type Ip6ConfigOf<T> = IP<<T as Config>::IP6, <T as Config>::GW6>;
-
     pub type PubConfigOf<T> =
         PublicConfig<Ip4ConfigOf<T>, Option<Ip6ConfigOf<T>>, Option<<T as Config>::Domain>>;
 
@@ -1104,7 +1123,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             farm_id: u32,
             node_id: u32,
-            public_config: Option<pallet::PubConfigOf<T>>,
+            public_config: Option<PubConfigInput>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1125,11 +1144,16 @@ pub mod pallet {
             let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
             ensure!(node.farm_id == farm_id, Error::<T>::NodeUpdateNotAuthorized);
 
-            // update the public config and save
-            node.public_config = public_config.clone();
-            Nodes::<T>::insert(node_id, node);
+            if let Some(config) = public_config {
+                let mut pub_config = Self::get_public_config(&config)?;
+                // update the public config and save
+                node.public_config = Some(pub_config);
+            } else {
+                node.public_config = None;
+            }
 
-            Self::deposit_event(Event::NodePublicConfigStored(node_id, public_config));
+            Nodes::<T>::insert(node_id, &node);
+            Self::deposit_event(Event::NodePublicConfigStored(node_id, node.public_config));
 
             Ok(().into())
         }
@@ -2080,6 +2104,31 @@ impl<T: Config> Pallet<T> {
         let ip = TwinIpOf::<T>::try_from(ip.to_vec()).map_err(DispatchErrorWithPostInfo::from)?;
 
         Ok(ip)
+    }
+
+    fn get_public_config(config: &pallet::PubConfigInput) -> Result<PubConfigOf<T>, Error<T>> {
+        let ipv4 = <T as Config>::IP4::try_from(config.ip4.ip.to_vec().clone())?;
+        let gw4 = <T as Config>::GW4::try_from(config.ip4.gw.to_vec().clone())?;
+
+        let mut pub_config = PublicConfig {
+            ip4: IP { ip: ipv4, gw: gw4 },
+            ip6: None,
+            domain: None,
+        };
+
+        if let Some(ipv6_config) = &config.ip6 {
+            let ipv6 = <T as Config>::IP6::try_from(ipv6_config.ip.to_vec().clone())?;
+            let gw6 = <T as Config>::GW6::try_from(ipv6_config.gw.to_vec().clone())?;
+
+            pub_config.ip6 = Some(IP { ip: ipv6, gw: gw6 });
+        }
+
+        if let Some(domain) = &config.domain {
+            let domain = <T as Config>::Domain::try_from(domain.to_vec().clone())?;
+            pub_config.domain = Some(domain)
+        }
+
+        Ok(pub_config)
     }
 }
 
