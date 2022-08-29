@@ -1099,6 +1099,89 @@ fn attach_farming_policy_with_certified_node_certification_works() {
 }
 
 #[test]
+fn attach_another_custom_farming_policy_to_farm_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+
+        // Add custom policies 5 and 6
+        create_custom_farming_policies();
+
+        // Initially attach custom (non-default) farming policy 5 to farm
+        let fp = TfgridModule::farming_policies_map(5);
+        let limit = FarmingPolicyLimit {
+            farming_policy_id: fp.id,
+            cu: Some(20),
+            su: Some(2),
+            end: Some(1654058949),
+            node_certification: false,
+            node_count: Some(10),
+        };
+
+        // Link farming policy 5 to farmfarm
+        let farm_id = 1;
+        assert_ok!(TfgridModule::attach_policy_to_farm(
+            RawOrigin::Root.into(),
+            farm_id,
+            Some(limit.clone())
+        ));
+
+        // Set limit with new custom (non-default) farming policy 6
+        // NB: no need to double CU and SU capacity here because new limits will not
+        // considere node 1 has it already has custom farming policy 5
+        let new_fp = TfgridModule::farming_policies_map(6);
+        let new_limit = FarmingPolicyLimit {
+            farming_policy_id: new_fp.id,
+            cu: Some(20),
+            su: Some(2),
+            end: Some(1654058949),
+            node_certification: false,
+            node_count: Some(10),
+        };
+
+        // Now link custom (non-default) farming policy 5 to farm
+        assert_ok!(TfgridModule::attach_policy_to_farm(
+            RawOrigin::Root.into(),
+            farm_id,
+            Some(new_limit.clone())
+        ));
+
+        // Get updated farm
+        let mut farm = TfgridModule::farms(farm_id).unwrap();
+        // Check updated farm limits, should be exactly the same as new farming policy
+        // with full CU/SU capacity since node 1 has custom farming policy 5
+        let mut new_farm_limit = farm.clone().farming_policy_limits.unwrap();
+        assert_eq!(new_farm_limit, new_limit);
+        assert_eq!(farm.certification, new_fp.farm_certification);
+
+        // Existing node 1 should not migrate to new farming policy
+        let node1_id = 1;
+        let node1 = TfgridModule::nodes(node1_id).unwrap();
+        assert_eq!(node1.farming_policy_id, fp.id);
+        assert_eq!(node1.certification, fp.node_certification);
+
+        // Add extra node 2 to farm
+        create_twin_bob();
+        create_extra_node();
+
+        // Extra node 2 should get new farming policy
+        let node1_id = 2;
+        let node2 = TfgridModule::nodes(node1_id).unwrap();
+        assert_eq!(node2.farming_policy_id, new_fp.id);
+        assert_eq!(node2.certification, new_fp.node_certification);
+
+        // Get updated farm
+        farm = TfgridModule::farms(farm_id).unwrap();
+        // Check updated fields for farm limits
+        new_farm_limit = farm.clone().farming_policy_limits.unwrap();
+        assert_eq!(new_farm_limit.cu, Some(0)); // No more CU available
+        assert_eq!(new_farm_limit.su, Some(0)); // No more SU available
+        assert_eq!(new_farm_limit.node_count, Some(9)); // Remains 9 spots for nodes
+    });
+}
+
+#[test]
 fn add_farm_limits_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
@@ -1740,6 +1823,37 @@ fn create_node() {
     ));
 }
 
+fn create_extra_node() {
+    let country = "Brazil".as_bytes().to_vec();
+    let city = "Rio de Janeiro".as_bytes().to_vec();
+
+    // random location
+    let location = Location {
+        longitude: "43.1868".as_bytes().to_vec(),
+        latitude: "22.9694".as_bytes().to_vec(),
+    };
+
+    let resources = Resources {
+        hru: 1024 * GIGABYTE,
+        sru: 512 * GIGABYTE,
+        cru: 8,
+        mru: 16 * GIGABYTE,
+    };
+
+    assert_ok!(TfgridModule::create_node(
+        Origin::signed(bob()),
+        1,
+        resources,
+        location,
+        country,
+        city,
+        Vec::new(),
+        true,
+        true,
+        "some_serial".as_bytes().to_vec()
+    ));
+}
+
 fn create_farming_policies() {
     let name = "f1".as_bytes().to_vec();
     assert_ok!(TfgridModule::create_farming_policy(
@@ -1789,7 +1903,7 @@ fn create_farming_policies() {
         FarmCertification::Gold,
     ));
 
-    let name = "f1".as_bytes().to_vec();
+    let name = "f4".as_bytes().to_vec();
     assert_ok!(TfgridModule::create_farming_policy(
         RawOrigin::Root.into(),
         name,
@@ -1803,6 +1917,40 @@ fn create_farming_policies() {
         true,
         NodeCertification::Certified,
         FarmCertification::NotCertified,
+    ));
+}
+
+fn create_custom_farming_policies() {
+    let name = "f5".as_bytes().to_vec();
+    assert_ok!(TfgridModule::create_farming_policy(
+        RawOrigin::Root.into(),
+        name,
+        12,
+        15,
+        10,
+        8,
+        9999,
+        System::block_number() + 100,
+        true,
+        false,
+        NodeCertification::Diy,
+        FarmCertification::NotCertified,
+    ));
+
+    let name = "f6".as_bytes().to_vec();
+    assert_ok!(TfgridModule::create_farming_policy(
+        RawOrigin::Root.into(),
+        name,
+        12,
+        15,
+        10,
+        8,
+        9999,
+        System::block_number() + 100,
+        true,
+        false,
+        NodeCertification::Certified,
+        FarmCertification::Gold,
     ));
 }
 
@@ -1820,8 +1968,8 @@ fn test_attach_farming_policy_flow(farming_policy_id: u32) {
     create_farm();
     create_node();
 
-    let farm1_id = 1;
-    let node1_id = 1;
+    let farm_id = 1;
+    let node_id = 1;
 
     // Set limit with farming policy to be attached to farm
     let fp = TfgridModule::farming_policies_map(farming_policy_id);
@@ -1834,70 +1982,70 @@ fn test_attach_farming_policy_flow(farming_policy_id: u32) {
         node_count: Some(10),
     };
 
-    // farm 1 has no farming policy limits at this stage
-    let mut f1 = TfgridModule::farms(farm1_id).unwrap();
-    assert_eq!(f1.farming_policy_limits.is_none(), true);
+    // farm has no farming policy limits at this stage
+    let mut farm = TfgridModule::farms(farm_id).unwrap();
+    assert_eq!(farm.farming_policy_limits.is_none(), true);
 
-    // farm 1 is 'not certified'
-    // node 1 is 'diy'
+    // farm is 'not certified'
+    // node is 'diy'
     // So without farming policy attached to farm
     // the auto-defined farming policy id for node is 2
     // see fn get_farming_policy()
     // and fn create_farming_policies()
-    let mut n1 = TfgridModule::nodes(node1_id).unwrap();
-    assert_eq!(n1.farming_policy_id, 2);
-    assert_eq!(n1.certification, NodeCertification::default());
+    let mut node = TfgridModule::nodes(node_id).unwrap();
+    assert_eq!(node.farming_policy_id, 2);
+    assert_eq!(node.certification, NodeCertification::default());
 
     // Provide enough CU and SU limits to avoid attaching default policy to node
-    // For node 1: [CU = 20; SU = 2]
-    assert_eq!(resources::get_cu(n1.resources) <= limit.cu.unwrap(), true);
-    assert_eq!(resources::get_su(n1.resources) <= limit.su.unwrap(), true);
+    // For node: [CU = 20; SU = 2]
+    assert_eq!(resources::get_cu(node.resources) <= limit.cu.unwrap(), true);
+    assert_eq!(resources::get_su(node.resources) <= limit.su.unwrap(), true);
 
-    // Link farming policy to farm 1
+    // Link farming policy to farm
     assert_ok!(TfgridModule::attach_policy_to_farm(
         RawOrigin::Root.into(),
-        f1.id,
+        farm.id,
         Some(limit.clone())
     ));
 
-    // Get updated farm 1
-    f1 = TfgridModule::farms(farm1_id).unwrap();
-    // Check updated farm 1 limits
-    let f1_limits = f1.clone().farming_policy_limits.unwrap();
-    assert_eq!(f1_limits.farming_policy_id, limit.farming_policy_id);
-    assert_eq!(f1_limits.cu, Some(0)); // No more CU available
-    assert_eq!(f1_limits.su, Some(0)); // No more SU available
-    assert_eq!(f1_limits.end, limit.end);
-    assert_eq!(f1_limits.node_certification, limit.node_certification);
-    assert_eq!(f1_limits.node_count, Some(9)); // Remains 9 spots for nodes
-    assert_eq!(f1.certification, fp.farm_certification);
+    // Get updated farm
+    farm = TfgridModule::farms(farm_id).unwrap();
+    // Check updated farm limits
+    let farm_limit = farm.clone().farming_policy_limits.unwrap();
+    assert_eq!(farm_limit.farming_policy_id, limit.farming_policy_id);
+    assert_eq!(farm_limit.cu, Some(0)); // No more CU available
+    assert_eq!(farm_limit.su, Some(0)); // No more SU available
+    assert_eq!(farm_limit.end, limit.end);
+    assert_eq!(farm_limit.node_certification, limit.node_certification);
+    assert_eq!(farm_limit.node_count, Some(9)); // Remains 9 spots for nodes
+    assert_eq!(farm.certification, fp.farm_certification);
 
-    // Get updated node 1
-    n1 = TfgridModule::nodes(node1_id).unwrap();
+    // Get updated node
+    node = TfgridModule::nodes(node_id).unwrap();
     // farming policy id 2 is a default farming policy
     // so it should have been overriden
     // see attach_policy_to_farm()
-    assert_eq!(n1.farming_policy_id, fp.id);
-    assert_eq!(n1.certification, fp.node_certification);
+    assert_eq!(node.farming_policy_id, fp.id);
+    assert_eq!(node.certification, fp.node_certification);
 
     // Check events sequence
     let our_events = System::events();
     assert_eq!(
         our_events[our_events.len() - 3],
         record(MockEvent::TfgridModule(
-            TfgridEvent::<TestRuntime>::FarmUpdated(f1.clone())
+            TfgridEvent::<TestRuntime>::FarmUpdated(farm.clone())
         ))
     );
     assert_eq!(
         our_events[our_events.len() - 2],
         record(MockEvent::TfgridModule(
-            TfgridEvent::<TestRuntime>::NodeUpdated(n1)
+            TfgridEvent::<TestRuntime>::NodeUpdated(node)
         ))
     );
     assert_eq!(
         our_events[our_events.len() - 1],
         record(MockEvent::TfgridModule(
-            TfgridEvent::<TestRuntime>::FarmingPolicySet(f1.id, Some(limit))
+            TfgridEvent::<TestRuntime>::FarmingPolicySet(farm.id, Some(limit))
         ))
     );
 }
