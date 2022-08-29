@@ -1,6 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use pub_config::IP4;
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
@@ -8,14 +7,14 @@ use sp_std::prelude::*;
 
 use codec::Encode;
 use frame_support::dispatch::DispatchErrorWithPostInfo;
-use frame_support::{ensure, traits::EnsureOrigin};
+use frame_support::{ensure, traits::EnsureOrigin, BoundedVec};
 use frame_system::{self as system, ensure_signed};
 use hex::FromHex;
 use pallet_timestamp as timestamp;
 use sp_runtime::SaturatedConversion;
 use tfchain_support::{
     resources,
-    types::{Node, PublicConfig, IP},
+    types::{Interface, Node, PublicConfig, IP},
 };
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
@@ -110,13 +109,25 @@ pub mod pallet {
         Option<PubConfigIP6Input>,
         Option<BoundedVec<u8, ConstU32<{ pub_config::MAX_DOMAIN_NAME_LENGTH }>>>,
     >;
-
     // Exact public config type
     pub type Ip4ConfigOf<T> = IP<<T as Config>::IP4, <T as Config>::GW4>;
     pub type Ip6ConfigOf<T> = IP<<T as Config>::IP6, <T as Config>::GW6>;
     pub type PubConfigOf<T> =
         PublicConfig<Ip4ConfigOf<T>, Option<Ip6ConfigOf<T>>, Option<<T as Config>::Domain>>;
 
+    // Input type for interfaces
+    pub type InterfaceIpInput = BoundedVec<u8, ConstU32<{ interface::MAX_INTERFACE_IP_LENGTH }>>;
+    pub type InterfaceIpsInput<T> =
+        BoundedVec<InterfaceIpInput, <T as Config>::MaxInterfacesLength>;
+    pub type InterfaceInput<T> = BoundedVec<
+        Interface<
+            BoundedVec<u8, ConstU32<{ interface::MAX_INTF_NAME_LENGTH }>>,
+            BoundedVec<u8, ConstU32<{ interface::INTERFACE_MAC_LENGTH }>>,
+            InterfaceIpsInput<T>,
+        >,
+        <T as Config>::MaxInterfaceIpsLength,
+    >;
+    // Exact type for interfaces
     pub type InterfaceIp<T> = <T as Config>::InterfaceIP;
     pub type InterfaceIpsOf<T> =
         BoundedVec<<T as Config>::InterfaceIP, <T as Config>::MaxInterfaceIpsLength>;
@@ -361,10 +372,10 @@ pub mod pallet {
         type MaxFarmNameLength: Get<u32>;
 
         #[pallet::constant]
-        type MaxInterfaceIpsLength: Get<u32>;
+        type MaxInterfacesLength: Get<u32>;
 
-        // #[pallet::constant]
-        // type MaxFarmIPs: Get<u32>;
+        #[pallet::constant]
+        type MaxInterfaceIpsLength: Get<u32>;
     }
 
     #[pallet::event]
@@ -940,7 +951,7 @@ pub mod pallet {
             location: Location,
             country: Vec<u8>,
             city: Vec<u8>,
-            interfaces: Vec<pallet::InterfaceOf<T>>,
+            interfaces: InterfaceInput<T>,
             secure_boot: bool,
             virtualized: bool,
             serial_number: Vec<u8>,
@@ -960,6 +971,8 @@ pub mod pallet {
                 Error::<T>::NodeWithTwinIdExists
             );
 
+            let node_interfaces = Self::get_interfaces(&interfaces)?;
+
             let mut id = NodeID::<T>::get();
             id = id + 1;
 
@@ -977,7 +990,7 @@ pub mod pallet {
                 public_config: None,
                 created,
                 farming_policy_id: 0,
-                interfaces,
+                interfaces: node_interfaces,
                 certification: NodeCertification::default(),
                 secure_boot,
                 virtualized,
@@ -1145,7 +1158,7 @@ pub mod pallet {
             ensure!(node.farm_id == farm_id, Error::<T>::NodeUpdateNotAuthorized);
 
             if let Some(config) = public_config {
-                let mut pub_config = Self::get_public_config(&config)?;
+                let pub_config = Self::get_public_config(&config)?;
                 // update the public config and save
                 node.public_config = Some(pub_config);
             } else {
@@ -2129,6 +2142,38 @@ impl<T: Config> Pallet<T> {
         }
 
         Ok(pub_config)
+    }
+
+    fn get_interfaces(
+        interfaces: &pallet::InterfaceInput<T>,
+    ) -> Result<Vec<InterfaceOf<T>>, Error<T>> {
+        let mut parsed_interfaces = Vec::new();
+        if interfaces.len() == 0 {
+            return Ok(parsed_interfaces);
+        }
+
+        for intf in interfaces.iter() {
+            let intf_name = <T as Config>::InterfaceName::try_from(intf.name.to_vec().clone())?;
+            let intf_mac = <T as Config>::InterfaceMac::try_from(intf.mac.to_vec().clone())?;
+
+            let mut parsed_interfaces_ips: BoundedVec<
+                InterfaceIp<T>,
+                <T as Config>::MaxInterfaceIpsLength,
+            > = vec![].try_into().unwrap();
+
+            for ip in intf.ips.iter() {
+                let intf_ip = <T as Config>::InterfaceIP::try_from(ip.to_vec().clone())?;
+                let _ = parsed_interfaces_ips.try_push(intf_ip);
+            }
+
+            parsed_interfaces.push(Interface {
+                name: intf_name,
+                mac: intf_mac,
+                ips: parsed_interfaces_ips,
+            });
+        }
+
+        Ok(parsed_interfaces)
     }
 }
 

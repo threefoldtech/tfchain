@@ -95,6 +95,7 @@ impl tfchain_support::traits::ChangeNode<PubConfig, Interface> for NodeChanged {
 parameter_types! {
     pub const MaxFarmNameLength: u32 = 40;
     pub const MaxInterfaceIpsLength: u32 = 5;
+    pub const MaxInterfacesLength: u32 = 10;
 }
 
 pub(crate) type TestTwinIp = TwinIp<TestRuntime>;
@@ -130,6 +131,7 @@ impl Config for TestRuntime {
     type InterfaceName = TestInterfaceName;
     type InterfaceMac = TestInterfaceMac;
     type InterfaceIP = TestInterfaceIp;
+    type MaxInterfacesLength = MaxInterfacesLength;
     type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
 }
 

@@ -1,11 +1,11 @@
 use super::Event as TfgridEvent;
-use crate::{mock::Event as MockEvent, mock::*, Error};
-use frame_support::{assert_noop, assert_ok, BoundedVec};
+use crate::{mock::Event as MockEvent, mock::*, Error, InterfaceInput, InterfaceIpsInput};
+use frame_support::{assert_noop, assert_ok, bounded_vec, BoundedVec};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
 use tfchain_support::types::{
-    FarmCertification, FarmingPolicyLimit, Location, NodeCertification, PublicConfig, PublicIP,
-    Resources, IP,
+    FarmCertification, FarmingPolicyLimit, Interface, Location, NodeCertification, PublicConfig,
+    PublicIP, Resources, IP,
 };
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -680,21 +680,21 @@ fn create_node_with_interfaces_works() {
             mru: 16 * GIGABYTE,
         };
 
-        let mut interface_ips = Vec::new();
+        let mut interface_ips: InterfaceIpsInput<TestRuntime> = bounded_vec![];
         let intf_ip_1 = get_interface_ip(&"10.2.3.3".as_bytes().to_vec());
-        interface_ips.push(intf_ip_1);
+        interface_ips.try_push(intf_ip_1.0).unwrap();
 
-        let name = get_interface_name(&"zos".as_bytes().to_vec());
-        let mac = get_interface_mac(&"00:00:5e:00:53:af".as_bytes().to_vec());
+        let name = get_interface_name(&"zos".as_bytes().to_vec()).0;
+        let mac = get_interface_mac(&"00:00:5e:00:53:af".as_bytes().to_vec()).0;
 
         let interface = Interface {
             name,
             mac,
-            ips: interface_ips.try_into().unwrap(),
+            ips: interface_ips,
         };
 
-        let mut interfaces = Vec::new();
-        interfaces.push(interface);
+        let mut interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
+        interfaces.try_push(interface).unwrap();
 
         assert_ok!(TfgridModule::create_node(
             Origin::signed(alice()),
@@ -820,8 +820,14 @@ fn node_add_public_config_works() {
         let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
 
         let pub_config = PublicConfig {
-            ip4: IP { ip: ipv4, gw: gw4 },
-            ip6: Some(IP { ip: ipv6, gw: gw6 }),
+            ip4: IP {
+                ip: ipv4.clone().0,
+                gw: gw4.clone().0,
+            },
+            ip6: Some(IP {
+                ip: ipv6.clone().0,
+                gw: gw6.clone().0,
+            }),
             domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
         };
 
@@ -833,7 +839,14 @@ fn node_add_public_config_works() {
         ));
 
         let node = TfgridModule::nodes(1).unwrap();
-        assert_eq!(node.public_config, Some(pub_config));
+        assert_eq!(
+            node.public_config,
+            Some(PublicConfig {
+                ip4: IP { ip: ipv4, gw: gw4 },
+                ip6: Some(IP { ip: ipv6, gw: gw6 }),
+                domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
+            })
+        );
     });
 }
 
@@ -849,7 +862,10 @@ fn node_add_public_config_without_ipv6_and_domain_works() {
         let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
 
         let pub_config = PublicConfig {
-            ip4: IP { ip: ipv4, gw: gw4 },
+            ip4: IP {
+                ip: ipv4.clone().0,
+                gw: gw4.clone().0,
+            },
             ip6: None,
             domain: None,
         };
@@ -862,7 +878,14 @@ fn node_add_public_config_without_ipv6_and_domain_works() {
         ));
 
         let node = TfgridModule::nodes(1).unwrap();
-        assert_eq!(node.public_config, Some(pub_config));
+        assert_eq!(
+            node.public_config,
+            Some(PublicConfig {
+                ip4: IP { ip: ipv4, gw: gw4 },
+                ip6: None,
+                domain: None,
+            })
+        );
     });
 }
 
@@ -880,8 +903,14 @@ fn node_add_public_config_fails_if_signature_incorrect() {
         let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
 
         let pub_config = PublicConfig {
-            ip4: IP { ip: ipv4, gw: gw4 },
-            ip6: Some(IP { ip: ipv6, gw: gw6 }),
+            ip4: IP {
+                ip: ipv4.clone().0,
+                gw: gw4.clone().0,
+            },
+            ip6: Some(IP {
+                ip: ipv6.clone().0,
+                gw: gw6.clone().0,
+            }),
             domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
         };
 
@@ -911,8 +940,14 @@ fn test_unsetting_node_public_config_works() {
         let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
 
         let pub_config = PublicConfig {
-            ip4: IP { ip: ipv4, gw: gw4 },
-            ip6: Some(IP { ip: ipv6, gw: gw6 }),
+            ip4: IP {
+                ip: ipv4.clone().0,
+                gw: gw4.clone().0,
+            },
+            ip6: Some(IP {
+                ip: ipv6.clone().0,
+                gw: gw6.clone().0,
+            }),
             domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
         };
 
@@ -924,7 +959,14 @@ fn test_unsetting_node_public_config_works() {
         ));
 
         let node = TfgridModule::nodes(1).unwrap();
-        assert_eq!(node.public_config, Some(pub_config));
+        assert_eq!(
+            node.public_config,
+            Some(PublicConfig {
+                ip4: IP { ip: ipv4, gw: gw4 },
+                ip6: Some(IP { ip: ipv6, gw: gw6 }),
+                domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
+            })
+        );
 
         assert_ok!(TfgridModule::add_node_public_config(
             Origin::signed(alice()),
@@ -935,6 +977,50 @@ fn test_unsetting_node_public_config_works() {
 
         let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(node.public_config, None);
+    });
+}
+
+#[test]
+fn test_node_public_config_falsy_values_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        let ipv4 = get_pub_config_ip4(&"1.1.1.1".as_bytes().to_vec());
+        let ipv6 = get_pub_config_ip6(&"2a10:b600:1::0cc4:7a30:65b5/64".as_bytes().to_vec());
+        let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
+        let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
+
+        let pub_config = PublicConfig {
+            ip4: IP {
+                ip: ipv4.clone().0,
+                gw: gw4.clone().0,
+            },
+            ip6: Some(IP {
+                ip: ipv6.clone().0,
+                gw: gw6.clone().0,
+            }),
+            domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
+        };
+
+        assert_ok!(TfgridModule::add_node_public_config(
+            Origin::signed(alice()),
+            1,
+            1,
+            Some(pub_config.clone())
+        ));
+
+        let node = TfgridModule::nodes(1).unwrap();
+        assert_eq!(
+            node.public_config,
+            Some(PublicConfig {
+                ip4: IP { ip: ipv4, gw: gw4 },
+                ip6: Some(IP { ip: ipv6, gw: gw6 }),
+                domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
+            })
+        );
     });
 }
 
@@ -994,6 +1080,8 @@ fn create_node_with_same_pubkey_fails() {
         let country = "Belgium".as_bytes().to_vec();
         let city = "Ghent".as_bytes().to_vec();
 
+        let interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
+
         assert_noop!(
             TfgridModule::create_node(
                 Origin::signed(alice()),
@@ -1002,7 +1090,7 @@ fn create_node_with_same_pubkey_fails() {
                 location,
                 country,
                 city,
-                Vec::new(),
+                interfaces,
                 true,
                 true,
                 "some_serial".as_bytes().to_vec()
@@ -1698,6 +1786,8 @@ fn create_node() {
         mru: 16 * GIGABYTE,
     };
 
+    let interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
+
     assert_ok!(TfgridModule::create_node(
         Origin::signed(alice()),
         1,
@@ -1705,7 +1795,7 @@ fn create_node() {
         location,
         country,
         city,
-        Vec::new(),
+        interfaces,
         true,
         true,
         "some_serial".as_bytes().to_vec()
