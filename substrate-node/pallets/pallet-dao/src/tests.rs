@@ -1,11 +1,12 @@
 use super::Event as DaoEvent;
 use crate::{mock::Event as MockEvent, mock::*, Error};
-use frame_support::{assert_noop, assert_ok, weights::GetDispatchInfo};
+use frame_support::{assert_noop, assert_ok, bounded_vec, weights::GetDispatchInfo};
 use frame_system::{EventRecord, Phase, RawOrigin};
+use pallet_tfgrid::types::PublicIpInput;
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Hash};
 use std::convert::TryInto;
-use tfchain_support::types::{FarmCertification, Location, NodeCertification, PublicIP, Resources};
+use tfchain_support::types::{FarmCertification, Location, NodeCertification, Resources};
 
 #[test]
 fn farmers_vote_no_farm_fails() {
@@ -810,7 +811,7 @@ fn prepare_node(account_id: u64, farm_id: u32) {
         location,
         country,
         city,
-        Vec::new(),
+        bounded_vec![],
         false,
         false,
         "some_serial".as_bytes().to_vec(),
@@ -840,7 +841,7 @@ fn prepare_big_node(account_id: u64, farm_id: u32) {
         location,
         country,
         city,
-        Vec::new(),
+        bounded_vec![],
         false,
         false,
         "some_serial".as_bytes().to_vec(),
@@ -849,16 +850,15 @@ fn prepare_big_node(account_id: u64, farm_id: u32) {
 
 pub fn prepare_farm(account_id: u64, farm_name: Vec<u8>) {
     let mut pub_ips = Vec::new();
-    pub_ips.push(PublicIP {
+    pub_ips.push(PublicIpInput {
         ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
-        gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
-        contract_id: 0,
+        gw: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
     });
 
     assert_ok!(TfgridModule::create_farm(
         Origin::signed(account_id),
         farm_name.try_into().unwrap(),
-        pub_ips.clone(),
+        pub_ips.clone().try_into().unwrap(),
     ));
 }
 

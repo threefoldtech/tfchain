@@ -1,11 +1,14 @@
 use super::Event as TfgridEvent;
-use crate::{mock::Event as MockEvent, mock::*, Error, InterfaceInput, InterfaceIpsInput};
+use crate::{
+    mock::Event as MockEvent, mock::*, types::PublicIpInput, Error, InterfaceInput,
+    InterfaceIpsInput, PublicIpListInput,
+};
 use frame_support::{assert_noop, assert_ok, bounded_vec, BoundedVec};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
 use tfchain_support::types::{
     FarmCertification, FarmingPolicyLimit, Interface, Location, NodeCertification, PublicConfig,
-    PublicIP, Resources, IP,
+    Resources, IP,
 };
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -304,25 +307,25 @@ fn test_create_farm_invalid_name_fails() {
 
         let farm_name = BoundedVec::try_from(b"test.farm".to_vec()).unwrap();
         assert_noop!(
-            TfgridModule::create_farm(Origin::signed(alice()), farm_name, Vec::new(),),
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name, bounded_vec![]),
             Error::<TestRuntime>::InvalidFarmName
         );
 
         let farm_name = BoundedVec::try_from(b"test farm".to_vec()).unwrap();
         assert_noop!(
-            TfgridModule::create_farm(Origin::signed(alice()), farm_name, Vec::new(),),
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name, bounded_vec![]),
             Error::<TestRuntime>::InvalidFarmName
         );
 
         let farm_name = BoundedVec::try_from(b"".to_vec()).unwrap();
         assert_noop!(
-            TfgridModule::create_farm(Origin::signed(alice()), farm_name, Vec::new(),),
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name, bounded_vec![]),
             Error::<TestRuntime>::FarmNameTooShort
         );
 
         let farm_name = BoundedVec::try_from(b"12".to_vec()).unwrap();
         assert_noop!(
-            TfgridModule::create_farm(Origin::signed(alice()), farm_name, Vec::new(),),
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name, bounded_vec![]),
             Error::<TestRuntime>::FarmNameTooShort
         );
     });
@@ -339,7 +342,7 @@ fn test_update_farm_name_works() {
         assert_ok!(TfgridModule::create_farm(
             Origin::signed(bob()),
             farm_name.0.clone(),
-            Vec::new()
+            bounded_vec![]
         ));
 
         let farm_name = get_farm_name(b"bob_updated_farm");
@@ -356,11 +359,13 @@ fn test_update_farm_name_works() {
 fn test_update_farm_existing_name_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
+
         let farm_name = get_farm_name(b"alice_farm");
+
         assert_ok!(TfgridModule::create_farm(
             Origin::signed(alice()),
             farm_name.0.clone(),
-            Vec::new()
+            bounded_vec![]
         ));
 
         create_twin_bob();
@@ -368,7 +373,7 @@ fn test_update_farm_existing_name_fails() {
         assert_ok!(TfgridModule::create_farm(
             Origin::signed(bob()),
             farm_name.0.clone(),
-            Vec::new()
+            bounded_vec![]
         ));
 
         let farm_name = get_farm_name(b"alice_farm");
@@ -386,22 +391,19 @@ fn test_create_farm_with_double_ip_fails() {
         create_twin();
 
         let farm_name = get_farm_name(b"test_farm");
-        let mut pub_ips = Vec::new();
 
-        let ip = get_public_ip_ip(&"185.206.122.33/24".as_bytes().to_vec());
-        let gateway = get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec());
+        let mut pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
 
-        pub_ips.push(PublicIP {
-            ip: ip.clone(),
-            gateway: gateway.clone(),
-            contract_id: 0,
-        });
+        let ip = get_public_ip_ip(&"185.206.122.33/24".as_bytes().to_vec()).0;
+        let gw = get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec()).0;
 
-        pub_ips.push(PublicIP {
-            ip,
-            gateway,
-            contract_id: 0,
-        });
+        pub_ips
+            .try_push(PublicIpInput {
+                ip: ip.clone(),
+                gw: gw.clone(),
+            })
+            .unwrap();
+        pub_ips.try_push(PublicIpInput { ip, gw }).unwrap();
 
         assert_noop!(
             TfgridModule::create_farm(Origin::signed(alice()), farm_name.0.clone(), pub_ips),
@@ -420,8 +422,8 @@ fn test_adding_ip_to_farm_works() {
         assert_ok!(TfgridModule::add_farm_ip(
             Origin::signed(alice()),
             1,
-            "185.206.122.125/16".as_bytes().to_vec(),
-            "185.206.122.1".as_bytes().to_vec()
+            get_public_ip_ip(&"185.206.122.125/16".as_bytes().to_vec()).0,
+            get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec()).0
         ));
     });
 }
@@ -437,8 +439,8 @@ fn test_adding_misformatted_ip_to_farm_fails() {
             TfgridModule::add_farm_ip(
                 Origin::signed(alice()),
                 1,
-                "185.206.122.125".as_bytes().to_vec(),
-                "185.206.122.1".as_bytes().to_vec()
+                "185.206.122.125".as_bytes().to_vec().try_into().unwrap(),
+                get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec()).0
             ),
             Error::<TestRuntime>::InvalidPublicIP
         );
@@ -468,16 +470,16 @@ fn test_adding_ip_duplicate_to_farm_fails() {
         assert_ok!(TfgridModule::add_farm_ip(
             Origin::signed(alice()),
             1,
-            "185.206.122.125/16".as_bytes().to_vec(),
-            "185.206.122.1".as_bytes().to_vec()
+            get_public_ip_ip(&"185.206.122.125/16".as_bytes().to_vec()).0,
+            get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec()).0
         ));
 
         assert_noop!(
             TfgridModule::add_farm_ip(
                 Origin::signed(alice()),
                 1,
-                "185.206.122.125/16".as_bytes().to_vec(),
-                "185.206.122.1".as_bytes().to_vec()
+                get_public_ip_ip(&"185.206.122.125/16".as_bytes().to_vec()).0,
+                get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec()).0
             ),
             Error::<TestRuntime>::IpExists
         );
@@ -574,16 +576,8 @@ fn test_create_farm_with_same_name_fails() {
         create_farm();
 
         let farm_name = get_farm_name(b"test_farm");
-        let mut pub_ips = Vec::new();
 
-        let ip = get_public_ip_ip(&"185.206.122.33/24".as_bytes().to_vec());
-        let gateway = get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec());
-
-        pub_ips.push(PublicIP {
-            ip,
-            gateway,
-            contract_id: 0,
-        });
+        let pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
 
         assert_noop!(
             TfgridModule::create_farm(Origin::signed(alice()), farm_name.0.clone(), pub_ips),
@@ -988,14 +982,14 @@ fn test_node_public_config_falsy_values_fails() {
         create_farm();
         create_node();
 
-        let ipv4 = get_pub_config_ip4(&"1.1.1.1".as_bytes().to_vec());
+        // let ipv4 = get_pub_config_ip4(&"1.1.1.1".as_bytes().to_vec());
         let ipv6 = get_pub_config_ip6(&"2a10:b600:1::0cc4:7a30:65b5/64".as_bytes().to_vec());
         let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
         let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
 
         let pub_config = PublicConfig {
             ip4: IP {
-                ip: ipv4.clone().0,
+                ip: "1.1.1.1".as_bytes().to_vec().try_into().unwrap(),
                 gw: gw4.clone().0,
             },
             ip6: Some(IP {
@@ -1005,21 +999,14 @@ fn test_node_public_config_falsy_values_fails() {
             domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
         };
 
-        assert_ok!(TfgridModule::add_node_public_config(
-            Origin::signed(alice()),
-            1,
-            1,
-            Some(pub_config.clone())
-        ));
-
-        let node = TfgridModule::nodes(1).unwrap();
-        assert_eq!(
-            node.public_config,
-            Some(PublicConfig {
-                ip4: IP { ip: ipv4, gw: gw4 },
-                ip6: Some(IP { ip: ipv6, gw: gw6 }),
-                domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
-            })
+        assert_noop!(
+            TfgridModule::add_node_public_config(
+                Origin::signed(alice()),
+                1,
+                1,
+                Some(pub_config.clone())
+            ),
+            Error::<TestRuntime>::IP4ToShort
         );
     });
 }
@@ -1750,16 +1737,13 @@ fn create_twin_bob() {
 fn create_farm() {
     let farm_name = get_farm_name(b"test_farm");
 
-    let mut pub_ips = Vec::new();
+    let mut pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
 
-    let ip = get_public_ip_ip(&"185.206.122.33/24".as_bytes().to_vec());
-    let gateway = get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec());
+    let ip = get_public_ip_ip(&"185.206.122.33/24".as_bytes().to_vec()).0;
+    let gw = get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec()).0;
 
-    pub_ips.push(PublicIP {
-        ip,
-        gateway,
-        contract_id: 0,
-    });
+    pub_ips.try_push(PublicIpInput { ip, gw }).unwrap();
+
     assert_ok!(TfgridModule::create_farm(
         Origin::signed(alice()),
         farm_name.0.clone(),

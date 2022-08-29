@@ -341,6 +341,8 @@ impl ChangeNode<PubConfig, Interface> for NodeChanged {
 parameter_types! {
     pub const MaxFarmNameLength: u32 = 40;
     pub const MaxInterfaceIpsLength: u32 = 10;
+    pub const MaxInterfacesLength: u32 = 10;
+    pub const MaxFarmPublicIps: u32 = 512;
 }
 
 impl pallet_tfgrid::Config for Runtime {
@@ -350,6 +352,7 @@ impl pallet_tfgrid::Config for Runtime {
     type NodeChanged = NodeChanged;
     type TwinIp = pallet_tfgrid::twin::TwinIp<Runtime>;
     type MaxFarmNameLength = MaxFarmNameLength;
+    type MaxFarmPublicIps = MaxFarmPublicIps;
     type FarmName = pallet_tfgrid::farm::FarmName<Runtime>;
     type PublicIP = pallet_tfgrid::pub_ip::PublicIP<Runtime>;
     type GatewayIP = pallet_tfgrid::pub_ip::GatewayIP<Runtime>;
@@ -358,6 +361,7 @@ impl pallet_tfgrid::Config for Runtime {
     type IP6 = pallet_tfgrid::pub_config::IP6<Runtime>;
     type GW6 = pallet_tfgrid::pub_config::GW6<Runtime>;
     type Domain = pallet_tfgrid::pub_config::Domain<Runtime>;
+    type MaxInterfacesLength = MaxInterfacesLength;
     type InterfaceName = pallet_tfgrid::interface::InterfaceName<Runtime>;
     type InterfaceMac = pallet_tfgrid::interface::InterfaceMac<Runtime>;
     type InterfaceIP = pallet_tfgrid::interface::InterfaceIp<Runtime>;

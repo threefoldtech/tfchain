@@ -1,7 +1,7 @@
 use super::Event as SmartContractEvent;
 use crate::{mock::Event as MockEvent, mock::*, Error};
 use frame_support::{
-    assert_noop, assert_ok,
+    assert_noop, assert_ok, bounded_vec,
     traits::{LockableCurrency, OnFinalize, OnInitialize, WithdrawReasons},
     BoundedVec,
 };
@@ -2350,10 +2350,9 @@ pub fn prepare_twins() {
 pub fn prepare_farm(source: AccountId, dedicated: bool) {
     let farm_name = "test_farm";
     let mut pub_ips = Vec::new();
-    pub_ips.push(PublicIP {
+    pub_ips.push(pallet_tfgrid_types::PublicIpInput {
         ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
-        gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
-        contract_id: 0,
+        gw: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
     });
 
     let su_policy = pallet_tfgrid_types::Policy {
@@ -2399,7 +2398,7 @@ pub fn prepare_farm(source: AccountId, dedicated: bool) {
     TfgridModule::create_farm(
         Origin::signed(source),
         farm_name.as_bytes().to_vec().try_into().unwrap(),
-        pub_ips.clone(),
+        pub_ips.clone().try_into().unwrap(),
     )
     .unwrap();
 
@@ -2441,7 +2440,7 @@ pub fn prepare_farm_and_node() {
         location,
         country,
         city,
-        Vec::new(),
+        bounded_vec![],
         false,
         false,
         "some_serial".as_bytes().to_vec(),
@@ -2479,7 +2478,7 @@ pub fn prepare_dedicated_farm_and_node() {
         location,
         country,
         city,
-        Vec::new(),
+        bounded_vec![],
         false,
         false,
         "some_serial".as_bytes().to_vec(),

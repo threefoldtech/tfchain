@@ -7,11 +7,12 @@ use sp_std::prelude::*;
 
 use codec::Encode;
 use frame_support::dispatch::DispatchErrorWithPostInfo;
-use frame_support::{ensure, traits::EnsureOrigin, BoundedVec};
+use frame_support::{ensure, traits::ConstU32, traits::EnsureOrigin, BoundedVec};
 use frame_system::{self as system, ensure_signed};
 use hex::FromHex;
 use pallet_timestamp as timestamp;
 use sp_runtime::SaturatedConversion;
+use tfchain_support::types::PublicIP;
 use tfchain_support::{
     resources,
     types::{Interface, Node, PublicConfig, IP},
@@ -74,10 +75,25 @@ pub mod pallet {
     pub const TFGRID_CERTIFICATION_CODE_VERSION: u32 = 1;
     pub const TFGRID_FARMING_POLICY_VERSION: u32 = 2;
 
+    // Input type for Farm Name
     pub type FarmNameInput<T> = BoundedVec<u8, <T as Config>::MaxFarmNameLength>;
+    // Concrete Farm Name type
     pub type FarmNameOf<T> = <T as Config>::FarmName;
+
+    // Input type for public ip
+    pub type PublicIpIpInput = BoundedVec<u8, ConstU32<{ pub_ip::MAX_IP_LENGTH }>>;
+    pub type PublicIpGatewayInput = BoundedVec<u8, ConstU32<{ pub_ip::MAX_GATEWAY_LENGTH }>>;
+    pub type FarmPublicIpInput = types::PublicIpInput<PublicIpIpInput, PublicIpGatewayInput>;
+
+    // Concrete type for Public IP type
     pub type PublicIpOf<T> = PublicIP<<T as Config>::PublicIP, <T as Config>::GatewayIP>;
+
+    // Input type for public ip list
+    pub type PublicIpListInput<T> = BoundedVec<FarmPublicIpInput, <T as Config>::MaxFarmPublicIps>;
+
+    // Farm information type
     pub type FarmInfoOf<T> = Farm<<T as Config>::FarmName, PublicIpOf<T>>;
+
     #[pallet::storage]
     #[pallet::getter(fn farms)]
     pub type Farms<T: Config> = StorageMap<_, Blake2_128Concat, u32, FarmInfoOf<T>, OptionQuery>;
@@ -109,7 +125,7 @@ pub mod pallet {
         Option<PubConfigIP6Input>,
         Option<BoundedVec<u8, ConstU32<{ pub_config::MAX_DOMAIN_NAME_LENGTH }>>>,
     >;
-    // Exact public config type
+    // Concrete public config type
     pub type Ip4ConfigOf<T> = IP<<T as Config>::IP4, <T as Config>::GW4>;
     pub type Ip6ConfigOf<T> = IP<<T as Config>::IP6, <T as Config>::GW6>;
     pub type PubConfigOf<T> =
@@ -127,7 +143,7 @@ pub mod pallet {
         >,
         <T as Config>::MaxInterfaceIpsLength,
     >;
-    // Exact type for interfaces
+    // Concrete type for interfaces
     pub type InterfaceIp<T> = <T as Config>::InterfaceIP;
     pub type InterfaceIpsOf<T> =
         BoundedVec<<T as Config>::InterfaceIP, <T as Config>::MaxInterfaceIpsLength>;
@@ -370,6 +386,9 @@ pub mod pallet {
 
         #[pallet::constant]
         type MaxFarmNameLength: Get<u32>;
+
+        #[pallet::constant]
+        type MaxFarmPublicIps: Get<u32>;
 
         #[pallet::constant]
         type MaxInterfacesLength: Get<u32>;
@@ -699,7 +718,7 @@ pub mod pallet {
         pub fn create_farm(
             origin: OriginFor<T>,
             name: FarmNameInput<T>,
-            public_ips: Vec<PublicIP<T::PublicIP, T::GatewayIP>>,
+            public_ips: PublicIpListInput<T>,
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
@@ -720,32 +739,7 @@ pub mod pallet {
             let mut id = FarmID::<T>::get();
             id = id + 1;
 
-            // reset all public ip contract id's
-            // just a safeguard
-            // filter out doubles
-            let mut public_ips_list: BoundedVec<
-                PublicIP<T::PublicIP, T::GatewayIP>,
-                ConstU32<256>,
-            > = vec![].try_into().unwrap();
-
-            for ip in public_ips {
-                match public_ips_list.iter().position(|pub_ip| pub_ip.ip == ip.ip) {
-                    Some(_) => return Err(Error::<T>::IpExists.into()),
-                    None => {
-                        public_ips_list
-                            .try_push(PublicIP {
-                                ip: ip.ip,
-                                gateway: ip.gateway,
-                                contract_id: 0,
-                            })
-                            .or_else(|_| {
-                                return Err(DispatchErrorWithPostInfo::from(
-                                    Error::<T>::InvalidPublicIP,
-                                ));
-                            })?;
-                    }
-                };
-            }
+            let public_ips_list = Self::get_public_ips(&public_ips)?;
 
             let new_farm = Farm {
                 version: TFGRID_FARM_VERSION,
@@ -862,8 +856,8 @@ pub mod pallet {
         pub fn add_farm_ip(
             origin: OriginFor<T>,
             id: u32,
-            ip: Vec<u8>,
-            gateway: Vec<u8>,
+            ip: PublicIpIpInput,
+            gateway: PublicIpGatewayInput,
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
@@ -875,10 +869,10 @@ pub mod pallet {
                 Error::<T>::CannotUpdateFarmWrongTwin
             );
 
-            let parsed_ip =
-                <T as Config>::PublicIP::try_from(ip).map_err(DispatchErrorWithPostInfo::from)?;
+            let parsed_ip = <T as Config>::PublicIP::try_from(ip.to_vec())
+                .map_err(DispatchErrorWithPostInfo::from)?;
 
-            let parsed_gateway = <T as Config>::GatewayIP::try_from(gateway)
+            let parsed_gateway = <T as Config>::GatewayIP::try_from(gateway.to_vec())
                 .map_err(DispatchErrorWithPostInfo::from)?;
 
             let new_ip = PublicIP {
@@ -908,7 +902,7 @@ pub mod pallet {
         pub fn remove_farm_ip(
             origin: OriginFor<T>,
             id: u32,
-            ip: Vec<u8>,
+            ip: PublicIpIpInput,
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
@@ -920,8 +914,8 @@ pub mod pallet {
                 Error::<T>::CannotUpdateFarmWrongTwin
             );
 
-            let parsed_ip =
-                <T as Config>::PublicIP::try_from(ip).map_err(DispatchErrorWithPostInfo::from)?;
+            let parsed_ip = <T as Config>::PublicIP::try_from(ip.to_vec())
+                .map_err(DispatchErrorWithPostInfo::from)?;
 
             match stored_farm
                 .public_ips
@@ -2174,6 +2168,39 @@ impl<T: Config> Pallet<T> {
         }
 
         Ok(parsed_interfaces)
+    }
+
+    fn get_public_ips(
+        public_ips: &pallet::PublicIpListInput<T>,
+    ) -> Result<BoundedVec<PublicIpOf<T>, ConstU32<256>>, Error<T>> {
+        let mut public_ips_list: BoundedVec<PublicIP<T::PublicIP, T::GatewayIP>, ConstU32<256>> =
+            vec![].try_into().unwrap();
+
+        for ip in public_ips.iter() {
+            let public_ip_ip = <T as Config>::PublicIP::try_from(ip.ip.to_vec().clone())?;
+            let public_ip_gateway = <T as Config>::GatewayIP::try_from(ip.gw.to_vec().clone())?;
+
+            if public_ips_list.contains(&PublicIP {
+                ip: public_ip_ip.clone(),
+                gateway: public_ip_gateway.clone(),
+                contract_id: 0,
+            }) {
+                return Err(Error::<T>::IpExists);
+            }
+
+            public_ips_list
+                .try_push(PublicIP {
+                    ip: public_ip_ip,
+                    gateway: public_ip_gateway,
+                    contract_id: 0,
+                })
+                .or_else(|_| {
+                    return Err(DispatchErrorWithPostInfo::from(Error::<T>::InvalidPublicIP));
+                })
+                .ok();
+        }
+
+        Ok(public_ips_list)
     }
 }
 
