@@ -1127,6 +1127,12 @@ fn attach_another_custom_farming_policy_to_farm_works() {
             Some(limit.clone())
         ));
 
+        // Check if node 1 received farming policy 5
+        let node1_id = 1;
+        let mut node1 = TfgridModule::nodes(node1_id).unwrap();
+        assert_eq!(node1.farming_policy_id, fp.id);
+        assert_eq!(node1.certification, fp.node_certification);
+
         // Set limit with new custom (non-default) farming policy 6
         // NB: no need to double CU and SU capacity here because new limits will not
         // considere node 1 has it already has custom farming policy 5
@@ -1156,8 +1162,7 @@ fn attach_another_custom_farming_policy_to_farm_works() {
         assert_eq!(farm.certification, new_fp.farm_certification);
 
         // Existing node 1 should not migrate to new farming policy
-        let node1_id = 1;
-        let node1 = TfgridModule::nodes(node1_id).unwrap();
+        node1 = TfgridModule::nodes(node1_id).unwrap();
         assert_eq!(node1.farming_policy_id, fp.id);
         assert_eq!(node1.certification, fp.node_certification);
 
