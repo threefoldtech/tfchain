@@ -1090,6 +1090,15 @@ fn attach_farming_policy_with_gold_farm_certification_works() {
 }
 
 #[test]
+fn attach_farming_policy_with_certified_node_certification_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        // farming policy 3 has certified node certification
+        // see create_farming_policies()
+        test_attach_farming_policy_flow(3);
+    });
+}
+
+#[test]
 fn add_farm_limits_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
