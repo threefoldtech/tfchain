@@ -968,6 +968,7 @@ pub mod pallet {
 
             let farming_policy = Self::get_farming_policy(&new_node)?;
             new_node.farming_policy_id = farming_policy.id;
+            new_node.certification = farming_policy.node_certification;
 
             Nodes::<T>::insert(id, &new_node);
             NodeID::<T>::put(id);
