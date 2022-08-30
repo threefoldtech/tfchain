@@ -149,15 +149,17 @@ impl<T: Config> Clone for IP6<T> {
     }
 }
 
-/// A Public Config IP6
-/// Needs to be valid format (ipv6 without cidr)
+/// A Public Config IP6 gateway
+/// Needs to be valid format (ipv6 without CIDR)
 #[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct GW6<T: Config>(
-    pub BoundedVec<u8, ConstU32<MAX_IP6_LENGTH>>,
-    PhantomData<(T, ConstU32<MAX_IP6_LENGTH>)>,
+    pub BoundedVec<u8, ConstU32<MAX_GW6_LENGTH>>,
+    PhantomData<(T, ConstU32<MAX_GW6_LENGTH>)>,
 );
+
+pub const MAX_GW6_LENGTH: u32 = 39;
 
 impl<T: Config> TryFrom<Vec<u8>> for GW6<T> {
     type Error = Error<T>;
@@ -170,7 +172,7 @@ impl<T: Config> TryFrom<Vec<u8>> for GW6<T> {
             value.len() >= MIN_IP6_LENGHT.saturated_into(),
             Self::Error::GW6ToShort
         );
-        let bounded_vec: BoundedVec<u8, ConstU32<MAX_IP6_LENGTH>> =
+        let bounded_vec: BoundedVec<u8, ConstU32<MAX_GW6_LENGTH>> =
             BoundedVec::try_from(value).map_err(|_| Self::Error::GW6ToLong)?;
         ensure!(IPv6::parse(&bounded_vec).is_ok(), Self::Error::InvalidGW6);
         Ok(Self(bounded_vec, PhantomData))

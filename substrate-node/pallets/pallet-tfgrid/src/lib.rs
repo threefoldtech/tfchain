@@ -118,7 +118,7 @@ pub mod pallet {
     >;
     pub type PubConfigIP6Input = IP<
         BoundedVec<u8, ConstU32<{ pub_config::MAX_IP6_LENGTH }>>,
-        BoundedVec<u8, ConstU32<{ pub_config::MAX_IP6_LENGTH }>>,
+        BoundedVec<u8, ConstU32<{ pub_config::MAX_GW6_LENGTH }>>,
     >;
     pub type PubConfigInput = PublicConfig<
         PubConfigIP4Input,
@@ -722,7 +722,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
-            let farm_name = FarmNameOf::<T>::try_from(name.to_vec())
+            let farm_name = FarmNameOf::<T>::try_from(name.clone().to_vec())
                 .map_err(DispatchErrorWithPostInfo::from)?;
 
             ensure!(
@@ -739,7 +739,7 @@ pub mod pallet {
             let mut id = FarmID::<T>::get();
             id = id + 1;
 
-            let public_ips_list = Self::get_public_ips(&public_ips)?;
+            let public_ips_list = Self::get_public_ips(public_ips)?;
 
             let new_farm = Farm {
                 version: TFGRID_FARM_VERSION,
@@ -869,10 +869,10 @@ pub mod pallet {
                 Error::<T>::CannotUpdateFarmWrongTwin
             );
 
-            let parsed_ip = <T as Config>::PublicIP::try_from(ip.to_vec())
+            let parsed_ip = <T as Config>::PublicIP::try_from(ip.into_inner())
                 .map_err(DispatchErrorWithPostInfo::from)?;
 
-            let parsed_gateway = <T as Config>::GatewayIP::try_from(gateway.to_vec())
+            let parsed_gateway = <T as Config>::GatewayIP::try_from(gateway.into_inner())
                 .map_err(DispatchErrorWithPostInfo::from)?;
 
             let new_ip = PublicIP {
@@ -914,7 +914,7 @@ pub mod pallet {
                 Error::<T>::CannotUpdateFarmWrongTwin
             );
 
-            let parsed_ip = <T as Config>::PublicIP::try_from(ip.to_vec())
+            let parsed_ip = <T as Config>::PublicIP::try_from(ip.into_inner())
                 .map_err(DispatchErrorWithPostInfo::from)?;
 
             match stored_farm
@@ -1152,7 +1152,7 @@ pub mod pallet {
             ensure!(node.farm_id == farm_id, Error::<T>::NodeUpdateNotAuthorized);
 
             if let Some(config) = public_config {
-                let pub_config = Self::get_public_config(&config)?;
+                let pub_config = Self::get_public_config(config)?;
                 // update the public config and save
                 node.public_config = Some(pub_config);
             } else {
@@ -2113,9 +2113,9 @@ impl<T: Config> Pallet<T> {
         Ok(ip)
     }
 
-    fn get_public_config(config: &pallet::PubConfigInput) -> Result<PubConfigOf<T>, Error<T>> {
-        let ipv4 = <T as Config>::IP4::try_from(config.ip4.ip.to_vec().clone())?;
-        let gw4 = <T as Config>::GW4::try_from(config.ip4.gw.to_vec().clone())?;
+    fn get_public_config(config: pallet::PubConfigInput) -> Result<PubConfigOf<T>, Error<T>> {
+        let ipv4 = <T as Config>::IP4::try_from(config.ip4.ip.into_inner())?;
+        let gw4 = <T as Config>::GW4::try_from(config.ip4.gw.into_inner())?;
 
         let mut pub_config = PublicConfig {
             ip4: IP { ip: ipv4, gw: gw4 },
@@ -2123,16 +2123,16 @@ impl<T: Config> Pallet<T> {
             domain: None,
         };
 
-        if let Some(ipv6_config) = &config.ip6 {
-            let ipv6 = <T as Config>::IP6::try_from(ipv6_config.ip.to_vec().clone())?;
-            let gw6 = <T as Config>::GW6::try_from(ipv6_config.gw.to_vec().clone())?;
+        if let Some(ipv6_config) = config.ip6 {
+            let ipv6 = <T as Config>::IP6::try_from(ipv6_config.ip.into_inner())?;
+            let gw6 = <T as Config>::GW6::try_from(ipv6_config.gw.into_inner())?;
 
             pub_config.ip6 = Some(IP { ip: ipv6, gw: gw6 });
         }
 
-        if let Some(domain) = &config.domain {
-            let domain = <T as Config>::Domain::try_from(domain.to_vec().clone())?;
-            pub_config.domain = Some(domain)
+        if let Some(domain) = config.domain {
+            let p_domain = <T as Config>::Domain::try_from(domain.into_inner())?;
+            pub_config.domain = Some(p_domain)
         }
 
         Ok(pub_config)
@@ -2147,8 +2147,8 @@ impl<T: Config> Pallet<T> {
         }
 
         for intf in interfaces.iter() {
-            let intf_name = <T as Config>::InterfaceName::try_from(intf.name.to_vec().clone())?;
-            let intf_mac = <T as Config>::InterfaceMac::try_from(intf.mac.to_vec().clone())?;
+            let intf_name = <T as Config>::InterfaceName::try_from(intf.name.to_vec())?;
+            let intf_mac = <T as Config>::InterfaceMac::try_from(intf.mac.to_vec())?;
 
             let mut parsed_interfaces_ips: BoundedVec<
                 InterfaceIp<T>,
@@ -2156,7 +2156,7 @@ impl<T: Config> Pallet<T> {
             > = vec![].try_into().unwrap();
 
             for ip in intf.ips.iter() {
-                let intf_ip = <T as Config>::InterfaceIP::try_from(ip.to_vec().clone())?;
+                let intf_ip = <T as Config>::InterfaceIP::try_from(ip.to_vec())?;
                 let _ = parsed_interfaces_ips.try_push(intf_ip);
             }
 
@@ -2171,14 +2171,14 @@ impl<T: Config> Pallet<T> {
     }
 
     fn get_public_ips(
-        public_ips: &pallet::PublicIpListInput<T>,
+        public_ips: pallet::PublicIpListInput<T>,
     ) -> Result<BoundedVec<PublicIpOf<T>, ConstU32<256>>, Error<T>> {
         let mut public_ips_list: BoundedVec<PublicIP<T::PublicIP, T::GatewayIP>, ConstU32<256>> =
             vec![].try_into().unwrap();
 
-        for ip in public_ips.iter() {
-            let public_ip_ip = <T as Config>::PublicIP::try_from(ip.ip.to_vec().clone())?;
-            let public_ip_gateway = <T as Config>::GatewayIP::try_from(ip.gw.to_vec().clone())?;
+        for ip in public_ips {
+            let public_ip_ip = <T as Config>::PublicIP::try_from(ip.ip.into_inner())?;
+            let public_ip_gateway = <T as Config>::GatewayIP::try_from(ip.gw.into_inner())?;
 
             if public_ips_list.contains(&PublicIP {
                 ip: public_ip_ip.clone(),
