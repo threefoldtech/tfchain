@@ -1946,7 +1946,7 @@ fn create_extra_node() {
         location,
         country,
         city,
-        Vec::new(),
+        Vec::new().try_into().unwrap(),
         true,
         true,
         "some_serial".as_bytes().to_vec()
