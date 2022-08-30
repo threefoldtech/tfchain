@@ -5,7 +5,7 @@ use frame_support::{
     ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
 };
 use scale_info::TypeInfo;
-use valip::{ip4::Ip, ip6::Ip as IPv6, mac::Mac};
+use valip::{ip4::Ip as IPv4, ip6::Ip as IPv6, mac::Mac};
 
 use crate::{Config, Error};
 
@@ -136,7 +136,7 @@ impl<T: Config> TryFrom<Vec<u8>> for InterfaceIp<T> {
         let bounded_vec: BoundedVec<u8, ConstU32<MAX_INTERFACE_IP_LENGTH>> =
             BoundedVec::try_from(value).map_err(|_| Self::Error::InterfaceIpToLong)?;
         ensure!(
-            Ip::parse(&bounded_vec).is_ok() || IPv6::parse(&bounded_vec).is_ok(),
+            IPv4::parse(&bounded_vec).is_ok() || IPv6::parse(&bounded_vec).is_ok(),
             Self::Error::InvalidInterfaceIP
         );
         Ok(Self(bounded_vec, PhantomData))

@@ -7,7 +7,7 @@ use frame_support::{
 };
 use scale_info::TypeInfo;
 use valip::{
-    ip4::{Ip, CIDR},
+    ip4::{Ip as IPv4, CIDR as IPv4Cidr},
     ip6::{Ip as IPv6, CIDR as IPv6Cidr},
 };
 
@@ -37,7 +37,10 @@ impl<T: Config> TryFrom<Vec<u8>> for IP4<T> {
         );
         let bounded_vec: BoundedVec<u8, ConstU32<MAX_IP_LENGTH>> =
             BoundedVec::try_from(value).map_err(|_| Self::Error::IP4ToLong)?;
-        ensure!(CIDR::parse(&bounded_vec).is_ok(), Self::Error::InvalidIP4);
+        ensure!(
+            IPv4Cidr::parse(&bounded_vec).is_ok(),
+            Self::Error::InvalidIP4
+        );
         Ok(Self(bounded_vec, PhantomData))
     }
 }
@@ -82,7 +85,7 @@ impl<T: Config> TryFrom<Vec<u8>> for GW4<T> {
         );
         let bounded_vec: BoundedVec<u8, ConstU32<MAX_GATEWAY_LENGTH>> =
             BoundedVec::try_from(value).map_err(|_| Self::Error::GW4ToLong)?;
-        ensure!(Ip::parse(&bounded_vec).is_ok(), Self::Error::InvalidGW4);
+        ensure!(IPv4::parse(&bounded_vec).is_ok(), Self::Error::InvalidGW4);
         Ok(Self(bounded_vec, PhantomData))
     }
 }
