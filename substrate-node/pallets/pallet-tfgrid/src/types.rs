@@ -13,7 +13,7 @@ pub enum StorageVersion {
     V4Struct,
     V5Struct,
     V6Struct,
-    V7Struct
+    V7Struct,
 }
 
 impl Default for StorageVersion {
@@ -181,4 +181,10 @@ pub struct TermsAndConditions<AccountId> {
     pub timestamp: u64,
     pub document_link: Vec<u8>,
     pub document_hash: Vec<u8>,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+pub struct PublicIpInput<IP, GW> {
+    pub ip: IP,
+    pub gw: GW,
 }

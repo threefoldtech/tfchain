@@ -5,7 +5,7 @@ use frame_support::{
     ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
 };
 use scale_info::TypeInfo;
-use valip::{ip4::ip::IPv4, ip6::Ip as IPv6, mac::Mac};
+use valip::{ip4::Ip as IPv4, ip6::Ip as IPv6, mac::Mac};
 
 use crate::{Config, Error};
 

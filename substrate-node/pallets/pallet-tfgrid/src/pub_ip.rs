@@ -5,7 +5,7 @@ use frame_support::{
     ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
 };
 use scale_info::TypeInfo;
-use valip::ip4::{cidr::CIDR, ip::IPv4};
+use valip::ip4::{Ip, CIDR};
 
 use crate::{Config, Error};
 
@@ -84,7 +84,7 @@ impl<T: Config> TryFrom<Vec<u8>> for GatewayIP<T> {
         let bounded_vec: BoundedVec<u8, ConstU32<MAX_GATEWAY_LENGTH>> =
             BoundedVec::try_from(value).map_err(|_| Self::Error::GatewayIPToLong)?;
         ensure!(
-            IPv4::parse(&bounded_vec).is_ok(),
+            Ip::parse(&bounded_vec).is_ok(),
             Self::Error::InvalidPublicIP
         );
         Ok(Self(bounded_vec, PhantomData))
