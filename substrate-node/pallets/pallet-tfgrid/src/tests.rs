@@ -1074,7 +1074,7 @@ fn edit_farming_policy_works() {
 #[test]
 fn attach_farming_policy_to_farm_works() {
     ExternalityBuilder::build().execute_with(|| {
-        // farming policy 2 has gold farm certification
+        // farming policy 2 is default and has no node/farm certification
         // see create_farming_policies()
         test_attach_farming_policy_flow(2);
     });
@@ -1083,7 +1083,7 @@ fn attach_farming_policy_to_farm_works() {
 #[test]
 fn attach_farming_policy_with_gold_farm_certification_works() {
     ExternalityBuilder::build().execute_with(|| {
-        // farming policy 1 has gold farm certification
+        // farming policy 1 is default and has gold farm certification
         // see create_farming_policies()
         test_attach_farming_policy_flow(1);
     });
@@ -1092,7 +1092,7 @@ fn attach_farming_policy_with_gold_farm_certification_works() {
 #[test]
 fn attach_farming_policy_with_certified_node_certification_works() {
     ExternalityBuilder::build().execute_with(|| {
-        // farming policy 3 has certified node certification
+        // farming policy 3 is default and has certified node certification
         // see create_farming_policies()
         test_attach_farming_policy_flow(3);
     });
@@ -1119,7 +1119,7 @@ fn attach_another_custom_farming_policy_to_farm_works() {
             node_count: Some(10),
         };
 
-        // Link farming policy 5 to farmfarm
+        // Link farming policy 5 to farm
         let farm_id = 1;
         assert_ok!(TfgridModule::attach_policy_to_farm(
             RawOrigin::Root.into(),
@@ -1134,8 +1134,9 @@ fn attach_another_custom_farming_policy_to_farm_works() {
         assert_eq!(node1.certification, fp.node_certification);
 
         // Set limit with new custom (non-default) farming policy 6
-        // NB: no need to double CU and SU capacity here because new limits will not
-        // considere node 1 has it already has custom farming policy 5
+        // NB: no need to double CU and SU capacity here !!
+        // Indeed, new limit will not considere node 1
+        // because it already has farming policy 5 which is custom
         let new_fp = TfgridModule::farming_policies_map(6);
         let new_limit = FarmingPolicyLimit {
             farming_policy_id: new_fp.id,
@@ -1156,7 +1157,7 @@ fn attach_another_custom_farming_policy_to_farm_works() {
         // Get updated farm
         let mut farm = TfgridModule::farms(farm_id).unwrap();
         // Check updated farm limits, should be exactly the same as new farming policy
-        // with full CU/SU capacity since node 1 has custom farming policy 5
+        // with full CU/SU capacity since node 1 has farming policy 5  which is custom
         let mut new_farm_limit = farm.clone().farming_policy_limits.unwrap();
         assert_eq!(new_farm_limit, new_limit);
         assert_eq!(farm.certification, new_fp.farm_certification);
@@ -1171,8 +1172,8 @@ fn attach_another_custom_farming_policy_to_farm_works() {
         create_extra_node();
 
         // Extra node 2 should get new farming policy
-        let node1_id = 2;
-        let node2 = TfgridModule::nodes(node1_id).unwrap();
+        let node2_id = 2;
+        let node2 = TfgridModule::nodes(node2_id).unwrap();
         assert_eq!(node2.farming_policy_id, new_fp.id);
         assert_eq!(node2.certification, new_fp.node_certification);
 
