@@ -1230,12 +1230,31 @@ fn add_farm_limits_on_expired_policy_fails() {
         // Farming policies expire at block 101
         System::set_block_number(System::block_number() + 102);
         assert_noop!(
-            TfgridModule::attach_policy_to_farm(RawOrigin::Root.into(), 1, Some(limit.clone())),
+            TfgridModule::attach_policy_to_farm(RawOrigin::Root.into(), 1, Some(limit)),
             Error::<TestRuntime>::FarmingPolicyExpired
         );
 
         let f1 = TfgridModule::farms(1).unwrap();
         assert_eq!(f1.farming_policy_limits, None);
+    });
+}
+
+#[test]
+fn add_farm_limits_to_non_existent_farm_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        let limit = FarmingPolicyLimit {
+            farming_policy_id: 1,
+            cu: Some(5),
+            su: Some(10),
+            end: Some(1654058949),
+            node_certification: false,
+            node_count: Some(10),
+        };
+
+        assert_noop!(
+            TfgridModule::attach_policy_to_farm(RawOrigin::Root.into(), 1, Some(limit)),
+            Error::<TestRuntime>::FarmNotExists
+        );
     });
 }
 
