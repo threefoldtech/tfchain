@@ -70,9 +70,6 @@ pub use pallet_validator;
 
 pub use pallet_dao;
 
-mod migrations;
-use self::migrations::*;
-
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -142,7 +139,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 68,
+    spec_version: 70,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -657,7 +654,6 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllModules,
-    CustomOnRuntimeUpgrades,
 >;
 
 impl_runtime_apis! {

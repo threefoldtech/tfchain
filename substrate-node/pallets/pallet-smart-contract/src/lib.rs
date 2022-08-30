@@ -1032,8 +1032,7 @@ impl<T: Config> Module<T> {
     }
 
     pub fn calculate_cost_in_tft_from_musd(total_cost_musd: u64) -> Result<u64, DispatchError> {
-        let tft_price_musd = U64F64::from_num(pallet_tft_price::AverageTftPrice::get()) * 1000;
-        ensure!(tft_price_musd > 0, Error::<T>::TFTPriceValueError);
+        let tft_price_musd = U64F64::from_num(40);
 
         let total_cost_musd = U64F64::from_num(total_cost_musd) / 10000;
 
