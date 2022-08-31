@@ -120,6 +120,15 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
         let mut migrated_count = 0;
         // We transform the storage values from the old into the new format.
         Contracts::<T>::translate::<deprecated::ContractV3, _>(|k, ctr| {
+            // Don't map deleted contracts
+            if matches!(ctr.state, types::ContractState::Deleted(_)) {
+                info!(
+                    "contract with id: {:?} in state delete, skipping...",
+                    ctr.contract_id
+                );
+                return None;
+            }
+
             // dummy default
             let rc = types::RentContract { node_id: 0 };
 
@@ -175,8 +184,8 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
 
                             match public_ips_list.try_push(new_ip) {
                                 Ok(()) => (),
-                                Err(err) => {
-                                    error!("error while pushing ip to contract ip list: {:?}", err);
+                                Err(_) => {
+                                    error!("error while pushing ip to contract ip list");
                                     should_free_ip = true;
                                     continue;
                                 }

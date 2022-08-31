@@ -243,14 +243,34 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
             }
         }
 
-        let replaced_farm_name = farm::replace_farm_name_spaces_with_underscores(&farm.name);
-        let name = match <T as Config>::FarmName::try_from(replaced_farm_name) {
+        let mut farm_name = farm.name;
+        let mut truncated = false;
+        if farm_name.len() > 40 {
+            info!("farm name length exceeded, removing from farm id by name map");
+            FarmIdByName::<T>::remove(&farm_name);
+            farm_name.truncate(40);
+            truncated = true;
+        }
+
+        let replaced_farm_name = farm::replace_farm_name_invalid_characters(&farm_name);
+
+        if replaced_farm_name != farm_name && !truncated {
+            info!("farm name changed, removing from farm id by name map");
+            FarmIdByName::<T>::remove(&farm_name);
+        }
+
+        let name = match <T as Config>::FarmName::try_from(replaced_farm_name.clone()) {
             Ok(n) => n,
             Err(_) => {
                 info!("invalid farm name, skipping updating farm {:?} ...", k);
                 return None;
             }
         };
+
+        if replaced_farm_name != farm_name {
+            info!("farm name changed, inserting into farm id by name map");
+            FarmIdByName::<T>::insert(replaced_farm_name, farm.id);
+        }
 
         let new_farm = Farm {
             version: 4,
