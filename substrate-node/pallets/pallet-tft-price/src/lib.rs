@@ -130,6 +130,10 @@ pub mod pallet {
     #[pallet::getter(fn allowed_origin)]
     pub type AllowedOrigin<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn min_tft_price)]
+    pub type MinTftPrice<T> = StorageValue<_, u32, ValueQuery>;
+
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
@@ -158,6 +162,13 @@ pub mod pallet {
             AllowedOrigin::<T>::set(Some(target));
             Ok(().into())
         }
+
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1))]
+        pub fn set_min_tft_price(origin: OriginFor<T>, price: u32) -> DispatchResultWithPostInfo {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+            MinTftPrice::<T>::put(price);
+            Ok(().into())
+        }
     }
 
     #[pallet::hooks]
@@ -173,6 +184,7 @@ pub mod pallet {
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub allowed_origin: Option<T::AccountId>,
+        pub min_tft_price: u32,
     }
 
     #[cfg(feature = "std")]
@@ -180,6 +192,7 @@ pub mod pallet {
         fn default() -> Self {
             Self {
                 allowed_origin: None,
+                min_tft_price: 30,
             }
         }
     }
@@ -188,6 +201,7 @@ pub mod pallet {
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
             AllowedOrigin::<T>::set(self.allowed_origin.clone());
+            MinTftPrice::<T>::put(self.min_tft_price);
         }
     }
 }
@@ -366,8 +380,9 @@ impl<T: Config> Pallet<T> {
     }
 
     fn calc_avg() -> u32 {
-        let queue = Self::queue_transient();
-        let items = queue.get_all_values();
+        let items: Vec<u32> = TftPriceHistory::<T>::iter_values()
+            .filter(|val| val > &0_u32)
+            .collect();
         items.iter().fold(0_u32, |a, b| a.saturating_add(*b)) / items.len() as u32
     }
 }

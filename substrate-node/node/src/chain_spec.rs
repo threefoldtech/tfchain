@@ -117,6 +117,8 @@ pub fn development_config() -> Result<ChainSpec, String> {
 			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
 			// TFT price pallet allow account
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
+            // TFT price pallet min price
+            30,
 		)
         },
         // Bootnodes
@@ -201,6 +203,8 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
 			// TFT price pallet allow account
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
+            // TFT price pallet min price
+            30,
 		)
         },
         // Bootnodes
@@ -229,6 +233,7 @@ fn testnet_genesis(
     bridge_validator_accounts: Vec<AccountId>,
     bridge_fee_account: AccountId,
     tft_price_allowed_account: AccountId,
+    min_tft_price: u32,
 ) -> GenesisConfig {
     GenesisConfig {
         system: SystemConfig {
@@ -316,6 +321,7 @@ fn testnet_genesis(
         // just some default for development
         tft_price_module: TFTPriceModuleConfig {
             allowed_origin: Some(tft_price_allowed_account),
+            min_tft_price,
         },
     }
 }
