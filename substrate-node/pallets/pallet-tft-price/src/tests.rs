@@ -288,6 +288,8 @@ fn test_set_min_tft_price_works() {
             RawOrigin::Root.into(),
             10
         ));
+
+        assert_eq!(TFTPriceModule::min_tft_price(), 10);
     })
 }
 
