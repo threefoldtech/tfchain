@@ -135,6 +135,16 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1))]
+        pub fn set_allowed_origin(
+            origin: OriginFor<T>,
+            target: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+            AllowedOrigin::<T>::set(Some(target));
+            Ok(().into())
+        }
+
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
         pub fn set_prices(
             origin: OriginFor<T>,
@@ -149,16 +159,6 @@ pub mod pallet {
                 );
                 Self::calculate_and_set_price(price, block_number)?;
             }
-            Ok(().into())
-        }
-
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1))]
-        pub fn set_allowed_origin(
-            origin: OriginFor<T>,
-            target: T::AccountId,
-        ) -> DispatchResultWithPostInfo {
-            T::RestrictedOrigin::ensure_origin(origin)?;
-            AllowedOrigin::<T>::set(Some(target));
             Ok(().into())
         }
 

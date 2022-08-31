@@ -184,6 +184,30 @@ impl ExternalityBuilder {
 }
 
 #[test]
+fn test_set_allowed_origin_works() {
+    let mut t = ExternalityBuilder::build();
+    t.execute_with(|| {
+        assert_ok!(TFTPriceModule::set_allowed_origin(
+            RawOrigin::Root.into(),
+            bob(),
+        ));
+
+        assert_eq!(TFTPriceModule::allowed_origin(), Some(bob()));
+    })
+}
+
+#[test]
+fn test_set_allowed_origin_by_wrong_origin_fails() {
+    let mut t = ExternalityBuilder::build();
+    t.execute_with(|| {
+        assert_noop!(
+            TFTPriceModule::set_allowed_origin(Origin::signed(bob()), bob()),
+            BadOrigin,
+        );
+    })
+}
+
+#[test]
 fn test_set_prices_works() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
