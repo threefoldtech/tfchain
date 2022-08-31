@@ -244,17 +244,14 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
         }
 
         let mut farm_name = farm.name;
-        let mut truncated = false;
-        if farm_name.len() > 40 {
-            info!("farm name length exceeded, removing from farm id by name map");
-            FarmIdByName::<T>::remove(&farm_name);
-            farm_name.truncate(40);
-            truncated = true;
+        let truncated = farm_name.len() > <T as Config>::MaxFarmNameLength::get() as usize;
+        if truncated {
+            info!("farm name length exceeded, truncating farm name");
+            farm_name.truncate(<T as Config>::MaxFarmNameLength::get() as usize);
         }
 
         let replaced_farm_name = farm::replace_farm_name_invalid_characters(&farm_name);
-
-        if replaced_farm_name != farm_name && !truncated {
+        if replaced_farm_name != farm_name || truncated {
             info!("farm name changed, removing from farm id by name map");
             FarmIdByName::<T>::remove(&farm_name);
         }
@@ -267,7 +264,7 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
             }
         };
 
-        if replaced_farm_name != farm_name {
+        if replaced_farm_name != farm_name || truncated {
             info!("farm name changed, inserting into farm id by name map");
             FarmIdByName::<T>::insert(replaced_farm_name, farm.id);
         }
