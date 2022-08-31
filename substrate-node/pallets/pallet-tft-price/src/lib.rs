@@ -5,7 +5,6 @@
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
 use frame_support::{dispatch::DispatchResultWithPostInfo, weights::Pays};
 use frame_system::offchain::{SendSignedTransaction, Signer};
-use lite_json::json::JsonValue;
 use log;
 use sp_runtime::offchain::{http, Duration};
 use sp_runtime::traits::SaturatedConversion;
@@ -317,28 +316,6 @@ impl<T: Config> Pallet<T> {
         // The case of `None`: no account is available for sending
         log::error!("No local account available");
         return Err(<Error<T>>::OffchainSignedTxError);
-    }
-
-    /// Parse the price from the given JSON string using `lite-json`.
-    ///
-    /// Returns `None` when parsing failed or `Some(price in mUSD)` when parsing is successful.
-    pub fn parse_price(price_str: &str) -> Option<u32> {
-        let val = lite_json::parse_json(price_str);
-        let price = match val.ok()? {
-            JsonValue::Object(obj) => {
-                let (_, v) = obj
-                    .into_iter()
-                    .find(|(k, _)| k.iter().copied().eq("USD".chars()))?;
-                match v {
-                    JsonValue::Number(number) => number,
-                    _ => return None,
-                }
-            }
-            _ => return None,
-        };
-
-        let exp = price.fraction_length.saturating_sub(3);
-        Some(price.integer as u32 * 1000 + (price.fraction / 10_u64.pow(exp)) as u32)
     }
 
     /// Parse the lowest price from the given JSON string using `serde_json`.

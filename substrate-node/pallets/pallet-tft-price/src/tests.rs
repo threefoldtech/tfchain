@@ -223,20 +223,6 @@ fn test_set_price_wrong_origin_fails() {
 }
 
 #[test]
-fn test_parse_price_works() {
-    let mut t = ExternalityBuilder::build();
-    t.execute_with(|| {
-        let price_str = "{\n\"USD\": 0.04457\n}";
-        let price = TFTPriceModule::parse_price(price_str).unwrap();
-        assert_eq!(price, 44);
-
-        let price_str = "{\n\"USD\": 1.14457\n}";
-        let price = TFTPriceModule::parse_price(price_str).unwrap();
-        assert_eq!(price, 1144);
-    })
-}
-
-#[test]
 fn test_parse_lowest_price_from_valid_request_works() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
