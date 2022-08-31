@@ -191,7 +191,7 @@ pub mod pallet {
         fn default() -> Self {
             Self {
                 allowed_origin: None,
-                min_tft_price: 30,
+                min_tft_price: 10,
             }
         }
     }

@@ -118,7 +118,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 			// TFT price pallet allow account
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
             // TFT price pallet min price
-            30,
+            10,
 		)
         },
         // Bootnodes
@@ -204,7 +204,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 			// TFT price pallet allow account
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
             // TFT price pallet min price
-            30,
+            10,
 		)
         },
         // Bootnodes

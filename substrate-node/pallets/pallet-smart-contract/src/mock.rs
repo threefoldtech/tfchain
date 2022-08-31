@@ -302,7 +302,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
     let genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
         allowed_origin: Some(bob()),
-        min_tft_price: 30,
+        min_tft_price: 10,
     };
     genesis.assimilate_storage(&mut t).unwrap();
 

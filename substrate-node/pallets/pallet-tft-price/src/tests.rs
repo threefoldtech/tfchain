@@ -170,7 +170,7 @@ impl ExternalityBuilder {
 
         let genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
             allowed_origin: Some(allowed_account()),
-            min_tft_price: 30,
+            min_tft_price: 10,
         };
         genesis.assimilate_storage(&mut storage).unwrap();
 
@@ -286,10 +286,10 @@ fn test_set_min_tft_price_works() {
     t.execute_with(|| {
         assert_ok!(TFTPriceModule::set_min_tft_price(
             RawOrigin::Root.into(),
-            10
+            20
         ));
 
-        assert_eq!(TFTPriceModule::min_tft_price(), 10);
+        assert_eq!(TFTPriceModule::min_tft_price(), 20);
     })
 }
 
@@ -298,7 +298,7 @@ fn test_set_min_tft_price_wrong_origin_fails() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
         assert_noop!(
-            TFTPriceModule::set_min_tft_price(Origin::signed(bob()), 10),
+            TFTPriceModule::set_min_tft_price(Origin::signed(bob()), 20),
             BadOrigin,
         );
     })
