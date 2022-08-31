@@ -1,9 +1,10 @@
 use crate::{self as pallet_tft_price, *};
 use codec::alloc::sync::Arc;
+use frame_support::error::BadOrigin;
 use frame_support::traits::GenesisBuild;
 use frame_support::{assert_noop, assert_ok, construct_runtime, parameter_types, traits::ConstU32};
-use frame_system::EnsureRoot;
 use frame_system::{limits, mocking};
+use frame_system::{EnsureRoot, RawOrigin};
 use sp_core::{
     offchain::{
         testing::{self},
@@ -169,6 +170,7 @@ impl ExternalityBuilder {
 
         let genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
             allowed_origin: Some(allowed_account()),
+            min_tft_price: 30,
         };
         genesis.assimilate_storage(&mut storage).unwrap();
 
@@ -182,7 +184,7 @@ impl ExternalityBuilder {
 }
 
 #[test]
-fn test_set_prices() {
+fn test_set_prices_works() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
         let acct = allowed_account();
@@ -201,7 +203,7 @@ fn test_set_prices() {
 }
 
 #[test]
-fn test_set_price() {
+fn test_set_price_works() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
         let acct = allowed_account();
@@ -210,7 +212,18 @@ fn test_set_price() {
 }
 
 #[test]
-fn test_parse_price() {
+fn test_set_price_wrong_origin_fails() {
+    let mut t = ExternalityBuilder::build();
+    t.execute_with(|| {
+        assert_noop!(
+            TFTPriceModule::set_prices(Origin::signed(bob()), 500, 1),
+            Error::<TestRuntime>::AccountUnauthorizedToSetPrice
+        );
+    })
+}
+
+#[test]
+fn test_parse_price_works() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
         let price_str = "{\n\"USD\": 0.04457\n}";
@@ -258,12 +271,23 @@ fn test_parse_lowest_price_from_incomplete_request_fails() {
 }
 
 #[test]
-fn test_set_price_wrong_origin() {
+fn test_set_min_tft_price_works() {
+    let mut t = ExternalityBuilder::build();
+    t.execute_with(|| {
+        assert_ok!(TFTPriceModule::set_min_tft_price(
+            RawOrigin::Root.into(),
+            10
+        ));
+    })
+}
+
+#[test]
+fn test_set_min_tft_price_wrong_origin_fails() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
         assert_noop!(
-            TFTPriceModule::set_prices(Origin::signed(bob()), 500, 1),
-            Error::<TestRuntime>::AccountUnauthorizedToSetPrice
+            TFTPriceModule::set_min_tft_price(Origin::signed(bob()), 10),
+            BadOrigin,
         );
     })
 }
