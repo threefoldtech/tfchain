@@ -251,11 +251,6 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
         }
 
         let replaced_farm_name = farm::replace_farm_name_invalid_characters(&farm_name);
-        if replaced_farm_name != farm_name || truncated {
-            info!("farm name changed, removing from farm id by name map");
-            FarmIdByName::<T>::remove(&farm_name);
-        }
-
         let name = match <T as Config>::FarmName::try_from(replaced_farm_name.clone()) {
             Ok(n) => n,
             Err(_) => {
@@ -265,7 +260,8 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
         };
 
         if replaced_farm_name != farm_name || truncated {
-            info!("farm name changed, inserting into farm id by name map");
+            info!("farm name changed, reworking storage");
+            FarmIdByName::<T>::remove(&farm_name);
             FarmIdByName::<T>::insert(replaced_farm_name, farm.id);
         }
 
