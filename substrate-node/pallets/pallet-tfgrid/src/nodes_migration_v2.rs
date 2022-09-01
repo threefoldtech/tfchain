@@ -4,18 +4,18 @@ use frame_support::{traits::Get, weights::Weight};
 use log::info;
 use sp_std::collections::btree_map::BTreeMap;
 
-pub mod v7patch {
+pub mod v8patch {
     use super::*;
     use crate::Config;
 
     use frame_support::{pallet_prelude::Weight, traits::OnRuntimeUpgrade};
     use sp_std::marker::PhantomData;
-    pub struct NodesMigration<T: Config>(PhantomData<T>);
+    pub struct FixFarmNodeIndexMap<T: Config>(PhantomData<T>);
 
-    impl<T: Config> OnRuntimeUpgrade for NodesMigration<T> {
+    impl<T: Config> OnRuntimeUpgrade for FixFarmNodeIndexMap<T> {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<(), &'static str> {
-            assert!(PalletVersion::<T>::get() == types::StorageVersion::V6Struct);
+            assert!(PalletVersion::<T>::get() == types::StorageVersion::V7Struct);
 
             info!("👥  TFGrid pallet to v4 passes PRE migrate checks ✅",);
             Ok(())
@@ -46,6 +46,8 @@ pub mod v7patch {
 
 pub fn add_farm_nodes_index<T: Config>() -> frame_support::weights::Weight {
     info!(" >>> Migrating nodes storage...");
+
+    NodesByFarmID::<T>::remove_all(None);
 
     let mut reads = 0;
     let mut writes = 0;
