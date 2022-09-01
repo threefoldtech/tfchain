@@ -3,6 +3,7 @@
 use sp_std::prelude::*;
 
 use frame_support::{
+    bounded_vec,
     dispatch::DispatchErrorWithPostInfo,
     ensure,
     log::info,
@@ -486,7 +487,7 @@ impl<T: Config> Pallet<T> {
                 <T as pallet_tfgrid::Config>::GatewayIP,
             >,
             MaxNodeContractPublicIPs<T>,
-        > = vec![].try_into().unwrap();
+        > = bounded_vec![];
         // Prepare NodeContract struct
         let node_contract = types::NodeContract {
             node_id,
@@ -1413,7 +1414,7 @@ impl<T: Config> Pallet<T> {
                 <T as pallet_tfgrid::Config>::GatewayIP,
             >,
             MaxNodeContractPublicIPs<T>,
-        > = vec![].try_into().unwrap();
+        > = bounded_vec![];
 
         for i in 0..farm.public_ips.len() {
             if ips.len() == node_contract.public_ips as usize {
@@ -1468,7 +1469,7 @@ impl<T: Config> Pallet<T> {
                 <T as pallet_tfgrid::Config>::GatewayIP,
             >,
             MaxNodeContractPublicIPs<T>,
-        > = vec![].try_into().unwrap();
+        > = bounded_vec![];
         for i in 0..farm.public_ips.len() {
             // if an ip has contract id 0 it means it's not reserved
             // reserve it now
