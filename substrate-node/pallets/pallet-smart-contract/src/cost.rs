@@ -4,7 +4,7 @@ use crate::pallet::Error;
 use crate::types;
 use crate::types::{Contract, ContractBillingInformation};
 use crate::Config;
-use frame_support::{dispatch::DispatchErrorWithPostInfo, ensure};
+use frame_support::dispatch::DispatchErrorWithPostInfo;
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use sp_runtime::Percent;
 use sp_runtime::SaturatedConversion;
@@ -244,10 +244,17 @@ pub fn calculate_cost_in_tft_from_musd<T: Config>(
     total_cost: u64,
 ) -> Result<u64, DispatchErrorWithPostInfo> {
     let avg_tft_price = pallet_tft_price::AverageTftPrice::<T>::get();
-    ensure!(avg_tft_price > 0, Error::<T>::TFTPriceValueError);
+
+    // Guaranty tft price will never be lower than min tft price
+    let min_tft_price = pallet_tft_price::MinTftPrice::<T>::get();
+    let mut tft_price = avg_tft_price.max(min_tft_price);
+
+    // Guaranty tft price will never be higher than max tft price
+    let max_tft_price = pallet_tft_price::MaxTftPrice::<T>::get();
+    tft_price = tft_price.min(max_tft_price);
 
     // TFT Price is in musd
-    let tft_price_musd = U64F64::from_num(avg_tft_price);
+    let tft_price_musd = U64F64::from_num(tft_price);
 
     // Cost is expressed in units USD, divide by 10000 to get the price in musd
     let total_cost_musd = U64F64::from_num(total_cost) / 10000;

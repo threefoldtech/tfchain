@@ -5,7 +5,6 @@
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
 use frame_support::{dispatch::DispatchResultWithPostInfo, weights::Pays};
 use frame_system::offchain::{SendSignedTransaction, Signer};
-use lite_json::json::JsonValue;
 use log;
 use sp_runtime::offchain::{http, Duration};
 use sp_runtime::traits::SaturatedConversion;
@@ -25,6 +24,9 @@ const DST_TYPE: &str = "credit_alphanum4";
 const DST_ISSUER: &str = "GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47";
 const DST_CODE: &str = "TFT";
 const DST_AMOUNT: u32 = 100;
+
+#[cfg(test)]
+mod mock;
 
 #[cfg(test)]
 mod tests;
@@ -91,6 +93,8 @@ pub mod pallet {
         PriceStored(u32),
         OffchainWorkerExecuted(T::AccountId),
         AveragePriceStored(u32),
+        AveragePriceIsAboveMaxPrice(u32, u32),
+        AveragePriceIsBelowMinPrice(u32, u32),
     }
 
     #[pallet::error]
@@ -99,6 +103,8 @@ pub mod pallet {
         OffchainSignedTxError,
         NoLocalAcctForSigning,
         AccountUnauthorizedToSetPrice,
+        MaxPriceBelowMinPriceError,
+        MinPriceAboveMaxPriceError,
     }
 
     #[pallet::pallet]
@@ -130,6 +136,14 @@ pub mod pallet {
     #[pallet::getter(fn allowed_origin)]
     pub type AllowedOrigin<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn min_tft_price)]
+    pub type MinTftPrice<T> = StorageValue<_, u32, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn max_tft_price)]
+    pub type MaxTftPrice<T> = StorageValue<_, u32, ValueQuery>;
+
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
@@ -158,6 +172,28 @@ pub mod pallet {
             AllowedOrigin::<T>::set(Some(target));
             Ok(().into())
         }
+
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        pub fn set_min_tft_price(origin: OriginFor<T>, price: u32) -> DispatchResultWithPostInfo {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+            ensure!(
+                price < MaxTftPrice::<T>::get(),
+                Error::<T>::MinPriceAboveMaxPriceError
+            );
+            MinTftPrice::<T>::put(price);
+            Ok(().into())
+        }
+
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        pub fn set_max_tft_price(origin: OriginFor<T>, price: u32) -> DispatchResultWithPostInfo {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+            ensure!(
+                price > MinTftPrice::<T>::get(),
+                Error::<T>::MaxPriceBelowMinPriceError
+            );
+            MaxTftPrice::<T>::put(price);
+            Ok(().into())
+        }
     }
 
     #[pallet::hooks]
@@ -173,6 +209,8 @@ pub mod pallet {
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub allowed_origin: Option<T::AccountId>,
+        pub min_tft_price: u32,
+        pub max_tft_price: u32,
     }
 
     #[cfg(feature = "std")]
@@ -180,6 +218,8 @@ pub mod pallet {
         fn default() -> Self {
             Self {
                 allowed_origin: None,
+                min_tft_price: 10,
+                max_tft_price: 1000,
             }
         }
     }
@@ -188,6 +228,8 @@ pub mod pallet {
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
             AllowedOrigin::<T>::set(self.allowed_origin.clone());
+            MinTftPrice::<T>::put(self.min_tft_price);
+            MaxTftPrice::<T>::put(self.max_tft_price);
         }
     }
 }
@@ -211,6 +253,18 @@ impl<T: Config> Pallet<T> {
         log::info!("average price {:?}", average);
         AverageTftPrice::<T>::put(average);
         Self::deposit_event(Event::AveragePriceStored(average));
+
+        let min = Self::min_tft_price();
+        if average < min {
+            log::info!("average price {:?} is below min price {:?} !", average, min);
+            Self::deposit_event(Event::AveragePriceIsBelowMinPrice(average, min));
+        }
+
+        let max = Self::max_tft_price();
+        if average > max {
+            log::info!("average price {:?} is above max price {:?} !", average, max);
+            Self::deposit_event(Event::AveragePriceIsAboveMaxPrice(average, max));
+        }
 
         Ok(Pays::No.into())
     }
@@ -305,28 +359,6 @@ impl<T: Config> Pallet<T> {
         return Err(<Error<T>>::OffchainSignedTxError);
     }
 
-    /// Parse the price from the given JSON string using `lite-json`.
-    ///
-    /// Returns `None` when parsing failed or `Some(price in mUSD)` when parsing is successful.
-    pub fn parse_price(price_str: &str) -> Option<u32> {
-        let val = lite_json::parse_json(price_str);
-        let price = match val.ok()? {
-            JsonValue::Object(obj) => {
-                let (_, v) = obj
-                    .into_iter()
-                    .find(|(k, _)| k.iter().copied().eq("USD".chars()))?;
-                match v {
-                    JsonValue::Number(number) => number,
-                    _ => return None,
-                }
-            }
-            _ => return None,
-        };
-
-        let exp = price.fraction_length.saturating_sub(3);
-        Some(price.integer as u32 * 1000 + (price.fraction / 10_u64.pow(exp)) as u32)
-    }
-
     /// Parse the lowest price from the given JSON string using `serde_json`.
     ///
     /// Returns `None` when parsing failed or `Some(price in mUSD)` when parsing is successful.
@@ -366,8 +398,9 @@ impl<T: Config> Pallet<T> {
     }
 
     fn calc_avg() -> u32 {
-        let queue = Self::queue_transient();
-        let items = queue.get_all_values();
+        let items: Vec<u32> = TftPriceHistory::<T>::iter_values()
+            .filter(|val| val > &0_u32)
+            .collect();
         items.iter().fold(0_u32, |a, b| a.saturating_add(*b)) / items.len() as u32
     }
 }
