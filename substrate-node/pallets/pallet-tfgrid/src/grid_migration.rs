@@ -210,7 +210,11 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
     );
 
     for (farm_id, nodes) in farms_with_nodes.iter() {
-        info!("inserting nodes {:?} in farm map: {:?}", nodes, farm_id);
+        info!(
+            "inserting nodes: {:?} with farm id: {:?}",
+            nodes.clone(),
+            farm_id
+        );
         NodesByFarmID::<T>::insert(farm_id, nodes);
         writes += 1;
     }
