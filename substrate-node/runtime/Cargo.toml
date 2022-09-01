@@ -5,7 +5,7 @@ homepage = 'https://substrate.dev'
 license = 'Unlicense'
 name = 'tfchain-runtime'
 repository = 'https://github.com/substrate-developer-hub/substrate-node-template/'
-version = '2.1.0-b5'
+version = '2.1.0-b6'
 
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
