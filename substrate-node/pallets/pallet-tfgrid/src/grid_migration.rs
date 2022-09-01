@@ -226,6 +226,7 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
     info!(" >>> Migrating farms storage...");
 
     let mut migrated_count = 0;
+    let mut generated_farm_names: i32 = 0;
     // We transform the storage values from the old into the new format.
     Farms::<T>::translate::<deprecated::FarmV3, _>(|k, farm| {
         info!("     Migrated farm for {:?}...", k);
@@ -251,14 +252,13 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
             farm_name.truncate(<T as Config>::MaxFarmNameLength::get() as usize);
         }
 
-        let replaced_farm_name = farm::replace_farm_name_invalid_characters(&farm_name);
-        let name = match <T as Config>::FarmName::try_from(replaced_farm_name.clone()) {
-            Ok(n) => n,
-            Err(_) => {
-                info!("invalid farm name, skipping updating farm {:?} ...", k);
-                return None;
-            }
-        };
+        let mut replaced_farm_name = farm::replace_farm_name_invalid_characters(&farm_name);
+        let name = <T as Config>::FarmName::try_from(replaced_farm_name.clone()).unwrap_or({
+            replaced_farm_name = b"change_me_".to_vec();
+            replaced_farm_name.append(&mut generated_farm_names.to_be_bytes().to_vec());
+            generated_farm_names += 1;
+            <T as Config>::FarmName::try_from(replaced_farm_name.clone()).unwrap()
+        });
 
         if replaced_farm_name != farm_name || truncated {
             info!("farm name changed, reworking storage");
