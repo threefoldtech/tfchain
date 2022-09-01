@@ -7,7 +7,7 @@ use sp_std::prelude::*;
 
 use codec::Encode;
 use frame_support::dispatch::DispatchErrorWithPostInfo;
-use frame_support::{ensure, traits::ConstU32, traits::EnsureOrigin, BoundedVec};
+use frame_support::{bounded_vec, ensure, traits::ConstU32, traits::EnsureOrigin, BoundedVec};
 use frame_system::{self as system, ensure_signed};
 use hex::FromHex;
 use pallet_timestamp as timestamp;
@@ -2161,7 +2161,7 @@ impl<T: Config> Pallet<T> {
             let mut parsed_interfaces_ips: BoundedVec<
                 InterfaceIp<T>,
                 <T as Config>::MaxInterfaceIpsLength,
-            > = vec![].try_into().unwrap();
+            > = bounded_vec![];
 
             for ip in intf.ips.iter() {
                 let intf_ip = <T as Config>::InterfaceIP::try_from(ip.to_vec())?;
@@ -2182,7 +2182,7 @@ impl<T: Config> Pallet<T> {
         public_ips: pallet::PublicIpListInput<T>,
     ) -> Result<BoundedVec<PublicIpOf<T>, ConstU32<256>>, Error<T>> {
         let mut public_ips_list: BoundedVec<PublicIP<T::PublicIP, T::GatewayIP>, ConstU32<256>> =
-            vec![].try_into().unwrap();
+            bounded_vec![];
 
         for ip in public_ips {
             let public_ip_ip = <T as Config>::PublicIP::try_from(ip.ip.into_inner())?;

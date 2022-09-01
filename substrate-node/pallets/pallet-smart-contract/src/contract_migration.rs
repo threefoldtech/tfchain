@@ -1,5 +1,5 @@
 use super::*;
-use frame_support::{weights::Weight, BoundedVec};
+use frame_support::{bounded_vec, weights::Weight, BoundedVec};
 use log::{error, info};
 use pallet_tfgrid;
 use sp_core::H256;
@@ -149,7 +149,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                             <T as pallet_tfgrid::Config>::GatewayIP,
                         >,
                         pallet::MaxNodeContractPublicIPs<T>,
-                    > = vec![].try_into().unwrap();
+                    > = bounded_vec![];
 
                     let mut should_free_ip = false;
                     if node_contract.public_ips_list.len() > 0 {
@@ -194,7 +194,7 @@ pub fn migrate_to_version_4<T: Config>() -> frame_support::weights::Weight {
                     }
 
                     let deployment_data: BoundedVec<u8, pallet::MaxDeploymentDataLength<T>> =
-                        vec![].try_into().unwrap();
+                        bounded_vec![];
 
                     let mut new_node_contract = types::NodeContract {
                         node_id: node_contract.node_id,
