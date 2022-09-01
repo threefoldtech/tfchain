@@ -22,7 +22,7 @@ pub mod v7patch {
         }
 
         fn on_runtime_upgrade() -> Weight {
-            if PalletVersion::<T>::get() == types::StorageVersion::V6Struct {
+            if PalletVersion::<T>::get() == types::StorageVersion::V7Struct {
                 add_farm_nodes_index::<T>()
             } else {
                 info!(" >>> Unused migration");
@@ -32,7 +32,7 @@ pub mod v7patch {
 
         #[cfg(feature = "try-runtime")]
         fn post_upgrade() -> Result<(), &'static str> {
-            assert!(PalletVersion::<T>::get() == types::StorageVersion::V7Struct);
+            assert!(PalletVersion::<T>::get() == types::StorageVersion::V8Struct);
 
             info!(
                 "👥  TFGrid pallet migration to {:?} passes POST migrate checks ✅",
@@ -62,12 +62,17 @@ pub fn add_farm_nodes_index<T: Config>() -> frame_support::weights::Weight {
     }
 
     for (farm_id, nodes) in farms_with_nodes.iter() {
+        info!(
+            "inserting nodes: {:?} with farm id: {:?}",
+            nodes.clone(),
+            farm_id
+        );
         NodesByFarmID::<T>::insert(farm_id, nodes);
         writes += 1;
     }
 
     // Update pallet storage version
-    PalletVersion::<T>::set(types::StorageVersion::V7Struct);
+    PalletVersion::<T>::set(types::StorageVersion::V8Struct);
     info!(" <<< Storage version upgraded");
 
     // Return the weight consumed by the migration.
