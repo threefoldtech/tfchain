@@ -133,6 +133,10 @@ pub mod pallet {
     #[pallet::getter(fn min_tft_price)]
     pub type MinTftPrice<T> = StorageValue<_, u32, ValueQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn max_tft_price)]
+    pub type MaxTftPrice<T> = StorageValue<_, u32, ValueQuery>;
+
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1))]
@@ -168,6 +172,13 @@ pub mod pallet {
             MinTftPrice::<T>::put(price);
             Ok(().into())
         }
+
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1))]
+        pub fn set_max_tft_price(origin: OriginFor<T>, price: u32) -> DispatchResultWithPostInfo {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+            MaxTftPrice::<T>::put(price);
+            Ok(().into())
+        }
     }
 
     #[pallet::hooks]
@@ -184,6 +195,7 @@ pub mod pallet {
     pub struct GenesisConfig<T: Config> {
         pub allowed_origin: Option<T::AccountId>,
         pub min_tft_price: u32,
+        pub max_tft_price: u32,
     }
 
     #[cfg(feature = "std")]
@@ -192,6 +204,7 @@ pub mod pallet {
             Self {
                 allowed_origin: None,
                 min_tft_price: 10,
+                max_tft_price: 1000,
             }
         }
     }
@@ -201,6 +214,7 @@ pub mod pallet {
         fn build(&self) {
             AllowedOrigin::<T>::set(self.allowed_origin.clone());
             MinTftPrice::<T>::put(self.min_tft_price);
+            MaxTftPrice::<T>::put(self.max_tft_price);
         }
     }
 }

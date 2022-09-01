@@ -119,6 +119,8 @@ pub fn development_config() -> Result<ChainSpec, String> {
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
             // TFT price pallet min price
             10,
+            // TFT price pallet max price
+            1000,
 		)
         },
         // Bootnodes
@@ -205,6 +207,8 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
             // TFT price pallet min price
             10,
+            // TFT price pallet max price
+            1000,
 		)
         },
         // Bootnodes
@@ -234,6 +238,7 @@ fn testnet_genesis(
     bridge_fee_account: AccountId,
     tft_price_allowed_account: AccountId,
     min_tft_price: u32,
+    max_tft_price: u32,
 ) -> GenesisConfig {
     GenesisConfig {
         system: SystemConfig {
@@ -322,6 +327,7 @@ fn testnet_genesis(
         tft_price_module: TFTPriceModuleConfig {
             allowed_origin: Some(tft_price_allowed_account),
             min_tft_price,
+            max_tft_price,
         },
     }
 }
