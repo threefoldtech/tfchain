@@ -1045,6 +1045,18 @@ pub mod pallet {
 
             let old_node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
 
+            // If the farm ID changed on the node,
+            // remove the node from the old map from the farm and insert into the correct one
+            if old_node.farm_id != farm_id {
+                let mut old_nodes_by_farm = NodesByFarmID::<T>::get(old_node.farm_id);
+                old_nodes_by_farm.retain(|&id| id != node_id);
+                NodesByFarmID::<T>::insert(farm_id, old_nodes_by_farm);
+
+                let mut nodes_by_farm = NodesByFarmID::<T>::get(farm_id);
+                nodes_by_farm.push(node_id);
+                NodesByFarmID::<T>::insert(farm_id, nodes_by_farm);
+            };
+
             stored_node.farm_id = farm_id;
             stored_node.resources = resources;
             stored_node.location = location;
