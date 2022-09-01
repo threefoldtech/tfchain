@@ -306,6 +306,17 @@ fn test_set_min_tft_price_wrong_origin_fails() {
 }
 
 #[test]
+fn test_set_min_tft_price_too_high_fails() {
+    let mut t = ExternalityBuilder::build();
+    t.execute_with(|| {
+        assert_noop!(
+            TFTPriceModule::set_min_tft_price(RawOrigin::Root.into(), 2000),
+            Error::<TestRuntime>::MinPriceHigherThanMaxPriceError,
+        );
+    })
+}
+
+#[test]
 fn test_set_max_tft_price_works() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
@@ -325,6 +336,17 @@ fn test_set_max_tft_price_wrong_origin_fails() {
         assert_noop!(
             TFTPriceModule::set_max_tft_price(Origin::signed(bob()), 2000),
             BadOrigin,
+        );
+    })
+}
+
+#[test]
+fn test_set_max_tft_price_too_low_fails() {
+    let mut t = ExternalityBuilder::build();
+    t.execute_with(|| {
+        assert_noop!(
+            TFTPriceModule::set_max_tft_price(RawOrigin::Root.into(), 5),
+            Error::<TestRuntime>::MaxPriceLowerThanMinPriceError,
         );
     })
 }
