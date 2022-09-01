@@ -3,7 +3,6 @@ use super::PubConfigOf;
 use super::*;
 use super::{InterfaceIp, InterfaceOf, PublicIpOf};
 use frame_support::{
-    bounded_vec,
     traits::{ConstU32, Get},
     weights::Weight,
     BoundedVec,
@@ -231,7 +230,7 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
     Farms::<T>::translate::<deprecated::FarmV3, _>(|k, farm| {
         info!("     Migrated farm for {:?}...", k);
 
-        let mut public_ips: BoundedVec<PublicIpOf<T>, ConstU32<256>> = bounded_vec![];
+        let mut public_ips: BoundedVec<PublicIpOf<T>, ConstU32<256>> = vec![].try_into().unwrap();
 
         match get_public_ips::<T>(&farm) {
             Ok(ips) => {
@@ -253,14 +252,16 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
         }
 
         let mut replaced_farm_name = farm::replace_farm_name_invalid_characters(&farm_name);
-        let name = <T as Config>::FarmName::try_from(replaced_farm_name.clone()).unwrap_or({
-            replaced_farm_name = b"change_me_".to_vec();
-            let first = ((generated_farm_names / 26) + b'a' as u32) as u8;
-            let second = ((generated_farm_names % 26) + b'a' as u32) as u8;
-            replaced_farm_name.append(&mut [first, second].to_vec());
-            generated_farm_names += 1;
-            <T as Config>::FarmName::try_from(replaced_farm_name.clone()).unwrap()
-        });
+        let name =
+            <T as Config>::FarmName::try_from(replaced_farm_name.clone()).unwrap_or_else(|_| {
+                info!("generating farm name for farm: {:?}", farm.id);
+                replaced_farm_name = b"change_me_".to_vec();
+                let first = ((generated_farm_names / 26) + b'a' as u32) as u8;
+                let second = ((generated_farm_names % 26) + b'a' as u32) as u8;
+                replaced_farm_name.extend_from_slice(&[first, second]);
+                generated_farm_names += 1;
+                <T as Config>::FarmName::try_from(replaced_farm_name.clone()).unwrap()
+            });
 
         if replaced_farm_name != farm_name || truncated {
             info!("farm name changed, reworking storage");
@@ -335,7 +336,7 @@ fn get_interfaces<T: Config>(node: &deprecated::NodeV4) -> Result<Vec<InterfaceO
         let mut parsed_interfaces_ips: BoundedVec<
             InterfaceIp<T>,
             <T as Config>::MaxInterfaceIpsLength,
-        > = bounded_vec![];
+        > = vec![].try_into().unwrap();
 
         for ip in &intf.ips {
             let intf_ip = <T as Config>::InterfaceIP::try_from(ip.clone())?;
@@ -355,7 +356,8 @@ fn get_interfaces<T: Config>(node: &deprecated::NodeV4) -> Result<Vec<InterfaceO
 fn get_public_ips<T: Config>(
     farm: &deprecated::FarmV3,
 ) -> Result<BoundedVec<PublicIpOf<T>, ConstU32<256>>, Error<T>> {
-    let mut parsed_public_ips: BoundedVec<PublicIpOf<T>, ConstU32<256>> = bounded_vec![];
+    let mut parsed_public_ips: BoundedVec<PublicIpOf<T>, ConstU32<256>> =
+        vec![].try_into().unwrap();
 
     for pub_ip in &farm.public_ips {
         let ip = <T as Config>::PublicIP::try_from(pub_ip.ip.clone())?;
