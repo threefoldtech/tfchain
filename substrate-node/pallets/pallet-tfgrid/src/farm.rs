@@ -65,8 +65,7 @@ pub fn replace_farm_name_invalid_characters(input: &[u8]) -> Vec<u8> {
         .iter()
         .map(|c| match c {
             b' ' => b'_',
-            // Represents ' (apostrophe)
-            39 => b'-',
+            b'\'' => b'-',
             b';' => b'_',
             _ => *c,
         })
