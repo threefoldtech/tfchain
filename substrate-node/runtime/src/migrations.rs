@@ -119,8 +119,10 @@ impl frame_support::traits::OnRuntimeUpgrade for PalletTftPriceStoragePrefixMigr
         // Reinsert some default values
         pallet_tft_price::TftPrice::<Runtime>::put(45);
         pallet_tft_price::AverageTftPrice::<Runtime>::put(45);
+        pallet_tft_price::MinTftPrice::<Runtime>::put(20);
+        pallet_tft_price::MaxTftPrice::<Runtime>::put(2000);
 
-        <Runtime as frame_system::Config>::DbWeight::get().writes(2)
+        <Runtime as frame_system::Config>::DbWeight::get().writes(8)
     }
 }
 
