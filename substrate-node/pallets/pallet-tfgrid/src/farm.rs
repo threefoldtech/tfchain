@@ -60,11 +60,13 @@ impl<T: Config> Clone for FarmName<T> {
     }
 }
 
-pub fn replace_farm_name_spaces_with_underscores(input: &[u8]) -> Vec<u8> {
+pub fn replace_farm_name_invalid_characters(input: &[u8]) -> Vec<u8> {
     input
         .iter()
         .map(|c| match c {
             b' ' => b'_',
+            b'\'' => b'-',
+            b';' => b'_',
             _ => *c,
         })
         .collect()

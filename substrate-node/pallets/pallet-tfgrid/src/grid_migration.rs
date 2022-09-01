@@ -2,10 +2,10 @@ use super::Config;
 use super::PubConfigOf;
 use super::*;
 use super::{InterfaceIp, InterfaceOf, PublicIpOf};
-use frame_support::BoundedVec;
 use frame_support::{
     traits::{ConstU32, Get},
     weights::Weight,
+    BoundedVec,
 };
 use log::info;
 use sp_std::collections::btree_map::BTreeMap;
@@ -230,6 +230,7 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
     info!(" >>> Migrating farms storage...");
 
     let mut migrated_count = 0;
+    let mut generated_farm_names: u32 = 0;
     // We transform the storage values from the old into the new format.
     Farms::<T>::translate::<deprecated::FarmV3, _>(|k, farm| {
         info!("     Migrated farm for {:?}...", k);
@@ -248,14 +249,30 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
             }
         }
 
-        let replaced_farm_name = farm::replace_farm_name_spaces_with_underscores(&farm.name);
-        let name = match <T as Config>::FarmName::try_from(replaced_farm_name) {
-            Ok(n) => n,
-            Err(_) => {
-                info!("invalid farm name, skipping updating farm {:?} ...", k);
-                return None;
-            }
-        };
+        let mut farm_name = farm.name;
+        let truncated = farm_name.len() > <T as Config>::MaxFarmNameLength::get() as usize;
+        if truncated {
+            info!("farm name length exceeded, truncating farm name");
+            farm_name.truncate(<T as Config>::MaxFarmNameLength::get() as usize);
+        }
+
+        let mut replaced_farm_name = farm::replace_farm_name_invalid_characters(&farm_name);
+        let name =
+            <T as Config>::FarmName::try_from(replaced_farm_name.clone()).unwrap_or_else(|_| {
+                info!("generating farm name for farm: {:?}", farm.id);
+                replaced_farm_name = b"change_me_".to_vec();
+                let first = ((generated_farm_names / 26) + b'a' as u32) as u8;
+                let second = ((generated_farm_names % 26) + b'a' as u32) as u8;
+                replaced_farm_name.extend_from_slice(&[first, second]);
+                generated_farm_names += 1;
+                <T as Config>::FarmName::try_from(replaced_farm_name.clone()).unwrap()
+            });
+
+        if replaced_farm_name != farm_name || truncated {
+            info!("farm name changed, reworking storage");
+            FarmIdByName::<T>::remove(&farm_name);
+            FarmIdByName::<T>::insert(replaced_farm_name, farm.id);
+        }
 
         let new_farm = Farm {
             version: 4,
