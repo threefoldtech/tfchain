@@ -26,6 +26,9 @@ const DST_CODE: &str = "TFT";
 const DST_AMOUNT: u32 = 100;
 
 #[cfg(test)]
+mod mock;
+
+#[cfg(test)]
 mod tests;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
