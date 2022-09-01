@@ -1,9 +1,10 @@
+use super::Event as TftPriceEvent;
 use crate::{self as pallet_tft_price, *};
 use codec::alloc::sync::Arc;
 use frame_support::error::BadOrigin;
 use frame_support::traits::GenesisBuild;
 use frame_support::{assert_noop, assert_ok, construct_runtime, parameter_types, traits::ConstU32};
-use frame_system::{limits, mocking};
+use frame_system::{limits, mocking, EventRecord, Phase};
 use frame_system::{EnsureRoot, RawOrigin};
 use sp_core::{
     offchain::{
@@ -224,6 +225,9 @@ fn test_set_prices_works() {
         let queue = TFTPriceModule::queue_transient();
         let items = queue.get_all_values();
         assert_eq!(items.len(), 1440);
+
+        assert_eq!(TFTPriceModule::tft_price(), 500);
+        assert_eq!(TFTPriceModule::average_tft_price(), 500);
     })
 }
 
@@ -233,6 +237,55 @@ fn test_set_price_works() {
     t.execute_with(|| {
         let acct = allowed_account();
         assert_ok!(TFTPriceModule::set_prices(Origin::signed(acct), 500, 1));
+
+        assert_eq!(TFTPriceModule::tft_price(), 500);
+        assert_eq!(TFTPriceModule::average_tft_price(), 500);
+    })
+}
+
+#[test]
+fn test_set_price_below_min_price_works() {
+    let mut t = ExternalityBuilder::build();
+    t.execute_with(|| {
+        let acct = allowed_account();
+        assert_ok!(TFTPriceModule::set_prices(Origin::signed(acct), 5, 1));
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events[our_events.len() - 1],
+            record(Event::TFTPriceModule(
+                TftPriceEvent::<TestRuntime>::AveragePriceIsBelowMinPrice(
+                    5,
+                    TFTPriceModule::min_tft_price()
+                )
+            ))
+        );
+
+        assert_eq!(TFTPriceModule::tft_price(), 5);
+        assert_eq!(TFTPriceModule::average_tft_price(), 5);
+    })
+}
+
+#[test]
+fn test_set_price_above_max_price_works() {
+    let mut t = ExternalityBuilder::build();
+    t.execute_with(|| {
+        let acct = allowed_account();
+        assert_ok!(TFTPriceModule::set_prices(Origin::signed(acct), 2000, 1));
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events[our_events.len() - 1],
+            record(Event::TFTPriceModule(
+                TftPriceEvent::<TestRuntime>::AveragePriceIsAboveMaxPrice(
+                    2000,
+                    TFTPriceModule::max_tft_price()
+                )
+            ))
+        );
+
+        assert_eq!(TFTPriceModule::tft_price(), 2000);
+        assert_eq!(TFTPriceModule::average_tft_price(), 2000);
     })
 }
 
@@ -311,7 +364,7 @@ fn test_set_min_tft_price_too_high_fails() {
     t.execute_with(|| {
         assert_noop!(
             TFTPriceModule::set_min_tft_price(RawOrigin::Root.into(), 2000),
-            Error::<TestRuntime>::MinPriceHigherThanMaxPriceError,
+            Error::<TestRuntime>::MinPriceAboveMaxPriceError,
         );
     })
 }
@@ -346,9 +399,17 @@ fn test_set_max_tft_price_too_low_fails() {
     t.execute_with(|| {
         assert_noop!(
             TFTPriceModule::set_max_tft_price(RawOrigin::Root.into(), 5),
-            Error::<TestRuntime>::MaxPriceLowerThanMinPriceError,
+            Error::<TestRuntime>::MaxPriceBelowMinPriceError,
         );
     })
+}
+
+fn record(event: Event) -> EventRecord<Event, H256> {
+    EventRecord {
+        phase: Phase::Initialization,
+        event,
+        topics: vec![],
+    }
 }
 
 fn run_to_block(n: u64) {

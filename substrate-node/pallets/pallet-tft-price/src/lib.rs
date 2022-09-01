@@ -90,6 +90,8 @@ pub mod pallet {
         PriceStored(u32),
         OffchainWorkerExecuted(T::AccountId),
         AveragePriceStored(u32),
+        AveragePriceIsAboveMaxPrice(u32, u32),
+        AveragePriceIsBelowMinPrice(u32, u32),
     }
 
     #[pallet::error]
@@ -98,8 +100,8 @@ pub mod pallet {
         OffchainSignedTxError,
         NoLocalAcctForSigning,
         AccountUnauthorizedToSetPrice,
-        MaxPriceLowerThanMinPriceError,
-        MinPriceHigherThanMaxPriceError,
+        MaxPriceBelowMinPriceError,
+        MinPriceAboveMaxPriceError,
     }
 
     #[pallet::pallet]
@@ -173,7 +175,7 @@ pub mod pallet {
             T::RestrictedOrigin::ensure_origin(origin)?;
             ensure!(
                 price < MaxTftPrice::<T>::get(),
-                Error::<T>::MinPriceHigherThanMaxPriceError
+                Error::<T>::MinPriceAboveMaxPriceError
             );
             MinTftPrice::<T>::put(price);
             Ok(().into())
@@ -184,7 +186,7 @@ pub mod pallet {
             T::RestrictedOrigin::ensure_origin(origin)?;
             ensure!(
                 price > MinTftPrice::<T>::get(),
-                Error::<T>::MaxPriceLowerThanMinPriceError
+                Error::<T>::MaxPriceBelowMinPriceError
             );
             MaxTftPrice::<T>::put(price);
             Ok(().into())
@@ -248,6 +250,18 @@ impl<T: Config> Pallet<T> {
         log::info!("average price {:?}", average);
         AverageTftPrice::<T>::put(average);
         Self::deposit_event(Event::AveragePriceStored(average));
+
+        let min = Self::min_tft_price();
+        if average < min {
+            log::info!("average price {:?} is below min price {:?} !", average, min);
+            Self::deposit_event(Event::AveragePriceIsBelowMinPrice(average, min));
+        }
+
+        let max = Self::max_tft_price();
+        if average > max {
+            log::info!("average price {:?} is above max price {:?} !", average, max);
+            Self::deposit_event(Event::AveragePriceIsAboveMaxPrice(average, max));
+        }
 
         Ok(Pays::No.into())
     }
