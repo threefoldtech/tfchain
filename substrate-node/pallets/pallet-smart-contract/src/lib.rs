@@ -1500,6 +1500,7 @@ impl<T: Config> Pallet<T> {
         let future_block = now + BillingFrequency::<T>::get();
         let mut contracts = ContractsToBillAt::<T>::get(future_block);
         contracts.push(contract_id);
+        contracts.dedup();
         ContractsToBillAt::<T>::insert(future_block, &contracts);
         log::info!(
             "Insert contracts: {:?}, to be billed at block {:?}",

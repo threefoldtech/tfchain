@@ -11,11 +11,11 @@ substrate = SubstrateInterface(
 
 key_alice = Keypair.create_from_uri("//Alice")
 
-# alice_insert_key_params = ["tft!", "//Alice", key_alice.public_key.hex()]
-# substrate.rpc_request("author_insertKey", alice_insert_key_params)
+alice_insert_key_params = ["tft!", "//Alice", key_alice.public_key.hex()]
+substrate.rpc_request("author_insertKey", alice_insert_key_params)
 
-# alice_insert_key_params = ["smct", "//Alice", key_alice.public_key.hex()]
-# substrate.rpc_request("author_insertKey", alice_insert_key_params)
+alice_insert_key_params = ["smct", "//Alice", key_alice.public_key.hex()]
+substrate.rpc_request("author_insertKey", alice_insert_key_params)
 
 
 call_user_accept_tc = substrate.compose_call("TfgridModule", 
@@ -101,13 +101,17 @@ if response.error_message:
 call_create_contract = substrate.compose_call("SmartContractModule",
                                               "report_contract_resources",
                                               {
-                                                  "contract_id": 1,
-                                                  "used": {
-                                                    "hru": 0,
-                                                    "sru": 20 * GIGABYTE,
-                                                    "cru": 2,
-                                                    "mru": 4 * GIGABYTE
-                                                  }
+                                                  "contract_resources": [
+                                                    {
+                                                        "contract_id": 1,
+                                                        "used": {
+                                                            "hru": 0,
+                                                            "sru": 20 * GIGABYTE,
+                                                            "cru": 2,
+                                                            "mru": 4 * GIGABYTE
+                                                        }
+                                                    }
+                                                  ]
                                               })
 call_create_contract_signed = substrate.create_signed_extrinsic(call_create_contract, key_alice)
 response = substrate.submit_extrinsic(call_create_contract_signed, wait_for_finalization=True)
