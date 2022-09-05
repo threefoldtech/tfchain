@@ -191,7 +191,7 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
             secure_boot: node.secure_boot,
             virtualized: node.virtualized,
             serial_number: node.serial_number,
-            connection_price: node.connection_price,
+            connection_price: 80,
         };
 
         // Add index of farm - list (nodes)
