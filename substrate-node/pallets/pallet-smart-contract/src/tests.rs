@@ -14,7 +14,7 @@ use substrate_fixed::types::U64F64;
 
 use crate::cost;
 use pallet_tfgrid::types as pallet_tfgrid_types;
-use tfchain_support::types::{FarmCertification, Location, NodeCertification, PublicIP, Resources};
+use tfchain_support::{types::{FarmCertification, Location, NodeCertification, PublicIP, Resources}};
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -820,8 +820,8 @@ fn test_node_contract_billing_details_with_solution_provider() {
             run_to_block(11 + i * 10, Some(&mut pool_state));
         }
 
-        let usable_balance = Balances::usable_balance(&twin.account_id);
-        let total_amount_billed = initial_twin_balance - usable_balance;
+        let free_balance = Balances::free_balance(&twin.account_id);
+        let total_amount_billed = initial_twin_balance - free_balance;
 
         validate_distribution_rewards(initial_total_issuance, total_amount_billed, true);
 
@@ -1182,7 +1182,7 @@ fn test_node_contract_billing_fails() {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
         // Creates a farm and node and sets the price of tft to 0 which raises an error later
-        prepare_farm_and_node_for_failing();
+        prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
 
         assert_ok!(SmartContractModule::create_node_contract(
@@ -1197,7 +1197,14 @@ fn test_node_contract_billing_fails() {
         let contracts_to_bill_at_block = SmartContractModule::contract_to_bill_at_block(11);
         assert_eq!(contracts_to_bill_at_block.len(), 1);
 
-        // at block 11 billing should fail because of the value of tft being 0
+        let contract_id = contracts_to_bill_at_block[0];
+
+        // delete twin to make the billing fail
+        assert_ok!(TfgridModule::delete_twin(
+            Origin::signed(bob()),
+            SmartContractModule::contracts(contract_id).unwrap().twin_id,
+        ));
+
         // the offchain worker should save the failed ids in local storage and try again
         // in subsequent blocks (which will also fail)
         for i in 0..3 {
@@ -1206,11 +1213,6 @@ fn test_node_contract_billing_fails() {
                 .should_call_bill_contract(1, 11 + i, Ok(()));
             run_to_block(12 + i, Some(&mut pool_state));
         }
-
-        // after setting the price back to normal the operation should succeed
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
-        pool_state.write().should_call_bill_contract(1, 14, Ok(()));
-        run_to_block(15, Some(&mut pool_state));
     });
 }
 
@@ -1241,11 +1243,15 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
         push_contract_resources_used(1);
 
         let (amount_due_1, discount_received) = calculate_tft_cost(contract_id, twin_id, 11);
-        run_to_block(12);
+        pool_state
+            .write()
+            .should_call_bill_contract(contract_id, 11, Ok(()));
         check_report_cost(1, amount_due_1, 12, discount_received);
 
         let (amount_due_2, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
-        run_to_block(22);
+        pool_state
+            .write()
+            .should_call_bill_contract(contract_id, 21, Ok(()));
         check_report_cost(1, amount_due_2, 22, discount_received);
 
         // Run halfway ish next cycle and cancel
@@ -2532,45 +2538,6 @@ pub fn prepare_farm(source: AccountId, dedicated: bool) {
     }
 
     TfgridModule::set_farm_dedicated(RawOrigin::Root.into(), 1, true).unwrap();
-}
-
-pub fn prepare_farm_and_node_for_failing() {
-    TFTPriceModule::set_prices(Origin::signed(bob()), 0, 101).unwrap();
-
-    create_farming_policies();
-
-    prepare_twins();
-
-    prepare_farm(alice(), false);
-
-    // random location
-    let location = Location {
-        longitude: "12.233213231".as_bytes().to_vec(),
-        latitude: "32.323112123".as_bytes().to_vec(),
-    };
-
-    let resources = Resources {
-        hru: 1024 * GIGABYTE,
-        sru: 512 * GIGABYTE,
-        cru: 8,
-        mru: 16 * GIGABYTE,
-    };
-
-    let country = "Belgium".as_bytes().to_vec();
-    let city = "Ghent".as_bytes().to_vec();
-    TfgridModule::create_node(
-        Origin::signed(alice()),
-        1,
-        resources,
-        location,
-        country,
-        city,
-        Vec::new(),
-        false,
-        false,
-        "some_serial".as_bytes().to_vec(),
-    )
-    .unwrap();
 }
 
 pub fn prepare_farm_and_node() {
