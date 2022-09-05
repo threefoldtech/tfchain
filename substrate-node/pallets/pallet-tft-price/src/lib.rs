@@ -398,9 +398,8 @@ impl<T: Config> Pallet<T> {
     }
 
     fn calc_avg() -> u32 {
-        let items: Vec<u32> = TftPriceHistory::<T>::iter_values()
-            .filter(|val| val > &0_u32)
-            .collect();
+        let queue = Self::queue_transient();
+        let items = queue.get_all_values();
         items.iter().fold(0_u32, |a, b| a.saturating_add(*b)) / items.len() as u32
     }
 }
