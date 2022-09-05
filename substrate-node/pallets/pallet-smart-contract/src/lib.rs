@@ -1523,6 +1523,7 @@ impl<T: Config> Pallet<T> {
                 index
             );
         }
+        }
     }
 
     // Helper function that updates the contract state and manages storage accordingly
