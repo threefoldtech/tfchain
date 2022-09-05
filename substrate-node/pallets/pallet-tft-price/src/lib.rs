@@ -400,6 +400,9 @@ impl<T: Config> Pallet<T> {
     fn calc_avg() -> u32 {
         let queue = Self::queue_transient();
         let items = queue.get_all_values();
-        items.iter().fold(0_u32, |a, b| a.saturating_add(*b)) / items.len() as u32
+        let sum = items.iter().fold(0_u32, |a, b| a.saturating_add(*b));
+        (U32F32::from_num(sum) / U32F32::from_num(items.len()))
+            .round()
+            .to_num::<u32>()
     }
 }
