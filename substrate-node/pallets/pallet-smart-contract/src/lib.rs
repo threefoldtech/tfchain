@@ -1079,6 +1079,7 @@ impl<T: Config> Pallet<T> {
 
         // If there is nothing to be paid, return
         if amount_due == BalanceOf::<T>::saturated_from(0 as u128) {
+            log::debug!("amount to be billed is 0, nothing to do");
             return Ok(().into());
         };
 
