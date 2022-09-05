@@ -1499,14 +1499,15 @@ impl<T: Config> Pallet<T> {
         // Save the contract to be billed in now + BILLING_FREQUENCY_IN_BLOCKS
         let future_block = now + BillingFrequency::<T>::get();
         let mut contracts = ContractsToBillAt::<T>::get(future_block);
-        contracts.push(contract_id);
-        contracts.dedup();
-        ContractsToBillAt::<T>::insert(future_block, &contracts);
-        log::info!(
-            "Insert contracts: {:?}, to be billed at block {:?}",
-            contracts,
-            future_block
-        );
+        if !contracts.contains(&contract_id) {        
+            contracts.push(contract_id);
+            ContractsToBillAt::<T>::insert(future_block, &contracts);
+            log::info!(
+                "Insert contracts: {:?}, to be billed at block {:?}",
+                contracts,
+                future_block
+            );
+        }
     }
 
     // Helper function that updates the contract state and manages storage accordingly
