@@ -22,8 +22,8 @@ impl<T: Config> TryFrom<Vec<u8>> for NodeLatitude<T> {
     type Error = Error<T>;
 
     /// Fallible initialization from a provided byte vector if it is below the
-    /// minimum or exceeds the maximum allowed length or contains invalid ASCII
-    /// characters.
+    /// minimum or exceeds the maximum allowed length or can not be converted
+    /// to float or is out of [-90, 90] range.
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         ensure!(
             value.len() >= MIN_NODE_LOCATION_LENGTH.saturated_into(),
@@ -55,8 +55,16 @@ impl<T: Config> Clone for NodeLatitude<T> {
 }
 
 fn validate_latitude_input(input: &[u8]) -> bool {
-    // TODO
-    true
+    match core::str::from_utf8(input) {
+        Ok(val) => {
+            if let Some(lat) = val.parse::<f32>().ok() {
+                lat >= -90.0 && lat <= 90.0
+            } else {
+                false
+            }
+        }
+        Err(_) => false,
+    }
 }
 
 /// A Node longitude (ASCI Characters).
@@ -72,8 +80,8 @@ impl<T: Config> TryFrom<Vec<u8>> for NodeLongitude<T> {
     type Error = Error<T>;
 
     /// Fallible initialization from a provided byte vector if it is below the
-    /// minimum or exceeds the maximum allowed length or contains invalid ASCII
-    /// characters.
+    /// minimum or exceeds the maximum allowed length or can not be converted
+    /// to float or is out of [-180, 180] range.
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         ensure!(
             value.len() >= MIN_NODE_LOCATION_LENGTH.saturated_into(),
@@ -105,6 +113,14 @@ impl<T: Config> Clone for NodeLongitude<T> {
 }
 
 fn validate_longitude_input(input: &[u8]) -> bool {
-    // TODO
-    true
+    match core::str::from_utf8(input) {
+        Ok(val) => {
+            if let Some(long) = val.parse::<f32>().ok() {
+                long >= -180.0 && long <= 180.0
+            } else {
+                false
+            }
+        }
+        Err(_) => false,
+    }
 }
