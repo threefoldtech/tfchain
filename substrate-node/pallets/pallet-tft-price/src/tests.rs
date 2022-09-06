@@ -29,6 +29,28 @@ fn test_set_allowed_origin_by_wrong_origin_fails() {
 }
 
 #[test]
+fn test_calc_avg_rounding_works() {
+    let mut t = ExternalityBuilder::build();
+    t.execute_with(|| {
+        let mut queue = TFTPriceModule::queue_transient();
+        queue.push(499); // avg = 499.0
+        assert_eq!(TFTPriceModule::calc_avg(), 499);
+        queue.push(500); // avg = 499.5
+        assert_eq!(TFTPriceModule::calc_avg(), 500);
+        queue.push(500); // avg = 499.66
+        assert_eq!(TFTPriceModule::calc_avg(), 500);
+        queue.push(500); // avg = 499.75
+        assert_eq!(TFTPriceModule::calc_avg(), 500);
+        queue.push(499); // avg = 499.66
+        assert_eq!(TFTPriceModule::calc_avg(), 500);
+        queue.push(499); // avg = 499.5
+        assert_eq!(TFTPriceModule::calc_avg(), 500);
+        queue.push(499); // avg = 499.25
+        assert_eq!(TFTPriceModule::calc_avg(), 499);
+    })
+}
+
+#[test]
 fn test_set_prices_works() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
