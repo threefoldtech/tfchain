@@ -671,6 +671,5 @@ pub fn new_test_ext_with_pool_state(
     ext.register_extension(TransactionPoolExt::new(pool));
     ext.register_extension(KeystoreExt(Arc::new(keystore)));
 
-    //(ext, pool_state)
     (ext, pool_state)
 }
