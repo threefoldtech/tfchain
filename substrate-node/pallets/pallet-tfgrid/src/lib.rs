@@ -33,6 +33,7 @@ pub mod types;
 
 pub mod farm;
 pub mod interface;
+pub mod node;
 pub mod pub_config;
 pub mod pub_ip;
 pub mod twin;
@@ -91,6 +92,16 @@ pub mod pallet {
 
     // Farm information type
     pub type FarmInfoOf<T> = Farm<<T as Config>::FarmName, PublicIpOf<T>>;
+
+    // Input type for Node Location
+    pub type NodeLocationInput = (
+        BoundedVec<u8, ConstU32<{ node::MAX_NODE_LOCATION_LENGTH }>>,
+        BoundedVec<u8, ConstU32<{ node::MAX_NODE_LOCATION_LENGTH }>>,
+    );
+    // Concrete Node Latitude type
+    pub type NodeLatitudeOf<T> = <T as Config>::NodeLatitude;
+    // Concrete Node Longitude type
+    pub type NodeLongitudeOf<T> = <T as Config>::NodeLongitude;
 
     #[pallet::storage]
     #[pallet::getter(fn farms)]
@@ -382,6 +393,24 @@ pub mod pallet {
             + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
+        /// The type of a node latitude.
+        type NodeLatitude: FullCodec
+            + Debug
+            + PartialEq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        /// The type of a node longitude.
+        type NodeLongitude: FullCodec
+            + Debug
+            + PartialEq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
         #[pallet::constant]
         type MaxFarmNameLength: Get<u32>;
 
@@ -530,6 +559,13 @@ pub mod pallet {
         InvalidInterfaceIP,
         InvalidZosVersion,
         FarmingPolicyExpired,
+
+        NodeLatitudeInputToShort,
+        NodeLatitudeInputToLong,
+        InvalidNodeLatitude,
+        NodeLongitudeInputToShort,
+        NodeLongitudeInputToLong,
+        InvalidNodeLongitude,
     }
 
     #[pallet::genesis_config]
