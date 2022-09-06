@@ -274,7 +274,7 @@ pub mod pallet {
 
         type NodeChanged: ChangeNode<super::PubConfigOf<Self>, super::InterfaceOf<Self>>;
 
-        /// The type of a name.
+        /// The type of a twin IP.
         type TwinIp: FullCodec
             + Debug
             + PartialEq
@@ -283,7 +283,7 @@ pub mod pallet {
             + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
-        /// The type of a name.
+        /// The type of a farm name.
         type FarmName: FullCodec
             + Debug
             + PartialEq
@@ -293,7 +293,7 @@ pub mod pallet {
             + Into<Vec<u8>>
             + MaxEncodedLen;
 
-        /// The type of a name.
+        /// The type of a public IP.
         type PublicIP: FullCodec
             + Debug
             + PartialEq
@@ -303,7 +303,7 @@ pub mod pallet {
             + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
-        /// The type of a name.
+        /// The type of a gateway IP.
         type GatewayIP: FullCodec
             + Debug
             + PartialEq
@@ -313,7 +313,7 @@ pub mod pallet {
             + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
-        /// The type of a name.
+        /// The type of a IP4.
         type IP4: FullCodec
             + Debug
             + PartialEq
@@ -323,7 +323,7 @@ pub mod pallet {
             + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
-        /// The type of a name.
+        /// The type of a GW4.
         type GW4: FullCodec
             + Debug
             + PartialEq
@@ -333,7 +333,7 @@ pub mod pallet {
             + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
-        /// The type of a name.
+        /// The type of a IP6.
         type IP6: FullCodec
             + Debug
             + PartialEq
@@ -343,7 +343,7 @@ pub mod pallet {
             + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
-        /// The type of a name.
+        /// The type of a GW6.
         type GW6: FullCodec
             + Debug
             + PartialEq
@@ -353,7 +353,7 @@ pub mod pallet {
             + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
-        /// The type of a name.
+        /// The type of a domain.
         type Domain: FullCodec
             + Debug
             + PartialEq
