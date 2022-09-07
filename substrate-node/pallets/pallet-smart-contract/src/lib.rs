@@ -1043,6 +1043,14 @@ impl<T: Config> Pallet<T> {
         contract_id: u64,
     ) -> Result<(), Error<T>> {
         let signer = Signer::<T, T::AuthorityId>::any_account();
+        if !signer.can_sign() {
+            log::error!(
+                "failed billing contract {:?}: at block {:?} account cannot be used to sign transaction",
+                contract_id,
+                block_number
+            );
+            return Err(<Error<T>>::OffchainSignedTxError);
+        }
         let result = signer.send_signed_transaction(|_acct| Call::bill_contract_for_block {
             contract_id,
             block_number,
