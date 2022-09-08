@@ -140,7 +140,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 109,
+    spec_version: 110,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -757,9 +757,9 @@ pub type Executive = frame_executive::Executive<
     Runtime,
     AllPalletsWithSystem,
     (
-        migrations::CustomOnRuntimeUpgrades,
         pallet_smart_contract::contract_migration::v5::ContractMigrationV5<Runtime>,
-        pallet_tfgrid::grid_migration::v7::GridMigration<Runtime>,
+        pallet_tfgrid::grid_migration::v9::GridMigration<Runtime>,
+        pallet_tfgrid::nodes_migration_v3::v9patch::FixFarmNodeIndexMap<Runtime>,
     ),
 >;
 
