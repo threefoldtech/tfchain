@@ -34,7 +34,6 @@ pub mod types;
 pub mod farm;
 pub mod grid_migration;
 pub mod interface;
-pub mod nodes_migration_v3;
 pub mod pub_config;
 pub mod pub_ip;
 pub mod twin;
