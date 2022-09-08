@@ -14,7 +14,7 @@ use sp_std::prelude::*;
 
 use crate::farm::FarmName;
 use crate::interface::{InterfaceIp, InterfaceMac, InterfaceName};
-use crate::node::{NodeLatitude, NodeLongitude};
+use crate::node::{NodeCountryName, NodeLatitude, NodeLongitude};
 use crate::pub_config::{Domain, GW4, GW6, IP4, IP6};
 use crate::pub_ip::{GatewayIP, PublicIP};
 use crate::twin::TwinIp;
@@ -117,6 +117,7 @@ pub(crate) type TestInterfaceIp = InterfaceIp<TestRuntime>;
 
 pub(crate) type TestNodeLatitude = NodeLatitude<TestRuntime>;
 pub(crate) type TestNodeLongitude = NodeLongitude<TestRuntime>;
+pub(crate) type TestNodeCountryName = NodeCountryName<TestRuntime>;
 
 impl Config for TestRuntime {
     type Event = Event;
@@ -141,6 +142,7 @@ impl Config for TestRuntime {
     type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
     type NodeLatitude = TestNodeLatitude;
     type NodeLongitude = TestNodeLongitude;
+    type NodeCountryName = TestNodeCountryName;
 }
 
 parameter_types! {
@@ -244,6 +246,10 @@ pub(crate) fn get_node_latitude(node_latitude_input: &[u8]) -> TestNodeLatitude 
 
 pub(crate) fn get_node_longitude(node_longitude_input: &[u8]) -> TestNodeLongitude {
     NodeLongitude::try_from(node_longitude_input.to_vec()).expect("Invalid node longitude input")
+}
+
+pub(crate) fn get_node_country_name(node_country_name: &[u8]) -> TestNodeCountryName {
+    NodeCountryName::try_from(node_country_name.to_vec()).expect("Invalid node country name")
 }
 
 // industry dismiss casual gym gap music pave gasp sick owner dumb cost

@@ -103,6 +103,12 @@ pub mod pallet {
     // Concrete Node Longitude type
     pub type NodeLongitudeOf<T> = <T as Config>::NodeLongitude;
 
+    // Input type for Node Country Name
+    pub type NodeCountryNameInput =
+        BoundedVec<u8, ConstU32<{ node::MAX_NODE_COUNTRY_NAME_LENGTH }>>;
+    // Concrete Node Country Name type
+    pub type NodeCountryNameOf<T> = <T as Config>::NodeCountryName;
+
     #[pallet::storage]
     #[pallet::getter(fn farms)]
     pub type Farms<T: Config> = StorageMap<_, Blake2_128Concat, u32, FarmInfoOf<T>, OptionQuery>;
@@ -411,6 +417,15 @@ pub mod pallet {
             + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
+        /// The type of a node country name.
+        type NodeCountryName: FullCodec
+            + Debug
+            + PartialEq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
         #[pallet::constant]
         type MaxFarmNameLength: Get<u32>;
 
@@ -562,10 +577,13 @@ pub mod pallet {
 
         NodeLatitudeInputToShort,
         NodeLatitudeInputToLong,
-        InvalidNodeLatitude,
+        InvalidNodeLatitudeInput,
         NodeLongitudeInputToShort,
         NodeLongitudeInputToLong,
-        InvalidNodeLongitude,
+        InvalidNodeLongitudeInput,
+        NodeCountryNameTooShort,
+        NodeCountryNameTooLong,
+        InvalidNodeCountryName,
     }
 
     #[pallet::genesis_config]
