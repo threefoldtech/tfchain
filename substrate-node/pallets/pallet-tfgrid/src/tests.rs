@@ -653,6 +653,59 @@ fn create_node_added_to_farm_list_works() {
 }
 
 #[test]
+fn update_node_moved_from_farm_list_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_farm2();
+        create_node();
+
+        let nodes = TfgridModule::nodes_by_farm_id(1);
+        assert_eq!(nodes.len(), 1);
+        assert_eq!(nodes[0], 1);
+
+        let country = "Belgium".as_bytes().to_vec();
+        let city = "Ghent".as_bytes().to_vec();
+
+        // random location
+        let location = Location {
+            longitude: "12.233213231".as_bytes().to_vec(),
+            latitude: "32.323112123".as_bytes().to_vec(),
+        };
+
+        let resources = Resources {
+            hru: 1024 * GIGABYTE,
+            sru: 512 * GIGABYTE,
+            cru: 8,
+            mru: 16 * GIGABYTE,
+        };
+        assert_ok!(TfgridModule::update_node(
+            Origin::signed(alice()),
+            1,
+            2,
+            resources,
+            location,
+            country,
+            city,
+            Vec::new().try_into().unwrap(),
+            true,
+            true,
+            "some_serial".as_bytes().to_vec(),
+        ));
+
+        // should be removed from farm 1 nodes
+        let nodes = TfgridModule::nodes_by_farm_id(1);
+        assert_eq!(nodes.len(), 0);
+
+        // Should be part of farm 2 nodes
+        let nodes = TfgridModule::nodes_by_farm_id(2);
+        assert_eq!(nodes.len(), 1);
+        assert_eq!(nodes[0], 1);
+    });
+}
+
+#[test]
 fn create_node_with_interfaces_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
@@ -1872,6 +1925,25 @@ fn create_twin_bob() {
 
 fn create_farm() {
     let farm_name = get_farm_name(b"test_farm");
+
+    let mut pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
+
+    let ip = get_public_ip_ip(&"185.206.122.33/24".as_bytes().to_vec()).0;
+    let gw = get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec()).0;
+
+    pub_ips.try_push(PublicIpInput { ip, gw }).unwrap();
+
+    assert_ok!(TfgridModule::create_farm(
+        Origin::signed(alice()),
+        farm_name.0.clone(),
+        pub_ips.clone()
+    ));
+
+    create_farming_policies()
+}
+
+fn create_farm2() {
+    let farm_name = get_farm_name(b"test_farm2");
 
     let mut pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
 
