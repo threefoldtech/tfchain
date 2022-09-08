@@ -93,22 +93,6 @@ pub mod pallet {
     // Farm information type
     pub type FarmInfoOf<T> = Farm<<T as Config>::FarmName, PublicIpOf<T>>;
 
-    // Input type for Node Location
-    pub type NodeLocationInput = (
-        BoundedVec<u8, ConstU32<{ node::MAX_NODE_LOCATION_LENGTH }>>,
-        BoundedVec<u8, ConstU32<{ node::MAX_NODE_LOCATION_LENGTH }>>,
-    );
-    // Concrete Node Latitude type
-    pub type NodeLatitudeOf<T> = <T as Config>::NodeLatitude;
-    // Concrete Node Longitude type
-    pub type NodeLongitudeOf<T> = <T as Config>::NodeLongitude;
-
-    // Input type for Node Country Name
-    pub type NodeCountryNameInput =
-        BoundedVec<u8, ConstU32<{ node::MAX_NODE_COUNTRY_NAME_LENGTH }>>;
-    // Concrete Node Country Name type
-    pub type NodeCountryNameOf<T> = <T as Config>::NodeCountryName;
-
     #[pallet::storage]
     #[pallet::getter(fn farms)]
     pub type Farms<T: Config> = StorageMap<_, Blake2_128Concat, u32, FarmInfoOf<T>, OptionQuery>;
@@ -164,6 +148,28 @@ pub mod pallet {
         BoundedVec<<T as Config>::InterfaceIP, <T as Config>::MaxInterfaceIpsLength>;
     pub type InterfaceOf<T> =
         Interface<<T as Config>::InterfaceName, <T as Config>::InterfaceMac, InterfaceIpsOf<T>>;
+
+    // Input type for Node Location
+    pub type NodeLocationInput = (
+        BoundedVec<u8, ConstU32<{ node::MAX_NODE_LOCATION_LENGTH }>>,
+        BoundedVec<u8, ConstU32<{ node::MAX_NODE_LOCATION_LENGTH }>>,
+    );
+    // Concrete Node Latitude type
+    pub type NodeLatitudeOf<T> = <T as Config>::NodeLatitude;
+    // Concrete Node Longitude type
+    pub type NodeLongitudeOf<T> = <T as Config>::NodeLongitude;
+
+    // Input type for Node Country Name
+    pub type NodeCountryNameInput =
+        BoundedVec<u8, ConstU32<{ node::MAX_NODE_COUNTRY_NAME_LENGTH }>>;
+    // Concrete Node Country Name type
+    pub type NodeCountryNameOf<T> = <T as Config>::NodeCountryName;
+
+    // Input type for Node City Name
+    pub type NodeCityNameInput =
+        BoundedVec<u8, ConstU32<{ node::MAX_NODE_CITY_NAME_LENGTH }>>;
+    // Concrete Node City Name type
+    pub type NodeCityNameOf<T> = <T as Config>::NodeCityName;
 
     #[pallet::storage]
     #[pallet::getter(fn nodes)]
@@ -426,6 +432,15 @@ pub mod pallet {
             + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
+        /// The type of a node city name.
+        type NodeCityName: FullCodec
+            + Debug
+            + PartialEq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
         #[pallet::constant]
         type MaxFarmNameLength: Get<u32>;
 
@@ -584,6 +599,9 @@ pub mod pallet {
         NodeCountryNameTooShort,
         NodeCountryNameTooLong,
         InvalidNodeCountryName,
+        NodeCityNameTooShort,
+        NodeCityNameTooLong,
+        InvalidNodeCityName,
     }
 
     #[pallet::genesis_config]
