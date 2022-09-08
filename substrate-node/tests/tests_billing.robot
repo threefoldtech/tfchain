@@ -1,6 +1,7 @@
 *** Settings ***
 Documentation    Suite for integration tests for testing billing
 Library          substrate_network.py
+Library          node_setup.py
 
 
 
@@ -8,6 +9,9 @@ Library          substrate_network.py
 Test Setup Then Tear Down
     ${nodes} =  Setup Multi Node Network
 
-    Sleep  5s
+    Setup First Node
+    Setup Second Node
+
+    Sleep  20s
 
     Tear Down Multi Node Network  ${nodes}
