@@ -3962,8 +3962,8 @@ dependencies = [
 
 [[package]]
 name = "pallet-tft-bridge"
-version = "1.0.0"
-source = "git+https://github.com/threefoldtech/tfchain_tft_bridge#7884ca7e69d63e0343b7c391aaeba0f5a30c90fc"
+version = "2.4.0"
+source = "git+https://github.com/threefoldtech/tfchain_tft_bridge#26e03446266a75c6078363e78a08d5eb2b3b95fb"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -7387,7 +7387,7 @@ dependencies = [
 
 [[package]]
 name = "tfchain-runtime"
-version = "2.1.0-b7"
+version = "2.1.0-b8"
 dependencies = [
  "frame-benchmarking",
  "frame-executive",
