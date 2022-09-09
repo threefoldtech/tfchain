@@ -6,7 +6,6 @@ use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
-use tfchain_support::types::Node;
 
 use sp_core::{ed25519, sr25519, Pair, Public, H256};
 
@@ -83,15 +82,12 @@ pub(crate) type Loc = crate::LocationOf<TestRuntime>;
 pub(crate) type PubConfig = crate::PubConfigOf<TestRuntime>;
 pub(crate) type Interface = crate::InterfaceOf<TestRuntime>;
 
+pub(crate) type TfgridNode = crate::TfgridNode<TestRuntime>;
+
 pub struct NodeChanged;
 impl tfchain_support::traits::ChangeNode<Loc, PubConfig, Interface> for NodeChanged {
-    fn node_changed(
-        _old_node: Option<&Node<Loc, PubConfig, Interface>>,
-        _new_node: &Node<Loc, PubConfig, Interface>,
-    ) {
-    }
-
-    fn node_deleted(_node: &tfchain_support::types::Node<Loc, PubConfig, Interface>) {}
+    fn node_changed(_old_node: Option<&TfgridNode>, _new_node: &TfgridNode) {}
+    fn node_deleted(_node: &TfgridNode) {}
 }
 
 parameter_types! {

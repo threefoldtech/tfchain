@@ -26,7 +26,7 @@ use sp_std::{cmp::Ordering, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-use tfchain_support::{traits::ChangeNode, types::Node};
+use tfchain_support::traits::ChangeNode;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -325,16 +325,15 @@ pub type Loc = pallet_tfgrid::pallet::LocationOf<Runtime>;
 pub type PubConfig = pallet_tfgrid::pallet::PubConfigOf<Runtime>;
 pub type Interface = pallet_tfgrid::pallet::InterfaceOf<Runtime>;
 
+pub type TfgridNode = pallet_tfgrid::pallet::TfgridNode<Runtime>;
+
 pub struct NodeChanged;
 impl ChangeNode<Loc, PubConfig, Interface> for NodeChanged {
-    fn node_changed(
-        old_node: Option<&Node<Loc, PubConfig, Interface>>,
-        new_node: &Node<Loc, PubConfig, Interface>,
-    ) {
+    fn node_changed(old_node: Option<&TfgridNode>, new_node: &TfgridNode) {
         Dao::node_changed(old_node, new_node)
     }
 
-    fn node_deleted(node: &Node<Loc, PubConfig, Interface>) {
+    fn node_deleted(node: &TfgridNode) {
         SmartContractModule::node_deleted(node);
         Dao::node_deleted(node);
     }

@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "128"]
 
-use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, PubConfigOf};
+use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, PubConfigOf, TfgridNode};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
@@ -16,7 +16,7 @@ use frame_support::{
 use tfchain_support::{
     constants, resources,
     traits::{ChangeNode, Tfgrid},
-    types::{Node, Resources},
+    types::Resources,
 };
 
 pub use pallet::*;
@@ -519,10 +519,7 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> ChangeNode<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>> for Pallet<T> {
-    fn node_changed(
-        old_node: Option<&Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>>>,
-        new_node: &Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>>,
-    ) {
+    fn node_changed(old_node: Option<&TfgridNode<T>>, new_node: &TfgridNode<T>) {
         let new_node_weight = Self::get_node_weight(new_node.resources);
         match old_node {
             Some(node) => {
@@ -553,7 +550,7 @@ impl<T: Config> ChangeNode<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>> for Pa
         };
     }
 
-    fn node_deleted(node: &Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>>) {
+    fn node_deleted(node: &TfgridNode<T>) {
         let node_weight = Self::get_node_weight(node.resources);
         let mut farm_weight = FarmWeight::<T>::get(node.farm_id);
         farm_weight = farm_weight.checked_sub(node_weight).unwrap_or(0);

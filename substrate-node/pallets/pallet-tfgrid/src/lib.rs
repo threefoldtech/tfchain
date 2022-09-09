@@ -162,15 +162,11 @@ pub mod pallet {
     // Input type for resources
     pub type ResourcesInput = Resources;
 
+    pub type TfgridNode<T> = Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>>;
+
     #[pallet::storage]
     #[pallet::getter(fn nodes)]
-    pub type Nodes<T> = StorageMap<
-        _,
-        Blake2_128Concat,
-        u32,
-        Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>>,
-        OptionQuery,
-    >;
+    pub type Nodes<T> = StorageMap<_, Blake2_128Concat, u32, TfgridNode<T>, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn node_by_twin_id)]
@@ -434,8 +430,8 @@ pub mod pallet {
         FarmUpdated(FarmInfoOf<T>),
         FarmDeleted(u32),
 
-        NodeStored(Node<pallet::LocationOf<T>, pallet::PubConfigOf<T>, pallet::InterfaceOf<T>>),
-        NodeUpdated(Node<pallet::LocationOf<T>, pallet::PubConfigOf<T>, pallet::InterfaceOf<T>>),
+        NodeStored(TfgridNode<T>),
+        NodeUpdated(TfgridNode<T>),
         NodeDeleted(u32),
         NodeUptimeReported(u32, u64, u64),
         NodePublicConfigStored(u32, Option<pallet::PubConfigOf<T>>),
@@ -2057,7 +2053,7 @@ impl<T: Config> Pallet<T> {
     }
 
     fn get_farming_policy(
-        node: &Node<pallet::LocationOf<T>, pallet::PubConfigOf<T>, pallet::InterfaceOf<T>>,
+        node: &TfgridNode<T>,
     ) -> Result<types::FarmingPolicy<T::BlockNumber>, DispatchErrorWithPostInfo> {
         let mut farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 

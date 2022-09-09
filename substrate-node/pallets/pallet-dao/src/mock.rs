@@ -7,7 +7,6 @@ use pallet_tfgrid::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
     node::Location,
-    pallet::{LocationOf, InterfaceOf, PubConfigOf},
     pub_config::{Domain, GW4, GW6, IP4, IP6},
     pub_ip::{GatewayIP, PublicIP},
     twin::TwinIp,
@@ -19,7 +18,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use sp_std::convert::{TryFrom, TryInto};
-use tfchain_support::{traits::ChangeNode, types::Node};
+use tfchain_support::traits::ChangeNode;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -80,20 +79,18 @@ parameter_types! {
     pub const MinVetos: u32 = 2;
 }
 
-pub(crate) type Loc = LocationOf<Test>;
-pub(crate) type PubConfig = PubConfigOf<Test>;
-pub(crate) type Interface = InterfaceOf<Test>;
+pub(crate) type Loc = pallet_tfgrid::pallet::LocationOf<Test>;
+pub(crate) type PubConfig = pallet_tfgrid::pallet::PubConfigOf<Test>;
+pub(crate) type Interface = pallet_tfgrid::pallet::InterfaceOf<Test>;
+
+pub(crate) type TfgridNode = pallet_tfgrid::pallet::TfgridNode<Test>;
 
 pub struct NodeChanged;
 impl ChangeNode<Loc, PubConfig, Interface> for NodeChanged {
-    fn node_changed(
-        old_node: Option<&Node<Loc, PubConfig, Interface>>,
-        new_node: &Node<Loc, PubConfig, Interface>,
-    ) {
+    fn node_changed(old_node: Option<&TfgridNode>, new_node: &TfgridNode) {
         DaoModule::node_changed(old_node, new_node)
     }
-
-    fn node_deleted(node: &Node<Loc, PubConfig, Interface>) {
+    fn node_deleted(node: &TfgridNode) {
         DaoModule::node_deleted(node);
     }
 }

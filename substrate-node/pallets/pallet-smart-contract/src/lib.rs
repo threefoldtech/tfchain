@@ -17,7 +17,7 @@ use frame_support::{
 };
 use frame_system::{self as system, ensure_signed};
 use pallet_tfgrid;
-use pallet_tfgrid::pallet::{LocationOf, InterfaceOf, PubConfigOf};
+use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, PubConfigOf, TfgridNode};
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_timestamp as timestamp;
 use sp_runtime::{
@@ -25,7 +25,7 @@ use sp_runtime::{
     Perbill,
 };
 use substrate_fixed::types::U64F64;
-use tfchain_support::{traits::ChangeNode, types::Node};
+use tfchain_support::traits::ChangeNode;
 
 pub use pallet::*;
 
@@ -1641,13 +1641,9 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> ChangeNode<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>> for Pallet<T> {
-    fn node_changed(
-        _node: Option<&Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>>>,
-        _new_node: &Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>>,
-    ) {
-    }
+    fn node_changed(_node: Option<&TfgridNode<T>>, _new_node: &TfgridNode<T>) {}
 
-    fn node_deleted(node: &Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>>) {
+    fn node_deleted(node: &TfgridNode<T>) {
         // Clean up all active contracts
         let active_node_contracts = ActiveNodeContracts::<T>::get(node.id);
         for node_contract_id in active_node_contracts {
