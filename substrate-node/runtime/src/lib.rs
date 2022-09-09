@@ -321,18 +321,20 @@ impl pallet_sudo::Config for Runtime {
     type Call = Call;
 }
 
+pub type Loc = pallet_tfgrid::pallet::LocationOf<Runtime>;
 pub type PubConfig = pallet_tfgrid::pallet::PubConfigOf<Runtime>;
 pub type Interface = pallet_tfgrid::pallet::InterfaceOf<Runtime>;
+
 pub struct NodeChanged;
-impl ChangeNode<PubConfig, Interface> for NodeChanged {
+impl ChangeNode<Loc, PubConfig, Interface> for NodeChanged {
     fn node_changed(
-        old_node: Option<&Node<PubConfig, Interface>>,
-        new_node: &Node<PubConfig, Interface>,
+        old_node: Option<&Node<Loc, PubConfig, Interface>>,
+        new_node: &Node<Loc, PubConfig, Interface>,
     ) {
         Dao::node_changed(old_node, new_node)
     }
 
-    fn node_deleted(node: &Node<PubConfig, Interface>) {
+    fn node_deleted(node: &Node<Loc, PubConfig, Interface>) {
         SmartContractModule::node_deleted(node);
         Dao::node_deleted(node);
     }
@@ -366,6 +368,7 @@ impl pallet_tfgrid::Config for Runtime {
     type InterfaceMac = pallet_tfgrid::interface::InterfaceMac<Runtime>;
     type InterfaceIP = pallet_tfgrid::interface::InterfaceIp<Runtime>;
     type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
+    type Location = pallet_tfgrid::node::Location<Runtime>;
 }
 
 parameter_types! {

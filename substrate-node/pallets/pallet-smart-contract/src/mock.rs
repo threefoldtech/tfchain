@@ -11,6 +11,8 @@ use frame_system::EnsureRoot;
 use pallet_tfgrid::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
+    node::Location,
+    pallet::{InterfaceOf, LocationOf, PubConfigOf},
     pub_config::{Domain, GW4, GW6, IP4, IP6},
     pub_ip::{GatewayIP, PublicIP},
     twin::TwinIp,
@@ -104,18 +106,19 @@ impl pallet_balances::Config for TestRuntime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<TestRuntime>;
 }
 
-pub(crate) type PubConfig = pallet_tfgrid::pallet::PubConfigOf<TestRuntime>;
-pub(crate) type Interface = pallet_tfgrid::pallet::InterfaceOf<TestRuntime>;
+pub(crate) type Loc = LocationOf<TestRuntime>;
+pub(crate) type PubConfig = PubConfigOf<TestRuntime>;
+pub(crate) type Interface = InterfaceOf<TestRuntime>;
 
 pub struct NodeChanged;
-impl ChangeNode<PubConfig, Interface> for NodeChanged {
+impl ChangeNode<Loc, PubConfig, Interface> for NodeChanged {
     fn node_changed(
-        _old_node: Option<&Node<PubConfig, Interface>>,
-        _new_node: &Node<PubConfig, Interface>,
+        _old_node: Option<&Node<Loc, PubConfig, Interface>>,
+        _new_node: &Node<Loc, PubConfig, Interface>,
     ) {
     }
 
-    fn node_deleted(node: &Node<PubConfig, Interface>) {
+    fn node_deleted(node: &Node<Loc, PubConfig, Interface>) {
         SmartContractModule::node_deleted(node);
     }
 }
@@ -142,6 +145,8 @@ pub(crate) type TestInterfaceName = InterfaceName<TestRuntime>;
 pub(crate) type TestInterfaceMac = InterfaceMac<TestRuntime>;
 pub(crate) type TestInterfaceIp = InterfaceIp<TestRuntime>;
 
+pub(crate) type TestLocation = Location<TestRuntime>;
+
 impl pallet_tfgrid::Config for TestRuntime {
     type Event = Event;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
@@ -163,6 +168,7 @@ impl pallet_tfgrid::Config for TestRuntime {
     type InterfaceMac = TestInterfaceMac;
     type InterfaceIP = TestInterfaceIp;
     type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
+    type Location = TestLocation;
 }
 
 impl pallet_tft_price::Config for TestRuntime {
@@ -286,6 +292,21 @@ pub fn dave() -> AccountId {
 
 pub fn get_staking_pool_account() -> AccountId {
     AccountId32::from_ss58check("5CNposRewardAccount11111111111111111111111111FSU").unwrap()
+}
+
+pub(crate) fn get_location(
+    city: &[u8],
+    country: &[u8],
+    latitude: &[u8],
+    longitude: &[u8],
+) -> TestLocation {
+    Location::try_from((
+        city.to_vec(),
+        country.to_vec(),
+        latitude.to_vec(),
+        longitude.to_vec(),
+    ))
+    .expect("Invalid location input")
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {

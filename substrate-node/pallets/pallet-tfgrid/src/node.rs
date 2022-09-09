@@ -28,10 +28,10 @@ pub const MAX_CITY_NAME_LENGTH: u32 = 58;
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct Location<T: Config> {
-    pub(crate) city: BoundedVec<u8, ConstU32<MAX_CITY_NAME_LENGTH>>,
-    pub(crate) country: BoundedVec<u8, ConstU32<MAX_COUNTRY_NAME_LENGTH>>,
-    pub(crate) latitude: BoundedVec<u8, ConstU32<MAX_LATITUDE_LENGTH>>,
-    pub(crate) longitude: BoundedVec<u8, ConstU32<MAX_LONGITUDE_LENGTH>>,
+    pub city: BoundedVec<u8, ConstU32<MAX_CITY_NAME_LENGTH>>,
+    pub country: BoundedVec<u8, ConstU32<MAX_COUNTRY_NAME_LENGTH>>,
+    pub latitude: BoundedVec<u8, ConstU32<MAX_LATITUDE_LENGTH>>,
+    pub longitude: BoundedVec<u8, ConstU32<MAX_LONGITUDE_LENGTH>>,
     _marker: PhantomData<T>,
 }
 

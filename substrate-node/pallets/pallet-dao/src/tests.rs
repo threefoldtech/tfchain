@@ -6,7 +6,7 @@ use pallet_tfgrid::types::PublicIpInput;
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Hash};
 use std::convert::TryInto;
-use tfchain_support::types::{FarmCertification, Location, NodeCertification, Resources};
+use tfchain_support::types::{FarmCertification, NodeCertification, Resources};
 
 #[test]
 fn farmers_vote_no_farm_fails() {
@@ -789,12 +789,6 @@ pub fn prepare_twin(account_id: u64) {
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 fn prepare_node(account_id: u64, farm_id: u32) {
-    // random location
-    let location = Location {
-        longitude: "12.233213231".as_bytes().to_vec(),
-        latitude: "32.323112123".as_bytes().to_vec(),
-    };
-
     let resources = Resources {
         hru: 1024 * GIGABYTE,
         sru: 512 * GIGABYTE,
@@ -802,15 +796,19 @@ fn prepare_node(account_id: u64, farm_id: u32) {
         mru: 16 * GIGABYTE,
     };
 
-    let country = "Belgium".as_bytes().to_vec();
-    let city = "Ghent".as_bytes().to_vec();
+    // random location
+    let city = b"Ghent";
+    let country = b"Belgium";
+    let lat = b"12.233213231";
+    let long = b"32.323112123";
+    let loc = get_location(city, country, lat, long);
+    let location = (loc.city, loc.country, loc.latitude, loc.longitude);
+
     assert_ok!(TfgridModule::create_node(
         Origin::signed(account_id),
         farm_id,
         resources,
         location,
-        country,
-        city,
         bounded_vec![],
         false,
         false,
@@ -819,12 +817,6 @@ fn prepare_node(account_id: u64, farm_id: u32) {
 }
 
 fn prepare_big_node(account_id: u64, farm_id: u32) {
-    // random location
-    let location = Location {
-        longitude: "12.233213231".as_bytes().to_vec(),
-        latitude: "32.323112123".as_bytes().to_vec(),
-    };
-
     let resources = Resources {
         hru: 20024 * GIGABYTE,
         sru: 2024 * GIGABYTE,
@@ -832,15 +824,19 @@ fn prepare_big_node(account_id: u64, farm_id: u32) {
         mru: 64 * GIGABYTE,
     };
 
-    let country = "Belgium".as_bytes().to_vec();
-    let city = "Ghent".as_bytes().to_vec();
+    // random location
+    let city = b"Ghent";
+    let country = b"Belgium";
+    let lat = b"12.233213231";
+    let long = b"32.323112123";
+    let loc = get_location(city, country, lat, long);
+    let location = (loc.city, loc.country, loc.latitude, loc.longitude);
+
     assert_ok!(TfgridModule::create_node(
         Origin::signed(account_id),
         farm_id,
         resources,
         location,
-        country,
-        city,
         bounded_vec![],
         false,
         false,

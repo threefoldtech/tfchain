@@ -14,7 +14,7 @@ use super::types;
 use crate::cost;
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use sp_std::convert::{TryFrom, TryInto};
-use tfchain_support::types::{FarmCertification, Location, NodeCertification, PublicIP, Resources};
+use tfchain_support::types::{FarmCertification, NodeCertification, PublicIP, Resources};
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -2418,12 +2418,6 @@ pub fn prepare_farm_and_node() {
 
     prepare_farm(alice(), false);
 
-    // random location
-    let location = Location {
-        longitude: "12.233213231".as_bytes().to_vec(),
-        latitude: "32.323112123".as_bytes().to_vec(),
-    };
-
     let resources = Resources {
         hru: 1024 * GIGABYTE,
         sru: 512 * GIGABYTE,
@@ -2431,15 +2425,19 @@ pub fn prepare_farm_and_node() {
         mru: 16 * GIGABYTE,
     };
 
-    let country = "Belgium".as_bytes().to_vec();
-    let city = "Ghent".as_bytes().to_vec();
+    // random location
+    let city = b"Ghent";
+    let country = b"Belgium";
+    let lat = b"12.233213231";
+    let long = b"32.323112123";
+    let loc = get_location(city, country, lat, long);
+    let location = (loc.city, loc.country, loc.latitude, loc.longitude);
+
     TfgridModule::create_node(
         Origin::signed(alice()),
         1,
         resources,
         location,
-        country,
-        city,
         bounded_vec![],
         false,
         false,
@@ -2456,12 +2454,6 @@ pub fn prepare_dedicated_farm_and_node() {
 
     prepare_farm(alice(), true);
 
-    // random location
-    let location = Location {
-        longitude: "12.233213231".as_bytes().to_vec(),
-        latitude: "32.323112123".as_bytes().to_vec(),
-    };
-
     let resources = Resources {
         hru: 1024 * GIGABYTE,
         sru: 512 * GIGABYTE,
@@ -2469,15 +2461,19 @@ pub fn prepare_dedicated_farm_and_node() {
         mru: 16 * GIGABYTE,
     };
 
-    let country = "Belgium".as_bytes().to_vec();
-    let city = "Ghent".as_bytes().to_vec();
+    // random location
+    let city = b"Ghent";
+    let country = b"Belgium";
+    let lat = b"12.233213231";
+    let long = b"32.323112123";
+    let loc = get_location(city, country, lat, long);
+    let location = (loc.city, loc.country, loc.latitude, loc.longitude);
+
     TfgridModule::create_node(
         Origin::signed(alice()),
         1,
         resources,
         location,
-        country,
-        city,
         bounded_vec![],
         false,
         false,

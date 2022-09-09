@@ -3,10 +3,11 @@ use crate::{self as pallet_dao};
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::EnsureRoot;
 use pallet_collective;
-use pallet_tfgrid;
-use pallet_tfgrid::interface::{InterfaceIp, InterfaceMac, InterfaceName};
 use pallet_tfgrid::{
     farm::FarmName,
+    interface::{InterfaceIp, InterfaceMac, InterfaceName},
+    node::Location,
+    pallet::{LocationOf, InterfaceOf, PubConfigOf},
     pub_config::{Domain, GW4, GW6, IP4, IP6},
     pub_ip::{GatewayIP, PublicIP},
     twin::TwinIp,
@@ -79,18 +80,20 @@ parameter_types! {
     pub const MinVetos: u32 = 2;
 }
 
-pub(crate) type PubConfig = pallet_tfgrid::pallet::PubConfigOf<Test>;
-pub(crate) type Interface = pallet_tfgrid::pallet::InterfaceOf<Test>;
+pub(crate) type Loc = LocationOf<Test>;
+pub(crate) type PubConfig = PubConfigOf<Test>;
+pub(crate) type Interface = InterfaceOf<Test>;
+
 pub struct NodeChanged;
-impl ChangeNode<PubConfig, Interface> for NodeChanged {
+impl ChangeNode<Loc, PubConfig, Interface> for NodeChanged {
     fn node_changed(
-        old_node: Option<&Node<PubConfig, Interface>>,
-        new_node: &Node<PubConfig, Interface>,
+        old_node: Option<&Node<Loc, PubConfig, Interface>>,
+        new_node: &Node<Loc, PubConfig, Interface>,
     ) {
         DaoModule::node_changed(old_node, new_node)
     }
 
-    fn node_deleted(node: &Node<PubConfig, Interface>) {
+    fn node_deleted(node: &Node<Loc, PubConfig, Interface>) {
         DaoModule::node_deleted(node);
     }
 }
@@ -129,6 +132,8 @@ pub(crate) type TestInterfaceName = InterfaceName<Test>;
 pub(crate) type TestInterfaceMac = InterfaceMac<Test>;
 pub(crate) type TestInterfaceIp = InterfaceIp<Test>;
 
+pub(crate) type TestLocation = Location<Test>;
+
 impl pallet_tfgrid::Config for Test {
     type Event = Event;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
@@ -150,6 +155,7 @@ impl pallet_tfgrid::Config for Test {
     type InterfaceMac = TestInterfaceMac;
     type InterfaceIP = TestInterfaceIp;
     type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
+    type Location = TestLocation;
 }
 
 impl pallet_timestamp::Config for Test {
@@ -192,6 +198,21 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Test {
 
 pub(crate) fn get_twin_ip(twin_ip_input: &[u8]) -> TestTwinIp {
     TwinIp::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
+}
+
+pub(crate) fn get_location(
+    city: &[u8],
+    country: &[u8],
+    latitude: &[u8],
+    longitude: &[u8],
+) -> TestLocation {
+    Location::try_from((
+        city.to_vec(),
+        country.to_vec(),
+        latitude.to_vec(),
+        longitude.to_vec(),
+    ))
+    .expect("Invalid location input")
 }
 
 // Build genesis storage according to the mock runtime.

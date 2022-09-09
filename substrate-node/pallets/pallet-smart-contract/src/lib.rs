@@ -17,7 +17,7 @@ use frame_support::{
 };
 use frame_system::{self as system, ensure_signed};
 use pallet_tfgrid;
-use pallet_tfgrid::pallet::{InterfaceOf, PubConfigOf};
+use pallet_tfgrid::pallet::{LocationOf, InterfaceOf, PubConfigOf};
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_timestamp as timestamp;
 use sp_runtime::{
@@ -181,7 +181,7 @@ pub mod pallet {
         type DistributionFrequency: Get<u16>;
         type GracePeriod: Get<u64>;
         type WeightInfo: WeightInfo;
-        type NodeChanged: ChangeNode<PubConfigOf<Self>, InterfaceOf<Self>>;
+        type NodeChanged: ChangeNode<LocationOf<Self>, PubConfigOf<Self>, InterfaceOf<Self>>;
 
         #[pallet::constant]
         type MaxNameContractNameLength: Get<u32>;
@@ -1640,14 +1640,14 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-impl<T: Config> ChangeNode<PubConfigOf<T>, InterfaceOf<T>> for Pallet<T> {
+impl<T: Config> ChangeNode<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>> for Pallet<T> {
     fn node_changed(
-        _node: Option<&Node<PubConfigOf<T>, InterfaceOf<T>>>,
-        _new_node: &Node<PubConfigOf<T>, InterfaceOf<T>>,
+        _node: Option<&Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>>>,
+        _new_node: &Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>>,
     ) {
     }
 
-    fn node_deleted(node: &Node<PubConfigOf<T>, InterfaceOf<T>>) {
+    fn node_deleted(node: &Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>>) {
         // Clean up all active contracts
         let active_node_contracts = ActiveNodeContracts::<T>::get(node.id);
         for node_contract_id in active_node_contracts {
