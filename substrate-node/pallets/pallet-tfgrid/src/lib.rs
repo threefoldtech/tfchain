@@ -151,21 +151,13 @@ pub mod pallet {
 
     // Input type for location
     pub type LocationInput = (
-        BoundedVec<u8, ConstU32<{ node::MAX_LOCATION_LENGTH }>>,
-        BoundedVec<u8, ConstU32<{ node::MAX_LOCATION_LENGTH }>>,
+        BoundedVec<u8, ConstU32<{ node::MAX_CITY_NAME_LENGTH }>>,
+        BoundedVec<u8, ConstU32<{ node::MAX_COUNTRY_NAME_LENGTH }>>,
+        BoundedVec<u8, ConstU32<{ node::MAX_LATITUDE_LENGTH }>>,
+        BoundedVec<u8, ConstU32<{ node::MAX_LONGITUDE_LENGTH }>>,
     );
     // Concrete type for location
     pub type LocationOf<T> = <T as Config>::Location;
-
-    // Input type for country name
-    pub type CountryNameInput = BoundedVec<u8, ConstU32<{ node::MAX_COUNTRY_NAME_LENGTH }>>;
-    // Concrete country name type
-    pub type CountryNameOf<T> = <T as Config>::CountryName;
-
-    // Input type for city name
-    pub type CityNameInput = BoundedVec<u8, ConstU32<{ node::MAX_CITY_NAME_LENGTH }>>;
-    // Concrete city name type
-    pub type CityNameOf<T> = <T as Config>::CityName;
 
     // Input type for resources
     pub type ResourcesInput = Resources;
@@ -176,7 +168,7 @@ pub mod pallet {
         _,
         Blake2_128Concat,
         u32,
-        Node<CityNameOf<T>, CountryNameOf<T>, LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>>,
+        Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>>,
         OptionQuery,
     >;
 
@@ -289,8 +281,6 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
 
         type NodeChanged: ChangeNode<
-            super::CityNameOf<Self>,
-            super::CountryNameOf<Self>,
             super::LocationOf<Self>,
             super::PubConfigOf<Self>,
             super::InterfaceOf<Self>,
@@ -421,25 +411,7 @@ pub mod pallet {
             + PartialEq
             + Clone
             + TypeInfo
-            + TryFrom<(Vec<u8>, Vec<u8>), Error = Error<Self>>
-            + MaxEncodedLen;
-
-        /// The type of a country name.
-        type CountryName: FullCodec
-            + Debug
-            + PartialEq
-            + Clone
-            + TypeInfo
-            + TryFrom<Vec<u8>, Error = Error<Self>>
-            + MaxEncodedLen;
-
-        /// The type of a city name.
-        type CityName: FullCodec
-            + Debug
-            + PartialEq
-            + Clone
-            + TypeInfo
-            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + TryFrom<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>), Error = Error<Self>>
             + MaxEncodedLen;
 
         #[pallet::constant]
@@ -462,24 +434,8 @@ pub mod pallet {
         FarmUpdated(FarmInfoOf<T>),
         FarmDeleted(u32),
 
-        NodeStored(
-            Node<
-                pallet::CityNameOf<T>,
-                pallet::CountryNameOf<T>,
-                pallet::LocationOf<T>,
-                pallet::PubConfigOf<T>,
-                pallet::InterfaceOf<T>,
-            >,
-        ),
-        NodeUpdated(
-            Node<
-                pallet::CityNameOf<T>,
-                pallet::CountryNameOf<T>,
-                pallet::LocationOf<T>,
-                pallet::PubConfigOf<T>,
-                pallet::InterfaceOf<T>,
-            >,
-        ),
+        NodeStored(Node<pallet::LocationOf<T>, pallet::PubConfigOf<T>, pallet::InterfaceOf<T>>),
+        NodeUpdated(Node<pallet::LocationOf<T>, pallet::PubConfigOf<T>, pallet::InterfaceOf<T>>),
         NodeDeleted(u32),
         NodeUptimeReported(u32, u64, u64),
         NodePublicConfigStored(u32, Option<pallet::PubConfigOf<T>>),
@@ -1030,8 +986,6 @@ pub mod pallet {
             farm_id: u32,
             resources: Resources,
             location: LocationInput,
-            country: CountryNameInput,
-            city: CityNameInput,
             interfaces: InterfaceInput<T>,
             secure_boot: bool,
             virtualized: bool,
@@ -1052,14 +1006,7 @@ pub mod pallet {
                 Error::<T>::NodeWithTwinIdExists
             );
 
-            let parsed_location =
-                <T as Config>::Location::try_from((location.0.to_vec(), location.1.to_vec()))
-                    .map_err(DispatchErrorWithPostInfo::from)?;
-            let parsed_country = <T as Config>::CountryName::try_from(country.to_vec())
-                .map_err(DispatchErrorWithPostInfo::from)?;
-            let parsed_city = <T as Config>::CityName::try_from(city.to_vec())
-                .map_err(DispatchErrorWithPostInfo::from)?;
-
+            let node_location = Self::get_location(location)?;
             let node_interfaces = Self::get_interfaces(&interfaces)?;
 
             let mut id = NodeID::<T>::get();
@@ -1073,9 +1020,7 @@ pub mod pallet {
                 farm_id,
                 twin_id,
                 resources,
-                location: parsed_location,
-                country: parsed_country,
-                city: parsed_city,
+                location: node_location,
                 public_config: None,
                 created,
                 farming_policy_id: 0,
@@ -1113,8 +1058,6 @@ pub mod pallet {
             farm_id: u32,
             resources: Resources,
             location: LocationInput,
-            country: Vec<u8>,
-            city: Vec<u8>,
             interfaces: Vec<pallet::InterfaceOf<T>>,
             secure_boot: bool,
             virtualized: bool,
@@ -1162,19 +1105,11 @@ pub mod pallet {
                 ));
             }
 
-            let parsed_location =
-                <T as Config>::Location::try_from((location.0.to_vec(), location.1.to_vec()))
-                    .map_err(DispatchErrorWithPostInfo::from)?;
-            let parsed_country = <T as Config>::CountryName::try_from(country.to_vec())
-                .map_err(DispatchErrorWithPostInfo::from)?;
-            let parsed_city = <T as Config>::CityName::try_from(city.to_vec())
-                .map_err(DispatchErrorWithPostInfo::from)?;
+            let node_location = Self::get_location(location)?;
 
             stored_node.farm_id = farm_id;
             stored_node.resources = resources;
-            stored_node.location = parsed_location;
-            stored_node.country = parsed_country;
-            stored_node.city = parsed_city;
+            stored_node.location = node_location;
             stored_node.interfaces = interfaces;
             stored_node.secure_boot = secure_boot;
             stored_node.virtualized = virtualized;
@@ -2122,13 +2057,7 @@ impl<T: Config> Pallet<T> {
     }
 
     fn get_farming_policy(
-        node: &Node<
-            pallet::CityNameOf<T>,
-            pallet::CountryNameOf<T>,
-            pallet::LocationOf<T>,
-            pallet::PubConfigOf<T>,
-            pallet::InterfaceOf<T>,
-        >,
+        node: &Node<pallet::LocationOf<T>, pallet::PubConfigOf<T>, pallet::InterfaceOf<T>>,
     ) -> Result<types::FarmingPolicy<T::BlockNumber>, DispatchErrorWithPostInfo> {
         let mut farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
@@ -2276,6 +2205,17 @@ impl<T: Config> Pallet<T> {
         }
 
         Ok(pub_config)
+    }
+
+    fn get_location(location: pallet::LocationInput) -> Result<LocationOf<T>, Error<T>> {
+        let parsed_location = <T as Config>::Location::try_from((
+            location.0.to_vec(),
+            location.1.to_vec(),
+            location.2.to_vec(),
+            location.3.to_vec(),
+        ))?;
+
+        Ok(parsed_location)
     }
 
     fn get_interfaces(

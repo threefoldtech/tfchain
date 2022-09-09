@@ -69,15 +69,13 @@ pub struct FarmingPolicyLimit {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct Node<City, Country, Location, PubConfig, If> {
+pub struct Node<Location, PubConfig, If> {
     pub version: u32,
     pub id: u32,
     pub farm_id: u32,
     pub twin_id: u32,
     pub resources: Resources,
     pub location: Location,
-    pub country: Country,
-    pub city: City,
     // optional public config
     pub public_config: Option<PubConfig>,
     pub created: u64,
@@ -144,8 +142,10 @@ impl Resources {
 // Store Location long and lat as string
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct Location {
-    pub longitude: Vec<u8>,
+    pub city: Vec<u8>,
+    pub country: Vec<u8>,
     pub latitude: Vec<u8>,
+    pub longitude: Vec<u8>,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, TypeInfo, Copy)]

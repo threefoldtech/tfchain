@@ -815,13 +815,12 @@ fn create_node_with_interfaces_works() {
         };
 
         // random location
+        let city = b"Ghent";
+        let country = b"Belgium";
         let lat = b"12.233213231";
         let long = b"32.323112123";
-        let loc = get_location(lat, long);
-        let location = (loc.0, loc.1);
-
-        let country = get_country_name(b"Belgium").0;
-        let city = get_city_name(b"Ghent").0;
+        let loc = get_location(city, country, lat, long);
+        let location = (loc.city, loc.country, loc.latitude, loc.longitude);
 
         let mut interface_ips: InterfaceIpsInput<TestRuntime> = bounded_vec![];
         let intf_ip_1 = get_interface_ip(&"10.2.3.3".as_bytes().to_vec());
@@ -844,8 +843,6 @@ fn create_node_with_interfaces_works() {
             1,
             resources,
             location,
-            country,
-            city,
             interfaces,
             true,
             true,
@@ -1208,13 +1205,12 @@ fn create_node_with_same_pubkey_fails() {
         };
 
         // random location
+        let city = b"Ghent";
+        let country = b"Belgium";
         let lat = b"12.233213231";
         let long = b"32.323112123";
-        let loc = get_location(lat, long);
-        let location = (loc.0, loc.1);
-
-        let country = get_country_name(b"Belgium").0;
-        let city = get_city_name(b"Ghent").0;
+        let loc = get_location(city, country, lat, long);
+        let location = (loc.city, loc.country, loc.latitude, loc.longitude);
 
         let interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
 
@@ -1224,8 +1220,6 @@ fn create_node_with_same_pubkey_fails() {
                 1,
                 resources,
                 location,
-                country,
-                city,
                 interfaces,
                 true,
                 true,
@@ -2065,13 +2059,12 @@ fn create_node() {
     };
 
     // random location
+    let city = b"Ghent";
+    let country = b"Belgium";
     let lat = b"12.233213231";
     let long = b"32.323112123";
-    let loc = get_location(lat, long);
-    let location = (loc.0, loc.1);
-
-    let country = get_country_name(b"Belgium").0;
-    let city = get_city_name(b"Ghent").0;
+    let loc = get_location(city, country, lat, long);
+    let location = (loc.city, loc.country, loc.latitude, loc.longitude);
 
     let interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
 
@@ -2080,8 +2073,6 @@ fn create_node() {
         1,
         resources,
         location,
-        country,
-        city,
         interfaces,
         true,
         true,
@@ -2098,21 +2089,18 @@ fn create_extra_node() {
     };
 
     // random location
+    let city = b"Rio de Janeiro";
+    let country = b"Brazil";
     let lat = b"43.1868";
     let long = b"22.9694";
-    let loc = get_location(lat, long);
-    let location = (loc.0, loc.1);
-
-    let country = get_country_name(b"Brazil").0;
-    let city = get_city_name(b"Rio de Janeiro").0;
+    let loc = get_location(city, country, lat, long);
+    let location = (loc.city, loc.country, loc.latitude, loc.longitude);
 
     assert_ok!(TfgridModule::create_node(
         Origin::signed(bob()),
         1,
         resources,
         location,
-        country,
-        city,
         Vec::new().try_into().unwrap(),
         true,
         true,
