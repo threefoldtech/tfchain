@@ -69,15 +69,15 @@ pub struct FarmingPolicyLimit {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct Node<PubConfig, If> {
+pub struct Node<City, Country, Location, PubConfig, If> {
     pub version: u32,
     pub id: u32,
     pub farm_id: u32,
     pub twin_id: u32,
     pub resources: Resources,
     pub location: Location,
-    pub country: Vec<u8>,
-    pub city: Vec<u8>,
+    pub country: Country,
+    pub city: City,
     // optional public config
     pub public_config: Option<PubConfig>,
     pub created: u64,

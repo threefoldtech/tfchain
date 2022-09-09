@@ -8,8 +8,8 @@ use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
 use tfchain_support::resources;
 use tfchain_support::types::{
-    FarmCertification, FarmingPolicyLimit, Interface, Location, NodeCertification, PublicConfig,
-    Resources, IP,
+    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, PublicConfig, Resources,
+    IP,
 };
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -807,21 +807,21 @@ fn create_node_with_interfaces_works() {
         create_twin();
         create_farm();
 
-        let country = "Belgium".as_bytes().to_vec();
-        let city = "Ghent".as_bytes().to_vec();
-
-        // random location
-        let location = Location {
-            longitude: "12.233213231".as_bytes().to_vec(),
-            latitude: "32.323112123".as_bytes().to_vec(),
-        };
-
         let resources = Resources {
             hru: 1024 * GIGABYTE,
             sru: 512 * GIGABYTE,
             cru: 8,
             mru: 16 * GIGABYTE,
         };
+
+        // random location
+        let lat = b"12.233213231";
+        let long = b"32.323112123";
+        let loc = get_location(lat, long);
+        let location = (loc.0, loc.1);
+
+        let country = get_country_name(b"Belgium").0;
+        let city = get_city_name(b"Ghent").0;
 
         let mut interface_ips: InterfaceIpsInput<TestRuntime> = bounded_vec![];
         let intf_ip_1 = get_interface_ip(&"10.2.3.3".as_bytes().to_vec());
@@ -1200,12 +1200,6 @@ fn create_node_with_same_pubkey_fails() {
         create_farm();
         create_node();
 
-        // random location
-        let location = Location {
-            longitude: "12.233213231".as_bytes().to_vec(),
-            latitude: "32.323112123".as_bytes().to_vec(),
-        };
-
         let resources = Resources {
             hru: 1,
             sru: 1,
@@ -1213,8 +1207,14 @@ fn create_node_with_same_pubkey_fails() {
             mru: 1,
         };
 
-        let country = "Belgium".as_bytes().to_vec();
-        let city = "Ghent".as_bytes().to_vec();
+        // random location
+        let lat = b"12.233213231";
+        let long = b"32.323112123";
+        let loc = get_location(lat, long);
+        let location = (loc.0, loc.1);
+
+        let country = get_country_name(b"Belgium").0;
+        let city = get_city_name(b"Ghent").0;
 
         let interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
 
@@ -2057,21 +2057,21 @@ fn create_farm2() {
 }
 
 fn create_node() {
-    let country = "Belgium".as_bytes().to_vec();
-    let city = "Ghent".as_bytes().to_vec();
-
-    // random location
-    let location = Location {
-        longitude: "12.233213231".as_bytes().to_vec(),
-        latitude: "32.323112123".as_bytes().to_vec(),
-    };
-
     let resources = Resources {
         hru: 1024 * GIGABYTE,
         sru: 512 * GIGABYTE,
         cru: 8,
         mru: 16 * GIGABYTE,
     };
+
+    // random location
+    let lat = b"12.233213231";
+    let long = b"32.323112123";
+    let loc = get_location(lat, long);
+    let location = (loc.0, loc.1);
+
+    let country = get_country_name(b"Belgium").0;
+    let city = get_city_name(b"Ghent").0;
 
     let interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
 
@@ -2090,21 +2090,21 @@ fn create_node() {
 }
 
 fn create_extra_node() {
-    let country = "Brazil".as_bytes().to_vec();
-    let city = "Rio de Janeiro".as_bytes().to_vec();
-
-    // random location
-    let location = Location {
-        longitude: "43.1868".as_bytes().to_vec(),
-        latitude: "22.9694".as_bytes().to_vec(),
-    };
-
     let resources = Resources {
         hru: 1024 * GIGABYTE,
         sru: 512 * GIGABYTE,
         cru: 8,
         mru: 16 * GIGABYTE,
     };
+
+    // random location
+    let lat = b"43.1868";
+    let long = b"22.9694";
+    let loc = get_location(lat, long);
+    let location = (loc.0, loc.1);
+
+    let country = get_country_name(b"Brazil").0;
+    let city = get_city_name(b"Rio de Janeiro").0;
 
     assert_ok!(TfgridModule::create_node(
         Origin::signed(bob()),

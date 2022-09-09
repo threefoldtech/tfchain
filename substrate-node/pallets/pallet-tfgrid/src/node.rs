@@ -6,61 +6,79 @@ use frame_support::{
 use scale_info::TypeInfo;
 use sp_std::marker::PhantomData;
 
-pub const MIN_NODE_LOCATION_LENGTH: u32 = 1;
-pub const MAX_NODE_LOCATION_LENGTH: u32 = 50;
+pub const MIN_LOCATION_LENGTH: u32 = 1;
+pub const MAX_LOCATION_LENGTH: u32 = 50;
 
 // 4: Cuba, Fiji, Iran, ..
-pub const MIN_NODE_COUNTRY_NAME_LENGTH: u32 = 4;
+pub const MIN_COUNTRY_NAME_LENGTH: u32 = 4;
 // 56: The United Kingdom of Great Britain and Northern Ireland
-pub const MAX_NODE_COUNTRY_NAME_LENGTH: u32 = 56;
+pub const MAX_COUNTRY_NAME_LENGTH: u32 = 56;
 
 // 1: Y
-pub const MIN_NODE_CITY_NAME_LENGTH: u32 = 1;
+pub const MIN_CITY_NAME_LENGTH: u32 = 1;
 // 85: Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch
-pub const MAX_NODE_CITY_NAME_LENGTH: u32 = 58;
+pub const MAX_CITY_NAME_LENGTH: u32 = 58;
 
-/// A Node latitude (ASCI Characters).
+/// A location lat/long (ASCI Characters).
 #[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
-pub struct NodeLatitude<T: Config>(
-    pub(crate) BoundedVec<u8, ConstU32<MAX_NODE_LOCATION_LENGTH>>,
-    PhantomData<(T, ConstU32<MAX_NODE_LOCATION_LENGTH>)>,
+pub struct Location<T: Config>(
+    // Latitude
+    pub(crate) BoundedVec<u8, ConstU32<MAX_LOCATION_LENGTH>>,
+    // Longitude
+    pub(crate) BoundedVec<u8, ConstU32<MAX_LOCATION_LENGTH>>,
+    PhantomData<(T, ConstU32<MAX_LOCATION_LENGTH>)>,
 );
 
-impl<T: Config> TryFrom<Vec<u8>> for NodeLatitude<T> {
+impl<T: Config> TryFrom<(Vec<u8>, Vec<u8>)> for Location<T> {
     type Error = Error<T>;
 
-    /// Fallible initialization from a provided byte vector if it is below the
-    /// minimum or exceeds the maximum allowed length or can not be converted
-    /// to float or is out of [-90, 90] range.
-    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+    /// Fallible initialization from a provided tuple of byte vector
+    /// (latitude and longitude) if one is below the minimum or exceeds
+    /// the maximum allowed length or can not be converted to float or
+    /// is out of [-90; 90] range (for latitude) or is out of [-180; 180]
+    /// range (for longitude)
+    fn try_from(value: (Vec<u8>, Vec<u8>)) -> Result<Self, Self::Error> {
         ensure!(
-            value.len() >= MIN_NODE_LOCATION_LENGTH.saturated_into(),
+            value.0.len() >= MIN_LOCATION_LENGTH.saturated_into(),
             Self::Error::NodeLatitudeInputToShort
         );
-        let bounded_vec: BoundedVec<u8, ConstU32<MAX_NODE_LOCATION_LENGTH>> =
-            BoundedVec::try_from(value.clone())
+        let latitute_bv: BoundedVec<u8, ConstU32<MAX_LOCATION_LENGTH>> =
+            BoundedVec::try_from(value.0.clone())
                 .map_err(|_| Self::Error::NodeLatitudeInputToLong)?;
         ensure!(
-            validate_latitude_input(&bounded_vec),
+            validate_latitude_input(&latitute_bv),
             Self::Error::InvalidNodeLatitudeInput
         );
-        Ok(Self(bounded_vec, PhantomData))
+
+        ensure!(
+            value.1.len() >= MIN_LOCATION_LENGTH.saturated_into(),
+            Self::Error::NodeLongitudeInputToShort
+        );
+        let longitute_bv: BoundedVec<u8, ConstU32<MAX_LOCATION_LENGTH>> =
+            BoundedVec::try_from(value.1.clone())
+                .map_err(|_| Self::Error::NodeLongitudeInputToLong)?;
+        ensure!(
+            validate_longitude_input(&longitute_bv),
+            Self::Error::InvalidNodeLongitudeInput
+        );
+
+        Ok(Self(latitute_bv, longitute_bv, PhantomData))
     }
 }
 
 // FIXME: did not find a way to automatically implement this.
-impl<T: Config> PartialEq for NodeLatitude<T> {
+impl<T: Config> PartialEq for Location<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
+        self.0 == other.0 && self.1 == other.1
     }
 }
 
 // FIXME: did not find a way to automatically implement this.
-impl<T: Config> Clone for NodeLatitude<T> {
+impl<T: Config> Clone for Location<T> {
     fn clone(&self) -> Self {
-        Self(self.0.clone(), self.1)
+        Self(self.0.clone(), self.1.clone(), self.2)
     }
 }
 
@@ -77,51 +95,6 @@ fn validate_latitude_input(input: &[u8]) -> bool {
     }
 }
 
-/// A Node longitude (ASCI Characters).
-#[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-#[scale_info(skip_type_params(T))]
-#[codec(mel_bound())]
-pub struct NodeLongitude<T: Config>(
-    pub(crate) BoundedVec<u8, ConstU32<MAX_NODE_LOCATION_LENGTH>>,
-    PhantomData<(T, ConstU32<MAX_NODE_LOCATION_LENGTH>)>,
-);
-
-impl<T: Config> TryFrom<Vec<u8>> for NodeLongitude<T> {
-    type Error = Error<T>;
-
-    /// Fallible initialization from a provided byte vector if it is below the
-    /// minimum or exceeds the maximum allowed length or can not be converted
-    /// to float or is out of [-180, 180] range.
-    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
-        ensure!(
-            value.len() >= MIN_NODE_LOCATION_LENGTH.saturated_into(),
-            Self::Error::NodeLongitudeInputToShort
-        );
-        let bounded_vec: BoundedVec<u8, ConstU32<MAX_NODE_LOCATION_LENGTH>> =
-            BoundedVec::try_from(value.clone())
-                .map_err(|_| Self::Error::NodeLongitudeInputToLong)?;
-        ensure!(
-            validate_longitude_input(&bounded_vec),
-            Self::Error::InvalidNodeLongitudeInput
-        );
-        Ok(Self(bounded_vec, PhantomData))
-    }
-}
-
-// FIXME: did not find a way to automatically implement this.
-impl<T: Config> PartialEq for NodeLongitude<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
-
-// FIXME: did not find a way to automatically implement this.
-impl<T: Config> Clone for NodeLongitude<T> {
-    fn clone(&self) -> Self {
-        Self(self.0.clone(), self.1)
-    }
-}
-
 fn validate_longitude_input(input: &[u8]) -> bool {
     match core::str::from_utf8(input) {
         Ok(val) => {
@@ -135,16 +108,16 @@ fn validate_longitude_input(input: &[u8]) -> bool {
     }
 }
 
-/// A Node country name (ASCI Characters).
+/// A country name (ASCI Characters).
 #[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
-pub struct NodeCountryName<T: Config>(
-    pub(crate) BoundedVec<u8, ConstU32<MAX_NODE_COUNTRY_NAME_LENGTH>>,
-    PhantomData<(T, ConstU32<MAX_NODE_COUNTRY_NAME_LENGTH>)>,
+pub struct CountryName<T: Config>(
+    pub(crate) BoundedVec<u8, ConstU32<MAX_COUNTRY_NAME_LENGTH>>,
+    PhantomData<(T, ConstU32<MAX_COUNTRY_NAME_LENGTH>)>,
 );
 
-impl<T: Config> TryFrom<Vec<u8>> for NodeCountryName<T> {
+impl<T: Config> TryFrom<Vec<u8>> for CountryName<T> {
     type Error = Error<T>;
 
     /// Fallible initialization from a provided byte vector if it is below the
@@ -152,10 +125,10 @@ impl<T: Config> TryFrom<Vec<u8>> for NodeCountryName<T> {
     /// characters.
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         ensure!(
-            value.len() >= MIN_NODE_COUNTRY_NAME_LENGTH.saturated_into(),
+            value.len() >= MIN_COUNTRY_NAME_LENGTH.saturated_into(),
             Self::Error::NodeCountryNameTooShort
         );
-        let bounded_vec: BoundedVec<u8, ConstU32<MAX_NODE_COUNTRY_NAME_LENGTH>> =
+        let bounded_vec: BoundedVec<u8, ConstU32<MAX_COUNTRY_NAME_LENGTH>> =
             BoundedVec::try_from(value).map_err(|_| Self::Error::NodeCountryNameTooLong)?;
         ensure!(
             validate_country_name(&bounded_vec),
@@ -166,14 +139,14 @@ impl<T: Config> TryFrom<Vec<u8>> for NodeCountryName<T> {
 }
 
 // FIXME: did not find a way to automatically implement this.
-impl<T: Config> PartialEq for NodeCountryName<T> {
+impl<T: Config> PartialEq for CountryName<T> {
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0
     }
 }
 
 // FIXME: did not find a way to automatically implement this.
-impl<T: Config> Clone for NodeCountryName<T> {
+impl<T: Config> Clone for CountryName<T> {
     fn clone(&self) -> Self {
         Self(self.0.clone(), self.1)
     }
@@ -186,16 +159,16 @@ fn validate_country_name(input: &[u8]) -> bool {
         .all(|c| c.is_ascii_alphabetic() || c.is_ascii_whitespace())
 }
 
-/// A Node city name (ASCI Characters).
+/// A city name (ASCI Characters).
 #[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
-pub struct NodeCityName<T: Config>(
-    pub(crate) BoundedVec<u8, ConstU32<MAX_NODE_CITY_NAME_LENGTH>>,
-    PhantomData<(T, ConstU32<MAX_NODE_CITY_NAME_LENGTH>)>,
+pub struct CityName<T: Config>(
+    pub(crate) BoundedVec<u8, ConstU32<MAX_CITY_NAME_LENGTH>>,
+    PhantomData<(T, ConstU32<MAX_CITY_NAME_LENGTH>)>,
 );
 
-impl<T: Config> TryFrom<Vec<u8>> for NodeCityName<T> {
+impl<T: Config> TryFrom<Vec<u8>> for CityName<T> {
     type Error = Error<T>;
 
     /// Fallible initialization from a provided byte vector if it is below the
@@ -203,10 +176,10 @@ impl<T: Config> TryFrom<Vec<u8>> for NodeCityName<T> {
     /// characters.
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         ensure!(
-            value.len() >= MIN_NODE_CITY_NAME_LENGTH.saturated_into(),
+            value.len() >= MIN_CITY_NAME_LENGTH.saturated_into(),
             Self::Error::NodeCityNameTooShort
         );
-        let bounded_vec: BoundedVec<u8, ConstU32<MAX_NODE_CITY_NAME_LENGTH>> =
+        let bounded_vec: BoundedVec<u8, ConstU32<MAX_CITY_NAME_LENGTH>> =
             BoundedVec::try_from(value).map_err(|_| Self::Error::NodeCityNameTooLong)?;
         ensure!(
             validate_city_name(&bounded_vec),
@@ -217,14 +190,14 @@ impl<T: Config> TryFrom<Vec<u8>> for NodeCityName<T> {
 }
 
 // FIXME: did not find a way to automatically implement this.
-impl<T: Config> PartialEq for NodeCityName<T> {
+impl<T: Config> PartialEq for CityName<T> {
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0
     }
 }
 
 // FIXME: did not find a way to automatically implement this.
-impl<T: Config> Clone for NodeCityName<T> {
+impl<T: Config> Clone for CityName<T> {
     fn clone(&self) -> Self {
         Self(self.0.clone(), self.1)
     }
