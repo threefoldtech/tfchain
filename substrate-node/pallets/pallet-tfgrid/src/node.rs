@@ -5,6 +5,7 @@ use frame_support::{
 };
 use scale_info::TypeInfo;
 use sp_std::marker::PhantomData;
+use sp_std::vec::Vec;
 
 pub const MIN_LATITUDE_LENGTH: u32 = 1;
 pub const MAX_LATITUDE_LENGTH: u32 = 50;
