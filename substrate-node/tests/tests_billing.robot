@@ -1,7 +1,7 @@
 *** Settings ***
 Documentation    Suite for integration tests for testing billing
-Library          substrate_network.py
-Library          tf_chain_client.py
+Library          SubstrateNetwork.py
+Library          TfChainClient.py
 
 
 *** Test Cases ***

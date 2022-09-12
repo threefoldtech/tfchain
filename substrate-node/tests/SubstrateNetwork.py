@@ -73,7 +73,7 @@ def run_node(log_file, base_path, predefined_account, port, ws_port, rpc_port, n
     
     return execute_command(cmd, log_file)
 
-class substrate_network:
+class SubstrateNetwork:
     def __init__(self):
         self._nodes = {}
         

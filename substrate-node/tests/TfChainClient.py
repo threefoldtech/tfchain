@@ -4,7 +4,7 @@ from substrateinterface import SubstrateInterface, Keypair
 
 GIGABYTE = 1024*1024*1024
 
-class tf_chain_client:
+class TfChainClient:
     def __init__(self):
         self._create_keys()
     
