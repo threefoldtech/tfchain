@@ -2,7 +2,7 @@ import argparse
 from datetime import datetime
 import logging
 import os
-from os.path import dirname, isdir, join
+from os.path import dirname, isdir, isfile, join
 import re
 from shutil import rmtree
 from socket import timeout
@@ -50,6 +50,10 @@ def execute_command(cmd, log_file=None):
     return p, fd
 
 def run_node(log_file, base_path, predefined_account, port, ws_port, rpc_port, node_key=None, bootnodes=None):
+    
+    if not isfile(TFCHAIN_EXE):
+        raise Exception(f"Executable {TFCHAIN_EXE} doesn't exist! Did you build the code?")
+    
     cmd = [ TFCHAIN_EXE, 
            "--base-path", f"{base_path}",
            "--chain", "local",
