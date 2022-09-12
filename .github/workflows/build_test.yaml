@@ -1,7 +1,7 @@
 name: Build and Test
 on: [pull_request]
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -15,6 +15,6 @@ jobs:
         run: rustup install nightly-2022-05-11
       - name: Build
         run: |
-          cd substrate_node
+          cd substrate-node
           rustup target add wasm32-unknown-unknown --toolchain nightly-2022-05-11
           cargo +nightly-2022-05-11 build --release
