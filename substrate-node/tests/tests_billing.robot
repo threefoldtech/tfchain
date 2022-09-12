@@ -1,17 +1,24 @@
 *** Settings ***
 Documentation    Suite for integration tests for testing billing
 Library          substrate_network.py
-Library          node_setup.py
-
+Library          tf_chain_client.py
 
 
 *** Test Cases ***
 Test Setup Then Tear Down
-    ${nodes} =  Setup Multi Node Network
+    Setup Multi Node Network
 
-    Setup First Node
-    Setup Second Node
+    # Setup for billing
+    Setup Alice
+    Setup Bob
+    User Accept Tc
+    Create Twin
+    Create Farm
+    Create Node
+    Create Node Contract
+    Report Contract Resources
 
-    Sleep  20s
+    # let it run for some time
+    Sleep  10s
 
-    Tear Down Multi Node Network  ${nodes}
+    Tear Down Multi Node Network

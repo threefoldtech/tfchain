@@ -2,9 +2,10 @@ import argparse
 from datetime import datetime
 import logging
 import os
-from os.path import dirname, join
+from os.path import dirname, isdir, join
 import re
 from shutil import rmtree
+from socket import timeout
 import subprocess
 import tempfile
 import time
@@ -15,14 +16,17 @@ TFCHAIN_EXE = join(SUBSTRATE_NODE_DIR, "target", "release", "tfchain")
 
 RE_NODE_STARTED = re.compile("Running JSON-RPC WS server")
 
-DEFAULT_TIMEOUT_IN_SECONDS = 600
+TIMEOUT_STARTUP_IN_SECONDS = 600
+TIMEOUT_TERMINATE_IN_SECONDS = 1
 
-def wait_till_node_ready(log_file, timeout_in_seconds=DEFAULT_TIMEOUT_IN_SECONDS):
+OUTPUT_TESTS = os.environ.get("TEST_OUTPUT_DIR", join(os.getcwd(), "_output_tests"))
+
+def wait_till_node_ready(log_file, timeout_in_seconds=TIMEOUT_STARTUP_IN_SECONDS):
     start = datetime.now()
     while True:
         elapsed = datetime.now() - start
         
-        if elapsed.total_seconds() >= DEFAULT_TIMEOUT_IN_SECONDS:
+        if elapsed.total_seconds() >= TIMEOUT_STARTUP_IN_SECONDS:
             raise Exception(f"Timeout on starting the node! See {log_file}")
         
         with open(log_file, "r") as fd:
@@ -35,44 +39,17 @@ def execute_command(cmd, log_file=None):
     if log_file is None:
         log_file = tempfile.mktemp()
         
+    dir_of_log_file = dirname(log_file)
+    if not isdir(dir_of_log_file):
+        os.makedirs(dir_of_log_file)
+        
     fd = open(log_file, 'w')
     logging.info("Running command\n\t> %s\nand saving output in file %s", " ".join([f"{arg}" for arg in cmd]), log_file)
     p = subprocess.Popen(cmd, stdout=fd, stderr=fd)
     
     return p, fd
 
-'''
-./target/release/tfchain 
-    --base-path /tmp/alice
-    --chain local
-    --alice
-    --port 30333
-    --ws-port 9945
-    --rpc-port 9933
-    --node-key 0000000000000000000000000000000000000000000000000000000000000001
-    --telemetry-url 'wss://telemetry.polkadot.io/submit/ 0'
-    --validator
-    --rpc-methods Unsafe
-    --rpc-cors all
-'''
-'''
-./target/release/tfchain
-    --base-path /tmp/bob
-    --chain local
-    --bob
-    --port 30334
-    --ws-port 9946
-    --rpc-port 9934
-    --telemetry-url 'wss://telemetry.polkadot.io/submit/ 0'
-    --validator
-    --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp
-    --rpc-methods Unsafe
-    --rpc-cors all
-'''
 def run_node(log_file, base_path, predefined_account, port, ws_port, rpc_port, node_key=None, bootnodes=None):
-    
-    
-    
     cmd = [ TFCHAIN_EXE, 
            "--base-path", f"{base_path}",
            "--chain", "local",
@@ -96,40 +73,46 @@ def run_node(log_file, base_path, predefined_account, port, ws_port, rpc_port, n
     
     return execute_command(cmd, log_file)
 
-def setup_multi_node_network():
-    nodes = {}
-
-    nodes["alice"] = run_node("node_alice.log", "/tmp/alice", "alice", 30333, 9945, 9933, "0000000000000000000000000000000000000000000000000000000000000001")
-    wait_till_node_ready("node_alice.log")
-    nodes["bob"] = run_node("node_bob.log", "/tmp/bob", "bob", 30334, 9946, 9934, node_key=None, bootnodes="/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp")
-    wait_till_node_ready("node_bob.log")
+class substrate_network:
+    def __init__(self):
+        self._nodes = {}
+        
+    def __del__(self):
+        if len(self._nodes) > 0:
+            self.tear_down_multi_node_network()
     
-    return nodes
+    def setup_multi_node_network(self):
+        log_file_alice = join(OUTPUT_TESTS, "node_alice.log")
+        self._nodes["alice"] = run_node(log_file_alice, "/tmp/alice", "alice", 30333, 9945, 9933, "0000000000000000000000000000000000000000000000000000000000000001")
+        wait_till_node_ready(log_file_alice)
+        
+        log_file_bob = join(OUTPUT_TESTS, "node_bob.log")
+        self._nodes["bob"] = run_node(log_file_bob, "/tmp/bob", "bob", 30334, 9946, 9934, node_key=None, bootnodes="/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp")
+        wait_till_node_ready(log_file_bob)
 
-def tear_down_multi_node_network(nodes):
-    for (account, (process, log_file)) in nodes.items():
-        logging.info("Terminating node %s", account)
-        process.terminate()
-        return_code = process.wait()
-        logging.info("Node for %s has terminated.", account)
-        if log_file is not None:
-            log_file.close()
+    def tear_down_multi_node_network(self):
+        for (account, (process, log_file)) in self._nodes.items():
+            logging.info("Terminating node %s", account)
+            process.terminate()
+            process.wait(timeout=TIMEOUT_TERMINATE_IN_SECONDS)
+            process.kill()
+            logging.info("Node for %s has terminated.", account)
+            if log_file is not None:
+                log_file.close()
     
+
 
 def main():
     parser = argparse.ArgumentParser(description='TODO')
-    
-    #parser.add_argument('integers', type=int, help='an integer for the accumulator')
 
     args = parser.parse_args()
 
     logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.DEBUG)
 
-    nodes = setup_multi_node_network()
-    
+    network = substrate_network()
+    network.setup_multi_node_network()   
     time.sleep(60)
-    
-    tear_down_multi_node_network(nodes)
+    network.tear_down_multi_node_network()
     
     
 
