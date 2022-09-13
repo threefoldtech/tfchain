@@ -2,7 +2,7 @@ name: Build and Test
 on: [pull_request]
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, poc]
     steps:
       - uses: actions/checkout@v3
       - name: Cache build
