@@ -3,6 +3,10 @@ on: [pull_request]
 jobs:
   build-and-test:
     runs-on: [self-hosted, poc]
+    container:
+      image: ubuntu-latest
+      env:
+        DEBIAN_FRONTEND: noninteractive
     steps:
       - uses: actions/checkout@v3
       - name: Cache build
@@ -16,7 +20,6 @@ jobs:
             substrate-node/target/            
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
-      - run: ls substrate-node/
       - name: Prepare dependencies
         run: |
           sudo apt-get update
