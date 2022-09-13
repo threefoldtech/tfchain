@@ -5,6 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - run: ls substrate-node/
       - name: Cache build
         uses: actions/cache@v3
         with:
@@ -13,9 +14,10 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            target/            
+            substrate-node/target/            
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
+      - run: ls substrate-node/
       - name: Prepare dependencies
         run: |
           sudo apt-get update
