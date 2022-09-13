@@ -69,7 +69,7 @@ pub struct FarmingPolicyLimit {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct Node<Location, PubConfig, If> {
+pub struct Node<Location, PubConfig, If, SerialNumber> {
     pub version: u32,
     pub id: u32,
     pub farm_id: u32,
@@ -84,7 +84,7 @@ pub struct Node<Location, PubConfig, If> {
     pub certification: NodeCertification,
     pub secure_boot: bool,
     pub virtualized: bool,
-    pub serial_number: Vec<u8>,
+    pub serial_number: SerialNumber,
     pub connection_price: u32,
 }
 

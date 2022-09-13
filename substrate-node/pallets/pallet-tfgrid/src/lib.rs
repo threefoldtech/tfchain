@@ -159,10 +159,15 @@ pub mod pallet {
     // Concrete type for location
     pub type LocationOf<T> = <T as Config>::Location;
 
+    // Input type for serial number
+    pub type SerialNumberInput = BoundedVec<u8, ConstU32<{ node::MAX_SERIAL_NUMBER_LENGTH }>>;
+    // Concrete type for location
+    pub type SerialNumberOf<T> = <T as Config>::SerialNumber;
+
     // Input type for resources
     pub type ResourcesInput = Resources;
 
-    pub type TfgridNode<T> = Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>>;
+    pub type TfgridNode<T> = Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>;
 
     #[pallet::storage]
     #[pallet::getter(fn nodes)]
@@ -280,6 +285,7 @@ pub mod pallet {
             super::LocationOf<Self>,
             super::PubConfigOf<Self>,
             super::InterfaceOf<Self>,
+            super::SerialNumberOf<Self>,
         >;
 
         /// The type of a twin IP.
@@ -408,6 +414,15 @@ pub mod pallet {
             + Clone
             + TypeInfo
             + TryFrom<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>), Error = Error<Self>>
+            + MaxEncodedLen;
+
+        /// The type of a serial number.
+        type SerialNumber: FullCodec
+            + Debug
+            + PartialEq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
         #[pallet::constant]
@@ -559,18 +574,22 @@ pub mod pallet {
         InvalidZosVersion,
         FarmingPolicyExpired,
 
-        NodeLatitudeInputToShort,
-        NodeLatitudeInputToLong,
-        InvalidNodeLatitudeInput,
-        NodeLongitudeInputToShort,
-        NodeLongitudeInputToLong,
-        InvalidNodeLongitudeInput,
-        NodeCountryNameTooShort,
-        NodeCountryNameTooLong,
-        InvalidNodeCountryName,
-        NodeCityNameTooShort,
-        NodeCityNameTooLong,
-        InvalidNodeCityName,
+        LatitudeInputToShort,
+        LatitudeInputToLong,
+        InvalidLatitudeInput,
+        LongitudeInputToShort,
+        LongitudeInputToLong,
+        InvalidLongitudeInput,
+        CountryNameTooShort,
+        CountryNameTooLong,
+        InvalidCountryName,
+        CityNameTooShort,
+        CityNameTooLong,
+        InvalidCityName,
+
+        SerialNumberTooShort,
+        SerialNumberTooLong,
+        InvalidSerialNumber,
     }
 
     #[pallet::genesis_config]
@@ -985,7 +1004,7 @@ pub mod pallet {
             interfaces: InterfaceInput<T>,
             secure_boot: bool,
             virtualized: bool,
-            serial_number: Vec<u8>,
+            serial_number: SerialNumberInput,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1002,11 +1021,12 @@ pub mod pallet {
                 Error::<T>::NodeWithTwinIdExists
             );
 
-            let node_location = Self::get_location(location)?;
-            let node_interfaces = Self::get_interfaces(&interfaces)?;
-
             let mut id = NodeID::<T>::get();
             id = id + 1;
+
+            let node_location = Self::get_location(location)?;
+            let node_interfaces = Self::get_interfaces(&interfaces)?;
+            let node_serial_number = Self::get_serial_number(serial_number)?;
 
             let created = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
@@ -1024,7 +1044,7 @@ pub mod pallet {
                 certification: NodeCertification::default(),
                 secure_boot,
                 virtualized,
-                serial_number,
+                serial_number: node_serial_number,
                 connection_price: ConnectionPrice::<T>::get(),
             };
 
@@ -1057,7 +1077,7 @@ pub mod pallet {
             interfaces: Vec<pallet::InterfaceOf<T>>,
             secure_boot: bool,
             virtualized: bool,
-            serial_number: Vec<u8>,
+            serial_number: SerialNumberInput,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1102,6 +1122,7 @@ pub mod pallet {
             }
 
             let node_location = Self::get_location(location)?;
+            let node_serial_number = Self::get_serial_number(serial_number)?;
 
             stored_node.farm_id = farm_id;
             stored_node.resources = resources;
@@ -1109,7 +1130,7 @@ pub mod pallet {
             stored_node.interfaces = interfaces;
             stored_node.secure_boot = secure_boot;
             stored_node.virtualized = virtualized;
-            stored_node.serial_number = serial_number;
+            stored_node.serial_number = node_serial_number;
 
             // override node in storage
             Nodes::<T>::insert(stored_node.id, &stored_node);
@@ -2277,6 +2298,13 @@ impl<T: Config> Pallet<T> {
         }
 
         Ok(public_ips_list)
+    }
+
+    fn get_serial_number(
+        serial_number: pallet::SerialNumberInput,
+    ) -> Result<SerialNumberOf<T>, Error<T>> {
+        let parsed_serial_number = <T as Config>::SerialNumber::try_from(serial_number.to_vec())?;
+        Ok(parsed_serial_number)
     }
 }
 

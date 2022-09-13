@@ -2433,6 +2433,8 @@ pub fn prepare_farm_and_node() {
     let loc = get_location(city, country, lat, long);
     let location = (loc.city, loc.country, loc.latitude, loc.longitude);
 
+    let serial_number = get_serial_number(b"some_serial").0;
+    
     TfgridModule::create_node(
         Origin::signed(alice()),
         1,
@@ -2441,7 +2443,7 @@ pub fn prepare_farm_and_node() {
         bounded_vec![],
         false,
         false,
-        "some_serial".as_bytes().to_vec(),
+        serial_number,
     )
     .unwrap();
 }
@@ -2469,6 +2471,8 @@ pub fn prepare_dedicated_farm_and_node() {
     let loc = get_location(city, country, lat, long);
     let location = (loc.city, loc.country, loc.latitude, loc.longitude);
 
+    let serial_number = get_serial_number(b"some_serial").0;
+
     TfgridModule::create_node(
         Origin::signed(alice()),
         1,
@@ -2477,7 +2481,7 @@ pub fn prepare_dedicated_farm_and_node() {
         bounded_vec![],
         false,
         false,
-        "some_serial".as_bytes().to_vec(),
+        serial_number,
     )
     .unwrap();
 }

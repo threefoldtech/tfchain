@@ -11,7 +11,7 @@ use frame_system::EnsureRoot;
 use pallet_tfgrid::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
-    node::Location,
+    node::{Location, SerialNumber},
     pub_config::{Domain, GW4, GW6, IP4, IP6},
     pub_ip::{GatewayIP, PublicIP},
     twin::TwinIp,
@@ -105,6 +105,7 @@ impl pallet_balances::Config for TestRuntime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<TestRuntime>;
 }
 
+pub(crate) type Serial = pallet_tfgrid::pallet::SerialNumberOf<TestRuntime>;
 pub(crate) type Loc = pallet_tfgrid::pallet::LocationOf<TestRuntime>;
 pub(crate) type PubConfig = pallet_tfgrid::pallet::PubConfigOf<TestRuntime>;
 pub(crate) type Interface = pallet_tfgrid::pallet::InterfaceOf<TestRuntime>;
@@ -112,7 +113,7 @@ pub(crate) type Interface = pallet_tfgrid::pallet::InterfaceOf<TestRuntime>;
 pub(crate) type TfgridNode = pallet_tfgrid::pallet::TfgridNode<TestRuntime>;
 
 pub struct NodeChanged;
-impl ChangeNode<Loc, PubConfig, Interface> for NodeChanged {
+impl ChangeNode<Loc, PubConfig, Interface, Serial> for NodeChanged {
     fn node_changed(_old_node: Option<&TfgridNode>, _new_node: &TfgridNode) {}
     fn node_deleted(node: &TfgridNode) {
         SmartContractModule::node_deleted(node);
@@ -142,6 +143,7 @@ pub(crate) type TestInterfaceMac = InterfaceMac<TestRuntime>;
 pub(crate) type TestInterfaceIp = InterfaceIp<TestRuntime>;
 
 pub(crate) type TestLocation = Location<TestRuntime>;
+pub(crate) type TestSerialNumber = SerialNumber<TestRuntime>;
 
 impl pallet_tfgrid::Config for TestRuntime {
     type Event = Event;
@@ -165,6 +167,7 @@ impl pallet_tfgrid::Config for TestRuntime {
     type InterfaceIP = TestInterfaceIp;
     type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
     type Location = TestLocation;
+    type SerialNumber = TestSerialNumber;
 }
 
 impl pallet_tft_price::Config for TestRuntime {
@@ -303,6 +306,10 @@ pub(crate) fn get_location(
         longitude.to_vec(),
     ))
     .expect("Invalid location input")
+}
+
+pub(crate) fn get_serial_number(serial_number: &[u8]) -> TestSerialNumber {
+    SerialNumber::try_from(serial_number.to_vec()).expect("Invalid serial number input")
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {

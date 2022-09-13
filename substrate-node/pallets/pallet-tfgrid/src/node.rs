@@ -49,48 +49,46 @@ impl<T: Config> TryFrom<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>)> for Location<T> {
         // 1. city name
         ensure!(
             value.0.len() >= MIN_CITY_NAME_LENGTH.saturated_into(),
-            Self::Error::NodeCityNameTooShort
+            Self::Error::CityNameTooShort
         );
         let city: BoundedVec<u8, ConstU32<MAX_CITY_NAME_LENGTH>> =
-            BoundedVec::try_from(value.0).map_err(|_| Self::Error::NodeCityNameTooLong)?;
-        ensure!(validate_city_name(&city), Self::Error::InvalidNodeCityName);
+            BoundedVec::try_from(value.0).map_err(|_| Self::Error::CityNameTooLong)?;
+        ensure!(validate_city_name(&city), Self::Error::InvalidCityName);
 
         // 2. country name
         ensure!(
             value.1.len() >= MIN_COUNTRY_NAME_LENGTH.saturated_into(),
-            Self::Error::NodeCountryNameTooShort
+            Self::Error::CountryNameTooShort
         );
         let country: BoundedVec<u8, ConstU32<MAX_COUNTRY_NAME_LENGTH>> =
-            BoundedVec::try_from(value.1).map_err(|_| Self::Error::NodeCountryNameTooLong)?;
+            BoundedVec::try_from(value.1).map_err(|_| Self::Error::CountryNameTooLong)?;
         ensure!(
             validate_country_name(&country),
-            Self::Error::InvalidNodeCountryName
+            Self::Error::InvalidCountryName
         );
 
         // 3. latitude
         ensure!(
             value.2.len() >= MIN_LATITUDE_LENGTH.saturated_into(),
-            Self::Error::NodeLatitudeInputToShort
+            Self::Error::LatitudeInputToShort
         );
         let latitude: BoundedVec<u8, ConstU32<MAX_LATITUDE_LENGTH>> =
-            BoundedVec::try_from(value.2.clone())
-                .map_err(|_| Self::Error::NodeLatitudeInputToLong)?;
+            BoundedVec::try_from(value.2.clone()).map_err(|_| Self::Error::LatitudeInputToLong)?;
         ensure!(
             validate_latitude_input(&latitude),
-            Self::Error::InvalidNodeLatitudeInput
+            Self::Error::InvalidLatitudeInput
         );
 
         // 4. latitude
         ensure!(
             value.3.len() >= MIN_LONGITUDE_LENGTH.saturated_into(),
-            Self::Error::NodeLongitudeInputToShort
+            Self::Error::LongitudeInputToShort
         );
         let longitude: BoundedVec<u8, ConstU32<MAX_LONGITUDE_LENGTH>> =
-            BoundedVec::try_from(value.3.clone())
-                .map_err(|_| Self::Error::NodeLongitudeInputToLong)?;
+            BoundedVec::try_from(value.3.clone()).map_err(|_| Self::Error::LongitudeInputToLong)?;
         ensure!(
             validate_longitude_input(&longitude),
-            Self::Error::InvalidNodeLongitudeInput
+            Self::Error::InvalidLongitudeInput
         );
 
         Ok(Self {
@@ -164,4 +162,57 @@ fn validate_longitude_input(input: &[u8]) -> bool {
         }
         Err(_) => false,
     }
+}
+
+pub const MIN_SERIAL_NUMBER_LENGTH: u32 = 10;
+pub const MAX_SERIAL_NUMBER_LENGTH: u32 = 50;
+
+/// A serial number in ASCI Characters.
+#[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(T))]
+#[codec(mel_bound())]
+pub struct SerialNumber<T: Config>(
+    pub BoundedVec<u8, ConstU32<MAX_SERIAL_NUMBER_LENGTH>>,
+    PhantomData<(T, ConstU32<MAX_SERIAL_NUMBER_LENGTH>)>,
+);
+
+impl<T: Config> TryFrom<Vec<u8>> for SerialNumber<T> {
+    type Error = Error<T>;
+
+    /// TODO: Fallible initialization from a provided byte vector if it is below the
+    /// minimum or exceeds the maximum allowed length or ...
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        ensure!(
+            value.len() >= MIN_SERIAL_NUMBER_LENGTH.saturated_into(),
+            Self::Error::SerialNumberTooShort
+        );
+        let bounded_vec: BoundedVec<u8, ConstU32<MAX_SERIAL_NUMBER_LENGTH>> =
+            BoundedVec::try_from(value).map_err(|_| Self::Error::SerialNumberTooLong)?;
+        ensure!(
+            validate_serial_number(&bounded_vec),
+            Self::Error::InvalidSerialNumber
+        );
+        Ok(Self(bounded_vec, PhantomData))
+    }
+}
+
+// FIXME: did not find a way to automatically implement this.
+impl<T: Config> PartialEq for SerialNumber<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+// FIXME: did not find a way to automatically implement this.
+impl<T: Config> Clone for SerialNumber<T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone(), self.1)
+    }
+}
+
+fn validate_serial_number(input: &[u8]) -> bool {
+    // TODO: check serial specifications
+    input
+        .iter()
+        .all(|c| matches!(c, b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_'))
 }

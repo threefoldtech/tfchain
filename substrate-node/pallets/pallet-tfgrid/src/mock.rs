@@ -13,7 +13,7 @@ use sp_std::prelude::*;
 
 use crate::farm::FarmName;
 use crate::interface::{InterfaceIp, InterfaceMac, InterfaceName};
-use crate::node::Location;
+use crate::node::{Location, SerialNumber};
 use crate::pub_config::{Domain, GW4, GW6, IP4, IP6};
 use crate::pub_ip::{GatewayIP, PublicIP};
 use crate::twin::TwinIp;
@@ -78,6 +78,7 @@ impl frame_system::Config for TestRuntime {
     type MaxConsumers = ConstU32<16>;
 }
 
+pub(crate) type Serial = crate::SerialNumberOf<TestRuntime>;
 pub(crate) type Loc = crate::LocationOf<TestRuntime>;
 pub(crate) type PubConfig = crate::PubConfigOf<TestRuntime>;
 pub(crate) type Interface = crate::InterfaceOf<TestRuntime>;
@@ -85,7 +86,7 @@ pub(crate) type Interface = crate::InterfaceOf<TestRuntime>;
 pub(crate) type TfgridNode = crate::TfgridNode<TestRuntime>;
 
 pub struct NodeChanged;
-impl tfchain_support::traits::ChangeNode<Loc, PubConfig, Interface> for NodeChanged {
+impl tfchain_support::traits::ChangeNode<Loc, PubConfig, Interface, Serial> for NodeChanged {
     fn node_changed(_old_node: Option<&TfgridNode>, _new_node: &TfgridNode) {}
     fn node_deleted(_node: &TfgridNode) {}
 }
@@ -113,6 +114,7 @@ pub(crate) type TestInterfaceMac = InterfaceMac<TestRuntime>;
 pub(crate) type TestInterfaceIp = InterfaceIp<TestRuntime>;
 
 pub(crate) type TestLocation = Location<TestRuntime>;
+pub(crate) type TestSerialNumber = SerialNumber<TestRuntime>;
 
 impl Config for TestRuntime {
     type Event = Event;
@@ -136,6 +138,7 @@ impl Config for TestRuntime {
     type MaxInterfacesLength = MaxInterfacesLength;
     type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
     type Location = TestLocation;
+    type SerialNumber = TestSerialNumber;
 }
 
 parameter_types! {
@@ -246,6 +249,10 @@ pub(crate) fn get_location(
         longitude.to_vec(),
     ))
     .expect("Invalid location input")
+}
+
+pub(crate) fn get_serial_number(serial_number: &[u8]) -> TestSerialNumber {
+    SerialNumber::try_from(serial_number.to_vec()).expect("Invalid serial number input")
 }
 
 // industry dismiss casual gym gap music pave gasp sick owner dumb cost

@@ -838,6 +838,8 @@ fn create_node_with_interfaces_works() {
         let mut interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
         interfaces.try_push(interface).unwrap();
 
+        let serial_number = get_serial_number(b"some_serial").0;
+
         assert_ok!(TfgridModule::create_node(
             Origin::signed(alice()),
             1,
@@ -846,7 +848,7 @@ fn create_node_with_interfaces_works() {
             interfaces,
             true,
             true,
-            "some_serial".as_bytes().to_vec()
+            serial_number,
         ));
     });
 }
@@ -1214,6 +1216,8 @@ fn create_node_with_same_pubkey_fails() {
 
         let interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
 
+        let serial_number = get_serial_number(b"some_serial").0;
+
         assert_noop!(
             TfgridModule::create_node(
                 Origin::signed(alice()),
@@ -1223,7 +1227,7 @@ fn create_node_with_same_pubkey_fails() {
                 interfaces,
                 true,
                 true,
-                "some_serial".as_bytes().to_vec()
+                serial_number,
             ),
             Error::<TestRuntime>::NodeWithTwinIdExists
         );
@@ -2068,6 +2072,8 @@ fn create_node() {
 
     let interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
 
+    let serial_number = get_serial_number(b"some_serial").0;
+
     assert_ok!(TfgridModule::create_node(
         Origin::signed(alice()),
         1,
@@ -2076,7 +2082,7 @@ fn create_node() {
         interfaces,
         true,
         true,
-        "some_serial".as_bytes().to_vec()
+        serial_number,
     ));
 }
 
@@ -2096,6 +2102,8 @@ fn create_extra_node() {
     let loc = get_location(city, country, lat, long);
     let location = (loc.city, loc.country, loc.latitude, loc.longitude);
 
+    let serial_number = get_serial_number(b"some_serial").0;
+
     assert_ok!(TfgridModule::create_node(
         Origin::signed(bob()),
         1,
@@ -2104,7 +2112,7 @@ fn create_extra_node() {
         Vec::new().try_into().unwrap(),
         true,
         true,
-        "some_serial".as_bytes().to_vec()
+        serial_number,
     ));
 }
 

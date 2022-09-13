@@ -804,6 +804,8 @@ fn prepare_node(account_id: u64, farm_id: u32) {
     let loc = get_location(city, country, lat, long);
     let location = (loc.city, loc.country, loc.latitude, loc.longitude);
 
+    let serial_number = get_serial_number(b"some_serial").0;
+
     assert_ok!(TfgridModule::create_node(
         Origin::signed(account_id),
         farm_id,
@@ -812,7 +814,7 @@ fn prepare_node(account_id: u64, farm_id: u32) {
         bounded_vec![],
         false,
         false,
-        "some_serial".as_bytes().to_vec(),
+        serial_number,
     ));
 }
 
@@ -832,6 +834,8 @@ fn prepare_big_node(account_id: u64, farm_id: u32) {
     let loc = get_location(city, country, lat, long);
     let location = (loc.city, loc.country, loc.latitude, loc.longitude);
 
+    let serial_number = get_serial_number(b"some_serial").0;
+
     assert_ok!(TfgridModule::create_node(
         Origin::signed(account_id),
         farm_id,
@@ -840,7 +844,7 @@ fn prepare_big_node(account_id: u64, farm_id: u32) {
         bounded_vec![],
         false,
         false,
-        "some_serial".as_bytes().to_vec(),
+        serial_number,
     ));
 }
 
