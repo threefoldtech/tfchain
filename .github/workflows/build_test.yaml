@@ -4,7 +4,7 @@ jobs:
   build-and-test:
     runs-on: [self-hosted, poc]
     container:
-      image: ubuntu-latest
+      image: ubuntu:latest
       env:
         DEBIAN_FRONTEND: noninteractive
     steps:
