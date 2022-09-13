@@ -10,19 +10,10 @@ pub fn get_cu(resources: Resources) -> u64 {
 }
 
 pub fn calc_cu(resources: Resources) -> u64 {
-    let cru_min = resources.cru as u128 * 2 * GIB * ONE_THOUSAND;
-    let mru_min = ((resources.mru as u128).checked_sub(1).unwrap_or(0) * GIB) * ONE_THOUSAND / 4;
-    let sru_min = resources.sru as u128 * ONE_THOUSAND / 50;
-
-    if cru_min < mru_min && cru_min < sru_min {
-        cru_min as u64
-    } else if mru_min < cru_min && mru_min < sru_min {
-        mru_min as u64
-    } else if sru_min < cru_min && sru_min < mru_min {
-        sru_min as u64
-    } else {
-        0
-    }
+    let cu_cru = resources.cru as u128 * 2 * GIB * ONE_THOUSAND;
+    let cu_mru = ((resources.mru as u128).checked_sub(1).unwrap_or(0) * GIB) * ONE_THOUSAND / 4;
+    let cu_sru = resources.sru as u128 * ONE_THOUSAND / 50;
+    cu_cru.min(cu_mru.min(cu_sru)) as u64
 }
 
 pub fn get_su(resources: Resources) -> u64 {
