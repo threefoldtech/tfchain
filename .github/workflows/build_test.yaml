@@ -19,14 +19,13 @@ jobs:
       - run: ls substrate-node/
       - name: Prepare dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y librocksdb-dev libclang-dev clang lldb lld build-essential
+          apt-get update
+          apt-get install -y librocksdb-dev libclang-dev clang lldb lld build-essential
       - name: Install rust
         run: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y
-          source "$HOME/.cargo/env"
       - name: Install nightly
-        run: rustup update nightly-2022-05-11
+        run: $HOME/.cargo/bin/rustup update nightly-2022-05-11
       - name: Build
         run: |
           cd substrate-node
