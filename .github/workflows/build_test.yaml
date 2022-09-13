@@ -23,7 +23,7 @@ jobs:
       - name: Prepare dependencies
         run: |
           apt-get update
-          apt-get install -y librocksdb-dev libclang-dev clang cmake lldb lld build-essential
+          apt-get install -y librocksdb-dev libclang-dev curl clang cmake lldb lld build-essential
       - name: Install rust
         run: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y
