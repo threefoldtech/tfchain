@@ -11,6 +11,7 @@ use sp_core::{ed25519, sr25519, Pair, Public, H256};
 
 use sp_std::prelude::*;
 
+use crate::terms_cond::TermsAndConditions;
 use crate::farm::FarmName;
 use crate::interface::{InterfaceIp, InterfaceMac, InterfaceName};
 use crate::node::{Location, SerialNumber};
@@ -98,6 +99,8 @@ parameter_types! {
     pub const MaxFarmPublicIps: u32 = 512;
 }
 
+pub(crate) type TestTermsAndConditions = TermsAndConditions<TestRuntime>;
+
 pub(crate) type TestTwinIp = TwinIp<TestRuntime>;
 pub(crate) type TestFarmName = FarmName<TestRuntime>;
 pub(crate) type TestPublicIP = PublicIP<TestRuntime>;
@@ -121,6 +124,7 @@ impl Config for TestRuntime {
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
+    type TermsAndConditions = TestTermsAndConditions;
     type TwinIp = TestTwinIp;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;

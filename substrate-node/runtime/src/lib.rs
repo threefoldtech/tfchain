@@ -352,6 +352,7 @@ impl pallet_tfgrid::Config for Runtime {
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Runtime>;
     type NodeChanged = NodeChanged;
+    type TermsAndConditions = pallet_tfgrid::terms_cond::TermsAndConditions<Runtime>;
     type TwinIp = pallet_tfgrid::twin::TwinIp<Runtime>;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;

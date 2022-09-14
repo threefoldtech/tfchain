@@ -14,6 +14,7 @@ use pallet_tfgrid::{
     node::{Location, SerialNumber},
     pub_config::{Domain, GW4, GW6, IP4, IP6},
     pub_ip::{GatewayIP, PublicIP},
+    terms_cond::TermsAndConditions,
     twin::TwinIp,
 };
 use sp_core::{crypto::Ss58Codec, sr25519, Pair, Public, H256};
@@ -127,6 +128,8 @@ parameter_types! {
     pub const MaxFarmPublicIps: u32 = 512;
 }
 
+pub(crate) type TestTermsAndConditions = TermsAndConditions<TestRuntime>;
+
 pub(crate) type TestTwinIp = TwinIp<TestRuntime>;
 pub(crate) type TestFarmName = FarmName<TestRuntime>;
 pub(crate) type TestPublicIP = PublicIP<TestRuntime>;
@@ -150,6 +153,7 @@ impl pallet_tfgrid::Config for TestRuntime {
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
+    type TermsAndConditions = TestTermsAndConditions;
     type TwinIp = TestTwinIp;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;

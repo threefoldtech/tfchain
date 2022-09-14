@@ -9,6 +9,7 @@ use pallet_tfgrid::{
     node::{Location, SerialNumber},
     pub_config::{Domain, GW4, GW6, IP4, IP6},
     pub_ip::{GatewayIP, PublicIP},
+    terms_cond::TermsAndConditions,
     twin::TwinIp,
 };
 use pallet_timestamp;
@@ -115,6 +116,8 @@ parameter_types! {
     pub const MaxFarmPublicIps: u32 = 512;
 }
 
+pub(crate) type TestTermsAndConditions = TermsAndConditions<Test>;
+
 pub(crate) type TestTwinIp = TwinIp<Test>;
 pub(crate) type TestFarmName = FarmName<Test>;
 pub(crate) type TestPublicIP = PublicIP<Test>;
@@ -138,6 +141,7 @@ impl pallet_tfgrid::Config for Test {
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Test>;
     type NodeChanged = NodeChanged;
+    type TermsAndConditions = TestTermsAndConditions;
     type TwinIp = TestTwinIp;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;

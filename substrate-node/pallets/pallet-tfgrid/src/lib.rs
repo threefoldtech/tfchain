@@ -36,6 +36,7 @@ pub mod interface;
 pub mod node;
 pub mod pub_config;
 pub mod pub_ip;
+pub mod terms_cond;
 pub mod twin;
 
 // Definition of the pallet logic, to be aggregated at runtime definition
@@ -221,15 +222,13 @@ pub mod pallet {
     pub type FarmingPoliciesMap<T: Config> =
         StorageMap<_, Blake2_128Concat, u32, types::FarmingPolicy<T::BlockNumber>, ValueQuery>;
 
+    // Concrete type for location
+    pub type TermsAndConditionsOf<T> = <T as Config>::TermsAndConditions;
+
     #[pallet::storage]
     #[pallet::getter(fn users_terms_and_condition)]
-    pub type UsersTermsAndConditions<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        T::AccountId,
-        Vec<types::TermsAndConditions<T::AccountId>>,
-        OptionQuery,
-    >;
+    pub type UsersTermsAndConditions<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, Vec<TermsAndConditionsOf<T>>, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn allowed_node_certifiers)]
@@ -287,6 +286,15 @@ pub mod pallet {
             super::InterfaceOf<Self>,
             super::SerialNumberOf<Self>,
         >;
+
+        /// The type of terms and conditions.
+        type TermsAndConditions: FullCodec
+            + Debug
+            + PartialEq
+            + Clone
+            + TypeInfo
+            + TryFrom<(Self::AccountId, u64, Vec<u8>, Vec<u8>), Error = Error<Self>>
+            + MaxEncodedLen;
 
         /// The type of a twin IP.
         type TwinIp: FullCodec
@@ -590,6 +598,13 @@ pub mod pallet {
         SerialNumberTooShort,
         SerialNumberTooLong,
         InvalidSerialNumber,
+
+        DocumentLinkInputToShort,
+        DocumentLinkInputToLong,
+        InvalidDocumentLinkInput,
+        DocumentHashInputToShort,
+        DocumentHashInputToLong,
+        InvalidDocumentHashInput,
     }
 
     #[pallet::genesis_config]
@@ -1742,12 +1757,12 @@ pub mod pallet {
             let account_id = ensure_signed(origin)?;
             let timestamp = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
-            let t_and_c = types::TermsAndConditions {
-                account_id: account_id.clone(),
+            let t_and_c = Self::get_terms_and_conditions(
+                account_id.clone(),
                 timestamp,
                 document_link,
                 document_hash,
-            };
+            )?;
 
             let mut users_terms_and_condition =
                 UsersTermsAndConditions::<T>::get(account_id.clone()).unwrap_or(vec![]);
@@ -2197,6 +2212,22 @@ impl<T: Config> Pallet<T> {
         let ip = TwinIpOf::<T>::try_from(ip.to_vec()).map_err(DispatchErrorWithPostInfo::from)?;
 
         Ok(ip)
+    }
+
+    fn get_terms_and_conditions(
+        account_id: T::AccountId,
+        timestamp: u64,
+        document_link: Vec<u8>,
+        document_hash: Vec<u8>,
+    ) -> Result<TermsAndConditionsOf<T>, Error<T>> {
+        let parsed_terms_cond = <T as Config>::TermsAndConditions::try_from((
+            account_id,
+            timestamp,
+            document_link,
+            document_hash,
+        ))?;
+
+        Ok(parsed_terms_cond)
     }
 
     fn get_public_config(config: pallet::PubConfigInput) -> Result<PubConfigOf<T>, Error<T>> {
