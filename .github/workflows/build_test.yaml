@@ -5,49 +5,37 @@ jobs:
     runs-on: [self-hosted, poc]
     container:
       image: ubuntu:latest
-      volumes:
-        - /home/coesensb/actions-runner/_work/cache/target:/root/cache/target
       env:
         DEBIAN_FRONTEND: noninteractive
     steps:
       - uses: actions/checkout@v3
-  
+
+      - name: Cache build
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            substrate-node/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+      
       - name: Prepare dependencies
         run: |
           apt-get update
-          apt-get install -y build-essential clang cmake curl libclang-dev librocksdb-dev lld lldb
+          apt-get install -y librocksdb-dev libclang-dev curl clang cmake lldb lld build-essential
           curl https://sh.rustup.rs -sSf | sh -s -- -y
           $HOME/.cargo/bin/rustup update nightly-2022-05-11
-
-      - name: Restore cache build
-        run: |
-          mkdir -p /__w/tfchain/tfchain/substrate-node/target
-          if [ -d "/root/cache/target" ]
-          then
-            cp -r /root/cache/target/* /__w/tfchain/tfchain/substrate-node/target/
-          fi
-
-          mkdir /root/.cargo
-          if [ -d "/root/cache/.cargo" ] 
-          then
-            cp -r /root/cache/.cargo/* /root/.cargo/
-          fi
-
+  
       - name: Build
         run: |
           cd substrate-node
           $HOME/.cargo/bin/rustup target add wasm32-unknown-unknown --toolchain nightly-2022-05-11
           $HOME/.cargo/bin/cargo +nightly-2022-05-11 build --release
-      
+
       - name: Unit tests
         run: |
           cd substrate-node
           $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
-          cd pallets
-          $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
-
-      - name: Cache
-        run: |
-          cp -r /__w/tfchain/tfchain/substrate-node/target /root/cache/
-          cp -r /root/.cargo /root/cache/
-
