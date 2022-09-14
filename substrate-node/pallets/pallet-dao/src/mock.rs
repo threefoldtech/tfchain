@@ -23,6 +23,10 @@ use tfchain_support::{traits::ChangeNode, types::Node};
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
+// set environment variable RUST_LOG=debug to see all logs when running the tests and call
+// env_logger::init() at the beginning of the test
+use env_logger;
+
 // Configure a mock runtime to test the pallet.
 construct_runtime!(
     pub enum Test where
@@ -196,6 +200,7 @@ pub(crate) fn get_twin_ip(twin_ip_input: &[u8]) -> TestTwinIp {
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
+    let _ = env_logger::try_init();
     let mut t = frame_system::GenesisConfig::default()
         .build_storage::<Test>()
         .unwrap();

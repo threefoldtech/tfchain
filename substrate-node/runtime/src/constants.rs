@@ -71,6 +71,7 @@ pub mod fee {
     impl WeightToFeePolynomial for WeightToFeeStruct {
         type Balance = Balance;
         fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
+            log::info!("I'm here!");
             // in Westend, extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
             let p = super::currency::CENTS;
             let q = 10 * Balance::from(ExtrinsicBaseWeight::get());
@@ -91,12 +92,13 @@ mod tests {
     use crate::MaximumBlockWeight;
     use frame_support::weights::constants::ExtrinsicBaseWeight;
     use frame_support::weights::WeightToFee;
-
+    
     #[test]
     // This function tests that the fee for `MaximumBlockWeight` of weight is correct
     fn full_block_fee_is_correct() {
         // A full block should cost 23.3112 DOLLARS
         log::info!("MaxBlockWeight: {:?}", MaximumBlockWeight::get());
+
         let x = WeightToFeeStruct::weight_to_fee(&MaximumBlockWeight::get());
         let y = 2331120 * MILLICENTS;
         assert!(x.max(y) - x.min(y) < MILLICENTS);
