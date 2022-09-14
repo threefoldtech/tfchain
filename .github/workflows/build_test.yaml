@@ -23,12 +23,9 @@ jobs:
       - name: Prepare dependencies
         run: |
           apt-get update
-          apt-get install -y librocksdb-dev libclang-dev curl clang cmake lldb lld build-essential
-      - name: Install rust
-        run: |
+          apt-get install -y build-essential clang cmake curl ldb libclang-dev librocksdb-dev lld
           curl https://sh.rustup.rs -sSf | sh -s -- -y
-      - name: Install nightly
-        run: $HOME/.cargo/bin/rustup update nightly-2022-05-11
+          $HOME/.cargo/bin/rustup update nightly-2022-05-11
       - name: Build
         run: |
           cd substrate-node
