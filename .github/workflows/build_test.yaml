@@ -6,26 +6,17 @@ jobs:
     container:
       image: ubuntu:latest
       volumes:
-        - /home/coesensb/actions-runner/_work/cargo/bin:/root/.cargo/bin
-        - /home/coesensb/actions-runner/_work/cargo/registry/index:/root/.cargo/registry/index
-        - /home/coesensb/actions-runner/_work/cargo/registry/cache:/root/.cargo/registry/cache
-        - /home/coesensb/actions-runner/_work/cargo/git/db:/root/.cargo/git/db
-        - /home/coesensb/actions-runner/_work/target:/__w/tfchain/tfchain/substrate-node/target
+        - /home/coesensb/actions-runner/_work/.cargo:/root/.cargo
+        - /home/coesensb/actions-runner/_work/cache/target:/root/cache/target
       env:
         DEBIAN_FRONTEND: noninteractive
     steps:
       - uses: actions/checkout@v3
-      - name: Cache build
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            substrate-node/target/            
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+      - name: Restore cache build
+        run: |
+          mkdir -p /__w/tfchain/tfchain/substrate-node/target"
+          cp -r /root/cache/target/* /__w/tfchain/tfchain/substrate-node/target/"
+      
       - name: Prepare dependencies
         run: |
           apt-get update
@@ -37,6 +28,7 @@ jobs:
           cd substrate-node
           $HOME/.cargo/bin/rustup target add wasm32-unknown-unknown --toolchain nightly-2022-05-11
           $HOME/.cargo/bin/cargo +nightly-2022-05-11 build --release
+          cp -r /__w/tfchain/tfchain/substrate-node/target /root/cache/target
       - name: Unit tests
         run: |
           cd substrate-node
