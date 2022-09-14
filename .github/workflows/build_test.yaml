@@ -22,9 +22,9 @@ jobs:
       - name: Restore cache build
         run: |
           mkdir -p /__w/tfchain/tfchain/substrate-node/target"
-          cp -r /root/cache/target/* /__w/tfchain/tfchain/substrate-node/target/"
+          [ -d "/root/cache/target" ] && cp -r /root/cache/target/* /__w/tfchain/tfchain/substrate-node/target/"
           mkdir /root/.cargo
-          cp -r /root/cache/.cargo/* /root/.cargo/
+          [ -d "/root/cache/.cargo" ] && cp -r /root/cache/.cargo/* /root/.cargo/
 
       - name: Build
         run: |
