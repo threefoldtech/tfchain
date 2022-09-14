@@ -5,6 +5,12 @@ jobs:
     runs-on: [self-hosted, poc]
     container:
       image: ubuntu:latest
+      volumes:
+        - .cargo/bin:/root/.cargo/bin
+        - .cargo/registry/index:/root/.cargo/registry/index
+        - .cargo/registry/cache:/root/.cargo/registry/cache
+        - .cargo/git/db:/root/.cargo/git/db
+        - .target:/__w/tfchain/tfchain/substrate-node/target
       env:
         DEBIAN_FRONTEND: noninteractive
     steps:
