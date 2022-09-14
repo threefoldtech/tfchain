@@ -34,7 +34,7 @@ jobs:
           cd substrate-node
           $HOME/.cargo/bin/rustup target add wasm32-unknown-unknown --toolchain nightly-2022-05-11
           $HOME/.cargo/bin/cargo +nightly-2022-05-11 build --release
-      - name: Test
+      - name: Unit tests
         run: |
           cd substrate-node
           $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
