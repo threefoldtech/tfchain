@@ -23,7 +23,7 @@ jobs:
       - name: Prepare dependencies
         run: |
           apt-get update
-          apt-get install -y build-essential clang cmake curl ldb libclang-dev librocksdb-dev lld
+          apt-get install -y build-essential clang cmake curl libclang-dev librocksdb-dev lld lldb
           curl https://sh.rustup.rs -sSf | sh -s -- -y
           $HOME/.cargo/bin/rustup update nightly-2022-05-11
       - name: Build
