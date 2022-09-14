@@ -6,35 +6,41 @@ jobs:
     container:
       image: ubuntu:latest
       volumes:
-        - /home/coesensb/actions-runner/_work/.cargo:/root/.cargo
         - /home/coesensb/actions-runner/_work/cache/target:/root/cache/target
       env:
         DEBIAN_FRONTEND: noninteractive
     steps:
       - uses: actions/checkout@v3
-      - name: Restore cache build
-        run: |
-          mkdir -p /__w/tfchain/tfchain/substrate-node/target"
-          cp -r /root/cache/target/* /__w/tfchain/tfchain/substrate-node/target/"
-      
+  
       - name: Prepare dependencies
         run: |
           apt-get update
           apt-get install -y build-essential clang cmake curl libclang-dev librocksdb-dev lld lldb
           curl https://sh.rustup.rs -sSf | sh -s -- -y
           $HOME/.cargo/bin/rustup update nightly-2022-05-11
+
+      - name: Restore cache build
+        run: |
+          mkdir -p /__w/tfchain/tfchain/substrate-node/target"
+          cp -r /root/cache/target/* /__w/tfchain/tfchain/substrate-node/target/"
+          mkdir /root/.cargo
+          cp -r /root/cache/.cargo/* /root/.cargo/
+
       - name: Build
         run: |
           cd substrate-node
           $HOME/.cargo/bin/rustup target add wasm32-unknown-unknown --toolchain nightly-2022-05-11
           $HOME/.cargo/bin/cargo +nightly-2022-05-11 build --release
+      
       - name: Unit tests
         run: |
           cd substrate-node
           $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
           cd pallets
           $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
+
       - name: Cache
         run: |
           cp -r /__w/tfchain/tfchain/substrate-node/target /root/cache/
+          cp -r /root/.cargo /root/cache/
 
