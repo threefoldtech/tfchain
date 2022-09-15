@@ -21,7 +21,7 @@ jobs:
             substrate-node/target/
           key: ${{ runner.os }}-tfchain-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-tfchain-cargo-
-      
+
  
       - name: Build
         run: |
