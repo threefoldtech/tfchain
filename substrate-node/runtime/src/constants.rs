@@ -71,7 +71,6 @@ pub mod fee {
     impl WeightToFeePolynomial for WeightToFeeStruct {
         type Balance = Balance;
         fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-            log::info!("I'm here!");
             // in Westend, extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
             let p = super::currency::CENTS;
             let q = 10 * Balance::from(ExtrinsicBaseWeight::get());
