@@ -1,5 +1,9 @@
 name: Build and Test
-on: [pull_request]
+on: 
+  push:
+    branches:
+      - development
+  pull_request:
 jobs:
   build-and-test:
     runs-on: [self-hosted, poc]
