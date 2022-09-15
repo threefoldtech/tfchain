@@ -19,8 +19,8 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             substrate-node/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          key: ${{ runner.os }}-tfchain-cargo-
+          restore-keys: ${{ runner.os }}-tfchain-cargo-
       
       - name: Prepare dependencies
         run: |
