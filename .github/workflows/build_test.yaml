@@ -4,7 +4,7 @@ jobs:
   build-and-test:
     runs-on: [self-hosted, poc]
     container:
-      image: ubuntu:latest
+      image: threefolddev/tfchain:0
       env:
         DEBIAN_FRONTEND: noninteractive
     steps:
@@ -19,16 +19,10 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             substrate-node/target/
-          key: ${{ runner.os }}-tfchain-cargo-
+          key: ${{ runner.os }}-tfchain-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-tfchain-cargo-
       
-      - name: Prepare dependencies
-        run: |
-          apt-get update
-          apt-get install -y librocksdb-dev libclang-dev curl clang cmake lldb lld build-essential
-          curl https://sh.rustup.rs -sSf | sh -s -- -y
-          $HOME/.cargo/bin/rustup update nightly-2022-05-11
-  
+ 
       - name: Build
         run: |
           cd substrate-node
