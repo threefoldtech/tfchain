@@ -6,7 +6,7 @@ Library          TfChainClient.py
 
 *** Test Cases ***
 Test Setup Then Tear Down
-    Setup Multi Node Network
+    Setup Multi Node Network  amt=4
 
     # Setup for billing
     Setup Alice

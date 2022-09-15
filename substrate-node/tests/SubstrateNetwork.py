@@ -5,6 +5,7 @@ import os
 from os.path import dirname, isdir, isfile, join
 import re
 from shutil import rmtree
+import signal
 from socket import timeout
 import subprocess
 import tempfile
@@ -20,6 +21,8 @@ TIMEOUT_STARTUP_IN_SECONDS = 600
 TIMEOUT_TERMINATE_IN_SECONDS = 1
 
 OUTPUT_TESTS = os.environ.get("TEST_OUTPUT_DIR", join(os.getcwd(), "_output_tests"))
+PREDEFINED_ACCOUNTS = ["alice", "bob", "charlie", "dave", "eve", "ferdie"]
+
 
 def wait_till_node_ready(log_file, timeout_in_seconds=TIMEOUT_STARTUP_IN_SECONDS):
     start = datetime.now()
@@ -85,14 +88,28 @@ class SubstrateNetwork:
         if len(self._nodes) > 0:
             self.tear_down_multi_node_network()
     
-    def setup_multi_node_network(self):
+    def setup_multi_node_network(self, amt=2):
+        assert amt >=2, "more then 2 nodes required for a multi node network"
+        assert amt <= len(PREDEFINED_ACCOUNTS), "maximum amount of nodes reached"
+        
+        port = 30333
+        ws_port = 9945
+        rpc_port = 9933
         log_file_alice = join(OUTPUT_TESTS, "node_alice.log")
-        self._nodes["alice"] = run_node(log_file_alice, "/tmp/alice", "alice", 30333, 9945, 9933, "0000000000000000000000000000000000000000000000000000000000000001")
+        self._nodes["alice"] = run_node(log_file_alice, "/tmp/alice", "alice", port, ws_port, rpc_port, node_key="0000000000000000000000000000000000000000000000000000000000000001")
         wait_till_node_ready(log_file_alice)
         
-        log_file_bob = join(OUTPUT_TESTS, "node_bob.log")
-        self._nodes["bob"] = run_node(log_file_bob, "/tmp/bob", "bob", 30334, 9946, 9934, node_key=None, bootnodes="/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp")
-        wait_till_node_ready(log_file_bob)
+        log_file = ""
+        for x in range(1, amt):
+            port += 1
+            ws_port += 1
+            rpc_port += 1
+            name = PREDEFINED_ACCOUNTS[x]
+            log_file = join(OUTPUT_TESTS, f"node_{name}.log")
+            self._nodes[name] = run_node(log_file, f"/tmp/{name}", name, port, ws_port, rpc_port, node_key=None, bootnodes="/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp")
+        
+        wait_till_node_ready(log_file)
+        logging.info("Network is up and running.")
 
     def tear_down_multi_node_network(self):
         for (account, (process, log_file)) in self._nodes.items():
@@ -103,22 +120,30 @@ class SubstrateNetwork:
             logging.info("Node for %s has terminated.", account)
             if log_file is not None:
                 log_file.close()
+        self._nodes = {}
+        logging.info("Teardown network completed!")
     
 
 
 def main():
-    parser = argparse.ArgumentParser(description='TODO')
+    parser = argparse.ArgumentParser(description="This tool allows you to start a multi node network.")
 
+    parser.add_argument("--amount", required=False, type=int, default=2, help=f"The amount of nodes to start. Should be minimum 2 and maximum {len(PREDEFINED_ACCOUNTS)}")
     args = parser.parse_args()
 
     logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.DEBUG)
 
-    network = substrate_network()
-    network.setup_multi_node_network()   
-    time.sleep(60)
-    network.tear_down_multi_node_network()
+    network = SubstrateNetwork()
+    network.setup_multi_node_network(args.amount)
     
+    def handler(signum, frame):
+        network.tear_down_multi_node_network()
+        exit(0)
     
+    signal.signal(signal.SIGINT, handler)
+    logging.info("Press Ctrl-c to teardown the network.")
+    while True:
+        time.sleep(0.1)
 
 if __name__ == "__main__":
     main()
