@@ -34,6 +34,7 @@ pub mod types;
 pub mod farm;
 pub mod interface;
 pub mod node;
+pub mod geo;
 pub mod pub_config;
 pub mod pub_ip;
 pub mod terms_cond;
@@ -168,6 +169,7 @@ pub mod pallet {
     // Input type for resources
     pub type ResourcesInput = Resources;
 
+    // Concrete type for node
     pub type TfgridNode<T> = Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>;
 
     #[pallet::storage]
@@ -594,6 +596,7 @@ pub mod pallet {
         CityNameTooShort,
         CityNameTooLong,
         InvalidCityName,
+        InvalidCountryCityPair,
 
         SerialNumberTooShort,
         SerialNumberTooLong,

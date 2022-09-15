@@ -1,4 +1,4 @@
-use crate::{Config, Error};
+use crate::{geo, Config, Error};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
@@ -53,7 +53,11 @@ impl<T: Config> TryFrom<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>)> for Location<T> {
         );
         let city: BoundedVec<u8, ConstU32<MAX_CITY_NAME_LENGTH>> =
             BoundedVec::try_from(value.0).map_err(|_| Self::Error::CityNameTooLong)?;
-        ensure!(validate_city_name(&city), Self::Error::InvalidCityName);
+        let city_str = core::str::from_utf8(&city);
+        ensure!(
+            validate_city_name(&city) && city_str.is_ok(),
+            Self::Error::InvalidCityName
+        );
 
         // 2. country name
         ensure!(
@@ -62,9 +66,16 @@ impl<T: Config> TryFrom<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>)> for Location<T> {
         );
         let country: BoundedVec<u8, ConstU32<MAX_COUNTRY_NAME_LENGTH>> =
             BoundedVec::try_from(value.1).map_err(|_| Self::Error::CountryNameTooLong)?;
+        let country_str = core::str::from_utf8(&country);
         ensure!(
-            validate_country_name(&country),
+            validate_country_name(&country) && country_str.is_ok(),
             Self::Error::InvalidCountryName
+        );
+
+        // Check if [country][city] pair exists in data base
+        ensure!(
+            geo::validate_country_city(country_str.unwrap(), city_str.unwrap()),
+            Self::Error::InvalidCountryCityPair
         );
 
         // 3. latitude
@@ -128,14 +139,14 @@ fn validate_city_name(input: &[u8]) -> bool {
     // TODO: find better alternative
     input
         .iter()
-        .all(|c| c.is_ascii_alphabetic() || c.is_ascii_whitespace())
+        .all(|c| c.is_ascii_alphabetic() || c.is_ascii_whitespace() || matches!(c, b'-'))
 }
 
 fn validate_country_name(input: &[u8]) -> bool {
     // TODO: find better alternative
     input
         .iter()
-        .all(|c| c.is_ascii_alphabetic() || c.is_ascii_whitespace())
+        .all(|c| c.is_ascii_alphabetic() || c.is_ascii_whitespace() || matches!(c, b'-'))
 }
 
 fn validate_latitude_input(input: &[u8]) -> bool {

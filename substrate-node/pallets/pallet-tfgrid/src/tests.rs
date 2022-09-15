@@ -1,6 +1,6 @@
 use super::Event as TfgridEvent;
 use crate::{
-    mock::Event as MockEvent, mock::*, types::PublicIpInput, Error, InterfaceInput,
+    geo, mock::Event as MockEvent, mock::*, types::PublicIpInput, Error, InterfaceInput,
     InterfaceIpsInput, PublicIpListInput,
 };
 use frame_support::{assert_noop, assert_ok, bounded_vec, BoundedVec};
@@ -1947,6 +1947,37 @@ fn test_set_invalid_zos_version_fails() {
             TfgridModule::set_zos_version(RawOrigin::Root.into(), TfgridModule::zos_version()),
             Error::<TestRuntime>::InvalidZosVersion,
         );
+    })
+}
+
+#[test]
+fn test_validate_country_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_eq!(geo::validate_country("Brazil"), true);
+        assert_eq!(geo::validate_country("Belgium"), true);
+        assert_eq!(geo::validate_country("Egypt"), true);
+
+        assert_eq!(geo::validate_country("Utopia"), false);
+        assert_eq!(geo::validate_country("Dreamland"), false);
+    })
+}
+
+#[test]
+fn test_validate_country_city_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_eq!(geo::validate_country_city("Brazil", "Rio de Janeiro"), true);
+        assert_eq!(geo::validate_country_city("Belgium", "Ghent"), true);
+        assert_eq!(geo::validate_country_city("Egypt", "Cairo"), true);
+        assert_eq!(
+            geo::validate_country_city("United States", "Los Angeles"),
+            true
+        );
+
+        assert_eq!(
+            geo::validate_country_city("United States", "Ghotam City"),
+            false
+        );
+        assert_eq!(geo::validate_country_city("Dreamland", "Dreamcity"), false);
     })
 }
 
