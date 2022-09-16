@@ -88,14 +88,18 @@ class SubstrateNetwork:
         if len(self._nodes) > 0:
             self.tear_down_multi_node_network()
     
-    def setup_multi_node_network(self, amt=2):
+    def setup_multi_node_network(self, log_name="", amt=2):
         assert amt >=2, "more then 2 nodes required for a multi node network"
         assert amt <= len(PREDEFINED_ACCOUNTS), "maximum amount of nodes reached"
+        
+        output_dir_network = join(OUTPUT_TESTS, log_name)
+        
+        rmtree(output_dir_network, ignore_errors=True)
         
         port = 30333
         ws_port = 9945
         rpc_port = 9933
-        log_file_alice = join(OUTPUT_TESTS, "node_alice.log")
+        log_file_alice = join(output_dir_network, "node_alice.log")
         self._nodes["alice"] = run_node(log_file_alice, "/tmp/alice", "alice", port, ws_port, rpc_port, node_key="0000000000000000000000000000000000000000000000000000000000000001")
         wait_till_node_ready(log_file_alice)
         
@@ -105,7 +109,7 @@ class SubstrateNetwork:
             ws_port += 1
             rpc_port += 1
             name = PREDEFINED_ACCOUNTS[x]
-            log_file = join(OUTPUT_TESTS, f"node_{name}.log")
+            log_file = join(output_dir_network, f"node_{name}.log")
             self._nodes[name] = run_node(log_file, f"/tmp/{name}", name, port, ws_port, rpc_port, node_key=None, bootnodes="/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp")
         
         wait_till_node_ready(log_file)
