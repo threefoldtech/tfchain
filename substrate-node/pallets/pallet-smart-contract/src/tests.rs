@@ -1181,6 +1181,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
 fn test_node_contract_billing_fails() {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
+        // Creates a farm and node and sets the price of tft to 0 which raises an error later
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
 
@@ -1211,10 +1212,6 @@ fn test_node_contract_billing_fails() {
                 .write()
                 .should_call_bill_contract(1, 11 + i, Ok(()));
             run_to_block(12 + i, Some(&mut pool_state));
-            
-            let failed_contract_ids = SmartContractModule::get_failed_contract_ids_from_storage();
-            assert_eq!(failed_contract_ids.len(), 1);
-            assert_eq!(failed_contract_ids[0], contract_id);
         }
     });
 }
@@ -1466,49 +1463,6 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
 
         let c1 = SmartContractModule::contracts(1);
         assert_eq!(c1, None);
-    });
-}
-
-#[test]
-fn test_unauthorized_billing() {
-    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
-    ext.execute_with(|| {
-        prepare_farm_and_node();
-        
-        // remove Bob from the allowed origin as we are using bob to send bill transactions in our mock
-        assert_ok!(SmartContractModule::remove_allowed_origin(RawOrigin::Root.into(), bob()));
-
-        run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
-
-        assert_ok!(SmartContractModule::create_node_contract(
-            Origin::signed(bob()),
-            1,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            0,
-            None
-        ));
-
-        push_contract_resources_used(1);
-
-        // billing should fail as bob is not allowed to send the transaction
-        pool_state.write().should_call_bill_contract(1, 11, Err(()));
-        run_to_block(12, Some(&mut pool_state));
-
-        // failed billings should be retried on next block
-        let failed_contract_ids = SmartContractModule::get_failed_contract_ids_from_storage();
-        assert_eq!(failed_contract_ids.len(), 1);
-        assert_eq!(failed_contract_ids[0], 1);
-
-        // add bob back to the allowed origin
-        assert_ok!(SmartContractModule::add_allowed_origin(RawOrigin::Root.into(), bob()));
-        pool_state.write().should_call_bill_contract(1, 12, Ok(()));
-        run_to_block(13, Some(&mut pool_state));
-
-        // failed contracts should be empty now
-        let failed_contract_ids = SmartContractModule::get_failed_contract_ids_from_storage();
-        assert_eq!(failed_contract_ids.len(), 0);
     });
 }
 
@@ -2518,12 +2472,6 @@ fn calculate_tft_cost(contract_id: u64, twin_id: u32, blocks: u64) -> (u64, type
     (amount_due, discount_received)
 }
 
-pub fn add_allowed_origin() {
-    SmartContractModule::add_allowed_origin(RawOrigin::Root.into(), alice()).unwrap();
-    SmartContractModule::add_allowed_origin(RawOrigin::Root.into(), bob()).unwrap();
-    SmartContractModule::add_allowed_origin(RawOrigin::Root.into(), charlie()).unwrap();
-}
-
 pub fn prepare_twins() {
     create_twin(alice());
     create_twin(bob());
@@ -2629,11 +2577,7 @@ pub fn prepare_farm_and_node() {
         "some_serial".as_bytes().to_vec(),
     )
     .unwrap();
-
-    add_allowed_origin();
 }
-
-
 
 pub fn prepare_dedicated_farm_and_node() {
     TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
@@ -2671,8 +2615,6 @@ pub fn prepare_dedicated_farm_and_node() {
         "some_serial".as_bytes().to_vec(),
     )
     .unwrap();
-    
-    add_allowed_origin();
 }
 
 pub fn create_twin(origin: AccountId) {
