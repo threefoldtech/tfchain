@@ -4,10 +4,10 @@ pub trait Tfgrid<AccountId, Name, PublicIP> {
     fn is_twin_owner(twin_id: u32, who: AccountId) -> bool;
 }
 
-pub trait ChangeNode<Rsrc, Loc, PubConf, If, Serial> {
+pub trait ChangeNode<Loc, PubConf, If, Serial> {
     fn node_changed(
-        node: Option<&super::types::Node<Rsrc, Loc, PubConf, If, Serial>>,
-        new_node: &super::types::Node<Rsrc, Loc, PubConf, If, Serial>,
+        node: Option<&super::types::Node<Loc, PubConf, If, Serial>>,
+        new_node: &super::types::Node<Loc, PubConf, If, Serial>,
     );
-    fn node_deleted(node: &super::types::Node<Rsrc, Loc, PubConf, If, Serial>);
+    fn node_deleted(node: &super::types::Node<Loc, PubConf, If, Serial>);
 }

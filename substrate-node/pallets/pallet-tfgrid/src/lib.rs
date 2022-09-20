@@ -13,8 +13,10 @@ use frame_system::{self as system, ensure_signed};
 use hex::FromHex;
 use pallet_timestamp as timestamp;
 use sp_runtime::SaturatedConversion;
-use tfchain_support::types::PublicIP;
-use tfchain_support::types::{Interface, Node, PublicConfig, IP};
+use tfchain_support::{
+    resources::Resources,
+    types::{Interface, Node, PublicConfig, PublicIP, IP},
+};
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
@@ -167,15 +169,9 @@ pub mod pallet {
 
     // Input type for resources
     pub type ResourcesInput = (u64, u64, u64, u64);
-    // Concrete type for location
-    pub type ResourcesOf<T> = <T as Config>::Resources;
-
-    pub type TfgridResources<T> = node::Resources<T>;
-    pub trait TfgridCapacity = node::Capacity;
 
     // Concrete type for node
-    pub type TfgridNode<T> =
-        Node<ResourcesOf<T>, LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>;
+    pub type TfgridNode<T> = Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>;
 
     #[pallet::storage]
     #[pallet::getter(fn nodes)]
@@ -288,7 +284,6 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
 
         type NodeChanged: ChangeNode<
-            super::ResourcesOf<Self>,
             super::LocationOf<Self>,
             super::PubConfigOf<Self>,
             super::InterfaceOf<Self>,
@@ -422,16 +417,6 @@ pub mod pallet {
             + TypeInfo
             + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
-
-        /// The type of resources.
-        type Resources: FullCodec
-            + Debug
-            + PartialEq
-            + Clone
-            + TypeInfo
-            + TryFrom<(u64, u64, u64, u64), Error = Error<Self>>
-            + MaxEncodedLen
-            + node::Capacity;
 
         /// The type of a location.
         type Location: FullCodec
@@ -2069,7 +2054,6 @@ pub mod pallet {
     }
 }
 
-use crate::node::Capacity;
 use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 // Internal functions of the pallet
 impl<T: Config> Pallet<T> {
@@ -2277,13 +2261,18 @@ impl<T: Config> Pallet<T> {
         Ok(pub_config)
     }
 
-    pub fn get_resources(resources: pallet::ResourcesInput) -> Result<ResourcesOf<T>, Error<T>> {
-        let parsed_resources = <T as Config>::Resources::try_from((
-            resources.0,
-            resources.1,
-            resources.2,
-            resources.3,
-        ))?;
+    pub fn get_resources(resources: pallet::ResourcesInput) -> Result<Resources, Error<T>> {
+        let parsed_resources = Resources {
+            hru: resources.0,
+            sru: resources.1,
+            cru: resources.2,
+            mru: resources.3,
+        };
+
+        ensure!(parsed_resources.validate_hru(), Error::<T>::InvalidHRUInput);
+        ensure!(parsed_resources.validate_sru(), Error::<T>::InvalidSRUInput);
+        ensure!(parsed_resources.validate_cru(), Error::<T>::InvalidCRUInput);
+        ensure!(parsed_resources.validate_mru(), Error::<T>::InvalidMRUInput);
 
         Ok(parsed_resources)
     }

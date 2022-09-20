@@ -5,7 +5,6 @@ use crate::types;
 use crate::types::{Contract, ContractBillingInformation};
 use crate::Config;
 use frame_support::dispatch::DispatchErrorWithPostInfo;
-use pallet_tfgrid::node::Capacity;
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use sp_runtime::Percent;
 use sp_runtime::SaturatedConversion;
@@ -90,15 +89,8 @@ impl<T: Config> Contract<T> {
                 }
                 let node = pallet_tfgrid::Nodes::<T>::get(rent_contract.node_id).unwrap();
 
-                let node_resources = Resources {
-                    hru: node.resources.get_hru(),
-                    sru: node.resources.get_sru(),
-                    cru: node.resources.get_cru(),
-                    mru: node.resources.get_mru(),
-                };
-
                 let contract_cost = calculate_resources_cost::<T>(
-                    node_resources,
+                    node.resources,
                     0,
                     seconds_elapsed,
                     &pricing_policy,

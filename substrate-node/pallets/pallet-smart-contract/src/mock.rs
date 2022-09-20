@@ -11,7 +11,7 @@ use frame_system::EnsureRoot;
 use pallet_tfgrid::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
-    node::{Location, Resources, SerialNumber},
+    node::{Location, SerialNumber},
     pub_config::{Domain, GW4, GW6, IP4, IP6},
     pub_ip::{GatewayIP, PublicIP},
     terms_cond::TermsAndConditions,
@@ -106,7 +106,6 @@ impl pallet_balances::Config for TestRuntime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<TestRuntime>;
 }
 
-pub(crate) type Rsrc = pallet_tfgrid::pallet::ResourcesOf<TestRuntime>;
 pub(crate) type Serial = pallet_tfgrid::pallet::SerialNumberOf<TestRuntime>;
 pub(crate) type Loc = pallet_tfgrid::pallet::LocationOf<TestRuntime>;
 pub(crate) type PubConfig = pallet_tfgrid::pallet::PubConfigOf<TestRuntime>;
@@ -115,7 +114,7 @@ pub(crate) type Interface = pallet_tfgrid::pallet::InterfaceOf<TestRuntime>;
 pub(crate) type TfgridNode = pallet_tfgrid::pallet::TfgridNode<TestRuntime>;
 
 pub struct NodeChanged;
-impl ChangeNode<Rsrc, Loc, PubConfig, Interface, Serial> for NodeChanged {
+impl ChangeNode<Loc, PubConfig, Interface, Serial> for NodeChanged {
     fn node_changed(_old_node: Option<&TfgridNode>, _new_node: &TfgridNode) {}
     fn node_deleted(node: &TfgridNode) {
         SmartContractModule::node_deleted(node);
@@ -146,7 +145,6 @@ pub(crate) type TestInterfaceName = InterfaceName<TestRuntime>;
 pub(crate) type TestInterfaceMac = InterfaceMac<TestRuntime>;
 pub(crate) type TestInterfaceIp = InterfaceIp<TestRuntime>;
 
-pub(crate) type TestResources = Resources<TestRuntime>;
 pub(crate) type TestLocation = Location<TestRuntime>;
 pub(crate) type TestSerialNumber = SerialNumber<TestRuntime>;
 
@@ -172,7 +170,6 @@ impl pallet_tfgrid::Config for TestRuntime {
     type InterfaceMac = TestInterfaceMac;
     type InterfaceIP = TestInterfaceIp;
     type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
-    type Resources = TestResources;
     type Location = TestLocation;
     type SerialNumber = TestSerialNumber;
 }

@@ -1,7 +1,7 @@
 use super::Event as TfgridEvent;
 use crate::{
     geo, mock::Event as MockEvent, mock::*, types::PublicIpInput, Error, InterfaceInput,
-    InterfaceIpsInput, PublicIpListInput, node::Capacity,
+    InterfaceIpsInput, PublicIpListInput,
 };
 use frame_support::{assert_noop, assert_ok, bounded_vec, BoundedVec};
 use frame_system::{EventRecord, Phase, RawOrigin};

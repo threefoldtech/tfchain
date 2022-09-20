@@ -3,6 +3,7 @@ use core::cmp::{Ord, Ordering, PartialOrd};
 use frame_support::{traits::ConstU32, BoundedVec};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
+use super::resources::Resources;
 
 #[derive(
     PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
@@ -69,7 +70,7 @@ pub struct FarmingPolicyLimit {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct Node<Resources, Location, PubConfig, If, SerialNumber> {
+pub struct Node<Location, PubConfig, If, SerialNumber> {
     pub version: u32,
     pub id: u32,
     pub farm_id: u32,
@@ -106,37 +107,6 @@ pub struct PublicConfig<IP4, IP6, Domain> {
 pub struct IP<IpAddr, Gw> {
     pub ip: IpAddr,
     pub gw: Gw,
-}
-
-#[derive(
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Clone,
-    Encode,
-    Decode,
-    Default,
-    Debug,
-    TypeInfo,
-    Copy,
-    MaxEncodedLen,
-)]
-pub struct Resources {
-    pub hru: u64,
-    pub sru: u64,
-    pub cru: u64,
-    pub mru: u64,
-}
-
-impl Resources {
-    pub fn add(mut self, other: &Resources) -> Resources {
-        self.cru += other.cru;
-        self.sru += other.sru;
-        self.hru += other.hru;
-        self.mru += other.mru;
-        self
-    }
 }
 
 // Store Location long and lat as string

@@ -18,7 +18,7 @@ use frame_support::{
 use frame_system::{self as system, ensure_signed};
 use pallet_tfgrid;
 use pallet_tfgrid::pallet::{
-    InterfaceOf, LocationOf, PubConfigOf, ResourcesOf, SerialNumberOf, TfgridNode,
+    InterfaceOf, LocationOf, PubConfigOf, SerialNumberOf, TfgridNode,
 };
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_timestamp as timestamp;
@@ -184,7 +184,6 @@ pub mod pallet {
         type GracePeriod: Get<u64>;
         type WeightInfo: WeightInfo;
         type NodeChanged: ChangeNode<
-            ResourcesOf<Self>,
             LocationOf<Self>,
             PubConfigOf<Self>,
             InterfaceOf<Self>,
@@ -1649,7 +1648,7 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config>
-    ChangeNode<ResourcesOf<T>, LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>
+    ChangeNode<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>
     for Pallet<T>
 {
     fn node_changed(_node: Option<&TfgridNode<T>>, _new_node: &TfgridNode<T>) {}

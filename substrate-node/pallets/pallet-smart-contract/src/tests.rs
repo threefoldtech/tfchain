@@ -14,7 +14,7 @@ use super::types;
 use crate::cost;
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use sp_std::convert::{TryFrom, TryInto};
-use tfchain_support::types::{FarmCertification, NodeCertification, PublicIP, Resources};
+use tfchain_support::{types::{FarmCertification, NodeCertification, PublicIP}, resources::Resources};
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 

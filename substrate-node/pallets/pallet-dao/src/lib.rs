@@ -5,9 +5,7 @@ use pallet_tfgrid::pallet::{
     InterfaceOf,
     LocationOf,
     PubConfigOf,
-    ResourcesOf,
     SerialNumberOf,
-    TfgridCapacity,
     TfgridNode,
 };
 use sp_runtime::traits::Hash;
@@ -83,7 +81,6 @@ pub mod pallet {
             SupportPublicIP<PublicIP<Self>, GatewayIP<Self>>,
         >;
         type NodeChanged: ChangeNode<
-            ResourcesOf<Self>,
             LocationOf<Self>,
             PubConfigOf<Self>,
             InterfaceOf<Self>,
@@ -526,7 +523,7 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config>
-    ChangeNode<ResourcesOf<T>, LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>
+    ChangeNode<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>
     for Pallet<T>
 {
     fn node_changed(old_node: Option<&TfgridNode<T>>, new_node: &TfgridNode<T>) {
