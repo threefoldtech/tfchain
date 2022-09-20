@@ -1,14 +1,13 @@
 use super::Event as TfgridEvent;
 use crate::{
     geo, mock::Event as MockEvent, mock::*, types::PublicIpInput, Error, InterfaceInput,
-    InterfaceIpsInput, PublicIpListInput,
+    InterfaceIpsInput, PublicIpListInput, node::Capacity,
 };
 use frame_support::{assert_noop, assert_ok, bounded_vec, BoundedVec};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
-use tfchain_support::resources;
 use tfchain_support::types::{
-    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, PublicConfig, Resources,
+    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, PublicConfig,
     IP,
 };
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
@@ -807,12 +806,11 @@ fn create_node_with_interfaces_works() {
         create_twin();
         create_farm();
 
-        let resources = Resources {
-            hru: 1024 * GIGABYTE,
-            sru: 512 * GIGABYTE,
-            cru: 8,
-            mru: 16 * GIGABYTE,
-        };
+        let hru = 1024 * GIGABYTE;
+        let sru = 512 * GIGABYTE;
+        let cru = 8;
+        let mru = 16 * GIGABYTE;
+        let resources = (hru, sru, cru, mru);
 
         // random location
         let city = b"Ghent";
@@ -820,6 +818,7 @@ fn create_node_with_interfaces_works() {
         let lat = b"12.233213231";
         let long = b"32.323112123";
         let loc = get_location(city, country, lat, long);
+        // TODO: doesn t make sense to call get_location for input purpose
         let location = (loc.city, loc.country, loc.latitude, loc.longitude);
 
         let mut interface_ips: InterfaceIpsInput<TestRuntime> = bounded_vec![];
@@ -1199,12 +1198,11 @@ fn create_node_with_same_pubkey_fails() {
         create_farm();
         create_node();
 
-        let resources = Resources {
-            hru: 1,
-            sru: 1,
-            cru: 1,
-            mru: 1,
-        };
+        let hru = 1;
+        let sru = 1;
+        let cru = 1;
+        let mru = 1;
+        let resources = (hru, sru, cru, mru);
 
         // random location
         let city = b"Ghent";
@@ -2086,12 +2084,11 @@ fn create_farm2() {
 }
 
 fn create_node() {
-    let resources = Resources {
-        hru: 1024 * GIGABYTE,
-        sru: 512 * GIGABYTE,
-        cru: 8,
-        mru: 16 * GIGABYTE,
-    };
+    let hru = 1024 * GIGABYTE;
+    let sru = 512 * GIGABYTE;
+    let cru = 8;
+    let mru = 16 * GIGABYTE;
+    let resources = (hru, sru, cru, mru);
 
     // random location
     let city = b"Ghent";
@@ -2118,12 +2115,11 @@ fn create_node() {
 }
 
 fn create_extra_node() {
-    let resources = Resources {
-        hru: 1024 * GIGABYTE,
-        sru: 512 * GIGABYTE,
-        cru: 8,
-        mru: 16 * GIGABYTE,
-    };
+    let hru = 1024 * GIGABYTE;
+    let sru = 512 * GIGABYTE;
+    let cru = 8;
+    let mru = 16 * GIGABYTE;
+    let resources = (hru, sru, cru, mru);
 
     // random location
     let city = b"Rio de Janeiro";
@@ -2291,8 +2287,8 @@ fn test_attach_farming_policy_flow(farming_policy_id: u32) {
 
     // Provide enough CU and SU limits to avoid attaching default policy to node
     // For node: [CU = 20; SU = 2]
-    assert_eq!(resources::get_cu(node.resources) <= limit.cu.unwrap(), true);
-    assert_eq!(resources::get_su(node.resources) <= limit.su.unwrap(), true);
+    assert_eq!(node.resources.get_cu() <= limit.cu.unwrap(), true);
+    assert_eq!(node.resources.get_su() <= limit.su.unwrap(), true);
 
     // Link farming policy to farm
     assert_ok!(TfgridModule::attach_policy_to_farm(

@@ -6,7 +6,7 @@ use pallet_tfgrid::types::PublicIpInput;
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Hash};
 use std::convert::TryInto;
-use tfchain_support::types::{FarmCertification, NodeCertification, Resources};
+use tfchain_support::types::{FarmCertification, NodeCertification};
 
 #[test]
 fn farmers_vote_no_farm_fails() {
@@ -789,12 +789,11 @@ pub fn prepare_twin(account_id: u64) {
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 fn prepare_node(account_id: u64, farm_id: u32) {
-    let resources = Resources {
-        hru: 1024 * GIGABYTE,
-        sru: 512 * GIGABYTE,
-        cru: 8,
-        mru: 16 * GIGABYTE,
-    };
+    let hru = 1024 * GIGABYTE;
+    let sru = 512 * GIGABYTE;
+    let cru = 8;
+    let mru = 16 * GIGABYTE;
+    let resources = (hru, sru, cru, mru);
 
     // random location
     let city = b"Ghent";
@@ -819,12 +818,11 @@ fn prepare_node(account_id: u64, farm_id: u32) {
 }
 
 fn prepare_big_node(account_id: u64, farm_id: u32) {
-    let resources = Resources {
-        hru: 20024 * GIGABYTE,
-        sru: 2024 * GIGABYTE,
-        cru: 16,
-        mru: 64 * GIGABYTE,
-    };
+    let hru = 1024 * GIGABYTE;
+    let sru = 512 * GIGABYTE;
+    let cru = 8;
+    let mru = 16 * GIGABYTE;
+    let resources = (hru, sru, cru, mru);
 
     // random location
     let city = b"Ghent";

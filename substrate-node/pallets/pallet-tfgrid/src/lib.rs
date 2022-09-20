@@ -1,4 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+#![feature(trait_alias)]
 
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
@@ -13,10 +14,7 @@ use hex::FromHex;
 use pallet_timestamp as timestamp;
 use sp_runtime::SaturatedConversion;
 use tfchain_support::types::PublicIP;
-use tfchain_support::{
-    resources,
-    types::{Interface, Node, PublicConfig, IP},
-};
+use tfchain_support::types::{Interface, Node, PublicConfig, IP};
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
@@ -32,9 +30,10 @@ pub mod weights;
 pub mod types;
 
 pub mod farm;
+pub mod geo;
+pub mod grid_migration;
 pub mod interface;
 pub mod node;
-pub mod geo;
 pub mod pub_config;
 pub mod pub_ip;
 pub mod terms_cond;
@@ -56,7 +55,7 @@ pub mod pallet {
         traits::ChangeNode,
         types::{
             Farm, FarmCertification, FarmingPolicyLimit, Interface, Node, NodeCertification,
-            PublicConfig, PublicIP, Resources, IP,
+            PublicConfig, PublicIP, IP,
         },
     };
 
@@ -167,10 +166,16 @@ pub mod pallet {
     pub type SerialNumberOf<T> = <T as Config>::SerialNumber;
 
     // Input type for resources
-    pub type ResourcesInput = Resources;
+    pub type ResourcesInput = (u64, u64, u64, u64);
+    // Concrete type for location
+    pub type ResourcesOf<T> = <T as Config>::Resources;
+
+    pub type TfgridResources<T> = node::Resources<T>;
+    pub trait TfgridCapacity = node::Capacity;
 
     // Concrete type for node
-    pub type TfgridNode<T> = Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>;
+    pub type TfgridNode<T> =
+        Node<ResourcesOf<T>, LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>;
 
     #[pallet::storage]
     #[pallet::getter(fn nodes)]
@@ -283,6 +288,7 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
 
         type NodeChanged: ChangeNode<
+            super::ResourcesOf<Self>,
             super::LocationOf<Self>,
             super::PubConfigOf<Self>,
             super::InterfaceOf<Self>,
@@ -416,6 +422,16 @@ pub mod pallet {
             + TypeInfo
             + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
+
+        /// The type of resources.
+        type Resources: FullCodec
+            + Debug
+            + PartialEq
+            + Clone
+            + TypeInfo
+            + TryFrom<(u64, u64, u64, u64), Error = Error<Self>>
+            + MaxEncodedLen
+            + node::Capacity;
 
         /// The type of a location.
         type Location: FullCodec
@@ -583,6 +599,11 @@ pub mod pallet {
         InvalidInterfaceIP,
         InvalidZosVersion,
         FarmingPolicyExpired,
+
+        InvalidHRUInput,
+        InvalidSRUInput,
+        InvalidCRUInput,
+        InvalidMRUInput,
 
         LatitudeInputToShort,
         LatitudeInputToLong,
@@ -1017,7 +1038,7 @@ pub mod pallet {
         pub fn create_node(
             origin: OriginFor<T>,
             farm_id: u32,
-            resources: Resources,
+            resources: ResourcesInput,
             location: LocationInput,
             interfaces: InterfaceInput<T>,
             secure_boot: bool,
@@ -1042,6 +1063,7 @@ pub mod pallet {
             let mut id = NodeID::<T>::get();
             id = id + 1;
 
+            let node_resources = Self::get_resources(resources)?;
             let node_location = Self::get_location(location)?;
             let node_interfaces = Self::get_interfaces(&interfaces)?;
             let node_serial_number = Self::get_serial_number(serial_number)?;
@@ -1053,7 +1075,7 @@ pub mod pallet {
                 id,
                 farm_id,
                 twin_id,
-                resources,
+                resources: node_resources,
                 location: node_location,
                 public_config: None,
                 created,
@@ -1090,7 +1112,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             node_id: u32,
             farm_id: u32,
-            resources: Resources,
+            resources: ResourcesInput,
             location: LocationInput,
             interfaces: Vec<pallet::InterfaceOf<T>>,
             secure_boot: bool,
@@ -1128,6 +1150,7 @@ pub mod pallet {
                 NodesByFarmID::<T>::insert(farm_id, nodes_by_farm);
             };
 
+            let node_resources = Self::get_resources(resources)?;
             // If the resources on a certified node changed, reset the certification level to DIY
             if stored_node.resources != resources
                 && stored_node.certification == NodeCertification::Certified
@@ -1143,7 +1166,7 @@ pub mod pallet {
             let node_serial_number = Self::get_serial_number(serial_number)?;
 
             stored_node.farm_id = farm_id;
-            stored_node.resources = resources;
+            stored_node.resources = node_resources;
             stored_node.location = node_location;
             stored_node.interfaces = interfaces;
             stored_node.secure_boot = secure_boot;
@@ -2046,17 +2069,13 @@ pub mod pallet {
     }
 }
 
+use crate::node::Capacity;
 use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 // Internal functions of the pallet
 impl<T: Config> Pallet<T> {
     pub fn verify_signature(signature: [u8; 64], target: &T::AccountId, payload: &Vec<u8>) -> bool {
-        if Self::verify_ed_signature(signature, target, payload) {
-            return true;
-        } else if Self::verify_sr_signature(signature, target, payload) {
-            return true;
-        }
-
-        false
+        Self::verify_ed_signature(signature, target, payload)
+            || Self::verify_sr_signature(signature, target, payload)
     }
 
     fn verify_ed_signature(signature: [u8; 64], target: &T::AccountId, payload: &Vec<u8>) -> bool {
@@ -2116,7 +2135,7 @@ impl<T: Config> Pallet<T> {
 
                 match limits.cu {
                     Some(cu_limit) => {
-                        let cu = resources::get_cu(node.resources);
+                        let cu = node.resources.get_cu();
                         if cu > cu_limit {
                             return Self::get_default_farming_policy();
                         }
@@ -2127,7 +2146,7 @@ impl<T: Config> Pallet<T> {
 
                 match limits.su {
                     Some(su_limit) => {
-                        let su = resources::get_su(node.resources);
+                        let su = node.resources.get_su();
                         if su > su_limit {
                             return Self::get_default_farming_policy();
                         }
@@ -2256,6 +2275,17 @@ impl<T: Config> Pallet<T> {
         }
 
         Ok(pub_config)
+    }
+
+    pub fn get_resources(resources: pallet::ResourcesInput) -> Result<ResourcesOf<T>, Error<T>> {
+        let parsed_resources = <T as Config>::Resources::try_from((
+            resources.0,
+            resources.1,
+            resources.2,
+            resources.3,
+        ))?;
+
+        Ok(parsed_resources)
     }
 
     fn get_location(location: pallet::LocationInput) -> Result<LocationOf<T>, Error<T>> {

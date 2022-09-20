@@ -2418,12 +2418,11 @@ pub fn prepare_farm_and_node() {
 
     prepare_farm(alice(), false);
 
-    let resources = Resources {
-        hru: 1024 * GIGABYTE,
-        sru: 512 * GIGABYTE,
-        cru: 8,
-        mru: 16 * GIGABYTE,
-    };
+    let hru = 1024 * GIGABYTE;
+    let sru = 512 * GIGABYTE;
+    let cru = 8;
+    let mru = 16 * GIGABYTE;
+    let resources = (hru, sru, cru, mru);
 
     // random location
     let city = b"Ghent";
@@ -2434,7 +2433,7 @@ pub fn prepare_farm_and_node() {
     let location = (loc.city, loc.country, loc.latitude, loc.longitude);
 
     let serial_number = get_serial_number(b"some_serial").0;
-    
+
     TfgridModule::create_node(
         Origin::signed(alice()),
         1,
@@ -2456,12 +2455,11 @@ pub fn prepare_dedicated_farm_and_node() {
 
     prepare_farm(alice(), true);
 
-    let resources = Resources {
-        hru: 1024 * GIGABYTE,
-        sru: 512 * GIGABYTE,
-        cru: 8,
-        mru: 16 * GIGABYTE,
-    };
+    let hru = 1024 * GIGABYTE;
+    let sru = 512 * GIGABYTE;
+    let cru = 8;
+    let mru = 16 * GIGABYTE;
+    let resources = (hru, sru, cru, mru);
 
     // random location
     let city = b"Ghent";

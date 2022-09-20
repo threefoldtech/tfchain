@@ -11,12 +11,12 @@ use sp_core::{ed25519, sr25519, Pair, Public, H256};
 
 use sp_std::prelude::*;
 
-use crate::terms_cond::TermsAndConditions;
 use crate::farm::FarmName;
 use crate::interface::{InterfaceIp, InterfaceMac, InterfaceName};
-use crate::node::{Location, SerialNumber};
+use crate::node::{Location, Resources, SerialNumber};
 use crate::pub_config::{Domain, GW4, GW6, IP4, IP6};
 use crate::pub_ip::{GatewayIP, PublicIP};
+use crate::terms_cond::TermsAndConditions;
 use crate::twin::TwinIp;
 use crate::weights;
 use sp_runtime::traits::{IdentifyAccount, Verify};
@@ -79,6 +79,7 @@ impl frame_system::Config for TestRuntime {
     type MaxConsumers = ConstU32<16>;
 }
 
+pub(crate) type Rsrc = crate::ResourcesOf<TestRuntime>;
 pub(crate) type Serial = crate::SerialNumberOf<TestRuntime>;
 pub(crate) type Loc = crate::LocationOf<TestRuntime>;
 pub(crate) type PubConfig = crate::PubConfigOf<TestRuntime>;
@@ -87,7 +88,7 @@ pub(crate) type Interface = crate::InterfaceOf<TestRuntime>;
 pub(crate) type TfgridNode = crate::TfgridNode<TestRuntime>;
 
 pub struct NodeChanged;
-impl tfchain_support::traits::ChangeNode<Loc, PubConfig, Interface, Serial> for NodeChanged {
+impl tfchain_support::traits::ChangeNode<Rsrc, Loc, PubConfig, Interface, Serial> for NodeChanged {
     fn node_changed(_old_node: Option<&TfgridNode>, _new_node: &TfgridNode) {}
     fn node_deleted(_node: &TfgridNode) {}
 }
@@ -116,6 +117,7 @@ pub(crate) type TestInterfaceName = InterfaceName<TestRuntime>;
 pub(crate) type TestInterfaceMac = InterfaceMac<TestRuntime>;
 pub(crate) type TestInterfaceIp = InterfaceIp<TestRuntime>;
 
+pub(crate) type TestResources = Resources<TestRuntime>;
 pub(crate) type TestLocation = Location<TestRuntime>;
 pub(crate) type TestSerialNumber = SerialNumber<TestRuntime>;
 
@@ -141,6 +143,7 @@ impl Config for TestRuntime {
     type InterfaceIP = TestInterfaceIp;
     type MaxInterfacesLength = MaxInterfacesLength;
     type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
+    type Resources = TestResources;
     type Location = TestLocation;
     type SerialNumber = TestSerialNumber;
 }

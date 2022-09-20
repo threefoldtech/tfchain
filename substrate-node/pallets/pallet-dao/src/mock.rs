@@ -6,7 +6,7 @@ use pallet_collective;
 use pallet_tfgrid::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
-    node::{Location, SerialNumber},
+    node::{Location, SerialNumber, Resources},
     pub_config::{Domain, GW4, GW6, IP4, IP6},
     pub_ip::{GatewayIP, PublicIP},
     terms_cond::TermsAndConditions,
@@ -80,6 +80,7 @@ parameter_types! {
     pub const MinVetos: u32 = 2;
 }
 
+pub(crate) type Rsrc = pallet_tfgrid::pallet::ResourcesOf<Test>;
 pub(crate) type Serial = pallet_tfgrid::pallet::SerialNumberOf<Test>;
 pub(crate) type Loc = pallet_tfgrid::pallet::LocationOf<Test>;
 pub(crate) type PubConfig = pallet_tfgrid::pallet::PubConfigOf<Test>;
@@ -88,7 +89,7 @@ pub(crate) type Interface = pallet_tfgrid::pallet::InterfaceOf<Test>;
 pub(crate) type TfgridNode = pallet_tfgrid::pallet::TfgridNode<Test>;
 
 pub struct NodeChanged;
-impl ChangeNode<Loc, PubConfig, Interface, Serial> for NodeChanged {
+impl ChangeNode<Rsrc, Loc, PubConfig, Interface, Serial> for NodeChanged {
     fn node_changed(old_node: Option<&TfgridNode>, new_node: &TfgridNode) {
         DaoModule::node_changed(old_node, new_node)
     }
@@ -133,6 +134,7 @@ pub(crate) type TestInterfaceName = InterfaceName<Test>;
 pub(crate) type TestInterfaceMac = InterfaceMac<Test>;
 pub(crate) type TestInterfaceIp = InterfaceIp<Test>;
 
+pub(crate) type TestResources = Resources<Test>;
 pub(crate) type TestLocation = Location<Test>;
 pub(crate) type TestSerialNumber = SerialNumber<Test>;
 
@@ -158,6 +160,7 @@ impl pallet_tfgrid::Config for Test {
     type InterfaceMac = TestInterfaceMac;
     type InterfaceIP = TestInterfaceIp;
     type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
+    type Resources = TestResources;
     type Location = TestLocation;
     type SerialNumber = TestSerialNumber;
 }
