@@ -982,7 +982,7 @@ impl<T: Config> Pallet<T> {
         // remove all associated storage and continue
         let ctr = Contracts::<T>::get(contract_id);
         if let Some(contract) = ctr {
-            if contract.contract_id != 0 && contract.is_state_delete() {
+            if contract.is_state_delete() {
                 Self::remove_contract(contract.contract_id);
                 return Ok(().into());
             }
@@ -1508,7 +1508,7 @@ impl<T: Config> Pallet<T> {
         // Save the contract to be billed in now + BILLING_FREQUENCY_IN_BLOCKS
         let future_block = now + BillingFrequency::<T>::get();
         let mut contracts = ContractsToBillAt::<T>::get(future_block);
-        if !contracts.contains(&contract_id) {        
+        if !contracts.contains(&contract_id) {
             contracts.push(contract_id);
             ContractsToBillAt::<T>::insert(future_block, &contracts);
             log::info!(
