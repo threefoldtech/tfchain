@@ -185,10 +185,6 @@ pub mod pallet {
     pub type ContractID<T> = StorageValue<_, u64, ValueQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn allowed_origin)]
-    pub type AllowedOrigin<T: Config> = StorageValue<_, Vec<T::AccountId>, OptionQuery>;
-
-    #[pallet::storage]
     #[pallet::getter(fn solution_providers)]
     pub type SolutionProviders<T: Config> =
         StorageMap<_, Blake2_128Concat, u64, types::SolutionProvider<T::AccountId>, OptionQuery>;
@@ -357,8 +353,6 @@ pub mod pallet {
         InvalidProviderConfiguration,
         NoSuchSolutionProvider,
         SolutionProviderNotApproved,
-        NotAuthorizedToBill,
-        AllowedOriginIsEmpty,
     }
 
     #[pallet::genesis_config]
@@ -385,36 +379,6 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn add_allowed_origin(
-            origin: OriginFor<T>,
-            account_id: T::AccountId,
-        ) -> DispatchResultWithPostInfo {
-            <T as pallet::Config>::RestrictedOrigin::ensure_origin(origin)?;
-            let mut allowed_origin = AllowedOrigin::<T>::get().unwrap_or(Vec::new());
-
-            if !allowed_origin.contains(&account_id) {
-                allowed_origin.push(account_id);
-            }
-
-            AllowedOrigin::<T>::set(Some(allowed_origin));
-            Ok(().into())
-        }
-        
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn remove_allowed_origin(
-            origin: OriginFor<T>,
-            account_id: T::AccountId,
-        ) -> DispatchResultWithPostInfo {
-            <T as pallet::Config>::RestrictedOrigin::ensure_origin(origin)?;
-            let mut allowed_origin = AllowedOrigin::<T>::get().unwrap_or(Vec::new());
-
-            allowed_origin.retain(|x| *x != account_id);
-
-            AllowedOrigin::<T>::set(Some(allowed_origin));
-            Ok(().into())
-        }
-
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn create_node_contract(
             origin: OriginFor<T>,
@@ -529,16 +493,8 @@ pub mod pallet {
             contract_id: u64,
             block_number: T::BlockNumber,
         ) -> DispatchResultWithPostInfo {
-            let account_id = ensure_signed(origin)?;
-
-            let res = Self::is_allowed_to_bill(account_id);
-            if !res.is_ok() {
-                Self::append_failed_contract_ids_to_storage(contract_id);
-                return res;
-            }
-            let _res = Self::_bill_contract_for_block(contract_id, block_number)?;
-
-            Ok(Pays::No.into())
+            let _account_id = ensure_signed(origin)?;
+            Self::_bill_contract_for_block(contract_id, block_number)
         }
     }
 
@@ -1087,20 +1043,6 @@ impl<T: Config> Pallet<T> {
         }
 
         return Vec::new();
-    }
-
-    fn is_allowed_to_bill(who: T::AccountId) -> DispatchResultWithPostInfo {
-        if let Some(allowed) = AllowedOrigin::<T>::get() {
-            if !allowed.contains(&who) {
-                log::error!("{:?} not authorized to bill contracts", who);
-                return Err(Error::<T>::NotAuthorizedToBill.into());
-            }
-        } else {
-            log::error!("AllowedOrigin is empty!");
-            return Err(Error::<T>::AllowedOriginIsEmpty.into());
-        }
-
-        Ok(().into())
     }
 
     // Bills a contract (NodeContract or NameContract)
