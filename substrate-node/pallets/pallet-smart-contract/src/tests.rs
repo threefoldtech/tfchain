@@ -14,7 +14,7 @@ use super::types;
 use crate::cost;
 use pallet_tfgrid::{
     types::{self as pallet_tfgrid_types, LocationInput},
-    ResourcesInput,
+    ResourcesInput, SerialNumberInput,
 };
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::{
@@ -2442,7 +2442,7 @@ pub fn prepare_farm_and_node() {
         longitude: long.to_vec(),
     };
 
-    let serial_number = get_serial_number(b"some_serial").0;
+    let serial_number: SerialNumberInput = b"some_serial".to_vec();
 
     TfgridModule::create_node(
         Origin::signed(alice()),
@@ -2483,7 +2483,7 @@ pub fn prepare_dedicated_farm_and_node() {
         longitude: long.to_vec(),
     };
 
-    let serial_number = get_serial_number(b"some_serial").0;
+    let serial_number: SerialNumberInput = b"some_serial".to_vec();
 
     TfgridModule::create_node(
         Origin::signed(alice()),

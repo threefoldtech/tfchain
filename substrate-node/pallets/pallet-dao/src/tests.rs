@@ -4,7 +4,7 @@ use frame_support::{assert_noop, assert_ok, bounded_vec, weights::GetDispatchInf
 use frame_system::{EventRecord, Phase, RawOrigin};
 use pallet_tfgrid::{
     types::{LocationInput, PublicIpInput},
-    ResourcesInput,
+    ResourcesInput, SerialNumberInput,
 };
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Hash};
@@ -810,7 +810,7 @@ fn prepare_node(account_id: u64, farm_id: u32) {
         longitude: long.to_vec(),
     };
 
-    let serial_number = get_serial_number(b"some_serial").0;
+    let serial_number: SerialNumberInput = b"some_serial".to_vec();
 
     assert_ok!(TfgridModule::create_node(
         Origin::signed(account_id),
@@ -843,7 +843,7 @@ fn prepare_big_node(account_id: u64, farm_id: u32) {
         longitude: long.to_vec(),
     };
 
-    let serial_number = get_serial_number(b"some_serial").0;
+    let serial_number: SerialNumberInput = b"some_serial".to_vec();
 
     assert_ok!(TfgridModule::create_node(
         Origin::signed(account_id),

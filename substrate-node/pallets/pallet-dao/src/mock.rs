@@ -204,10 +204,6 @@ pub(crate) fn get_twin_ip(twin_ip_input: &[u8]) -> TestTwinIp {
     TwinIp::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
 }
 
-pub(crate) fn get_serial_number(serial_number: &[u8]) -> TestSerialNumber {
-    SerialNumber::try_from(serial_number.to_vec()).expect("Invalid serial number input")
-}
-
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
     let mut t = frame_system::GenesisConfig::default()

@@ -158,7 +158,7 @@ pub mod pallet {
     pub type LocationOf<T> = <T as Config>::Location;
 
     // Input type for serial number
-    pub type SerialNumberInput = BoundedVec<u8, ConstU32<{ node::MAX_SERIAL_NUMBER_LENGTH }>>;
+    pub type SerialNumberInput = Vec<u8>;
     // Concrete type for location
     pub type SerialNumberOf<T> = <T as Config>::SerialNumber;
 
@@ -2339,7 +2339,7 @@ impl<T: Config> Pallet<T> {
     fn get_serial_number(
         serial_number: pallet::SerialNumberInput,
     ) -> Result<SerialNumberOf<T>, Error<T>> {
-        let parsed_serial_number = <T as Config>::SerialNumber::try_from(serial_number.to_vec())?;
+        let parsed_serial_number = <T as Config>::SerialNumber::try_from(serial_number)?;
         Ok(parsed_serial_number)
     }
 }

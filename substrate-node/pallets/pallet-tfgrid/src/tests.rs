@@ -4,7 +4,7 @@ use crate::{
     mock::Event as MockEvent,
     mock::*,
     types::{LocationInput, PublicIpInput},
-    Error, InterfaceInput, InterfaceIpsInput, PublicIpListInput, ResourcesInput,
+    Error, InterfaceInput, InterfaceIpsInput, PublicIpListInput, ResourcesInput, SerialNumberInput,
 };
 use frame_support::{assert_noop, assert_ok, bounded_vec, BoundedVec};
 use frame_system::{EventRecord, Phase, RawOrigin};
@@ -842,7 +842,7 @@ fn create_node_with_interfaces_works() {
         let mut interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
         interfaces.try_push(interface).unwrap();
 
-        let serial_number = get_serial_number(b"some_serial").0;
+        let serial_number: SerialNumberInput = b"some_serial".to_vec();
 
         assert_ok!(TfgridModule::create_node(
             Origin::signed(alice()),
@@ -1223,7 +1223,7 @@ fn create_node_with_same_pubkey_fails() {
 
         let interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
 
-        let serial_number = get_serial_number(b"some_serial").0;
+        let serial_number: SerialNumberInput = b"some_serial".to_vec();
 
         assert_noop!(
             TfgridModule::create_node(
@@ -2113,7 +2113,7 @@ fn create_node() {
 
     let interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
 
-    let serial_number = get_serial_number(b"some_serial").0;
+    let serial_number: SerialNumberInput = b"some_serial".to_vec();
 
     assert_ok!(TfgridModule::create_node(
         Origin::signed(alice()),
@@ -2146,7 +2146,7 @@ fn create_extra_node() {
         longitude: long.to_vec(),
     };
 
-    let serial_number = get_serial_number(b"some_serial").0;
+    let serial_number: SerialNumberInput = b"some_serial".to_vec();
 
     assert_ok!(TfgridModule::create_node(
         Origin::signed(bob()),

@@ -240,10 +240,6 @@ pub(crate) fn get_interface_ip(ip: &[u8]) -> TestInterfaceIp {
     InterfaceIp::try_from(ip.to_vec()).expect("Invalid interface ip input")
 }
 
-pub(crate) fn get_serial_number(serial_number: &[u8]) -> TestSerialNumber {
-    SerialNumber::try_from(serial_number.to_vec()).expect("Invalid serial number input")
-}
-
 // industry dismiss casual gym gap music pave gasp sick owner dumb cost
 /// Helper function to generate a crypto pair from seed
 fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {

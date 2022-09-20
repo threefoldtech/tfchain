@@ -297,10 +297,6 @@ pub fn get_staking_pool_account() -> AccountId {
     AccountId32::from_ss58check("5CNposRewardAccount11111111111111111111111111FSU").unwrap()
 }
 
-pub(crate) fn get_serial_number(serial_number: &[u8]) -> TestSerialNumber {
-    SerialNumber::try_from(serial_number.to_vec()).expect("Invalid serial number input")
-}
-
 pub fn new_test_ext() -> sp_io::TestExternalities {
     let mut t = frame_system::GenesisConfig::default()
         .build_storage::<TestRuntime>()

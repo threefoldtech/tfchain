@@ -1,4 +1,4 @@
-use crate::{geo, types::LocationInput, Config, Error};
+use crate::{geo, types::LocationInput, SerialNumberInput, Config, Error};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
@@ -194,7 +194,7 @@ impl<T: Config> TryFrom<Vec<u8>> for SerialNumber<T> {
 
     /// TODO: Fallible initialization from a provided byte vector if it is below the
     /// minimum or exceeds the maximum allowed length or ...
-    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+    fn try_from(value: SerialNumberInput) -> Result<Self, Self::Error> {
         ensure!(
             value.len() >= MIN_SERIAL_NUMBER_LENGTH.saturated_into(),
             Self::Error::SerialNumberTooShort
