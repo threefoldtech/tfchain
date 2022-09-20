@@ -2,7 +2,7 @@ use super::Event as DaoEvent;
 use crate::{mock::Event as MockEvent, mock::*, Error};
 use frame_support::{assert_noop, assert_ok, bounded_vec, weights::GetDispatchInfo};
 use frame_system::{EventRecord, Phase, RawOrigin};
-use pallet_tfgrid::types::PublicIpInput;
+use pallet_tfgrid::{types::PublicIpInput, ResourcesInput};
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Hash};
 use std::convert::TryInto;
@@ -793,7 +793,7 @@ fn prepare_node(account_id: u64, farm_id: u32) {
     let sru = 512 * GIGABYTE;
     let cru = 8;
     let mru = 16 * GIGABYTE;
-    let resources = (hru, sru, cru, mru);
+    let resources = ResourcesInput { hru, sru, cru, mru };
 
     // random location
     let city = b"Ghent";
@@ -822,7 +822,7 @@ fn prepare_big_node(account_id: u64, farm_id: u32) {
     let sru = 512 * GIGABYTE;
     let cru = 8;
     let mru = 16 * GIGABYTE;
-    let resources = (hru, sru, cru, mru);
+    let resources = ResourcesInput { hru, sru, cru, mru };
 
     // random location
     let city = b"Ghent";

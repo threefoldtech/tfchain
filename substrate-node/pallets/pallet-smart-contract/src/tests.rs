@@ -12,9 +12,12 @@ use substrate_fixed::types::U64F64;
 
 use super::types;
 use crate::cost;
-use pallet_tfgrid::types as pallet_tfgrid_types;
+use pallet_tfgrid::{types as pallet_tfgrid_types, ResourcesInput};
 use sp_std::convert::{TryFrom, TryInto};
-use tfchain_support::{types::{FarmCertification, NodeCertification, PublicIP}, resources::Resources};
+use tfchain_support::{
+    resources::Resources,
+    types::{FarmCertification, NodeCertification, PublicIP},
+};
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -2422,7 +2425,7 @@ pub fn prepare_farm_and_node() {
     let sru = 512 * GIGABYTE;
     let cru = 8;
     let mru = 16 * GIGABYTE;
-    let resources = (hru, sru, cru, mru);
+    let resources = ResourcesInput { hru, sru, cru, mru };
 
     // random location
     let city = b"Ghent";
@@ -2459,7 +2462,7 @@ pub fn prepare_dedicated_farm_and_node() {
     let sru = 512 * GIGABYTE;
     let cru = 8;
     let mru = 16 * GIGABYTE;
-    let resources = (hru, sru, cru, mru);
+    let resources = ResourcesInput { hru, sru, cru, mru };
 
     // random location
     let city = b"Ghent";

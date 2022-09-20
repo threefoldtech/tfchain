@@ -168,7 +168,7 @@ pub mod pallet {
     pub type SerialNumberOf<T> = <T as Config>::SerialNumber;
 
     // Input type for resources
-    pub type ResourcesInput = (u64, u64, u64, u64);
+    pub type ResourcesInput = Resources;
 
     // Concrete type for node
     pub type TfgridNode<T> = Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>;
@@ -2262,19 +2262,12 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn get_resources(resources: pallet::ResourcesInput) -> Result<Resources, Error<T>> {
-        let parsed_resources = Resources {
-            hru: resources.0,
-            sru: resources.1,
-            cru: resources.2,
-            mru: resources.3,
-        };
+        ensure!(resources.validate_hru(), Error::<T>::InvalidHRUInput);
+        ensure!(resources.validate_sru(), Error::<T>::InvalidSRUInput);
+        ensure!(resources.validate_cru(), Error::<T>::InvalidCRUInput);
+        ensure!(resources.validate_mru(), Error::<T>::InvalidMRUInput);
 
-        ensure!(parsed_resources.validate_hru(), Error::<T>::InvalidHRUInput);
-        ensure!(parsed_resources.validate_sru(), Error::<T>::InvalidSRUInput);
-        ensure!(parsed_resources.validate_cru(), Error::<T>::InvalidCRUInput);
-        ensure!(parsed_resources.validate_mru(), Error::<T>::InvalidMRUInput);
-
-        Ok(parsed_resources)
+        Ok(resources)
     }
 
     fn get_location(location: pallet::LocationInput) -> Result<LocationOf<T>, Error<T>> {

@@ -1,14 +1,13 @@
 use super::Event as TfgridEvent;
 use crate::{
     geo, mock::Event as MockEvent, mock::*, types::PublicIpInput, Error, InterfaceInput,
-    InterfaceIpsInput, PublicIpListInput,
+    InterfaceIpsInput, PublicIpListInput, ResourcesInput,
 };
 use frame_support::{assert_noop, assert_ok, bounded_vec, BoundedVec};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
 use tfchain_support::types::{
-    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, PublicConfig,
-    IP,
+    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, PublicConfig, IP,
 };
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -810,7 +809,7 @@ fn create_node_with_interfaces_works() {
         let sru = 512 * GIGABYTE;
         let cru = 8;
         let mru = 16 * GIGABYTE;
-        let resources = (hru, sru, cru, mru);
+        let resources = ResourcesInput { hru, sru, cru, mru };
 
         // random location
         let city = b"Ghent";
@@ -1202,7 +1201,7 @@ fn create_node_with_same_pubkey_fails() {
         let sru = 1;
         let cru = 1;
         let mru = 1;
-        let resources = (hru, sru, cru, mru);
+        let resources = ResourcesInput { hru, sru, cru, mru };
 
         // random location
         let city = b"Ghent";
@@ -2088,7 +2087,7 @@ fn create_node() {
     let sru = 512 * GIGABYTE;
     let cru = 8;
     let mru = 16 * GIGABYTE;
-    let resources = (hru, sru, cru, mru);
+    let resources = ResourcesInput { hru, sru, cru, mru };
 
     // random location
     let city = b"Ghent";
@@ -2119,7 +2118,7 @@ fn create_extra_node() {
     let sru = 512 * GIGABYTE;
     let cru = 8;
     let mru = 16 * GIGABYTE;
-    let resources = (hru, sru, cru, mru);
+    let resources = ResourcesInput { hru, sru, cru, mru };
 
     // random location
     let city = b"Rio de Janeiro";
