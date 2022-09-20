@@ -190,3 +190,11 @@ pub struct PublicIpInput<IP, GW> {
     pub ip: IP,
     pub gw: GW,
 }
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+pub struct LocationInput {
+    pub city: Vec<u8>,
+    pub country: Vec<u8>,
+    pub latitude: Vec<u8>,
+    pub longitude: Vec<u8>,
+}

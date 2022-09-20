@@ -1,7 +1,10 @@
 use super::Event as TfgridEvent;
 use crate::{
-    geo, mock::Event as MockEvent, mock::*, types::PublicIpInput, Error, InterfaceInput,
-    InterfaceIpsInput, PublicIpListInput, ResourcesInput,
+    geo,
+    mock::Event as MockEvent,
+    mock::*,
+    types::{LocationInput, PublicIpInput},
+    Error, InterfaceInput, InterfaceIpsInput, PublicIpListInput, ResourcesInput,
 };
 use frame_support::{assert_noop, assert_ok, bounded_vec, BoundedVec};
 use frame_system::{EventRecord, Phase, RawOrigin};
@@ -816,9 +819,12 @@ fn create_node_with_interfaces_works() {
         let country = b"Belgium";
         let lat = b"12.233213231";
         let long = b"32.323112123";
-        let loc = get_location(city, country, lat, long);
-        // TODO: doesn t make sense to call get_location for input purpose
-        let location = (loc.city, loc.country, loc.latitude, loc.longitude);
+        let location = LocationInput {
+            city: city.to_vec(),
+            country: country.to_vec(),
+            latitude: lat.to_vec(),
+            longitude: long.to_vec(),
+        };
 
         let mut interface_ips: InterfaceIpsInput<TestRuntime> = bounded_vec![];
         let intf_ip_1 = get_interface_ip(&"10.2.3.3".as_bytes().to_vec());
@@ -1208,8 +1214,12 @@ fn create_node_with_same_pubkey_fails() {
         let country = b"Belgium";
         let lat = b"12.233213231";
         let long = b"32.323112123";
-        let loc = get_location(city, country, lat, long);
-        let location = (loc.city, loc.country, loc.latitude, loc.longitude);
+        let location = LocationInput {
+            city: city.to_vec(),
+            country: country.to_vec(),
+            latitude: lat.to_vec(),
+            longitude: long.to_vec(),
+        };
 
         let interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
 
@@ -2094,8 +2104,12 @@ fn create_node() {
     let country = b"Belgium";
     let lat = b"12.233213231";
     let long = b"32.323112123";
-    let loc = get_location(city, country, lat, long);
-    let location = (loc.city, loc.country, loc.latitude, loc.longitude);
+    let location = LocationInput {
+        city: city.to_vec(),
+        country: country.to_vec(),
+        latitude: lat.to_vec(),
+        longitude: long.to_vec(),
+    };
 
     let interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
 
@@ -2125,8 +2139,12 @@ fn create_extra_node() {
     let country = b"Brazil";
     let lat = b"43.1868";
     let long = b"22.9694";
-    let loc = get_location(city, country, lat, long);
-    let location = (loc.city, loc.country, loc.latitude, loc.longitude);
+    let location = LocationInput {
+        city: city.to_vec(),
+        country: country.to_vec(),
+        latitude: lat.to_vec(),
+        longitude: long.to_vec(),
+    };
 
     let serial_number = get_serial_number(b"some_serial").0;
 

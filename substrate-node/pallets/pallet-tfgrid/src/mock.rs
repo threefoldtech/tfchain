@@ -240,21 +240,6 @@ pub(crate) fn get_interface_ip(ip: &[u8]) -> TestInterfaceIp {
     InterfaceIp::try_from(ip.to_vec()).expect("Invalid interface ip input")
 }
 
-pub(crate) fn get_location(
-    city: &[u8],
-    country: &[u8],
-    latitude: &[u8],
-    longitude: &[u8],
-) -> TestLocation {
-    Location::try_from((
-        city.to_vec(),
-        country.to_vec(),
-        latitude.to_vec(),
-        longitude.to_vec(),
-    ))
-    .expect("Invalid location input")
-}
-
 pub(crate) fn get_serial_number(serial_number: &[u8]) -> TestSerialNumber {
     SerialNumber::try_from(serial_number.to_vec()).expect("Invalid serial number input")
 }

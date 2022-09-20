@@ -1,4 +1,4 @@
-use crate::{geo, Config, Error};
+use crate::{geo, types::LocationInput, Config, Error};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
@@ -35,24 +35,24 @@ pub struct Location<T: Config> {
     _marker: PhantomData<T>,
 }
 
-impl<T: Config> TryFrom<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>)> for Location<T> {
+impl<T: Config> TryFrom<LocationInput> for Location<T> {
     type Error = Error<T>;
 
-    /// Fallible initialization from a provided tuple of byte vector
+    /// Fallible initialization from provided byte vectors
     /// (city, country, latitude and longitude) if one is below the
     /// minimum or exceeds the maximum allowed length.
     /// For city and country check if byte vector contains invalid
     /// ASCII characters. For lat/long check if byte vector can be
     /// converted to float and is inside [-90; 90] range (for latitude)
     /// or inside [-180; 180] range (for longitude)
-    fn try_from(value: (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>)) -> Result<Self, Self::Error> {
+    fn try_from(value: LocationInput) -> Result<Self, Self::Error> {
         // 1. city name
         ensure!(
-            value.0.len() >= MIN_CITY_NAME_LENGTH.saturated_into(),
+            value.city.len() >= MIN_CITY_NAME_LENGTH.saturated_into(),
             Self::Error::CityNameTooShort
         );
         let city: BoundedVec<u8, ConstU32<MAX_CITY_NAME_LENGTH>> =
-            BoundedVec::try_from(value.0).map_err(|_| Self::Error::CityNameTooLong)?;
+            BoundedVec::try_from(value.city).map_err(|_| Self::Error::CityNameTooLong)?;
         let city_str = core::str::from_utf8(&city);
         ensure!(
             validate_city_name(&city) && city_str.is_ok(),
@@ -61,11 +61,11 @@ impl<T: Config> TryFrom<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>)> for Location<T> {
 
         // 2. country name
         ensure!(
-            value.1.len() >= MIN_COUNTRY_NAME_LENGTH.saturated_into(),
+            value.country.len() >= MIN_COUNTRY_NAME_LENGTH.saturated_into(),
             Self::Error::CountryNameTooShort
         );
         let country: BoundedVec<u8, ConstU32<MAX_COUNTRY_NAME_LENGTH>> =
-            BoundedVec::try_from(value.1).map_err(|_| Self::Error::CountryNameTooLong)?;
+            BoundedVec::try_from(value.country).map_err(|_| Self::Error::CountryNameTooLong)?;
         let country_str = core::str::from_utf8(&country);
         ensure!(
             validate_country_name(&country) && country_str.is_ok(),
@@ -80,23 +80,25 @@ impl<T: Config> TryFrom<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>)> for Location<T> {
 
         // 3. latitude
         ensure!(
-            value.2.len() >= MIN_LATITUDE_LENGTH.saturated_into(),
+            value.latitude.len() >= MIN_LATITUDE_LENGTH.saturated_into(),
             Self::Error::LatitudeInputToShort
         );
         let latitude: BoundedVec<u8, ConstU32<MAX_LATITUDE_LENGTH>> =
-            BoundedVec::try_from(value.2.clone()).map_err(|_| Self::Error::LatitudeInputToLong)?;
+            BoundedVec::try_from(value.latitude.clone())
+                .map_err(|_| Self::Error::LatitudeInputToLong)?;
         ensure!(
             validate_latitude_input(&latitude),
             Self::Error::InvalidLatitudeInput
         );
 
-        // 4. latitude
+        // 4. longitude
         ensure!(
-            value.3.len() >= MIN_LONGITUDE_LENGTH.saturated_into(),
+            value.longitude.len() >= MIN_LONGITUDE_LENGTH.saturated_into(),
             Self::Error::LongitudeInputToShort
         );
         let longitude: BoundedVec<u8, ConstU32<MAX_LONGITUDE_LENGTH>> =
-            BoundedVec::try_from(value.3.clone()).map_err(|_| Self::Error::LongitudeInputToLong)?;
+            BoundedVec::try_from(value.longitude.clone())
+                .map_err(|_| Self::Error::LongitudeInputToLong)?;
         ensure!(
             validate_longitude_input(&longitude),
             Self::Error::InvalidLongitudeInput

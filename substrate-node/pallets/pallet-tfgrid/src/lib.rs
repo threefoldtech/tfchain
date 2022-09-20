@@ -153,12 +153,7 @@ pub mod pallet {
         Interface<<T as Config>::InterfaceName, <T as Config>::InterfaceMac, InterfaceIpsOf<T>>;
 
     // Input type for location
-    pub type LocationInput = (
-        BoundedVec<u8, ConstU32<{ node::MAX_CITY_NAME_LENGTH }>>,
-        BoundedVec<u8, ConstU32<{ node::MAX_COUNTRY_NAME_LENGTH }>>,
-        BoundedVec<u8, ConstU32<{ node::MAX_LATITUDE_LENGTH }>>,
-        BoundedVec<u8, ConstU32<{ node::MAX_LONGITUDE_LENGTH }>>,
-    );
+    pub type LocationInput = types::LocationInput;
     // Concrete type for location
     pub type LocationOf<T> = <T as Config>::Location;
 
@@ -424,7 +419,7 @@ pub mod pallet {
             + PartialEq
             + Clone
             + TypeInfo
-            + TryFrom<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>), Error = Error<Self>>
+            + TryFrom<LocationInput, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of a serial number.
@@ -2270,13 +2265,8 @@ impl<T: Config> Pallet<T> {
         Ok(resources)
     }
 
-    fn get_location(location: pallet::LocationInput) -> Result<LocationOf<T>, Error<T>> {
-        let parsed_location = <T as Config>::Location::try_from((
-            location.0.to_vec(),
-            location.1.to_vec(),
-            location.2.to_vec(),
-            location.3.to_vec(),
-        ))?;
+    pub fn get_location(location: pallet::LocationInput) -> Result<LocationOf<T>, Error<T>> {
+        let parsed_location = <T as Config>::Location::try_from(location)?;
 
         Ok(parsed_location)
     }

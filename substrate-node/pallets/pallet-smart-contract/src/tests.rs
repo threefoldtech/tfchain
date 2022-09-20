@@ -12,7 +12,10 @@ use substrate_fixed::types::U64F64;
 
 use super::types;
 use crate::cost;
-use pallet_tfgrid::{types as pallet_tfgrid_types, ResourcesInput};
+use pallet_tfgrid::{
+    types::{self as pallet_tfgrid_types, LocationInput},
+    ResourcesInput,
+};
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::{
     resources::Resources,
@@ -2432,8 +2435,12 @@ pub fn prepare_farm_and_node() {
     let country = b"Belgium";
     let lat = b"12.233213231";
     let long = b"32.323112123";
-    let loc = get_location(city, country, lat, long);
-    let location = (loc.city, loc.country, loc.latitude, loc.longitude);
+    let location = LocationInput {
+        city: city.to_vec(),
+        country: country.to_vec(),
+        latitude: lat.to_vec(),
+        longitude: long.to_vec(),
+    };
 
     let serial_number = get_serial_number(b"some_serial").0;
 
@@ -2469,8 +2476,12 @@ pub fn prepare_dedicated_farm_and_node() {
     let country = b"Belgium";
     let lat = b"12.233213231";
     let long = b"32.323112123";
-    let loc = get_location(city, country, lat, long);
-    let location = (loc.city, loc.country, loc.latitude, loc.longitude);
+    let location = LocationInput {
+        city: city.to_vec(),
+        country: country.to_vec(),
+        latitude: lat.to_vec(),
+        longitude: long.to_vec(),
+    };
 
     let serial_number = get_serial_number(b"some_serial").0;
 
