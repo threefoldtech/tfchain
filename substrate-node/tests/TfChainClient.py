@@ -79,7 +79,7 @@ class TfChainClient:
     def setup_eve(self, create_twin=False, port=9949):
         self._setup_predefined_account("Eve", port=port, create_twin=create_twin)
 
-    def setup_eve(self, create_twin=False, port=9950):
+    def setup_ferdie(self, create_twin=False, port=9950):
         self._setup_predefined_account("Ferdie", port=port, create_twin=create_twin)
 
     def set_wait_for_finalization(self, value):

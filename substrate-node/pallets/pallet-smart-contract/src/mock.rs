@@ -180,7 +180,7 @@ impl pallet_timestamp::Config for TestRuntime {
 }
 
 parameter_types! {
-    pub const BillingFrequency: u64 = 10;
+    //pub const BillingFrequency: u64 = 10;
     pub const GracePeriod: u64 = 100;
     pub const DistributionFrequency: u16 = 24;
     pub const MaxNameContractNameLength: u32 = 64;
@@ -195,7 +195,7 @@ impl pallet_smart_contract::Config for TestRuntime {
     type Event = Event;
     type Currency = Balances;
     type StakingPoolAccount = StakingPoolAccount;
-    type BillingFrequency = BillingFrequency;
+    //type BillingFrequency = BillingFrequency;
     type DistributionFrequency = DistributionFrequency;
     type GracePeriod = GracePeriod;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;

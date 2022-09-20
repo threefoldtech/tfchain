@@ -3,6 +3,7 @@ Documentation       Suite for integration tests on tfchain
 Library             Collections
 Library             SubstrateNetwork.py
 Library             TfChainClient.py
+Library    OperatingSystem
 
 
 *** Keywords ***
@@ -214,6 +215,14 @@ Test Create Update Cancel Node Contract: Success
     # Bob is the one creating the contract and thus being billed
     Create Node Contract    node_id=${1}    public_ips=${1}    who=Bob    port=9946
 
+    ${farm} =     Get Farm    ${1}
+    Should Not Be Equal    ${farm}    ${None}    msg=Farm with id 1 doesn't exist
+    Dictionary Should Contain Key    ${farm}    public_ips    msg=The farm doesn't have a key public_ips
+    Length Should Be    ${farm}[public_ips]    1    msg=There should only be one public ip in public_ips
+    Should Be Equal    ${farm}[public_ips][0][ip]    185.206.122.33/24    msg=The public ip address should be 185.206.122.33/24
+    Should Be Equal    ${farm}[public_ips][0][gateway]    185.206.122.1    msg=The gateway should be 185.206.122.1
+    Should Be Equal    ${farm}[public_ips][0][contract_id]    ${1}    msg=The public ip was claimed in contract with id 1 while the farm contains a different contract id for it
+
     Update Node Contract    contract_id=${1}    who=Bob    port=9946
 
     Cancel Contract    contract_id=${1}    who=Bob    port=9946
@@ -258,17 +267,21 @@ Test Create Name Contract: Success
 
 Test Billing
     [Documentation]    Sets up a network of 3 nodes. Alice creates a twin, a farm, a node, a node contract and reports contract resources. The test will run for some time with the goal to go through the billing process
-    Setup Multi Node Network    log_name=test_billing    amt=${3}
+    Setup Multi Node Network    log_name=test_billing    amt=${6}
 
     Setup Alice    create_twin=${True}
     Setup Bob    create_twin=${True}
     Setup Charlie    create_twin=${True}
+    Setup Dave    create_twin=${True}
+    Setup Eve    create_twin=${True}
+    Setup Ferdie    create_twin=${True}
+    
     Create Farm    name=alice_farm
     Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
     Create Node Contract    node_id=${1}
     Report Contract Resources    contract_id=${1}    hru=${0}    sru=${20}    cru=${2}    mru=${4}
 
     # let it run for some time
-    Sleep    10s
+    Sleep    15s
 
     Tear Down Multi Node Network

@@ -156,6 +156,13 @@ pub mod pallet {
     #[pallet::getter(fn pallet_version)]
     pub type PalletVersion<T> = StorageValue<_, types::StorageVersion, ValueQuery>;
 
+    #[pallet::type_value]
+    pub fn DefaultBillingFrequency<T: Config>() -> u64 { 600 }
+
+    #[pallet::storage]
+    #[pallet::getter(fn billing_frequency)]
+    pub type BillingFrequency<T> = StorageValue<_, u64, ValueQuery, DefaultBillingFrequency<T>>;
+
     #[pallet::config]
     pub trait Config:
         frame_system::Config
@@ -167,7 +174,7 @@ pub mod pallet {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: LockableCurrency<Self::AccountId>;
         type StakingPoolAccount: Get<Self::AccountId>;
-        type BillingFrequency: Get<u64>;
+        //type BillingFrequency: Get<u64>;
         type DistributionFrequency: Get<u16>;
         type GracePeriod: Get<u64>;
         type WeightInfo: WeightInfo;
@@ -293,6 +300,28 @@ pub mod pallet {
         NoSuchSolutionProvider,
         SolutionProviderNotApproved,
     }
+
+    #[pallet::genesis_config]
+	pub struct GenesisConfig {
+        pub billing_frequency: u64,
+	}
+
+    // The default value for the genesis config type.
+	#[cfg(feature = "std")]
+	impl Default for GenesisConfig {
+		fn default() -> Self {
+			Self { 
+                billing_frequency: 600,
+            }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig {
+		fn build(&self) {
+            BillingFrequency::<T>::put(self.billing_frequency);
+		}
+	}
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -902,7 +931,7 @@ impl<T: Config> Pallet<T> {
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
         let usable_balance = Self::get_usable_balance(&twin.account_id);
 
-        let mut seconds_elapsed = T::BillingFrequency::get() * 6;
+        let mut seconds_elapsed = BillingFrequency::<T>::get() * 6;
         // Calculate amount of seconds elapsed based on the contract lock struct
 
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
@@ -1318,7 +1347,7 @@ impl<T: Config> Pallet<T> {
 
         let now = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
         // Save the contract to be billed in now + BILLING_FREQUENCY_IN_BLOCKS
-        let future_block = now + T::BillingFrequency::get();
+        let future_block = now + BillingFrequency::<T>::get();
         let mut contracts = ContractsToBillAt::<T>::get(future_block);
         contracts.push(contract_id);
         ContractsToBillAt::<T>::insert(future_block, &contracts);

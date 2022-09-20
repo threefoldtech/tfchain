@@ -371,7 +371,6 @@ impl pallet_tfgrid::Config for Runtime {
 
 parameter_types! {
     pub StakingPoolAccount: AccountId = get_staking_pool_account();
-    pub BillingFrequency: u64 = 600;
     pub GracePeriod: u64 = (14 * DAYS).into();
     pub DistributionFrequency: u16 = 24;
     pub RetryInterval: u32 = 20;
@@ -392,7 +391,6 @@ impl pallet_smart_contract::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
     type StakingPoolAccount = StakingPoolAccount;
-    type BillingFrequency = BillingFrequency;
     type DistributionFrequency = DistributionFrequency;
     type GracePeriod = GracePeriod;
     type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
@@ -709,7 +707,7 @@ construct_runtime!(
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
         Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
         TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>, Config<T>},
-        SmartContractModule: pallet_smart_contract::{Pallet, Call, Storage, Event<T>},
+        SmartContractModule: pallet_smart_contract::{Pallet, Call, Config, Storage, Event<T>},
         TFTBridgeModule: pallet_tft_bridge::{Pallet, Call, Config<T>, Storage, Event<T>},
         TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Config<T>, Event<T>},
         Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>},
