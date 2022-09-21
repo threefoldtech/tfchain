@@ -3,6 +3,7 @@ use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{ed25519, sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{IdentifyAccount, Verify};
+use std::convert::TryInto;
 use tfchain_runtime::opaque::SessionKeys;
 use tfchain_runtime::{
     AccountId, AuraConfig, BalancesConfig, CouncilConfig, CouncilMembershipConfig, GenesisConfig,
@@ -320,7 +321,9 @@ fn testnet_genesis(
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
                 get_account_id_from_seed::<sr25519::Public>("Bob"),
                 get_account_id_from_seed::<sr25519::Public>("Eve"),
-            ],
+            ]
+            .try_into()
+            .unwrap(),
             phantom: Default::default(),
         },
         // just some default for development

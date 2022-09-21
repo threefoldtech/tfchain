@@ -37,7 +37,6 @@ mod tests;
 
 pub mod weights;
 
-pub mod contract_migration;
 pub mod cost;
 pub mod name_contract;
 pub mod types;
@@ -296,7 +295,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(100_000_000)]
         pub fn create_node_contract(
             origin: OriginFor<T>,
             node_id: u32,
@@ -316,7 +315,7 @@ pub mod pallet {
             )
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(100_000_000)]
         pub fn update_node_contract(
             origin: OriginFor<T>,
             contract_id: u64,
@@ -327,7 +326,7 @@ pub mod pallet {
             Self::_update_node_contract(account_id, contract_id, deployment_hash, deployment_data)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(100_000_000)]
         pub fn cancel_contract(
             origin: OriginFor<T>,
             contract_id: u64,
@@ -337,7 +336,7 @@ pub mod pallet {
         }
 
         // DEPRECATED
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(100_000_000)]
         pub fn add_reports(
             _origin: OriginFor<T>,
             _reports: Vec<types::Consumption>,
@@ -346,7 +345,7 @@ pub mod pallet {
             Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(100_000_000)]
         pub fn create_name_contract(
             origin: OriginFor<T>,
             name: Vec<u8>,
@@ -355,7 +354,7 @@ pub mod pallet {
             Self::_create_name_contract(account_id, name)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(100_000_000)]
         pub fn add_nru_reports(
             origin: OriginFor<T>,
             reports: Vec<types::NruConsumption>,
@@ -364,7 +363,7 @@ pub mod pallet {
             Self::_compute_reports(account_id, reports)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(100_000_000)]
         pub fn report_contract_resources(
             origin: OriginFor<T>,
             contract_resources: Vec<types::ContractResources>,
@@ -373,7 +372,7 @@ pub mod pallet {
             Self::_report_contract_resources(account_id, contract_resources)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(100_000_000)]
         pub fn create_rent_contract(
             origin: OriginFor<T>,
             node_id: u32,
@@ -383,7 +382,7 @@ pub mod pallet {
             Self::_create_rent_contract(account_id, node_id, solution_provider_id)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(100_000_000)]
         pub fn create_solution_provider(
             origin: OriginFor<T>,
             description: Vec<u8>,
@@ -394,7 +393,7 @@ pub mod pallet {
             Self::_create_solution_provider(description, link, providers)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(100_000_000)]
         pub fn approve_solution_provider(
             origin: OriginFor<T>,
             solution_provider_id: u64,
@@ -426,10 +425,6 @@ pub mod pallet {
             // clean storage map for billed contracts at block
             let current_block_u64: u64 = block.saturated_into::<u64>();
             ContractsToBillAt::<T>::remove(current_block_u64);
-        }
-
-        fn on_runtime_upgrade() -> Weight {
-            contract_migration::migrate_to_version_4::<T>()
         }
     }
 }

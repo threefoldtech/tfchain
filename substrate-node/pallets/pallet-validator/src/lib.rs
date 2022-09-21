@@ -9,9 +9,9 @@ use frame_support;
 use frame_support::traits::Currency;
 use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
 use sp_runtime::traits::StaticLookup;
+use sp_std::convert::TryInto;
 use sp_std::prelude::*;
 use substrate_validator_set;
-use sp_std::convert::TryInto;
 
 pub mod types;
 pub use pallet::*;
@@ -244,21 +244,23 @@ pub mod pallet {
         #[pallet::weight(100_000_000)]
         pub fn approve_validator(
             origin: OriginFor<T>,
-            validator_account: T::AccountId,
+            validator_account: <T::Lookup as StaticLookup>::Source,
         ) -> DispatchResultWithPostInfo {
             T::CouncilOrigin::ensure_origin(origin)?;
 
-            let mut validator = <Validator<T>>::get(&validator_account)
+            let v = T::Lookup::lookup(validator_account.clone())?;
+
+            let mut validator = <Validator<T>>::get(&v)
                 .ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
 
             // Set state to approved
             validator.state = types::ValidatorRequestState::Approved;
-            <Validator<T>>::insert(validator_account.clone(), &validator);
+            <Validator<T>>::insert(v.clone(), &validator);
 
             // Add the validator as a council member
             pallet_membership::Pallet::<T, pallet_membership::Instance1>::add_member(
                 frame_system::RawOrigin::Root.into(),
-                validator_account.clone(),
+                validator_account,
             )?;
 
             Self::deposit_event(Event::ValidatorApproved(validator));
@@ -275,25 +277,27 @@ pub mod pallet {
         #[pallet::weight(100_000_000)]
         pub fn remove_validator(
             origin: OriginFor<T>,
-            validator: T::AccountId,
+            validator_account: <T::Lookup as StaticLookup>::Source,
         ) -> DispatchResultWithPostInfo {
-            if !(ensure_signed(origin.clone())? == validator
+            let v = T::Lookup::lookup(validator_account.clone())?;
+
+            if !(ensure_signed(origin.clone())? == v
                 || T::CouncilOrigin::ensure_origin(origin).is_ok())
             {
                 Err(Error::<T>::BadOrigin)?
             }
 
-            let _ = <Validator<T>>::get(&validator)
+            let _ = <Validator<T>>::get(&v)
                 .ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
 
             // Remove the validator as a council member
             pallet_membership::Pallet::<T, pallet_membership::Instance1>::remove_member(
                 frame_system::RawOrigin::Root.into(),
-                validator.clone(),
+                validator_account,
             )?;
 
             // Remove the entry from the storage map
-            <Validator<T>>::remove(validator);
+            <Validator<T>>::remove(v);
 
             // let node_validators = substrate_validator_set::Validators::<T>::get();
 
