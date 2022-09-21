@@ -5,7 +5,7 @@ use crate::{
     mock::*,
     types::{LocationInput, PublicIpInput},
     DocumentHashInput, DocumentLinkInput, Error, InterfaceInput, InterfaceIpsInput,
-    PublicIpListInput, ResourcesInput, SerialNumberInput,
+    PublicIpListInput, ResourcesInput, SerialNumberInput, TwinIpInput,
 };
 use frame_support::{assert_noop, assert_ok, bounded_vec, BoundedVec};
 use frame_system::{EventRecord, Phase, RawOrigin};
@@ -147,10 +147,10 @@ fn test_create_twin_works() {
             document_hash,
         ));
 
-        let ip = get_twin_ip(b"::1");
+        let ip: TwinIpInput = BoundedVec::try_from(b"::1".to_vec()).unwrap();
         assert_ok!(TfgridModule::create_twin(
             Origin::signed(test_ed25519()),
-            ip.clone().0
+            ip,
         ));
     });
 }
@@ -167,11 +167,8 @@ fn test_delete_twin_works() {
             document_hash,
         ));
 
-        let ip = get_twin_ip(b"::1");
-        assert_ok!(TfgridModule::create_twin(
-            Origin::signed(alice()),
-            ip.clone().0
-        ));
+        let ip: TwinIpInput = BoundedVec::try_from(b"::1".to_vec()).unwrap();
+        assert_ok!(TfgridModule::create_twin(Origin::signed(alice()), ip));
 
         let twin_id = 1;
         assert_ok!(TfgridModule::delete_twin(Origin::signed(alice()), twin_id));
@@ -285,9 +282,9 @@ fn test_create_twin_double_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
 
-        let ip = get_twin_ip(b"::1");
+        let ip: TwinIpInput = BoundedVec::try_from(b"::1".to_vec()).unwrap();
         assert_noop!(
-            TfgridModule::create_twin(Origin::signed(alice()), ip.clone().0),
+            TfgridModule::create_twin(Origin::signed(alice()), ip),
             Error::<TestRuntime>::TwinWithPubkeyExists
         );
     });
@@ -537,11 +534,8 @@ fn test_update_twin_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
 
-        let ip = get_twin_ip(b"::1");
-        assert_ok!(TfgridModule::update_twin(
-            Origin::signed(alice()),
-            ip.clone().0
-        ));
+        let ip: TwinIpInput = BoundedVec::try_from(b"::1".to_vec()).unwrap();
+        assert_ok!(TfgridModule::update_twin(Origin::signed(alice()), ip));
     });
 }
 
@@ -557,15 +551,14 @@ fn test_update_twin_fails_if_signed_by_someone_else() {
             document_hash,
         ));
 
-        let ip = get_twin_ip(b"::1");
+        let ip: TwinIpInput = BoundedVec::try_from(b"::1".to_vec()).unwrap();
         assert_ok!(TfgridModule::create_twin(
             Origin::signed(alice()),
-            ip.clone().0
+            ip.clone()
         ));
 
-        let ip = get_twin_ip(b"::1");
         assert_noop!(
-            TfgridModule::update_twin(Origin::signed(bob()), ip.clone().0),
+            TfgridModule::update_twin(Origin::signed(bob()), ip),
             Error::<TestRuntime>::TwinNotExists
         );
     });
@@ -2027,11 +2020,8 @@ fn create_twin() {
         document_hash,
     ));
 
-    let ip = get_twin_ip(b"::1");
-    assert_ok!(TfgridModule::create_twin(
-        Origin::signed(alice()),
-        ip.clone().0
-    ));
+    let ip: TwinIpInput = BoundedVec::try_from(b"::1".to_vec()).unwrap();
+    assert_ok!(TfgridModule::create_twin(Origin::signed(alice()), ip));
 }
 
 fn create_twin_bob() {
@@ -2044,11 +2034,8 @@ fn create_twin_bob() {
         document_hash,
     ));
 
-    let ip = get_twin_ip(b"::1");
-    assert_ok!(TfgridModule::create_twin(
-        Origin::signed(bob()),
-        ip.clone().0
-    ));
+    let ip: TwinIpInput = BoundedVec::try_from(b"::1".to_vec()).unwrap();
+    assert_ok!(TfgridModule::create_twin(Origin::signed(bob()), ip));
 }
 
 fn create_farm() {

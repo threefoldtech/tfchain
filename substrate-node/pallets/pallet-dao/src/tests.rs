@@ -6,7 +6,7 @@ use frame_support::{assert_noop, assert_ok, bounded_vec, weights::GetDispatchInf
 use frame_system::{EventRecord, Phase, RawOrigin};
 use pallet_tfgrid::{
     types::{LocationInput, PublicIpInput},
-    DocumentHashInput, DocumentLinkInput, ResourcesInput, SerialNumberInput,
+    DocumentHashInput, DocumentLinkInput, ResourcesInput, SerialNumberInput, TwinIpInput,
 };
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Hash};
@@ -785,11 +785,8 @@ pub fn prepare_twin(account_id: u64) {
         document_hash,
     ));
 
-    let ip = get_twin_ip(b"::1");
-    assert_ok!(TfgridModule::create_twin(
-        Origin::signed(account_id),
-        ip.clone().0
-    ));
+    let ip: TwinIpInput = BoundedVec::try_from(b"::1".to_vec()).unwrap();
+    assert_ok!(TfgridModule::create_twin(Origin::signed(account_id), ip));
 }
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;

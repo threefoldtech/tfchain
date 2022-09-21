@@ -157,7 +157,8 @@ pub mod pallet {
     pub type CountryInput = BoundedVec<u8, ConstU32<{ node::MAX_COUNTRY_NAME_LENGTH }>>;
     pub type LatitudeInput = BoundedVec<u8, ConstU32<{ node::MAX_LATITUDE_LENGTH }>>;
     pub type LongitudeInput = BoundedVec<u8, ConstU32<{ node::MAX_LONGITUDE_LENGTH }>>;
-    pub type LocationInput = types::LocationInput<CityInput, CountryInput, LatitudeInput, LongitudeInput>;
+    pub type LocationInput =
+        types::LocationInput<CityInput, CountryInput, LatitudeInput, LongitudeInput>;
     // Concrete type for location
     pub type LocationOf<T> = <T as Config>::Location;
 
@@ -203,7 +204,7 @@ pub mod pallet {
     pub type TwinIndex = u32;
     type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     type TwinInfoOf<T> = types::Twin<<T as Config>::TwinIp, AccountIdOf<T>>;
-    pub type TwinIpInput = BoundedVec<u8, ConstU32<39>>;
+    pub type TwinIpInput = BoundedVec<u8, ConstU32<{ twin::MAX_IP_LENGHT }>>;
     pub type TwinIpOf<T> = <T as Config>::TwinIp;
 
     #[pallet::storage]
@@ -310,7 +311,7 @@ pub mod pallet {
             + PartialEq
             + Clone
             + TypeInfo
-            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + TryFrom<TwinIpInput, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of a farm name.
@@ -1458,7 +1459,7 @@ pub mod pallet {
             let mut twin_id = TwinID::<T>::get();
             twin_id = twin_id + 1;
 
-            let twin_ip = Self::check_twin_ip(ip)?;
+            let twin_ip = Self::get_twin_ip(ip)?;
 
             let twin = types::Twin::<T::TwinIp, T::AccountId> {
                 version: TFGRID_TWIN_VERSION,
@@ -1494,7 +1495,7 @@ pub mod pallet {
                 Error::<T>::UnauthorizedToUpdateTwin
             );
 
-            let twin_ip = Self::check_twin_ip(ip)?;
+            let twin_ip = Self::get_twin_ip(ip)?;
 
             twin.ip = twin_ip;
 
@@ -2221,10 +2222,10 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    fn check_twin_ip(ip: TwinIpInput) -> Result<TwinIpOf<T>, DispatchErrorWithPostInfo> {
-        let ip = TwinIpOf::<T>::try_from(ip.to_vec()).map_err(DispatchErrorWithPostInfo::from)?;
+    fn get_twin_ip(ip: TwinIpInput) -> Result<TwinIpOf<T>, DispatchErrorWithPostInfo> {
+        let ip_parsed = <T as Config>::TwinIp::try_from(ip)?;
 
-        Ok(ip)
+        Ok(ip_parsed)
     }
 
     fn get_terms_and_conditions(

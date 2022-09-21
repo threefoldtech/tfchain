@@ -14,7 +14,7 @@ use super::types;
 use crate::cost;
 use pallet_tfgrid::{
     types::{self as pallet_tfgrid_types, LocationInput},
-    DocumentHashInput, DocumentLinkInput, ResourcesInput, SerialNumberInput,
+    DocumentHashInput, DocumentLinkInput, ResourcesInput, SerialNumberInput, TwinIpInput,
 };
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::{
@@ -2498,11 +2498,8 @@ pub fn create_twin(origin: AccountId) {
         document_hash,
     ));
 
-    let ip = get_twin_ip(b"::1");
-    assert_ok!(TfgridModule::create_twin(
-        Origin::signed(origin),
-        ip.clone().0
-    ));
+    let ip: TwinIpInput = BoundedVec::try_from(b"::1".to_vec()).unwrap();
+    assert_ok!(TfgridModule::create_twin(Origin::signed(origin), ip));
 }
 
 fn run_to_block(n: u64) {

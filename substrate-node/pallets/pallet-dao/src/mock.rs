@@ -200,10 +200,6 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Test {
     type WeightInfo = pallet_membership::weights::SubstrateWeight<Test>;
 }
 
-pub(crate) fn get_twin_ip(twin_ip_input: &[u8]) -> TestTwinIp {
-    TwinIp::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
-}
-
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
     let mut t = frame_system::GenesisConfig::default()

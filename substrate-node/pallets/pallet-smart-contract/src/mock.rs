@@ -223,10 +223,6 @@ pub(crate) fn get_name_contract_name(contract_name_input: &[u8]) -> TestNameCont
     NameContractName::try_from(contract_name_input.to_vec()).expect("Invalid farm input.")
 }
 
-pub(crate) fn get_twin_ip(twin_ip_input: &[u8]) -> TestTwinIp {
-    TwinIp::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
-}
-
 /// Helper function to generate a crypto pair from seed
 fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
     TPublic::Pair::from_string(&format!("//{}", seed), None)
