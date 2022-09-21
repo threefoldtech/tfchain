@@ -1,11 +1,10 @@
-use crate::{Config, Error};
+use crate::{types::TermsAndConditionsInput, Config, Error};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
 };
 use scale_info::TypeInfo;
 use sp_std::marker::PhantomData;
-use sp_std::vec::Vec;
 
 pub const MIN_DOCUMENT_LINK_LENGTH: u32 = 1;
 pub const MAX_DOCUMENT_LINK_LENGTH: u32 = 50;
@@ -25,7 +24,7 @@ pub struct TermsAndConditions<T: Config> {
     _marker: PhantomData<T>,
 }
 
-impl<T: Config> TryFrom<(T::AccountId, u64, Vec<u8>, Vec<u8>)> for TermsAndConditions<T> {
+impl<T: Config> TryFrom<TermsAndConditionsInput<T::AccountId>> for TermsAndConditions<T> {
     type Error = Error<T>;
 
     /// Fallible initialization from a provided tuple
@@ -34,33 +33,25 @@ impl<T: Config> TryFrom<(T::AccountId, u64, Vec<u8>, Vec<u8>)> for TermsAndCondi
     /// For document link and document hash check if byte vector
     /// is below the minimum or exceeds the maximum allowed length.
     /// Also check if byte vector only contains allowed ASCII characters.
-    fn try_from(value: (T::AccountId, u64, Vec<u8>, Vec<u8>)) -> Result<Self, Self::Error> {
-        // 1. account id
-        let account_id = value.0;
-
-        // 2. timestamp
-        let timestamp = value.1;
-
-        // 3. document link
+    fn try_from(value: TermsAndConditionsInput<T::AccountId>) -> Result<Self, Self::Error> {
         ensure!(
-            value.2.len() >= MIN_DOCUMENT_LINK_LENGTH.saturated_into(),
+            value.document_link.len() >= MIN_DOCUMENT_LINK_LENGTH.saturated_into(),
             Self::Error::DocumentLinkInputToShort
         );
         let document_link: BoundedVec<u8, ConstU32<MAX_DOCUMENT_LINK_LENGTH>> =
-            BoundedVec::try_from(value.2.clone())
+            BoundedVec::try_from(value.document_link.clone())
                 .map_err(|_| Self::Error::DocumentLinkInputToLong)?;
         ensure!(
             validate_document_link_input(&document_link),
             Self::Error::InvalidDocumentLinkInput
         );
 
-        // 4. document hash
         ensure!(
-            value.3.len() >= MIN_DOCUMENT_HASH_LENGTH.saturated_into(),
+            value.document_hash.len() >= MIN_DOCUMENT_HASH_LENGTH.saturated_into(),
             Self::Error::DocumentHashInputToShort
         );
         let document_hash: BoundedVec<u8, ConstU32<MAX_DOCUMENT_HASH_LENGTH>> =
-            BoundedVec::try_from(value.3.clone())
+            BoundedVec::try_from(value.document_hash.clone())
                 .map_err(|_| Self::Error::DocumentHashInputToLong)?;
         ensure!(
             validate_document_hash_input(&document_hash),
@@ -68,8 +59,8 @@ impl<T: Config> TryFrom<(T::AccountId, u64, Vec<u8>, Vec<u8>)> for TermsAndCondi
         );
 
         Ok(Self {
-            account_id,
-            timestamp,
+            account_id: value.account_id,
+            timestamp: value.timestamp,
             document_link,
             document_hash,
             _marker: PhantomData,

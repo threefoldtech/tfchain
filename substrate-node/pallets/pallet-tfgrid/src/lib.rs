@@ -165,6 +165,9 @@ pub mod pallet {
     // Input type for resources
     pub type ResourcesInput = Resources;
 
+    // Input type for terms and conditions
+    pub type TermsAndConditionsInput<T> = types::TermsAndConditionsInput<AccountIdOf<T>>;
+
     // Concrete type for node
     pub type TfgridNode<T> = Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>;
 
@@ -291,7 +294,7 @@ pub mod pallet {
             + PartialEq
             + Clone
             + TypeInfo
-            + TryFrom<(Self::AccountId, u64, Vec<u8>, Vec<u8>), Error = Error<Self>>
+            + TryFrom<TermsAndConditionsInput<Self>, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of a twin IP.
@@ -428,7 +431,7 @@ pub mod pallet {
             + PartialEq
             + Clone
             + TypeInfo
-            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + TryFrom<SerialNumberInput, Error = Error<Self>>
             + MaxEncodedLen;
 
         #[pallet::constant]
@@ -1763,12 +1766,14 @@ pub mod pallet {
             let account_id = ensure_signed(origin)?;
             let timestamp = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
-            let t_and_c = Self::get_terms_and_conditions(
-                account_id.clone(),
+            let input = TermsAndConditionsInput::<T> {
+                account_id: account_id.clone(),
                 timestamp,
                 document_link,
                 document_hash,
-            )?;
+            };
+
+            let t_and_c = Self::get_terms_and_conditions(input)?;
 
             let mut users_terms_and_condition =
                 UsersTermsAndConditions::<T>::get(account_id.clone()).unwrap_or(vec![]);
@@ -2216,17 +2221,9 @@ impl<T: Config> Pallet<T> {
     }
 
     fn get_terms_and_conditions(
-        account_id: T::AccountId,
-        timestamp: u64,
-        document_link: Vec<u8>,
-        document_hash: Vec<u8>,
+        terms_cond: pallet::TermsAndConditionsInput<T>,
     ) -> Result<TermsAndConditionsOf<T>, Error<T>> {
-        let parsed_terms_cond = <T as Config>::TermsAndConditions::try_from((
-            account_id,
-            timestamp,
-            document_link,
-            document_hash,
-        ))?;
+        let parsed_terms_cond = <T as Config>::TermsAndConditions::try_from(terms_cond)?;
 
         Ok(parsed_terms_cond)
     }

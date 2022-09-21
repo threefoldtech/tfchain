@@ -1,11 +1,10 @@
-use crate::{geo, types::LocationInput, SerialNumberInput, Config, Error};
+use crate::{geo, types::LocationInput, Config, Error, SerialNumberInput};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
 };
 use scale_info::TypeInfo;
 use sp_std::marker::PhantomData;
-use sp_std::vec::Vec;
 
 pub const MIN_LATITUDE_LENGTH: u32 = 1;
 pub const MAX_LATITUDE_LENGTH: u32 = 50;
@@ -189,7 +188,7 @@ pub struct SerialNumber<T: Config>(
     PhantomData<(T, ConstU32<MAX_SERIAL_NUMBER_LENGTH>)>,
 );
 
-impl<T: Config> TryFrom<Vec<u8>> for SerialNumber<T> {
+impl<T: Config> TryFrom<SerialNumberInput> for SerialNumber<T> {
     type Error = Error<T>;
 
     /// TODO: Fallible initialization from a provided byte vector if it is below the

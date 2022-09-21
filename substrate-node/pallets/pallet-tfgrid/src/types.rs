@@ -156,19 +156,13 @@ pub struct FarmingPolicy<BlockNumber> {
     pub farm_certification: FarmCertification,
 }
 
-impl<B> PartialOrd for FarmingPolicy<B>
-where
-    B: Ord,
-{
+impl<B: Ord> PartialOrd for FarmingPolicy<B> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<B> Ord for FarmingPolicy<B>
-where
-    B: Ord,
-{
+impl<B: Ord> Ord for FarmingPolicy<B> {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.farm_certification.cmp(&other.farm_certification) {
             Ordering::Equal => self.node_certification.cmp(&other.node_certification),
@@ -178,7 +172,7 @@ where
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct TermsAndConditions<AccountId> {
+pub struct TermsAndConditionsInput<AccountId> {
     pub account_id: AccountId,
     pub timestamp: u64,
     pub document_link: Vec<u8>,
