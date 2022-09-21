@@ -157,7 +157,7 @@ pub mod pallet {
     pub type PalletVersion<T> = StorageValue<_, types::StorageVersion, ValueQuery>;
 
     #[pallet::type_value]
-    pub fn DefaultBillingFrequency<T: Config>() -> u64 { 600 }
+    pub fn DefaultBillingFrequency<T: Config>() -> u64 { T::BillingFrequency::get() }
 
     #[pallet::storage]
     #[pallet::getter(fn billing_frequency)]
@@ -174,7 +174,7 @@ pub mod pallet {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: LockableCurrency<Self::AccountId>;
         type StakingPoolAccount: Get<Self::AccountId>;
-        //type BillingFrequency: Get<u64>;
+        type BillingFrequency: Get<u64>;
         type DistributionFrequency: Get<u16>;
         type GracePeriod: Get<u64>;
         type WeightInfo: WeightInfo;
