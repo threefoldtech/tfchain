@@ -1,10 +1,12 @@
 use super::Event as DaoEvent;
 use crate::{mock::Event as MockEvent, mock::*, Error};
+use core::convert::TryFrom;
+use frame_benchmarking::frame_support::BoundedVec;
 use frame_support::{assert_noop, assert_ok, bounded_vec, weights::GetDispatchInfo};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use pallet_tfgrid::{
     types::{LocationInput, PublicIpInput},
-    ResourcesInput, SerialNumberInput,
+    DocumentHashInput, DocumentLinkInput, ResourcesInput, SerialNumberInput,
 };
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Hash};
@@ -774,13 +776,13 @@ pub fn prepare_twin_farm_and_big_node(account_id: u64, farm_name: Vec<u8>, farm_
 }
 
 pub fn prepare_twin(account_id: u64) {
-    let document = "some_link".as_bytes().to_vec();
-    let hash = "some_hash".as_bytes().to_vec();
+    let document_link: DocumentLinkInput = BoundedVec::try_from(b"some_link".to_vec()).unwrap();
+    let document_hash: DocumentHashInput = BoundedVec::try_from(b"some_hash".to_vec()).unwrap();
 
     assert_ok!(TfgridModule::user_accept_tc(
         Origin::signed(account_id),
-        document.clone(),
-        hash.clone(),
+        document_link,
+        document_hash,
     ));
 
     let ip = get_twin_ip(b"::1");
@@ -792,25 +794,21 @@ pub fn prepare_twin(account_id: u64) {
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 fn prepare_node(account_id: u64, farm_id: u32) {
-    let hru = 1024 * GIGABYTE;
-    let sru = 512 * GIGABYTE;
-    let cru = 8;
-    let mru = 16 * GIGABYTE;
-    let resources = ResourcesInput { hru, sru, cru, mru };
-
-    // random location
-    let city = b"Ghent";
-    let country = b"Belgium";
-    let lat = b"12.233213231";
-    let long = b"32.323112123";
-    let location = LocationInput {
-        city: city.to_vec(),
-        country: country.to_vec(),
-        latitude: lat.to_vec(),
-        longitude: long.to_vec(),
+    let resources = ResourcesInput {
+        hru: 1024 * GIGABYTE,
+        sru: 512 * GIGABYTE,
+        cru: 8,
+        mru: 16 * GIGABYTE,
     };
 
-    let serial_number: SerialNumberInput = b"some_serial".to_vec();
+    // random location
+    let location = LocationInput {
+        city: BoundedVec::try_from(b"Ghent".to_vec()).unwrap(),
+        country: BoundedVec::try_from(b"Belgium".to_vec()).unwrap(),
+        latitude: BoundedVec::try_from(b"12.233213231".to_vec()).unwrap(),
+        longitude: BoundedVec::try_from(b"32.323112123".to_vec()).unwrap(),
+    };
+    let serial_number: SerialNumberInput = BoundedVec::try_from(b"some_serial".to_vec()).unwrap();
 
     assert_ok!(TfgridModule::create_node(
         Origin::signed(account_id),
@@ -825,25 +823,22 @@ fn prepare_node(account_id: u64, farm_id: u32) {
 }
 
 fn prepare_big_node(account_id: u64, farm_id: u32) {
-    let hru = 1024 * GIGABYTE;
-    let sru = 512 * GIGABYTE;
-    let cru = 8;
-    let mru = 16 * GIGABYTE;
-    let resources = ResourcesInput { hru, sru, cru, mru };
-
-    // random location
-    let city = b"Ghent";
-    let country = b"Belgium";
-    let lat = b"12.233213231";
-    let long = b"32.323112123";
-    let location = LocationInput {
-        city: city.to_vec(),
-        country: country.to_vec(),
-        latitude: lat.to_vec(),
-        longitude: long.to_vec(),
+    let resources = ResourcesInput {
+        hru: 20024 * GIGABYTE,
+        sru: 2024 * GIGABYTE,
+        cru: 16,
+        mru: 64 * GIGABYTE,
     };
 
-    let serial_number: SerialNumberInput = b"some_serial".to_vec();
+    // random location
+    let location = LocationInput {
+        city: BoundedVec::try_from(b"Ghent".to_vec()).unwrap(),
+        country: BoundedVec::try_from(b"Belgium".to_vec()).unwrap(),
+        latitude: BoundedVec::try_from(b"12.233213231".to_vec()).unwrap(),
+        longitude: BoundedVec::try_from(b"32.323112123".to_vec()).unwrap(),
+    };
+
+    let serial_number: SerialNumberInput = BoundedVec::try_from(b"some_serial".to_vec()).unwrap();
 
     assert_ok!(TfgridModule::create_node(
         Origin::signed(account_id),

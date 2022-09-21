@@ -1,4 +1,4 @@
-use crate::{types::TermsAndConditionsInput, Config, Error};
+use crate::{Config, Error, TermsAndConditionsInput};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
@@ -24,7 +24,7 @@ pub struct TermsAndConditions<T: Config> {
     _marker: PhantomData<T>,
 }
 
-impl<T: Config> TryFrom<TermsAndConditionsInput<T::AccountId>> for TermsAndConditions<T> {
+impl<T: Config> TryFrom<TermsAndConditionsInput<T>> for TermsAndConditions<T> {
     type Error = Error<T>;
 
     /// Fallible initialization from a provided tuple
@@ -33,16 +33,17 @@ impl<T: Config> TryFrom<TermsAndConditionsInput<T::AccountId>> for TermsAndCondi
     /// For document link and document hash check if byte vector
     /// is below the minimum or exceeds the maximum allowed length.
     /// Also check if byte vector only contains allowed ASCII characters.
-    fn try_from(value: TermsAndConditionsInput<T::AccountId>) -> Result<Self, Self::Error> {
+    fn try_from(value: TermsAndConditionsInput<T>) -> Result<Self, Self::Error> {
         ensure!(
             value.document_link.len() >= MIN_DOCUMENT_LINK_LENGTH.saturated_into(),
             Self::Error::DocumentLinkInputToShort
         );
-        let document_link: BoundedVec<u8, ConstU32<MAX_DOCUMENT_LINK_LENGTH>> =
-            BoundedVec::try_from(value.document_link.clone())
-                .map_err(|_| Self::Error::DocumentLinkInputToLong)?;
         ensure!(
-            validate_document_link_input(&document_link),
+            value.document_link.len() <= MAX_DOCUMENT_LINK_LENGTH.saturated_into(),
+            Self::Error::DocumentLinkInputToLong
+        );
+        ensure!(
+            validate_document_link_input(&value.document_link),
             Self::Error::InvalidDocumentLinkInput
         );
 
@@ -50,19 +51,20 @@ impl<T: Config> TryFrom<TermsAndConditionsInput<T::AccountId>> for TermsAndCondi
             value.document_hash.len() >= MIN_DOCUMENT_HASH_LENGTH.saturated_into(),
             Self::Error::DocumentHashInputToShort
         );
-        let document_hash: BoundedVec<u8, ConstU32<MAX_DOCUMENT_HASH_LENGTH>> =
-            BoundedVec::try_from(value.document_hash.clone())
-                .map_err(|_| Self::Error::DocumentHashInputToLong)?;
         ensure!(
-            validate_document_hash_input(&document_hash),
+            value.document_hash.len() <= MAX_DOCUMENT_HASH_LENGTH.saturated_into(),
+            Self::Error::DocumentHashInputToLong
+        );
+        ensure!(
+            validate_document_hash_input(&value.document_hash),
             Self::Error::InvalidDocumentHashInput
         );
 
         Ok(Self {
             account_id: value.account_id,
             timestamp: value.timestamp,
-            document_link,
-            document_hash,
+            document_link: value.document_link,
+            document_hash: value.document_hash,
             _marker: PhantomData,
         })
     }

@@ -153,12 +153,16 @@ pub mod pallet {
         Interface<<T as Config>::InterfaceName, <T as Config>::InterfaceMac, InterfaceIpsOf<T>>;
 
     // Input type for location
-    pub type LocationInput = types::LocationInput;
+    pub type CityInput = BoundedVec<u8, ConstU32<{ node::MAX_CITY_NAME_LENGTH }>>;
+    pub type CountryInput = BoundedVec<u8, ConstU32<{ node::MAX_COUNTRY_NAME_LENGTH }>>;
+    pub type LatitudeInput = BoundedVec<u8, ConstU32<{ node::MAX_LATITUDE_LENGTH }>>;
+    pub type LongitudeInput = BoundedVec<u8, ConstU32<{ node::MAX_LONGITUDE_LENGTH }>>;
+    pub type LocationInput = types::LocationInput<CityInput, CountryInput, LatitudeInput, LongitudeInput>;
     // Concrete type for location
     pub type LocationOf<T> = <T as Config>::Location;
 
     // Input type for serial number
-    pub type SerialNumberInput = Vec<u8>;
+    pub type SerialNumberInput = BoundedVec<u8, ConstU32<{ node::MAX_SERIAL_NUMBER_LENGTH }>>;
     // Concrete type for location
     pub type SerialNumberOf<T> = <T as Config>::SerialNumber;
 
@@ -166,7 +170,10 @@ pub mod pallet {
     pub type ResourcesInput = Resources;
 
     // Input type for terms and conditions
-    pub type TermsAndConditionsInput<T> = types::TermsAndConditionsInput<AccountIdOf<T>>;
+    pub type DocumentLinkInput = BoundedVec<u8, ConstU32<{ terms_cond::MAX_DOCUMENT_LINK_LENGTH }>>;
+    pub type DocumentHashInput = BoundedVec<u8, ConstU32<{ terms_cond::MAX_DOCUMENT_HASH_LENGTH }>>;
+    pub type TermsAndConditionsInput<T> =
+        types::TermsAndConditionsInput<AccountIdOf<T>, DocumentLinkInput, DocumentHashInput>;
 
     // Concrete type for node
     pub type TfgridNode<T> = Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>;
@@ -1760,8 +1767,8 @@ pub mod pallet {
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2))]
         pub fn user_accept_tc(
             origin: OriginFor<T>,
-            document_link: Vec<u8>,
-            document_hash: Vec<u8>,
+            document_link: DocumentLinkInput,
+            document_hash: DocumentHashInput,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             let timestamp = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;

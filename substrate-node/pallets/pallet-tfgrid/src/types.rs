@@ -172,11 +172,11 @@ impl<B: Ord> Ord for FarmingPolicy<B> {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct TermsAndConditionsInput<AccountId> {
+pub struct TermsAndConditionsInput<AccountId, DocLink, DocHash> {
     pub account_id: AccountId,
     pub timestamp: u64,
-    pub document_link: Vec<u8>,
-    pub document_hash: Vec<u8>,
+    pub document_link: DocLink,
+    pub document_hash: DocHash,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
@@ -186,9 +186,9 @@ pub struct PublicIpInput<IP, GW> {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct LocationInput {
-    pub city: Vec<u8>,
-    pub country: Vec<u8>,
-    pub latitude: Vec<u8>,
-    pub longitude: Vec<u8>,
+pub struct LocationInput<City, Country, Latitude, Longitude> {
+    pub city: City,
+    pub country: Country,
+    pub latitude: Latitude,
+    pub longitude: Longitude,
 }

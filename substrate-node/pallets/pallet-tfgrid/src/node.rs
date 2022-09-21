@@ -1,4 +1,4 @@
-use crate::{geo, types::LocationInput, Config, Error, SerialNumberInput};
+use crate::{geo, Config, Error, LocationInput, SerialNumberInput};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
@@ -50,11 +50,13 @@ impl<T: Config> TryFrom<LocationInput> for Location<T> {
             value.city.len() >= MIN_CITY_NAME_LENGTH.saturated_into(),
             Self::Error::CityNameTooShort
         );
-        let city: BoundedVec<u8, ConstU32<MAX_CITY_NAME_LENGTH>> =
-            BoundedVec::try_from(value.city).map_err(|_| Self::Error::CityNameTooLong)?;
-        let city_str = core::str::from_utf8(&city);
         ensure!(
-            validate_city_name(&city) && city_str.is_ok(),
+            value.city.len() <= MAX_CITY_NAME_LENGTH.saturated_into(),
+            Self::Error::CityNameTooLong
+        );
+        let city_str = core::str::from_utf8(&value.city);
+        ensure!(
+            validate_city_name(&value.city) && city_str.is_ok(),
             Self::Error::InvalidCityName
         );
 
@@ -63,11 +65,13 @@ impl<T: Config> TryFrom<LocationInput> for Location<T> {
             value.country.len() >= MIN_COUNTRY_NAME_LENGTH.saturated_into(),
             Self::Error::CountryNameTooShort
         );
-        let country: BoundedVec<u8, ConstU32<MAX_COUNTRY_NAME_LENGTH>> =
-            BoundedVec::try_from(value.country).map_err(|_| Self::Error::CountryNameTooLong)?;
-        let country_str = core::str::from_utf8(&country);
         ensure!(
-            validate_country_name(&country) && country_str.is_ok(),
+            value.country.len() <= MAX_COUNTRY_NAME_LENGTH.saturated_into(),
+            Self::Error::CountryNameTooLong
+        );
+        let country_str = core::str::from_utf8(&value.country);
+        ensure!(
+            validate_country_name(&value.country) && country_str.is_ok(),
             Self::Error::InvalidCountryName
         );
 
@@ -82,11 +86,12 @@ impl<T: Config> TryFrom<LocationInput> for Location<T> {
             value.latitude.len() >= MIN_LATITUDE_LENGTH.saturated_into(),
             Self::Error::LatitudeInputToShort
         );
-        let latitude: BoundedVec<u8, ConstU32<MAX_LATITUDE_LENGTH>> =
-            BoundedVec::try_from(value.latitude.clone())
-                .map_err(|_| Self::Error::LatitudeInputToLong)?;
         ensure!(
-            validate_latitude_input(&latitude),
+            value.latitude.len() <= MAX_LATITUDE_LENGTH.saturated_into(),
+            Self::Error::LatitudeInputToLong
+        );
+        ensure!(
+            validate_latitude_input(&value.latitude),
             Self::Error::InvalidLatitudeInput
         );
 
@@ -95,19 +100,20 @@ impl<T: Config> TryFrom<LocationInput> for Location<T> {
             value.longitude.len() >= MIN_LONGITUDE_LENGTH.saturated_into(),
             Self::Error::LongitudeInputToShort
         );
-        let longitude: BoundedVec<u8, ConstU32<MAX_LONGITUDE_LENGTH>> =
-            BoundedVec::try_from(value.longitude.clone())
-                .map_err(|_| Self::Error::LongitudeInputToLong)?;
         ensure!(
-            validate_longitude_input(&longitude),
+            value.longitude.len() <= MAX_LONGITUDE_LENGTH.saturated_into(),
+            Self::Error::LongitudeInputToLong
+        );
+        ensure!(
+            validate_longitude_input(&value.longitude),
             Self::Error::InvalidLongitudeInput
         );
 
         Ok(Self {
-            city,
-            country,
-            latitude,
-            longitude,
+            city: value.city,
+            country: value.country,
+            latitude: value.latitude,
+            longitude: value.longitude,
             _marker: PhantomData,
         })
     }
@@ -198,13 +204,15 @@ impl<T: Config> TryFrom<SerialNumberInput> for SerialNumber<T> {
             value.len() >= MIN_SERIAL_NUMBER_LENGTH.saturated_into(),
             Self::Error::SerialNumberTooShort
         );
-        let bounded_vec: BoundedVec<u8, ConstU32<MAX_SERIAL_NUMBER_LENGTH>> =
-            BoundedVec::try_from(value).map_err(|_| Self::Error::SerialNumberTooLong)?;
         ensure!(
-            validate_serial_number(&bounded_vec),
+            value.len() <= MAX_SERIAL_NUMBER_LENGTH.saturated_into(),
+            Self::Error::SerialNumberTooLong
+        );
+        ensure!(
+            validate_serial_number(&value),
             Self::Error::InvalidSerialNumber
         );
-        Ok(Self(bounded_vec, PhantomData))
+        Ok(Self(value, PhantomData))
     }
 }
 

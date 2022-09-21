@@ -4,7 +4,8 @@ use crate::{
     mock::Event as MockEvent,
     mock::*,
     types::{LocationInput, PublicIpInput},
-    Error, InterfaceInput, InterfaceIpsInput, PublicIpListInput, ResourcesInput, SerialNumberInput,
+    DocumentHashInput, DocumentLinkInput, Error, InterfaceInput, InterfaceIpsInput,
+    PublicIpListInput, ResourcesInput, SerialNumberInput,
 };
 use frame_support::{assert_noop, assert_ok, bounded_vec, BoundedVec};
 use frame_system::{EventRecord, Phase, RawOrigin};
@@ -137,13 +138,13 @@ fn test_delete_entity_fails_if_signed_by_someone_else() {
 #[test]
 fn test_create_twin_works() {
     ExternalityBuilder::build().execute_with(|| {
-        let document = "some_link".as_bytes().to_vec();
-        let hash = "some_hash".as_bytes().to_vec();
+        let document_link: DocumentLinkInput = BoundedVec::try_from(b"some_link".to_vec()).unwrap();
+        let document_hash: DocumentHashInput = BoundedVec::try_from(b"some_hash".to_vec()).unwrap();
 
         assert_ok!(TfgridModule::user_accept_tc(
             Origin::signed(test_ed25519()),
-            document,
-            hash,
+            document_link,
+            document_hash,
         ));
 
         let ip = get_twin_ip(b"::1");
@@ -157,13 +158,13 @@ fn test_create_twin_works() {
 #[test]
 fn test_delete_twin_works() {
     ExternalityBuilder::build().execute_with(|| {
-        let document = "some_link".as_bytes().to_vec();
-        let hash = "some_hash".as_bytes().to_vec();
+        let document_link: DocumentLinkInput = BoundedVec::try_from(b"some_link".to_vec()).unwrap();
+        let document_hash: DocumentHashInput = BoundedVec::try_from(b"some_hash".to_vec()).unwrap();
 
         assert_ok!(TfgridModule::user_accept_tc(
             Origin::signed(alice()),
-            document,
-            hash,
+            document_link,
+            document_hash,
         ));
 
         let ip = get_twin_ip(b"::1");
@@ -547,13 +548,13 @@ fn test_update_twin_works() {
 #[test]
 fn test_update_twin_fails_if_signed_by_someone_else() {
     ExternalityBuilder::build().execute_with(|| {
-        let document = "some_link".as_bytes().to_vec();
-        let hash = "some_hash".as_bytes().to_vec();
+        let document_link: DocumentLinkInput = BoundedVec::try_from(b"some_link".to_vec()).unwrap();
+        let document_hash: DocumentHashInput = BoundedVec::try_from(b"some_hash".to_vec()).unwrap();
 
         assert_ok!(TfgridModule::user_accept_tc(
             Origin::signed(alice()),
-            document,
-            hash,
+            document_link,
+            document_hash,
         ));
 
         let ip = get_twin_ip(b"::1");
@@ -808,22 +809,19 @@ fn create_node_with_interfaces_works() {
         create_twin();
         create_farm();
 
-        let hru = 1024 * GIGABYTE;
-        let sru = 512 * GIGABYTE;
-        let cru = 8;
-        let mru = 16 * GIGABYTE;
-        let resources = ResourcesInput { hru, sru, cru, mru };
+        let resources = ResourcesInput {
+            hru: 1024 * GIGABYTE,
+            sru: 512 * GIGABYTE,
+            cru: 8,
+            mru: 16 * GIGABYTE,
+        };
 
         // random location
-        let city = b"Ghent";
-        let country = b"Belgium";
-        let lat = b"12.233213231";
-        let long = b"32.323112123";
         let location = LocationInput {
-            city: city.to_vec(),
-            country: country.to_vec(),
-            latitude: lat.to_vec(),
-            longitude: long.to_vec(),
+            city: BoundedVec::try_from(b"Ghent".to_vec()).unwrap(),
+            country: BoundedVec::try_from(b"Belgium".to_vec()).unwrap(),
+            latitude: BoundedVec::try_from(b"12.233213231".to_vec()).unwrap(),
+            longitude: BoundedVec::try_from(b"32.323112123".to_vec()).unwrap(),
         };
 
         let mut interface_ips: InterfaceIpsInput<TestRuntime> = bounded_vec![];
@@ -842,7 +840,8 @@ fn create_node_with_interfaces_works() {
         let mut interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
         interfaces.try_push(interface).unwrap();
 
-        let serial_number: SerialNumberInput = b"some_serial".to_vec();
+        let serial_number: SerialNumberInput =
+            BoundedVec::try_from(b"some_serial".to_vec()).unwrap();
 
         assert_ok!(TfgridModule::create_node(
             Origin::signed(alice()),
@@ -1203,27 +1202,25 @@ fn create_node_with_same_pubkey_fails() {
         create_farm();
         create_node();
 
-        let hru = 1;
-        let sru = 1;
-        let cru = 1;
-        let mru = 1;
-        let resources = ResourcesInput { hru, sru, cru, mru };
+        let resources = ResourcesInput {
+            hru: 1,
+            sru: 1,
+            cru: 1,
+            mru: 1,
+        };
 
         // random location
-        let city = b"Ghent";
-        let country = b"Belgium";
-        let lat = b"12.233213231";
-        let long = b"32.323112123";
         let location = LocationInput {
-            city: city.to_vec(),
-            country: country.to_vec(),
-            latitude: lat.to_vec(),
-            longitude: long.to_vec(),
+            city: BoundedVec::try_from(b"Ghent".to_vec()).unwrap(),
+            country: BoundedVec::try_from(b"Belgium".to_vec()).unwrap(),
+            latitude: BoundedVec::try_from(b"12.233213231".to_vec()).unwrap(),
+            longitude: BoundedVec::try_from(b"32.323112123".to_vec()).unwrap(),
         };
 
         let interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
 
-        let serial_number: SerialNumberInput = b"some_serial".to_vec();
+        let serial_number: SerialNumberInput =
+            BoundedVec::try_from(b"some_serial".to_vec()).unwrap();
 
         assert_noop!(
             TfgridModule::create_node(
@@ -2021,13 +2018,13 @@ fn create_entity_sr() {
 }
 
 fn create_twin() {
-    let document = "some_link".as_bytes().to_vec();
-    let hash = "some_hash".as_bytes().to_vec();
+    let document_link: DocumentLinkInput = BoundedVec::try_from(b"some_link".to_vec()).unwrap();
+    let document_hash: DocumentHashInput = BoundedVec::try_from(b"some_hash".to_vec()).unwrap();
 
     assert_ok!(TfgridModule::user_accept_tc(
         Origin::signed(alice()),
-        document,
-        hash,
+        document_link,
+        document_hash,
     ));
 
     let ip = get_twin_ip(b"::1");
@@ -2038,13 +2035,13 @@ fn create_twin() {
 }
 
 fn create_twin_bob() {
-    let document = "some_link".as_bytes().to_vec();
-    let hash = "some_hash".as_bytes().to_vec();
+    let document_link: DocumentLinkInput = BoundedVec::try_from(b"some_link".to_vec()).unwrap();
+    let document_hash: DocumentHashInput = BoundedVec::try_from(b"some_hash".to_vec()).unwrap();
 
     assert_ok!(TfgridModule::user_accept_tc(
         Origin::signed(bob()),
-        document,
-        hash,
+        document_link,
+        document_hash,
     ));
 
     let ip = get_twin_ip(b"::1");
@@ -2093,27 +2090,24 @@ fn create_farm2() {
 }
 
 fn create_node() {
-    let hru = 1024 * GIGABYTE;
-    let sru = 512 * GIGABYTE;
-    let cru = 8;
-    let mru = 16 * GIGABYTE;
-    let resources = ResourcesInput { hru, sru, cru, mru };
+    let resources = ResourcesInput {
+        hru: 1024 * GIGABYTE,
+        sru: 512 * GIGABYTE,
+        cru: 8,
+        mru: 16 * GIGABYTE,
+    };
 
     // random location
-    let city = b"Ghent";
-    let country = b"Belgium";
-    let lat = b"12.233213231";
-    let long = b"32.323112123";
     let location = LocationInput {
-        city: city.to_vec(),
-        country: country.to_vec(),
-        latitude: lat.to_vec(),
-        longitude: long.to_vec(),
+        city: BoundedVec::try_from(b"Ghent".to_vec()).unwrap(),
+        country: BoundedVec::try_from(b"Belgium".to_vec()).unwrap(),
+        latitude: BoundedVec::try_from(b"12.233213231".to_vec()).unwrap(),
+        longitude: BoundedVec::try_from(b"32.323112123".to_vec()).unwrap(),
     };
 
     let interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
 
-    let serial_number: SerialNumberInput = b"some_serial".to_vec();
+    let serial_number: SerialNumberInput = BoundedVec::try_from(b"some_serial".to_vec()).unwrap();
 
     assert_ok!(TfgridModule::create_node(
         Origin::signed(alice()),
@@ -2128,25 +2122,22 @@ fn create_node() {
 }
 
 fn create_extra_node() {
-    let hru = 1024 * GIGABYTE;
-    let sru = 512 * GIGABYTE;
-    let cru = 8;
-    let mru = 16 * GIGABYTE;
-    let resources = ResourcesInput { hru, sru, cru, mru };
-
-    // random location
-    let city = b"Rio de Janeiro";
-    let country = b"Brazil";
-    let lat = b"43.1868";
-    let long = b"22.9694";
-    let location = LocationInput {
-        city: city.to_vec(),
-        country: country.to_vec(),
-        latitude: lat.to_vec(),
-        longitude: long.to_vec(),
+    let resources = ResourcesInput {
+        hru: 1024 * GIGABYTE,
+        sru: 512 * GIGABYTE,
+        cru: 8,
+        mru: 16 * GIGABYTE,
     };
 
-    let serial_number: SerialNumberInput = b"some_serial".to_vec();
+    // random location
+    let location = LocationInput {
+        city: BoundedVec::try_from(b"Rio de Janeiro".to_vec()).unwrap(),
+        country: BoundedVec::try_from(b"Brazil".to_vec()).unwrap(),
+        latitude: BoundedVec::try_from(b"43.1868".to_vec()).unwrap(),
+        longitude: BoundedVec::try_from(b"22.9694".to_vec()).unwrap(),
+    };
+
+    let serial_number: SerialNumberInput = BoundedVec::try_from(b"some_serial".to_vec()).unwrap();
 
     assert_ok!(TfgridModule::create_node(
         Origin::signed(bob()),
