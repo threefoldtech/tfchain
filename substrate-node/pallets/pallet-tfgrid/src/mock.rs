@@ -1,4 +1,4 @@
-use crate::{self as tfgridModule, Config, FarmNameInput};
+use crate::{self as tfgridModule, Config, FarmNameInput, TwinIpInput};
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
 use frame_system::EnsureRoot;
 use sp_io::TestExternalities;
@@ -194,6 +194,10 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     };
     genesis.assimilate_storage(&mut t).unwrap();
     t.into()
+}
+
+pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {
+    BoundedVec::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
 }
 
 pub(crate) fn get_farm_name_input(farm_name_input: &[u8]) -> FarmNameInput<TestRuntime> {

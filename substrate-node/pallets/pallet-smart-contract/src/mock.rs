@@ -6,6 +6,7 @@ use crate::{self as pallet_smart_contract};
 use frame_support::{
     construct_runtime, parameter_types,
     traits::{ConstU32, GenesisBuild},
+    BoundedVec,
 };
 use frame_system::EnsureRoot;
 use pallet_tfgrid::{
@@ -16,6 +17,7 @@ use pallet_tfgrid::{
     pub_ip::{GatewayIP, PublicIP},
     terms_cond::TermsAndConditions,
     twin::TwinIp,
+    TwinIpInput,
 };
 use sp_core::{crypto::Ss58Codec, sr25519, Pair, Public, H256};
 use sp_runtime::traits::{IdentifyAccount, Verify};
@@ -221,6 +223,10 @@ type AccountPublic = <MultiSignature as Verify>::Signer;
 
 pub(crate) fn get_name_contract_name(contract_name_input: &[u8]) -> TestNameContractName {
     NameContractName::try_from(contract_name_input.to_vec()).expect("Invalid farm input.")
+}
+
+pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {
+    BoundedVec::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
 }
 
 /// Helper function to generate a crypto pair from seed

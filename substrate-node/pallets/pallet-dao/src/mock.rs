@@ -1,6 +1,6 @@
 use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
 use crate::{self as pallet_dao};
-use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
+use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
 use frame_system::EnsureRoot;
 use pallet_collective;
 use pallet_tfgrid::{
@@ -11,6 +11,7 @@ use pallet_tfgrid::{
     pub_ip::{GatewayIP, PublicIP},
     terms_cond::TermsAndConditions,
     twin::TwinIp,
+    TwinIpInput,
 };
 use pallet_timestamp;
 use sp_core::H256;
@@ -198,6 +199,10 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Test {
     type MembershipChanged = ();
     type MaxMembers = CouncilMaxMembers;
     type WeightInfo = pallet_membership::weights::SubstrateWeight<Test>;
+}
+
+pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {
+    BoundedVec::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
 }
 
 // Build genesis storage according to the mock runtime.
