@@ -1,13 +1,16 @@
+from cmath import exp
+from datetime import datetime
+import json
 import logging
 from random import randbytes
 from re import sub
-from venv import create
-from xml import dom
-from xmlrpc.client import boolean
+import time
+from unittest import expectedFailure
 from substrateinterface import SubstrateInterface, Keypair
 
 GIGABYTE = 1024*1024*1024
 
+TIMEOUT_WAIT_FOR_BLOCK = 6
 DEFAULT_SIGNER = "Alice"
 
 
@@ -39,7 +42,7 @@ class TfChainClient:
         insert_key_params = [
             "smct", f"//{name}", self._predefined_keys[name].public_key.hex()]
         substrate.rpc_request("author_insertKey", insert_key_params)
-        
+
         if create_twin:
             self.user_accept_tc(port=port, who=name)
             self.create_twin(port=port, who=name)
@@ -50,7 +53,28 @@ class TfChainClient:
         assert _who in self._predefined_keys, f"{who} is not a predefined account, use one of {self._predefined_keys.keys()}"
         return _who
 
-    def _sign_extrinsic_submit_check_response(self, substrate, call, who):
+    def _check_events(self, events, expected_events):
+        assert isinstance(
+            expected_events, list), "expected_events should be a list"
+        for expected_event in expected_events:
+            assert isinstance(
+                expected_event, dict), "all expected_events should be dictionaries"
+
+        logging.info("Events: %s", json.dumps(events))
+
+        for expected_event in expected_events:
+            check = False
+            for event in events:
+                check = all(item in event.keys(
+                ) and event[item] == expected_event[item] for item in expected_event.keys())
+                if check:
+                    logging.info("Found event %s", expected_event)
+                    break
+            if not check:
+                raise Exception(
+                    f"Expected the event {expected_event} in {events}, no match found!")
+
+    def _sign_extrinsic_submit_check_response(self, substrate, call, who, expected_events=[]):
         _who = who.title()
         assert _who in self._predefined_keys, f"{who} is not a predefined account, use one of {self._predefined_keys.keys()}"
 
@@ -60,27 +84,36 @@ class TfChainClient:
 
         response = substrate.submit_extrinsic(
             signed_call, wait_for_finalization=self._wait_for_finalization, wait_for_inclusion=self._wait_for_inclusion)
-        logging.info("Response: %s", response)
         if response.error_message:
             raise Exception(response.error_message)
 
+        events = [event.value["event"] for event in response.triggered_events]
+        self._check_events([event.value["event"]
+                           for event in response.triggered_events], expected_events)
+
     def setup_alice(self, create_twin=False, port=9945):
-        self._setup_predefined_account("Alice", port=port, create_twin=create_twin)
+        self._setup_predefined_account(
+            "Alice", port=port, create_twin=create_twin)
 
     def setup_bob(self, create_twin=False, port=9946):
-        self._setup_predefined_account("Bob", port=port, create_twin=create_twin)
+        self._setup_predefined_account(
+            "Bob", port=port, create_twin=create_twin)
 
     def setup_charlie(self, create_twin=False, port=9947):
-        self._setup_predefined_account("Charlie", port=port, create_twin=create_twin)
+        self._setup_predefined_account(
+            "Charlie", port=port, create_twin=create_twin)
 
     def setup_dave(self, create_twin=False, port=9948):
-        self._setup_predefined_account("Dave", port=port, create_twin=create_twin)
+        self._setup_predefined_account(
+            "Dave", port=port, create_twin=create_twin)
 
     def setup_eve(self, create_twin=False, port=9949):
-        self._setup_predefined_account("Eve", port=port, create_twin=create_twin)
+        self._setup_predefined_account(
+            "Eve", port=port, create_twin=create_twin)
 
     def setup_ferdie(self, create_twin=False, port=9950):
-        self._setup_predefined_account("Ferdie", port=port, create_twin=create_twin)
+        self._setup_predefined_account(
+            "Ferdie", port=port, create_twin=create_twin)
 
     def set_wait_for_finalization(self, value):
         assert isinstance(value, bool), "value should be a boolean"
@@ -106,7 +139,11 @@ class TfChainClient:
         call = substrate.compose_call(
             "TfgridModule", "create_twin", {"ip": ip})
 
-        self._sign_extrinsic_submit_check_response(substrate, call, who)
+        expected_events = [{
+            "module_id": "TfgridModule",
+            "event_id": "TwinStored"
+        }]
+        self._sign_extrinsic_submit_check_response(substrate, call, who, expected_events=expected_events)
 
     def update_twin(self, ip="::1", port=9945, who=DEFAULT_SIGNER):
         assert isinstance(ip, str), "ip should be a string"
@@ -117,7 +154,11 @@ class TfChainClient:
         call = substrate.compose_call("TfgridModule", "update_twin", {
             "ip": ip})
 
-        self._sign_extrinsic_submit_check_response(substrate, call, who)
+        expected_events = [{
+            "module_id": "TfgridModule",
+            "event_id": "TwinUpdated"
+        }]
+        self._sign_extrinsic_submit_check_response(substrate, call, who, expected_events=expected_events)
 
     def delete_twin(self, twin_id=1, port=9945, who=DEFAULT_SIGNER):
         assert isinstance(twin_id, int), "twin_id should be an integer"
@@ -127,15 +168,53 @@ class TfChainClient:
 
         call = substrate.compose_call("TfgridModule", "delete_twin", {
             "twin_id": twin_id})
-
-        self._sign_extrinsic_submit_check_response(substrate, call, who)
+        
+        expected_events = [{
+            "module_id": "TfgridModule",
+            "event_id": "TwinDeleted"
+        }]
+        self._sign_extrinsic_submit_check_response(substrate, call, who, expected_events=expected_events)
 
     def get_twin(self, id=1, port=9945):
         assert isinstance(id, int), "id should be an integer"
 
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
-        return substrate.query("TfgridModule", "Twins", [id])
+        q = substrate.query("TfgridModule", "Twins", [id])
+        return q.value
+
+    def balance_data(self, twin_id=1, port=9945):
+        assert isinstance(twin_id, int), "twin_id should be an integer"
+
+        twin = self.get_twin(id=twin_id, port=port)
+        if twin is None:
+            raise Exception(f"The twin with id {twin_id} was not found.")
+
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+
+        account_info = substrate.query(
+            "System", "Account", [str(twin["account_id"])])
+        assert account_info is not None, f"Failed fetching the account data for {str(twin['account_id'])}"
+        assert "data" in account_info, f"Could not find balance data in the account info {account_info}"
+
+        logging.info(dir(account_info["data"]))
+        return account_info["data"].value
+
+    def get_block_number(self, port=9945):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+        q = substrate.query("System", "Number", [])
+        return q.value
+
+    def wait_x_blocks(self, x=1, port=9945):
+        start_time = datetime.now()
+        stop_at_block = self.get_block_number(port=port) + x
+        logging.info("Waiting %s blocks. Current is %s", x, stop_at_block - x)
+        timeout_for_x_blocks = TIMEOUT_WAIT_FOR_BLOCK * (x+1)
+        while self.get_block_number(port=port) < stop_at_block:
+            elapsed_time = datetime.now() - start_time
+            if elapsed_time.total_seconds() >= timeout_for_x_blocks:
+                raise Exception(f"Timeout on waiting for {x} blocks")
+            time.sleep(6)
 
     def create_farm(self, name="myfarm", public_ips=[], port=9945, who=DEFAULT_SIGNER):
         assert isinstance(name, str), "name should be a string"
@@ -149,8 +228,13 @@ class TfChainClient:
                                           "name": f"{name}",
                                           "public_ips": public_ips
                                       })
+        expected_events = [{
+            "module_id": "TfgridModule",
+            "event_id": "FarmStored"
+        }]
 
-        self._sign_extrinsic_submit_check_response(substrate, call, who)
+        self._sign_extrinsic_submit_check_response(
+            substrate, call, who, expected_events=expected_events)
 
     def update_farm(self, id=1, name="", pricing_policy_id=1, port=9945, who=DEFAULT_SIGNER):
         assert isinstance(id, int), "id should be an integer"
@@ -165,15 +249,20 @@ class TfChainClient:
                                           "name": f"{name}",
                                           "pricing_policy_id": pricing_policy_id
                                       })
+        
+        expected_events = [{
+            "module_id": "TfgridModule",
+            "event_id": "FarmUpdated"
+        }]
 
-        self._sign_extrinsic_submit_check_response(substrate, call, who)
+        self._sign_extrinsic_submit_check_response(substrate, call, who, expected_events=expected_events)
 
     def get_farm(self, id=1, port=9945):
         assert isinstance(id, int), "id should be an integer"
 
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
-
-        return substrate.query("TfgridModule", "Farms", [id])
+        q = substrate.query("TfgridModule", "Farms", [id])
+        return q.value
 
     def add_farm_ip(self, id=1, ip="", gateway="", port=9945, who=DEFAULT_SIGNER):
         assert isinstance(id, int), "id should be an integer"
@@ -189,8 +278,12 @@ class TfChainClient:
                                           "ip": ip,
                                           "gateway": gateway
                                       })
+        expected_events = [{
+            "module_id": "TfgridModule",
+            "event_id": "FarmUpdated"
+        }]
 
-        self._sign_extrinsic_submit_check_response(substrate, call, who)
+        self._sign_extrinsic_submit_check_response(substrate, call, who, expected_events=expected_events)
 
     def remove_farm_ip(self, id=1, ip="", port=9945, who=DEFAULT_SIGNER):
         assert isinstance(id, int), "id should be an integer"
@@ -204,8 +297,13 @@ class TfChainClient:
                                           "id": id,
                                           "ip": ip
                                       })
+        
+        expected_events = [{
+            "module_id": "TfgridModule",
+            "event_id": "FarmUpdated"
+        }]
 
-        self._sign_extrinsic_submit_check_response(substrate, call, who)
+        self._sign_extrinsic_submit_check_response(substrate, call, who, expected_events=expected_events)
 
     def create_node(self, farm_id=1, hru=0, sru=0, cru=0, mru=0, longitude="", latitude="", country="", city="", interfaces=[],
                     secure_boot=False, virtualized=False, serial_number="", port=9945, who=DEFAULT_SIGNER):
@@ -250,7 +348,12 @@ class TfChainClient:
         call = substrate.compose_call(
             "TfgridModule", "create_node", params)
 
-        self._sign_extrinsic_submit_check_response(substrate, call, who)
+        expected_events = [{
+            "module_id": "TfgridModule",
+            "event_id": "NodeStored"
+        }]
+        self._sign_extrinsic_submit_check_response(
+            substrate, call, who, expected_events=expected_events)
 
     def update_node(self, node_id=1, farm_id=1, hru=0, sru=0, cru=0, mru=0, longitude="", latitude="", country="", city="",
                     secure_boot=False, virtualized=False, serial_number="", port=9945, who=DEFAULT_SIGNER):
@@ -296,7 +399,11 @@ class TfChainClient:
         call = substrate.compose_call(
             "TfgridModule", "update_node", params)
 
-        self._sign_extrinsic_submit_check_response(substrate, call, who)
+        expected_events = [{
+            "module_id": "TfgridModule",
+            "event_id": "NodeUpdated"
+        }]
+        self._sign_extrinsic_submit_check_response(substrate, call, who, expected_events=expected_events)
 
     def add_node_public_config(self, farm_id=1, node_id=1, ipv4="", gw4="", ipv6=None, gw6=None, domain=None, port=9945,
                                who=DEFAULT_SIGNER):
@@ -336,8 +443,13 @@ class TfChainClient:
                                           "node_id": node_id,
                                           "public_config": public_config
                                       })
+        
+        expected_events = [{
+            "module_id": "TfgridModule",
+            "event_id": "NodePublicConfigStored"
+        }]
 
-        self._sign_extrinsic_submit_check_response(substrate, call, who)
+        self._sign_extrinsic_submit_check_response(substrate, call, who, expected_events=expected_events)
 
     def delete_node(self, id=1, port=9945, who=DEFAULT_SIGNER):
         assert isinstance(id, int), "id should be an integer"
@@ -348,14 +460,19 @@ class TfChainClient:
         call = substrate.compose_call("TfgridModule", "delete_node", {
             "id": id})
 
-        self._sign_extrinsic_submit_check_response(substrate, call, who)
+        expected_events = [{
+            "module_id": "TfgridModule",
+            "event_id": "NodeDeleted"
+        }]
+        self._sign_extrinsic_submit_check_response(substrate, call, who, expected_events=expected_events)
 
     def get_node(self, id=1, port=9945):
         assert isinstance(id, int), "id should be an integer"
 
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
-        return substrate.query("TfgridModule", "Nodes", [id])
+        q = substrate.query("TfgridModule", "Nodes", [id])
+        return q.value
 
     def create_node_contract(self, node_id=1, deployment_data=randbytes(32), deployment_hash=randbytes(32), public_ips=0,
                              solution_provider_id=None, port=9945, who=DEFAULT_SIGNER):
@@ -378,7 +495,12 @@ class TfChainClient:
         call = substrate.compose_call(
             "SmartContractModule", "create_node_contract", params)
 
-        self._sign_extrinsic_submit_check_response(substrate, call, who)
+        expected_events = [{
+            "module_id": "SmartContractModule",
+            "event_id": "ContractCreated"
+        }]
+        self._sign_extrinsic_submit_check_response(
+            substrate, call, who, expected_events=expected_events)
 
     def update_node_contract(self, contract_id=1, deployment_data=randbytes(32), deployment_hash=randbytes(32), port=9945, who=DEFAULT_SIGNER):
         assert isinstance(contract_id, int), "contract_id should be an integer"
@@ -395,8 +517,12 @@ class TfChainClient:
             "deployment_data": deployment_data,
             "deployment_hash": deployment_data
         })
-
-        self._sign_extrinsic_submit_check_response(substrate, call, who)
+        
+        expected_events = [{
+            "module_id": "SmartContractModule",
+            "event_id": "ContractUpdated"
+        }]
+        self._sign_extrinsic_submit_check_response(substrate, call, who, expected_events=expected_events)
 
     def create_rent_contract(self, node_id, solution_provider_id=None, port=9945, who=DEFAULT_SIGNER):
         assert isinstance(node_id, int), "node_id should be an integer"
@@ -411,8 +537,11 @@ class TfChainClient:
                                           "node_id": node_id,
                                           "solution_provider_id": solution_provider_id
                                       })
-
-        self._sign_extrinsic_submit_check_response(substrate, call, who)
+        expected_events = [{
+            "module_id": "SmartContractModule",
+            "event_id": "ContractCreated"
+        }]
+        self._sign_extrinsic_submit_check_response(substrate, call, who, expected_events=expected_events)
 
     def create_name_contract(self, name="", port=9945, who=DEFAULT_SIGNER):
         assert isinstance(name, str), "name should be an integer"
@@ -424,10 +553,13 @@ class TfChainClient:
                                       {
                                           "name": name
                                       })
+        expected_events = [{
+            "module_id": "SmartContractModule",
+            "event_id": "ContractCreated"
+        }]
+        self._sign_extrinsic_submit_check_response(substrate, call, who, expected_events=expected_events)
 
-        self._sign_extrinsic_submit_check_response(substrate, call, who)
-
-    def cancel_contract(self, contract_id=1, port=9945, who=DEFAULT_SIGNER):
+    def _cancel_contract(self, contract_id=1, type="Name", port=9945, who=DEFAULT_SIGNER):
         assert isinstance(contract_id, int), "name should be an integer"
         assert isinstance(port, int), "port should be an integer"
 
@@ -437,8 +569,20 @@ class TfChainClient:
                                       {
                                           "contract_id": contract_id
                                       })
+        expected_events = [{
+            "module_id": "SmartContractModule",
+            "event_id": f"{type}ContractCanceled"
+        }]
+        self._sign_extrinsic_submit_check_response(substrate, call, who, expected_events=expected_events)
 
-        self._sign_extrinsic_submit_check_response(substrate, call, who)
+    def cancel_name_contract(self, contract_id=1, port=9945, who=DEFAULT_SIGNER):
+        self._cancel_contract(contract_id=contract_id, type="Name", port=port, who=who)
+    
+    def cancel_rent_contract(self, contract_id=1, port=9945, who=DEFAULT_SIGNER):
+        self._cancel_contract(contract_id=contract_id, type="Rent", port=port, who=who)
+    
+    def cancel_node_contract(self, contract_id=1, port=9945, who=DEFAULT_SIGNER):
+        self._cancel_contract(contract_id=contract_id, type="Node", port=port, who=who)    
 
     def report_contract_resources(self, contract_id=1, hru=0, sru=0, cru=0, mru=0, port=9945, who=DEFAULT_SIGNER):
         assert isinstance(hru, int), "hru should be an integer"
@@ -463,5 +607,16 @@ class TfChainClient:
 
         call = substrate.compose_call(
             "SmartContractModule", "report_contract_resources", params)
+        
+        expected_events = [{
+            "module_id": "SmartContractModule",
+            "event_id": "UpdatedUsedResources"
+        }]
+        self._sign_extrinsic_submit_check_response(
+            substrate, call, who, expected_events=expected_events)
 
-        self._sign_extrinsic_submit_check_response(substrate, call, who)
+    def events(self, port=9945):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+
+        q = substrate.query("System", "Events", [])
+        return q.value

@@ -45,13 +45,13 @@ Create Interface
 
 *** Test Cases ***
 Test Start And Stop Network
-    [Documentation]     Starts and immediately stops the network once correctly started
+    [Documentation]     Starts and immediately stops the network (4 nodes) once correctly started
     Setup Multi Node Network    log_name=test_start_stop_network    amt=${4}
 
     Tear Down Multi Node Network
 
 Test Create Update Delete Twin
-    [Documentation]    Testing api calls for managing twins
+    [Documentation]    Testing api calls (create, update, delete) for managing twins
     Setup Multi Node Network    log_name=test_create_update_delete_twin    amt=${2}
 
     Setup Alice
@@ -75,12 +75,12 @@ Test Create Update Delete Twin
     Tear Down Multi Node Network
 
 Test Create Update Farm
-    [Documentation]    Testing api calls for managing farms
+    [Documentation]    Testing api calls (create, update) for managing farms
     Setup Multi Node Network    log_name=test_create_update_farm
 
     Setup Alice    create_twin=${True}
     Setup Bob    create_twin=${True}
- 
+    
     Create Farm    name=this_is_the_name_of_the_farm
     ${farm_before} =    Get Farm    ${1}
     Should Not Be Equal    ${farm_before}    ${None}
@@ -94,7 +94,7 @@ Test Create Update Farm
     Tear Down Multi Node Network
 
 Test Add Remove Public Ips
-    [Documentation]    Testing api calls for managing public ips
+    [Documentation]    Testing api calls (adding, removing) for managing public ips
     Setup Multi Node Network    log_name=test_add_remove_pub_ips
 
     Setup Network And Create Farm
@@ -112,7 +112,7 @@ Test Add Remove Public Ips
     Public Ips Should Not Contain Ip    ${farm}[public_ips]    185.206.122.125/16
 
 Test Add Public Ips: Failure InvalidPublicIP
-    [Documentation]    Testing api calls for managing public ips
+    [Documentation]    Testing adding an invalid public IP
     Setup Multi Node Network    log_name=test_add_pub_ips_failure_invalidpubip
 
     Setup Network And Create Farm
@@ -124,11 +124,10 @@ Test Add Public Ips: Failure InvalidPublicIP
     
 
 Test Create Update Delete Node
-    [Documentation]    Testing api calls for managing nodes
+    [Documentation]    Testing api calls (create, update, delete) for managing nodes
     Setup Multi Node Network    log_name=test_create_update_delet_node    amt=${3}
 
     Setup Network And Create Farm
-
     Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
     ${node} =    Get Node    ${1}
     Should Not Be Equal    ${node}    ${None}
@@ -199,14 +198,16 @@ Test Add Public Config On Node: Failure InvalidDomain
     Tear Down Multi Node Network
 
 Test Create Update Cancel Node Contract: Success
-    [Documentation]    Testing creating a node contract
+    [Documentation]    Testing api calls (create, update, cancel) for managing a node contract
     Setup Multi Node Network    log_name=test_create_node_contract    amt=${2}
 
     Setup Alice    create_twin=${True}
     Setup Bob    create_twin=${True}
+    
     ${ip_1} =     Create Dictionary    ip    185.206.122.33/24    gw    185.206.122.1
     ${public_ips} =    Create List    ${ip_1}
     Create Farm    name=alice_farm    public_ips=${public_ips}
+    
     ${interface_ips} =     Create List    10.2.3.3
     ${interface_1} =     Create Interface    name=zos    mac=00:00:5e:00:53:af    ips=${interface_ips}
     ${interfaces} =    Create List    ${interface_1}
@@ -225,7 +226,7 @@ Test Create Update Cancel Node Contract: Success
 
     Update Node Contract    contract_id=${1}    who=Bob    port=9946
 
-    Cancel Contract    contract_id=${1}    who=Bob    port=9946
+    Cancel Node Contract    contract_id=${1}    who=Bob    port=9946
 
     Tear Down Multi Node Network
 
@@ -242,46 +243,53 @@ Test Create Node Contract: Failure Not Enough Public Ips
     Tear Down Multi Node Network
 
 Test Create Rent Contract: Success
-    [Documentation]    Testing creating a rent contract
+    [Documentation]    Testing api calls (create, cancel) for managing a rent contract
     Setup Multi Node Network    log_name=test_create_rent_contract    amt=${2}
 
     Setup Network And Create Node
     
     Create Rent Contract    node_id=${1}
 
-    Cancel Contract    contract_id=${1}
+    Cancel Rent Contract    contract_id=${1}
 
     Tear Down Multi Node Network
 
 Test Create Name Contract: Success
-    [Documentation]    Testing creating a name contract
+    [Documentation]    Testing api calls (create, cancel) for managing a name contract
     Setup Multi Node Network    log_name=test_create_name_contract    amt=${2}
 
     Setup Network And Create Node
 
     Create Name Contract    name=my_name_contract
 
-    Cancel Contract    contract_id=${1}
+    Cancel Name Contract    contract_id=${1}
 
     Tear Down Multi Node Network
 
 Test Billing
-    [Documentation]    Sets up a network of 3 nodes. Alice creates a twin, a farm, a node, a node contract and reports contract resources. The test will run for some time with the goal to go through the billing process
-    Setup Multi Node Network    log_name=test_billing    amt=${6}
+    [Documentation]    Testing billing. Alice creates a twin and Bob too. Alice creates a farm and a node in that farm while Bob creates a node contract requesting Alice to use her node. Alice will report contract resources. We will wait 6 blocks so that Bob will be billed a single time.
+    Setup Multi Node Network    log_name=test_billing    amt=${2}
 
     Setup Alice    create_twin=${True}
     Setup Bob    create_twin=${True}
-    Setup Charlie    create_twin=${True}
-    Setup Dave    create_twin=${True}
-    Setup Eve    create_twin=${True}
-    Setup Ferdie    create_twin=${True}
+
+    ${balance} =    Balance Data    ${2}    port=9946
     
     Create Farm    name=alice_farm
     Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
-    Create Node Contract    node_id=${1}
+
+    # Bob will be using the node: let's create a node contract in his name
+    Create Node Contract    node_id=${1}    port=9946    who=Bob
+
     Report Contract Resources    contract_id=${1}    hru=${0}    sru=${20}    cru=${2}    mru=${4}
 
-    # let it run for some time
-    Sleep    15s
+    # let it run 6 blocks so that the user will be billed 1 time
+    Wait X Blocks    ${6}
+
+    # balance should be different
+    ${balance_after} =    Balance Data    ${2}  port=9946
+    IF    ${balance}[free] <= ${balance_after}[free] - ${balance_after}[fee_frozen]
+        Fail    msg=It looks like the billing did not take place.
+    END
 
     Tear Down Multi Node Network
