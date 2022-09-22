@@ -13,7 +13,7 @@ pub struct Resources {
 }
 
 pub const ONE_THOUSAND: u128 = 1_000;
-pub const GIB: u128 = 1024 * 1024 * 1024;
+pub const GIGABYTE: u128 = 1024 * 1024 * 1024;
 
 impl Resources {
     pub fn add(mut self, other: &Resources) -> Resources {
@@ -25,34 +25,39 @@ impl Resources {
     }
 
     pub fn validate_hru(&self) -> bool {
-        // TODO
+        // No constraint, always valid
         true
     }
 
     pub fn validate_sru(&self) -> bool {
-        // TODO
+        // Convert SRU to bytes
+
+        // minimum of 500 GB
         true
     }
 
     pub fn validate_cru(&self) -> bool {
-        // TODO
+        // Convert SRU to vCPU
+        // minimum of 1 vCPU
         true
     }
 
     pub fn validate_mru(&self) -> bool {
-        // TODO
+        // Convert MRU to bytes
+        // minimum of 2GB
         true
     }
 
     pub fn get_cu(&self) -> u64 {
         let cu = self.calc_cu();
-        let calculated_cu = 2 * (cu as u128 / GIB / ONE_THOUSAND);
+        let calculated_cu = 2 * (cu as u128 / GIGABYTE / ONE_THOUSAND);
         calculated_cu as u64
     }
 
     fn calc_cu(&self) -> u64 {
-        let cru_min = self.cru as u128 * 2 * GIB * ONE_THOUSAND;
-        let mru_min = ((self.mru as u128).checked_sub(1).unwrap_or(0) * GIB) * ONE_THOUSAND / 4;
+        let cru_min = self.cru as u128 * 2 * GIGABYTE * ONE_THOUSAND;
+        let mru_min =
+            ((self.mru as u128).checked_sub(1).unwrap_or(0) * GIGABYTE) * ONE_THOUSAND / 4;
         let sru_min = self.sru as u128 * ONE_THOUSAND / 50;
 
         if cru_min < mru_min && cru_min < sru_min {
@@ -68,7 +73,7 @@ impl Resources {
 
     pub fn get_su(&self) -> u64 {
         let su = self.hru as u128 * ONE_THOUSAND / 1200 + self.sru as u128 * ONE_THOUSAND / 250;
-        let calculated_su = su / GIB;
+        let calculated_su = su / GIGABYTE;
         let result = calculated_su as u128 / ONE_THOUSAND;
         result as u64
     }
@@ -100,10 +105,10 @@ mod test {
     #[test]
     fn test_calc_cu() {
         let resources = Resources {
-            hru: 4 * GIB as u64 * 1024,
+            hru: 4 * GIGABYTE as u64 * 1024,
             cru: 64,
-            mru: 64 * GIB as u64 * 1024,
-            sru: 12 * GIB as u64 * 1024,
+            mru: 64 * GIGABYTE as u64 * 1024,
+            sru: 12 * GIGABYTE as u64 * 1024,
         };
 
         let cu = resources.get_cu();
@@ -113,10 +118,10 @@ mod test {
     #[test]
     fn test_calc_cu_2() {
         let resources = Resources {
-            hru: 4 * GIB as u64 * 1024,
+            hru: 4 * GIGABYTE as u64 * 1024,
             cru: 4,
             mru: 8,
-            sru: 12 * GIB as u64 * 1024,
+            sru: 12 * GIGABYTE as u64 * 1024,
         };
 
         let cu = resources.get_cu();
@@ -126,10 +131,10 @@ mod test {
     #[test]
     fn test_calc_su() {
         let resources = Resources {
-            hru: 4 * GIB as u64 * 1024,
+            hru: 4 * GIGABYTE as u64 * 1024,
             cru: 64,
             mru: 64,
-            sru: 12 * GIB as u64 * 1024,
+            sru: 12 * GIGABYTE as u64 * 1024,
         };
 
         let su = resources.get_su();
@@ -142,7 +147,7 @@ mod test {
             hru: 0,
             cru: 64,
             mru: 64,
-            sru: 12 * GIB as u64 * 1024,
+            sru: 12 * GIGABYTE as u64 * 1024,
         };
 
         let su = resources.get_su();
@@ -165,7 +170,7 @@ mod test {
     #[test]
     fn test_calc_su_4() {
         let resources = Resources {
-            hru: 4 * GIB as u64 * 1024,
+            hru: 4 * GIGABYTE as u64 * 1024,
             cru: 64,
             mru: 64,
             sru: 0,

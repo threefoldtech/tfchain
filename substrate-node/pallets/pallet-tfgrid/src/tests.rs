@@ -305,25 +305,25 @@ fn test_create_farm_invalid_name_fails() {
         create_entity();
         create_twin();
 
-        let farm_name = BoundedVec::try_from(b"test.farm".to_vec()).unwrap();
+        let farm_name = get_farm_name_input(b"test.farm");
         assert_noop!(
             TfgridModule::create_farm(Origin::signed(alice()), farm_name, bounded_vec![]),
             Error::<TestRuntime>::InvalidFarmName
         );
 
-        let farm_name = BoundedVec::try_from(b"test farm".to_vec()).unwrap();
+        let farm_name = get_farm_name_input(b"test farm");
         assert_noop!(
             TfgridModule::create_farm(Origin::signed(alice()), farm_name, bounded_vec![]),
             Error::<TestRuntime>::InvalidFarmName
         );
 
-        let farm_name = BoundedVec::try_from(b"".to_vec()).unwrap();
+        let farm_name = get_farm_name_input(b"");
         assert_noop!(
             TfgridModule::create_farm(Origin::signed(alice()), farm_name, bounded_vec![]),
             Error::<TestRuntime>::FarmNameTooShort
         );
 
-        let farm_name = BoundedVec::try_from(b"12".to_vec()).unwrap();
+        let farm_name = get_farm_name_input(b"12");
         assert_noop!(
             TfgridModule::create_farm(Origin::signed(alice()), farm_name, bounded_vec![]),
             Error::<TestRuntime>::FarmNameTooShort
@@ -338,18 +338,19 @@ fn test_update_farm_name_works() {
         create_farm();
 
         create_twin_bob();
-        let farm_name = get_farm_name(b"bob_farm");
+
+        let farm_name = get_farm_name_input(b"bob_farm");
         assert_ok!(TfgridModule::create_farm(
             Origin::signed(bob()),
-            farm_name.0.clone(),
+            farm_name,
             bounded_vec![]
         ));
 
-        let farm_name = get_farm_name(b"bob_updated_farm");
+        let farm_name = get_farm_name_input(b"bob_updated_farm");
         assert_ok!(TfgridModule::update_farm(
             Origin::signed(bob()),
             2,
-            farm_name.0.clone(),
+            farm_name,
             1
         ));
     });
@@ -360,25 +361,25 @@ fn test_update_farm_existing_name_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
 
-        let farm_name = get_farm_name(b"alice_farm");
-
+        let farm_name = get_farm_name_input(b"alice_farm");
         assert_ok!(TfgridModule::create_farm(
             Origin::signed(alice()),
-            farm_name.0.clone(),
+            farm_name,
             bounded_vec![]
         ));
 
         create_twin_bob();
-        let farm_name = get_farm_name(b"bob_farm");
+
+        let farm_name = get_farm_name_input(b"bob_farm");
         assert_ok!(TfgridModule::create_farm(
             Origin::signed(bob()),
-            farm_name.0.clone(),
+            farm_name,
             bounded_vec![]
         ));
 
-        let farm_name = get_farm_name(b"alice_farm");
+        let farm_name = get_farm_name_input(b"alice_farm");
         assert_noop!(
-            TfgridModule::update_farm(Origin::signed(bob()), 2, farm_name.0.clone(), 1),
+            TfgridModule::update_farm(Origin::signed(bob()), 2, farm_name, 1),
             Error::<TestRuntime>::InvalidFarmName
         );
     });
@@ -390,7 +391,7 @@ fn test_create_farm_with_double_ip_fails() {
         create_entity();
         create_twin();
 
-        let farm_name = get_farm_name(b"test_farm");
+        let farm_name = get_farm_name_input(b"test_farm");
 
         let mut pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
 
@@ -406,7 +407,7 @@ fn test_create_farm_with_double_ip_fails() {
         pub_ips.try_push(PublicIpInput { ip, gw }).unwrap();
 
         assert_noop!(
-            TfgridModule::create_farm(Origin::signed(alice()), farm_name.0.clone(), pub_ips),
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name, pub_ips),
             Error::<TestRuntime>::IpExists
         );
     });
@@ -571,12 +572,12 @@ fn test_create_farm_with_same_name_fails() {
         create_twin();
         create_farm();
 
-        let farm_name = get_farm_name(b"test_farm");
+        let farm_name = get_farm_name_input(b"test_farm");
 
         let pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
 
         assert_noop!(
-            TfgridModule::create_farm(Origin::signed(alice()), farm_name.0.clone(), pub_ips),
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name, pub_ips),
             Error::<TestRuntime>::FarmExists
         );
     });
@@ -2039,7 +2040,7 @@ fn create_twin_bob() {
 }
 
 fn create_farm() {
-    let farm_name = get_farm_name(b"test_farm");
+    let farm_name = get_farm_name_input(b"test_farm");
 
     let mut pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
 
@@ -2050,7 +2051,7 @@ fn create_farm() {
 
     assert_ok!(TfgridModule::create_farm(
         Origin::signed(alice()),
-        farm_name.0.clone(),
+        farm_name,
         pub_ips.clone()
     ));
 

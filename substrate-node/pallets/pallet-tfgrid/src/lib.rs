@@ -320,7 +320,7 @@ pub mod pallet {
             + PartialEq
             + Clone
             + TypeInfo
-            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + TryFrom<FarmNameInput<Self>, Error = Error<Self>>
             + Into<Vec<u8>>
             + MaxEncodedLen;
 
@@ -810,13 +810,9 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
-            let farm_name = FarmNameOf::<T>::try_from(name.clone().to_vec())
-                .map_err(DispatchErrorWithPostInfo::from)?;
+            let mut id = FarmID::<T>::get();
+            id = id + 1;
 
-            ensure!(
-                !FarmIdByName::<T>::contains_key(name.clone()),
-                Error::<T>::FarmExists
-            );
             let twin_id = TwinIdByAccountID::<T>::get(&address).ok_or(Error::<T>::TwinNotExists)?;
             let twin = Twins::<T>::get(twin_id).ok_or(Error::<T>::TwinNotExists)?;
             ensure!(
@@ -824,8 +820,11 @@ pub mod pallet {
                 Error::<T>::CannotCreateFarmWrongTwin
             );
 
-            let mut id = FarmID::<T>::get();
-            id = id + 1;
+            ensure!(
+                !FarmIdByName::<T>::contains_key(name.clone()),
+                Error::<T>::FarmExists
+            );
+            let farm_name = Self::get_farm_name(name.clone())?;
 
             let public_ips_list = Self::get_public_ips(public_ips)?;
 
@@ -842,7 +841,7 @@ pub mod pallet {
             };
 
             Farms::<T>::insert(id, &new_farm);
-            FarmIdByName::<T>::insert(name.to_vec().clone(), id);
+            FarmIdByName::<T>::insert(name.to_vec(), id);
             FarmID::<T>::put(id);
 
             Self::deposit_event(Event::FarmStored(new_farm));
@@ -859,8 +858,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
-            let new_farm_name = FarmNameOf::<T>::try_from(name.to_vec())
-                .map_err(DispatchErrorWithPostInfo::from)?;
+            let new_farm_name = Self::get_farm_name(name.clone())?;
 
             let twin_id = TwinIdByAccountID::<T>::get(&address).ok_or(Error::<T>::TwinNotExists)?;
 
@@ -2220,6 +2218,12 @@ impl<T: Config> Pallet<T> {
                 ))
             }
         }
+    }
+
+    fn get_farm_name(name: FarmNameInput<T>) -> Result<FarmNameOf<T>, DispatchErrorWithPostInfo> {
+        let name_parsed = <T as Config>::FarmName::try_from(name)?;
+
+        Ok(name_parsed)
     }
 
     fn get_twin_ip(ip: TwinIpInput) -> Result<TwinIpOf<T>, DispatchErrorWithPostInfo> {
