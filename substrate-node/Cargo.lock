@@ -3948,6 +3948,8 @@ dependencies = [
  "hex-literal 0.3.4",
  "log",
  "pallet-balances",
+ "pallet-collective",
+ "pallet-membership",
  "pallet-timestamp",
  "parity-scale-codec 3.1.5",
  "scale-info",

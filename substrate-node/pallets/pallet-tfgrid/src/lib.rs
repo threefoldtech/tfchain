@@ -1081,36 +1081,48 @@ pub mod pallet {
             node_id: u32,
             node_certification: NodeCertification,
         ) -> DispatchResultWithPostInfo {
-            let account_id = ensure_signed(origin)?;
+            let account_id = ensure_signed(origin.clone())?;
 
-            if let Some(certifiers) = AllowedNodeCertifiers::<T>::get() {
-                ensure!(
-                    certifiers.contains(&account_id),
-                    Error::<T>::NotAllowedToCertifyNode
-                );
+            // let mut can_modify = false;
 
-                ensure!(
-                    Nodes::<T>::contains_key(&node_id),
-                    Error::<T>::NodeNotExists
-                );
-                let mut stored_node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+            let x = AllowedNodeCertifiers::<T>::get().unwrap_or(vec![]);
 
-                stored_node.certification = node_certification;
-
-                let current_node_policy =
-                    FarmingPoliciesMap::<T>::get(stored_node.farming_policy_id);
-                if current_node_policy.default {
-                    // Refetch farming policy and save it on the node
-                    let farming_policy = Self::get_farming_policy(&stored_node)?;
-                    stored_node.farming_policy_id = farming_policy.id;
-                }
-
-                // override node in storage
-                Nodes::<T>::insert(stored_node.id, &stored_node);
-
-                Self::deposit_event(Event::NodeUpdated(stored_node));
-                Self::deposit_event(Event::NodeCertificationSet(node_id, node_certification));
+            // Council or root can modify node certification
+            if !T::RestrictedOrigin::ensure_origin(origin).is_ok() && !x.contains(&account_id) {
+                return Err(Error::<T>::NotAllowedToCertifyNode.into());
             }
+
+            // // Allowed node certifiers can modify node certification
+            // if let Some(certifiers) = AllowedNodeCertifiers::<T>::get() {
+            //     if certifiers.contains(&account_id) {
+            //         can_modify = true;
+            //     }
+            // }
+
+            // if !can_modify {
+            //     return Err(Error::<T>::NotAllowedToCertifyNode.into());
+            // }
+
+            ensure!(
+                Nodes::<T>::contains_key(&node_id),
+                Error::<T>::NodeNotExists
+            );
+            let mut stored_node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+
+            stored_node.certification = node_certification;
+
+            let current_node_policy = FarmingPoliciesMap::<T>::get(stored_node.farming_policy_id);
+            if current_node_policy.default {
+                // Refetch farming policy and save it on the node
+                let farming_policy = Self::get_farming_policy(&stored_node)?;
+                stored_node.farming_policy_id = farming_policy.id;
+            }
+
+            // override node in storage
+            Nodes::<T>::insert(stored_node.id, &stored_node);
+
+            Self::deposit_event(Event::NodeUpdated(stored_node));
+            Self::deposit_event(Event::NodeCertificationSet(node_id, node_certification));
 
             Ok(().into())
         }
