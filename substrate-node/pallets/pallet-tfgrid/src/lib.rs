@@ -1081,15 +1081,14 @@ pub mod pallet {
             node_id: u32,
             node_certification: NodeCertification,
         ) -> DispatchResultWithPostInfo {
-            let account_id = ensure_signed(origin.clone())?;
-
-            let allowed_node_certifiers = AllowedNodeCertifiers::<T>::get().unwrap_or(vec![]);
-
-            // Only Council/root or allowed node certifiers can modify node certification
-            if !T::RestrictedOrigin::ensure_origin(origin).is_ok()
-                && !allowed_node_certifiers.contains(&account_id)
-            {
-                return Err(Error::<T>::NotAllowedToCertifyNode.into());
+            if !T::RestrictedOrigin::ensure_origin(origin.clone()).is_ok() {
+                let account_id = ensure_signed(origin)?;
+                if !AllowedNodeCertifiers::<T>::get()
+                    .unwrap_or(vec![])
+                    .contains(&account_id)
+                {
+                    return Err(Error::<T>::NotAllowedToCertifyNode.into());
+                }
             }
 
             ensure!(

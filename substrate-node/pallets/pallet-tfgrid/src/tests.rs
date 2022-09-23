@@ -869,7 +869,7 @@ fn set_certification_type_node_council_works() {
         create_node();
 
         assert_ok!(TfgridModule::set_node_certification(
-            Origin::signed(alice()),
+            RawOrigin::Root.into(),
             1,
             NodeCertification::Certified
         ));
@@ -877,7 +877,7 @@ fn set_certification_type_node_council_works() {
         assert_eq!(node.certification, NodeCertification::Certified);
 
         assert_ok!(TfgridModule::set_node_certification(
-            Origin::signed(alice()),
+            RawOrigin::Root.into(),
             1,
             NodeCertification::Diy
         ));
