@@ -211,7 +211,7 @@ pub mod pallet {
                 !<ProposalOf<T>>::contains_key(proposal_hash),
                 Error::<T>::DuplicateProposal
             );
-            
+
             let now = frame_system::Pallet::<T>::block_number();
             let mut end = now + T::MotionDuration::get();
             if let Some(motion_duration) = duration {
