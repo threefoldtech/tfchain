@@ -706,6 +706,101 @@ fn update_node_moved_from_farm_list_works() {
 }
 
 #[test]
+fn update_certified_node_resources_loses_certification_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        assert_ok!(TfgridModule::add_node_certifier(
+            RawOrigin::Root.into(),
+            alice()
+        ));
+
+        assert_ok!(TfgridModule::set_node_certification(
+            Origin::signed(alice()),
+            1,
+            NodeCertification::Certified
+        ));
+
+        let node = TfgridModule::nodes(1).unwrap();
+        assert_eq!(node.certification, NodeCertification::Certified);
+
+        let nodes = TfgridModule::nodes_by_farm_id(1);
+        assert_eq!(nodes.len(), 1);
+        assert_eq!(nodes[0], 1);
+
+        // Change cores to 2
+        let mut node_resources = node.resources;
+        node_resources.cru = 2;
+
+        assert_ok!(TfgridModule::update_node(
+            Origin::signed(alice()),
+            1,
+            1,
+            node_resources,
+            node.location,
+            node.country,
+            node.city,
+            Vec::new().try_into().unwrap(),
+            true,
+            true,
+            "some_serial".as_bytes().to_vec(),
+        ));
+
+        let node = TfgridModule::nodes(1).unwrap();
+        assert_eq!(node.certification, NodeCertification::Diy);
+    });
+}
+
+#[test]
+fn update_certified_node_same_resources_keeps_certification_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        assert_ok!(TfgridModule::add_node_certifier(
+            RawOrigin::Root.into(),
+            alice()
+        ));
+
+        assert_ok!(TfgridModule::set_node_certification(
+            Origin::signed(alice()),
+            1,
+            NodeCertification::Certified
+        ));
+
+        let node = TfgridModule::nodes(1).unwrap();
+        assert_eq!(node.certification, NodeCertification::Certified);
+
+        let nodes = TfgridModule::nodes_by_farm_id(1);
+        assert_eq!(nodes.len(), 1);
+        assert_eq!(nodes[0], 1);
+
+        // Don't change resources
+        assert_ok!(TfgridModule::update_node(
+            Origin::signed(alice()),
+            1,
+            1,
+            node.resources,
+            node.location,
+            node.country,
+            node.city,
+            Vec::new().try_into().unwrap(),
+            true,
+            true,
+            "some_serial".as_bytes().to_vec(),
+        ));
+
+        let node = TfgridModule::nodes(1).unwrap();
+        assert_eq!(node.certification, NodeCertification::Certified);
+    });
+}
+
+#[test]
 fn create_node_with_interfaces_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
