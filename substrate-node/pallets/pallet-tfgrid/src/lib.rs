@@ -1081,6 +1081,7 @@ pub mod pallet {
             node_id: u32,
             node_certification: NodeCertification,
         ) -> DispatchResultWithPostInfo {
+            // Only council/root or allowed certifiers can modify node certification
             if !T::RestrictedOrigin::ensure_origin(origin.clone()).is_ok() {
                 let account_id = ensure_signed(origin)?;
                 if !AllowedNodeCertifiers::<T>::get()
