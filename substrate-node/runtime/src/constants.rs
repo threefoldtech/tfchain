@@ -86,7 +86,7 @@ pub mod fee {
 
 #[cfg(test)]
 mod tests {
-    use super::currency::{CENTS, DOLLARS, MILLICENTS};
+    use super::currency::{CENTS, MILLICENTS};
     use super::fee::WeightToFeeStruct;
     use crate::MaximumBlockWeight;
     use frame_support::weights::constants::ExtrinsicBaseWeight;
@@ -95,10 +95,10 @@ mod tests {
     #[test]
     // This function tests that the fee for `MaximumBlockWeight` of weight is correct
     fn full_block_fee_is_correct() {
-        // A full block should cost 16 DOLLARS
-        println!("Base: {}", ExtrinsicBaseWeight::get());
+        // A full block should cost 23.3112 DOLLARS
+        log::info!("MaxBlockWeight: {:?}", MaximumBlockWeight::get());
         let x = WeightToFeeStruct::weight_to_fee(&MaximumBlockWeight::get());
-        let y = 16 * DOLLARS;
+        let y = 2331120 * MILLICENTS;
         assert!(x.max(y) - x.min(y) < MILLICENTS);
     }
 
@@ -106,7 +106,7 @@ mod tests {
     // This function tests that the fee for `ExtrinsicBaseWeight` of weight is correct
     fn extrinsic_base_fee_is_correct() {
         // `ExtrinsicBaseWeight` should cost 1/10 of a CENT
-        println!("Base: {}", ExtrinsicBaseWeight::get());
+        log::info!("Base: {}", ExtrinsicBaseWeight::get());
         let x = WeightToFeeStruct::weight_to_fee(&ExtrinsicBaseWeight::get());
         let y = CENTS / 10;
         assert!(x.max(y) - x.min(y) < MILLICENTS);
