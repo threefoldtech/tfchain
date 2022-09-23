@@ -91,7 +91,7 @@ mod tests {
     use crate::MaximumBlockWeight;
     use frame_support::weights::constants::ExtrinsicBaseWeight;
     use frame_support::weights::WeightToFee;
-    
+
     #[test]
     // This function tests that the fee for `MaximumBlockWeight` of weight is correct
     fn full_block_fee_is_correct() {
