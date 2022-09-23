@@ -212,6 +212,16 @@ pub mod pallet {
                 Error::<T>::DuplicateProposal
             );
 
+            let now = frame_system::Pallet::<T>::block_number();
+            let mut end = now + T::MotionDuration::get();
+            if let Some(motion_duration) = duration {
+                ensure!(
+                    motion_duration < T::BlockNumber::from(constants::time::DAYS * 30),
+                    Error::<T>::InvalidProposalDuration
+                );
+                end = now + motion_duration;
+            }
+
             let index = Self::proposal_count();
             <ProposalCount<T>>::mutate(|i| *i += 1);
             <ProposalOf<T>>::insert(proposal_hash, *action);
@@ -222,16 +232,6 @@ pub mod pallet {
                 link,
             };
             <Proposals<T>>::insert(proposal_hash, p);
-
-            let now = frame_system::Pallet::<T>::block_number();
-            let mut end = now + T::MotionDuration::get();
-            if let Some(motion_duration) = duration {
-                ensure!(
-                    motion_duration < T::BlockNumber::from(constants::time::DAYS * 30),
-                    Error::<T>::InvalidProposalDuration
-                );
-                end = now + motion_duration;
-            }
 
             let votes = {
                 proposal::DaoVotes {
