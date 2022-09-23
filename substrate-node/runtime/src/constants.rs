@@ -97,7 +97,6 @@ mod tests {
     fn full_block_fee_is_correct() {
         // A full block should cost 23.3112 DOLLARS
         log::info!("MaxBlockWeight: {:?}", MaximumBlockWeight::get());
-
         let x = WeightToFeeStruct::weight_to_fee(&MaximumBlockWeight::get());
         let y = 2331120 * MILLICENTS;
         assert!(x.max(y) - x.min(y) < MILLICENTS);
