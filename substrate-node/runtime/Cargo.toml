@@ -31,10 +31,11 @@ path = "../pallets/pallet-kvstore"
 
 [dependencies.pallet-tft-bridge]
 default-features = false
-#git = "https://github.com/threefoldtech/tfchain_tft_bridge"
-#package = "pallet-tft-bridge"
+git = "https://github.com/threefoldtech/tfchain_tft_bridge"
+package = "pallet-tft-bridge"
+branch = "feat_upgrade_polkadot-0.9.29"
 #version = "2.4.0"
-path = "../../../tfchain_tft/pallet-tft-bridge"
+#path = "../../../tfchain_tft/pallet-tft-bridge"
 
 [dependencies.pallet-tft-price]
 default-features = false

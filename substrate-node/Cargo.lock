@@ -3999,6 +3999,7 @@ dependencies = [
 [[package]]
 name = "pallet-tft-bridge"
 version = "2.4.0"
+source = "git+https://github.com/threefoldtech/tfchain_tft_bridge?branch=feat_upgrade_polkadot-0.9.29#96b0d2f156ecb4bc795da15615a9acc011bce4dc"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6863,7 +6864,7 @@ dependencies = [
 [[package]]
 name = "sp-std"
 version = "4.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.24#814752f60ab8cce7e2ece3ce0c1b10799b4eab28"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.24#814752f60ab8cce7e2ece3ce0c1b10799b4eab28"
 
 [[package]]
 name = "sp-std"
@@ -7191,7 +7192,7 @@ dependencies = [
  "num-rational 0.4.1",
  "sha2 0.9.9",
  "sodalite",
- "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.24)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.24)",
 ]
 
 [[package]]
