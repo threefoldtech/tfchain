@@ -727,10 +727,6 @@ fn update_certified_node_resources_loses_certification_works() {
         let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(node.certification, NodeCertification::Certified);
 
-        let nodes = TfgridModule::nodes_by_farm_id(1);
-        assert_eq!(nodes.len(), 1);
-        assert_eq!(nodes[0], 1);
-
         // Change cores to 2
         let mut node_resources = node.resources;
         node_resources.cru = 2;
@@ -775,10 +771,6 @@ fn update_certified_node_same_resources_keeps_certification_works() {
 
         let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(node.certification, NodeCertification::Certified);
-
-        let nodes = TfgridModule::nodes_by_farm_id(1);
-        assert_eq!(nodes.len(), 1);
-        assert_eq!(nodes[0], 1);
 
         // Don't change resources
         assert_ok!(TfgridModule::update_node(
