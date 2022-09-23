@@ -4,8 +4,7 @@ use crate::{
     mock::Event as MockEvent,
     mock::*,
     types::{LocationInput, PublicIpInput},
-    DocumentHashInput, DocumentLinkInput, Error, InterfaceInput, InterfaceIpsInput,
-    PublicIpListInput, ResourcesInput, SerialNumberInput,
+    Error, InterfaceInput, InterfaceIpsInput, PublicIpListInput, ResourcesInput, SerialNumberInput,
 };
 use frame_support::{assert_noop, assert_ok, bounded_vec, BoundedVec};
 use frame_system::{EventRecord, Phase, RawOrigin};
@@ -138,13 +137,10 @@ fn test_delete_entity_fails_if_signed_by_someone_else() {
 #[test]
 fn test_create_twin_works() {
     ExternalityBuilder::build().execute_with(|| {
-        let document_link: DocumentLinkInput = BoundedVec::try_from(b"some_link".to_vec()).unwrap();
-        let document_hash: DocumentHashInput = BoundedVec::try_from(b"some_hash".to_vec()).unwrap();
-
         assert_ok!(TfgridModule::user_accept_tc(
             Origin::signed(test_ed25519()),
-            document_link,
-            document_hash,
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
         ));
 
         let ip = get_twin_ip_input(b"::1");
@@ -158,13 +154,10 @@ fn test_create_twin_works() {
 #[test]
 fn test_delete_twin_works() {
     ExternalityBuilder::build().execute_with(|| {
-        let document_link: DocumentLinkInput = BoundedVec::try_from(b"some_link".to_vec()).unwrap();
-        let document_hash: DocumentHashInput = BoundedVec::try_from(b"some_hash".to_vec()).unwrap();
-
         assert_ok!(TfgridModule::user_accept_tc(
             Origin::signed(alice()),
-            document_link,
-            document_hash,
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
         ));
 
         let ip = get_twin_ip_input(b"::1");
@@ -543,13 +536,10 @@ fn test_update_twin_works() {
 #[test]
 fn test_update_twin_fails_if_signed_by_someone_else() {
     ExternalityBuilder::build().execute_with(|| {
-        let document_link: DocumentLinkInput = BoundedVec::try_from(b"some_link".to_vec()).unwrap();
-        let document_hash: DocumentHashInput = BoundedVec::try_from(b"some_hash".to_vec()).unwrap();
-
         assert_ok!(TfgridModule::user_accept_tc(
             Origin::signed(alice()),
-            document_link,
-            document_hash,
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
         ));
 
         let ip = get_twin_ip_input(b"::1");
@@ -2012,13 +2002,10 @@ fn create_entity_sr() {
 }
 
 fn create_twin() {
-    let document_link: DocumentLinkInput = BoundedVec::try_from(b"some_link".to_vec()).unwrap();
-    let document_hash: DocumentHashInput = BoundedVec::try_from(b"some_hash".to_vec()).unwrap();
-
     assert_ok!(TfgridModule::user_accept_tc(
         Origin::signed(alice()),
-        document_link,
-        document_hash,
+        get_document_link_input(b"some_link"),
+        get_document_hash_input(b"some_hash"),
     ));
 
     let ip = get_twin_ip_input(b"::1");
@@ -2026,13 +2013,10 @@ fn create_twin() {
 }
 
 fn create_twin_bob() {
-    let document_link: DocumentLinkInput = BoundedVec::try_from(b"some_link".to_vec()).unwrap();
-    let document_hash: DocumentHashInput = BoundedVec::try_from(b"some_hash".to_vec()).unwrap();
-
     assert_ok!(TfgridModule::user_accept_tc(
         Origin::signed(bob()),
-        document_link,
-        document_hash,
+        get_document_link_input(b"some_link"),
+        get_document_hash_input(b"some_hash"),
     ));
 
     let ip = get_twin_ip_input(b"::1");

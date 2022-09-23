@@ -6,7 +6,7 @@ use frame_support::{assert_noop, assert_ok, bounded_vec, weights::GetDispatchInf
 use frame_system::{EventRecord, Phase, RawOrigin};
 use pallet_tfgrid::{
     types::{LocationInput, PublicIpInput},
-    DocumentHashInput, DocumentLinkInput, ResourcesInput, SerialNumberInput,
+    ResourcesInput, SerialNumberInput,
 };
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Hash};
@@ -776,13 +776,10 @@ pub fn prepare_twin_farm_and_big_node(account_id: u64, farm_name: Vec<u8>, farm_
 }
 
 pub fn prepare_twin(account_id: u64) {
-    let document_link: DocumentLinkInput = BoundedVec::try_from(b"some_link".to_vec()).unwrap();
-    let document_hash: DocumentHashInput = BoundedVec::try_from(b"some_hash".to_vec()).unwrap();
-
     assert_ok!(TfgridModule::user_accept_tc(
         Origin::signed(account_id),
-        document_link,
-        document_hash,
+        get_document_link_input(b"some_link"),
+        get_document_hash_input(b"some_hash"),
     ));
 
     let ip = get_twin_ip_input(b"::1");

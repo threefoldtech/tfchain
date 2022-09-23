@@ -17,7 +17,7 @@ use pallet_tfgrid::{
     pub_ip::{GatewayIP, PublicIP},
     terms_cond::TermsAndConditions,
     twin::TwinIp,
-    TwinIpInput,
+    DocumentHashInput, DocumentLinkInput, TwinIpInput,
 };
 use sp_core::{crypto::Ss58Codec, sr25519, Pair, Public, H256};
 use sp_runtime::traits::{IdentifyAccount, Verify};
@@ -223,6 +223,14 @@ type AccountPublic = <MultiSignature as Verify>::Signer;
 
 pub(crate) fn get_name_contract_name(contract_name_input: &[u8]) -> TestNameContractName {
     NameContractName::try_from(contract_name_input.to_vec()).expect("Invalid farm input.")
+}
+
+pub(crate) fn get_document_link_input(document_link_input: &[u8]) -> DocumentLinkInput {
+    BoundedVec::try_from(document_link_input.to_vec()).expect("Invalid document link input.")
+}
+
+pub(crate) fn get_document_hash_input(document_hash_input: &[u8]) -> DocumentHashInput {
+    BoundedVec::try_from(document_hash_input.to_vec()).expect("Invalid document hash input.")
 }
 
 pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {

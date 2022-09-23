@@ -11,7 +11,7 @@ use pallet_tfgrid::{
     pub_ip::{GatewayIP, PublicIP},
     terms_cond::TermsAndConditions,
     twin::TwinIp,
-    TwinIpInput,
+    DocumentHashInput, DocumentLinkInput, TwinIpInput,
 };
 use pallet_timestamp;
 use sp_core::H256;
@@ -199,6 +199,14 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Test {
     type MembershipChanged = ();
     type MaxMembers = CouncilMaxMembers;
     type WeightInfo = pallet_membership::weights::SubstrateWeight<Test>;
+}
+
+pub(crate) fn get_document_link_input(document_link_input: &[u8]) -> DocumentLinkInput {
+    BoundedVec::try_from(document_link_input.to_vec()).expect("Invalid document link input.")
+}
+
+pub(crate) fn get_document_hash_input(document_hash_input: &[u8]) -> DocumentHashInput {
+    BoundedVec::try_from(document_hash_input.to_vec()).expect("Invalid document hash input.")
 }
 
 pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {

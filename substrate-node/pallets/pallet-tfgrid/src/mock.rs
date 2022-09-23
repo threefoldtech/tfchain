@@ -1,4 +1,6 @@
-use crate::{self as tfgridModule, Config, FarmNameInput, TwinIpInput};
+use crate::{
+    self as tfgridModule, Config, DocumentHashInput, DocumentLinkInput, FarmNameInput, TwinIpInput,
+};
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
 use frame_system::EnsureRoot;
 use sp_io::TestExternalities;
@@ -194,6 +196,14 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     };
     genesis.assimilate_storage(&mut t).unwrap();
     t.into()
+}
+
+pub(crate) fn get_document_link_input(document_link_input: &[u8]) -> DocumentLinkInput {
+    BoundedVec::try_from(document_link_input.to_vec()).expect("Invalid document link input.")
+}
+
+pub(crate) fn get_document_hash_input(document_hash_input: &[u8]) -> DocumentHashInput {
+    BoundedVec::try_from(document_hash_input.to_vec()).expect("Invalid document hash input.")
 }
 
 pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {
