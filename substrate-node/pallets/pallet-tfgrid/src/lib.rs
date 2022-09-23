@@ -1083,25 +1083,14 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin.clone())?;
 
-            // let mut can_modify = false;
+            let allowed_node_certifiers = AllowedNodeCertifiers::<T>::get().unwrap_or(vec![]);
 
-            let x = AllowedNodeCertifiers::<T>::get().unwrap_or(vec![]);
-
-            // Council or root can modify node certification
-            if !T::RestrictedOrigin::ensure_origin(origin).is_ok() && !x.contains(&account_id) {
+            // Only Council/root or allowed node certifiers can modify node certification
+            if !T::RestrictedOrigin::ensure_origin(origin).is_ok()
+                && !allowed_node_certifiers.contains(&account_id)
+            {
                 return Err(Error::<T>::NotAllowedToCertifyNode.into());
             }
-
-            // // Allowed node certifiers can modify node certification
-            // if let Some(certifiers) = AllowedNodeCertifiers::<T>::get() {
-            //     if certifiers.contains(&account_id) {
-            //         can_modify = true;
-            //     }
-            // }
-
-            // if !can_modify {
-            //     return Err(Error::<T>::NotAllowedToCertifyNode.into());
-            // }
 
             ensure!(
                 Nodes::<T>::contains_key(&node_id),
