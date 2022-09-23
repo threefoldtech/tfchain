@@ -204,7 +204,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     genesis.assimilate_storage(&mut t).unwrap();
 
     let genesis = pallet_membership::GenesisConfig::<Test, pallet_membership::Instance1> {
-        members: vec![1, 2, 3],
+        members: vec![1, 2, 3].try_into().unwrap(),
         phantom: Default::default(),
     };
     genesis.assimilate_storage(&mut t).unwrap();

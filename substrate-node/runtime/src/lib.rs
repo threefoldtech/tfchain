@@ -31,7 +31,7 @@ use tfchain_support::{traits::ChangeNode, types::Node};
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
     construct_runtime, parameter_types,
-    traits::{ConstU8, EnsureOneOf, FindAuthor, KeyOwnerProofSystem, PrivilegeCmp, Randomness},
+    traits::{ConstU8, EitherOfDiverse, FindAuthor, KeyOwnerProofSystem, PrivilegeCmp, Randomness},
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
         ConstantMultiplier, IdentityFee, Weight,
@@ -181,7 +181,7 @@ parameter_types! {
     pub BlockLength: frame_system::limits::BlockLength = frame_system::limits::BlockLength
         ::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
     pub const SS58Prefix: u8 = 42;
-    pub const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND.saturating_mul(2);
+    pub const MaximumBlockWeight: Weight = WEIGHT_PER_SECOND.saturating_mul(2);
 
     pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
     BlockWeights::get().max_block;
@@ -645,7 +645,7 @@ impl ChangeMembers<AccountId> for MembershipChangedGroup {
     }
 }
 
-type EnsureRootOrCouncilApproval = EnsureOneOf<
+type EnsureRootOrCouncilApproval = EitherOfDiverse<
     EnsureRoot<AccountId>,
     pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 5>,
 >;

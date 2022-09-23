@@ -7,7 +7,6 @@ use crate::{
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 use sc_cli::{ChainSpec, RuntimeVersion, SubstrateCli};
 use sc_service::PartialComponents;
-use std::sync::Arc;
 use tfchain_runtime::Block;
 
 impl SubstrateCli for Cli {
@@ -172,7 +171,7 @@ pub fn run() -> sc_cli::Result<()> {
                     BenchmarkCmd::Machine(cmd) => {
                         cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone())
                     }
-                    BenchmarkCmd::Extrinsic(cmd) => {
+                    BenchmarkCmd::Extrinsic(_cmd) => {
                         todo!()
                     }
                 }
