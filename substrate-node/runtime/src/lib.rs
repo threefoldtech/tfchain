@@ -11,7 +11,7 @@ use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{crypto::KeyTypeId, Encode, OpaqueMetadata};
+use sp_core::{crypto::KeyTypeId, sr25519, Encode, OpaqueMetadata};
 use sp_runtime::traits::{
     AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, NumberFor, OpaqueKeys,
     SaturatedConversion, Verify,
@@ -832,7 +832,16 @@ impl_runtime_apis! {
         }
 
         fn authorities() -> Vec<AuraId> {
-            Aura::authorities().into_inner()
+            let authorities: Vec<AuraId> = ValidatorSet::validators()
+                .iter()
+                .map(|account| {
+                    let mut bytes = [0u8; 32];
+                    bytes.copy_from_slice(&account.encode());
+                    sr25519::Public::from_raw(bytes).into()
+                })
+                .collect();
+            log::info!("authorities {:?}", authorities.clone());
+            authorities
         }
     }
 
