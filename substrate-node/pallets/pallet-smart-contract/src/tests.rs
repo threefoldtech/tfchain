@@ -67,8 +67,8 @@ fn test_create_node_contract_with_public_ips_works() {
                 assert_eq!(c.public_ips, 1);
 
                 let pub_ip = PublicIP {
-                    ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
-                    gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+                    ip: get_public_ip_ip(b"185.206.122.33/24"),
+                    gateway: get_public_ip_gw(b"185.206.122.1"),
                     contract_id: 1,
                 };
 
@@ -1026,8 +1026,8 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
         }
 
         let public_ip = PublicIP {
-            ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
-            gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+            ip: get_public_ip_ip(b"185.206.122.33/24"),
+            gateway: get_public_ip_gw(b"185.206.122.1"),
             contract_id: 0,
         };
 

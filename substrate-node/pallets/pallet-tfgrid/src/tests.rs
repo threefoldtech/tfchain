@@ -388,8 +388,8 @@ fn test_create_farm_with_double_ip_fails() {
 
         let mut pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
 
-        let ip = get_public_ip_ip(&"185.206.122.33/24".as_bytes().to_vec()).0;
-        let gw = get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec()).0;
+        let ip = get_public_ip_ip_input(b"185.206.122.33/24");
+        let gw = get_public_ip_gw_input(b"185.206.122.1");
 
         pub_ips
             .try_push(PublicIpInput {
@@ -416,8 +416,8 @@ fn test_adding_ip_to_farm_works() {
         assert_ok!(TfgridModule::add_farm_ip(
             Origin::signed(alice()),
             1,
-            get_public_ip_ip(&"185.206.122.125/16".as_bytes().to_vec()).0,
-            get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec()).0
+            get_public_ip_ip_input(b"185.206.122.125/16"),
+            get_public_ip_gw_input(b"185.206.122.1"),
         ));
     });
 }
@@ -433,8 +433,8 @@ fn test_adding_misformatted_ip_to_farm_fails() {
             TfgridModule::add_farm_ip(
                 Origin::signed(alice()),
                 1,
-                "185.206.122.125".as_bytes().to_vec().try_into().unwrap(),
-                get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec()).0
+                get_public_ip_ip_input(b"185.206.122.125"),
+                get_public_ip_gw_input(b"185.206.122.1"),
             ),
             Error::<TestRuntime>::InvalidPublicIP
         );
@@ -464,16 +464,16 @@ fn test_adding_ip_duplicate_to_farm_fails() {
         assert_ok!(TfgridModule::add_farm_ip(
             Origin::signed(alice()),
             1,
-            get_public_ip_ip(&"185.206.122.125/16".as_bytes().to_vec()).0,
-            get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec()).0
+            get_public_ip_ip_input(b"185.206.122.125/16"),
+            get_public_ip_gw_input(b"185.206.122.1"),
         ));
 
         assert_noop!(
             TfgridModule::add_farm_ip(
                 Origin::signed(alice()),
                 1,
-                get_public_ip_ip(&"185.206.122.125/16".as_bytes().to_vec()).0,
-                get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec()).0
+                get_public_ip_ip_input(b"185.206.122.125/16"),
+                get_public_ip_gw_input(b"185.206.122.1"),
             ),
             Error::<TestRuntime>::IpExists
         );
@@ -2028,8 +2028,8 @@ fn create_farm() {
 
     let mut pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
 
-    let ip = get_public_ip_ip(&"185.206.122.33/24".as_bytes().to_vec()).0;
-    let gw = get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec()).0;
+    let ip = get_public_ip_ip_input(b"185.206.122.33/24");
+    let gw = get_public_ip_gw_input(b"185.206.122.1");
 
     pub_ips.try_push(PublicIpInput { ip, gw }).unwrap();
 

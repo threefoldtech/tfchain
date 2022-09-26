@@ -8,7 +8,7 @@ use sp_std::prelude::*;
 
 use codec::Encode;
 use frame_support::dispatch::DispatchErrorWithPostInfo;
-use frame_support::{ensure, traits::ConstU32, traits::EnsureOrigin, BoundedVec};
+use frame_support::{ensure, traits::EnsureOrigin, BoundedVec};
 use frame_system::{self as system, ensure_signed};
 use hex::FromHex;
 use pallet_timestamp as timestamp;
@@ -88,10 +88,14 @@ pub mod pallet {
     pub type FarmPublicIpInput = types::PublicIpInput<PublicIpIpInput, PublicIpGatewayInput>;
 
     // Concrete type for Public IP type
-    pub type PublicIpOf<T> = PublicIP<<T as Config>::PublicIP, <T as Config>::GatewayIP>;
+    pub type PublicIpIpOf<T> = <T as Config>::PublicIP;
+    pub type PublicIpGatewayOf<T> = <T as Config>::GatewayIP;
+    pub type PublicIpOf<T> = PublicIP<PublicIpIpOf<T>, PublicIpGatewayOf<T>>;
 
     // Input type for public ip list
     pub type PublicIpListInput<T> = BoundedVec<FarmPublicIpInput, <T as Config>::MaxFarmPublicIps>;
+    // Concrete type for public ip list type
+    pub type PublicIpListOf<T> = BoundedVec<PublicIpOf<T>, ConstU32<256>>;
 
     // Farm information type
     pub type FarmInfoOf<T> = Farm<<T as Config>::FarmName, PublicIpOf<T>>;
@@ -331,7 +335,7 @@ pub mod pallet {
             + Eq
             + Clone
             + TypeInfo
-            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + TryFrom<PublicIpIpInput, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of a gateway IP.
@@ -341,7 +345,7 @@ pub mod pallet {
             + Eq
             + Clone
             + TypeInfo
-            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + TryFrom<PublicIpGatewayInput, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of a IP4.
@@ -955,11 +959,8 @@ pub mod pallet {
                 Error::<T>::CannotUpdateFarmWrongTwin
             );
 
-            let parsed_ip = <T as Config>::PublicIP::try_from(ip.into_inner())
-                .map_err(DispatchErrorWithPostInfo::from)?;
-
-            let parsed_gateway = <T as Config>::GatewayIP::try_from(gateway.into_inner())
-                .map_err(DispatchErrorWithPostInfo::from)?;
+            let parsed_ip = Self::get_public_ip_ip(ip)?;
+            let parsed_gateway = Self::get_public_ip_gw(gateway)?;
 
             let new_ip = PublicIP {
                 ip: parsed_ip,
@@ -1000,8 +1001,7 @@ pub mod pallet {
                 Error::<T>::CannotUpdateFarmWrongTwin
             );
 
-            let parsed_ip = <T as Config>::PublicIP::try_from(ip.into_inner())
-                .map_err(DispatchErrorWithPostInfo::from)?;
+            let parsed_ip = Self::get_public_ip_ip(ip)?;
 
             match stored_farm
                 .public_ips
@@ -1852,15 +1852,14 @@ pub mod pallet {
         pub fn force_reset_farm_ip(
             origin: OriginFor<T>,
             farm_id: u32,
-            ip: Vec<u8>,
+            ip: PublicIpIpInput,
         ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
             ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
             let mut stored_farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
-            let parsed_ip =
-                <T as Config>::PublicIP::try_from(ip).map_err(DispatchErrorWithPostInfo::from)?;
+            let parsed_ip = Self::get_public_ip_ip(ip)?;
 
             match stored_farm
                 .public_ips
@@ -2220,10 +2219,12 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    fn get_farm_name(name: FarmNameInput<T>) -> Result<FarmNameOf<T>, DispatchErrorWithPostInfo> {
-        let name_parsed = <T as Config>::FarmName::try_from(name)?;
+    fn get_terms_and_conditions(
+        terms_cond: pallet::TermsAndConditionsInput<T>,
+    ) -> Result<TermsAndConditionsOf<T>, Error<T>> {
+        let parsed_terms_cond = <T as Config>::TermsAndConditions::try_from(terms_cond)?;
 
-        Ok(name_parsed)
+        Ok(parsed_terms_cond)
     }
 
     fn get_twin_ip(ip: TwinIpInput) -> Result<TwinIpOf<T>, DispatchErrorWithPostInfo> {
@@ -2232,12 +2233,61 @@ impl<T: Config> Pallet<T> {
         Ok(ip_parsed)
     }
 
-    fn get_terms_and_conditions(
-        terms_cond: pallet::TermsAndConditionsInput<T>,
-    ) -> Result<TermsAndConditionsOf<T>, Error<T>> {
-        let parsed_terms_cond = <T as Config>::TermsAndConditions::try_from(terms_cond)?;
+    fn get_farm_name(name: FarmNameInput<T>) -> Result<FarmNameOf<T>, DispatchErrorWithPostInfo> {
+        let name_parsed = <T as Config>::FarmName::try_from(name)?;
 
-        Ok(parsed_terms_cond)
+        Ok(name_parsed)
+    }
+
+    fn get_public_ip_ip(
+        public_ip_ip: PublicIpIpInput,
+    ) -> Result<PublicIpIpOf<T>, DispatchErrorWithPostInfo> {
+        let public_ip_ip_parsed = <T as Config>::PublicIP::try_from(public_ip_ip)?;
+
+        Ok(public_ip_ip_parsed)
+    }
+
+    fn get_public_ip_gw(
+        public_ip_gw: PublicIpGatewayInput,
+    ) -> Result<PublicIpGatewayOf<T>, DispatchErrorWithPostInfo> {
+        let public_ip_gw_parsed = <T as Config>::GatewayIP::try_from(public_ip_gw)?;
+
+        Ok(public_ip_gw_parsed)
+    }
+
+    fn get_public_ips(
+        public_ips: pallet::PublicIpListInput<T>,
+    ) -> Result<PublicIpListOf<T>, Error<T>> {
+        let mut public_ips_list: PublicIpListOf<T> =
+            vec![].try_into().unwrap();
+
+        for ip in public_ips {
+            let public_ip_ip =
+                Self::get_public_ip_ip(ip.ip).map_err(|_| Error::<T>::InvalidPublicIP)?;
+            let public_ip_gateway =
+                Self::get_public_ip_gw(ip.gw).map_err(|_| Error::<T>::InvalidPublicIP)?;
+
+            if public_ips_list.contains(&PublicIP {
+                ip: public_ip_ip.clone(),
+                gateway: public_ip_gateway.clone(),
+                contract_id: 0,
+            }) {
+                return Err(Error::<T>::IpExists);
+            }
+
+            public_ips_list
+                .try_push(PublicIP {
+                    ip: public_ip_ip,
+                    gateway: public_ip_gateway,
+                    contract_id: 0,
+                })
+                .or_else(|_| {
+                    return Err(DispatchErrorWithPostInfo::from(Error::<T>::InvalidPublicIP));
+                })
+                .ok();
+        }
+
+        Ok(public_ips_list)
     }
 
     fn get_public_config(config: pallet::PubConfigInput) -> Result<PubConfigOf<T>, Error<T>> {
@@ -2310,39 +2360,6 @@ impl<T: Config> Pallet<T> {
         }
 
         Ok(parsed_interfaces)
-    }
-
-    fn get_public_ips(
-        public_ips: pallet::PublicIpListInput<T>,
-    ) -> Result<BoundedVec<PublicIpOf<T>, ConstU32<256>>, Error<T>> {
-        let mut public_ips_list: BoundedVec<PublicIP<T::PublicIP, T::GatewayIP>, ConstU32<256>> =
-            vec![].try_into().unwrap();
-
-        for ip in public_ips {
-            let public_ip_ip = <T as Config>::PublicIP::try_from(ip.ip.into_inner())?;
-            let public_ip_gateway = <T as Config>::GatewayIP::try_from(ip.gw.into_inner())?;
-
-            if public_ips_list.contains(&PublicIP {
-                ip: public_ip_ip.clone(),
-                gateway: public_ip_gateway.clone(),
-                contract_id: 0,
-            }) {
-                return Err(Error::<T>::IpExists);
-            }
-
-            public_ips_list
-                .try_push(PublicIP {
-                    ip: public_ip_ip,
-                    gateway: public_ip_gateway,
-                    contract_id: 0,
-                })
-                .or_else(|_| {
-                    return Err(DispatchErrorWithPostInfo::from(Error::<T>::InvalidPublicIP));
-                })
-                .ok();
-        }
-
-        Ok(public_ips_list)
     }
 
     fn get_serial_number(

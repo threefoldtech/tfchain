@@ -1,13 +1,11 @@
-use sp_std::{marker::PhantomData, vec::Vec};
-
+use crate::{Config, Error, PublicIpGatewayInput, PublicIpIpInput};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
 };
 use scale_info::TypeInfo;
+use sp_std::marker::PhantomData;
 use valip::ip4::{Ip, CIDR};
-
-use crate::{Config, Error};
 
 /// A Public IP.
 /// Needs to be valid format (ipv4 with cidr and in public range)
@@ -22,24 +20,23 @@ pub struct PublicIP<T: Config>(
 pub const MIN_IP_LENGHT: u32 = 9;
 pub const MAX_IP_LENGTH: u32 = 18;
 
-impl<T: Config> TryFrom<Vec<u8>> for PublicIP<T> {
+impl<T: Config> TryFrom<PublicIpIpInput> for PublicIP<T> {
     type Error = Error<T>;
 
     /// Fallible initialization from a provided byte vector if it is below the
     /// minimum or exceeds the maximum allowed length or contains invalid ASCII
     /// characters.
-    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+    fn try_from(value: PublicIpIpInput) -> Result<Self, Self::Error> {
         ensure!(
             value.len() >= MIN_IP_LENGHT.saturated_into(),
             Self::Error::PublicIPToShort
         );
-        let bounded_vec: BoundedVec<u8, ConstU32<MAX_IP_LENGTH>> =
-            BoundedVec::try_from(value).map_err(|_| Self::Error::PublicIPToLong)?;
         ensure!(
-            CIDR::parse(&bounded_vec).is_ok(),
-            Self::Error::InvalidPublicIP
+            value.len() <= MAX_IP_LENGTH.saturated_into(),
+            Self::Error::PublicIPToLong
         );
-        Ok(Self(bounded_vec, PhantomData))
+        ensure!(CIDR::parse(&value).is_ok(), Self::Error::InvalidPublicIP);
+        Ok(Self(value, PhantomData))
     }
 }
 
@@ -70,24 +67,23 @@ pub struct GatewayIP<T: Config>(
 pub const MIN_GATEWAY_LENGTH: u32 = 7;
 pub const MAX_GATEWAY_LENGTH: u32 = 15;
 
-impl<T: Config> TryFrom<Vec<u8>> for GatewayIP<T> {
+impl<T: Config> TryFrom<PublicIpGatewayInput> for GatewayIP<T> {
     type Error = Error<T>;
 
     /// Fallible initialization from a provided byte vector if it is below the
     /// minimum or exceeds the maximum allowed length or contains invalid ASCII
     /// characters.
-    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+    fn try_from(value: PublicIpGatewayInput) -> Result<Self, Self::Error> {
         ensure!(
             value.len() >= MIN_GATEWAY_LENGTH.saturated_into(),
             Self::Error::GatewayIPToShort
         );
-        let bounded_vec: BoundedVec<u8, ConstU32<MAX_GATEWAY_LENGTH>> =
-            BoundedVec::try_from(value).map_err(|_| Self::Error::GatewayIPToLong)?;
         ensure!(
-            Ip::parse(&bounded_vec).is_ok(),
-            Self::Error::InvalidPublicIP
+            value.len() <= MAX_GATEWAY_LENGTH.saturated_into(),
+            Self::Error::GatewayIPToLong
         );
-        Ok(Self(bounded_vec, PhantomData))
+        ensure!(Ip::parse(&value).is_ok(), Self::Error::InvalidPublicIP);
+        Ok(Self(value, PhantomData))
     }
 }
 

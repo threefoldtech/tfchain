@@ -17,7 +17,7 @@ use pallet_tfgrid::{
     pub_ip::{GatewayIP, PublicIP},
     terms_cond::TermsAndConditions,
     twin::TwinIp,
-    DocumentHashInput, DocumentLinkInput, TwinIpInput,
+    DocumentHashInput, DocumentLinkInput, PublicIpGatewayInput, PublicIpIpInput, TwinIpInput,
 };
 use sp_core::{crypto::Ss58Codec, sr25519, Pair, Public, H256};
 use sp_runtime::traits::{IdentifyAccount, Verify};
@@ -235,6 +235,24 @@ pub(crate) fn get_document_hash_input(document_hash_input: &[u8]) -> DocumentHas
 
 pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {
     BoundedVec::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
+}
+
+pub(crate) fn get_public_ip_ip_input(public_ip_ip_input: &[u8]) -> PublicIpIpInput {
+    BoundedVec::try_from(public_ip_ip_input.to_vec()).expect("Invalid public ip (ip) input.")
+}
+
+pub(crate) fn get_public_ip_gw_input(public_ip_gw_input: &[u8]) -> PublicIpGatewayInput {
+    BoundedVec::try_from(public_ip_gw_input.to_vec()).expect("Invalid public ip (gw) input.")
+}
+
+pub(crate) fn get_public_ip_ip(public_ip_ip_input: &[u8]) -> TestPublicIP {
+    let input = get_public_ip_ip_input(public_ip_ip_input);
+    TestPublicIP::try_from(input).expect("Invalid public ip (ip).")
+}
+
+pub(crate) fn get_public_ip_gw(public_ip_gw_input: &[u8]) -> TestGatewayIP {
+    let input = get_public_ip_gw_input(public_ip_gw_input);
+    TestGatewayIP::try_from(input).expect("Invalid public ip (gw).")
 }
 
 /// Helper function to generate a crypto pair from seed

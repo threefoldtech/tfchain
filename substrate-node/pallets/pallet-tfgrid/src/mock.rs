@@ -1,28 +1,26 @@
 use crate::{
-    self as tfgridModule, Config, DocumentHashInput, DocumentLinkInput, FarmNameInput, TwinIpInput,
+    self as tfgridModule,
+    farm::FarmName,
+    interface::{InterfaceIp, InterfaceMac, InterfaceName},
+    node::{Location, SerialNumber},
+    pub_config::{Domain, GW4, GW6, IP4, IP6},
+    pub_ip::{GatewayIP, PublicIP},
+    terms_cond::TermsAndConditions,
+    twin::TwinIp,
+    weights, Config, DocumentHashInput, DocumentLinkInput, FarmNameInput, PublicIpGatewayInput,
+    PublicIpIpInput, TwinIpInput,
 };
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
 use frame_system::EnsureRoot;
+use sp_core::{ed25519, sr25519, Pair, Public, H256};
 use sp_io::TestExternalities;
+use sp_runtime::traits::{IdentifyAccount, Verify};
+use sp_runtime::MultiSignature;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
-
-use sp_core::{ed25519, sr25519, Pair, Public, H256};
-
 use sp_std::prelude::*;
-
-use crate::farm::FarmName;
-use crate::interface::{InterfaceIp, InterfaceMac, InterfaceName};
-use crate::node::{Location, SerialNumber};
-use crate::pub_config::{Domain, GW4, GW6, IP4, IP6};
-use crate::pub_ip::{GatewayIP, PublicIP};
-use crate::terms_cond::TermsAndConditions;
-use crate::twin::TwinIp;
-use crate::weights;
-use sp_runtime::traits::{IdentifyAccount, Verify};
-use sp_runtime::MultiSignature;
 
 use hex;
 
@@ -214,6 +212,14 @@ pub(crate) fn get_farm_name_input(farm_name_input: &[u8]) -> FarmNameInput<TestR
     BoundedVec::try_from(farm_name_input.to_vec()).expect("Invalid farm name input.")
 }
 
+pub(crate) fn get_public_ip_ip_input(ip_input: &[u8]) -> PublicIpIpInput {
+    BoundedVec::try_from(ip_input.to_vec()).expect("Invalid public ip (ip) input.")
+}
+
+pub(crate) fn get_public_ip_gw_input(gw_input: &[u8]) -> PublicIpGatewayInput {
+    BoundedVec::try_from(gw_input.to_vec()).expect("Invalid public ip (gw) input.")
+}
+
 pub(crate) fn get_pub_config_ip4(ip4: &[u8]) -> TestIP4 {
     IP4::try_from(ip4.to_vec()).expect("Invalid ip4 input")
 }
@@ -228,14 +234,6 @@ pub(crate) fn get_pub_config_ip6(ip6: &[u8]) -> TestIP6 {
 
 pub(crate) fn get_pub_config_gw6(gw6: &[u8]) -> TestGW6 {
     GW6::try_from(gw6.to_vec()).expect("Invalid gw6 input")
-}
-
-pub(crate) fn get_public_ip_ip(ip: &[u8]) -> TestPublicIP {
-    PublicIP::try_from(ip.to_vec()).expect("Invalid public ip input")
-}
-
-pub(crate) fn get_public_ip_gateway(gw: &[u8]) -> TestGatewayIP {
-    GatewayIP::try_from(gw.to_vec()).expect("Invalid gateway ip input")
 }
 
 pub(crate) fn get_interface_name(name: &[u8]) -> TestInterfaceName {

@@ -1,9 +1,9 @@
+use super::resources::Resources;
 use codec::{Decode, Encode, MaxEncodedLen};
 use core::cmp::{Ord, Ordering, PartialOrd};
 use frame_support::{traits::ConstU32, BoundedVec};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
-use super::resources::Resources;
 
 #[derive(
     PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
