@@ -1309,7 +1309,7 @@ impl<T: Config> Pallet<T> {
         let to_burn = T::Currency::withdraw(
             &twin.account_id,
             amount_to_burn,
-            WithdrawReasons::TRANSACTION_PAYMENT,
+            WithdrawReasons::FEE,
             ExistenceRequirement::KeepAlive,
         )?;
         T::Burn::on_unbalanced(to_burn);
