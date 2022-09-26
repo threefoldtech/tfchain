@@ -832,16 +832,14 @@ impl_runtime_apis! {
         }
 
         fn authorities() -> Vec<AuraId> {
-            let authorities: Vec<AuraId> = ValidatorSet::validators()
+            ValidatorSet::validators()
                 .iter()
                 .map(|account| {
                     let mut bytes = [0u8; 32];
                     bytes.copy_from_slice(&account.encode());
                     sr25519::Public::from_raw(bytes).into()
                 })
-                .collect();
-            log::info!("authorities {:?}", authorities.clone());
-            authorities
+                .collect()
         }
     }
 
