@@ -745,6 +745,14 @@ fn update_certified_node_resources_loses_certification_works() {
             "some_serial".as_bytes().to_vec(),
         ));
 
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::TfgridModule(
+                TfgridEvent::<TestRuntime>::NodeCertificationSet(1, NodeCertification::Diy)
+            ))),
+            true
+        );
+
         let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(node.certification, NodeCertification::Diy);
     });
