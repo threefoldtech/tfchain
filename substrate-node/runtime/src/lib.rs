@@ -401,8 +401,8 @@ impl pallet_smart_contract::Config for Runtime {
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
     type MaxDeploymentDataLength = MaxDeploymentDataLength;
     type MaxNodeContractPublicIps = MaxNodeContractPublicIPs;
+    type Burn = ();
 }
-// type Tfgrid = TfgridModule;
 
 impl pallet_tft_bridge::Config for Runtime {
     type Event = Event;

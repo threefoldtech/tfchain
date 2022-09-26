@@ -9,7 +9,7 @@ use frame_support::{
     pallet_prelude::DispatchResult,
     traits::{
         Currency, EnsureOrigin, ExistenceRequirement, ExistenceRequirement::KeepAlive, Get,
-        LockableCurrency, WithdrawReasons,
+        LockableCurrency, OnUnbalanced, WithdrawReasons,
     },
     transactional,
     weights::Pays,
@@ -51,7 +51,7 @@ pub mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         log,
-        traits::{Currency, Get, LockIdentifier, LockableCurrency},
+        traits::{Currency, Get, LockIdentifier, LockableCurrency, OnUnbalanced},
     };
     use frame_system::pallet_prelude::*;
     use sp_core::H256;
@@ -64,6 +64,8 @@ pub mod pallet {
 
     pub type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
+    pub type NegativeImbalanceOf<T> =
+        <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::NegativeImbalance;
 
     pub const GRID_LOCK_ID: LockIdentifier = *b"gridlock";
 
@@ -165,6 +167,8 @@ pub mod pallet {
     {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: LockableCurrency<Self::AccountId>;
+        /// Handler for the unbalanced decrement when slashing (burning collateral)
+        type Burn: OnUnbalanced<NegativeImbalanceOf<Self>>;
         type StakingPoolAccount: Get<Self::AccountId>;
         type BillingFrequency: Get<u64>;
         type DistributionFrequency: Get<u16>;
@@ -1297,11 +1301,18 @@ impl<T: Config> Pallet<T> {
                 - existential_deposit_requirement;
         }
 
-        <T as Config>::Currency::slash(&twin.account_id, amount_to_burn);
+        let to_burn = T::Currency::withdraw(
+            &twin.account_id,
+            amount_to_burn,
+            WithdrawReasons::FEE,
+            ExistenceRequirement::KeepAlive,
+        )?;
+        T::Burn::on_unbalanced(to_burn);
         Self::deposit_event(Event::TokensBurned {
             contract_id: contract.contract_id,
             amount: amount_to_burn,
         });
+
         Ok(().into())
     }
 
