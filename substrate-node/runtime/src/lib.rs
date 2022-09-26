@@ -53,6 +53,8 @@ use pallet_transaction_payment::CurrencyAdapter;
 
 pub mod impls;
 
+mod bridge_migration;
+
 /// Import the template pallet.
 pub use pallet_tfgrid;
 
@@ -755,7 +757,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    (),
+    bridge_migration::RemoveBridgeStorage,
 >;
 
 impl_runtime_apis! {
