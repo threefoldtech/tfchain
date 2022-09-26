@@ -374,7 +374,7 @@ parameter_types! {
     pub BillingFrequency: u64 = 600;
     pub GracePeriod: u64 = (14 * DAYS).into();
     pub DistributionFrequency: u16 = 24;
-    pub RetryInterval: u32 = 20;
+    pub RetryInterval: u32 = 100;
     pub MaxNameContractNameLength: u32 = 64;
     pub MaxNodeContractPublicIPs: u32 = 1;
     pub MaxDeploymentDataLength: u32 = 512;
