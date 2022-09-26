@@ -52,7 +52,6 @@ pub use sp_runtime::{Perbill, Permill};
 use pallet_transaction_payment::CurrencyAdapter;
 
 pub mod impls;
-mod migrations;
 
 /// Import the template pallet.
 pub use pallet_tfgrid;
@@ -756,11 +755,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    (
-        migrations::CustomOnRuntimeUpgrades,
-        pallet_smart_contract::contract_migration::v5::ContractMigrationV5<Runtime>,
-        pallet_tfgrid::grid_migration::v9::GridMigration<Runtime>,
-    ),
+    (),
 >;
 
 impl_runtime_apis! {

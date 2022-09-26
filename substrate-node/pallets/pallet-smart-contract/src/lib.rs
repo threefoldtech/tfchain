@@ -37,7 +37,6 @@ mod tests;
 
 pub mod weights;
 
-pub mod contract_migration;
 pub mod cost;
 pub mod name_contract;
 pub mod types;
@@ -426,10 +425,6 @@ pub mod pallet {
             // clean storage map for billed contracts at block
             let current_block_u64: u64 = block.saturated_into::<u64>();
             ContractsToBillAt::<T>::remove(current_block_u64);
-        }
-
-        fn on_runtime_upgrade() -> Weight {
-            contract_migration::migrate_to_version_4::<T>()
         }
     }
 }

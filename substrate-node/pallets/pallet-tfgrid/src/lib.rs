@@ -32,7 +32,6 @@ pub mod weights;
 pub mod types;
 
 pub mod farm;
-pub mod grid_migration;
 pub mod interface;
 pub mod pub_config;
 pub mod pub_ip;
