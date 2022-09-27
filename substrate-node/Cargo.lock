@@ -7326,7 +7326,7 @@ checksum = "949517c0cf1bf4ee812e2e07e08ab448e3ae0d23472aee8a06c985f0c8815b16"
 
 [[package]]
 name = "tfchain"
-version = "2.1.0"
+version = "2.1.1"
 dependencies = [
  "clap 3.2.22",
  "frame-benchmarking",
@@ -7380,7 +7380,7 @@ dependencies = [
 
 [[package]]
 name = "tfchain-runtime"
-version = "2.1.0"
+version = "2.1.1"
 dependencies = [
  "frame-benchmarking",
  "frame-executive",

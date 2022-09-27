@@ -194,6 +194,7 @@ use weights;
 impl pallet_smart_contract::Config for TestRuntime {
     type Event = Event;
     type Currency = Balances;
+    type Burn = ();
     type StakingPoolAccount = StakingPoolAccount;
     type BillingFrequency = BillingFrequency;
     type DistributionFrequency = DistributionFrequency;

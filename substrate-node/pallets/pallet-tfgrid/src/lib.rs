@@ -1054,6 +1054,17 @@ pub mod pallet {
                 NodesByFarmID::<T>::insert(farm_id, nodes_by_farm);
             };
 
+            // If the resources on a certified node changed, reset the certification level to DIY
+            if stored_node.resources != resources
+                && stored_node.certification == NodeCertification::Certified
+            {
+                stored_node.certification = NodeCertification::Diy;
+                Self::deposit_event(Event::NodeCertificationSet(
+                    node_id,
+                    stored_node.certification,
+                ));
+            }
+
             stored_node.farm_id = farm_id;
             stored_node.resources = resources;
             stored_node.location = location;
