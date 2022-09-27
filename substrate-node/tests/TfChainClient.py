@@ -1,5 +1,6 @@
 from cmath import exp
 from datetime import datetime
+from re import S
 from unittest.mock import DEFAULT
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from itertools import count
@@ -24,6 +25,12 @@ NODE_CERTIFICATION_CERTIFIED = "Certified"
 NODE_CERTIFICATION_TYPES = [
     NODE_CERTIFICATION_DIY, NODE_CERTIFICATION_CERTIFIED]
 
+UNIT_BYTES = "Bytes"
+UNIT_KILOBYTES = "Kilobytes"
+UNIT_MEGABYTES = "Mebabytes"
+UNIT_GIGABYTES = "Gigabytes"
+UNIT_TERRABYTES = "Terrabytes"
+UNIT_TYPES = [UNIT_BYTES, UNIT_KILOBYTES, UNIT_MEGABYTES, UNIT_GIGABYTES, UNIT_TERRABYTES]
 
 class TfChainClient:
     def __init__(self):
@@ -65,6 +72,11 @@ class TfChainClient:
 
     def _check_events(self, events: list = [], expected_events: list = []):
         logging.info("Events: %s", json.dumps(events))
+        
+        # This was a sudo call that failed
+        for event in events:
+            if event["event_id"] == "Sudid" and "Err" in event["attributes"]:
+                raise Exception(event["attributes"])
 
         for expected_event in expected_events:
             check = False
@@ -96,8 +108,9 @@ class TfChainClient:
             signed_call, wait_for_finalization=self._wait_for_finalization, wait_for_inclusion=self._wait_for_inclusion)
         if response.error_message:
             raise Exception(response.error_message)
-
-        events = [event.value["event"] for event in response.triggered_events]
+        
+        logging.info(response.is_success)
+        logging.info(dir(response))
         self._check_events([event.value["event"]
                            for event in response.triggered_events], expected_events)
 
@@ -201,11 +214,15 @@ class TfChainClient:
         return q.value
 
     def wait_x_blocks(self, x: int = 1, port: int = 9945):
+        block_to_wait_for = self.get_block_number(port=port) + x
+        self.wait_till_block(block_to_wait_for, port=port)
+            
+    def wait_till_block(self, x: int = 1, port: int = 9945):
         start_time = datetime.now()
-        stop_at_block = self.get_block_number(port=port) + x
-        logging.info("Waiting %s blocks. Current is %s", x, stop_at_block - x)
-        timeout_for_x_blocks = TIMEOUT_WAIT_FOR_BLOCK * (x+1)
-        while self.get_block_number(port=port) < stop_at_block:
+        current_block = self.get_block_number(port=port)
+        logging.info("Waiting till block %s. Current is %s", x, current_block)
+        timeout_for_x_blocks = TIMEOUT_WAIT_FOR_BLOCK * (x-current_block+1)
+        while self.get_block_number(port=port) < x:
             elapsed_time = datetime.now() - start_time
             if elapsed_time.total_seconds() >= timeout_for_x_blocks:
                 raise Exception(f"Timeout on waiting for {x} blocks")
@@ -597,7 +614,7 @@ class TfChainClient:
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
 
-    def remove_node_certifier(self, account_name: str = "", port: int = 9945, str = DEFAULT_SIGNER):
+    def remove_node_certifier(self, account_name: str = "", port: int = 9945, who=DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         call = substrate.compose_call("TfgridModule", "remove_node_certifier", {
@@ -623,75 +640,157 @@ class TfChainClient:
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
 
+    def create_pricing_policy(self, name: str = "", unit: str = UNIT_GIGABYTES, su: int = 0, cu: int = 0, nu: int = 0, ipu: int = 0, unique_name: int = "",
+                              domain_name: int = "", foundation_account: str = "", certified_sales_account: str = "",
+                              discount_for_dedication_nodes: int = 0, port: int = 9945, who: str = DEFAULT_SIGNER):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+
+        params = {
+            "name": f"{name}",
+            "su": { "value": su, "unit": unit },
+            "cu": { "value": cu, "unit": unit },
+            "nu": { "value": nu, "unit": unit },
+            "ipu": { "value": ipu, "unit": unit},
+            "unique_name": { "value": unique_name, "unit": unit },
+            "domain_name": { "value": domain_name, "unit": unit },
+            "foundation_account": f"{self._predefined_keys[foundation_account].ss58_address}",
+            "certified_sales_account": f"{self._predefined_keys[certified_sales_account].ss58_address}",
+            "discount_for_dedication_nodes": discount_for_dedication_nodes
+        }
+        call = substrate.compose_call(
+            "TfgridModule", "create_pricing_policy", params)
+        expected_events = [{
+            "module_id": "TfgridModule",
+            "event_id": "PricingPolicyStored"
+        }]
+        self._sign_extrinsic_submit_check_response(
+            substrate, call, who, expected_events=expected_events)
+    
+    def update_pricing_policy(self, id: int = 1, name: str = "", unit: str = UNIT_GIGABYTES, su: int = 0, cu: int = 0, nu: int = 0, ipu: int = 0,
+                              unique_name: int = "", domain_name: int = "", foundation_account: str = "", certified_sales_account: str = "",
+                              discount_for_dedication_nodes: int = 0, port: int = 9945, who: str = DEFAULT_SIGNER):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+
+        params = {
+            "id": id,
+            "name": f"{name}",
+            "su": { "value": su, "unit": unit },
+            "cu": { "value": cu, "unit": unit },
+            "nu": { "value": nu, "unit": unit },
+            "ipu": { "value": ipu, "unit": unit},
+            "unique_name": { "value": unique_name, "unit": unit },
+            "domain_name": { "value": domain_name, "unit": unit },
+            "foundation_account": f"{self._predefined_keys[foundation_account].ss58_address}",
+            "certified_sales_account": f"{self._predefined_keys[certified_sales_account].ss58_address}",
+            "discount_for_dedication_nodes": discount_for_dedication_nodes
+        }
+        call = substrate.compose_call(
+            "TfgridModule", "update_pricing_policy", params)
+        expected_events = [{
+            "module_id": "TfgridModule",
+            "event_id": "PricingPolicyStored"
+        }]
+        self._sign_extrinsic_submit_check_response(
+            substrate, call, who, expected_events=expected_events)
+    
+    def get_pricing_policy(self, id: int = 1, port: int = 9945):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+
+        q = substrate.query("TfgridModule", "PricingPolicies", [id])
+        return q.value
+
+    def create_farming_policy(self, name: str = "", su: int = 0, cu: int = 0, nu: int = 0, ipv4: int = 0, minimal_uptime: int = 0, 
+                              policy_end: int = 0, immutable: bool = False, default: bool = False, 
+                              node_certification: str = NODE_CERTIFICATION_DIY, farm_certification: str = FARM_CERTIFICATION_NOTCERTIFIED, 
+                              port: int = 9945, who: str = DEFAULT_SIGNER):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+
+        params = {
+            "name": f"{name}",
+            "su": su,
+            "cu": cu,
+            "nu": nu,
+            "ipv4": ipv4,
+            "minimal_uptime": minimal_uptime,
+            "policy_end": policy_end,
+            "immutable": immutable,
+            "default": default,
+            "node_certification": f"{node_certification}",
+            "farm_certification": f"{farm_certification}"
+        }
+        call = substrate.compose_call(
+            "TfgridModule", "create_farming_policy", params)
+        expected_events = [{
+            "module_id": "TfgridModule",
+            "event_id": "FarmingPolicyStored"
+        }]
+        self._sign_extrinsic_submit_check_response(
+            substrate, call, who, expected_events=expected_events)
+    
+    def update_farming_policy(self, id: int = 1, name: str = "", su: int = 0, cu: int = 0, nu: int = 0, ipv4: int = 0, minimal_uptime: int = 0,
+                              policy_end: int = 0, immutable: bool = False, default: bool = False, 
+                              node_certification: str = NODE_CERTIFICATION_DIY, farm_certification: str = FARM_CERTIFICATION_NOTCERTIFIED, 
+                              port: int = 9945, who: str = DEFAULT_SIGNER):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+
+        params = {
+            "id": id,
+            "name": f"{name}",
+            "su": su,
+            "cu": cu,
+            "nu": nu,
+            "ipv4": ipv4,
+            "minimal_uptime": minimal_uptime,
+            "policy_end": policy_end,
+            "immutable": immutable,
+            "default": default,
+            "node_certification": f"{node_certification}",
+            "farm_certification": f"{farm_certification}"
+        }
+        call = substrate.compose_call(
+            "TfgridModule", "update_farming_policy", params)
+        expected_events = [{
+            "module_id": "TfgridModule",
+            "event_id": "FarmingPolicyUpdated"
+        }]
+        self._sign_extrinsic_submit_check_response(
+            substrate, call, who, expected_events=expected_events)
+        
+    def get_farming_policy(self, id: int = 1, port: int = 9945):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+
+        q = substrate.query("TfgridModule", "FarmingPoliciesMap", [id])
+        return q.value
+    
+    def attach_policy_to_farm(self, farm_id: int = 1, farming_policy_id: int | None = None, cu: int | None = None, 
+                              su: int | None = None, end: int | None = None, node_count: int | None = 0, node_certification: bool = False,
+                              port: int = 9945, who: str = DEFAULT_SIGNER):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+
+        limits = {
+            "farming_policy_id": farming_policy_id,
+            "cu": cu,
+            "su": su,
+            "end": end,
+            "node_count": node_count,
+            "node_certification": node_certification
+        }
+        params = {
+            "farm_id": farm_id,
+            "limits": limits if farming_policy_id is not None else None
+        }
+        call = substrate.compose_call(
+            "TfgridModule", "attach_policy_to_farm", params)
+        expected_events = [{
+            "module_id": "TfgridModule",
+            "event_id": "FarmingPolicySet"
+        }]
+        self._sign_extrinsic_submit_check_response(
+            substrate, call, who, expected_events=expected_events)
+
 
 """
 TODO:
-add_validator
-remove_validator
-add_validator_again
-
-
-create_pricing_policy
-update_pricing_policy
-create_farming_policy
-delete_node_farm
-set_farm_dedicated
-force_reset_farm_ip
-set_connection_price
-
-remove_node_certifier
-update_farming_policy
-attach_policy_to_farm
-set_zos_version
-add_reports
-add_nru_reports
-report_contract_resources
 create_solution_provider
 approve_solution_provider
-add_bridge_validator
-remove_bridge_validator
-propose_or_vote_mint_transaction
-propose_burn_transaction_or_add_sig
-set_burn_transaction_executed
-create_refund_transaction_or_add_sig
-set_refund_transaction_executed
-set_prices
-set_allowed_origin
-set_min_tft_price
-set_max_tft_price
-schedule
-cancel
-schedule_named
-cancel_named
-schedule_after
-schedule_named_after
-burn_tft
-execute
-propose
-vote
-close
-disapprove_proposal
-add_member
-remove_member
-swap_member
-reset_members
-change_key
-set_prime
-clear_prime
-set_code
-create_validator
-activate_validator_node
-change_validator_node_account
-bond
-approve_validator
-remove_validator
-propose
-vote
-veto
-close
-batch
-as_derivative
-batch_all
-dispatch_as
-force_batch
 """

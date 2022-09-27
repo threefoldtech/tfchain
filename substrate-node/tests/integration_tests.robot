@@ -24,7 +24,6 @@ Public Ips Should Not Contain Ip
 
     Run Keyword If    ${status}    Fail    The list of public ips ${list} contains the ip ${ip}, it shouldn't!
 
-
 Setup Network And Create Farm
     [Documentation]    Helper function to quickly create a network with 2 nodes and creating a farm using Alice's key
     Setup Alice    create_twin=${True}
@@ -41,6 +40,7 @@ Create Interface
     ${dict} =     Create Dictionary    name    ${name}    mac    ${mac}    ips    ${ips}
 
     [Return]    ${dict}
+
 
 
 *** Test Cases ***
@@ -94,8 +94,8 @@ Test Create Update Farm
     Tear Down Multi Node Network
 
 Test Add Stellar Payout V2ADDRESS 
-    [Documentation]    
-    Setup Multi Node Network    log_name=test_create_update_farm
+    [Documentation]    Testing adding a stellar payout address
+    Setup Multi Node Network    log_name=test_add_stellar_address
 
     Setup Network And Create Farm
 
@@ -113,11 +113,12 @@ Test Add Stellar Payout V2ADDRESS
     Tear Down Multi Node Network
 
 Test Set Farm Certification
-    [Documentation]    
+    [Documentation]    Testing setting a farm certification
     Setup Multi Node Network    log_name=test_farm_certification
 
     Setup Network And Create Farm
 
+    # only possible with sudo
     Run Keyword And Expect Error    *'BadOrigin'*
     ...    Set Farm Certification    farm_id=${1}    certification=Gold
 
@@ -126,14 +127,22 @@ Test Set Farm Certification
     Tear Down Multi Node Network
 
 Test Set Node Certification
-    [Documentation]    
+    [Documentation]    Testing setting a node certification
     Setup Multi Node Network    log_name=test_node_certification
 
     Setup Network And Create Node
 
+    # Make Alice a node certifier
     Add Node Certifier    account_name=Alice    who=Sudo
 
     Set Node Certification    node_id=${1}    certification=Certified
+
+    Remove Node Certifier    account_name=Alice    who=Sudo
+
+    # Alice is no longer able to set node certification
+    Run Keyword And Expect Error    *'NotAllowedToCertifyNode'*
+    ...    Set Node Certification    node_id=${1}    certification=Certified
+
 
     Tear Down Multi Node Network
 
@@ -189,6 +198,7 @@ Test Create Update Delete Node
     Tear Down Multi Node Network
 
 Test Reporting Uptime
+    [Documentation]    Testing reporting uptime including a failed attempt to report uptime to a non existing node
     Setup Multi Node Network    log_name=test_reporting_uptime
     
     Run Keyword And Expect Error    *'TwinNotExists'*
@@ -326,6 +336,77 @@ Test Create Name Contract: Success
     Create Name Contract    name=my_name_contract
 
     Cancel Name Contract    contract_id=${1}
+
+    Tear Down Multi Node Network
+
+Test Create Update Pricing Policy
+    [Documentation]    Testing api calls (create, update) for managing pricing policies including failed attempts
+    Setup Multi Node Network    log_name=test_create_update_pricing_policy
+
+    # only possible with sudo
+    Run Keyword And Expect Error    *'BadOrigin'*
+    ...    Create Pricing Policy    name=mypricingpolicy    unit=Gigabytes    su=${55000}    cu=${90000}    nu=${20000}    ipu=${35000}    unique_name=${3000}    domain_name=${6000}    foundation_account=Bob    certified_sales_account=Bob    discount_for_dedication_nodes=45
+
+    Create Pricing Policy    name=mypricingpolicy    unit=Gigabytes    su=${55000}    cu=${90000}    nu=${20000}    ipu=${35000}    unique_name=${3000}    domain_name=${6000}    foundation_account=Bob    certified_sales_account=Bob    discount_for_dedication_nodes=45    who=Sudo
+    ${pricing_policy} =     Get Pricing Policy    id=${2}
+    Should Not Be Equal    ${pricing_policy}    ${None}
+    Should Be Equal    ${pricing_policy}[name]    mypricingpolicy
+
+    # only possible with sudo
+    Run Keyword And Expect Error    *'BadOrigin'*
+    ...    Update Pricing Policy    id=${2}    name=mypricingpolicyupdated    unit=Gigabytes    su=${55000}    cu=${90000}    nu=${20000}    ipu=${35000}    unique_name=${3000}    domain_name=${6000}    foundation_account=Bob    certified_sales_account=Bob    discount_for_dedication_nodes=45
+
+    Update Pricing Policy    id=${2}    name=mypricingpolicyupdated    unit=Gigabytes    su=${55000}    cu=${90000}    nu=${20000}    ipu=${35000}    unique_name=${3000}    domain_name=${6000}    foundation_account=Bob    certified_sales_account=Bob    discount_for_dedication_nodes=45    who=Sudo
+    ${pricing_policy} =     Get Pricing Policy    id=${2}
+    Should Not Be Equal    ${pricing_policy}    ${None}
+    Should Be Equal    ${pricing_policy}[name]    mypricingpolicyupdated
+
+    Tear Down Multi Node Network
+
+Test Create Update Farming Policy
+    [Documentation]    Testing api calls (create, update) for managing farming policies including failed attempts
+    Setup Multi Node Network    log_name=test_create_update_farming_policy
+
+    # only possible with sudo
+    Run Keyword And Expect Error    *'BadOrigin'*
+    ...    Create Farming Policy    name=myfarmingpolicy    su=${12}    cu=${15}    nu=${10}    ipv4=${8}    minimal_uptime=${9999}    policy_end=${10}    immutable=${True}    default=${True}    node_certification=Diy    farm_certification=Gold
+
+    Create Farming Policy    name=myfarmingpolicy    su=${12}    cu=${15}    nu=${10}    ipv4=${8}    minimal_uptime=${9999}    policy_end=${15}    immutable=${True}    default=${True}    node_certification=Diy    farm_certification=Gold    who=Sudo
+    ${farming_policy} =    Get Farming Policy    id=${3}
+    Should Not Be Equal    ${farming_policy}    ${None}
+    Should Be Equal    ${farming_policy}[name]    myfarmingpolicy
+
+    # only possible with sudo
+    Run Keyword And Expect Error    *'BadOrigin'*
+    ...    Update Farming Policy    id=${3}    name=myfarmingpolicyupdated    su=${12}    cu=${15}    nu=${10}    ipv4=${8}    minimal_uptime=${9999}    policy_end=${10}    immutable=${True}    default=${True}    node_certification=Diy    farm_certification=Gold
+
+    Update Farming Policy    id=${3}    name=myfarmingpolicyupdated    su=${12}    cu=${15}    nu=${10}    ipv4=${8}    minimal_uptime=${9999}    policy_end=${10}    immutable=${True}    default=${True}    node_certification=Diy    farm_certification=Gold    who=Sudo
+    ${farming_policy} =    Get Farming Policy    id=${3}
+    Should Not Be Equal    ${farming_policy}    ${None}
+    Should Be Equal    ${farming_policy}[name]    myfarmingpolicyupdated
+    
+    Tear Down Multi Node Network
+
+Test Attach Policy To Farm
+    [Documentation]    Testing attaching a policy to a farm including a failed attempt to attach an expired policy
+    Setup Multi Node Network    log_name=test_attach_policy_to_farm
+
+    Setup Network And Create Farm
+    Create Farming Policy    name=myfarmingpolicy    su=${12}    cu=${15}    nu=${10}    ipv4=${8}    minimal_uptime=${9999}    policy_end=${5}    immutable=${True}    default=${True}    node_certification=Diy    farm_certification=Gold    who=Sudo
+    ${policy} =     Get Farming Policy    id=${3}
+    Should Not Be Equal    ${policy}    ${None}
+    Should Be Equal    ${policy}[name]    myfarmingpolicy
+
+    # only possible with sudo
+    Run Keyword And Expect Error    *'BadOrigin'*
+    ...    Attach Policy To Farm    farm_id=${1}    farming_policy_id=${3}    cu=${20}    su=${2}    end=${1654058949}    node_certification=${False}    node_count=${10}
+
+    Attach Policy To Farm    farm_id=${1}    farming_policy_id=${3}    cu=${20}    su=${2}    end= ${1654058949}    node_certification=${False}    node_count=${10}    who=Sudo
+
+    # farming policy expires after 5 blocks
+    Wait X Blocks    x=${5}
+    Run Keyword And Expect Error    {'Err': {'Module': {'index': 11, 'error': '0x52000000'}}}
+    ...    Attach_policy_to_farm    farm_id=${1}    farming_policy_id=${3}    cu=${20}    su=${2}    end=${1654058949}    node_certification=${False}    node_count=${10}    who=Sudo
 
     Tear Down Multi Node Network
 
