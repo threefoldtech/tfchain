@@ -19,6 +19,7 @@ use pallet_tfgrid::{
     twin::TwinIp,
     DocumentHashInput, DocumentLinkInput, PublicIpGatewayInput, PublicIpIpInput, TwinIpInput,
 };
+use pallet_tfgrid::{CityInput, CountryInput, LatitudeInput, LongitudeInput, SerialNumberInput};
 use sp_core::{crypto::Ss58Codec, sr25519, Pair, Public, H256};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::MultiSignature;
@@ -253,6 +254,26 @@ pub(crate) fn get_public_ip_ip(public_ip_ip_input: &[u8]) -> TestPublicIP {
 pub(crate) fn get_public_ip_gw(public_ip_gw_input: &[u8]) -> TestGatewayIP {
     let input = get_public_ip_gw_input(public_ip_gw_input);
     TestGatewayIP::try_from(input).expect("Invalid public ip (gw).")
+}
+
+pub(crate) fn get_city_input(city_input: &[u8]) -> CityInput {
+    BoundedVec::try_from(city_input.to_vec()).expect("Invalid city name input.")
+}
+
+pub(crate) fn get_country_input(country_input: &[u8]) -> CountryInput {
+    BoundedVec::try_from(country_input.to_vec()).expect("Invalid country name input.")
+}
+
+pub(crate) fn get_latitude_input(latitude_input: &[u8]) -> LatitudeInput {
+    BoundedVec::try_from(latitude_input.to_vec()).expect("Invalid latitude input.")
+}
+
+pub(crate) fn get_longitude_input(longitude_input: &[u8]) -> LongitudeInput {
+    BoundedVec::try_from(longitude_input.to_vec()).expect("Invalid longitude input.")
+}
+
+pub(crate) fn get_serial_number_input(serial_number_input: &[u8]) -> SerialNumberInput {
+    BoundedVec::try_from(serial_number_input.to_vec()).expect("Invalid serial number input.")
 }
 
 /// Helper function to generate a crypto pair from seed

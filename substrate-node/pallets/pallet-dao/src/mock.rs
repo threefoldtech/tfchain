@@ -13,6 +13,7 @@ use pallet_tfgrid::{
     twin::TwinIp,
     DocumentHashInput, DocumentLinkInput, TwinIpInput,
 };
+use pallet_tfgrid::{CityInput, CountryInput, LatitudeInput, LongitudeInput, SerialNumberInput};
 use pallet_timestamp;
 use sp_core::H256;
 use sp_runtime::{
@@ -211,6 +212,26 @@ pub(crate) fn get_document_hash_input(document_hash_input: &[u8]) -> DocumentHas
 
 pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {
     BoundedVec::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
+}
+
+pub(crate) fn get_city_input(city_input: &[u8]) -> CityInput {
+    BoundedVec::try_from(city_input.to_vec()).expect("Invalid city name input.")
+}
+
+pub(crate) fn get_country_input(country_input: &[u8]) -> CountryInput {
+    BoundedVec::try_from(country_input.to_vec()).expect("Invalid country name input.")
+}
+
+pub(crate) fn get_latitude_input(latitude_input: &[u8]) -> LatitudeInput {
+    BoundedVec::try_from(latitude_input.to_vec()).expect("Invalid latitude input.")
+}
+
+pub(crate) fn get_longitude_input(longitude_input: &[u8]) -> LongitudeInput {
+    BoundedVec::try_from(longitude_input.to_vec()).expect("Invalid longitude input.")
+}
+
+pub(crate) fn get_serial_number_input(serial_number_input: &[u8]) -> SerialNumberInput {
+    BoundedVec::try_from(serial_number_input.to_vec()).expect("Invalid serial number input.")
 }
 
 // Build genesis storage according to the mock runtime.

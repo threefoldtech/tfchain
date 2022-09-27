@@ -1,12 +1,10 @@
 use super::Event as DaoEvent;
 use crate::{mock::Event as MockEvent, mock::*, Error};
-use core::convert::TryFrom;
-use frame_benchmarking::frame_support::BoundedVec;
 use frame_support::{assert_noop, assert_ok, bounded_vec, weights::GetDispatchInfo};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use pallet_tfgrid::{
     types::{LocationInput, PublicIpInput},
-    ResourcesInput, SerialNumberInput,
+    ResourcesInput,
 };
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Hash};
@@ -797,12 +795,11 @@ fn prepare_node(account_id: u64, farm_id: u32) {
 
     // random location
     let location = LocationInput {
-        city: BoundedVec::try_from(b"Ghent".to_vec()).unwrap(),
-        country: BoundedVec::try_from(b"Belgium".to_vec()).unwrap(),
-        latitude: BoundedVec::try_from(b"12.233213231".to_vec()).unwrap(),
-        longitude: BoundedVec::try_from(b"32.323112123".to_vec()).unwrap(),
+        city: get_city_input(b"Ghent"),
+        country: get_country_input(b"Belgium"),
+        latitude: get_latitude_input(b"12.233213231"),
+        longitude: get_longitude_input(b"32.323112123"),
     };
-    let serial_number: SerialNumberInput = BoundedVec::try_from(b"some_serial".to_vec()).unwrap();
 
     assert_ok!(TfgridModule::create_node(
         Origin::signed(account_id),
@@ -812,7 +809,7 @@ fn prepare_node(account_id: u64, farm_id: u32) {
         bounded_vec![],
         false,
         false,
-        serial_number,
+        get_serial_number_input(b"some_serial"),
     ));
 }
 
@@ -826,13 +823,11 @@ fn prepare_big_node(account_id: u64, farm_id: u32) {
 
     // random location
     let location = LocationInput {
-        city: BoundedVec::try_from(b"Ghent".to_vec()).unwrap(),
-        country: BoundedVec::try_from(b"Belgium".to_vec()).unwrap(),
-        latitude: BoundedVec::try_from(b"12.233213231".to_vec()).unwrap(),
-        longitude: BoundedVec::try_from(b"32.323112123".to_vec()).unwrap(),
+        city: get_city_input(b"Ghent"),
+        country: get_country_input(b"Belgium"),
+        latitude: get_latitude_input(b"12.233213231"),
+        longitude: get_longitude_input(b"32.323112123"),
     };
-
-    let serial_number: SerialNumberInput = BoundedVec::try_from(b"some_serial".to_vec()).unwrap();
 
     assert_ok!(TfgridModule::create_node(
         Origin::signed(account_id),
@@ -842,7 +837,7 @@ fn prepare_big_node(account_id: u64, farm_id: u32) {
         bounded_vec![],
         false,
         false,
-        serial_number,
+        get_serial_number_input(b"some_serial"),
     ));
 }
 

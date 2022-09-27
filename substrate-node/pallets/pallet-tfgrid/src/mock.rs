@@ -7,8 +7,9 @@ use crate::{
     pub_ip::{GatewayIP, PublicIP},
     terms_cond::TermsAndConditions,
     twin::TwinIp,
-    weights, Config, DocumentHashInput, DocumentLinkInput, DomainInput, FarmNameInput, GW4Input,
-    GW6Input, IP4Input, IP6Input, PublicIpGatewayInput, PublicIpIpInput, TwinIpInput,
+    weights, CityInput, Config, CountryInput, DocumentHashInput, DocumentLinkInput, DomainInput,
+    FarmNameInput, GW4Input, GW6Input, IP4Input, IP6Input, LatitudeInput, LongitudeInput,
+    PublicIpGatewayInput, PublicIpIpInput, SerialNumberInput, TwinIpInput,
 };
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
 use frame_system::EnsureRoot;
@@ -270,6 +271,26 @@ pub(crate) fn get_interface_mac(mac: &[u8]) -> TestInterfaceMac {
 
 pub(crate) fn get_interface_ip(ip: &[u8]) -> TestInterfaceIp {
     InterfaceIp::try_from(ip.to_vec()).expect("Invalid interface ip input")
+}
+
+pub(crate) fn get_city_input(city_input: &[u8]) -> CityInput {
+    BoundedVec::try_from(city_input.to_vec()).expect("Invalid city name input.")
+}
+
+pub(crate) fn get_country_input(country_input: &[u8]) -> CountryInput {
+    BoundedVec::try_from(country_input.to_vec()).expect("Invalid country name input.")
+}
+
+pub(crate) fn get_latitude_input(latitude_input: &[u8]) -> LatitudeInput {
+    BoundedVec::try_from(latitude_input.to_vec()).expect("Invalid latitude input.")
+}
+
+pub(crate) fn get_longitude_input(longitude_input: &[u8]) -> LongitudeInput {
+    BoundedVec::try_from(longitude_input.to_vec()).expect("Invalid longitude input.")
+}
+
+pub(crate) fn get_serial_number_input(serial_number_input: &[u8]) -> SerialNumberInput {
+    BoundedVec::try_from(serial_number_input.to_vec()).expect("Invalid serial number input.")
 }
 
 // industry dismiss casual gym gap music pave gasp sick owner dumb cost

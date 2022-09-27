@@ -5,7 +5,6 @@ use crate::{
     mock::*,
     types::{LocationInput, PublicIpInput},
     Error, InterfaceInput, InterfaceIpsInput, PubConfigInput, PublicIpListInput, ResourcesInput,
-    SerialNumberInput,
 };
 use frame_support::{assert_noop, assert_ok, bounded_vec, BoundedVec};
 use frame_system::{EventRecord, Phase, RawOrigin};
@@ -803,10 +802,10 @@ fn create_node_with_interfaces_works() {
 
         // random location
         let location = LocationInput {
-            city: BoundedVec::try_from(b"Ghent".to_vec()).unwrap(),
-            country: BoundedVec::try_from(b"Belgium".to_vec()).unwrap(),
-            latitude: BoundedVec::try_from(b"12.233213231".to_vec()).unwrap(),
-            longitude: BoundedVec::try_from(b"32.323112123".to_vec()).unwrap(),
+            city: get_city_input(b"Ghent"),
+            country: get_country_input(b"Belgium"),
+            latitude: get_latitude_input(b"12.233213231"),
+            longitude: get_longitude_input(b"32.323112123"),
         };
 
         let mut interface_ips: InterfaceIpsInput<TestRuntime> = bounded_vec![];
@@ -825,9 +824,6 @@ fn create_node_with_interfaces_works() {
         let mut interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
         interfaces.try_push(interface).unwrap();
 
-        let serial_number: SerialNumberInput =
-            BoundedVec::try_from(b"some_serial".to_vec()).unwrap();
-
         assert_ok!(TfgridModule::create_node(
             Origin::signed(alice()),
             1,
@@ -836,7 +832,7 @@ fn create_node_with_interfaces_works() {
             interfaces,
             true,
             true,
-            serial_number,
+            get_serial_number_input(b"some_serial"),
         ));
     });
 }
@@ -950,7 +946,7 @@ fn node_add_public_config_works() {
         let gw6 = get_pub_config_gw6_input(b"2a10:b600:1::1");
         let domain = get_pub_config_domain_input(b"some-domain");
 
-        let pub_config = PubConfigInput {
+        let pub_config_input = PubConfigInput {
             ip4: IP {
                 ip: ipv4.clone(),
                 gw: gw4.clone(),
@@ -966,7 +962,7 @@ fn node_add_public_config_works() {
             Origin::signed(alice()),
             1,
             1,
-            Some(pub_config)
+            Some(pub_config_input)
         ));
 
         let node = TfgridModule::nodes(1).unwrap();
@@ -999,7 +995,7 @@ fn node_add_public_config_without_ipv6_and_domain_works() {
         let ipv4 = get_pub_config_ip4_input(b"185.206.122.33/24");
         let gw4 = get_pub_config_gw4_input(b"185.206.122.1");
 
-        let pub_config = PubConfigInput {
+        let pub_config_input = PubConfigInput {
             ip4: IP {
                 ip: ipv4.clone(),
                 gw: gw4.clone(),
@@ -1012,7 +1008,7 @@ fn node_add_public_config_without_ipv6_and_domain_works() {
             Origin::signed(alice()),
             1,
             1,
-            Some(pub_config.clone())
+            Some(pub_config_input)
         ));
 
         let ipv4 = get_pub_config_ip4(ipv4);
@@ -1038,16 +1034,16 @@ fn node_add_public_config_fails_if_signature_incorrect() {
         create_farm();
         create_node();
 
-        let ipv4 = get_pub_config_ip4_input(b"185.206.122.33/24");
-        let ipv6 = get_pub_config_ip6_input(b"2a10:b600:1::0cc4:7a30:65b5/64");
-        let gw4 = get_pub_config_gw4_input(b"185.206.122.1");
-        let gw6 = get_pub_config_gw6_input(b"2a10:b600:1::1");
-        let domain = get_pub_config_domain_input(b"some-domain");
-
-        let pub_config = PublicConfig {
-            ip4: IP { ip: ipv4, gw: gw4 },
-            ip6: Some(IP { ip: ipv6, gw: gw6 }),
-            domain: Some(domain),
+        let pub_config_input = PubConfigInput {
+            ip4: IP {
+                ip: get_pub_config_ip4_input(b"185.206.122.33/24"),
+                gw: get_pub_config_gw4_input(b"185.206.122.1"),
+            },
+            ip6: Some(IP {
+                ip: get_pub_config_ip6_input(b"2a10:b600:1::0cc4:7a30:65b5/64"),
+                gw: get_pub_config_gw6_input(b"2a10:b600:1::1"),
+            }),
+            domain: Some(get_pub_config_domain_input(b"some-domain")),
         };
 
         assert_noop!(
@@ -1055,7 +1051,7 @@ fn node_add_public_config_fails_if_signature_incorrect() {
                 Origin::signed(bob()),
                 1,
                 1,
-                Some(pub_config.clone())
+                Some(pub_config_input)
             ),
             Error::<TestRuntime>::CannotUpdateFarmWrongTwin
         );
@@ -1076,7 +1072,7 @@ fn test_unsetting_node_public_config_works() {
         let gw6 = get_pub_config_gw6_input(b"2a10:b600:1::1");
         let domain = get_pub_config_domain_input(b"some-domain");
 
-        let pub_config = PublicConfig {
+        let pub_config_input = PubConfigInput {
             ip4: IP {
                 ip: ipv4.clone(),
                 gw: gw4.clone(),
@@ -1092,7 +1088,7 @@ fn test_unsetting_node_public_config_works() {
             Origin::signed(alice()),
             1,
             1,
-            Some(pub_config.clone())
+            Some(pub_config_input)
         ));
 
         let node = TfgridModule::nodes(1).unwrap();
@@ -1132,7 +1128,7 @@ fn test_node_public_config_falsy_values_fails() {
         create_farm();
         create_node();
 
-        let pub_config = PublicConfig {
+        let pub_config_input = PubConfigInput {
             ip4: IP {
                 ip: get_pub_config_ip4_input(b"1.1.1.1"), // Too short
                 gw: get_pub_config_gw4_input(b"185.206.122.1"),
@@ -1149,7 +1145,7 @@ fn test_node_public_config_falsy_values_fails() {
                 Origin::signed(alice()),
                 1,
                 1,
-                Some(pub_config.clone())
+                Some(pub_config_input)
             ),
             Error::<TestRuntime>::IP4TooShort
         );
@@ -1178,8 +1174,10 @@ fn test_validate_invalid_ip4_2() {
 #[should_panic(expected = "IP4TooLong")]
 fn test_validate_invalid_ip4_3() {
     ExternalityBuilder::build().execute_with(|| {
-        let input = get_pub_config_ip4_input(b"185.206.12.12.1232123");
-        TestIP4::try_from(input).expect("fails");
+        // TODO: handle this case
+        let input = BoundedVec::try_from(b"185.206.12.12.1232123".to_vec())
+            .map_err(|_| Error::<TestRuntime>::IP4TooLong);
+        TestIP4::try_from(input.unwrap()).expect("fails");
     });
 }
 
@@ -1209,16 +1207,11 @@ fn create_node_with_same_pubkey_fails() {
 
         // random location
         let location = LocationInput {
-            city: BoundedVec::try_from(b"Ghent".to_vec()).unwrap(),
-            country: BoundedVec::try_from(b"Belgium".to_vec()).unwrap(),
-            latitude: BoundedVec::try_from(b"12.233213231".to_vec()).unwrap(),
-            longitude: BoundedVec::try_from(b"32.323112123".to_vec()).unwrap(),
+            city: get_city_input(b"Ghent"),
+            country: get_country_input(b"Belgium"),
+            latitude: get_latitude_input(b"12.233213231"),
+            longitude: get_longitude_input(b"32.323112123"),
         };
-
-        let interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
-
-        let serial_number: SerialNumberInput =
-            BoundedVec::try_from(b"some_serial".to_vec()).unwrap();
 
         assert_noop!(
             TfgridModule::create_node(
@@ -1226,10 +1219,10 @@ fn create_node_with_same_pubkey_fails() {
                 1,
                 resources,
                 location,
-                interfaces,
+                bounded_vec![],
                 true,
                 true,
-                serial_number,
+                get_serial_number_input(b"some_serial"),
             ),
             Error::<TestRuntime>::NodeWithTwinIdExists
         );
@@ -2085,15 +2078,13 @@ fn create_node() {
 
     // random location
     let location = LocationInput {
-        city: BoundedVec::try_from(b"Ghent".to_vec()).unwrap(),
-        country: BoundedVec::try_from(b"Belgium".to_vec()).unwrap(),
-        latitude: BoundedVec::try_from(b"12.233213231".to_vec()).unwrap(),
-        longitude: BoundedVec::try_from(b"32.323112123".to_vec()).unwrap(),
+        city: get_city_input(b"Ghent"),
+        country: get_country_input(b"Belgium"),
+        latitude: get_latitude_input(b"12.233213231"),
+        longitude: get_longitude_input(b"32.323112123"),
     };
 
     let interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
-
-    let serial_number: SerialNumberInput = BoundedVec::try_from(b"some_serial".to_vec()).unwrap();
 
     assert_ok!(TfgridModule::create_node(
         Origin::signed(alice()),
@@ -2103,7 +2094,7 @@ fn create_node() {
         interfaces,
         true,
         true,
-        serial_number,
+        get_serial_number_input(b"some_serial"),
     ));
 }
 
@@ -2117,13 +2108,11 @@ fn create_extra_node() {
 
     // random location
     let location = LocationInput {
-        city: BoundedVec::try_from(b"Rio de Janeiro".to_vec()).unwrap(),
-        country: BoundedVec::try_from(b"Brazil".to_vec()).unwrap(),
-        latitude: BoundedVec::try_from(b"43.1868".to_vec()).unwrap(),
-        longitude: BoundedVec::try_from(b"22.9694".to_vec()).unwrap(),
+        city: get_city_input(b"Rio de Janeiro"),
+        country: get_country_input(b"Brazil"),
+        latitude: get_latitude_input(b"43.1868"),
+        longitude: get_longitude_input(b"22.9694"),
     };
-
-    let serial_number: SerialNumberInput = BoundedVec::try_from(b"some_serial".to_vec()).unwrap();
 
     assert_ok!(TfgridModule::create_node(
         Origin::signed(bob()),
@@ -2133,7 +2122,7 @@ fn create_extra_node() {
         Vec::new().try_into().unwrap(),
         true,
         true,
-        serial_number,
+        get_serial_number_input(b"some_serial"),
     ));
 }
 

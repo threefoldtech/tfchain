@@ -14,7 +14,7 @@ use super::types;
 use crate::cost;
 use pallet_tfgrid::{
     types::{self as pallet_tfgrid_types, LocationInput},
-    ResourcesInput, SerialNumberInput,
+    ResourcesInput,
 };
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::{
@@ -2431,13 +2431,11 @@ pub fn prepare_farm_and_node() {
 
     // random location
     let location = LocationInput {
-        city: BoundedVec::try_from(b"Ghent".to_vec()).unwrap(),
-        country: BoundedVec::try_from(b"Belgium".to_vec()).unwrap(),
-        latitude: BoundedVec::try_from(b"12.233213231".to_vec()).unwrap(),
-        longitude: BoundedVec::try_from(b"32.323112123".to_vec()).unwrap(),
+        city: get_city_input(b"Ghent"),
+        country: get_country_input(b"Belgium"),
+        latitude: get_latitude_input(b"12.233213231"),
+        longitude: get_longitude_input(b"32.323112123"),
     };
-
-    let serial_number: SerialNumberInput = BoundedVec::try_from(b"some_serial".to_vec()).unwrap();
 
     TfgridModule::create_node(
         Origin::signed(alice()),
@@ -2447,7 +2445,7 @@ pub fn prepare_farm_and_node() {
         bounded_vec![],
         false,
         false,
-        serial_number,
+        get_serial_number_input(b"some_serial"),
     )
     .unwrap();
 }
@@ -2467,13 +2465,11 @@ pub fn prepare_dedicated_farm_and_node() {
 
     // random location
     let location = LocationInput {
-        city: BoundedVec::try_from(b"Ghent".to_vec()).unwrap(),
-        country: BoundedVec::try_from(b"Belgium".to_vec()).unwrap(),
-        latitude: BoundedVec::try_from(b"12.233213231".to_vec()).unwrap(),
-        longitude: BoundedVec::try_from(b"32.323112123".to_vec()).unwrap(),
+        city: get_city_input(b"Ghent"),
+        country: get_country_input(b"Belgium"),
+        latitude: get_latitude_input(b"12.233213231"),
+        longitude: get_longitude_input(b"32.323112123"),
     };
-
-    let serial_number: SerialNumberInput = BoundedVec::try_from(b"some_serial".to_vec()).unwrap();
 
     TfgridModule::create_node(
         Origin::signed(alice()),
@@ -2483,7 +2479,7 @@ pub fn prepare_dedicated_farm_and_node() {
         bounded_vec![],
         false,
         false,
-        serial_number,
+        get_serial_number_input(b"some_serial"),
     )
     .unwrap();
 }
