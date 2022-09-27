@@ -4,7 +4,8 @@ use crate::{
     mock::Event as MockEvent,
     mock::*,
     types::{LocationInput, PublicIpInput},
-    Error, InterfaceInput, InterfaceIpsInput, PublicIpListInput, ResourcesInput, SerialNumberInput,
+    Error, InterfaceInput, InterfaceIpsInput, PubConfigInput, PublicIpListInput, ResourcesInput,
+    SerialNumberInput,
 };
 use frame_support::{assert_noop, assert_ok, bounded_vec, BoundedVec};
 use frame_system::{EventRecord, Phase, RawOrigin};
@@ -943,37 +944,45 @@ fn node_add_public_config_works() {
         create_farm();
         create_node();
 
-        let ipv4 = get_pub_config_ip4(&"185.206.122.33/24".as_bytes().to_vec());
-        let ipv6 = get_pub_config_ip6(&"2a10:b600:1::0cc4:7a30:65b5/64".as_bytes().to_vec());
-        let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
-        let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
+        let ipv4 = get_pub_config_ip4_input(b"185.206.122.33/24");
+        let ipv6 = get_pub_config_ip6_input(b"2a10:b600:1::0cc4:7a30:65b5/64");
+        let gw4 = get_pub_config_gw4_input(b"185.206.122.1");
+        let gw6 = get_pub_config_gw6_input(b"2a10:b600:1::1");
+        let domain = get_pub_config_domain_input(b"some-domain");
 
-        let pub_config = PublicConfig {
+        let pub_config = PubConfigInput {
             ip4: IP {
-                ip: ipv4.clone().0,
-                gw: gw4.clone().0,
+                ip: ipv4.clone(),
+                gw: gw4.clone(),
             },
             ip6: Some(IP {
-                ip: ipv6.clone().0,
-                gw: gw6.clone().0,
+                ip: ipv6.clone(),
+                gw: gw6.clone(),
             }),
-            domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
+            domain: Some(domain.clone()),
         };
 
         assert_ok!(TfgridModule::add_node_public_config(
             Origin::signed(alice()),
             1,
             1,
-            Some(pub_config.clone())
+            Some(pub_config)
         ));
 
         let node = TfgridModule::nodes(1).unwrap();
+
+        let ipv4 = get_pub_config_ip4(ipv4);
+        let ipv6 = get_pub_config_ip6(ipv6);
+        let gw4 = get_pub_config_gw4(gw4);
+        let gw6 = get_pub_config_gw6(gw6);
+        let domain = get_pub_config_domain(domain);
+
         assert_eq!(
             node.public_config,
-            Some(PublicConfig {
+            Some(PubConfig {
                 ip4: IP { ip: ipv4, gw: gw4 },
                 ip6: Some(IP { ip: ipv6, gw: gw6 }),
-                domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
+                domain: Some(domain),
             })
         );
     });
@@ -987,13 +996,13 @@ fn node_add_public_config_without_ipv6_and_domain_works() {
         create_farm();
         create_node();
 
-        let ipv4 = get_pub_config_ip4(&"185.206.122.33/24".as_bytes().to_vec());
-        let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
+        let ipv4 = get_pub_config_ip4_input(b"185.206.122.33/24");
+        let gw4 = get_pub_config_gw4_input(b"185.206.122.1");
 
-        let pub_config = PublicConfig {
+        let pub_config = PubConfigInput {
             ip4: IP {
-                ip: ipv4.clone().0,
-                gw: gw4.clone().0,
+                ip: ipv4.clone(),
+                gw: gw4.clone(),
             },
             ip6: None,
             domain: None,
@@ -1005,6 +1014,9 @@ fn node_add_public_config_without_ipv6_and_domain_works() {
             1,
             Some(pub_config.clone())
         ));
+
+        let ipv4 = get_pub_config_ip4(ipv4);
+        let gw4 = get_pub_config_gw4(gw4);
 
         let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(
@@ -1026,21 +1038,16 @@ fn node_add_public_config_fails_if_signature_incorrect() {
         create_farm();
         create_node();
 
-        let ipv4 = get_pub_config_ip4(&"185.206.122.33/24".as_bytes().to_vec());
-        let ipv6 = get_pub_config_ip6(&"2a10:b600:1::0cc4:7a30:65b5/64".as_bytes().to_vec());
-        let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
-        let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
+        let ipv4 = get_pub_config_ip4_input(b"185.206.122.33/24");
+        let ipv6 = get_pub_config_ip6_input(b"2a10:b600:1::0cc4:7a30:65b5/64");
+        let gw4 = get_pub_config_gw4_input(b"185.206.122.1");
+        let gw6 = get_pub_config_gw6_input(b"2a10:b600:1::1");
+        let domain = get_pub_config_domain_input(b"some-domain");
 
         let pub_config = PublicConfig {
-            ip4: IP {
-                ip: ipv4.clone().0,
-                gw: gw4.clone().0,
-            },
-            ip6: Some(IP {
-                ip: ipv6.clone().0,
-                gw: gw6.clone().0,
-            }),
-            domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
+            ip4: IP { ip: ipv4, gw: gw4 },
+            ip6: Some(IP { ip: ipv6, gw: gw6 }),
+            domain: Some(domain),
         };
 
         assert_noop!(
@@ -1063,21 +1070,22 @@ fn test_unsetting_node_public_config_works() {
         create_farm();
         create_node();
 
-        let ipv4 = get_pub_config_ip4(&"185.206.122.33/24".as_bytes().to_vec());
-        let ipv6 = get_pub_config_ip6(&"2a10:b600:1::0cc4:7a30:65b5/64".as_bytes().to_vec());
-        let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
-        let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
+        let ipv4 = get_pub_config_ip4_input(b"185.206.122.33/24");
+        let ipv6 = get_pub_config_ip6_input(b"2a10:b600:1::0cc4:7a30:65b5/64");
+        let gw4 = get_pub_config_gw4_input(b"185.206.122.1");
+        let gw6 = get_pub_config_gw6_input(b"2a10:b600:1::1");
+        let domain = get_pub_config_domain_input(b"some-domain");
 
         let pub_config = PublicConfig {
             ip4: IP {
-                ip: ipv4.clone().0,
-                gw: gw4.clone().0,
+                ip: ipv4.clone(),
+                gw: gw4.clone(),
             },
             ip6: Some(IP {
-                ip: ipv6.clone().0,
-                gw: gw6.clone().0,
+                ip: ipv6.clone(),
+                gw: gw6.clone(),
             }),
-            domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
+            domain: Some(domain.clone()),
         };
 
         assert_ok!(TfgridModule::add_node_public_config(
@@ -1088,12 +1096,19 @@ fn test_unsetting_node_public_config_works() {
         ));
 
         let node = TfgridModule::nodes(1).unwrap();
+
+        let ipv4 = get_pub_config_ip4(ipv4);
+        let ipv6 = get_pub_config_ip6(ipv6);
+        let gw4 = get_pub_config_gw4(gw4);
+        let gw6 = get_pub_config_gw6(gw6);
+        let domain = get_pub_config_domain(domain);
+
         assert_eq!(
             node.public_config,
             Some(PublicConfig {
                 ip4: IP { ip: ipv4, gw: gw4 },
                 ip6: Some(IP { ip: ipv6, gw: gw6 }),
-                domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
+                domain: Some(domain),
             })
         );
 
@@ -1117,21 +1132,16 @@ fn test_node_public_config_falsy_values_fails() {
         create_farm();
         create_node();
 
-        // let ipv4 = get_pub_config_ip4(&"1.1.1.1".as_bytes().to_vec());
-        let ipv6 = get_pub_config_ip6(&"2a10:b600:1::0cc4:7a30:65b5/64".as_bytes().to_vec());
-        let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
-        let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
-
         let pub_config = PublicConfig {
             ip4: IP {
-                ip: "1.1.1.1".as_bytes().to_vec().try_into().unwrap(),
-                gw: gw4.clone().0,
+                ip: get_pub_config_ip4_input(b"1.1.1.1"), // Too short
+                gw: get_pub_config_gw4_input(b"185.206.122.1"),
             },
             ip6: Some(IP {
-                ip: ipv6.clone().0,
-                gw: gw6.clone().0,
+                ip: get_pub_config_ip6_input(b"2a10:b600:1::0cc4:7a30:65b5/64"),
+                gw: get_pub_config_gw6_input(b"2a10:b600:1::1"),
             }),
-            domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
+            domain: Some(get_pub_config_domain_input(b"some-domain")),
         };
 
         assert_noop!(
@@ -1141,7 +1151,7 @@ fn test_node_public_config_falsy_values_fails() {
                 1,
                 Some(pub_config.clone())
             ),
-            Error::<TestRuntime>::IP4ToShort
+            Error::<TestRuntime>::IP4TooShort
         );
     });
 }
@@ -1150,23 +1160,26 @@ fn test_node_public_config_falsy_values_fails() {
 #[should_panic(expected = "InvalidIP4")]
 fn test_validate_invalid_ip4_1() {
     ExternalityBuilder::build().execute_with(|| {
-        TestIP4::try_from("185.206.122.33".as_bytes().to_vec()).expect("fails");
+        let input = get_pub_config_ip4_input(b"185.206.122.33");
+        TestIP4::try_from(input).expect("fails");
     });
 }
 
 #[test]
-#[should_panic(expected = "IP4ToShort")]
+#[should_panic(expected = "IP4TooShort")]
 fn test_validate_invalid_ip4_2() {
     ExternalityBuilder::build().execute_with(|| {
-        TestIP4::try_from("185.206".as_bytes().to_vec()).expect("fails");
+        let input = get_pub_config_ip4_input(b"185.206");
+        TestIP4::try_from(input).expect("fails");
     });
 }
 
 #[test]
-#[should_panic(expected = "IP4ToLong")]
+#[should_panic(expected = "IP4TooLong")]
 fn test_validate_invalid_ip4_3() {
     ExternalityBuilder::build().execute_with(|| {
-        TestIP4::try_from("185.206.12.12.1232123".as_bytes().to_vec()).expect("fails");
+        let input = get_pub_config_ip4_input(b"185.206.12.12.1232123");
+        TestIP4::try_from(input).expect("fails");
     });
 }
 
@@ -1174,7 +1187,8 @@ fn test_validate_invalid_ip4_3() {
 #[should_panic(expected = "InvalidIP4")]
 fn test_validate_invalid_ip4_4() {
     ExternalityBuilder::build().execute_with(|| {
-        TestIP4::try_from("garbage data".as_bytes().to_vec()).expect("fails");
+        let input = get_pub_config_ip4_input(b"garbage data");
+        TestIP4::try_from(input).expect("fails");
     });
 }
 

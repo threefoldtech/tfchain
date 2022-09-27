@@ -36,11 +36,11 @@ impl<T: Config> TryFrom<TermsAndConditionsInput<T>> for TermsAndConditions<T> {
     fn try_from(value: TermsAndConditionsInput<T>) -> Result<Self, Self::Error> {
         ensure!(
             value.document_link.len() >= MIN_DOCUMENT_LINK_LENGTH.saturated_into(),
-            Self::Error::DocumentLinkInputToShort
+            Self::Error::DocumentLinkInputTooShort
         );
         ensure!(
             value.document_link.len() <= MAX_DOCUMENT_LINK_LENGTH.saturated_into(),
-            Self::Error::DocumentLinkInputToLong
+            Self::Error::DocumentLinkInputTooLong
         );
         ensure!(
             validate_document_link_input(&value.document_link),
@@ -49,11 +49,11 @@ impl<T: Config> TryFrom<TermsAndConditionsInput<T>> for TermsAndConditions<T> {
 
         ensure!(
             value.document_hash.len() >= MIN_DOCUMENT_HASH_LENGTH.saturated_into(),
-            Self::Error::DocumentHashInputToShort
+            Self::Error::DocumentHashInputTooShort
         );
         ensure!(
             value.document_hash.len() <= MAX_DOCUMENT_HASH_LENGTH.saturated_into(),
-            Self::Error::DocumentHashInputToLong
+            Self::Error::DocumentHashInputTooLong
         );
         ensure!(
             validate_document_hash_input(&value.document_hash),

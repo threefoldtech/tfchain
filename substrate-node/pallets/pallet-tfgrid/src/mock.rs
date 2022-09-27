@@ -7,8 +7,8 @@ use crate::{
     pub_ip::{GatewayIP, PublicIP},
     terms_cond::TermsAndConditions,
     twin::TwinIp,
-    weights, Config, DocumentHashInput, DocumentLinkInput, FarmNameInput, PublicIpGatewayInput,
-    PublicIpIpInput, TwinIpInput,
+    weights, Config, DocumentHashInput, DocumentLinkInput, DomainInput, FarmNameInput, GW4Input,
+    GW6Input, IP4Input, IP6Input, PublicIpGatewayInput, PublicIpIpInput, TwinIpInput,
 };
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
 use frame_system::EnsureRoot;
@@ -220,20 +220,44 @@ pub(crate) fn get_public_ip_gw_input(gw_input: &[u8]) -> PublicIpGatewayInput {
     BoundedVec::try_from(gw_input.to_vec()).expect("Invalid public ip (gw) input.")
 }
 
-pub(crate) fn get_pub_config_ip4(ip4: &[u8]) -> TestIP4 {
-    IP4::try_from(ip4.to_vec()).expect("Invalid ip4 input")
+pub(crate) fn get_pub_config_ip4_input(ip4_input: &[u8]) -> IP4Input {
+    BoundedVec::try_from(ip4_input.to_vec()).expect("Invalid ip4 input.")
 }
 
-pub(crate) fn get_pub_config_gw4(gw4: &[u8]) -> TestGW4 {
-    GW4::try_from(gw4.to_vec()).expect("Invalid gw4 input")
+pub(crate) fn get_pub_config_gw4_input(gw4_input: &[u8]) -> GW4Input {
+    BoundedVec::try_from(gw4_input.to_vec()).expect("Invalid gw4 input.")
 }
 
-pub(crate) fn get_pub_config_ip6(ip6: &[u8]) -> TestIP6 {
-    IP6::try_from(ip6.to_vec()).expect("Invalid ip6 input")
+pub(crate) fn get_pub_config_ip6_input(ip6_input: &[u8]) -> IP6Input {
+    BoundedVec::try_from(ip6_input.to_vec()).expect("Invalid ip6 input.")
 }
 
-pub(crate) fn get_pub_config_gw6(gw6: &[u8]) -> TestGW6 {
-    GW6::try_from(gw6.to_vec()).expect("Invalid gw6 input")
+pub(crate) fn get_pub_config_gw6_input(gw6_input: &[u8]) -> GW6Input {
+    BoundedVec::try_from(gw6_input.to_vec()).expect("Invalid gw6 input.")
+}
+
+pub(crate) fn get_pub_config_domain_input(domain_input: &[u8]) -> DomainInput {
+    BoundedVec::try_from(domain_input.to_vec()).expect("Invalid domain input.")
+}
+
+pub(crate) fn get_pub_config_ip4(ip4_input: IP4Input) -> TestIP4 {
+    IP4::try_from(ip4_input).expect("Invalid ip4.")
+}
+
+pub(crate) fn get_pub_config_gw4(gw4_input: GW4Input) -> TestGW4 {
+    GW4::try_from(gw4_input).expect("Invalid gw4.")
+}
+
+pub(crate) fn get_pub_config_ip6(ip6_input: IP6Input) -> TestIP6 {
+    IP6::try_from(ip6_input).expect("Invalid ip6.")
+}
+
+pub(crate) fn get_pub_config_gw6(gw6_input: GW6Input) -> TestGW6 {
+    GW6::try_from(gw6_input).expect("Invalid gw6.")
+}
+
+pub(crate) fn get_pub_config_domain(domain_input: DomainInput) -> TestDomain {
+    Domain::try_from(domain_input).expect("Invalid domain.")
 }
 
 pub(crate) fn get_interface_name(name: &[u8]) -> TestInterfaceName {

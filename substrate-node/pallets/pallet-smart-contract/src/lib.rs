@@ -17,9 +17,7 @@ use frame_support::{
 };
 use frame_system::{self as system, ensure_signed};
 use pallet_tfgrid;
-use pallet_tfgrid::pallet::{
-    InterfaceOf, LocationOf, PubConfigOf, SerialNumberOf, TfgridNode,
-};
+use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, PubConfigOf, SerialNumberOf, TfgridNode};
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_timestamp as timestamp;
 use sp_runtime::{
@@ -304,8 +302,8 @@ pub mod pallet {
         NodeNotAvailableToDeploy,
         CannotUpdateContractInGraceState,
         NumOverflow,
-        NameContractNameToShort,
-        NameContractNameToLong,
+        NameContractNameTooShort,
+        NameContractNameTooLong,
         InvalidProviderConfiguration,
         NoSuchSolutionProvider,
         SolutionProviderNotApproved,
@@ -1647,8 +1645,7 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-impl<T: Config>
-    ChangeNode<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>
+impl<T: Config> ChangeNode<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>
     for Pallet<T>
 {
     fn node_changed(_node: Option<&TfgridNode<T>>, _new_node: &TfgridNode<T>) {}

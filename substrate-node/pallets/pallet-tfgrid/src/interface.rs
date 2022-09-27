@@ -30,10 +30,10 @@ impl<T: Config> TryFrom<Vec<u8>> for InterfaceName<T> {
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         ensure!(
             value.len() >= MIN_INTF_NAME_LENGHT.saturated_into(),
-            Self::Error::InterfaceNameToShort
+            Self::Error::InterfaceNameTooShort
         );
         let bounded_vec: BoundedVec<u8, ConstU32<MAX_INTF_NAME_LENGTH>> =
-            BoundedVec::try_from(value.clone()).map_err(|_| Self::Error::InterfaceNameToLong)?;
+            BoundedVec::try_from(value.clone()).map_err(|_| Self::Error::InterfaceNameTooLong)?;
         ensure!(
             validate_interface_name(&value),
             Self::Error::InvalidInterfaceName
@@ -83,10 +83,10 @@ impl<T: Config> TryFrom<Vec<u8>> for InterfaceMac<T> {
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         ensure!(
             value.len() >= INTERFACE_MAC_LENGTH.saturated_into(),
-            Self::Error::InterfaceMacToShort
+            Self::Error::InterfaceMacTooShort
         );
         let bounded_vec: BoundedVec<u8, ConstU32<INTERFACE_MAC_LENGTH>> =
-            BoundedVec::try_from(value).map_err(|_| Self::Error::InterfaceMacToLong)?;
+            BoundedVec::try_from(value).map_err(|_| Self::Error::InterfaceMacTooLong)?;
         ensure!(
             Mac::parse(&bounded_vec).is_ok(),
             Self::Error::InvalidMacAddress
@@ -131,10 +131,10 @@ impl<T: Config> TryFrom<Vec<u8>> for InterfaceIp<T> {
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         ensure!(
             value.len() >= MIN_INTERFACE_IP_LENGTH.saturated_into(),
-            Self::Error::InterfaceIpToShort
+            Self::Error::InterfaceIpTooShort
         );
         let bounded_vec: BoundedVec<u8, ConstU32<MAX_INTERFACE_IP_LENGTH>> =
-            BoundedVec::try_from(value).map_err(|_| Self::Error::InterfaceIpToLong)?;
+            BoundedVec::try_from(value).map_err(|_| Self::Error::InterfaceIpTooLong)?;
         ensure!(
             IPv4::parse(&bounded_vec).is_ok() || IPv6::parse(&bounded_vec).is_ok(),
             Self::Error::InvalidInterfaceIP

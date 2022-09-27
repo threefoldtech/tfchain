@@ -118,24 +118,25 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, u32, Vec<u8>, ValueQuery>;
 
     // Input type for public config
-    pub type PubConfigIP4Input = IP<
-        BoundedVec<u8, ConstU32<{ pub_config::MAX_IP_LENGTH }>>,
-        BoundedVec<u8, ConstU32<{ pub_config::MAX_GATEWAY_LENGTH }>>,
-    >;
-    pub type PubConfigIP6Input = IP<
-        BoundedVec<u8, ConstU32<{ pub_config::MAX_IP6_LENGTH }>>,
-        BoundedVec<u8, ConstU32<{ pub_config::MAX_GW6_LENGTH }>>,
-    >;
-    pub type PubConfigInput = PublicConfig<
-        PubConfigIP4Input,
-        Option<PubConfigIP6Input>,
-        Option<BoundedVec<u8, ConstU32<{ pub_config::MAX_DOMAIN_NAME_LENGTH }>>>,
-    >;
+    pub type IP4Input = BoundedVec<u8, ConstU32<{ pub_config::MAX_IP4_LENGTH }>>;
+    pub type GW4Input = BoundedVec<u8, ConstU32<{ pub_config::MAX_GW4_LENGTH }>>;
+    pub type PubConfigIP4Input = IP<IP4Input, GW4Input>;
+    pub type IP6Input = BoundedVec<u8, ConstU32<{ pub_config::MAX_IP6_LENGTH }>>;
+    pub type GW6Input = BoundedVec<u8, ConstU32<{ pub_config::MAX_GW6_LENGTH }>>;
+    pub type PubConfigIP6Input = IP<IP6Input, GW6Input>;
+    pub type DomainInput = BoundedVec<u8, ConstU32<{ pub_config::MAX_DOMAIN_NAME_LENGTH }>>;
+    pub type PubConfigInput =
+        PublicConfig<PubConfigIP4Input, Option<PubConfigIP6Input>, Option<DomainInput>>;
     // Concrete public config type
-    pub type Ip4ConfigOf<T> = IP<<T as Config>::IP4, <T as Config>::GW4>;
-    pub type Ip6ConfigOf<T> = IP<<T as Config>::IP6, <T as Config>::GW6>;
+    pub type Ip4Of<T> = <T as Config>::IP4;
+    pub type Gw4Of<T> = <T as Config>::GW4;
+    pub type Ip4ConfigOf<T> = IP<Ip4Of<T>, Gw4Of<T>>;
+    pub type Ip6Of<T> = <T as Config>::IP6;
+    pub type Gw6Of<T> = <T as Config>::GW6;
+    pub type Ip6ConfigOf<T> = IP<Ip6Of<T>, Gw6Of<T>>;
+    pub type DomainOf<T> = <T as Config>::Domain;
     pub type PubConfigOf<T> =
-        PublicConfig<Ip4ConfigOf<T>, Option<Ip6ConfigOf<T>>, Option<<T as Config>::Domain>>;
+        PublicConfig<Ip4ConfigOf<T>, Option<Ip6ConfigOf<T>>, Option<DomainOf<T>>>;
 
     // Input type for interfaces
     pub type InterfaceIpInput = BoundedVec<u8, ConstU32<{ interface::MAX_INTERFACE_IP_LENGTH }>>;
@@ -355,7 +356,7 @@ pub mod pallet {
             + Eq
             + Clone
             + TypeInfo
-            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + TryFrom<IP4Input, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of a GW4.
@@ -365,7 +366,7 @@ pub mod pallet {
             + Eq
             + Clone
             + TypeInfo
-            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + TryFrom<GW4Input, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of a IP6.
@@ -375,7 +376,7 @@ pub mod pallet {
             + Eq
             + Clone
             + TypeInfo
-            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + TryFrom<IP6Input, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of a GW6.
@@ -385,7 +386,7 @@ pub mod pallet {
             + Eq
             + Clone
             + TypeInfo
-            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + TryFrom<GW6Input, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of a domain.
@@ -395,7 +396,7 @@ pub mod pallet {
             + Eq
             + Clone
             + TypeInfo
-            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + TryFrom<DomainInput, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of an interface name.
@@ -562,35 +563,35 @@ pub mod pallet {
         FarmNameTooShort,
         FarmNameTooLong,
         InvalidPublicIP,
-        PublicIPToShort,
-        PublicIPToLong,
-        GatewayIPToShort,
-        GatewayIPToLong,
+        PublicIPTooShort,
+        PublicIPTooLong,
+        GatewayIPTooShort,
+        GatewayIPTooLong,
 
-        IP4ToShort,
-        IP4ToLong,
+        IP4TooShort,
+        IP4TooLong,
         InvalidIP4,
-        GW4ToShort,
-        GW4ToLong,
+        GW4TooShort,
+        GW4TooLong,
         InvalidGW4,
-        IP6ToShort,
-        IP6ToLong,
+        IP6TooShort,
+        IP6TooLong,
         InvalidIP6,
-        GW6ToShort,
-        GW6ToLong,
+        GW6TooShort,
+        GW6TooLong,
         InvalidGW6,
-        DomainToShort,
-        DomainToLong,
+        DomainTooShort,
+        DomainTooLong,
         InvalidDomain,
         MethodIsDeprecated,
-        InterfaceNameToShort,
-        InterfaceNameToLong,
+        InterfaceNameTooShort,
+        InterfaceNameTooLong,
         InvalidInterfaceName,
-        InterfaceMacToShort,
-        InterfaceMacToLong,
+        InterfaceMacTooShort,
+        InterfaceMacTooLong,
         InvalidMacAddress,
-        InterfaceIpToShort,
-        InterfaceIpToLong,
+        InterfaceIpTooShort,
+        InterfaceIpTooLong,
         InvalidInterfaceIP,
         InvalidZosVersion,
         FarmingPolicyExpired,
@@ -600,11 +601,11 @@ pub mod pallet {
         InvalidCRUInput,
         InvalidMRUInput,
 
-        LatitudeInputToShort,
-        LatitudeInputToLong,
+        LatitudeInputTooShort,
+        LatitudeInputTooLong,
         InvalidLatitudeInput,
-        LongitudeInputToShort,
-        LongitudeInputToLong,
+        LongitudeInputTooShort,
+        LongitudeInputTooLong,
         InvalidLongitudeInput,
         CountryNameTooShort,
         CountryNameTooLong,
@@ -618,11 +619,11 @@ pub mod pallet {
         SerialNumberTooLong,
         InvalidSerialNumber,
 
-        DocumentLinkInputToShort,
-        DocumentLinkInputToLong,
+        DocumentLinkInputTooShort,
+        DocumentLinkInputTooLong,
         InvalidDocumentLinkInput,
-        DocumentHashInputToShort,
-        DocumentHashInputToLong,
+        DocumentHashInputTooShort,
+        DocumentHashInputTooLong,
         InvalidDocumentHashInput,
     }
 
@@ -2221,7 +2222,7 @@ impl<T: Config> Pallet<T> {
 
     fn get_terms_and_conditions(
         terms_cond: pallet::TermsAndConditionsInput<T>,
-    ) -> Result<TermsAndConditionsOf<T>, Error<T>> {
+    ) -> Result<TermsAndConditionsOf<T>, DispatchErrorWithPostInfo> {
         let parsed_terms_cond = <T as Config>::TermsAndConditions::try_from(terms_cond)?;
 
         Ok(parsed_terms_cond)
@@ -2257,22 +2258,19 @@ impl<T: Config> Pallet<T> {
 
     fn get_public_ips(
         public_ips: pallet::PublicIpListInput<T>,
-    ) -> Result<PublicIpListOf<T>, Error<T>> {
-        let mut public_ips_list: PublicIpListOf<T> =
-            vec![].try_into().unwrap();
+    ) -> Result<PublicIpListOf<T>, DispatchErrorWithPostInfo> {
+        let mut public_ips_list: PublicIpListOf<T> = vec![].try_into().unwrap();
 
         for ip in public_ips {
-            let public_ip_ip =
-                Self::get_public_ip_ip(ip.ip).map_err(|_| Error::<T>::InvalidPublicIP)?;
-            let public_ip_gateway =
-                Self::get_public_ip_gw(ip.gw).map_err(|_| Error::<T>::InvalidPublicIP)?;
+            let public_ip_ip = Self::get_public_ip_ip(ip.ip)?;
+            let public_ip_gateway = Self::get_public_ip_gw(ip.gw)?;
 
             if public_ips_list.contains(&PublicIP {
                 ip: public_ip_ip.clone(),
                 gateway: public_ip_gateway.clone(),
                 contract_id: 0,
             }) {
-                return Err(Error::<T>::IpExists);
+                return Err(DispatchErrorWithPostInfo::from(Error::<T>::IpExists));
             }
 
             public_ips_list
@@ -2290,32 +2288,66 @@ impl<T: Config> Pallet<T> {
         Ok(public_ips_list)
     }
 
-    fn get_public_config(config: pallet::PubConfigInput) -> Result<PubConfigOf<T>, Error<T>> {
-        let ipv4 = <T as Config>::IP4::try_from(config.ip4.ip.into_inner())?;
-        let gw4 = <T as Config>::GW4::try_from(config.ip4.gw.into_inner())?;
+    fn get_ip4(ip4: IP4Input) -> Result<Ip4Of<T>, DispatchErrorWithPostInfo> {
+        let ip4_parsed = <T as Config>::IP4::try_from(ip4)?;
 
+        Ok(ip4_parsed)
+    }
+
+    fn get_gw4(gw4: GW4Input) -> Result<Gw4Of<T>, DispatchErrorWithPostInfo> {
+        let gw4_parsed = <T as Config>::GW4::try_from(gw4)?;
+
+        Ok(gw4_parsed)
+    }
+
+    fn get_ip6(ip6: IP6Input) -> Result<Ip6Of<T>, DispatchErrorWithPostInfo> {
+        let ip6_parsed = <T as Config>::IP6::try_from(ip6)?;
+
+        Ok(ip6_parsed)
+    }
+
+    fn get_gw6(gw6: GW6Input) -> Result<Gw6Of<T>, DispatchErrorWithPostInfo> {
+        let gw6_parsed = <T as Config>::GW6::try_from(gw6)?;
+
+        Ok(gw6_parsed)
+    }
+
+    fn get_domain(domain: DomainInput) -> Result<DomainOf<T>, DispatchErrorWithPostInfo> {
+        let domain_parsed = <T as Config>::Domain::try_from(domain)?;
+
+        Ok(domain_parsed)
+    }
+
+    fn get_public_config(
+        config: PubConfigInput,
+    ) -> Result<PubConfigOf<T>, DispatchErrorWithPostInfo> {
         let mut pub_config = PublicConfig {
-            ip4: IP { ip: ipv4, gw: gw4 },
+            ip4: IP {
+                ip: Self::get_ip4(config.ip4.ip)?,
+                gw: Self::get_gw4(config.ip4.gw)?,
+            },
             ip6: None,
             domain: None,
         };
 
         if let Some(ipv6_config) = config.ip6 {
-            let ipv6 = <T as Config>::IP6::try_from(ipv6_config.ip.into_inner())?;
-            let gw6 = <T as Config>::GW6::try_from(ipv6_config.gw.into_inner())?;
-
-            pub_config.ip6 = Some(IP { ip: ipv6, gw: gw6 });
+            pub_config.ip6 = Some(IP {
+                ip: Self::get_ip6(ipv6_config.ip)?,
+                gw: Self::get_gw6(ipv6_config.gw)?,
+            });
         }
 
         if let Some(domain) = config.domain {
-            let p_domain = <T as Config>::Domain::try_from(domain.into_inner())?;
+            let p_domain = Self::get_domain(domain)?;
             pub_config.domain = Some(p_domain)
         }
 
         Ok(pub_config)
     }
 
-    pub fn get_resources(resources: pallet::ResourcesInput) -> Result<Resources, Error<T>> {
+    pub fn get_resources(
+        resources: pallet::ResourcesInput,
+    ) -> Result<Resources, DispatchErrorWithPostInfo> {
         ensure!(resources.validate_hru(), Error::<T>::InvalidHRUInput);
         ensure!(resources.validate_sru(), Error::<T>::InvalidSRUInput);
         ensure!(resources.validate_cru(), Error::<T>::InvalidCRUInput);
@@ -2324,7 +2356,9 @@ impl<T: Config> Pallet<T> {
         Ok(resources)
     }
 
-    pub fn get_location(location: pallet::LocationInput) -> Result<LocationOf<T>, Error<T>> {
+    pub fn get_location(
+        location: pallet::LocationInput,
+    ) -> Result<LocationOf<T>, DispatchErrorWithPostInfo> {
         let parsed_location = <T as Config>::Location::try_from(location)?;
 
         Ok(parsed_location)
@@ -2332,7 +2366,7 @@ impl<T: Config> Pallet<T> {
 
     fn get_interfaces(
         interfaces: &pallet::InterfaceInput<T>,
-    ) -> Result<Vec<InterfaceOf<T>>, Error<T>> {
+    ) -> Result<Vec<InterfaceOf<T>>, DispatchErrorWithPostInfo> {
         let mut parsed_interfaces = Vec::new();
         if interfaces.len() == 0 {
             return Ok(parsed_interfaces);
@@ -2364,8 +2398,9 @@ impl<T: Config> Pallet<T> {
 
     fn get_serial_number(
         serial_number: pallet::SerialNumberInput,
-    ) -> Result<SerialNumberOf<T>, Error<T>> {
+    ) -> Result<SerialNumberOf<T>, DispatchErrorWithPostInfo> {
         let parsed_serial_number = <T as Config>::SerialNumber::try_from(serial_number)?;
+
         Ok(parsed_serial_number)
     }
 }

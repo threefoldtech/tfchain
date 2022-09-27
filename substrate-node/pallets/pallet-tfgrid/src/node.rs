@@ -84,11 +84,11 @@ impl<T: Config> TryFrom<LocationInput> for Location<T> {
         // 3. latitude
         ensure!(
             value.latitude.len() >= MIN_LATITUDE_LENGTH.saturated_into(),
-            Self::Error::LatitudeInputToShort
+            Self::Error::LatitudeInputTooShort
         );
         ensure!(
             value.latitude.len() <= MAX_LATITUDE_LENGTH.saturated_into(),
-            Self::Error::LatitudeInputToLong
+            Self::Error::LatitudeInputTooLong
         );
         ensure!(
             validate_latitude_input(&value.latitude),
@@ -98,11 +98,11 @@ impl<T: Config> TryFrom<LocationInput> for Location<T> {
         // 4. longitude
         ensure!(
             value.longitude.len() >= MIN_LONGITUDE_LENGTH.saturated_into(),
-            Self::Error::LongitudeInputToShort
+            Self::Error::LongitudeInputTooShort
         );
         ensure!(
             value.longitude.len() <= MAX_LONGITUDE_LENGTH.saturated_into(),
-            Self::Error::LongitudeInputToLong
+            Self::Error::LongitudeInputTooLong
         );
         ensure!(
             validate_longitude_input(&value.longitude),

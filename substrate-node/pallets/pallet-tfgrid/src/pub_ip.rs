@@ -29,11 +29,11 @@ impl<T: Config> TryFrom<PublicIpIpInput> for PublicIP<T> {
     fn try_from(value: PublicIpIpInput) -> Result<Self, Self::Error> {
         ensure!(
             value.len() >= MIN_IP_LENGHT.saturated_into(),
-            Self::Error::PublicIPToShort
+            Self::Error::PublicIPTooShort
         );
         ensure!(
             value.len() <= MAX_IP_LENGTH.saturated_into(),
-            Self::Error::PublicIPToLong
+            Self::Error::PublicIPTooLong
         );
         ensure!(CIDR::parse(&value).is_ok(), Self::Error::InvalidPublicIP);
         Ok(Self(value, PhantomData))
@@ -76,11 +76,11 @@ impl<T: Config> TryFrom<PublicIpGatewayInput> for GatewayIP<T> {
     fn try_from(value: PublicIpGatewayInput) -> Result<Self, Self::Error> {
         ensure!(
             value.len() >= MIN_GATEWAY_LENGTH.saturated_into(),
-            Self::Error::GatewayIPToShort
+            Self::Error::GatewayIPTooShort
         );
         ensure!(
             value.len() <= MAX_GATEWAY_LENGTH.saturated_into(),
-            Self::Error::GatewayIPToLong
+            Self::Error::GatewayIPTooLong
         );
         ensure!(Ip::parse(&value).is_ok(), Self::Error::InvalidPublicIP);
         Ok(Self(value, PhantomData))
