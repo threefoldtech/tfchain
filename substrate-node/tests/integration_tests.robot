@@ -93,6 +93,50 @@ Test Create Update Farm
 
     Tear Down Multi Node Network
 
+Test Add Stellar Payout V2ADDRESS 
+    [Documentation]    
+    Setup Multi Node Network    log_name=test_create_update_farm
+
+    Setup Network And Create Farm
+
+    Add Stellar Payout V2address    farm_id=${1}    stellar_address=address
+    ${payout_address} =    Get Farm Payout V2address    farm_id=${1}
+    Should Be Equal    ${payout_address}    address
+
+    Add Stellar Payout V2address    farm_id=${1}    stellar_address=changed address
+    ${payout_address} =    Get Farm Payout V2address    farm_id=${1}
+    Should Be Equal    ${payout_address}    changed address
+
+    Run Keyword And Expect Error    *'CannotUpdateFarmWrongTwin'*
+    ...    Add Stellar Payout V2address    farm_id=${1}    who=Bob
+
+    Tear Down Multi Node Network
+
+Test Set Farm Certification
+    [Documentation]    
+    Setup Multi Node Network    log_name=test_farm_certification
+
+    Setup Network And Create Farm
+
+    Run Keyword And Expect Error    *'BadOrigin'*
+    ...    Set Farm Certification    farm_id=${1}    certification=Gold
+
+    Set Farm Certification    farm_id=${1}    certification=Gold    who=sudo
+
+    Tear Down Multi Node Network
+
+Test Set Node Certification
+    [Documentation]    
+    Setup Multi Node Network    log_name=test_node_certification
+
+    Setup Network And Create Node
+
+    Add Node Certifier    account_name=Alice    who=Sudo
+
+    Set Node Certification    node_id=${1}    certification=Certified
+
+    Tear Down Multi Node Network
+
 Test Add Remove Public Ips
     [Documentation]    Testing api calls (adding, removing) for managing public ips
     Setup Multi Node Network    log_name=test_add_remove_pub_ips
@@ -141,6 +185,25 @@ Test Create Update Delete Node
     Delete Node    ${1}
     ${node} =    Get Node    ${1}
     Should Be Equal    ${node}    ${None}
+
+    Tear Down Multi Node Network
+
+Test Reporting Uptime
+    Setup Multi Node Network    log_name=test_reporting_uptime
+    
+    Run Keyword And Expect Error    *'TwinNotExists'*
+    ...    Report Uptime    ${500}
+
+    Setup Alice    create_twin=${True}
+    Setup Bob    create_twin=${True}
+    
+    Run Keyword And Expect Error    *'NodeNotExists'*
+    ...    Report Uptime    ${500}
+
+    Create Farm    name=alice_farm
+    Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
+    
+    Report Uptime    ${500}
 
     Tear Down Multi Node Network
 
