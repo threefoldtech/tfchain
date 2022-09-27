@@ -91,15 +91,24 @@ mod tests {
     use crate::MaximumBlockWeight;
     use frame_support::weights::constants::ExtrinsicBaseWeight;
     use frame_support::weights::WeightToFee;
+    use env_logger;
 
     #[test]
     // This function tests that the fee for `MaximumBlockWeight` of weight is correct
     fn full_block_fee_is_correct() {
+        env_logger::try_init();
         // A full block should cost 23.3112 DOLLARS
         log::info!("MaxBlockWeight: {:?}", MaximumBlockWeight::get());
+        log::info!("BaseWeight: {:?}", ExtrinsicBaseWeight::get());
+        // we multiply by 100 to avoid loss of precision after division and devide by 100 at the end
+        let precision = 100;
+        let max_block_weight: u128 = (MaximumBlockWeight::get() as u128) * precision;
+        let ext_base_weight: u128 = ExtrinsicBaseWeight::get() as u128;
         let x = WeightToFeeStruct::weight_to_fee(&MaximumBlockWeight::get());
-        let y = 2331120 * MILLICENTS;
-        assert!(x.max(y) - x.min(y) < MILLICENTS);
+        let cost_extrinsic:u128 = WeightToFeeStruct::weight_to_fee(&ExtrinsicBaseWeight::get());
+        let y:u128 = (cost_extrinsic * (max_block_weight/ext_base_weight)) / precision;
+
+        assert!(x.max(y) - x.min(y) < cost_extrinsic / 2);
     }
 
     #[test]
