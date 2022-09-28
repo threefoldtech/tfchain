@@ -25,27 +25,23 @@ impl Resources {
     }
 
     pub fn validate_hru(&self) -> bool {
-        // No constraint, always valid
+        // No HRU minimun requirement
         true
     }
 
     pub fn validate_sru(&self) -> bool {
-        // Convert SRU to bytes
-
-        // minimum of 500 GB
-        true
+        // SRU minimum of 500 GB
+        self.sru as u128 >= 500 * GIGABYTE
     }
 
     pub fn validate_cru(&self) -> bool {
-        // Convert SRU to vCPU
-        // minimum of 1 vCPU
-        true
+        // CRU minimum of 1 vCPU
+        self.cru >= 1
     }
 
     pub fn validate_mru(&self) -> bool {
-        // Convert MRU to bytes
-        // minimum of 2GB
-        true
+        // MRU minimum of 2GB
+        self.mru as u128 >= 2 * GIGABYTE
     }
 
     pub fn get_cu(&self) -> u64 {
