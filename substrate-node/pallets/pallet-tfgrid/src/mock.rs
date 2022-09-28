@@ -8,8 +8,9 @@ use crate::{
     terms_cond::TermsAndConditions,
     twin::TwinIp,
     weights, CityInput, Config, CountryInput, DocumentHashInput, DocumentLinkInput, DomainInput,
-    FarmNameInput, GW4Input, GW6Input, IP4Input, IP6Input, LatitudeInput, LongitudeInput,
-    PublicIpGatewayInput, PublicIpIpInput, SerialNumberInput, TwinIpInput,
+    FarmNameInput, GW4Input, GW6Input, IP4Input, IP6Input, InterfaceIpInput, InterfaceMacInput,
+    InterfaceNameInput, LatitudeInput, LongitudeInput, PublicIpGatewayInput, PublicIpIpInput,
+    SerialNumberInput, TwinIpInput,
 };
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
 use frame_system::EnsureRoot;
@@ -261,16 +262,16 @@ pub(crate) fn get_pub_config_domain(domain_input: DomainInput) -> TestDomain {
     Domain::try_from(domain_input).expect("Invalid domain.")
 }
 
-pub(crate) fn get_interface_name(name: &[u8]) -> TestInterfaceName {
-    InterfaceName::try_from(name.to_vec()).expect("Invalid interface name input")
+pub(crate) fn get_interface_name_input(if_name_input: &[u8]) -> InterfaceNameInput {
+    BoundedVec::try_from(if_name_input.to_vec()).expect("Invalid interface name input")
 }
 
-pub(crate) fn get_interface_mac(mac: &[u8]) -> TestInterfaceMac {
-    InterfaceMac::try_from(mac.to_vec()).expect("Invalid interface mac input")
+pub(crate) fn get_interface_mac_input(if_mac_input: &[u8]) -> InterfaceMacInput {
+    BoundedVec::try_from(if_mac_input.to_vec()).expect("Invalid interface mac input")
 }
 
-pub(crate) fn get_interface_ip(ip: &[u8]) -> TestInterfaceIp {
-    InterfaceIp::try_from(ip.to_vec()).expect("Invalid interface ip input")
+pub(crate) fn get_interface_ip_input(if_ip_input: &[u8]) -> InterfaceIpInput {
+    BoundedVec::try_from(if_ip_input.to_vec()).expect("Invalid interface ip input")
 }
 
 pub(crate) fn get_city_input(city_input: &[u8]) -> CityInput {

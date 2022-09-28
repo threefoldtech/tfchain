@@ -139,23 +139,21 @@ pub mod pallet {
         PublicConfig<Ip4ConfigOf<T>, Option<Ip6ConfigOf<T>>, Option<DomainOf<T>>>;
 
     // Input type for interfaces
+    pub type InterfaceNameInput = BoundedVec<u8, ConstU32<{ interface::MAX_INTF_NAME_LENGTH }>>;
+    pub type InterfaceMacInput = BoundedVec<u8, ConstU32<{ interface::INTERFACE_MAC_LENGTH }>>;
     pub type InterfaceIpInput = BoundedVec<u8, ConstU32<{ interface::MAX_INTERFACE_IP_LENGTH }>>;
     pub type InterfaceIpsInput<T> =
         BoundedVec<InterfaceIpInput, <T as Config>::MaxInterfacesLength>;
     pub type InterfaceInput<T> = BoundedVec<
-        Interface<
-            BoundedVec<u8, ConstU32<{ interface::MAX_INTF_NAME_LENGTH }>>,
-            BoundedVec<u8, ConstU32<{ interface::INTERFACE_MAC_LENGTH }>>,
-            InterfaceIpsInput<T>,
-        >,
+        Interface<InterfaceNameInput, InterfaceMacInput, InterfaceIpsInput<T>>,
         <T as Config>::MaxInterfaceIpsLength,
     >;
     // Concrete type for interfaces
-    pub type InterfaceIp<T> = <T as Config>::InterfaceIP;
-    pub type InterfaceIpsOf<T> =
-        BoundedVec<<T as Config>::InterfaceIP, <T as Config>::MaxInterfaceIpsLength>;
-    pub type InterfaceOf<T> =
-        Interface<<T as Config>::InterfaceName, <T as Config>::InterfaceMac, InterfaceIpsOf<T>>;
+    pub type InterfaceNameOf<T> = <T as Config>::InterfaceName;
+    pub type InterfaceMacOf<T> = <T as Config>::InterfaceMac;
+    pub type InterfaceIpOf<T> = <T as Config>::InterfaceIP;
+    pub type InterfaceIpsOf<T> = BoundedVec<InterfaceIpOf<T>, <T as Config>::MaxInterfaceIpsLength>;
+    pub type InterfaceOf<T> = Interface<InterfaceNameOf<T>, InterfaceMacOf<T>, InterfaceIpsOf<T>>;
 
     // Input type for location
     pub type CityInput = BoundedVec<u8, ConstU32<{ node::MAX_CITY_NAME_LENGTH }>>;
@@ -209,7 +207,7 @@ pub mod pallet {
     pub type TwinIndex = u32;
     type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     type TwinInfoOf<T> = types::Twin<<T as Config>::TwinIp, AccountIdOf<T>>;
-    pub type TwinIpInput = BoundedVec<u8, ConstU32<{ twin::MAX_IP_LENGHT }>>;
+    pub type TwinIpInput = BoundedVec<u8, ConstU32<{ twin::MAX_IP_LENGTH }>>;
     pub type TwinIpOf<T> = <T as Config>::TwinIp;
 
     #[pallet::storage]
@@ -406,7 +404,7 @@ pub mod pallet {
             + Eq
             + Clone
             + TypeInfo
-            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + TryFrom<InterfaceNameInput, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of an interface mac address.
@@ -416,7 +414,7 @@ pub mod pallet {
             + Eq
             + Clone
             + TypeInfo
-            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + TryFrom<InterfaceMacInput, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of an interface IP.
@@ -426,7 +424,7 @@ pub mod pallet {
             + Eq
             + Clone
             + TypeInfo
-            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + TryFrom<InterfaceIpInput, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of a location.
@@ -530,7 +528,7 @@ pub mod pallet {
         EntityWithSignatureAlreadyExists,
         CannotUpdateEntity,
         CannotDeleteEntity,
-        SignatureLenghtIsIncorrect,
+        SignatureLengthIsIncorrect,
 
         TwinExists,
         TwinNotExists,
@@ -1328,7 +1326,7 @@ pub mod pallet {
             );
             ensure!(
                 signature.len() == 128,
-                Error::<T>::SignatureLenghtIsIncorrect
+                Error::<T>::SignatureLengthIsIncorrect
             );
             let decoded_signature_as_byteslice =
                 <[u8; 64]>::from_hex(signature.clone()).expect("Decoding failed");
@@ -2060,7 +2058,6 @@ pub mod pallet {
     }
 }
 
-use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 // Internal functions of the pallet
 impl<T: Config> Pallet<T> {
     pub fn verify_signature(signature: [u8; 64], target: &T::AccountId, payload: &Vec<u8>) -> bool {
@@ -2221,22 +2218,19 @@ impl<T: Config> Pallet<T> {
     }
 
     fn get_terms_and_conditions(
-        terms_cond: pallet::TermsAndConditionsInput<T>,
+        terms_cond: TermsAndConditionsInput<T>,
     ) -> Result<TermsAndConditionsOf<T>, DispatchErrorWithPostInfo> {
         let parsed_terms_cond = <T as Config>::TermsAndConditions::try_from(terms_cond)?;
-
         Ok(parsed_terms_cond)
     }
 
     fn get_twin_ip(ip: TwinIpInput) -> Result<TwinIpOf<T>, DispatchErrorWithPostInfo> {
         let ip_parsed = <T as Config>::TwinIp::try_from(ip)?;
-
         Ok(ip_parsed)
     }
 
     fn get_farm_name(name: FarmNameInput<T>) -> Result<FarmNameOf<T>, DispatchErrorWithPostInfo> {
         let name_parsed = <T as Config>::FarmName::try_from(name)?;
-
         Ok(name_parsed)
     }
 
@@ -2244,7 +2238,6 @@ impl<T: Config> Pallet<T> {
         public_ip_ip: PublicIpIpInput,
     ) -> Result<PublicIpIpOf<T>, DispatchErrorWithPostInfo> {
         let public_ip_ip_parsed = <T as Config>::PublicIP::try_from(public_ip_ip)?;
-
         Ok(public_ip_ip_parsed)
     }
 
@@ -2252,12 +2245,11 @@ impl<T: Config> Pallet<T> {
         public_ip_gw: PublicIpGatewayInput,
     ) -> Result<PublicIpGatewayOf<T>, DispatchErrorWithPostInfo> {
         let public_ip_gw_parsed = <T as Config>::GatewayIP::try_from(public_ip_gw)?;
-
         Ok(public_ip_gw_parsed)
     }
 
     fn get_public_ips(
-        public_ips: pallet::PublicIpListInput<T>,
+        public_ips: PublicIpListInput<T>,
     ) -> Result<PublicIpListOf<T>, DispatchErrorWithPostInfo> {
         let mut public_ips_list: PublicIpListOf<T> = vec![].try_into().unwrap();
 
@@ -2290,31 +2282,26 @@ impl<T: Config> Pallet<T> {
 
     fn get_ip4(ip4: IP4Input) -> Result<Ip4Of<T>, DispatchErrorWithPostInfo> {
         let ip4_parsed = <T as Config>::IP4::try_from(ip4)?;
-
         Ok(ip4_parsed)
     }
 
     fn get_gw4(gw4: GW4Input) -> Result<Gw4Of<T>, DispatchErrorWithPostInfo> {
         let gw4_parsed = <T as Config>::GW4::try_from(gw4)?;
-
         Ok(gw4_parsed)
     }
 
     fn get_ip6(ip6: IP6Input) -> Result<Ip6Of<T>, DispatchErrorWithPostInfo> {
         let ip6_parsed = <T as Config>::IP6::try_from(ip6)?;
-
         Ok(ip6_parsed)
     }
 
     fn get_gw6(gw6: GW6Input) -> Result<Gw6Of<T>, DispatchErrorWithPostInfo> {
         let gw6_parsed = <T as Config>::GW6::try_from(gw6)?;
-
         Ok(gw6_parsed)
     }
 
     fn get_domain(domain: DomainInput) -> Result<DomainOf<T>, DispatchErrorWithPostInfo> {
         let domain_parsed = <T as Config>::Domain::try_from(domain)?;
-
         Ok(domain_parsed)
     }
 
@@ -2356,16 +2343,29 @@ impl<T: Config> Pallet<T> {
         Ok(resources)
     }
 
-    pub fn get_location(
-        location: pallet::LocationInput,
-    ) -> Result<LocationOf<T>, DispatchErrorWithPostInfo> {
-        let parsed_location = <T as Config>::Location::try_from(location)?;
+    fn get_interface_name(
+        if_name: InterfaceNameInput,
+    ) -> Result<InterfaceNameOf<T>, DispatchErrorWithPostInfo> {
+        let if_name_parsed = <T as Config>::InterfaceName::try_from(if_name)?;
+        Ok(if_name_parsed)
+    }
 
-        Ok(parsed_location)
+    fn get_interface_mac(
+        if_mac: InterfaceMacInput,
+    ) -> Result<InterfaceMacOf<T>, DispatchErrorWithPostInfo> {
+        let if_mac_parsed = <T as Config>::InterfaceMac::try_from(if_mac)?;
+        Ok(if_mac_parsed)
+    }
+
+    fn get_interface_ip(
+        if_ip: InterfaceIpInput,
+    ) -> Result<InterfaceIpOf<T>, DispatchErrorWithPostInfo> {
+        let if_ip_parsed = <T as Config>::InterfaceIP::try_from(if_ip)?;
+        Ok(if_ip_parsed)
     }
 
     fn get_interfaces(
-        interfaces: &pallet::InterfaceInput<T>,
+        interfaces: &InterfaceInput<T>,
     ) -> Result<Vec<InterfaceOf<T>>, DispatchErrorWithPostInfo> {
         let mut parsed_interfaces = Vec::new();
         if interfaces.len() == 0 {
@@ -2373,16 +2373,16 @@ impl<T: Config> Pallet<T> {
         }
 
         for intf in interfaces.iter() {
-            let intf_name = <T as Config>::InterfaceName::try_from(intf.name.to_vec())?;
-            let intf_mac = <T as Config>::InterfaceMac::try_from(intf.mac.to_vec())?;
+            let intf_name = Self::get_interface_name(intf.name.clone())?;
+            let intf_mac = Self::get_interface_mac(intf.mac.clone())?;
 
             let mut parsed_interfaces_ips: BoundedVec<
-                InterfaceIp<T>,
+                InterfaceIpOf<T>,
                 <T as Config>::MaxInterfaceIpsLength,
             > = vec![].try_into().unwrap();
 
             for ip in intf.ips.iter() {
-                let intf_ip = <T as Config>::InterfaceIP::try_from(ip.to_vec())?;
+                let intf_ip = Self::get_interface_ip(ip.clone())?;
                 let _ = parsed_interfaces_ips.try_push(intf_ip);
             }
 
@@ -2396,11 +2396,17 @@ impl<T: Config> Pallet<T> {
         Ok(parsed_interfaces)
     }
 
+    pub fn get_location(
+        location: pallet::LocationInput,
+    ) -> Result<LocationOf<T>, DispatchErrorWithPostInfo> {
+        let parsed_location = <T as Config>::Location::try_from(location)?;
+        Ok(parsed_location)
+    }
+
     fn get_serial_number(
         serial_number: pallet::SerialNumberInput,
     ) -> Result<SerialNumberOf<T>, DispatchErrorWithPostInfo> {
         let parsed_serial_number = <T as Config>::SerialNumber::try_from(serial_number)?;
-
         Ok(parsed_serial_number)
     }
 }

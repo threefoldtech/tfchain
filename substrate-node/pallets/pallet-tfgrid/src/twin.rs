@@ -14,12 +14,12 @@ use valip::ip6::Ip;
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct TwinIp<T: Config>(
-    pub BoundedVec<u8, ConstU32<MAX_IP_LENGHT>>,
-    PhantomData<(T, ConstU32<MAX_IP_LENGHT>)>,
+    pub BoundedVec<u8, ConstU32<MAX_IP_LENGTH>>,
+    PhantomData<(T, ConstU32<MAX_IP_LENGTH>)>,
 );
 
-pub const MIN_IP_LENGHT: u32 = 3;
-pub const MAX_IP_LENGHT: u32 = 39;
+pub const MIN_IP_LENGTH: u32 = 3;
+pub const MAX_IP_LENGTH: u32 = 39;
 
 impl<T: Config> TryFrom<TwinIpInput> for TwinIp<T> {
     type Error = Error<T>;
@@ -29,11 +29,11 @@ impl<T: Config> TryFrom<TwinIpInput> for TwinIp<T> {
     /// characters.
     fn try_from(value: TwinIpInput) -> Result<Self, Self::Error> {
         ensure!(
-            value.len() >= MIN_IP_LENGHT.saturated_into(),
+            value.len() >= MIN_IP_LENGTH.saturated_into(),
             Self::Error::TwinIpTooShort
         );
         ensure!(
-            value.len() <= MAX_IP_LENGHT.saturated_into(),
+            value.len() <= MAX_IP_LENGTH.saturated_into(),
             Self::Error::TwinIpTooLong
         );
         ensure!(Ip::parse(&value).is_ok(), Self::Error::InvalidTwinIp);

@@ -17,7 +17,7 @@ pub struct PublicIP<T: Config>(
     PhantomData<(T, ConstU32<MAX_IP_LENGTH>)>,
 );
 
-pub const MIN_IP_LENGHT: u32 = 9;
+pub const MIN_IP_LENGTH: u32 = 9;
 pub const MAX_IP_LENGTH: u32 = 18;
 
 impl<T: Config> TryFrom<PublicIpIpInput> for PublicIP<T> {
@@ -28,7 +28,7 @@ impl<T: Config> TryFrom<PublicIpIpInput> for PublicIP<T> {
     /// characters.
     fn try_from(value: PublicIpIpInput) -> Result<Self, Self::Error> {
         ensure!(
-            value.len() >= MIN_IP_LENGHT.saturated_into(),
+            value.len() >= MIN_IP_LENGTH.saturated_into(),
             Self::Error::PublicIPTooShort
         );
         ensure!(

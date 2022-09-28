@@ -809,15 +809,12 @@ fn create_node_with_interfaces_works() {
         };
 
         let mut interface_ips: InterfaceIpsInput<TestRuntime> = bounded_vec![];
-        let intf_ip_1 = get_interface_ip(&"10.2.3.3".as_bytes().to_vec());
-        interface_ips.try_push(intf_ip_1.0).unwrap();
-
-        let name = get_interface_name(&"zos".as_bytes().to_vec()).0;
-        let mac = get_interface_mac(&"00:00:5e:00:53:af".as_bytes().to_vec()).0;
+        let intf_ip = get_interface_ip_input(b"10.2.3.3");
+        interface_ips.try_push(intf_ip).unwrap();
 
         let interface = Interface {
-            name,
-            mac,
+            name: get_interface_name_input(b"zos"),
+            mac: get_interface_mac_input(b"00:00:5e:00:53:af"),
             ips: interface_ips,
         };
 
