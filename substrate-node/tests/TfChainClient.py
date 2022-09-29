@@ -30,7 +30,9 @@ UNIT_KILOBYTES = "Kilobytes"
 UNIT_MEGABYTES = "Mebabytes"
 UNIT_GIGABYTES = "Gigabytes"
 UNIT_TERRABYTES = "Terrabytes"
-UNIT_TYPES = [UNIT_BYTES, UNIT_KILOBYTES, UNIT_MEGABYTES, UNIT_GIGABYTES, UNIT_TERRABYTES]
+UNIT_TYPES = [UNIT_BYTES, UNIT_KILOBYTES,
+              UNIT_MEGABYTES, UNIT_GIGABYTES, UNIT_TERRABYTES]
+
 
 class TfChainClient:
     def __init__(self):
@@ -51,6 +53,8 @@ class TfChainClient:
         self._predefined_keys["Ferdie"] = Keypair.create_from_uri("//Ferdie")
 
     def _setup_predefined_account(self, name: str, port: int = 9945, create_twin: bool = False):
+        logging.info("Setting up %s (%s)", name, self._predefined_keys[name].ss58_address)
+
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         insert_key_params = [
@@ -60,7 +64,7 @@ class TfChainClient:
         insert_key_params = [
             "smct", f"//{name}", self._predefined_keys[name].public_key.hex()]
         substrate.rpc_request("author_insertKey", insert_key_params)
-
+        
         if create_twin:
             self.user_accept_tc(port=port, who=name)
             self.create_twin(port=port, who=name)
@@ -72,7 +76,7 @@ class TfChainClient:
 
     def _check_events(self, events: list = [], expected_events: list = []):
         logging.info("Events: %s", json.dumps(events))
-        
+
         # This was a sudo call that failed
         for event in events:
             if event["event_id"] == "Sudid" and "Err" in event["attributes"]:
@@ -108,7 +112,7 @@ class TfChainClient:
             signed_call, wait_for_finalization=self._wait_for_finalization, wait_for_inclusion=self._wait_for_inclusion)
         if response.error_message:
             raise Exception(response.error_message)
-        
+
         logging.info(response.is_success)
         logging.info(dir(response))
         self._check_events([event.value["event"]
@@ -205,7 +209,7 @@ class TfChainClient:
         assert account_info is not None, f"Failed fetching the account data for {str(twin['account_id'])}"
         assert "data" in account_info, f"Could not find balance data in the account info {account_info}"
 
-        logging.info(dir(account_info["data"]))
+        logging.info(account_info)
         return account_info["data"].value
 
     def get_block_number(self, port: int = 9945):
@@ -216,7 +220,7 @@ class TfChainClient:
     def wait_x_blocks(self, x: int = 1, port: int = 9945):
         block_to_wait_for = self.get_block_number(port=port) + x
         self.wait_till_block(block_to_wait_for, port=port)
-            
+
     def wait_till_block(self, x: int = 1, port: int = 9945):
         start_time = datetime.now()
         current_block = self.get_block_number(port=port)
@@ -530,13 +534,31 @@ class TfChainClient:
                 }
             }]
         }
-
         call = substrate.compose_call(
             "SmartContractModule", "report_contract_resources", params)
-
         expected_events = [{
             "module_id": "SmartContractModule",
             "event_id": "UpdatedUsedResources"
+        }]
+        self._sign_extrinsic_submit_check_response(
+            substrate, call, who, expected_events=expected_events)
+
+    def add_nru_reports(self, contract_id: int = 1, nru: int = 1, port: int = 9945, who: str = DEFAULT_SIGNER):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+
+        # TODO fix this
+        block_number = 29
+        reports = [{
+            "contract_id": contract_id,
+            "nru": nru * GIGABYTE,
+            "timestamp": block_number,
+            "window": 6 * block_number
+        }]
+        call = substrate.compose_call("SmartContractModule", "add_nru_reports", { "reports": reports })
+
+        expected_events = [{
+            "module_id": "SmartContractModule",
+            "event_id": "NruConsumptionReportReceived"
         }]
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
@@ -647,12 +669,12 @@ class TfChainClient:
 
         params = {
             "name": f"{name}",
-            "su": { "value": su, "unit": unit },
-            "cu": { "value": cu, "unit": unit },
-            "nu": { "value": nu, "unit": unit },
-            "ipu": { "value": ipu, "unit": unit},
-            "unique_name": { "value": unique_name, "unit": unit },
-            "domain_name": { "value": domain_name, "unit": unit },
+            "su": {"value": su, "unit": unit},
+            "cu": {"value": cu, "unit": unit},
+            "nu": {"value": nu, "unit": unit},
+            "ipu": {"value": ipu, "unit": unit},
+            "unique_name": {"value": unique_name, "unit": unit},
+            "domain_name": {"value": domain_name, "unit": unit},
             "foundation_account": f"{self._predefined_keys[foundation_account].ss58_address}",
             "certified_sales_account": f"{self._predefined_keys[certified_sales_account].ss58_address}",
             "discount_for_dedication_nodes": discount_for_dedication_nodes
@@ -665,7 +687,7 @@ class TfChainClient:
         }]
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
-    
+
     def update_pricing_policy(self, id: int = 1, name: str = "", unit: str = UNIT_GIGABYTES, su: int = 0, cu: int = 0, nu: int = 0, ipu: int = 0,
                               unique_name: int = "", domain_name: int = "", foundation_account: str = "", certified_sales_account: str = "",
                               discount_for_dedication_nodes: int = 0, port: int = 9945, who: str = DEFAULT_SIGNER):
@@ -674,12 +696,12 @@ class TfChainClient:
         params = {
             "id": id,
             "name": f"{name}",
-            "su": { "value": su, "unit": unit },
-            "cu": { "value": cu, "unit": unit },
-            "nu": { "value": nu, "unit": unit },
-            "ipu": { "value": ipu, "unit": unit},
-            "unique_name": { "value": unique_name, "unit": unit },
-            "domain_name": { "value": domain_name, "unit": unit },
+            "su": {"value": su, "unit": unit},
+            "cu": {"value": cu, "unit": unit},
+            "nu": {"value": nu, "unit": unit},
+            "ipu": {"value": ipu, "unit": unit},
+            "unique_name": {"value": unique_name, "unit": unit},
+            "domain_name": {"value": domain_name, "unit": unit},
             "foundation_account": f"{self._predefined_keys[foundation_account].ss58_address}",
             "certified_sales_account": f"{self._predefined_keys[certified_sales_account].ss58_address}",
             "discount_for_dedication_nodes": discount_for_dedication_nodes
@@ -692,16 +714,16 @@ class TfChainClient:
         }]
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
-    
+
     def get_pricing_policy(self, id: int = 1, port: int = 9945):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         q = substrate.query("TfgridModule", "PricingPolicies", [id])
         return q.value
 
-    def create_farming_policy(self, name: str = "", su: int = 0, cu: int = 0, nu: int = 0, ipv4: int = 0, minimal_uptime: int = 0, 
-                              policy_end: int = 0, immutable: bool = False, default: bool = False, 
-                              node_certification: str = NODE_CERTIFICATION_DIY, farm_certification: str = FARM_CERTIFICATION_NOTCERTIFIED, 
+    def create_farming_policy(self, name: str = "", su: int = 0, cu: int = 0, nu: int = 0, ipv4: int = 0, minimal_uptime: int = 0,
+                              policy_end: int = 0, immutable: bool = False, default: bool = False,
+                              node_certification: str = NODE_CERTIFICATION_DIY, farm_certification: str = FARM_CERTIFICATION_NOTCERTIFIED,
                               port: int = 9945, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
@@ -726,10 +748,10 @@ class TfChainClient:
         }]
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
-    
+
     def update_farming_policy(self, id: int = 1, name: str = "", su: int = 0, cu: int = 0, nu: int = 0, ipv4: int = 0, minimal_uptime: int = 0,
-                              policy_end: int = 0, immutable: bool = False, default: bool = False, 
-                              node_certification: str = NODE_CERTIFICATION_DIY, farm_certification: str = FARM_CERTIFICATION_NOTCERTIFIED, 
+                              policy_end: int = 0, immutable: bool = False, default: bool = False,
+                              node_certification: str = NODE_CERTIFICATION_DIY, farm_certification: str = FARM_CERTIFICATION_NOTCERTIFIED,
                               port: int = 9945, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
@@ -755,14 +777,14 @@ class TfChainClient:
         }]
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
-        
+
     def get_farming_policy(self, id: int = 1, port: int = 9945):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         q = substrate.query("TfgridModule", "FarmingPoliciesMap", [id])
         return q.value
-    
-    def attach_policy_to_farm(self, farm_id: int = 1, farming_policy_id: int | None = None, cu: int | None = None, 
+
+    def attach_policy_to_farm(self, farm_id: int = 1, farming_policy_id: int | None = None, cu: int | None = None,
                               su: int | None = None, end: int | None = None, node_count: int | None = 0, node_certification: bool = False,
                               port: int = 9945, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
@@ -788,9 +810,42 @@ class TfChainClient:
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
 
+    def create_solution_provider(self, description: str = "", link: str = "", providers: dict = {}, port: int = 9945,
+                                 who: str = DEFAULT_SIGNER):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+        
+        providers = [{ "who": self._predefined_keys[who].ss58_address, "take": take } for who, take in providers.items()]
+        call = substrate.compose_call("SmartContractModule", "create_solution_provider",
+                                      {
+                                          "description": f"{description}",
+                                          "link": f"{link}",
+                                          "providers": providers
+                                      })
+        expected_events = [{
+            "module_id": "SmartContractModule",
+            "event_id": "SolutionProviderCreated"
+        }]
+        self._sign_extrinsic_submit_check_response(
+            substrate, call, who, expected_events=expected_events)
+        
+    def get_solution_provider(self, id: int = 1, port: int = 9945, who: str = DEFAULT_SIGNER):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
-"""
-TODO:
-create_solution_provider
-approve_solution_provider
-"""
+        q = substrate.query("SmartContractModule", "SolutionProviders", [id])
+        return q.value
+        
+    def approve_solution_provider(self, solution_provider_id: int = 1, approve: bool = True, port: int = 9945,
+                                  who: str = DEFAULT_SIGNER):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+
+        call = substrate.compose_call("SmartContractModule", "approve_solution_provider",
+                                      {
+                                          "solution_provider_id": solution_provider_id,
+                                          "approve": approve
+                                      })
+        expected_events = [{
+            "module_id": "SmartContractModule",
+            "event_id": "SolutionProviderApproved"
+        }]
+        self._sign_extrinsic_submit_check_response(
+            substrate, call, who, expected_events=expected_events)

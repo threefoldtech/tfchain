@@ -38,8 +38,19 @@ Setup Network And Create Node
 Create Interface
     [Arguments]    ${name}    ${mac}    ${ips}
     ${dict} =     Create Dictionary    name    ${name}    mac    ${mac}    ips    ${ips}
-
     [Return]    ${dict}
+
+Ensure Account Balance Increased
+    [Arguments]    ${balance_before}    ${balance_after}
+    IF    ${balance_before}[free] >= ${balance_after}[free]-${balance_after}[fee_frozen]
+        Fail    msg=It looks like the billing did not take place.
+    END
+
+Ensure Account Balance Decreased
+    [Arguments]    ${balance_before}    ${balance_after}
+    IF    ${balance_before}[free] <= ${balance_after}[free]-${balance_after}[fee_frozen]
+        Fail    msg=It looks like the billing did not take place.
+    END
 
 
 
@@ -52,7 +63,7 @@ Test Start And Stop Network
 
 Test Create Update Delete Twin
     [Documentation]    Testing api calls (create, update, delete) for managing twins
-    Setup Multi Node Network    log_name=test_create_update_delete_twin    amt=${2}
+    Setup Multi Node Network    log_name=test_create_update_delete_twin
 
     Setup Alice
     User Accept Tc
@@ -219,7 +230,7 @@ Test Reporting Uptime
 
 Test Add Public Config On Node: Success
     [Documentation]    Testing adding a public config on a node
-    Setup Multi Node Network    log_name=test_add_pub_config_node    amt=${2}
+    Setup Multi Node Network    log_name=test_add_pub_config_node
 
     Setup Network And Create Node
 
@@ -239,7 +250,7 @@ Test Add Public Config On Node: Success
 
 Test Add Public Config On Node: Failure InvalidIP4
     [Documentation]    Testing adding a public config on a node with an invalid ipv4
-    Setup Multi Node Network    log_name=test_add_pub_config_node_failure_ipv4    amt=${2}
+    Setup Multi Node Network    log_name=test_add_pub_config_node_failure_ipv4
 
     Setup Network And Create Node
 
@@ -250,7 +261,7 @@ Test Add Public Config On Node: Failure InvalidIP4
 
 Test Add Public Config On Node: Failure InvalidIP6
     [Documentation]    Testing adding a public config on a node with an invalid ipv6
-    Setup Multi Node Network    log_name=test_add_pub_config_node_failure_ipv6    amt=${2}
+    Setup Multi Node Network    log_name=test_add_pub_config_node_failure_ipv6
 
     Setup Network And Create Node  
 
@@ -262,7 +273,7 @@ Test Add Public Config On Node: Failure InvalidIP6
 
 Test Add Public Config On Node: Failure InvalidDomain
     [Documentation]    Testing adding a public config on a node with an invalid domain
-    Setup Multi Node Network    log_name=test_add_pub_config_node_failure_invaliddomain    amt=${2}
+    Setup Multi Node Network    log_name=test_add_pub_config_node_failure_invaliddomain
 
     Setup Network And Create Node
     Run Keyword And Expect Error    *'InvalidDomain'*
@@ -272,7 +283,7 @@ Test Add Public Config On Node: Failure InvalidDomain
 
 Test Create Update Cancel Node Contract: Success
     [Documentation]    Testing api calls (create, update, cancel) for managing a node contract
-    Setup Multi Node Network    log_name=test_create_node_contract    amt=${2}
+    Setup Multi Node Network    log_name=test_create_node_contract
 
     Setup Alice    create_twin=${True}
     Setup Bob    create_twin=${True}
@@ -305,7 +316,7 @@ Test Create Update Cancel Node Contract: Success
 
 Test Create Node Contract: Failure Not Enough Public Ips
     [Documentation]    Testing creating a node contract and requesting too much pub ips
-    Setup Multi Node Network    log_name=test_create_node_contract_failure_notenoughpubips    amt=${2}
+    Setup Multi Node Network    log_name=test_create_node_contract_failure_notenoughpubips
 
     # the function below creates a farm containing 0 public ips and a node with 0 configured interfaces
     Setup Network And Create Node
@@ -317,7 +328,7 @@ Test Create Node Contract: Failure Not Enough Public Ips
 
 Test Create Rent Contract: Success
     [Documentation]    Testing api calls (create, cancel) for managing a rent contract
-    Setup Multi Node Network    log_name=test_create_rent_contract    amt=${2}
+    Setup Multi Node Network    log_name=test_create_rent_contract
 
     Setup Network And Create Node
     
@@ -329,7 +340,7 @@ Test Create Rent Contract: Success
 
 Test Create Name Contract: Success
     [Documentation]    Testing api calls (create, cancel) for managing a name contract
-    Setup Multi Node Network    log_name=test_create_name_contract    amt=${2}
+    Setup Multi Node Network    log_name=test_create_name_contract
 
     Setup Network And Create Node
 
@@ -412,28 +423,74 @@ Test Attach Policy To Farm
 
 Test Billing
     [Documentation]    Testing billing. Alice creates a twin and Bob too. Alice creates a farm and a node in that farm while Bob creates a node contract requesting Alice to use her node. Alice will report contract resources. We will wait 6 blocks so that Bob will be billed a single time.
-    Setup Multi Node Network    log_name=test_billing    amt=${2}
+    Setup Multi Node Network    log_name=test_billing
 
+    # Setup
     Setup Alice    create_twin=${True}
-    Setup Bob    create_twin=${True}
-
-    ${balance} =    Balance Data    ${2}    port=9946
-    
+    Setup Bob    create_twin=${True}    
     Create Farm    name=alice_farm
     Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
 
+    ${balance_alice} =    Balance Data    ${1}
+    ${balance_bob} =    Balance Data    ${2}    port=${9946}
     # Bob will be using the node: let's create a node contract in his name
-    Create Node Contract    node_id=${1}    port=9946    who=Bob
+    Create Node Contract    node_id=${1}    port=${9946}    who=Bob
+    Report Contract Resources    contract_id=${1}    hru=${20}    sru=${20}    cru=${2}    mru=${4}
+    Add Nru Reports    contract_id=${1}    nru=${3}
 
-    Report Contract Resources    contract_id=${1}    hru=${0}    sru=${20}    cru=${2}    mru=${4}
-
-    # let it run 6 blocks so that the user will be billed 1 time
+    # Let it run 6 blocks so that the user will be billed 1 time
     Wait X Blocks    ${6}
+    Cancel Node Contract    contract_id=${1}    who=Bob
 
-    # balance should be different
-    ${balance_after} =    Balance Data    ${2}  port=9946
-    IF    ${balance}[free] <= ${balance_after}[free] - ${balance_after}[fee_frozen]
-        Fail    msg=It looks like the billing did not take place.
-    END
+    # Balance should have decreased
+    ${balance_alice_after} =    Balance Data    ${1}
+    ${balance_bob_after} =    Balance Data    ${2}  port=${9946}
+    Ensure Account Balance Decreased    ${balance_bob}    ${balance_bob_after}
+
+    Tear Down Multi Node Network
+
+Test Solution Provider
+    [Documentation]    Testing creating and validating a solution provider
+    Setup Multi Node Network    log_name=test_create_approve_solution_provider    amt=${2}
+
+    # Setup
+    Setup Alice    create_twin=${True}
+    Setup Bob    create_twin=${True}
+    Setup Charlie    create_twin=${True}    port=${9945}
+    Setup Dave    create_twin=${True}    port=${9945}
+    Create Farm    name=alice_farm
+    Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
+    
+    # lets add two providers: charlie gets 30% and Dave 10%
+    ${providers} =    Create Dictionary    Charlie    ${30}    Dave    ${10}
+    Create Solution Provider    description=mysolutionprovider    providers=${providers}
+    ${solution_provider} =    Get Solution Provider    id=${1}
+    Should Not Be Equal    ${solution_provider}    ${None}
+    Should Be Equal    ${solution_provider}[description]    mysolutionprovider
+    Should Be Equal    ${solution_provider}[approved]    ${False}
+    Length Should Be    ${solution_provider}[providers]    ${2}
+    
+    # The solution provider has to be approved
+    Approve Solution Provider    solution_provider_id=${1}    who=Sudo
+    ${solution_provider} =    Get Solution Provider    id=${1}
+    Should Not Be Equal    ${solution_provider}    ${None}
+    Should Be Equal    ${solution_provider}[approved]    ${True}
+
+    ${balance_charlie_before} =     Balance Data    twin_id=${3}
+    ${balance_dave_before} =    Balance Data    twin_id=${4}
+    # Bob will be using the node: let's create a node contract in his name
+    Create Node Contract    node_id=${1}    port=9946    who=Bob    solution_provider_id=${1}
+    Report Contract Resources    contract_id=${1}    hru=${20}    sru=${20}    cru=${2}    mru=${4}
+    Add Nru Reports    contract_id=${1}    nru=${3}
+    # Wait 6 blocks: after 5 blocks Bob should be billed
+    Wait X Blocks    ${6}
+    # Cancel the contract so that the bill is distributed and so that the providers get their part
+    Cancel Node Contract    contract_id=${1}    who=Bob
+
+    # Verification: both providers should have received their part
+    ${balance_charlie_after} =     Balance Data    twin_id=${3}
+    ${balance_dave_after} =    Balance Data    twin_id=${4}
+    #Ensure Account Balance Increased    ${balance_charlie_before}    ${balance_charlie_after}
+    #Ensure Account Balance Increased    ${balance_dave_before}    ${balance_dave_after}
 
     Tear Down Multi Node Network
