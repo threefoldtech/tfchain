@@ -15,9 +15,9 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Cache build
-        env: 
-          SEGMENT_DOWNLOAD_TIMEOUT_MIN: 6
         uses: actions/cache@v3
+        timeout-minutes: 6
+        continue-on-error: true
         with:
           path: |
             ~/.cargo/bin/
