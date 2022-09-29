@@ -44,7 +44,7 @@ jobs:
 
       - name: Integration tests
         run: |
-          python3 -m pip install robotframework
+          python3 -m pip install robotframework cryptography
           cd substrate-node/tests
           robot -d _output_tests/ .
 
