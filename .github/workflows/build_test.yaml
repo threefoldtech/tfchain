@@ -45,6 +45,7 @@ jobs:
       - name: Integration tests
         if: github.event.pull_request.merged == true || ${{ contains(github.event.head_commit.message, '[integration-tests]') }}
         run: |
+          echo Message is ${{ (github.event.head_commit.message }}
           python3.10 -m pip install robotframework cryptography substrate-interface
           cd substrate-node/tests
           robot -d _output_tests/ .
