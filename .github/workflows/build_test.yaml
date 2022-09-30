@@ -28,7 +28,6 @@ jobs:
           key: ${{ runner.os }}-tfchain-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-tfchain-cargo-
 
- 
       - name: Build
         run: |
           cd substrate-node
@@ -42,7 +41,9 @@ jobs:
           cd pallets
           $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
 
+      # This will only be execute when merging a PR
       - name: Integration tests
+        if: github.event.pull_request.merged == true || contains(github.event.head_commit.message, '#test')
         run: |
           python3.10 -m pip install robotframework cryptography substrate-interface
           cd substrate-node/tests
