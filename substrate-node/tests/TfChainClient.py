@@ -47,8 +47,8 @@ class TfChainClient:
         self._predefined_keys = {}
         self._predefined_keys["Alice"] = Keypair.create_from_uri("//Alice")
         self._predefined_keys["Bob"] = Keypair.create_from_uri("//Bob")
-        self._predefined_keys["Charlie"] = Keypair.create_from_uri("//Charlie")
-        self._predefined_keys["Dave"] = Keypair.create_from_uri("//Dave")
+        self._predefined_keys["Charlie"] = Keypair.create_from_uri("//Charlie//stash")
+        self._predefined_keys["Dave"] = Keypair.create_from_uri("//Dave//stash")
         self._predefined_keys["Eve"] = Keypair.create_from_uri("//Eve")
         self._predefined_keys["Ferdie"] = Keypair.create_from_uri("//Ferdie")
 

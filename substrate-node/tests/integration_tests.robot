@@ -468,7 +468,7 @@ Test Solution Provider
     Should Not Be Equal    ${solution_provider}    ${None}
     Should Be Equal    ${solution_provider}[description]    mysolutionprovider
     Should Be Equal    ${solution_provider}[approved]    ${False}
-    Length Should Be    ${solution_provider}[providers]    ${2}
+    Length Should Be    ${solution_provider}[providers]    ${1}
     
     # The solution provider has to be approved
     Approve Solution Provider    solution_provider_id=${1}    who=Sudo
@@ -489,8 +489,8 @@ Test Solution Provider
 
     # Verification: both providers should have received their part
     ${balance_charlie_after} =     Balance Data    twin_id=${3}
-    ${balance_dave_after} =    Balance Data    twin_id=${4}
-    #Ensure Account Balance Increased    ${balance_charlie_before}    ${balance_charlie_after}
-    #Ensure Account Balance Increased    ${balance_dave_before}    ${balance_dave_after}
+    ${balance_dave_after} =    Balance Data    twin_id=${3}
+    Ensure Account Balance Increased    ${balance_charlie_before}    ${balance_charlie_after}
+    Ensure Account Balance Increased    ${balance_dave_before}    ${balance_dave_after}
 
     Tear Down Multi Node Network
