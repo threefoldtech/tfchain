@@ -43,7 +43,7 @@ jobs:
 
       # This will only be execute when merging a PR or when adding #test to the commit message
       - name: Integration tests
-        if: github.event.pull_request.merged == true || contains(github.event.head_commit.message, '#test')
+        if: github.event.pull_request.merged == true || ${{ contains(github.event.head_commit.message, '#test') }}
         run: |
           python3.10 -m pip install robotframework cryptography substrate-interface
           cd substrate-node/tests
