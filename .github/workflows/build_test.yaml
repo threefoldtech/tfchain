@@ -41,7 +41,7 @@ jobs:
           cd pallets
           $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
 
-      # This will only be execute when merging a PR or when adding #test to the commit message
+      # This will only be execute when merging a PR or when adding #test to the commit message (only the last commit)
       - name: Integration tests
         if: github.event.pull_request.merged == true || ${{ contains(github.event.head_commit.message, '#test') }}
         run: |
