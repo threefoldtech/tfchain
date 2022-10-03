@@ -4,6 +4,7 @@ use std::{panic, thread};
 use super::*;
 use crate::name_contract::NameContractName;
 use crate::{self as pallet_smart_contract, types::BlockNumber};
+use codec::{alloc::sync::Arc, Decode};
 use frame_support::{
     construct_runtime, parameter_types,
     traits::{ConstU32, GenesisBuild},

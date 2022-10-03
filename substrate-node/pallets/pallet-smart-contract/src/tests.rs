@@ -8,7 +8,7 @@ use frame_support::{
 };
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
-use sp_runtime::{traits::SaturatedConversion, Perbill, Percent};
+use sp_runtime::{traits::SaturatedConversion, Perbill, Percent, assert_eq_error_rate};
 use sp_std::convert::{TryFrom, TryInto};
 use substrate_fixed::types::U64F64;
 
@@ -1218,9 +1218,10 @@ fn test_node_contract_billing_fails() {
 
 #[test]
 fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balance_works() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
         prepare_farm_and_node();
-        run_to_block(1);
+        run_to_block(1, Some(&mut pool_state));
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let twin = TfgridModule::twins(2).unwrap();
@@ -1246,16 +1247,18 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
         pool_state
             .write()
             .should_call_bill_contract(contract_id, 11, Ok(()));
+        run_to_block(12, Some(&mut pool_state));
         check_report_cost(1, amount_due_1, 12, discount_received);
 
         let (amount_due_2, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
         pool_state
             .write()
             .should_call_bill_contract(contract_id, 21, Ok(()));
+        run_to_block(22, Some(&mut pool_state));
         check_report_cost(1, amount_due_2, 22, discount_received);
 
         // Run halfway ish next cycle and cancel
-        run_to_block(25);
+        run_to_block(25, Some(&mut pool_state));
 
         let usable_balance = Balances::usable_balance(&twin.account_id);
         let total_amount_billed = initial_twin_balance - usable_balance;
@@ -1276,7 +1279,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
             1
         ));
 
-        run_to_block(29);
+        run_to_block(29, Some(&mut pool_state));
 
         // After canceling contract, and not being able to pay for the remainder of the cycle
         // where the cancel was excecuted, the remaining balance should still be the same
