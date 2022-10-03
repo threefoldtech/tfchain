@@ -41,12 +41,11 @@ jobs:
           cd pallets
           $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
 
-      # This will only be execute when merging a PR or when adding #test to the commit message (only the last commit)
+      # This will only be execute when merging a PR or when the review status is set to approved
       - name: Integration tests
-        if: github.event.pull_request.merged == true || ${{ contains(github.event.commits[-1].message, '#run-integration-tests') }}
+        if: github.event.pull_request.merged == true || github.event.review.state == 'approved'
         run: |
-          git log -1 --pretty=format:"%s"
-      #    python3.10 -m pip install robotframework cryptography substrate-interface
-      #    cd substrate-node/tests
-      #    robot -d _output_tests/ .
+          python3.10 -m pip install robotframework cryptography substrate-interface
+          cd substrate-node/tests
+          robot -d _output_tests/ .
 
