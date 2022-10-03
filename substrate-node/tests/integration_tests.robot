@@ -154,7 +154,6 @@ Test Set Node Certification
     Run Keyword And Expect Error    *'NotAllowedToCertifyNode'*
     ...    Set Node Certification    node_id=${1}    certification=Certified
 
-
     Tear Down Multi Node Network
 
 Test Add Remove Public Ips
@@ -184,8 +183,7 @@ Test Add Public Ips: Failure InvalidPublicIP
     Run Keyword And Expect Error    *'InvalidPublicIP'*
     ...    Add Farm Ip    id=${1}    ip="185.206.122.125"    gateway=185.206.122.1
 
-    Tear Down Multi Node Network    
-    
+    Tear Down Multi Node Network
 
 Test Create Update Delete Node
     [Documentation]    Testing api calls (create, update, delete) for managing nodes
@@ -269,7 +267,6 @@ Test Add Public Config On Node: Failure InvalidIP6
     ...    Add Node Public Config    farm_id=${1}    node_id=${1}    ipv4=185.206.122.33/24    gw4=185.206.122.1    ipv6=2a10:b600:1::0cc4:7a30:65b5    gw6=2a10:b600:1::1    domain=some-domain
     
     Tear Down Multi Node Network
-
 
 Test Add Public Config On Node: Failure InvalidDomain
     [Documentation]    Testing adding a public config on a node with an invalid domain
@@ -431,8 +428,8 @@ Test Billing
     Create Farm    name=alice_farm
     Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
 
-    ${balance_alice} =    Balance Data    ${1}
-    ${balance_bob} =    Balance Data    ${2}    port=${9946}
+    ${balance_alice} =    Balance Data    who=Alice
+    ${balance_bob} =    Balance Data    who=Bob    port=${9946}
     # Bob will be using the node: let's create a node contract in his name
     Create Node Contract    node_id=${1}    port=${9946}    who=Bob
     Report Contract Resources    contract_id=${1}    hru=${20}    sru=${20}    cru=${2}    mru=${4}
@@ -443,8 +440,8 @@ Test Billing
     Cancel Node Contract    contract_id=${1}    who=Bob
 
     # Balance should have decreased
-    ${balance_alice_after} =    Balance Data    ${1}
-    ${balance_bob_after} =    Balance Data    ${2}  port=${9946}
+    ${balance_alice_after} =    Balance Data    who=Alice
+    ${balance_bob_after} =    Balance Data    who=Bob port=${9946}
     Ensure Account Balance Decreased    ${balance_bob}    ${balance_bob_after}
 
     Tear Down Multi Node Network
@@ -456,8 +453,6 @@ Test Solution Provider
     # Setup
     Setup Alice    create_twin=${True}
     Setup Bob    create_twin=${True}
-    Setup Charlie    create_twin=${True}    port=${9945}
-    Setup Dave    create_twin=${True}    port=${9945}
     Create Farm    name=alice_farm
     Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
     
@@ -476,8 +471,8 @@ Test Solution Provider
     Should Not Be Equal    ${solution_provider}    ${None}
     Should Be Equal    ${solution_provider}[approved]    ${True}
 
-    ${balance_charlie_before} =     Balance Data    twin_id=${3}
-    ${balance_dave_before} =    Balance Data    twin_id=${4}
+    ${balance_charlie_before} =     Balance Data    who=Charlie
+    ${balance_dave_before} =    Balance Data    who=Dave
     # Bob will be using the node: let's create a node contract in his name
     Create Node Contract    node_id=${1}    port=9946    who=Bob    solution_provider_id=${1}
     Report Contract Resources    contract_id=${1}    hru=${20}    sru=${20}    cru=${2}    mru=${4}
@@ -488,8 +483,8 @@ Test Solution Provider
     Cancel Node Contract    contract_id=${1}    who=Bob
 
     # Verification: both providers should have received their part
-    ${balance_charlie_after} =     Balance Data    twin_id=${3}
-    ${balance_dave_after} =    Balance Data    twin_id=${3}
+    ${balance_charlie_after} =     Balance Data    who=Charlie
+    ${balance_dave_after} =    Balance Data    who=Dave
     Ensure Account Balance Increased    ${balance_charlie_before}    ${balance_charlie_after}
     Ensure Account Balance Increased    ${balance_dave_before}    ${balance_dave_after}
 

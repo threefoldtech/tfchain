@@ -53,6 +53,7 @@ def execute_command(cmd, log_file=None):
     return p, fd
 
 def run_node(log_file, base_path, predefined_account, port, ws_port, rpc_port, node_key=None, bootnodes=None):
+    logging.info("Starting node with logfile %s", log_file)
     
     if not isfile(TFCHAIN_EXE):
         raise Exception(f"Executable {TFCHAIN_EXE} doesn't exist! Did you build the code?")
