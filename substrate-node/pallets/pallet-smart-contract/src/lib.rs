@@ -981,7 +981,7 @@ impl<T: Config> Pallet<T> {
         block_number: T::BlockNumber,
         contract_id: u64,
     ) -> Result<(), Error<T>> {
-        let signer = Signer::<T, T::AuthorityId>::any_account();
+        let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::any_account();
         if !signer.can_sign() {
             log::error!(
                 "failed billing contract {:?}: at block {:?} account cannot be used to sign transaction",

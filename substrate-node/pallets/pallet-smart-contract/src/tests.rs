@@ -14,7 +14,7 @@ use pallet_tfgrid::{
     ResourcesInput,
 };
 use sp_core::H256;
-use sp_runtime::{traits::SaturatedConversion, Perbill, Percent};
+use sp_runtime::{traits::SaturatedConversion, Perbill, Percent, assert_eq_error_rate};
 use sp_std::convert::{TryFrom, TryInto};
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
