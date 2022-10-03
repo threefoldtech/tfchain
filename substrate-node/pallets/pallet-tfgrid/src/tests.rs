@@ -712,21 +712,26 @@ fn update_certified_node_resources_loses_certification_works() {
         assert_eq!(node.certification, NodeCertification::Certified);
 
         // Change cores to 2
-        let mut node_resources = node.resources;
+        let mut node_resources: ResourcesInput = node.resources;
         node_resources.cru = 2;
+
+        let node_location = LocationInput {
+            city: node.location.city,
+            country: node.location.country,
+            latitude: node.location.latitude,
+            longitude: node.location.longitude,
+        };
 
         assert_ok!(TfgridModule::update_node(
             Origin::signed(alice()),
             1,
             1,
             node_resources,
-            node.location,
-            node.country,
-            node.city,
+            node_location,
             Vec::new().try_into().unwrap(),
             true,
             true,
-            "some_serial".as_bytes().to_vec(),
+            get_serial_number_input(b"some_serial"),
         ));
 
         let our_events = System::events();
@@ -764,19 +769,26 @@ fn update_certified_node_same_resources_keeps_certification_works() {
         let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(node.certification, NodeCertification::Certified);
 
+        let node_resources: ResourcesInput = node.resources;
+
+        let node_location = LocationInput {
+            city: node.location.city,
+            country: node.location.country,
+            latitude: node.location.latitude,
+            longitude: node.location.longitude,
+        };
+
         // Don't change resources
         assert_ok!(TfgridModule::update_node(
             Origin::signed(alice()),
             1,
             1,
-            node.resources,
-            node.location,
-            node.country,
-            node.city,
+            node_resources,
+            node_location,
             Vec::new().try_into().unwrap(),
             true,
             true,
-            "some_serial".as_bytes().to_vec(),
+            get_serial_number_input(b"some_serial"),
         ));
 
         let node = TfgridModule::nodes(1).unwrap();

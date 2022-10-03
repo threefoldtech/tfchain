@@ -1101,7 +1101,7 @@ pub mod pallet {
             farm_id: u32,
             resources: ResourcesInput,
             location: LocationInput,
-            interfaces: Vec<pallet::InterfaceOf<T>>,
+            interfaces: InterfaceInput<T>,
             secure_boot: bool,
             virtualized: bool,
             serial_number: SerialNumberInput,
@@ -1138,6 +1138,10 @@ pub mod pallet {
             };
 
             let node_resources = Self::get_resources(resources)?;
+            let node_location = Self::get_location(location)?;
+            let node_interfaces = Self::get_interfaces(&interfaces)?;
+            let node_serial_number = Self::get_serial_number(serial_number)?;
+
             // If the resources on a certified node changed, reset the certification level to DIY
             if stored_node.resources != resources
                 && stored_node.certification == NodeCertification::Certified
@@ -1155,7 +1159,7 @@ pub mod pallet {
             stored_node.farm_id = farm_id;
             stored_node.resources = node_resources;
             stored_node.location = node_location;
-            stored_node.interfaces = interfaces;
+            stored_node.interfaces = node_interfaces;
             stored_node.secure_boot = secure_boot;
             stored_node.virtualized = virtualized;
             stored_node.serial_number = node_serial_number;
