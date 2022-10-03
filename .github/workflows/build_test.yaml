@@ -45,7 +45,7 @@ jobs:
       - name: Integration tests
         if: github.event.pull_request.merged == true || ${{ contains(github.event.commits[-1].message, '#run-integration-tests') }}
         run: |
-          echo "${{toJSON(github.event)}}"
+          echo "${{toJSON(github.event.commits[-1])}}"
           python3.10 -m pip install robotframework cryptography substrate-interface
           cd substrate-node/tests
           robot -d _output_tests/ .
