@@ -9,12 +9,18 @@ use frame_support;
 use frame_support::traits::Currency;
 use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
 use sp_runtime::traits::StaticLookup;
+use sp_std::convert::TryInto;
 use sp_std::prelude::*;
 use substrate_validator_set;
-use sp_std::convert::TryInto;
 
 pub mod types;
 pub use pallet::*;
+
+#[cfg(test)]
+mod tests;
+
+#[cfg(test)]
+mod mock;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -53,8 +59,8 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         Bonded(T::AccountId),
-        ValidatorCreated(T::AccountId, types::Validator<T::AccountId>),
-        ValidatorApproved(types::Validator<T::AccountId>),
+        ValidatorRequestCreated(T::AccountId, types::Validator<T::AccountId>),
+        ValidatorRequestApproved(types::Validator<T::AccountId>),
         ValidatorActivated(types::Validator<T::AccountId>),
         ValidatorRemoved(types::Validator<T::AccountId>),
         NodeValidatorChanged(T::AccountId),
@@ -105,11 +111,11 @@ pub mod pallet {
         /// Validator node account: the account that will validate on consensus layer
         /// Stash account: the "bank" account of the validator (where rewards should be sent to) the stash should be bonded to a validator
         /// Description: why someone wants to become a validator
-        /// Tf Connect ID: the threefold connect ID of the persion who wants to become a validator
+        /// Tf Connect ID: the threefold connect ID of the person who wants to become a validator
         /// Info: some public info about the validator (website link, blog link, ..)
         /// A user can only have 1 validator request at a time
         #[pallet::weight(100_000_000)]
-        pub fn create_validator(
+        pub fn create_validator_request(
             origin: OriginFor<T>,
             validator_node_account: T::AccountId,
             stash_account: T::AccountId,
@@ -137,7 +143,7 @@ pub mod pallet {
             // Create a validator request object
             <Validator<T>>::insert(&address, &request);
 
-            Self::deposit_event(Event::ValidatorCreated(address, request.clone()));
+            Self::deposit_event(Event::ValidatorRequestCreated(address, request.clone()));
 
             Ok(().into())
         }
@@ -261,7 +267,7 @@ pub mod pallet {
                 validator_account.clone(),
             )?;
 
-            Self::deposit_event(Event::ValidatorApproved(validator));
+            Self::deposit_event(Event::ValidatorRequestApproved(validator));
 
             Ok(().into())
         }
