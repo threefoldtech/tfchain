@@ -24,6 +24,8 @@ use tfchain_support::{
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
+use env_logger;
+
 //  NODE CONTRACT TESTS //
 // -------------------- //
 
@@ -2723,6 +2725,7 @@ pub fn create_twin(origin: AccountId) {
     let ip = get_twin_ip_input(b"::1");
     assert_ok!(TfgridModule::create_twin(Origin::signed(origin), ip));
 }
+        SmartContractModule::offchain_worker(System::block_number());
 
 fn create_farming_policies() {
     let name = "f1".as_bytes().to_vec();
