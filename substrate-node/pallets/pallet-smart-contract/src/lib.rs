@@ -15,7 +15,9 @@ use frame_support::{
     weights::Pays,
     BoundedVec,
 };
-use frame_system::{self as system, ensure_signed};
+use frame_system::{self as system, ensure_signed,
+    offchain::{AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer},
+};
 use pallet_tfgrid;
 use pallet_tfgrid::pallet::{InterfaceOf, PubConfigOf};
 use pallet_tfgrid::types as pallet_tfgrid_types;
@@ -26,14 +28,48 @@ use sp_runtime::{
 };
 use substrate_fixed::types::U64F64;
 use tfchain_support::{traits::ChangeNode, types::Node};
+use sp_core::crypto::KeyTypeId;
 
 pub use pallet::*;
+
+pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"demo");
 
 #[cfg(test)]
 mod mock;
 
 #[cfg(test)]
 mod tests;
+
+pub mod crypto {
+    use crate::KEY_TYPE;
+    use sp_core::sr25519::Signature as Sr25519Signature;
+    use sp_runtime::{
+        app_crypto::{app_crypto, sr25519},
+        traits::Verify,
+        MultiSignature, MultiSigner,
+    };
+    use sp_std::convert::TryFrom;
+
+    app_crypto!(sr25519, KEY_TYPE);
+
+    pub struct AuthId;
+
+    // implemented for ocw-runtime
+    impl frame_system::offchain::AppCrypto<MultiSigner, MultiSignature> for AuthId {
+        type RuntimeAppPublic = Public;
+        type GenericSignature = sp_core::sr25519::Signature;
+        type GenericPublic = sp_core::sr25519::Public;
+    }
+
+    // implemented for mock runtime in test
+    impl frame_system::offchain::AppCrypto<<Sr25519Signature as Verify>::Signer, Sr25519Signature>
+        for AuthId
+    {
+        type RuntimeAppPublic = Public;
+        type GenericSignature = sp_core::sr25519::Signature;
+        type GenericPublic = sp_core::sr25519::Public;
+    }
+}
 
 pub mod weights;
 
@@ -48,9 +84,9 @@ pub mod pallet {
     use super::*;
     use codec::FullCodec;
     use frame_support::pallet_prelude::*;
+    use frame_support::traits::Hooks;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
-        log,
         traits::{Currency, Get, LockIdentifier, LockableCurrency, OnUnbalanced},
     };
     use frame_system::pallet_prelude::*;
@@ -166,7 +202,7 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config:
-        frame_system::Config
+        CreateSignedTransaction<Call<Self>> + frame_system::Config
         + pallet_timestamp::Config
         + pallet_balances::Config
         + pallet_tfgrid::Config
@@ -182,6 +218,8 @@ pub mod pallet {
         type GracePeriod: Get<u64>;
         type WeightInfo: WeightInfo;
         type NodeChanged: ChangeNode<PubConfigOf<Self>, InterfaceOf<Self>>;
+        type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
+        type Call: From<Call<Self>>;
 
         #[pallet::constant]
         type MaxNameContractNameLength: Get<u32>;
@@ -297,6 +335,7 @@ pub mod pallet {
         NodeNotAvailableToDeploy,
         CannotUpdateContractInGraceState,
         NumOverflow,
+        OffchainSignedTxError,
         NameContractNameToShort,
         NameContractNameToLong,
         InvalidProviderConfiguration,
@@ -435,30 +474,70 @@ pub mod pallet {
             <T as Config>::RestrictedOrigin::ensure_origin(origin)?;
             Self::_approve_solution_provider(solution_provider_id, approve)
         }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        pub fn bill_contract_for_block(
+            origin: OriginFor<T>,
+            contract_id: u64,
+            block_number: T::BlockNumber
+        ) -> DispatchResultWithPostInfo {
+            //TODO needed?
+            let _account_id = ensure_signed(origin)?;
+            Self::_bill_contract_for_block(contract_id, block_number)
+        }
     }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_finalize(block: T::BlockNumber) {
-            match Self::_bill_contracts_at_block(block) {
-                Ok(_) => {
-                    log::info!(
-                        "types::NodeContract billed successfully at block: {:?}",
-                        block
-                    );
-                }
-                Err(err) => {
-                    log::error!(
-                        "types::NodeContract billed failed at block: {:?} with err {:?}",
-                        block,
-                        err
-                    );
+        fn offchain_worker(block_number: T::BlockNumber) {
+            //println!("Offchain Worker!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+
+            let current_block_u64: u64 = block_number.saturated_into::<u64>();
+            let contracts = ContractsToBillAt::<T>::get(current_block_u64);
+            let mut failed_contract_ids: Vec<u64> = Vec::new();
+
+            for contract_id in contracts {
+                match Self::offchain_signed_tx(block_number, contract_id) {
+                    Ok(_) => (),
+                    Err(_) => failed_contract_ids.push(contract_id),
                 }
             }
-            // clean storage map for billed contracts at block
-            let current_block_u64: u64 = block.saturated_into::<u64>();
-            ContractsToBillAt::<T>::remove(current_block_u64);
+
+            if failed_contract_ids.is_empty() {
+                log::info!(
+                    "types::NodeContract billed successfully at block: {:?}",
+                    block_number
+                );
+            } else {
+                log::info!(
+                    "types::NodeContract billed failed for some of the contracts in block: {:?}",
+                    block_number
+                );
+                //TODO add for next run
+            }
         }
+
+        // TODO remove
+        //fn on_finalize(block: T::BlockNumber) {
+        //     match Self::_bill_contracts_at_block(block) {
+        //         Ok(_) => {
+        //             log::info!(
+        //                 "types::NodeContract billed successfully at block: {:?}",
+        //                 block
+        //             );
+        //         }
+        //         Err(err) => {
+        //             log::info!(
+        //                 "types::NodeContract billed failed at block: {:?} with err {:?}",
+        //                 block,
+        //                 err
+        //             );
+        //         }
+        //     }
+        //     clean storage map for billed contracts at block
+        //     let current_block_u64: u64 = block.saturated_into::<u64>();
+        //     ContractsToBillAt::<T>::remove(current_block_u64);
+        // }
     }
 }
 
@@ -874,45 +953,42 @@ impl<T: Config> Pallet<T> {
         ContractBillingInformationByID::<T>::insert(report.contract_id, &contract_billing_info);
     }
 
-    pub fn _bill_contracts_at_block(block: T::BlockNumber) -> DispatchResultWithPostInfo {
-        let current_block_u64: u64 = block.saturated_into::<u64>();
-        let contracts = ContractsToBillAt::<T>::get(current_block_u64);
-        for contract_id in contracts {
+    pub fn _bill_contract_for_block(contract_id: u64, block: T::BlockNumber) -> DispatchResultWithPostInfo {
             if !Contracts::<T>::contains_key(contract_id) {
-                continue;
-            }
+            return Ok(().into());
+        }
             let mut contract =
                 Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
 
-            // Try to bill contract
-            match Self::bill_contract(&mut contract) {
-                Ok(_) => {
-                    log::info!(
-                        "billed contract with id {:?} at block {:?}",
-                        contract_id,
-                        block
-                    );
-                }
-                Err(err) => {
-                    log::error!(
-                        "error while billing contract with id {:?}: {:?}",
-                        contract_id,
-                        err
-                    );
-                    // If billing the contract failed, we should delete the contract and clean up storage
-                    Self::remove_contract(contract.contract_id);
-                    continue;
-                }
+        // Try to bill contract
+        match Self::bill_contract(&mut contract) {
+            Ok(_) => {
+                log::info!(
+                    "billed contract with id {:?} at block {:?}",
+                    contract_id,
+                    block
+                );
             }
+            Err(err) => {
+                log::error!(
+                    "error while billing contract with id {:?}: {:?}",
+                    contract_id,
+                    err
+                );
+                // If billing the contract failed, we should delete the contract and clean up storage
+                Self::remove_contract(contract.contract_id);
+                return Ok(().into());
+            }
+        }
 
-            // https://github.com/threefoldtech/tfchain/issues/264
-            // if a contract is still in storage and actively getting billed whilst it is in state delete
-            // remove all associated storage and continue
+        // https://github.com/threefoldtech/tfchain/issues/264
+        // if a contract is still in storage and actively getting billed whilst it is in state delete
+        // remove all associated storage and continue
             let ctr = Contracts::<T>::get(contract_id);
             if let Some(contract) = ctr {
                 if contract.contract_id != 0 && contract.is_state_delete() {
                     Self::remove_contract(contract.contract_id);
-                    continue;
+                    return Ok(().into());
                 }
 
                 // Reinsert into the next billing frequency
@@ -921,6 +997,72 @@ impl<T: Config> Pallet<T> {
         }
         Ok(().into())
     }
+
+    pub fn offchain_signed_tx(block_number: T::BlockNumber, contract_id: u64) -> Result<(), Error<T>> {
+        let signer = Signer::<T, T::AuthorityId>::any_account();    
+        let result = signer.send_signed_transaction(|_acct| Call::bill_contract_for_block {
+            contract_id,
+            block_number,
+        });
+
+        if let Some((acc, res)) = result {
+            if res.is_err() {
+                log::error!("failure: offchain_signed_tx: tx sent: {:?}", acc.id);
+                return Err(<Error<T>>::OffchainSignedTxError);
+            }
+            // Transaction is sent successfully
+            return Ok(());
+        }
+        // The case of `None`: no account is available for sending
+        log::error!("No local account available");
+        return Err(<Error<T>>::OffchainSignedTxError);
+    }
+
+    // TO BE REMOVED:
+    // pub fn _bill_contracts_at_block(block: T::BlockNumber) -> DispatchResultWithPostInfo {
+    //     let current_block_u64: u64 = block.saturated_into::<u64>();
+    //     let contracts = ContractsToBillAt::<T>::get(current_block_u64);
+    //     for contract_id in contracts {
+    //         let mut contract = Contracts::<T>::get(contract_id);
+    //         if contract.contract_id == 0 {
+    //             continue;
+    //         }
+
+    //         // Try to bill contract
+    //         match Self::bill_contract(&mut contract) {
+    //             Ok(_) => {
+    //                 log::info!(
+    //                     "billed contract with id {:?} at block {:?}",
+    //                     contract_id,
+    //                     block
+    //                 );
+    //             }
+    //             Err(err) => {
+    //                 log::info!(
+    //                     "error while billing contract with id {:?}: {:?}",
+    //                     contract_id,
+    //                     err
+    //                 );
+    //                 // If billing the contract failed, we should delete the contract and clean up storage
+    //                 Self::remove_contract(contract.contract_id);
+    //                 continue;
+    //             }
+    //         }
+
+    //         // https://github.com/threefoldtech/tfchain/issues/264
+    //         // if a contract is still in storage and actively getting billed whilst it is in state delete
+    //         // remove all associated storage and continue
+    //         let contract = Contracts::<T>::get(contract_id);
+    //         if contract.contract_id != 0 && contract.is_state_delete() {
+    //             Self::remove_contract(contract.contract_id);
+    //             continue;
+    //         }
+
+    //         // Reinsert into the next billing frequency
+    //         Self::_reinsert_contract_to_bill(contract.contract_id);
+    //     }
+    //     Ok(().into())
+    // }
 
     // Bills a contract (NodeContract or NameContract)
     // Calculates how much TFT is due by the user and distributes the rewards
