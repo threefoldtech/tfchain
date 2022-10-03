@@ -30,8 +30,11 @@ use sp_runtime::{
 };
 use substrate_fixed::types::U64F64;
 use tfchain_support::traits::ChangeNode;
+use sp_core::crypto::KeyTypeId;
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"smct");
+
+pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"demo");
 
 #[cfg(test)]
 mod mock;
@@ -490,9 +493,11 @@ pub mod pallet {
         pub fn bill_contract_for_block(
             origin: OriginFor<T>,
             contract_id: u64,
+            block_number: T::BlockNumber
         ) -> DispatchResultWithPostInfo {
+            //TODO needed?
             let _account_id = ensure_signed(origin)?;
-            Self::bill_contract(contract_id)
+            Self::_bill_contract_for_block(contract_id, block_number)
         }
     }
 
@@ -967,6 +972,72 @@ impl<T: Config> Pallet<T> {
         log::error!("No local account available");
         return Err(<Error<T>>::OffchainSignedTxError);
     }
+
+    pub fn offchain_signed_tx(block_number: T::BlockNumber, contract_id: u64) -> Result<(), Error<T>> {
+        let signer = Signer::<T, T::AuthorityId>::any_account();    
+        let result = signer.send_signed_transaction(|_acct| Call::bill_contract_for_block {
+            contract_id,
+            block_number,
+        });
+
+        if let Some((acc, res)) = result {
+            if res.is_err() {
+                log::error!("failure: offchain_signed_tx: tx sent: {:?}", acc.id);
+                return Err(<Error<T>>::OffchainSignedTxError);
+            }
+            // Transaction is sent successfully
+            return Ok(());
+        }
+        // The case of `None`: no account is available for sending
+        log::error!("No local account available");
+        return Err(<Error<T>>::OffchainSignedTxError);
+    }
+
+    // TO BE REMOVED:
+    // pub fn _bill_contracts_at_block(block: T::BlockNumber) -> DispatchResultWithPostInfo {
+    //     let current_block_u64: u64 = block.saturated_into::<u64>();
+    //     let contracts = ContractsToBillAt::<T>::get(current_block_u64);
+    //     for contract_id in contracts {
+    //         let mut contract = Contracts::<T>::get(contract_id);
+    //         if contract.contract_id == 0 {
+    //             continue;
+    //         }
+
+    //         // Try to bill contract
+    //         match Self::bill_contract(&mut contract) {
+    //             Ok(_) => {
+    //                 log::info!(
+    //                     "billed contract with id {:?} at block {:?}",
+    //                     contract_id,
+    //                     block
+    //                 );
+    //             }
+    //             Err(err) => {
+    //                 log::info!(
+    //                     "error while billing contract with id {:?}: {:?}",
+    //                     contract_id,
+    //                     err
+    //                 );
+    //                 // If billing the contract failed, we should delete the contract and clean up storage
+    //                 Self::remove_contract(contract.contract_id);
+    //                 continue;
+    //             }
+    //         }
+
+    //         // https://github.com/threefoldtech/tfchain/issues/264
+    //         // if a contract is still in storage and actively getting billed whilst it is in state delete
+    //         // remove all associated storage and continue
+    //         let contract = Contracts::<T>::get(contract_id);
+    //         if contract.contract_id != 0 && contract.is_state_delete() {
+    //             Self::remove_contract(contract.contract_id);
+    //             continue;
+    //         }
+
+    //         // Reinsert into the next billing frequency
+    //         Self::_reinsert_contract_to_bill(contract.contract_id);
+    //     }
+    //     Ok(().into())
+    // }
 
     // Bills a contract (NodeContract or NameContract)
     // Calculates how much TFT is due by the user and distributes the rewards
