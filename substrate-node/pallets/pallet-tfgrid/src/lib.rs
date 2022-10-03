@@ -15,7 +15,7 @@ use pallet_timestamp as timestamp;
 use sp_runtime::SaturatedConversion;
 use tfchain_support::{
     resources::Resources,
-    types::{Interface, Node, PublicConfig, PublicIP, IP},
+    types::{Interface, PublicConfig, PublicIP, IP},
 };
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
@@ -33,7 +33,6 @@ pub mod types;
 
 pub mod farm;
 pub mod geo;
-pub mod grid_migration;
 pub mod interface;
 pub mod node;
 pub mod pub_config;

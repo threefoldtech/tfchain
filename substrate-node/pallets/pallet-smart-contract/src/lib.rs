@@ -35,11 +35,10 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub mod weights;
-
 pub mod cost;
 pub mod name_contract;
 pub mod types;
+pub mod weights;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -158,7 +157,9 @@ pub mod pallet {
     pub type PalletVersion<T> = StorageValue<_, types::StorageVersion, ValueQuery>;
 
     #[pallet::type_value]
-    pub fn DefaultBillingFrequency<T: Config>() -> u64 { T::BillingFrequency::get() }
+    pub fn DefaultBillingFrequency<T: Config>() -> u64 {
+        T::BillingFrequency::get()
+    }
 
     #[pallet::storage]
     #[pallet::getter(fn billing_frequency)]
@@ -310,26 +311,26 @@ pub mod pallet {
     }
 
     #[pallet::genesis_config]
-	pub struct GenesisConfig {
+    pub struct GenesisConfig {
         pub billing_frequency: u64,
-	}
+    }
 
     // The default value for the genesis config type.
-	#[cfg(feature = "std")]
-	impl Default for GenesisConfig {
-		fn default() -> Self {
-			Self { 
+    #[cfg(feature = "std")]
+    impl Default for GenesisConfig {
+        fn default() -> Self {
+            Self {
                 billing_frequency: 600,
             }
-		}
-	}
+        }
+    }
 
-	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig {
-		fn build(&self) {
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig {
+        fn build(&self) {
             BillingFrequency::<T>::put(self.billing_frequency);
-		}
-	}
+        }
+    }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
