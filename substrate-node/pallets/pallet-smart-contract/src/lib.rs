@@ -495,7 +495,6 @@ pub mod pallet {
             contract_id: u64,
             block_number: T::BlockNumber
         ) -> DispatchResultWithPostInfo {
-            //TODO needed?
             let _account_id = ensure_signed(origin)?;
             Self::_bill_contract_for_block(contract_id, block_number)
         }
@@ -974,6 +973,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn offchain_signed_tx(block_number: T::BlockNumber, contract_id: u64) -> Result<(), Error<T>> {
+        log::info!("Billing contract {:?} from block {:?}", contract_id, block_number);
         let signer = Signer::<T, T::AuthorityId>::any_account();    
         let result = signer.send_signed_transaction(|_acct| Call::bill_contract_for_block {
             contract_id,
