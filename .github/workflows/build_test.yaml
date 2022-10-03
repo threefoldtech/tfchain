@@ -47,7 +47,7 @@ jobs:
         run: |
           echo "${{toJSON(github.event)}}"
           echo "${{toJSON(github.event.commits)}}"
-          python3.10 -m pip install robotframework cryptography substrate-interface
-          cd substrate-node/tests
-          robot -d _output_tests/ .
+      #    python3.10 -m pip install robotframework cryptography substrate-interface
+      #    cd substrate-node/tests
+      #    robot -d _output_tests/ .
 
