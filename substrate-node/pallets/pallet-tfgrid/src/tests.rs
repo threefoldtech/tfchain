@@ -651,33 +651,31 @@ fn update_node_moved_from_farm_list_works() {
         assert_eq!(nodes.len(), 1);
         assert_eq!(nodes[0], 1);
 
-        let country = "Belgium".as_bytes().to_vec();
-        let city = "Ghent".as_bytes().to_vec();
-
-        // random location
-        let location = Location {
-            longitude: "12.233213231".as_bytes().to_vec(),
-            latitude: "32.323112123".as_bytes().to_vec(),
-        };
-
-        let resources = Resources {
+        let resources = ResourcesInput {
             hru: 1024 * GIGABYTE,
             sru: 512 * GIGABYTE,
             cru: 8,
             mru: 16 * GIGABYTE,
         };
+
+        // random location
+        let location = LocationInput {
+            city: get_city_input(b"Ghent"),
+            country: get_country_input(b"Belgium"),
+            latitude: get_latitude_input(b"12.233213231"),
+            longitude: get_longitude_input(b"32.323112123"),
+        };
+
         assert_ok!(TfgridModule::update_node(
             Origin::signed(alice()),
             1,
             2,
             resources,
             location,
-            country,
-            city,
             Vec::new().try_into().unwrap(),
             true,
             true,
-            "some_serial".as_bytes().to_vec(),
+            get_serial_number_input(b"some_serial"),
         ));
 
         // should be removed from farm 1 nodes
@@ -2040,26 +2038,26 @@ fn create_farm() {
     assert_ok!(TfgridModule::create_farm(
         Origin::signed(alice()),
         farm_name,
-        pub_ips.clone()
+        pub_ips,
     ));
 
     create_farming_policies()
 }
 
 fn create_farm2() {
-    let farm_name = get_farm_name(b"test_farm2");
+    let farm_name = get_farm_name_input(b"test_farm2");
 
     let mut pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
 
-    let ip = get_public_ip_ip(&"185.206.122.33/24".as_bytes().to_vec()).0;
-    let gw = get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec()).0;
+    let ip = get_public_ip_ip_input(b"185.206.122.33/24");
+    let gw = get_public_ip_gw_input(b"185.206.122.1");
 
     pub_ips.try_push(PublicIpInput { ip, gw }).unwrap();
 
     assert_ok!(TfgridModule::create_farm(
         Origin::signed(alice()),
-        farm_name.0.clone(),
-        pub_ips.clone()
+        farm_name,
+        pub_ips,
     ));
 
     create_farming_policies()
