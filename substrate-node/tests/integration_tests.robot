@@ -441,7 +441,7 @@ Test Billing
 
     # Balance should have decreased
     ${balance_alice_after} =    Balance Data    who=Alice
-    ${balance_bob_after} =    Balance Data    who=Bob port=${9946}
+    ${balance_bob_after} =    Balance Data    who=Bob    port=${9946}
     Ensure Account Balance Decreased    ${balance_bob}    ${balance_bob_after}
 
     Tear Down Multi Node Network
