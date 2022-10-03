@@ -2,7 +2,7 @@ use super::Event as SmartContractEvent;
 use crate::{mock::Event as MockEvent, mock::*, Error};
 use frame_support::{
     assert_noop, assert_ok, bounded_vec,
-    traits::{LockableCurrency, OnFinalize, OnInitialize, WithdrawReasons},
+    traits::{LockableCurrency, OnFinalize, OnInitialize, WithdrawReasons, Hooks},
     BoundedVec,
 };
 use frame_system::{EventRecord, Phase, RawOrigin};
@@ -17,6 +17,8 @@ use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::types::{FarmCertification, Location, NodeCertification, PublicIP, Resources};
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
+
+use env_logger;
 
 //  NODE CONTRACT TESTS //
 // -------------------- //
@@ -1380,6 +1382,7 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
 #[test]
 fn test_name_contract_billing() {
     new_test_ext().execute_with(|| {
+        env_logger::init();
         prepare_farm_and_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
@@ -2510,6 +2513,7 @@ fn run_to_block(n: u64) {
         System::set_block_number(System::block_number() + 1);
         System::on_initialize(System::block_number());
         SmartContractModule::on_initialize(System::block_number());
+        SmartContractModule::offchain_worker(System::block_number());
     }
 }
 
