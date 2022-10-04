@@ -18,8 +18,7 @@ jobs:
 
       - name: temp
         run: |
-          echo ${{ toJSON(github.event.review) }}
-          echo ${{ toJSON(github.event.review.state) }}
+          echo ${{ toJSON(github.event) }}
 
       - name: Cache build
         uses: actions/cache@v3
