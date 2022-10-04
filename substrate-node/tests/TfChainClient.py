@@ -38,8 +38,12 @@ UNIT_TYPES = [UNIT_BYTES, UNIT_KILOBYTES,
 
 class TfChainClient:
     def __init__(self):
+        self._setup()
+
+    def _setup(self):
         self._wait_for_finalization = False
         self._wait_for_inclusion = True
+        self._pallets_offchain_workers = ["tft!", "smct"]
         self._create_keys()
 
     def _connect_to_server(self, url: str):
@@ -56,19 +60,17 @@ class TfChainClient:
         self._predefined_keys["Eve"] = Keypair.create_from_uri("//Eve")
         self._predefined_keys["Ferdie"] = Keypair.create_from_uri("//Ferdie")
 
-    def _setup_predefined_account(self, name: str, port: int = DEFAULT_PORT, create_twin: bool = False):
+    def _setup_offchain_workers(self, name: str, port: int = DEFAULT_PORT, create_twin: bool = False):
         logging.info("Setting up %s (%s)", name,
                      self._predefined_keys[name].ss58_address)
 
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
-        insert_key_params = [
-            "tft!", f"//{name}", self._predefined_keys[name].public_key.hex()]
-        substrate.rpc_request("author_insertKey", insert_key_params)
-
-        insert_key_params = [
-            "smct", f"//{name}", self._predefined_keys[name].public_key.hex()]
-        substrate.rpc_request("author_insertKey", insert_key_params)
+        if len(self._pallets_offchain_workers):
+            pallet = self._pallets_offchain_workers.pop()
+            insert_key_params = [
+                pallet, f"//{name}", self._predefined_keys[name].public_key.hex()]
+            substrate.rpc_request("author_insertKey", insert_key_params)
 
         if create_twin:
             self.user_accept_tc(port=port, who=name)
@@ -123,27 +125,27 @@ class TfChainClient:
                            for event in response.triggered_events], expected_events)
 
     def setup_alice(self, create_twin: bool = False, port: int = DEFAULT_PORT):
-        self._setup_predefined_account(
+        self._setup_offchain_workers(
             "Alice", port=port, create_twin=create_twin)
 
     def setup_bob(self, create_twin: bool = False, port: int = 9946):
-        self._setup_predefined_account(
+        self._setup_offchain_workers(
             "Bob", port=port, create_twin=create_twin)
 
     def setup_charlie(self, create_twin: bool = False, port: int = 9947):
-        self._setup_predefined_account(
+        self._setup_offchain_workers(
             "Charlie", port=port, create_twin=create_twin)
 
     def setup_dave(self, create_twin: bool = False, port: int = 9948):
-        self._setup_predefined_account(
+        self._setup_offchain_workers(
             "Dave", port=port, create_twin=create_twin)
 
     def setup_eve(self, create_twin: bool = False, port: int = 9949):
-        self._setup_predefined_account(
+        self._setup_offchain_workers(
             "Eve", port=port, create_twin=create_twin)
 
     def setup_ferdie(self, create_twin: bool = False, port: int = 9950):
-        self._setup_predefined_account(
+        self._setup_offchain_workers(
             "Ferdie", port=port, create_twin=create_twin)
 
     def user_accept_tc(self, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
