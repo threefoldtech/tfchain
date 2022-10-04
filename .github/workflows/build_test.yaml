@@ -16,10 +16,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: temp
-        run: |
-          echo ${{ toJSON(github) }}
-
       - name: Cache build
         uses: actions/cache@v3
         timeout-minutes: 6
@@ -34,6 +30,9 @@ jobs:
           key: ${{ runner.os }}-tfchain-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-tfchain-cargo-
 
+      - name: temp
+        run: |
+          git log -n1
       - name: Build
         run: |
           cd substrate-node
@@ -46,8 +45,6 @@ jobs:
           $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
           cd pallets
           $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
-
-
 
       # This will only be execute when merging a PR or when the review status is set to approved
       - name: Integration tests
