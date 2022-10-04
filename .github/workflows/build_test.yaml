@@ -16,6 +16,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: temp
+        run: |
+          echo ${{ toJSON(github.event.review) }}
+          echo ${{ toJSON(github.event.review.state) }}
+
       - name: Cache build
         uses: actions/cache@v3
         timeout-minutes: 6
@@ -43,8 +48,7 @@ jobs:
           cd pallets
           $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
 
-          echo github.event.review
-          echo github.event.review.state
+
 
       # This will only be execute when merging a PR or when the review status is set to approved
       - name: Integration tests
