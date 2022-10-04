@@ -109,15 +109,6 @@ pub struct IP<IpAddr, Gw> {
     pub gw: Gw,
 }
 
-// Store Location long and lat as string
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct Location {
-    pub city: Vec<u8>,
-    pub country: Vec<u8>,
-    pub latitude: Vec<u8>,
-    pub longitude: Vec<u8>,
-}
-
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, TypeInfo, Copy)]
 pub enum NodeCertification {
     Diy,
