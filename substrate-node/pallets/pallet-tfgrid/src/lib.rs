@@ -969,6 +969,7 @@ pub mod pallet {
             id = id + 1;
 
             let created = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+            let power_target = true;
 
             let mut new_node = Node {
                 version: TFGRID_NODE_VERSION,
@@ -979,6 +980,7 @@ pub mod pallet {
                 location,
                 country,
                 city,
+                power_target,
                 public_config: None,
                 created,
                 farming_policy_id: 0,

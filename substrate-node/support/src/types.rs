@@ -78,6 +78,7 @@ pub struct Node<PubConfig, If> {
     pub location: Location,
     pub country: Vec<u8>,
     pub city: Vec<u8>,
+    pub power_target: bool,
     // optional public config
     pub public_config: Option<PubConfig>,
     pub created: u64,
