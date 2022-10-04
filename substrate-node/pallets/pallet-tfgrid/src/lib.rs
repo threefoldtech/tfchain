@@ -155,13 +155,15 @@ pub mod pallet {
     pub type InterfaceOf<T> = Interface<InterfaceNameOf<T>, InterfaceMacOf<T>, InterfaceIpsOf<T>>;
 
     // Input type for location
-    pub type CityInput = BoundedVec<u8, ConstU32<{ node::MAX_CITY_NAME_LENGTH }>>;
-    pub type CountryInput = BoundedVec<u8, ConstU32<{ node::MAX_COUNTRY_NAME_LENGTH }>>;
+    pub type CityNameInput = BoundedVec<u8, ConstU32<{ node::MAX_CITY_NAME_LENGTH }>>;
+    pub type CountryNameInput = BoundedVec<u8, ConstU32<{ node::MAX_COUNTRY_NAME_LENGTH }>>;
     pub type LatitudeInput = BoundedVec<u8, ConstU32<{ node::MAX_LATITUDE_LENGTH }>>;
     pub type LongitudeInput = BoundedVec<u8, ConstU32<{ node::MAX_LONGITUDE_LENGTH }>>;
     pub type LocationInput =
-        types::LocationInput<CityInput, CountryInput, LatitudeInput, LongitudeInput>;
+        types::LocationInput<CityNameInput, CountryNameInput, LatitudeInput, LongitudeInput>;
     // Concrete type for location
+    pub type CityNameOf<T> = <T as Config>::CityName;
+    pub type CountryNameOf<T> = <T as Config>::CountryName;
     pub type LocationOf<T> = <T as Config>::Location;
 
     // Input type for serial number
@@ -181,6 +183,9 @@ pub mod pallet {
     // Concrete type for node
     pub type TfgridNode<T> = Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>;
 
+    // Concrete type for entity
+    pub type TfgridEntity<T> = types::Entity<AccountIdOf<T>, CityNameOf<T>, CountryNameOf<T>>;
+
     #[pallet::storage]
     #[pallet::getter(fn nodes)]
     pub type Nodes<T> = StorageMap<_, Blake2_128Concat, u32, TfgridNode<T>, OptionQuery>;
@@ -192,7 +197,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn entities)]
     pub type Entities<T: Config> =
-        StorageMap<_, Blake2_128Concat, u32, types::Entity<T::AccountId>, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, u32, TfgridEntity<T>, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn entities_by_pubkey_id)]
@@ -426,6 +431,24 @@ pub mod pallet {
             + TryFrom<InterfaceIpInput, Error = Error<Self>>
             + MaxEncodedLen;
 
+        /// The type of a city name.
+        type CityName: FullCodec
+            + Debug
+            + PartialEq
+            + Clone
+            + TypeInfo
+            + TryFrom<CityNameInput, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        /// The type of a country name.
+        type CountryName: FullCodec
+            + Debug
+            + PartialEq
+            + Clone
+            + TypeInfo
+            + TryFrom<CountryNameInput, Error = Error<Self>>
+            + MaxEncodedLen;
+
         /// The type of a location.
         type Location: FullCodec
             + Debug
@@ -470,8 +493,8 @@ pub mod pallet {
         NodeUptimeReported(u32, u64, u64),
         NodePublicConfigStored(u32, Option<pallet::PubConfigOf<T>>),
 
-        EntityStored(types::Entity<T::AccountId>),
-        EntityUpdated(types::Entity<T::AccountId>),
+        EntityStored(TfgridEntity<T>),
+        EntityUpdated(TfgridEntity<T>),
         EntityDeleted(u32),
 
         TwinStored(types::Twin<T::TwinIp, T::AccountId>),
@@ -1313,8 +1336,8 @@ pub mod pallet {
             origin: OriginFor<T>,
             target: T::AccountId,
             name: Vec<u8>,
-            country: Vec<u8>,
-            city: Vec<u8>,
+            country: CountryNameInput,
+            city: CityNameInput,
             signature: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             let _ = ensure_signed(origin)?;
@@ -1346,12 +1369,12 @@ pub mod pallet {
             let mut id = EntityID::<T>::get();
             id = id + 1;
 
-            let entity = types::Entity::<T::AccountId> {
+            let entity = TfgridEntity::<T> {
                 version: TFGRID_ENTITY_VERSION,
                 id,
                 name: name.clone(),
-                country,
-                city,
+                country: Self::get_country_name(country)?,
+                city: Self::get_city_name(city)?,
                 account_id: target.clone(),
             };
 
@@ -1369,8 +1392,8 @@ pub mod pallet {
         pub fn update_entity(
             origin: OriginFor<T>,
             name: Vec<u8>,
-            country: Vec<u8>,
-            city: Vec<u8>,
+            country: CountryNameInput,
+            city: CityNameInput,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1398,8 +1421,8 @@ pub mod pallet {
             EntityIdByName::<T>::remove(&stored_entity.name);
 
             stored_entity.name = name.clone();
-            stored_entity.country = country;
-            stored_entity.city = city;
+            stored_entity.country = Self::get_country_name(country)?;
+            stored_entity.city = Self::get_city_name(city)?;
 
             // overwrite entity
             Entities::<T>::insert(&stored_entity_id, &stored_entity);
@@ -2397,6 +2420,18 @@ impl<T: Config> Pallet<T> {
         }
 
         Ok(parsed_interfaces)
+    }
+
+    pub fn get_city_name(city: CityNameInput) -> Result<CityNameOf<T>, DispatchErrorWithPostInfo> {
+        let parsed_city = <T as Config>::CityName::try_from(city)?;
+        Ok(parsed_city)
+    }
+
+    pub fn get_country_name(
+        country: CountryNameInput,
+    ) -> Result<CountryNameOf<T>, DispatchErrorWithPostInfo> {
+        let parsed_country = <T as Config>::CountryName::try_from(country)?;
+        Ok(parsed_country)
     }
 
     pub fn get_location(

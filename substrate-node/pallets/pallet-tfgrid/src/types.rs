@@ -25,13 +25,13 @@ impl Default for StorageVersion {
 }
 
 #[derive(Encode, Decode, Debug, Default, PartialEq, Eq, Clone, TypeInfo)]
-pub struct Entity<AccountId> {
+pub struct Entity<AccountId, City, Country> {
     pub version: u32,
     pub id: u32,
     pub name: Vec<u8>,
     pub account_id: AccountId,
-    pub country: Vec<u8>,
-    pub city: Vec<u8>,
+    pub country: Country,
+    pub city: City,
 }
 
 //digital twin

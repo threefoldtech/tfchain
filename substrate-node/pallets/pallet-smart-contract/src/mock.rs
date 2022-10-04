@@ -9,6 +9,7 @@ use frame_support::{
     BoundedVec,
 };
 use frame_system::EnsureRoot;
+use pallet_tfgrid::node::{CityName, CountryName};
 use pallet_tfgrid::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
@@ -19,7 +20,9 @@ use pallet_tfgrid::{
     twin::TwinIp,
     DocumentHashInput, DocumentLinkInput, PublicIpGatewayInput, PublicIpIpInput, TwinIpInput,
 };
-use pallet_tfgrid::{CityInput, CountryInput, LatitudeInput, LongitudeInput, SerialNumberInput};
+use pallet_tfgrid::{
+    CityNameInput, CountryNameInput, LatitudeInput, LongitudeInput, SerialNumberInput,
+};
 use sp_core::{crypto::Ss58Codec, sr25519, Pair, Public, H256};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::MultiSignature;
@@ -148,6 +151,8 @@ pub(crate) type TestInterfaceName = InterfaceName<TestRuntime>;
 pub(crate) type TestInterfaceMac = InterfaceMac<TestRuntime>;
 pub(crate) type TestInterfaceIp = InterfaceIp<TestRuntime>;
 
+pub(crate) type TestCountryName = CountryName<TestRuntime>;
+pub(crate) type TestCityName = CityName<TestRuntime>;
 pub(crate) type TestLocation = Location<TestRuntime>;
 pub(crate) type TestSerialNumber = SerialNumber<TestRuntime>;
 
@@ -173,6 +178,8 @@ impl pallet_tfgrid::Config for TestRuntime {
     type InterfaceMac = TestInterfaceMac;
     type InterfaceIP = TestInterfaceIp;
     type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
+    type CountryName = TestCountryName;
+    type CityName = TestCityName;
     type Location = TestLocation;
     type SerialNumber = TestSerialNumber;
 }
@@ -256,11 +263,11 @@ pub(crate) fn get_public_ip_gw(public_ip_gw_input: &[u8]) -> TestGatewayIP {
     TestGatewayIP::try_from(input).expect("Invalid public ip (gw).")
 }
 
-pub(crate) fn get_city_input(city_input: &[u8]) -> CityInput {
+pub(crate) fn get_city_name_input(city_input: &[u8]) -> CityNameInput {
     BoundedVec::try_from(city_input.to_vec()).expect("Invalid city name input.")
 }
 
-pub(crate) fn get_country_input(country_input: &[u8]) -> CountryInput {
+pub(crate) fn get_country_name_input(country_input: &[u8]) -> CountryNameInput {
     BoundedVec::try_from(country_input.to_vec()).expect("Invalid country name input.")
 }
 

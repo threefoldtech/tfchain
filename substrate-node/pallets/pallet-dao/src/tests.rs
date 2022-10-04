@@ -795,8 +795,8 @@ fn prepare_node(account_id: u64, farm_id: u32) {
 
     // random location
     let location = LocationInput {
-        city: get_city_input(b"Ghent"),
-        country: get_country_input(b"Belgium"),
+        city: get_city_name_input(b"Ghent"),
+        country: get_country_name_input(b"Belgium"),
         latitude: get_latitude_input(b"12.233213231"),
         longitude: get_longitude_input(b"32.323112123"),
     };
@@ -823,8 +823,8 @@ fn prepare_big_node(account_id: u64, farm_id: u32) {
 
     // random location
     let location = LocationInput {
-        city: get_city_input(b"Ghent"),
-        country: get_country_input(b"Belgium"),
+        city: get_city_name_input(b"Ghent"),
+        country: get_country_name_input(b"Belgium"),
         latitude: get_latitude_input(b"12.233213231"),
         longitude: get_longitude_input(b"32.323112123"),
     };

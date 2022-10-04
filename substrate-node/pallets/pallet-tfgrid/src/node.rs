@@ -1,4 +1,6 @@
-use crate::{geo, Config, Error, LocationInput, SerialNumberInput};
+use crate::{
+    geo, CityNameInput, Config, CountryNameInput, Error, LocationInput, SerialNumberInput,
+};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
@@ -6,29 +8,139 @@ use frame_support::{
 use scale_info::TypeInfo;
 use sp_std::marker::PhantomData;
 
-pub const MIN_LATITUDE_LENGTH: u32 = 1;
-pub const MAX_LATITUDE_LENGTH: u32 = 50;
+// 1: Y
+pub const MIN_CITY_NAME_LENGTH: u32 = 1;
+// 85: Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch
+pub const MAX_CITY_NAME_LENGTH: u32 = 58;
 
-pub const MIN_LONGITUDE_LENGTH: u32 = 1;
-pub const MAX_LONGITUDE_LENGTH: u32 = 50;
+/// A city name in ASCI Characters.
+#[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(T))]
+#[codec(mel_bound())]
+pub struct CityName<T: Config>(
+    pub BoundedVec<u8, ConstU32<MAX_CITY_NAME_LENGTH>>,
+    PhantomData<(T, ConstU32<MAX_CITY_NAME_LENGTH>)>,
+);
+
+impl<T: Config> TryFrom<CityNameInput> for CityName<T> {
+    type Error = Error<T>;
+
+    /// Fallible initialization from a provided byte vector if it is below the
+    /// minimum or exceeds the maximum allowed length or contains invalid ASCII
+    /// characters.
+    fn try_from(value: CityNameInput) -> Result<Self, Self::Error> {
+        ensure!(
+            value.len() >= MIN_CITY_NAME_LENGTH.saturated_into(),
+            Self::Error::CityNameTooShort
+        );
+        ensure!(
+            value.len() <= MAX_CITY_NAME_LENGTH.saturated_into(),
+            Self::Error::CityNameTooLong
+        );
+        let city_str = core::str::from_utf8(&value);
+        ensure!(
+            validate_city_name(&value) && city_str.is_ok(),
+            Self::Error::InvalidCityName
+        );
+
+        Ok(Self(value, PhantomData))
+    }
+}
+
+// FIXME: did not find a way to automatically implement this.
+impl<T: Config> PartialEq for CityName<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+// FIXME: did not find a way to automatically implement this.
+impl<T: Config> Clone for CityName<T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone(), self.1)
+    }
+}
+
+fn validate_city_name(input: &[u8]) -> bool {
+    // TODO: find better alternative
+    input
+        .iter()
+        .all(|c| c.is_ascii_alphabetic() || c.is_ascii_whitespace() || matches!(c, b'-'))
+}
 
 // 4: Cuba, Fiji, Iran, ..
 pub const MIN_COUNTRY_NAME_LENGTH: u32 = 4;
 // 56: The United Kingdom of Great Britain and Northern Ireland
 pub const MAX_COUNTRY_NAME_LENGTH: u32 = 56;
 
-// 1: Y
-pub const MIN_CITY_NAME_LENGTH: u32 = 1;
-// 85: Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch
-pub const MAX_CITY_NAME_LENGTH: u32 = 58;
+/// A city name in ASCI Characters.
+#[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(T))]
+#[codec(mel_bound())]
+pub struct CountryName<T: Config>(
+    pub BoundedVec<u8, ConstU32<MAX_COUNTRY_NAME_LENGTH>>,
+    PhantomData<(T, ConstU32<MAX_COUNTRY_NAME_LENGTH>)>,
+);
+
+impl<T: Config> TryFrom<CountryNameInput> for CountryName<T> {
+    type Error = Error<T>;
+
+    /// Fallible initialization from a provided byte vector if it is below the
+    /// minimum or exceeds the maximum allowed length or contains invalid ASCII
+    /// characters.
+    fn try_from(value: CountryNameInput) -> Result<Self, Self::Error> {
+        ensure!(
+            value.len() >= MIN_COUNTRY_NAME_LENGTH.saturated_into(),
+            Self::Error::CountryNameTooShort
+        );
+        ensure!(
+            value.len() <= MAX_COUNTRY_NAME_LENGTH.saturated_into(),
+            Self::Error::CountryNameTooLong
+        );
+        let country_str = core::str::from_utf8(&value);
+        ensure!(
+            validate_country_name(&value) && country_str.is_ok(),
+            Self::Error::InvalidCountryName
+        );
+
+        Ok(Self(value, PhantomData))
+    }
+}
+
+// FIXME: did not find a way to automatically implement this.
+impl<T: Config> PartialEq for CountryName<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+// FIXME: did not find a way to automatically implement this.
+impl<T: Config> Clone for CountryName<T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone(), self.1)
+    }
+}
+
+fn validate_country_name(input: &[u8]) -> bool {
+    // TODO: find better alternative
+    input
+        .iter()
+        .all(|c| c.is_ascii_alphabetic() || c.is_ascii_whitespace() || matches!(c, b'-'))
+}
+
+pub const MIN_LATITUDE_LENGTH: u32 = 1;
+pub const MAX_LATITUDE_LENGTH: u32 = 50;
+
+pub const MIN_LONGITUDE_LENGTH: u32 = 1;
+pub const MAX_LONGITUDE_LENGTH: u32 = 50;
 
 /// A location that countains city, country and lat/long informations in ASCI Characters.
 #[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct Location<T: Config> {
-    pub city: BoundedVec<u8, ConstU32<MAX_CITY_NAME_LENGTH>>,
-    pub country: BoundedVec<u8, ConstU32<MAX_COUNTRY_NAME_LENGTH>>,
+    pub city: CityName<T>,
+    pub country: CountryName<T>,
     pub latitude: BoundedVec<u8, ConstU32<MAX_LATITUDE_LENGTH>>,
     pub longitude: BoundedVec<u8, ConstU32<MAX_LONGITUDE_LENGTH>>,
     _marker: PhantomData<T>,
@@ -45,43 +157,20 @@ impl<T: Config> TryFrom<LocationInput> for Location<T> {
     /// converted to float and is inside [-90; 90] range (for latitude)
     /// or inside [-180; 180] range (for longitude)
     fn try_from(value: LocationInput) -> Result<Self, Self::Error> {
-        // 1. city name
-        ensure!(
-            value.city.len() >= MIN_CITY_NAME_LENGTH.saturated_into(),
-            Self::Error::CityNameTooShort
-        );
-        ensure!(
-            value.city.len() <= MAX_CITY_NAME_LENGTH.saturated_into(),
-            Self::Error::CityNameTooLong
-        );
-        let city_str = core::str::from_utf8(&value.city);
-        ensure!(
-            validate_city_name(&value.city) && city_str.is_ok(),
-            Self::Error::InvalidCityName
-        );
-
-        // 2. country name
-        ensure!(
-            value.country.len() >= MIN_COUNTRY_NAME_LENGTH.saturated_into(),
-            Self::Error::CountryNameTooShort
-        );
-        ensure!(
-            value.country.len() <= MAX_COUNTRY_NAME_LENGTH.saturated_into(),
-            Self::Error::CountryNameTooLong
-        );
-        let country_str = core::str::from_utf8(&value.country);
-        ensure!(
-            validate_country_name(&value.country) && country_str.is_ok(),
-            Self::Error::InvalidCountryName
-        );
-
         // Check if [country][city] pair exists in data base
+        let city = CityName::<T>::try_from(value.city)?;
+        let country = CountryName::<T>::try_from(value.country)?;
+
+        let city_str = city.0.to_vec();
+        let city_str = core::str::from_utf8(&city_str).unwrap();
+        let country_str = country.0.to_vec();
+        let country_str = core::str::from_utf8(&country_str).unwrap();
         ensure!(
-            geo::validate_country_city(country_str.unwrap(), city_str.unwrap()),
+            geo::validate_country_city(country_str, city_str),
             Self::Error::InvalidCountryCityPair
         );
 
-        // 3. latitude
+        // latitude
         ensure!(
             value.latitude.len() >= MIN_LATITUDE_LENGTH.saturated_into(),
             Self::Error::LatitudeInputTooShort
@@ -95,7 +184,7 @@ impl<T: Config> TryFrom<LocationInput> for Location<T> {
             Self::Error::InvalidLatitudeInput
         );
 
-        // 4. longitude
+        // longitude
         ensure!(
             value.longitude.len() >= MIN_LONGITUDE_LENGTH.saturated_into(),
             Self::Error::LongitudeInputTooShort
@@ -110,8 +199,8 @@ impl<T: Config> TryFrom<LocationInput> for Location<T> {
         );
 
         Ok(Self {
-            city: value.city,
-            country: value.country,
+            city,
+            country,
             latitude: value.latitude,
             longitude: value.longitude,
             _marker: PhantomData,
@@ -140,20 +229,6 @@ impl<T: Config> Clone for Location<T> {
             _marker: PhantomData,
         }
     }
-}
-
-fn validate_city_name(input: &[u8]) -> bool {
-    // TODO: find better alternative
-    input
-        .iter()
-        .all(|c| c.is_ascii_alphabetic() || c.is_ascii_whitespace() || matches!(c, b'-'))
-}
-
-fn validate_country_name(input: &[u8]) -> bool {
-    // TODO: find better alternative
-    input
-        .iter()
-        .all(|c| c.is_ascii_alphabetic() || c.is_ascii_whitespace() || matches!(c, b'-'))
 }
 
 fn validate_latitude_input(input: &[u8]) -> bool {
@@ -212,6 +287,7 @@ impl<T: Config> TryFrom<SerialNumberInput> for SerialNumber<T> {
             validate_serial_number(&value),
             Self::Error::InvalidSerialNumber
         );
+
         Ok(Self(value, PhantomData))
     }
 }

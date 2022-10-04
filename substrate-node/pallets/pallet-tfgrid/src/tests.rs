@@ -33,16 +33,14 @@ fn test_update_entity_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
 
-        let country = "Belgium".as_bytes().to_vec();
-        let city = "Ghent".as_bytes().to_vec();
         // Change name to barfoo
-        let name = "barfoo".as_bytes().to_vec();
+        let name = b"barfoo".to_vec();
 
         assert_ok!(TfgridModule::update_entity(
             Origin::signed(test_ed25519()),
             name,
-            country,
-            city
+            get_country_name_input(b"Belgium"),
+            get_city_name_input(b"Ghent"),
         ));
     });
 }
@@ -52,13 +50,16 @@ fn test_update_entity_fails_if_signed_by_someone_else() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
 
-        let country = "Belgium".as_bytes().to_vec();
-        let city = "Ghent".as_bytes().to_vec();
         // Change name to barfoo
-        let name = "barfoo".as_bytes().to_vec();
+        let name = b"barfoo".to_vec();
 
         assert_noop!(
-            TfgridModule::update_entity(Origin::signed(bob()), name, country, city),
+            TfgridModule::update_entity(
+                Origin::signed(bob()),
+                name,
+                get_country_name_input(b"Belgium"),
+                get_city_name_input(b"Ghent"),
+            ),
             Error::<TestRuntime>::EntityNotExists
         );
     });
@@ -69,10 +70,11 @@ fn test_create_entity_double_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
 
-        let name = "foobar".as_bytes().to_vec();
-        let country = "Belgium".as_bytes().to_vec();
-        let city = "Ghent".as_bytes().to_vec();
-        let signature = sign_create_entity(name.clone(), country.clone(), city.clone());
+        let name = b"foobar".to_vec();
+        let country = get_country_name_input(b"Belgium");
+        let city = get_city_name_input(b"Ghent");
+
+        let signature = sign_create_entity(name.clone(), country.to_vec(), city.to_vec());
 
         assert_noop!(
             TfgridModule::create_entity(
@@ -81,7 +83,7 @@ fn test_create_entity_double_fails() {
                 name,
                 country,
                 city,
-                signature
+                signature,
             ),
             Error::<TestRuntime>::EntityWithNameExists
         );
@@ -93,11 +95,11 @@ fn test_create_entity_double_fails_with_same_pubkey() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
 
-        let name = "barfoo".as_bytes().to_vec();
-        let country = "Belgium".as_bytes().to_vec();
-        let city = "Ghent".as_bytes().to_vec();
+        let name = b"barfoo".to_vec();
+        let country = get_country_name_input(b"Belgium");
+        let city = get_city_name_input(b"Ghent");
 
-        let signature = sign_create_entity(name.clone(), country.clone(), city.clone());
+        let signature = sign_create_entity(name.clone(), country.to_vec(), city.to_vec());
 
         assert_noop!(
             TfgridModule::create_entity(
@@ -106,7 +108,7 @@ fn test_create_entity_double_fails_with_same_pubkey() {
                 name,
                 country,
                 city,
-                signature
+                signature,
             ),
             Error::<TestRuntime>::EntityWithPubkeyExists
         );
@@ -660,8 +662,8 @@ fn update_node_moved_from_farm_list_works() {
 
         // random location
         let location = LocationInput {
-            city: get_city_input(b"Ghent"),
-            country: get_country_input(b"Belgium"),
+            city: get_city_name_input(b"Ghent"),
+            country: get_country_name_input(b"Belgium"),
             latitude: get_latitude_input(b"12.233213231"),
             longitude: get_longitude_input(b"32.323112123"),
         };
@@ -716,8 +718,8 @@ fn update_certified_node_resources_loses_certification_works() {
         node_resources.cru = 2;
 
         let node_location = LocationInput {
-            city: node.location.city,
-            country: node.location.country,
+            city: node.location.city.0,
+            country: node.location.country.0,
             latitude: node.location.latitude,
             longitude: node.location.longitude,
         };
@@ -772,8 +774,8 @@ fn update_certified_node_same_resources_keeps_certification_works() {
         let node_resources: ResourcesInput = node.resources;
 
         let node_location = LocationInput {
-            city: node.location.city,
-            country: node.location.country,
+            city: node.location.city.0,
+            country: node.location.country.0,
             latitude: node.location.latitude,
             longitude: node.location.longitude,
         };
@@ -812,8 +814,8 @@ fn create_node_with_interfaces_works() {
 
         // random location
         let location = LocationInput {
-            city: get_city_input(b"Ghent"),
-            country: get_country_input(b"Belgium"),
+            city: get_city_name_input(b"Ghent"),
+            country: get_country_name_input(b"Belgium"),
             latitude: get_latitude_input(b"12.233213231"),
             longitude: get_longitude_input(b"32.323112123"),
         };
@@ -1214,8 +1216,8 @@ fn create_node_with_same_pubkey_fails() {
 
         // random location
         let location = LocationInput {
-            city: get_city_input(b"Ghent"),
-            country: get_country_input(b"Belgium"),
+            city: get_city_name_input(b"Ghent"),
+            country: get_country_name_input(b"Belgium"),
             latitude: get_latitude_input(b"12.233213231"),
             longitude: get_longitude_input(b"32.323112123"),
         };
@@ -1984,34 +1986,34 @@ fn test_validate_country_city_works() {
 }
 
 fn create_entity() {
-    let name = "foobar".as_bytes().to_vec();
-    let country = "Belgium".as_bytes().to_vec();
-    let city = "Ghent".as_bytes().to_vec();
+    let name = b"foobar".to_vec();
+    let country = get_country_name_input(b"Belgium");
+    let city = get_city_name_input(b"Ghent");
 
-    let signature = sign_create_entity(name.clone(), country.clone(), city.clone());
+    let signature = sign_create_entity(name.clone(), country.to_vec(), city.to_vec());
     assert_ok!(TfgridModule::create_entity(
         Origin::signed(alice()),
         test_ed25519(),
         name,
         country,
         city,
-        signature.clone()
+        signature,
     ));
 }
 
 fn create_entity_sr() {
-    let name = "foobar".as_bytes().to_vec();
-    let country = "Belgium".as_bytes().to_vec();
-    let city = "Ghent".as_bytes().to_vec();
+    let name = b"foobar".to_vec();
+    let country = get_country_name_input(b"Belgium");
+    let city = get_city_name_input(b"Ghent");
 
-    let signature = sign_create_entity_sr(name.clone(), country.clone(), city.clone());
+    let signature = sign_create_entity_sr(name.clone(), country.to_vec(), city.to_vec());
     assert_ok!(TfgridModule::create_entity(
         Origin::signed(alice()),
         test_sr25519(),
         name,
         country,
         city,
-        signature.clone()
+        signature,
     ));
 }
 
@@ -2085,8 +2087,8 @@ fn create_node() {
 
     // random location
     let location = LocationInput {
-        city: get_city_input(b"Ghent"),
-        country: get_country_input(b"Belgium"),
+        city: get_city_name_input(b"Ghent"),
+        country: get_country_name_input(b"Belgium"),
         latitude: get_latitude_input(b"12.233213231"),
         longitude: get_longitude_input(b"32.323112123"),
     };
@@ -2115,8 +2117,8 @@ fn create_extra_node() {
 
     // random location
     let location = LocationInput {
-        city: get_city_input(b"Rio de Janeiro"),
-        country: get_country_input(b"Brazil"),
+        city: get_city_name_input(b"Rio de Janeiro"),
+        country: get_country_name_input(b"Brazil"),
         latitude: get_latitude_input(b"43.1868"),
         longitude: get_longitude_input(b"22.9694"),
     };

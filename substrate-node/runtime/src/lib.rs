@@ -369,6 +369,8 @@ impl pallet_tfgrid::Config for Runtime {
     type InterfaceMac = pallet_tfgrid::interface::InterfaceMac<Runtime>;
     type InterfaceIP = pallet_tfgrid::interface::InterfaceIp<Runtime>;
     type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
+    type CountryName = pallet_tfgrid::node::CountryName<Runtime>;
+    type CityName = pallet_tfgrid::node::CityName<Runtime>;
     type Location = pallet_tfgrid::node::Location<Runtime>;
     type SerialNumber = pallet_tfgrid::node::SerialNumber<Runtime>;
 }

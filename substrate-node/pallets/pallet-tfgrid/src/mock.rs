@@ -2,15 +2,15 @@ use crate::{
     self as tfgridModule,
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
-    node::{Location, SerialNumber},
+    node::{CityName, CountryName, Location, SerialNumber},
     pub_config::{Domain, GW4, GW6, IP4, IP6},
     pub_ip::{GatewayIP, PublicIP},
     terms_cond::TermsAndConditions,
     twin::TwinIp,
-    weights, CityInput, Config, CountryInput, DocumentHashInput, DocumentLinkInput, DomainInput,
-    FarmNameInput, GW4Input, GW6Input, IP4Input, IP6Input, InterfaceIpInput, InterfaceMacInput,
-    InterfaceNameInput, LatitudeInput, LongitudeInput, PublicIpGatewayInput, PublicIpIpInput,
-    SerialNumberInput, TwinIpInput,
+    weights, CityNameInput, Config, CountryNameInput, DocumentHashInput, DocumentLinkInput,
+    DomainInput, FarmNameInput, GW4Input, GW6Input, IP4Input, IP6Input, InterfaceIpInput,
+    InterfaceMacInput, InterfaceNameInput, LatitudeInput, LongitudeInput, PublicIpGatewayInput,
+    PublicIpIpInput, SerialNumberInput, TwinIpInput,
 };
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
 use frame_system::EnsureRoot;
@@ -118,6 +118,8 @@ pub(crate) type TestInterfaceName = InterfaceName<TestRuntime>;
 pub(crate) type TestInterfaceMac = InterfaceMac<TestRuntime>;
 pub(crate) type TestInterfaceIp = InterfaceIp<TestRuntime>;
 
+pub(crate) type TestCountryName = CountryName<TestRuntime>;
+pub(crate) type TestCityName = CityName<TestRuntime>;
 pub(crate) type TestLocation = Location<TestRuntime>;
 pub(crate) type TestSerialNumber = SerialNumber<TestRuntime>;
 
@@ -143,6 +145,8 @@ impl Config for TestRuntime {
     type InterfaceIP = TestInterfaceIp;
     type MaxInterfacesLength = MaxInterfacesLength;
     type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
+    type CountryName = TestCountryName;
+    type CityName = TestCityName;
     type Location = TestLocation;
     type SerialNumber = TestSerialNumber;
 }
@@ -274,11 +278,11 @@ pub(crate) fn get_interface_ip_input(if_ip_input: &[u8]) -> InterfaceIpInput {
     BoundedVec::try_from(if_ip_input.to_vec()).expect("Invalid interface ip input")
 }
 
-pub(crate) fn get_city_input(city_input: &[u8]) -> CityInput {
+pub(crate) fn get_city_name_input(city_input: &[u8]) -> CityNameInput {
     BoundedVec::try_from(city_input.to_vec()).expect("Invalid city name input.")
 }
 
-pub(crate) fn get_country_input(country_input: &[u8]) -> CountryInput {
+pub(crate) fn get_country_name_input(country_input: &[u8]) -> CountryNameInput {
     BoundedVec::try_from(country_input.to_vec()).expect("Invalid country name input.")
 }
 

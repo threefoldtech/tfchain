@@ -3,6 +3,7 @@ use crate::{self as pallet_dao};
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
 use frame_system::EnsureRoot;
 use pallet_collective;
+use pallet_tfgrid::node::{CityName, CountryName};
 use pallet_tfgrid::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
@@ -13,7 +14,9 @@ use pallet_tfgrid::{
     twin::TwinIp,
     DocumentHashInput, DocumentLinkInput, TwinIpInput,
 };
-use pallet_tfgrid::{CityInput, CountryInput, LatitudeInput, LongitudeInput, SerialNumberInput};
+use pallet_tfgrid::{
+    CityNameInput, CountryNameInput, LatitudeInput, LongitudeInput, SerialNumberInput,
+};
 use pallet_timestamp;
 use sp_core::H256;
 use sp_runtime::{
@@ -135,6 +138,8 @@ pub(crate) type TestInterfaceName = InterfaceName<Test>;
 pub(crate) type TestInterfaceMac = InterfaceMac<Test>;
 pub(crate) type TestInterfaceIp = InterfaceIp<Test>;
 
+pub(crate) type TestCountryName = CountryName<Test>;
+pub(crate) type TestCityName = CityName<Test>;
 pub(crate) type TestLocation = Location<Test>;
 pub(crate) type TestSerialNumber = SerialNumber<Test>;
 
@@ -160,6 +165,8 @@ impl pallet_tfgrid::Config for Test {
     type InterfaceMac = TestInterfaceMac;
     type InterfaceIP = TestInterfaceIp;
     type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
+    type CountryName = TestCountryName;
+    type CityName = TestCityName;
     type Location = TestLocation;
     type SerialNumber = TestSerialNumber;
 }
@@ -214,11 +221,11 @@ pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {
     BoundedVec::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
 }
 
-pub(crate) fn get_city_input(city_input: &[u8]) -> CityInput {
+pub(crate) fn get_city_name_input(city_input: &[u8]) -> CityNameInput {
     BoundedVec::try_from(city_input.to_vec()).expect("Invalid city name input.")
 }
 
-pub(crate) fn get_country_input(country_input: &[u8]) -> CountryInput {
+pub(crate) fn get_country_name_input(country_input: &[u8]) -> CountryNameInput {
     BoundedVec::try_from(country_input.to_vec()).expect("Invalid country name input.")
 }
 
