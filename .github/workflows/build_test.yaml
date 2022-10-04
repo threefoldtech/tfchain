@@ -32,6 +32,7 @@ jobs:
 
       - name: temp
         run: |
+          git config --global --add safe.directory '*'
           git log -n1
       - name: Build
         run: |
