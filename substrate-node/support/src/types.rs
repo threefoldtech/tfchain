@@ -77,6 +77,7 @@ pub struct Node<Location, PubConfig, If, SerialNumber> {
     pub twin_id: u32,
     pub resources: Resources,
     pub location: Location,
+    pub power_target: bool,
     // optional public config
     pub public_config: Option<PubConfig>,
     pub created: u64,
