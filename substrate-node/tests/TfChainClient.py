@@ -1,13 +1,10 @@
-from cmath import exp
 from datetime import datetime
-from re import S
-from unittest.mock import DEFAULT
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from itertools import count
 import json
 import logging
 from random import randbytes
 import time
+
+from SubstrateNetwork import PREDEFINED_KEYS
 from substrateinterface import SubstrateInterface, Keypair
 
 GIGABYTE = 1024*1024*1024
@@ -44,42 +41,9 @@ class TfChainClient:
         self._wait_for_finalization = False
         self._wait_for_inclusion = True
         self._pallets_offchain_workers = ["tft!", "smct"]
-        self._create_keys()
 
     def _connect_to_server(self, url: str):
         return SubstrateInterface(url=url, ss58_format=42, type_registry_preset='polkadot')
-
-    def _create_keys(self):
-        self._predefined_keys = {}
-        self._predefined_keys["Alice"] = Keypair.create_from_uri("//Alice")
-        self._predefined_keys["Bob"] = Keypair.create_from_uri("//Bob")
-        self._predefined_keys["Charlie"] = Keypair.create_from_uri(
-            "//Charlie")
-        self._predefined_keys["Dave"] = Keypair.create_from_uri(
-            "//Dave")
-        self._predefined_keys["Eve"] = Keypair.create_from_uri("//Eve")
-        self._predefined_keys["Ferdie"] = Keypair.create_from_uri("//Ferdie")
-
-    def _setup_offchain_workers(self, name: str, port: int = DEFAULT_PORT, create_twin: bool = False):
-        logging.info("Setting up %s (%s)", name,
-                     self._predefined_keys[name].ss58_address)
-
-        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
-
-        if len(self._pallets_offchain_workers):
-            pallet = self._pallets_offchain_workers.pop()
-            insert_key_params = [
-                pallet, f"//{name}", self._predefined_keys[name].public_key.hex()]
-            substrate.rpc_request("author_insertKey", insert_key_params)
-
-        if create_twin:
-            self.user_accept_tc(port=port, who=name)
-            self.create_twin(port=port, who=name)
-
-    def _check_signer(self, who: str):
-        _who = who.title()
-        assert _who in self._predefined_keys, f"{who} is not a predefined account, use one of {self._predefined_keys.keys()}"
-        return _who
 
     def _check_events(self, events: list = [], expected_events: list = []):
         logging.info("Events: %s", json.dumps(events))
@@ -109,11 +73,12 @@ class TfChainClient:
             })
             _who = "Alice"
         else:
-            assert _who in self._predefined_keys, f"{who} is not a predefined account, use one of {self._predefined_keys.keys()}"
+            assert _who in PREDEFINED_KEYS.keys(
+            ), f"{who} is not a predefined account, use one of {PREDEFINED_KEYS.keys()}"
 
         logging.info("Sending signed transaction: %s", call)
         signed_call = substrate.create_signed_extrinsic(
-            call, self._predefined_keys[_who])
+            call, PREDEFINED_KEYS[_who])
 
         response = substrate.submit_extrinsic(
             signed_call, wait_for_finalization=False, wait_for_inclusion=True)
@@ -124,29 +89,11 @@ class TfChainClient:
         self._check_events([event.value["event"]
                            for event in response.triggered_events], expected_events)
 
-    def setup_alice(self, create_twin: bool = False, port: int = DEFAULT_PORT):
-        self._setup_offchain_workers(
-            "Alice", port=port, create_twin=create_twin)
-
-    def setup_bob(self, create_twin: bool = False, port: int = 9946):
-        self._setup_offchain_workers(
-            "Bob", port=port, create_twin=create_twin)
-
-    def setup_charlie(self, create_twin: bool = False, port: int = 9947):
-        self._setup_offchain_workers(
-            "Charlie", port=port, create_twin=create_twin)
-
-    def setup_dave(self, create_twin: bool = False, port: int = 9948):
-        self._setup_offchain_workers(
-            "Dave", port=port, create_twin=create_twin)
-
-    def setup_eve(self, create_twin: bool = False, port: int = 9949):
-        self._setup_offchain_workers(
-            "Eve", port=port, create_twin=create_twin)
-
-    def setup_ferdie(self, create_twin: bool = False, port: int = 9950):
-        self._setup_offchain_workers(
-            "Ferdie", port=port, create_twin=create_twin)
+    def setup_predefined_account(self, who: str, port: int = DEFAULT_PORT):
+        logging.info("Setting up predefined account %s (%s)", who,
+                     PREDEFINED_KEYS[who].ss58_address)
+        self.user_accept_tc(port=port, who=who)
+        self.create_twin(port=port, who=who)
 
     def user_accept_tc(self, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
@@ -202,12 +149,13 @@ class TfChainClient:
         return q.value
 
     def balance_data(self, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
-        assert who in self._predefined_keys, f"{who} is not a predefined account"
+        assert who in PREDEFINED_KEYS.keys(
+        ), f"{who} is not a predefined account"
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         account_info = substrate.query(
-            "System", "Account", [self._predefined_keys[who].ss58_address])
-        assert account_info is not None, f"Failed fetching the account data for {who} ({self._predefined_keys[who].ss58_address})"
+            "System", "Account", [PREDEFINED_KEYS[who].ss58_address])
+        assert account_info is not None, f"Failed fetching the account data for {who} ({PREDEFINED_KEYS[who].ss58_address})"
         assert "data" in account_info, f"Could not find balance data in the account info {account_info}"
 
         logging.info(account_info)
@@ -617,7 +565,7 @@ class TfChainClient:
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         call = substrate.compose_call("TfgridModule", "add_node_certifier", {
-                                      "who": f"{self._predefined_keys[account_name].ss58_address}"})
+                                      "who": f"{PREDEFINED_KEYS[account_name].ss58_address}"})
         expected_events = [{
             "module_id": "TfgridModule",
             "event_id": "NodeCertifierAdded"
@@ -629,7 +577,7 @@ class TfChainClient:
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         call = substrate.compose_call("TfgridModule", "remove_node_certifier", {
-                                      "who": f"{self._predefined_keys[account_name].ss58_address}"})
+                                      "who": f"{PREDEFINED_KEYS[account_name].ss58_address}"})
         expected_events = [{
             "module_id": "TfgridModule",
             "event_id": "NodeCertifierRemoved"
@@ -663,8 +611,8 @@ class TfChainClient:
             "ipu": {"value": ipu, "unit": unit},
             "unique_name": {"value": unique_name, "unit": unit},
             "domain_name": {"value": domain_name, "unit": unit},
-            "foundation_account": f"{self._predefined_keys[foundation_account].ss58_address}",
-            "certified_sales_account": f"{self._predefined_keys[certified_sales_account].ss58_address}",
+            "foundation_account": f"{PREDEFINED_KEYS[foundation_account].ss58_address}",
+            "certified_sales_account": f"{PREDEFINED_KEYS[certified_sales_account].ss58_address}",
             "discount_for_dedication_nodes": discount_for_dedication_nodes
         }
         call = substrate.compose_call(
@@ -691,8 +639,8 @@ class TfChainClient:
             "ipu": {"value": ipu, "unit": unit},
             "unique_name": {"value": unique_name, "unit": unit},
             "domain_name": {"value": domain_name, "unit": unit},
-            "foundation_account": f"{self._predefined_keys[foundation_account].ss58_address}",
-            "certified_sales_account": f"{self._predefined_keys[certified_sales_account].ss58_address}",
+            "foundation_account": f"{PREDEFINED_KEYS[foundation_account].ss58_address}",
+            "certified_sales_account": f"{PREDEFINED_KEYS[certified_sales_account].ss58_address}",
             "discount_for_dedication_nodes": discount_for_dedication_nodes
         }
         call = substrate.compose_call(
@@ -805,7 +753,7 @@ class TfChainClient:
                                  who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
-        providers = [{"who": self._predefined_keys[who].ss58_address,
+        providers = [{"who": PREDEFINED_KEYS[who].ss58_address,
                       "take": take} for who, take in providers.items()]
         call = substrate.compose_call("SmartContractModule", "create_solution_provider",
                                       {

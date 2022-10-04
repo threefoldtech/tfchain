@@ -1,9 +1,9 @@
 *** Settings ***
-Documentation       Suite for integration tests on tfchain
-Library             Collections
-Library             SubstrateNetwork.py
-Library             TfChainClient.py
-Library    OperatingSystem
+Documentation      Suite for integration tests on tfchain
+Library            Collections
+Library            SubstrateNetwork.py
+Library            TfChainClient.py
+Library            OperatingSystem
 
 
 *** Keywords ***
@@ -26,8 +26,8 @@ Public Ips Should Not Contain Ip
 
 Setup Network And Create Farm
     [Documentation]    Helper function to quickly create a network with 2 nodes and creating a farm using Alice's key
-    Setup Alice    create_twin=${True}
-    Setup Bob    create_twin=${True}
+    Setup Predefined Account    who=Alice
+    Setup Predefined Account    who=Bob
     Create Farm    name=alice_farm
 
 Setup Network And Create Node
@@ -65,7 +65,6 @@ Test Create Update Delete Twin
     [Documentation]    Testing api calls (create, update, delete) for managing twins
     Setup Multi Node Network    log_name=test_create_update_delete_twin
 
-    Setup Alice
     User Accept Tc
 
     Create Twin    ip=::1
@@ -89,8 +88,7 @@ Test Create Update Farm
     [Documentation]    Testing api calls (create, update) for managing farms
     Setup Multi Node Network    log_name=test_create_update_farm
 
-    Setup Alice    create_twin=${True}
-    Setup Bob    create_twin=${True}
+    Setup Predefined Account    who=Alice
     
     Create Farm    name=this_is_the_name_of_the_farm
     ${farm_before} =    Get Farm    ${1}
@@ -213,8 +211,7 @@ Test Reporting Uptime
     Run Keyword And Expect Error    *'TwinNotExists'*
     ...    Report Uptime    ${500}
 
-    Setup Alice    create_twin=${True}
-    Setup Bob    create_twin=${True}
+    Setup Predefined Account    who=Alice
     
     Run Keyword And Expect Error    *'NodeNotExists'*
     ...    Report Uptime    ${500}
@@ -282,8 +279,8 @@ Test Create Update Cancel Node Contract: Success
     [Documentation]    Testing api calls (create, update, cancel) for managing a node contract
     Setup Multi Node Network    log_name=test_create_node_contract
 
-    Setup Alice    create_twin=${True}
-    Setup Bob    create_twin=${True}
+    Setup Predefined Account    who=Alice
+    Setup Predefined Account    who=Bob
     
     ${ip_1} =     Create Dictionary    ip    185.206.122.33/24    gw    185.206.122.1
     ${public_ips} =    Create List    ${ip_1}
@@ -423,8 +420,8 @@ Test Billing
     Setup Multi Node Network    log_name=test_billing
 
     # Setup
-    Setup Alice    create_twin=${True}
-    Setup Bob    create_twin=${True}    
+    Setup Predefined Account    who=Alice
+    Setup Predefined Account    who=Bob  
     Create Farm    name=alice_farm
     Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
 
@@ -451,8 +448,8 @@ Test Solution Provider
     Setup Multi Node Network    log_name=test_create_approve_solution_provider    amt=${2}
 
     # Setup
-    Setup Alice    create_twin=${True}
-    Setup Bob    create_twin=${True}
+    Setup Predefined Account    who=Alice
+    Setup Predefined Account    who=Bob
     Create Farm    name=alice_farm
     Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
     
