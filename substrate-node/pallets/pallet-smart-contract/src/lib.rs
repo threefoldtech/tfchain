@@ -29,7 +29,10 @@ use sp_runtime::{
     Perbill,
 };
 use substrate_fixed::types::U64F64;
-use tfchain_support::{traits::ChangeNode, types::Node};
+use tfchain_support::{
+    traits::ChangeNode,
+    types::{Node, PowerTarget, Resources},
+};
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"smct");
 
@@ -311,6 +314,12 @@ pub mod pallet {
         },
         SolutionProviderCreated(types::SolutionProvider<T::AccountId>),
         SolutionProviderApproved(u64, bool),
+        /// Send an event to zero os to change its state
+        ChangePowerTarget {
+            farm_id: u32,
+            node_id: u32,
+            power_target: PowerTarget,
+        },
     }
 
     #[pallet::error]
@@ -431,6 +440,17 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_create_name_contract(account_id, name)
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        pub fn create_deployment_contract(
+            origin: OriginFor<T>,
+            farm_id: u32,
+            resources: Resources,
+            rent_contract_id: Option<u64>,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_create_deployment_contract(account_id, farm_id, resources, rent_contract_id)
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
@@ -616,6 +636,34 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
+    pub fn _create_deployment_contract(
+        account_id: T::AccountId,
+        farm_id: u32,
+        resources: Resources,
+        rent_contract_id: Option<u64>,
+    ) -> DispatchResultWithPostInfo {
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
+            .ok_or(Error::<T>::TwinNotExists)?;
+
+        let node_id = Self::_find_suitable_node_in_farm(farm_id, resources)?;
+
+        // Prepare NodeContract struct
+        let deployment_contract = types::DeploymentContract { node_id: node_id };
+
+        // Create contract
+        let contract = Self::_create_contract(
+            twin_id,
+            types::ContractData::DeploymentContract(deployment_contract.clone()),
+            None,
+        )?;
+
+        // TODO: insert contract in pending_node_farm_contracts
+
+        Self::deposit_event(Event::ContractCreated(contract));
+
+        Ok(().into())
+    }
+
     pub fn _create_rent_contract(
         account_id: T::AccountId,
         node_id: u32,
@@ -642,6 +690,8 @@ impl<T: Config> Pallet<T> {
         // Create contract
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
             .ok_or(Error::<T>::TwinNotExists)?;
+        // claim all the resources
+        Self::_claim_resources_on_node(node_id, node.resources)?;
         let contract = Self::_create_contract(
             twin_id,
             types::ContractData::RentContract(types::RentContract { node_id }),
@@ -693,6 +743,103 @@ impl<T: Config> Pallet<T> {
         Self::deposit_event(Event::ContractCreated(contract));
 
         Ok(().into())
+    }
+
+    fn _claim_resources_on_node(node_id: u32, resources: Resources) -> DispatchResultWithPostInfo {
+        let mut node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+
+        ensure!(
+            node.available_resources.hru >= resources.hru
+                && node.available_resources.sru >= resources.sru
+                && node.available_resources.cru >= resources.cru
+                && node.available_resources.mru >= resources.mru,
+            Error::<T>::NotEnoughResourcesOnNode
+        );
+
+        // if the node is down => wake it up
+        if matches!(node.power_target, PowerTarget::Down) {
+            Self::deposit_event(Event::ChangePowerTarget {
+                farm_id: node.farm_id,
+                node_id: node_id,
+                power_target: PowerTarget::Up,
+            });
+            node.power_target = PowerTarget::Up;
+        }
+
+        //update the available resources
+        node.available_resources.hru -= resources.hru;
+        node.available_resources.sru -= resources.sru;
+        node.available_resources.cru -= resources.cru;
+        node.available_resources.mru -= resources.mru;
+        pallet_tfgrid::Nodes::<T>::insert(node.id, &node);
+
+        Ok(().into())
+    }
+
+    fn _un_claim_resources_on_node(
+        node_id: u32,
+        resources: Resources,
+    ) -> DispatchResultWithPostInfo {
+        let mut node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+
+        //update the available resources
+        node.available_resources.hru += resources.hru;
+        node.available_resources.sru += resources.sru;
+        node.available_resources.cru += resources.cru;
+        node.available_resources.mru += resources.mru;
+
+        // if all resources are free shutdown the node
+        if node.available_resources.hru == node.resources.hru
+            && node.available_resources.sru == node.resources.sru
+            && node.available_resources.cru == node.resources.cru
+            && node.available_resources.mru == node.resources.mru
+        {
+            Self::deposit_event(Event::ChangePowerTarget {
+                farm_id: node.farm_id,
+                node_id: node_id,
+                power_target: PowerTarget::Down,
+            });
+            node.power_target = PowerTarget::Down;
+        }
+
+        pallet_tfgrid::Nodes::<T>::insert(node.id, &node);
+
+        Ok(().into())
+    }
+
+    fn _find_suitable_node_in_farm(
+        farm_id: u32,
+        resources: Resources,
+    ) -> Result<u32, DispatchErrorWithPostInfo> {
+        ensure!(
+            pallet_tfgrid::Farms::<T>::contains_key(farm_id),
+            Error::<T>::FarmNotExists
+        );
+
+        let nodes_in_farm = pallet_tfgrid::NodesByFarmID::<T>::get(farm_id);
+        let mut suitable_nodes = Vec::new();
+        for node_id in nodes_in_farm {
+            let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+            if node.available_resources.hru >= resources.hru
+                && node.available_resources.sru >= resources.sru
+                && node.available_resources.cru >= resources.cru
+                && node.available_resources.mru >= resources.mru
+            {
+                suitable_nodes.push(node);
+            }
+        }
+
+        ensure!(
+            !suitable_nodes.is_empty(),
+            Error::<T>::NotEnoughResourcesOnNode
+        );
+
+        // sort the suitable nodes on power_target: the nodes that are Up will be first in the list
+        suitable_nodes.sort_by(|a, b| a.power_target.cmp(&b.power_target));
+
+        Self::_claim_resources_on_node(suitable_nodes[0].id, resources)?;
+
+        Ok(suitable_nodes[0].id)
     }
 
     fn _create_contract(
@@ -799,16 +946,27 @@ impl<T: Config> Pallet<T> {
         );
 
         // If it's a rent contract and it still has active workloads, don't allow cancellation.
-        if matches!(
-            &contract.contract_type,
-            types::ContractData::RentContract(_)
-        ) {
-            let rent_contract = Self::get_rent_contract(&contract)?;
-            let active_node_contracts = ActiveNodeContracts::<T>::get(rent_contract.node_id);
-            ensure!(
-                active_node_contracts.len() == 0,
-                Error::<T>::NodeHasActiveContracts
-            );
+        match contract.contract_type {
+            types::ContractData::RentContract(ref c) => {
+                let rent_contract = Self::get_rent_contract(&contract)?;
+                let active_node_contracts = ActiveNodeContracts::<T>::get(rent_contract.node_id);
+                ensure!(
+                    active_node_contracts.len() == 0,
+                    Error::<T>::NodeHasActiveContracts
+                );
+                let node =
+                    pallet_tfgrid::Nodes::<T>::get(c.node_id).ok_or(Error::<T>::NodeNotExists)?;
+                let used_resources = node.resources;
+                Self::_un_claim_resources_on_node(c.node_id, used_resources)?;
+            },
+            types::ContractData::DeploymentContract(ref c) => {
+                let used_resources = NodeContractResources::<T>::get(contract_id).used;
+                Self::_un_claim_resources_on_node(c.node_id, used_resources)?;
+            },
+            _ => {
+                //TODO 
+            }
+
         }
 
         Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
@@ -1249,6 +1407,9 @@ impl<T: Config> Pallet<T> {
 
         if let Some(contract) = contract {
             match contract.contract_type.clone() {
+                types::ContractData::DeploymentContract(_) => {
+                    //TODO
+                }
                 types::ContractData::NodeContract(mut node_contract) => {
                     Self::remove_active_node_contract(node_contract.node_id, contract_id);
                     if node_contract.public_ips > 0 {

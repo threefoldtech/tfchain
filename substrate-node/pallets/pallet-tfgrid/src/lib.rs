@@ -15,7 +15,7 @@ use sp_runtime::SaturatedConversion;
 use tfchain_support::types::PublicIP;
 use tfchain_support::{
     resources,
-    types::{Interface, Node, PublicConfig, IP},
+    types::{Interface, Node, PowerTarget, PublicConfig, IP},
 };
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
@@ -969,7 +969,9 @@ pub mod pallet {
             id = id + 1;
 
             let created = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-            let power_target = true;
+            let power_target = PowerTarget::Up;
+
+            let available_resources = resources.clone();
 
             let mut new_node = Node {
                 version: TFGRID_NODE_VERSION,
@@ -977,6 +979,7 @@ pub mod pallet {
                 farm_id,
                 twin_id,
                 resources,
+                available_resources,
                 location,
                 country,
                 city,

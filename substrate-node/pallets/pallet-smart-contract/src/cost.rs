@@ -53,6 +53,9 @@ impl<T: Config> Contract<T> {
         seconds_elapsed: u64,
     ) -> Result<u64, DispatchErrorWithPostInfo> {
         let total_cost = match &self.contract_type {
+            types::ContractData::DeploymentContract(_) => {
+              0  
+            },
             // Calculate total cost for a node contract
             types::ContractData::NodeContract(node_contract) => {
                 // Get the contract billing info to view the amount unbilled for NRU (network resource units)
