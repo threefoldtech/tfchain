@@ -1437,6 +1437,8 @@ impl<T: Config> Pallet<T> {
         let index = Self::get_contract_index().checked_sub(1).unwrap_or(0);
         let mut contracts = ContractsToBillAt::<T>::get(index);
 
+
+        println!("now: {:?}, index: {:?}", now, index);
         if !contracts.contains(&contract_id) {
             contracts.push(contract_id);
             ContractsToBillAt::<T>::insert(index, &contracts);
