@@ -69,6 +69,18 @@ pub struct FarmingPolicyLimit {
     pub node_certification: bool,
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
+pub enum PowerTarget {
+    Up,
+    Down,
+}
+
+impl Default for PowerTarget {
+    fn default() -> PowerTarget {
+        PowerTarget::Down
+    }
+}
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct Node<Location, PubConfig, If, SerialNumber> {
     pub version: u32,
@@ -76,8 +88,9 @@ pub struct Node<Location, PubConfig, If, SerialNumber> {
     pub farm_id: u32,
     pub twin_id: u32,
     pub resources: Resources,
+    pub available_resources: Resources,
     pub location: Location,
-    pub power_target: bool,
+    pub power_target: PowerTarget,
     // optional public config
     pub public_config: Option<PubConfig>,
     pub created: u64,
