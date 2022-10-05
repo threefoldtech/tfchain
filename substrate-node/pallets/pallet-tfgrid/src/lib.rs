@@ -40,6 +40,8 @@ pub mod pub_ip;
 pub mod terms_cond;
 pub mod twin;
 
+pub mod grid_migration;
+
 // Definition of the pallet logic, to be aggregated at runtime definition
 // through `construct_runtime`.
 #[frame_support::pallet]
