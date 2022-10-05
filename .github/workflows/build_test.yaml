@@ -4,8 +4,6 @@ on:
     branches:
       - development
   pull_request:
-  pull_request_review:
-    types: [submitted]
 jobs:
   build-and-test:
     runs-on: [self-hosted, poc]
@@ -43,9 +41,7 @@ jobs:
           cd pallets
           $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
 
-      # This will only be execute when merging a PR or when the review status is set to approved github.event.pull_request.merged == true || 
       - name: Integration tests
-        if: github.event.review.state == 'approved'
         run: |
           python3.10 -m pip install robotframework cryptography substrate-interface
           cd substrate-node/tests
