@@ -30,10 +30,10 @@ jobs:
           key: ${{ runner.os }}-tfchain-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-tfchain-cargo-
 
-      - name: temp
-        run: |
-          git config --global --add safe.directory '*'
-          git log -n1
+      #- name: temp
+      #  run: |
+      #    git config --global --add safe.directory '*'
+      #    git log -n1
       - name: Build
         run: |
           cd substrate-node
