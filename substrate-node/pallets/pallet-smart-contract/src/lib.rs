@@ -199,7 +199,9 @@ pub mod pallet {
     pub type PalletVersion<T> = StorageValue<_, types::StorageVersion, ValueQuery>;
 
     #[pallet::type_value]
-    pub fn DefaultBillingFrequency<T: Config>() -> u64 { T::BillingFrequency::get() }
+    pub fn DefaultBillingFrequency<T: Config>() -> u64 {
+        T::BillingFrequency::get()
+    }
 
     #[pallet::storage]
     #[pallet::getter(fn billing_frequency)]
@@ -350,26 +352,26 @@ pub mod pallet {
     }
 
     #[pallet::genesis_config]
-	pub struct GenesisConfig {
+    pub struct GenesisConfig {
         pub billing_frequency: u64,
-	}
+    }
 
     // The default value for the genesis config type.
-	#[cfg(feature = "std")]
-	impl Default for GenesisConfig {
-		fn default() -> Self {
-			Self { 
+    #[cfg(feature = "std")]
+    impl Default for GenesisConfig {
+        fn default() -> Self {
+            Self {
                 billing_frequency: 600,
             }
-		}
-	}
+        }
+    }
 
-	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig {
-		fn build(&self) {
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig {
+        fn build(&self) {
             BillingFrequency::<T>::put(self.billing_frequency);
-		}
-	}
+        }
+    }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -485,34 +487,21 @@ pub mod pallet {
         pub fn bill_contract_for_block(
             origin: OriginFor<T>,
             contract_id: u64,
-            block_number: T::BlockNumber,
         ) -> DispatchResultWithPostInfo {
             let _account_id = ensure_signed(origin)?;
-            Self::_bill_contract_for_block(contract_id, block_number)
+            Self::_bill_contract(contract_id)
         }
     }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn offchain_worker(block_number: T::BlockNumber) {
-            let current_block_u64: u64 = block_number.saturated_into::<u64>();
-            let mut contracts = Self::get_failed_contract_ids_from_storage();
-            if !contracts.is_empty() {
-                log::info!(
-                    "trying to bill {:?} failed contracts from last block",
-                    contracts
-                );
-            }
-            //reset the failed contract ids for next run
-            Self::save_failed_contract_ids_in_storage(Vec::new());
-            contracts.extend(ContractsToBillAt::<T>::get(current_block_u64));
-            // filter out the contracts that have been deleted in the meantime
-            contracts = contracts
-                .into_iter()
-                .filter(|contract_id| Contracts::<T>::contains_key(contract_id))
-                .collect::<Vec<_>>();
-            contracts.dedup();
+            // Let offchain worker check if there are contracts on the map at current index
+            // Index being current block number % (mod) Billing Frequency
+            let current_index: u64 =
+                block_number.saturated_into::<u64>() % BillingFrequency::<T>::get();
 
+            let contracts = ContractsToBillAt::<T>::get(current_index);
             if contracts.is_empty() {
                 log::debug!("No contracts to bill at block {:?}", block_number);
                 return;
@@ -525,10 +514,9 @@ pub mod pallet {
             );
 
             for contract_id in contracts {
-                let _res = Self::bill_contract_using_signed_transaction(block_number, contract_id);
+                let _res = Self::bill_contract_using_signed_transaction(contract_id);
             }
         }
-
     }
 }
 
@@ -730,7 +718,7 @@ impl<T: Config> Pallet<T> {
 
         // Start billing frequency loop
         // Will always be block now + frequency
-        Self::_reinsert_contract_to_bill(id);
+        Self::insert_contract_to_bill(id);
 
         // insert into contracts map
         Contracts::<T>::insert(id, &contract);
@@ -941,28 +929,17 @@ impl<T: Config> Pallet<T> {
         ContractBillingInformationByID::<T>::insert(report.contract_id, &contract_billing_info);
     }
 
-    pub fn _bill_contract_for_block(
-        contract_id: u64,
-        block: T::BlockNumber,
-    ) -> DispatchResultWithPostInfo {
+    pub fn _bill_contract(contract_id: u64) -> DispatchResultWithPostInfo {
         if !Contracts::<T>::contains_key(contract_id) {
             return Ok(().into());
         }
         let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
 
-        log::info!(
-            "billing contract with id {:?} at block {:?}",
-            contract_id,
-            block
-        );
+        log::info!("billing contract with id {:?}", contract_id);
         // Try to bill contract
         match Self::bill_contract(&mut contract) {
             Ok(_) => {
-                log::info!(
-                    "successfully billed contract with id {:?} at block {:?}",
-                    contract_id,
-                    block
-                );
+                log::info!("successfully billed contract with id {:?}", contract_id,);
             }
             Err(err) => {
                 // if billing failed append it to the failed ids in local storage
@@ -972,7 +949,6 @@ impl<T: Config> Pallet<T> {
                     contract_id,
                     err.error
                 );
-                Self::append_failed_contract_ids_to_storage(contract_id);
                 return Ok(().into());
             }
         }
@@ -987,30 +963,24 @@ impl<T: Config> Pallet<T> {
                 return Ok(().into());
             }
 
-            // Reinsert into the next billing frequency
-            Self::_reinsert_contract_to_bill(contract.contract_id);
+            // // Reinsert into the next billing frequency
+            // Self::insert_contract_to_bill(contract.contract_id);
         }
 
         Ok(().into())
     }
 
-    fn bill_contract_using_signed_transaction(
-        block_number: T::BlockNumber,
-        contract_id: u64,
-    ) -> Result<(), Error<T>> {
+    fn bill_contract_using_signed_transaction(contract_id: u64) -> Result<(), Error<T>> {
         let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::any_account();
         if !signer.can_sign() {
             log::error!(
-                "failed billing contract {:?}: at block {:?} account cannot be used to sign transaction",
+                "failed billing contract {:?} account cannot be used to sign transaction",
                 contract_id,
-                block_number
             );
             return Err(<Error<T>>::OffchainSignedTxError);
         }
-        let result = signer.send_signed_transaction(|_acct| Call::bill_contract_for_block {
-            contract_id,
-            block_number,
-        });
+        let result =
+            signer.send_signed_transaction(|_acct| Call::bill_contract_for_block { contract_id });
 
         if let Some((acc, res)) = result {
             // if res is an error this means sending the transaction failed
@@ -1019,9 +989,8 @@ impl<T: Config> Pallet<T> {
             // returns Err())
             if res.is_err() {
                 log::error!(
-                    "signed transaction failed for billing contract {:?} at block {:?} using account {:?}",
+                    "signed transaction failed for billing contract {:?} using account {:?}",
                     contract_id,
-                    block_number,
                     acc.id
                 );
                 return Err(<Error<T>>::OffchainSignedTxError);
@@ -1030,36 +999,6 @@ impl<T: Config> Pallet<T> {
         }
         log::error!("No local account available");
         return Err(<Error<T>>::OffchainSignedTxError);
-    }
-
-    fn append_failed_contract_ids_to_storage(failed_id: u64) {
-        log::info!(
-            "billing contract {:?} will be retried in the next block",
-            failed_id
-        );
-
-        let mut failed_ids = Self::get_failed_contract_ids_from_storage();
-        failed_ids.push(failed_id);
-
-        Self::save_failed_contract_ids_in_storage(failed_ids);
-    }
-
-    fn save_failed_contract_ids_in_storage(failed_ids: Vec<u64>) {
-        let s_contracts =
-            StorageValueRef::persistent(b"pallet-smart-contract::failed-contracts-when-billing");
-
-        s_contracts.set(&failed_ids);
-    }
-
-    fn get_failed_contract_ids_from_storage() -> Vec<u64> {
-        let s_contracts =
-            StorageValueRef::persistent(b"pallet-smart-contract::failed-contracts-when-billing");
-
-        if let Ok(Some(failed_contract_ids)) = s_contracts.get::<Vec<u64>>() {
-            return failed_contract_ids;
-        }
-
-        return Vec::new();
     }
 
     // Bills a contract (NodeContract or NameContract)
@@ -1498,23 +1437,26 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    // Reinserts a contract by id at the next interval we need to bill the contract
-    pub fn _reinsert_contract_to_bill(contract_id: u64) {
+    // Inserts a contract in a list where the index is the current block % billing frequency
+    // This way, we don't need to reinsert the contract everytime it gets billed
+    pub fn insert_contract_to_bill(contract_id: u64) {
         if contract_id == 0 {
             return;
         }
 
         let now = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
-        // Save the contract to be billed in now + BILLING_FREQUENCY_IN_BLOCKS
-        let future_block = now + BillingFrequency::<T>::get();
-        let mut contracts = ContractsToBillAt::<T>::get(future_block);
+        // Save the contract to be billed in (now %(mod) BILLING_FREQUENCY_IN_BLOCKS)
+        let index = now % BillingFrequency::<T>::get();
+        let mut contracts = ContractsToBillAt::<T>::get(index);
+
+        println!("now: {:?}, index: {:?}", now, index);
         if !contracts.contains(&contract_id) {
             contracts.push(contract_id);
-            ContractsToBillAt::<T>::insert(future_block, &contracts);
+            ContractsToBillAt::<T>::insert(index, &contracts);
             log::info!(
-                "Insert contracts: {:?}, to be billed at block {:?}",
+                "Insert contracts: {:?}, to be billed at index {:?}",
                 contracts,
-                future_block
+                index
             );
         }
     }

@@ -343,17 +343,9 @@ pub struct PoolState {
 }
 
 impl PoolState {
-    pub fn should_call_bill_contract(
-        &mut self,
-        contract_id: u64,
-        block_number: BlockNumber,
-        expected_result: Result<(), ()>,
-    ) {
+    pub fn should_call_bill_contract(&mut self, contract_id: u64, expected_result: Result<(), ()>) {
         self.expected_calls.push((
-            crate::Call::bill_contract_for_block {
-                contract_id,
-                block_number,
-            },
+            crate::Call::bill_contract_for_block { contract_id },
             expected_result,
         ));
     }
@@ -366,29 +358,24 @@ impl PoolState {
         if self.calls_to_execute.len() == 0 {
             return;
         }
-    
+
         // execute the calls that were submitted to the pool and compare the result
         for call_to_execute in self.calls_to_execute.iter() {
             let result = match call_to_execute.0 {
                 // matches bill_contract_for_block
-                crate::Call::bill_contract_for_block {
-                    contract_id,
-                    block_number,
-                } => SmartContractModule::bill_contract_for_block(
-                    Origin::signed(bob()),
-                    contract_id,
-                    block_number,
-                ),
+                crate::Call::bill_contract_for_block { contract_id } => {
+                    SmartContractModule::bill_contract_for_block(Origin::signed(bob()), contract_id)
+                }
                 // did not match anything => unkown call => this means you should add
                 // a capture for that function here
                 _ => panic!("Unknown call!"),
             };
-    
+
             let result = match result {
                 Ok(_) => Ok(()),
                 Err(_) => Err(()),
             };
-    
+
             // the call should return what we expect it to return
             assert_eq!(
                 call_to_execute.1, result,
@@ -396,7 +383,7 @@ impl PoolState {
                 call_to_execute.0
             );
         }
-    
+
         self.calls_to_execute.clear();
     }
 }
@@ -411,10 +398,10 @@ impl Drop for PoolState {
 }
 
 /// Implementation of mocked transaction pool used for testing
-/// 
-/// This transaction pool mocks submitting the transactions to the pool. It does 
+///
+/// This transaction pool mocks submitting the transactions to the pool. It does
 /// not execute the transactions. Instead it keeps them in list. It does compare
-/// the submitted call to the expected call. 
+/// the submitted call to the expected call.
 #[derive(Default)]
 pub struct MockedTransactionPoolExt(Arc<RwLock<PoolState>>);
 
