@@ -1134,7 +1134,7 @@ pub mod pallet {
 
             ensure!(
                 NodeIdByTwinID::<T>::contains_key(twin_id),
-                Error::<T>::TwinNotExists
+                Error::<T>::NodeNotExists
             );
             let node_id = NodeIdByTwinID::<T>::get(twin_id);
 
