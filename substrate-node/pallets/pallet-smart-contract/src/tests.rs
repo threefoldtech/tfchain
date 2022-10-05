@@ -2551,6 +2551,10 @@ fn check_report_cost(
 ) {
     let our_events = System::events();
 
+    for e in our_events.clone().iter() {
+        println!("event: {:?}", e);
+    }
+
     let contract_bill_event = types::ContractBill {
         contract_id,
         timestamp: 1628082000 + (6 * block_number),
