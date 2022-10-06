@@ -404,9 +404,11 @@ pub struct PoolState {
 }
 
 impl PoolState {
-    pub fn should_call_bill_contract(&mut self, contract_id: u64, expected_result: Result<(), ()>) {
+    pub fn should_call_bill_contract(
         expected_result: ExtrinsicResult,
         block_number: u64,
+        expected_result: ExtrinsicResult,
+    ) {
         self.expected_calls.push((
             crate::Call::bill_contract_for_block { contract_id },
             expected_result,
