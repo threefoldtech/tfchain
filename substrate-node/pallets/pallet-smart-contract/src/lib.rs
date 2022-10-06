@@ -26,7 +26,6 @@ use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_timestamp as timestamp;
 use sp_core::crypto::KeyTypeId;
 use sp_runtime::{
-    offchain::storage::StorageValueRef,
     traits::{CheckedSub, SaturatedConversion},
     Perbill,
 };
@@ -931,25 +930,34 @@ impl<T: Config> Pallet<T> {
 
     pub fn _bill_contract(contract_id: u64) -> DispatchResultWithPostInfo {
         if !Contracts::<T>::contains_key(contract_id) {
+            log::debug!("cleaning up deleted contract from storage");
+
+            let now = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
+            let index = now % BillingFrequency::<T>::get();
+
+            // Remove contract from billing list
+            let mut contracts = ContractsToBillAt::<T>::get(index);
+            contracts.retain(|&c| c != contract_id);
+            ContractsToBillAt::<T>::insert(index, contracts);
+
             return Ok(().into());
         }
         let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
 
         log::info!("billing contract with id {:?}", contract_id);
+
         // Try to bill contract
         match Self::bill_contract(&mut contract) {
             Ok(_) => {
                 log::info!("successfully billed contract with id {:?}", contract_id,);
             }
             Err(err) => {
-                // if billing failed append it to the failed ids in local storage
-                // billing will be retried at the next block
                 log::error!(
                     "error while billing contract with id {:?}: <{:?}>",
                     contract_id,
                     err.error
                 );
-                return Ok(().into());
+                return Err(err);
             }
         }
 
@@ -1013,12 +1021,17 @@ impl<T: Config> Pallet<T> {
         // Calculate amount of seconds elapsed based on the contract lock struct
 
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+        log::debug!("now timestamp: {:?}", now);
         // this will set the seconds elapsed to the default billing cycle duration in seconds
         // if there is no contract lock object yet. A contract lock object will be created later in this function
         // https://github.com/threefoldtech/tfchain/issues/261
         let contract_lock = ContractLock::<T>::get(contract.contract_id);
+        log::debug!("contract lock: {:?}", contract_lock);
+        let now_block = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
+        log::debug!("current block: {:?}", now_block);
         if contract_lock.lock_updated != 0 {
             seconds_elapsed = now.checked_sub(contract_lock.lock_updated).unwrap_or(0);
+            log::debug!("seconds elapsed: {:?}", seconds_elapsed);
         }
 
         let (amount_due, discount_received) =
@@ -1444,12 +1457,11 @@ impl<T: Config> Pallet<T> {
             return;
         }
 
-        let now = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
-        // Save the contract to be billed in (now %(mod) BILLING_FREQUENCY_IN_BLOCKS)
+        let now = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>() - 1;
+        // Save the contract to be billed in (now -1 %(mod) BILLING_FREQUENCY_IN_BLOCKS)
         let index = now % BillingFrequency::<T>::get();
         let mut contracts = ContractsToBillAt::<T>::get(index);
 
-        println!("now: {:?}, index: {:?}", now, index);
         if !contracts.contains(&contract_id) {
             contracts.push(contract_id);
             ContractsToBillAt::<T>::insert(index, &contracts);

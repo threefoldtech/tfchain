@@ -3,11 +3,12 @@ use std::{panic, thread};
 
 use super::*;
 use crate::name_contract::NameContractName;
-use crate::{self as pallet_smart_contract, types::BlockNumber};
+use crate::{self as pallet_smart_contract};
 use codec::{alloc::sync::Arc, Decode};
 use frame_support::{
     construct_runtime, parameter_types,
     traits::{ConstU32, GenesisBuild},
+    weights::PostDispatchInfo,
 };
 use frame_system::EnsureRoot;
 use pallet_tfgrid::{
@@ -333,26 +334,31 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     t
 }
 pub type TransactionCall = pallet_smart_contract::Call<TestRuntime>;
+pub type ExtrinsicResult = Result<PostDispatchInfo, DispatchErrorWithPostInfo>;
 
 #[derive(Default)]
 pub struct PoolState {
     /// A vector of calls that we expect should be executed
-    pub expected_calls: Vec<(TransactionCall, Result<(), ()>)>,
-    pub calls_to_execute: Vec<(TransactionCall, Result<(), ()>)>,
+    pub expected_calls: Vec<(TransactionCall, ExtrinsicResult)>,
+    pub calls_to_execute: Vec<(TransactionCall, ExtrinsicResult)>,
     pub i: usize,
 }
 
 impl PoolState {
-    pub fn should_call_bill_contract(&mut self, contract_id: u64, expected_result: Result<(), ()>) {
+    pub fn should_call_bill_contract(
+        &mut self,
+        contract_id: u64,
+        expected_result: ExtrinsicResult,
+    ) {
         self.expected_calls.push((
             crate::Call::bill_contract_for_block { contract_id },
             expected_result,
         ));
     }
 
-    pub fn should_call(&mut self, expected_call: TransactionCall, expected_result: Result<(), ()>) {
-        self.expected_calls.push((expected_call, expected_result));
-    }
+    // fn should_call(&mut self, expected_call: TransactionCall, expected_result: ExtrinsicResult) {
+    //     self.expected_calls.push((expected_call, expected_result));
+    // }
 
     pub fn execute_calls_and_check_results(&mut self) {
         if self.calls_to_execute.len() == 0 {
@@ -369,11 +375,6 @@ impl PoolState {
                 // did not match anything => unkown call => this means you should add
                 // a capture for that function here
                 _ => panic!("Unknown call!"),
-            };
-
-            let result = match result {
-                Ok(_) => Ok(()),
-                Err(_) => Err(()),
             };
 
             // the call should return what we expect it to return
@@ -443,7 +444,10 @@ impl TransactionPool for MockedTransactionPoolExt {
             self.0.write().i = i + 1;
 
             // return the expected return value
-            return self.0.read().expected_calls[i].1;
+            return self.0.read().expected_calls[i]
+                .1
+                .map_err(|_| ())
+                .map(|_| ());
         }
 
         // we should not end here as it would mean we did not expect any more calls
