@@ -933,6 +933,7 @@ impl<T: Config> Pallet<T> {
         ContractBillingInformationByID::<T>::insert(report.contract_id, &contract_billing_info);
     }
 
+
     fn bill_contract_using_signed_transaction(contract_id: u64) -> Result<(), Error<T>> {
         let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::any_account();
         if !signer.can_sign() {
@@ -991,12 +992,17 @@ impl<T: Config> Pallet<T> {
         // Calculate amount of seconds elapsed based on the contract lock struct
 
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+        log::debug!("now timestamp: {:?}", now);
         // this will set the seconds elapsed to the default billing cycle duration in seconds
         // if there is no contract lock object yet. A contract lock object will be created later in this function
         // https://github.com/threefoldtech/tfchain/issues/261
         let contract_lock = ContractLock::<T>::get(contract.contract_id);
+        log::debug!("contract lock: {:?}", contract_lock);
+        let now_block = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
+        log::debug!("current block: {:?}", now_block);
         if contract_lock.lock_updated != 0 {
             seconds_elapsed = now.checked_sub(contract_lock.lock_updated).unwrap_or(0);
+            log::debug!("seconds elapsed: {:?}", seconds_elapsed);
         }
 
         let (amount_due, discount_received) =
@@ -1438,7 +1444,6 @@ impl<T: Config> Pallet<T> {
         let mut contracts = ContractsToBillAt::<T>::get(index);
 
 
-        println!("now: {:?}, index: {:?}", now, index);
         if !contracts.contains(&contract_id) {
             contracts.push(contract_id);
             ContractsToBillAt::<T>::insert(index, &contracts);
