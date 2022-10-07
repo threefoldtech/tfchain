@@ -46,4 +46,8 @@ jobs:
           python3.10 -m pip install robotframework cryptography substrate-interface
           cd substrate-node/tests
           robot -d _output_tests/ .
+        - uses: actions/upload-artifact@v3
+          with:
+            name: integration test output
+            path: substrate-node/tests/_output_tests/
 
