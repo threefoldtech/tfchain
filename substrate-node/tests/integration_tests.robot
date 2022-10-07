@@ -477,6 +477,8 @@ Test Solution Provider
     # Cancel the contract so that the bill is distributed and so that the providers get their part
     Cancel Node Contract    contract_id=${1}    who=Bob
 
+    Wait X Blocks    ${2}
+
     # Verification: both providers should have received their part
     ${balance_charlie_after} =     Balance Data    who=Charlie
     ${balance_dave_after} =    Balance Data    who=Dave
