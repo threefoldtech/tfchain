@@ -42,7 +42,7 @@ jobs:
           $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
 
       - name: Integration tests
-        run: |
+        - run: |
           python3.10 -m pip install robotframework cryptography substrate-interface
           cd substrate-node/tests
           robot -d _output_tests/ .
