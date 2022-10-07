@@ -368,20 +368,28 @@ class TfChainClient:
         q = substrate.query("TfgridModule", "Nodes", [id])
         return q.value
 
-    def create_node_contract(self, node_id: int = 1, deployment_data: bytes = randbytes(32),
-                             deployment_hash: bytes = randbytes(32), public_ips: int = 0,
-                             solution_provider_id: int | None = None, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+    def create_deployment_contract(self, farm_id: int = 1, deployment_data: bytes = randbytes(32),
+                             deployment_hash: bytes = randbytes(32), public_ips: int = 0, hru: int = 0, sru: int = 0,
+                             cru: int = 0, mru: int = 0, solution_provider_id: int | None = None, 
+                             rent_contract_id: int | None = None, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         params = {
-            "node_id": node_id,
+            "farm_id": farm_id,
             "deployment_data": deployment_data,
             "deployment_hash": deployment_hash,
             "public_ips": public_ips,
-            "solution_provider_id": solution_provider_id
+            "resources": {
+                "hru": hru * GIGABYTE,
+                "sru": sru * GIGABYTE,
+                "cru": cru,
+                "mru": mru * GIGABYTE
+            },
+            "solution_provider_id": solution_provider_id,
+            "rent_contract_id": rent_contract_id
         }
         call = substrate.compose_call(
-            "SmartContractModule", "create_node_contract", params)
+            "SmartContractModule", "create_deployment_contract", params)
         expected_events = [{
             "module_id": "SmartContractModule",
             "event_id": "ContractCreated"
@@ -389,14 +397,21 @@ class TfChainClient:
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
 
-    def update_node_contract(self, contract_id: int = 1, deployment_data: bytes = randbytes(32),
-                             deployment_hash: bytes = randbytes(32), port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+    def update_deployment_contract(self, contract_id: int = 1, deployment_data: bytes = randbytes(32),
+                             deployment_hash: bytes = randbytes(32), hru: int = 0, sru: int = 0, cru: int = 0,
+                             mru: int = 0, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
-        call = substrate.compose_call("SmartContractModule", "update_node_contract", {
+        call = substrate.compose_call("SmartContractModule", "update_deployment_contract", {
             "contract_id": contract_id,
             "deployment_data": deployment_data,
-            "deployment_hash": deployment_hash
+            "deployment_hash": deployment_hash,
+            "extra_resources": None if hru == 0 and sru == 0 and cru == 0 and mru == 0 else {
+                "hru": hru * GIGABYTE,
+                "sru": sru * GIGABYTE,
+                "cru": cru,
+                "mru": mru * GIGABYTE
+            }
         })
         expected_events = [{
             "module_id": "SmartContractModule",
@@ -460,30 +475,6 @@ class TfChainClient:
     def cancel_node_contract(self, contract_id: int = 1, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         self._cancel_contract(contract_id=contract_id,
                               type="Node", port=port, who=who)
-
-    def report_contract_resources(self, contract_id: int = 1, hru: int = 0, sru: int = 0, cru: int = 0, mru: int = 0,
-                                  port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
-        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
-
-        params = {
-            "contract_resources": [{
-                "contract_id": contract_id,
-                "used": {
-                    "hru": hru * GIGABYTE,
-                    "sru": sru * GIGABYTE,
-                    "cru": cru,
-                    "mru": mru * GIGABYTE
-                }
-            }]
-        }
-        call = substrate.compose_call(
-            "SmartContractModule", "report_contract_resources", params)
-        expected_events = [{
-            "module_id": "SmartContractModule",
-            "event_id": "UpdatedUsedResources"
-        }]
-        self._sign_extrinsic_submit_check_response(
-            substrate, call, who, expected_events=expected_events)
 
     def add_nru_reports(self, contract_id: int = 1, nru: int = 1, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         block_number = self.get_block_number(port=port)
