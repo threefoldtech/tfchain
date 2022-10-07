@@ -211,7 +211,7 @@ pub mod pallet {
     pub type EntityIdByName<T> = StorageMap<_, Blake2_128Concat, Vec<u8>, u32, ValueQuery>;
 
     pub type TwinIndex = u32;
-    type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+    pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     type TwinInfoOf<T> = types::Twin<<T as Config>::TwinIp, AccountIdOf<T>>;
     pub type TwinIpInput = BoundedVec<u8, ConstU32<{ twin::MAX_IP_LENGTH }>>;
     pub type TwinIpOf<T> = <T as Config>::TwinIp;

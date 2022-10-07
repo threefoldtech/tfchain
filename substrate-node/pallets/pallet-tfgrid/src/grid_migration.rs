@@ -5,7 +5,6 @@ use super::*;
 use frame_support::{traits::Get, weights::Weight, BoundedVec};
 use log::info;
 use sp_std::collections::btree_map::BTreeMap;
-use tfchain_support::types::Node;
 
 pub mod deprecated {
     use codec::{Decode, Encode};
@@ -16,7 +15,7 @@ pub mod deprecated {
     use tfchain_support::{resources::Resources, types::NodeCertification};
 
     #[derive(Encode, Decode, Debug, Default, PartialEq, Eq, Clone, TypeInfo)]
-    pub struct EntityV9<AccountId> {
+    pub struct Entity<AccountId> {
         pub version: u32,
         pub id: u32,
         pub name: Vec<u8>,
@@ -26,7 +25,7 @@ pub mod deprecated {
     }
 
     #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-    pub struct NodeV9<PubConfig, If> {
+    pub struct Node<PubConfig, If> {
         pub version: u32,
         pub id: u32,
         pub farm_id: u32,
@@ -72,7 +71,7 @@ pub mod v10 {
         }
 
         fn on_runtime_upgrade() -> Weight {
-            migrate_entities::<T>() + migrate_nodes::<T>()
+            migrate::<T>()
         }
 
         #[cfg(feature = "try-runtime")]
@@ -89,16 +88,76 @@ pub mod v10 {
     }
 }
 
-pub fn migrate<T: Config>() -> frame_support::weights::Weight {
+fn migrate<T: Config>() -> frame_support::weights::Weight {
     if PalletVersion::<T>::get() == types::StorageVersion::V9Struct {
-        migrate_entities::<T>() + migrate_nodes::<T>()
+        migrate_entities::<T>() + migrate_nodes::<T>() + update_pallet_storage_version::<T>()
     } else {
         info!(" >>> Unused migration");
         0
     }
 }
 
-pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
+fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
+    info!(" >>> Migrating entities storage...");
+
+    let mut migrated_count = 0;
+
+    // We transform the storage values from the old into the new format.
+    Entities::<T>::translate::<deprecated::Entity<AccountIdOf<T>>, _>(|k, entity| {
+        info!("     Migrated entity for {:?}...", k);
+
+        let country_name_input: CountryNameInput = BoundedVec::try_from(entity.country).unwrap();
+        let country = match <T as Config>::CountryName::try_from(country_name_input) {
+            Ok(country_name) => country_name,
+            Err(e) => {
+                info!(
+                    "failed to parse country name for entity: {:?}, error: {:?}",
+                    k, e
+                );
+                let default_country_name_input: CountryNameInput =
+                    BoundedVec::try_from(b"Unknown".to_vec()).unwrap();
+                <T as Config>::CountryName::try_from(default_country_name_input).unwrap()
+            }
+        };
+
+        let city_name_input: CityNameInput = BoundedVec::try_from(entity.city).unwrap();
+        let city = match <T as Config>::CityName::try_from(city_name_input) {
+            Ok(city_name) => city_name,
+            Err(e) => {
+                info!(
+                    "failed to parse city name for entity: {:?}, error: {:?}",
+                    k, e
+                );
+                let default_city_name_input: CityNameInput =
+                    BoundedVec::try_from(b"Unknown".to_vec()).unwrap();
+                <T as Config>::CityName::try_from(default_city_name_input).unwrap()
+            }
+        };
+
+        let new_entity = TfgridEntity::<T> {
+            version: 2, // ??
+            id: entity.id,
+            name: entity.name,
+            account_id: entity.account_id,
+            country,
+            city,
+        };
+
+        migrated_count += 1;
+
+        Some(new_entity)
+    });
+
+    info!(
+        " <<< Entity storage updated! Migrated {} Entities ✅",
+        migrated_count
+    );
+
+    // Return the weight consumed by the migration.
+    T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
+}
+
+fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
     info!(" >>> Migrating nodes storage...");
 
     let mut migrated_count = 0;
@@ -106,25 +165,40 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
     let mut farms_with_nodes: BTreeMap<u32, Vec<u32>> = BTreeMap::new();
 
     // We transform the storage values from the old into the new format.
-    Nodes::<T>::translate::<deprecated::NodeV9<PubConfigOf<T>, InterfaceOf<T>>, _>(|k, node| {
+    Nodes::<T>::translate::<deprecated::Node<PubConfigOf<T>, InterfaceOf<T>>, _>(|k, node| {
         info!("     Migrated node for {:?}...", k);
 
-        // TODO: handle migration errors
-        let location_input = LocationInput {
-            city: BoundedVec::try_from(node.city).unwrap(),
-            country: BoundedVec::try_from(node.country).unwrap(),
-            latitude: BoundedVec::try_from(node.location.latitude).unwrap(),
-            longitude: BoundedVec::try_from(node.location.longitude).unwrap(),
+        let location = match get_location::<T>(&node) {
+            Ok(loc) => loc,
+            Err(e) => {
+                info!("failed to parse location for node: {:?}, error: {:?}", k, e);
+                let default_location_input = LocationInput {
+                    city: BoundedVec::try_from(b"Unknown".to_vec()).unwrap(),
+                    country: BoundedVec::try_from(b"Unknown".to_vec()).unwrap(),
+                    latitude: BoundedVec::try_from(b"0".to_vec()).unwrap(),
+                    longitude: BoundedVec::try_from(b"0".to_vec()).unwrap(),
+                };
+                <T as Config>::Location::try_from(default_location_input).unwrap()
+            }
         };
-        let location = <T as Config>::Location::try_from(location_input).unwrap();
 
-        // TODO: handle migration errors
         let serial_number_input: SerialNumberInput =
             BoundedVec::try_from(node.serial_number).unwrap();
-        let serial_number = <T as Config>::SerialNumber::try_from(serial_number_input).unwrap();
+        let serial_number = match <T as Config>::SerialNumber::try_from(serial_number_input) {
+            Ok(serial) => serial,
+            Err(e) => {
+                info!(
+                    "failed to parse serial number for node: {:?}, error: {:?}",
+                    k, e
+                );
+                let default_serial_number_input: SerialNumberInput =
+                    BoundedVec::try_from(b"NA".to_vec()).unwrap();
+                <T as Config>::SerialNumber::try_from(default_serial_number_input).unwrap()
+            }
+        };
 
-        let new_node = Node {
-            version: 5,
+        let new_node = TfgridNode::<T> {
+            version: 6, // ??
             id: node.id,
             farm_id: node.farm_id,
             twin_id: node.twin_id,
@@ -138,7 +212,7 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
             secure_boot: node.secure_boot,
             virtualized: node.virtualized,
             serial_number,
-            connection_price: 80,
+            connection_price: node.connection_price,
         };
 
         // Add index of farm - list (nodes)
@@ -173,7 +247,23 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
     )
 }
 
-pub fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
-    info!(" >>> Migrating entities storage...");
-    0
+fn update_pallet_storage_version<T: Config>() -> frame_support::weights::Weight {
+    PalletVersion::<T>::set(types::StorageVersion::V10Struct);
+    info!(" <<< Storage version upgraded");
+
+    // Return the weight consumed by the migration.
+    T::DbWeight::get().writes(1)
+}
+
+fn get_location<T: Config>(
+    node: &deprecated::Node<PubConfigOf<T>, InterfaceOf<T>>,
+) -> Result<LocationOf<T>, Error<T>> {
+    let location_input = LocationInput {
+        city: BoundedVec::try_from(node.city.clone()).unwrap(),
+        country: BoundedVec::try_from(node.country.clone()).unwrap(),
+        latitude: BoundedVec::try_from(node.location.longitude.clone()).unwrap(),
+        longitude: BoundedVec::try_from(node.location.latitude.clone()).unwrap(),
+    };
+
+    <T as Config>::Location::try_from(location_input)
 }
