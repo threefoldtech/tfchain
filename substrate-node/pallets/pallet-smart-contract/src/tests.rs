@@ -14,6 +14,7 @@ use sp_std::convert::{TryFrom, TryInto};
 use substrate_fixed::types::U64F64;
 
 use crate::cost;
+use log::info;
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use tfchain_support::types::{FarmCertification, Location, NodeCertification, PublicIP, Resources};
 
@@ -761,12 +762,12 @@ fn test_node_contract_billing_details() {
 
         let free_balance = Balances::free_balance(&twin.account_id);
         let total_amount_billed = initial_twin_balance - free_balance;
-        println!("locked balance {:?}", total_amount_billed);
+        info!("locked balance {:?}", total_amount_billed);
 
-        println!("total locked balance {:?}", total_amount_billed);
+        info!("total locked balance {:?}", total_amount_billed);
 
         let staking_pool_account_balance = Balances::free_balance(&get_staking_pool_account());
-        println!(
+        info!(
             "staking pool account balance, {:?}",
             staking_pool_account_balance
         );
@@ -1078,7 +1079,7 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
         let our_events = System::events();
 
         for e in our_events.clone().iter() {
-            println!("{:?}", e);
+            info!("{:?}", e);
         }
 
         let public_ip = PublicIP {
@@ -1266,7 +1267,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
 
         let twin = TfgridModule::twins(2).unwrap();
         let initial_twin_balance = Balances::free_balance(&twin.account_id);
-        println!("initial twin balance: {:?}", initial_twin_balance);
+        info!("initial twin balance: {:?}", initial_twin_balance);
         let initial_total_issuance = Balances::total_issuance();
 
         assert_ok!(SmartContractModule::create_node_contract(
@@ -1539,7 +1540,7 @@ fn test_name_contract_billing() {
             amount_billed: 1848,
         };
         let our_events = System::events();
-        println!("events: {:?}", our_events.clone());
+        info!("events: {:?}", our_events.clone());
         assert_eq!(
             our_events[3],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
@@ -1681,7 +1682,7 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
         let free_balance = Balances::free_balance(&twin.account_id);
 
         let locked_balance = free_balance - usable_balance;
-        println!("locked balance: {:?}", locked_balance);
+        info!("locked balance: {:?}", locked_balance);
 
         run_to_block(8, Some(&mut pool_state));
         // Calculate the cost for 7 blocks of runtime (created a block 1, canceled at block 8)
@@ -2422,10 +2423,10 @@ fn validate_distribution_rewards(
     total_amount_billed: u64,
     had_solution_provider: bool,
 ) {
-    println!("total locked balance {:?}", total_amount_billed);
+    info!("total locked balance {:?}", total_amount_billed);
 
     let staking_pool_account_balance = Balances::free_balance(&get_staking_pool_account());
-    println!(
+    info!(
         "staking pool account balance, {:?}",
         staking_pool_account_balance
     );
@@ -2456,7 +2457,7 @@ fn validate_distribution_rewards(
         let solution_provider = SmartContractModule::solution_providers(1).unwrap();
         let solution_provider_1_balance =
             Balances::free_balance(solution_provider.providers[0].who.clone());
-        println!("solution provider b: {:?}", solution_provider_1_balance);
+        info!("solution provider b: {:?}", solution_provider_1_balance);
         assert_eq!(
             solution_provider_1_balance,
             Perbill::from_percent(10) * total_amount_billed
@@ -2521,10 +2522,6 @@ fn check_report_cost(
     discount_level: types::DiscountLevel,
 ) {
     let our_events = System::events();
-
-    for e in our_events.clone().iter() {
-        println!("event: {:?}", e);
-    }
 
     let contract_bill_event = types::ContractBill {
         contract_id,

@@ -356,10 +356,6 @@ impl PoolState {
         ));
     }
 
-    // fn should_call(&mut self, expected_call: TransactionCall, expected_result: ExtrinsicResult) {
-    //     self.expected_calls.push((expected_call, expected_result));
-    // }
-
     pub fn execute_calls_and_check_results(&mut self) {
         if self.calls_to_execute.len() == 0 {
             return;
