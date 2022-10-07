@@ -53,11 +53,8 @@ impl<T: Config> Contract<T> {
         seconds_elapsed: u64,
     ) -> Result<u64, DispatchErrorWithPostInfo> {
         let total_cost = match &self.contract_type {
-            types::ContractData::DeploymentContract(_) => {
-              0  
-            },
             // Calculate total cost for a node contract
-            types::ContractData::NodeContract(node_contract) => {
+            types::ContractData::DeploymentContract(node_contract) => {
                 // Get the contract billing info to view the amount unbilled for NRU (network resource units)
                 let contract_billing_info = self.get_billing_info();
                 // Get the node
@@ -67,8 +64,8 @@ impl<T: Config> Contract<T> {
 
                 // We know the contract is using resources, now calculate the cost for each used resource
 
-                let node_contract_resources =
-                    pallet::Pallet::<T>::node_contract_resources(self.contract_id);
+                //let node_contract_resources =
+                //    pallet::Pallet::<T>::node_contract_resources(self.contract_id);
 
                 let mut bill_resources = true;
                 // If this node contract is deployed on a node which has a rent contract
@@ -78,7 +75,7 @@ impl<T: Config> Contract<T> {
                 }
 
                 let contract_cost = calculate_resources_cost::<T>(
-                    node_contract_resources.used,
+                    node_contract.resources,
                     node_contract.public_ips,
                     seconds_elapsed,
                     &pricing_policy,

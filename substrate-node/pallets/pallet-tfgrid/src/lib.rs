@@ -1088,8 +1088,6 @@ pub mod pallet {
             let created = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
             let power_target = PowerTarget::Up;
 
-            let available_resources = resources.clone();
-
             let mut new_node = Node {
                 version: TFGRID_NODE_VERSION,
                 id,

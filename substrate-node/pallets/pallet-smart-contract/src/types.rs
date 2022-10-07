@@ -48,9 +48,8 @@ impl<T: Config> Contract<T> {
     pub fn get_node_id(&self) -> u32 {
         match self.contract_type.clone() {
             ContractData::RentContract(c) => c.node_id,
-            ContractData::NodeContract(c) => c.node_id,
-            ContractData::NameContract(_) => 0,
             ContractData::DeploymentContract(c) => c.node_id,
+            ContractData::NameContract(_) => 0,
         }
     }
 }
@@ -58,7 +57,7 @@ impl<T: Config> Contract<T> {
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
-pub struct NodeContract<T: Config> {
+pub struct DeploymentContract<T: Config> {
     pub node_id: u32,
     // Hash of the deployment, set by the user
     // Max 32 bytes
@@ -66,6 +65,7 @@ pub struct NodeContract<T: Config> {
     pub deployment_data: BoundedVec<u8, MaxDeploymentDataLength<T>>,
     pub public_ips: u32,
     pub public_ips_list: BoundedVec<ContractPublicIP<T>, MaxNodeContractPublicIPs<T>>,
+    pub resources: Resources,
 }
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
@@ -92,31 +92,13 @@ pub struct RentContract {
     pub node_id: u32,
 }
 
-#[derive(
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Clone,
-    Encode,
-    Decode,
-    Default,
-    RuntimeDebugNoBound,
-    TypeInfo,
-    MaxEncodedLen,
-)]
-pub struct DeploymentContract {
-    pub node_id: u32,
-}
-
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub enum ContractData<T: Config> {
-    NodeContract(NodeContract<T>),
+    DeploymentContract(DeploymentContract<T>),
     NameContract(NameContract<T>),
     RentContract(RentContract),
-    DeploymentContract(DeploymentContract),
 }
 
 impl<T: Config> Default for ContractData<T> {

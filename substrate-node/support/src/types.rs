@@ -88,7 +88,7 @@ pub struct Node<Location, PubConfig, If, SerialNumber> {
     pub farm_id: u32,
     pub twin_id: u32,
     pub resources: Resources,
-    pub available_resources: Resources,
+    pub used_resources: Resources,
     pub location: Location,
     pub power_target: PowerTarget,
     // optional public config
@@ -101,6 +101,22 @@ pub struct Node<Location, PubConfig, If, SerialNumber> {
     pub virtualized: bool,
     pub serial_number: Option<SerialNumber>,
     pub connection_price: u32,
+}
+
+impl<PubConfig, If> Node<PubConfig, If> {
+    pub fn can_claim_resources(&self, resources: Resources) -> bool {
+        self.resources.hru - self.used_resources.hru >= resources.hru
+            && self.resources.hru - self.used_resources.sru >= resources.sru
+            && self.resources.hru - self.used_resources.cru >= resources.cru
+            && self.resources.hru - self.used_resources.mru >= resources.mru
+    }
+
+    pub fn can_be_shutdown(&self) -> bool {
+        self.used_resources.hru == 0
+            && self.used_resources.sru == 0
+            && self.used_resources.cru == 0
+            && self.used_resources.mru == 0
+    }
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
