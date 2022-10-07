@@ -292,7 +292,7 @@ Test Create Update Cancel Node Contract: Success
     Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}   longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent    interfaces=${interfaces}
     
     # Bob is the one creating the contract and thus being billed
-    Create Node Contract    node_id=${1}    public_ips=${1}    who=Bob    port=9946
+    Create Deployment Contract    farm_id=${1}    public_ips=${1}    who=Bob    port=9946
 
     ${farm} =     Get Farm    ${1}
     Should Not Be Equal    ${farm}    ${None}    msg=Farm with id 1 doesn't exist
@@ -302,7 +302,7 @@ Test Create Update Cancel Node Contract: Success
     Should Be Equal    ${farm}[public_ips][0][gateway]    185.206.122.1    msg=The gateway should be 185.206.122.1
     Should Be Equal    ${farm}[public_ips][0][contract_id]    ${1}    msg=The public ip was claimed in contract with id 1 while the farm contains a different contract id for it
 
-    Update Node Contract    contract_id=${1}    who=Bob    port=9946
+    Update Deployment Contract    contract_id=${1}    who=Bob    port=9946
 
     Cancel Node Contract    contract_id=${1}    who=Bob    port=9946
 
@@ -316,7 +316,7 @@ Test Create Node Contract: Failure Not Enough Public Ips
     Setup Network And Create Node
     # let's request 2 public ips which should result in an error
     Run Keyword And Expect Error    *'FarmHasNotEnoughPublicIPs'*
-    ...    Create Node Contract    node_id=${1}    public_ips=${2}
+    ...    Create Deployment Contract    farm_id=${1}    public_ips=${2}
 
     Tear Down Multi Node Network
 
@@ -428,8 +428,7 @@ Test Billing
     ${balance_alice} =    Balance Data    who=Alice
     ${balance_bob} =    Balance Data    who=Bob    port=${9946}
     # Bob will be using the node: let's create a node contract in his name
-    Create Node Contract    node_id=${1}    port=${9946}    who=Bob
-    Report Contract Resources    contract_id=${1}    hru=${20}    sru=${20}    cru=${2}    mru=${4}
+    Create Deployment Contract    farm_id=${1}    hru=${20}    sru=${20}    cru=${2}    mru=${4}   port=${9946}    who=Bob
     Add Nru Reports    contract_id=${1}    nru=${3}
 
     # Let it run 6 blocks so that the user will be billed 1 time
@@ -471,8 +470,7 @@ Test Solution Provider
     ${balance_charlie_before} =     Balance Data    who=Charlie
     ${balance_dave_before} =    Balance Data    who=Dave
     # Bob will be using the node: let's create a node contract in his name
-    Create Node Contract    node_id=${1}    port=9946    who=Bob    solution_provider_id=${1}
-    Report Contract Resources    contract_id=${1}    hru=${20}    sru=${20}    cru=${2}    mru=${4}
+    Create Deployment Contract    farm_id=${1}    hru=${20}    sru=${20}    cru=${2}    mru=${4}    port=9946    who=Bob    solution_provider_id=${1}
     Add Nru Reports    contract_id=${1}    nru=${3}
     # Wait 6 blocks: after 5 blocks Bob should be billed
     Wait X Blocks    ${6}

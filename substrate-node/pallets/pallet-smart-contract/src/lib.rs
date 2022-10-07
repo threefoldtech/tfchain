@@ -137,10 +137,10 @@ pub mod pallet {
     pub type ContractBillingInformationByID<T: Config> =
         StorageMap<_, Blake2_128Concat, u64, ContractBillingInformation, ValueQuery>;
 
-    //#[pallet::storage]
-    //#[pallet::getter(fn node_contract_resources)]
-    //pub type NodeContractResources<T: Config> =
-    //    StorageMap<_, Blake2_128Concat, u64, ContractResources, ValueQuery>;
+    #[pallet::storage]
+    #[pallet::getter(fn node_contract_resources)]
+    pub type NodeContractResources<T: Config> =
+       StorageMap<_, Blake2_128Concat, u64, ContractResources, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn node_contract_by_hash)]
