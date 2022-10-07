@@ -402,7 +402,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
         }
-        
+
         // DEPRECATED
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn update_node_contract(
@@ -605,6 +605,9 @@ impl<T: Config> Pallet<T> {
             );
             Self::get_rent_contract(&contract)?.node_id
         } else {
+            // the farm cannot be a dedicated farm unless you provide a rent contract id
+            let farm = pallet_tfgrid::Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
+            ensure!(!farm.dedicated_farm, Error::<T>::NodeNotAvailableToDeploy);
             Self::_find_suitable_node_in_farm(farm_id, resources)?
         };
 
