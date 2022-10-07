@@ -390,6 +390,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        // DEPRECATED
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn create_node_contract(
             _origin: OriginFor<T>,
@@ -401,23 +402,16 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
         }
-
+        
+        // DEPRECATED
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn update_node_contract(
-            origin: OriginFor<T>,
-            contract_id: u64,
-            deployment_hash: DeploymentHash,
-            deployment_data: DeploymentDataInput<T>,
-            extra_resources: Option<Resources>,
+            _origin: OriginFor<T>,
+            _contract_id: u64,
+            _deployment_hash: DeploymentHash,
+            _deployment_data: DeploymentDataInput<T>,
         ) -> DispatchResultWithPostInfo {
-            let account_id = ensure_signed(origin)?;
-            Self::_update_node_contract(
-                account_id,
-                contract_id,
-                deployment_hash,
-                deployment_data,
-                extra_resources,
-            )
+            Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
@@ -469,6 +463,24 @@ pub mod pallet {
                 public_ips,
                 solution_provider_id,
                 rent_contract_id,
+            )
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        pub fn update_deployment_contract(
+            origin: OriginFor<T>,
+            contract_id: u64,
+            deployment_hash: DeploymentHash,
+            deployment_data: DeploymentDataInput<T>,
+            extra_resources: Option<Resources>,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_update_deployment_contract(
+                account_id,
+                contract_id,
+                deployment_hash,
+                deployment_data,
+                extra_resources,
             )
         }
 
@@ -854,10 +866,10 @@ impl<T: Config> Pallet<T> {
                 Self::_reserve_ip(id, nc)?;
                 Self::_claim_resources_on_node(nc.node_id, nc.resources)?;
                 Self::_change_power_target_node(nc.node_id, PowerTarget::Up)?;
-            },
+            }
             types::ContractData::RentContract(ref mut nc) => {
                 Self::_change_power_target_node(nc.node_id, PowerTarget::Up)?;
-            },
+            }
             _ => {}
         }
 
@@ -891,7 +903,7 @@ impl<T: Config> Pallet<T> {
     }
 
     #[transactional]
-    pub fn _update_node_contract(
+    pub fn _update_deployment_contract(
         account_id: T::AccountId,
         contract_id: u64,
         deployment_hash: DeploymentHash,
@@ -972,7 +984,10 @@ impl<T: Config> Pallet<T> {
                 Self::_change_power_target_node(rent_contract.node_id, PowerTarget::Down)?;
             }
             types::ContractData::DeploymentContract(ref deployment_contract) => {
-                Self::_un_claim_resources_on_node(deployment_contract.node_id, deployment_contract.resources)?;
+                Self::_un_claim_resources_on_node(
+                    deployment_contract.node_id,
+                    deployment_contract.resources,
+                )?;
             }
             _ => {}
         }
