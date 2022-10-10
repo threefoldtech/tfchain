@@ -933,8 +933,7 @@ impl<T: Config> Pallet<T> {
         if !Contracts::<T>::contains_key(contract_id) {
             log::debug!("cleaning up deleted contract from storage");
 
-            let now = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
-            let index = now % BillingFrequency::<T>::get();
+            let index = Self::get_contract_index();
 
             // Remove contract from billing list
             let mut contracts = ContractsToBillAt::<T>::get(index);
@@ -1450,9 +1449,8 @@ impl<T: Config> Pallet<T> {
             return;
         }
 
-        let now = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>() - 1;
         // Save the contract to be billed in (now -1 %(mod) BILLING_FREQUENCY_IN_BLOCKS)
-        let index = now % BillingFrequency::<T>::get();
+        let index = Self::get_contract_index() - 1;
         let mut contracts = ContractsToBillAt::<T>::get(index);
 
         if !contracts.contains(&contract_id) {
@@ -1739,6 +1737,11 @@ impl<T: Config> Pallet<T> {
             }
         }
         Ok(().into())
+    }
+
+    pub fn get_contract_index() -> u64 {
+        let now = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
+        now % BillingFrequency::<T>::get()
     }
 }
 
