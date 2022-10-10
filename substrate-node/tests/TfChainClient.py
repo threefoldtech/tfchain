@@ -406,7 +406,7 @@ class TfChainClient:
             "contract_id": contract_id,
             "deployment_data": deployment_data,
             "deployment_hash": deployment_hash,
-            "extra_resources": None if hru == 0 and sru == 0 and cru == 0 and mru == 0 else {
+            "resources": None if hru == 0 and sru == 0 and cru == 0 and mru == 0 else {
                 "hru": hru * GIGABYTE,
                 "sru": sru * GIGABYTE,
                 "cru": cru,
