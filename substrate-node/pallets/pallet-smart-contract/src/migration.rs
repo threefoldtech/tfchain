@@ -39,7 +39,7 @@ pub mod v5 {
 }
 
 pub fn migrate_to_version_6<T: Config>() -> frame_support::weights::Weight {
-    if PalletVersion::<T>::get() == types::StorageVersion::V6 {
+    if PalletVersion::<T>::get() == types::StorageVersion::V5 {
         info!(
             " >>> Starting contract pallet migration, pallet version: {:?}",
             PalletVersion::<T>::get()
@@ -57,12 +57,17 @@ pub fn migrate_to_version_6<T: Config>() -> frame_support::weights::Weight {
             b"",
         );
 
-        let billing_frequency = BillingFrequency::<T>::get();
+        let billing_frequency = DefaultBillingFrequency::<T>::get();
         for (block_number, contract_ids) in contracts_to_bill_at {
             migrated_count += 1;
             // Construct new index
-            let index = block_number - 1 % billing_frequency;
+            let index = (block_number - 1) % billing_frequency;
             // Reinsert items under the new key
+            info!(
+                "inserted contracts:{:?} at index: {:?}",
+                contract_ids.clone(),
+                index
+            );
             ContractsToBillAt::<T>::insert(index, contract_ids);
         }
 

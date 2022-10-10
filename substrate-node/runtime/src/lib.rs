@@ -757,7 +757,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    (),
+    pallet_smart_contract::migration::v5::ContractMigrationV5<Runtime>,
 >;
 
 impl_runtime_apis! {
