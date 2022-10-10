@@ -140,7 +140,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn node_contract_resources)]
     pub type NodeContractResources<T: Config> =
-       StorageMap<_, Blake2_128Concat, u64, ContractResources, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, u64, ContractResources, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn node_contract_by_hash)]
@@ -751,20 +751,13 @@ impl<T: Config> Pallet<T> {
         power_target: PowerTarget,
     ) -> DispatchResultWithPostInfo {
         let mut node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-        ensure!(
-            pallet_tfgrid::Farms::<T>::contains_key(node.farm_id),
-            Error::<T>::FarmNotExists
-        );
-
-        // we never shut down the first node in the of a farm, there should always be one node up per farm
-        if matches!(power_target, PowerTarget::Down)
-            && pallet_tfgrid::NodesByFarmID::<T>::get(node.farm_id)[0] == node_id
-        {
-            return Ok(().into());
-        }
 
         // if the power_target is not correct => change it and emit event
         if node.power_target != power_target {
+            ensure!(
+                pallet_tfgrid::Farms::<T>::contains_key(node.farm_id),
+                Error::<T>::FarmNotExists
+            );
             Self::deposit_event(Event::PowerTargetChanged {
                 farm_id: node.farm_id,
                 node_id: node_id,
@@ -786,12 +779,11 @@ impl<T: Config> Pallet<T> {
         );
 
         //update the available resources
-        node.used_resources.hru += resources.hru;
-        node.used_resources.sru += resources.sru;
-        node.used_resources.cru += resources.cru;
-        node.used_resources.mru += resources.mru;
+        node.used_resources = node.used_resources.add(&resources);
 
         pallet_tfgrid::Nodes::<T>::insert(node.id, &node);
+
+        Self::_change_power_target_node(node_id, PowerTarget::Up)?;
 
         Ok(().into())
     }
@@ -803,22 +795,20 @@ impl<T: Config> Pallet<T> {
         let mut node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
 
         //update the available resources
-        node.used_resources.hru -= resources.hru;
-        node.used_resources.sru -= resources.sru;
-        node.used_resources.cru -= resources.cru;
-        node.used_resources.mru -= resources.mru;
-
-        // if all resources are free shutdown the node
-        if node.can_be_shutdown() {
-            Self::deposit_event(Event::PowerTargetChanged {
-                farm_id: node.farm_id,
-                node_id: node_id,
-                power_target: PowerTarget::Down,
-            });
-            node.power_target = PowerTarget::Down;
-        }
+        node.used_resources = node.used_resources.substract(&resources);
 
         pallet_tfgrid::Nodes::<T>::insert(node.id, &node);
+
+        // we don't shutdown the node if:
+        //      some of the resources are still being used
+        //      it is the first node in the farm (one must stay up)
+        //      there is a rent contract (canceling that rent contract will trigger the shutdown)
+        if node.can_be_shutdown()
+            && !ActiveRentContractForNode::<T>::contains_key(node_id)
+            && pallet_tfgrid::NodesByFarmID::<T>::get(node.farm_id)[0] != node_id
+        {
+            Self::_change_power_target_node(node_id, PowerTarget::Down)?;
+        }
 
         Ok(().into())
     }
@@ -864,7 +854,6 @@ impl<T: Config> Pallet<T> {
             types::ContractData::DeploymentContract(ref mut nc) => {
                 Self::_reserve_ip(id, nc)?;
                 Self::_claim_resources_on_node(nc.node_id, nc.resources)?;
-                Self::_change_power_target_node(nc.node_id, PowerTarget::Up)?;
             }
             types::ContractData::RentContract(ref mut nc) => {
                 Self::_change_power_target_node(nc.node_id, PowerTarget::Up)?;
@@ -941,7 +930,10 @@ impl<T: Config> Pallet<T> {
         node_contract.deployment_data = deployment_data;
         // update the resources with the extra resources
         if let Some(resources) = resources {
-            ensure!(resources > node_contract.resources, Error::<T>::InvalidResources);
+            ensure!(
+                resources > node_contract.resources,
+                Error::<T>::InvalidResources
+            );
             let extra_resources = resources.substract(&node_contract.resources);
             Self::_claim_resources_on_node(node_contract.node_id, extra_resources)?;
             node_contract.resources = resources;

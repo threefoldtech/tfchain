@@ -16,7 +16,9 @@ use substrate_fixed::types::U64F64;
 use crate::cost;
 use log::info;
 use pallet_tfgrid::types as pallet_tfgrid_types;
-use tfchain_support::types::{FarmCertification, Location, NodeCertification, PublicIP, Resources};
+use tfchain_support::types::{
+    FarmCertification, Location, NodeCertification, PowerTarget, PublicIP, Resources,
+};
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -178,15 +180,244 @@ fn test_create_deployment_contract_which_was_canceled_before_works() {
     });
 }
 
-// todo test resources on a contract
-// todo test updating resources (increase)
-// todo test choosing the best node
-// todo test multiple nodes same farm so that there are no more nodes left
-// todo test waking up a node 
-// todo test shutting down nodes (and not shutting down the lest node in the farm)
+#[test]
+fn test_create_deployment_contract_no_node_in_farm_with_enough_resources() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+
+        assert_noop!(
+            SmartContractModule::create_deployment_contract(
+                Origin::signed(alice()),
+                1,
+                generate_deployment_hash(),
+                get_deployment_data(),
+                Resources {
+                    cru: 10,
+                    hru: 0,
+                    mru: 2 * GIGABYTE,
+                    sru: 60 * GIGABYTE
+                },
+                0,
+                None,
+                None,
+            ),
+            Error::<TestRuntime>::NoSuitableNodeInFarm
+        );
+    });
+}
+
 // todo test creating deployment contract using rent contract id (+ all possible failures)
 // todo test billing
 // todo test grouping contracts
+
+#[test]
+fn test_create_deployment_contract_finding_a_node() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+
+        prepare_farm_three_nodes_three_deployment_contracts();
+
+        // first contract should go to node 1
+        match SmartContractModule::contracts(1).unwrap().contract_type {
+            types::ContractData::DeploymentContract(c) => {
+                assert_eq!(c.node_id, 1);
+                assert_eq!(
+                    c.resources,
+                    Resources {
+                        cru: 4,
+                        hru: 0,
+                        mru: 2 * GIGABYTE,
+                        sru: 60 * GIGABYTE,
+                    }
+                );
+            }
+            _ => {
+                panic!("Expecting a deployment contract!");
+            }
+        }
+
+        // second contract will take most resources but can still go to node 1
+        match SmartContractModule::contracts(2).unwrap().contract_type {
+            types::ContractData::DeploymentContract(c) => {
+                assert_eq!(c.node_id, 1);
+                assert_eq!(
+                    c.resources,
+                    Resources {
+                        cru: 4,
+                        hru: 1000 * GIGABYTE,
+                        mru: 10 * GIGABYTE,
+                        sru: 100 * GIGABYTE,
+                    }
+                );
+            }
+            _ => {
+                panic!("Expecting a deployment contract!");
+            }
+        }
+
+        // third contract can no longer go to node 1 => node 2 should be started
+        match SmartContractModule::contracts(3).unwrap().contract_type {
+            types::ContractData::DeploymentContract(c) => {
+                assert_eq!(c.node_id, 2);
+                assert_eq!(
+                    c.resources,
+                    Resources {
+                        cru: 2,
+                        hru: 1024 * GIGABYTE,
+                        mru: 4 * GIGABYTE,
+                        sru: 50 * GIGABYTE,
+                    }
+                );
+            }
+            _ => {
+                panic!("Expecting a deployment contract!");
+            }
+        }
+
+        let our_events = System::events();
+        for event in our_events.clone().iter() {
+            log::info!("Event: {:?}", event);
+        }
+        // node 2 should be started and event should be emitted
+        assert_eq!(
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::PowerTargetChanged {
+                    farm_id: 1,
+                    node_id: 2,
+                    power_target: PowerTarget::Up,
+                }
+            ))),
+            true
+        );
+    });
+}
+
+#[test]
+fn test_create_deployment_contract_finding_a_node_failure() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_three_nodes_three_deployment_contracts();
+
+        assert_noop!(
+            SmartContractModule::create_deployment_contract(
+                Origin::signed(alice()),
+                1,
+                generate_deployment_hash(),
+                get_deployment_data(),
+                Resources {
+                    hru: 4096 * GIGABYTE,
+                    sru: 2048 * GIGABYTE,
+                    cru: 32,
+                    mru: 48 * GIGABYTE,
+                },
+                0,
+                None,
+                None,
+            ),
+            Error::<TestRuntime>::NoSuitableNodeInFarm
+        );
+    });
+}
+
+#[test]
+fn test_cancel_deployment_contract_shutdown_node() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_three_nodes_three_deployment_contracts();
+
+        // cancel contract 2 = nothing should change
+        assert_ok!(SmartContractModule::cancel_contract(
+            Origin::signed(alice()),
+            2
+        ));
+        assert_eq!(
+            TfgridModule::nodes(1).unwrap().power_target,
+            PowerTarget::Up
+        );
+        assert_eq!(
+            TfgridModule::nodes(2).unwrap().power_target,
+            PowerTarget::Up
+        );
+        assert_eq!(
+            TfgridModule::nodes(3).unwrap().power_target,
+            PowerTarget::Down
+        );
+        // on node 1 there is only one contract left => used resources of node 1 should equal resources of contract 1
+        assert_eq!(
+            TfgridModule::nodes(1).unwrap().used_resources,
+            Resources {
+                cru: 4,
+                hru: 0,
+                mru: 2 * GIGABYTE,
+                sru: 60 * GIGABYTE,
+            }
+        );
+
+        // cancel contract 3 = node 2 should shutdown
+        assert_ok!(SmartContractModule::cancel_contract(
+            Origin::signed(alice()),
+            3
+        ));
+        assert_eq!(
+            TfgridModule::nodes(1).unwrap().power_target,
+            PowerTarget::Up
+        );
+        assert_eq!(
+            TfgridModule::nodes(2).unwrap().power_target,
+            PowerTarget::Down
+        );
+        assert_eq!(
+            TfgridModule::nodes(3).unwrap().power_target,
+            PowerTarget::Down
+        );
+        // nothing else running on node 2 => used resources should be 0
+        assert_eq!(
+            TfgridModule::nodes(2).unwrap().used_resources,
+            Resources::empty()
+        );
+
+        // cancel contract 1 (last contract running on node 1) => node may not be shutdown as it is the only
+        // one left running in the farm
+        assert_ok!(SmartContractModule::cancel_contract(
+            Origin::signed(alice()),
+            1
+        ));
+        assert_eq!(
+            TfgridModule::nodes(1).unwrap().power_target,
+            PowerTarget::Up
+        );
+        assert_eq!(
+            TfgridModule::nodes(2).unwrap().power_target,
+            PowerTarget::Down
+        );
+        assert_eq!(
+            TfgridModule::nodes(3).unwrap().power_target,
+            PowerTarget::Down
+        );
+        // nothing else running on node 1 => used resources should be 0
+        assert_eq!(
+            TfgridModule::nodes(1).unwrap().used_resources,
+            Resources::empty()
+        );
+
+        let our_events = System::events();
+        for event in our_events.clone().iter() {
+            log::info!("Event: {:?}", event);
+        }
+
+        assert_eq!(
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::PowerTargetChanged {
+                    farm_id: 1,
+                    node_id: 2,
+                    power_target: PowerTarget::Down,
+                }
+            ))),
+            true
+        );
+    });
+}
 
 #[test]
 fn test_update_deployment_contract_works() {
@@ -201,18 +432,24 @@ fn test_update_deployment_contract_works() {
             get_deployment_data(),
             resources.clone(),
             0,
-            None, 
+            None,
             None,
         ));
 
         let new_hash = generate_deployment_hash();
         let deployment_data = get_deployment_data();
+        let updated_resources = resources.clone().add(&Resources {
+            cru: 1,
+            hru: 1 * GIGABYTE,
+            mru: 2 * GIGABYTE,
+            sru: 30 * GIGABYTE,
+        });
         assert_ok!(SmartContractModule::update_deployment_contract(
             Origin::signed(alice()),
             1,
             new_hash,
             get_deployment_data(),
-            None,
+            Some(updated_resources),
         ));
 
         let deployment_contract = types::DeploymentContract {
@@ -221,7 +458,7 @@ fn test_update_deployment_contract_works() {
             deployment_data,
             public_ips: 0,
             public_ips_list: Vec::new().try_into().unwrap(),
-            resources: resources,
+            resources: updated_resources,
         };
         let contract_type = types::ContractData::DeploymentContract(deployment_contract);
 
@@ -242,8 +479,88 @@ fn test_update_deployment_contract_works() {
 
         assert_eq!(contracts[0], 1);
 
-        let deployment_contract_id_by_hash = SmartContractModule::node_contract_by_hash(1, new_hash);
+        let deployment_contract_id_by_hash =
+            SmartContractModule::node_contract_by_hash(1, new_hash);
         assert_eq!(deployment_contract_id_by_hash, 1);
+    });
+}
+#[test]
+fn test_update_deployment_contract_too_much_resources() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+
+        assert_ok!(SmartContractModule::create_deployment_contract(
+            Origin::signed(alice()),
+            1,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            Resources {
+                cru: 2,
+                hru: 0,
+                mru: 2 * GIGABYTE,
+                sru: 60 * GIGABYTE
+            },
+            0,
+            None,
+            None,
+        ));
+        // asking for too much resources
+        assert_noop!(
+            SmartContractModule::update_deployment_contract(
+                Origin::signed(alice()),
+                1,
+                generate_deployment_hash(),
+                get_deployment_data(),
+                Some(Resources {
+                    hru: 1024 * GIGABYTE,
+                    sru: 512 * GIGABYTE,
+                    cru: 10,
+                    mru: 16 * GIGABYTE
+                }),
+            ),
+            Error::<TestRuntime>::NotEnoughResourcesOnNode
+        );
+    });
+}
+
+#[test]
+fn test_update_deployment_contract_invalid_resources() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+
+        assert_ok!(SmartContractModule::create_deployment_contract(
+            Origin::signed(alice()),
+            1,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            Resources {
+                cru: 2,
+                hru: 0,
+                mru: 2 * GIGABYTE,
+                sru: 60 * GIGABYTE
+            },
+            0,
+            None,
+            None,
+        ));
+        // resources should increase
+        assert_noop!(
+            SmartContractModule::update_deployment_contract(
+                Origin::signed(alice()),
+                1,
+                generate_deployment_hash(),
+                get_deployment_data(),
+                Some(Resources {
+                    cru: 1,
+                    hru: 0,
+                    mru: 1 * GIGABYTE,
+                    sru: 30 * GIGABYTE
+                }),
+            ),
+            Error::<TestRuntime>::InvalidResources
+        );
     });
 }
 
@@ -289,7 +606,12 @@ fn test_update_deployment_contract_wrong_twins_fails() {
                 1,
                 generate_deployment_hash(),
                 get_deployment_data(),
-                Some(Resources { cru: 1, hru: 0, mru: 1 * GIGABYTE, sru: 10 * GIGABYTE }),
+                Some(Resources {
+                    cru: 1,
+                    hru: 0,
+                    mru: 1 * GIGABYTE,
+                    sru: 10 * GIGABYTE
+                }),
             ),
             Error::<TestRuntime>::TwinNotAuthorizedToUpdateContract
         );
@@ -1781,7 +2103,8 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
 }
 
 #[test]
-fn test_create_rent_contract_and_deployment_contract_excludes_deployment_contract_from_billing_works() {
+fn test_create_rent_contract_and_deployment_contract_excludes_deployment_contract_from_billing_works(
+) {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
@@ -2732,6 +3055,85 @@ pub fn prepare_farm_and_node() {
     .unwrap();
 }
 
+pub fn prepare_farm_with_three_nodes() {
+    prepare_farm_and_node();
+
+    // SECOND NODE
+    // random location
+    let location = Location {
+        longitude: "45.233213231".as_bytes().to_vec(),
+        latitude: "241.323112123".as_bytes().to_vec(),
+    };
+
+    let resources = Resources {
+        hru: 2048 * GIGABYTE,
+        sru: 1024 * GIGABYTE,
+        cru: 16,
+        mru: 32 * GIGABYTE,
+    };
+
+    let country = "Belgium".as_bytes().to_vec();
+    let city = "Ghent".as_bytes().to_vec();
+    TfgridModule::create_node(
+        Origin::signed(bob()),
+        1,
+        resources,
+        location,
+        country,
+        city,
+        bounded_vec![],
+        false,
+        false,
+        "some_serial".as_bytes().to_vec(),
+    )
+    .unwrap();
+
+    // SECOND NODE
+    // random location
+    let location = Location {
+        longitude: "6514.233213231".as_bytes().to_vec(),
+        latitude: "324.323112123".as_bytes().to_vec(),
+    };
+
+    let resources = Resources {
+        hru: 512 * GIGABYTE,
+        sru: 256 * GIGABYTE,
+        cru: 4,
+        mru: 8 * GIGABYTE,
+    };
+
+    let country = "Belgium".as_bytes().to_vec();
+    let city = "Ghent".as_bytes().to_vec();
+    TfgridModule::create_node(
+        Origin::signed(charlie()),
+        1,
+        resources,
+        location,
+        country,
+        city,
+        bounded_vec![],
+        false,
+        false,
+        "some_serial".as_bytes().to_vec(),
+    )
+    .unwrap();
+
+    let nodes_from_farm = TfgridModule::nodes_by_farm_id(1);
+    assert_eq!(nodes_from_farm.len(), 3);
+    assert_eq!(
+        TfgridModule::nodes(1).unwrap().power_target,
+        PowerTarget::Up
+    );
+    assert_eq!(
+        TfgridModule::nodes(2).unwrap().power_target,
+        PowerTarget::Down
+    );
+    assert_eq!(
+        TfgridModule::nodes(3).unwrap().power_target,
+        PowerTarget::Down
+    );
+}
+
 pub fn prepare_dedicated_farm_and_node() {
     TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
     create_farming_policies();
@@ -2893,5 +3295,107 @@ fn get_deployment_data() -> crate::DeploymentDataInput<TestRuntime> {
 }
 
 fn get_resources() -> Resources {
-    Resources { cru: 2, hru: 0, mru: 2 * GIGABYTE, sru: 60 * GIGABYTE }
+    Resources {
+        cru: 2,
+        hru: 0,
+        mru: 2 * GIGABYTE,
+        sru: 60 * GIGABYTE,
+    }
+}
+
+fn prepare_farm_three_nodes_three_deployment_contracts() {
+    prepare_farm_with_three_nodes();
+
+    assert_eq!(
+        TfgridModule::nodes(1).unwrap().power_target,
+        PowerTarget::Up
+    );
+    assert_eq!(
+        TfgridModule::nodes(2).unwrap().power_target,
+        PowerTarget::Down
+    );
+    assert_eq!(
+        TfgridModule::nodes(3).unwrap().power_target,
+        PowerTarget::Down
+    );
+
+    // first contract should go to node 1
+    let resources_c1 = Resources {
+        cru: 4,
+        hru: 0,
+        mru: 2 * GIGABYTE,
+        sru: 60 * GIGABYTE,
+    };
+    assert_ok!(SmartContractModule::create_deployment_contract(
+        Origin::signed(alice()),
+        1,
+        generate_deployment_hash(),
+        get_deployment_data(),
+        resources_c1,
+        0,
+        None,
+        None,
+    ));
+
+    assert_eq!(
+        TfgridModule::nodes(1).unwrap().power_target,
+        PowerTarget::Up
+    );
+    assert_eq!(
+        TfgridModule::nodes(2).unwrap().power_target,
+        PowerTarget::Down
+    );
+    assert_eq!(
+        TfgridModule::nodes(3).unwrap().power_target,
+        PowerTarget::Down
+    );
+
+    // second contract will take most resources but can still go to node 1
+    let resources_c2 = Resources {
+        cru: 4,
+        hru: 1000 * GIGABYTE,
+        mru: 10 * GIGABYTE,
+        sru: 100 * GIGABYTE,
+    };
+    assert_ok!(SmartContractModule::create_deployment_contract(
+        Origin::signed(alice()),
+        1,
+        generate_deployment_hash(),
+        get_deployment_data(),
+        resources_c2,
+        0,
+        None,
+        None,
+    ),);
+
+    // third contract will take most resources but can still go to node 1
+    let resources_c3 = Resources {
+        cru: 2,
+        hru: 1024 * GIGABYTE,
+        mru: 4 * GIGABYTE,
+        sru: 50 * GIGABYTE,
+    };
+    assert_ok!(SmartContractModule::create_deployment_contract(
+        Origin::signed(alice()),
+        1,
+        generate_deployment_hash(),
+        get_deployment_data(),
+        resources_c3,
+        0,
+        None,
+        None,
+    ),);
+
+    assert_eq!(
+        TfgridModule::nodes(1).unwrap().power_target,
+        PowerTarget::Up
+    );
+    assert_eq!(
+        TfgridModule::nodes(2).unwrap().power_target,
+        PowerTarget::Up
+    );
+    assert_eq!(
+        TfgridModule::nodes(3).unwrap().power_target,
+        PowerTarget::Down
+    );
 }
