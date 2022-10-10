@@ -806,7 +806,8 @@ impl<T: Config> Pallet<T> {
                 Error::<T>::NodeHasActiveContracts
             );
         }
-        Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
+
+        contract.state = types::ContractState::Deleted(cause);
         Self::bill_contract(&mut contract)?;
         // Remove all associated storage
         Self::remove_contract(contract.contract_id);
@@ -1027,8 +1028,10 @@ impl<T: Config> Pallet<T> {
         let (amount_due, discount_received) =
             contract.calculate_contract_cost_tft(usable_balance, seconds_elapsed)?;
 
-        // If there is nothing to be paid, return
-        if amount_due == BalanceOf::<T>::saturated_from(0 as u128) {
+        // If there is nothing to be paid and the contract is not in state delete, return
+        // Can be that the users cancels the contract in the same block that it's getting billed
+        // where elapsed seconds would be 0, but we still have to distribute rewards
+        if amount_due == BalanceOf::<T>::saturated_from(0 as u128) && !contract.is_state_delete() {
             log::debug!("amount to be billed is 0, nothing to do");
             return Ok(().into());
         };
@@ -1187,11 +1190,6 @@ impl<T: Config> Pallet<T> {
             ContractLock::<T>::insert(contract.contract_id, &contract_lock);
         }
 
-        // Contract is in grace state, don't actually lock tokens or distribute rewards
-        if matches!(contract.state, types::ContractState::GracePeriod(_)) {
-            return Ok(().into());
-        }
-
         // Only lock an amount from the user's balance if the contract is in create state
         // The lock is specified on the user's account, since a user can have multiple contracts
         // Just extend the lock with the amount due for this contract billing period (lock will be created if not exists)
@@ -1208,9 +1206,8 @@ impl<T: Config> Pallet<T> {
             );
         }
 
-        let is_canceled = matches!(contract.state, types::ContractState::Deleted(_));
         let canceled_and_not_zero =
-            is_canceled && contract_lock.amount_locked.saturated_into::<u64>() > 0;
+            contract.is_state_delete() && contract_lock.amount_locked.saturated_into::<u64>() > 0;
         // When the cultivation rewards are ready to be distributed or it's in delete state
         // Unlock all reserved balance and distribute
         if contract_lock.cycles >= T::DistributionFrequency::get() || canceled_and_not_zero {
@@ -1456,7 +1453,7 @@ impl<T: Config> Pallet<T> {
         }
 
         // Save the contract to be billed in (now -1 %(mod) BILLING_FREQUENCY_IN_BLOCKS)
-        let index = Self::get_contract_index() - 1;
+        let index = Self::get_contract_index().checked_sub(1).unwrap_or(0);
         let mut contracts = ContractsToBillAt::<T>::get(index);
 
         if !contracts.contains(&contract_id) {
