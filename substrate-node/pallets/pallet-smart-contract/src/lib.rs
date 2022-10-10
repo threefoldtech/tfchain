@@ -11,7 +11,6 @@ use frame_support::{
         Currency, EnsureOrigin, ExistenceRequirement, ExistenceRequirement::KeepAlive, Get,
         LockableCurrency, OnUnbalanced, WithdrawReasons,
     },
-    transactional,
     weights::Pays,
     BoundedVec,
 };
@@ -1008,7 +1007,6 @@ impl<T: Config> Pallet<T> {
 
     // Bills a contract (NodeContract or NameContract)
     // Calculates how much TFT is due by the user and distributes the rewards
-    #[transactional]
     fn bill_contract(contract: &mut types::Contract<T>) -> DispatchResultWithPostInfo {
         let twin =
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
@@ -1036,15 +1034,16 @@ impl<T: Config> Pallet<T> {
         };
 
         // Handle grace
-        let was_grace = matches!(contract.state, types::ContractState::GracePeriod(_));
         let contract = Self::handle_grace(contract, usable_balance, amount_due)?;
 
-        // Handle contract lock operations
-        // skip when the contract status was grace and changed to deleted because that means
-        // the grace period ended and there were still no funds
-        if !(was_grace && matches!(contract.state, types::ContractState::Deleted(_))) {
-            Self::handle_lock(contract, amount_due)?;
+        // If still in grace period, no need to continue doing locking and other stuff
+        if matches!(contract.state, types::ContractState::GracePeriod(_)) {
+            log::debug!("contract {} is still in grace", contract.contract_id);
+            return Ok(().into());
         }
+
+        // Handle contract lock operations
+        Self::handle_lock(contract, amount_due)?;
 
         // Always emit a contract billed event
         let contract_bill = types::ContractBill {
@@ -1374,7 +1373,7 @@ impl<T: Config> Pallet<T> {
                     .iter()
                     .map(|provider| {
                         let share = Perbill::from_percent(provider.take as u32) * amount;
-                        frame_support::log::info!(
+                        log::info!(
                             "Transfering: {:?} from contract twin {:?} to provider account {:?}",
                             &share,
                             &twin.account_id,
@@ -1402,9 +1401,9 @@ impl<T: Config> Pallet<T> {
             let share = Perbill::from_percent(sales_share.into()) * amount;
             // Transfer the remaining share to the sales account
             // By default it is 50%, if a contract has solution providers it can be less
-            frame_support::log::info!(
+            log::info!(
                 "Transfering: {:?} from contract twin {:?} to sales account {:?}",
-                &sales_share,
+                &share,
                 &twin.account_id,
                 &pricing_policy.certified_sales_account
             );
@@ -1433,7 +1432,14 @@ impl<T: Config> Pallet<T> {
             WithdrawReasons::FEE,
             ExistenceRequirement::KeepAlive,
         )?;
+
+        log::info!(
+            "Burning: {:?} from contract twin {:?}",
+            amount_to_burn,
+            &twin.account_id
+        );
         T::Burn::on_unbalanced(to_burn);
+
         Self::deposit_event(Event::TokensBurned {
             contract_id: contract.contract_id,
             amount: amount_to_burn,
