@@ -320,7 +320,7 @@ pub mod pallet {
         SolutionProviderCreated(types::SolutionProvider<T::AccountId>),
         SolutionProviderApproved(u64, bool),
         /// Send an event to zero os to change its state
-        ChangePowerTarget {
+        PowerTargetChanged {
             farm_id: u32,
             node_id: u32,
             power_target: PowerTarget,
@@ -364,6 +364,7 @@ pub mod pallet {
         SolutionProviderNotApproved,
         NoSuitableNodeInFarm,
         NotAuthorizedToCreateDeploymentContract,
+        InvalidResources,
     }
 
     #[pallet::genesis_config]
@@ -472,7 +473,7 @@ pub mod pallet {
             contract_id: u64,
             deployment_hash: DeploymentHash,
             deployment_data: DeploymentDataInput<T>,
-            extra_resources: Option<Resources>,
+            resources: Option<Resources>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_update_deployment_contract(
@@ -480,7 +481,7 @@ pub mod pallet {
                 contract_id,
                 deployment_hash,
                 deployment_data,
-                extra_resources,
+                resources,
             )
         }
 
@@ -769,7 +770,7 @@ impl<T: Config> Pallet<T> {
 
         // if the power_target is not correct => change it and emit event
         if node.power_target != power_target {
-            Self::deposit_event(Event::ChangePowerTarget {
+            Self::deposit_event(Event::PowerTargetChanged {
                 farm_id: node.farm_id,
                 node_id: node_id,
                 power_target: power_target.clone(),
@@ -814,7 +815,7 @@ impl<T: Config> Pallet<T> {
 
         // if all resources are free shutdown the node
         if node.can_be_shutdown() {
-            Self::deposit_event(Event::ChangePowerTarget {
+            Self::deposit_event(Event::PowerTargetChanged {
                 farm_id: node.farm_id,
                 node_id: node_id,
                 power_target: PowerTarget::Down,
@@ -911,7 +912,7 @@ impl<T: Config> Pallet<T> {
         contract_id: u64,
         deployment_hash: DeploymentHash,
         deployment_data: DeploymentDataInput<T>,
-        extra_resources: Option<Resources>,
+        resources: Option<Resources>,
     ) -> DispatchResultWithPostInfo {
         let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
         let twin =
@@ -944,10 +945,10 @@ impl<T: Config> Pallet<T> {
         node_contract.deployment_hash = deployment_hash;
         node_contract.deployment_data = deployment_data;
         // update the resources with the extra resources
-        if let Some(extra_resources) = extra_resources {
+        if let Some(resources) = resources {
+            ensure!(resources > node_contract.resources, Error::<T>::InvalidResources);
+            let extra_resources = resources.substract(&node_contract.resources);
             Self::_claim_resources_on_node(node_contract.node_id, extra_resources)?;
-            let resources = node_contract.resources;
-            resources.add(&extra_resources);
             node_contract.resources = resources;
         }
 
