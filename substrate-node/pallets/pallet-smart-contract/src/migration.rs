@@ -57,11 +57,13 @@ pub fn migrate_to_version_6<T: Config>() -> frame_support::weights::Weight {
             b"",
         );
 
-        let billing_frequency = DefaultBillingFrequency::<T>::get();
+        let billing_freq = 600;
+        BillingFrequency::<T>::put(billing_freq);
+
         for (block_number, contract_ids) in contracts_to_bill_at {
             migrated_count += 1;
             // Construct new index
-            let index = (block_number - 1) % billing_frequency;
+            let index = (block_number - 1) % billing_freq;
             // Reinsert items under the new key
             info!(
                 "inserted contracts:{:?} at index: {:?}",

@@ -502,7 +502,11 @@ pub mod pallet {
 
             let contracts = ContractsToBillAt::<T>::get(current_index);
             if contracts.is_empty() {
-                log::debug!("No contracts to bill at block {:?}", block_number);
+                log::info!(
+                    "No contracts to bill at block {:?}, index: {:?}",
+                    block_number,
+                    current_index
+                );
                 return;
             }
 
