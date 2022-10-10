@@ -169,6 +169,30 @@ impl Resources {
         self.mru += other.mru;
         self
     }
+    pub fn substract(mut self, other: &Resources) -> Resources {
+        self.cru = if self.cru < other.cru {
+            0
+        } else {
+            self.cru - other.cru
+        };
+        self.sru = if self.sru < other.sru {
+            0
+        } else {
+            self.sru - other.sru
+        };
+        self.hru = if self.hru < other.hru {
+            0
+        } else {
+            self.hru - other.hru
+        };
+        self.mru = if self.mru < other.mru {
+            0
+        } else {
+            self.mru - other.mru
+        };
+        
+        self
+    }
 }
 
 // Store Location long and lat as string
