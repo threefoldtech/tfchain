@@ -1086,7 +1086,11 @@ pub mod pallet {
             };
 
             let created = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-            let power_target = PowerTarget::Up;
+            let power_target = if NodesByFarmID::<T>::get(farm_id).is_empty() {
+                PowerTarget::Up
+            } else {
+                PowerTarget::Down
+            };
 
             let mut new_node = Node {
                 version: TFGRID_NODE_VERSION,

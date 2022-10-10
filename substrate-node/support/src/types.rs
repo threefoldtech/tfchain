@@ -105,10 +105,11 @@ pub struct Node<Location, PubConfig, If, SerialNumber> {
 
 impl<PubConfig, If> Node<PubConfig, If> {
     pub fn can_claim_resources(&self, resources: Resources) -> bool {
-        self.resources.hru - self.used_resources.hru >= resources.hru
-            && self.resources.hru - self.used_resources.sru >= resources.sru
-            && self.resources.hru - self.used_resources.cru >= resources.cru
-            && self.resources.hru - self.used_resources.mru >= resources.mru
+
+        (self.resources.hru - self.used_resources.hru) >= resources.hru
+            && (self.resources.sru - self.used_resources.sru) >= resources.sru
+            && (self.resources.cru - self.used_resources.cru) >= resources.cru
+            && (self.resources.mru - self.used_resources.mru) >= resources.mru
     }
 
     pub fn can_be_shutdown(&self) -> bool {
@@ -138,6 +139,10 @@ pub struct IP<IpAddr, Gw> {
     pub ip: IpAddr,
     pub gw: Gw,
 }
+    pub fn empty() -> Resources {
+        Resources { hru: 0, sru: 0, cru: 0, mru: 0 }
+    }
+
     pub fn substract(mut self, other: &Resources) -> Resources {
         self.cru = if self.cru < other.cru {
             0
@@ -159,7 +164,7 @@ pub struct IP<IpAddr, Gw> {
         } else {
             self.mru - other.mru
         };
-        
+
         self
     }
 
