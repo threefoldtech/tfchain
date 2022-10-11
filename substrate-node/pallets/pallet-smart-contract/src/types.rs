@@ -28,6 +28,20 @@ impl Default for StorageVersion {
     }
 }
 
+
+
+#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo)]
+pub struct Group {
+    pub id: u32,
+    pub twin_id: u32,
+}
+
+#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo)]
+pub struct NodeGroupConfig {
+    pub node_id: u32,
+    pub group_id: u32,
+}
+
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
@@ -66,6 +80,7 @@ pub struct DeploymentContract<T: Config> {
     pub public_ips: u32,
     pub public_ips_list: BoundedVec<ContractPublicIP<T>, MaxNodeContractPublicIPs<T>>,
     pub resources: Resources,
+    pub group_id: Option<u32>,
 }
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
