@@ -17,7 +17,7 @@ use crate::cost;
 use log::info;
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use tfchain_support::types::{
-    FarmCertification, Location, NodeCertification, PowerTarget, PublicIP, Resources,
+    ContractPolicy, FarmCertification, Location, NodeCertification, PowerTarget, PublicIP, Resources,
 };
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
@@ -353,7 +353,7 @@ fn test_create_rent_contract_then_deployment_contract_checking_power_target() {
             resources,
             1,
             None,
-            Some(1)
+            Some(ContractPolicy::Join(1))
         ));
         assert_eq!(TfgridModule::nodes(2).unwrap().used_resources, resources);
         // canceling the deployment contract should not shutdown the node (because of the created
@@ -576,6 +576,7 @@ fn test_update_deployment_contract_works() {
             public_ips: 0,
             public_ips_list: Vec::new().try_into().unwrap(),
             resources: updated_resources,
+            group_id: None,
         };
         let contract_type = types::ContractData::DeploymentContract(deployment_contract);
 
@@ -1145,7 +1146,7 @@ fn test_create_deployment_contract_when_having_a_rentcontract_works() {
             get_resources(),
             1,
             None,
-            Some(1)
+            Some(ContractPolicy::Join(1))
         ));
     })
 }
@@ -1174,7 +1175,7 @@ fn test_create_deployment_contract_when_someone_else_has_rent_contract_fails() {
                 get_resources(),
                 1,
                 None,
-                Some(1),
+                Some(ContractPolicy::Join(1)),
             ),
             Error::<TestRuntime>::NotAuthorizedToCreateDeploymentContract
         );
@@ -1204,7 +1205,7 @@ fn test_cancel_rent_contract_with_active_deployment_contracts_fails() {
             get_resources(),
             1,
             None,
-            Some(1)
+            Some(ContractPolicy::Join(1))
         ));
 
         assert_noop!(
@@ -2248,7 +2249,7 @@ fn test_create_rent_contract_and_deployment_contract_excludes_deployment_contrac
             get_resources(),
             0,
             None,
-            Some(1)
+            Some(ContractPolicy::Join(1))
         ));
         pool_state
             .write()
@@ -2298,7 +2299,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_deployment_cont
             get_resources(),
             0,
             None,
-            Some(1)
+            Some(ContractPolicy::Join(1))
         ));
 
         // run 12 cycles, contracts should cancel after 11 due to lack of funds
@@ -2400,7 +2401,7 @@ fn test_create_rent_contract_and_deployment_contract_with_ip_billing_works() {
             get_resources(),
             1,
             None,
-            Some(1)
+            Some(ContractPolicy::Join(1))
         ));
 
         // 2 contracts => we expect 2 calls to bill_contract
@@ -2559,7 +2560,7 @@ fn test_restore_rent_contract_and_deployment_contracts_in_grace_works() {
             get_resources(),
             0,
             None,
-            Some(1)
+            Some(ContractPolicy::Join(1))
         ));
 
         // cycle 1
@@ -2737,7 +2738,7 @@ fn test_rent_contract_and_deployment_contract_canceled_when_node_is_deleted_work
             get_resources(),
             0,
             None,
-            Some(1)
+            Some(ContractPolicy::Join(1))
         ));
 
         // 2 contracts => 2 calls to bill_contract

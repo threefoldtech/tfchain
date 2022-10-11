@@ -68,6 +68,18 @@ pub struct FarmingPolicyLimit {
     pub node_certification: bool,
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo, MaxEncodedLen)]
+pub enum ContractPolicy {
+    Any,
+    Join(u64),
+    Exclusive(u32),
+}
+impl Default for ContractPolicy {
+    fn default() -> ContractPolicy {
+        ContractPolicy::Any
+    }
+}
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
 pub enum PowerTarget {
     Up,
@@ -106,7 +118,6 @@ pub struct Node<PubConfig, If> {
 
 impl<PubConfig, If> Node<PubConfig, If> {
     pub fn can_claim_resources(&self, resources: Resources) -> bool {
-
         (self.resources.hru - self.used_resources.hru) >= resources.hru
             && (self.resources.sru - self.used_resources.sru) >= resources.sru
             && (self.resources.cru - self.used_resources.cru) >= resources.cru
@@ -164,7 +175,12 @@ pub struct Resources {
 
 impl Resources {
     pub fn empty() -> Resources {
-        Resources { hru: 0, sru: 0, cru: 0, mru: 0 }
+        Resources {
+            hru: 0,
+            sru: 0,
+            cru: 0,
+            mru: 0,
+        }
     }
 
     pub fn add(mut self, other: &Resources) -> Resources {
