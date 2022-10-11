@@ -207,7 +207,6 @@ fn test_create_deployment_contract_no_node_in_farm_with_enough_resources() {
     });
 }
 
-// todo test creating deployment contract using rent contract id (+ all possible failures)
 // todo test billing
 // todo test grouping contracts
 
@@ -319,6 +318,124 @@ fn test_create_deployment_contract_finding_a_node_failure() {
         );
     });
 }
+
+#[test]
+fn test_create_rent_contract_then_deployment_contract_checking_power_target() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_with_three_nodes();
+        // node 2 should be down and when we create the rent contract the node should be woken up
+        // we do not yet change the used resources until deployment contracts are created
+        assert_eq!(
+            TfgridModule::nodes(2).unwrap().power_target,
+            PowerTarget::Down
+        );
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(bob()),
+            2,
+            None
+        ));
+        assert_eq!(
+            TfgridModule::nodes(2).unwrap().power_target,
+            PowerTarget::Up
+        );
+        assert_eq!(
+            TfgridModule::nodes(2).unwrap().used_resources,
+            Resources::empty()
+        );
+        // creating the deployment contract should claim resources from the node
+        let resources = get_resources();
+        assert_ok!(SmartContractModule::create_deployment_contract(
+            Origin::signed(bob()),
+            1,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            resources,
+            1,
+            None,
+            Some(1)
+        ));
+        assert_eq!(TfgridModule::nodes(2).unwrap().used_resources, resources);
+        // canceling the deployment contract should not shutdown the node (because of the created
+        // rent contract) but it should unclaim the resources on that node
+        assert_ok!(SmartContractModule::cancel_contract(
+            Origin::signed(bob()),
+            2
+        ));
+        assert_eq!(
+            TfgridModule::nodes(2).unwrap().power_target,
+            PowerTarget::Up
+        );
+        // canceling rent contract should shut down the node (as it is not the first in the list
+        // of nodes from that farm)
+        assert_ok!(SmartContractModule::cancel_contract(
+            Origin::signed(bob()),
+            1
+        ));
+        assert_eq!(
+            TfgridModule::nodes(2).unwrap().power_target,
+            PowerTarget::Down
+        );
+
+        let our_events = System::events();
+        for event in our_events.clone().iter() {
+            log::info!("Event: {:?}", event);
+        }
+        // should have emitted one power up event and one power down
+        assert_eq!(
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::PowerTargetChanged {
+                    farm_id: 1,
+                    node_id: 2,
+                    power_target: PowerTarget::Up,
+                }
+            ))),
+            true
+        );
+        assert_eq!(
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::PowerTargetChanged {
+                    farm_id: 1,
+                    node_id: 2,
+                    power_target: PowerTarget::Down,
+                }
+            ))),
+            true
+        );
+
+    });
+}
+
+#[test]
+fn test_cancel_rent_contract_should_not_shutdown_first_node() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_with_three_nodes();
+        assert_eq!(
+            TfgridModule::nodes(1).unwrap().power_target,
+            PowerTarget::Up
+        );
+        assert_ok!(SmartContractModule::create_rent_contract(
+            Origin::signed(bob()),
+            1,
+            None
+        ));
+        assert_eq!(
+            TfgridModule::nodes(1).unwrap().power_target,
+            PowerTarget::Up
+        );
+        assert_ok!(SmartContractModule::cancel_contract(
+            Origin::signed(bob()),
+            1
+        ));
+        // node should still be up as it is the first in the list of nodes of that farm
+        assert_eq!(
+            TfgridModule::nodes(1).unwrap().power_target,
+            PowerTarget::Up
+        );
+    });
+}
+
 
 #[test]
 fn test_cancel_deployment_contract_shutdown_node() {
@@ -1078,7 +1195,7 @@ fn test_cancel_rent_contract_with_active_deployment_contracts_fails() {
             node_id,
             None
         ));
-
+        // set rent contract id to 1 to use node from rent contract with id 1
         assert_ok!(SmartContractModule::create_deployment_contract(
             Origin::signed(bob()),
             1,
@@ -1093,6 +1210,11 @@ fn test_cancel_rent_contract_with_active_deployment_contracts_fails() {
         assert_noop!(
             SmartContractModule::cancel_contract(Origin::signed(bob()), 1,),
             Error::<TestRuntime>::NodeHasActiveContracts
+        );
+        // node 1 should still be up after failed attempt to cancel rent contract
+        assert_eq!(
+            TfgridModule::nodes(1).unwrap().power_target,
+            PowerTarget::Up
         );
     });
 }
