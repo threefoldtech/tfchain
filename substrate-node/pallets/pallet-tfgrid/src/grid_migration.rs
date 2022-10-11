@@ -114,7 +114,8 @@ fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
                     k, e
                 );
                 let default_country_name_input: CountryNameInput =
-                    BoundedVec::try_from(b"Unknown".to_vec()).unwrap();
+                    BoundedVec::try_from(node::DEFAULT_COUNTRY_NAME.to_vec()).unwrap();
+                info!("set default country name for entity");
                 <T as Config>::CountryName::try_from(default_country_name_input).unwrap()
             }
         };
@@ -128,7 +129,9 @@ fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
                     k, e
                 );
                 let default_city_name_input: CityNameInput =
-                    BoundedVec::try_from(b"Unknown".to_vec()).unwrap();
+                    BoundedVec::try_from(node::DEFAULT_COUNTRY_NAME.to_vec()).unwrap();
+
+                info!("set default city name for entity");
                 <T as Config>::CityName::try_from(default_city_name_input).unwrap()
             }
         };
@@ -168,28 +171,41 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
         let location = match get_location::<T>(&node) {
             Ok(loc) => loc,
             Err(e) => {
+                info!(
+                    "location: [city: {:?}, country: {:?}, latitude {:?}, longitude {:?}]",
+                    core::str::from_utf8(&node.city).unwrap(),
+                    core::str::from_utf8(&node.country).unwrap(),
+                    core::str::from_utf8(&node.location.latitude).unwrap(),
+                    core::str::from_utf8(&node.location.longitude).unwrap()
+                );
                 info!("failed to parse location for node: {:?}, error: {:?}", k, e);
                 let default_location_input = LocationInput {
-                    city: BoundedVec::try_from(b"Unknown".to_vec()).unwrap(),
-                    country: BoundedVec::try_from(b"Unknown".to_vec()).unwrap(),
-                    latitude: BoundedVec::try_from(b"0".to_vec()).unwrap(),
-                    longitude: BoundedVec::try_from(b"0".to_vec()).unwrap(),
+                    city: BoundedVec::try_from(node::DEFAULT_CITY_NAME.to_vec()).unwrap(),
+                    country: BoundedVec::try_from(node::DEFAULT_COUNTRY_NAME.to_vec()).unwrap(),
+                    latitude: BoundedVec::try_from(node::DEFAULT_LATITUDE.to_vec()).unwrap(),
+                    longitude: BoundedVec::try_from(node::DEFAULT_LONGITUDE.to_vec()).unwrap(),
                 };
+                info!("set default location for node");
                 <T as Config>::Location::try_from(default_location_input).unwrap()
             }
         };
 
         let serial_number_input: SerialNumberInput =
-            BoundedVec::try_from(node.serial_number).unwrap();
+            BoundedVec::try_from(node.serial_number.clone()).unwrap();
         let serial_number = match <T as Config>::SerialNumber::try_from(serial_number_input) {
             Ok(serial) => serial,
             Err(e) => {
+                info!(
+                    "serial number: {:?}",
+                    core::str::from_utf8(&node.serial_number).unwrap()
+                );
                 info!(
                     "failed to parse serial number for node: {:?}, error: {:?}",
                     k, e
                 );
                 let default_serial_number_input: SerialNumberInput =
-                    BoundedVec::try_from(b"NA".to_vec()).unwrap();
+                    BoundedVec::try_from(node::DEFAULT_SERIAL_NUMBER.to_vec()).unwrap();
+                info!("set default serial number for node");
                 <T as Config>::SerialNumber::try_from(default_serial_number_input).unwrap()
             }
         };

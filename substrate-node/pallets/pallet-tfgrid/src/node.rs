@@ -12,6 +12,7 @@ use sp_std::marker::PhantomData;
 pub const MIN_CITY_NAME_LENGTH: u32 = 1;
 // 85: Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch
 pub const MAX_CITY_NAME_LENGTH: u32 = 58;
+pub const DEFAULT_CITY_NAME: &[u8] = b"Unknown";
 
 /// A city name in ASCI Characters.
 #[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -62,16 +63,17 @@ impl<T: Config> Clone for CityName<T> {
 }
 
 fn validate_city_name(input: &[u8]) -> bool {
-    // TODO: find better alternative
-    input
-        .iter()
-        .all(|c| c.is_ascii_alphabetic() || c.is_ascii_whitespace() || matches!(c, b'-'))
+    input == DEFAULT_CITY_NAME
+        || input
+            .iter()
+            .all(|c| c.is_ascii_alphabetic() || c.is_ascii_whitespace() || matches!(c, b'-'))
 }
 
 // 4: Cuba, Fiji, Iran, ..
 pub const MIN_COUNTRY_NAME_LENGTH: u32 = 4;
 // 56: The United Kingdom of Great Britain and Northern Ireland
 pub const MAX_COUNTRY_NAME_LENGTH: u32 = 56;
+pub const DEFAULT_COUNTRY_NAME: &[u8] = b"Unknown";
 
 /// A city name in ASCI Characters.
 #[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -122,17 +124,20 @@ impl<T: Config> Clone for CountryName<T> {
 }
 
 fn validate_country_name(input: &[u8]) -> bool {
-    // TODO: find better alternative
-    input
-        .iter()
-        .all(|c| c.is_ascii_alphabetic() || c.is_ascii_whitespace() || matches!(c, b'-'))
+    input == DEFAULT_COUNTRY_NAME
+        || match core::str::from_utf8(input) {
+            Ok(val) => geo::validate_country(val),
+            Err(_) => false,
+        }
 }
 
 pub const MIN_LATITUDE_LENGTH: u32 = 1;
 pub const MAX_LATITUDE_LENGTH: u32 = 50;
+pub const DEFAULT_LATITUDE: &[u8] = b"Unknown";
 
 pub const MIN_LONGITUDE_LENGTH: u32 = 1;
 pub const MAX_LONGITUDE_LENGTH: u32 = 50;
+pub const DEFAULT_LONGITUDE: &[u8] = b"Unknown";
 
 /// A location that countains city, country and lat/long informations in ASCI Characters.
 #[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -161,12 +166,16 @@ impl<T: Config> TryFrom<LocationInput> for Location<T> {
         let city = CityName::<T>::try_from(value.city)?;
         let country = CountryName::<T>::try_from(value.country)?;
 
-        let city_str = city.0.to_vec();
-        let city_str = core::str::from_utf8(&city_str).unwrap();
-        let country_str = country.0.to_vec();
-        let country_str = core::str::from_utf8(&country_str).unwrap();
+        let city_vec = city.0.to_vec();
+        let city_str =
+            core::str::from_utf8(&city_vec).map_err(|_| Self::Error::InvalidCountryName)?;
+        let country_vec = country.0.to_vec();
+        let country_str =
+            core::str::from_utf8(&country_vec).map_err(|_| Self::Error::InvalidCityName)?;
         ensure!(
-            geo::validate_country_city(country_str, city_str),
+            &city_vec == DEFAULT_CITY_NAME
+                || &country_vec == DEFAULT_COUNTRY_NAME
+                || geo::validate_country_city(country_str, city_str),
             Self::Error::InvalidCountryCityPair
         );
 
@@ -232,33 +241,36 @@ impl<T: Config> Clone for Location<T> {
 }
 
 fn validate_latitude_input(input: &[u8]) -> bool {
-    match core::str::from_utf8(input) {
-        Ok(val) => {
-            if let Some(lat) = val.parse::<f32>().ok() {
-                lat >= -90.0 && lat <= 90.0
-            } else {
-                false
+    input == DEFAULT_LATITUDE
+        || match core::str::from_utf8(input) {
+            Ok(val) => {
+                if let Some(lat) = val.parse::<f32>().ok() {
+                    lat >= -90.0 && lat <= 90.0
+                } else {
+                    false
+                }
             }
+            Err(_) => false,
         }
-        Err(_) => false,
-    }
 }
 
 fn validate_longitude_input(input: &[u8]) -> bool {
-    match core::str::from_utf8(input) {
-        Ok(val) => {
-            if let Some(long) = val.parse::<f32>().ok() {
-                long >= -180.0 && long <= 180.0
-            } else {
-                false
+    input == DEFAULT_LONGITUDE
+        || match core::str::from_utf8(input) {
+            Ok(val) => {
+                if let Some(long) = val.parse::<f32>().ok() {
+                    long >= -180.0 && long <= 180.0
+                } else {
+                    false
+                }
             }
+            Err(_) => false,
         }
-        Err(_) => false,
-    }
 }
 
 pub const MIN_SERIAL_NUMBER_LENGTH: u32 = 10;
 pub const MAX_SERIAL_NUMBER_LENGTH: u32 = 50;
+pub const DEFAULT_SERIAL_NUMBER: &[u8] = b"Not Specified";
 
 /// A serial number in ASCI Characters.
 #[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -307,8 +319,8 @@ impl<T: Config> Clone for SerialNumber<T> {
 }
 
 fn validate_serial_number(input: &[u8]) -> bool {
-    // TODO: check serial specifications
-    input
-        .iter()
-        .all(|c| matches!(c, b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_'))
+    input == DEFAULT_SERIAL_NUMBER
+        || input
+            .iter()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'-' | b'_'))
 }
