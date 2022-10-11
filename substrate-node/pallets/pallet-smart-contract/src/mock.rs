@@ -339,8 +339,8 @@ pub type ExtrinsicResult = Result<PostDispatchInfo, DispatchErrorWithPostInfo>;
 #[derive(Default)]
 pub struct PoolState {
     /// A vector of calls that we expect should be executed
-    pub expected_calls: Vec<(TransactionCall, ExtrinsicResult)>,
-    pub calls_to_execute: Vec<(TransactionCall, ExtrinsicResult)>,
+    pub expected_calls: Vec<(TransactionCall, ExtrinsicResult, u64)>,
+    pub calls_to_execute: Vec<(TransactionCall, ExtrinsicResult, u64)>,
     pub i: usize,
 }
 
@@ -349,14 +349,16 @@ impl PoolState {
         &mut self,
         contract_id: u64,
         expected_result: ExtrinsicResult,
+        block_number: u64,
     ) {
         self.expected_calls.push((
             crate::Call::bill_contract_for_block { contract_id },
             expected_result,
+            block_number,
         ));
     }
 
-    pub fn execute_calls_and_check_results(&mut self) {
+    pub fn execute_calls_and_check_results(&mut self, block_number: u64) {
         if self.calls_to_execute.len() == 0 {
             return;
         }
@@ -379,6 +381,8 @@ impl PoolState {
                 "The result of call to {:?} was not as expected!",
                 call_to_execute.0
             );
+
+            assert_eq!(block_number, call_to_execute.2);
         }
 
         self.calls_to_execute.clear();
