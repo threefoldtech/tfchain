@@ -757,6 +757,13 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         let mut node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
 
+        // do not power down if it is the first node in the list of nodes from that farm
+        if matches!(power_target, PowerTarget::Down)
+            && pallet_tfgrid::NodesByFarmID::<T>::get(node.farm_id)[0] == node_id
+        {
+            return Ok(().into());
+        }
+
         // if the power_target is not correct => change it and emit event
         if node.power_target != power_target {
             ensure!(
@@ -808,10 +815,7 @@ impl<T: Config> Pallet<T> {
         //      some of the resources are still being used
         //      it is the first node in the farm (one must stay up)
         //      there is a rent contract (canceling that rent contract will trigger the shutdown)
-        if node.can_be_shutdown()
-            && !ActiveRentContractForNode::<T>::contains_key(node_id)
-            && pallet_tfgrid::NodesByFarmID::<T>::get(node.farm_id)[0] != node_id
-        {
+        if node.can_be_shutdown() && !ActiveRentContractForNode::<T>::contains_key(node_id) {
             Self::_change_power_target_node(node_id, PowerTarget::Down)?;
         }
 
@@ -994,45 +998,6 @@ impl<T: Config> Pallet<T> {
 
         Ok(().into())
     }
-
-    // pub fn _report_contract_resources(
-    //     source: T::AccountId,
-    //     contract_resources: Vec<types::ContractResources>,
-    // ) -> DispatchResultWithPostInfo {
-    //     ensure!(
-    //         pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
-    //         Error::<T>::TwinNotExists
-    //     );
-    //     let twin_id =
-    //         pallet_tfgrid::TwinIdByAccountID::<T>::get(&source).ok_or(Error::<T>::TwinNotExists)?;
-    //     ensure!(
-    //         pallet_tfgrid::NodeIdByTwinID::<T>::contains_key(twin_id),
-    //         Error::<T>::NodeNotExists
-    //     );
-    //     let node_id = pallet_tfgrid::NodeIdByTwinID::<T>::get(twin_id);
-
-    //     for contract_resource in contract_resources {
-    //         // we know contract exists, fetch it
-    //         // if the node is trying to send garbage data we can throw an error here
-    //         if let Some(contract) = Contracts::<T>::get(contract_resource.contract_id) {
-    //             let node_contract = Self::get_node_contract(&contract)?;
-    //             ensure!(
-    //                 node_contract.node_id == node_id,
-    //                 Error::<T>::NodeNotAuthorizedToComputeReport
-    //             );
-
-    //             // Do insert
-    //             NodeContractResources::<T>::insert(
-    //                 contract_resource.contract_id,
-    //                 &contract_resource,
-    //             );
-    //             // deposit event
-    //             Self::deposit_event(Event::UpdatedUsedResources(contract_resource));
-    //         }
-    //     }
-
-    //     Ok(Pays::No.into())
-    // }
 
     pub fn _compute_reports(
         source: T::AccountId,
