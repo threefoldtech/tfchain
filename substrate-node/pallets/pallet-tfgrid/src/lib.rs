@@ -1168,7 +1168,7 @@ pub mod pallet {
             let node_serial_number = Self::get_serial_number(serial_number)?;
 
             // If the resources on a certified node changed, reset the certification level to DIY
-            if stored_node.resources != resources
+            if stored_node.resources != node_resources
                 && stored_node.certification == NodeCertification::Certified
             {
                 stored_node.certification = NodeCertification::Diy;
@@ -1177,9 +1177,6 @@ pub mod pallet {
                     stored_node.certification,
                 ));
             }
-
-            let node_location = Self::get_location(location)?;
-            let node_serial_number = Self::get_serial_number(serial_number)?;
 
             stored_node.farm_id = farm_id;
             stored_node.resources = node_resources;
