@@ -62,17 +62,15 @@ impl<T: Config> Contract<T> {
                     return Err(DispatchErrorWithPostInfo::from(Error::<T>::NodeNotExists));
                 }
 
-                // We know the contract is using resources, now calculate the cost for each used resource
-
-                //let node_contract_resources =
-                //    pallet::Pallet::<T>::node_contract_resources(self.contract_id);
-
-                let mut bill_resources = true;
                 // If this node contract is deployed on a node which has a rent contract
                 // We can ignore billing for the resources used by this node contract
-                if pallet::ActiveRentContractForNode::<T>::contains_key(node_contract.node_id) {
-                    bill_resources = false
-                }
+                let bill_resources = if pallet::ActiveRentContractForNode::<T>::contains_key(
+                    node_contract.node_id,
+                ) {
+                    false
+                } else {
+                    true
+                };
 
                 let contract_cost = calculate_resources_cost::<T>(
                     node_contract.resources,
