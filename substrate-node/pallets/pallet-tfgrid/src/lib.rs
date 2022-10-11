@@ -33,6 +33,7 @@ pub mod types;
 
 pub mod farm;
 pub mod interface;
+pub mod nodes_migration;
 pub mod pub_config;
 pub mod pub_ip;
 pub mod twin;

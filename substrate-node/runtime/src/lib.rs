@@ -755,7 +755,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    (),
+    pallet_tfgrid::nodes_migration::v9patch::FixFarmNodeIndexMap<Runtime>,
 >;
 
 impl_runtime_apis! {
