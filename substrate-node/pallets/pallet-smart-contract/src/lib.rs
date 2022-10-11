@@ -1238,6 +1238,11 @@ impl<T: Config> Pallet<T> {
                 WithdrawReasons::all(),
             );
 
+            // Fetch twin balance, if the amount locked in the contract lock exceeds the current unlocked
+            // balance we can only transfer out the remaining balance
+            // https://github.com/threefoldtech/tfchain/issues/479
+            let twin_balance = Self::get_usable_balance(&twin.account_id);
+
             // Fetch the default pricing policy
             let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1)
                 .ok_or(Error::<T>::PricingPolicyNotExists)?;
@@ -1245,7 +1250,7 @@ impl<T: Config> Pallet<T> {
             match Self::_distribute_cultivation_rewards(
                 &contract,
                 &pricing_policy,
-                contract_lock.amount_locked,
+                twin_balance.min(contract_lock.amount_locked),
             ) {
                 Ok(_) => {}
                 Err(err) => {
