@@ -887,6 +887,24 @@ fn set_certification_type_node_council_works() {
 }
 
 #[test]
+fn set_certification_type_node_not_exists_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+
+        assert_noop!(
+            TfgridModule::set_node_certification(
+                RawOrigin::Root.into(),
+                1,
+                NodeCertification::Certified
+            ),
+            Error::<TestRuntime>::NodeNotExists
+        );
+    });
+}
+
+#[test]
 fn node_report_uptime_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();

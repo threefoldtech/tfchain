@@ -1092,10 +1092,6 @@ pub mod pallet {
                 }
             }
 
-            ensure!(
-                Nodes::<T>::contains_key(&node_id),
-                Error::<T>::NodeNotExists
-            );
             let mut stored_node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
 
             stored_node.certification = node_certification;
