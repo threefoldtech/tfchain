@@ -4,7 +4,6 @@ use super::PubConfigOf;
 use super::*;
 use frame_support::{traits::Get, weights::Weight, BoundedVec};
 use log::info;
-use sp_std::collections::btree_map::BTreeMap;
 
 pub mod deprecated {
     use codec::{Decode, Encode};
@@ -161,8 +160,6 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
     info!(" >>> Migrating nodes storage...");
 
     let mut migrated_count = 0;
-    let mut writes = 0;
-    let mut farms_with_nodes: BTreeMap<u32, Vec<u32>> = BTreeMap::new();
 
     // We transform the storage values from the old into the new format.
     Nodes::<T>::translate::<deprecated::Node<PubConfigOf<T>, InterfaceOf<T>>, _>(|k, node| {
@@ -215,12 +212,6 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
             connection_price: node.connection_price,
         };
 
-        // Add index of farm - list (nodes)
-        farms_with_nodes
-            .entry(node.farm_id)
-            .or_insert(vec![])
-            .push(node.id);
-
         migrated_count += 1;
 
         Some(new_node)
@@ -230,21 +221,8 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
         migrated_count
     );
 
-    for (farm_id, nodes) in farms_with_nodes.iter() {
-        info!(
-            "inserting nodes: {:?} with farm id: {:?}",
-            nodes.clone(),
-            farm_id
-        );
-        NodesByFarmID::<T>::insert(farm_id, nodes);
-        writes += 1;
-    }
-
     // Return the weight consumed by the migration.
-    T::DbWeight::get().reads_writes(
-        migrated_count as Weight + 1,
-        migrated_count + writes as Weight + 1,
-    )
+    T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
 }
 
 fn update_pallet_storage_version<T: Config>() -> frame_support::weights::Weight {
