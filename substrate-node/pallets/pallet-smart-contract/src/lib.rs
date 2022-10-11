@@ -32,7 +32,7 @@ use sp_runtime::{
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
     traits::ChangeNode,
-    types::{Node, PowerTarget, Resources},
+    types::{ContractPolicy, Node, PowerTarget, Resources},
 };
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"smct");
@@ -156,6 +156,18 @@ pub mod pallet {
     >;
 
     #[pallet::storage]
+    #[pallet::getter(fn group_by_node)]
+    pub type GroupIDByNodeId<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        u32,
+        Blake2_128Concat,
+        DeploymentHash,
+        u32,
+        ValueQuery,
+    >;
+
+    #[pallet::storage]
     #[pallet::getter(fn active_node_contracts)]
     // A list of Contract ID's for a given node.
     // In this list, all the active contracts are kept for a node.
@@ -187,6 +199,19 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn contract_id)]
     pub type ContractID<T> = StorageValue<_, u64, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn group_id)]
+    pub type GroupID<T> = StorageValue<_, u32, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn groups)]
+    pub type Groups<T: Config> = StorageMap<_, Blake2_128Concat, u32, Group, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn contract_id_by_node_group_config)]
+    pub type ContractIDByNodeGroupConfig<T: Config> =
+        StorageMap<_, Blake2_128Concat, types::NodeGroupConfig, u64, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn solution_providers)]
@@ -326,6 +351,7 @@ pub mod pallet {
             node_id: u32,
             power_target: PowerTarget,
         },
+        GroupCreated(types::Group),
     }
 
     #[pallet::error]
@@ -366,6 +392,8 @@ pub mod pallet {
         NoSuitableNodeInFarm,
         NotAuthorizedToCreateDeploymentContract,
         InvalidResources,
+        GroupNotExists,
+        InvalidContractPolicy,
     }
 
     #[pallet::genesis_config]
@@ -392,6 +420,12 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        pub fn create_group(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_create_group(account_id)
+        }
+
         // DEPRECATED
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn create_node_contract(
@@ -453,7 +487,7 @@ pub mod pallet {
             resources: Resources,
             public_ips: u32,
             solution_provider_id: Option<u64>,
-            rent_contract_id: Option<u64>,
+            contract_policy: Option<ContractPolicy>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_create_deployment_contract(
@@ -464,7 +498,7 @@ pub mod pallet {
                 resources,
                 public_ips,
                 solution_provider_id,
-                rent_contract_id,
+                contract_policy,
             )
         }
 
@@ -582,6 +616,25 @@ use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::types::PublicIP;
 // Internal functions of the pallet
 impl<T: Config> Pallet<T> {
+    pub fn _create_group(account_id: T::AccountId) -> DispatchResultWithPostInfo {
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
+            .ok_or(Error::<T>::TwinNotExists)?;
+
+        let mut id = GroupID::<T>::get();
+        id = id + 1;
+
+        let new_group = types::Group {
+            id: id,
+            twin_id: twin_id,
+        };
+
+        Groups::<T>::insert(id, &new_group);
+
+        Self::deposit_event(Event::GroupCreated(new_group));
+
+        Ok(().into())
+    }
+
     #[transactional]
     pub fn _create_deployment_contract(
         account_id: T::AccountId,
@@ -591,26 +644,35 @@ impl<T: Config> Pallet<T> {
         resources: Resources,
         public_ips: u32,
         solution_provider_id: Option<u64>,
-        rent_contract_id: Option<u64>,
+        contract_policy: Option<ContractPolicy>,
     ) -> DispatchResultWithPostInfo {
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
             .ok_or(Error::<T>::TwinNotExists)?;
 
-        // if rent_contract_id is an actual rent contract let's use that node to create deployment contract and
-        // only allow the user who created the rent contract to actually deploy a deployment contract on it
-        // else find a suitable node in the provided farm
-        let node_id = if let Some(contract_id) = rent_contract_id {
-            let contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
-            ensure!(
-                contract.twin_id == twin_id,
-                Error::<T>::NotAuthorizedToCreateDeploymentContract
-            );
-            Self::get_rent_contract(&contract)?.node_id
-        } else {
-            // the farm cannot be a dedicated farm unless you provide a rent contract id
-            let farm = pallet_tfgrid::Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
-            ensure!(!farm.dedicated_farm, Error::<T>::NodeNotAvailableToDeploy);
-            Self::_find_suitable_node_in_farm(farm_id, resources)?
+        let mut group_id = None;
+        let node_id = match contract_policy {
+            Some(ContractPolicy::Join(contract_id)) => {
+                let contract =
+                    Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+                ensure!(
+                    contract.twin_id == twin_id,
+                    Error::<T>::NotAuthorizedToCreateDeploymentContract
+                );
+                Self::_get_node_id_from_contract(&contract)?
+            }
+            Some(ContractPolicy::Exclusive(g_id)) => {
+                let farm =
+                    pallet_tfgrid::Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
+                ensure!(!farm.dedicated_farm, Error::<T>::NodeNotAvailableToDeploy);
+                group_id = Some(g_id);
+                Self::_find_suitable_node_in_farm(farm_id, resources, group_id)?
+            }
+            None | Some(ContractPolicy::Any) => {
+                let farm =
+                    pallet_tfgrid::Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
+                ensure!(!farm.dedicated_farm, Error::<T>::NodeNotAvailableToDeploy);
+                Self::_find_suitable_node_in_farm(farm_id, resources, None)?
+            }
         };
 
         // If the contract with hash and node id exists and it's in any other state then
@@ -640,6 +702,7 @@ impl<T: Config> Pallet<T> {
             public_ips: public_ips,
             public_ips_list: public_ips_list,
             resources: resources,
+            group_id: group_id,
         };
 
         // Create contract
@@ -648,6 +711,17 @@ impl<T: Config> Pallet<T> {
             types::ContractData::DeploymentContract(node_contract.clone()),
             solution_provider_id,
         )?;
+
+        // insert NodeGroup configuration
+        if let Some(group_id) = group_id {
+            ContractIDByNodeGroupConfig::<T>::insert(
+                types::NodeGroupConfig {
+                    group_id: group_id,
+                    node_id: node_id,
+                },
+                contract.contract_id,
+            );
+        }
 
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
         let contract_billing_information = types::ContractBillingInformation {
@@ -671,6 +745,21 @@ impl<T: Config> Pallet<T> {
         Self::deposit_event(Event::ContractCreated(contract));
 
         Ok(().into())
+    }
+
+    pub fn _get_node_id_from_contract(
+        contract: &types::Contract<T>,
+    ) -> Result<u32, DispatchErrorWithPostInfo> {
+        let node_id = match contract.contract_type {
+            types::ContractData::RentContract(ref rent_contract) => rent_contract.node_id,
+            types::ContractData::DeploymentContract(ref deployment_contract) => {
+                deployment_contract.node_id
+            }
+            _ => 0,
+        };
+        ensure!(node_id != 0, Error::<T>::InvalidContractType);
+
+        Ok(node_id.into())
     }
 
     pub fn _create_rent_contract(
@@ -826,6 +915,7 @@ impl<T: Config> Pallet<T> {
     fn _find_suitable_node_in_farm(
         farm_id: u32,
         resources: Resources,
+        group_id: Option<u32>,
     ) -> Result<u32, DispatchErrorWithPostInfo> {
         ensure!(
             pallet_tfgrid::Farms::<T>::contains_key(farm_id),
@@ -834,12 +924,22 @@ impl<T: Config> Pallet<T> {
 
         let nodes_in_farm = pallet_tfgrid::NodesByFarmID::<T>::get(farm_id);
         let mut suitable_nodes = Vec::new();
+
         for node_id in nodes_in_farm {
             let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
             if node.can_claim_resources(resources)
                 && !ActiveRentContractForNode::<T>::contains_key(node_id)
             {
-                suitable_nodes.push(node);
+                if let Some(id) = group_id {
+                    if ContractIDByNodeGroupConfig::<T>::contains_key(types::NodeGroupConfig {
+                        node_id: node_id,
+                        group_id: id,
+                    }) {
+                        suitable_nodes.push(node);
+                    }
+                } else {
+                    suitable_nodes.push(node);
+                }
             }
         }
 
@@ -985,6 +1085,13 @@ impl<T: Config> Pallet<T> {
                 Self::_change_power_target_node(rent_contract.node_id, PowerTarget::Down)?;
             }
             types::ContractData::DeploymentContract(ref deployment_contract) => {
+                // remove NodeGroup config
+                if let Some(group_id) = deployment_contract.group_id {
+                    ContractIDByNodeGroupConfig::<T>::remove(types::NodeGroupConfig {
+                        group_id: group_id,
+                        node_id: deployment_contract.node_id,
+                    });
+                }
                 Self::_un_claim_resources_on_node(
                     deployment_contract.node_id,
                     deployment_contract.resources,
