@@ -2327,7 +2327,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_deployment_cont
         // Event 17: Node contract canceled
         // Event 18: Rent contract Canceled
         // => no Node Contract billed event
-        assert_eq!(our_events.len(), 10);
+        assert_eq!(our_events.len(), 9);
 
         for e in our_events.clone().iter() {
             info!("event: {:?}", e);
@@ -2357,7 +2357,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_deployment_cont
         );
 
         assert_eq!(
-            our_events[17],
+            our_events[7],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::NodeContractCanceled {
@@ -2367,7 +2367,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_deployment_cont
             }))
         );
         assert_eq!(
-            our_events[18],
+            our_events[8],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::RentContractCanceled {
@@ -2639,7 +2639,7 @@ fn test_restore_rent_contract_and_deployment_contracts_in_grace_works() {
         let our_events = System::events();
 
         assert_eq!(
-            our_events[10],
+            our_events[7],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::ContractGracePeriodEnded {
@@ -2649,7 +2649,7 @@ fn test_restore_rent_contract_and_deployment_contracts_in_grace_works() {
             }))
         );
         assert_eq!(
-            our_events[11],
+            our_events[8],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::ContractGracePeriodEnded {
