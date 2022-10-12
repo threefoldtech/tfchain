@@ -493,7 +493,7 @@ pub mod pallet {
             contract_id: u64,
         ) -> DispatchResultWithPostInfo {
             let _account_id = ensure_signed(origin)?;
-            Self::_bill_contract(contract_id)
+            Self::bill_contract(contract_id)
         }
     }
 
