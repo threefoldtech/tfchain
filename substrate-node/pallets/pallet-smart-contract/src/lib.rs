@@ -488,7 +488,7 @@ pub mod pallet {
             contract_id: u64,
         ) -> DispatchResultWithPostInfo {
             let _account_id = ensure_signed(origin)?;
-            Self::_bill_contract(contract_id)
+            Self::bill_contract(contract_id)
         }
     }
 
@@ -811,8 +811,8 @@ impl<T: Config> Pallet<T> {
             );
         }
 
-        contract.state = types::ContractState::Deleted(cause);
-        Self::bill_contract(&mut contract)?;
+        Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
+        Self::bill_contract(contract.contract_id)?;
         // Remove all associated storage
         Self::remove_contract(contract.contract_id);
 
@@ -933,52 +933,6 @@ impl<T: Config> Pallet<T> {
         ContractBillingInformationByID::<T>::insert(report.contract_id, &contract_billing_info);
     }
 
-    pub fn _bill_contract(contract_id: u64) -> DispatchResultWithPostInfo {
-        if !Contracts::<T>::contains_key(contract_id) {
-            log::debug!("cleaning up deleted contract from storage");
-
-            let index = Self::get_contract_index();
-
-            // Remove contract from billing list
-            let mut contracts = ContractsToBillAt::<T>::get(index);
-            contracts.retain(|&c| c != contract_id);
-            ContractsToBillAt::<T>::insert(index, contracts);
-
-            return Ok(().into());
-        }
-        let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
-
-        log::info!("billing contract with id {:?}", contract_id);
-
-        // Try to bill contract
-        match Self::bill_contract(&mut contract) {
-            Ok(_) => {
-                log::info!("successfully billed contract with id {:?}", contract_id,);
-            }
-            Err(err) => {
-                log::error!(
-                    "error while billing contract with id {:?}: <{:?}>",
-                    contract_id,
-                    err.error
-                );
-                return Err(err);
-            }
-        }
-
-        // https://github.com/threefoldtech/tfchain/issues/264
-        // if a contract is still in storage and actively getting billed whilst it is in state delete
-        // remove all associated storage and continue
-        let ctr = Contracts::<T>::get(contract_id);
-        if let Some(contract) = ctr {
-            if contract.is_state_delete() {
-                Self::remove_contract(contract.contract_id);
-                return Ok(().into());
-            }
-        }
-
-        Ok(().into())
-    }
-
     fn bill_contract_using_signed_transaction(contract_id: u64) -> Result<(), Error<T>> {
         let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::any_account();
         if !signer.can_sign() {
@@ -1012,7 +966,23 @@ impl<T: Config> Pallet<T> {
 
     // Bills a contract (NodeContract or NameContract)
     // Calculates how much TFT is due by the user and distributes the rewards
-    fn bill_contract(contract: &mut types::Contract<T>) -> DispatchResultWithPostInfo {
+    fn bill_contract(contract_id: u64) -> DispatchResultWithPostInfo {
+        // Clean up contract from blling loop if it not exists anymore
+        if !Contracts::<T>::contains_key(contract_id) {
+            log::debug!("cleaning up deleted contract from storage");
+
+            let index = Self::get_contract_index();
+
+            // Remove contract from billing list
+            let mut contracts = ContractsToBillAt::<T>::get(index);
+            contracts.retain(|&c| c != contract_id);
+            ContractsToBillAt::<T>::insert(index, contracts);
+
+            return Ok(().into());
+        }
+
+        let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+
         let twin =
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
         let usable_balance = Self::get_usable_balance(&twin.account_id);
@@ -1041,7 +1011,7 @@ impl<T: Config> Pallet<T> {
         };
 
         // Handle grace
-        let contract = Self::handle_grace(contract, usable_balance, amount_due)?;
+        let contract = Self::handle_grace(&mut contract, usable_balance, amount_due)?;
 
         // If still in grace period, no need to continue doing locking and other stuff
         if matches!(contract.state, types::ContractState::GracePeriod(_)) {
@@ -1071,6 +1041,8 @@ impl<T: Config> Pallet<T> {
         if matches!(contract.state, types::ContractState::Deleted(_)) {
             Self::remove_contract(contract.contract_id);
         }
+
+        log::info!("successfully billed contract with id {:?}", contract_id,);
 
         Ok(().into())
     }
@@ -1774,7 +1746,7 @@ impl<T: Config> ChangeNode<PubConfigOf<T>, InterfaceOf<T>> for Pallet<T> {
                     &mut contract,
                     &types::ContractState::Deleted(types::Cause::CanceledByUser),
                 );
-                let _ = Self::bill_contract(&mut contract);
+                let _ = Self::bill_contract(node_contract_id);
                 Self::remove_contract(node_contract_id);
             }
         }
@@ -1787,7 +1759,7 @@ impl<T: Config> ChangeNode<PubConfigOf<T>, InterfaceOf<T>> for Pallet<T> {
                     &mut contract,
                     &types::ContractState::Deleted(types::Cause::CanceledByUser),
                 );
-                let _ = Self::bill_contract(&mut contract);
+                let _ = Self::bill_contract(contract.contract_id);
                 Self::remove_contract(contract.contract_id);
             }
         }
