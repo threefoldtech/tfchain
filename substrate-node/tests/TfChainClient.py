@@ -371,7 +371,7 @@ class TfChainClient:
     def create_deployment_contract(self, farm_id: int = 1, deployment_data: bytes = randbytes(32),
                              deployment_hash: bytes = randbytes(32), public_ips: int = 0, hru: int = 0, sru: int = 0,
                              cru: int = 0, mru: int = 0, solution_provider_id: int | None = None, 
-                             rent_contract_id: int | None = None, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+                             contract_policy: int | None = None, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         params = {
@@ -386,7 +386,7 @@ class TfChainClient:
                 "mru": mru * GIGABYTE
             },
             "solution_provider_id": solution_provider_id,
-            "rent_contract_id": rent_contract_id
+            "contract_policy": contract_policy
         }
         call = substrate.compose_call(
             "SmartContractModule", "create_deployment_contract", params)
