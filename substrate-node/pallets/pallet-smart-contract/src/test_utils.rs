@@ -1,8 +1,6 @@
 #![cfg(test)]
 
-use crate::mock::{
-    bob, Origin, PoolState, SmartContractModule, System, Timestamp,
-};
+use crate::mock::{PoolState, SmartContractModule, System, Timestamp};
 
 use codec::alloc::sync::Arc;
 use frame_support::traits::Hooks;
