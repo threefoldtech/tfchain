@@ -1545,7 +1545,7 @@ fn test_deployment_contract_billing_cycles_delete_node_cancels_contract() {
         let contract_id = 1;
         let twin_id = 2;
 
-        for _ in 0..5 {
+        for i in 0..5 {
             pool_state
                 .write()
                 .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11 + i * 10);
@@ -1641,7 +1641,7 @@ fn test_deployment_contract_only_public_ip_billing_cycles() {
         let contract_id = 1;
         let twin_id = 2;
 
-        for _ in 0..5 {
+        for i in 0..5 {
             pool_state.write().should_call_bill_contract(
                 contract_id,
                 Ok(Pays::Yes.into()),
@@ -1695,7 +1695,7 @@ fn test_deployment_contract_billing_cycles_cancel_contract_during_cycle_works() 
         let twin_id = 2;
 
         // 2 cycles for billing
-        for _ in 0..2 {
+        for i in 0..2 {
             pool_state.write().should_call_bill_contract(
                 contract_id,
                 Ok(Pays::Yes.into()),
@@ -1921,7 +1921,7 @@ fn test_restore_deployment_contract_in_grace_works() {
             None
         ));
 
-        for _ in 0..6 {
+        for i in 0..6 {
             pool_state
                 .write()
                 .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11 + i * 10);
@@ -2303,7 +2303,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_deployment_cont
         ));
 
         // run 12 cycles, contracts should cancel after 11 due to lack of funds
-        for _ in 0..11 {
+        for i in 0..11 {
             pool_state
                 .write()
                 .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11 + i * 10);
