@@ -19,11 +19,12 @@ pub enum StorageVersion {
     V3,
     V4,
     V5,
+    V6,
 }
 
 impl Default for StorageVersion {
     fn default() -> StorageVersion {
-        StorageVersion::V3
+        StorageVersion::V5
     }
 }
 

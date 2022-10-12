@@ -11,7 +11,6 @@ use frame_support::{
         Currency, EnsureOrigin, ExistenceRequirement, ExistenceRequirement::KeepAlive, Get,
         LockableCurrency, OnUnbalanced, WithdrawReasons,
     },
-    transactional,
     weights::Pays,
     BoundedVec,
 };
@@ -26,7 +25,6 @@ use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_timestamp as timestamp;
 use sp_core::crypto::KeyTypeId;
 use sp_runtime::{
-    offchain::storage::StorageValueRef,
     traits::{CheckedSub, SaturatedConversion},
     Perbill,
 };
@@ -78,6 +76,7 @@ pub mod crypto {
 pub mod weights;
 
 pub mod cost;
+pub mod migration;
 pub mod name_contract;
 pub mod types;
 
@@ -199,7 +198,9 @@ pub mod pallet {
     pub type PalletVersion<T> = StorageValue<_, types::StorageVersion, ValueQuery>;
 
     #[pallet::type_value]
-    pub fn DefaultBillingFrequency<T: Config>() -> u64 { T::BillingFrequency::get() }
+    pub fn DefaultBillingFrequency<T: Config>() -> u64 {
+        T::BillingFrequency::get()
+    }
 
     #[pallet::storage]
     #[pallet::getter(fn billing_frequency)]
@@ -350,26 +351,26 @@ pub mod pallet {
     }
 
     #[pallet::genesis_config]
-	pub struct GenesisConfig {
+    pub struct GenesisConfig {
         pub billing_frequency: u64,
-	}
+    }
 
     // The default value for the genesis config type.
-	#[cfg(feature = "std")]
-	impl Default for GenesisConfig {
-		fn default() -> Self {
-			Self { 
+    #[cfg(feature = "std")]
+    impl Default for GenesisConfig {
+        fn default() -> Self {
+            Self {
                 billing_frequency: 600,
             }
-		}
-	}
+        }
+    }
 
-	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig {
-		fn build(&self) {
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig {
+        fn build(&self) {
             BillingFrequency::<T>::put(self.billing_frequency);
-		}
-	}
+        }
+    }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -485,36 +486,27 @@ pub mod pallet {
         pub fn bill_contract_for_block(
             origin: OriginFor<T>,
             contract_id: u64,
-            block_number: T::BlockNumber,
         ) -> DispatchResultWithPostInfo {
             let _account_id = ensure_signed(origin)?;
-            Self::_bill_contract_for_block(contract_id, block_number)
+            Self::_bill_contract(contract_id)
         }
     }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn offchain_worker(block_number: T::BlockNumber) {
-            let current_block_u64: u64 = block_number.saturated_into::<u64>();
-            let mut contracts = Self::get_failed_contract_ids_from_storage();
-            if !contracts.is_empty() {
-                log::info!(
-                    "trying to bill {:?} failed contracts from last block",
-                    contracts
-                );
-            }
-            //reset the failed contract ids for next run
-            Self::save_failed_contract_ids_in_storage(Vec::new());
-            contracts.extend(ContractsToBillAt::<T>::get(current_block_u64));
-            // filter out the contracts that have been deleted in the meantime
-            contracts = contracts
-                .into_iter()
-                .filter(|contract_id| Contracts::<T>::contains_key(contract_id))
-                .collect::<Vec<_>>();
-            contracts.dedup();
+            // Let offchain worker check if there are contracts on the map at current index
+            // Index being current block number % (mod) Billing Frequency
+            let current_index: u64 =
+                block_number.saturated_into::<u64>() % BillingFrequency::<T>::get();
 
+            let contracts = ContractsToBillAt::<T>::get(current_index);
             if contracts.is_empty() {
-                log::debug!("No contracts to bill at block {:?}", block_number);
+                log::info!(
+                    "No contracts to bill at block {:?}, index: {:?}",
+                    block_number,
+                    current_index
+                );
                 return;
             }
 
@@ -525,10 +517,9 @@ pub mod pallet {
             );
 
             for contract_id in contracts {
-                let _res = Self::bill_contract_using_signed_transaction(block_number, contract_id);
+                let _res = Self::bill_contract_using_signed_transaction(contract_id);
             }
         }
-
     }
 }
 
@@ -730,7 +721,7 @@ impl<T: Config> Pallet<T> {
 
         // Start billing frequency loop
         // Will always be block now + frequency
-        Self::_reinsert_contract_to_bill(id);
+        Self::insert_contract_to_bill(id);
 
         // insert into contracts map
         Contracts::<T>::insert(id, &contract);
@@ -819,7 +810,8 @@ impl<T: Config> Pallet<T> {
                 Error::<T>::NodeHasActiveContracts
             );
         }
-        Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
+
+        contract.state = types::ContractState::Deleted(cause);
         Self::bill_contract(&mut contract)?;
         // Remove all associated storage
         Self::remove_contract(contract.contract_id);
@@ -941,39 +933,35 @@ impl<T: Config> Pallet<T> {
         ContractBillingInformationByID::<T>::insert(report.contract_id, &contract_billing_info);
     }
 
-    pub fn _bill_contract_for_block(
-        contract_id: u64,
-        block: T::BlockNumber,
-    ) -> DispatchResultWithPostInfo {
+    pub fn _bill_contract(contract_id: u64) -> DispatchResultWithPostInfo {
         if !Contracts::<T>::contains_key(contract_id) {
+            log::debug!("cleaning up deleted contract from storage");
+
+            let index = Self::get_contract_index();
+
+            // Remove contract from billing list
+            let mut contracts = ContractsToBillAt::<T>::get(index);
+            contracts.retain(|&c| c != contract_id);
+            ContractsToBillAt::<T>::insert(index, contracts);
+
             return Ok(().into());
         }
         let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
 
-        log::info!(
-            "billing contract with id {:?} at block {:?}",
-            contract_id,
-            block
-        );
+        log::info!("billing contract with id {:?}", contract_id);
+
         // Try to bill contract
         match Self::bill_contract(&mut contract) {
             Ok(_) => {
-                log::info!(
-                    "successfully billed contract with id {:?} at block {:?}",
-                    contract_id,
-                    block
-                );
+                log::info!("successfully billed contract with id {:?}", contract_id,);
             }
             Err(err) => {
-                // if billing failed append it to the failed ids in local storage
-                // billing will be retried at the next block
                 log::error!(
                     "error while billing contract with id {:?}: <{:?}>",
                     contract_id,
                     err.error
                 );
-                Self::append_failed_contract_ids_to_storage(contract_id);
-                return Ok(().into());
+                return Err(err);
             }
         }
 
@@ -986,31 +974,22 @@ impl<T: Config> Pallet<T> {
                 Self::remove_contract(contract.contract_id);
                 return Ok(().into());
             }
-
-            // Reinsert into the next billing frequency
-            Self::_reinsert_contract_to_bill(contract.contract_id);
         }
 
         Ok(().into())
     }
 
-    fn bill_contract_using_signed_transaction(
-        block_number: T::BlockNumber,
-        contract_id: u64,
-    ) -> Result<(), Error<T>> {
+    fn bill_contract_using_signed_transaction(contract_id: u64) -> Result<(), Error<T>> {
         let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::any_account();
         if !signer.can_sign() {
             log::error!(
-                "failed billing contract {:?}: at block {:?} account cannot be used to sign transaction",
+                "failed billing contract {:?} account cannot be used to sign transaction",
                 contract_id,
-                block_number
             );
             return Err(<Error<T>>::OffchainSignedTxError);
         }
-        let result = signer.send_signed_transaction(|_acct| Call::bill_contract_for_block {
-            contract_id,
-            block_number,
-        });
+        let result =
+            signer.send_signed_transaction(|_acct| Call::bill_contract_for_block { contract_id });
 
         if let Some((acc, res)) = result {
             // if res is an error this means sending the transaction failed
@@ -1019,9 +998,8 @@ impl<T: Config> Pallet<T> {
             // returns Err())
             if res.is_err() {
                 log::error!(
-                    "signed transaction failed for billing contract {:?} at block {:?} using account {:?}",
+                    "signed transaction failed for billing contract {:?} using account {:?}",
                     contract_id,
-                    block_number,
                     acc.id
                 );
                 return Err(<Error<T>>::OffchainSignedTxError);
@@ -1032,39 +1010,8 @@ impl<T: Config> Pallet<T> {
         return Err(<Error<T>>::OffchainSignedTxError);
     }
 
-    fn append_failed_contract_ids_to_storage(failed_id: u64) {
-        log::info!(
-            "billing contract {:?} will be retried in the next block",
-            failed_id
-        );
-
-        let mut failed_ids = Self::get_failed_contract_ids_from_storage();
-        failed_ids.push(failed_id);
-
-        Self::save_failed_contract_ids_in_storage(failed_ids);
-    }
-
-    fn save_failed_contract_ids_in_storage(failed_ids: Vec<u64>) {
-        let s_contracts =
-            StorageValueRef::persistent(b"pallet-smart-contract::failed-contracts-when-billing");
-
-        s_contracts.set(&failed_ids);
-    }
-
-    fn get_failed_contract_ids_from_storage() -> Vec<u64> {
-        let s_contracts =
-            StorageValueRef::persistent(b"pallet-smart-contract::failed-contracts-when-billing");
-
-        if let Ok(Some(failed_contract_ids)) = s_contracts.get::<Vec<u64>>() {
-            return failed_contract_ids;
-        }
-
-        return Vec::new();
-    }
-
     // Bills a contract (NodeContract or NameContract)
     // Calculates how much TFT is due by the user and distributes the rewards
-    #[transactional]
     fn bill_contract(contract: &mut types::Contract<T>) -> DispatchResultWithPostInfo {
         let twin =
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
@@ -1085,22 +1032,25 @@ impl<T: Config> Pallet<T> {
         let (amount_due, discount_received) =
             contract.calculate_contract_cost_tft(usable_balance, seconds_elapsed)?;
 
-        // If there is nothing to be paid, return
-        if amount_due == BalanceOf::<T>::saturated_from(0 as u128) {
+        // If there is nothing to be paid and the contract is not in state delete, return
+        // Can be that the users cancels the contract in the same block that it's getting billed
+        // where elapsed seconds would be 0, but we still have to distribute rewards
+        if amount_due == BalanceOf::<T>::saturated_from(0 as u128) && !contract.is_state_delete() {
             log::debug!("amount to be billed is 0, nothing to do");
             return Ok(().into());
         };
 
         // Handle grace
-        let was_grace = matches!(contract.state, types::ContractState::GracePeriod(_));
         let contract = Self::handle_grace(contract, usable_balance, amount_due)?;
 
-        // Handle contract lock operations
-        // skip when the contract status was grace and changed to deleted because that means
-        // the grace period ended and there were still no funds
-        if !(was_grace && matches!(contract.state, types::ContractState::Deleted(_))) {
-            Self::handle_lock(contract, amount_due)?;
+        // If still in grace period, no need to continue doing locking and other stuff
+        if matches!(contract.state, types::ContractState::GracePeriod(_)) {
+            log::debug!("contract {} is still in grace", contract.contract_id);
+            return Ok(().into());
         }
+
+        // Handle contract lock operations
+        Self::handle_lock(contract, amount_due)?;
 
         // Always emit a contract billed event
         let contract_bill = types::ContractBill {
@@ -1244,11 +1194,6 @@ impl<T: Config> Pallet<T> {
             ContractLock::<T>::insert(contract.contract_id, &contract_lock);
         }
 
-        // Contract is in grace state, don't actually lock tokens or distribute rewards
-        if matches!(contract.state, types::ContractState::GracePeriod(_)) {
-            return Ok(().into());
-        }
-
         // Only lock an amount from the user's balance if the contract is in create state
         // The lock is specified on the user's account, since a user can have multiple contracts
         // Just extend the lock with the amount due for this contract billing period (lock will be created if not exists)
@@ -1265,9 +1210,8 @@ impl<T: Config> Pallet<T> {
             );
         }
 
-        let is_canceled = matches!(contract.state, types::ContractState::Deleted(_));
         let canceled_and_not_zero =
-            is_canceled && contract_lock.amount_locked.saturated_into::<u64>() > 0;
+            contract.is_state_delete() && contract_lock.amount_locked.saturated_into::<u64>() > 0;
         // When the cultivation rewards are ready to be distributed or it's in delete state
         // Unlock all reserved balance and distribute
         if contract_lock.cycles >= T::DistributionFrequency::get() || canceled_and_not_zero {
@@ -1294,6 +1238,11 @@ impl<T: Config> Pallet<T> {
                 WithdrawReasons::all(),
             );
 
+            // Fetch twin balance, if the amount locked in the contract lock exceeds the current unlocked
+            // balance we can only transfer out the remaining balance
+            // https://github.com/threefoldtech/tfchain/issues/479
+            let twin_balance = Self::get_usable_balance(&twin.account_id);
+
             // Fetch the default pricing policy
             let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1)
                 .ok_or(Error::<T>::PricingPolicyNotExists)?;
@@ -1301,7 +1250,7 @@ impl<T: Config> Pallet<T> {
             match Self::_distribute_cultivation_rewards(
                 &contract,
                 &pricing_policy,
-                contract_lock.amount_locked,
+                twin_balance.min(contract_lock.amount_locked),
             ) {
                 Ok(_) => {}
                 Err(err) => {
@@ -1430,7 +1379,7 @@ impl<T: Config> Pallet<T> {
                     .iter()
                     .map(|provider| {
                         let share = Perbill::from_percent(provider.take as u32) * amount;
-                        frame_support::log::info!(
+                        log::info!(
                             "Transfering: {:?} from contract twin {:?} to provider account {:?}",
                             &share,
                             &twin.account_id,
@@ -1458,9 +1407,9 @@ impl<T: Config> Pallet<T> {
             let share = Perbill::from_percent(sales_share.into()) * amount;
             // Transfer the remaining share to the sales account
             // By default it is 50%, if a contract has solution providers it can be less
-            frame_support::log::info!(
+            log::info!(
                 "Transfering: {:?} from contract twin {:?} to sales account {:?}",
-                &sales_share,
+                &share,
                 &twin.account_id,
                 &pricing_policy.certified_sales_account
             );
@@ -1489,7 +1438,14 @@ impl<T: Config> Pallet<T> {
             WithdrawReasons::FEE,
             ExistenceRequirement::KeepAlive,
         )?;
+
+        log::info!(
+            "Burning: {:?} from contract twin {:?}",
+            amount_to_burn,
+            &twin.account_id
+        );
         T::Burn::on_unbalanced(to_burn);
+
         Self::deposit_event(Event::TokensBurned {
             contract_id: contract.contract_id,
             amount: amount_to_burn,
@@ -1498,23 +1454,24 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    // Reinserts a contract by id at the next interval we need to bill the contract
-    pub fn _reinsert_contract_to_bill(contract_id: u64) {
+    // Inserts a contract in a list where the index is the current block % billing frequency
+    // This way, we don't need to reinsert the contract everytime it gets billed
+    pub fn insert_contract_to_bill(contract_id: u64) {
         if contract_id == 0 {
             return;
         }
 
-        let now = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
-        // Save the contract to be billed in now + BILLING_FREQUENCY_IN_BLOCKS
-        let future_block = now + BillingFrequency::<T>::get();
-        let mut contracts = ContractsToBillAt::<T>::get(future_block);
+        // Save the contract to be billed in (now -1 %(mod) BILLING_FREQUENCY_IN_BLOCKS)
+        let index = Self::get_contract_index().checked_sub(1).unwrap_or(0);
+        let mut contracts = ContractsToBillAt::<T>::get(index);
+
         if !contracts.contains(&contract_id) {
             contracts.push(contract_id);
-            ContractsToBillAt::<T>::insert(future_block, &contracts);
+            ContractsToBillAt::<T>::insert(index, &contracts);
             log::info!(
-                "Insert contracts: {:?}, to be billed at block {:?}",
+                "Insert contracts: {:?}, to be billed at index {:?}",
                 contracts,
-                future_block
+                index
             );
         }
     }
@@ -1792,6 +1749,11 @@ impl<T: Config> Pallet<T> {
             }
         }
         Ok(().into())
+    }
+
+    pub fn get_contract_index() -> u64 {
+        let now = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
+        now % BillingFrequency::<T>::get()
     }
 }
 
