@@ -14,7 +14,7 @@ use pallet_tfgrid::{
     ResourcesInput,
 };
 use sp_core::H256;
-use sp_runtime::{traits::SaturatedConversion, Perbill, Percent, assert_eq_error_rate};
+use sp_runtime::{assert_eq_error_rate, traits::SaturatedConversion, Perbill, Percent};
 use sp_std::convert::{TryFrom, TryInto};
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
@@ -940,7 +940,6 @@ fn test_node_contract_billing_cycles() {
             .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11);
         run_to_block(11, Some(&mut pool_state));
         check_report_cost(1, amount_due_1, 11, discount_received);
-        pool_state.write().should_call_bill_contract(1, 11, Ok(()));
 
         let twin = TfgridModule::twins(twin_id).unwrap();
         let usable_balance = Balances::usable_balance(&twin.account_id);
@@ -1238,8 +1237,8 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
 fn test_node_contract_billing_fails() {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
-        // Creates a farm and node and sets the price of tft to 0 which raises an error later
         run_to_block(1, Some(&mut pool_state));
+        // Creates a farm and node and sets the price of tft to 0 which raises an error later
         prepare_farm_and_node();
 
         assert_ok!(SmartContractModule::create_node_contract(
@@ -1825,6 +1824,10 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
 
         let our_events = System::events();
         assert_eq!(our_events.len(), 10);
+
+        for e in our_events.clone().iter() {
+            info!("event: {:?}", e);
+        }
 
         assert_eq!(
             our_events[5],
