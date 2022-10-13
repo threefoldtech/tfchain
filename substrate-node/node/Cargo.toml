@@ -37,7 +37,7 @@ frame-benchmarking-cli = {git = "https://github.com/paritytech/substrate.git", b
 pallet-transaction-payment-rpc = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24"}
 pallet-transaction-payment = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24"}
 sc-basic-authorship = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24"}
-sc-cli = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24"}
+sc-cli = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", features = ["wasmtime"]}
 sc-client-api = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24"}
 sc-executor = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24"}
 sc-service = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24"}
