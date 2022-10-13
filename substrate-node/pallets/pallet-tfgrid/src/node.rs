@@ -62,7 +62,7 @@ impl<T: Config> Clone for CityName<T> {
     }
 }
 
-fn validate_city_name(input: &[u8]) -> bool {
+pub fn validate_city_name(input: &[u8]) -> bool {
     input == DEFAULT_CITY_NAME
         || input
             .iter()
@@ -123,7 +123,7 @@ impl<T: Config> Clone for CountryName<T> {
     }
 }
 
-fn validate_country_name(input: &[u8]) -> bool {
+pub fn validate_country_name(input: &[u8]) -> bool {
     input == DEFAULT_COUNTRY_NAME
         || match core::str::from_utf8(input) {
             Ok(val) => geo::validate_country(val),
@@ -189,7 +189,7 @@ impl<T: Config> TryFrom<LocationInput> for Location<T> {
             Self::Error::LatitudeInputTooLong
         );
         ensure!(
-            validate_latitude_input(&value.latitude),
+            validate_latitude_input(&value.latitude.to_vec()),
             Self::Error::InvalidLatitudeInput
         );
 
@@ -203,7 +203,7 @@ impl<T: Config> TryFrom<LocationInput> for Location<T> {
             Self::Error::LongitudeInputTooLong
         );
         ensure!(
-            validate_longitude_input(&value.longitude),
+            validate_longitude_input(&value.longitude.to_vec()),
             Self::Error::InvalidLongitudeInput
         );
 
@@ -240,7 +240,7 @@ impl<T: Config> Clone for Location<T> {
     }
 }
 
-fn validate_latitude_input(input: &[u8]) -> bool {
+pub fn validate_latitude_input(input: &[u8]) -> bool {
     input == DEFAULT_LATITUDE
         || match core::str::from_utf8(input) {
             Ok(val) => {
@@ -254,7 +254,7 @@ fn validate_latitude_input(input: &[u8]) -> bool {
         }
 }
 
-fn validate_longitude_input(input: &[u8]) -> bool {
+pub fn validate_longitude_input(input: &[u8]) -> bool {
     input == DEFAULT_LONGITUDE
         || match core::str::from_utf8(input) {
             Ok(val) => {
@@ -318,7 +318,7 @@ impl<T: Config> Clone for SerialNumber<T> {
     }
 }
 
-fn validate_serial_number(input: &[u8]) -> bool {
+pub fn validate_serial_number(input: &[u8]) -> bool {
     input == DEFAULT_SERIAL_NUMBER
         || input
             .iter()

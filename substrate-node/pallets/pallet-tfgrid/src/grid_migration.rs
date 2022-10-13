@@ -4,6 +4,7 @@ use super::PubConfigOf;
 use super::*;
 use frame_support::{traits::Get, weights::Weight, BoundedVec};
 use log::info;
+use unicode_normalization::UnicodeNormalization;
 
 pub mod deprecated {
     use codec::{Decode, Encode};
@@ -129,7 +130,7 @@ fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
                     k, e
                 );
                 let default_city_name_input: CityNameInput =
-                    BoundedVec::try_from(node::DEFAULT_COUNTRY_NAME.to_vec()).unwrap();
+                    BoundedVec::try_from(node::DEFAULT_CITY_NAME.to_vec()).unwrap();
 
                 info!("set default city name for entity");
                 <T as Config>::CityName::try_from(default_city_name_input).unwrap()
@@ -252,12 +253,26 @@ fn update_pallet_storage_version<T: Config>() -> frame_support::weights::Weight 
 fn get_location<T: Config>(
     node: &deprecated::Node<PubConfigOf<T>, InterfaceOf<T>>,
 ) -> Result<LocationOf<T>, Error<T>> {
+    let city_str = core::str::from_utf8(&node.city).unwrap();
+    let country_str = core::str::from_utf8(&node.country).unwrap();
+    let latitude_str = core::str::from_utf8(&node.location.latitude).unwrap();
+    let longitude_str = core::str::from_utf8(&node.location.longitude).unwrap();
+
+    let city_nfd = convert_to_nfd(city_str);
+    let country_nfd = convert_to_nfd(country_str);
+    let latitude_nfd = convert_to_nfd(latitude_str);
+    let longitude_nfd = convert_to_nfd(longitude_str);
+
     let location_input = LocationInput {
-        city: BoundedVec::try_from(node.city.clone()).unwrap(),
-        country: BoundedVec::try_from(node.country.clone()).unwrap(),
-        latitude: BoundedVec::try_from(node.location.longitude.clone()).unwrap(),
-        longitude: BoundedVec::try_from(node.location.latitude.clone()).unwrap(),
+        city: BoundedVec::try_from(city_nfd).unwrap(),
+        country: BoundedVec::try_from(country_nfd).unwrap(),
+        latitude: BoundedVec::try_from(latitude_nfd).unwrap(),
+        longitude: BoundedVec::try_from(longitude_nfd).unwrap(),
     };
 
     <T as Config>::Location::try_from(location_input)
+}
+
+pub fn convert_to_nfd(input: &str) -> Vec<u8> {
+    input.nfkd().map(|x| x as u8).collect::<Vec<u8>>()
 }

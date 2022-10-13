@@ -23,6 +23,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 	"derive",
 ] }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+unicode-normalization = { version = "0.1.22", default-features = false }
 tfchain-support = { path = "../../support", default-features = false }
 valip = "0.3.0"
 

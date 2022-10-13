@@ -1,8 +1,9 @@
 use super::Event as TfgridEvent;
 use crate::{
-    geo,
+    geo, grid_migration,
     mock::Event as MockEvent,
     mock::*,
+    node,
     types::{LocationInput, PublicIpInput},
     Error, InterfaceInput, InterfaceIpsInput, PubConfigInput, PublicIpListInput, ResourcesInput,
 };
@@ -1982,6 +1983,56 @@ fn test_validate_country_city_works() {
             false
         );
         assert_eq!(geo::validate_country_city("Dreamland", "Dreamcity"), false);
+    })
+}
+
+#[test]
+fn test_convert_to_nfd_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_eq!(grid_migration::convert_to_nfd("Liege"), b"Liege".to_vec()); // replace with "Liège"
+        assert_eq!(
+            grid_migration::convert_to_nfd("Angouleme"),
+            b"Angouleme".to_vec()
+        ); // replace with "Angoulême"
+        assert_eq!(
+            grid_migration::convert_to_nfd("Besancon"),
+            b"Besancon".to_vec()
+        ); // replace with "Besançon"
+    })
+}
+
+#[test]
+fn test_validate_city_name_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_eq!(node::validate_city_name(b"Liege"), true);
+    })
+}
+
+#[test]
+fn test_validate_latitude_input_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_eq!(node::validate_latitude_input(b"90.0"), true);
+        assert_eq!(node::validate_latitude_input(b"-90.0"), true);
+        assert_eq!(node::validate_latitude_input(b"0.0"), true);
+
+        assert_eq!(node::validate_latitude_input(b"90.00001"), false); // 10e-5 sensitive
+        assert_eq!(node::validate_latitude_input(b"-90.00001"), false); // 10e-5 sensitive
+        assert_eq!(node::validate_longitude_input(b"30,35465"), false);
+        assert_eq!(node::validate_latitude_input(b"garbage data"), false);
+    })
+}
+
+#[test]
+fn test_validate_longitude_input_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_eq!(node::validate_longitude_input(b"180.0"), true);
+        assert_eq!(node::validate_longitude_input(b"-180.0"), true);
+        assert_eq!(node::validate_longitude_input(b"0.0"), true);
+
+        assert_eq!(node::validate_longitude_input(b"180.00001"), false); // 10e-5 sensitive
+        assert_eq!(node::validate_longitude_input(b"-180.00001"), false); // 10e-5 sensitive
+        assert_eq!(node::validate_longitude_input(b"30,35465"), false);
+        assert_eq!(node::validate_longitude_input(b"garbage data"), false);
     })
 }
 
