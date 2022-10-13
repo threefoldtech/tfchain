@@ -60,6 +60,12 @@ The script can be tweaked and configured using various environment variables -
 | FORK_CHAIN           | Chain to use as base for the forked chain.                                                                                                                                                              | `dev`                    |
 | ALICE                | If set, the script will replace the chain's sudo account with `//Alice`                                                                                                                                 | `NULL`                   |
 | QUICK_MODE           | If set, it parallelizes the data download from the RPC endpoint                                                                                                                                         | `NULL`                   |
+## Network list
+
+- Devnet: 10.10.0.151
+- QAnet: 10.10.0.152
+- Testnet: 10.10.0.22
+- Mainnet: 10.10.0.19
 
 ## Read more
 

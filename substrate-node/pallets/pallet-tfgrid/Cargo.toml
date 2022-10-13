@@ -40,6 +40,8 @@ frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = 
 
 [dev-dependencies]
 hex-literal = "0.3.1"
+pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
 
 [features]
 default = ['std']
@@ -60,6 +62,8 @@ std = [
 	'hex/std',
 	'log/std',
 	'frame-try-runtime/std',
+	'pallet-membership/std',
+	'pallet-collective/std'
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

@@ -2,6 +2,7 @@ use crate::{
     self as tfgridModule,
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
+    mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild,
     node::{CityName, CountryName, Location, SerialNumber},
     pub_config::{Domain, GW4, GW6, IP4, IP6},
     pub_ip::{GatewayIP, PublicIP},
@@ -44,6 +45,8 @@ construct_runtime!(
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         TfgridModule: tfgridModule::{Pallet, Call, Storage, Config<T>, Event<T>},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+        Council: pallet_collective::<Instance1>::{Pallet, Call, Origin<T>, Event<T>, Config<T>},
+        Membership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -177,6 +180,37 @@ impl pallet_timestamp::Config for TestRuntime {
     type WeightInfo = pallet_timestamp::weights::SubstrateWeight<TestRuntime>;
 }
 
+parameter_types! {
+    pub const CouncilMotionDuration: u32 = 4;
+    pub const CouncilMaxProposals: u32 = 100;
+    pub const CouncilMaxMembers: u32 = 100;
+}
+
+pub type CouncilCollective = pallet_collective::Instance1;
+impl pallet_collective::Config<CouncilCollective> for TestRuntime {
+    type Origin = Origin;
+    type Proposal = Call;
+    type Event = Event;
+    type MotionDuration = CouncilMotionDuration;
+    type MaxProposals = CouncilMaxProposals;
+    type MaxMembers = CouncilMaxMembers;
+    type DefaultVote = pallet_collective::PrimeDefaultVote;
+    type WeightInfo = ();
+}
+
+impl pallet_membership::Config<pallet_membership::Instance1> for TestRuntime {
+    type Event = Event;
+    type AddOrigin = EnsureRoot<Self::AccountId>;
+    type RemoveOrigin = EnsureRoot<Self::AccountId>;
+    type SwapOrigin = EnsureRoot<Self::AccountId>;
+    type ResetOrigin = EnsureRoot<Self::AccountId>;
+    type PrimeOrigin = EnsureRoot<Self::AccountId>;
+    type MembershipInitialized = Council;
+    type MembershipChanged = ();
+    type MaxMembers = CouncilMaxMembers;
+    type WeightInfo = pallet_membership::weights::SubstrateWeight<TestRuntime>;
+}
+
 pub struct ExternalityBuilder;
 
 impl ExternalityBuilder {
@@ -195,10 +229,18 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     let mut t = frame_system::GenesisConfig::default()
         .build_storage::<TestRuntime>()
         .unwrap();
+
     let genesis = pallet_balances::GenesisConfig::<TestRuntime> {
         balances: vec![(alice(), 1000000000000), (bob(), 190000)],
     };
     genesis.assimilate_storage(&mut t).unwrap();
+
+    let genesis = pallet_membership::GenesisConfig::<TestRuntime, pallet_membership::Instance1> {
+        members: vec![alice()],
+        phantom: Default::default(),
+    };
+    genesis.assimilate_storage(&mut t).unwrap();
+
     t.into()
 }
 
