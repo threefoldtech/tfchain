@@ -1,6 +1,5 @@
 use super::Event as TfgridEvent;
 use crate::{
-    geo, grid_migration,
     mock::Event as MockEvent,
     mock::*,
     node,
@@ -1956,55 +1955,24 @@ fn test_set_invalid_zos_version_fails() {
 }
 
 #[test]
-fn test_validate_country_works() {
-    ExternalityBuilder::build().execute_with(|| {
-        assert_eq!(geo::validate_country("Brazil"), true);
-        assert_eq!(geo::validate_country("Belgium"), true);
-        assert_eq!(geo::validate_country("Egypt"), true);
-
-        assert_eq!(geo::validate_country("Utopia"), false);
-        assert_eq!(geo::validate_country("Dreamland"), false);
-    })
-}
-
-#[test]
-fn test_validate_country_city_works() {
-    ExternalityBuilder::build().execute_with(|| {
-        assert_eq!(geo::validate_country_city("Brazil", "Rio de Janeiro"), true);
-        assert_eq!(geo::validate_country_city("Belgium", "Ghent"), true);
-        assert_eq!(geo::validate_country_city("Egypt", "Cairo"), true);
-        assert_eq!(
-            geo::validate_country_city("United States", "Los Angeles"),
-            true
-        );
-
-        assert_eq!(
-            geo::validate_country_city("United States", "Ghotam City"),
-            false
-        );
-        assert_eq!(geo::validate_country_city("Dreamland", "Dreamcity"), false);
-    })
-}
-
-#[test]
-fn test_convert_to_nfd_works() {
-    ExternalityBuilder::build().execute_with(|| {
-        assert_eq!(grid_migration::convert_to_nfd("Liege"), b"Liege".to_vec()); // replace with "Liège"
-        assert_eq!(
-            grid_migration::convert_to_nfd("Angouleme"),
-            b"Angouleme".to_vec()
-        ); // replace with "Angoulême"
-        assert_eq!(
-            grid_migration::convert_to_nfd("Besancon"),
-            b"Besancon".to_vec()
-        ); // replace with "Besançon"
-    })
-}
-
-#[test]
 fn test_validate_city_name_works() {
     ExternalityBuilder::build().execute_with(|| {
-        assert_eq!(node::validate_city_name(b"Liege"), true);
+        assert_eq!(node::validate_city_name(b"Rio de Janeiro"), true);
+        assert_eq!(node::validate_city_name(b"Ghent"), true);
+        assert_eq!(node::validate_city_name(b"Cairo"), true);
+
+        assert_eq!(node::validate_city_name(b"Los_Angeles"), false);
+    })
+}
+
+#[test]
+fn test_validate_country_name_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        assert_eq!(node::validate_country_name(b"Brazil"), true);
+        assert_eq!(node::validate_country_name(b"Belgium"), true);
+        assert_eq!(node::validate_country_name(b"Egypt"), true);
+
+        assert_eq!(node::validate_country_name(b"Costa_Rica"), false);
     })
 }
 

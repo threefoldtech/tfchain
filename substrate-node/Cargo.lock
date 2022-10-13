@@ -3958,7 +3958,6 @@ dependencies = [
  "sp-std",
  "sp-storage",
  "tfchain-support",
- "unicode-normalization",
  "valip",
 ]
 

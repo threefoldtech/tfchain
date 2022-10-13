@@ -1,6 +1,4 @@
-use crate::{
-    geo, CityNameInput, Config, CountryNameInput, Error, LocationInput, SerialNumberInput,
-};
+use crate::{CityNameInput, Config, CountryNameInput, Error, LocationInput, SerialNumberInput};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
@@ -66,7 +64,7 @@ pub fn validate_city_name(input: &[u8]) -> bool {
     input == DEFAULT_CITY_NAME
         || input
             .iter()
-            .all(|c| c.is_ascii_alphabetic() || c.is_ascii_whitespace() || matches!(c, b'-'))
+            .all(|c| c.is_ascii_alphabetic() || matches!(c, b'-' | b'.' | b' '))
 }
 
 // 4: Cuba, Fiji, Iran, ..
@@ -125,10 +123,9 @@ impl<T: Config> Clone for CountryName<T> {
 
 pub fn validate_country_name(input: &[u8]) -> bool {
     input == DEFAULT_COUNTRY_NAME
-        || match core::str::from_utf8(input) {
-            Ok(val) => geo::validate_country(val),
-            Err(_) => false,
-        }
+        || input
+            .iter()
+            .all(|c| c.is_ascii_alphabetic() || matches!(c, b'-' | b'.' | b' '))
 }
 
 pub const MIN_LATITUDE_LENGTH: u32 = 1;
@@ -165,19 +162,6 @@ impl<T: Config> TryFrom<LocationInput> for Location<T> {
         // Check if [country][city] pair exists in data base
         let city = CityName::<T>::try_from(value.city)?;
         let country = CountryName::<T>::try_from(value.country)?;
-
-        let city_vec = city.0.to_vec();
-        let city_str =
-            core::str::from_utf8(&city_vec).map_err(|_| Self::Error::InvalidCountryName)?;
-        let country_vec = country.0.to_vec();
-        let country_str =
-            core::str::from_utf8(&country_vec).map_err(|_| Self::Error::InvalidCityName)?;
-        ensure!(
-            &city_vec == DEFAULT_CITY_NAME
-                || &country_vec == DEFAULT_COUNTRY_NAME
-                || geo::validate_country_city(country_str, city_str),
-            Self::Error::InvalidCountryCityPair
-        );
 
         // latitude
         ensure!(
@@ -322,5 +306,5 @@ pub fn validate_serial_number(input: &[u8]) -> bool {
     input == DEFAULT_SERIAL_NUMBER
         || input
             .iter()
-            .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'-' | b'_'))
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'-' | b'_' | b'.'))
 }

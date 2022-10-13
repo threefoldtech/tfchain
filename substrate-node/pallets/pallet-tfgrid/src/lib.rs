@@ -32,7 +32,6 @@ pub mod weights;
 pub mod types;
 
 pub mod farm;
-pub mod geo;
 pub mod interface;
 pub mod node;
 pub mod pub_config;
