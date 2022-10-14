@@ -105,39 +105,40 @@ fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
     Entities::<T>::translate::<deprecated::Entity<AccountIdOf<T>>, _>(|k, entity| {
         info!("     Migrated entity for {:?}...", k);
 
-        let country_name_input: CountryNameInput = BoundedVec::try_from(entity.country).unwrap();
-        let country = match <T as Config>::CountryName::try_from(country_name_input) {
+        let country = match get_country_name::<T>(&entity) {
             Ok(country_name) => country_name,
             Err(e) => {
+                info!(
+                    "country name: {:?}",
+                    core::str::from_utf8(&entity.country).unwrap_or_default()
+                );
                 info!(
                     "failed to parse country name for entity: {:?}, error: {:?}",
                     k, e
                 );
-                let default_country_name_input: CountryNameInput =
-                    BoundedVec::try_from(node::DEFAULT_COUNTRY_NAME.to_vec()).unwrap();
                 info!("set default country name for entity");
-                <T as Config>::CountryName::try_from(default_country_name_input).unwrap()
+                <T as Config>::CountryName::default()
             }
         };
 
-        let city_name_input: CityNameInput = BoundedVec::try_from(entity.city).unwrap();
-        let city = match <T as Config>::CityName::try_from(city_name_input) {
+        let city = match get_city_name::<T>(&entity) {
             Ok(city_name) => city_name,
             Err(e) => {
+                info!(
+                    "city name: {:?}",
+                    core::str::from_utf8(&entity.city).unwrap_or_default()
+                );
                 info!(
                     "failed to parse city name for entity: {:?}, error: {:?}",
                     k, e
                 );
-                let default_city_name_input: CityNameInput =
-                    BoundedVec::try_from(node::DEFAULT_CITY_NAME.to_vec()).unwrap();
-
                 info!("set default city name for entity");
-                <T as Config>::CityName::try_from(default_city_name_input).unwrap()
+                <T as Config>::CityName::default()
             }
         };
 
         let new_entity = TfgridEntity::<T> {
-            version: 2, // ??
+            version: 2, // deprecated
             id: entity.id,
             name: entity.name,
             account_id: entity.account_id,
@@ -173,45 +174,35 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
             Err(e) => {
                 info!(
                     "location: [city: {:?}, country: {:?}, latitude: {:?}, longitude: {:?}]",
-                    core::str::from_utf8(&node.city).unwrap(),
-                    core::str::from_utf8(&node.country).unwrap(),
-                    core::str::from_utf8(&node.location.latitude).unwrap(),
-                    core::str::from_utf8(&node.location.longitude).unwrap()
+                    core::str::from_utf8(&node.city).unwrap_or_default(),
+                    core::str::from_utf8(&node.country).unwrap_or_default(),
+                    core::str::from_utf8(&node.location.latitude).unwrap_or_default(),
+                    core::str::from_utf8(&node.location.longitude).unwrap_or_default()
                 );
                 info!("failed to parse location for node: {:?}, error: {:?}", k, e);
-                let default_location_input = LocationInput {
-                    city: BoundedVec::try_from(node::DEFAULT_CITY_NAME.to_vec()).unwrap(),
-                    country: BoundedVec::try_from(node::DEFAULT_COUNTRY_NAME.to_vec()).unwrap(),
-                    latitude: BoundedVec::try_from(node::DEFAULT_LATITUDE.to_vec()).unwrap(),
-                    longitude: BoundedVec::try_from(node::DEFAULT_LONGITUDE.to_vec()).unwrap(),
-                };
                 info!("set default location for node");
-                <T as Config>::Location::try_from(default_location_input).unwrap()
+                <T as Config>::Location::default()
             }
         };
 
-        let serial_number_input: SerialNumberInput =
-            BoundedVec::try_from(node.serial_number.clone()).unwrap();
-        let serial_number = match <T as Config>::SerialNumber::try_from(serial_number_input) {
+        let serial_number = match get_serial_number::<T>(&node) {
             Ok(serial) => serial,
             Err(e) => {
                 info!(
                     "serial number: {:?}",
-                    core::str::from_utf8(&node.serial_number).unwrap()
+                    core::str::from_utf8(&node.serial_number).unwrap_or_default()
                 );
                 info!(
                     "failed to parse serial number for node: {:?}, error: {:?}",
                     k, e
                 );
-                let default_serial_number_input: SerialNumberInput =
-                    BoundedVec::try_from(node::DEFAULT_SERIAL_NUMBER.to_vec()).unwrap();
                 info!("set default serial number for node");
-                <T as Config>::SerialNumber::try_from(default_serial_number_input).unwrap()
+                <T as Config>::SerialNumber::default()
             }
         };
 
         let new_node = TfgridNode::<T> {
-            version: 6, // ??
+            version: 6, // deprecated
             id: node.id,
             farm_id: node.farm_id,
             twin_id: node.twin_id,
@@ -249,15 +240,45 @@ fn update_pallet_storage_version<T: Config>() -> frame_support::weights::Weight 
     T::DbWeight::get().writes(1)
 }
 
+fn get_country_name<T: Config>(
+    node: &deprecated::Entity<AccountIdOf<T>>,
+) -> Result<CountryNameOf<T>, Error<T>> {
+    let country_name_input: CountryNameInput =
+        BoundedVec::try_from(node.country.clone()).map_err(|_| Error::<T>::CountryNameTooLong)?;
+
+    <T as Config>::CountryName::try_from(country_name_input)
+}
+
+fn get_city_name<T: Config>(
+    node: &deprecated::Entity<AccountIdOf<T>>,
+) -> Result<CityNameOf<T>, Error<T>> {
+    let city_name_input: CityNameInput =
+        BoundedVec::try_from(node.city.clone()).map_err(|_| Error::<T>::CityNameTooLong)?;
+
+    <T as Config>::CityName::try_from(city_name_input)
+}
+
 fn get_location<T: Config>(
     node: &deprecated::Node<PubConfigOf<T>, InterfaceOf<T>>,
 ) -> Result<LocationOf<T>, Error<T>> {
     let location_input = LocationInput {
-        city: BoundedVec::try_from(node.city.clone()).unwrap(),
-        country: BoundedVec::try_from(node.country.clone()).unwrap(),
-        latitude: BoundedVec::try_from(node.location.latitude.clone()).unwrap(),
-        longitude: BoundedVec::try_from(node.location.longitude.clone()).unwrap(),
+        city: BoundedVec::try_from(node.city.clone()).map_err(|_| Error::<T>::CityNameTooLong)?,
+        country: BoundedVec::try_from(node.country.clone())
+            .map_err(|_| Error::<T>::CountryNameTooLong)?,
+        latitude: BoundedVec::try_from(node.location.latitude.clone())
+            .map_err(|_| Error::<T>::LatitudeInputTooLong)?,
+        longitude: BoundedVec::try_from(node.location.longitude.clone())
+            .map_err(|_| Error::<T>::LongitudeInputTooLong)?,
     };
 
     <T as Config>::Location::try_from(location_input)
+}
+
+fn get_serial_number<T: Config>(
+    node: &deprecated::Node<PubConfigOf<T>, InterfaceOf<T>>,
+) -> Result<SerialNumberOf<T>, Error<T>> {
+    let serial_number_input: SerialNumberInput = BoundedVec::try_from(node.serial_number.clone())
+        .map_err(|_| Error::<T>::SerialNumberTooLong)?;
+
+    <T as Config>::SerialNumber::try_from(serial_number_input)
 }

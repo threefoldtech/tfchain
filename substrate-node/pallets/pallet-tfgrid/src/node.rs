@@ -42,6 +42,15 @@ impl<T: Config> TryFrom<CityNameInput> for CityName<T> {
     }
 }
 
+impl<T: Config> Default for CityName<T> {
+    fn default() -> Self {
+        let city: BoundedVec<u8, ConstU32<MAX_CITY_NAME_LENGTH>> =
+            DEFAULT_CITY_NAME.to_vec().try_into().unwrap_or_default();
+
+        Self(city, PhantomData)
+    }
+}
+
 // FIXME: did not find a way to automatically implement this.
 impl<T: Config> PartialEq for CityName<T> {
     fn eq(&self, other: &Self) -> bool {
@@ -68,8 +77,8 @@ pub fn validate_city_name(input: &[u8]) -> bool {
     // special alphabetic characters thanks to is_alphabetic()
 }
 
-// 4: Cuba, Fiji, Iran, ..
-pub const MIN_COUNTRY_NAME_LENGTH: u32 = 4;
+// 2: Allow country code like BE, FR, BR, ...
+pub const MIN_COUNTRY_NAME_LENGTH: u32 = 2;
 // 56: The United Kingdom of Great Britain and Northern Ireland
 pub const MAX_COUNTRY_NAME_LENGTH: u32 = 56;
 pub const DEFAULT_COUNTRY_NAME: &[u8] = b"Unknown";
@@ -104,6 +113,15 @@ impl<T: Config> TryFrom<CountryNameInput> for CountryName<T> {
         );
 
         Ok(Self(value, PhantomData))
+    }
+}
+
+impl<T: Config> Default for CountryName<T> {
+    fn default() -> Self {
+        let country: BoundedVec<u8, ConstU32<MAX_COUNTRY_NAME_LENGTH>> =
+            DEFAULT_COUNTRY_NAME.to_vec().try_into().unwrap_or_default();
+
+        Self(country, PhantomData)
     }
 }
 
@@ -206,6 +224,25 @@ impl<T: Config> TryFrom<LocationInput> for Location<T> {
     }
 }
 
+impl<T: Config> Default for Location<T> {
+    fn default() -> Self {
+        let city = CityName::default();
+        let country = CountryName::default();
+        let latitude: BoundedVec<u8, ConstU32<MAX_LATITUDE_LENGTH>> =
+            DEFAULT_CITY_NAME.to_vec().try_into().unwrap_or_default();
+        let longitude: BoundedVec<u8, ConstU32<MAX_LONGITUDE_LENGTH>> =
+            DEFAULT_CITY_NAME.to_vec().try_into().unwrap_or_default();
+
+        Self {
+            city,
+            country,
+            latitude,
+            longitude,
+            _marker: PhantomData,
+        }
+    }
+}
+
 // FIXME: did not find a way to automatically implement this.
 impl<T: Config> PartialEq for Location<T> {
     fn eq(&self, other: &Self) -> bool {
@@ -273,8 +310,9 @@ pub struct SerialNumber<T: Config>(
 impl<T: Config> TryFrom<SerialNumberInput> for SerialNumber<T> {
     type Error = Error<T>;
 
-    /// TODO: Fallible initialization from a provided byte vector if it is below the
-    /// minimum or exceeds the maximum allowed length or ...
+    /// Fallible initialization from a provided byte vector if it is below the
+    /// minimum or exceeds the maximum allowed length or contains invalid ASCII
+    /// characters.
     fn try_from(value: SerialNumberInput) -> Result<Self, Self::Error> {
         ensure!(
             value.len() >= MIN_SERIAL_NUMBER_LENGTH.saturated_into(),
@@ -290,6 +328,17 @@ impl<T: Config> TryFrom<SerialNumberInput> for SerialNumber<T> {
         );
 
         Ok(Self(value, PhantomData))
+    }
+}
+
+impl<T: Config> Default for SerialNumber<T> {
+    fn default() -> Self {
+        let serial: BoundedVec<u8, ConstU32<MAX_SERIAL_NUMBER_LENGTH>> = DEFAULT_SERIAL_NUMBER
+            .to_vec()
+            .try_into()
+            .unwrap_or_default();
+
+        Self(serial, PhantomData)
     }
 }
 

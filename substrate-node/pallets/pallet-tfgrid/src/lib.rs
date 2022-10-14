@@ -435,6 +435,7 @@ pub mod pallet {
         /// The type of a city name.
         type CityName: FullCodec
             + Debug
+            + Default
             + PartialEq
             + Clone
             + TypeInfo
@@ -444,6 +445,7 @@ pub mod pallet {
         /// The type of a country name.
         type CountryName: FullCodec
             + Debug
+            + Default
             + PartialEq
             + Clone
             + TypeInfo
@@ -453,6 +455,7 @@ pub mod pallet {
         /// The type of a location.
         type Location: FullCodec
             + Debug
+            + Default
             + PartialEq
             + Clone
             + TypeInfo
@@ -462,6 +465,7 @@ pub mod pallet {
         /// The type of a serial number.
         type SerialNumber: FullCodec
             + Debug
+            + Default
             + PartialEq
             + Clone
             + TypeInfo
