@@ -16,7 +16,7 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         /// Origin for runtime upgrades
-        type SetCodeOrigin: EnsureOrigin<Self::Origin>;
+        type SetCodeOrigin: EnsureOrigin<Self::RuntimeOrigin>;
     }
 
     #[pallet::call]

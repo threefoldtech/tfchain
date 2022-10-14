@@ -40,55 +40,57 @@
 // --template
 // ./.maintain/frame-weight-template.hbs
 
-
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 use sp_std::marker::PhantomData;
 
 /// Weight functions needed for pallet_dao.
 pub trait WeightInfo {
-	fn propose() -> Weight;
-	fn vote() -> Weight;
-	fn close() -> Weight;
+    fn propose() -> Weight;
+    fn vote() -> Weight;
+    fn close() -> Weight;
 }
 
 /// Weights for pallet_dao using the Substrate node and recommended hardware.
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
-	fn propose() -> Weight {
-		(162_531_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(4 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
-	}
-	fn vote() -> Weight {
-		(147_194_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(5 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
-	}
-	fn close() -> Weight {
-		(257_076_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
-			.saturating_add(T::DbWeight::get().writes(4 as Weight))
-	}
+    fn propose() -> Weight {
+        Weight::from_ref_time(162_531_000 as u64)
+            .saturating_add(T::DbWeight::get().reads(4 as u64))
+            .saturating_add(T::DbWeight::get().writes(5 as u64))
+    }
+    fn vote() -> Weight {
+        Weight::from_ref_time(147_194_000 as u64)
+            .saturating_add(T::DbWeight::get().reads(5 as u64))
+            .saturating_add(T::DbWeight::get().writes(1 as u64))
+    }
+    fn close() -> Weight {
+        Weight::from_ref_time(257_076_000 as u64)
+            .saturating_add(T::DbWeight::get().reads(3 as u64))
+            .saturating_add(T::DbWeight::get().writes(4 as u64))
+    }
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	fn propose() -> Weight {
-		(162_531_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(4 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
-	}
-	fn vote() -> Weight {
-		(147_194_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(5 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
-	}
-	fn close() -> Weight {
-		(257_076_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(4 as Weight))
-	}
+    fn propose() -> Weight {
+        Weight::from_ref_time(162_531_000 as u64)
+            .saturating_add(RocksDbWeight::get().reads(4 as u64))
+            .saturating_add(RocksDbWeight::get().writes(5 as u64))
+    }
+    fn vote() -> Weight {
+        Weight::from_ref_time(147_194_000 as u64)
+            .saturating_add(RocksDbWeight::get().reads(5 as u64))
+            .saturating_add(RocksDbWeight::get().writes(1 as u64))
+    }
+    fn close() -> Weight {
+        Weight::from_ref_time(257_076_000 as u64)
+            .saturating_add(RocksDbWeight::get().reads(3 as u64))
+            .saturating_add(RocksDbWeight::get().writes(4 as u64))
+    }
 }

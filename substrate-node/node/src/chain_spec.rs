@@ -3,11 +3,12 @@ use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{ed25519, sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{IdentifyAccount, Verify};
+use std::convert::TryInto;
 use tfchain_runtime::opaque::SessionKeys;
 use tfchain_runtime::{
     AccountId, AuraConfig, BalancesConfig, CouncilConfig, CouncilMembershipConfig, GenesisConfig,
-    GrandpaConfig, SessionConfig, Signature, SudoConfig, SystemConfig, TFTBridgeModuleConfig,
-    SmartContractModuleConfig, TFTPriceModuleConfig, TfgridModuleConfig, ValidatorSetConfig, 
+    GrandpaConfig, SessionConfig, Signature, SmartContractModuleConfig, SudoConfig, SystemConfig,
+    TFTBridgeModuleConfig, TFTPriceModuleConfig, TfgridModuleConfig, ValidatorSetConfig,
     WASM_BINARY,
 };
 
@@ -244,7 +245,7 @@ fn testnet_genesis(
     tft_price_allowed_account: AccountId,
     min_tft_price: u32,
     max_tft_price: u32,
-    billing_frequency: u64
+    billing_frequency: u64,
 ) -> GenesisConfig {
     GenesisConfig {
         system: SystemConfig {
@@ -326,7 +327,9 @@ fn testnet_genesis(
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
                 get_account_id_from_seed::<sr25519::Public>("Bob"),
                 get_account_id_from_seed::<sr25519::Public>("Eve"),
-            ],
+            ]
+            .try_into()
+            .unwrap(),
             phantom: Default::default(),
         },
         // just some default for development
@@ -336,7 +339,7 @@ fn testnet_genesis(
             max_tft_price,
         },
         smart_contract_module: SmartContractModuleConfig {
-            billing_frequency: billing_frequency
+            billing_frequency: billing_frequency,
         },
     }
 }

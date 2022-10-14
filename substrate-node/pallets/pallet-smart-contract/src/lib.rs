@@ -3,7 +3,7 @@
 use sp_std::prelude::*;
 
 use frame_support::{
-    dispatch::DispatchErrorWithPostInfo,
+    dispatch::{DispatchErrorWithPostInfo, Pays},
     ensure,
     log::info,
     pallet_prelude::DispatchResult,
@@ -11,9 +11,7 @@ use frame_support::{
         Currency, EnsureOrigin, ExistenceRequirement, ExistenceRequirement::KeepAlive, Get,
         LockableCurrency, OnUnbalanced, WithdrawReasons,
     },
-    transactional,
-    weights::Pays,
-    BoundedVec,
+    transactional, BoundedVec,
 };
 use frame_system::{self as system, ensure_signed};
 use pallet_tfgrid;
@@ -158,7 +156,9 @@ pub mod pallet {
     pub type PalletVersion<T> = StorageValue<_, types::StorageVersion, ValueQuery>;
 
     #[pallet::type_value]
-    pub fn DefaultBillingFrequency<T: Config>() -> u64 { T::BillingFrequency::get() }
+    pub fn DefaultBillingFrequency<T: Config>() -> u64 {
+        T::BillingFrequency::get()
+    }
 
     #[pallet::storage]
     #[pallet::getter(fn billing_frequency)]
@@ -172,7 +172,7 @@ pub mod pallet {
         + pallet_tfgrid::Config
         + pallet_tft_price::Config
     {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type Currency: LockableCurrency<Self::AccountId>;
         /// Handler for the unbalanced decrement when slashing (burning collateral)
         type Burn: OnUnbalanced<NegativeImbalanceOf<Self>>;
@@ -202,7 +202,7 @@ pub mod pallet {
             + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
-        type RestrictedOrigin: EnsureOrigin<Self::Origin>;
+        type RestrictedOrigin: EnsureOrigin<Self::RuntimeOrigin>;
     }
 
     #[pallet::event]
@@ -305,30 +305,30 @@ pub mod pallet {
     }
 
     #[pallet::genesis_config]
-	pub struct GenesisConfig {
+    pub struct GenesisConfig {
         pub billing_frequency: u64,
-	}
+    }
 
     // The default value for the genesis config type.
-	#[cfg(feature = "std")]
-	impl Default for GenesisConfig {
-		fn default() -> Self {
-			Self { 
+    #[cfg(feature = "std")]
+    impl Default for GenesisConfig {
+        fn default() -> Self {
+            Self {
                 billing_frequency: 600,
             }
-		}
-	}
+        }
+    }
 
-	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig {
-		fn build(&self) {
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig {
+        fn build(&self) {
             BillingFrequency::<T>::put(self.billing_frequency);
-		}
-	}
+        }
+    }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn create_node_contract(
             origin: OriginFor<T>,
             node_id: u32,
@@ -348,7 +348,7 @@ pub mod pallet {
             )
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn update_node_contract(
             origin: OriginFor<T>,
             contract_id: u64,
@@ -359,7 +359,7 @@ pub mod pallet {
             Self::_update_node_contract(account_id, contract_id, deployment_hash, deployment_data)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn cancel_contract(
             origin: OriginFor<T>,
             contract_id: u64,
@@ -369,7 +369,7 @@ pub mod pallet {
         }
 
         // DEPRECATED
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn add_reports(
             _origin: OriginFor<T>,
             _reports: Vec<types::Consumption>,
@@ -378,7 +378,7 @@ pub mod pallet {
             Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn create_name_contract(
             origin: OriginFor<T>,
             name: Vec<u8>,
@@ -387,7 +387,7 @@ pub mod pallet {
             Self::_create_name_contract(account_id, name)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn add_nru_reports(
             origin: OriginFor<T>,
             reports: Vec<types::NruConsumption>,
@@ -396,7 +396,7 @@ pub mod pallet {
             Self::_compute_reports(account_id, reports)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn report_contract_resources(
             origin: OriginFor<T>,
             contract_resources: Vec<types::ContractResources>,
@@ -405,7 +405,7 @@ pub mod pallet {
             Self::_report_contract_resources(account_id, contract_resources)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn create_rent_contract(
             origin: OriginFor<T>,
             node_id: u32,
@@ -415,7 +415,7 @@ pub mod pallet {
             Self::_create_rent_contract(account_id, node_id, solution_provider_id)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn create_solution_provider(
             origin: OriginFor<T>,
             description: Vec<u8>,
@@ -426,7 +426,7 @@ pub mod pallet {
             Self::_create_solution_provider(description, link, providers)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn approve_solution_provider(
             origin: OriginFor<T>,
             solution_provider_id: u64,

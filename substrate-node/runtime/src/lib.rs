@@ -31,7 +31,7 @@ use tfchain_support::{traits::ChangeNode, types::Node};
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
     construct_runtime, parameter_types,
-    traits::{ConstU8, EnsureOneOf, FindAuthor, KeyOwnerProofSystem, PrivilegeCmp, Randomness},
+    traits::{ConstU8, EitherOfDiverse, FindAuthor, KeyOwnerProofSystem, PrivilegeCmp, Randomness},
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
         ConstantMultiplier, IdentityFee, Weight,
@@ -177,11 +177,11 @@ parameter_types! {
     pub const BlockHashCount: BlockNumber = 2400;
     /// We allow for 2 seconds of compute with a 6 second average block time.
     pub BlockWeights: frame_system::limits::BlockWeights = frame_system::limits::BlockWeights
-        ::with_sensible_defaults(2 * WEIGHT_PER_SECOND, NORMAL_DISPATCH_RATIO);
+        ::with_sensible_defaults(2u64 * WEIGHT_PER_SECOND, NORMAL_DISPATCH_RATIO);
     pub BlockLength: frame_system::limits::BlockLength = frame_system::limits::BlockLength
         ::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
     pub const SS58Prefix: u8 = 42;
-    pub const MaximumBlockWeight: Weight = 2 * WEIGHT_PER_SECOND;
+    pub const MaximumBlockWeight: Weight = WEIGHT_PER_SECOND.saturating_mul(2);
 
     pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) * MaximumBlockWeight::get();
     pub const MaxScheduledPerBlock: u32 = 50;
@@ -200,7 +200,7 @@ impl frame_system::Config for Runtime {
     /// The identifier used to distinguish between accounts.
     type AccountId = AccountId;
     /// The aggregated dispatch type that is available for extrinsics.
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     /// The lookup mechanism to get account ID from whatever is passed in dispatchers.
     type Lookup = AccountIdLookup<AccountId, ()>;
     /// The index type for storing how many extrinsics an account has signed.
@@ -214,9 +214,9 @@ impl frame_system::Config for Runtime {
     /// The header type.
     type Header = generic::Header<BlockNumber, BlakeTwo256>;
     /// The ubiquitous event type.
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     /// The ubiquitous origin type.
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     /// Maximum number of block number to block hash mappings to keep (oldest pruned first).
     type BlockHashCount = BlockHashCount;
     /// The weight of database operations that the runtime can invoke.
@@ -253,8 +253,7 @@ impl pallet_aura::Config for Runtime {
 }
 
 impl pallet_grandpa::Config for Runtime {
-    type Event = Event;
-    type Call = Call;
+    type RuntimeEvent = RuntimeEvent;
 
     type KeyOwnerProofSystem = ();
 
@@ -297,7 +296,7 @@ impl pallet_balances::Config for Runtime {
     /// The type for recording an account's balance.
     type Balance = Balance;
     /// The ubiquitous event type.
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
@@ -309,6 +308,7 @@ parameter_types! {
 }
 
 impl pallet_transaction_payment::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
     type OnChargeTransaction = CurrencyAdapter<Balances, impls::DealWithFees<Runtime>>;
     type OperationalFeeMultiplier = ConstU8<5>;
     type WeightToFee = WeightToFeeStruct;
@@ -317,8 +317,8 @@ impl pallet_transaction_payment::Config for Runtime {
 }
 
 impl pallet_sudo::Config for Runtime {
-    type Event = Event;
-    type Call = Call;
+    type RuntimeEvent = RuntimeEvent;
+    type RuntimeCall = RuntimeCall;
 }
 
 pub type PubConfig = pallet_tfgrid::pallet::PubConfigOf<Runtime>;
@@ -346,7 +346,7 @@ parameter_types! {
 }
 
 impl pallet_tfgrid::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Runtime>;
     type NodeChanged = NodeChanged;
@@ -388,7 +388,7 @@ pub fn get_staking_pool_account() -> AccountId {
 }
 
 impl pallet_smart_contract::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type StakingPoolAccount = StakingPoolAccount;
     type BillingFrequency = BillingFrequency;
@@ -405,7 +405,7 @@ impl pallet_smart_contract::Config for Runtime {
 }
 
 impl pallet_tft_bridge::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type Burn = ();
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
@@ -413,24 +413,24 @@ impl pallet_tft_bridge::Config for Runtime {
 }
 
 impl pallet_burning::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type Burn = ();
 }
 
 impl pallet_kvstore::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
 }
 
 impl pallet_tft_price::Config for Runtime {
     type AuthorityId = pallet_tft_price::AuthId;
-    type Call = Call;
-    type Event = Event;
+    type Call = RuntimeCall;
+    type RuntimeEvent = RuntimeEvent;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
 }
 
 impl pallet_validator::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type CouncilOrigin = EnsureRootOrCouncilApproval;
     type Currency = Balances;
 }
@@ -440,7 +440,7 @@ parameter_types! {
 }
 
 impl validatorset::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type AddRemoveOrigin = EnsureRootOrCouncilApproval;
     type MinAuthorities = MinAuthorities;
 }
@@ -451,9 +451,9 @@ parameter_types! {
 }
 
 impl pallet_dao::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type CouncilOrigin = EnsureRootOrCouncilApproval;
-    type Proposal = Call;
+    type Proposal = RuntimeCall;
     type MotionDuration = DaoMotionDuration;
     type Tfgrid = TfgridModule;
     type NodeChanged = NodeChanged;
@@ -496,22 +496,22 @@ impl pallet_session::Config for Runtime {
     type SessionHandler = <opaque::SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
     type Keys = opaque::SessionKeys;
     type WeightInfo = ();
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     // type DisabledValidatorsThreshold = ();
 }
 
-pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
+pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
 where
-    Call: From<LocalCall>,
+    RuntimeCall: From<LocalCall>,
 {
     fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
-        call: Call,
+        call: RuntimeCall,
         public: <Signature as sp_runtime::traits::Verify>::Signer,
         account: AccountId,
         index: Index,
     ) -> Option<(
-        Call,
+        RuntimeCall,
         <UncheckedExtrinsic as sp_runtime::traits::Extrinsic>::SignaturePayload,
     )> {
         let period = BlockHashCount::get() as u64;
@@ -555,9 +555,9 @@ impl frame_system::offchain::SigningTypes for Runtime {
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
 where
-    Call: From<C>,
+    RuntimeCall: From<C>,
 {
-    type OverarchingCall = Call;
+    type OverarchingCall = RuntimeCall;
     type Extrinsic = UncheckedExtrinsic;
 }
 
@@ -585,10 +585,10 @@ impl PrivilegeCmp<OriginCaller> for OriginPrivilegeCmp {
 }
 
 impl pallet_scheduler::Config for Runtime {
-    type Event = Event;
-    type Origin = Origin;
+    type RuntimeEvent = RuntimeEvent;
+    type RuntimeOrigin = RuntimeOrigin;
     type PalletsOrigin = OriginCaller;
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type MaximumWeight = MaximumSchedulerWeight;
     type ScheduleOrigin = frame_system::EnsureRoot<AccountId>;
     type MaxScheduledPerBlock = MaxScheduledPerBlock;
@@ -606,9 +606,9 @@ parameter_types! {
 
 type CouncilCollective = pallet_collective::Instance1;
 impl pallet_collective::Config<CouncilCollective> for Runtime {
-    type Origin = Origin;
-    type Proposal = Call;
-    type Event = Event;
+    type RuntimeOrigin = RuntimeOrigin;
+    type Proposal = RuntimeCall;
+    type RuntimeEvent = RuntimeEvent;
     type MotionDuration = CouncilMotionDuration;
     type MaxProposals = CouncilMaxProposals;
     type MaxMembers = CouncilMaxMembers;
@@ -617,7 +617,7 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 }
 
 impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type AddOrigin = EnsureRootOrCouncilApproval;
     type RemoveOrigin = EnsureRootOrCouncilApproval;
     type SwapOrigin = EnsureRootOrCouncilApproval;
@@ -643,7 +643,7 @@ impl ChangeMembers<AccountId> for MembershipChangedGroup {
     }
 }
 
-type EnsureRootOrCouncilApproval = EnsureOneOf<
+type EnsureRootOrCouncilApproval = EitherOfDiverse<
     EnsureRoot<AccountId>,
     pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 5>,
 >;
@@ -683,8 +683,8 @@ impl pallet_authorship::Config for Runtime {
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
 impl pallet_utility::Config for Runtime {
-    type Event = Event;
-    type Call = Call;
+    type RuntimeEvent = RuntimeEvent;
+    type RuntimeCall = RuntimeCall;
     type PalletsOrigin = OriginCaller;
     type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
 }
@@ -704,7 +704,7 @@ construct_runtime!(
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
         Aura: pallet_aura::{Pallet, Config<T>},
         Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event},
-        TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
+        TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
         Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
         TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>, Config<T>},
@@ -745,9 +745,10 @@ pub type SignedExtra = (
     pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this runtime.
-pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
+pub type UncheckedExtrinsic =
+    generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
 /// Extrinsic type that has already been checked.
-pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Call, SignedExtra>;
+pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra>;
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
     Runtime,

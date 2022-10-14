@@ -73,7 +73,7 @@ pub mod fee {
         fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
             // in Westend, extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
             let p = super::currency::CENTS;
-            let q = 10 * Balance::from(ExtrinsicBaseWeight::get());
+            let q = 10 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
             smallvec![WeightToFeeCoefficient {
                 degree: 1,
                 negative: false,
@@ -103,8 +103,8 @@ mod tests {
         let max_block_weight: u128 = (MaximumBlockWeight::get() as u128) * precision;
         let ext_base_weight: u128 = ExtrinsicBaseWeight::get() as u128;
         let x = WeightToFeeStruct::weight_to_fee(&MaximumBlockWeight::get());
-        let cost_extrinsic:u128 = WeightToFeeStruct::weight_to_fee(&ExtrinsicBaseWeight::get());
-        let y:u128 = (cost_extrinsic * (max_block_weight/ext_base_weight)) / precision;
+        let cost_extrinsic: u128 = WeightToFeeStruct::weight_to_fee(&ExtrinsicBaseWeight::get());
+        let y: u128 = (cost_extrinsic * (max_block_weight / ext_base_weight)) / precision;
         // Difference should be less then the cost of an extrinsic devided by 2 as we can execute Z amount of extrinsics and Z was calculated by deviding
         // the max amount of weight per block by the weight of one extrinsic. That operation results in a loss of precision (from float to integer).
         assert!(x.max(y) - x.min(y) < cost_extrinsic / 2);

@@ -253,11 +253,11 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_timestamp::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// Origin for restricted extrinsics
         /// Can be the root or another origin configured in the runtime
-        type RestrictedOrigin: EnsureOrigin<Self::Origin>;
+        type RestrictedOrigin: EnsureOrigin<Self::RuntimeOrigin>;
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
 
@@ -700,7 +700,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn set_storage_version(
             origin: OriginFor<T>,
             version: types::StorageVersion,
@@ -712,7 +712,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn create_farm(
             origin: OriginFor<T>,
             name: FarmNameInput<T>,
@@ -760,7 +760,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(3).ref_time() + T::DbWeight::get().reads(2).ref_time())]
         pub fn update_farm(
             origin: OriginFor<T>,
             id: u32,
@@ -804,7 +804,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(2).ref_time())]
         pub fn add_stellar_payout_v2address(
             origin: OriginFor<T>,
             farm_id: u32,
@@ -831,7 +831,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn set_farm_certification(
             origin: OriginFor<T>,
             farm_id: u32,
@@ -850,7 +850,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(2).ref_time())]
         pub fn add_farm_ip(
             origin: OriginFor<T>,
             id: u32,
@@ -896,7 +896,7 @@ pub mod pallet {
             };
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(2).ref_time())]
         pub fn remove_farm_ip(
             origin: OriginFor<T>,
             id: u32,
@@ -930,7 +930,7 @@ pub mod pallet {
             }
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2) + T::DbWeight::get().reads(2))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2).ref_time() + T::DbWeight::get().reads(2).ref_time())]
         pub fn delete_farm(_origin: OriginFor<T>, _id: u32) -> DispatchResultWithPostInfo {
             Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
         }
@@ -1085,7 +1085,7 @@ pub mod pallet {
             Ok(Pays::No.into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn set_node_certification(
             origin: OriginFor<T>,
             node_id: u32,
@@ -1144,7 +1144,7 @@ pub mod pallet {
             Ok(Pays::No.into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(3))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(3).ref_time())]
         pub fn add_node_public_config(
             origin: OriginFor<T>,
             farm_id: u32,
@@ -1184,7 +1184,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(2).ref_time())]
         pub fn delete_node(origin: OriginFor<T>, id: u32) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1216,7 +1216,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(4) + T::DbWeight::get().reads(3))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(4).ref_time() + T::DbWeight::get().reads(3).ref_time())]
         pub fn create_entity(
             origin: OriginFor<T>,
             target: T::AccountId,
@@ -1273,7 +1273,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(3))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(3).ref_time() + T::DbWeight::get().reads(3).ref_time())]
         pub fn update_entity(
             origin: OriginFor<T>,
             name: Vec<u8>,
@@ -1321,7 +1321,7 @@ pub mod pallet {
         }
 
         // TODO: delete all object that have an entity id reference?
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(3).ref_time() + T::DbWeight::get().reads(2).ref_time())]
         pub fn delete_entity(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1388,7 +1388,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(3))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(3).ref_time())]
         pub fn update_twin(origin: OriginFor<T>, ip: TwinIpInput) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1414,7 +1414,7 @@ pub mod pallet {
         }
 
         // Method for twins only
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(2).ref_time())]
         pub fn add_twin_entity(
             origin: OriginFor<T>,
             twin_id: u32,
@@ -1469,7 +1469,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn delete_twin_entity(
             origin: OriginFor<T>,
             twin_id: u32,
@@ -1504,7 +1504,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2) + T::DbWeight::get().reads(1))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn delete_twin(origin: OriginFor<T>, twin_id: u32) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1525,7 +1525,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(3).ref_time() + T::DbWeight::get().reads(2).ref_time())]
         pub fn create_pricing_policy(
             origin: OriginFor<T>,
             name: Vec<u8>,
@@ -1572,7 +1572,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(4) + T::DbWeight::get().reads(2))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(4).ref_time() + T::DbWeight::get().reads(2).ref_time())]
         pub fn update_pricing_policy(
             origin: OriginFor<T>,
             id: u32,
@@ -1626,7 +1626,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2) + T::DbWeight::get().reads(3))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2).ref_time() + T::DbWeight::get().reads(3).ref_time())]
         pub fn create_farming_policy(
             origin: OriginFor<T>,
             name: Vec<u8>,
@@ -1673,7 +1673,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(2).ref_time())]
         pub fn user_accept_tc(
             origin: OriginFor<T>,
             document_link: Vec<u8>,
@@ -1697,7 +1697,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2) + T::DbWeight::get().reads(5))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2).ref_time() + T::DbWeight::get().reads(5).ref_time())]
         pub fn delete_node_farm(origin: OriginFor<T>, node_id: u32) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1739,7 +1739,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(3).ref_time() + T::DbWeight::get().reads(2).ref_time())]
         pub fn set_farm_dedicated(
             origin: OriginFor<T>,
             farm_id: u32,
@@ -1756,7 +1756,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn force_reset_farm_ip(
             origin: OriginFor<T>,
             farm_id: u32,
@@ -1788,7 +1788,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn set_connection_price(
             origin: OriginFor<T>,
             price: u32,
@@ -1802,7 +1802,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn add_node_certifier(
             origin: OriginFor<T>,
             who: T::AccountId,
@@ -1830,7 +1830,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn remove_node_certifier(
             origin: OriginFor<T>,
             who: T::AccountId,
@@ -1850,7 +1850,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn update_farming_policy(
             origin: OriginFor<T>,
             id: u32,
@@ -1892,7 +1892,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn attach_policy_to_farm(
             origin: OriginFor<T>,
             farm_id: u32,
@@ -1947,7 +1947,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn set_zos_version(
             origin: OriginFor<T>,
             zos_version: Vec<u8>,

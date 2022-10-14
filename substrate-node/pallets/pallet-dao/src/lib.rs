@@ -7,11 +7,12 @@ use sp_std::prelude::*;
 
 use frame_support::{
     dispatch::{
-        DispatchError, DispatchResult, DispatchResultWithPostInfo, Dispatchable, PostDispatchInfo,
+        DispatchError, DispatchResult, DispatchResultWithPostInfo, Dispatchable, GetDispatchInfo,
+        PostDispatchInfo,
     },
     ensure,
     traits::{EnsureOrigin, Get},
-    weights::{GetDispatchInfo, Weight},
+    weights::Weight,
 };
 use tfchain_support::{
     constants, resources,
@@ -55,12 +56,12 @@ pub mod pallet {
         + pallet_tfgrid::Config
     {
         /// Because this pallet emits events, it depends on the runtime's definition of an event
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-        type CouncilOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+        type CouncilOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// The outer call dispatch type.
         type Proposal: Parameter
-            + Dispatchable<Origin = Self::Origin, PostInfo = PostDispatchInfo>
+            + Dispatchable<RuntimeOrigin = Self::RuntimeOrigin, PostInfo = PostDispatchInfo>
             + From<frame_system::Call<Self>>
             + GetDispatchInfo;
 
