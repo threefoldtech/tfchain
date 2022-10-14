@@ -13,7 +13,8 @@ RUN apt update && \
         lldb \
         software-properties-common \
         tar \
-        zstd && \
+        zstd \
+        protobuf-compiler && \
     add-apt-repository ppa:deadsnakes/ppa && \
     apt install -y python3.10 && \
     curl https://bootstrap.pypa.io/get-pip.py > get-pip.py && \
