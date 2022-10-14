@@ -36,11 +36,7 @@ impl<T: Config> TryFrom<CityNameInput> for CityName<T> {
             value.len() <= MAX_CITY_NAME_LENGTH.saturated_into(),
             Self::Error::CityNameTooLong
         );
-        let city_str = core::str::from_utf8(&value);
-        ensure!(
-            validate_city_name(&value) && city_str.is_ok(),
-            Self::Error::InvalidCityName
-        );
+        ensure!(validate_city_name(&value), Self::Error::InvalidCityName);
 
         Ok(Self(value, PhantomData))
     }
@@ -62,9 +58,14 @@ impl<T: Config> Clone for CityName<T> {
 
 pub fn validate_city_name(input: &[u8]) -> bool {
     input == DEFAULT_CITY_NAME
-        || input
-            .iter()
-            .all(|c| c.is_ascii_alphabetic() || matches!(c, b'-' | b'.' | b' '))
+        || match core::str::from_utf8(input) {
+            Ok(val) => val
+                .chars()
+                .all(|c| c.is_alphabetic() || matches!(c, '-' | '.' | ' ')),
+            Err(_) => false,
+        }
+    // we convert to &str and then to chars to handle
+    // special alphabetic characters thanks to is_alphabetic()
 }
 
 // 4: Cuba, Fiji, Iran, ..
@@ -97,9 +98,8 @@ impl<T: Config> TryFrom<CountryNameInput> for CountryName<T> {
             value.len() <= MAX_COUNTRY_NAME_LENGTH.saturated_into(),
             Self::Error::CountryNameTooLong
         );
-        let country_str = core::str::from_utf8(&value);
         ensure!(
-            validate_country_name(&value) && country_str.is_ok(),
+            validate_country_name(&value),
             Self::Error::InvalidCountryName
         );
 
@@ -123,9 +123,14 @@ impl<T: Config> Clone for CountryName<T> {
 
 pub fn validate_country_name(input: &[u8]) -> bool {
     input == DEFAULT_COUNTRY_NAME
-        || input
-            .iter()
-            .all(|c| c.is_ascii_alphabetic() || matches!(c, b'-' | b'.' | b' '))
+        || match core::str::from_utf8(input) {
+            Ok(val) => val
+                .chars()
+                .all(|c| c.is_alphabetic() || matches!(c, '-' | '.' | ' ')),
+            Err(_) => false,
+        }
+    // we convert to &str and then to chars to handle
+    // special alphabetic characters thanks to is_alphabetic()
 }
 
 pub const MIN_LATITUDE_LENGTH: u32 = 1;

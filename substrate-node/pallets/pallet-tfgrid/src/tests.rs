@@ -1960,6 +1960,10 @@ fn test_validate_city_name_works() {
         assert_eq!(node::validate_city_name(b"Rio de Janeiro"), true);
         assert_eq!(node::validate_city_name(b"Ghent"), true);
         assert_eq!(node::validate_city_name(b"Cairo"), true);
+        assert_eq!(
+            node::validate_city_name(&vec![76, 105, 195, 168, 103, 101]), // b"Liège"
+            true
+        );
 
         assert_eq!(node::validate_city_name(b"Los_Angeles"), false);
     })
@@ -1971,6 +1975,7 @@ fn test_validate_country_name_works() {
         assert_eq!(node::validate_country_name(b"Brazil"), true);
         assert_eq!(node::validate_country_name(b"Belgium"), true);
         assert_eq!(node::validate_country_name(b"Egypt"), true);
+        assert_eq!(node::validate_country_name(b"U.S.A"), true);
 
         assert_eq!(node::validate_country_name(b"Costa_Rica"), false);
     })

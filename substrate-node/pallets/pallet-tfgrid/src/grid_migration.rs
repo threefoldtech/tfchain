@@ -172,7 +172,7 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
             Ok(loc) => loc,
             Err(e) => {
                 info!(
-                    "location: [city: {:?}, country: {:?}, latitude {:?}, longitude {:?}]",
+                    "location: [city: {:?}, country: {:?}, latitude: {:?}, longitude: {:?}]",
                     core::str::from_utf8(&node.city).unwrap(),
                     core::str::from_utf8(&node.country).unwrap(),
                     core::str::from_utf8(&node.location.latitude).unwrap(),
