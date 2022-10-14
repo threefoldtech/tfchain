@@ -109,10 +109,6 @@ fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
             Ok(country_name) => country_name,
             Err(e) => {
                 info!(
-                    "country name: {:?}",
-                    core::str::from_utf8(&entity.country).unwrap_or_default()
-                );
-                info!(
                     "failed to parse country name for entity: {:?}, error: {:?}",
                     k, e
                 );
@@ -124,10 +120,6 @@ fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
         let city = match get_city_name::<T>(&entity) {
             Ok(city_name) => city_name,
             Err(e) => {
-                info!(
-                    "city name: {:?}",
-                    core::str::from_utf8(&entity.city).unwrap_or_default()
-                );
                 info!(
                     "failed to parse city name for entity: {:?}, error: {:?}",
                     k, e
@@ -172,13 +164,6 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
         let location = match get_location::<T>(&node) {
             Ok(loc) => loc,
             Err(e) => {
-                info!(
-                    "location: [city: {:?}, country: {:?}, latitude: {:?}, longitude: {:?}]",
-                    core::str::from_utf8(&node.city).unwrap_or_default(),
-                    core::str::from_utf8(&node.country).unwrap_or_default(),
-                    core::str::from_utf8(&node.location.latitude).unwrap_or_default(),
-                    core::str::from_utf8(&node.location.longitude).unwrap_or_default()
-                );
                 info!("failed to parse location for node: {:?}, error: {:?}", k, e);
                 info!("set default location for node");
                 <T as Config>::Location::default()
@@ -188,10 +173,6 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
         let serial_number = match get_serial_number::<T>(&node) {
             Ok(serial) => serial,
             Err(e) => {
-                info!(
-                    "serial number: {:?}",
-                    core::str::from_utf8(&node.serial_number).unwrap_or_default()
-                );
                 info!(
                     "failed to parse serial number for node: {:?}, error: {:?}",
                     k, e
