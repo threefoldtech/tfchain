@@ -1727,6 +1727,9 @@ pub mod pallet {
                 farm_twin_id == farm_twin.id,
                 Error::<T>::FarmerNotAuthorized
             );
+            
+            // Call node deleted
+            T::NodeChanged::node_deleted(&node);
 
             let mut nodes_by_farm = NodesByFarmID::<T>::get(node.farm_id);
             let location = nodes_by_farm
@@ -1735,14 +1738,8 @@ pub mod pallet {
             nodes_by_farm.remove(location);
             NodesByFarmID::<T>::insert(node.farm_id, nodes_by_farm);
 
-            // Call node deleted
-            T::NodeChanged::node_deleted(&node);
-
             Nodes::<T>::remove(node_id);
             NodeIdByTwinID::<T>::remove(node.twin_id);
-
-            // Call node deleted
-            T::NodeChanged::node_deleted(&node);
 
             Self::deposit_event(Event::NodeDeleted(node_id));
 
