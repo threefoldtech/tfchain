@@ -2,7 +2,6 @@ use super::Event as TfgridEvent;
 use crate::{
     mock::Event as MockEvent,
     mock::*,
-    node,
     types::{LocationInput, PublicIpInput},
     Error, InterfaceInput, InterfaceIpsInput, PubConfigInput, PublicIpListInput, ResourcesInput,
 };
@@ -2014,61 +2013,6 @@ fn test_set_invalid_zos_version_fails() {
             TfgridModule::set_zos_version(RawOrigin::Root.into(), TfgridModule::zos_version()),
             Error::<TestRuntime>::InvalidZosVersion,
         );
-    })
-}
-
-#[test]
-fn test_validate_city_name_works() {
-    ExternalityBuilder::build().execute_with(|| {
-        assert_eq!(node::validate_city_name(b"Rio de Janeiro"), true);
-        assert_eq!(node::validate_city_name(b"Ghent"), true);
-        assert_eq!(node::validate_city_name(b"Cairo"), true);
-        assert_eq!(
-            node::validate_city_name(&vec![76, 105, 195, 168, 103, 101]), // b"Liège"
-            true
-        );
-
-        assert_eq!(node::validate_city_name(b"Los_Angeles"), false);
-    })
-}
-
-#[test]
-fn test_validate_country_name_works() {
-    ExternalityBuilder::build().execute_with(|| {
-        assert_eq!(node::validate_country_name(b"Brazil"), true);
-        assert_eq!(node::validate_country_name(b"Belgium"), true);
-        assert_eq!(node::validate_country_name(b"Egypt"), true);
-        assert_eq!(node::validate_country_name(b"U.S.A"), true);
-
-        assert_eq!(node::validate_country_name(b"Costa_Rica"), false);
-    })
-}
-
-#[test]
-fn test_validate_latitude_input_works() {
-    ExternalityBuilder::build().execute_with(|| {
-        assert_eq!(node::validate_latitude_input(b"90.0"), true);
-        assert_eq!(node::validate_latitude_input(b"-90.0"), true);
-        assert_eq!(node::validate_latitude_input(b"0.0"), true);
-
-        assert_eq!(node::validate_latitude_input(b"90.00001"), false); // 10e-5 sensitive
-        assert_eq!(node::validate_latitude_input(b"-90.00001"), false); // 10e-5 sensitive
-        assert_eq!(node::validate_longitude_input(b"30,35465"), false);
-        assert_eq!(node::validate_latitude_input(b"garbage data"), false);
-    })
-}
-
-#[test]
-fn test_validate_longitude_input_works() {
-    ExternalityBuilder::build().execute_with(|| {
-        assert_eq!(node::validate_longitude_input(b"180.0"), true);
-        assert_eq!(node::validate_longitude_input(b"-180.0"), true);
-        assert_eq!(node::validate_longitude_input(b"0.0"), true);
-
-        assert_eq!(node::validate_longitude_input(b"180.00001"), false); // 10e-5 sensitive
-        assert_eq!(node::validate_longitude_input(b"-180.00001"), false); // 10e-5 sensitive
-        assert_eq!(node::validate_longitude_input(b"30,35465"), false);
-        assert_eq!(node::validate_longitude_input(b"garbage data"), false);
     })
 }
 
