@@ -70,14 +70,13 @@ pub struct FarmingPolicyLimit {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo, MaxEncodedLen)]
-pub enum ContractPolicy {
+pub enum CapacityReservationPolicy {
     Any,
-    Join(u64),
     Exclusive(u32),
 }
-impl Default for ContractPolicy {
-    fn default() -> ContractPolicy {
-        ContractPolicy::Any
+impl Default for CapacityReservationPolicy {
+    fn default() -> CapacityReservationPolicy {
+        CapacityReservationPolicy::Any
     }
 }
 
@@ -93,14 +92,44 @@ impl Default for PowerTarget {
     }
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
+pub struct ConsumableResources {
+    pub total_resources: Resources,
+    pub used_resources: Resources,
+}
+
+impl ConsumableResources {
+    pub fn can_consume_resources(&self, resources: &Resources) -> bool {
+        (self.total_resources.hru - self.used_resources.hru) >= resources.hru
+            && (self.total_resources.sru - self.used_resources.sru) >= resources.sru
+            && (self.total_resources.cru - self.used_resources.cru) >= resources.cru
+            && (self.total_resources.mru - self.used_resources.mru) >= resources.mru
+    }
+
+    pub fn consume(&mut self, resources: &Resources) {
+        self.used_resources = self.used_resources.add(&resources);
+    }
+
+    pub fn free(&mut self, resources: &Resources) {
+        self.used_resources = self.used_resources.substract(&resources);
+    }
+
+    pub fn calculate_increase_in_resources(&self, resources: &Resources) -> Resources {
+        resources.substract(&self.total_resources)
+    }
+
+    pub fn calculate_reduction_in_resources(&self, resources: &Resources) -> Resources {
+        self.total_resources.substract(&resources)
+    }
+}
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct Node<Location, PubConfig, If, SerialNumber> {
     pub version: u32,
     pub id: u32,
     pub farm_id: u32,
     pub twin_id: u32,
-    pub resources: Resources,
-    pub used_resources: Resources,
+    pub resources: ConsumableResources,
     pub location: Location,
     pub power_target: PowerTarget,
     // optional public config
@@ -116,18 +145,8 @@ pub struct Node<Location, PubConfig, If, SerialNumber> {
 }
 
 impl<PubConfig, If> Node<PubConfig, If> {
-    pub fn can_claim_resources(&self, resources: Resources) -> bool {
-        (self.resources.hru - self.used_resources.hru) >= resources.hru
-            && (self.resources.sru - self.used_resources.sru) >= resources.sru
-            && (self.resources.cru - self.used_resources.cru) >= resources.cru
-            && (self.resources.mru - self.used_resources.mru) >= resources.mru
-    }
-
     pub fn can_be_shutdown(&self) -> bool {
-        self.used_resources.hru == 0
-            && self.used_resources.sru == 0
-            && self.used_resources.cru == 0
-            && self.used_resources.mru == 0
+        self.resources.used_resources.is_empty()
     }
 }
 
@@ -157,6 +176,18 @@ pub struct IP<IpAddr, Gw> {
             cru: 0,
             mru: 0,
         }
+    }
+
+    pub fn is_empty(self) -> bool {
+        self.cru == 0 && self.sru == 0 && self.hru == 0 && self.mru == 0
+    }
+
+
+    pub fn can_substract(self, other: &Resources) -> bool {
+        self.cru >= other.cru
+            && self.sru >= other.sru
+            && self.hru >= other.hru
+            && self.mru >= other.mru
     }
 
     pub fn substract(mut self, other: &Resources) -> Resources {

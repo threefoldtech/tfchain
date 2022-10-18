@@ -28,26 +28,25 @@ const GIGABYTE: u64 = 1024 * 1024 * 1024;
 // -------------------- //
 
 #[test]
-fn test_create_deployment_contract_works() {
+fn test_create_capacity_reservation_contract_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
 
-        assert_ok!(SmartContractModule::create_deployment_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            get_resources(),
-            0,
+            CapacityReservationPolicy::Any,
             None,
-            None,
+            Some(get_resources()),
+            None
         ));
     });
 }
 
 #[test]
 fn test_create_deployment_contract_with_public_ips_works() {
+    // todo fix this
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
@@ -59,7 +58,6 @@ fn test_create_deployment_contract_with_public_ips_works() {
             get_deployment_data(),
             get_resources(),
             2,
-            None,
             None,
         ));
 
@@ -92,20 +90,18 @@ fn test_create_deployment_contract_with_public_ips_works() {
 }
 
 #[test]
-fn test_create_deployment_contract_with_undefined_node_fails() {
+fn test_create_capacity_reservation_contract_with_nonexisting_farm_fails() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
 
         assert_noop!(
-            SmartContractModule::create_deployment_contract(
+            SmartContractModule::create_capacity_reservation_contract(
                 Origin::signed(alice()),
                 2,
-                generate_deployment_hash(),
-                get_deployment_data(),
-                get_resources(),
-                0,
+                CapacityReservationPolicy::Any,
                 None,
+                Some(get_resources()),
                 None,
             ),
             Error::<TestRuntime>::FarmNotExists
@@ -115,6 +111,7 @@ fn test_create_deployment_contract_with_undefined_node_fails() {
 
 #[test]
 fn test_create_deployment_contract_with_same_hash_and_node_fails() {
+    // TODO reorganize
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
@@ -127,7 +124,6 @@ fn test_create_deployment_contract_with_same_hash_and_node_fails() {
             get_deployment_data(),
             get_resources(),
             0,
-            None,
             None,
         ));
 
@@ -140,7 +136,6 @@ fn test_create_deployment_contract_with_same_hash_and_node_fails() {
                 get_resources(),
                 0,
                 None,
-                None
             ),
             Error::<TestRuntime>::ContractIsNotUnique
         );
@@ -149,6 +144,7 @@ fn test_create_deployment_contract_with_same_hash_and_node_fails() {
 
 #[test]
 fn test_create_deployment_contract_which_was_canceled_before_works() {
+    //todo reorganize
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
@@ -161,7 +157,6 @@ fn test_create_deployment_contract_which_was_canceled_before_works() {
             get_deployment_data(),
             get_resources(),
             0,
-            None,
             None,
         ));
         let contract_id = SmartContractModule::node_contract_by_hash(1, h);
@@ -181,7 +176,6 @@ fn test_create_deployment_contract_which_was_canceled_before_works() {
             get_resources(),
             0,
             None,
-            None
         ));
         let contract_id = SmartContractModule::node_contract_by_hash(1, h);
         assert_eq!(contract_id, 2);
@@ -189,25 +183,23 @@ fn test_create_deployment_contract_which_was_canceled_before_works() {
 }
 
 #[test]
-fn test_create_deployment_contract_no_node_in_farm_with_enough_resources() {
+fn test_create_capacity_reservation_contract_no_node_in_farm_with_enough_resources() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
 
         assert_noop!(
-            SmartContractModule::create_deployment_contract(
+            SmartContractModule::create_capacity_reservation_contract(
                 Origin::signed(alice()),
                 1,
-                generate_deployment_hash(),
-                get_deployment_data(),
-                Resources {
+                CapacityReservationPolicy::Any,
+                None,
+                Some(Resources {
                     cru: 10,
                     hru: 0,
                     mru: 2 * GIGABYTE,
                     sru: 60 * GIGABYTE
-                },
-                0,
-                None,
+                }),
                 None,
             ),
             Error::<TestRuntime>::NoSuitableNodeInFarm
@@ -219,18 +211,18 @@ fn test_create_deployment_contract_no_node_in_farm_with_enough_resources() {
 // todo test grouping contracts
 
 #[test]
-fn test_create_deployment_contract_finding_a_node() {
+fn test_create_capacity_reservation_contract_finding_a_node() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
 
-        prepare_farm_three_nodes_three_deployment_contracts();
+        prepare_farm_three_nodes_three_capacity_reservation_contracts();
 
         // first contract should go to node 1
         match SmartContractModule::contracts(1).unwrap().contract_type {
-            types::ContractData::DeploymentContract(c) => {
+            types::ContractData::CapacityReservationContract(c) => {
                 assert_eq!(c.node_id, 1);
                 assert_eq!(
-                    c.resources,
+                    c.resources.total_resources,
                     Resources {
                         cru: 4,
                         hru: 0,
@@ -246,10 +238,10 @@ fn test_create_deployment_contract_finding_a_node() {
 
         // second contract will take most resources but can still go to node 1
         match SmartContractModule::contracts(2).unwrap().contract_type {
-            types::ContractData::DeploymentContract(c) => {
+            types::ContractData::CapacityReservationContract(c) => {
                 assert_eq!(c.node_id, 1);
                 assert_eq!(
-                    c.resources,
+                    c.resources.total_resources,
                     Resources {
                         cru: 4,
                         hru: 1000 * GIGABYTE,
@@ -265,10 +257,10 @@ fn test_create_deployment_contract_finding_a_node() {
 
         // third contract can no longer go to node 1 => node 2 should be started
         match SmartContractModule::contracts(3).unwrap().contract_type {
-            types::ContractData::DeploymentContract(c) => {
+            types::ContractData::CapacityReservationContract(c) => {
                 assert_eq!(c.node_id, 2);
                 assert_eq!(
-                    c.resources,
+                    c.resources.total_resources,
                     Resources {
                         cru: 2,
                         hru: 1024 * GIGABYTE,
@@ -301,25 +293,23 @@ fn test_create_deployment_contract_finding_a_node() {
 }
 
 #[test]
-fn test_create_deployment_contract_finding_a_node_failure() {
+fn test_create_capacity_reservation_contract_finding_a_node_failure() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
-        prepare_farm_three_nodes_three_deployment_contracts();
-
+        prepare_farm_three_nodes_three_capacity_reservation_contracts();
+        // no available nodes anymore that meet the required resources
         assert_noop!(
-            SmartContractModule::create_deployment_contract(
+            SmartContractModule::create_capacity_reservation_contract(
                 Origin::signed(alice()),
                 1,
-                generate_deployment_hash(),
-                get_deployment_data(),
-                Resources {
+                CapacityReservationPolicy::Any,
+                None,
+                Some(Resources {
                     hru: 4096 * GIGABYTE,
                     sru: 2048 * GIGABYTE,
                     cru: 32,
                     mru: 48 * GIGABYTE,
-                },
-                0,
-                None,
+                }),
                 None,
             ),
             Error::<TestRuntime>::NoSuitableNodeInFarm
@@ -328,52 +318,84 @@ fn test_create_deployment_contract_finding_a_node_failure() {
 }
 
 #[test]
-fn test_create_rent_contract_then_deployment_contract_checking_power_target() {
+fn test_create_capacity_reservation_contract_full_node_then_deployment_contract() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_farm_with_three_nodes();
         // node 2 should be down and when we create the rent contract the node should be woken up
         // we do not yet change the used resources until deployment contracts are created
+        let node_id = 2;
         assert_eq!(
-            TfgridModule::nodes(2).unwrap().power_target,
+            TfgridModule::nodes(node_id).unwrap().power_target,
             PowerTarget::Down
         );
-        assert_ok!(SmartContractModule::create_rent_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
-            2,
-            None
+            1,
+            CapacityReservationPolicy::Any,
+            Some(node_id),
+            None,
+            None,
         ));
         assert_eq!(
-            TfgridModule::nodes(2).unwrap().power_target,
+            TfgridModule::nodes(node_id).unwrap().power_target,
             PowerTarget::Up
         );
         assert_eq!(
-            TfgridModule::nodes(2).unwrap().used_resources,
-            Resources::empty()
+            TfgridModule::nodes(node_id)
+                .unwrap()
+                .resources
+                .used_resources,
+            TfgridModule::nodes(node_id)
+                .unwrap()
+                .resources
+                .total_resources
         );
         // creating the deployment contract should claim resources from the node
         let resources = get_resources();
+        let hash = generate_deployment_hash();
+        let data = get_deployment_data();
         assert_ok!(SmartContractModule::create_deployment_contract(
             Origin::signed(bob()),
             1,
-            generate_deployment_hash(),
-            get_deployment_data(),
+            hash,
+            data.clone(),
             resources,
-            1,
+            0,
             None,
-            Some(ContractPolicy::Join(1))
         ));
-        assert_eq!(TfgridModule::nodes(2).unwrap().used_resources, resources);
+        // we expect the reservation contract to look like this:
+        assert_eq!(
+            SmartContractModule::contracts(1).unwrap().contract_type,
+            types::ContractData::CapacityReservationContract(types::CapacityReservationContract {
+                group_id: None,
+                public_ips: 0,
+                resources: ConsumableResources {
+                    total_resources: resources_n2(),
+                    used_resources: resources,
+                },
+                node_id: 2,
+                deployment_contracts: vec![2]
+            })
+        );
+        // we expect the deployment contract to look like this:
+        assert_eq!(
+            SmartContractModule::contracts(2).unwrap().contract_type,
+            types::ContractData::DeploymentContract(types::DeploymentContract {
+                capacity_reservation_id: 1,
+                deployment_data: data,
+                deployment_hash: hash,
+                public_ips: 0,
+                public_ips_list: Vec::new().try_into().unwrap(),
+                resources: resources,
+            })
+        );
         // canceling the deployment contract should not shutdown the node (because of the created
         // rent contract) but it should unclaim the resources on that node
         assert_ok!(SmartContractModule::cancel_contract(
             Origin::signed(bob()),
             2
         ));
-        assert_eq!(
-            TfgridModule::nodes(2).unwrap().power_target,
-            PowerTarget::Up
-        );
         // canceling rent contract should shut down the node (as it is not the first in the list
         // of nodes from that farm)
         assert_ok!(SmartContractModule::cancel_contract(
@@ -381,7 +403,7 @@ fn test_create_rent_contract_then_deployment_contract_checking_power_target() {
             1
         ));
         assert_eq!(
-            TfgridModule::nodes(2).unwrap().power_target,
+            TfgridModule::nodes(node_id).unwrap().power_target,
             PowerTarget::Down
         );
 
@@ -410,12 +432,11 @@ fn test_create_rent_contract_then_deployment_contract_checking_power_target() {
             ))),
             true
         );
-
     });
 }
 
 #[test]
-fn test_cancel_rent_contract_should_not_shutdown_first_node() {
+fn test_cancel_capacity_reservation_contract_should_not_shutdown_first_node() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_farm_with_three_nodes();
@@ -423,9 +444,12 @@ fn test_cancel_rent_contract_should_not_shutdown_first_node() {
             TfgridModule::nodes(1).unwrap().power_target,
             PowerTarget::Up
         );
-        assert_ok!(SmartContractModule::create_rent_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
+            CapacityReservationPolicy::Any,
+            None,
+            Some(resources_c1()),
             None
         ));
         assert_eq!(
@@ -444,12 +468,12 @@ fn test_cancel_rent_contract_should_not_shutdown_first_node() {
     });
 }
 
-
 #[test]
-fn test_cancel_deployment_contract_shutdown_node() {
+fn test_cancel_capacity_reservation_contract_shutdown_node() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
-        prepare_farm_three_nodes_three_deployment_contracts();
+        prepare_farm_three_nodes_three_capacity_reservation_contracts();
+        // node 1 => capacity contract 1 and 2
 
         // cancel contract 2 = nothing should change
         assert_ok!(SmartContractModule::cancel_contract(
@@ -470,13 +494,8 @@ fn test_cancel_deployment_contract_shutdown_node() {
         );
         // on node 1 there is only one contract left => used resources of node 1 should equal resources of contract 1
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().used_resources,
-            Resources {
-                cru: 4,
-                hru: 0,
-                mru: 2 * GIGABYTE,
-                sru: 60 * GIGABYTE,
-            }
+            TfgridModule::nodes(1).unwrap().resources.used_resources,
+            resources_c1()
         );
 
         // cancel contract 3 = node 2 should shutdown
@@ -498,7 +517,7 @@ fn test_cancel_deployment_contract_shutdown_node() {
         );
         // nothing else running on node 2 => used resources should be 0
         assert_eq!(
-            TfgridModule::nodes(2).unwrap().used_resources,
+            TfgridModule::nodes(2).unwrap().resources.used_resources,
             Resources::empty()
         );
 
@@ -522,7 +541,7 @@ fn test_cancel_deployment_contract_shutdown_node() {
         );
         // nothing else running on node 1 => used resources should be 0
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().used_resources,
+            TfgridModule::nodes(1).unwrap().resources.used_resources,
             Resources::empty()
         );
 
@@ -545,49 +564,43 @@ fn test_cancel_deployment_contract_shutdown_node() {
 }
 
 #[test]
-fn test_update_deployment_contract_works() {
+fn test_update_capacity_reservation_contract_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
-        let resources = get_resources();
-        assert_ok!(SmartContractModule::create_deployment_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            resources.clone(),
-            0,
+            CapacityReservationPolicy::Any,
             None,
+            Some(get_resources()),
             None,
         ));
 
-        let new_hash = generate_deployment_hash();
-        let deployment_data = get_deployment_data();
-        let updated_resources = resources.clone().add(&Resources {
+        let updated_resources = get_resources().clone().add(&Resources {
             cru: 1,
             hru: 1 * GIGABYTE,
             mru: 2 * GIGABYTE,
             sru: 30 * GIGABYTE,
         });
-        assert_ok!(SmartContractModule::update_deployment_contract(
+        assert_ok!(SmartContractModule::update_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            new_hash,
-            get_deployment_data(),
-            Some(updated_resources),
+            updated_resources,
         ));
 
-        let deployment_contract = types::DeploymentContract {
+        let capacity_reservation_contract = types::CapacityReservationContract {
             node_id: 1,
-            deployment_hash: new_hash,
-            deployment_data,
-            public_ips: 0,
-            public_ips_list: bounded_vec![],
-            resources: updated_resources,
             group_id: None,
+            public_ips: 0,
+            resources: ConsumableResources {
+                total_resources: updated_resources,
+                used_resources: Resources::empty(),
+            },
+            deployment_contracts: vec![],
         };
-        let contract_type = types::ContractData::DeploymentContract(deployment_contract);
-
+        let contract_type =
+            types::ContractData::CapacityReservationContract(capacity_reservation_contract);
         let expected_contract_value = types::Contract {
             contract_id: 1,
             state: types::ContractState::Created,
@@ -604,46 +617,33 @@ fn test_update_deployment_contract_works() {
         assert_eq!(contracts.len(), 1);
 
         assert_eq!(contracts[0], 1);
-
-        let deployment_contract_id_by_hash =
-            SmartContractModule::node_contract_by_hash(1, new_hash);
-        assert_eq!(deployment_contract_id_by_hash, 1);
     });
 }
 #[test]
-fn test_update_deployment_contract_too_much_resources() {
+fn test_update_capacity_reservation_contract_too_much_resources() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
 
-        assert_ok!(SmartContractModule::create_deployment_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            Resources {
-                cru: 2,
-                hru: 0,
-                mru: 2 * GIGABYTE,
-                sru: 60 * GIGABYTE
-            },
-            0,
+            CapacityReservationPolicy::Any,
             None,
-            None,
+            Some(get_resources()),
+            None
         ));
         // asking for too much resources
         assert_noop!(
-            SmartContractModule::update_deployment_contract(
+            SmartContractModule::update_capacity_reservation_contract(
                 Origin::signed(alice()),
                 1,
-                generate_deployment_hash(),
-                get_deployment_data(),
-                Some(Resources {
+                Resources {
                     hru: 1024 * GIGABYTE,
                     sru: 512 * GIGABYTE,
                     cru: 10,
                     mru: 16 * GIGABYTE
-                }),
+                },
             ),
             Error::<TestRuntime>::NotEnoughResourcesOnNode
         );
@@ -651,58 +651,64 @@ fn test_update_deployment_contract_too_much_resources() {
 }
 
 #[test]
-fn test_update_deployment_contract_invalid_resources() {
+fn test_capacity_reservation_contract_decrease_resources_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
 
-        assert_ok!(SmartContractModule::create_deployment_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            Resources {
-                cru: 2,
-                hru: 0,
-                mru: 2 * GIGABYTE,
-                sru: 60 * GIGABYTE
-            },
-            0,
+            CapacityReservationPolicy::Any,
             None,
+            Some(get_resources()),
             None,
         ));
-        // resources should increase
-        assert_noop!(
-            SmartContractModule::update_deployment_contract(
-                Origin::signed(alice()),
-                1,
-                generate_deployment_hash(),
-                get_deployment_data(),
-                Some(Resources {
-                    cru: 1,
-                    hru: 0,
-                    mru: 1 * GIGABYTE,
-                    sru: 30 * GIGABYTE
-                }),
-            ),
-            Error::<TestRuntime>::InvalidResources
+        let updated_resources = Resources {
+            cru: 1,
+            hru: 0,
+            mru: 1 * GIGABYTE,
+            sru: 80 * GIGABYTE,
+        };
+        assert_ok!(SmartContractModule::update_capacity_reservation_contract(
+            Origin::signed(alice()),
+            1,
+            updated_resources,
+        ));
+        // validation
+        assert_eq!(
+            TfgridModule::nodes(1).unwrap().resources.used_resources,
+            updated_resources
+        );
+        assert_eq!(
+            SmartContractModule::contracts(1).unwrap().contract_type,
+            types::ContractData::CapacityReservationContract(types::CapacityReservationContract {
+                node_id: 1,
+                group_id: None,
+                public_ips: 0,
+                resources: ConsumableResources {
+                    total_resources: updated_resources,
+                    used_resources: Resources::empty(),
+                },
+                deployment_contracts: vec![]
+            })
         );
     });
 }
 
+// todo test decrease resources fails due to resources being used by some contract
+
 #[test]
-fn test_update_deployment_contract_not_exists_fails() {
+fn test_update_capacity_reservation_contract_not_exists_fails() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
 
         assert_noop!(
-            SmartContractModule::update_deployment_contract(
+            SmartContractModule::update_capacity_reservation_contract(
                 Origin::signed(alice()),
                 1,
-                generate_deployment_hash(),
-                get_deployment_data(),
-                None,
+                get_resources()
             ),
             Error::<TestRuntime>::ContractNotExists
         );
@@ -710,34 +716,30 @@ fn test_update_deployment_contract_not_exists_fails() {
 }
 
 #[test]
-fn test_update_deployment_contract_wrong_twins_fails() {
+fn test_update_capacity_reservation_contract_wrong_twins_fails() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
 
-        assert_ok!(SmartContractModule::create_deployment_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            get_resources(),
-            0,
+            CapacityReservationPolicy::Any,
             None,
+            Some(get_resources()),
             None,
         ));
 
         assert_noop!(
-            SmartContractModule::update_deployment_contract(
+            SmartContractModule::update_capacity_reservation_contract(
                 Origin::signed(bob()),
                 1,
-                generate_deployment_hash(),
-                get_deployment_data(),
-                Some(Resources {
+                Resources {
                     cru: 1,
                     hru: 0,
                     mru: 1 * GIGABYTE,
                     sru: 10 * GIGABYTE
-                }),
+                },
             ),
             Error::<TestRuntime>::TwinNotAuthorizedToUpdateContract
         );
@@ -745,19 +747,17 @@ fn test_update_deployment_contract_wrong_twins_fails() {
 }
 
 #[test]
-fn test_cancel_deployment_contract_works() {
+fn test_cancel_capacity_reservation_contract_contract_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
 
-        assert_ok!(SmartContractModule::create_deployment_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            get_resources(),
-            0,
+            CapacityReservationPolicy::Any,
             None,
+            Some(get_resources()),
             None,
         ));
 
@@ -775,59 +775,6 @@ fn test_cancel_deployment_contract_works() {
 }
 
 #[test]
-fn test_create_multiple_deployment_contracts_works() {
-    new_test_ext().execute_with(|| {
-        run_to_block(1, None);
-        prepare_farm_and_node();
-
-        assert_ok!(SmartContractModule::create_deployment_contract(
-            Origin::signed(alice()),
-            1,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            get_resources(),
-            0,
-            None,
-            None
-        ));
-
-        assert_ok!(SmartContractModule::create_deployment_contract(
-            Origin::signed(alice()),
-            1,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            get_resources(),
-            0,
-            None,
-            None
-        ));
-
-        assert_ok!(SmartContractModule::create_deployment_contract(
-            Origin::signed(alice()),
-            1,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            get_resources(),
-            0,
-            None,
-            None
-        ));
-
-        let deployment_contracts = SmartContractModule::active_node_contracts(1);
-        assert_eq!(deployment_contracts.len(), 3);
-
-        // now cancel 1 and check if the storage maps are updated correctly
-        assert_ok!(SmartContractModule::cancel_contract(
-            Origin::signed(alice()),
-            1
-        ));
-
-        let deployment_contracts = SmartContractModule::active_node_contracts(1);
-        assert_eq!(deployment_contracts.len(), 2);
-    });
-}
-
-#[test]
 fn test_cancel_deployment_contract_frees_public_ips_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
@@ -840,7 +787,6 @@ fn test_cancel_deployment_contract_frees_public_ips_works() {
             get_resources(),
             2,
             None,
-            None
         ));
 
         let farm = TfgridModule::farms(1).unwrap();
@@ -884,7 +830,6 @@ fn test_cancel_deployment_contract_wrong_twins_fails() {
             get_resources(),
             0,
             None,
-            None
         ));
 
         assert_noop!(
@@ -1023,45 +968,71 @@ fn test_create_name_contract_with_invalid_dns_name_fails() {
 // -------------------- //
 
 #[test]
-fn test_create_rent_contract_works() {
+fn test_create_capacity_reservation_contract_full_node_reservation_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_dedicated_farm_and_node();
 
         let node_id = 1;
-        assert_ok!(SmartContractModule::create_rent_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
-            node_id,
-            None
+            1,
+            CapacityReservationPolicy::Any,
+            Some(node_id),
+            None,
+            None,
         ));
 
         let contract = SmartContractModule::contracts(1).unwrap();
-        let rent_contract = types::RentContract { node_id };
+        let rent_contract = types::CapacityReservationContract {
+            group_id: None,
+            public_ips: 0,
+            resources: ConsumableResources {
+                total_resources: resources_n1(),
+                used_resources: Resources::empty(),
+            },
+            deployment_contracts: vec![],
+            node_id: 1,
+        };
+        assert_eq!(
+            TfgridModule::nodes(1).unwrap().resources.used_resources,
+            resources_n1()
+        );
         assert_eq!(
             contract.contract_type,
-            types::ContractData::RentContract(rent_contract)
+            types::ContractData::CapacityReservationContract(rent_contract)
         );
     });
 }
 
 #[test]
-fn test_cancel_rent_contract_works() {
+fn test_cancel_capacity_reservation_contract_of_full_node_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_dedicated_farm_and_node();
 
         let node_id = 1;
-        assert_ok!(SmartContractModule::create_rent_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
-            node_id,
+            1,
+            CapacityReservationPolicy::Any,
+            Some(node_id),
+            None,
             None
         ));
 
-        let contract = SmartContractModule::contracts(1).unwrap();
-        let rent_contract = types::RentContract { node_id };
         assert_eq!(
-            contract.contract_type,
-            types::ContractData::RentContract(rent_contract)
+            SmartContractModule::contracts(1).unwrap().contract_type,
+            types::ContractData::CapacityReservationContract(types::CapacityReservationContract {
+                node_id: node_id,
+                group_id: None,
+                public_ips: 0,
+                resources: ConsumableResources{
+                    total_resources: resources_n1(),
+                    used_resources: Resources::empty(),
+                },
+                deployment_contracts: vec![],
+            })
         );
 
         assert_ok!(SmartContractModule::cancel_contract(
@@ -1075,46 +1046,55 @@ fn test_cancel_rent_contract_works() {
 }
 
 #[test]
-fn test_create_rent_contract_on_node_in_use_fails() {
+fn test_create_capacity_reservation_contract_on_node_in_use_fails() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
 
-        assert_ok!(SmartContractModule::create_deployment_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            get_resources(),
-            1,
+            CapacityReservationPolicy::Any,
+            Some(1),
             None,
             None,
         ));
 
         assert_noop!(
-            SmartContractModule::create_rent_contract(Origin::signed(bob()), 1, None),
+            SmartContractModule::create_capacity_reservation_contract(
+                Origin::signed(bob()),
+                1,
+                CapacityReservationPolicy::Any,
+                Some(1),
+                None,
+                None,
+            ),
             Error::<TestRuntime>::NodeNotAvailableToDeploy
         );
     })
 }
 
 #[test]
-fn test_create_rent_contract_non_dedicated_empty_node_works() {
+fn test_capacity_reservation_contract_non_dedicated_empty_node_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
 
         let node_id = 1;
-        assert_ok!(SmartContractModule::create_rent_contract(
-            Origin::signed(bob()),
-            node_id,
-            None
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
+            Origin::signed(alice()),
+            1,
+            CapacityReservationPolicy::Any,
+            Some(node_id),
+            None,
+            None,
         ));
     })
 }
 
 #[test]
 fn test_create_deployment_contract_on_dedicated_node_without_rent_contract_fails() {
+    // todo fix this
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_dedicated_farm_and_node();
@@ -1128,7 +1108,6 @@ fn test_create_deployment_contract_on_dedicated_node_without_rent_contract_fails
                 get_resources(),
                 1,
                 None,
-                None
             ),
             Error::<TestRuntime>::NodeNotAvailableToDeploy
         );
@@ -1137,6 +1116,7 @@ fn test_create_deployment_contract_on_dedicated_node_without_rent_contract_fails
 
 #[test]
 fn test_create_deployment_contract_when_having_a_rentcontract_works() {
+    // todo fix test
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_dedicated_farm_and_node();
@@ -1155,7 +1135,6 @@ fn test_create_deployment_contract_when_having_a_rentcontract_works() {
             get_resources(),
             1,
             None,
-            Some(ContractPolicy::Join(1))
         ));
     })
 }
@@ -1184,7 +1163,6 @@ fn test_create_deployment_contract_when_someone_else_has_rent_contract_fails() {
                 get_resources(),
                 1,
                 None,
-                Some(ContractPolicy::Join(1)),
             ),
             Error::<TestRuntime>::NotAuthorizedToCreateDeploymentContract
         );
@@ -1192,7 +1170,7 @@ fn test_create_deployment_contract_when_someone_else_has_rent_contract_fails() {
 }
 
 #[test]
-fn test_cancel_rent_contract_with_active_deployment_contracts_fails() {
+fn test_cancel_capacity_reservation_contract_with_active_deployment_contracts_fails() {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
@@ -1200,9 +1178,12 @@ fn test_cancel_rent_contract_with_active_deployment_contracts_fails() {
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
-        assert_ok!(SmartContractModule::create_rent_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
-            node_id,
+            1,
+            CapacityReservationPolicy::Any,
+            Some(node_id),
+            None,
             None
         ));
         // set rent contract id to 1 to use node from rent contract with id 1
@@ -1212,14 +1193,13 @@ fn test_cancel_rent_contract_with_active_deployment_contracts_fails() {
             generate_deployment_hash(),
             get_deployment_data(),
             get_resources(),
-            1,
+            0,
             None,
-            Some(ContractPolicy::Join(1))
         ));
 
         assert_noop!(
             SmartContractModule::cancel_contract(Origin::signed(bob()), 1,),
-            Error::<TestRuntime>::NodeHasActiveContracts
+            Error::<TestRuntime>::CapacityReservationHasActiveContracts
         );
         // node 1 should still be up after failed attempt to cancel rent contract
         assert_eq!(
@@ -1251,7 +1231,6 @@ fn test_deployment_contract_billing_details() {
             get_resources(),
             1,
             None,
-            None
         ));
 
         push_nru_report_for_contract(1, 10);
@@ -1339,7 +1318,6 @@ fn test_deployment_contract_billing_details_with_solution_provider() {
             get_resources(),
             1,
             Some(1),
-            None,
         ));
 
         push_nru_report_for_contract(1, 10);
@@ -1382,7 +1360,6 @@ fn test_multiple_contracts_billing_loop_works() {
             get_resources(),
             1,
             None,
-            None
         ));
         assert_ok!(SmartContractModule::create_name_contract(
             Origin::signed(bob()),
@@ -1428,7 +1405,6 @@ fn test_deployment_contract_billing_cycles() {
             get_resources(),
             0,
             None,
-            None
         ));
         let contract_id = 1;
         let twin_id = 2;
@@ -1492,7 +1468,6 @@ fn test_node_multiple_contract_billing_cycles() {
             get_resources(),
             0,
             None,
-            None
         ));
         assert_ok!(SmartContractModule::create_deployment_contract(
             Origin::signed(bob()),
@@ -1502,7 +1477,6 @@ fn test_node_multiple_contract_billing_cycles() {
             get_resources(),
             0,
             None,
-            None
         ));
         let twin_id = 2;
 
@@ -1549,7 +1523,6 @@ fn test_deployment_contract_billing_cycles_delete_node_cancels_contract() {
             get_resources(),
             1,
             None,
-            None
         ));
         let contract_id = 1;
         let twin_id = 2;
@@ -1645,7 +1618,6 @@ fn test_deployment_contract_only_public_ip_billing_cycles() {
             get_resources(),
             1,
             None,
-            None
         ));
         let contract_id = 1;
         let twin_id = 2;
@@ -1697,7 +1669,6 @@ fn test_deployment_contract_billing_cycles_cancel_contract_during_cycle_works() 
             get_resources(),
             0,
             None,
-            None
         ));
 
         let contract_id = 1;
@@ -1754,7 +1725,6 @@ fn test_deployment_contract_billing_fails() {
             get_resources(),
             1,
             None,
-            None
         ));
 
         let contracts_to_bill_at_block = SmartContractModule::contract_to_bill_at_block(1);
@@ -1801,7 +1771,6 @@ fn test_deployment_contract_billing_cycles_cancel_contract_during_cycle_without_
             get_deployment_data(),
             get_resources(),
             0,
-            None,
             None,
         ));
 
@@ -1877,7 +1846,6 @@ fn test_deployment_contract_out_of_funds_should_move_state_to_graceperiod_works(
             get_resources(),
             0,
             None,
-            None
         ));
 
         // cycle 1
@@ -1927,7 +1895,6 @@ fn test_restore_deployment_contract_in_grace_works() {
             get_resources(),
             0,
             None,
-            None
         ));
 
         for i in 0..6 {
@@ -1990,7 +1957,6 @@ fn test_deployment_contract_grace_period_cancels_contract_when_grace_period_ends
             get_resources(),
             0,
             None,
-            None
         ));
 
         // cycle 1
@@ -2093,7 +2059,7 @@ fn test_name_contract_billing() {
 }
 
 #[test]
-fn test_rent_contract_billing() {
+fn test_capacity_reservation_contract_full_node_billing() {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
@@ -2101,17 +2067,27 @@ fn test_rent_contract_billing() {
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
-        assert_ok!(SmartContractModule::create_rent_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
-            node_id,
-            None
+            1,
+            CapacityReservationPolicy::Any,
+            Some(node_id),
+            None,
+            None,
         ));
 
-        let contract = SmartContractModule::contracts(1).unwrap();
-        let rent_contract = types::RentContract { node_id };
         assert_eq!(
-            contract.contract_type,
-            types::ContractData::RentContract(rent_contract)
+            SmartContractModule::contracts(1).unwrap().contract_type,
+            types::ContractData::CapacityReservationContract(types::CapacityReservationContract {
+                node_id: node_id,
+                public_ips: 0,
+                deployment_contracts: vec![],
+                group_id: None,
+                resources: ConsumableResources {
+                    total_resources: resources_n1(),
+                    used_resources: Resources::empty()
+                },
+            })
         );
 
         pool_state
@@ -2126,7 +2102,7 @@ fn test_rent_contract_billing() {
 }
 
 #[test]
-fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
+fn test_capacity_reservation_contract_full_node_billing_cancel_should_bill_reserved_balance() {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
@@ -2134,18 +2110,14 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
-        assert_ok!(SmartContractModule::create_rent_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
-            node_id,
+            1,
+            CapacityReservationPolicy::Any,
+            Some(node_id),
+            None,
             None
         ));
-
-        let contract = SmartContractModule::contracts(1).unwrap();
-        let rent_contract = types::RentContract { node_id };
-        assert_eq!(
-            contract.contract_type,
-            types::ContractData::RentContract(rent_contract)
-        );
 
         pool_state
             .write()
@@ -2196,7 +2168,7 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
 }
 
 #[test]
-fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
+fn test_capacity_reservation_contract_full_node_canceled_mid_cycle_should_bill_for_remainder() {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
@@ -2204,18 +2176,14 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
-        assert_ok!(SmartContractModule::create_rent_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
-            node_id,
-            None
+            1,
+            CapacityReservationPolicy::Any,
+            Some(node_id),
+            None,
+            None,
         ));
-
-        let contract = SmartContractModule::contracts(1).unwrap();
-        let rent_contract = types::RentContract { node_id };
-        assert_eq!(
-            contract.contract_type,
-            types::ContractData::RentContract(rent_contract)
-        );
 
         let twin = TfgridModule::twins(2).unwrap();
         let usable_balance = Balances::usable_balance(&twin.account_id);
@@ -2244,7 +2212,7 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
 }
 
 #[test]
-fn test_create_rent_contract_and_deployment_contract_excludes_deployment_contract_from_billing_works(
+fn test_create_capacity_contract_full_node_and_deployment_contract_should_bill_full_node_works(
 ) {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
@@ -2253,10 +2221,13 @@ fn test_create_rent_contract_and_deployment_contract_excludes_deployment_contrac
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
-        assert_ok!(SmartContractModule::create_rent_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
-            node_id,
-            None
+            1,
+            CapacityReservationPolicy::Any,
+            Some(node_id),
+            None,
+            None,
         ));
 
         assert_ok!(SmartContractModule::create_deployment_contract(
@@ -2267,7 +2238,6 @@ fn test_create_rent_contract_and_deployment_contract_excludes_deployment_contrac
             get_resources(),
             0,
             None,
-            Some(ContractPolicy::Join(1))
         ));
         pool_state
             .write()
@@ -2295,7 +2265,7 @@ fn test_create_rent_contract_and_deployment_contract_excludes_deployment_contrac
 }
 
 #[test]
-fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_deployment_contracts_works() {
+fn test_create_capacity_contract_full_node_canceled_due_to_out_of_funds_should_cancel_deployment_contracts_works() {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
@@ -2303,9 +2273,12 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_deployment_cont
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
-        assert_ok!(SmartContractModule::create_rent_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(charlie()),
-            node_id,
+            1,
+            CapacityReservationPolicy::Any,
+            Some(node_id),
+            None,
             None
         ));
 
@@ -2317,7 +2290,6 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_deployment_cont
             get_resources(),
             0,
             None,
-            Some(ContractPolicy::Join(1))
         ));
 
         // run 12 cycles, contracts should cancel after 11 due to lack of funds
@@ -2389,7 +2361,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_deployment_cont
 }
 
 #[test]
-fn test_create_rent_contract_and_deployment_contract_with_ip_billing_works() {
+fn test_create_capacity_reservation_contract_contract_and_deployment_contract_with_ip_billing_works() {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
@@ -2397,9 +2369,12 @@ fn test_create_rent_contract_and_deployment_contract_with_ip_billing_works() {
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
-        assert_ok!(SmartContractModule::create_rent_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
-            node_id,
+            1,
+            CapacityReservationPolicy::Any,
+            Some(node_id),
+            None,
             None
         ));
 
@@ -2411,7 +2386,6 @@ fn test_create_rent_contract_and_deployment_contract_with_ip_billing_works() {
             get_resources(),
             1,
             None,
-            Some(ContractPolicy::Join(1))
         ));
 
         // 2 contracts => we expect 2 calls to bill_contract
@@ -2444,7 +2418,7 @@ fn test_create_rent_contract_and_deployment_contract_with_ip_billing_works() {
 }
 
 #[test]
-fn test_rent_contract_out_of_funds_should_move_state_to_graceperiod_works() {
+fn test_capacity_reservation_contract_full_node_out_of_funds_should_move_state_to_graceperiod_works() {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
@@ -2452,10 +2426,13 @@ fn test_rent_contract_out_of_funds_should_move_state_to_graceperiod_works() {
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
-        assert_ok!(SmartContractModule::create_rent_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(charlie()),
-            node_id,
-            None
+            1,
+            CapacityReservationPolicy::Any,
+            Some(node_id),
+            None,
+            None,
         ));
 
         // cycle 1
@@ -2484,7 +2461,7 @@ fn test_rent_contract_out_of_funds_should_move_state_to_graceperiod_works() {
 }
 
 #[test]
-fn test_restore_rent_contract_in_grace_works() {
+fn test_restore_capacity_reservation_contract_in_grace_works() {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
@@ -2492,10 +2469,13 @@ fn test_restore_rent_contract_in_grace_works() {
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
-        assert_ok!(SmartContractModule::create_rent_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(charlie()),
-            node_id,
-            None
+            1,
+            CapacityReservationPolicy::Any,
+            Some(node_id),
+            None,
+            None,
         ));
 
         // cycle 1
@@ -2549,7 +2529,7 @@ fn test_restore_rent_contract_in_grace_works() {
 }
 
 #[test]
-fn test_restore_rent_contract_and_deployment_contracts_in_grace_works() {
+fn test_restore_capacity_reservation_contract_and_deployment_contracts_in_grace_works() {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
@@ -2557,9 +2537,12 @@ fn test_restore_rent_contract_and_deployment_contracts_in_grace_works() {
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
-        assert_ok!(SmartContractModule::create_rent_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(charlie()),
-            node_id,
+            1,
+            CapacityReservationPolicy::Any,
+            Some(node_id),
+            None,
             None
         ));
         assert_ok!(SmartContractModule::create_deployment_contract(
@@ -2570,7 +2553,6 @@ fn test_restore_rent_contract_and_deployment_contracts_in_grace_works() {
             get_resources(),
             0,
             None,
-            Some(ContractPolicy::Join(1))
         ));
 
         // cycle 1
@@ -2673,7 +2655,7 @@ fn test_restore_rent_contract_and_deployment_contracts_in_grace_works() {
 }
 
 #[test]
-fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works() {
+fn test_capacity_reservation_contract_grace_period_cancels_contract_when_grace_period_ends_works() {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
@@ -2681,10 +2663,13 @@ fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
-        assert_ok!(SmartContractModule::create_rent_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(charlie()),
-            node_id,
-            None
+            1,
+            CapacityReservationPolicy::Any,
+            Some(node_id),
+            None,
+            None,
         ));
 
         // cycle 1
@@ -2726,7 +2711,7 @@ fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works
 }
 
 #[test]
-fn test_rent_contract_and_deployment_contract_canceled_when_node_is_deleted_works() {
+fn test_capacity_reservation_contract_and_deployment_contract_canceled_when_node_is_deleted_works() {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
@@ -2734,10 +2719,13 @@ fn test_rent_contract_and_deployment_contract_canceled_when_node_is_deleted_work
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
         let node_id = 1;
-        assert_ok!(SmartContractModule::create_rent_contract(
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
-            node_id,
-            None
+            1,
+            CapacityReservationPolicy::Any,
+            Some(node_id),
+            None,
+            None,
         ));
 
         assert_ok!(SmartContractModule::create_deployment_contract(
@@ -2748,7 +2736,6 @@ fn test_rent_contract_and_deployment_contract_canceled_when_node_is_deleted_work
             get_resources(),
             0,
             None,
-            Some(ContractPolicy::Join(1))
         ));
 
         // 2 contracts => 2 calls to bill_contract
@@ -2857,7 +2844,6 @@ fn test_create_deployment_contract_with_solution_provider_works() {
             get_resources(),
             0,
             Some(1),
-            None
         ));
     });
 }
@@ -2889,7 +2875,6 @@ fn test_create_deployment_contract_with_solution_provider_fails_if_not_approved(
                 get_resources(),
                 0,
                 Some(1),
-                None
             ),
             Error::<TestRuntime>::SolutionProviderNotApproved
         );
@@ -3161,12 +3146,6 @@ pub fn prepare_farm_and_node() {
     prepare_farm(alice(), false);
 
     let resources = ResourcesInput {
-        hru: 1024 * GIGABYTE,
-        sru: 512 * GIGABYTE,
-        cru: 8,
-        mru: 16 * GIGABYTE,
-    };
-
     // random location
     let location = LocationInput {
         city: get_city_name_input(b"Ghent"),
@@ -3178,7 +3157,7 @@ pub fn prepare_farm_and_node() {
     TfgridModule::create_node(
         Origin::signed(alice()),
         1,
-        resources,
+        resources_n1(),
         location,
         bounded_vec![],
         false,
@@ -3198,19 +3177,12 @@ pub fn prepare_farm_with_three_nodes() {
         latitude: "241.323112123".as_bytes().to_vec(),
     };
 
-    let resources = Resources {
-        hru: 2048 * GIGABYTE,
-        sru: 1024 * GIGABYTE,
-        cru: 16,
-        mru: 32 * GIGABYTE,
-    };
-
     let country = "Belgium".as_bytes().to_vec();
     let city = "Ghent".as_bytes().to_vec();
     TfgridModule::create_node(
         Origin::signed(bob()),
         1,
-        resources,
+        resources_c2(),
         location,
         country,
         city,
@@ -3221,18 +3193,11 @@ pub fn prepare_farm_with_three_nodes() {
     )
     .unwrap();
 
-    // SECOND NODE
+    // THIRD NODE
     // random location
     let location = Location {
         longitude: "6514.233213231".as_bytes().to_vec(),
         latitude: "324.323112123".as_bytes().to_vec(),
-    };
-
-    let resources = Resources {
-        hru: 512 * GIGABYTE,
-        sru: 256 * GIGABYTE,
-        cru: 4,
-        mru: 8 * GIGABYTE,
     };
 
     let country = "Belgium".as_bytes().to_vec();
@@ -3240,7 +3205,7 @@ pub fn prepare_farm_with_three_nodes() {
     TfgridModule::create_node(
         Origin::signed(charlie()),
         1,
-        resources,
+        resources_n3(),
         location,
         country,
         city,
@@ -3274,12 +3239,6 @@ pub fn prepare_dedicated_farm_and_node() {
     prepare_farm(alice(), true);
 
     let resources = ResourcesInput {
-        hru: 1024 * GIGABYTE,
-        sru: 512 * GIGABYTE,
-        cru: 8,
-        mru: 16 * GIGABYTE,
-    };
-
     // random location
     let location = LocationInput {
         city: get_city_name_input(b"Ghent"),
@@ -3291,7 +3250,7 @@ pub fn prepare_dedicated_farm_and_node() {
     TfgridModule::create_node(
         Origin::signed(alice()),
         1,
-        resources,
+        resources_n1(),
         location,
         bounded_vec![],
         false,
@@ -3299,6 +3258,33 @@ pub fn prepare_dedicated_farm_and_node() {
         None,
     )
     .unwrap();
+}
+
+pub fn resources_n1() -> Resources {
+    Resources {
+        hru: 1024 * GIGABYTE,
+        sru: 512 * GIGABYTE,
+        cru: 8,
+        mru: 16 * GIGABYTE,
+    }
+}
+
+pub fn resources_n2() -> Resources {
+    Resources {
+        hru: 2048 * GIGABYTE,
+        sru: 1024 * GIGABYTE,
+        cru: 16,
+        mru: 32 * GIGABYTE,
+    }
+}
+
+pub fn resources_n3() -> Resources {
+    Resources {
+        hru: 512 * GIGABYTE,
+        sru: 256 * GIGABYTE,
+        cru: 4,
+        mru: 8 * GIGABYTE,
+    }
 }
 
 pub fn create_twin(origin: AccountId) {
@@ -3427,7 +3413,34 @@ fn get_resources() -> Resources {
     }
 }
 
-fn prepare_farm_three_nodes_three_deployment_contracts() {
+fn resources_c1() -> Resources {
+    Resources {
+        cru: 4,
+        hru: 0,
+        mru: 2 * GIGABYTE,
+        sru: 60 * GIGABYTE,
+    }
+}
+
+fn resources_c2() -> Resources {
+    Resources {
+        cru: 4,
+        hru: 1000 * GIGABYTE,
+        mru: 10 * GIGABYTE,
+        sru: 100 * GIGABYTE,
+    }
+}
+
+fn resources_c3() -> Resources {
+    Resources {
+        cru: 2,
+        hru: 1024 * GIGABYTE,
+        mru: 4 * GIGABYTE,
+        sru: 50 * GIGABYTE,
+    }
+}
+
+fn prepare_farm_three_nodes_three_capacity_reservation_contracts() {
     prepare_farm_with_three_nodes();
 
     assert_eq!(
@@ -3444,20 +3457,12 @@ fn prepare_farm_three_nodes_three_deployment_contracts() {
     );
 
     // first contract should go to node 1
-    let resources_c1 = Resources {
-        cru: 4,
-        hru: 0,
-        mru: 2 * GIGABYTE,
-        sru: 60 * GIGABYTE,
-    };
-    assert_ok!(SmartContractModule::create_deployment_contract(
+    assert_ok!(SmartContractModule::create_capacity_reservation_contract(
         Origin::signed(alice()),
         1,
-        generate_deployment_hash(),
-        get_deployment_data(),
-        resources_c1,
-        0,
+        CapacityReservationPolicy::Any,
         None,
+        Some(resources_c1()),
         None,
     ));
 
@@ -3475,38 +3480,22 @@ fn prepare_farm_three_nodes_three_deployment_contracts() {
     );
 
     // second contract will take most resources but can still go to node 1
-    let resources_c2 = Resources {
-        cru: 4,
-        hru: 1000 * GIGABYTE,
-        mru: 10 * GIGABYTE,
-        sru: 100 * GIGABYTE,
-    };
-    assert_ok!(SmartContractModule::create_deployment_contract(
+    assert_ok!(SmartContractModule::create_capacity_reservation_contract(
         Origin::signed(alice()),
         1,
-        generate_deployment_hash(),
-        get_deployment_data(),
-        resources_c2,
-        0,
+        CapacityReservationPolicy::Any,
         None,
+        Some(resources_c2()),
         None,
     ),);
 
-    // third contract will take most resources but can still go to node 1
-    let resources_c3 = Resources {
-        cru: 2,
-        hru: 1024 * GIGABYTE,
-        mru: 4 * GIGABYTE,
-        sru: 50 * GIGABYTE,
-    };
-    assert_ok!(SmartContractModule::create_deployment_contract(
+    // third can no longer go on node 1 so should start node 2 up
+    assert_ok!(SmartContractModule::create_capacity_reservation_contract(
         Origin::signed(alice()),
         1,
-        generate_deployment_hash(),
-        get_deployment_data(),
-        resources_c3,
-        0,
+        CapacityReservationPolicy::Any,
         None,
+        Some(resources_c3()),
         None,
     ),);
 
@@ -3522,4 +3511,7 @@ fn prepare_farm_three_nodes_three_deployment_contracts() {
         TfgridModule::nodes(3).unwrap().power_target,
         PowerTarget::Down
     );
+
+    assert_eq!(SmartContractModule::active_node_contracts(1).len(), 2);
+    assert_eq!(SmartContractModule::active_node_contracts(2).len(), 1);
 }

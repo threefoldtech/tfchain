@@ -1184,7 +1184,7 @@ pub mod pallet {
             };
 
             // If the resources on a certified node changed, reset the certification level to DIY
-            if Resources::has_changed(&stored_node.resources, &node_resources, 1)
+            if Resources::has_changed(&stored_node.resources.total_resources, &node_resources, 1)
                 && stored_node.certification == NodeCertification::Certified
             {
                 stored_node.certification = NodeCertification::Diy;
@@ -1195,8 +1195,7 @@ pub mod pallet {
             }
 
             stored_node.farm_id = farm_id;
-            stored_node.resources = node_resources;
-            stored_node.location = node_location;
+            stored_node.resources.total_resources = resources;
             stored_node.interfaces = node_interfaces;
             stored_node.secure_boot = secure_boot;
             stored_node.virtualized = virtualized;
