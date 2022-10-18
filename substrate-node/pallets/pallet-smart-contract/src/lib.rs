@@ -510,10 +510,11 @@ pub mod pallet {
             node_id: Option<u32>,
             resources: Option<Resources>,
             features: Option<Vec<u32>>,
+            solution_provider_id: Option<u64>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_create_capacity_reservation_contract(
-                account_id, farm_id, policy, node_id, resources, features,
+                account_id, farm_id, policy, node_id, resources, features, solution_provider_id
             )
         }
 
@@ -539,7 +540,6 @@ pub mod pallet {
             deployment_data: DeploymentDataInput<T>,
             resources: Resources,
             public_ips: u32,
-            solution_provider_id: Option<u64>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_create_deployment_contract(
@@ -549,7 +549,6 @@ pub mod pallet {
                 deployment_data,
                 resources,
                 public_ips,
-                solution_provider_id,
             )
         }
 
@@ -687,6 +686,7 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
+    #[transactional]
     pub fn _create_capacity_reservation_contract(
         account_id: T::AccountId,
         farm_id: u32,
@@ -694,6 +694,7 @@ impl<T: Config> Pallet<T> {
         node_id: Option<u32>,
         resources: Option<Resources>,
         _features: Option<Vec<u32>>,
+        solution_provider_id: Option<u64>,
     ) -> DispatchResultWithPostInfo {
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
             .ok_or(Error::<T>::TwinNotExists)?;
@@ -717,10 +718,10 @@ impl<T: Config> Pallet<T> {
                 CapacityReservationPolicy::Exclusive(g_id) => Some(g_id),
                 CapacityReservationPolicy::Any => None,
             };
+            let farm = pallet_tfgrid::Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
+            ensure!(!farm.dedicated_farm, Error::<T>::NodeNotAvailableToDeploy);
             Self::_find_suitable_node_in_farm(farm_id, resources, group_id)?
         };
-
-        Self::_claim_resources_on_node(node_id, resources)?;
 
         let new_capacity_reservation = types::CapacityReservationContract {
             node_id: node_id,
@@ -737,7 +738,7 @@ impl<T: Config> Pallet<T> {
         let contract = Self::_create_contract(
             twin_id,
             types::ContractData::CapacityReservationContract(new_capacity_reservation.clone()),
-            None,
+            solution_provider_id,
         )?;
 
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
@@ -840,14 +841,14 @@ impl<T: Config> Pallet<T> {
         deployment_data: DeploymentDataInput<T>,
         resources: Resources,
         public_ips: u32,
-        solution_provider_id: Option<u64>,
     ) -> DispatchResultWithPostInfo {
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
             .ok_or(Error::<T>::TwinNotExists)?;
 
-        let contract = Contracts::<T>::get(capacity_reservation_id)
+        let cr_contract = Contracts::<T>::get(capacity_reservation_id)
             .ok_or(Error::<T>::CapacityReservationNotExists)?;
-        let capacity_reservation_contract = Self::get_capacity_reservation_contract(&contract)?;
+        let capacity_reservation_contract = Self::get_capacity_reservation_contract(&cr_contract)?;
+        ensure!(cr_contract.twin_id == twin_id, Error::<T>::NotAuthorizedToCreateDeploymentContract);
 
         // If the contract with hash and node id exists and it's in any other state then
         // contractState::Deleted then we don't allow the creation of it.
@@ -887,7 +888,7 @@ impl<T: Config> Pallet<T> {
         let contract = Self::_create_contract(
             twin_id,
             types::ContractData::DeploymentContract(deployment_contract.clone()),
-            solution_provider_id,
+            None,
         )?;
 
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
@@ -1071,8 +1072,11 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         let mut node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
 
+        log::info!("Before freeing: {:?}", node.resources.used_resources);
         //update the available resources
         node.resources.free(&resources);
+        log::info!("After freeing: {:?}", node.resources.used_resources);
+
 
         // if the power_target is down wake the node up and emit event
         // do not power down if it is the first node in the list of nodes from that farm
@@ -1209,8 +1213,14 @@ impl<T: Config> Pallet<T> {
 
         for node_id in nodes_in_farm {
             let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+            log::info!("total {:?}", node.resources.total_resources);
+            log::info!("used {:?}", node.resources.used_resources);
+            log::info!("required {:?}", resources);
+            log::info!("HRU: {:?}", (node.resources.total_resources.hru - node.resources.used_resources.hru) >= resources.hru);
+            log::info!("SRU: {:?}", (node.resources.total_resources.sru - node.resources.used_resources.sru) >= resources.sru);
+            log::info!("CRU: {:?}", (node.resources.total_resources.cru - node.resources.used_resources.cru) >= resources.cru); 
+            log::info!("MRU: {:?}", (node.resources.total_resources.mru - node.resources.used_resources.mru) >= resources.mru);
             if node.resources.can_consume_resources(&resources) {
-
                 if let Some(g_id) = group_id {
                     if !CapacityReservationIDByNodeGroupConfig::<T>::contains_key(
                         types::NodeGroupConfig {
@@ -1268,13 +1278,15 @@ impl<T: Config> Pallet<T> {
             twin_id,
             contract_id: id,
             state: types::ContractState::Created,
-            contract_type,
+            contract_type: contract_type.clone(),
             solution_provider_id,
         };
 
         // Start billing frequency loop
         // Will always be block now + frequency
-        Self::insert_contract_to_bill(id);
+        if !matches!(contract_type, types::ContractData::DeploymentContract(_)) {
+            Self::insert_contract_to_bill(id);
+        }
 
         // insert into contracts map
         Contracts::<T>::insert(id, &contract);
@@ -1377,20 +1389,6 @@ impl<T: Config> Pallet<T> {
                     capacity_reservation_contract.deployment_contracts.len() == 0,
                     Error::<T>::CapacityReservationHasActiveContracts
                 );
-                Self::_unclaim_resources_on_node(
-                    capacity_reservation_contract.node_id,
-                    capacity_reservation_contract.resources.total_resources,
-                )?;
-            }
-            types::ContractData::DeploymentContract(ref deployment_contract) => {
-                Self::_remove_deployment_contract_from_capacity_reservation_contract(
-                    deployment_contract.capacity_reservation_id,
-                    contract_id,
-                )?;
-                Self::_unclaim_resources_on_capacity_reservation(
-                    deployment_contract.capacity_reservation_id,
-                    deployment_contract.resources,
-                )?;
             }
             _ => {}
         }
@@ -1848,7 +1846,7 @@ impl<T: Config> Pallet<T> {
                         match Self::_free_ip(contract_id, &mut deployment_contract) {
                             Ok(_) => (),
                             Err(e) => {
-                                log::info!("error while freeing ips: {:?}", e);
+                                log::error!("error while freeing ips: {:?}", e);
                             }
                         }
                     }
