@@ -7,7 +7,9 @@ use frame_support::{BoundedVec, RuntimeDebugNoBound};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
 use substrate_fixed::types::U64F64;
-use tfchain_support::types::Resources;
+use tfchain_support::types::{
+    ConsumableResources, Resources
+};
 
 pub type BlockNumber = u64;
 
@@ -28,8 +30,6 @@ impl Default for StorageVersion {
     }
 }
 
-
-
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo)]
 pub struct Group {
     pub id: u32,
@@ -42,7 +42,7 @@ pub struct NodeGroupConfig {
     pub group_id: u32,
 }
 
-#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct Contract<T: Config> {
@@ -61,18 +61,29 @@ impl<T: Config> Contract<T> {
 
     pub fn get_node_id(&self) -> u32 {
         match self.contract_type.clone() {
-            ContractData::RentContract(c) => c.node_id,
-            ContractData::DeploymentContract(c) => c.node_id,
+            ContractData::CapacityReservationContract(c) => c.node_id,
+            ContractData::DeploymentContract(_) => 0,
             ContractData::NameContract(_) => 0,
         }
     }
+}
+
+#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo)]
+#[scale_info(skip_type_params(T))]
+#[codec(mel_bound())]
+pub struct CapacityReservationContract {
+    pub node_id: u32,
+    pub resources: ConsumableResources,
+    pub group_id: Option<u32>,
+    pub public_ips: u32,
+    pub deployment_contracts: Vec<u64>,
 }
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct DeploymentContract<T: Config> {
-    pub node_id: u32,
+    pub capacity_reservation_id: u64,
     // Hash of the deployment, set by the user
     // Max 32 bytes
     pub deployment_hash: DeploymentHash,
@@ -80,7 +91,6 @@ pub struct DeploymentContract<T: Config> {
     pub public_ips: u32,
     pub public_ips_list: BoundedVec<ContractPublicIP<T>, MaxNodeContractPublicIPs<T>>,
     pub resources: Resources,
-    pub group_id: Option<u32>,
 }
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
@@ -107,20 +117,20 @@ pub struct RentContract {
     pub node_id: u32,
 }
 
-#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub enum ContractData<T: Config> {
     DeploymentContract(DeploymentContract<T>),
     NameContract(NameContract<T>),
-    RentContract(RentContract),
+    CapacityReservationContract(CapacityReservationContract),
 }
 
-impl<T: Config> Default for ContractData<T> {
-    fn default() -> ContractData<T> {
-        ContractData::RentContract(RentContract::default())
-    }
-}
+// impl<T: Config> Default for ContractData<T> {
+//     fn default() -> ContractData<T> {
+//         ContractData::CapacityReservationContract(CapacityReservationContract::default())
+//     }
+// }
 
 #[derive(
     PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
@@ -218,10 +228,20 @@ pub struct ContractResources {
     pub used: Resources,
 }
 
+// DEPRECATED
 #[derive(
     PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
 )]
 pub struct ContractLock<BalanceOf> {
+    pub amount_locked: BalanceOf,
+    pub lock_updated: u64,
+    pub cycles: u16,
+}
+
+#[derive(
+    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
+)]
+pub struct CapacityReservationLock<BalanceOf> {
     pub amount_locked: BalanceOf,
     pub lock_updated: u64,
     pub cycles: u16,

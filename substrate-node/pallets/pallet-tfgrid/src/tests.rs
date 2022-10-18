@@ -728,7 +728,7 @@ fn update_certified_node_resources_loses_certification_works() {
         assert_eq!(node.certification, NodeCertification::Certified);
 
         // Change cores to 2
-        let mut node_resources = node.resources;
+        let mut node_resources = node.resources.total_resources;
         node_resources.cru = 2;
 
         assert_ok!(TfgridModule::update_node(
@@ -785,7 +785,7 @@ fn update_certified_node_same_resources_keeps_certification_works() {
             Origin::signed(alice()),
             1,
             1,
-            node.resources,
+            node.resources.total_resources,
             node.location,
             node.country,
             node.city,
@@ -2327,8 +2327,8 @@ fn test_attach_farming_policy_flow(farming_policy_id: u32) {
 
     // Provide enough CU and SU limits to avoid attaching default policy to node
     // For node: [CU = 20; SU = 2]
-    assert_eq!(resources::get_cu(node.resources) <= limit.cu.unwrap(), true);
-    assert_eq!(resources::get_su(node.resources) <= limit.su.unwrap(), true);
+    assert_eq!(resources::get_cu(node.resources.total_resources) <= limit.cu.unwrap(), true);
+    assert_eq!(resources::get_su(node.resources.total_resources) <= limit.su.unwrap(), true);
 
     // Link farming policy to farm
     assert_ok!(TfgridModule::attach_policy_to_farm(

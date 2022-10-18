@@ -52,7 +52,7 @@ pub mod pallet {
     use tfchain_support::{
         traits::ChangeNode,
         types::{
-            Farm, FarmCertification, FarmingPolicyLimit, Interface, Location, Node,
+            ConsumableResources, Farm, FarmCertification, FarmingPolicyLimit, Interface, Location, Node,
             NodeCertification, PublicConfig, PublicIP, Resources, IP,
         },
     };
@@ -980,8 +980,10 @@ pub mod pallet {
                 id,
                 farm_id,
                 twin_id,
-                resources,
-                used_resources: Resources::empty(),
+                resources: ConsumableResources {
+                    total_resources: resources,
+                    used_resources: Resources::empty(),
+                },
                 location,
                 country,
                 city,
@@ -1062,7 +1064,7 @@ pub mod pallet {
             };
 
             // If the resources on a certified node changed, reset the certification level to DIY
-            if stored_node.resources != resources
+            if stored_node.resources.total_resources != resources
                 && stored_node.certification == NodeCertification::Certified
             {
                 stored_node.certification = NodeCertification::Diy;
@@ -1073,7 +1075,8 @@ pub mod pallet {
             }
 
             stored_node.farm_id = farm_id;
-            stored_node.resources = resources;
+            //TODO check that updating resources is possible!
+            stored_node.resources.total_resources = resources;
             stored_node.location = location;
             stored_node.country = country;
             stored_node.city = city;
@@ -2045,7 +2048,7 @@ impl<T: Config> Pallet<T> {
 
                 match limits.cu {
                     Some(cu_limit) => {
-                        let cu = resources::get_cu(node.resources);
+                        let cu = resources::get_cu(node.resources.total_resources);
                         if cu > cu_limit {
                             return Self::get_default_farming_policy();
                         }
@@ -2056,7 +2059,7 @@ impl<T: Config> Pallet<T> {
 
                 match limits.su {
                     Some(su_limit) => {
-                        let su = resources::get_su(node.resources);
+                        let su = resources::get_su(node.resources.total_resources);
                         if su > su_limit {
                             return Self::get_default_farming_policy();
                         }

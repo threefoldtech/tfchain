@@ -523,10 +523,10 @@ impl<T: Config> ChangeNode<PubConfigOf<T>, InterfaceOf<T>> for Pallet<T> {
         old_node: Option<&Node<PubConfigOf<T>, InterfaceOf<T>>>,
         new_node: &Node<PubConfigOf<T>, InterfaceOf<T>>,
     ) {
-        let new_node_weight = Self::get_node_weight(new_node.resources);
+        let new_node_weight = Self::get_node_weight(new_node.resources.total_resources);
         match old_node {
             Some(node) => {
-                let old_node_weight = Self::get_node_weight(node.resources);
+                let old_node_weight = Self::get_node_weight(node.resources.total_resources);
 
                 if node.farm_id != new_node.farm_id {
                     let mut old_farm_weight = FarmWeight::<T>::get(node.farm_id);
@@ -554,7 +554,7 @@ impl<T: Config> ChangeNode<PubConfigOf<T>, InterfaceOf<T>> for Pallet<T> {
     }
 
     fn node_deleted(node: &Node<PubConfigOf<T>, InterfaceOf<T>>) {
-        let node_weight = Self::get_node_weight(node.resources);
+        let node_weight = Self::get_node_weight(node.resources.total_resources);
         let mut farm_weight = FarmWeight::<T>::get(node.farm_id);
         farm_weight = farm_weight.checked_sub(node_weight).unwrap_or(0);
         FarmWeight::<T>::insert(node.farm_id, farm_weight);
