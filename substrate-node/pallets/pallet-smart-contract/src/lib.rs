@@ -784,7 +784,7 @@ impl<T: Config> Pallet<T> {
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
         ensure!(
             twin.account_id == account_id,
-            Error::<T>::TwinNotAuthorizedToCancelContract
+            Error::<T>::TwinNotAuthorizedToUpdateContract
         );
         let mut capacity_reservation_contract = Self::get_capacity_reservation_contract(&contract)?;
 
