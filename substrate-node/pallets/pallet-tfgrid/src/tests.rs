@@ -2309,8 +2309,8 @@ fn test_attach_farming_policy_flow(farming_policy_id: u32) {
 
     // Provide enough CU and SU limits to avoid attaching default policy to node
     // For node: [CU = 20; SU = 2]
-    assert_eq!(node.resources.get_cu() <= limit.cu.unwrap(), true);
-    assert_eq!(node.resources.get_su() <= limit.su.unwrap(), true);
+    assert_eq!(node.resources.total_resources.get_cu() <= limit.cu.unwrap(), true);
+    assert_eq!(node.resources.total_resources.get_su() <= limit.su.unwrap(), true);
 
     // Link farming policy to farm
     assert_ok!(TfgridModule::attach_policy_to_farm(
