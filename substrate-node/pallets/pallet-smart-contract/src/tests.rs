@@ -697,7 +697,7 @@ fn test_capacity_reservation_contract_decrease_resources_works() {
 }
 
 // todo test decrease resources fails due to resources being used by some contract
-
+// todo more tests resources update
 #[test]
 fn test_update_capacity_reservation_contract_not_exists_fails() {
     new_test_ext().execute_with(|| {
@@ -710,7 +710,7 @@ fn test_update_capacity_reservation_contract_not_exists_fails() {
                 1,
                 get_resources()
             ),
-            Error::<TestRuntime>::ContractNotExists
+            Error::<TestRuntime>::CapacityReservationNotExists
         );
     });
 }
