@@ -2,7 +2,7 @@
 
 ## Installation
 
-#### Prerequisites:
+### Prerequisites
 
 Ensure you have the following installed first:
 
@@ -15,13 +15,13 @@ You will also need rust and nightly installed.
 
 To install Rust:
 
-```
+```sh
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
 To install nightly:
 
-```
+```sh
 rustup install nightly-2022-05-11
 ```
 
@@ -29,37 +29,37 @@ rustup install nightly-2022-05-11
 
 Navigate to substrate node:
 
-```
+```sh
 cd substrate-node
 ```
 
 Add Wasm toolchain:
 
-```
+```sh
 rustup target add wasm32-unknown-unknown --toolchain nightly-2022-05-11
 ```
 
 Now you can build:
 
-```
+```sh
 cargo +nightly-2022-05-11 build --release
 ```
 
 You can also override the default toolchain
 
-```
+```sh
 rustup override set nightly-2022-05-11
 ```
 
 Now you can build as following:
 
-```
+```sh
 cargo build
 ```
 
 This will build the node binary in release mode, once built you can execute it by doing following:
 
-```
+```sh
 ./target/release/tfchain --ws-external --dev
 ```
 
@@ -89,10 +89,10 @@ See [process](./substrate-node/upgrade_process.md)
 
 You can use the client to interact with the chain, [read more](./cli-tool/readme.md)
 
-### Data Cleanup:
+### Data Cleanup
 
 To wipe data run:
 
-```
+```sh
 ./target/release/tfchain purge-chain --dev
 ```
