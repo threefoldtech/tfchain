@@ -70,6 +70,7 @@ pub mod pallet {
     #[pallet::error]
     pub enum Error<T> {
         BadOrigin,
+        NotCouncilMember,
         AlreadyBonded,
         StashNotBonded,
         StashBondedWithWrongValidator,
@@ -223,7 +224,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Bond an account to to a validator account
+        /// Bond an account to a validator account
         /// Just proves that the stash account is indeed under control of the validator account
         #[pallet::weight(100_000_000)]
         pub fn bond(
@@ -252,7 +253,9 @@ pub mod pallet {
             origin: OriginFor<T>,
             validator_account: T::AccountId,
         ) -> DispatchResultWithPostInfo {
-            T::CouncilOrigin::ensure_origin(origin)?;
+            let who = ensure_signed(origin)?;
+
+            Self::is_council_member(who)?;
 
             let mut validator = <Validator<T>>::get(&validator_account)
                 .ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
@@ -283,9 +286,9 @@ pub mod pallet {
             origin: OriginFor<T>,
             validator: T::AccountId,
         ) -> DispatchResultWithPostInfo {
-            if !(ensure_signed(origin.clone())? == validator
-                || T::CouncilOrigin::ensure_origin(origin).is_ok())
-            {
+            let who = ensure_signed(origin.clone())?;
+
+            if !(who == validator || Self::is_council_member(who).is_ok()) {
                 Err(Error::<T>::BadOrigin)?
             }
 
@@ -322,5 +325,16 @@ pub mod pallet {
 
             Ok(().into())
         }
+    }
+}
+
+impl<T: Config> Pallet<T> {
+    fn is_council_member(who: T::AccountId) -> DispatchResultWithPostInfo {
+        let council_members =
+            pallet_membership::Pallet::<T, pallet_membership::Instance1>::members();
+
+        ensure!(council_members.contains(&who), Error::<T>::NotCouncilMember,);
+
+        Ok(().into())
     }
 }
