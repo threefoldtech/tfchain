@@ -256,7 +256,7 @@ fn close_if_not_council_member_fails() {
             None
         ));
 
-        let not_council_member = Origin::signed(4); // [1,2,3] are council members
+        let not_council_member = Origin::signed(4); // [1, 2, 3] are council members
 
         assert_noop!(
             DaoModule::close(not_council_member, hash.clone(), 0,),
