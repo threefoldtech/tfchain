@@ -229,9 +229,9 @@ impl<T: Config> Default for Location<T> {
         let city = CityName::default();
         let country = CountryName::default();
         let latitude: BoundedVec<u8, ConstU32<MAX_LATITUDE_LENGTH>> =
-            DEFAULT_CITY_NAME.to_vec().try_into().unwrap_or_default();
+            DEFAULT_LATITUDE.to_vec().try_into().unwrap_or_default();
         let longitude: BoundedVec<u8, ConstU32<MAX_LONGITUDE_LENGTH>> =
-            DEFAULT_CITY_NAME.to_vec().try_into().unwrap_or_default();
+            DEFAULT_LONGITUDE.to_vec().try_into().unwrap_or_default();
 
         Self {
             city,
