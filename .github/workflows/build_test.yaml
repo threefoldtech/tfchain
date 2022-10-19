@@ -1,0 +1,41 @@
+name: Build and Test
+on: 
+  push:
+    branches:
+      - development
+  pull_request:
+jobs:
+  build-and-test:
+    runs-on: [self-hosted, poc]
+    container:
+      image: threefolddev/tfchain:0
+      env:
+        DEBIAN_FRONTEND: noninteractive
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Cache build
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            substrate-node/target/
+          key: ${{ runner.os }}-tfchain-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-tfchain-cargo-
+
+ 
+      - name: Build
+        run: |
+          cd substrate-node
+          $HOME/.cargo/bin/rustup target add wasm32-unknown-unknown --toolchain nightly-2022-05-11
+          $HOME/.cargo/bin/cargo +nightly-2022-05-11 build --release
+
+      - name: Unit tests
+        run: |
+          cd substrate-node
+          $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
+          cd pallets
+          $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast

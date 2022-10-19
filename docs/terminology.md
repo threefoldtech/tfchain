@@ -1,4 +1,4 @@
-# Tfchain terminolog
+# Tfchain terminology
 
 ## Validator
 

@@ -1,0 +1,70 @@
+[package]
+authors = ['Threefoldtech <https://github.com/threefoldtech>']
+description = 'Substrate TF Grid DB pallet'
+edition = '2021'
+homepage = 'https://threefold.io'
+license = 'Apache'
+name = 'pallet-tfgrid'
+repository = 'https://github.com/threefoldtech/tfchain_pallets'
+version = '3.0.0'
+
+[package.metadata.docs.rs]
+targets = ['x86_64-unknown-linux-gnu']
+
+[dependencies.log]
+default-features = false
+version = '0.4.14'
+
+[dependencies]
+# Substrate packages
+hex = { version = "0.4", default-features = false }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
+	"derive",
+] }
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+tfchain-support = { path = "../../support", default-features = false }
+valip = "0.3.0"
+
+frame-benchmarking =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false, optional = true }
+pallet-balances =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+frame-support =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+frame-system =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+sp-runtime =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+sp-std =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+sp-storage =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+pallet-timestamp =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+sp-core =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+sp-io =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false, optional = true }
+
+[dev-dependencies]
+hex-literal = "0.3.1"
+
+[features]
+default = ['std']
+std = [
+	'codec/std',
+	'pallet-balances/std',
+	'frame-support/std',
+	'frame-system/std',
+	'sp-runtime/std',
+	'sp-std/std',
+	'sp-storage/std',
+    'pallet-timestamp/std',
+	'sp-core/std',
+	'sp-io/std',
+	'frame-benchmarking/std',
+	'tfchain-support/std',
+	'scale-info/std',
+	'hex/std',
+	'log/std',
+	'frame-try-runtime/std',
+]
+runtime-benchmarks = [
+	"frame-benchmarking",
+	"frame-support/runtime-benchmarks",
+	"frame-system/runtime-benchmarks",
+]
+try-runtime = [
+	"frame-support/try-runtime"
+]

@@ -1,5 +1,5 @@
-use frame_support::traits::{Currency, OnUnbalanced};
 use crate::*;
+use frame_support::traits::{Currency, OnUnbalanced};
 
 type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
 
@@ -12,6 +12,8 @@ where
     <R as frame_system::Config>::Event: From<pallet_balances::Event<R>>,
 {
     fn on_nonzero_unbalanced(amount: NegativeImbalance) {
-        Balances::resolve_creating(&Authorship::author(), amount);
+        if let Some(author) = Authorship::author() {
+            Balances::resolve_creating(&author, amount);
+        }
     }
 }

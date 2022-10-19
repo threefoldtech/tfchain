@@ -1,0 +1,46 @@
+[package]
+authors = ['Threefoldtech <https://github.com/threefoldtech>']
+description = 'Substrate TF Grid Burning Pallet'
+edition = '2018'
+homepage = 'https://threefold.io'
+license = 'Apache'
+name = 'pallet-burning'
+repository = 'https://github.com/threefoldtech/tfchain_pallets'
+version = '3.0.0'
+
+[package.metadata.docs.rs]
+targets = ['x86_64-unknown-linux-gnu']
+
+[dependencies]
+# Substrate packages
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
+	"derive",
+] }
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+sp-storage = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+sp-io =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+
+[dev-dependencies]
+sp-core =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+
+[features]
+default = ['std']
+std = [
+	'pallet-balances/std',
+	'frame-support/std',
+	'frame-system/std',
+	'sp-runtime/std',
+	'sp-std/std',
+	'sp-storage/std',
+    'pallet-timestamp/std',
+	'codec/std',
+	'sp-io/std',
+	'scale-info/std'
+]
