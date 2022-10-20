@@ -574,6 +574,7 @@ pub mod pallet {
             Self::_compute_reports(account_id, reports)
         }
 
+        // DEPRECATED
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn report_contract_resources(
             _origin: OriginFor<T>,
