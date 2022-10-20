@@ -1,6 +1,6 @@
 use super::Event as DaoEvent;
-use crate::{mock::Event as MockEvent, mock::*, Error};
-use frame_support::{assert_noop, assert_ok, bounded_vec, weights::GetDispatchInfo};
+use crate::{mock::RuntimeEvent as MockEvent, mock::*, Error};
+use frame_support::{assert_noop, assert_ok, bounded_vec, dispatch::GetDispatchInfo};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use pallet_tfgrid::types::PublicIpInput;
 use sp_core::H256;
@@ -16,7 +16,7 @@ fn farmers_vote_no_farm_fails() {
         let hash = BlakeTwo256::hash_of(&proposal);
 
         assert_ok!(DaoModule::propose(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             3,
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
@@ -25,7 +25,7 @@ fn farmers_vote_no_farm_fails() {
         ));
 
         assert_noop!(
-            DaoModule::vote(Origin::signed(10), 1, hash.clone(), true),
+            DaoModule::vote(RuntimeOrigin::signed(10), 1, hash.clone(), true),
             Error::<Test>::NotAuthorizedToVote
         );
     });
@@ -42,7 +42,7 @@ fn farmers_vote_proposal_works() {
         let hash = BlakeTwo256::hash_of(&proposal);
 
         assert_ok!(DaoModule::propose(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             3,
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
@@ -51,10 +51,20 @@ fn farmers_vote_proposal_works() {
         ));
 
         prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
-        assert_ok!(DaoModule::vote(Origin::signed(10), 1, hash.clone(), true));
+        assert_ok!(DaoModule::vote(
+            RuntimeOrigin::signed(10),
+            1,
+            hash.clone(),
+            true
+        ));
 
         prepare_twin_farm_and_node(11, "farm2".as_bytes().to_vec(), 2);
-        assert_ok!(DaoModule::vote(Origin::signed(11), 2, hash.clone(), true));
+        assert_ok!(DaoModule::vote(
+            RuntimeOrigin::signed(11),
+            2,
+            hash.clone(),
+            true
+        ));
     });
 }
 
@@ -69,7 +79,7 @@ fn farmers_vote_proposal_if_no_nodes_fails() {
         let hash = BlakeTwo256::hash_of(&proposal);
 
         assert_ok!(DaoModule::propose(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             1,
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
@@ -80,7 +90,7 @@ fn farmers_vote_proposal_if_no_nodes_fails() {
         prepare_twin(10);
         prepare_farm(10, "farm1".as_bytes().to_vec());
         assert_noop!(
-            DaoModule::vote(Origin::signed(10), 1, hash.clone(), true),
+            DaoModule::vote(RuntimeOrigin::signed(10), 1, hash.clone(), true),
             Error::<Test>::FarmHasNoNodes
         );
 
@@ -113,7 +123,7 @@ fn farmer_weight_is_set_properly_when_node_is_added_and_removed_works() {
         let weight = DaoModule::farm_weight(1);
         assert_ne!(weight, 0);
 
-        TfgridModule::delete_node_farm(Origin::signed(10), 1).unwrap();
+        TfgridModule::delete_node_farm(RuntimeOrigin::signed(10), 1).unwrap();
 
         let weight = DaoModule::farm_weight(1);
         assert_eq!(weight, 0);
@@ -131,7 +141,7 @@ fn close_works() {
 
         let threshold = 2;
         assert_ok!(DaoModule::propose(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             threshold,
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
@@ -141,23 +151,33 @@ fn close_works() {
 
         // Farmer 1 votes yes
         prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
-        assert_ok!(DaoModule::vote(Origin::signed(10), 1, hash.clone(), true));
+        assert_ok!(DaoModule::vote(
+            RuntimeOrigin::signed(10),
+            1,
+            hash.clone(),
+            true
+        ));
 
         System::set_block_number(4);
         assert_noop!(
-            DaoModule::close(Origin::signed(4), hash.clone(), 0,),
+            DaoModule::close(RuntimeOrigin::signed(4), hash.clone(), 0,),
             Error::<Test>::NotCouncilMember
         );
         assert_noop!(
-            DaoModule::close(Origin::signed(2), hash.clone(), 0,),
+            DaoModule::close(RuntimeOrigin::signed(2), hash.clone(), 0,),
             Error::<Test>::OngoingVoteAndTresholdStillNotMet
         );
 
         // Farmer 2 votes yes
         prepare_twin_farm_and_node(11, "farm2".as_bytes().to_vec(), 2);
-        assert_ok!(DaoModule::vote(Origin::signed(11), 2, hash.clone(), true));
+        assert_ok!(DaoModule::vote(
+            RuntimeOrigin::signed(11),
+            2,
+            hash.clone(),
+            true
+        ));
 
-        assert_ok!(DaoModule::close(Origin::signed(2), hash.clone(), 0,));
+        assert_ok!(DaoModule::close(RuntimeOrigin::signed(2), hash.clone(), 0,));
 
         let e = System::events();
         assert_eq!(
@@ -228,7 +248,7 @@ fn close_after_proposal_duration_works() {
         let hash = BlakeTwo256::hash_of(&proposal);
 
         assert_ok!(DaoModule::propose(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             2,
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
@@ -237,7 +257,7 @@ fn close_after_proposal_duration_works() {
         ));
 
         System::set_block_number(5); // default duration is 4 blocks
-        assert_ok!(DaoModule::close(Origin::signed(2), hash.clone(), 0,));
+        assert_ok!(DaoModule::close(RuntimeOrigin::signed(2), hash.clone(), 0,));
     });
 }
 
@@ -248,7 +268,7 @@ fn close_if_not_council_member_fails() {
         let hash = BlakeTwo256::hash_of(&proposal);
 
         assert_ok!(DaoModule::propose(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             2,
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
@@ -256,7 +276,7 @@ fn close_if_not_council_member_fails() {
             None
         ));
 
-        let not_council_member = Origin::signed(4); // [1,2,3] are council members
+        let not_council_member = RuntimeOrigin::signed(4); // [1,2,3] are council members
 
         assert_noop!(
             DaoModule::close(not_council_member, hash.clone(), 0,),
@@ -271,14 +291,14 @@ fn motion_approval_works() {
         System::set_block_number(1);
         create_farming_policies();
 
-        let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_farm_certification {
+        let proposal = RuntimeCall::TfgridModule(pallet_tfgrid::Call::set_farm_certification {
             farm_id: 1,
             certification: FarmCertification::Gold,
         });
         let hash = BlakeTwo256::hash_of(&proposal);
 
         assert_ok!(DaoModule::propose(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             2,
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
@@ -288,18 +308,28 @@ fn motion_approval_works() {
 
         // Farmer 1 votes yes
         prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
-        assert_ok!(DaoModule::vote(Origin::signed(10), 1, hash.clone(), true));
+        assert_ok!(DaoModule::vote(
+            RuntimeOrigin::signed(10),
+            1,
+            hash.clone(),
+            true
+        ));
 
         // Farmer 2 votes yes
         prepare_twin_farm_and_node(11, "farm2".as_bytes().to_vec(), 2);
-        assert_ok!(DaoModule::vote(Origin::signed(11), 2, hash.clone(), true));
+        assert_ok!(DaoModule::vote(
+            RuntimeOrigin::signed(11),
+            2,
+            hash.clone(),
+            true
+        ));
 
         // // Check farm certification type before we close
         let farm_1 = TfgridModule::farms(1).unwrap();
         assert_eq!(farm_1.certification, FarmCertification::NotCertified);
 
         System::set_block_number(5);
-        assert_ok!(DaoModule::close(Origin::signed(2), hash.clone(), 0,));
+        assert_ok!(DaoModule::close(RuntimeOrigin::signed(2), hash.clone(), 0,));
 
         let e = System::events();
         assert_eq!(
@@ -376,14 +406,14 @@ fn motion_veto_works() {
         System::set_block_number(1);
         create_farming_policies();
 
-        let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_farm_certification {
+        let proposal = RuntimeCall::TfgridModule(pallet_tfgrid::Call::set_farm_certification {
             farm_id: 1,
             certification: FarmCertification::Gold,
         });
         let hash = BlakeTwo256::hash_of(&proposal);
 
         assert_ok!(DaoModule::propose(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             2,
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
@@ -391,8 +421,8 @@ fn motion_veto_works() {
             None
         ));
 
-        assert_ok!(DaoModule::veto(Origin::signed(2), hash.clone()));
-        assert_ok!(DaoModule::veto(Origin::signed(3), hash.clone()));
+        assert_ok!(DaoModule::veto(RuntimeOrigin::signed(2), hash.clone()));
+        assert_ok!(DaoModule::veto(RuntimeOrigin::signed(3), hash.clone()));
 
         System::set_block_number(5);
 
@@ -482,14 +512,14 @@ fn weighted_voting_works() {
         System::set_block_number(1);
         create_farming_policies();
 
-        let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_farm_certification {
+        let proposal = RuntimeCall::TfgridModule(pallet_tfgrid::Call::set_farm_certification {
             farm_id: 1,
             certification: FarmCertification::Gold,
         });
         let hash = BlakeTwo256::hash_of(&proposal);
 
         assert_ok!(DaoModule::propose(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             2,
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
@@ -499,18 +529,28 @@ fn weighted_voting_works() {
 
         // Farmer 1 votes yes
         prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
-        assert_ok!(DaoModule::vote(Origin::signed(10), 1, hash.clone(), true));
+        assert_ok!(DaoModule::vote(
+            RuntimeOrigin::signed(10),
+            1,
+            hash.clone(),
+            true
+        ));
 
         // Farmer 2 votes no
         prepare_twin_farm_and_big_node(11, "farm2".as_bytes().to_vec(), 2);
-        assert_ok!(DaoModule::vote(Origin::signed(11), 2, hash.clone(), false));
+        assert_ok!(DaoModule::vote(
+            RuntimeOrigin::signed(11),
+            2,
+            hash.clone(),
+            false
+        ));
 
         // // Check farm certification type before we close
         let farm_1 = TfgridModule::farms(1).unwrap();
         assert_eq!(farm_1.certification, FarmCertification::NotCertified);
 
         System::set_block_number(5);
-        assert_ok!(DaoModule::close(Origin::signed(2), hash.clone(), 0,));
+        assert_ok!(DaoModule::close(RuntimeOrigin::signed(2), hash.clone(), 0,));
 
         let e = System::events();
         assert_eq!(
@@ -580,11 +620,12 @@ fn voting_tfgridmodule_call_works() {
         System::set_block_number(1);
         create_farming_policies();
 
-        let proposal = Call::TfgridModule(pallet_tfgrid::Call::set_connection_price { price: 100 });
+        let proposal =
+            RuntimeCall::TfgridModule(pallet_tfgrid::Call::set_connection_price { price: 100 });
         let hash = BlakeTwo256::hash_of(&proposal);
 
         assert_ok!(DaoModule::propose(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             2,
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
@@ -594,18 +635,28 @@ fn voting_tfgridmodule_call_works() {
 
         // Farmer 1 votes yes
         prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
-        assert_ok!(DaoModule::vote(Origin::signed(10), 1, hash.clone(), true));
+        assert_ok!(DaoModule::vote(
+            RuntimeOrigin::signed(10),
+            1,
+            hash.clone(),
+            true
+        ));
 
         // Farmer 2 votes no
         prepare_twin_farm_and_node(11, "farm2".as_bytes().to_vec(), 2);
-        assert_ok!(DaoModule::vote(Origin::signed(11), 2, hash.clone(), true));
+        assert_ok!(DaoModule::vote(
+            RuntimeOrigin::signed(11),
+            2,
+            hash.clone(),
+            true
+        ));
 
         // Check connection price of node 1
         let n1 = TfgridModule::nodes(1).unwrap();
         assert_eq!(n1.connection_price, 80);
 
         System::set_block_number(5);
-        assert_ok!(DaoModule::close(Origin::signed(2), hash.clone(), 0,));
+        assert_ok!(DaoModule::close(RuntimeOrigin::signed(2), hash.clone(), 0,));
 
         let e = System::events();
         for (idx, event) in e.clone().iter().enumerate() {
@@ -691,7 +742,7 @@ fn customize_proposal_duration_works() {
         let hash = BlakeTwo256::hash_of(&proposal);
 
         assert_ok!(DaoModule::propose(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             2,
             Box::new(proposal.clone()),
             "some_description".as_bytes().to_vec(),
@@ -701,16 +752,21 @@ fn customize_proposal_duration_works() {
 
         // Farmer 1 votes yes
         prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
-        assert_ok!(DaoModule::vote(Origin::signed(10), 1, hash.clone(), true));
+        assert_ok!(DaoModule::vote(
+            RuntimeOrigin::signed(10),
+            1,
+            hash.clone(),
+            true
+        ));
 
         System::set_block_number(9);
         assert_noop!(
-            DaoModule::close(Origin::signed(2), hash.clone(), 0,),
+            DaoModule::close(RuntimeOrigin::signed(2), hash.clone(), 0,),
             Error::<Test>::OngoingVoteAndTresholdStillNotMet
         );
 
         System::set_block_number(11);
-        assert_ok!(DaoModule::close(Origin::signed(2), hash.clone(), 0,));
+        assert_ok!(DaoModule::close(RuntimeOrigin::signed(2), hash.clone(), 0,));
     });
 }
 
@@ -722,7 +778,7 @@ fn customize_proposal_duration_out_of_bounds_fails() {
         let proposal = make_proposal("some_remark".as_bytes().to_vec());
         // assert_noop!(
         //     DaoModule::propose(
-        //         Origin::signed(1),
+        //         RuntimeOrigin::signed(1),
         //         2,
         //         Box::new(proposal.clone()),
         //         "some_description".as_bytes().to_vec(),
@@ -734,7 +790,7 @@ fn customize_proposal_duration_out_of_bounds_fails() {
 
         assert_noop!(
             DaoModule::propose(
-                Origin::signed(1),
+                RuntimeOrigin::signed(1),
                 2,
                 Box::new(proposal.clone()),
                 "some_description".as_bytes().to_vec(),
@@ -746,7 +802,7 @@ fn customize_proposal_duration_out_of_bounds_fails() {
     });
 }
 
-fn record(event: Event) -> EventRecord<Event, H256> {
+fn record(event: RuntimeEvent) -> EventRecord<RuntimeEvent, H256> {
     EventRecord {
         phase: Phase::Initialization,
         event,
@@ -754,8 +810,8 @@ fn record(event: Event) -> EventRecord<Event, H256> {
     }
 }
 
-fn make_proposal(value: Vec<u8>) -> Call {
-    Call::System(frame_system::Call::remark { remark: value })
+fn make_proposal(value: Vec<u8>) -> RuntimeCall {
+    RuntimeCall::System(frame_system::Call::remark { remark: value })
 }
 
 pub fn prepare_twin_farm_and_node(account_id: u64, farm_name: Vec<u8>, farm_id: u32) {
@@ -775,14 +831,14 @@ pub fn prepare_twin(account_id: u64) {
     let hash = "some_hash".as_bytes().to_vec();
 
     assert_ok!(TfgridModule::user_accept_tc(
-        Origin::signed(account_id),
+        RuntimeOrigin::signed(account_id),
         document.clone(),
         hash.clone(),
     ));
 
     let ip = get_twin_ip(b"::1");
     assert_ok!(TfgridModule::create_twin(
-        Origin::signed(account_id),
+        RuntimeOrigin::signed(account_id),
         ip.clone().0
     ));
 }
@@ -805,7 +861,7 @@ fn prepare_node(account_id: u64, farm_id: u32) {
     let country = "Belgium".as_bytes().to_vec();
     let city = "Ghent".as_bytes().to_vec();
     assert_ok!(TfgridModule::create_node(
-        Origin::signed(account_id),
+        RuntimeOrigin::signed(account_id),
         farm_id,
         resources,
         location,
@@ -835,7 +891,7 @@ fn prepare_big_node(account_id: u64, farm_id: u32) {
     let country = "Belgium".as_bytes().to_vec();
     let city = "Ghent".as_bytes().to_vec();
     assert_ok!(TfgridModule::create_node(
-        Origin::signed(account_id),
+        RuntimeOrigin::signed(account_id),
         farm_id,
         resources,
         location,
@@ -856,7 +912,7 @@ pub fn prepare_farm(account_id: u64, farm_name: Vec<u8>) {
     });
 
     assert_ok!(TfgridModule::create_farm(
-        Origin::signed(account_id),
+        RuntimeOrigin::signed(account_id),
         farm_name.try_into().unwrap(),
         pub_ips.clone().try_into().unwrap(),
     ));

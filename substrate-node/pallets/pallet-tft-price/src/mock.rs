@@ -5,8 +5,8 @@ use crate::{self as pallet_tft_price};
 use codec::alloc::sync::Arc;
 use frame_support::traits::GenesisBuild;
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
+use frame_system::mocking;
 use frame_system::EnsureRoot;
-use frame_system::{limits, mocking};
 use sp_core::{
     offchain::{testing, OffchainDbExt, TransactionPoolExt},
     sr25519, H256,
@@ -14,12 +14,11 @@ use sp_core::{
 use sp_io::TestExternalities;
 use sp_keystore::{testing::KeyStore, KeystoreExt, SyncCryptoStore};
 use sp_runtime::{
-    testing::{Header, TestXt},
+    testing::Header,
     traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentifyAccount, IdentityLookup, Verify},
 };
 
-type Extrinsic = TestXt<Call, ()>;
-type UncheckedExtrinsic = mocking::MockUncheckedExtrinsic<TestRuntime>;
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime>;
 type Block = mocking::MockBlock<TestRuntime>;
 use sp_runtime::MultiSignature;
 pub type Signature = MultiSignature;
@@ -39,23 +38,22 @@ construct_runtime!(
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
-    pub BlockWeights: limits::BlockWeights = limits::BlockWeights::simple_max(1024);
 }
 
 impl frame_system::Config for TestRuntime {
     type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     type Index = u64;
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
@@ -75,8 +73,8 @@ parameter_types! {
 
 impl Config for TestRuntime {
     type AuthorityId = pallet_tft_price::AuthId;
-    type Call = Call;
-    type Event = Event;
+    type Call = RuntimeCall;
+    type RuntimeEvent = RuntimeEvent;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
 }
 
@@ -87,23 +85,26 @@ impl frame_system::offchain::SigningTypes for TestRuntime {
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for TestRuntime
 where
-    Call: From<C>,
+    RuntimeCall: From<C>,
 {
-    type OverarchingCall = Call;
-    type Extrinsic = Extrinsic;
+    type OverarchingCall = RuntimeCall;
+    type Extrinsic = UncheckedExtrinsic;
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for TestRuntime
 where
-    Call: From<LocalCall>,
+    RuntimeCall: From<LocalCall>,
 {
     fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
-        call: Call,
+        call: RuntimeCall,
         _public: <Signature as Verify>::Signer,
-        _account: AccountId,
-        nonce: u64,
-    ) -> Option<(Call, <Extrinsic as ExtrinsicT>::SignaturePayload)> {
-        Some((call, (nonce, ())))
+        account: AccountId,
+        _nonce: u64,
+    ) -> Option<(
+        RuntimeCall,
+        <UncheckedExtrinsic as ExtrinsicT>::SignaturePayload,
+    )> {
+        Some((call, (account, (), ())))
     }
 }
 

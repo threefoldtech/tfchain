@@ -41,25 +41,22 @@ construct_runtime!(
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
-    pub BlockWeights: frame_system::limits::BlockWeights =
-        frame_system::limits::BlockWeights::simple_max(1024);
-    pub const ExistentialDeposit: u64 = 1;
 }
 
 impl frame_system::Config for Test {
     type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     type Index = u64;
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = u64;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
@@ -97,9 +94,9 @@ impl ChangeNode<PubConfig, Interface> for NodeChanged {
 
 use super::weights;
 impl pallet_dao::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type CouncilOrigin = EnsureRoot<Self::AccountId>;
-    type Proposal = Call;
+    type Proposal = RuntimeCall;
     type MotionDuration = DaoMotionDuration;
     type MinVetos = MinVetos;
     type Tfgrid = TfgridModule;
@@ -130,7 +127,7 @@ pub(crate) type TestInterfaceMac = InterfaceMac<Test>;
 pub(crate) type TestInterfaceIp = InterfaceIp<Test>;
 
 impl pallet_tfgrid::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Test>;
     type NodeChanged = NodeChanged;
@@ -167,9 +164,9 @@ parameter_types! {
 
 pub type CouncilCollective = pallet_collective::Instance1;
 impl pallet_collective::Config<CouncilCollective> for Test {
-    type Origin = Origin;
-    type Proposal = Call;
-    type Event = Event;
+    type RuntimeOrigin = RuntimeOrigin;
+    type Proposal = RuntimeCall;
+    type RuntimeEvent = RuntimeEvent;
     type MotionDuration = CouncilMotionDuration;
     type MaxProposals = CouncilMaxProposals;
     type MaxMembers = CouncilMaxMembers;
@@ -178,7 +175,7 @@ impl pallet_collective::Config<CouncilCollective> for Test {
 }
 
 impl pallet_membership::Config<pallet_membership::Instance1> for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type AddOrigin = EnsureRoot<Self::AccountId>;
     type RemoveOrigin = EnsureRoot<Self::AccountId>;
     type SwapOrigin = EnsureRoot<Self::AccountId>;
@@ -204,7 +201,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     genesis.assimilate_storage(&mut t).unwrap();
 
     let genesis = pallet_membership::GenesisConfig::<Test, pallet_membership::Instance1> {
-        members: vec![1, 2, 3],
+        members: vec![1, 2, 3].try_into().unwrap(),
         phantom: Default::default(),
     };
     genesis.assimilate_storage(&mut t).unwrap();

@@ -19,7 +19,7 @@ use sp_core::{crypto::Ss58Codec, sr25519, Pair, Public, H256};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::MultiSignature;
 use sp_runtime::{
-    testing::{Header, TestXt},
+    testing::Header,
     traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentityLookup},
     AccountId32,
 };
@@ -31,7 +31,6 @@ pub type Signature = MultiSignature;
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 pub type Moment = u64;
 
-type Extrinsic = TestXt<Call, ()>;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime>;
 type Block = frame_system::mocking::MockBlock<TestRuntime>;
 
@@ -52,9 +51,6 @@ construct_runtime!(
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
-    pub BlockWeights: frame_system::limits::BlockWeights =
-        frame_system::limits::BlockWeights::simple_max(1024);
-    pub const ExistentialDeposit: u64 = 1;
     pub StakingPoolAccount: AccountId = get_staking_pool_account();
 }
 
@@ -62,16 +58,16 @@ impl frame_system::Config for TestRuntime {
     type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     type Index = u64;
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
@@ -88,6 +84,7 @@ impl frame_system::Config for TestRuntime {
 parameter_types! {
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
+    pub const ExistentialDeposit: u64 = 1;
 }
 
 impl pallet_balances::Config for TestRuntime {
@@ -97,7 +94,7 @@ impl pallet_balances::Config for TestRuntime {
     /// The type for recording an account's balance.
     type Balance = u64;
     /// The ubiquitous event type.
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
@@ -143,7 +140,7 @@ pub(crate) type TestInterfaceMac = InterfaceMac<TestRuntime>;
 pub(crate) type TestInterfaceIp = InterfaceIp<TestRuntime>;
 
 impl pallet_tfgrid::Config for TestRuntime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
@@ -166,9 +163,9 @@ impl pallet_tfgrid::Config for TestRuntime {
 }
 
 impl pallet_tft_price::Config for TestRuntime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type AuthorityId = pallet_tft_price::AuthId;
-    type Call = Call;
+    type Call = RuntimeCall;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
 }
 
@@ -192,7 +189,7 @@ pub(crate) type TestNameContractName = NameContractName<TestRuntime>;
 
 use weights;
 impl pallet_smart_contract::Config for TestRuntime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type Burn = ();
     type StakingPoolAccount = StakingPoolAccount;
@@ -232,23 +229,26 @@ impl frame_system::offchain::SigningTypes for TestRuntime {
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for TestRuntime
 where
-    Call: From<C>,
+    RuntimeCall: From<C>,
 {
-    type OverarchingCall = Call;
-    type Extrinsic = Extrinsic;
+    type OverarchingCall = RuntimeCall;
+    type Extrinsic = UncheckedExtrinsic;
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for TestRuntime
 where
-    Call: From<LocalCall>,
+    RuntimeCall: From<LocalCall>,
 {
     fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
-        call: Call,
+        call: RuntimeCall,
         _public: <Signature as Verify>::Signer,
-        _account: AccountId,
-        nonce: u64,
-    ) -> Option<(Call, <Extrinsic as ExtrinsicT>::SignaturePayload)> {
-        Some((call, (nonce, ())))
+        account: AccountId,
+        _nonce: u64,
+    ) -> Option<(
+        RuntimeCall,
+        <UncheckedExtrinsic as ExtrinsicT>::SignaturePayload,
+    )> {
+        Some((call, (account, (), ())))
     }
 }
 
