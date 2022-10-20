@@ -47,7 +47,7 @@ fn test_create_node_contract_with_public_ips_works() {
             1,
             generate_deployment_hash(),
             get_deployment_data(),
-            1,
+            2,
             None
         ));
 
@@ -58,7 +58,7 @@ fn test_create_node_contract_with_public_ips_works() {
                 let farm = TfgridModule::farms(1).unwrap();
                 assert_eq!(farm.public_ips[0].contract_id, 1);
 
-                assert_eq!(c.public_ips, 1);
+                assert_eq!(c.public_ips, 2);
 
                 let pub_ip = PublicIP {
                     ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
@@ -66,7 +66,13 @@ fn test_create_node_contract_with_public_ips_works() {
                     contract_id: 1,
                 };
 
+                let pub_ip_2 = PublicIP {
+                    ip: "185.206.122.34/24".as_bytes().to_vec().try_into().unwrap(),
+                    gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+                    contract_id: 1,
+                };
                 assert_eq!(c.public_ips_list[0], pub_ip);
+                assert_eq!(c.public_ips_list[1], pub_ip_2);
             }
             _ => (),
         }
@@ -331,18 +337,18 @@ fn test_create_multiple_node_contracts_works() {
 fn test_cancel_node_contract_frees_public_ips_works() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
-
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(alice()),
             1,
             generate_deployment_hash(),
             get_deployment_data(),
-            1,
+            2,
             None
         ));
 
         let farm = TfgridModule::farms(1).unwrap();
         assert_eq!(farm.public_ips[0].contract_id, 1);
+        assert_eq!(farm.public_ips[1].contract_id, 1);
 
         assert_ok!(SmartContractModule::cancel_contract(
             Origin::signed(alice()),
@@ -351,6 +357,7 @@ fn test_cancel_node_contract_frees_public_ips_works() {
 
         let farm = TfgridModule::farms(1).unwrap();
         assert_eq!(farm.public_ips[0].contract_id, 0);
+        assert_eq!(farm.public_ips[1].contract_id, 0);
     });
 }
 
@@ -2352,6 +2359,10 @@ pub fn prepare_farm(source: AccountId, dedicated: bool) {
     let mut pub_ips = Vec::new();
     pub_ips.push(pallet_tfgrid_types::PublicIpInput {
         ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
+        gw: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+    });
+    pub_ips.push(pallet_tfgrid_types::PublicIpInput {
+        ip: "185.206.122.34/24".as_bytes().to_vec().try_into().unwrap(),
         gw: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
     });
 
