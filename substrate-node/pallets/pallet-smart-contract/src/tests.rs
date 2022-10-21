@@ -24,6 +24,152 @@ use tfchain_support::{
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
+//  GROUP TESTS //
+// -------------------- //
+
+#[test]
+fn test_create_group_then_capacity_reservation_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+
+        assert_ok!(SmartContractModule::create_group(Origin::signed(alice())));
+        let group = SmartContractModule::groups(1).unwrap();
+        assert_eq!(group.twin_id, 1);
+        assert_eq!(group.capacity_reservation_contract_ids.len(), 0);
+
+        create_capacity_reservation_and_add_to_group(1, resources_c1(), 1, 1);
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::GroupCreated {
+                    group_id: 1,
+                    twin_id: 1,
+                }
+            ))),
+            true
+        );
+    });
+}
+
+#[test]
+fn test_remove_group_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+
+        assert_ok!(SmartContractModule::create_group(Origin::signed(alice())));
+
+        assert_ok!(SmartContractModule::delete_group(
+            Origin::signed(alice()),
+            1
+        ));
+
+        assert_eq!(SmartContractModule::groups(1), None);
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::GroupDeleted { group_id: 1 }
+            ))),
+            true
+        );
+    });
+}
+
+#[test]
+fn test_remove_group_unauthorized_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+
+        assert_ok!(SmartContractModule::create_group(Origin::signed(alice())));
+
+        assert_noop!(
+            SmartContractModule::delete_group(Origin::signed(bob()), 1),
+            Error::<TestRuntime>::TwinNotAuthorizedToDeleteGroup
+        );
+    });
+}
+
+#[test]
+fn test_remove_group_active_capacity_reservation_contracts_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+
+        assert_ok!(SmartContractModule::create_group(Origin::signed(alice())));
+        let group = SmartContractModule::groups(1).unwrap();
+        assert_eq!(group.twin_id, 1);
+        assert_eq!(group.capacity_reservation_contract_ids.len(), 0);
+
+        create_capacity_reservation_and_add_to_group(1, resources_c1(), 1, 1);
+
+        assert_noop!(
+            SmartContractModule::delete_group(Origin::signed(alice()), 1),
+            Error::<TestRuntime>::GroupHasActiveMembers
+        );
+    });
+}
+
+#[test]
+fn test_create_capacity_contract_reservation_finding_node_using_group() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_with_three_nodes();
+
+        assert_ok!(SmartContractModule::create_group(Origin::signed(alice())));
+
+        // although there is still place to add the contract on node 1 all contracts are in the same group
+        // so they should not go on the same node
+        create_capacity_reservation_and_add_to_group(1, resources_c1(), 1, 1);
+        create_capacity_reservation_and_add_to_group(1, resources_c1(), 1, 2);
+        create_capacity_reservation_and_add_to_group(1, resources_c1(), 1, 3);
+
+        // only three nodes so no more node left that doesn't contain a capacity reservation contract that is in the same group
+        assert_noop!(
+            SmartContractModule::create_capacity_reservation_contract(
+                Origin::signed(alice()),
+                1,
+                CapacityReservationPolicy::Exclusive(1),
+                None,
+                Some(resources_c1()),
+                None,
+                None,
+            ),
+            Error::<TestRuntime>::NoSuitableNodeInFarm
+        );
+        // let's add it without a group
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
+            Origin::signed(alice()),
+            1,
+            CapacityReservationPolicy::Any,
+            None,
+            Some(resources_c1()),
+            None,
+            None,
+        ));
+        assert_eq!(
+            SmartContractModule::contracts(4).unwrap().contract_type,
+            types::ContractData::CapacityReservationContract(types::CapacityReservationContract {
+                node_id: 1,
+                group_id: None,
+                public_ips: 0,
+                resources: ConsumableResources {
+                    total_resources: resources_c1(),
+                    used_resources: Resources::empty(),
+                },
+                deployment_contracts: vec![],
+            })
+        );
+        assert_eq!(
+            TfgridModule::nodes(1).unwrap().resources.used_resources,
+            resources_c1().add(&resources_c1())
+        );
+    });
+}
+
 //  NODE CONTRACT TESTS //
 // -------------------- //
 
@@ -207,8 +353,6 @@ fn test_create_capacity_reservation_contract_no_node_in_farm_with_enough_resourc
     });
 }
 
-// todo test grouping contracts
-
 #[test]
 fn test_create_capacity_reservation_contract_finding_a_node() {
     new_test_ext().execute_with(|| {
@@ -224,6 +368,35 @@ fn test_create_capacity_reservation_contract_finding_a_node_failure() {
         run_to_block(1, None);
         prepare_farm_three_nodes_three_capacity_reservation_contracts();
         // no available nodes anymore that meet the required resources
+        assert_noop!(
+            SmartContractModule::create_capacity_reservation_contract(
+                Origin::signed(alice()),
+                1,
+                CapacityReservationPolicy::Any,
+                None,
+                Some(Resources {
+                    hru: 4096 * GIGABYTE,
+                    sru: 2048 * GIGABYTE,
+                    cru: 32,
+                    mru: 48 * GIGABYTE,
+                }),
+                None,
+                None,
+            ),
+            Error::<TestRuntime>::NoSuitableNodeInFarm
+        );
+    });
+}
+
+// todo test grouping contracts
+
+#[test]
+fn test_create_capacity_reservation_contract_grouping_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_with_three_nodes();
+
+        // todo
         assert_noop!(
             SmartContractModule::create_capacity_reservation_contract(
                 Origin::signed(alice()),
@@ -3733,6 +3906,67 @@ pub fn prepare_dedicated_farm_and_node() {
         None,
     )
     .unwrap();
+}
+
+pub fn create_capacity_reservation_and_add_to_group(
+    farm_id: u32,
+    resources: Resources,
+    group_id: u32,
+    expected_node_id: u32,
+) {
+    let cnt_members_before = SmartContractModule::groups(group_id)
+        .unwrap()
+        .capacity_reservation_contract_ids
+        .len();
+    let cnt_contracts = SmartContractModule::contract_id();
+    assert_ok!(SmartContractModule::create_capacity_reservation_contract(
+        Origin::signed(alice()),
+        farm_id,
+        CapacityReservationPolicy::Exclusive(group_id),
+        None,
+        Some(resources),
+        None,
+        None,
+    ));
+
+    assert_eq!(
+        SmartContractModule::contracts(cnt_contracts + 1)
+            .unwrap()
+            .contract_type,
+        types::ContractData::CapacityReservationContract(types::CapacityReservationContract {
+            node_id: expected_node_id,
+            group_id: Some(group_id),
+            public_ips: 0,
+            resources: ConsumableResources {
+                total_resources: resources,
+                used_resources: Resources::empty(),
+            },
+            deployment_contracts: vec![],
+        })
+    );
+
+    assert_eq!(
+        TfgridModule::nodes(expected_node_id).unwrap().power_target,
+        PowerTarget::Up
+    );
+
+    let group = SmartContractModule::groups(group_id).unwrap();
+    assert_eq!(
+        group.capacity_reservation_contract_ids.len(),
+        cnt_members_before + 1
+    );
+    assert_eq!(
+        group.capacity_reservation_contract_ids[cnt_members_before],
+        cnt_contracts + 1
+    );
+
+    assert_eq!(
+        SmartContractModule::capacity_reservation_id_by_node_group_config(types::NodeGroupConfig {
+            group_id: group_id,
+            node_id: expected_node_id
+        }),
+        cnt_contracts + 1
+    );
 }
 
 pub fn resources_n1() -> Resources {
