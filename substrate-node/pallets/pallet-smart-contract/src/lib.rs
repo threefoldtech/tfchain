@@ -158,7 +158,9 @@ pub mod pallet {
     pub type PalletVersion<T> = StorageValue<_, types::StorageVersion, ValueQuery>;
 
     #[pallet::type_value]
-    pub fn DefaultBillingFrequency<T: Config>() -> u64 { T::BillingFrequency::get() }
+    pub fn DefaultBillingFrequency<T: Config>() -> u64 {
+        T::BillingFrequency::get()
+    }
 
     #[pallet::storage]
     #[pallet::getter(fn billing_frequency)]
@@ -305,26 +307,26 @@ pub mod pallet {
     }
 
     #[pallet::genesis_config]
-	pub struct GenesisConfig {
+    pub struct GenesisConfig {
         pub billing_frequency: u64,
-	}
+    }
 
     // The default value for the genesis config type.
-	#[cfg(feature = "std")]
-	impl Default for GenesisConfig {
-		fn default() -> Self {
-			Self { 
+    #[cfg(feature = "std")]
+    impl Default for GenesisConfig {
+        fn default() -> Self {
+            Self {
                 billing_frequency: 600,
             }
-		}
-	}
+        }
+    }
 
-	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig {
-		fn build(&self) {
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig {
+        fn build(&self) {
             BillingFrequency::<T>::put(self.billing_frequency);
-		}
-	}
+        }
+    }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -1144,6 +1146,11 @@ impl<T: Config> Pallet<T> {
                 WithdrawReasons::all(),
             );
 
+            // Fetch twin balance, if the amount locked in the contract lock exceeds the current unlocked
+            // balance we can only transfer out the remaining balance
+            // https://github.com/threefoldtech/tfchain/issues/479
+            let twin_balance = Self::get_usable_balance(&twin.account_id);
+
             // Fetch the default pricing policy
             let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1)
                 .ok_or(Error::<T>::PricingPolicyNotExists)?;
@@ -1151,7 +1158,7 @@ impl<T: Config> Pallet<T> {
             match Self::_distribute_cultivation_rewards(
                 &contract,
                 &pricing_policy,
-                contract_lock.amount_locked,
+                twin_balance.min(contract_lock.amount_locked),
             ) {
                 Ok(_) => (),
                 Err(err) => log::error!("error while distributing cultivation rewards {:?}", err),
