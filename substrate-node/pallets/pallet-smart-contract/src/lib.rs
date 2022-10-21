@@ -362,7 +362,13 @@ pub mod pallet {
             node_id: u32,
             power_target: PowerTarget,
         },
-        GroupCreated(types::Group),
+        GroupCreated {
+            group_id: u32,
+            twin_id: u32,
+        },
+        GroupDeleted {
+            group_id: u32,
+        },
         CapacityReservationContractCanceled {
             contract_id: u64,
             node_id: u32,
@@ -414,6 +420,8 @@ pub mod pallet {
         NotAuthorizedToCreateDeploymentContract,
         InvalidResources,
         GroupNotExists,
+        TwinNotAuthorizedToDeleteGroup,
+        GroupHasActiveMembers,
         InvalidContractPolicy,
         CapacityReservationNotExists,
         CapacityReservationHasActiveContracts,
@@ -449,6 +457,12 @@ pub mod pallet {
         pub fn create_group(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_create_group(account_id)
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        pub fn delete_group(origin: OriginFor<T>, group_id: u32) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_delete_group(account_id, group_id)
         }
 
         // DEPRECATED
@@ -685,11 +699,78 @@ impl<T: Config> Pallet<T> {
         let new_group = types::Group {
             id: id,
             twin_id: twin_id,
+            capacity_reservation_contract_ids: vec![],
         };
 
         Groups::<T>::insert(id, &new_group);
 
-        Self::deposit_event(Event::GroupCreated(new_group));
+        Self::deposit_event(Event::GroupCreated {
+            group_id: id,
+            twin_id: twin_id,
+        });
+
+        Ok(().into())
+    }
+
+    pub fn _delete_group(account_id: T::AccountId, group_id: u32) -> DispatchResultWithPostInfo {
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
+            .ok_or(Error::<T>::TwinNotExists)?;
+
+        let group = Groups::<T>::get(group_id).ok_or(Error::<T>::GroupNotExists)?;
+
+        ensure!(
+            twin_id == group.twin_id,
+            Error::<T>::TwinNotAuthorizedToDeleteGroup
+        );
+        ensure!(
+            group.capacity_reservation_contract_ids.is_empty(),
+            Error::<T>::GroupHasActiveMembers
+        );
+
+        Groups::<T>::remove(group_id);
+
+        Self::deposit_event(Event::GroupDeleted { group_id: group_id });
+
+        Ok(().into())
+    }
+
+    pub fn _add_capacity_reservation_contract_to_group(
+        group_id: u32,
+        capacity_rservation_id: u64,
+        node_id: u32,
+    ) -> DispatchResultWithPostInfo {
+        let mut group = Groups::<T>::get(group_id).ok_or(Error::<T>::GroupNotExists)?;
+        group
+            .capacity_reservation_contract_ids
+            .push(capacity_rservation_id);
+        Groups::<T>::insert(group_id, &group);
+
+        CapacityReservationIDByNodeGroupConfig::<T>::insert(
+            types::NodeGroupConfig {
+                group_id: group_id,
+                node_id: node_id,
+            },
+            capacity_rservation_id,
+        );
+
+        Ok(().into())
+    }
+
+    pub fn _remove_capacity_reservation_contract_from_group(
+        group_id: u32,
+        capacity_reservation_id: u64,
+        node_id: u32,
+    ) -> DispatchResultWithPostInfo {
+        let mut group = Groups::<T>::get(group_id).ok_or(Error::<T>::GroupNotExists)?;
+        group
+            .capacity_reservation_contract_ids
+            .retain(|&id| id != capacity_reservation_id);
+        Groups::<T>::insert(group_id, &group);
+
+        CapacityReservationIDByNodeGroupConfig::<T>::remove(types::NodeGroupConfig {
+            node_id: node_id,
+            group_id: group_id,
+        });
 
         Ok(().into())
     }
@@ -749,6 +830,7 @@ impl<T: Config> Pallet<T> {
             solution_provider_id,
         )?;
 
+        // insert billing information
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
         let contract_billing_information = types::ContractBillingInformation {
             last_updated: now,
@@ -762,13 +844,11 @@ impl<T: Config> Pallet<T> {
 
         // insert NodeGroup configuration
         if let Some(group_id) = group_id {
-            CapacityReservationIDByNodeGroupConfig::<T>::insert(
-                types::NodeGroupConfig {
-                    group_id: group_id,
-                    node_id: node_id,
-                },
+            Self::_add_capacity_reservation_contract_to_group(
+                group_id,
                 contract.contract_id,
-            );
+                node_id,
+            )?;
         }
 
         // Insert contract into active contracts map
@@ -1230,29 +1310,6 @@ impl<T: Config> Pallet<T> {
 
         for node_id in nodes_in_farm {
             let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-            log::info!("total {:?}", node.resources.total_resources);
-            log::info!("used {:?}", node.resources.used_resources);
-            log::info!("required {:?}", resources);
-            log::info!(
-                "HRU: {:?}",
-                (node.resources.total_resources.hru - node.resources.used_resources.hru)
-                    >= resources.hru
-            );
-            log::info!(
-                "SRU: {:?}",
-                (node.resources.total_resources.sru - node.resources.used_resources.sru)
-                    >= resources.sru
-            );
-            log::info!(
-                "CRU: {:?}",
-                (node.resources.total_resources.cru - node.resources.used_resources.cru)
-                    >= resources.cru
-            );
-            log::info!(
-                "MRU: {:?}",
-                (node.resources.total_resources.mru - node.resources.used_resources.mru)
-                    >= resources.mru
-            );
             if node.resources.can_consume_resources(&resources) {
                 if let Some(g_id) = group_id {
                     if !CapacityReservationIDByNodeGroupConfig::<T>::contains_key(
@@ -1934,6 +1991,21 @@ impl<T: Config> Pallet<T> {
                     {
                         Self::remove_contract(deployment_contract_id);
                     }
+
+                    // remove groups
+                    if let Some(group_id) = capacity_reservation_contract.group_id {
+                        match Self::_remove_capacity_reservation_contract_from_group(
+                            group_id,
+                            contract_id,
+                            capacity_reservation_contract.node_id,
+                        ) {
+                            Ok(_) => (),
+                            Err(e) => {
+                                log::error!("error while removing the capacity reservation contract fromt its group: {:?}", e);
+                            }
+                        }
+                    }
+
                     // unclaim the resources on the node
                     match Self::_unclaim_resources_on_node(
                         capacity_reservation_contract.node_id,

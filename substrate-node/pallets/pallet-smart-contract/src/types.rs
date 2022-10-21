@@ -34,6 +34,7 @@ impl Default for StorageVersion {
 pub struct Group {
     pub id: u32,
     pub twin_id: u32,
+    pub capacity_reservation_contract_ids: Vec<u64>
 }
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo)]
