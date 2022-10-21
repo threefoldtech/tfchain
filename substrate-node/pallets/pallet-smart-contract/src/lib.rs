@@ -418,6 +418,7 @@ pub mod pallet {
         CapacityReservationNotExists,
         CapacityReservationHasActiveContracts,
         ResourcesUsedByActiveContracts,
+        NotEnoughResourcesInCapacityReservation,
     }
 
     #[pallet::genesis_config]
@@ -514,7 +515,13 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_create_capacity_reservation_contract(
-                account_id, farm_id, policy, node_id, resources, features, solution_provider_id
+                account_id,
+                farm_id,
+                policy,
+                node_id,
+                resources,
+                features,
+                solution_provider_id,
             )
         }
 
@@ -792,6 +799,13 @@ impl<T: Config> Pallet<T> {
             twin.account_id == account_id,
             Error::<T>::TwinNotAuthorizedToUpdateContract
         );
+
+        // Don't allow updates for contracts that are in grace state
+        ensure!(
+            !matches!(contract.state, types::ContractState::GracePeriod(_)),
+            Error::<T>::CannotUpdateContractInGraceState
+        );
+
         let mut capacity_reservation_contract = Self::get_capacity_reservation_contract(&contract)?;
 
         let resources_increase = capacity_reservation_contract
@@ -849,7 +863,10 @@ impl<T: Config> Pallet<T> {
         let cr_contract = Contracts::<T>::get(capacity_reservation_id)
             .ok_or(Error::<T>::CapacityReservationNotExists)?;
         let capacity_reservation_contract = Self::get_capacity_reservation_contract(&cr_contract)?;
-        ensure!(cr_contract.twin_id == twin_id, Error::<T>::NotAuthorizedToCreateDeploymentContract);
+        ensure!(
+            cr_contract.twin_id == twin_id,
+            Error::<T>::NotAuthorizedToCreateDeploymentContract
+        );
 
         // If the contract with hash and node id exists and it's in any other state then
         // contractState::Deleted then we don't allow the creation of it.
@@ -1078,7 +1095,6 @@ impl<T: Config> Pallet<T> {
         node.resources.free(&resources);
         log::info!("After freeing: {:?}", node.resources.used_resources);
 
-
         // if the power_target is down wake the node up and emit event
         // do not power down if it is the first node in the list of nodes from that farm
         if node.can_be_shutdown()
@@ -1110,7 +1126,7 @@ impl<T: Config> Pallet<T> {
             capacity_reservation_contract
                 .resources
                 .can_consume_resources(&resources),
-            Error::<T>::NotEnoughResourcesOnNode
+            Error::<T>::NotEnoughResourcesInCapacityReservation
         );
 
         //update the available resources
@@ -1217,10 +1233,26 @@ impl<T: Config> Pallet<T> {
             log::info!("total {:?}", node.resources.total_resources);
             log::info!("used {:?}", node.resources.used_resources);
             log::info!("required {:?}", resources);
-            log::info!("HRU: {:?}", (node.resources.total_resources.hru - node.resources.used_resources.hru) >= resources.hru);
-            log::info!("SRU: {:?}", (node.resources.total_resources.sru - node.resources.used_resources.sru) >= resources.sru);
-            log::info!("CRU: {:?}", (node.resources.total_resources.cru - node.resources.used_resources.cru) >= resources.cru); 
-            log::info!("MRU: {:?}", (node.resources.total_resources.mru - node.resources.used_resources.mru) >= resources.mru);
+            log::info!(
+                "HRU: {:?}",
+                (node.resources.total_resources.hru - node.resources.used_resources.hru)
+                    >= resources.hru
+            );
+            log::info!(
+                "SRU: {:?}",
+                (node.resources.total_resources.sru - node.resources.used_resources.sru)
+                    >= resources.sru
+            );
+            log::info!(
+                "CRU: {:?}",
+                (node.resources.total_resources.cru - node.resources.used_resources.cru)
+                    >= resources.cru
+            );
+            log::info!(
+                "MRU: {:?}",
+                (node.resources.total_resources.mru - node.resources.used_resources.mru)
+                    >= resources.mru
+            );
             if node.resources.can_consume_resources(&resources) {
                 if let Some(g_id) = group_id {
                     if !CapacityReservationIDByNodeGroupConfig::<T>::contains_key(
