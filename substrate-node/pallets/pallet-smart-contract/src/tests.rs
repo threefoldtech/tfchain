@@ -506,8 +506,6 @@ fn test_cancel_capacity_reservation_contract_shutdown_node() {
     });
 }
 
-// tests update_deployment_reservation_contract
-
 #[test]
 fn test_update_capacity_reservation_contract_works() {
     new_test_ext().execute_with(|| {
@@ -650,8 +648,6 @@ fn test_capacity_reservation_contract_decrease_resources_fails_resources_used_by
     });
 }
 
-// todo test decrease resources fails due to resources being used by some contract
-// todo more tests resources update
 #[test]
 fn test_update_capacity_reservation_contract_not_exists_fails() {
     new_test_ext().execute_with(|| {
@@ -763,7 +759,7 @@ fn test_cancel_deployment_contract_free_resources_works() {
                 group_id: None,
                 public_ips: 0,
                 resources: ConsumableResources {
-                    total_resources: resources_n1(),
+                    total_resources: resources_c1(),
                     used_resources: Resources::empty(),
                 },
                 deployment_contracts: vec![],
@@ -831,6 +827,279 @@ fn test_cancel_deployment_contract_wrong_twins_fails() {
         assert_noop!(
             SmartContractModule::cancel_contract(Origin::signed(bob()), 1),
             Error::<TestRuntime>::TwinNotAuthorizedToCancelContract
+        );
+    });
+}
+
+#[test]
+fn test_update_deployment_contract_increase_resources_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
+            Origin::signed(alice()),
+            1,
+            CapacityReservationPolicy::Any,
+            None,
+            Some(resources_c1()),
+            None,
+            None,
+        ));
+        let data = get_deployment_data();
+        let hash = generate_deployment_hash();
+        assert_ok!(SmartContractModule::create_deployment_contract(
+            Origin::signed(alice()),
+            1,
+            hash,
+            data.clone(),
+            half_resources_c1(),
+            0
+        ));
+        assert_eq!(
+            SmartContractModule::contracts(2).unwrap().contract_type,
+            types::ContractData::DeploymentContract(types::DeploymentContract {
+                capacity_reservation_id: 1,
+                deployment_data: data,
+                deployment_hash: hash,
+                public_ips: 0,
+                resources: half_resources_c1(),
+                public_ips_list: vec![].try_into().unwrap(),
+            })
+        );
+        let updated_data = get_updated_deployment_data();
+        let updated_hash = generate_deployment_hash();
+        assert_ok!(SmartContractModule::update_deployment_contract(
+            Origin::signed(alice()),
+            2,
+            updated_hash,
+            updated_data.clone(),
+            Some(resources_c1()),
+        ));
+        assert_eq!(
+            SmartContractModule::contracts(2).unwrap().contract_type,
+            types::ContractData::DeploymentContract(types::DeploymentContract {
+                capacity_reservation_id: 1,
+                deployment_data: updated_data,
+                deployment_hash: updated_hash,
+                public_ips: 0,
+                resources: resources_c1(),
+                public_ips_list: vec![].try_into().unwrap(),
+            })
+        );
+    });
+}
+
+#[test]
+fn test_update_deployment_contract_decrease_resources_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
+            Origin::signed(alice()),
+            1,
+            CapacityReservationPolicy::Any,
+            None,
+            Some(resources_c1()),
+            None,
+            None,
+        ));
+        let data = get_deployment_data();
+        let hash = generate_deployment_hash();
+        assert_ok!(SmartContractModule::create_deployment_contract(
+            Origin::signed(alice()),
+            1,
+            hash,
+            data.clone(),
+            resources_c1(),
+            0
+        ));
+        assert_eq!(
+            SmartContractModule::contracts(2).unwrap().contract_type,
+            types::ContractData::DeploymentContract(types::DeploymentContract {
+                capacity_reservation_id: 1,
+                deployment_data: data.clone(),
+                deployment_hash: hash,
+                public_ips: 0,
+                resources: resources_c1(),
+                public_ips_list: vec![].try_into().unwrap(),
+            })
+        );
+        assert_ok!(SmartContractModule::update_deployment_contract(
+            Origin::signed(alice()),
+            2,
+            hash,
+            data.clone(),
+            Some(half_resources_c1()),
+        ));
+        assert_eq!(
+            SmartContractModule::contracts(2).unwrap().contract_type,
+            types::ContractData::DeploymentContract(types::DeploymentContract {
+                capacity_reservation_id: 1,
+                deployment_data: data,
+                deployment_hash: hash,
+                public_ips: 0,
+                resources: half_resources_c1(),
+                public_ips_list: vec![].try_into().unwrap(),
+            })
+        );
+    });
+}
+
+#[test]
+fn test_update_deployment_contract_unauthorized_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
+            Origin::signed(alice()),
+            1,
+            CapacityReservationPolicy::Any,
+            None,
+            Some(resources_c1()),
+            None,
+            None,
+        ));
+        let data = get_deployment_data();
+        let hash = generate_deployment_hash();
+        assert_ok!(SmartContractModule::create_deployment_contract(
+            Origin::signed(alice()),
+            1,
+            hash,
+            data.clone(),
+            half_resources_c1(),
+            0
+        ));
+        assert_noop!(
+            SmartContractModule::update_deployment_contract(
+                Origin::signed(bob()),
+                2,
+                generate_deployment_hash(),
+                get_updated_deployment_data(),
+                Some(resources_c1()),
+            ),
+            Error::<TestRuntime>::TwinNotAuthorizedToUpdateContract
+        );
+    });
+}
+
+#[test]
+fn test_update_deployment_contract_notenoughresourcesonnode_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
+            Origin::signed(alice()),
+            1,
+            CapacityReservationPolicy::Any,
+            None,
+            Some(resources_c1()),
+            None,
+            None,
+        ));
+        let data = get_deployment_data();
+        let hash = generate_deployment_hash();
+        assert_ok!(SmartContractModule::create_deployment_contract(
+            Origin::signed(alice()),
+            1,
+            hash,
+            data.clone(),
+            half_resources_c1(),
+            0
+        ));
+        assert_eq!(
+            SmartContractModule::contracts(2).unwrap().contract_type,
+            types::ContractData::DeploymentContract(types::DeploymentContract {
+                capacity_reservation_id: 1,
+                deployment_data: data,
+                deployment_hash: hash,
+                public_ips: 0,
+                resources: half_resources_c1(),
+                public_ips_list: vec![].try_into().unwrap(),
+            })
+        );
+        let updated_data = get_updated_deployment_data();
+        let updated_hash = generate_deployment_hash();
+        assert_noop!(
+            SmartContractModule::update_deployment_contract(
+                Origin::signed(alice()),
+                2,
+                updated_hash,
+                updated_data,
+                Some(resources_n1()),
+            ),
+            Error::<TestRuntime>::NotEnoughResourcesInCapacityReservation
+        );
+    });
+}
+
+#[test]
+fn test_update_contract_in_grace_state_fails() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
+            Origin::signed(charlie()),
+            1,
+            CapacityReservationPolicy::Any,
+            None,
+            Some(resources_c1()),
+            None,
+            None,
+        ));
+        assert_ok!(SmartContractModule::create_deployment_contract(
+            Origin::signed(charlie()),
+            1,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            half_resources_c1(),
+            0
+        ));
+
+        // cycle 1
+        pool_state
+            .write()
+            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11);
+        run_to_block(11, Some(&mut pool_state));
+
+        // cycle 2
+        // user does not have enough funds to pay for 2 cycles
+        pool_state
+            .write()
+            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 21);
+        run_to_block(21, Some(&mut pool_state));
+
+        assert_eq!(
+            SmartContractModule::contracts(1).unwrap().state,
+            types::ContractState::GracePeriod(21)
+        );
+        assert_eq!(
+            SmartContractModule::contracts(2).unwrap().state,
+            types::ContractState::GracePeriod(21)
+        );
+        assert_noop!(
+            SmartContractModule::update_capacity_reservation_contract(
+                Origin::signed(charlie()),
+                1,
+                resources_c1()
+            ),
+            Error::<TestRuntime>::CannotUpdateContractInGraceState
+        );
+        assert_noop!(
+            SmartContractModule::update_deployment_contract(
+                Origin::signed(charlie()),
+                2,
+                generate_deployment_hash(),
+                get_updated_deployment_data(),
+                Some(resources_n1()),
+            ),
+            Error::<TestRuntime>::CannotUpdateContractInGraceState
         );
     });
 }
@@ -2058,7 +2327,24 @@ fn test_restore_deployment_contract_in_grace_works() {
         let c1 = SmartContractModule::contracts(1).unwrap();
         assert_eq!(c1.state, types::ContractState::GracePeriod(21));
 
-        // todo testing the used resources (should still be in used resoures)
+        // resources should still be reserved
+        assert_eq!(
+            SmartContractModule::contracts(1).unwrap().contract_type,
+            types::ContractData::CapacityReservationContract(types::CapacityReservationContract {
+                node_id: 1,
+                public_ips: 0,
+                deployment_contracts: vec![2],
+                group_id: None,
+                resources: ConsumableResources {
+                    total_resources: resources_c1(),
+                    used_resources: get_resources(),
+                },
+            })
+        );
+        assert_eq!(
+            TfgridModule::nodes(1).unwrap().resources.used_resources,
+            resources_c1()
+        );
         let our_events = System::events();
         assert_eq!(
             our_events.contains(&record(MockEvent::SmartContractModule(
@@ -2890,10 +3176,6 @@ fn test_capacity_reservation_contract_and_deployment_contract_canceled_when_node
         pool_state
             .write()
             .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11);
-        // TODO: decide whether to bill deployment contracts
-        // pool_state
-        //     .write()
-        //     .should_call_bill_contract(2, Ok(Pays::Yes.into()), 11);
         run_to_block(11, Some(&mut pool_state));
 
         run_to_block(16, Some(&mut pool_state));
@@ -3593,6 +3875,13 @@ fn generate_deployment_hash() -> H256 {
 fn get_deployment_data() -> crate::DeploymentDataInput<TestRuntime> {
     BoundedVec::<u8, crate::MaxDeploymentDataLength<TestRuntime>>::try_from(
         "some_data".as_bytes().to_vec(),
+    )
+    .unwrap()
+}
+
+fn get_updated_deployment_data() -> crate::DeploymentDataInput<TestRuntime> {
+    BoundedVec::<u8, crate::MaxDeploymentDataLength<TestRuntime>>::try_from(
+        "changedthedata".as_bytes().to_vec(),
     )
     .unwrap()
 }
