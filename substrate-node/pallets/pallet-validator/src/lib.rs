@@ -72,15 +72,15 @@ pub mod pallet {
         BadOrigin,
         NotCouncilMember,
         AlreadyBonded,
-        StashNotBonded,
-        StashBondedWithWrongValidator,
-        CannotBondWithSameAccount,
+        StashNotBonded,                // TOCHECK: Unused
+        StashBondedWithWrongValidator, // TOCHECK: Unused
+        CannotBondWithSameAccount,     // TOCHECK: Unused
         DuplicateValidator,
         ValidatorNotFound,
         ValidatorNotApproved,
-        UnauthorizedToActivateValidator,
+        UnauthorizedToActivateValidator, // TOCHECK: Unused
         ValidatorValidatingAlready,
-        ValidatorNotValidating,
+        ValidatorNotValidating, // TOCHECK: Unused
     }
 
     #[pallet::hooks]
@@ -198,10 +198,6 @@ pub mod pallet {
             let mut validator = <Validator<T>>::get(&address)
                 .ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
 
-            // Set the new validator node account on the validator struct
-            validator.validator_node_account = new_node_validator_account.clone();
-            <Validator<T>>::insert(address, &validator);
-
             // if validator is validating, also remove old one from consensus and add new one.
             if validator.state == types::ValidatorRequestState::Validating {
                 // Remove the old validator and rotate session
@@ -218,8 +214,14 @@ pub mod pallet {
                     frame_system::RawOrigin::Root.into(),
                     new_node_validator_account.clone(),
                 )?;
-                Self::deposit_event(Event::NodeValidatorChanged(new_node_validator_account));
+                Self::deposit_event(Event::NodeValidatorChanged(
+                    new_node_validator_account.clone(),
+                ));
             }
+
+            // Set the new validator node account on the validator struct
+            validator.validator_node_account = new_node_validator_account;
+            <Validator<T>>::insert(address, &validator);
 
             Ok(().into())
         }
@@ -237,6 +239,7 @@ pub mod pallet {
                 Err(Error::<T>::AlreadyBonded)?
             }
             let validator = T::Lookup::lookup(validator)?;
+            // TOCHECK: enough to identify validator?
 
             <Bonded<T>>::insert(&stash, &validator);
 
