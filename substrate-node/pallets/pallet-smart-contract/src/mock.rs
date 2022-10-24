@@ -295,6 +295,22 @@ pub(crate) fn get_longitude_input(longitude_input: &[u8]) -> LongitudeInput {
     BoundedVec::try_from(longitude_input.to_vec()).expect("Invalid longitude input.")
 }
 
+pub(crate) fn get_pub_config_ip4(ip4: &[u8]) -> TestIP4 {
+    IP4::try_from(ip4.to_vec()).expect("Invalid ip4 input")
+}
+
+pub(crate) fn get_pub_config_gw4(gw4: &[u8]) -> TestGW4 {
+    GW4::try_from(gw4.to_vec()).expect("Invalid gw4 input")
+}
+
+pub(crate) fn get_pub_config_ip6(ip6: &[u8]) -> TestIP6 {
+    IP6::try_from(ip6.to_vec()).expect("Invalid ip6 input")
+}
+
+pub(crate) fn get_pub_config_gw6(gw6: &[u8]) -> TestGW6 {
+    GW6::try_from(gw6.to_vec()).expect("Invalid gw6 input")
+}
+
 /// Helper function to generate a crypto pair from seed
 fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
     TPublic::Pair::from_string(&format!("//{}", seed), None)
