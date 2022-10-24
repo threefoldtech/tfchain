@@ -18,7 +18,7 @@ use log::info;
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use tfchain_support::types::{
     CapacityReservationPolicy, ConsumableResources, FarmCertification, Location, NodeCertification,
-    PowerTarget, PublicIP, Resources,
+    NodeFeatures, PowerTarget, PublicConfig, PublicIP, Resources, IP,
 };
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
@@ -37,7 +37,7 @@ fn test_create_group_then_capacity_reservation_works() {
         assert_eq!(group.twin_id, 1);
         assert_eq!(group.capacity_reservation_contract_ids.len(), 0);
 
-        create_capacity_reservation_and_add_to_group(1, resources_c1(), 1, 1);
+        create_capacity_reservation_and_add_to_group(1, resources_c1(), None, 1, 1);
 
         let our_events = System::events();
         assert_eq!(
@@ -103,7 +103,7 @@ fn test_remove_group_active_capacity_reservation_contracts_fails() {
         assert_eq!(group.twin_id, 1);
         assert_eq!(group.capacity_reservation_contract_ids.len(), 0);
 
-        create_capacity_reservation_and_add_to_group(1, resources_c1(), 1, 1);
+        create_capacity_reservation_and_add_to_group(1, resources_c1(), None, 1, 1);
 
         assert_noop!(
             SmartContractModule::delete_group(Origin::signed(alice()), 1),
@@ -122,19 +122,20 @@ fn test_create_capacity_contract_reservation_finding_node_using_group() {
 
         // although there is still place to add the contract on node 1 all contracts are in the same group
         // so they should not go on the same node
-        create_capacity_reservation_and_add_to_group(1, resources_c1(), 1, 1);
-        create_capacity_reservation_and_add_to_group(1, resources_c1(), 1, 2);
-        create_capacity_reservation_and_add_to_group(1, resources_c1(), 1, 3);
+        create_capacity_reservation_and_add_to_group(1, resources_c1(), None, 1, 1);
+        create_capacity_reservation_and_add_to_group(1, resources_c1(), None, 1, 2);
+        create_capacity_reservation_and_add_to_group(1, resources_c1(), None, 1, 3);
 
         // only three nodes so no more node left that doesn't contain a capacity reservation contract that is in the same group
         assert_noop!(
             SmartContractModule::create_capacity_reservation_contract(
                 Origin::signed(alice()),
                 1,
-                CapacityReservationPolicy::Exclusive(1),
-                None,
-                Some(resources_c1()),
-                None,
+                CapacityReservationPolicy::Exclusive {
+                    group_id: 1,
+                    resources: resources_c1(),
+                    features: None,
+                },
                 None,
             ),
             Error::<TestRuntime>::NoSuitableNodeInFarm
@@ -143,10 +144,10 @@ fn test_create_capacity_contract_reservation_finding_node_using_group() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(resources_c1()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: resources_c1(),
+                features: None,
+            },
             None,
         ));
         assert_eq!(
@@ -169,8 +170,117 @@ fn test_create_capacity_contract_reservation_finding_node_using_group() {
     });
 }
 
-//  NODE CONTRACT TESTS //
-// -------------------- //
+#[test]
+fn test_capacity_reservation_contract_with_policy_any_and_features_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_with_three_nodes();
+        add_public_config(1, 3, alice());
+
+        // Contract should go to node 3 (the only node with a public config) and thus bring it up
+        assert_ok!(SmartContractModule::create_capacity_reservation_contract(
+            Origin::signed(alice()),
+            1,
+            CapacityReservationPolicy::Any {
+                resources: resources_c3(),
+                features: Some(vec![NodeFeatures::PublicNode]),
+            },
+            None,
+        ));
+
+        assert_eq!(
+            SmartContractModule::contracts(1).unwrap().contract_type,
+            types::ContractData::CapacityReservationContract(types::CapacityReservationContract {
+                node_id: 3,
+                group_id: None,
+                public_ips: 0,
+                resources: ConsumableResources {
+                    total_resources: resources_c3(),
+                    used_resources: Resources::empty(),
+                },
+                deployment_contracts: vec![],
+            })
+        );
+
+        assert_eq!(
+            TfgridModule::nodes(3).unwrap().power_target,
+            PowerTarget::Up
+        );
+    });
+}
+
+#[test]
+fn test_capacity_reservation_contract_with_policy_exclusive_and_features_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_with_three_nodes();
+        // node 2 and 3 have public config
+        add_public_config(1, 2, alice());
+        add_public_config(1, 3, alice());
+
+        assert_ok!(SmartContractModule::create_group(Origin::signed(alice())));
+
+        // Contract should go to node 2 (enough resources + has public config) and thus bring it up
+        let expected_node = 2;
+        create_capacity_reservation_and_add_to_group(
+            1,
+            resources_c2(),
+            Some(vec![NodeFeatures::PublicNode]),
+            1,
+            expected_node,
+        );
+
+        // Contract could go to node 2 but there is already a contract on that node that belongs to the same group
+        // so the contract will go to node 3 which also has a public config
+        let expected_node = 3;
+        create_capacity_reservation_and_add_to_group(
+            1,
+            resources_c3(),
+            Some(vec![NodeFeatures::PublicNode]),
+            1,
+            expected_node,
+        );
+    });
+}
+
+#[test]
+fn test_capacity_reservation_contract_with_policy_exclusive_and_features_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_with_three_nodes();
+        // node 2 has public config
+        add_public_config(1, 2, alice());
+
+        assert_ok!(SmartContractModule::create_group(Origin::signed(alice())));
+
+        // Contract should go to node 2 (enough resources + has public config) and thus bring it up
+        let expected_node = 2;
+        create_capacity_reservation_and_add_to_group(
+            1,
+            resources_c2(),
+            Some(vec![NodeFeatures::PublicNode]),
+            1,
+            expected_node,
+        );
+
+        // Contract could go to node 2 (if we only look at resources) but the contract we want to create
+        // belongs to the same group as prior contract so we can't add it on node 2. As node 2 is the only
+        // node with a public config this call shoul fail
+        assert_noop!(
+            SmartContractModule::create_capacity_reservation_contract(
+                Origin::signed(alice()),
+                1,
+                CapacityReservationPolicy::Exclusive {
+                    group_id: 1,
+                    resources: resources_c3(),
+                    features: Some(vec![NodeFeatures::PublicNode]),
+                },
+                None,
+            ),
+            Error::<TestRuntime>::NoSuitableNodeInFarm
+        );
+    });
+}
 
 #[test]
 fn test_create_capacity_reservation_contract_works() {
@@ -181,10 +291,10 @@ fn test_create_capacity_reservation_contract_works() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(get_resources()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: get_resources(),
+                features: None,
+            },
             None,
         ));
 
@@ -242,10 +352,10 @@ fn test_create_capacity_reservation_contract_with_nonexisting_farm_fails() {
             SmartContractModule::create_capacity_reservation_contract(
                 Origin::signed(alice()),
                 2,
-                CapacityReservationPolicy::Any,
-                None,
-                Some(get_resources()),
-                None,
+                CapacityReservationPolicy::Any {
+                    resources: get_resources(),
+                    features: None,
+                },
                 None,
             ),
             Error::<TestRuntime>::FarmNotExists
@@ -330,15 +440,15 @@ fn test_create_capacity_reservation_contract_no_node_in_farm_with_enough_resourc
             SmartContractModule::create_capacity_reservation_contract(
                 Origin::signed(alice()),
                 1,
-                CapacityReservationPolicy::Any,
-                None,
-                Some(Resources {
-                    cru: 10,
-                    hru: 0,
-                    mru: 2 * GIGABYTE,
-                    sru: 60 * GIGABYTE
-                }),
-                None,
+                CapacityReservationPolicy::Any {
+                    resources: Resources {
+                        cru: 10,
+                        hru: 0,
+                        mru: 2 * GIGABYTE,
+                        sru: 60 * GIGABYTE
+                    },
+                    features: None,
+                },
                 None,
             ),
             Error::<TestRuntime>::NoSuitableNodeInFarm
@@ -365,44 +475,15 @@ fn test_create_capacity_reservation_contract_finding_a_node_failure() {
             SmartContractModule::create_capacity_reservation_contract(
                 Origin::signed(alice()),
                 1,
-                CapacityReservationPolicy::Any,
-                None,
-                Some(Resources {
-                    hru: 4096 * GIGABYTE,
-                    sru: 2048 * GIGABYTE,
-                    cru: 32,
-                    mru: 48 * GIGABYTE,
-                }),
-                None,
-                None,
-            ),
-            Error::<TestRuntime>::NoSuitableNodeInFarm
-        );
-    });
-}
-
-// todo test grouping contracts
-
-#[test]
-fn test_create_capacity_reservation_contract_grouping_works() {
-    new_test_ext().execute_with(|| {
-        run_to_block(1, None);
-        prepare_farm_with_three_nodes();
-
-        // todo
-        assert_noop!(
-            SmartContractModule::create_capacity_reservation_contract(
-                Origin::signed(alice()),
-                1,
-                CapacityReservationPolicy::Any,
-                None,
-                Some(Resources {
-                    hru: 4096 * GIGABYTE,
-                    sru: 2048 * GIGABYTE,
-                    cru: 32,
-                    mru: 48 * GIGABYTE,
-                }),
-                None,
+                CapacityReservationPolicy::Any {
+                    resources: Resources {
+                        hru: 4096 * GIGABYTE,
+                        sru: 2048 * GIGABYTE,
+                        cru: 32,
+                        mru: 48 * GIGABYTE,
+                    },
+                    features: None
+                },
                 None,
             ),
             Error::<TestRuntime>::NoSuitableNodeInFarm
@@ -422,10 +503,7 @@ fn test_create_capacity_reservation_contract_reserving_full_node_then_deployment
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            Some(node_id),
-            None,
-            None,
+            CapacityReservationPolicy::Node { node_id: node_id },
             None,
         ));
         assert_eq!(
@@ -556,10 +634,10 @@ fn test_cancel_capacity_reservation_contract_should_not_shutdown_first_node() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(resources_c1()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: resources_c1(),
+                features: None,
+            },
             None,
         ));
         assert_eq!(
@@ -680,10 +758,10 @@ fn test_update_capacity_reservation_contract_works() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(get_resources()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: get_resources(),
+                features: None,
+            },
             None,
         ));
 
@@ -743,10 +821,10 @@ fn test_update_capacity_reservation_contract_too_much_resources() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(get_resources()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: get_resources(),
+                features: None,
+            },
             None,
         ));
         // asking for too much resources
@@ -776,10 +854,10 @@ fn test_capacity_reservation_contract_decrease_resources_fails_resources_used_by
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(get_resources()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: get_resources(),
+                features: None,
+            },
             None,
         ));
         // deployment contract using half of the resources
@@ -840,10 +918,10 @@ fn test_update_capacity_reservation_contract_wrong_twins_fails() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(get_resources()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: get_resources(),
+                features: None,
+            },
             None,
         ));
 
@@ -872,10 +950,10 @@ fn test_cancel_capacity_reservation_contract_works() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(get_resources()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: get_resources(),
+                features: None,
+            },
             None,
         ));
 
@@ -896,7 +974,6 @@ fn test_cancel_capacity_reservation_contract_works() {
         assert_eq!(contracts.len(), 0);
     });
 }
-// todo test multiple deployment contracts on the same capacity reservation contract
 
 #[test]
 fn test_cancel_deployment_contract_free_resources_works() {
@@ -1005,10 +1082,10 @@ fn test_update_deployment_contract_increase_resources_works() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(resources_c1()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: resources_c1(),
+                features: None,
+            },
             None,
         ));
         let data = get_deployment_data();
@@ -1064,10 +1141,10 @@ fn test_update_deployment_contract_decrease_resources_works() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(resources_c1()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: resources_c1(),
+                features: None,
+            },
             None,
         ));
         let data = get_deployment_data();
@@ -1121,10 +1198,10 @@ fn test_update_deployment_contract_unauthorized_fails() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(resources_c1()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: resources_c1(),
+                features: None,
+            },
             None,
         ));
         let data = get_deployment_data();
@@ -1159,10 +1236,10 @@ fn test_update_deployment_contract_notenoughresourcesonnode_fails() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(resources_c1()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: resources_c1(),
+                features: None,
+            },
             None,
         ));
         let data = get_deployment_data();
@@ -1212,10 +1289,10 @@ fn test_update_contract_in_grace_state_fails() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(charlie()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(resources_c1()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: resources_c1(),
+                features: None,
+            },
             None,
         ));
         assert_ok!(SmartContractModule::create_deployment_contract(
@@ -1407,10 +1484,7 @@ fn test_create_capacity_reservation_contract_reserving_all_resources_node_works(
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            Some(node_id),
-            None,
-            None,
+            CapacityReservationPolicy::Node { node_id: node_id },
             None,
         ));
 
@@ -1446,10 +1520,7 @@ fn test_cancel_capacity_reservation_contract_all_resources_of_node_works() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            Some(node_id),
-            None,
-            None,
+            CapacityReservationPolicy::Node { node_id: node_id },
             None,
         ));
 
@@ -1487,10 +1558,7 @@ fn test_create_capacity_reservation_contract_reserving_all_resources_on_node_in_
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            CapacityReservationPolicy::Any,
-            Some(1),
-            None,
-            None,
+            CapacityReservationPolicy::Node { node_id: 1 },
             None,
         ));
 
@@ -1498,10 +1566,7 @@ fn test_create_capacity_reservation_contract_reserving_all_resources_on_node_in_
             SmartContractModule::create_capacity_reservation_contract(
                 Origin::signed(bob()),
                 1,
-                CapacityReservationPolicy::Any,
-                Some(1),
-                None,
-                None,
+                CapacityReservationPolicy::Node { node_id: 1 },
                 None,
             ),
             Error::<TestRuntime>::NodeNotAvailableToDeploy
@@ -1519,10 +1584,7 @@ fn test_capacity_reservation_contract_non_dedicated_empty_node_works() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            CapacityReservationPolicy::Any,
-            Some(node_id),
-            None,
-            None,
+            CapacityReservationPolicy::Node { node_id: node_id },
             None,
         ));
     })
@@ -1539,10 +1601,10 @@ fn test_create_capacity_reservation_contract_on_dedicated_farm_without_reserving
             SmartContractModule::create_capacity_reservation_contract(
                 Origin::signed(bob()),
                 1,
-                CapacityReservationPolicy::Any,
-                None,
-                Some(resources_c1()), // not requesting the all the resources of the node should not be possible for dedicated farms!
-                None,
+                CapacityReservationPolicy::Any {
+                    resources: resources_c1(), // not requesting the all the resources of the node should not be possible for dedicated farms!
+                    features: None,
+                },
                 None,
             ),
             Error::<TestRuntime>::NodeNotAvailableToDeploy
@@ -1560,10 +1622,7 @@ fn test_create_deployment_contract_when_having_a_capacity_reservation_reserving_
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            Some(1),
-            None,
-            None,
+            CapacityReservationPolicy::Node { node_id: 1 },
             None,
         ));
 
@@ -1588,10 +1647,7 @@ fn test_create_deployment_contract_using_someone_elses_capacity_reservation_cont
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            Some(1),
-            None,
-            None,
+            CapacityReservationPolicy::Node { node_id: 1 },
             None,
         ));
         // Alice not the owner of the capacity reservation contract so she is unauthorized to deploy a deployment contract
@@ -1621,10 +1677,7 @@ fn test_cancel_capacity_reservation_contract_with_active_deployment_contracts_fa
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            Some(node_id),
-            None,
-            None,
+            CapacityReservationPolicy::Node { node_id: node_id },
             None,
         ));
         assert_ok!(SmartContractModule::create_deployment_contract(
@@ -1665,10 +1718,10 @@ fn test_deployment_contract_billing_details() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(resources_c1()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: resources_c1(),
+                features: None,
+            },
             None,
         ));
         assert_ok!(SmartContractModule::create_deployment_contract(
@@ -1760,10 +1813,10 @@ fn test_deployment_contract_billing_details_with_solution_provider() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(resources_c1()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: resources_c1(),
+                features: None,
+            },
             Some(1),
         ));
         assert_ok!(SmartContractModule::create_deployment_contract(
@@ -1810,10 +1863,10 @@ fn test_multiple_contracts_billing_loop_works() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(resources_c1()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: resources_c1(),
+                features: None,
+            },
             None,
         ));
         assert_ok!(SmartContractModule::create_deployment_contract(
@@ -1868,10 +1921,10 @@ fn test_deployment_contract_billing_cycles() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(resources_c1()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: resources_c1(),
+                features: None,
+            },
             None,
         ));
 
@@ -1940,10 +1993,10 @@ fn test_node_multiple_contract_billing_cycles() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(resources_c1()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: resources_c1(),
+                features: None,
+            },
             None,
         ));
         assert_ok!(SmartContractModule::create_deployment_contract(
@@ -1967,10 +2020,10 @@ fn test_node_multiple_contract_billing_cycles() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(rest_of_the_resources_on_node_1.clone()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: rest_of_the_resources_on_node_1.clone(),
+                features: None,
+            },
             None,
         ));
         assert_ok!(SmartContractModule::create_deployment_contract(
@@ -2019,10 +2072,10 @@ fn test_deployment_contract_billing_cycles_delete_node_cancels_contract() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(resources_c1()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: resources_c1(),
+                features: None,
+            },
             None
         ));
         assert_ok!(SmartContractModule::create_deployment_contract(
@@ -2132,10 +2185,10 @@ fn test_deployment_contract_only_public_ip_billing_cycles() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            None, // no resources required
-            None,
+            CapacityReservationPolicy::Any {
+                resources: Resources::empty(), // no resources required
+                features: None,
+            },
             None
         ));
         assert_ok!(SmartContractModule::create_deployment_contract(
@@ -2191,10 +2244,10 @@ fn test_deployment_contract_billing_cycles_cancel_contract_during_cycle_works() 
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(resources_c1()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: resources_c1(),
+                features: None,
+            },
             None,
         ));
         assert_ok!(SmartContractModule::create_deployment_contract(
@@ -2260,10 +2313,10 @@ fn test_deployment_contract_billing_fails() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(resources_c1()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: resources_c1(),
+                features: None,
+            },
             None,
         ));
         assert_ok!(SmartContractModule::create_deployment_contract(
@@ -2314,10 +2367,10 @@ fn test_deployment_contract_billing_cycles_cancel_contract_during_cycle_without_
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(resources_c1()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: resources_c1(),
+                features: None,
+            },
             None,
         ));
 
@@ -2404,10 +2457,10 @@ fn test_deployment_contract_out_of_funds_should_move_state_to_graceperiod_works(
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(charlie()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(resources_c1()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: resources_c1(),
+                features: None,
+            },
             None
         ));
         assert_ok!(SmartContractModule::create_deployment_contract(
@@ -2461,11 +2514,11 @@ fn test_restore_deployment_contract_in_grace_works() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(charlie()),
             1,
-            CapacityReservationPolicy::Any,
+            CapacityReservationPolicy::Any {
+                resources: resources_c1(),
+                features: None,
+            },
             None,
-            Some(resources_c1()),
-            None,
-            None
         ));
         assert_ok!(SmartContractModule::create_deployment_contract(
             Origin::signed(charlie()),
@@ -2557,10 +2610,10 @@ fn test_deployment_contract_grace_period_cancels_contract_when_grace_period_ends
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(charlie()),
             1,
-            CapacityReservationPolicy::Any,
-            None,
-            Some(resources_c1()),
-            None,
+            CapacityReservationPolicy::Any {
+                resources: resources_c1(),
+                features: None,
+            },
             None,
         ));
         assert_ok!(SmartContractModule::create_deployment_contract(
@@ -2677,10 +2730,7 @@ fn test_capacity_reservation_contract_full_node_billing() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            Some(node_id),
-            None,
-            None,
+            CapacityReservationPolicy::Node { node_id: node_id },
             None,
         ));
 
@@ -2721,10 +2771,7 @@ fn test_capacity_reservation_contract_full_node_billing_cancel_should_bill_reser
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            Some(node_id),
-            None,
-            None,
+            CapacityReservationPolicy::Node { node_id: node_id },
             None,
         ));
 
@@ -2788,10 +2835,7 @@ fn test_capacity_reservation_contract_full_node_canceled_mid_cycle_should_bill_f
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            Some(node_id),
-            None,
-            None,
+            CapacityReservationPolicy::Node { node_id: node_id },
             None,
         ));
 
@@ -2833,10 +2877,7 @@ fn test_create_capacity_contract_full_node_and_deployment_contract_should_bill_f
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            Some(node_id),
-            None,
-            None,
+            CapacityReservationPolicy::Node { node_id: node_id },
             None,
         ));
 
@@ -2883,10 +2924,7 @@ fn test_create_capacity_contract_full_node_canceled_due_to_out_of_funds_should_c
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(charlie()),
             1,
-            CapacityReservationPolicy::Any,
-            Some(node_id),
-            None,
-            None,
+            CapacityReservationPolicy::Node { node_id: node_id },
             None,
         ));
 
@@ -2987,10 +3025,7 @@ fn test_create_capacity_reservation_contract_and_deployment_contract_with_ip_bil
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            Some(node_id),
-            None,
-            None,
+            CapacityReservationPolicy::Node { node_id: node_id },
             None,
         ));
 
@@ -3039,10 +3074,7 @@ fn test_capacity_reservation_contract_full_node_out_of_funds_should_move_state_t
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(charlie()),
             1,
-            CapacityReservationPolicy::Any,
-            Some(node_id),
-            None,
-            None,
+            CapacityReservationPolicy::Node { node_id: node_id },
             None,
         ));
 
@@ -3083,10 +3115,7 @@ fn test_restore_capacity_reservation_contract_in_grace_works() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(charlie()),
             1,
-            CapacityReservationPolicy::Any,
-            Some(node_id),
-            None,
-            None,
+            CapacityReservationPolicy::Node { node_id: node_id },
             None,
         ));
 
@@ -3152,10 +3181,7 @@ fn test_restore_capacity_reservation_contract_and_deployment_contracts_in_grace_
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(charlie()),
             1,
-            CapacityReservationPolicy::Any,
-            Some(node_id),
-            None,
-            None,
+            CapacityReservationPolicy::Node { node_id: node_id },
             None,
         ));
         assert_ok!(SmartContractModule::create_deployment_contract(
@@ -3263,10 +3289,7 @@ fn test_capacity_reservation_contract_grace_period_cancels_contract_when_grace_p
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(charlie()),
             1,
-            CapacityReservationPolicy::Any,
-            Some(node_id),
-            None,
-            None,
+            CapacityReservationPolicy::Node { node_id: node_id },
             None,
         ));
 
@@ -3321,10 +3344,7 @@ fn test_capacity_reservation_contract_and_deployment_contract_canceled_when_node
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
-            CapacityReservationPolicy::Any,
-            Some(node_id),
-            None,
-            None,
+            CapacityReservationPolicy::Node { node_id: node_id },
             None,
         ));
 
@@ -3439,10 +3459,7 @@ fn test_create_capacity_reservation_contract_with_solution_provider_works() {
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(alice()),
             1,
-            CapacityReservationPolicy::Any,
-            Some(1),
-            None,
-            None,
+            CapacityReservationPolicy::Node { node_id: 1 },
             Some(1),
         ));
     });
@@ -3470,10 +3487,7 @@ fn test_create_capacity_reservation_contract_with_solution_provider_fails_if_not
             SmartContractModule::create_capacity_reservation_contract(
                 Origin::signed(alice()),
                 1,
-                CapacityReservationPolicy::Any,
-                Some(1),
-                None,
-                None,
+                CapacityReservationPolicy::Node { node_id: 1 },
                 Some(1),
             ),
             Error::<TestRuntime>::SolutionProviderNotApproved
@@ -3779,10 +3793,10 @@ pub fn prepare_farm_node_and_capacity_reservation() {
     assert_ok!(SmartContractModule::create_capacity_reservation_contract(
         Origin::signed(alice()),
         1,
-        CapacityReservationPolicy::Any,
-        None,
-        Some(resources_c1()),
-        None,
+        CapacityReservationPolicy::Any {
+            resources: resources_c1(),
+            features: None,
+        },
         None,
     ));
     assert_eq!(
@@ -3791,6 +3805,39 @@ pub fn prepare_farm_node_and_capacity_reservation() {
             total_resources: resources_n1(),
             used_resources: resources_c1(),
         }
+    );
+}
+
+pub fn add_public_config(farm_id: u32, node_id: u32, account_id: AccountId) {
+    let ipv4 = get_pub_config_ip4(&"185.206.122.33/24".as_bytes().to_vec());
+    let ipv6 = get_pub_config_ip6(&"2a10:b600:1::0cc4:7a30:65b5/64".as_bytes().to_vec());
+    let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
+    let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
+
+    let pub_config = PublicConfig {
+        ip4: IP {
+            ip: ipv4.clone().0,
+            gw: gw4.clone().0,
+        },
+        ip6: Some(IP {
+            ip: ipv6.clone().0,
+            gw: gw6.clone().0,
+        }),
+        domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
+    };
+
+    assert_ok!(TfgridModule::add_node_public_config(
+        Origin::signed(account_id),
+        farm_id,
+        node_id,
+        Some(pub_config.clone())
+    ));
+    assert_eq!(
+        TfgridModule::nodes(node_id)
+            .unwrap()
+            .public_config
+            .is_some(),
+        true
     );
 }
 
@@ -3905,6 +3952,7 @@ pub fn prepare_dedicated_farm_and_node() {
 pub fn create_capacity_reservation_and_add_to_group(
     farm_id: u32,
     resources: Resources,
+    features: Option<Vec<NodeFeatures>>,
     group_id: u32,
     expected_node_id: u32,
 ) {
@@ -3916,10 +3964,11 @@ pub fn create_capacity_reservation_and_add_to_group(
     assert_ok!(SmartContractModule::create_capacity_reservation_contract(
         Origin::signed(alice()),
         farm_id,
-        CapacityReservationPolicy::Exclusive(group_id),
-        None,
-        Some(resources),
-        None,
+        CapacityReservationPolicy::Exclusive {
+            group_id: group_id,
+            resources: resources,
+            features: features,
+        },
         None,
     ));
 
@@ -3961,33 +4010,6 @@ pub fn create_capacity_reservation_and_add_to_group(
         }),
         cnt_contracts + 1
     );
-}
-
-pub fn resources_n1() -> Resources {
-    Resources {
-        hru: 1024 * GIGABYTE,
-        sru: 512 * GIGABYTE,
-        cru: 8,
-        mru: 16 * GIGABYTE,
-    }
-}
-
-pub fn resources_n2() -> Resources {
-    Resources {
-        hru: 2048 * GIGABYTE,
-        sru: 1024 * GIGABYTE,
-        cru: 16,
-        mru: 32 * GIGABYTE,
-    }
-}
-
-pub fn resources_n3() -> Resources {
-    Resources {
-        hru: 512 * GIGABYTE,
-        sru: 256 * GIGABYTE,
-        cru: 4,
-        mru: 8 * GIGABYTE,
-    }
 }
 
 pub fn create_twin(origin: AccountId) {
@@ -4128,6 +4150,33 @@ fn get_resources() -> Resources {
     }
 }
 
+pub fn resources_n1() -> Resources {
+    Resources {
+        hru: 1024 * GIGABYTE,
+        sru: 512 * GIGABYTE,
+        cru: 8,
+        mru: 16 * GIGABYTE,
+    }
+}
+
+pub fn resources_n2() -> Resources {
+    Resources {
+        hru: 2048 * GIGABYTE,
+        sru: 1024 * GIGABYTE,
+        cru: 16,
+        mru: 32 * GIGABYTE,
+    }
+}
+
+pub fn resources_n3() -> Resources {
+    Resources {
+        hru: 512 * GIGABYTE,
+        sru: 256 * GIGABYTE,
+        cru: 4,
+        mru: 8 * GIGABYTE,
+    }
+}
+
 fn resources_c1() -> Resources {
     Resources {
         cru: 4,
@@ -4158,7 +4207,7 @@ fn resources_c2() -> Resources {
 fn resources_c3() -> Resources {
     Resources {
         cru: 2,
-        hru: 1024 * GIGABYTE,
+        hru: 512 * GIGABYTE,
         mru: 4 * GIGABYTE,
         sru: 50 * GIGABYTE,
     }
@@ -4171,10 +4220,10 @@ fn prepare_farm_three_nodes_three_capacity_reservation_contracts() {
     assert_ok!(SmartContractModule::create_capacity_reservation_contract(
         Origin::signed(alice()),
         1,
-        CapacityReservationPolicy::Any,
-        None,
-        Some(resources_c1()),
-        None,
+        CapacityReservationPolicy::Any {
+            resources: resources_c1(),
+            features: None,
+        },
         None,
     ));
 
@@ -4212,10 +4261,10 @@ fn prepare_farm_three_nodes_three_capacity_reservation_contracts() {
     assert_ok!(SmartContractModule::create_capacity_reservation_contract(
         Origin::signed(alice()),
         1,
-        CapacityReservationPolicy::Any,
-        None,
-        Some(resources_c2()),
-        None,
+        CapacityReservationPolicy::Any {
+            resources: resources_c2(),
+            features: None,
+        },
         None,
     ));
     assert_eq!(
@@ -4240,10 +4289,10 @@ fn prepare_farm_three_nodes_three_capacity_reservation_contracts() {
     assert_ok!(SmartContractModule::create_capacity_reservation_contract(
         Origin::signed(alice()),
         1,
-        CapacityReservationPolicy::Any,
-        None,
-        Some(resources_c3()),
-        None,
+        CapacityReservationPolicy::Any {
+            resources: resources_c3(),
+            features: None,
+        },
         None,
     ),);
 

@@ -32,7 +32,9 @@ use sp_runtime::{
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
     traits::ChangeNode,
-    types::{CapacityReservationPolicy, ConsumableResources, Node, PowerTarget, Resources},
+    types::{
+        CapacityReservationPolicy, ConsumableResources, Node, NodeFeatures, PowerTarget, Resources,
+    },
 };
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"smct");
@@ -517,9 +519,6 @@ pub mod pallet {
             origin: OriginFor<T>,
             farm_id: u32,
             policy: CapacityReservationPolicy,
-            node_id: Option<u32>,
-            resources: Option<Resources>,
-            features: Option<Vec<u32>>,
             solution_provider_id: Option<u64>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
@@ -527,9 +526,6 @@ pub mod pallet {
                 account_id,
                 farm_id,
                 policy,
-                node_id,
-                resources,
-                features,
                 solution_provider_id,
             )
         }
@@ -775,9 +771,6 @@ impl<T: Config> Pallet<T> {
         account_id: T::AccountId,
         farm_id: u32,
         policy: CapacityReservationPolicy,
-        node_id: Option<u32>,
-        resources: Option<Resources>,
-        _features: Option<Vec<u32>>,
         solution_provider_id: Option<u64>,
     ) -> DispatchResultWithPostInfo {
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
@@ -786,25 +779,43 @@ impl<T: Config> Pallet<T> {
             pallet_tfgrid::Farms::<T>::contains_key(farm_id),
             Error::<T>::FarmNotExists
         );
-        let mut resources = resources.unwrap_or(Resources::empty());
-        let mut group_id = None;
-        let node_id = if let Some(n_id) = node_id {
-            let node = pallet_tfgrid::Nodes::<T>::get(n_id).ok_or(Error::<T>::NodeNotExists)?;
-            ensure!(
-                node.resources.used_resources == Resources::empty(),
-                Error::<T>::NodeNotAvailableToDeploy
-            );
-            // if node_id was passed the user wants to reserve all resources of a specific node
-            resources = node.resources.total_resources;
-            n_id
-        } else {
-            group_id = match policy {
-                CapacityReservationPolicy::Exclusive(g_id) => Some(g_id),
-                CapacityReservationPolicy::Any => None,
-            };
-            let farm = pallet_tfgrid::Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
-            ensure!(!farm.dedicated_farm, Error::<T>::NodeNotAvailableToDeploy);
-            Self::_find_suitable_node_in_farm(farm_id, resources, group_id)?
+
+        let (node_id, resources, group_id) = match policy {
+            CapacityReservationPolicy::Any {
+                resources,
+                features,
+            } => {
+                let farm =
+                    pallet_tfgrid::Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
+                ensure!(!farm.dedicated_farm, Error::<T>::NodeNotAvailableToDeploy);
+                let n_id = Self::_find_suitable_node_in_farm(farm_id, resources, None, features)?;
+                (n_id, resources, None)
+            }
+            CapacityReservationPolicy::Exclusive {
+                group_id,
+                resources,
+                features,
+            } => {
+                let farm =
+                    pallet_tfgrid::Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
+                ensure!(!farm.dedicated_farm, Error::<T>::NodeNotAvailableToDeploy);
+                let n_id = Self::_find_suitable_node_in_farm(
+                    farm_id,
+                    resources,
+                    Some(group_id),
+                    features,
+                )?;
+                (n_id, resources, Some(group_id))
+            }
+            CapacityReservationPolicy::Node { node_id } => {
+                let node =
+                    pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+                ensure!(
+                    node.resources.used_resources == Resources::empty(),
+                    Error::<T>::NodeNotAvailableToDeploy
+                );
+                (node_id, node.resources.total_resources, None)
+            }
         };
 
         let new_capacity_reservation = types::CapacityReservationContract {
@@ -1290,33 +1301,40 @@ impl<T: Config> Pallet<T> {
         farm_id: u32,
         resources: Resources,
         group_id: Option<u32>,
+        features: Option<Vec<NodeFeatures>>,
     ) -> Result<u32, DispatchErrorWithPostInfo> {
         ensure!(
             pallet_tfgrid::Farms::<T>::contains_key(farm_id),
             Error::<T>::FarmNotExists
         );
-
-        if let Some(g_id) = group_id {
-            ensure!(Groups::<T>::contains_key(g_id), Error::<T>::GroupNotExists);
-        }
-
         let nodes_in_farm = pallet_tfgrid::NodesByFarmID::<T>::get(farm_id);
         let mut suitable_nodes = Vec::new();
-
         for node_id in nodes_in_farm {
             let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-            if node.resources.can_consume_resources(&resources) {
-                if let Some(g_id) = group_id {
-                    if !CapacityReservationIDByNodeGroupConfig::<T>::contains_key(
-                        types::NodeGroupConfig {
-                            node_id: node_id,
-                            group_id: g_id,
-                        },
-                    ) {
-                        suitable_nodes.push(node);
+            suitable_nodes.push(node);
+        }
+
+        // only keep nodes with enough resources
+        suitable_nodes.retain_mut(|node| node.resources.can_consume_resources(&resources));
+
+        // only keep nodes that DON'T have a contract configured on them that belong to the same group
+        if let Some(g_id) = group_id {
+            ensure!(Groups::<T>::contains_key(g_id), Error::<T>::GroupNotExists);
+            suitable_nodes.retain_mut(|node| {
+                !CapacityReservationIDByNodeGroupConfig::<T>::contains_key(types::NodeGroupConfig {
+                    node_id: node.id,
+                    group_id: g_id,
+                })
+            });
+        }
+
+        // only keep nodes with the required features
+        if let Some(features) = features {
+            for feature in features {
+                match feature {
+                    NodeFeatures::PublicNode => {
+                        suitable_nodes.retain_mut(|node| node.public_config.is_some())
                     }
-                } else {
-                    suitable_nodes.push(node);
                 }
             }
         }

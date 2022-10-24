@@ -181,6 +181,32 @@ class TfChainClient:
                 raise Exception(f"Timeout on waiting for {x} blocks")
             time.sleep(6)
 
+    def create_group(self, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+
+        call = substrate.compose_call(
+            "SmartContractModule", "create_group", {})
+        expected_events = [{
+            "module_id": "SmartContractModule",
+            "event_id": "GroupCreated"
+        }]
+        self._sign_extrinsic_submit_check_response(
+            substrate, call, who, expected_events=expected_events)
+
+    def delete_group(self, id: int = 1, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+
+        call = substrate.compose_call("SmartContractModule", "delete_group",
+                                      {
+                                          "group_id": id
+                                      })
+        expected_events = [{
+            "module_id": "SmartContractModule",
+            "event_id": "GroupDeleted"
+        }]
+        self._sign_extrinsic_submit_check_response(
+            substrate, call, who, expected_events=expected_events)
+
     def create_farm(self, name: str = "myfarm", public_ips: list = [], port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
@@ -368,9 +394,9 @@ class TfChainClient:
         return q.value
 
     def create_deployment_contract(self, farm_id: int = 1, deployment_data: bytes = randbytes(32),
-                             deployment_hash: bytes = randbytes(32), public_ips: int = 0, hru: int = 0, sru: int = 0,
-                             cru: int = 0, mru: int = 0, solution_provider_id: int | None = None, 
-                             contract_policy: int | None = None, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+                                   deployment_hash: bytes = randbytes(32), public_ips: int = 0, hru: int = 0, sru: int = 0,
+                                   cru: int = 0, mru: int = 0, solution_provider_id: int | None = None,
+                                   contract_policy: int | None = None, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         params = {
@@ -397,8 +423,8 @@ class TfChainClient:
             substrate, call, who, expected_events=expected_events)
 
     def update_deployment_contract(self, contract_id: int = 1, deployment_data: bytes = randbytes(32),
-                             deployment_hash: bytes = randbytes(32), hru: int = 0, sru: int = 0, cru: int = 0,
-                             mru: int = 0, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+                                   deployment_hash: bytes = randbytes(32), hru: int = 0, sru: int = 0, cru: int = 0,
+                                   mru: int = 0, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         call = substrate.compose_call("SmartContractModule", "update_deployment_contract", {

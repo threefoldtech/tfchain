@@ -68,15 +68,33 @@ pub struct FarmingPolicyLimit {
     pub node_certification: bool,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo, MaxEncodedLen)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
 pub enum CapacityReservationPolicy {
-    Any,
-    Exclusive(u32),
+    Any {
+        resources: Resources,
+        features: Option<Vec<NodeFeatures>>,
+    },
+    Exclusive {
+        group_id: u32,
+        resources: Resources,
+        features: Option<Vec<NodeFeatures>>,
+    },
+    Node {
+        node_id: u32,
+    },
 }
 impl Default for CapacityReservationPolicy {
     fn default() -> CapacityReservationPolicy {
-        CapacityReservationPolicy::Any
+        CapacityReservationPolicy::Any {
+            resources: Resources::empty(),
+            features: None,
+        }
     }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
+pub enum NodeFeatures {
+    PublicNode,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
@@ -91,7 +109,9 @@ impl Default for PowerTarget {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen)]
+#[derive(
+    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
+)]
 pub struct ConsumableResources {
     pub total_resources: Resources,
     pub used_resources: Resources,
