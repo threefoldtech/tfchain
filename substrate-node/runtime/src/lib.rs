@@ -66,6 +66,8 @@ pub use pallet_session;
 
 pub use pallet_burning;
 
+pub use pallet_minting;
+
 pub use pallet_kvstore;
 
 pub use pallet_runtime_upgrade;
@@ -417,6 +419,10 @@ impl pallet_burning::Config for Runtime {
     type Burn = ();
 }
 
+impl pallet_minting::Config for Runtime {
+    type Event = Event;
+}
+
 impl pallet_kvstore::Config for Runtime {
     type Event = Event;
 }
@@ -712,6 +718,7 @@ construct_runtime!(
         TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Config<T>, Event<T>},
         Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>},
         BurningModule: pallet_burning::{Pallet, Call, Storage, Event<T>},
+        MintingModule: pallet_minting::{Pallet, Call, Storage, Event<T>},
         TFKVStore: pallet_kvstore::{Pallet, Call, Storage, Event<T>},
         Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
         CouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},

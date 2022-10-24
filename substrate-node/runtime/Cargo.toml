@@ -25,6 +25,10 @@ path = "../pallets/pallet-smart-contract"
 default-features = false
 path = "../pallets/pallet-burning"
 
+[dependencies.pallet-minting]
+default-features = false
+path = "../pallets/pallet-minting"
+
 [dependencies.pallet-kvstore]
 default-features = false
 path = "../pallets/pallet-kvstore"
@@ -170,6 +174,7 @@ std = [
     'pallet-session/std',
     'validatorset/std',
     'pallet-burning/std',
+    'pallet-minting/std',
     'pallet-runtime-upgrade/std',
     'pallet-collective/std',
     'pallet-membership/std',
