@@ -69,7 +69,7 @@ impl frame_system::Config for TestRuntime {
 }
 
 parameter_types! {
-    pub const MinAuthorities: u32 = 2;
+    pub const MinAuthorities: u32 = 0;
 }
 
 impl substrate_validator_set::Config for TestRuntime {
@@ -185,10 +185,13 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     genesis.assimilate_storage(&mut t).unwrap();
 
     let genesis = pallet_membership::GenesisConfig::<TestRuntime, pallet_membership::Instance1> {
-        members: vec![1, 2, 3],
+        members: vec![1, 2, 3], // [1, 2, 3] accounts are council members
         phantom: Default::default(),
     };
     genesis.assimilate_storage(&mut t).unwrap();
 
-    t.into()
+    // Enable receiving events
+    let mut ext = sp_io::TestExternalities::new(t);
+    ext.execute_with(|| System::set_block_number(1));
+    ext
 }
