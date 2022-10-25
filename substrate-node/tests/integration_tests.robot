@@ -311,7 +311,8 @@ Test Add Public Config On Node: Failure InvalidDomain
 
     Tear Down Multi Node Network
 
-Test Create Update Cancel Capacity Reservation Contract: Success
+#Test Create Update Cancel Capacity Reservation Contract: Success
+    
     
 
 Test Create Update Cancel Deployment Contract: Success

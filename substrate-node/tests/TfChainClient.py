@@ -90,12 +90,6 @@ class TfChainClient:
 
         self._check_events([event.value["event"]
                            for event in response.triggered_events], expected_events)
-        
-    def _gigabytify_resources(self, resources: dict):
-        resources["hru"] *= GIGABYTE
-        resources["sru"] *= GIGABYTE
-        resources["mru"] *= GIGABYTE
-        return dict(resources)
 
     def setup_predefined_account(self, who: str, port: int = DEFAULT_PORT):
         logging.info("Setting up predefined account %s (%s)", who,
@@ -291,7 +285,7 @@ class TfChainClient:
 
         params = {
             "farm_id": farm_id,
-            "resources": self._gigabytify_resources(resources),
+            "resources": dict(resources),
             "location": {
                 "longitude": f"{longitude}",
                 "latitude": f"{latitude}"
@@ -321,7 +315,7 @@ class TfChainClient:
         params = {
             "node_id": node_id,
             "farm_id": farm_id,
-            "resources": self._gigabytify_resources(resources),
+            "resources": dict(resources),
             "location": {
                 "longitude": f"{longitude}",
                 "latitude": f"{latitude}"
@@ -440,7 +434,7 @@ class TfChainClient:
             "deployment_data": deployment_data,
             "deployment_hash": deployment_hash,
             "public_ips": public_ips,
-            "resources": self._gigabytify_resources(resources),
+            "resources": dict(resources),
             "contract_policy": contract_policy
         }
         call = substrate.compose_call(
@@ -461,7 +455,7 @@ class TfChainClient:
             "contract_id": contract_id,
             "deployment_data": deployment_data,
             "deployment_hash": deployment_hash,
-            "resources": None if resources is None else self._gigabytify_resources(resources),
+            "resources": None if resources is None else dict(resources),
         })
         expected_events = [{
             "module_id": "SmartContractModule",
