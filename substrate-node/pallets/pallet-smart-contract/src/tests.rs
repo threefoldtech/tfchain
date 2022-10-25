@@ -1741,7 +1741,7 @@ fn test_deployment_contract_billing_details() {
             1,
         ));
 
-        push_nru_report_for_contract(1, 10);
+        push_nru_report_for_contract(2, 10);
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(1);
         assert_eq!(contract_to_bill, [1]);
@@ -1836,7 +1836,7 @@ fn test_deployment_contract_billing_details_with_solution_provider() {
             1,
         ));
 
-        push_nru_report_for_contract(1, 10);
+        push_nru_report_for_contract(2, 10);
 
         let contract_to_bill = SmartContractModule::contract_to_bill_at_block(1);
         assert_eq!(contract_to_bill, [1]);
