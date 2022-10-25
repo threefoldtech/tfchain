@@ -33,6 +33,8 @@ UNIT_TERRABYTES = "Terrabytes"
 UNIT_TYPES = [UNIT_BYTES, UNIT_KILOBYTES,
               UNIT_MEGABYTES, UNIT_GIGABYTES, UNIT_TERRABYTES]
 
+EMPTY_RESOURCES = { "hru": 0, "mru": 0, "cru": 0, "sru": 0}
+
 
 class TfChainClient:
     def __init__(self):
@@ -89,6 +91,12 @@ class TfChainClient:
 
         self._check_events([event.value["event"]
                            for event in response.triggered_events], expected_events)
+        
+    def _gigabytify_resources(self, resources: dict):
+        resources["hru"] *= GIGABYTE
+        resources["sru"] *= GIGABYTE
+        resources["mru"] *= GIGABYTE
+        return dict(resources)
 
     def setup_predefined_account(self, who: str, port: int = DEFAULT_PORT):
         logging.info("Setting up predefined account %s (%s)", who,
@@ -276,7 +284,7 @@ class TfChainClient:
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
 
-    def create_node(self, farm_id: int = 1, hru: int = 0, sru: int = 0, cru: int = 0, mru: int = 0,
+    def create_node(self, farm_id: int = 1, resources: dict = EMPTY_RESOURCES,
                     longitude: str = "", latitude: str = "", country: str = "", city: str = "", interfaces: list = [],
                     secure_boot: bool = False, virtualized: bool = False, serial_number: str = DEFAULT_SERIAL_NUMBER,
                     port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
@@ -284,12 +292,7 @@ class TfChainClient:
 
         params = {
             "farm_id": farm_id,
-            "resources": {
-                "hru": hru * GIGABYTE,
-                "sru": sru * GIGABYTE,
-                "cru": cru,
-                "mru": mru * GIGABYTE
-            },
+            "resources": self._gigabytify_resources(resources),
             "location": {
                 "city": city,
                 "country": country,
@@ -310,7 +313,7 @@ class TfChainClient:
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
 
-    def update_node(self, node_id: int = 1, farm_id: int = 1, hru: int = 0, sru: int = 0, cru: int = 0, mru: int = 0,
+    def update_node(self, node_id: int = 1, farm_id: int = 1, resources: dict = EMPTY_RESOURCES,
                     longitude: str = "", latitude: str = "", country: str = "", city: str = "",
                     secure_boot: bool = False, virtualized: bool = False, serial_number: str = DEFAULT_SERIAL_NUMBER,
                     port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
@@ -319,12 +322,7 @@ class TfChainClient:
         params = {
             "node_id": node_id,
             "farm_id": farm_id,
-            "resources": {
-                "hru": hru * GIGABYTE,
-                "sru": sru * GIGABYTE,
-                "cru": cru,
-                "mru": mru * GIGABYTE
-            },
+            "resources": self._gigabytify_resources(resources),
             "location": {
                 "city": city,
                 "country": country,
@@ -393,25 +391,57 @@ class TfChainClient:
 
         q = substrate.query("TfgridModule", "Nodes", [id])
         return q.value
-
-    def create_deployment_contract(self, farm_id: int = 1, deployment_data: bytes = randbytes(32),
-                                   deployment_hash: bytes = randbytes(32), public_ips: int = 0, hru: int = 0, sru: int = 0,
-                                   cru: int = 0, mru: int = 0, solution_provider_id: int | None = None,
-                                   contract_policy: int | None = None, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+    
+    def get_contract(self, id: int = 1, port: int = DEFAULT_PORT):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
+        q = substrate.query("SmartContractModule", "Contracts", [id])
+        
+        return q.value
+
+    def get_node_id_from_capacity_reservation_contract(self, contract_id: int = 1, port: int = DEFAULT_PORT):
+        contract = self.get_contract(id=contract_id, port=port)
+        assert contract is not None, "Contract doesn't exist"
+        assert "CapacityReservationContract" in contract["contract_type"], "Contract is not a Capacity Reservation Contract"
+        return contract["contract_type"]["CapacityReservationContract"]["node_id"]
+
+    def create_capacity_reservation_contract(self, farm_id: int = 1, policy: dict = {},
+                                             solution_provider_id: int | None = None, port: int = DEFAULT_PORT,
+                                             who: str = DEFAULT_SIGNER):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+
+        call_function = substrate.get_metadata_call_function(
+            "SmartContractModule", "create_capacity_reservation_contract")
+
+        call = substrate.compose_call("SmartContractModule", "create_capacity_reservation_contract",
+                                      {
+                                          "farm_id": farm_id,
+                                          "policy": dict(policy),
+                                          "solution_provider_id": solution_provider_id
+                                      })
+        expected_events = [{
+            "module_id": "SmartContractModule",
+            "event_id": "ContractCreated"
+        }]
+        self._sign_extrinsic_submit_check_response(
+            substrate, call, who, expected_events=expected_events)
+
+    def create_deployment_contract(self, capacity_reservation_id: int = 1, deployment_data: None | bytes = None,
+                                   deployment_hash: None | bytes = None, public_ips: int = 0, 
+                                   resources: dict = EMPTY_RESOURCES, contract_policy: int | None = None, 
+                                   port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+        if deployment_data is None:
+            deployment_data = randbytes(32)
+        if deployment_hash is None:
+            deployment_hash = randbytes(32)
+            
         params = {
-            "farm_id": farm_id,
+            "capacity_reservation_id": capacity_reservation_id,
             "deployment_data": deployment_data,
             "deployment_hash": deployment_hash,
             "public_ips": public_ips,
-            "resources": {
-                "hru": hru * GIGABYTE,
-                "sru": sru * GIGABYTE,
-                "cru": cru,
-                "mru": mru * GIGABYTE
-            },
-            "solution_provider_id": solution_provider_id,
+            "resources": self._gigabytify_resources(resources),
             "contract_policy": contract_policy
         }
         call = substrate.compose_call(
@@ -424,40 +454,19 @@ class TfChainClient:
             substrate, call, who, expected_events=expected_events)
 
     def update_deployment_contract(self, contract_id: int = 1, deployment_data: bytes = randbytes(32),
-                                   deployment_hash: bytes = randbytes(32), hru: int = 0, sru: int = 0, cru: int = 0,
-                                   mru: int = 0, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+                                   deployment_hash: bytes = randbytes(32), resources: None | dict = None,
+                                   port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         call = substrate.compose_call("SmartContractModule", "update_deployment_contract", {
             "contract_id": contract_id,
             "deployment_data": deployment_data,
             "deployment_hash": deployment_hash,
-            "resources": None if hru == 0 and sru == 0 and cru == 0 and mru == 0 else {
-                "hru": hru * GIGABYTE,
-                "sru": sru * GIGABYTE,
-                "cru": cru,
-                "mru": mru * GIGABYTE
-            }
+            "resources": None if resources is None else self._gigabytify_resources(resources),
         })
         expected_events = [{
             "module_id": "SmartContractModule",
             "event_id": "ContractUpdated"
-        }]
-        self._sign_extrinsic_submit_check_response(
-            substrate, call, who, expected_events=expected_events)
-
-    def create_rent_contract(self, node_id: int = 1, solution_provider_id: int | None = None, port: int = DEFAULT_PORT,
-                             who: str = DEFAULT_SIGNER):
-        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
-
-        call = substrate.compose_call("SmartContractModule", "create_rent_contract",
-                                      {
-                                          "node_id": node_id,
-                                          "solution_provider_id": solution_provider_id
-                                      })
-        expected_events = [{
-            "module_id": "SmartContractModule",
-            "event_id": "ContractCreated"
         }]
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
@@ -494,13 +503,13 @@ class TfChainClient:
         self._cancel_contract(contract_id=contract_id,
                               type="Name", port=port, who=who)
 
-    def cancel_rent_contract(self, contract_id: int = 1, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+    def cancel_deployment_contract(self, contract_id: int = 1, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         self._cancel_contract(contract_id=contract_id,
-                              type="Rent", port=port, who=who)
+                              type="Deployment", port=port, who=who)
 
-    def cancel_node_contract(self, contract_id: int = 1, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+    def cancel_capacity_reservation_contract(self, contract_id: int = 1, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         self._cancel_contract(contract_id=contract_id,
-                              type="Node", port=port, who=who)
+                              type="CapacityReservation", port=port, who=who)
 
     def add_nru_reports(self, contract_id: int = 1, nru: int = 1, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         block_number = self.get_block_number(port=port)
