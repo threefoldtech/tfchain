@@ -1428,7 +1428,7 @@ impl<T: Config> Pallet<T> {
             Error::<T>::CannotUpdateContractInGraceState
         );
 
-        let mut deployment_contract = Self::get_node_contract(&contract.clone())?;
+        let mut deployment_contract = Self::get_deployment_contract(&contract.clone())?;
         let cr_contract = Contracts::<T>::get(deployment_contract.capacity_reservation_id)
             .ok_or(Error::<T>::ContractNotExists)?;
         let capacity_reservation_contract = Self::get_capacity_reservation_contract(&cr_contract)?;
@@ -1533,13 +1533,17 @@ impl<T: Config> Pallet<T> {
             // if the node is trying to send garbage data we can throw an error here
             let contract =
                 Contracts::<T>::get(report.contract_id).ok_or(Error::<T>::ContractNotExists)?;
-            let capacity_reservation_contract = Self::get_capacity_reservation_contract(&contract)?;
+            let deployment_contract = Self::get_deployment_contract(&contract)?;
+            let contract_cr = Contracts::<T>::get(deployment_contract.capacity_reservation_id)
+                .ok_or(Error::<T>::CapacityReservationNotExists)?;
+            let capacity_reservation_contract =
+                Self::get_capacity_reservation_contract(&contract_cr)?;
             ensure!(
                 capacity_reservation_contract.node_id == node_id,
                 Error::<T>::NodeNotAuthorizedToComputeReport
             );
 
-            Self::_calculate_report_cost(&report, &pricing_policy);
+            Self::_calculate_report_cost(contract_cr.contract_id, &report, &pricing_policy);
             Self::deposit_event(Event::NruConsumptionReportReceived(report.clone()));
         }
 
@@ -1550,11 +1554,11 @@ impl<T: Config> Pallet<T> {
     // Takes in a report for NRU (network resource units)
     // Updates the contract's billing information in storage
     pub fn _calculate_report_cost(
+        contract_id: u64,
         report: &types::NruConsumption,
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
     ) {
-        let mut contract_billing_info =
-            ContractBillingInformationByID::<T>::get(report.contract_id);
+        let mut contract_billing_info = ContractBillingInformationByID::<T>::get(contract_id);
         if report.timestamp < contract_billing_info.last_updated {
             return;
         }
@@ -1577,7 +1581,7 @@ impl<T: Config> Pallet<T> {
         // update contract billing info
         contract_billing_info.amount_unbilled += total;
         contract_billing_info.last_updated = report.timestamp;
-        ContractBillingInformationByID::<T>::insert(report.contract_id, &contract_billing_info);
+        ContractBillingInformationByID::<T>::insert(contract_id, &contract_billing_info);
     }
 
     fn bill_contract_using_signed_transaction(contract_id: u64) -> Result<(), Error<T>> {
@@ -2315,7 +2319,7 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn get_node_contract(
+    pub fn get_deployment_contract(
         contract: &types::Contract<T>,
     ) -> Result<types::DeploymentContract<T>, DispatchErrorWithPostInfo> {
         match contract.contract_type.clone() {
