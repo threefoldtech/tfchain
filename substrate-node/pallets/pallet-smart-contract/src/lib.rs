@@ -309,6 +309,10 @@ pub mod pallet {
         NameContractCanceled {
             contract_id: u64,
         },
+        /// A Service contract is canceled
+        ServiceContractCanceled {
+            contract_id: u64,
+        },
         /// IP got reserved by a Node contract
         IPsReserved {
             contract_id: u64,
@@ -639,6 +643,12 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let _account_id = ensure_signed(origin)?;
             Self::bill_contract(contract_id)
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        pub fn create_service_contract(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_create_service_contract(account_id)
         }
     }
 
@@ -1107,6 +1117,37 @@ impl<T: Config> Pallet<T> {
         )?;
 
         ContractIDByNameRegistration::<T>::insert(valid_name, &contract.contract_id);
+
+        Self::deposit_event(Event::ContractCreated(contract));
+
+        Ok(().into())
+    }
+
+    #[transactional]
+    pub fn _create_service_contract(source: T::AccountId) -> DispatchResultWithPostInfo {
+        ensure!(
+            pallet_tfgrid::TwinIdByAccountID::<T>::contains_key(&source),
+            Error::<T>::TwinNotExists
+        );
+        let twin_id =
+            pallet_tfgrid::TwinIdByAccountID::<T>::get(&source).ok_or(Error::<T>::TwinNotExists)?;
+
+        let service_contract = types::ServiceContract {
+            service_twin_id: 0,                   // TODO
+            consumer_twin_id: 0,                  // TODO
+            base_fee: 0,                          // OK
+            variable_fee: 0,                      // OK
+            metadata: vec![].try_into().unwrap(), // TODO
+            accepted_by_service: false,           // TODO
+            accepted_by_consumer: false,          // TODO
+            last_bill_received: 0,                // TODO
+        };
+
+        let contract = Self::_create_contract(
+            twin_id,
+            types::ContractData::ServiceContract(service_contract),
+            None,
+        )?;
 
         Self::deposit_event(Event::ContractCreated(contract));
 
@@ -2010,6 +2051,9 @@ impl<T: Config> Pallet<T> {
                         node_id: capacity_reservation_contract.node_id,
                         twin_id: contract.twin_id,
                     });
+                }
+                types::ContractData::ServiceContract(_) => {
+                    Self::deposit_event(Event::ServiceContractCanceled { contract_id });
                 }
             };
             info!("removing contract");

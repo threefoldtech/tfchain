@@ -3,13 +3,11 @@ use crate::pallet::{
 };
 use crate::Config;
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::{BoundedVec, RuntimeDebugNoBound};
+use frame_support::{pallet_prelude::ConstU32, BoundedVec, RuntimeDebugNoBound};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
 use substrate_fixed::types::U64F64;
-use tfchain_support::types::{
-    ConsumableResources, Resources
-};
+use tfchain_support::types::{ConsumableResources, Resources};
 
 pub type BlockNumber = u64;
 
@@ -34,7 +32,7 @@ impl Default for StorageVersion {
 pub struct Group {
     pub id: u32,
     pub twin_id: u32,
-    pub capacity_reservation_contract_ids: Vec<u64>
+    pub capacity_reservation_contract_ids: Vec<u64>,
 }
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo)]
@@ -65,6 +63,7 @@ impl<T: Config> Contract<T> {
             ContractData::CapacityReservationContract(c) => c.node_id,
             ContractData::DeploymentContract(_) => 0,
             ContractData::NameContract(_) => 0,
+            ContractData::ServiceContract(_) => 0,
         }
     }
 }
@@ -101,6 +100,20 @@ pub struct NameContract<T: Config> {
     pub name: T::NameContractName,
 }
 
+#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(T))]
+#[codec(mel_bound())]
+pub struct ServiceContract {
+    pub service_twin_id: u32,
+    pub consumer_twin_id: u32,
+    pub base_fee: u64,
+    pub variable_fee: u64,
+    pub metadata: BoundedVec<u8, ConstU32<64>>,
+    pub accepted_by_service: bool,
+    pub accepted_by_consumer: bool,
+    pub last_bill_received: u32,
+}
+
 #[derive(
     PartialEq,
     Eq,
@@ -122,9 +135,10 @@ pub struct RentContract {
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub enum ContractData<T: Config> {
+    CapacityReservationContract(CapacityReservationContract),
     DeploymentContract(DeploymentContract<T>),
     NameContract(NameContract<T>),
-    CapacityReservationContract(CapacityReservationContract),
+    ServiceContract(ServiceContract),
 }
 
 // impl<T: Config> Default for ContractData<T> {

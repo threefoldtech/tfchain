@@ -86,6 +86,14 @@ impl<T: Config> Contract<T> {
                     * U64F64::from_num(seconds_elapsed);
                 total_cost_u64f64.to_num::<u64>()
             }
+            types::ContractData::ServiceContract(service_contract) => {
+                // bill user for service usage for number of seconds elapsed
+                let bill_window = 0; // TODO
+                let contract_cost = (U64F64::from_num(service_contract.base_fee * bill_window)
+                    / 3600)
+                    + U64F64::from_num(service_contract.variable_fee);
+                contract_cost.to_num::<u64>()
+            }
         };
 
         Ok(total_cost)
