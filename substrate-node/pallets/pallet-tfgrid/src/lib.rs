@@ -1086,11 +1086,8 @@ pub mod pallet {
             };
 
             let created = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-            let power_target = if NodesByFarmID::<T>::get(farm_id).is_empty() {
-                PowerTarget::Up
-            } else {
-                PowerTarget::Down
-            };
+
+            // TODO decide power state and target
 
             let mut new_node = Node {
                 version: TFGRID_NODE_VERSION,
@@ -1099,7 +1096,10 @@ pub mod pallet {
                 twin_id,
                 resources: node_resources,
                 location: node_location,
-                power_target,
+                power: Power {
+                    state: PowerState::Up,
+                    target: PowerTarget::Up,
+                },
                 public_config: None,
                 created,
                 farming_policy_id: 0,

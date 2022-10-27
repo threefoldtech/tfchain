@@ -110,6 +110,24 @@ impl Default for PowerTarget {
     }
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
+pub enum PowerState {
+    Up,
+    Down(u32),
+}
+
+impl Default for PowerState {
+    fn default() -> PowerState {
+        PowerState::Up
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+pub struct Power {
+    pub target: PowerTarget,
+    pub state: PowerState,
+}
+
 #[derive(
     PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
 )]
@@ -151,7 +169,7 @@ pub struct Node<Location, PubConfig, If, SerialNumber> {
     pub twin_id: u32,
     pub resources: ConsumableResources,
     pub location: Location,
-    pub power_target: PowerTarget,
+    pub power: Power,
     // optional public config
     pub public_config: Option<PubConfig>,
     pub created: u64,
