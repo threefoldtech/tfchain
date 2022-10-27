@@ -108,10 +108,39 @@ pub struct ServiceContract {
     pub consumer_twin_id: u32,
     pub base_fee: u64,
     pub variable_fee: u64,
-    pub metadata: BoundedVec<u8, ConstU32<64>>,
+    pub metadata: BoundedVec<u8, ConstU32<64>>, // limited to 64 bytes (2 public keys)
     pub accepted_by_service: bool,
     pub accepted_by_consumer: bool,
-    pub last_bill_received: u32,
+    pub last_bill: u64,
+    pub state: ServiceContractState,
+}
+
+// impl ServiceContract {
+//     pub fn get_state(&self) -> ServiceContractState {
+//         if self.accepted_by_service && self.accepted_by_consumer {
+//             return ServiceContractState::ApprovedByBoth;
+//         } else if self.base_fee.is_some() && self.metadata.is_some() {
+//             return ServiceContractState::AgreementReady;
+//         }
+//         ServiceContractState::Created
+//     }
+// }
+
+#[derive(
+    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
+)]
+pub struct ServiceContractBillReport {
+    pub bill_id: u64,
+    pub amount: u64,
+    pub window: u64,
+    pub metadata: BoundedVec<u8, ConstU32<50>>, // limited to 50 bytes for now
+}
+
+#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
+pub enum ServiceContractState {
+    Created,
+    AgreementReady,
+    ApprovedByBoth,
 }
 
 #[derive(
