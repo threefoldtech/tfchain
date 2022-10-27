@@ -33,7 +33,7 @@ use substrate_fixed::types::U64F64;
 use tfchain_support::{
     traits::ChangeNode,
     types::{
-        CapacityReservationPolicy, ConsumableResources, Node, NodeFeatures, PowerTarget, Resources,
+        CapacityReservationPolicy, ConsumableResources, Node, NodeFeatures, PowerState, PowerTarget, Resources,
     },
 };
 
@@ -364,6 +364,11 @@ pub mod pallet {
             node_id: u32,
             power_target: PowerTarget,
         },
+        PowerStateChanged {
+            farm_id: u32,
+            node_id: u32,
+            power_state: PowerState,
+        },
         GroupCreated {
             group_id: u32,
             twin_id: u32,
@@ -508,6 +513,16 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             // return error
             Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        pub fn change_power_state(
+            origin: OriginFor<T>,
+            node_id: u32,
+            power_state: PowerState,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_change_power_state(account_id, node_id, power_state)
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
@@ -1079,6 +1094,32 @@ impl<T: Config> Pallet<T> {
     //     Ok(().into())
     // }
 
+    pub fn _change_power_state(
+        account_id: T::AccountId,
+        node_id: u32,
+        power_state: PowerState,
+    ) -> DispatchResultWithPostInfo {
+        let twin_id =
+            pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
+        
+        // todo should we 
+        let mut node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+
+        // if the power state is not correct => change it and emit event
+        if node.power.state != power_state {
+            node.power.state = power_state.clone();
+            pallet_tfgrid::Nodes::<T>::insert(node.id, &node);
+
+            Self::deposit_event(Event::PowerStateChanged {
+                farm_id: node.farm_id,
+                node_id: node_id,
+                power_state: power_state,
+            });
+        }
+
+        Ok(().into())
+    }
+
     // Registers a DNS name for a Twin
     // Ensures uniqueness and also checks if it's a valid DNS name
     pub fn _create_name_contract(
@@ -1118,37 +1159,6 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    fn _change_power_target_node(
-        node_id: u32,
-        power_target: PowerTarget,
-    ) -> DispatchResultWithPostInfo {
-        let mut node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-
-        // do not power down if it is the first node in the list of nodes from that farm
-        if matches!(power_target, PowerTarget::Down)
-            && pallet_tfgrid::NodesByFarmID::<T>::get(node.farm_id)[0] == node_id
-        {
-            return Ok(().into());
-        }
-
-        // if the power_target is not correct => change it and emit event
-        if node.power_target != power_target {
-            ensure!(
-                pallet_tfgrid::Farms::<T>::contains_key(node.farm_id),
-                Error::<T>::FarmNotExists
-            );
-            Self::deposit_event(Event::PowerTargetChanged {
-                farm_id: node.farm_id,
-                node_id: node_id,
-                power_target: power_target.clone(),
-            });
-            node.power_target = power_target;
-            pallet_tfgrid::Nodes::<T>::insert(node.id, &node);
-        }
-
-        Ok(().into())
-    }
-
     fn _claim_resources_on_node(node_id: u32, resources: Resources) -> DispatchResultWithPostInfo {
         let mut node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
 
@@ -1158,13 +1168,13 @@ impl<T: Config> Pallet<T> {
         );
 
         // if the power_target is down wake the node up and emit event
-        if matches!(node.power_target, PowerTarget::Down) {
+        if matches!(node.power.state, PowerState::Down(_)) {
             Self::deposit_event(Event::PowerTargetChanged {
                 farm_id: node.farm_id,
                 node_id: node_id,
                 power_target: PowerTarget::Up,
             });
-            node.power_target = PowerTarget::Up;
+            node.power.target = PowerTarget::Up;
         }
 
         //update the available resources
@@ -1181,23 +1191,19 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         let mut node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
 
-        log::info!("Before freeing: {:?}", node.resources.used_resources);
         //update the available resources
         node.resources.free(&resources);
-        log::info!("After freeing: {:?}", node.resources.used_resources);
 
-        // if the power_target is down wake the node up and emit event
-        // do not power down if it is the first node in the list of nodes from that farm
+        // if the power state is up and the resources are all freed attempt to shutdown the node
         if node.can_be_shutdown()
-            && matches!(node.power_target, PowerTarget::Up)
-            && pallet_tfgrid::NodesByFarmID::<T>::get(node.farm_id)[0] != node_id
+            && matches!(node.power.state, PowerState::Up)
         {
             Self::deposit_event(Event::PowerTargetChanged {
                 farm_id: node.farm_id,
                 node_id: node_id,
                 power_target: PowerTarget::Down,
             });
-            node.power_target = PowerTarget::Down;
+            node.power.target = PowerTarget::Down;
         }
 
         pallet_tfgrid::Nodes::<T>::insert(node.id, &node);
@@ -1346,8 +1352,8 @@ impl<T: Config> Pallet<T> {
 
         ensure!(!suitable_nodes.is_empty(), Error::<T>::NoSuitableNodeInFarm);
 
-        // sort the suitable nodes on power_target: the nodes that are Up will be first in the list
-        suitable_nodes.sort_by(|a, b| a.power_target.cmp(&b.power_target));
+        // sort the suitable nodes on power state: the nodes that are Up will be first in the list
+        suitable_nodes.sort_by(|a, b| a.power.state.cmp(&b.power.state));
 
         Ok(suitable_nodes[0].id)
     }
