@@ -100,6 +100,9 @@ pub struct NameContract<T: Config> {
     pub name: T::NameContractName,
 }
 
+// metadata length limited to 64 bytes (2 public keys)
+pub const MAX_METADATA_LENGTH: u32 = 64;
+
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
@@ -108,7 +111,7 @@ pub struct ServiceContract {
     pub consumer_twin_id: u32,
     pub base_fee: u64,
     pub variable_fee: u64,
-    pub metadata: BoundedVec<u8, ConstU32<64>>, // limited to 64 bytes (2 public keys)
+    pub metadata: BoundedVec<u8, ConstU32<MAX_METADATA_LENGTH>>,
     pub accepted_by_service: bool,
     pub accepted_by_consumer: bool,
     pub last_bill: u64,

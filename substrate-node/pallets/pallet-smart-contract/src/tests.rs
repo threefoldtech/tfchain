@@ -1471,6 +1471,74 @@ fn test_create_name_contract_with_invalid_dns_name_fails() {
     });
 }
 
+// SERVICE CONTRACT TESTS //
+// ---------------------- //
+
+#[test]
+fn test_create_service_contract_works() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+
+        // check data
+
+        // check event
+    });
+}
+
+#[test]
+fn test_service_contract_set_metadata_works() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+
+        assert_ok!(SmartContractModule::service_contract_set_metadata(
+            Origin::signed(alice()),
+            1,
+            b"some_metadata".to_vec(),
+        ));
+
+        // check data
+    });
+}
+
+#[test]
+fn test_service_contract_set_fees_works() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+
+        assert_ok!(SmartContractModule::service_contract_set_fees(
+            Origin::signed(alice()),
+            1,
+            10,
+            10,
+        ));
+
+        // check data
+    });
+}
+
+#[test]
+fn test_service_contract_approve_works() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+
+        assert_ok!(SmartContractModule::service_contract_approve(
+            Origin::signed(alice()),
+            1,
+        ));
+
+        // check state
+
+        assert_ok!(SmartContractModule::service_contract_approve(
+            Origin::signed(bob()),
+            1,
+        ));
+
+        // check data
+
+        // check event
+    });
+}
+
 //  CAPACITY CONTRACT RESERVING ALL RESOURCES OF NODE TESTS //
 // -------------------------------------------- //
 
@@ -4328,4 +4396,33 @@ fn prepare_farm_three_nodes_three_capacity_reservation_contracts() {
 
     assert_eq!(SmartContractModule::active_node_contracts(1).len(), 2);
     assert_eq!(SmartContractModule::active_node_contracts(2).len(), 1);
+}
+
+fn create_service_consumer_contract() {
+    create_twin(alice());
+    create_twin(bob());
+
+    // create contract between service (Alice) and consumer (Bob)
+    assert_ok!(SmartContractModule::create_service_contract(
+        Origin::signed(alice()),
+        alice(),
+        bob(),
+    ));
+}
+
+fn prepare_service_consumer_contract() {
+    create_service_consumer_contract();
+
+    assert_ok!(SmartContractModule::service_contract_set_metadata(
+        Origin::signed(alice()),
+        1,
+        b"some_metadata".to_vec(),
+    ));
+
+    assert_ok!(SmartContractModule::service_contract_set_fees(
+        Origin::signed(alice()),
+        1,
+        10,
+        10,
+    ));
 }

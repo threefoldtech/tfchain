@@ -4,7 +4,6 @@ use frame_support::{
     dispatch::DispatchErrorWithPostInfo,
     ensure,
     log::info,
-    pallet_prelude::ConstU32,
     pallet_prelude::DispatchResult,
     traits::{
         Currency, EnsureOrigin, ExistenceRequirement, ExistenceRequirement::KeepAlive, Get,
@@ -440,6 +439,7 @@ pub mod pallet {
         TwinNotAuthorizedToApproveServiceContract,
         NoServiceContractModificationAllowed,
         NoServiceContractApprovalAllowed,
+        MetadataTooLong,
     }
 
     #[pallet::genesis_config]
@@ -671,7 +671,7 @@ pub mod pallet {
         pub fn service_contract_set_metadata(
             origin: OriginFor<T>,
             contract_id: u64,
-            metadata: BoundedVec<u8, ConstU32<64>>,
+            metadata: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_service_contract_set_metadata(account_id, contract_id, metadata)
@@ -1186,7 +1186,7 @@ impl<T: Config> Pallet<T> {
 
         // Only service or consumer can create contract
         ensure!(
-            caller_twin_id == service_twin_id || caller_twin_id == service_twin_id,
+            caller_twin_id == service_twin_id || caller_twin_id == consumer_twin_id,
             Error::<T>::TwinNotAuthorizedToCreateServiceContract,
         );
 
@@ -1216,18 +1216,19 @@ impl<T: Config> Pallet<T> {
     pub fn _service_contract_set_metadata(
         account_id: T::AccountId,
         contract_id: u64,
-        metadata: BoundedVec<u8, ConstU32<64>>,
+        metadata: Vec<u8>,
     ) -> DispatchResultWithPostInfo {
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
             .ok_or(Error::<T>::TwinNotExists)?;
 
-        let contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+        let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
 
         let mut service_contract = Self::get_service_contract(&contract)?;
 
         // Only service or consumer can set metadata
         ensure!(
-            twin_id == service_contract.service_twin_id | service_contract.consumer_twin_id,
+            twin_id == service_contract.service_twin_id
+                || twin_id == service_contract.consumer_twin_id,
             Error::<T>::TwinNotAuthorizedToSetMetadata,
         );
 
@@ -1240,7 +1241,18 @@ impl<T: Config> Pallet<T> {
             Error::<T>::NoServiceContractModificationAllowed,
         );
 
-        service_contract.metadata = metadata;
+        // TODO create metadata input type to control size
+        service_contract.metadata =
+            BoundedVec::try_from(metadata).map_err(|_| Error::<T>::MetadataTooLong)?;
+
+        // If base_fee is set and non-zero (mandatory)
+        if !service_contract.base_fee != 0 {
+            service_contract.state = types::ServiceContractState::AgreementReady;
+        }
+
+        // Update contract in list after modification
+        contract.contract_type = types::ContractData::ServiceContract(service_contract);
+        Contracts::<T>::insert(contract_id, contract);
 
         Ok(().into())
     }
@@ -1254,7 +1266,7 @@ impl<T: Config> Pallet<T> {
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
             .ok_or(Error::<T>::TwinNotExists)?;
 
-        let contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+        let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
 
         let mut service_contract = Self::get_service_contract(&contract)?;
 
@@ -1276,6 +1288,15 @@ impl<T: Config> Pallet<T> {
         service_contract.base_fee = base_fee;
         service_contract.variable_fee = variable_fee;
 
+        // If metadata is filled and not empty (mandatory)
+        if !service_contract.metadata.is_empty() {
+            service_contract.state = types::ServiceContractState::AgreementReady;
+        }
+
+        // Update contract in list after modification
+        contract.contract_type = types::ContractData::ServiceContract(service_contract);
+        Contracts::<T>::insert(contract_id, contract);
+
         Ok(().into())
     }
 
@@ -1286,7 +1307,7 @@ impl<T: Config> Pallet<T> {
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
             .ok_or(Error::<T>::TwinNotExists)?;
 
-        let contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+        let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
 
         let mut service_contract = Self::get_service_contract(&contract)?;
 
@@ -1315,6 +1336,10 @@ impl<T: Config> Pallet<T> {
             service_contract.state = types::ServiceContractState::ApprovedByBoth;
             Self::deposit_event(Event::ServiceContractApproved { contract_id });
         }
+
+        // Update contract in list after modification
+        contract.contract_type = types::ContractData::ServiceContract(service_contract);
+        Contracts::<T>::insert(contract_id, contract);
 
         Ok(().into())
     }
