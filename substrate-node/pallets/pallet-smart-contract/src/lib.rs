@@ -30,11 +30,10 @@ use sp_runtime::{
     Perbill,
 };
 use substrate_fixed::types::U64F64;
+
 use tfchain_support::{
-    traits::ChangeNode,
-    types::{
-        CapacityReservationPolicy, ConsumableResources, Node, NodeFeatures, PowerState, PowerTarget, Resources,
-    },
+    traits::{ChangeNode, Tfgrid},
+    types::{CapacityReservationPolicy, ConsumableResources, Node, NodeFeatures, Resources},
 };
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"smct");
@@ -274,6 +273,7 @@ pub mod pallet {
         >;
         type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
         type Call: From<Call<Self>>;
+        type Tfgrid: Tfgrid<Self::AccountId, FarmName<Self>, ContractPublicIP<Self>>;
 
         #[pallet::constant]
         type MaxNameContractNameLength: Get<u32>;
@@ -358,17 +358,6 @@ pub mod pallet {
         },
         SolutionProviderCreated(types::SolutionProvider<T::AccountId>),
         SolutionProviderApproved(u64, bool),
-        /// Send an event to zero os to change its state
-        PowerTargetChanged {
-            farm_id: u32,
-            node_id: u32,
-            power_target: PowerTarget,
-        },
-        PowerStateChanged {
-            farm_id: u32,
-            node_id: u32,
-            power_state: PowerState,
-        },
         GroupCreated {
             group_id: u32,
             twin_id: u32,
@@ -513,16 +502,6 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             // return error
             Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
-        }
-
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn change_power_state(
-            origin: OriginFor<T>,
-            node_id: u32,
-            power_state: PowerState,
-        ) -> DispatchResultWithPostInfo {
-            let account_id = ensure_signed(origin)?;
-            Self::_change_power_state(account_id, node_id, power_state)
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
@@ -1054,72 +1033,6 @@ impl<T: Config> Pallet<T> {
         Ok(node_id.into())
     }
 
-    // pub fn _create_rent_contract(
-    //     account_id: T::AccountId,
-    //     node_id: u32,
-    //     solution_provider_id: Option<u64>,
-    // ) -> DispatchResultWithPostInfo {
-    //     ensure!(
-    //         !ActiveRentContractForNode::<T>::contains_key(node_id),
-    //         Error::<T>::NodeHasRentContract
-    //     );
-
-    //     let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-    //     ensure!(
-    //         pallet_tfgrid::Farms::<T>::contains_key(node.farm_id),
-    //         Error::<T>::FarmNotExists
-    //     );
-
-    //     let active_node_contracts = ActiveNodeContracts::<T>::get(node_id);
-    //     let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
-    //     ensure!(
-    //         farm.dedicated_farm || active_node_contracts.is_empty(),
-    //         Error::<T>::NodeNotAvailableToDeploy
-    //     );
-
-    //     // Create contract
-    //     let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
-    //         .ok_or(Error::<T>::TwinNotExists)?;
-    //     let contract = Self::_create_contract(
-    //         twin_id,
-    //         types::ContractData::RentContract(types::RentContract { node_id }),
-    //         solution_provider_id,
-    //     )?;
-
-    //     // Insert active rent contract for node
-    //     ActiveRentContractForNode::<T>::insert(node_id, contract.contract_id);
-
-    //     Self::deposit_event(Event::ContractCreated(contract));
-
-    //     Ok(().into())
-    // }
-
-    pub fn _change_power_state(
-        account_id: T::AccountId,
-        node_id: u32,
-        power_state: PowerState,
-    ) -> DispatchResultWithPostInfo {
-        let twin_id =
-            pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
-        
-        // todo should we 
-        let mut node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-
-        // if the power state is not correct => change it and emit event
-        if node.power.state != power_state {
-            node.power.state = power_state.clone();
-            pallet_tfgrid::Nodes::<T>::insert(node.id, &node);
-
-            Self::deposit_event(Event::PowerStateChanged {
-                farm_id: node.farm_id,
-                node_id: node_id,
-                power_state: power_state,
-            });
-        }
-
-        Ok(().into())
-    }
-
     // Registers a DNS name for a Twin
     // Ensures uniqueness and also checks if it's a valid DNS name
     pub fn _create_name_contract(
@@ -1166,21 +1079,12 @@ impl<T: Config> Pallet<T> {
             node.resources.can_consume_resources(&resources),
             Error::<T>::NotEnoughResourcesOnNode
         );
-
-        // if the power_target is down wake the node up and emit event
-        if matches!(node.power.state, PowerState::Down(_)) {
-            Self::deposit_event(Event::PowerTargetChanged {
-                farm_id: node.farm_id,
-                node_id: node_id,
-                power_target: PowerTarget::Up,
-            });
-            node.power.target = PowerTarget::Up;
-        }
-
         //update the available resources
         node.resources.consume(&resources);
 
         pallet_tfgrid::Nodes::<T>::insert(node.id, &node);
+
+        T::Tfgrid::node_resources_changed(node.id);
 
         Ok(().into())
     }
@@ -1194,19 +1098,9 @@ impl<T: Config> Pallet<T> {
         //update the available resources
         node.resources.free(&resources);
 
-        // if the power state is up and the resources are all freed attempt to shutdown the node
-        if node.can_be_shutdown()
-            && matches!(node.power.state, PowerState::Up)
-        {
-            Self::deposit_event(Event::PowerTargetChanged {
-                farm_id: node.farm_id,
-                node_id: node_id,
-                power_target: PowerTarget::Down,
-            });
-            node.power.target = PowerTarget::Down;
-        }
-
         pallet_tfgrid::Nodes::<T>::insert(node.id, &node);
+
+        T::Tfgrid::node_resources_changed(node.id);
 
         Ok(().into())
     }

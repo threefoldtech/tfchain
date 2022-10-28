@@ -9,7 +9,8 @@ use frame_support::{assert_noop, assert_ok, bounded_vec, BoundedVec};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
 use tfchain_support::types::{
-    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, PublicConfig, IP,
+    FarmCertification, FarmingPolicyLimit, Interface, Location, NodeCertification, PowerState,
+    PowerTarget, PublicConfig, Resources, IP,
 };
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -841,6 +842,53 @@ fn create_node_with_interfaces_works() {
             true,
             None,
         ));
+    });
+}
+
+#[test]
+fn change_power_state_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+        create_twin_bob();
+        create_extra_node();
+
+        assert_ok!(TfgridModule::change_power_state(
+            Origin::signed(alice()),
+            2,
+            PowerState::Down(1)
+        ));
+
+        assert_eq!(
+            TfgridModule::nodes(2).unwrap().power.state,
+            PowerState::Down(1)
+        );
+    });
+}
+
+#[test]
+fn node_resources_changed_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+        create_twin_bob();
+        create_extra_node();
+
+        assert_ok!(TfgridModule::change_power_state(
+            Origin::signed(alice()),
+            2,
+            PowerState::Down(1)
+        ));
+
+        assert_eq!(
+            TfgridModule::nodes(2).unwrap().power.state,
+            PowerState::Down(1)
+        );
+        // todo !
     });
 }
 
@@ -2135,6 +2183,17 @@ fn create_node() {
         true,
         None,
     ));
+
+    assert_eq!(
+        System::events().contains(&record(MockEvent::TfgridModule(
+            TfgridEvent::PowerTargetChanged {
+                farm_id: 1,
+                node_id: 1,
+                power_target: PowerTarget::Down
+            }
+        ))),
+        true
+    );
 }
 
 fn create_extra_node() {
@@ -2163,6 +2222,17 @@ fn create_extra_node() {
         true,
         None,
     ));
+
+    assert_eq!(
+        System::events().contains(&record(MockEvent::TfgridModule(
+            TfgridEvent::PowerTargetChanged {
+                farm_id: 1,
+                node_id: 2,
+                power_target: PowerTarget::Down
+            }
+        ))),
+        true
+    );
 }
 
 fn create_farming_policies() {
