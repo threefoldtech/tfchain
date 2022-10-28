@@ -402,6 +402,7 @@ impl pallet_smart_contract::Config for Runtime {
     type GracePeriod = GracePeriod;
     type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
     type NodeChanged = NodeChanged;
+    type Tfgrid = TfgridModule;
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
     type Call = Call;
     type MaxNameContractNameLength = MaxNameContractNameLength;

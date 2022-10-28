@@ -34,6 +34,28 @@ pub type Moment = u64;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime>;
 type Block = frame_system::mocking::MockBlock<TestRuntime>;
+pub type PublicIpOf =
+    tfchain_support::types::PublicIP<PublicIP<TestRuntime>, GatewayIP<TestRuntime>>;
+pub struct TfgridMock;
+impl tfchain_support::traits::Tfgrid<AccountId, FarmName<TestRuntime>, PublicIpOf>
+    for TfgridMock
+{
+    fn get_farm(farm_id: u32) -> Option<Farm<FarmName<TestRuntime>, PublicIpOf>> {
+        TfgridModule::get_farm(farm_id)
+    }
+
+    fn is_farm_owner(farm_id: u32, who: AccountId) -> bool {
+        TfgridModule::is_farm_owner(farm_id, who)
+    }
+
+    fn is_twin_owner(twin_id: u32, who: AccountId) -> bool {
+        TfgridModule::is_twin_owner(twin_id, who)
+    }
+
+    fn node_resources_changed(node_id: u32) {
+        TfgridModule::node_resources_changed(node_id);
+    }
+}
 
 construct_runtime!(
     pub enum TestRuntime where

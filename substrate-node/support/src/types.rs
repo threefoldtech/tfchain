@@ -186,6 +186,9 @@ impl<PubConfig, If> Node<PubConfig, If> {
     pub fn can_be_shutdown(&self) -> bool {
         self.resources.used_resources.is_empty()
     }
+    pub fn is_up(&self) -> bool {
+        matches!(self.power.state, PowerState::Up)
+    }
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]

@@ -6,7 +6,7 @@ use crate::name_contract::NameContractName;
 use crate::{self as pallet_smart_contract};
 use codec::{alloc::sync::Arc, Decode};
 use frame_support::{
-    construct_runtime, parameter_types,
+    assert_ok, construct_runtime, parameter_types,
     traits::{ConstU32, GenesisBuild},
     weights::PostDispatchInfo,
     BoundedVec,
@@ -42,7 +42,10 @@ use sp_runtime::{
     AccountId32,
 };
 use sp_std::convert::{TryFrom, TryInto};
-use tfchain_support::traits::ChangeNode;
+use tfchain_support::{
+    traits::ChangeNode,
+    types::{Farm, Node, PowerState, PowerTarget},
+};
 
 // set environment variable RUST_LOG=debug to see all logs when running the tests and call
 // env_logger::init() at the beginning of the test
@@ -223,6 +226,80 @@ parameter_types! {
 
 pub(crate) type TestNameContractName = NameContractName<TestRuntime>;
 
+pub(crate) type ContractPublicIp =
+    tfchain_support::types::PublicIP<PublicIP<TestRuntime>, GatewayIP<TestRuntime>>;
+
+// This struct mocks the trait implementaition of Tfgrid for pallet-tfgrid
+// It calls the original functions while adding extra functionality for the function
+// node_resources_changed
+pub struct TfgridMock;
+impl tfchain_support::traits::Tfgrid<AccountId32, FarmName<TestRuntime>, ContractPublicIp>
+    for TfgridMock
+{
+    fn get_farm(farm_id: u32) -> Option<Farm<FarmName<TestRuntime>, ContractPublicIp>> {
+        TfgridModule::get_farm(farm_id)
+    }
+
+    fn is_farm_owner(farm_id: u32, who: AccountId) -> bool {
+        TfgridModule::is_farm_owner(farm_id, who)
+    }
+
+    fn is_twin_owner(twin_id: u32, who: AccountId) -> bool {
+        TfgridModule::is_twin_owner(twin_id, who)
+    }
+
+    fn node_resources_changed(node_id: u32) {
+        let count = System::event_count();
+        TfgridModule::node_resources_changed(node_id);
+        // We are simulating the extrinsic calls from zos here. Whenever zos receives a
+        // PowerTargetChanged event it might change the state of the node using the extrinsic
+        // change_power_state.
+        if count < System::event_count() {
+            if System::event_count() - count > 1 {
+                panic!("This mock expected only one event to be triggered at this point");
+            }
+            let events = System::events();
+            match events[events.len() - 1].event.clone() {
+                mock::Event::TfgridModule(pallet_tfgrid::Event::PowerTargetChanged {
+                    farm_id,
+                    node_id,
+                    power_target,
+                }) => match power_target {
+                    PowerTarget::Up => {
+                        // zos will always put the state to up if the target is up
+                        assert_ok!(TfgridModule::change_power_state(
+                            Origin::signed(alice()),
+                            node_id,
+                            PowerState::Up
+                        ));
+                    }
+                    PowerTarget::Down => {
+                        // Zos will only shut down the node if it is not a manager node.
+                        // In most cases this will be the first node in the list of nodes of
+                        // that farm. There might be multiple manager nodes per farm (one
+                        // per segment of nodes in the same LAN). That doesn't matter here
+                        // as the chain only cares about finding nodes for capacity
+                        // reservation (preferably nodes that are Up).
+                        let node_id_first_node_in_farm = TfgridModule::nodes_by_farm_id(farm_id)[0];
+                        if node_id != node_id_first_node_in_farm {
+                            assert_ok!(TfgridModule::change_power_state(
+                                Origin::signed(alice()),
+                                node_id,
+                                PowerState::Down(node_id_first_node_in_farm)
+                            ));
+                        }
+                    }
+                },
+                _ => {
+                    panic!(
+                        "An unexpected event was triggered during the node_resources_changed call."
+                    );
+                }
+            }
+        }
+    }
+}
+
 use weights;
 impl pallet_smart_contract::Config for TestRuntime {
     type Event = Event;
@@ -234,6 +311,7 @@ impl pallet_smart_contract::Config for TestRuntime {
     type GracePeriod = GracePeriod;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
+    type Tfgrid = TfgridMock;
     type MaxNameContractNameLength = MaxNameContractNameLength;
     type NameContractName = TestNameContractName;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;

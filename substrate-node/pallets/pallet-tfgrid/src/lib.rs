@@ -55,8 +55,8 @@ pub mod pallet {
     use tfchain_support::{
         traits::ChangeNode,
         types::{
-            Farm, FarmCertification, FarmingPolicyLimit, Interface, Node, NodeCertification,
-            PublicConfig, PublicIP, IP,
+            ConsumableResources, Farm, FarmCertification, FarmingPolicyLimit, Interface, Location,
+            Node, NodeCertification, PublicConfig, PublicIP, Resources, IP,
         },
     };
 
@@ -522,6 +522,18 @@ pub mod pallet {
         FarmCertificationSet(u32, FarmCertification),
 
         ZosVersionUpdated(Vec<u8>),
+
+        /// Send an event to zero os to change its state
+        PowerTargetChanged {
+            farm_id: u32,
+            node_id: u32,
+            power_target: PowerTarget,
+        },
+        PowerStateChanged {
+            farm_id: u32,
+            node_id: u32,
+            power_state: PowerState,
+        },
     }
 
     #[pallet::error]
@@ -1098,7 +1110,7 @@ pub mod pallet {
                 location: node_location,
                 power: Power {
                     state: PowerState::Up,
-                    target: PowerTarget::Up,
+                    target: PowerTarget::Down,
                 },
                 public_config: None,
                 created,
@@ -1124,6 +1136,13 @@ pub mod pallet {
             NodesByFarmID::<T>::insert(farm_id, nodes_by_farm);
 
             T::NodeChanged::node_changed(None, &new_node);
+
+            // lets try to bring the node down if possible
+            Self::deposit_event(Event::PowerTargetChanged {
+                farm_id: farm_id,
+                node_id: new_node.id,
+                power_target: PowerTarget::Down,
+            });
 
             Self::deposit_event(Event::NodeStored(new_node));
 
@@ -1210,6 +1229,16 @@ pub mod pallet {
             Self::deposit_event(Event::NodeUpdated(stored_node));
 
             Ok(Pays::No.into())
+        }
+
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        pub fn change_power_state(
+            origin: OriginFor<T>,
+            node_id: u32,
+            power_state: PowerState,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_change_power_state(account_id, node_id, power_state)
         }
 
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
@@ -1846,7 +1875,7 @@ pub mod pallet {
                 farm_twin_id == farm_twin.id,
                 Error::<T>::FarmerNotAuthorized
             );
-            
+
             // Call node deleted
             T::NodeChanged::node_deleted(&node);
 
@@ -2095,6 +2124,31 @@ pub mod pallet {
 
 // Internal functions of the pallet
 impl<T: Config> Pallet<T> {
+    fn _change_power_state(
+        account_id: T::AccountId,
+        node_id: u32,
+        power_state: PowerState,
+    ) -> DispatchResultWithPostInfo {
+        let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
+
+        // todo should we check
+        let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+
+        //if the power state is not correct => change it and emit event
+        if node.power.state != power_state {
+            node.power.state = power_state.clone();
+            Nodes::<T>::insert(node.id, &node);
+
+            Self::deposit_event(Event::PowerStateChanged {
+                farm_id: node.farm_id,
+                node_id: node_id,
+                power_state: power_state,
+            });
+        }
+
+        Ok(().into())
+    }
+
     pub fn verify_signature(signature: [u8; 64], target: &T::AccountId, payload: &Vec<u8>) -> bool {
         Self::verify_ed_signature(signature, target, payload)
             || Self::verify_sr_signature(signature, target, payload)
@@ -2483,6 +2537,29 @@ impl<T: Config> tfchain_support::traits::Tfgrid<T::AccountId, T::FarmName, palle
         match Twins::<T>::get(twin_id) {
             Some(twin) => twin.account_id == who,
             None => false,
+        }
+    }
+
+    fn node_resources_changed(node_id: u32) {
+        let n = Nodes::<T>::get(node_id);
+        if let Some(mut node) = n {
+            let power_target = if node.can_be_shutdown() && node.is_up() {
+                Some(PowerTarget::Down)
+            } else if !node.can_be_shutdown() && !node.is_up() {
+                Some(PowerTarget::Up)
+            } else {
+                None
+            };
+
+            if let Some(change_in_power_target) = power_target {
+                Self::deposit_event(Event::PowerTargetChanged {
+                    farm_id: node.farm_id,
+                    node_id: node_id,
+                    power_target: change_in_power_target.clone(),
+                });
+                node.power.target = change_in_power_target;
+                Nodes::<T>::insert(node.id, &node);
+            }
         }
     }
 }

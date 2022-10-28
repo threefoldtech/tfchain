@@ -204,8 +204,8 @@ fn test_capacity_reservation_contract_with_policy_any_and_features_works() {
         );
 
         assert_eq!(
-            TfgridModule::nodes(3).unwrap().power_target,
-            PowerTarget::Up
+            TfgridModule::nodes(3).unwrap().power.state,
+            PowerState::Up
         );
     });
 }
@@ -514,8 +514,8 @@ fn test_create_capacity_reservation_contract_reserving_full_node_then_deployment
             None,
         ));
         assert_eq!(
-            TfgridModule::nodes(node_id).unwrap().power_target,
-            PowerTarget::Up
+            TfgridModule::nodes(node_id).unwrap().power.state,
+            PowerState::Up
         );
         assert_eq!(
             TfgridModule::nodes(node_id)
@@ -590,8 +590,8 @@ fn test_create_capacity_reservation_contract_reserving_full_node_then_deployment
             1
         ));
         assert_eq!(
-            TfgridModule::nodes(node_id).unwrap().power_target,
-            PowerTarget::Down
+            TfgridModule::nodes(node_id).unwrap().power.state,
+            PowerState::Down(1)
         );
         assert_eq!(
             TfgridModule::nodes(node_id).unwrap().resources,
@@ -607,23 +607,23 @@ fn test_create_capacity_reservation_contract_reserving_full_node_then_deployment
         }
         // should have emitted one power up event and one power down
         assert_eq!(
-            our_events.contains(&record(MockEvent::SmartContractModule(
-                SmartContractEvent::<TestRuntime>::PowerTargetChanged {
-                    farm_id: 1,
-                    node_id: 2,
-                    power_target: PowerTarget::Up,
-                }
-            ))),
+            our_events.contains(&record(MockEvent::TfgridModule(pallet_tfgrid::Event::<
+                TestRuntime,
+            >::PowerTargetChanged {
+                farm_id: 1,
+                node_id: 2,
+                power_target: PowerTarget::Up,
+            }))),
             true
         );
         assert_eq!(
-            our_events.contains(&record(MockEvent::SmartContractModule(
-                SmartContractEvent::<TestRuntime>::PowerTargetChanged {
-                    farm_id: 1,
-                    node_id: 2,
-                    power_target: PowerTarget::Down,
-                }
-            ))),
+            our_events.contains(&record(MockEvent::TfgridModule(pallet_tfgrid::Event::<
+                TestRuntime,
+            >::PowerTargetChanged {
+                farm_id: 1,
+                node_id: 2,
+                power_target: PowerTarget::Down,
+            }))),
             true
         );
     });
@@ -635,8 +635,8 @@ fn test_cancel_capacity_reservation_contract_should_not_shutdown_first_node() {
         run_to_block(1, None);
         prepare_farm_with_three_nodes();
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().power_target,
-            PowerTarget::Up
+            TfgridModule::nodes(1).unwrap().power.state,
+            PowerState::Up
         );
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
@@ -648,8 +648,8 @@ fn test_cancel_capacity_reservation_contract_should_not_shutdown_first_node() {
             None,
         ));
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().power_target,
-            PowerTarget::Up
+            TfgridModule::nodes(1).unwrap().power.state,
+            PowerState::Up
         );
         assert_ok!(SmartContractModule::cancel_contract(
             Origin::signed(bob()),
@@ -657,8 +657,8 @@ fn test_cancel_capacity_reservation_contract_should_not_shutdown_first_node() {
         ));
         // node should still be up as it is the first in the list of nodes of that farm
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().power_target,
-            PowerTarget::Up
+            TfgridModule::nodes(1).unwrap().power.state,
+            PowerState::Up
         );
     });
 }
@@ -675,16 +675,16 @@ fn test_cancel_capacity_reservation_contract_shutdown_node() {
             2
         ));
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().power_target,
-            PowerTarget::Up
+             TfgridModule::nodes(1).unwrap().power.state,
+             PowerState::Up
         );
         assert_eq!(
-            TfgridModule::nodes(2).unwrap().power_target,
-            PowerTarget::Up
+            TfgridModule::nodes(2).unwrap().power.state,
+            PowerState::Up
         );
         assert_eq!(
-            TfgridModule::nodes(3).unwrap().power_target,
-            PowerTarget::Down
+            TfgridModule::nodes(3).unwrap().power.state,
+            PowerState::Down(1)
         );
         // on node 1 there is only one contract left => used resources of node 1 should equal resources of contract 1
         assert_eq!(
@@ -698,16 +698,16 @@ fn test_cancel_capacity_reservation_contract_shutdown_node() {
             3
         ));
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().power_target,
-            PowerTarget::Up
+            TfgridModule::nodes(1).unwrap().power.state,
+            PowerState::Up
         );
         assert_eq!(
-            TfgridModule::nodes(2).unwrap().power_target,
-            PowerTarget::Down
+            TfgridModule::nodes(2).unwrap().power.state,
+            PowerState::Down(1)
         );
         assert_eq!(
-            TfgridModule::nodes(3).unwrap().power_target,
-            PowerTarget::Down
+            TfgridModule::nodes(3).unwrap().power.state,
+            PowerState::Down(1)
         );
         // nothing else running on node 2 => used resources should be 0
         assert_eq!(
@@ -722,16 +722,16 @@ fn test_cancel_capacity_reservation_contract_shutdown_node() {
             1
         ));
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().power_target,
-            PowerTarget::Up
+            TfgridModule::nodes(1).unwrap().power.state,
+            PowerState::Up
         );
         assert_eq!(
-            TfgridModule::nodes(2).unwrap().power_target,
-            PowerTarget::Down
+            TfgridModule::nodes(2).unwrap().power.state,
+            PowerState::Down(1)
         );
         assert_eq!(
-            TfgridModule::nodes(3).unwrap().power_target,
-            PowerTarget::Down
+            TfgridModule::nodes(3).unwrap().power.state,
+            PowerState::Down(1)
         );
         // nothing else running on node 1 => used resources should be 0
         assert_eq!(
@@ -745,13 +745,13 @@ fn test_cancel_capacity_reservation_contract_shutdown_node() {
             log::info!("Event: {:?}", event);
         }
         assert_eq!(
-            our_events.contains(&record(MockEvent::SmartContractModule(
-                SmartContractEvent::<TestRuntime>::PowerTargetChanged {
-                    farm_id: 1,
-                    node_id: 2,
-                    power_target: PowerTarget::Down,
-                }
-            ))),
+            our_events.contains(&record(MockEvent::TfgridModule(pallet_tfgrid::Event::<
+                TestRuntime,
+            >::PowerTargetChanged {
+                farm_id: 1,
+                node_id: 2,
+                power_target: PowerTarget::Down,
+            }))),
             true
         );
     });
@@ -1703,8 +1703,8 @@ fn test_cancel_capacity_reservation_contract_with_active_deployment_contracts_fa
         );
         // node 1 should still be up after failed attempt to cancel capacity contract
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().power_target,
-            PowerTarget::Up
+            TfgridModule::nodes(1).unwrap().power.state,
+            PowerState::Up
         );
     });
 }
@@ -2969,7 +2969,7 @@ fn test_create_capacity_contract_full_node_canceled_due_to_out_of_funds_should_c
         // check_report_cost(1, 3, amount_due_as_u128, 12, discount_received);
 
         let our_events = System::events();
-        assert_eq!(our_events.len(), 9);
+        assert_eq!(our_events.len(), 10);
 
         for e in our_events.clone().iter() {
             info!("event: {:?}", e);
@@ -2997,7 +2997,6 @@ fn test_create_capacity_contract_full_node_canceled_due_to_out_of_funds_should_c
                 block_number: 11
             }))
         );
-
         assert_eq!(
             our_events[7],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
@@ -3010,6 +3009,16 @@ fn test_create_capacity_contract_full_node_canceled_due_to_out_of_funds_should_c
         );
         assert_eq!(
             our_events[8],
+            record(MockEvent::TfgridModule(
+                pallet_tfgrid::Event::<TestRuntime>::PowerTargetChanged {
+                    farm_id: 1,
+                    node_id: 1,
+                    power_target: PowerTarget::Down,
+                }
+            ))
+        );
+        assert_eq!(
+            our_events[9],
             record(MockEvent::SmartContractModule(
                 SmartContractEvent::<TestRuntime>::CapacityReservationContractCanceled {
                     contract_id: 1,
@@ -3881,6 +3890,12 @@ pub fn prepare_farm_with_three_nodes() {
             used_resources: Resources::empty(),
         }
     );
+    // simulate zos calling this extrinsic to shutdown node 2 (where node 1 is the leader)
+    assert_ok!(TfgridModule::change_power_state(
+        Origin::signed(alice()),
+        2,
+        PowerState::Down(1)
+    ));
 
     // THIRD NODE
     let location = Location {
@@ -3910,20 +3925,23 @@ pub fn prepare_farm_with_three_nodes() {
             used_resources: Resources::empty(),
         }
     );
+    // simulate zos calling this extrinsic to shutdown node 3 (where node 1 is the leader)
+    assert_ok!(TfgridModule::change_power_state(
+        Origin::signed(alice()),
+        3,
+        PowerState::Down(1)
+    ));
 
     let nodes_from_farm = TfgridModule::nodes_by_farm_id(1);
     assert_eq!(nodes_from_farm.len(), 3);
+    assert_eq!(TfgridModule::nodes(1).unwrap().power.state, PowerState::Up);
     assert_eq!(
-        TfgridModule::nodes(1).unwrap().power_target,
-        PowerTarget::Up
+        TfgridModule::nodes(2).unwrap().power.state,
+        PowerState::Down(1)
     );
     assert_eq!(
-        TfgridModule::nodes(2).unwrap().power_target,
-        PowerTarget::Down
-    );
-    assert_eq!(
-        TfgridModule::nodes(3).unwrap().power_target,
-        PowerTarget::Down
+        TfgridModule::nodes(3).unwrap().power.state,
+        PowerState::Down(1)
     );
 }
 
@@ -3995,8 +4013,8 @@ pub fn create_capacity_reservation_and_add_to_group(
     );
 
     assert_eq!(
-        TfgridModule::nodes(expected_node_id).unwrap().power_target,
-        PowerTarget::Up
+        TfgridModule::nodes(expected_node_id).unwrap().power.state,
+        PowerState::Up
     );
 
     let group = SmartContractModule::groups(group_id).unwrap();
@@ -4228,17 +4246,14 @@ fn prepare_farm_three_nodes_three_capacity_reservation_contracts() {
         None,
     ));
 
+    assert_eq!(TfgridModule::nodes(1).unwrap().power.state, PowerState::Up);
     assert_eq!(
-        TfgridModule::nodes(1).unwrap().power_target,
-        PowerTarget::Up
+        TfgridModule::nodes(2).unwrap().power.state,
+        PowerState::Down(1)
     );
     assert_eq!(
-        TfgridModule::nodes(2).unwrap().power_target,
-        PowerTarget::Down
-    );
-    assert_eq!(
-        TfgridModule::nodes(3).unwrap().power_target,
-        PowerTarget::Down
+        TfgridModule::nodes(3).unwrap().power.state,
+        PowerState::Down(1)
     );
     assert_eq!(
         TfgridModule::nodes(1).unwrap().resources.used_resources,
@@ -4297,17 +4312,11 @@ fn prepare_farm_three_nodes_three_capacity_reservation_contracts() {
         None,
     ),);
 
+    assert_eq!(TfgridModule::nodes(1).unwrap().power.state, PowerState::Up);
+    assert_eq!(TfgridModule::nodes(2).unwrap().power.state, PowerState::Up);
     assert_eq!(
-        TfgridModule::nodes(1).unwrap().power_target,
-        PowerTarget::Up
-    );
-    assert_eq!(
-        TfgridModule::nodes(2).unwrap().power_target,
-        PowerTarget::Up
-    );
-    assert_eq!(
-        TfgridModule::nodes(3).unwrap().power_target,
-        PowerTarget::Down
+        TfgridModule::nodes(3).unwrap().power.state,
+        PowerState::Down(1)
     );
     assert_eq!(
         TfgridModule::nodes(2).unwrap().resources.used_resources,
