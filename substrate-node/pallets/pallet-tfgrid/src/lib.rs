@@ -661,6 +661,8 @@ pub mod pallet {
         DocumentHashInputTooShort,
         DocumentHashInputTooLong,
         InvalidDocumentHashInput,
+        
+        UnauthorizedToChangePowerState,
     }
 
     #[pallet::genesis_config]
@@ -1099,8 +1101,6 @@ pub mod pallet {
 
             let created = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
-            // TODO decide power state and target
-
             let mut new_node = Node {
                 version: TFGRID_NODE_VERSION,
                 id,
@@ -1111,6 +1111,7 @@ pub mod pallet {
                 power: Power {
                     state: PowerState::Up,
                     target: PowerTarget::Down,
+                    last_up_time: created,
                 },
                 public_config: None,
                 created,
@@ -2131,13 +2132,20 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
 
-        // todo should we check
         let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+        let farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
+        ensure!(
+            twin_id == node.twin_id
+                || (twin_id == farm.twin_id && matches!(power_state, PowerState::Up)),
+            Error::<T>::UnauthorizedToChangePowerState
+        );
 
+        if matches!(power_state, PowerState::Down(_)) {
+            node.power.last_up_time = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+        }
         //if the power state is not correct => change it and emit event
         if node.power.state != power_state {
             node.power.state = power_state.clone();
-            Nodes::<T>::insert(node.id, &node);
 
             Self::deposit_event(Event::PowerStateChanged {
                 farm_id: node.farm_id,
@@ -2145,6 +2153,7 @@ impl<T: Config> Pallet<T> {
                 power_state: power_state,
             });
         }
+        Nodes::<T>::insert(node.id, &node);
 
         Ok(().into())
     }

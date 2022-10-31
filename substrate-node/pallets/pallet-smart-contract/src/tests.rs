@@ -3892,7 +3892,7 @@ pub fn prepare_farm_with_three_nodes() {
     );
     // simulate zos calling this extrinsic to shutdown node 2 (where node 1 is the leader)
     assert_ok!(TfgridModule::change_power_state(
-        Origin::signed(alice()),
+        Origin::signed(bob()),
         2,
         PowerState::Down(1)
     ));
@@ -3927,7 +3927,7 @@ pub fn prepare_farm_with_three_nodes() {
     );
     // simulate zos calling this extrinsic to shutdown node 3 (where node 1 is the leader)
     assert_ok!(TfgridModule::change_power_state(
-        Origin::signed(alice()),
+        Origin::signed(charlie()),
         3,
         PowerState::Down(1)
     ));
