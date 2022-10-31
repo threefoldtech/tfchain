@@ -856,7 +856,7 @@ fn change_power_state_works() {
         create_extra_node();
 
         assert_ok!(TfgridModule::change_power_state(
-            Origin::signed(alice()),
+            Origin::signed(bob()),
             2,
             PowerState::Down(1)
         ));

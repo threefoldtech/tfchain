@@ -259,6 +259,8 @@ impl tfchain_support::traits::Tfgrid<AccountId32, FarmName<TestRuntime>, Contrac
                 panic!("This mock expected only one event to be triggered at this point");
             }
             let events = System::events();
+            let twin_id_node = TfgridModule::nodes(node_id).unwrap().twin_id;
+            let account_id_node = get_account_id_from_twin_id(twin_id_node).unwrap();
             match events[events.len() - 1].event.clone() {
                 mock::Event::TfgridModule(pallet_tfgrid::Event::PowerTargetChanged {
                     farm_id,
@@ -268,7 +270,7 @@ impl tfchain_support::traits::Tfgrid<AccountId32, FarmName<TestRuntime>, Contrac
                     PowerTarget::Up => {
                         // zos will always put the state to up if the target is up
                         assert_ok!(TfgridModule::change_power_state(
-                            Origin::signed(alice()),
+                            Origin::signed(account_id_node),
                             node_id,
                             PowerState::Up
                         ));
@@ -283,7 +285,7 @@ impl tfchain_support::traits::Tfgrid<AccountId32, FarmName<TestRuntime>, Contrac
                         let node_id_first_node_in_farm = TfgridModule::nodes_by_farm_id(farm_id)[0];
                         if node_id != node_id_first_node_in_farm {
                             assert_ok!(TfgridModule::change_power_state(
-                                Origin::signed(alice()),
+                                Origin::signed(account_id_node),
                                 node_id,
                                 PowerState::Down(node_id_first_node_in_farm)
                             ));
@@ -429,6 +431,23 @@ where
     AccountPublic: From<<TPublic::Pair as Pair>::Public>,
 {
     AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
+}
+
+pub fn get_account_id_from_twin_id(twin_id: u32) -> Option<AccountId> {
+    if twin_id == TfgridModule::twin_ids_by_pubkey(alice()).unwrap_or(0) {
+        return Some(alice());
+    } else if twin_id == TfgridModule::twin_ids_by_pubkey(bob()).unwrap_or(0) {
+        return Some(bob());
+    } else if twin_id == TfgridModule::twin_ids_by_pubkey(charlie()).unwrap_or(0) {
+        return Some(charlie());
+    } else if twin_id == TfgridModule::twin_ids_by_pubkey(dave()).unwrap_or(0) {
+        return Some(dave());
+    } else if twin_id == TfgridModule::twin_ids_by_pubkey(eve()).unwrap_or(0) {
+        return Some(eve());
+    } else if twin_id == TfgridModule::twin_ids_by_pubkey(ferdie()).unwrap_or(0) {
+        return Some(ferdie());
+    }
+    None
 }
 
 pub fn alice() -> AccountId {
