@@ -869,30 +869,6 @@ fn change_power_state_works() {
 }
 
 #[test]
-fn node_resources_changed_works() {
-    ExternalityBuilder::build().execute_with(|| {
-        create_entity();
-        create_twin();
-        create_farm();
-        create_node();
-        create_twin_bob();
-        create_extra_node();
-
-        assert_ok!(TfgridModule::change_power_state(
-            Origin::signed(alice()),
-            2,
-            PowerState::Down(1)
-        ));
-
-        assert_eq!(
-            TfgridModule::nodes(2).unwrap().power.state,
-            PowerState::Down(1)
-        );
-        // todo !
-    });
-}
-
-#[test]
 fn add_node_certifier_works() {
     ExternalityBuilder::build().execute_with(|| {
         assert_ok!(TfgridModule::add_node_certifier(

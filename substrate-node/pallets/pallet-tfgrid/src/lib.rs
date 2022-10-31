@@ -2149,6 +2149,29 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
+    fn node_resources_changed(node_id: u32) -> DispatchResultWithPostInfo {
+        let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+        let power_target = if node.can_be_shutdown() && node.is_up() {
+            Some(PowerTarget::Down)
+        } else if !node.can_be_shutdown() && !node.is_up() {
+            Some(PowerTarget::Up)
+        } else {
+            None
+        };
+
+        if let Some(change_in_power_target) = power_target {
+            Self::deposit_event(Event::PowerTargetChanged {
+                farm_id: node.farm_id,
+                node_id: node_id,
+                power_target: change_in_power_target.clone(),
+            });
+            node.power.target = change_in_power_target;
+            Nodes::<T>::insert(node.id, &node);
+        }
+
+        Ok(().into())
+    }
+
     pub fn verify_signature(signature: [u8; 64], target: &T::AccountId, payload: &Vec<u8>) -> bool {
         Self::verify_ed_signature(signature, target, payload)
             || Self::verify_sr_signature(signature, target, payload)
@@ -2541,25 +2564,9 @@ impl<T: Config> tfchain_support::traits::Tfgrid<T::AccountId, T::FarmName, palle
     }
 
     fn node_resources_changed(node_id: u32) {
-        let n = Nodes::<T>::get(node_id);
-        if let Some(mut node) = n {
-            let power_target = if node.can_be_shutdown() && node.is_up() {
-                Some(PowerTarget::Down)
-            } else if !node.can_be_shutdown() && !node.is_up() {
-                Some(PowerTarget::Up)
-            } else {
-                None
-            };
-
-            if let Some(change_in_power_target) = power_target {
-                Self::deposit_event(Event::PowerTargetChanged {
-                    farm_id: node.farm_id,
-                    node_id: node_id,
-                    power_target: change_in_power_target.clone(),
-                });
-                node.power.target = change_in_power_target;
-                Nodes::<T>::insert(node.id, &node);
-            }
+        match Self::node_resources_changed(node_id) {
+            Ok(_) => (),
+            Err(e) => log::error!("Failed executing node_resources_changed: {:?}", e),
         }
     }
 }
