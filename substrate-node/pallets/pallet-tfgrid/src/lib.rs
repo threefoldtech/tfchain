@@ -7,7 +7,7 @@ use sp_std::prelude::*;
 
 use codec::Encode;
 use frame_support::dispatch::DispatchErrorWithPostInfo;
-use frame_support::{ensure, traits::EnsureOrigin, BoundedVec};
+use frame_support::{ensure, traits::ConstU32, traits::EnsureOrigin, weights::Pays, BoundedVec};
 use frame_system::{self as system, ensure_signed};
 use hex::FromHex;
 use pallet_timestamp as timestamp;
@@ -2158,7 +2158,7 @@ impl<T: Config> Pallet<T> {
         }
         Nodes::<T>::insert(node.id, &node);
 
-        Ok(().into())
+        Ok(Pays::No.into())
     }
 
     fn _change_power_target(
