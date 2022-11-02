@@ -271,7 +271,6 @@ impl tfchain_support::traits::Tfgrid<AccountId32, FarmName<TestRuntime>, Contrac
                         // zos will always put the state to up if the target is up
                         assert_ok!(TfgridModule::change_power_state(
                             Origin::signed(account_id_node),
-                            node_id,
                             PowerState::Up
                         ));
                     }
@@ -286,7 +285,6 @@ impl tfchain_support::traits::Tfgrid<AccountId32, FarmName<TestRuntime>, Contrac
                         if node_id != node_id_first_node_in_farm {
                             assert_ok!(TfgridModule::change_power_state(
                                 Origin::signed(account_id_node),
-                                node_id,
                                 PowerState::Down(node_id_first_node_in_farm)
                             ));
                         }
