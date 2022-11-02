@@ -663,6 +663,7 @@ pub mod pallet {
         InvalidDocumentHashInput,
         
         UnauthorizedToChangePowerState,
+        UnauthorizedToChangePowerTarget,
     }
 
     #[pallet::genesis_config]
@@ -1235,11 +1236,20 @@ pub mod pallet {
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
         pub fn change_power_state(
             origin: OriginFor<T>,
-            node_id: u32,
             power_state: PowerState,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_change_power_state(account_id, node_id, power_state)
+            Self::_change_power_state(account_id, power_state)
+        }
+
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        pub fn change_power_target(
+            origin: OriginFor<T>,
+            node_id: u32,
+            power_target: PowerTarget,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_change_power_target(account_id, node_id, power_target)
         }
 
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
@@ -2127,22 +2137,16 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
     fn _change_power_state(
         account_id: T::AccountId,
-        node_id: u32,
         power_state: PowerState,
     ) -> DispatchResultWithPostInfo {
         let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
-
-        let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-        let farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
         ensure!(
-            twin_id == node.twin_id
-                || (twin_id == farm.twin_id && matches!(power_state, PowerState::Up)),
-            Error::<T>::UnauthorizedToChangePowerState
+            NodeIdByTwinID::<T>::contains_key(twin_id),
+            Error::<T>::NodeNotExists
         );
+        let node_id = NodeIdByTwinID::<T>::get(twin_id);
+        let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
 
-        if matches!(power_state, PowerState::Down(_)) {
-            node.power.last_up_time = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-        }
         //if the power state is not correct => change it and emit event
         if node.power.state != power_state {
             node.power.state = power_state.clone();
@@ -2158,6 +2162,37 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
+    fn _change_power_target(
+        account_id: T::AccountId,
+        node_id: u32,
+        power_target: PowerTarget,
+    ) -> DispatchResultWithPostInfo {
+        let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
+        let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+        let farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
+        ensure!(
+            twin_id == farm.twin_id && matches!(power_target, PowerTarget::Up),
+            Error::<T>::UnauthorizedToChangePowerTarget
+        );
+
+        Self::_change_power_target_on_node(&mut node, power_target);
+
+        Ok(().into())
+    }
+
+    fn _change_power_target_on_node(
+        node: &mut Node<pallet::PubConfigOf<T>, pallet::InterfaceOf<T>>,
+        power_target: PowerTarget,
+    ) {
+        Self::deposit_event(Event::PowerTargetChanged {
+            farm_id: node.farm_id,
+            node_id: node.id,
+            power_target: power_target.clone(),
+        });
+        node.power.target = power_target;
+        Nodes::<T>::insert(node.id, node);
+    }
+
     fn node_resources_changed(node_id: u32) -> DispatchResultWithPostInfo {
         let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
         let power_target = if node.can_be_shutdown() && node.is_up() {
@@ -2167,15 +2202,9 @@ impl<T: Config> Pallet<T> {
         } else {
             None
         };
-
+        log::info!("Yeees: {:?}", power_target);
         if let Some(change_in_power_target) = power_target {
-            Self::deposit_event(Event::PowerTargetChanged {
-                farm_id: node.farm_id,
-                node_id: node_id,
-                power_target: change_in_power_target.clone(),
-            });
-            node.power.target = change_in_power_target;
-            Nodes::<T>::insert(node.id, &node);
+            Self::_change_power_target_on_node(&mut node, change_in_power_target);
         }
 
         Ok(().into())

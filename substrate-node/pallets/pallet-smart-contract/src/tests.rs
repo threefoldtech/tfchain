@@ -2969,11 +2969,10 @@ fn test_create_capacity_contract_full_node_canceled_due_to_out_of_funds_should_c
         // check_report_cost(1, 3, amount_due_as_u128, 12, discount_received);
 
         let our_events = System::events();
-        assert_eq!(our_events.len(), 10);
-
         for e in our_events.clone().iter() {
             info!("event: {:?}", e);
         }
+        assert_eq!(our_events.len(), 10);
 
         assert_eq!(
             our_events[4],
@@ -3893,7 +3892,6 @@ pub fn prepare_farm_with_three_nodes() {
     // simulate zos calling this extrinsic to shutdown node 2 (where node 1 is the leader)
     assert_ok!(TfgridModule::change_power_state(
         Origin::signed(bob()),
-        2,
         PowerState::Down(1)
     ));
 
@@ -3928,7 +3926,6 @@ pub fn prepare_farm_with_three_nodes() {
     // simulate zos calling this extrinsic to shutdown node 3 (where node 1 is the leader)
     assert_ok!(TfgridModule::change_power_state(
         Origin::signed(charlie()),
-        3,
         PowerState::Down(1)
     ));
 

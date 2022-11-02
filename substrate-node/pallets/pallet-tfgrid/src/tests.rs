@@ -857,7 +857,6 @@ fn change_power_state_works() {
 
         assert_ok!(TfgridModule::change_power_state(
             Origin::signed(bob()),
-            2,
             PowerState::Down(1)
         ));
 
@@ -865,6 +864,73 @@ fn change_power_state_works() {
             TfgridModule::nodes(2).unwrap().power.state,
             PowerState::Down(1)
         );
+    });
+}
+
+#[test]
+fn change_power_state_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+        create_twin_bob();
+        //try changing the power state using another twin_id 
+        assert_noop!(TfgridModule::change_power_state(
+            Origin::signed(bob()),
+            PowerState::Down(1)
+        ), Error::<TestRuntime>::NodeNotExists);
+    });
+}
+
+#[test]
+fn change_power_target_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+        create_twin_bob();
+        create_extra_node();
+
+        assert_eq!(
+            TfgridModule::nodes(2).unwrap().power.target,
+            PowerTarget::Down,
+        );
+
+        assert_ok!(TfgridModule::change_power_target(
+            Origin::signed(alice()),
+            2,
+            PowerTarget::Up,
+        ));
+
+        assert_eq!(
+            TfgridModule::nodes(2).unwrap().power.target,
+            PowerTarget::Up,
+        );
+    });
+}
+
+#[test]
+fn change_power_target_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+        create_twin_bob();
+        create_extra_node();
+
+        assert_eq!(
+            TfgridModule::nodes(2).unwrap().power.target,
+            PowerTarget::Down,
+        );
+
+        assert_noop!(TfgridModule::change_power_target(
+            Origin::signed(bob()),
+            2,
+            PowerTarget::Up,
+        ), Error::<TestRuntime>::UnauthorizedToChangePowerTarget);
     });
 }
 
