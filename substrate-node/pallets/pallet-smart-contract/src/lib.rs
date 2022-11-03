@@ -157,18 +157,6 @@ pub mod pallet {
     >;
 
     #[pallet::storage]
-    #[pallet::getter(fn group_by_node)]
-    pub type GroupIDByNodeId<T: Config> = StorageDoubleMap<
-        _,
-        Blake2_128Concat,
-        u32,
-        Blake2_128Concat,
-        DeploymentHash,
-        u32,
-        ValueQuery,
-    >;
-
-    #[pallet::storage]
     #[pallet::getter(fn active_node_contracts)]
     // A list of Contract ID's for a given node.
     // In this list, all the active contracts are kept for a node.
@@ -176,19 +164,8 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, u32, Vec<u64>, ValueQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn contracts_by_capacity_reservation)]
-    // A list of Contract ID's for a given capacity reservation.
-    pub type ContractsByCapacityReservation<T: Config> =
-        StorageMap<_, Blake2_128Concat, u32, Vec<u64>, ValueQuery>;
-
-    #[pallet::storage]
     #[pallet::getter(fn contract_to_bill_at_block)]
     pub type ContractsToBillAt<T: Config> =
-        StorageMap<_, Blake2_128Concat, u64, Vec<u64>, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn capacity_reservations_to_bill_at_block)]
-    pub type CapacityReservationsToBillAt<T: Config> =
         StorageMap<_, Blake2_128Concat, u64, Vec<u64>, ValueQuery>;
 
     #[pallet::storage]
@@ -414,11 +391,9 @@ pub mod pallet {
         SolutionProviderNotApproved,
         NoSuitableNodeInFarm,
         NotAuthorizedToCreateDeploymentContract,
-        InvalidResources,
         GroupNotExists,
         TwinNotAuthorizedToDeleteGroup,
         GroupHasActiveMembers,
-        InvalidContractPolicy,
         CapacityReservationNotExists,
         CapacityReservationHasActiveContracts,
         ResourcesUsedByActiveContracts,
