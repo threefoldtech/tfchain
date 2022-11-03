@@ -315,8 +315,6 @@ pub mod pallet {
         /// A Service contract is canceled
         ServiceContractCanceled {
             contract_id: u64,
-            service_twin_id: u32,
-            consumer_twin_id: u32,
         },
         /// IP got reserved by a Node contract
         IPsReserved {
@@ -437,6 +435,7 @@ pub mod pallet {
         TwinNotAuthorizedToSetMetadata,
         TwinNotAuthorizedToSetFees,
         TwinNotAuthorizedToApproveServiceContract,
+        TwinNotAuthorizedToRejectServiceContract,
         NoServiceContractModificationAllowed,
         NoServiceContractApprovalAllowed,
         MetadataTooLong,
@@ -695,6 +694,15 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_service_contract_approve(account_id, contract_id)
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        pub fn service_contract_reject(
+            origin: OriginFor<T>,
+            contract_id: u64,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_service_contract_reject(account_id, contract_id)
         }
     }
 
@@ -1246,7 +1254,7 @@ impl<T: Config> Pallet<T> {
             BoundedVec::try_from(metadata).map_err(|_| Error::<T>::MetadataTooLong)?;
 
         // If base_fee is set and non-zero (mandatory)
-        if !service_contract.base_fee != 0 {
+        if service_contract.base_fee != 0 {
             service_contract.state = types::ServiceContractState::AgreementReady;
         }
 
@@ -1331,7 +1339,7 @@ impl<T: Config> Pallet<T> {
             ));
         }
 
-        // If both parties (service and consumer) accepted then contract is approved
+        // If both parties (service and consumer) accept then contract is approved
         if service_contract.accepted_by_service && service_contract.accepted_by_consumer {
             service_contract.state = types::ServiceContractState::ApprovedByBoth;
             Self::deposit_event(Event::ServiceContractApproved { contract_id });
@@ -1340,6 +1348,42 @@ impl<T: Config> Pallet<T> {
         // Update contract in list after modification
         contract.contract_type = types::ContractData::ServiceContract(service_contract);
         Contracts::<T>::insert(contract_id, contract);
+
+        Ok(().into())
+    }
+
+    pub fn _service_contract_reject(
+        account_id: T::AccountId,
+        contract_id: u64,
+    ) -> DispatchResultWithPostInfo {
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
+            .ok_or(Error::<T>::TwinNotExists)?;
+
+        let contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+
+        let service_contract = Self::get_service_contract(&contract)?;
+
+        // Allow to reject contract only if agreement is ready
+        ensure!(
+            matches!(
+                service_contract.state,
+                types::ServiceContractState::AgreementReady
+            ),
+            Error::<T>::NoServiceContractApprovalAllowed,
+        );
+
+        // Only service or consumer can reject agreement
+        if twin_id != service_contract.service_twin_id
+            && twin_id != service_contract.consumer_twin_id
+        {
+            return Err(DispatchErrorWithPostInfo::from(
+                Error::<T>::TwinNotAuthorizedToRejectServiceContract,
+            ));
+        }
+
+        // If one party (service or consumer) rejects then contract
+        // is canceled and removed from contract list
+        Self::remove_contract(contract_id);
 
         Ok(().into())
     }
@@ -2242,12 +2286,8 @@ impl<T: Config> Pallet<T> {
                         twin_id: contract.twin_id,
                     });
                 }
-                types::ContractData::ServiceContract(service_contract) => {
-                    Self::deposit_event(Event::ServiceContractCanceled {
-                        contract_id: contract_id,
-                        service_twin_id: service_contract.service_twin_id,
-                        consumer_twin_id: service_contract.consumer_twin_id,
-                    });
+                types::ContractData::ServiceContract(_service_contract) => {
+                    Self::deposit_event(Event::ServiceContractCanceled { contract_id });
                 }
             };
             info!("removing contract");
