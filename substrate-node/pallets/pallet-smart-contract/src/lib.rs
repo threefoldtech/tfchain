@@ -139,6 +139,7 @@ pub mod pallet {
     pub type ContractBillingInformationByID<T: Config> =
         StorageMap<_, Blake2_128Concat, u64, ContractBillingInformation, ValueQuery>;
 
+    // deprecated
     #[pallet::storage]
     #[pallet::getter(fn node_contract_resources)]
     pub type NodeContractResources<T: Config> =
@@ -178,6 +179,7 @@ pub mod pallet {
     pub type ContractIDByNameRegistration<T: Config> =
         StorageMap<_, Blake2_128Concat, T::NameContractName, u64, ValueQuery>;
 
+    // deprecated
     #[pallet::storage]
     #[pallet::getter(fn active_rent_contracts)]
     // A mapping between a Node ID and Contract ID
@@ -1137,7 +1139,6 @@ impl<T: Config> Pallet<T> {
             .deployment_contracts
             .contains(&deployment_contract_id)
         {
-            //update the available resources
             capacity_reservation_contract
                 .deployment_contracts
                 .push(deployment_contract_id);
@@ -1163,7 +1164,6 @@ impl<T: Config> Pallet<T> {
             .deployment_contracts
             .contains(&deployment_contract_id)
         {
-            //update the available resources
             capacity_reservation_contract
                 .deployment_contracts
                 .retain(|&id| id != deployment_contract_id);
