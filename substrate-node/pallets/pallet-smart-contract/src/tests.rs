@@ -1487,10 +1487,10 @@ fn test_service_contract_create_works() {
         create_service_consumer_contract();
 
         let contract = SmartContractModule::contracts(1).unwrap();
-        let service_contrat = get_service_contract();
+        let service_contract = get_service_contract();
         assert_eq!(
             contract.contract_type,
-            types::ContractData::ServiceContract(service_contrat),
+            types::ContractData::ServiceContract(service_contract),
         );
 
         let our_events = System::events();
@@ -1518,11 +1518,11 @@ fn test_service_contract_set_metadata_works() {
         ));
 
         let contract = SmartContractModule::contracts(1).unwrap();
-        let mut service_contrat = get_service_contract();
-        service_contrat.metadata = BoundedVec::try_from(b"some_metadata".to_vec()).unwrap();
+        let mut service_contract = get_service_contract();
+        service_contract.metadata = BoundedVec::try_from(b"some_metadata".to_vec()).unwrap();
         assert_eq!(
             contract.contract_type,
-            types::ContractData::ServiceContract(service_contrat),
+            types::ContractData::ServiceContract(service_contract),
         );
     });
 }
@@ -1540,12 +1540,12 @@ fn test_service_contract_set_fees_works() {
         ));
 
         let contract = SmartContractModule::contracts(1).unwrap();
-        let mut service_contrat = get_service_contract();
-        service_contrat.base_fee = 100;
-        service_contrat.variable_fee = 10;
+        let mut service_contract = get_service_contract();
+        service_contract.base_fee = 100;
+        service_contract.variable_fee = 10;
         assert_eq!(
             contract.contract_type,
-            types::ContractData::ServiceContract(service_contrat),
+            types::ContractData::ServiceContract(service_contract),
         );
     });
 }
@@ -1557,14 +1557,14 @@ fn test_service_contract_approve_works() {
         prepare_service_consumer_contract();
 
         let contract = SmartContractModule::contracts(1).unwrap();
-        let mut service_contrat = get_service_contract();
-        service_contrat.base_fee = 100;
-        service_contrat.variable_fee = 10;
-        service_contrat.metadata = BoundedVec::try_from(b"some_metadata".to_vec()).unwrap();
-        service_contrat.state = types::ServiceContractState::AgreementReady;
+        let mut service_contract = get_service_contract();
+        service_contract.base_fee = 100;
+        service_contract.variable_fee = 10;
+        service_contract.metadata = BoundedVec::try_from(b"some_metadata".to_vec()).unwrap();
+        service_contract.state = types::ServiceContractState::AgreementReady;
         assert_eq!(
             contract.contract_type,
-            types::ContractData::ServiceContract(service_contrat.clone()),
+            types::ContractData::ServiceContract(service_contract.clone()),
         );
 
         // Service approves
@@ -1574,10 +1574,10 @@ fn test_service_contract_approve_works() {
         ));
 
         let contract = SmartContractModule::contracts(1).unwrap();
-        service_contrat.accepted_by_service = true;
+        service_contract.accepted_by_service = true;
         assert_eq!(
             contract.contract_type,
-            types::ContractData::ServiceContract(service_contrat.clone()),
+            types::ContractData::ServiceContract(service_contract.clone()),
         );
 
         // Consumer approves
@@ -1587,12 +1587,12 @@ fn test_service_contract_approve_works() {
         ));
 
         let contract = SmartContractModule::contracts(1).unwrap();
-        service_contrat.accepted_by_consumer = true;
-        service_contrat.last_bill = 1628082006;
-        service_contrat.state = types::ServiceContractState::ApprovedByBoth;
+        service_contract.accepted_by_consumer = true;
+        service_contract.last_bill = 1628082006;
+        service_contract.state = types::ServiceContractState::ApprovedByBoth;
         assert_eq!(
             contract.contract_type,
-            types::ContractData::ServiceContract(service_contrat),
+            types::ContractData::ServiceContract(service_contract),
         );
 
         let our_events = System::events();
