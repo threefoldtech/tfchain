@@ -132,10 +132,9 @@ pub struct ServiceContract {
 #[derive(
     PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
 )]
-pub struct ServiceContractBillReport {
-    pub bill_id: u64,
+pub struct ServiceContractBill {
     pub amount: u64,
-    pub window: u64,
+    pub window: u64, // amount of time (in seconds) covered since last bill
     pub metadata: BoundedVec<u8, ConstU32<50>>, // limited to 50 bytes for now
 }
 

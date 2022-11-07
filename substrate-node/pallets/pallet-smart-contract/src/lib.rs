@@ -140,6 +140,11 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, u64, ContractBillingInformation, ValueQuery>;
 
     #[pallet::storage]
+    #[pallet::getter(fn service_contract_bill_by_id)]
+    pub type ServiceContractBillByID<T: Config> =
+        StorageMap<_, Blake2_128Concat, u64, ServiceContractBill, ValueQuery>;
+
+    #[pallet::storage]
     #[pallet::getter(fn node_contract_resources)]
     pub type NodeContractResources<T: Config> =
         StorageMap<_, Blake2_128Concat, u64, ContractResources, ValueQuery>;
@@ -436,8 +441,10 @@ pub mod pallet {
         TwinNotAuthorizedToSetFees,
         TwinNotAuthorizedToApproveServiceContract,
         TwinNotAuthorizedToRejectServiceContract,
+        TwinNotAuthorizedToBillServiceContract,
         NoServiceContractModificationAllowed,
         NoServiceContractApprovalAllowed,
+        NoServiceContractBillingAllowed,
         MetadataTooLong,
     }
 
@@ -657,13 +664,13 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn create_service_contract(
+        pub fn service_contract_create(
             origin: OriginFor<T>,
             service_account: T::AccountId,
             consumer_account: T::AccountId,
         ) -> DispatchResultWithPostInfo {
             let caller_account = ensure_signed(origin)?;
-            Self::_create_service_contract(caller_account, service_account, consumer_account)
+            Self::_service_contract_create(caller_account, service_account, consumer_account)
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
@@ -703,6 +710,15 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_service_contract_reject(account_id, contract_id)
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        pub fn service_contract_bill(
+            origin: OriginFor<T>,
+            contract_id: u64,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_service_contract_bill(account_id, contract_id)
         }
     }
 
@@ -1178,7 +1194,7 @@ impl<T: Config> Pallet<T> {
     }
 
     #[transactional]
-    pub fn _create_service_contract(
+    pub fn _service_contract_create(
         caller: T::AccountId,
         service: T::AccountId,
         consumer: T::AccountId,
@@ -1206,7 +1222,7 @@ impl<T: Config> Pallet<T> {
             metadata: vec![].try_into().unwrap(),        // OK
             accepted_by_service: false,                  // OK
             accepted_by_consumer: false,                 // OK
-            last_bill: 0,                                // TODO
+            last_bill: 0,                                // OK
             state: types::ServiceContractState::Created, // OK
         };
 
@@ -1339,9 +1355,11 @@ impl<T: Config> Pallet<T> {
             ));
         }
 
-        // If both parties (service and consumer) accept then contract is approved
+        // If both parties (service and consumer) accept then contract is approved and can be billed
         if service_contract.accepted_by_service && service_contract.accepted_by_consumer {
             service_contract.state = types::ServiceContractState::ApprovedByBoth;
+            let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+            service_contract.last_bill = now; // Initialize billing period
             Self::deposit_event(Event::ServiceContractApproved { contract_id });
         }
 
@@ -1384,6 +1402,52 @@ impl<T: Config> Pallet<T> {
         // If one party (service or consumer) rejects then contract
         // is canceled and removed from contract list
         Self::remove_contract(contract_id);
+
+        Ok(().into())
+    }
+
+    pub fn _service_contract_bill(
+        account_id: T::AccountId,
+        contract_id: u64,
+    ) -> DispatchResultWithPostInfo {
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
+            .ok_or(Error::<T>::TwinNotExists)?;
+
+        let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+
+        let mut service_contract = Self::get_service_contract(&contract)?;
+
+        // Only service can bill consumer for service contract
+        ensure!(
+            twin_id == service_contract.service_twin_id,
+            Error::<T>::TwinNotAuthorizedToBillServiceContract,
+        );
+
+        // Allow to bill contract only if approved by both
+        ensure!(
+            matches!(
+                service_contract.state,
+                types::ServiceContractState::ApprovedByBoth
+            ),
+            Error::<T>::NoServiceContractBillingAllowed,
+        );
+
+        // Get amount of time to bill for
+        let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+        let window = now - service_contract.last_bill;
+
+        // Create service contract bill and insert to list
+        let service_contract_bill = types::ServiceContractBill {
+            amount: 0,                            // TODO
+            window,                               // OK
+            metadata: vec![].try_into().unwrap(), // TODO
+        };
+        ServiceContractBillByID::<T>::insert(contract.contract_id, service_contract_bill);
+
+        // Update contract in list after modification
+        service_contract.last_bill = now;
+        contract.contract_type = types::ContractData::ServiceContract(service_contract);
+        Contracts::<T>::insert(contract_id, contract);
 
         Ok(().into())
     }
@@ -1893,7 +1957,7 @@ impl<T: Config> Pallet<T> {
     // Bills a contract (DeploymentContract or NameContract)
     // Calculates how much TFT is due by the user and distributes the rewards
     fn bill_contract(contract_id: u64) -> DispatchResultWithPostInfo {
-        // Clean up contract from blling loop if it not exists anymore
+        // Clean up contract from billing loop if it does not exist anymore
         if !Contracts::<T>::contains_key(contract_id) {
             log::debug!("cleaning up deleted contract from storage");
 

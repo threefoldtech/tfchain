@@ -1475,7 +1475,7 @@ fn test_create_name_contract_with_invalid_dns_name_fails() {
 // ---------------------- //
 
 #[test]
-fn test_create_service_contract_works() {
+fn test_service_contract_create_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         create_service_consumer_contract();
@@ -1582,13 +1582,13 @@ fn test_service_contract_approve_works() {
 
         let contract = SmartContractModule::contracts(1).unwrap();
         service_contrat.accepted_by_consumer = true;
+        service_contrat.last_bill = 1628082006;
         service_contrat.state = types::ServiceContractState::ApprovedByBoth;
         assert_eq!(
             contract.contract_type,
             types::ContractData::ServiceContract(service_contrat),
         );
 
-        // check event
         let our_events = System::events();
         assert_eq!(!our_events.is_empty(), true);
         assert_eq!(
@@ -4492,7 +4492,7 @@ fn create_service_consumer_contract() {
     create_twin(bob());
 
     // create contract between service (Alice) and consumer (Bob)
-    assert_ok!(SmartContractModule::create_service_contract(
+    assert_ok!(SmartContractModule::service_contract_create(
         Origin::signed(alice()),
         alice(),
         bob(),
