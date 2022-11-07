@@ -139,7 +139,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 114,
+    spec_version: 115,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -375,7 +375,6 @@ parameter_types! {
     pub DistributionFrequency: u16 = 24;
     pub RetryInterval: u32 = 20;
     pub MaxNameContractNameLength: u32 = 64;
-    pub MaxNodeContractPublicIPs: u32 = 1;
     pub MaxDeploymentDataLength: u32 = 512;
 }
 
@@ -402,7 +401,7 @@ impl pallet_smart_contract::Config for Runtime {
     type NameContractName = pallet_smart_contract::name_contract::NameContractName<Runtime>;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
     type MaxDeploymentDataLength = MaxDeploymentDataLength;
-    type MaxNodeContractPublicIps = MaxNodeContractPublicIPs;
+    type MaxNodeContractPublicIps = MaxFarmPublicIps;
     type Burn = ();
 }
 
