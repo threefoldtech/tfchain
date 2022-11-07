@@ -1637,15 +1637,6 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         // check_report_cost(1, 3, amount_due_as_u128, 12, discount_received);
 
         let our_events = System::events();
-        // Event 1: Rent contract created
-        // Event 2: Node Contract created
-        // Event 3: Updated used resources
-        // Event 4: Grace period started rent contract
-        // Event 5: Grace period started node contract
-        // Event 6-17: Rent contract billed
-        // Event 18: Node contract canceled
-        // Event 19: Rent contract Canceled
-        // => no Node Contract billed event
         assert_eq!(our_events.len(), 31);
 
         assert_eq!(
