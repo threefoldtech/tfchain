@@ -903,7 +903,7 @@ impl<T: Config> Pallet<T> {
             types::ContractData::CapacityReservationContract(capacity_reservation_contract);
 
         contract.state = contract.state.clone();
-        Contracts::<T>::insert(&contract.contract_id, contract.clone());
+        Contracts::<T>::insert(&contract.contract_id, &contract);
 
         Self::deposit_event(Event::ContractUpdated(contract));
 
@@ -1351,7 +1351,6 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    #[transactional]
     pub fn _cancel_contract(
         account_id: T::AccountId,
         contract_id: u64,
@@ -2128,7 +2127,7 @@ impl<T: Config> Pallet<T> {
         log::info!(
             "Number of farm ips {:?}, number of ips to reserve: {:?}",
             farm.public_ips.len(),
-            capacity_reservation_contract.public_ips as usize
+            deployment_contract.public_ips as usize
         );
         ensure!(
             farm.public_ips.len() >= deployment_contract.public_ips as usize,
