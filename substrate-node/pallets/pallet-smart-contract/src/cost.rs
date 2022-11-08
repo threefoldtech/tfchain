@@ -2,7 +2,7 @@ use crate::pallet;
 use crate::pallet::BalanceOf;
 use crate::pallet::Error;
 use crate::types;
-use crate::types::{Contract, ContractBillingInformation};
+use crate::types::{Contract, ContractBillingInformation, ServiceContractBill};
 use crate::Config;
 use frame_support::dispatch::DispatchErrorWithPostInfo;
 use pallet_tfgrid::types as pallet_tfgrid_types;
@@ -14,6 +14,10 @@ use tfchain_support::{resources::Resources, types::NodeCertification};
 impl<T: Config> Contract<T> {
     pub fn get_billing_info(&self) -> ContractBillingInformation {
         pallet::ContractBillingInformationByID::<T>::get(self.contract_id)
+    }
+
+    pub fn get_service_contract_bill(&self) -> ServiceContractBill {
+        pallet::ServiceContractBillByID::<T>::get(self.contract_id)
     }
 
     pub fn calculate_contract_cost_tft(
@@ -29,6 +33,7 @@ impl<T: Config> Contract<T> {
         // - NodeContract
         // - RentContract
         // - NameContract
+        // - ServiceContract
         let total_cost = self.calculate_contract_cost(&pricing_policy, seconds_elapsed)?;
         // If cost is 0, reinsert to be billed at next interval
         if total_cost == 0 {
@@ -88,11 +93,11 @@ impl<T: Config> Contract<T> {
             }
             types::ContractData::ServiceContract(service_contract) => {
                 // bill user for service usage for number of seconds elapsed
-                let bill_window = 0; // TODO
-                let contract_cost = (U64F64::from_num(service_contract.base_fee * bill_window)
-                    / 3600)
-                    + U64F64::from_num(service_contract.variable_fee);
-                contract_cost.to_num::<u64>()
+                let service_contract_bill = self.get_service_contract_bill();
+                let contract_cost = U64F64::from_num(service_contract.base_fee)
+                    * U64F64::from_num(service_contract_bill.window / 3600)
+                    + U64F64::from_num(service_contract_bill.variable_amount);
+                contract_cost.round().to_num::<u64>()
             }
         };
 
