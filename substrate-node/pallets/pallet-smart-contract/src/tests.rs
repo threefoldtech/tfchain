@@ -327,7 +327,7 @@ fn test_create_deployment_contract_with_public_ips_works() {
                 let farm = TfgridModule::farms(1).unwrap();
                 assert_eq!(farm.public_ips[0].contract_id, 1);
 
-                assert_eq!(c.public_ips, 2);
+                assert_eq!(c.public_ips, 1);
 
                 let pub_ip = PublicIP {
                     ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
@@ -335,13 +335,7 @@ fn test_create_deployment_contract_with_public_ips_works() {
                     contract_id: 1,
                 };
 
-                let pub_ip_2 = PublicIP {
-                    ip: "185.206.122.34/24".as_bytes().to_vec().try_into().unwrap(),
-                    gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
-                    contract_id: 1,
-                };
                 assert_eq!(c.public_ips_list[0], pub_ip);
-                assert_eq!(c.public_ips_list[1], pub_ip_2);
             }
             _ => (),
         }
@@ -2818,26 +2812,20 @@ fn test_deployment_contract_grace_period_cancels_contract_when_grace_period_ends
         );
 
         // grace period stops after 100 blocknumbers, so after 121
-        for i in 1..11 {
+        for i in 1..10 {
             pool_state
                 .write()
                 .should_call_bill_contract(1, Ok(Pays::Yes.into()), 21 + i * 10);
         }
 
-        for i in 1..11 {
+        for i in 1..10 {
             run_to_block(21 + i * 10, Some(&mut pool_state));
         }
 
-        // pool_state
-        //     .write()
-        //     .should_call_bill_contract(1, Ok(Pays::Yes.into()), 131);
-        // run_to_block(131, Some(&mut pool_state));
-
-        // The user's total free balance should be distributed
-        let free_balance = Balances::free_balance(&twin.account_id);
-        let total_amount_billed = initial_twin_balance - free_balance;
-
-        validate_distribution_rewards(initial_total_issuance, total_amount_billed, false);
+        pool_state
+            .write()
+            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 121);
+        run_to_block(121, Some(&mut pool_state));
 
         let c1 = SmartContractModule::contracts(1);
         assert_eq!(c1, None);
@@ -3860,10 +3848,6 @@ pub fn prepare_farm(source: AccountId, dedicated: bool) {
     let mut pub_ips = Vec::new();
     pub_ips.push(pallet_tfgrid_types::PublicIpInput {
         ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
-        gw: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
-    });
-    pub_ips.push(pallet_tfgrid_types::PublicIpInput {
-        ip: "185.206.122.34/24".as_bytes().to_vec().try_into().unwrap(),
         gw: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
     });
 
