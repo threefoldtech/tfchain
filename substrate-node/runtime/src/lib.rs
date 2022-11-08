@@ -755,8 +755,8 @@ pub type Executive = frame_executive::Executive<
     Runtime,
     AllPalletsWithSystem,
     (
+        pallet_tfgrid::nodes_migration::v9::FixFarmNodeIndexMap<Runtime>,
         pallet_tfgrid::farm_migration::v10::FixFarmingPolicy<Runtime>,
-        pallet_tfgrid::nodes_migration::v9patch::FixFarmNodeIndexMap<Runtime>,
     ),
 >;
 

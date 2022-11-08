@@ -19,7 +19,7 @@ pub mod v10 {
     impl<T: Config> OnRuntimeUpgrade for FixFarmingPolicy<T> {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<(), &'static str> {
-            assert!(PalletVersion::<T>::get() == types::StorageVersion::V10Struct);
+            assert!(PalletVersion::<T>::get() <= types::StorageVersion::V10Struct);
 
             // Store number of farms in temp storage
             let farms_count: u64 = Farms::<T>::iter_keys().count().saturated_into();
@@ -44,7 +44,7 @@ pub mod v10 {
 
         #[cfg(feature = "try-runtime")]
         fn post_upgrade() -> Result<(), &'static str> {
-            assert!(PalletVersion::<T>::get() == types::StorageVersion::V11Struct);
+            assert!(PalletVersion::<T>::get() >= types::StorageVersion::V11Struct);
 
             // Check number of farms against pre-check result
             let pre_farms_count = Self::get_temp_storage("pre_farms_count").unwrap_or(0u64);
