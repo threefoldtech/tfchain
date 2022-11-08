@@ -1439,18 +1439,12 @@ impl<T: Config> Pallet<T> {
 
         // Get elapsed time (in seconds) to bill for service
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-        let window = now - service_contract.last_bill;
+        let elapsed_time = now - service_contract.last_bill;
 
-        // Update contract in list after modification
-        // Do it here to allow future billing if this one fails
-        // because max window size is reached
-        // TOCHECK: specs not clear on this point
-        service_contract.last_bill = now;
-        contract.contract_type = types::ContractData::ServiceContract(service_contract.clone());
-        Contracts::<T>::insert(contract_id, contract.clone());
-
-        // Billing window max size is 1 hour
-        ensure!(window <= 3600, Error::<T>::ServiceContractBillingNotAllowed,);
+        // Billing time (window) is max 1h by design
+        // So extra time will not be billed
+        // It is service responsability to bill on rigth frequency
+        let window = elapsed_time.min(3600);
 
         // Billing variable amount is bounded by contract variable fee
         ensure!(
@@ -1473,6 +1467,11 @@ impl<T: Config> Pallet<T> {
             metadata: bill_metadata,
         };
         ServiceContractBillByID::<T>::insert(contract.contract_id, service_contract_bill);
+
+        // Update contract in list after modification
+        service_contract.last_bill = now;
+        contract.contract_type = types::ContractData::ServiceContract(service_contract);
+        Contracts::<T>::insert(contract_id, contract);
 
         Ok(().into())
     }
