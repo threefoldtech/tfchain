@@ -4332,7 +4332,9 @@ version = "1.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "pallet-collective",
  "pallet-membership",
+ "pallet-session",
  "parity-scale-codec 3.1.5",
  "scale-info",
  "sp-core",
