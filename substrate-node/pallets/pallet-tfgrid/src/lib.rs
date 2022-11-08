@@ -27,7 +27,7 @@ mod mock;
 mod tests;
 
 pub mod weights;
-
+pub mod migration;
 pub mod types;
 
 pub mod farm;
