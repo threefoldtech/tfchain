@@ -765,7 +765,6 @@ pub mod pallet {
             origin: OriginFor<T>,
             id: u32,
             name: FarmNameInput<T>,
-            pricing_policy_id: u32,
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
@@ -794,7 +793,6 @@ pub mod pallet {
             FarmIdByName::<T>::remove(name.clone());
 
             stored_farm.name = new_farm_name;
-            stored_farm.pricing_policy_id = pricing_policy_id;
 
             Farms::<T>::insert(id, &stored_farm);
             FarmIdByName::<T>::insert(name, stored_farm.id);
