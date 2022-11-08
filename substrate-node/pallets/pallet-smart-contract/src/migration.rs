@@ -1,6 +1,6 @@
 use super::*;
 use frame_support::weights::Weight;
-use tfchain_support::types::{ConsumableResources, Power, PowerState, PowerTarget};
+use tfchain_support::types::ConsumableResources;
 
 pub mod deprecated {
     use crate::pallet::{
@@ -14,8 +14,6 @@ pub mod deprecated {
 
     use scale_info::TypeInfo;
     use sp_std::prelude::*;
-
-    use tfchain_support::types::{Location, NodeCertification, Resources};
 
     #[derive(
         Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen,
@@ -83,28 +81,6 @@ pub mod deprecated {
         RentContract(RentContract),
     }
 
-    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-    pub struct NodeV6<PubConfig, If> {
-        pub version: u32,
-        pub id: u32,
-        pub farm_id: u32,
-        pub twin_id: u32,
-        pub resources: Resources,
-        pub location: Location,
-        pub country: Vec<u8>,
-        pub city: Vec<u8>,
-        // optional public config
-        pub public_config: Option<PubConfig>,
-        pub created: u64,
-        pub farming_policy_id: u32,
-        pub interfaces: Vec<If>,
-        pub certification: NodeCertification,
-        pub secure_boot: bool,
-        pub virtualized: bool,
-        pub serial_number: Vec<u8>,
-        pub connection_price: u32,
-    }
-
     decl_module! {
         pub struct Module<T: Config> for enum Call where origin: T::Origin { }
     }
@@ -124,18 +100,19 @@ pub mod v6 {
             info!("current pallet version: {:?}", PalletVersion::<T>::get());
             assert!(PalletVersion::<T>::get() == types::StorageVersion::V5);
 
-            info!("👥  Smart Contract pallet to v6 passes PRE migrate checks ✅",);
+            info!("👥  Smart Contract pallet to V6 passes PRE migrate checks ✅",);
             Ok(())
         }
 
         fn on_runtime_upgrade() -> Weight {
+            migrate_to_version_6::<T>();
             migrate_to_version_7::<T>()
         }
 
         #[cfg(feature = "try-runtime")]
         fn post_upgrade() -> Result<(), &'static str> {
             info!("current pallet version: {:?}", PalletVersion::<T>::get());
-            assert!(PalletVersion::<T>::get() == types::StorageVersion::V6);
+            assert!(PalletVersion::<T>::get() == types::StorageVersion::V7);
 
             info!(
                 "👥  Smart Contract pallet to {:?} passes POST migrate checks ✅",
@@ -147,8 +124,8 @@ pub mod v6 {
     }
 }
 
-pub fn migrate_to_version_7<T: Config>() -> frame_support::weights::Weight {
-    if PalletVersion::<T>::get() == types::StorageVersion::V6 {
+pub fn migrate_to_version_6<T: Config>() -> frame_support::weights::Weight {
+    if PalletVersion::<T>::get() == types::StorageVersion::V5 {
         info!(
             " >>> Starting contract pallet migration, pallet version: {:?}",
             PalletVersion::<T>::get()
@@ -156,17 +133,31 @@ pub fn migrate_to_version_7<T: Config>() -> frame_support::weights::Weight {
 
         let mut migrated_count = 0;
 
-        // fix billing information
+        // Collect ContractsToBillAt storage in memory
+        let contracts_to_bill_at = ContractsToBillAt::<T>::iter().collect::<Vec<_>>();
 
-        translate_node_objects::<T>();
-        translate_contract_objects::<T>();
+        // Remove all items under ContractsToBillAt
+        frame_support::migration::remove_storage_prefix(
+            b"SmartContractModule",
+            b"ContractsToBillAt",
+            b"",
+        );
 
-        remove_deployment_contracts_from_contracts_to_bill::<T>();
-        add_used_resources::<T>();
-        add_active_node_contracts::<T>();
+        let billing_freq = 600;
+        BillingFrequency::<T>::put(billing_freq);
 
-        NodeContractResources::<T>::drain();
-        ActiveRentContractForNode::<T>::drain();
+        for (block_number, contract_ids) in contracts_to_bill_at {
+            migrated_count += 1;
+            // Construct new index
+            let index = (block_number - 1) % billing_freq;
+            // Reinsert items under the new key
+            info!(
+                "inserted contracts:{:?} at index: {:?}",
+                contract_ids.clone(),
+                index
+            );
+            ContractsToBillAt::<T>::insert(index, contract_ids);
+        }
 
         info!(
             " <<< Contracts storage updated! Migrated {} Contracts ✅",
@@ -174,10 +165,9 @@ pub fn migrate_to_version_7<T: Config>() -> frame_support::weights::Weight {
         );
 
         // Update pallet storage version
-        PalletVersion::<T>::set(types::StorageVersion::V7);
+        PalletVersion::<T>::set(types::StorageVersion::V6);
         info!(" <<< Storage version upgraded");
 
-        // Return the weight consumed by the migration.
         T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
     } else {
         info!(" >>> Unused migration");
@@ -185,34 +175,76 @@ pub fn migrate_to_version_7<T: Config>() -> frame_support::weights::Weight {
     }
 }
 
-pub fn remove_deployment_contracts_from_contracts_to_bill<T: Config>() {
+pub fn migrate_to_version_7<T: Config>() -> frame_support::weights::Weight {
+    if PalletVersion::<T>::get() == types::StorageVersion::V6 {
+        info!(
+            " >>> Starting contract pallet migration, pallet version: {:?}",
+            PalletVersion::<T>::get()
+        );
+
+        let translated_count = translate_contract_objects::<T>();
+        let (mut total_reads, mut total_writes) =
+            remove_deployment_contracts_from_contracts_to_bill::<T>();
+        let (reads, writes) = add_used_resources_and_active_node_contracts::<T>();
+        total_reads += reads;
+        total_writes += writes;
+
+        NodeContractResources::<T>::drain();
+        ActiveRentContractForNode::<T>::drain();
+
+        info!(
+            " <<< Contracts storage updated! Migrated {} Contracts ✅",
+            translated_count
+        );
+
+        // Update pallet storage version
+        PalletVersion::<T>::set(types::StorageVersion::V7);
+        info!(" <<< Storage version upgraded");
+
+        // Return the weight consumed by the migration.
+        T::DbWeight::get().reads_writes(
+            (translated_count + total_reads) as Weight + 1,
+            (translated_count + total_writes) as Weight + 1,
+        )
+    } else {
+        info!(" >>> Unused migration");
+        return 0;
+    }
+}
+
+pub fn remove_deployment_contracts_from_contracts_to_bill<T: Config>() -> (u32, u32) {
+    let mut reads = 0;
+    let mut writes = 0;
     // we only bill capacity reservation contracts and name contracts
     for index in 0..BillingFrequency::<T>::get() {
         let mut contract_ids = ContractsToBillAt::<T>::get(index);
+        reads += 1;
+        let mut modified = false;
         contract_ids.retain(|&id| {
-            let contract = Contracts::<T>::get(id).unwrap();
-            !matches!(contract.contract_type, types::ContractData::DeploymentContract(_))
-        });
-        ContractsToBillAt::<T>::insert(index, &contract_ids);
-    }
-}
-
-pub fn add_active_node_contracts<T: Config>() {
-    // active node contracts contains only capacity reservation contracts
-    ActiveNodeContracts::<T>::drain();
-    for (_contract_id, contract) in Contracts::<T>::iter() {
-        match contract.contract_type {
-            types::ContractData::CapacityReservationContract(crc) => {
-                let mut contracts = ActiveNodeContracts::<T>::get(crc.node_id);
-                contracts.push(contract.contract_id);
-                ActiveNodeContracts::<T>::insert(crc.node_id, &contracts);
+            let contract = Contracts::<T>::get(id);
+            if let Some(c) = contract {
+                let res = !matches!(c.contract_type, types::ContractData::DeploymentContract(_));
+                modified |= res;
+                res
+            } else {
+                // some contracts are still in contracts to bill but have been removed already
+                // keep them as the chain will remove them and log stuff 
+                true
             }
-            _ => {}
+        });
+        if modified {
+            ContractsToBillAt::<T>::insert(index, &contract_ids);
+            writes += 1;
         }
     }
+    (reads, writes)
 }
 
-pub fn add_used_resources<T: Config>() {
+pub fn add_used_resources_and_active_node_contracts<T: Config>() -> (u32, u32) {
+    // active node contracts contains only capacity reservation contracts
+    let mut reads = 0;
+    let mut writes = 0;
+    ActiveNodeContracts::<T>::drain();
     for (_contract_id, contract) in Contracts::<T>::iter() {
         match contract.contract_type {
             types::ContractData::NameContract(_) => {}
@@ -220,6 +252,7 @@ pub fn add_used_resources<T: Config>() {
                 // fix the used resources, the public ips and the deployment_contracts
                 // of the corresponding CapacityReservationContract
                 let mut crc_contract = Contracts::<T>::get(dc.capacity_reservation_id).unwrap();
+                reads += 1;
                 let mut crc = match crc_contract.contract_type {
                     types::ContractData::CapacityReservationContract(c) => Some(c),
                     _ => None,
@@ -233,59 +266,34 @@ pub fn add_used_resources<T: Config>() {
                 // todo check for billing
                 crc_contract.contract_type = types::ContractData::CapacityReservationContract(crc);
                 Contracts::<T>::insert(crc_contract.contract_id, &crc_contract);
+                writes += 1;
             }
             types::ContractData::CapacityReservationContract(crc) => {
+                // update the active node contracts
+                let mut contracts = ActiveNodeContracts::<T>::get(crc.node_id);
+                reads += 1;
+                contracts.push(contract.contract_id);
+                ActiveNodeContracts::<T>::insert(crc.node_id, &contracts);
+                writes += 1;
                 // update the used resources of the node
                 let mut node = pallet_tfgrid::Nodes::<T>::get(crc.node_id).unwrap();
+                reads += 1;
                 node.resources.used_resources = node
                     .resources
                     .used_resources
                     .add(&crc.resources.total_resources);
                 pallet_tfgrid::Nodes::<T>::insert(node.id, &node);
+                writes += 1;
             }
         }
+        reads += 1;
     }
+    (reads, writes)
 }
 
-pub fn translate_node_objects<T: Config>() {
-    // migrate node objects
-    pallet_tfgrid::Nodes::<T>::translate::<deprecated::NodeV6<PubConfigOf<T>, InterfaceOf<T>>, _>(
-        |_k, n| {
-            Some(Node {
-                version: pallet_tfgrid::TFGRID_NODE_VERSION,
-                id: n.id,
-                farm_id: n.farm_id,
-                twin_id: n.twin_id,
-                resources: ConsumableResources {
-                    total_resources: n.resources,
-                    used_resources: Resources::empty(),
-                },
-                location: n.location,
-                country: n.country,
-                city: n.city,
-                power: Power {
-                    target: PowerTarget::Up,
-                    state: PowerState::Up,
-                    last_up_time: 0,
-                },
-                // optional public config
-                public_config: n.public_config,
-                created: n.created,
-                farming_policy_id: n.farming_policy_id,
-                interfaces: n.interfaces,
-                certification: n.certification,
-                secure_boot: n.secure_boot,
-                virtualized: n.virtualized,
-                serial_number: n.serial_number,
-                connection_price: n.connection_price,
-            })
-        },
-    );
-}
-
-pub fn translate_contract_objects<T: Config>() {
+pub fn translate_contract_objects<T: Config>() -> u32 {
+    let mut count = 0;
     Contracts::<T>::translate::<deprecated::ContractV6<T>, _>(|k, ctr| {
-        // dummy default
         let contract_type = match ctr.contract_type {
             deprecated::ContractData::NodeContract(nc) => {
                 let used_resources = NodeContractResources::<T>::get(ctr.contract_id).used;
@@ -341,8 +349,10 @@ pub fn translate_contract_objects<T: Config>() {
             solution_provider_id: ctr.solution_provider_id,
         };
         info!("Contract: {:?} succesfully migrated", k);
+        count += 1;
         Some(new_contract)
     });
+    count
 }
 
 pub fn find_bill_index<T: Config>(contract_id: u64) -> Option<u64> {
