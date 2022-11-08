@@ -442,10 +442,11 @@ pub mod pallet {
         TwinNotAuthorizedToApproveServiceContract,
         TwinNotAuthorizedToRejectServiceContract,
         TwinNotAuthorizedToBillServiceContract,
-        NoServiceContractModificationAllowed,
-        NoServiceContractApprovalAllowed,
-        NoServiceContractBillingAllowed,
-        MetadataTooLong,
+        ServiceContractModificationNotAllowed,
+        ServiceContractApprovalNotAllowed,
+        ServiceContractBillingNotAllowed,
+        ServiceContractBillMetadataTooLong,
+        ServiceContractMetadataTooLong,
     }
 
     #[pallet::genesis_config]
@@ -716,9 +717,11 @@ pub mod pallet {
         pub fn service_contract_bill(
             origin: OriginFor<T>,
             contract_id: u64,
+            variable_amount: u64,
+            metadata: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_service_contract_bill(account_id, contract_id)
+            Self::_service_contract_bill(account_id, contract_id, variable_amount, metadata)
         }
     }
 
@@ -1215,15 +1218,15 @@ impl<T: Config> Pallet<T> {
         );
 
         let service_contract = types::ServiceContract {
-            service_twin_id,                             // OK
-            consumer_twin_id,                            // OK
-            base_fee: 0,                                 // OK
-            variable_fee: 0,                             // OK
-            metadata: vec![].try_into().unwrap(),        // OK
-            accepted_by_service: false,                  // OK
-            accepted_by_consumer: false,                 // OK
-            last_bill: 0,                                // OK
-            state: types::ServiceContractState::Created, // OK
+            service_twin_id,
+            consumer_twin_id,
+            base_fee: 0,
+            variable_fee: 0,
+            metadata: vec![].try_into().unwrap(),
+            accepted_by_service: false,
+            accepted_by_consumer: false,
+            last_bill: 0,
+            state: types::ServiceContractState::Created,
         };
 
         let contract = Self::_create_contract(
@@ -1262,12 +1265,12 @@ impl<T: Config> Pallet<T> {
                 service_contract.state,
                 types::ServiceContractState::ApprovedByBoth
             ),
-            Error::<T>::NoServiceContractModificationAllowed,
+            Error::<T>::ServiceContractModificationNotAllowed,
         );
 
         // TODO create metadata input type to control size
-        service_contract.metadata =
-            BoundedVec::try_from(metadata).map_err(|_| Error::<T>::MetadataTooLong)?;
+        service_contract.metadata = BoundedVec::try_from(metadata)
+            .map_err(|_| Error::<T>::ServiceContractMetadataTooLong)?;
 
         // If base_fee is set and non-zero (mandatory)
         if service_contract.base_fee != 0 {
@@ -1306,7 +1309,7 @@ impl<T: Config> Pallet<T> {
                 service_contract.state,
                 types::ServiceContractState::ApprovedByBoth
             ),
-            Error::<T>::NoServiceContractModificationAllowed,
+            Error::<T>::ServiceContractModificationNotAllowed,
         );
 
         service_contract.base_fee = base_fee;
@@ -1341,7 +1344,7 @@ impl<T: Config> Pallet<T> {
                 service_contract.state,
                 types::ServiceContractState::AgreementReady
             ),
-            Error::<T>::NoServiceContractApprovalAllowed,
+            Error::<T>::ServiceContractApprovalNotAllowed,
         );
 
         // Only service or consumer can accept agreement
@@ -1387,7 +1390,7 @@ impl<T: Config> Pallet<T> {
                 service_contract.state,
                 types::ServiceContractState::AgreementReady
             ),
-            Error::<T>::NoServiceContractApprovalAllowed,
+            Error::<T>::ServiceContractApprovalNotAllowed,
         );
 
         // Only service or consumer can reject agreement
@@ -1409,6 +1412,8 @@ impl<T: Config> Pallet<T> {
     pub fn _service_contract_bill(
         account_id: T::AccountId,
         contract_id: u64,
+        variable_amount: u64,
+        metadata: Vec<u8>,
     ) -> DispatchResultWithPostInfo {
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
             .ok_or(Error::<T>::TwinNotExists)?;
@@ -1429,25 +1434,45 @@ impl<T: Config> Pallet<T> {
                 service_contract.state,
                 types::ServiceContractState::ApprovedByBoth
             ),
-            Error::<T>::NoServiceContractBillingAllowed,
+            Error::<T>::ServiceContractBillingNotAllowed,
         );
 
-        // Get amount of time to bill for
+        // Get elapsed time (in seconds) to bill for service
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
         let window = now - service_contract.last_bill;
 
+        // Update contract in list after modification
+        // Do it here to allow future billing if this one fails
+        // because max window size is reached
+        // TOCHECK: specs not clear on this point
+        service_contract.last_bill = now;
+        contract.contract_type = types::ContractData::ServiceContract(service_contract.clone());
+        Contracts::<T>::insert(contract_id, contract.clone());
+
+        // Billing window max size is 1 hour
+        ensure!(window <= 3600, Error::<T>::ServiceContractBillingNotAllowed,);
+
+        // Billing variable amount is bounded by contract variable fee
+        ensure!(
+            variable_amount
+                <= ((U64F64::from_num(window) / 3600)
+                    * U64F64::from_num(service_contract.variable_fee))
+                .round()
+                .to_num::<u64>(),
+            Error::<T>::ServiceContractBillingNotAllowed,
+        );
+
+        // TODO: create metadata input type to control size
+        let bill_metadata = BoundedVec::try_from(metadata)
+            .map_err(|_| Error::<T>::ServiceContractBillMetadataTooLong)?;
+
         // Create service contract bill and insert to list
         let service_contract_bill = types::ServiceContractBill {
-            amount: 0,                            // TODO
-            window,                               // OK
-            metadata: vec![].try_into().unwrap(), // TODO
+            variable_amount,
+            window,
+            metadata: bill_metadata,
         };
         ServiceContractBillByID::<T>::insert(contract.contract_id, service_contract_bill);
-
-        // Update contract in list after modification
-        service_contract.last_bill = now;
-        contract.contract_type = types::ContractData::ServiceContract(service_contract);
-        Contracts::<T>::insert(contract_id, contract);
 
         Ok(().into())
     }
