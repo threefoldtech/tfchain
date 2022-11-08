@@ -1,7 +1,7 @@
 use super::Config;
 use super::*;
 use frame_support::{traits::Get, weights::Weight};
-use log::info;
+use log::{debug, info};
 use sp_std::collections::btree_map::BTreeMap;
 
 #[cfg(feature = "try-runtime")]
@@ -85,7 +85,7 @@ pub fn add_farm_nodes_index<T: Config>() -> frame_support::weights::Weight {
     }
 
     for (farm_id, nodes) in farms_with_nodes.iter() {
-        info!(
+        debug!(
             "inserting nodes: {:?} with farm id: {:?}",
             nodes.clone(),
             farm_id

@@ -1,7 +1,7 @@
 use super::Config;
 use super::*;
 use frame_support::{traits::Get, weights::Weight};
-use log::info;
+use log::{debug, info};
 
 #[cfg(feature = "try-runtime")]
 use frame_support::traits::OnRuntimeUpgradeHelpersExt;
@@ -29,7 +29,7 @@ pub mod v10 {
                 farms_count
             );
 
-            info!("👥  TFGrid pallet to V10 passes PRE migrate checks ✅",);
+            info!("👥  TFGrid pallet to V11 passes PRE migrate checks ✅",);
             Ok(())
         }
 
@@ -73,7 +73,7 @@ pub fn fix_farming_policy_migration_<T: Config>() -> frame_support::weights::Wei
         let mut new_farm = f;
 
         new_farm.pricing_policy_id = 1;
-        info!("migrated farm: {:?}", k);
+        debug!("migrated farm: {:?}", k);
 
         read_writes += 1;
         Some(new_farm)
