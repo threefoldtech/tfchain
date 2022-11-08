@@ -53,7 +53,7 @@ fn test_create_node_contract_with_public_ips_works() {
             1,
             generate_deployment_hash(),
             get_deployment_data(),
-            1,
+            2,
             None
         ));
 
@@ -64,7 +64,7 @@ fn test_create_node_contract_with_public_ips_works() {
                 let farm = TfgridModule::farms(1).unwrap();
                 assert_eq!(farm.public_ips[0].contract_id, 1);
 
-                assert_eq!(c.public_ips, 1);
+                assert_eq!(c.public_ips, 2);
 
                 let pub_ip = PublicIP {
                     ip: get_public_ip_ip(b"185.206.122.33/24"),
@@ -72,7 +72,13 @@ fn test_create_node_contract_with_public_ips_works() {
                     contract_id: 1,
                 };
 
+                let pub_ip_2 = PublicIP {
+                    ip: "185.206.122.34/24".as_bytes().to_vec().try_into().unwrap(),
+                    gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+                    contract_id: 1,
+                };
                 assert_eq!(c.public_ips_list[0], pub_ip);
+                assert_eq!(c.public_ips_list[1], pub_ip_2);
             }
             _ => (),
         }
@@ -337,18 +343,18 @@ fn test_create_multiple_node_contracts_works() {
 fn test_cancel_node_contract_frees_public_ips_works() {
     new_test_ext().execute_with(|| {
         prepare_farm_and_node();
-
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(alice()),
             1,
             generate_deployment_hash(),
             get_deployment_data(),
-            1,
+            2,
             None
         ));
 
         let farm = TfgridModule::farms(1).unwrap();
         assert_eq!(farm.public_ips[0].contract_id, 1);
+        assert_eq!(farm.public_ips[1].contract_id, 1);
 
         assert_ok!(SmartContractModule::cancel_contract(
             Origin::signed(alice()),
@@ -357,6 +363,7 @@ fn test_cancel_node_contract_frees_public_ips_works() {
 
         let farm = TfgridModule::farms(1).unwrap();
         assert_eq!(farm.public_ips[0].contract_id, 0);
+        assert_eq!(farm.public_ips[1].contract_id, 0);
     });
 }
 
@@ -1331,6 +1338,7 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
         prepare_farm_and_node();
         run_to_block(1);
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        let initial_total_issuance = Balances::total_issuance();
 
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(charlie()),
@@ -1366,6 +1374,9 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
             true
         );
 
+        let twin = TfgridModule::twins(3).unwrap();
+        let free_balance = Balances::free_balance(&twin.account_id);
+
         run_to_block(32);
         run_to_block(42);
         run_to_block(52);
@@ -1377,6 +1388,9 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
         run_to_block(112);
         run_to_block(122);
         run_to_block(132);
+
+        // The user's total free balance should be distributed
+        validate_distribution_rewards(initial_total_issuance, free_balance, false);
 
         let c1 = SmartContractModule::contracts(1);
         assert_eq!(c1, None);
@@ -1636,16 +1650,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         // check_report_cost(1, 3, amount_due_as_u128, 12, discount_received);
 
         let our_events = System::events();
-        // Event 1: Rent contract created
-        // Event 2: Node Contract created
-        // Event 3: Updated used resources
-        // Event 4: Grace period started rent contract
-        // Event 5: Grace period started node contract
-        // Event 6-17: Rent contract billed
-        // Event 18: Node contract canceled
-        // Event 19: Rent contract Canceled
-        // => no Node Contract billed event
-        assert_eq!(our_events.len(), 20);
+        assert_eq!(our_events.len(), 31);
 
         assert_eq!(
             our_events[5],
@@ -1671,7 +1676,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         );
 
         assert_eq!(
-            our_events[18],
+            our_events[29],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::NodeContractCanceled {
@@ -1681,7 +1686,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
             }))
         );
         assert_eq!(
-            our_events[19],
+            our_events[30],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::RentContractCanceled {
@@ -2358,6 +2363,10 @@ pub fn prepare_farm(source: AccountId, dedicated: bool) {
     let mut pub_ips = Vec::new();
     pub_ips.push(pallet_tfgrid_types::PublicIpInput {
         ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
+        gw: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+    });
+    pub_ips.push(pallet_tfgrid_types::PublicIpInput {
+        ip: "185.206.122.34/24".as_bytes().to_vec().try_into().unwrap(),
         gw: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
     });
 

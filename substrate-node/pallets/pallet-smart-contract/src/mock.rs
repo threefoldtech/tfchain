@@ -203,7 +203,7 @@ parameter_types! {
     pub const GracePeriod: u64 = 100;
     pub const DistributionFrequency: u16 = 24;
     pub const MaxNameContractNameLength: u32 = 64;
-    pub const MaxNodeContractPublicIPs: u32 = 1;
+    pub const MaxNodeContractPublicIPs: u32 = 512;
     pub const MaxDeploymentDataLength: u32 = 512;
 }
 
