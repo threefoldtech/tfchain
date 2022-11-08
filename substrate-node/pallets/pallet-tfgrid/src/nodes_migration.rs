@@ -17,7 +17,7 @@ pub mod v9patch {
         fn pre_upgrade() -> Result<(), &'static str> {
             assert!(PalletVersion::<T>::get() == types::StorageVersion::V9Struct);
 
-            info!("👥  TFGrid pallet to v4 passes PRE migrate checks ✅",);
+            info!("👥  TFGrid pallet to V10 passes PRE migrate checks ✅",);
             Ok(())
         }
 
@@ -78,5 +78,5 @@ pub fn add_farm_nodes_index<T: Config>() -> frame_support::weights::Weight {
     info!(" <<< Storage version upgraded");
 
     // Return the weight consumed by the migration.
-    T::DbWeight::get().reads_writes(reads as Weight + 1, writes as Weight + 1)
+    T::DbWeight::get().reads_writes(reads as Weight, writes as Weight)
 }
