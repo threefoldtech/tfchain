@@ -74,10 +74,10 @@ pub mod crypto {
 }
 
 pub mod cost;
-pub mod migration;
 pub mod name_contract;
 pub mod types;
 pub mod weights;
+pub mod migrations;
 
 #[frame_support::pallet]
 pub mod pallet {

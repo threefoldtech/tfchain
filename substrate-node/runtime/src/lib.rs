@@ -764,9 +764,11 @@ pub type Executive = frame_executive::Executive<
     Runtime,
     AllPalletsWithSystem,
     (
-        pallet_tfgrid::grid_migration::v10::GridMigration<Runtime>,
-        pallet_smart_contract::migration::v5::ContractMigrationV5<Runtime>,
-    ),
+        pallet_smart_contract::migrations::v6::ContractMigrationV5<Runtime>,
+        pallet_tfgrid::migrations::v10::FixFarmNodeIndexMap<Runtime>,
+        pallet_tfgrid::migrations::v11::FixFarmingPolicy<Runtime>,
+        pallet_tfgrid::grid_migration::v12::GridMigration<Runtime>,
+    )
 >;
 
 impl_runtime_apis! {

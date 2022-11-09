@@ -38,6 +38,7 @@ pub mod pub_config;
 pub mod pub_ip;
 pub mod terms_cond;
 pub mod twin;
+pub mod migrations;
 
 pub mod grid_migration;
 pub mod nodes_migration;
