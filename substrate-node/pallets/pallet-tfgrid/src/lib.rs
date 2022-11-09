@@ -32,12 +32,11 @@ pub mod weights;
 pub mod types;
 
 pub mod farm;
-pub mod farm_migration;
 pub mod interface;
-pub mod nodes_migration;
 pub mod pub_config;
 pub mod pub_ip;
 pub mod twin;
+pub mod migrations;
 
 // Definition of the pallet logic, to be aggregated at runtime definition
 // through `construct_runtime`.
