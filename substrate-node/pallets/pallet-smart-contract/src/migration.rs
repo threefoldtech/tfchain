@@ -1,5 +1,11 @@
 use super::*;
 use frame_support::weights::Weight;
+use log::debug;
+
+#[cfg(feature = "try-runtime")]
+use frame_support::traits::OnRuntimeUpgradeHelpersExt;
+#[cfg(feature = "try-runtime")]
+use sp_runtime::SaturatedConversion;
 
 pub mod v5 {
     use super::*;
@@ -15,6 +21,14 @@ pub mod v5 {
             info!("current pallet version: {:?}", PalletVersion::<T>::get());
             assert!(PalletVersion::<T>::get() == types::StorageVersion::V5);
 
+            // Store number of contracts in temp storage
+            let contracts_count: u64 = ContractsToBillAt::<T>::iter_keys().count().saturated_into();
+            Self::set_temp_storage(contracts_count, "pre_contracts_count");
+            log::info!(
+                "🔎 ContractMigrationV5 pre migration: Number of existing contracts {:?}",
+                contracts_count
+            );
+
             info!("👥  Smart Contract pallet to v6 passes PRE migrate checks ✅",);
             Ok(())
         }
@@ -27,6 +41,14 @@ pub mod v5 {
         fn post_upgrade() -> Result<(), &'static str> {
             info!("current pallet version: {:?}", PalletVersion::<T>::get());
             assert!(PalletVersion::<T>::get() == types::StorageVersion::V6);
+
+            // Check number of Contracts against pre-check result
+            let pre_contracts_count = Self::get_temp_storage("pre_contracts_count").unwrap_or(0u64);
+            assert_eq!(
+                ContractsToBillAt::<T>::iter().count().saturated_into::<u64>(),
+                pre_contracts_count,
+                "Number of Contracts migrated does not match"
+            );
 
             info!(
                 "👥  Smart Contract pallet to {:?} passes POST migrate checks ✅",
@@ -65,7 +87,7 @@ pub fn migrate_to_version_6<T: Config>() -> frame_support::weights::Weight {
             // Construct new index
             let index = (block_number - 1) % billing_freq;
             // Reinsert items under the new key
-            info!(
+            debug!(
                 "inserted contracts:{:?} at index: {:?}",
                 contract_ids.clone(),
                 index
