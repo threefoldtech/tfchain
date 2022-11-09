@@ -4155,6 +4155,7 @@ dependencies = [
 name = "pallet-smart-contract"
 version = "3.0.0"
 dependencies = [
+ "env_logger",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -4165,9 +4166,11 @@ dependencies = [
  "pallet-tft-price",
  "pallet-timestamp",
  "parity-scale-codec 3.1.5",
+ "parking_lot 0.12.1",
  "scale-info",
  "sp-core",
  "sp-io",
+ "sp-keystore",
  "sp-runtime",
  "sp-std",
  "substrate-fixed",
