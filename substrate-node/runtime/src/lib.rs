@@ -767,7 +767,7 @@ pub type Executive = frame_executive::Executive<
         pallet_smart_contract::migrations::v6::ContractMigrationV5<Runtime>,
         pallet_tfgrid::migrations::v10::FixFarmNodeIndexMap<Runtime>,
         pallet_tfgrid::migrations::v11::FixFarmingPolicy<Runtime>,
-        pallet_tfgrid::migrations::v12::GridMigration<Runtime>,
+        pallet_tfgrid::migrations::v12::InputValidation<Runtime>,
     ),
 >;
 

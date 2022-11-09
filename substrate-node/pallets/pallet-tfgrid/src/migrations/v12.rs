@@ -1,9 +1,10 @@
-use super::Config;
-use super::InterfaceOf;
-use super::PubConfigOf;
-use super::*;
-use frame_support::{traits::Get, weights::Weight, BoundedVec};
+use crate::Config;
+use crate::InterfaceOf;
+use crate::PubConfigOf;
+use crate::*;
+use frame_support::{traits::Get, traits::OnRuntimeUpgrade, weights::Weight, BoundedVec};
 use log::info;
+use sp_std::marker::PhantomData;
 
 pub mod deprecated {
     use codec::{Decode, Encode};
@@ -52,38 +53,31 @@ pub mod deprecated {
     }
 }
 
-pub mod v12 {
-    use super::*;
-    use crate::Config;
+pub struct InputValidation<T: Config>(PhantomData<T>);
 
-    use frame_support::{pallet_prelude::Weight, traits::OnRuntimeUpgrade};
-    use sp_std::marker::PhantomData;
-    pub struct GridMigration<T: Config>(PhantomData<T>);
+impl<T: Config> OnRuntimeUpgrade for InputValidation<T> {
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<(), &'static str> {
+        assert!(PalletVersion::<T>::get() <= types::StorageVersion::V11Struct);
 
-    impl<T: Config> OnRuntimeUpgrade for GridMigration<T> {
-        #[cfg(feature = "try-runtime")]
-        fn pre_upgrade() -> Result<(), &'static str> {
-            assert!(PalletVersion::<T>::get() <= types::StorageVersion::V11Struct);
+        info!("👥  TFGrid pallet to v12 passes PRE migrate checks ✅",);
+        Ok(())
+    }
 
-            info!("👥  TFGrid pallet to v12 passes PRE migrate checks ✅",);
-            Ok(())
-        }
+    fn on_runtime_upgrade() -> Weight {
+        migrate::<T>()
+    }
 
-        fn on_runtime_upgrade() -> Weight {
-            migrate::<T>()
-        }
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade() -> Result<(), &'static str> {
+        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V12Struct);
 
-        #[cfg(feature = "try-runtime")]
-        fn post_upgrade() -> Result<(), &'static str> {
-            assert!(PalletVersion::<T>::get() >= types::StorageVersion::V12Struct);
+        info!(
+            "👥  TFGrid pallet migration to {:?} passes POST migrate checks ✅",
+            Pallet::<T>::pallet_version()
+        );
 
-            info!(
-                "👥  TFGrid pallet migration to {:?} passes POST migrate checks ✅",
-                Pallet::<T>::pallet_version()
-            );
-
-            Ok(())
-        }
+        Ok(())
     }
 }
 
