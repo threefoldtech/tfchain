@@ -52,7 +52,7 @@ pub mod deprecated {
     }
 }
 
-pub mod v10 {
+pub mod v12 {
     use super::*;
     use crate::Config;
 
@@ -63,9 +63,9 @@ pub mod v10 {
     impl<T: Config> OnRuntimeUpgrade for GridMigration<T> {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<(), &'static str> {
-            assert!(PalletVersion::<T>::get() == types::StorageVersion::V9Struct);
+            assert!(PalletVersion::<T>::get() <= types::StorageVersion::V11Struct);
 
-            info!("👥  TFGrid pallet to v10 passes PRE migrate checks ✅",);
+            info!("👥  TFGrid pallet to v12 passes PRE migrate checks ✅",);
             Ok(())
         }
 
@@ -75,7 +75,7 @@ pub mod v10 {
 
         #[cfg(feature = "try-runtime")]
         fn post_upgrade() -> Result<(), &'static str> {
-            assert!(PalletVersion::<T>::get() == types::StorageVersion::V10Struct);
+            assert!(PalletVersion::<T>::get() >= types::StorageVersion::V12Struct);
 
             info!(
                 "👥  TFGrid pallet migration to {:?} passes POST migrate checks ✅",
@@ -88,7 +88,7 @@ pub mod v10 {
 }
 
 fn migrate<T: Config>() -> frame_support::weights::Weight {
-    if PalletVersion::<T>::get() == types::StorageVersion::V9Struct {
+    if PalletVersion::<T>::get() == types::StorageVersion::V11Struct {
         migrate_entities::<T>() + migrate_nodes::<T>() + update_pallet_storage_version::<T>()
     } else {
         info!(" >>> Unused migration");
@@ -214,7 +214,7 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
 }
 
 fn update_pallet_storage_version<T: Config>() -> frame_support::weights::Weight {
-    PalletVersion::<T>::set(types::StorageVersion::V10Struct);
+    PalletVersion::<T>::set(types::StorageVersion::V12Struct);
     info!(" <<< Storage version upgraded");
 
     // Return the weight consumed by the migration.
