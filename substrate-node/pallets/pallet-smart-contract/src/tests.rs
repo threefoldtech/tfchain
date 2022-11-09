@@ -1,4 +1,5 @@
 use super::{types, Event as SmartContractEvent};
+use crate::cost;
 use crate::{mock::Event as MockEvent, mock::*, test_utils::*, Error};
 use frame_support::{
     assert_noop, assert_ok, bounded_vec,
@@ -7,21 +8,19 @@ use frame_support::{
     BoundedVec,
 };
 use frame_system::{EventRecord, Phase, RawOrigin};
-use sp_core::H256;
-use sp_runtime::{assert_eq_error_rate, traits::SaturatedConversion, Perbill, Percent};
-use sp_std::convert::{TryFrom, TryInto};
-use substrate_fixed::types::U64F64;
-use crate::cost;
+use log::info;
 use pallet_tfgrid::{
     types::{self as pallet_tfgrid_types, LocationInput},
     ResourcesInput,
 };
+use sp_core::H256;
+use sp_runtime::{assert_eq_error_rate, traits::SaturatedConversion, Perbill, Percent};
 use sp_std::convert::{TryFrom, TryInto};
+use substrate_fixed::types::U64F64;
 use tfchain_support::{
     resources::Resources,
-    types::{FarmCertification, Location, NodeCertification, PublicIP, Resources},
+    types::{FarmCertification, NodeCertification, PublicIP},
 };
-use log::info;
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -76,8 +75,8 @@ fn test_create_node_contract_with_public_ips_works() {
                 };
 
                 let pub_ip_2 = PublicIP {
-                    ip: "185.206.122.34/24".as_bytes().to_vec().try_into().unwrap(),
-                    gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+                    ip: get_public_ip_ip(b"185.206.122.34/24"),
+                    gateway: get_public_ip_gw(b"185.206.122.1"),
                     contract_id: 1,
                 };
                 assert_eq!(c.public_ips_list[0], pub_ip);

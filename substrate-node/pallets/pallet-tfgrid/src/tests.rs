@@ -345,7 +345,6 @@ fn test_update_farm_name_works() {
             Origin::signed(bob()),
             2,
             farm_name,
-            farm_name.0.clone(),
         ));
     });
 }
@@ -373,7 +372,7 @@ fn test_update_farm_existing_name_fails() {
 
         let farm_name = get_farm_name_input(b"alice_farm");
         assert_noop!(
-            TfgridModule::update_farm(Origin::signed(bob()), 2, farm_name.0.clone()),
+            TfgridModule::update_farm(Origin::signed(bob()), 2, farm_name),
             Error::<TestRuntime>::InvalidFarmName
         );
     });
