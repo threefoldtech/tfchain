@@ -5,7 +5,7 @@ use sp_std::vec::Vec;
 use tfchain_support::types::{FarmCertification, NodeCertification};
 
 /// Utility type for managing upgrades/migrations.
-#[derive(Encode, Decode, Clone, Debug, PartialEq, TypeInfo)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, PartialOrd, TypeInfo)]
 pub enum StorageVersion {
     V1Struct,
     V2Struct,
@@ -16,11 +16,13 @@ pub enum StorageVersion {
     V7Struct,
     V8Struct,
     V9Struct,
+    V10Struct,
+    V11Struct,
 }
 
 impl Default for StorageVersion {
     fn default() -> StorageVersion {
-        StorageVersion::V5Struct
+        StorageVersion::V11Struct
     }
 }
 
