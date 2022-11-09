@@ -128,7 +128,7 @@ class SubstrateNetwork:
         self._nodes["alice"] = run_node(log_file_alice, "/tmp/alice", "alice", port, ws_port,
                                         rpc_port, node_key="0000000000000000000000000000000000000000000000000000000000000001")
         wait_till_node_ready(log_file_alice)
-        setup_offchain_workers(ws_port)
+        setup_offchain_workers(ws_port, "Alice", "Bob")
 
         log_file = ""
         for x in range(1, amt):
@@ -140,7 +140,7 @@ class SubstrateNetwork:
             self._nodes[name] = run_node(log_file, f"/tmp/{name}", name, port, ws_port, rpc_port, node_key=None,
                                          bootnodes="/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp")
             wait_till_node_ready(log_file)
-            setup_offchain_workers(ws_port)
+            setup_offchain_workers(ws_port, "Bob", "Alice")
 
         logging.info("Network is up and running.")
 

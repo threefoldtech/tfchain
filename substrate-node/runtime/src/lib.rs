@@ -139,7 +139,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 115,
+    spec_version: 117,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -402,6 +402,8 @@ impl pallet_smart_contract::Config for Runtime {
     type GracePeriod = GracePeriod;
     type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
     type NodeChanged = NodeChanged;
+    type AuthorityId = pallet_smart_contract::crypto::AuthId;
+    type Call = Call;
     type MaxNameContractNameLength = MaxNameContractNameLength;
     type NameContractName = pallet_smart_contract::name_contract::NameContractName<Runtime>;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
@@ -761,7 +763,8 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    pallet_tfgrid::grid_migration::v10::GridMigration<Runtime>,
+    (pallet_tfgrid::grid_migration::v10::GridMigration<Runtime>,
+    pallet_smart_contract::migration::v5::ContractMigrationV5<Runtime>,)
 >;
 
 impl_runtime_apis! {
