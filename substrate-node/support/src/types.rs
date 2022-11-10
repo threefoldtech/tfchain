@@ -126,7 +126,7 @@ impl Default for PowerState {
 pub struct Power {
     pub target: PowerTarget,
     pub state: PowerState,
-    pub last_up_time: u64,
+    pub last_uptime: u64,
 }
 
 #[derive(
