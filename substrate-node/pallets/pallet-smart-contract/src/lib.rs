@@ -971,17 +971,6 @@ impl<T: Config> Pallet<T> {
             None,
         )?;
 
-        let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-        let contract_billing_information = types::ContractBillingInformation {
-            last_updated: now,
-            amount_unbilled: 0,
-            previous_nu_reported: 0,
-        };
-        ContractBillingInformationByID::<T>::insert(
-            contract.contract_id,
-            contract_billing_information,
-        );
-
         // Insert contract id by (node_id, hash)
         ContractIDByNodeIDAndHash::<T>::insert(
             capacity_reservation_contract.node_id,
@@ -1867,7 +1856,6 @@ impl<T: Config> Pallet<T> {
                         node_id,
                         &deployment_contract.deployment_hash,
                     );
-                    //NodeContractResources::<T>::remove(contract_id);
                     ContractBillingInformationByID::<T>::remove(contract_id);
 
                     Self::deposit_event(Event::DeploymentContractCanceled {
@@ -1915,6 +1903,7 @@ impl<T: Config> Pallet<T> {
                             );
                         }
                     }
+                    ContractBillingInformationByID::<T>::remove(contract_id);
                     // remove the contract id from the active contracts on that node
                     Self::remove_active_node_contract(
                         capacity_reservation_contract.node_id,
