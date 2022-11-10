@@ -1112,7 +1112,7 @@ pub mod pallet {
                 power: Power {
                     state: PowerState::Up,
                     target: PowerTarget::Down,
-                    last_up_time: created,
+                    last_uptime: created,
                 },
                 public_config: None,
                 created,
