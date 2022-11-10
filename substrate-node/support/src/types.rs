@@ -146,19 +146,23 @@ impl ConsumableResources {
     }
 
     pub fn consume(&mut self, resources: &Resources) {
-        self.used_resources = self.used_resources.add(&resources);
+        self.used_resources.add(&resources);
     }
 
     pub fn free(&mut self, resources: &Resources) {
-        self.used_resources = self.used_resources.substract(&resources);
+        self.used_resources.substract(&resources);
     }
 
     pub fn calculate_increase_in_resources(&self, resources: &Resources) -> Resources {
-        resources.substract(&self.total_resources)
+        let mut increase = resources.clone();
+        increase.substract(&self.total_resources);
+        increase
     }
 
     pub fn calculate_reduction_in_resources(&self, resources: &Resources) -> Resources {
-        self.total_resources.substract(&resources)
+        let mut reduction = self.total_resources.clone();
+        reduction.substract(&resources);
+        reduction       
     }
 }
 
@@ -220,10 +224,27 @@ pub struct IP<IpAddr, Gw> {
         }
     }
 
+    pub fn sum(a: &Resources, b: &Resources) -> Resources {
+        let mut sum = a.clone();
+        sum.add(b);
+        sum
+    }
+    pub fn subtraction(a: &Resources, b: &Resources) -> Resources {
+        let mut subtraction = a.clone();
+        subtraction.substract(b);
+        subtraction
+    }
+
     pub fn is_empty(self) -> bool {
         self.cru == 0 && self.sru == 0 && self.hru == 0 && self.mru == 0
     }
 
+    pub fn add(&mut self, other: &Resources) {
+        self.cru += other.cru;
+        self.sru += other.sru;
+        self.hru += other.hru;
+        self.mru += other.mru;
+    }
 
     pub fn can_substract(self, other: &Resources) -> bool {
         self.cru >= other.cru
@@ -232,7 +253,7 @@ pub struct IP<IpAddr, Gw> {
             && self.mru >= other.mru
     }
 
-    pub fn substract(mut self, other: &Resources) -> Resources {
+    pub fn substract(&mut self, other: &Resources) {
         self.cru = if self.cru < other.cru {
             0
         } else {
@@ -253,8 +274,6 @@ pub struct IP<IpAddr, Gw> {
         } else {
             self.mru - other.mru
         };
-
-        self
     }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, TypeInfo, Copy)]

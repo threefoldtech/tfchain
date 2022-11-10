@@ -1,5 +1,9 @@
 use super::*;
-use frame_support::weights::Weight;
+use crate::Contracts as ContractsV7;
+use frame_support::{
+    pallet_prelude::OptionQuery, storage_alias, weights::Weight, Blake2_128Concat,
+};
+use sp_std::{cmp::max, collections::btree_map::BTreeMap};
 use tfchain_support::types::ConsumableResources;
 
 pub mod deprecated {
@@ -86,6 +90,10 @@ pub mod deprecated {
     }
 }
 
+#[storage_alias]
+type Contracts<T: Config> =
+    StorageMap<Pallet<T>, Blake2_128Concat, u64, deprecated::ContractV6<T>, OptionQuery>;
+
 pub mod v6 {
     use super::*;
     use crate::Config;
@@ -93,6 +101,19 @@ pub mod v6 {
     use frame_support::{pallet_prelude::Weight, traits::OnRuntimeUpgrade};
     use sp_std::marker::PhantomData;
     pub struct ContractMigrationV6<T: Config>(PhantomData<T>);
+
+    pub struct NodeChanges {
+        pub used_resources: Resources,
+        pub active_contracts: Vec<u64>,
+    }
+
+    pub struct ContractChanges<T: Config> {
+        pub used_resources: Resources,
+        pub public_ips: u32,
+        pub deployment_contracts: Vec<u64>,
+        pub contract_lock: types::ContractLock<BalanceOf<T>>,
+        pub billing_info: types::ContractBillingInformation,
+    }
 
     impl<T: Config> OnRuntimeUpgrade for ContractMigrationV6<T> {
         #[cfg(feature = "try-runtime")]
@@ -182,53 +203,84 @@ pub fn migrate_to_version_7<T: Config>() -> frame_support::weights::Weight {
             PalletVersion::<T>::get()
         );
 
-        let translated_count = translate_contract_objects::<T>();
-        let (mut total_reads, mut total_writes) =
-            remove_deployment_contracts_from_contracts_to_bill::<T>();
-        let (reads, writes) = add_used_resources_and_active_node_contracts::<T>();
+        let mut total_reads = 0;
+        let mut total_writes = 0;
+        let mut contracts: BTreeMap<u64, types::Contract<T>> = BTreeMap::new();
+        let (mut bill_index_per_contract_id, reads) = get_bill_index_per_contract_id::<T>();
+        total_reads += reads;
+
+        let (reads, writes) =
+            translate_contract_objects::<T>(&mut contracts, &mut bill_index_per_contract_id);
         total_reads += reads;
         total_writes += writes;
 
-        NodeContractResources::<T>::drain();
-        ActiveRentContractForNode::<T>::drain();
+        let (reads, writes) = write_contracts_to_bill_at::<T>(&bill_index_per_contract_id);
+        total_reads += reads;
+        total_writes += writes;
 
-        info!(
-            " <<< Contracts storage updated! Migrated {} Contracts ✅",
-            translated_count
-        );
+        let writes = write_contracts_to_storage::<T>(&contracts);
+        total_writes += writes;
+
+        info!(" <<< Contracts storage updated! Migrated all Contracts ✅");
 
         // Update pallet storage version
         PalletVersion::<T>::set(types::StorageVersion::V7);
         info!(" <<< Storage version upgraded");
 
         // Return the weight consumed by the migration.
-        T::DbWeight::get().reads_writes(
-            (translated_count + total_reads) as Weight + 1,
-            (translated_count + total_writes) as Weight + 1,
-        )
+        T::DbWeight::get().reads_writes(total_reads as Weight + 1, total_writes as Weight + 1)
     } else {
         info!(" >>> Unused migration");
         return 0;
     }
 }
 
-pub fn remove_deployment_contracts_from_contracts_to_bill<T: Config>() -> (u32, u32) {
-    let mut reads = 0;
+pub fn write_contracts_to_storage<T: Config>(contracts: &BTreeMap<u64, types::Contract<T>>) -> u32 {
+    for (contract_id, contract) in contracts {
+        ContractsV7::<T>::insert(contract_id, contract);
+    }
+    contracts.len() as u32
+}
+
+pub fn write_contracts_to_bill_at<T: Config>(
+    bill_index_per_contract_id: &BTreeMap<u64, u64>,
+) -> (u32, u32) {
+    let bill_frequency = BillingFrequency::<T>::get();
+    let mut contract_ids_per_billing_index: Vec<Vec<u64>> = vec![vec![]; bill_frequency as usize];
+    let mut writes = 0;
+
+    // invert bill_index_per_contract_id
+    for (contract_id, bill_index) in bill_index_per_contract_id {
+        contract_ids_per_billing_index[*bill_index as usize].push(*contract_id);
+    }
+
+    // write to storage
+    for index in 0..bill_frequency {
+        if contract_ids_per_billing_index[index as usize].len() > 0 {
+            ContractsToBillAt::<T>::insert(index, &contract_ids_per_billing_index[index as usize]);
+            writes += 1;
+        }
+    }
+
+    (1, writes)
+}
+
+pub fn remove_deployment_contracts_from_contracts_to_bill<T: Config>(
+    contracts: &BTreeMap<u64, types::Contract<T>>,
+) -> (u32, u32) {
     let mut writes = 0;
     // we only bill capacity reservation contracts and name contracts
     for index in 0..BillingFrequency::<T>::get() {
         let mut contract_ids = ContractsToBillAt::<T>::get(index);
-        reads += 1;
         let mut modified = false;
-        contract_ids.retain(|&id| {
-            let contract = Contracts::<T>::get(id);
-            if let Some(c) = contract {
+        contract_ids.retain(|id| {
+            if let Some(c) = contracts.get(id) {
                 let res = !matches!(c.contract_type, types::ContractData::DeploymentContract(_));
                 modified |= res;
                 res
             } else {
                 // some contracts are still in contracts to bill but have been removed already
-                // keep them as the chain will remove them and log stuff 
+                // keep them as the chain will remove them and log stuff
                 true
             }
         });
@@ -237,97 +289,97 @@ pub fn remove_deployment_contracts_from_contracts_to_bill<T: Config>() -> (u32, 
             writes += 1;
         }
     }
-    (reads, writes)
+    (1, writes)
 }
 
-pub fn add_used_resources_and_active_node_contracts<T: Config>() -> (u32, u32) {
-    // active node contracts contains only capacity reservation contracts
+pub fn translate_contract_objects<T: Config>(
+    contracts: &mut BTreeMap<u64, types::Contract<T>>,
+    bill_index_per_contract_id: &mut BTreeMap<u64, u64>,
+) -> (u32, u32) {
     let mut reads = 0;
     let mut writes = 0;
-    ActiveNodeContracts::<T>::drain();
-    for (_contract_id, contract) in Contracts::<T>::iter() {
-        match contract.contract_type {
-            types::ContractData::NameContract(_) => {}
-            types::ContractData::DeploymentContract(dc) => {
-                // fix the used resources, the public ips and the deployment_contracts
-                // of the corresponding CapacityReservationContract
-                let mut crc_contract = Contracts::<T>::get(dc.capacity_reservation_id).unwrap();
-                reads += 1;
-                let mut crc = match crc_contract.contract_type {
-                    types::ContractData::CapacityReservationContract(c) => Some(c),
-                    _ => None,
-                }
-                .unwrap();
-                crc.resources.used_resources = crc.resources.used_resources.add(&dc.resources);
-                crc.public_ips += dc.public_ips;
-                let mut deployment_contracts = crc.deployment_contracts;
-                deployment_contracts.push(contract.contract_id);
-                crc.deployment_contracts = deployment_contracts;
-                // todo check for billing
-                crc_contract.contract_type = types::ContractData::CapacityReservationContract(crc);
-                Contracts::<T>::insert(crc_contract.contract_id, &crc_contract);
-                writes += 1;
-            }
-            types::ContractData::CapacityReservationContract(crc) => {
-                // update the active node contracts
-                let mut contracts = ActiveNodeContracts::<T>::get(crc.node_id);
-                reads += 1;
-                contracts.push(contract.contract_id);
-                ActiveNodeContracts::<T>::insert(crc.node_id, &contracts);
-                writes += 1;
-                // update the used resources of the node
-                let mut node = pallet_tfgrid::Nodes::<T>::get(crc.node_id).unwrap();
-                reads += 1;
-                node.resources.used_resources = node
-                    .resources
-                    .used_resources
-                    .add(&crc.resources.total_resources);
-                pallet_tfgrid::Nodes::<T>::insert(node.id, &node);
-                writes += 1;
-            }
-        }
-        reads += 1;
-    }
-    (reads, writes)
-}
+    let mut crc_changes: BTreeMap<u64, v6::ContractChanges<T>> = BTreeMap::new();
+    let mut node_changes: BTreeMap<u32, v6::NodeChanges> = BTreeMap::new();
 
-pub fn translate_contract_objects<T: Config>() -> u32 {
-    let mut count = 0;
-    Contracts::<T>::translate::<deprecated::ContractV6<T>, _>(|k, ctr| {
+    for (k, ctr) in Contracts::<T>::drain() {
+        reads += 1;
         let contract_type = match ctr.contract_type {
-            deprecated::ContractData::NodeContract(nc) => {
+            deprecated::ContractData::NodeContract(ref nc) => {
                 let used_resources = NodeContractResources::<T>::get(ctr.contract_id).used;
                 let mut crc_id = ActiveRentContractForNode::<T>::get(nc.node_id).unwrap_or(0);
+                reads += 2;
                 // if there is no rent contract for it create a capacity reservation contract that consumes the required resources
                 // else use the rent contract id as capacity reservation contract id
                 if crc_id == 0 {
-                    let billing_index = find_bill_index::<T>(ctr.contract_id).unwrap_or(0);
-                    crc_id = create_capacity_reservation::<T>(
+                    let billing_index = bill_index_per_contract_id
+                        .get(&ctr.contract_id)
+                        .unwrap_or(&0);
+                    let (id, crc) = create_capacity_reservation::<T>(
                         nc.node_id,
                         ctr.twin_id,
                         ctr.state.clone(),
                         used_resources,
                         ctr.solution_provider_id,
-                        billing_index,
                     );
+                    crc_id = id;
+                    contracts.insert(crc_id, crc);
+                    bill_index_per_contract_id.insert(crc_id, *billing_index);
                 }
+
+                // remove the contract id from the billing as we don't bill deployment contracts
+                bill_index_per_contract_id.remove(&ctr.contract_id);
+
                 // create the deployment contract
-                let deployment_contract = types::DeploymentContract {
+                let dc = types::DeploymentContract {
                     capacity_reservation_id: crc_id,
                     deployment_hash: nc.deployment_hash,
-                    deployment_data: nc.deployment_data,
+                    deployment_data: nc.deployment_data.clone(),
                     public_ips: nc.public_ips,
-                    public_ips_list: nc.public_ips_list,
+                    public_ips_list: nc.public_ips_list.clone(),
                     resources: used_resources,
                 };
-                types::ContractData::DeploymentContract(deployment_contract)
+
+                // gather the capacity reservation contract changes for later so that we can modify them later
+                let billing_info_dc = ContractBillingInformationByID::<T>::get(ctr.contract_id);
+                let contract_lock_dc = ContractLock::<T>::get(ctr.contract_id);
+                reads += 2;
+                crc_changes
+                    .entry(dc.capacity_reservation_id)
+                    .and_modify(|changes| {
+                        changes.used_resources.add(&dc.resources);
+                        changes.public_ips += dc.public_ips;
+                        changes.deployment_contracts.push(ctr.contract_id);
+                        changes.billing_info.previous_nu_reported +=
+                            billing_info_dc.previous_nu_reported;
+                        changes.billing_info.last_updated = max(
+                            changes.billing_info.last_updated,
+                            billing_info_dc.last_updated,
+                        );
+                        changes.billing_info.amount_unbilled += billing_info_dc.amount_unbilled;
+                        changes.contract_lock.amount_locked += contract_lock_dc.amount_locked;
+                        changes.contract_lock.lock_updated = max(
+                            changes.contract_lock.lock_updated,
+                            contract_lock_dc.lock_updated,
+                        );
+                        changes.contract_lock.cycles =
+                            max(changes.contract_lock.cycles, contract_lock_dc.cycles);
+                    })
+                    .or_insert(v6::ContractChanges {
+                        used_resources: dc.resources,
+                        public_ips: dc.public_ips,
+                        deployment_contracts: vec![ctr.contract_id],
+                        billing_info: billing_info_dc,
+                        contract_lock: contract_lock_dc,
+                    });
+
+                types::ContractData::DeploymentContract(dc)
             }
             deprecated::ContractData::NameContract(nc) => {
                 types::ContractData::NameContract(types::NameContract { name: nc.name })
             }
-            deprecated::ContractData::RentContract(rc) => {
+            deprecated::ContractData::RentContract(ref rc) => {
                 let node = pallet_tfgrid::Nodes::<T>::get(rc.node_id).unwrap();
-                let capacity_reservation_contract = types::CapacityReservationContract {
+                let crc = types::CapacityReservationContract {
                     node_id: rc.node_id,
                     deployment_contracts: vec![],
                     public_ips: 0,
@@ -337,7 +389,19 @@ pub fn translate_contract_objects<T: Config>() -> u32 {
                     },
                     group_id: None,
                 };
-                types::ContractData::CapacityReservationContract(capacity_reservation_contract)
+                // gather the node changes
+                node_changes
+                    .entry(crc.node_id)
+                    .and_modify(|changes| {
+                        changes.active_contracts.push(ctr.contract_id);
+                        changes.used_resources.add(&crc.resources.total_resources);
+                    })
+                    .or_insert(v6::NodeChanges {
+                        used_resources: crc.resources.total_resources,
+                        active_contracts: vec![ctr.contract_id],
+                    });
+
+                types::ContractData::CapacityReservationContract(crc)
             }
         };
         let new_contract = types::Contract {
@@ -349,21 +413,83 @@ pub fn translate_contract_objects<T: Config>() -> u32 {
             solution_provider_id: ctr.solution_provider_id,
         };
         info!("Contract: {:?} succesfully migrated", k);
-        count += 1;
-        Some(new_contract)
-    });
-    count
+        contracts.insert(ctr.contract_id, new_contract);
+    }
+
+    frame_support::migration::remove_storage_prefix(
+        b"SmartContractModule",
+        b"NodeContractResources",
+        b"",
+    );
+    frame_support::migration::remove_storage_prefix(
+        b"SmartContractModule",
+        b"ActiveRentContractForNode",
+        b"",
+    );
+
+    // apply the changes to the capacity reservations contracts that we gathered previously
+    for (contract_id, contract_changes) in crc_changes {
+        let crc_contract = contracts.get_mut(&contract_id).unwrap();
+        let mut crc = match &crc_contract.contract_type {
+            types::ContractData::CapacityReservationContract(c) => Some(c.clone()),
+            _ => None,
+        }
+        .unwrap();
+        crc.resources.used_resources = contract_changes.used_resources;
+        crc.public_ips = contract_changes.public_ips;
+        crc.deployment_contracts = contract_changes.deployment_contracts;
+        crc_contract.contract_type = types::ContractData::CapacityReservationContract(crc);
+
+        ContractBillingInformationByID::<T>::insert(contract_id, contract_changes.billing_info);
+        ContractLock::<T>::insert(contract_id, contract_changes.contract_lock);
+        writes += 2;
+    }
+
+    // fix the active node contracts storage and modif the node objects
+    frame_support::migration::remove_storage_prefix(
+        b"SmartContractModule",
+        b"ActiveNodeContracts",
+        b"",
+    );
+    for (node_id, nc) in node_changes.iter() {
+        // modify storage
+        ActiveNodeContracts::<T>::insert(node_id, &nc.active_contracts);
+        // modify used resources of node object
+        let mut node = pallet_tfgrid::Nodes::<T>::get(node_id).unwrap();
+        node.resources.used_resources = nc.used_resources;
+        pallet_tfgrid::Nodes::<T>::insert(node_id, &node);
+        reads += 1;
+        writes += 2;
+    }
+
+    (reads, writes)
 }
 
-pub fn find_bill_index<T: Config>(contract_id: u64) -> Option<u64> {
+pub fn get_bill_index_per_contract_id<T: Config>() -> (BTreeMap<u64, u64>, u32) {
+    let mut bill_index_per_contract_id: BTreeMap<u64, u64> = BTreeMap::new();
+    let mut reads = 1;
     for index in 0..BillingFrequency::<T>::get() {
         for ctr_id in ContractsToBillAt::<T>::get(index) {
+            reads += 1;
+            bill_index_per_contract_id.insert(ctr_id, index);
+        }
+    }
+
+    (bill_index_per_contract_id, reads)
+}
+
+pub fn find_bill_index<T: Config>(contract_id: u64) -> (Option<u64>, u32) {
+    let mut reads = 1;
+    for index in 0..BillingFrequency::<T>::get() {
+        for ctr_id in ContractsToBillAt::<T>::get(index) {
+            reads += 1;
             if ctr_id == contract_id {
-                return Some(index);
+                return (Some(index), reads);
             }
         }
     }
-    None
+    info!("Reads for finding bill index {:?}", reads);
+    (None, reads)
 }
 
 pub fn create_capacity_reservation<T: Config>(
@@ -372,8 +498,7 @@ pub fn create_capacity_reservation<T: Config>(
     state: types::ContractState,
     resources: Resources,
     solution_provider_id: Option<u64>,
-    billing_index: u64,
-) -> u64 {
+) -> (u64, types::Contract<T>) {
     let mut ctr_id = ContractID::<T>::get();
     ctr_id = ctr_id + 1;
 
@@ -399,28 +524,7 @@ pub fn create_capacity_reservation<T: Config>(
         solution_provider_id: solution_provider_id,
     };
 
-    Contracts::<T>::insert(ctr_id, &contract);
-
-    let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-    let mut contract_lock = types::ContractLock::default();
-    contract_lock.lock_updated = now;
-    ContractLock::<T>::insert(ctr_id, contract_lock);
-
     ContractID::<T>::put(ctr_id);
 
-    // insert billing information
-    let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-    let contract_billing_information = types::ContractBillingInformation {
-        last_updated: now,
-        amount_unbilled: 0,
-        previous_nu_reported: 0,
-    };
-
-    // insert in contracts to bill
-    ContractBillingInformationByID::<T>::insert(contract.contract_id, contract_billing_information);
-    let mut contracts_to_bill_at = ContractsToBillAt::<T>::get(billing_index);
-    contracts_to_bill_at.push(ctr_id);
-    ContractsToBillAt::<T>::insert(billing_index, &contracts_to_bill_at);
-
-    ctr_id
+    (ctr_id, contract)
 }

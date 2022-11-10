@@ -166,7 +166,7 @@ fn test_create_capacity_contract_reservation_finding_node_using_group() {
         );
         assert_eq!(
             TfgridModule::nodes(1).unwrap().resources.used_resources,
-            resources_c1().add(&resources_c1())
+            Resources::sum(&resources_c1(), &resources_c1())
         );
     });
 }
@@ -2024,7 +2024,7 @@ fn test_node_multiple_contract_billing_cycles() {
             0,
         ));
         // CAPACITY RESERVATION 2 with 1 deployment contract
-        let rest_of_the_resources_on_node_1 = resources_n1().substract(&resources_c1());
+        let rest_of_the_resources_on_node_1 = Resources::subtraction(&resources_n1(), &resources_c1());
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
@@ -4282,7 +4282,7 @@ fn prepare_farm_three_nodes_three_capacity_reservation_contracts() {
     ));
     assert_eq!(
         TfgridModule::nodes(1).unwrap().resources.used_resources,
-        resources_c1().add(&resources_c2())
+        Resources::sum(&resources_c1(), &resources_c2())
     );
     assert_eq!(
         SmartContractModule::contracts(2).unwrap().contract_type,
