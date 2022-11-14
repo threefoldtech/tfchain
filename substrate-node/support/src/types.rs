@@ -162,7 +162,7 @@ impl ConsumableResources {
     pub fn calculate_reduction_in_resources(&self, resources: &Resources) -> Resources {
         let mut reduction = self.total_resources.clone();
         reduction.substract(&resources);
-        reduction       
+        reduction
     }
 }
 
@@ -187,7 +187,7 @@ pub struct Node<Location, PubConfig, If, SerialNumber> {
     pub connection_price: u32,
 }
 
-impl<PubConfig, If> Node<PubConfig, If> {
+impl<Location, PubConfig, If, SerialNumber> Node<Location, PubConfig, If, SerialNumber> {
     pub fn can_be_shutdown(&self) -> bool {
         self.resources.used_resources.is_empty()
     }
@@ -215,66 +215,6 @@ pub struct IP<IpAddr, Gw> {
     pub ip: IpAddr,
     pub gw: Gw,
 }
-    pub fn empty() -> Resources {
-        Resources {
-            hru: 0,
-            sru: 0,
-            cru: 0,
-            mru: 0,
-        }
-    }
-
-    pub fn sum(a: &Resources, b: &Resources) -> Resources {
-        let mut sum = a.clone();
-        sum.add(b);
-        sum
-    }
-    pub fn subtraction(a: &Resources, b: &Resources) -> Resources {
-        let mut subtraction = a.clone();
-        subtraction.substract(b);
-        subtraction
-    }
-
-    pub fn is_empty(self) -> bool {
-        self.cru == 0 && self.sru == 0 && self.hru == 0 && self.mru == 0
-    }
-
-    pub fn add(&mut self, other: &Resources) {
-        self.cru += other.cru;
-        self.sru += other.sru;
-        self.hru += other.hru;
-        self.mru += other.mru;
-    }
-
-    pub fn can_substract(self, other: &Resources) -> bool {
-        self.cru >= other.cru
-            && self.sru >= other.sru
-            && self.hru >= other.hru
-            && self.mru >= other.mru
-    }
-
-    pub fn substract(&mut self, other: &Resources) {
-        self.cru = if self.cru < other.cru {
-            0
-        } else {
-            self.cru - other.cru
-        };
-        self.sru = if self.sru < other.sru {
-            0
-        } else {
-            self.sru - other.sru
-        };
-        self.hru = if self.hru < other.hru {
-            0
-        } else {
-            self.hru - other.hru
-        };
-        self.mru = if self.mru < other.mru {
-            0
-        } else {
-            self.mru - other.mru
-        };
-    }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, TypeInfo, Copy)]
 pub enum NodeCertification {
