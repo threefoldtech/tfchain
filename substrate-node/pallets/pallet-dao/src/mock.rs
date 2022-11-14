@@ -14,9 +14,7 @@ use pallet_tfgrid::{
     twin::TwinIp,
     DocumentHashInput, DocumentLinkInput, TwinIpInput,
 };
-use pallet_tfgrid::{
-    CityNameInput, CountryNameInput, LatitudeInput, LongitudeInput, SerialNumberInput,
-};
+use pallet_tfgrid::{CityNameInput, CountryNameInput, LatitudeInput, LongitudeInput};
 use pallet_timestamp;
 use sp_core::H256;
 use sp_runtime::{
@@ -235,10 +233,6 @@ pub(crate) fn get_latitude_input(latitude_input: &[u8]) -> LatitudeInput {
 
 pub(crate) fn get_longitude_input(longitude_input: &[u8]) -> LongitudeInput {
     BoundedVec::try_from(longitude_input.to_vec()).expect("Invalid longitude input.")
-}
-
-pub(crate) fn get_serial_number_input(serial_number_input: &[u8]) -> SerialNumberInput {
-    BoundedVec::try_from(serial_number_input.to_vec()).expect("Invalid serial number input.")
 }
 
 // Build genesis storage according to the mock runtime.

@@ -203,7 +203,7 @@ fn test_update_node_contract_works() {
             deployment_hash: new_hash,
             deployment_data,
             public_ips: 0,
-            public_ips_list: Vec::new().try_into().unwrap(),
+            public_ips_list: bounded_vec![],
         };
         let contract_type = types::ContractData::NodeContract(node_contract);
 
@@ -2674,7 +2674,7 @@ pub fn prepare_farm_and_node() {
         bounded_vec![],
         false,
         false,
-        get_serial_number_input(b"some_serial"),
+        None,
     )
     .unwrap();
 }
@@ -2708,7 +2708,7 @@ pub fn prepare_dedicated_farm_and_node() {
         bounded_vec![],
         false,
         false,
-        get_serial_number_input(b"some_serial"),
+        None,
     )
     .unwrap();
 }

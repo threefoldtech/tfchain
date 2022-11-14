@@ -809,7 +809,7 @@ fn prepare_node(account_id: u64, farm_id: u32) {
         bounded_vec![],
         false,
         false,
-        get_serial_number_input(b"some_serial"),
+        None,
     ));
 }
 
@@ -837,7 +837,7 @@ fn prepare_big_node(account_id: u64, farm_id: u32) {
         bounded_vec![],
         false,
         false,
-        get_serial_number_input(b"some_serial"),
+        None,
     ));
 }
 

@@ -1055,7 +1055,7 @@ pub mod pallet {
             interfaces: InterfaceInput<T>,
             secure_boot: bool,
             virtualized: bool,
-            serial_number: SerialNumberInput,
+            serial_number: Option<SerialNumberInput>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1078,7 +1078,12 @@ pub mod pallet {
             let node_resources = Self::get_resources(resources)?;
             let node_location = Self::get_location(location)?;
             let node_interfaces = Self::get_interfaces(&interfaces)?;
-            let node_serial_number = Self::get_serial_number(serial_number)?;
+
+            let node_serial_number = if let Some(serial_input) = serial_number {
+                Some(Self::get_serial_number(serial_input)?)
+            } else {
+                None
+            };
 
             let created = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
@@ -1129,7 +1134,7 @@ pub mod pallet {
             interfaces: InterfaceInput<T>,
             secure_boot: bool,
             virtualized: bool,
-            serial_number: SerialNumberInput,
+            serial_number: Option<SerialNumberInput>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1165,7 +1170,12 @@ pub mod pallet {
             let node_resources = Self::get_resources(resources)?;
             let node_location = Self::get_location(location)?;
             let node_interfaces = Self::get_interfaces(&interfaces)?;
-            let node_serial_number = Self::get_serial_number(serial_number)?;
+
+            let node_serial_number = if let Some(serial_input) = serial_number {
+                Some(Self::get_serial_number(serial_input)?)
+            } else {
+                None
+            };
 
             // If the resources on a certified node changed, reset the certification level to DIY
             if stored_node.resources != node_resources

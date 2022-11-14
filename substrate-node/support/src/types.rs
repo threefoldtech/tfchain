@@ -85,7 +85,7 @@ pub struct Node<Location, PubConfig, If, SerialNumber> {
     pub certification: NodeCertification,
     pub secure_boot: bool,
     pub virtualized: bool,
-    pub serial_number: SerialNumber,
+    pub serial_number: Option<SerialNumber>,
     pub connection_price: u32,
 }
 
