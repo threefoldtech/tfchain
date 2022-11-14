@@ -21,6 +21,7 @@ use frame_system::{
 };
 pub use pallet::*;
 use pallet_tfgrid;
+use pallet_tfgrid::farm::FarmName;
 use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, PubConfigOf, SerialNumberOf, TfgridNode};
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_timestamp as timestamp;
@@ -32,8 +33,9 @@ use sp_runtime::{
 use substrate_fixed::types::U64F64;
 
 use tfchain_support::{
+    resources::Resources,
     traits::{ChangeNode, Tfgrid},
-    types::{CapacityReservationPolicy, ConsumableResources, Node, NodeFeatures, Resources},
+    types::{CapacityReservationPolicy, ConsumableResources, NodeFeatures},
 };
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"smct");
@@ -79,10 +81,10 @@ pub mod crypto {
 }
 
 pub mod cost;
+pub mod migrations;
 pub mod name_contract;
 pub mod types;
 pub mod weights;
-pub mod migrations;
 
 #[frame_support::pallet]
 pub mod pallet {

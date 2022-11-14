@@ -8,14 +8,17 @@ use sp_std::prelude::*;
 
 use codec::Encode;
 use frame_support::dispatch::DispatchErrorWithPostInfo;
-use frame_support::{ensure, traits::ConstU32, traits::EnsureOrigin, weights::Pays, BoundedVec};
+use frame_support::{
+    ensure, pallet_prelude::DispatchResultWithPostInfo, traits::EnsureOrigin,
+    weights::Pays, BoundedVec,
+};
 use frame_system::{self as system, ensure_signed};
 use hex::FromHex;
 use pallet_timestamp as timestamp;
 use sp_runtime::SaturatedConversion;
 use tfchain_support::{
     resources::Resources,
-    types::{Interface, PublicConfig, PublicIP, IP},
+    types::{Interface, Power, PowerState, PowerTarget, PublicConfig, PublicIP, IP},
 };
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
@@ -27,8 +30,8 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub mod weights;
 pub mod types;
+pub mod weights;
 
 pub mod farm;
 pub mod interface;
@@ -52,10 +55,11 @@ pub mod pallet {
     use pallet_timestamp as timestamp;
     use sp_std::{convert::TryInto, fmt::Debug, vec::Vec};
     use tfchain_support::{
+        resources::Resources,
         traits::ChangeNode,
         types::{
-            ConsumableResources, Farm, FarmCertification, FarmingPolicyLimit, Interface, Location,
-            Node, NodeCertification, PublicConfig, PublicIP, Resources, IP,
+            ConsumableResources, Farm, FarmCertification, FarmingPolicyLimit, Interface, Node,
+            NodeCertification, PublicConfig, PublicIP, IP,
         },
     };
 
@@ -660,7 +664,7 @@ pub mod pallet {
         DocumentHashInputTooShort,
         DocumentHashInputTooLong,
         InvalidDocumentHashInput,
-        
+
         UnauthorizedToChangePowerState,
         UnauthorizedToChangePowerTarget,
     }
@@ -1106,7 +1110,10 @@ pub mod pallet {
                 id,
                 farm_id,
                 twin_id,
-                resources: node_resources,
+                resources: ConsumableResources {
+                    total_resources: node_resources,
+                    used_resources: Resources::empty(),
+                },
                 location: node_location,
                 power: Power {
                     state: PowerState::Up,
@@ -1216,7 +1223,8 @@ pub mod pallet {
 
             stored_node.farm_id = farm_id;
             //TODO check that updating resources is possible!
-            stored_node.resources.total_resources = resources;
+            stored_node.resources.total_resources = node_resources;
+            stored_node.location = node_location;
             stored_node.interfaces = node_interfaces;
             stored_node.secure_boot = secure_boot;
             stored_node.virtualized = virtualized;
@@ -2180,7 +2188,7 @@ impl<T: Config> Pallet<T> {
     }
 
     fn _change_power_target_on_node(
-        node: &mut Node<pallet::PubConfigOf<T>, pallet::InterfaceOf<T>>,
+        node: &mut TfgridNode<T>,
         power_target: PowerTarget,
     ) {
         Self::deposit_event(Event::PowerTargetChanged {
@@ -2271,7 +2279,7 @@ impl<T: Config> Pallet<T> {
 
                 match limits.cu {
                     Some(cu_limit) => {
-                        let cu = node.resources.get_cu();
+                        let cu = node.resources.total_resources.get_cu();
                         if cu > cu_limit {
                             return Self::get_default_farming_policy();
                         }
@@ -2282,7 +2290,7 @@ impl<T: Config> Pallet<T> {
 
                 match limits.su {
                     Some(su_limit) => {
-                        let su = node.resources.get_su();
+                        let su = node.resources.total_resources.get_su();
                         if su > su_limit {
                             return Self::get_default_farming_policy();
                         }

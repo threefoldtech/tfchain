@@ -14,7 +14,7 @@ use frame_support::{
 use frame_system::Pallet;
 use log::info;
 use sp_std::{cmp::max, collections::btree_map::BTreeMap, marker::PhantomData, vec, vec::Vec};
-use tfchain_support::types::{ConsumableResources, Resources};
+use tfchain_support::{resources::Resources, types::ConsumableResources};
 
 pub mod deprecated {
     use crate::pallet::{
@@ -140,7 +140,7 @@ impl<T: Config> OnRuntimeUpgrade for ContractMigrationV6<T> {
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
-        
+
         info!(
             "👥  Smart Contract pallet to {:?} passes POST migrate checks ✅",
             PalletVersion::<T>::get()

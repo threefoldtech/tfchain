@@ -65,7 +65,7 @@ impl<T: Config> Contract<T> {
                     .ok_or(Error::<T>::NodeNotExists)?;
 
                 let contract_cost = calculate_resources_cost::<T>(
-                    capacity_reservation_contract.resources.total_resources,
+                    &capacity_reservation_contract.resources.total_resources,
                     capacity_reservation_contract.public_ips,
                     seconds_elapsed,
                     &pricing_policy,
@@ -94,7 +94,7 @@ impl<T: Config> Contract<T> {
 
 // Calculates the total cost of a node contract.
 pub fn calculate_resources_cost<T: Config>(
-    resources: Resources,
+    resources: &Resources,
     ipu: u32,
     seconds_elapsed: u64,
     pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
