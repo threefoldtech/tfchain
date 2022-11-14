@@ -79,7 +79,6 @@ pub mod crypto {
 }
 
 pub mod cost;
-pub mod migration;
 pub mod name_contract;
 pub mod types;
 pub mod weights;
@@ -1483,6 +1482,7 @@ impl<T: Config> Pallet<T> {
         return Err(<Error<T>>::OffchainSignedTxError);
     }
 
+    // Bills a contract (CapacityReservationContract or NameContract)
     // Calculates how much TFT is due by the user and distributes the rewards
     fn bill_contract(contract_id: u64) -> DispatchResultWithPostInfo {
         // Clean up contract from blling loop if it not exists anymore
