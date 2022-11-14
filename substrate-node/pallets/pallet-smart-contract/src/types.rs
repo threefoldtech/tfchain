@@ -7,7 +7,7 @@ use frame_support::{BoundedVec, RuntimeDebugNoBound};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
 use substrate_fixed::types::U64F64;
-use tfchain_support::types::Resources;
+use tfchain_support::resources::Resources;
 
 pub type BlockNumber = u64;
 

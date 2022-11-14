@@ -26,7 +26,7 @@ use sp_std::{cmp::Ordering, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-use tfchain_support::{traits::ChangeNode, types::Node};
+use tfchain_support::traits::ChangeNode;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -321,18 +321,20 @@ impl pallet_sudo::Config for Runtime {
     type Call = Call;
 }
 
+pub type Serial = pallet_tfgrid::pallet::SerialNumberOf<Runtime>;
+pub type Loc = pallet_tfgrid::pallet::LocationOf<Runtime>;
 pub type PubConfig = pallet_tfgrid::pallet::PubConfigOf<Runtime>;
 pub type Interface = pallet_tfgrid::pallet::InterfaceOf<Runtime>;
+
+pub type TfgridNode = pallet_tfgrid::pallet::TfgridNode<Runtime>;
+
 pub struct NodeChanged;
-impl ChangeNode<PubConfig, Interface> for NodeChanged {
-    fn node_changed(
-        old_node: Option<&Node<PubConfig, Interface>>,
-        new_node: &Node<PubConfig, Interface>,
-    ) {
+impl ChangeNode<Loc, PubConfig, Interface, Serial> for NodeChanged {
+    fn node_changed(old_node: Option<&TfgridNode>, new_node: &TfgridNode) {
         Dao::node_changed(old_node, new_node)
     }
 
-    fn node_deleted(node: &Node<PubConfig, Interface>) {
+    fn node_deleted(node: &TfgridNode) {
         SmartContractModule::node_deleted(node);
         Dao::node_deleted(node);
     }
@@ -350,6 +352,7 @@ impl pallet_tfgrid::Config for Runtime {
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Runtime>;
     type NodeChanged = NodeChanged;
+    type TermsAndConditions = pallet_tfgrid::terms_cond::TermsAndConditions<Runtime>;
     type TwinIp = pallet_tfgrid::twin::TwinIp<Runtime>;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
@@ -366,6 +369,10 @@ impl pallet_tfgrid::Config for Runtime {
     type InterfaceMac = pallet_tfgrid::interface::InterfaceMac<Runtime>;
     type InterfaceIP = pallet_tfgrid::interface::InterfaceIp<Runtime>;
     type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
+    type CountryName = pallet_tfgrid::node::CountryName<Runtime>;
+    type CityName = pallet_tfgrid::node::CityName<Runtime>;
+    type Location = pallet_tfgrid::node::Location<Runtime>;
+    type SerialNumber = pallet_tfgrid::node::SerialNumber<Runtime>;
 }
 
 parameter_types! {
@@ -760,7 +767,8 @@ pub type Executive = frame_executive::Executive<
         pallet_smart_contract::migrations::v6::ContractMigrationV5<Runtime>,
         pallet_tfgrid::migrations::v10::FixFarmNodeIndexMap<Runtime>,
         pallet_tfgrid::migrations::v11::FixFarmingPolicy<Runtime>,
-    )
+        pallet_tfgrid::migrations::v12::InputValidation<Runtime>,
+    ),
 >;
 
 impl_runtime_apis! {

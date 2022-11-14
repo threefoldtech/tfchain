@@ -1,6 +1,6 @@
 use super::{types, Event as SmartContractEvent};
+use crate::cost;
 use crate::{mock::Event as MockEvent, mock::*, test_utils::*, Error};
-
 use frame_support::{
     assert_noop, assert_ok, bounded_vec,
     traits::{LockableCurrency, WithdrawReasons},
@@ -8,15 +8,19 @@ use frame_support::{
     BoundedVec,
 };
 use frame_system::{EventRecord, Phase, RawOrigin};
+use log::info;
+use pallet_tfgrid::{
+    types::{self as pallet_tfgrid_types, LocationInput},
+    ResourcesInput,
+};
 use sp_core::H256;
 use sp_runtime::{assert_eq_error_rate, traits::SaturatedConversion, Perbill, Percent};
 use sp_std::convert::{TryFrom, TryInto};
 use substrate_fixed::types::U64F64;
-
-use crate::cost;
-use log::info;
-use pallet_tfgrid::types as pallet_tfgrid_types;
-use tfchain_support::types::{FarmCertification, Location, NodeCertification, PublicIP, Resources};
+use tfchain_support::{
+    resources::Resources,
+    types::{FarmCertification, NodeCertification, PublicIP},
+};
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -65,14 +69,14 @@ fn test_create_node_contract_with_public_ips_works() {
                 assert_eq!(c.public_ips, 2);
 
                 let pub_ip = PublicIP {
-                    ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
-                    gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+                    ip: get_public_ip_ip(b"185.206.122.33/24"),
+                    gateway: get_public_ip_gw(b"185.206.122.1"),
                     contract_id: 1,
                 };
 
                 let pub_ip_2 = PublicIP {
-                    ip: "185.206.122.34/24".as_bytes().to_vec().try_into().unwrap(),
-                    gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+                    ip: get_public_ip_ip(b"185.206.122.34/24"),
+                    gateway: get_public_ip_gw(b"185.206.122.1"),
                     contract_id: 1,
                 };
                 assert_eq!(c.public_ips_list[0], pub_ip);
@@ -1090,8 +1094,8 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
         }
 
         let public_ip = PublicIP {
-            ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
-            gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+            ip: get_public_ip_ip(b"185.206.122.33/24"),
+            gateway: get_public_ip_gw(b"185.206.122.1"),
             contract_id: 0,
         };
 
@@ -2644,37 +2648,33 @@ pub fn prepare_farm_and_node() {
     TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
     create_farming_policies();
-
     prepare_twins();
-
     prepare_farm(alice(), false);
 
-    // random location
-    let location = Location {
-        longitude: "12.233213231".as_bytes().to_vec(),
-        latitude: "32.323112123".as_bytes().to_vec(),
-    };
-
-    let resources = Resources {
+    let resources = ResourcesInput {
         hru: 1024 * GIGABYTE,
         sru: 512 * GIGABYTE,
         cru: 8,
         mru: 16 * GIGABYTE,
     };
 
-    let country = "Belgium".as_bytes().to_vec();
-    let city = "Ghent".as_bytes().to_vec();
+    // random location
+    let location = LocationInput {
+        city: get_city_name_input(b"Ghent"),
+        country: get_country_name_input(b"Belgium"),
+        latitude: get_latitude_input(b"12.233213231"),
+        longitude: get_longitude_input(b"32.323112123"),
+    };
+
     TfgridModule::create_node(
         Origin::signed(alice()),
         1,
         resources,
         location,
-        country,
-        city,
         bounded_vec![],
         false,
         false,
-        "some_serial".as_bytes().to_vec(),
+        get_serial_number_input(b"some_serial"),
     )
     .unwrap();
 }
@@ -2682,55 +2682,46 @@ pub fn prepare_farm_and_node() {
 pub fn prepare_dedicated_farm_and_node() {
     TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
     create_farming_policies();
-
     prepare_twins();
-
     prepare_farm(alice(), true);
 
-    // random location
-    let location = Location {
-        longitude: "12.233213231".as_bytes().to_vec(),
-        latitude: "32.323112123".as_bytes().to_vec(),
-    };
-
-    let resources = Resources {
+    let resources = ResourcesInput {
         hru: 1024 * GIGABYTE,
         sru: 512 * GIGABYTE,
         cru: 8,
         mru: 16 * GIGABYTE,
     };
 
-    let country = "Belgium".as_bytes().to_vec();
-    let city = "Ghent".as_bytes().to_vec();
+    // random location
+    let location = LocationInput {
+        city: get_city_name_input(b"Ghent"),
+        country: get_country_name_input(b"Belgium"),
+        latitude: get_latitude_input(b"12.233213231"),
+        longitude: get_longitude_input(b"32.323112123"),
+    };
+
     TfgridModule::create_node(
         Origin::signed(alice()),
         1,
         resources,
         location,
-        country,
-        city,
         bounded_vec![],
         false,
         false,
-        "some_serial".as_bytes().to_vec(),
+        get_serial_number_input(b"some_serial"),
     )
     .unwrap();
 }
 
 pub fn create_twin(origin: AccountId) {
-    let document = "some_link".as_bytes().to_vec();
-    let hash = "some_hash".as_bytes().to_vec();
-
     assert_ok!(TfgridModule::user_accept_tc(
         Origin::signed(origin.clone()),
-        document.clone(),
-        hash.clone(),
+        get_document_link_input(b"some_link"),
+        get_document_hash_input(b"some_hash"),
     ));
-    let ip = get_twin_ip(b"::1");
-    assert_ok!(TfgridModule::create_twin(
-        Origin::signed(origin),
-        ip.clone().0
-    ));
+
+    let ip = get_twin_ip_input(b"::1");
+    assert_ok!(TfgridModule::create_twin(Origin::signed(origin), ip));
 }
 
 fn create_farming_policies() {

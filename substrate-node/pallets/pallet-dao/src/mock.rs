@@ -1,15 +1,21 @@
 use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
 use crate::{self as pallet_dao};
-use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
+use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
 use frame_system::EnsureRoot;
 use pallet_collective;
-use pallet_tfgrid;
-use pallet_tfgrid::interface::{InterfaceIp, InterfaceMac, InterfaceName};
+use pallet_tfgrid::node::{CityName, CountryName};
 use pallet_tfgrid::{
     farm::FarmName,
+    interface::{InterfaceIp, InterfaceMac, InterfaceName},
+    node::{Location, SerialNumber},
     pub_config::{Domain, GW4, GW6, IP4, IP6},
     pub_ip::{GatewayIP, PublicIP},
+    terms_cond::TermsAndConditions,
     twin::TwinIp,
+    DocumentHashInput, DocumentLinkInput, TwinIpInput,
+};
+use pallet_tfgrid::{
+    CityNameInput, CountryNameInput, LatitudeInput, LongitudeInput, SerialNumberInput,
 };
 use pallet_timestamp;
 use sp_core::H256;
@@ -18,7 +24,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use sp_std::convert::{TryFrom, TryInto};
-use tfchain_support::{traits::ChangeNode, types::Node};
+use tfchain_support::traits::ChangeNode;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -79,18 +85,19 @@ parameter_types! {
     pub const MinVetos: u32 = 2;
 }
 
+pub(crate) type Serial = pallet_tfgrid::pallet::SerialNumberOf<Test>;
+pub(crate) type Loc = pallet_tfgrid::pallet::LocationOf<Test>;
 pub(crate) type PubConfig = pallet_tfgrid::pallet::PubConfigOf<Test>;
 pub(crate) type Interface = pallet_tfgrid::pallet::InterfaceOf<Test>;
+
+pub(crate) type TfgridNode = pallet_tfgrid::pallet::TfgridNode<Test>;
+
 pub struct NodeChanged;
-impl ChangeNode<PubConfig, Interface> for NodeChanged {
-    fn node_changed(
-        old_node: Option<&Node<PubConfig, Interface>>,
-        new_node: &Node<PubConfig, Interface>,
-    ) {
+impl ChangeNode<Loc, PubConfig, Interface, Serial> for NodeChanged {
+    fn node_changed(old_node: Option<&TfgridNode>, new_node: &TfgridNode) {
         DaoModule::node_changed(old_node, new_node)
     }
-
-    fn node_deleted(node: &Node<PubConfig, Interface>) {
+    fn node_deleted(node: &TfgridNode) {
         DaoModule::node_deleted(node);
     }
 }
@@ -114,6 +121,8 @@ parameter_types! {
     pub const MaxFarmPublicIps: u32 = 512;
 }
 
+pub(crate) type TestTermsAndConditions = TermsAndConditions<Test>;
+
 pub(crate) type TestTwinIp = TwinIp<Test>;
 pub(crate) type TestFarmName = FarmName<Test>;
 pub(crate) type TestPublicIP = PublicIP<Test>;
@@ -129,11 +138,17 @@ pub(crate) type TestInterfaceName = InterfaceName<Test>;
 pub(crate) type TestInterfaceMac = InterfaceMac<Test>;
 pub(crate) type TestInterfaceIp = InterfaceIp<Test>;
 
+pub(crate) type TestCountryName = CountryName<Test>;
+pub(crate) type TestCityName = CityName<Test>;
+pub(crate) type TestLocation = Location<Test>;
+pub(crate) type TestSerialNumber = SerialNumber<Test>;
+
 impl pallet_tfgrid::Config for Test {
     type Event = Event;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Test>;
     type NodeChanged = NodeChanged;
+    type TermsAndConditions = TestTermsAndConditions;
     type TwinIp = TestTwinIp;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
@@ -150,6 +165,10 @@ impl pallet_tfgrid::Config for Test {
     type InterfaceMac = TestInterfaceMac;
     type InterfaceIP = TestInterfaceIp;
     type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
+    type CountryName = TestCountryName;
+    type CityName = TestCityName;
+    type Location = TestLocation;
+    type SerialNumber = TestSerialNumber;
 }
 
 impl pallet_timestamp::Config for Test {
@@ -190,8 +209,36 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Test {
     type WeightInfo = pallet_membership::weights::SubstrateWeight<Test>;
 }
 
-pub(crate) fn get_twin_ip(twin_ip_input: &[u8]) -> TestTwinIp {
-    TwinIp::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
+pub(crate) fn get_document_link_input(document_link_input: &[u8]) -> DocumentLinkInput {
+    BoundedVec::try_from(document_link_input.to_vec()).expect("Invalid document link input.")
+}
+
+pub(crate) fn get_document_hash_input(document_hash_input: &[u8]) -> DocumentHashInput {
+    BoundedVec::try_from(document_hash_input.to_vec()).expect("Invalid document hash input.")
+}
+
+pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {
+    BoundedVec::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
+}
+
+pub(crate) fn get_city_name_input(city_input: &[u8]) -> CityNameInput {
+    BoundedVec::try_from(city_input.to_vec()).expect("Invalid city name input.")
+}
+
+pub(crate) fn get_country_name_input(country_input: &[u8]) -> CountryNameInput {
+    BoundedVec::try_from(country_input.to_vec()).expect("Invalid country name input.")
+}
+
+pub(crate) fn get_latitude_input(latitude_input: &[u8]) -> LatitudeInput {
+    BoundedVec::try_from(latitude_input.to_vec()).expect("Invalid latitude input.")
+}
+
+pub(crate) fn get_longitude_input(longitude_input: &[u8]) -> LongitudeInput {
+    BoundedVec::try_from(longitude_input.to_vec()).expect("Invalid longitude input.")
+}
+
+pub(crate) fn get_serial_number_input(serial_number_input: &[u8]) -> SerialNumberInput {
+    BoundedVec::try_from(serial_number_input.to_vec()).expect("Invalid serial number input.")
 }
 
 // Build genesis storage according to the mock runtime.

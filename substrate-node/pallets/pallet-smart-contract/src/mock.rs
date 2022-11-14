@@ -8,15 +8,23 @@ use codec::{alloc::sync::Arc, Decode};
 use frame_support::{
     construct_runtime, parameter_types,
     traits::{ConstU32, GenesisBuild},
+    BoundedVec,
     weights::PostDispatchInfo,
 };
 use frame_system::EnsureRoot;
+use pallet_tfgrid::node::{CityName, CountryName};
 use pallet_tfgrid::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
+    node::{Location, SerialNumber},
     pub_config::{Domain, GW4, GW6, IP4, IP6},
     pub_ip::{GatewayIP, PublicIP},
+    terms_cond::TermsAndConditions,
     twin::TwinIp,
+    DocumentHashInput, DocumentLinkInput, PublicIpGatewayInput, PublicIpIpInput, TwinIpInput,
+};
+use pallet_tfgrid::{
+    CityNameInput, CountryNameInput, LatitudeInput, LongitudeInput, SerialNumberInput,
 };
 use parking_lot::RwLock;
 use sp_core::{
@@ -36,7 +44,7 @@ use sp_runtime::{
     AccountId32,
 };
 use sp_std::convert::{TryFrom, TryInto};
-use tfchain_support::{traits::ChangeNode, types::Node};
+use tfchain_support::traits::ChangeNode;
 
 // set environment variable RUST_LOG=debug to see all logs when running the tests and call
 // env_logger::init() at the beginning of the test
@@ -120,18 +128,17 @@ impl pallet_balances::Config for TestRuntime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<TestRuntime>;
 }
 
+pub(crate) type Serial = pallet_tfgrid::pallet::SerialNumberOf<TestRuntime>;
+pub(crate) type Loc = pallet_tfgrid::pallet::LocationOf<TestRuntime>;
 pub(crate) type PubConfig = pallet_tfgrid::pallet::PubConfigOf<TestRuntime>;
 pub(crate) type Interface = pallet_tfgrid::pallet::InterfaceOf<TestRuntime>;
 
-pub struct NodeChanged;
-impl ChangeNode<PubConfig, Interface> for NodeChanged {
-    fn node_changed(
-        _old_node: Option<&Node<PubConfig, Interface>>,
-        _new_node: &Node<PubConfig, Interface>,
-    ) {
-    }
+pub(crate) type TfgridNode = pallet_tfgrid::pallet::TfgridNode<TestRuntime>;
 
-    fn node_deleted(node: &Node<PubConfig, Interface>) {
+pub struct NodeChanged;
+impl ChangeNode<Loc, PubConfig, Interface, Serial> for NodeChanged {
+    fn node_changed(_old_node: Option<&TfgridNode>, _new_node: &TfgridNode) {}
+    fn node_deleted(node: &TfgridNode) {
         SmartContractModule::node_deleted(node);
     }
 }
@@ -142,6 +149,8 @@ parameter_types! {
     pub const MaxInterfacesLength: u32 = 10;
     pub const MaxFarmPublicIps: u32 = 512;
 }
+
+pub(crate) type TestTermsAndConditions = TermsAndConditions<TestRuntime>;
 
 pub(crate) type TestTwinIp = TwinIp<TestRuntime>;
 pub(crate) type TestFarmName = FarmName<TestRuntime>;
@@ -158,11 +167,17 @@ pub(crate) type TestInterfaceName = InterfaceName<TestRuntime>;
 pub(crate) type TestInterfaceMac = InterfaceMac<TestRuntime>;
 pub(crate) type TestInterfaceIp = InterfaceIp<TestRuntime>;
 
+pub(crate) type TestCountryName = CountryName<TestRuntime>;
+pub(crate) type TestCityName = CityName<TestRuntime>;
+pub(crate) type TestLocation = Location<TestRuntime>;
+pub(crate) type TestSerialNumber = SerialNumber<TestRuntime>;
+
 impl pallet_tfgrid::Config for TestRuntime {
     type Event = Event;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
+    type TermsAndConditions = TestTermsAndConditions;
     type TwinIp = TestTwinIp;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
@@ -179,6 +194,10 @@ impl pallet_tfgrid::Config for TestRuntime {
     type InterfaceMac = TestInterfaceMac;
     type InterfaceIP = TestInterfaceIp;
     type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
+    type CountryName = TestCountryName;
+    type CityName = TestCityName;
+    type Location = TestLocation;
+    type SerialNumber = TestSerialNumber;
 }
 
 impl pallet_tft_price::Config for TestRuntime {
@@ -232,8 +251,54 @@ pub(crate) fn get_name_contract_name(contract_name_input: &[u8]) -> TestNameCont
     NameContractName::try_from(contract_name_input.to_vec()).expect("Invalid farm input.")
 }
 
-pub(crate) fn get_twin_ip(twin_ip_input: &[u8]) -> TestTwinIp {
-    TwinIp::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
+pub(crate) fn get_document_link_input(document_link_input: &[u8]) -> DocumentLinkInput {
+    BoundedVec::try_from(document_link_input.to_vec()).expect("Invalid document link input.")
+}
+
+pub(crate) fn get_document_hash_input(document_hash_input: &[u8]) -> DocumentHashInput {
+    BoundedVec::try_from(document_hash_input.to_vec()).expect("Invalid document hash input.")
+}
+
+pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {
+    BoundedVec::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
+}
+
+pub(crate) fn get_public_ip_ip_input(public_ip_ip_input: &[u8]) -> PublicIpIpInput {
+    BoundedVec::try_from(public_ip_ip_input.to_vec()).expect("Invalid public ip (ip) input.")
+}
+
+pub(crate) fn get_public_ip_gw_input(public_ip_gw_input: &[u8]) -> PublicIpGatewayInput {
+    BoundedVec::try_from(public_ip_gw_input.to_vec()).expect("Invalid public ip (gw) input.")
+}
+
+pub(crate) fn get_public_ip_ip(public_ip_ip_input: &[u8]) -> TestPublicIP {
+    let input = get_public_ip_ip_input(public_ip_ip_input);
+    TestPublicIP::try_from(input).expect("Invalid public ip (ip).")
+}
+
+pub(crate) fn get_public_ip_gw(public_ip_gw_input: &[u8]) -> TestGatewayIP {
+    let input = get_public_ip_gw_input(public_ip_gw_input);
+    TestGatewayIP::try_from(input).expect("Invalid public ip (gw).")
+}
+
+pub(crate) fn get_city_name_input(city_input: &[u8]) -> CityNameInput {
+    BoundedVec::try_from(city_input.to_vec()).expect("Invalid city name input.")
+}
+
+pub(crate) fn get_country_name_input(country_input: &[u8]) -> CountryNameInput {
+    BoundedVec::try_from(country_input.to_vec()).expect("Invalid country name input.")
+}
+
+pub(crate) fn get_latitude_input(latitude_input: &[u8]) -> LatitudeInput {
+    BoundedVec::try_from(latitude_input.to_vec()).expect("Invalid latitude input.")
+}
+
+pub(crate) fn get_longitude_input(longitude_input: &[u8]) -> LongitudeInput {
+    BoundedVec::try_from(longitude_input.to_vec()).expect("Invalid longitude input.")
+}
+
+pub(crate) fn get_serial_number_input(serial_number_input: &[u8]) -> SerialNumberInput {
+    BoundedVec::try_from(serial_number_input.to_vec()).expect("Invalid serial number input.")
 }
 
 /// Helper function to generate a crypto pair from seed

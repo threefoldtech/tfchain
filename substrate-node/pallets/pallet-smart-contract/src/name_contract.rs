@@ -27,20 +27,23 @@ impl<T: Config> TryFrom<Vec<u8>> for NameContractName<T> {
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         ensure!(
             value.len() >= MIN_NAME_LENGTH as usize,
-            Self::Error::NameContractNameToShort
+            Self::Error::NameContractNameTooShort
         );
         let bounded_vec: BoundedVec<u8, T::MaxNameContractNameLength> =
-            BoundedVec::try_from(value).map_err(|_| Self::Error::NameContractNameToLong)?;
-        ensure!(is_valid_name_contract_name(&bounded_vec), Self::Error::NameNotValid);
+            BoundedVec::try_from(value).map_err(|_| Self::Error::NameContractNameTooLong)?;
+        ensure!(
+            is_valid_name_contract_name(&bounded_vec),
+            Self::Error::NameNotValid
+        );
         Ok(Self(bounded_vec, PhantomData))
     }
 }
 
 /// Verify that a given slice can be used as a name contract name.
 fn is_valid_name_contract_name(input: &[u8]) -> bool {
-	input
-		.iter()
-		.all(|c| matches!(c, b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_'))
+    input
+        .iter()
+        .all(|c| matches!(c, b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_'))
 }
 
 // FIXME: did not find a way to automatically implement this.

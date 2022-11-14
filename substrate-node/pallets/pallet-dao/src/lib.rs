@@ -1,7 +1,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "128"]
 
-use pallet_tfgrid::pallet::{InterfaceOf, PubConfigOf};
+use pallet_tfgrid::pallet::{
+    InterfaceOf,
+    LocationOf,
+    PubConfigOf,
+    SerialNumberOf,
+    TfgridNode,
+};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
@@ -14,9 +20,8 @@ use frame_support::{
     weights::{GetDispatchInfo, Weight},
 };
 use tfchain_support::{
-    constants, resources,
+    constants,
     traits::{ChangeNode, Tfgrid},
-    types::{Node, Resources},
 };
 
 pub use pallet::*;
@@ -75,7 +80,12 @@ pub mod pallet {
             FarmName<Self>,
             SupportPublicIP<PublicIP<Self>, GatewayIP<Self>>,
         >;
-        type NodeChanged: ChangeNode<PubConfigOf<Self>, InterfaceOf<Self>>;
+        type NodeChanged: ChangeNode<
+            LocationOf<Self>,
+            PubConfigOf<Self>,
+            InterfaceOf<Self>,
+            SerialNumberOf<Self>,
+        >;
 
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
@@ -502,12 +512,6 @@ impl<T: Config> Pallet<T> {
         ProposalList::<T>::set(active_proposals);
     }
 
-    pub fn get_node_weight(resources: Resources) -> u64 {
-        let cu = resources::get_cu(resources);
-        let su = resources::get_su(resources);
-        cu * 2 + su
-    }
-
     fn is_council_member(who: T::AccountId) -> DispatchResultWithPostInfo {
         let council_members =
             pallet_membership::Pallet::<T, pallet_membership::Instance1>::members();
@@ -518,15 +522,15 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-impl<T: Config> ChangeNode<PubConfigOf<T>, InterfaceOf<T>> for Pallet<T> {
-    fn node_changed(
-        old_node: Option<&Node<PubConfigOf<T>, InterfaceOf<T>>>,
-        new_node: &Node<PubConfigOf<T>, InterfaceOf<T>>,
-    ) {
-        let new_node_weight = Self::get_node_weight(new_node.resources);
+impl<T: Config>
+    ChangeNode<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>
+    for Pallet<T>
+{
+    fn node_changed(old_node: Option<&TfgridNode<T>>, new_node: &TfgridNode<T>) {
+        let new_node_weight = new_node.resources.get_node_weight();
         match old_node {
             Some(node) => {
-                let old_node_weight = Self::get_node_weight(node.resources);
+                let old_node_weight = node.resources.get_node_weight();
 
                 if node.farm_id != new_node.farm_id {
                     let mut old_farm_weight = FarmWeight::<T>::get(node.farm_id);
@@ -553,8 +557,8 @@ impl<T: Config> ChangeNode<PubConfigOf<T>, InterfaceOf<T>> for Pallet<T> {
         };
     }
 
-    fn node_deleted(node: &Node<PubConfigOf<T>, InterfaceOf<T>>) {
-        let node_weight = Self::get_node_weight(node.resources);
+    fn node_deleted(node: &TfgridNode<T>) {
+        let node_weight = node.resources.get_node_weight();
         let mut farm_weight = FarmWeight::<T>::get(node.farm_id);
         farm_weight = farm_weight.checked_sub(node_weight).unwrap_or(0);
         FarmWeight::<T>::insert(node.farm_id, farm_weight);

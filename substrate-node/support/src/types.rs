@@ -1,3 +1,4 @@
+use super::resources::Resources;
 use codec::{Decode, Encode, MaxEncodedLen};
 use core::cmp::{Ord, Ordering, PartialOrd};
 use frame_support::{traits::ConstU32, BoundedVec};
@@ -69,15 +70,13 @@ pub struct FarmingPolicyLimit {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct Node<PubConfig, If> {
+pub struct Node<Location, PubConfig, If, SerialNumber> {
     pub version: u32,
     pub id: u32,
     pub farm_id: u32,
     pub twin_id: u32,
     pub resources: Resources,
     pub location: Location,
-    pub country: Vec<u8>,
-    pub city: Vec<u8>,
     // optional public config
     pub public_config: Option<PubConfig>,
     pub created: u64,
@@ -86,7 +85,7 @@ pub struct Node<PubConfig, If> {
     pub certification: NodeCertification,
     pub secure_boot: bool,
     pub virtualized: bool,
-    pub serial_number: Vec<u8>,
+    pub serial_number: SerialNumber,
     pub connection_price: u32,
 }
 
@@ -108,44 +107,6 @@ pub struct PublicConfig<IP4, IP6, Domain> {
 pub struct IP<IpAddr, Gw> {
     pub ip: IpAddr,
     pub gw: Gw,
-}
-
-#[derive(
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Clone,
-    Encode,
-    Decode,
-    Default,
-    Debug,
-    TypeInfo,
-    Copy,
-    MaxEncodedLen,
-)]
-pub struct Resources {
-    pub hru: u64,
-    pub sru: u64,
-    pub cru: u64,
-    pub mru: u64,
-}
-
-impl Resources {
-    pub fn add(mut self, other: &Resources) -> Resources {
-        self.cru += other.cru;
-        self.sru += other.sru;
-        self.hru += other.hru;
-        self.mru += other.mru;
-        self
-    }
-}
-
-// Store Location long and lat as string
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct Location {
-    pub longitude: Vec<u8>,
-    pub latitude: Vec<u8>,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, TypeInfo, Copy)]

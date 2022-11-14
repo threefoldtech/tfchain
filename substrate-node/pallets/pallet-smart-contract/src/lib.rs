@@ -20,7 +20,7 @@ use frame_system::{
 };
 pub use pallet::*;
 use pallet_tfgrid;
-use pallet_tfgrid::pallet::{InterfaceOf, PubConfigOf};
+use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, PubConfigOf, SerialNumberOf, TfgridNode};
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_timestamp as timestamp;
 use sp_core::crypto::KeyTypeId;
@@ -29,7 +29,7 @@ use sp_runtime::{
     Perbill,
 };
 use substrate_fixed::types::U64F64;
-use tfchain_support::{traits::ChangeNode, types::Node};
+use tfchain_support::traits::ChangeNode;
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"smct");
 
@@ -73,11 +73,10 @@ pub mod crypto {
     }
 }
 
-pub mod weights;
-
 pub mod cost;
 pub mod name_contract;
 pub mod types;
+pub mod weights;
 pub mod migrations;
 
 #[frame_support::pallet]
@@ -224,7 +223,12 @@ pub mod pallet {
         type DistributionFrequency: Get<u16>;
         type GracePeriod: Get<u64>;
         type WeightInfo: WeightInfo;
-        type NodeChanged: ChangeNode<PubConfigOf<Self>, InterfaceOf<Self>>;
+        type NodeChanged: ChangeNode<
+            LocationOf<Self>,
+            PubConfigOf<Self>,
+            InterfaceOf<Self>,
+            SerialNumberOf<Self>,
+        >;
         type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
         type Call: From<Call<Self>>;
 
@@ -343,8 +347,8 @@ pub mod pallet {
         CannotUpdateContractInGraceState,
         NumOverflow,
         OffchainSignedTxError,
-        NameContractNameToShort,
-        NameContractNameToLong,
+        NameContractNameTooShort,
+        NameContractNameTooLong,
         InvalidProviderConfiguration,
         NoSuchSolutionProvider,
         SolutionProviderNotApproved,
@@ -1729,14 +1733,12 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-impl<T: Config> ChangeNode<PubConfigOf<T>, InterfaceOf<T>> for Pallet<T> {
-    fn node_changed(
-        _node: Option<&Node<PubConfigOf<T>, InterfaceOf<T>>>,
-        _new_node: &Node<PubConfigOf<T>, InterfaceOf<T>>,
-    ) {
-    }
+impl<T: Config> ChangeNode<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>
+    for Pallet<T>
+{
+    fn node_changed(_node: Option<&TfgridNode<T>>, _new_node: &TfgridNode<T>) {}
 
-    fn node_deleted(node: &Node<PubConfigOf<T>, InterfaceOf<T>>) {
+    fn node_deleted(node: &TfgridNode<T>) {
         // Clean up all active contracts
         let active_node_contracts = ActiveNodeContracts::<T>::get(node.id);
         for node_contract_id in active_node_contracts {
