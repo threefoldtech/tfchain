@@ -1483,37 +1483,6 @@ impl<T: Config> Pallet<T> {
         return Err(<Error<T>>::OffchainSignedTxError);
     }
 
-    fn bill_contract_using_signed_transaction(contract_id: u64) -> Result<(), Error<T>> {
-        let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::any_account();
-        if !signer.can_sign() {
-            log::error!(
-                "failed billing contract {:?} account cannot be used to sign transaction",
-                contract_id,
-            );
-            return Err(<Error<T>>::OffchainSignedTxError);
-        }
-        let result =
-            signer.send_signed_transaction(|_acct| Call::bill_contract_for_block { contract_id });
-
-        if let Some((acc, res)) = result {
-            // if res is an error this means sending the transaction failed
-            // this means the transaction was already send before (probably by another node)
-            // unfortunately the error is always empty (substrate just logs the error and
-            // returns Err())
-            if res.is_err() {
-                log::error!(
-                    "signed transaction failed for billing contract {:?} using account {:?}",
-                    contract_id,
-                    acc.id
-                );
-                return Err(<Error<T>>::OffchainSignedTxError);
-            }
-            return Ok(());
-        }
-        log::error!("No local account available");
-        return Err(<Error<T>>::OffchainSignedTxError);
-    }
-
     // Calculates how much TFT is due by the user and distributes the rewards
     fn bill_contract(contract_id: u64) -> DispatchResultWithPostInfo {
         // Clean up contract from blling loop if it not exists anymore
@@ -2074,7 +2043,6 @@ impl<T: Config> Pallet<T> {
                 index
             );
         }
-        }
     }
 
     // Helper function that updates the contract state and manages storage accordingly
@@ -2333,11 +2301,6 @@ impl<T: Config> Pallet<T> {
             }
         }
         Ok(().into())
-    }
-
-    pub fn get_contract_index() -> u64 {
-        let now = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
-        now % BillingFrequency::<T>::get()
     }
 
     pub fn get_contract_index() -> u64 {

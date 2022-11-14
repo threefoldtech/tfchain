@@ -34,8 +34,8 @@ use sp_core::{
     sr25519, Pair, Public, H256,
 };
 use sp_keystore::{testing::KeyStore, KeystoreExt, SyncCryptoStore};
+use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::{offchain::TransactionPool, MultiSignature};
-use sp_keystore::{testing::KeyStore, KeystoreExt, SyncCryptoStore};
 use sp_runtime::{
     testing::{Header, TestXt},
     traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentityLookup},
@@ -505,130 +505,6 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 }
 pub type TransactionCall = pallet_smart_contract::Call<TestRuntime>;
 pub type ExtrinsicResult = Result<PostDispatchInfo, DispatchErrorWithPostInfo>;
-
-#[derive(Default)]
-pub struct PoolState {
-    /// A vector of calls that we expect should be executed
-    pub expected_calls: Vec<(TransactionCall, ExtrinsicResult, u64)>,
-    pub calls_to_execute: Vec<(TransactionCall, ExtrinsicResult, u64)>,
-    pub i: usize,
-}
-
-impl PoolState {
-    pub fn should_call_bill_contract(
-        &mut self,
-        contract_id: u64,
-        expected_result: ExtrinsicResult,
-        block_number: u64,
-    ) {
-        self.expected_calls.push((
-            crate::Call::bill_contract_for_block { contract_id },
-            expected_result,
-            block_number,
-        ));
-    }
-
-    pub fn execute_calls_and_check_results(&mut self, block_number: u64) {
-        if self.calls_to_execute.len() == 0 {
-            return;
-        }
-
-        // execute the calls that were submitted to the pool and compare the result
-        for call_to_execute in self.calls_to_execute.iter() {
-            let result = match call_to_execute.0 {
-                // matches bill_contract_for_block
-                crate::Call::bill_contract_for_block { contract_id } => {
-                    SmartContractModule::bill_contract_for_block(Origin::signed(bob()), contract_id)
-                }
-                // did not match anything => unkown call => this means you should add
-                // a capture for that function here
-                _ => panic!("Unknown call!"),
-            };
-
-            // the call should return what we expect it to return
-            assert_eq!(
-                call_to_execute.1, result,
-                "The result of call to {:?} was not as expected!",
-                call_to_execute.0
-            );
-
-            assert_eq!(block_number, call_to_execute.2);
-        }
-
-        self.calls_to_execute.clear();
-    }
-}
-
-impl Drop for PoolState {
-    fn drop(&mut self) {
-        // do not panic if the thread is already panicking!
-        if !thread::panicking() && self.i < self.expected_calls.len() {
-            panic!("\nNot all expected calls have been executed! The following calls were still expected: {:?}\n", &self.expected_calls[self.i..]);
-        }
-    }
-}
-
-/// Implementation of mocked transaction pool used for testing
-///
-/// This transaction pool mocks submitting the transactions to the pool. It does
-/// not execute the transactions. Instead it keeps them in list. It does compare
-/// the submitted call to the expected call.
-#[derive(Default)]
-pub struct MockedTransactionPoolExt(Arc<RwLock<PoolState>>);
-
-impl MockedTransactionPoolExt {
-    /// Create new `TestTransactionPoolExt` and a reference to the internal state.
-    pub fn new() -> (Self, Arc<RwLock<PoolState>>) {
-        let ext = Self::default();
-        let state = ext.0.clone();
-        (ext, state)
-    }
-}
-
-impl TransactionPool for MockedTransactionPoolExt {
-    fn submit_transaction(&mut self, extrinsic: Vec<u8>) -> Result<(), ()> {
-        if self.0.read().expected_calls.is_empty() {
-            return Ok(());
-        }
-
-        let extrinsic_decoded: Extrinsic = Decode::decode(&mut &*extrinsic).unwrap();
-        if self.0.read().i < self.0.read().expected_calls.len() {
-            let i = self.0.read().i.clone();
-
-            log::debug!("Call {:?}: {:?}", i, extrinsic_decoded.call);
-            // the extrinsic should match the expected call at position i
-            if extrinsic_decoded.call
-                != Call::SmartContractModule(self.0.read().expected_calls[i].0.clone())
-            {
-                panic!(
-                    "\nEXPECTED call: {:?}\nACTUAL call: {:?}\n",
-                    self.0.read().expected_calls[i].0,
-                    extrinsic_decoded.call
-                );
-            }
-
-            // increment i for the next iteration
-            let call_to_execute = self.0.read().expected_calls[i].clone();
-            // we push the call to be executed later in the "test thread"
-            self.0.write().calls_to_execute.push(call_to_execute);
-            self.0.write().i = i + 1;
-
-            // return the expected return value
-            return self.0.read().expected_calls[i]
-                .1
-                .map_err(|_| ())
-                .map(|_| ());
-        }
-
-        // we should not end here as it would mean we did not expect any more calls
-        panic!(
-            "\nDid not expect any more calls! Still have the call {:?} left.\n",
-            extrinsic_decoded.call
-        );
-    }
-}
-
-
 
 #[derive(Default)]
 pub struct PoolState {

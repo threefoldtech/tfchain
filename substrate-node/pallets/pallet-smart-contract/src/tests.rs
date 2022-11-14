@@ -1034,7 +1034,7 @@ fn test_cancel_deployment_contract_frees_public_ips_works() {
 
         let farm = TfgridModule::farms(1).unwrap();
         assert_eq!(farm.public_ips[0].contract_id, 2);
-        assert_eq!(farm.public_ips[1].contract_id, 1);
+        assert_eq!(farm.public_ips[1].contract_id, 2);
 
         assert_ok!(SmartContractModule::cancel_contract(
             Origin::signed(alice()),
