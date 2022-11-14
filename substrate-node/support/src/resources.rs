@@ -30,8 +30,8 @@ impl Resources {
     }
 
     pub fn validate_sru(&self) -> bool {
-        // SRU minimum of 500 GB
-        self.sru as u128 >= 500 * GIGABYTE
+        // SRU minimum of 100 GB
+        self.sru as u128 >= 100 * GIGABYTE
     }
 
     pub fn validate_cru(&self) -> bool {
