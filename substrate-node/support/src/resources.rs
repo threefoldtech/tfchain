@@ -1,5 +1,6 @@
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
+use sp_runtime::Percent;
 
 /// A resources capacity that countains HRU, SRU, CRU and MRU in integer values.
 #[derive(
@@ -78,6 +79,34 @@ impl Resources {
         let cu = self.get_cu();
         let su = self.get_su();
         cu * 2 + su
+    }
+
+    pub fn resources_changed_one_percent_or_more(&self, other: Resources) -> bool {
+        let one_percent_cru = Percent::from_percent(1) * self.cru;
+        let cru_diff = (self.cru as i64 - other.cru as i64).abs() as u64;
+        if cru_diff > one_percent_cru {
+            return true;
+        }
+
+        let one_percent_sru = Percent::from_percent(1) * self.sru;
+        let sru_diff = (self.sru as i64 - other.sru as i64).abs() as u64;
+        if sru_diff > one_percent_sru {
+            return true;
+        }
+
+        let one_percent_hru = Percent::from_percent(1) * self.hru;
+        let hru_diff = (self.hru as i64 - other.hru as i64).abs() as u64;
+        if hru_diff > one_percent_hru {
+            return true;
+        }
+
+        let one_percent_mru = Percent::from_percent(1) * self.mru;
+        let mru_diff = (self.mru as i64 - other.mru as i64).abs() as u64;
+        if mru_diff > one_percent_mru {
+            return true;
+        }
+
+        false
     }
 }
 
@@ -174,5 +203,46 @@ mod test {
 
         let su = resources.get_su();
         assert_eq!(su, 3);
+    }
+
+    #[test]
+    fn test_resources_diff() {
+        let resources = Resources {
+            hru: 4 * GIGABYTE as u64 * 1024,
+            cru: 64,
+            mru: 64 * GIGABYTE as u64,
+            sru: 0,
+        };
+
+        let new_resources = Resources {
+            hru: 4 * GIGABYTE as u64 * 1024,
+            cru: 64,
+            mru: 64 * GIGABYTE as u64,
+            sru: 0,
+        };
+
+        assert_eq!(
+            new_resources.resources_changed_one_percent_or_more(resources),
+            false
+        );
+
+        let resources = Resources {
+            hru: 4 * GIGABYTE as u64 * 1024,
+            cru: 64,
+            mru: 64 * GIGABYTE as u64,
+            sru: 0,
+        };
+
+        let new_resources = Resources {
+            hru: 4 * GIGABYTE as u64 * 1024,
+            cru: 64,
+            mru: 40 * GIGABYTE as u64,
+            sru: 0,
+        };
+
+        assert_eq!(
+            new_resources.resources_changed_one_percent_or_more(resources),
+            true
+        );
     }
 }
