@@ -44,7 +44,7 @@ use sp_runtime::{
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::{
     traits::ChangeNode,
-    types::{Farm, Node, PowerState, PowerTarget},
+    types::{Farm, PowerState, PowerTarget},
 };
 
 // set environment variable RUST_LOG=debug to see all logs when running the tests and call
@@ -373,20 +373,20 @@ pub(crate) fn get_longitude_input(longitude_input: &[u8]) -> LongitudeInput {
     BoundedVec::try_from(longitude_input.to_vec()).expect("Invalid longitude input.")
 }
 
-pub(crate) fn get_pub_config_ip4(ip4: &[u8]) -> TestIP4 {
-    IP4::try_from(ip4.to_vec()).expect("Invalid ip4 input")
+pub(crate) fn get_pub_config_ip4_input(ip4_input: &[u8]) -> IP4Input {
+    BoundedVec::try_from(ip4_input.to_vec()).expect("Invalid ip4 input.")
 }
 
-pub(crate) fn get_pub_config_gw4(gw4: &[u8]) -> TestGW4 {
-    GW4::try_from(gw4.to_vec()).expect("Invalid gw4 input")
+pub(crate) fn get_pub_config_gw4_input(gw4_input: &[u8]) -> GW4Input {
+    BoundedVec::try_from(gw4_input.to_vec()).expect("Invalid gw4 input.")
 }
 
-pub(crate) fn get_pub_config_ip6(ip6: &[u8]) -> TestIP6 {
-    IP6::try_from(ip6.to_vec()).expect("Invalid ip6 input")
+pub(crate) fn get_pub_config_ip6_input(ip6_input: &[u8]) -> IP6Input {
+    BoundedVec::try_from(ip6_input.to_vec()).expect("Invalid ip6 input.")
 }
 
-pub(crate) fn get_pub_config_gw6(gw6: &[u8]) -> TestGW6 {
-    GW6::try_from(gw6.to_vec()).expect("Invalid gw6 input")
+pub(crate) fn get_pub_config_gw6_input(gw6_input: &[u8]) -> GW6Input {
+    BoundedVec::try_from(gw6_input.to_vec()).expect("Invalid gw6 input.")
 }
 
 /// Helper function to generate a crypto pair from seed

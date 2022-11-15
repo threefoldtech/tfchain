@@ -9,8 +9,8 @@ use frame_support::{assert_noop, assert_ok, bounded_vec, BoundedVec};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
 use tfchain_support::types::{
-    FarmCertification, FarmingPolicyLimit, Interface, Location, NodeCertification, PowerState,
-    PowerTarget, PublicConfig, Resources, IP,
+    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, PowerState, PowerTarget,
+    PublicConfig, IP,
 };
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -713,7 +713,7 @@ fn update_certified_node_resources_loses_certification_works() {
         assert_eq!(node.certification, NodeCertification::Certified);
 
         // Change cores to 2
-        let mut node_resources: ResourcesInput = node.resources;
+        let mut node_resources: ResourcesInput = node.resources.total_resources;
         node_resources.cru = 2;
 
         let node_location = LocationInput {
@@ -770,7 +770,7 @@ fn update_certified_node_same_resources_keeps_certification_works() {
         let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(node.certification, NodeCertification::Certified);
 
-        let node_resources: ResourcesInput = node.resources;
+        let node_resources: ResourcesInput = node.resources.total_resources;
 
         let node_location = LocationInput {
             city: node.location.city.0,
@@ -875,11 +875,11 @@ fn change_power_state_fails() {
         create_farm();
         create_node();
         create_twin_bob();
-        //try changing the power state using another twin_id 
-        assert_noop!(TfgridModule::change_power_state(
-            Origin::signed(bob()),
-            PowerState::Down(1)
-        ), Error::<TestRuntime>::NodeNotExists);
+        //try changing the power state using another twin_id
+        assert_noop!(
+            TfgridModule::change_power_state(Origin::signed(bob()), PowerState::Down(1)),
+            Error::<TestRuntime>::NodeNotExists
+        );
     });
 }
 
@@ -926,11 +926,10 @@ fn change_power_target_fails() {
             PowerTarget::Down,
         );
 
-        assert_noop!(TfgridModule::change_power_target(
-            Origin::signed(bob()),
-            2,
-            PowerTarget::Up,
-        ), Error::<TestRuntime>::UnauthorizedToChangePowerTarget);
+        assert_noop!(
+            TfgridModule::change_power_target(Origin::signed(bob()), 2, PowerTarget::Up,),
+            Error::<TestRuntime>::UnauthorizedToChangePowerTarget
+        );
     });
 }
 
@@ -2421,8 +2420,14 @@ fn test_attach_farming_policy_flow(farming_policy_id: u32) {
 
     // Provide enough CU and SU limits to avoid attaching default policy to node
     // For node: [CU = 20; SU = 2]
-    assert_eq!(node.resources.total_resources.get_cu() <= limit.cu.unwrap(), true);
-    assert_eq!(node.resources.total_resources.get_su() <= limit.su.unwrap(), true);
+    assert_eq!(
+        node.resources.total_resources.get_cu() <= limit.cu.unwrap(),
+        true
+    );
+    assert_eq!(
+        node.resources.total_resources.get_su() <= limit.su.unwrap(),
+        true
+    );
 
     // Link farming policy to farm
     assert_ok!(TfgridModule::attach_policy_to_farm(
