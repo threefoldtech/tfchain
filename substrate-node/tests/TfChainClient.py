@@ -605,7 +605,11 @@ class TfChainClient:
                               type="CapacityReservation", port=port, who=who)
         node = self.get_node(id=node_id, port=port)
         nodes = self.get_nodes_from_farm(farm_id=node["farm_id"], port=port)
-        if node_id != nodes[0] and node["resources"]["used_resources"]["hru"] == 0 and node["resources"]["used_resources"]["sru"] == 0 and node["resources"]["used_resources"]["cru"] == 0 and node["resources"]["used_resources"]["mru"] == 0:
+        if node_id != nodes[0] and \
+                node["resources"]["used_resources"]["hru"] == 0 and \
+                node["resources"]["used_resources"]["sru"] == 0 and \
+                node["resources"]["used_resources"]["cru"] == 0 and \
+                node["resources"]["used_resources"]["mru"] == 0:
             self.bring_node_down(node_id, nodes[0], port=port)
 
     def add_nru_reports(self, contract_id: int = 1, nru: int = 1, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
