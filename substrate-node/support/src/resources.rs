@@ -81,38 +81,29 @@ impl Resources {
         cu * 2 + su
     }
 
-    pub fn resources_changed_one_percent_or_more(&self, other: Resources) -> bool {
-        let one_percent_cru = Percent::from_percent(1) * self.cru;
-        let cru_diff = (self.cru as i64 - other.cru as i64).abs() as u64;
-        if cru_diff > one_percent_cru {
-            return true;
-        }
+    pub fn has_changed(&self, other: Resources, tolerance: u8) -> Result<(), ()> {
+        let wiggle = |a: u64, b: u64| -> Result<(), ()> {
+            let p = Percent::from_percent(tolerance) * a;
+            let diff = (a as i64 - b as i64).abs() as u64;
+            if diff > p {
+                return Err(());
+            }
+            Ok(())
+        };
 
-        let one_percent_sru = Percent::from_percent(1) * self.sru;
-        let sru_diff = (self.sru as i64 - other.sru as i64).abs() as u64;
-        if sru_diff > one_percent_sru {
-            return true;
-        }
+        wiggle(self.cru, other.cru)?;
+        wiggle(self.sru, other.sru)?;
+        wiggle(self.hru, other.hru)?;
+        wiggle(self.mru, other.mru)?;
 
-        let one_percent_hru = Percent::from_percent(1) * self.hru;
-        let hru_diff = (self.hru as i64 - other.hru as i64).abs() as u64;
-        if hru_diff > one_percent_hru {
-            return true;
-        }
-
-        let one_percent_mru = Percent::from_percent(1) * self.mru;
-        let mru_diff = (self.mru as i64 - other.mru as i64).abs() as u64;
-        if mru_diff > one_percent_mru {
-            return true;
-        }
-
-        false
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use frame_support::{assert_err, assert_ok};
 
     #[test]
     fn test_calc_cu_falsy_values() {
@@ -221,10 +212,7 @@ mod test {
             sru: 0,
         };
 
-        assert_eq!(
-            new_resources.resources_changed_one_percent_or_more(resources),
-            false
-        );
+        assert_ok!(new_resources.has_changed(resources, 1));
 
         let resources = Resources {
             hru: 4 * GIGABYTE as u64 * 1024,
@@ -240,9 +228,6 @@ mod test {
             sru: 0,
         };
 
-        assert_eq!(
-            new_resources.resources_changed_one_percent_or_more(resources),
-            true
-        );
+        assert_err!(new_resources.has_changed(resources, 1), ());
     }
 }
