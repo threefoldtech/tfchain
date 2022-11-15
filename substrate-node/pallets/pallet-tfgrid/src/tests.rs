@@ -672,10 +672,10 @@ fn update_node_moved_from_farm_list_works() {
             2,
             resources,
             location,
-            Vec::new().try_into().unwrap(),
+            bounded_vec![],
             true,
             true,
-            get_serial_number_input(b"some_serial"),
+            None,
         ));
 
         // should be removed from farm 1 nodes
@@ -728,10 +728,10 @@ fn update_certified_node_resources_loses_certification_works() {
             1,
             node_resources,
             node_location,
-            Vec::new().try_into().unwrap(),
+            bounded_vec![],
             true,
             true,
-            get_serial_number_input(b"some_serial"),
+            None,
         ));
 
         let our_events = System::events();
@@ -785,10 +785,10 @@ fn update_certified_node_same_resources_keeps_certification_works() {
             1,
             node_resources,
             node_location,
-            Vec::new().try_into().unwrap(),
+            bounded_vec![],
             true,
             true,
-            get_serial_number_input(b"some_serial"),
+            None,
         ));
 
         let node = TfgridModule::nodes(1).unwrap();
@@ -839,7 +839,7 @@ fn create_node_with_interfaces_works() {
             interfaces,
             true,
             true,
-            get_serial_number_input(b"some_serial"),
+            None,
         ));
     });
 }
@@ -1292,7 +1292,7 @@ fn create_node_with_same_pubkey_fails() {
                 bounded_vec![],
                 true,
                 true,
-                get_serial_number_input(b"some_serial"),
+                None,
             ),
             Error::<TestRuntime>::NodeWithTwinIdExists
         );
@@ -2133,7 +2133,7 @@ fn create_node() {
         interfaces,
         true,
         true,
-        get_serial_number_input(b"some_serial"),
+        None,
     ));
 }
 
@@ -2158,10 +2158,10 @@ fn create_extra_node() {
         1,
         resources,
         location,
-        Vec::new().try_into().unwrap(),
+        bounded_vec![],
         true,
         true,
-        get_serial_number_input(b"some_serial"),
+        None,
     ));
 }
 

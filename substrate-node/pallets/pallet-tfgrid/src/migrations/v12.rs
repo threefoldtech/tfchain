@@ -165,15 +165,8 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
         };
 
         let serial_number = match get_serial_number::<T>(&node) {
-            Ok(serial) => serial,
-            Err(e) => {
-                info!(
-                    "failed to parse serial number for node: {:?}, error: {:?}",
-                    k, e
-                );
-                info!("set default serial number for node");
-                <T as Config>::SerialNumber::default()
-            }
+            Ok(serial) => Some(serial),
+            Err(_) => None,
         };
 
         let new_node = TfgridNode::<T> {

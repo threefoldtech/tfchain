@@ -11,7 +11,7 @@ use crate::{
     weights, CityNameInput, Config, CountryNameInput, DocumentHashInput, DocumentLinkInput,
     DomainInput, FarmNameInput, GW4Input, GW6Input, IP4Input, IP6Input, InterfaceIpInput,
     InterfaceMacInput, InterfaceNameInput, LatitudeInput, LongitudeInput, PublicIpGatewayInput,
-    PublicIpIpInput, SerialNumberInput, TwinIpInput,
+    PublicIpIpInput, TwinIpInput,
 };
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
 use frame_system::EnsureRoot;
@@ -334,10 +334,6 @@ pub(crate) fn get_latitude_input(latitude_input: &[u8]) -> LatitudeInput {
 
 pub(crate) fn get_longitude_input(longitude_input: &[u8]) -> LongitudeInput {
     BoundedVec::try_from(longitude_input.to_vec()).expect("Invalid longitude input.")
-}
-
-pub(crate) fn get_serial_number_input(serial_number_input: &[u8]) -> SerialNumberInput {
-    BoundedVec::try_from(serial_number_input.to_vec()).expect("Invalid serial number input.")
 }
 
 // industry dismiss casual gym gap music pave gasp sick owner dumb cost

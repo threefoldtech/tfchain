@@ -8,8 +8,8 @@ use codec::{alloc::sync::Arc, Decode};
 use frame_support::{
     construct_runtime, parameter_types,
     traits::{ConstU32, GenesisBuild},
-    BoundedVec,
     weights::PostDispatchInfo,
+    BoundedVec,
 };
 use frame_system::EnsureRoot;
 use pallet_tfgrid::node::{CityName, CountryName};
@@ -23,9 +23,7 @@ use pallet_tfgrid::{
     twin::TwinIp,
     DocumentHashInput, DocumentLinkInput, PublicIpGatewayInput, PublicIpIpInput, TwinIpInput,
 };
-use pallet_tfgrid::{
-    CityNameInput, CountryNameInput, LatitudeInput, LongitudeInput, SerialNumberInput,
-};
+use pallet_tfgrid::{CityNameInput, CountryNameInput, LatitudeInput, LongitudeInput};
 use parking_lot::RwLock;
 use sp_core::{
     crypto::Ss58Codec,
@@ -295,10 +293,6 @@ pub(crate) fn get_latitude_input(latitude_input: &[u8]) -> LatitudeInput {
 
 pub(crate) fn get_longitude_input(longitude_input: &[u8]) -> LongitudeInput {
     BoundedVec::try_from(longitude_input.to_vec()).expect("Invalid longitude input.")
-}
-
-pub(crate) fn get_serial_number_input(serial_number_input: &[u8]) -> SerialNumberInput {
-    BoundedVec::try_from(serial_number_input.to_vec()).expect("Invalid serial number input.")
 }
 
 /// Helper function to generate a crypto pair from seed
