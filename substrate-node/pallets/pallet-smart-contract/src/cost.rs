@@ -86,10 +86,6 @@ impl<T: Config> Contract<T> {
                     * U64F64::from_num(seconds_elapsed);
                 total_cost_u64f64.to_num::<u64>()
             }
-            types::ContractData::ServiceContract(_) => {
-                // cost is not calculated here for service contracts
-                0
-            }
         };
 
         Ok(total_cost)

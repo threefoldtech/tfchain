@@ -64,7 +64,6 @@ impl<T: Config> Contract<T> {
             ContractData::CapacityReservationContract(c) => c.node_id,
             ContractData::DeploymentContract(_) => 0,
             ContractData::NameContract(_) => 0,
-            ContractData::ServiceContract(_) => 0,
         }
     }
 }
@@ -160,7 +159,6 @@ pub enum ContractData<T: Config> {
     CapacityReservationContract(CapacityReservationContract),
     DeploymentContract(DeploymentContract<T>),
     NameContract(NameContract<T>),
-    ServiceContract(ServiceContract<T>),
 }
 
 // impl<T: Config> Default for ContractData<T> {

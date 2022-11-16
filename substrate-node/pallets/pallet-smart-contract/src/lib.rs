@@ -136,6 +136,11 @@ pub mod pallet {
     pub type Contracts<T: Config> = StorageMap<_, Blake2_128Concat, u64, Contract<T>, OptionQuery>;
 
     #[pallet::storage]
+    #[pallet::getter(fn service_contracts)]
+    pub type ServiceContracts<T: Config> =
+        StorageMap<_, Blake2_128Concat, u64, ServiceContract<T>, OptionQuery>;
+
+    #[pallet::storage]
     #[pallet::getter(fn contract_billing_information_by_id)]
     pub type ContractBillingInformationByID<T: Config> =
         StorageMap<_, Blake2_128Concat, u64, ContractBillingInformation, ValueQuery>;
@@ -212,6 +217,10 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn contract_id)]
     pub type ContractID<T> = StorageValue<_, u64, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn service_contract_id)]
+    pub type ServiceContractID<T> = StorageValue<_, u64, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn group_id)]
@@ -309,13 +318,17 @@ pub mod pallet {
         NameContractCanceled {
             contract_id: u64,
         },
+        /// A Service contract is created
+        ServiceContractCreated {
+            service_contract_id: u64,
+        },
         /// A Service contract is approved
         ServiceContractApproved {
-            contract_id: u64,
+            service_contract_id: u64,
         },
         /// A Service contract is canceled
         ServiceContractCanceled {
-            contract_id: u64,
+            service_contract_id: u64,
         },
         /// IP got reserved by a Node contract
         IPsReserved {
@@ -438,11 +451,13 @@ pub mod pallet {
         TwinNotAuthorizedToApproveServiceContract,
         TwinNotAuthorizedToRejectServiceContract,
         TwinNotAuthorizedToBillServiceContract,
+        ServiceContractNotExists,
         ServiceContractModificationNotAllowed,
         ServiceContractApprovalNotAllowed,
         ServiceContractBillingNotAllowed,
         ServiceContractBillMetadataTooLong,
         ServiceContractMetadataTooLong,
+        ServiceContractNotEnoughFundToPayBill,
     }
 
     #[pallet::genesis_config]
@@ -673,51 +688,65 @@ pub mod pallet {
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn service_contract_set_metadata(
             origin: OriginFor<T>,
-            contract_id: u64,
+            service_contract_id: u64,
             metadata: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_service_contract_set_metadata(account_id, contract_id, metadata)
+            Self::_service_contract_set_metadata(account_id, service_contract_id, metadata)
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn service_contract_set_fees(
             origin: OriginFor<T>,
-            contract_id: u64,
+            service_contract_id: u64,
             base_fee: u64,
             variable_fee: u64,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_service_contract_set_fees(account_id, contract_id, base_fee, variable_fee)
+            Self::_service_contract_set_fees(
+                account_id,
+                service_contract_id,
+                base_fee,
+                variable_fee,
+            )
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn service_contract_approve(
             origin: OriginFor<T>,
-            contract_id: u64,
+            service_contract_id: u64,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_service_contract_approve(account_id, contract_id)
+            Self::_service_contract_approve(account_id, service_contract_id)
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn service_contract_reject(
             origin: OriginFor<T>,
-            contract_id: u64,
+            service_contract_id: u64,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_service_contract_reject(account_id, contract_id)
+            Self::_service_contract_reject(account_id, service_contract_id)
         }
+
+        // #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        // pub fn service_contract_cancel(
+        //     origin: OriginFor<T>,
+        //     service_contract_id: u64,
+        // ) -> DispatchResultWithPostInfo {
+        //     let account_id = ensure_signed(origin)?;
+        //     Self::_service_contract_cancel(account_id, service_contract_id)
+        // }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn service_contract_bill(
             origin: OriginFor<T>,
-            contract_id: u64,
+            service_contract_id: u64,
             variable_amount: u64,
             metadata: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_service_contract_bill(account_id, contract_id, variable_amount, metadata)
+            Self::_service_contract_bill(account_id, service_contract_id, variable_amount, metadata)
         }
     }
 
@@ -1213,6 +1242,7 @@ impl<T: Config> Pallet<T> {
             Error::<T>::TwinNotAuthorizedToCreateServiceContract,
         );
 
+        // Create service contract
         let service_contract = types::ServiceContract {
             service_twin_id,
             consumer_twin_id,
@@ -1226,28 +1256,34 @@ impl<T: Config> Pallet<T> {
             phantom: PhantomData,
         };
 
-        let contract = Self::_create_contract(
-            caller_twin_id,
-            types::ContractData::ServiceContract(service_contract),
-            None,
-        )?;
+        // Get the service contract ID map and increment
+        let mut id = ServiceContractID::<T>::get();
+        id = id + 1;
 
-        Self::deposit_event(Event::ContractCreated(contract));
+        // Insert into service contract map
+        ServiceContracts::<T>::insert(id, &service_contract);
+
+        // Update Contract ID
+        ServiceContractID::<T>::put(id);
+
+        // Trigger event for service contract creation
+        Self::deposit_event(Event::ServiceContractCreated {
+            service_contract_id: id,
+        });
 
         Ok(().into())
     }
 
     pub fn _service_contract_set_metadata(
         account_id: T::AccountId,
-        contract_id: u64,
+        service_contract_id: u64,
         metadata: Vec<u8>,
     ) -> DispatchResultWithPostInfo {
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
             .ok_or(Error::<T>::TwinNotExists)?;
 
-        let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
-
-        let mut service_contract = Self::get_service_contract(&contract)?;
+        let mut service_contract = ServiceContracts::<T>::get(service_contract_id)
+            .ok_or(Error::<T>::ServiceContractNotExists)?;
 
         // Only service or consumer can set metadata
         ensure!(
@@ -1274,25 +1310,23 @@ impl<T: Config> Pallet<T> {
             service_contract.state = types::ServiceContractState::AgreementReady;
         }
 
-        // Update contract in list after modification
-        contract.contract_type = types::ContractData::ServiceContract(service_contract);
-        Contracts::<T>::insert(contract_id, contract);
+        // Update service contract in map after modification
+        ServiceContracts::<T>::insert(service_contract_id, service_contract);
 
         Ok(().into())
     }
 
     pub fn _service_contract_set_fees(
         account_id: T::AccountId,
-        contract_id: u64,
+        service_contract_id: u64,
         base_fee: u64,
         variable_fee: u64,
     ) -> DispatchResultWithPostInfo {
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
             .ok_or(Error::<T>::TwinNotExists)?;
 
-        let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
-
-        let mut service_contract = Self::get_service_contract(&contract)?;
+        let mut service_contract = ServiceContracts::<T>::get(service_contract_id)
+            .ok_or(Error::<T>::ServiceContractNotExists)?;
 
         // Only service can set fees
         ensure!(
@@ -1317,23 +1351,21 @@ impl<T: Config> Pallet<T> {
             service_contract.state = types::ServiceContractState::AgreementReady;
         }
 
-        // Update contract in list after modification
-        contract.contract_type = types::ContractData::ServiceContract(service_contract);
-        Contracts::<T>::insert(contract_id, contract);
+        // Update service contract in map after modification
+        ServiceContracts::<T>::insert(service_contract_id, service_contract);
 
         Ok(().into())
     }
 
     pub fn _service_contract_approve(
         account_id: T::AccountId,
-        contract_id: u64,
+        service_contract_id: u64,
     ) -> DispatchResultWithPostInfo {
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
             .ok_or(Error::<T>::TwinNotExists)?;
 
-        let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
-
-        let mut service_contract = Self::get_service_contract(&contract)?;
+        let mut service_contract = ServiceContracts::<T>::get(service_contract_id)
+            .ok_or(Error::<T>::ServiceContractNotExists)?;
 
         // Allow to approve contract only if agreement is ready
         ensure!(
@@ -1359,31 +1391,29 @@ impl<T: Config> Pallet<T> {
         if service_contract.accepted_by_service && service_contract.accepted_by_consumer {
             // Change contract state to approved and emit event
             service_contract.state = types::ServiceContractState::ApprovedByBoth;
-            Self::deposit_event(Event::ServiceContractApproved { contract_id });
+            Self::deposit_event(Event::ServiceContractApproved {
+                service_contract_id,
+            });
             // Initialize billing time
             let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
             service_contract.last_bill = now;
-            // Start billing inserting contract in billing loop
-            Self::insert_contract_to_bill(contract_id);
         }
 
-        // Update contract in list after modification
-        contract.contract_type = types::ContractData::ServiceContract(service_contract);
-        Contracts::<T>::insert(contract_id, contract);
+        // Update service contract in map after modification
+        ServiceContracts::<T>::insert(service_contract_id, service_contract);
 
         Ok(().into())
     }
 
     pub fn _service_contract_reject(
         account_id: T::AccountId,
-        contract_id: u64,
+        service_contract_id: u64,
     ) -> DispatchResultWithPostInfo {
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
             .ok_or(Error::<T>::TwinNotExists)?;
 
-        let contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
-
-        let service_contract = Self::get_service_contract(&contract)?;
+        let service_contract = ServiceContracts::<T>::get(service_contract_id)
+            .ok_or(Error::<T>::ServiceContractNotExists)?;
 
         // Allow to reject contract only if agreement is ready
         ensure!(
@@ -1404,24 +1434,29 @@ impl<T: Config> Pallet<T> {
         }
 
         // If one party (service or consumer) rejects then contract
-        // is canceled and removed from contract list
-        Self::remove_contract(contract_id);
+        // is canceled and removed from service contract map
+        // Self::_service_contract_cancel(service_contract_id);
+        // TODO
+        // info!("removing service contract");
+        ServiceContracts::<T>::remove(service_contract_id);
+        Self::deposit_event(Event::ServiceContractCanceled {
+            service_contract_id,
+        });
 
         Ok(().into())
     }
 
     pub fn _service_contract_bill(
         account_id: T::AccountId,
-        contract_id: u64,
+        service_contract_id: u64,
         variable_amount: u64,
         metadata: Vec<u8>,
     ) -> DispatchResultWithPostInfo {
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
             .ok_or(Error::<T>::TwinNotExists)?;
 
-        let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
-
-        let mut service_contract = Self::get_service_contract(&contract)?;
+        let mut service_contract = ServiceContracts::<T>::get(service_contract_id)
+            .ok_or(Error::<T>::ServiceContractNotExists)?;
 
         // Only service can bill consumer for service contract
         ensure!(
@@ -1469,26 +1504,23 @@ impl<T: Config> Pallet<T> {
         };
 
         // Make consumer pay for service contract bill
-        Self::_service_contract_pay_bill(contract_id, service_contract_bill)?;
+        Self::_service_contract_pay_bill(service_contract_id, service_contract_bill)?;
 
         // Update contract in list after modification
         service_contract.last_bill = now;
-        contract.contract_type = types::ContractData::ServiceContract(service_contract);
-        Contracts::<T>::insert(contract_id, contract);
+        ServiceContracts::<T>::insert(service_contract_id, service_contract);
 
         Ok(().into())
     }
 
-    // Bill for a service contract
+    // Pay a service contract bill
     // Calculates how much TFT is due by the consumer and pay the amount to the service
     fn _service_contract_pay_bill(
-        contract_id: u64,
+        service_contract_id: u64,
         bill: types::ServiceContractBill,
     ) -> DispatchResultWithPostInfo {
-        let contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
-
-        let service_contract = Self::get_service_contract(&contract)?;
-
+        let service_contract = ServiceContracts::<T>::get(service_contract_id)
+            .ok_or(Error::<T>::ServiceContractNotExists)?;
         let amount_due = service_contract.calculate_bill_cost_tft(bill)?;
 
         let service_twin = pallet_tfgrid::Twins::<T>::get(service_contract.service_twin_id)
@@ -1499,18 +1531,23 @@ impl<T: Config> Pallet<T> {
 
         let usable_balance = Self::get_usable_balance(&consumer_twin.account_id);
 
-        // TODO: Handle consumer out of founds
+        // Handle consumer out of funds
+        ensure!(
+            usable_balance >= amount_due,
+            Error::<T>::ServiceContractNotEnoughFundToPayBill,
+        );
 
+        // Transfer amount due from consumer account to service account
         <T as Config>::Currency::transfer(
             &consumer_twin.account_id,
             &service_twin.account_id,
-            amount_due.min(usable_balance),
+            amount_due,
             ExistenceRequirement::KeepAlive,
         )?;
 
         log::info!(
             "bill successfully payed by consumer for service contract with id {:?}",
-            contract_id,
+            service_contract_id,
         );
 
         Ok(().into())
@@ -2421,9 +2458,6 @@ impl<T: Config> Pallet<T> {
                         twin_id: contract.twin_id,
                     });
                 }
-                types::ContractData::ServiceContract(_service_contract) => {
-                    Self::deposit_event(Event::ServiceContractCanceled { contract_id });
-                }
             };
             info!("removing contract");
             Contracts::<T>::remove(contract_id);
@@ -2750,19 +2784,6 @@ impl<T: Config> Pallet<T> {
     ) -> Result<types::CapacityReservationContract, DispatchErrorWithPostInfo> {
         match contract.contract_type.clone() {
             types::ContractData::CapacityReservationContract(c) => Ok(c),
-            _ => {
-                return Err(DispatchErrorWithPostInfo::from(
-                    Error::<T>::InvalidContractType,
-                ))
-            }
-        }
-    }
-
-    pub fn get_service_contract(
-        contract: &types::Contract<T>,
-    ) -> Result<types::ServiceContract<T>, DispatchErrorWithPostInfo> {
-        match contract.contract_type.clone() {
-            types::ContractData::ServiceContract(c) => Ok(c),
             _ => {
                 return Err(DispatchErrorWithPostInfo::from(
                     Error::<T>::InvalidContractType,

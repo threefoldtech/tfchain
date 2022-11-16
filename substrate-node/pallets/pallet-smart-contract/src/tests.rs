@@ -1482,22 +1482,20 @@ fn test_service_contract_create_works() {
         run_to_block(1, None);
         create_service_consumer_contract();
 
-        let contract = SmartContractModule::contracts(1).unwrap();
-        let service_contract = get_service_contract();
         assert_eq!(
-            contract.contract_type,
-            types::ContractData::ServiceContract(service_contract),
+            get_service_contract(),
+            SmartContractModule::service_contracts(1).unwrap(),
         );
 
         let our_events = System::events();
         assert_eq!(!our_events.is_empty(), true);
         assert_eq!(
             our_events.last().unwrap(),
-            &record(MockEvent::SmartContractModule(SmartContractEvent::<
-                TestRuntime,
-            >::ContractCreated(
-                contract
-            ))),
+            &record(MockEvent::SmartContractModule(
+                SmartContractEvent::ServiceContractCreated {
+                    service_contract_id: 1,
+                }
+            )),
         );
     });
 }
@@ -1513,12 +1511,11 @@ fn test_service_contract_set_metadata_works() {
             b"some_metadata".to_vec(),
         ));
 
-        let contract = SmartContractModule::contracts(1).unwrap();
         let mut service_contract = get_service_contract();
         service_contract.metadata = BoundedVec::try_from(b"some_metadata".to_vec()).unwrap();
         assert_eq!(
-            contract.contract_type,
-            types::ContractData::ServiceContract(service_contract),
+            service_contract,
+            SmartContractModule::service_contracts(1).unwrap(),
         );
     });
 }
@@ -1535,13 +1532,12 @@ fn test_service_contract_set_fees_works() {
             10,
         ));
 
-        let contract = SmartContractModule::contracts(1).unwrap();
         let mut service_contract = get_service_contract();
         service_contract.base_fee = 100;
         service_contract.variable_fee = 10;
         assert_eq!(
-            contract.contract_type,
-            types::ContractData::ServiceContract(service_contract),
+            service_contract,
+            SmartContractModule::service_contracts(1).unwrap(),
         );
     });
 }
@@ -1552,15 +1548,14 @@ fn test_service_contract_approve_works() {
         run_to_block(1, None);
         prepare_service_consumer_contract();
 
-        let contract = SmartContractModule::contracts(1).unwrap();
         let mut service_contract = get_service_contract();
         service_contract.base_fee = 100;
         service_contract.variable_fee = 10;
         service_contract.metadata = BoundedVec::try_from(b"some_metadata".to_vec()).unwrap();
         service_contract.state = types::ServiceContractState::AgreementReady;
         assert_eq!(
-            contract.contract_type,
-            types::ContractData::ServiceContract(service_contract.clone()),
+            service_contract,
+            SmartContractModule::service_contracts(1).unwrap(),
         );
 
         // Service approves
@@ -1569,11 +1564,10 @@ fn test_service_contract_approve_works() {
             1,
         ));
 
-        let contract = SmartContractModule::contracts(1).unwrap();
         service_contract.accepted_by_service = true;
         assert_eq!(
-            contract.contract_type,
-            types::ContractData::ServiceContract(service_contract.clone()),
+            service_contract,
+            SmartContractModule::service_contracts(1).unwrap(),
         );
 
         // Consumer approves
@@ -1582,13 +1576,12 @@ fn test_service_contract_approve_works() {
             1,
         ));
 
-        let contract = SmartContractModule::contracts(1).unwrap();
         service_contract.accepted_by_consumer = true;
         service_contract.last_bill = 1628082006;
         service_contract.state = types::ServiceContractState::ApprovedByBoth;
         assert_eq!(
-            contract.contract_type,
-            types::ContractData::ServiceContract(service_contract),
+            service_contract,
+            SmartContractModule::service_contracts(1).unwrap(),
         );
 
         let our_events = System::events();
@@ -1598,7 +1591,7 @@ fn test_service_contract_approve_works() {
             &record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::ServiceContractApproved {
-                contract_id: 1,
+                service_contract_id: 1,
             })),
         );
     });
@@ -1615,7 +1608,7 @@ fn test_service_contract_reject_works() {
             1,
         ));
 
-        assert_eq!(SmartContractModule::contracts(1).is_none(), true);
+        assert_eq!(SmartContractModule::service_contracts(1).is_none(), true);
 
         let our_events = System::events();
         assert_eq!(!our_events.is_empty(), true);
@@ -1624,7 +1617,7 @@ fn test_service_contract_reject_works() {
             &record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::ServiceContractCanceled {
-                contract_id: 1,
+                service_contract_id: 1,
             })),
         );
     });
