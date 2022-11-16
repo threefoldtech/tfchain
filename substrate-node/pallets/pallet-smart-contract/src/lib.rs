@@ -141,11 +141,6 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, u64, ContractBillingInformation, ValueQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn service_contract_bill_by_id)]
-    pub type ServiceContractBillByID<T: Config> =
-        StorageMap<_, Blake2_128Concat, u64, ServiceContractBill, ValueQuery>;
-
-    #[pallet::storage]
     #[pallet::getter(fn node_contract_resources)]
     pub type NodeContractResources<T: Config> =
         StorageMap<_, Blake2_128Concat, u64, ContractResources, ValueQuery>;
@@ -715,14 +710,14 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn service_contract_send_bill(
+        pub fn service_contract_bill(
             origin: OriginFor<T>,
             contract_id: u64,
             variable_amount: u64,
             metadata: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_service_contract_send_bill(account_id, contract_id, variable_amount, metadata)
+            Self::_service_contract_bill(account_id, contract_id, variable_amount, metadata)
         }
     }
 
@@ -1415,7 +1410,7 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn _service_contract_send_bill(
+    pub fn _service_contract_bill(
         account_id: T::AccountId,
         contract_id: u64,
         variable_amount: u64,
@@ -1466,18 +1461,57 @@ impl<T: Config> Pallet<T> {
         let bill_metadata = BoundedVec::try_from(metadata)
             .map_err(|_| Error::<T>::ServiceContractBillMetadataTooLong)?;
 
-        // Create service contract bill and insert to list
+        // Create service contract bill
         let service_contract_bill = types::ServiceContractBill {
             variable_amount,
             window,
             metadata: bill_metadata,
         };
-        ServiceContractBillByID::<T>::insert(contract.contract_id, service_contract_bill);
+
+        // Make consumer pay for service contract bill
+        Self::_service_contract_pay_bill(contract_id, service_contract_bill)?;
 
         // Update contract in list after modification
         service_contract.last_bill = now;
         contract.contract_type = types::ContractData::ServiceContract(service_contract);
         Contracts::<T>::insert(contract_id, contract);
+
+        Ok(().into())
+    }
+
+    // Bill for a service contract
+    // Calculates how much TFT is due by the consumer and pay the amount to the service
+    fn _service_contract_pay_bill(
+        contract_id: u64,
+        bill: types::ServiceContractBill,
+    ) -> DispatchResultWithPostInfo {
+        let contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+
+        let service_contract = Self::get_service_contract(&contract)?;
+
+        let amount_due = service_contract.calculate_bill_cost_tft(bill)?;
+
+        let service_twin = pallet_tfgrid::Twins::<T>::get(service_contract.service_twin_id)
+            .ok_or(Error::<T>::TwinNotExists)?;
+
+        let consumer_twin = pallet_tfgrid::Twins::<T>::get(service_contract.consumer_twin_id)
+            .ok_or(Error::<T>::TwinNotExists)?;
+
+        let usable_balance = Self::get_usable_balance(&consumer_twin.account_id);
+
+        // TODO: Handle consumer out of founds
+
+        <T as Config>::Currency::transfer(
+            &consumer_twin.account_id,
+            &service_twin.account_id,
+            amount_due.min(usable_balance),
+            ExistenceRequirement::KeepAlive,
+        )?;
+
+        log::info!(
+            "bill successfully payed by consumer for service contract with id {:?}",
+            contract_id,
+        );
 
         Ok(().into())
     }
@@ -1984,19 +2018,6 @@ impl<T: Config> Pallet<T> {
         return Err(<Error<T>>::OffchainSignedTxError);
     }
 
-    fn _handle_bill_contract_by_type(contract_id: u64) -> DispatchResultWithPostInfo {
-        let contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
-
-        match contract.contract_type {
-            types::ContractData::ServiceContract(_) => {
-                return Self::_service_contract_pay_bill(contract_id);
-            }
-            _ => (),
-        };
-
-        Ok(().into())
-    }
-
     // Remove contract from billing loop if it does not exist anymore
     fn is_contract_billing_active(contract_id: u64) -> bool {
         if !Contracts::<T>::contains_key(contract_id) {
@@ -2012,50 +2033,6 @@ impl<T: Config> Pallet<T> {
             return false;
         }
         true
-    }
-
-    // Pay a bill for a service contract
-    // Calculates how much TFT is due by the consumer and pay the amount to the service
-    fn _service_contract_pay_bill(contract_id: u64) -> DispatchResultWithPostInfo {
-        if !Self::is_contract_billing_active(contract_id) {
-            return Ok(().into());
-        }
-
-        let contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
-
-        let service_contract = Self::get_service_contract(&contract)?;
-
-        let service_contract_bill = contract.get_service_contract_bill(); // TODO: handle bill not exists
-
-        let amount_due = service_contract.calculate_bill_cost_tft(service_contract_bill)?;
-
-        // If there is nothing to be paid and the contract is not in state delete, return
-        // Can be that the users cancels the contract in the same block that it's getting billed
-        // where elapsed seconds would be 0, but we still have to distribute rewards
-        if amount_due == BalanceOf::<T>::saturated_from(0 as u128) && !contract.is_state_delete() {
-            log::debug!("amount to be billed is 0, nothing to do");
-            return Ok(().into());
-        };
-
-        let _service_twin = pallet_tfgrid::Twins::<T>::get(service_contract.service_twin_id)
-            .ok_or(Error::<T>::TwinNotExists)?;
-
-        let consumer_twin = pallet_tfgrid::Twins::<T>::get(service_contract.consumer_twin_id)
-            .ok_or(Error::<T>::TwinNotExists)?;
-
-        let _usable_balance = Self::get_usable_balance(&consumer_twin.account_id);
-
-        // If the contract is in delete state, remove all associated storage
-        if matches!(contract.state, types::ContractState::Deleted(_)) {
-            Self::remove_contract(contract.contract_id);
-        }
-
-        log::info!(
-            "bill successfully payed by consumer for service contract with id {:?}",
-            contract_id,
-        );
-
-        Ok(().into())
     }
 
     // Bills a contract (DeploymentContract or NameContract)

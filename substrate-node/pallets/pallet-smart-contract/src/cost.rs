@@ -16,10 +16,6 @@ impl<T: Config> Contract<T> {
         pallet::ContractBillingInformationByID::<T>::get(self.contract_id)
     }
 
-    pub fn get_service_contract_bill(&self) -> ServiceContractBill {
-        pallet::ServiceContractBillByID::<T>::get(self.contract_id)
-    }
-
     pub fn calculate_contract_cost_tft(
         &self,
         balance: BalanceOf<T>,
@@ -90,9 +86,9 @@ impl<T: Config> Contract<T> {
                     * U64F64::from_num(seconds_elapsed);
                 total_cost_u64f64.to_num::<u64>()
             }
-            types::ContractData::ServiceContract(service_contract) => {
-                let service_bill = self.get_service_contract_bill();
-                service_contract.calculate_bill_cost(service_bill)
+            types::ContractData::ServiceContract(_) => {
+                // cost is not calculated here for service contracts
+                0
             }
         };
 
