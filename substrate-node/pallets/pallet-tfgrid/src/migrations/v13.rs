@@ -4,6 +4,7 @@ use crate::{
 };
 use frame_support::{pallet_prelude::Weight, traits::Get, traits::OnRuntimeUpgrade};
 use log::info;
+use pallet_timestamp as timestamp;
 use sp_std::marker::PhantomData;
 use tfchain_support::resources::Resources;
 use tfchain_support::types::{ConsumableResources, Node, Power, PowerState, PowerTarget};
@@ -119,7 +120,7 @@ pub fn migrate_to_version_13<T: Config>() -> frame_support::weights::Weight {
             power: Power {
                 target: PowerTarget::Up,
                 state: PowerState::Up,
-                last_uptime: 0,
+                last_uptime: <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000,
             },
             // optional public config
             public_config: n.public_config,

@@ -5,16 +5,20 @@ use crate::{
     },
     ActiveNodeContracts, ActiveRentContractForNode, BalanceOf, BillingFrequency, Config,
     ContractBillingInformationByID, ContractID, ContractLock, Contracts as ContractsV7,
-    ContractsToBillAt, NodeContractResources, PalletVersion, CONTRACT_VERSION,
+    ContractsToBillAt, NodeContractResources, Pallet, PalletVersion, CONTRACT_VERSION,
 };
 use frame_support::{
     pallet_prelude::OptionQuery, pallet_prelude::Weight, storage_alias, traits::Get,
     traits::OnRuntimeUpgrade, Blake2_128Concat,
 };
-use frame_system::Pallet;
 use log::info;
 use sp_std::{cmp::max, collections::btree_map::BTreeMap, marker::PhantomData, vec, vec::Vec};
 use tfchain_support::{resources::Resources, types::ConsumableResources};
+
+#[cfg(feature = "try-runtime")]
+use frame_support::traits::OnRuntimeUpgradeHelpersExt;
+#[cfg(feature = "try-runtime")]
+use sp_runtime::SaturatedConversion;
 
 pub mod deprecated {
     use crate::pallet::{
@@ -123,8 +127,12 @@ impl<T: Config> OnRuntimeUpgrade for ContractMigrationV6<T> {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
-
-        info!("👥  Smart Contract pallet to V6 passes PRE migrate checks ✅",);
+        let contract_counts: u64 = Contracts::<T>::iter_keys().count() as u64;
+        Self::set_temp_storage(contract_counts, "pre_contract_count");
+        info!(
+            "👥  Smart Contract pallet to V6 passes PRE migrate checks ✅: {:?} contracts",
+            contract_counts
+        );
         Ok(())
     }
 
@@ -139,20 +147,117 @@ impl<T: Config> OnRuntimeUpgrade for ContractMigrationV6<T> {
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
-        info!("current pallet version: {:?}", PalletVersion::<T>::get());
-
+        let pre_contract_counts = Self::get_temp_storage("pre_contract_count").unwrap_or(0u64);
+        let post_contract_counts = ContractsV7::<T>::iter().count().saturated_into::<u64>();
+        assert!(
+            post_contract_counts >= pre_contract_counts,
+            "This migration should result in the same amount of contracts or more!"
+        );
+        post_migration_checks::<T>();
         info!(
-            "👥  Smart Contract pallet to {:?} passes POST migrate checks ✅",
-            PalletVersion::<T>::get()
+            "👥  Smart Contract pallet to {:?} passes POST migrate checks ✅: {:?} contracts",
+            PalletVersion::<T>::get(),
+            post_contract_counts,
         );
 
         Ok(())
     }
 }
 
+pub fn post_migration_checks<T: Config>() {
+    // lets check the contracts
+    let mut count = 0;
+    for (_, contract) in ContractsV7::<T>::iter() {
+        match contract.contract_type {
+            ContractData::NameContract(_) => {
+                assert!(
+                    is_in_contracts_to_bill::<T>(contract.contract_id), 
+                    "Name Contract with id {:?} should be in ContractsToBill!", 
+                    contract.contract_id
+                );
+            }
+            ContractData::DeploymentContract(dc) => {
+                assert!(
+                    !is_in_contracts_to_bill::<T>(contract.contract_id), 
+                    "Deployment contract with id {:?} should not be in ContractsToBill!", 
+                    contract.contract_id
+                );
+                assert!(
+                    ContractsV7::<T>::contains_key(dc.capacity_reservation_id),
+                    "Migration failure! Capacity Reservation Contract with id {:?} not found!",
+                    dc.capacity_reservation_id
+                );
+            }
+            ContractData::CapacityReservationContract(crc) => {
+                assert!(
+                    is_in_contracts_to_bill::<T>(contract.contract_id), 
+                    "Capacity Reservation Contract with id {:?} should be in ContractsToBill!", 
+                    contract.contract_id
+                );
+                let mut resources_check = Resources::empty();
+                let mut pub_ips = 0;
+                for dc_id in crc.deployment_contracts {
+                    let ctr = ContractsV7::<T>::get(dc_id).unwrap();
+                    let dc = match ctr.contract_type {
+                        ContractData::DeploymentContract(dc) => Some(dc),
+                        _ => None,
+                    }
+                    .unwrap();
+                    resources_check.add(&dc.resources);
+                    pub_ips += dc.public_ips;
+                }
+                assert_eq!(crc.resources.used_resources, resources_check, 
+                    "Migration failure! The used resources of capacity reservation contract with id {:?} are incorrect!",
+                    contract.contract_id
+                );
+                assert_eq!(
+                    crc.public_ips, pub_ips,
+                    "Migration failure! The amount of public ips for contract {:?} is incorrect!",
+                    contract.contract_id
+                );
+            }
+        }
+        count += 1; 
+    }
+    info!("Checked the migration of {:?} contracts. All good ✅", count);
+
+    // check node resources
+    count = 0;
+    for (node_id, crc_ids) in ActiveNodeContracts::<T>::iter() {
+        let node = pallet_tfgrid::Nodes::<T>::get(node_id).unwrap();
+        let mut resources_check = Resources::empty();
+        for crc_id in crc_ids {
+            let ctr = ContractsV7::<T>::get(crc_id).unwrap();
+            let crc = match ctr.contract_type {
+                ContractData::CapacityReservationContract(dc) => Some(dc),
+                _ => None,
+            }
+            .unwrap();
+            resources_check.add(&crc.resources.total_resources);
+        }
+        assert_eq!(
+            node.resources.used_resources, resources_check,
+            "Migration failure! The used resources of the node with id {:?} are incorrect!",
+            node.id,
+        );
+        count += 1;
+    }
+    info!("Checked the migration of resources in {:?} nodes. All good ✅", count);
+
+}
+
+pub fn is_in_contracts_to_bill<T: Config>(contract_id: u64) -> bool {
+    for index in 0..BillingFrequency::<T>::get() {
+        if ContractsToBillAt::<T>::get(index).contains(&contract_id) { 
+            return true;
+        }
+    }
+    false
+}
+
 pub fn migrate_to_version_7<T: Config>() -> frame_support::weights::Weight {
     info!(
-        " >>> Starting contract pallet migration, pallet version: {:?}",
+        " >>> Starting smart contract pallet migration, pallet version: {:?}",
         PalletVersion::<T>::get()
     );
 
@@ -166,6 +271,7 @@ pub fn migrate_to_version_7<T: Config>() -> frame_support::weights::Weight {
         translate_contract_objects::<T>(&mut contracts, &mut bill_index_per_contract_id);
     total_reads += reads;
     total_writes += writes;
+    info!("translated {:?} contracts", contracts.len());
 
     let (reads, writes) = write_contracts_to_bill_at::<T>(&bill_index_per_contract_id);
     total_reads += reads;
@@ -423,6 +529,10 @@ pub fn get_bill_index_per_contract_id<T: Config>() -> (BTreeMap<u64, u64>, u32) 
             bill_index_per_contract_id.insert(ctr_id, index);
         }
     }
+    info!(
+        "bill_index_per_contract is {:?}",
+        bill_index_per_contract_id.len()
+    );
 
     (bill_index_per_contract_id, reads)
 }

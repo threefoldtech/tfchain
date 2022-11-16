@@ -35,7 +35,7 @@ impl<T: Config> OnRuntimeUpgrade for ContractMigrationV5<T> {
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
-        assert!(PalletVersion::<T>::get() == types::StorageVersion::V6);
+        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V6);
 
         // Check number of Contracts against pre-check result
         let pre_contracts_count = Self::get_temp_storage("pre_contracts_count").unwrap_or(0u64);
