@@ -3850,7 +3850,7 @@ pub fn prepare_farm_with_three_nodes() {
         bounded_vec![],
         false,
         false,
-        get_serial_number_input(b"some_serial"),
+        None,
     )
     .unwrap();
     assert_eq!(
@@ -3881,7 +3881,7 @@ pub fn prepare_farm_with_three_nodes() {
         bounded_vec![],
         false,
         false,
-        get_serial_number_input(b"some_serial"),
+        None,
     )
     .unwrap();
     assert_eq!(

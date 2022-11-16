@@ -23,7 +23,10 @@ use pallet_tfgrid::{
     twin::TwinIp,
     DocumentHashInput, DocumentLinkInput, PublicIpGatewayInput, PublicIpIpInput, TwinIpInput,
 };
-use pallet_tfgrid::{CityNameInput, CountryNameInput, LatitudeInput, LongitudeInput};
+use pallet_tfgrid::{
+    CityNameInput, CountryNameInput, GW4Input, GW6Input, IP4Input, IP6Input, LatitudeInput,
+    LongitudeInput,
+};
 use parking_lot::RwLock;
 use sp_core::{
     crypto::Ss58Codec,
