@@ -3,6 +3,7 @@ use crate::pallet::{
 };
 use crate::Config;
 use codec::{Decode, Encode, MaxEncodedLen};
+use core::marker::PhantomData;
 use frame_support::{pallet_prelude::ConstU32, BoundedVec, RuntimeDebugNoBound};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
@@ -106,7 +107,7 @@ pub const MAX_METADATA_LENGTH: u32 = 64;
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
-pub struct ServiceContract {
+pub struct ServiceContract<T: Config> {
     pub service_twin_id: u32,
     pub consumer_twin_id: u32,
     pub base_fee: u64,
@@ -116,18 +117,8 @@ pub struct ServiceContract {
     pub accepted_by_consumer: bool,
     pub last_bill: u64,
     pub state: ServiceContractState,
+    pub phantom: PhantomData<T>,
 }
-
-// impl ServiceContract {
-//     pub fn get_state(&self) -> ServiceContractState {
-//         if self.accepted_by_service && self.accepted_by_consumer {
-//             return ServiceContractState::ApprovedByBoth;
-//         } else if self.base_fee.is_some() && self.metadata.is_some() {
-//             return ServiceContractState::AgreementReady;
-//         }
-//         ServiceContractState::Created
-//     }
-// }
 
 #[derive(
     PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
@@ -169,7 +160,7 @@ pub enum ContractData<T: Config> {
     CapacityReservationContract(CapacityReservationContract),
     DeploymentContract(DeploymentContract<T>),
     NameContract(NameContract<T>),
-    ServiceContract(ServiceContract),
+    ServiceContract(ServiceContract<T>),
 }
 
 // impl<T: Config> Default for ContractData<T> {

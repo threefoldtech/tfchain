@@ -2,7 +2,7 @@ use crate::pallet;
 use crate::pallet::BalanceOf;
 use crate::pallet::Error;
 use crate::types;
-use crate::types::{Contract, ContractBillingInformation, ServiceContractBill};
+use crate::types::{Contract, ContractBillingInformation, ServiceContract, ServiceContractBill};
 use crate::Config;
 use frame_support::dispatch::DispatchErrorWithPostInfo;
 use pallet_tfgrid::types as pallet_tfgrid_types;
@@ -33,7 +33,6 @@ impl<T: Config> Contract<T> {
         // - NodeContract
         // - RentContract
         // - NameContract
-        // - ServiceContract
         let total_cost = self.calculate_contract_cost(&pricing_policy, seconds_elapsed)?;
         // If cost is 0, reinsert to be billed at next interval
         if total_cost == 0 {
@@ -92,16 +91,42 @@ impl<T: Config> Contract<T> {
                 total_cost_u64f64.to_num::<u64>()
             }
             types::ContractData::ServiceContract(service_contract) => {
-                // bill user for service usage for number of seconds elapsed
-                let service_contract_bill = self.get_service_contract_bill();
-                let contract_cost = U64F64::from_num(service_contract.base_fee)
-                    * U64F64::from_num(service_contract_bill.window / 3600)
-                    + U64F64::from_num(service_contract_bill.variable_amount);
-                contract_cost.round().to_num::<u64>()
+                let service_bill = self.get_service_contract_bill();
+                service_contract.calculate_bill_cost(service_bill)
             }
         };
 
         Ok(total_cost)
+    }
+}
+
+impl<T: Config> ServiceContract<T> {
+    pub fn calculate_bill_cost_tft(
+        &self,
+        service_bill: ServiceContractBill,
+    ) -> Result<BalanceOf<T>, DispatchErrorWithPostInfo> {
+        // Calculate the cost in mUSD for service contract bill
+        let total_cost = self.calculate_bill_cost(service_bill);
+
+        if total_cost == 0 {
+            return Ok(BalanceOf::<T>::saturated_from(0 as u128));
+        }
+
+        // Calculate the cost in TFT for service contract
+        let total_cost_tft_64 = calculate_cost_in_tft_from_musd::<T>(total_cost)?;
+
+        // convert to balance object
+        let amount_due: BalanceOf<T> = BalanceOf::<T>::saturated_from(total_cost_tft_64);
+
+        return Ok(amount_due);
+    }
+
+    pub fn calculate_bill_cost(&self, service_bill: ServiceContractBill) -> u64 {
+        // bill user for service usage for elpased usage (window) in seconds
+        let contract_cost = U64F64::from_num(self.base_fee)
+            * U64F64::from_num(service_bill.window / 3600)
+            + U64F64::from_num(service_bill.variable_amount);
+        contract_cost.round().to_num::<u64>()
     }
 }
 

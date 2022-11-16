@@ -1,3 +1,5 @@
+use core::marker::PhantomData;
+
 use super::{types, Event as SmartContractEvent};
 use crate::{mock::Event as MockEvent, mock::*, test_utils::*, Error};
 
@@ -1625,6 +1627,13 @@ fn test_service_contract_reject_works() {
                 contract_id: 1,
             })),
         );
+    });
+}
+
+#[test]
+fn test_service_contract_send_bill_works() {
+    new_test_ext().execute_with(|| {
+        // TODO
     });
 }
 
@@ -4516,8 +4525,8 @@ fn prepare_service_consumer_contract() {
     ));
 }
 
-fn get_service_contract() -> types::ServiceContract {
-    types::ServiceContract {
+fn get_service_contract() -> types::ServiceContract<TestRuntime> {
+    types::ServiceContract::<TestRuntime> {
         service_twin_id: 1,  //Alice
         consumer_twin_id: 2, //Bob
         base_fee: 0,
@@ -4527,5 +4536,6 @@ fn get_service_contract() -> types::ServiceContract {
         accepted_by_consumer: false,
         last_bill: 0,
         state: types::ServiceContractState::Created,
+        phantom: PhantomData,
     }
 }

@@ -1,5 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use core::marker::PhantomData;
 use frame_support::{
     dispatch::DispatchErrorWithPostInfo,
     ensure,
@@ -714,14 +715,14 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn service_contract_bill(
+        pub fn service_contract_send_bill(
             origin: OriginFor<T>,
             contract_id: u64,
             variable_amount: u64,
             metadata: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_service_contract_bill(account_id, contract_id, variable_amount, metadata)
+            Self::_service_contract_send_bill(account_id, contract_id, variable_amount, metadata)
         }
     }
 
@@ -1227,6 +1228,7 @@ impl<T: Config> Pallet<T> {
             accepted_by_consumer: false,
             last_bill: 0,
             state: types::ServiceContractState::Created,
+            phantom: PhantomData,
         };
 
         let contract = Self::_create_contract(
@@ -1360,10 +1362,14 @@ impl<T: Config> Pallet<T> {
 
         // If both parties (service and consumer) accept then contract is approved and can be billed
         if service_contract.accepted_by_service && service_contract.accepted_by_consumer {
+            // Change contract state to approved and emit event
             service_contract.state = types::ServiceContractState::ApprovedByBoth;
-            let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-            service_contract.last_bill = now; // Initialize billing period
             Self::deposit_event(Event::ServiceContractApproved { contract_id });
+            // Initialize billing time
+            let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+            service_contract.last_bill = now;
+            // Start billing inserting contract in billing loop
+            Self::insert_contract_to_bill(contract_id);
         }
 
         // Update contract in list after modification
@@ -1409,7 +1415,7 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn _service_contract_bill(
+    pub fn _service_contract_send_bill(
         account_id: T::AccountId,
         contract_id: u64,
         variable_amount: u64,
@@ -1439,12 +1445,12 @@ impl<T: Config> Pallet<T> {
 
         // Get elapsed time (in seconds) to bill for service
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-        let elapsed_time = now - service_contract.last_bill;
+        let elapsed_seconds_since_last_bill = now - service_contract.last_bill;
 
         // Billing time (window) is max 1h by design
         // So extra time will not be billed
         // It is service responsability to bill on rigth frequency
-        let window = elapsed_time.min(3600);
+        let window = elapsed_seconds_since_last_bill.min(3600);
 
         // Billing variable amount is bounded by contract variable fee
         ensure!(
@@ -1978,10 +1984,21 @@ impl<T: Config> Pallet<T> {
         return Err(<Error<T>>::OffchainSignedTxError);
     }
 
-    // Bills a contract (DeploymentContract or NameContract)
-    // Calculates how much TFT is due by the user and distributes the rewards
-    fn bill_contract(contract_id: u64) -> DispatchResultWithPostInfo {
-        // Clean up contract from billing loop if it does not exist anymore
+    fn _handle_bill_contract_by_type(contract_id: u64) -> DispatchResultWithPostInfo {
+        let contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+
+        match contract.contract_type {
+            types::ContractData::ServiceContract(_) => {
+                return Self::_service_contract_pay_bill(contract_id);
+            }
+            _ => (),
+        };
+
+        Ok(().into())
+    }
+
+    // Remove contract from billing loop if it does not exist anymore
+    fn is_contract_billing_active(contract_id: u64) -> bool {
         if !Contracts::<T>::contains_key(contract_id) {
             log::debug!("cleaning up deleted contract from storage");
 
@@ -1992,6 +2009,59 @@ impl<T: Config> Pallet<T> {
             contracts.retain(|&c| c != contract_id);
             ContractsToBillAt::<T>::insert(index, contracts);
 
+            return false;
+        }
+        true
+    }
+
+    // Pay a bill for a service contract
+    // Calculates how much TFT is due by the consumer and pay the amount to the service
+    fn _service_contract_pay_bill(contract_id: u64) -> DispatchResultWithPostInfo {
+        if !Self::is_contract_billing_active(contract_id) {
+            return Ok(().into());
+        }
+
+        let contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+
+        let service_contract = Self::get_service_contract(&contract)?;
+
+        let service_contract_bill = contract.get_service_contract_bill(); // TODO: handle bill not exists
+
+        let amount_due = service_contract.calculate_bill_cost_tft(service_contract_bill)?;
+
+        // If there is nothing to be paid and the contract is not in state delete, return
+        // Can be that the users cancels the contract in the same block that it's getting billed
+        // where elapsed seconds would be 0, but we still have to distribute rewards
+        if amount_due == BalanceOf::<T>::saturated_from(0 as u128) && !contract.is_state_delete() {
+            log::debug!("amount to be billed is 0, nothing to do");
+            return Ok(().into());
+        };
+
+        let _service_twin = pallet_tfgrid::Twins::<T>::get(service_contract.service_twin_id)
+            .ok_or(Error::<T>::TwinNotExists)?;
+
+        let consumer_twin = pallet_tfgrid::Twins::<T>::get(service_contract.consumer_twin_id)
+            .ok_or(Error::<T>::TwinNotExists)?;
+
+        let _usable_balance = Self::get_usable_balance(&consumer_twin.account_id);
+
+        // If the contract is in delete state, remove all associated storage
+        if matches!(contract.state, types::ContractState::Deleted(_)) {
+            Self::remove_contract(contract.contract_id);
+        }
+
+        log::info!(
+            "bill successfully payed by consumer for service contract with id {:?}",
+            contract_id,
+        );
+
+        Ok(().into())
+    }
+
+    // Bills a contract (DeploymentContract or NameContract)
+    // Calculates how much TFT is due by the user and distributes the rewards
+    fn bill_contract(contract_id: u64) -> DispatchResultWithPostInfo {
+        if !Self::is_contract_billing_active(contract_id) {
             return Ok(().into());
         }
 
@@ -2713,7 +2783,7 @@ impl<T: Config> Pallet<T> {
 
     pub fn get_service_contract(
         contract: &types::Contract<T>,
-    ) -> Result<types::ServiceContract, DispatchErrorWithPostInfo> {
+    ) -> Result<types::ServiceContract<T>, DispatchErrorWithPostInfo> {
         match contract.contract_type.clone() {
             types::ContractData::ServiceContract(c) => Ok(c),
             _ => {
