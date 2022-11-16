@@ -36,7 +36,7 @@ pub mod deprecated {
         pub certification: NodeCertification,
         pub secure_boot: bool,
         pub virtualized: bool,
-        pub serial_number: SerialNumber,
+        pub serial_number: Option<SerialNumber>,
         pub connection_price: u32,
     }
 

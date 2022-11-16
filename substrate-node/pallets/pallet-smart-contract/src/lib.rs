@@ -1394,10 +1394,6 @@ impl<T: Config> Pallet<T> {
             if !Contracts::<T>::contains_key(report.contract_id) {
                 continue;
             }
-            if !ContractBillingInformationByID::<T>::contains_key(report.contract_id) {
-                continue;
-            }
-
             // we know contract exists, fetch it
             // if the node is trying to send garbage data we can throw an error here
             let contract =
@@ -1411,6 +1407,9 @@ impl<T: Config> Pallet<T> {
                 capacity_reservation_contract.node_id == node_id,
                 Error::<T>::NodeNotAuthorizedToComputeReport
             );
+            if !ContractBillingInformationByID::<T>::contains_key(contract_cr.contract_id) {
+                continue;
+            }
 
             Self::_calculate_report_cost(contract_cr.contract_id, &report, &pricing_policy);
             Self::deposit_event(Event::NruConsumptionReportReceived(report.clone()));
