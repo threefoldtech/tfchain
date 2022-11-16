@@ -770,7 +770,7 @@ pub type Executive = frame_executive::Executive<
         pallet_tfgrid::migrations::v11::FixFarmingPolicy<Runtime>,*/
         pallet_tfgrid::migrations::v12::InputValidation<Runtime>,
         
-        pallet_tfgrid::migrations::v13::NodeMigrationV11<Runtime>,
+        pallet_tfgrid::migrations::v13::NodeMigration<Runtime>,
         pallet_smart_contract::migrations::v7::ContractMigrationV6<Runtime>,
     ),
 >;
