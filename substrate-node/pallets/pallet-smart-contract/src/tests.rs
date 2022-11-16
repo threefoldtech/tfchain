@@ -1618,6 +1618,7 @@ fn test_service_contract_reject_works() {
                 TestRuntime,
             >::ServiceContractCanceled {
                 service_contract_id: 1,
+                cause: types::Cause::CanceledByUser,
             })),
         );
     });

@@ -329,6 +329,7 @@ pub mod pallet {
         /// A Service contract is canceled
         ServiceContractCanceled {
             service_contract_id: u64,
+            cause: types::Cause,
         },
         /// IP got reserved by a Node contract
         IPsReserved {
@@ -450,6 +451,7 @@ pub mod pallet {
         TwinNotAuthorizedToSetFees,
         TwinNotAuthorizedToApproveServiceContract,
         TwinNotAuthorizedToRejectServiceContract,
+        TwinNotAuthorizedToCancelServiceContract,
         TwinNotAuthorizedToBillServiceContract,
         ServiceContractNotExists,
         ServiceContractModificationNotAllowed,
@@ -729,14 +731,18 @@ pub mod pallet {
             Self::_service_contract_reject(account_id, service_contract_id)
         }
 
-        // #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        // pub fn service_contract_cancel(
-        //     origin: OriginFor<T>,
-        //     service_contract_id: u64,
-        // ) -> DispatchResultWithPostInfo {
-        //     let account_id = ensure_signed(origin)?;
-        //     Self::_service_contract_cancel(account_id, service_contract_id)
-        // }
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        pub fn service_contract_cancel(
+            origin: OriginFor<T>,
+            service_contract_id: u64,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_service_contract_cancel(
+                account_id,
+                service_contract_id,
+                types::Cause::CanceledByUser,
+            )
+        }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn service_contract_bill(
@@ -1433,15 +1439,47 @@ impl<T: Config> Pallet<T> {
             ));
         }
 
-        // If one party (service or consumer) rejects then contract
-        // is canceled and removed from service contract map
-        // Self::_service_contract_cancel(service_contract_id);
-        // TODO
-        // info!("removing service contract");
+        // If one party (service or consumer) rejects agreement
+        // then contract is canceled and removed from service contract map
+        Self::_service_contract_cancel(
+            account_id,
+            service_contract_id,
+            types::Cause::CanceledByUser,
+        )?;
+
+        Ok(().into())
+    }
+
+    #[transactional]
+    pub fn _service_contract_cancel(
+        account_id: T::AccountId,
+        service_contract_id: u64,
+        cause: types::Cause,
+    ) -> DispatchResultWithPostInfo {
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
+            .ok_or(Error::<T>::TwinNotExists)?;
+
+        let service_contract = ServiceContracts::<T>::get(service_contract_id)
+            .ok_or(Error::<T>::ServiceContractNotExists)?;
+
+        // Only service or consumer can cancel contract
+        ensure!(
+            twin_id == service_contract.service_twin_id
+                || twin_id == service_contract.consumer_twin_id,
+            Error::<T>::TwinNotAuthorizedToCancelServiceContract,
+        );
+
+        // Remove contract from service contract map
         ServiceContracts::<T>::remove(service_contract_id);
         Self::deposit_event(Event::ServiceContractCanceled {
             service_contract_id,
+            cause,
         });
+
+        log::info!(
+            "successfully removed service contract with id {:?}",
+            service_contract_id,
+        );
 
         Ok(().into())
     }
@@ -1532,10 +1570,23 @@ impl<T: Config> Pallet<T> {
         let usable_balance = Self::get_usable_balance(&consumer_twin.account_id);
 
         // Handle consumer out of funds
-        ensure!(
-            usable_balance >= amount_due,
-            Error::<T>::ServiceContractNotEnoughFundToPayBill,
-        );
+        // ensure!(
+        //     usable_balance >= amount_due,
+        //     Error::<T>::ServiceContractNotEnoughFundToPayBill,
+        // );
+
+        // If consumer is out of funds then contract is canceled
+        // by service and removed from service contract map
+        if usable_balance < amount_due {
+            Self::_service_contract_cancel(
+                service_twin.account_id,
+                service_contract_id,
+                types::Cause::OutOfFunds,
+            )?;
+            return Err(DispatchErrorWithPostInfo::from(
+                Error::<T>::ServiceContractNotEnoughFundToPayBill,
+            ));
+        }
 
         // Transfer amount due from consumer account to service account
         <T as Config>::Currency::transfer(
