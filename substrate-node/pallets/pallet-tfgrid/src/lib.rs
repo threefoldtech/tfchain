@@ -9,8 +9,8 @@ use sp_std::prelude::*;
 use codec::Encode;
 use frame_support::dispatch::DispatchErrorWithPostInfo;
 use frame_support::{
-    ensure, pallet_prelude::DispatchResultWithPostInfo, traits::EnsureOrigin,
-    weights::Pays, BoundedVec,
+    ensure, pallet_prelude::DispatchResultWithPostInfo, traits::EnsureOrigin, weights::Pays,
+    BoundedVec,
 };
 use frame_system::{self as system, ensure_signed};
 use hex::FromHex;
@@ -667,6 +667,7 @@ pub mod pallet {
 
         UnauthorizedToChangePowerState,
         UnauthorizedToChangePowerTarget,
+        NotEnoughResourcesOnNode,
     }
 
     #[pallet::genesis_config]
@@ -2153,18 +2154,17 @@ impl<T: Config> Pallet<T> {
         );
         let node_id = NodeIdByTwinID::<T>::get(twin_id);
         let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-
         //if the power state is not correct => change it and emit event
         if node.power.state != power_state {
             node.power.state = power_state.clone();
 
+            Nodes::<T>::insert(node.id, &node);
             Self::deposit_event(Event::PowerStateChanged {
                 farm_id: node.farm_id,
                 node_id: node_id,
                 power_state: power_state,
             });
         }
-        Nodes::<T>::insert(node.id, &node);
 
         Ok(Pays::No.into())
     }
@@ -2187,32 +2187,79 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    fn _change_power_target_on_node(
-        node: &mut TfgridNode<T>,
-        power_target: PowerTarget,
-    ) {
+    fn _change_power_target_on_node(node: &mut TfgridNode<T>, power_target: PowerTarget) {
+        let node_id = node.id;
+        let farm_id = node.farm_id;
+        node.power.target = power_target.clone();
+        Nodes::<T>::insert(node_id, node);
         Self::deposit_event(Event::PowerTargetChanged {
-            farm_id: node.farm_id,
-            node_id: node.id,
+            farm_id: farm_id,
+            node_id: node_id,
             power_target: power_target.clone(),
         });
-        node.power.target = power_target;
-        Nodes::<T>::insert(node.id, node);
     }
 
-    fn node_resources_changed(node_id: u32) -> DispatchResultWithPostInfo {
+    fn _change_used_resources_on_node(
+        node_id: u32,
+        to_free: Resources,
+        to_claim: Resources,
+    ) -> DispatchResultWithPostInfo {
         let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-        let power_target = if node.can_be_shutdown() && node.is_up() {
-            Some(PowerTarget::Down)
-        } else if !node.can_be_shutdown() && !node.is_up() {
-            Some(PowerTarget::Up)
-        } else {
-            None
-        };
-        log::info!("Yeees: {:?}", power_target);
-        if let Some(change_in_power_target) = power_target {
-            Self::_change_power_target_on_node(&mut node, change_in_power_target);
+
+        node.resources.free(&to_free);
+
+        ensure!(
+            node.resources.can_consume_resources(&to_claim),
+            Error::<T>::NotEnoughResourcesOnNode
+        );
+        node.resources.consume(&to_claim);
+
+        if !node.is_up() && !node.can_be_shutdown() {
+            // is down and shouldn't be so bring it up
+            Self::_change_power_target_on_node(&mut node, PowerTarget::Up);
+        } else if node.is_up() && node.can_be_shutdown() {
+            // is up and should be down
+            Self::_change_power_target_on_node(&mut node, PowerTarget::Down);
         }
+
+        Nodes::<T>::insert(node.id, &node);
+        Self::deposit_event(Event::NodeUpdated(node));
+
+        Ok(().into())
+    }
+
+    fn _claim_resources_on_node(node_id: u32, resources: Resources) -> DispatchResultWithPostInfo {
+        let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+
+        ensure!(
+            node.resources.can_consume_resources(&resources),
+            Error::<T>::NotEnoughResourcesOnNode
+        );
+        //update the available resources
+        node.resources.consume(&resources);
+
+        if !node.is_up() {
+            Self::_change_power_target_on_node(&mut node, PowerTarget::Up);
+        }
+
+        Nodes::<T>::insert(node.id, &node);
+
+        Ok(().into())
+    }
+
+    fn _unclaim_resources_on_node(
+        node_id: u32,
+        resources: Resources,
+    ) -> DispatchResultWithPostInfo {
+        let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+
+        node.resources.free(&resources);
+
+        if node.can_be_shutdown() {
+            Self::_change_power_target_on_node(&mut node, PowerTarget::Down);
+        }
+
+        Nodes::<T>::insert(node.id, &node);
 
         Ok(().into())
     }
@@ -2608,10 +2655,11 @@ impl<T: Config> tfchain_support::traits::Tfgrid<T::AccountId, T::FarmName, palle
         }
     }
 
-    fn node_resources_changed(node_id: u32) {
-        match Self::node_resources_changed(node_id) {
-            Ok(_) => (),
-            Err(e) => log::error!("Failed executing node_resources_changed: {:?}", e),
-        }
+    fn change_used_resources_on_node(
+        node_id: u32,
+        to_free: Resources,
+        to_consume: Resources,
+    ) -> DispatchResultWithPostInfo {
+        Self::_change_used_resources_on_node(node_id, to_free, to_consume)
     }
 }
