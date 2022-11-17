@@ -2162,6 +2162,7 @@ impl<T: Config> Pallet<T> {
                 node_id: node_id,
                 power_state: power_state,
             });
+            Self::deposit_event(Event::NodeUpdated(node));
         }
 
         Ok(Pays::No.into())
