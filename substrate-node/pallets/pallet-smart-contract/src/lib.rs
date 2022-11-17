@@ -1540,39 +1540,6 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    fn _claim_resources_on_node(node_id: u32, resources: Resources) -> DispatchResultWithPostInfo {
-        let mut node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-
-        ensure!(
-            node.resources.can_consume_resources(&resources),
-            Error::<T>::NotEnoughResourcesOnNode
-        );
-        //update the available resources
-        node.resources.consume(&resources);
-
-        pallet_tfgrid::Nodes::<T>::insert(node.id, &node);
-
-        T::Tfgrid::node_resources_changed(node.id);
-
-        Ok(().into())
-    }
-
-    fn _unclaim_resources_on_node(
-        node_id: u32,
-        resources: Resources,
-    ) -> DispatchResultWithPostInfo {
-        let mut node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-
-        //update the available resources
-        node.resources.free(&resources);
-
-        pallet_tfgrid::Nodes::<T>::insert(node.id, &node);
-
-        T::Tfgrid::node_resources_changed(node.id);
-
-        Ok(().into())
-    }
-
     fn _change_used_resources_on_capacity_reservation(
         capacity_reservation_id: u64,
         to_free: Resources,
