@@ -1,7 +1,7 @@
 use crate::{
     types::{
         CapacityReservationContract, Contract, ContractBillingInformation, ContractData,
-        ContractState, DeploymentContract, NameContract, StorageVersion,
+        ContractState, Deployment, NameContract, StorageVersion,
     },
     ActiveNodeContracts, ActiveRentContractForNode, BalanceOf, BillingFrequency, Config,
     ContractBillingInformationByID, ContractID, ContractLock, Contracts as ContractsV7,
@@ -176,7 +176,7 @@ pub fn post_migration_checks<T: Config>() {
                     contract.contract_id
                 );
             }
-            ContractData::DeploymentContract(dc) => {
+            ContractData::Deployment(dc) => {
                 assert!(
                     !is_in_contracts_to_bill::<T>(contract.contract_id), 
                     "Deployment contract with id {:?} should not be in ContractsToBill!", 
@@ -199,7 +199,7 @@ pub fn post_migration_checks<T: Config>() {
                 for dc_id in crc.deployment_contracts {
                     let ctr = ContractsV7::<T>::get(dc_id).unwrap();
                     let dc = match ctr.contract_type {
-                        ContractData::DeploymentContract(dc) => Some(dc),
+                        ContractData::Deployment(dc) => Some(dc),
                         _ => None,
                     }
                     .unwrap();
@@ -330,7 +330,7 @@ pub fn remove_deployment_contracts_from_contracts_to_bill<T: Config>(
         let mut modified = false;
         contract_ids.retain(|id| {
             if let Some(c) = contracts.get(id) {
-                let res = !matches!(c.contract_type, ContractData::DeploymentContract(_));
+                let res = !matches!(c.contract_type, ContractData::Deployment(_));
                 modified |= res;
                 res
             } else {
@@ -393,7 +393,7 @@ pub fn translate_contract_objects<T: Config>(
                 bill_index_per_contract_id.remove(&ctr.contract_id);
 
                 // create the deployment contract
-                let dc = DeploymentContract {
+                let dc = Deployment {
                     capacity_reservation_id: crc_id,
                     deployment_hash: nc.deployment_hash,
                     deployment_data: nc.deployment_data.clone(),
@@ -435,7 +435,7 @@ pub fn translate_contract_objects<T: Config>(
                         contract_lock: contract_lock_dc,
                     });
 
-                ContractData::DeploymentContract(dc)
+                ContractData::Deployment(dc)
             }
             deprecated::ContractData::NameContract(nc) => {
                 ContractData::NameContract(NameContract { name: nc.name })
