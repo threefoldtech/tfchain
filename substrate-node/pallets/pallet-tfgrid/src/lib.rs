@@ -668,6 +668,7 @@ pub mod pallet {
         UnauthorizedToChangePowerState,
         UnauthorizedToChangePowerTarget,
         NotEnoughResourcesOnNode,
+        ResourcesUsedByActiveContracts,
     }
 
     #[pallet::genesis_config]
@@ -1187,6 +1188,17 @@ pub mod pallet {
 
             ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
 
+            // we can only reduce as much as we have free resources on our node
+            let resources_reduction = stored_node
+                .resources
+                .calculate_reduction_in_resources(&resources);
+            ensure!(
+                stored_node
+                    .resources
+                    .can_consume_resources(&resources_reduction),
+                Error::<T>::ResourcesUsedByActiveContracts
+            );
+
             let old_node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
 
             // If the farm ID changed on the node,
@@ -1223,7 +1235,6 @@ pub mod pallet {
             }
 
             stored_node.farm_id = farm_id;
-            //TODO check that updating resources is possible!
             stored_node.resources.total_resources = node_resources;
             stored_node.location = node_location;
             stored_node.interfaces = node_interfaces;

@@ -1167,14 +1167,14 @@ impl<T: Config> Pallet<T> {
         match contract_type {
             types::ContractData::DeploymentContract(ref mut c) => {
                 Self::_reserve_ip(id, c)?;
+                Self::_add_deployment_contract_to_capacity_reservation_contract(
+                    c.capacity_reservation_id,
+                    id,
+                )?;
                 Self::_change_used_resources_on_capacity_reservation(
                     c.capacity_reservation_id,
                     Resources::empty(),
                     c.resources,
-                )?;
-                Self::_add_deployment_contract_to_capacity_reservation_contract(
-                    c.capacity_reservation_id,
-                    id,
                 )?;
             }
             types::ContractData::CapacityReservationContract(ref mut c) => {
