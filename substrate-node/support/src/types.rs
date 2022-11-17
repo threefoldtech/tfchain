@@ -1,3 +1,4 @@
+use super::resources::Resources;
 use codec::{Decode, Encode, MaxEncodedLen};
 use core::cmp::{Ord, Ordering, PartialOrd};
 use frame_support::{traits::ConstU32, BoundedVec};
@@ -109,6 +110,25 @@ impl Default for PowerTarget {
     }
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
+pub enum PowerState {
+    Up,
+    Down(u32),
+}
+
+impl Default for PowerState {
+    fn default() -> PowerState {
+        PowerState::Up
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+pub struct Power {
+    pub target: PowerTarget,
+    pub state: PowerState,
+    pub last_uptime: u64,
+}
+
 #[derive(
     PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
 )]
@@ -126,33 +146,35 @@ impl ConsumableResources {
     }
 
     pub fn consume(&mut self, resources: &Resources) {
-        self.used_resources = self.used_resources.add(&resources);
+        self.used_resources.add(&resources);
     }
 
     pub fn free(&mut self, resources: &Resources) {
-        self.used_resources = self.used_resources.substract(&resources);
+        self.used_resources.substract(&resources);
     }
 
     pub fn calculate_increase_in_resources(&self, resources: &Resources) -> Resources {
-        resources.substract(&self.total_resources)
+        let mut increase = resources.clone();
+        increase.substract(&self.total_resources);
+        increase
     }
 
     pub fn calculate_reduction_in_resources(&self, resources: &Resources) -> Resources {
-        self.total_resources.substract(&resources)
+        let mut reduction = self.total_resources.clone();
+        reduction.substract(&resources);
+        reduction
     }
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct Node<PubConfig, If> {
+pub struct Node<Location, PubConfig, If, SerialNumber> {
     pub version: u32,
     pub id: u32,
     pub farm_id: u32,
     pub twin_id: u32,
     pub resources: ConsumableResources,
     pub location: Location,
-    pub country: Vec<u8>,
-    pub city: Vec<u8>,
-    pub power_target: PowerTarget,
+    pub power: Power,
     // optional public config
     pub public_config: Option<PubConfig>,
     pub created: u64,
@@ -161,13 +183,16 @@ pub struct Node<PubConfig, If> {
     pub certification: NodeCertification,
     pub secure_boot: bool,
     pub virtualized: bool,
-    pub serial_number: Vec<u8>,
+    pub serial_number: Option<SerialNumber>,
     pub connection_price: u32,
 }
 
-impl<PubConfig, If> Node<PubConfig, If> {
+impl<Location, PubConfig, If, SerialNumber> Node<Location, PubConfig, If, SerialNumber> {
     pub fn can_be_shutdown(&self) -> bool {
         self.resources.used_resources.is_empty()
+    }
+    pub fn is_up(&self) -> bool {
+        matches!(self.power.state, PowerState::Up)
     }
 }
 
@@ -189,89 +214,6 @@ pub struct PublicConfig<IP4, IP6, Domain> {
 pub struct IP<IpAddr, Gw> {
     pub ip: IpAddr,
     pub gw: Gw,
-}
-
-#[derive(
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Clone,
-    Encode,
-    Decode,
-    Default,
-    Debug,
-    TypeInfo,
-    Copy,
-    MaxEncodedLen,
-)]
-pub struct Resources {
-    pub hru: u64,
-    pub sru: u64,
-    pub cru: u64,
-    pub mru: u64,
-}
-
-impl Resources {
-    pub fn empty() -> Resources {
-        Resources {
-            hru: 0,
-            sru: 0,
-            cru: 0,
-            mru: 0,
-        }
-    }
-
-    pub fn is_empty(self) -> bool {
-        self.cru == 0 && self.sru == 0 && self.hru == 0 && self.mru == 0
-    }
-
-    pub fn add(mut self, other: &Resources) -> Resources {
-        self.cru += other.cru;
-        self.sru += other.sru;
-        self.hru += other.hru;
-        self.mru += other.mru;
-        self
-    }
-
-    pub fn can_substract(self, other: &Resources) -> bool {
-        self.cru >= other.cru
-            && self.sru >= other.sru
-            && self.hru >= other.hru
-            && self.mru >= other.mru
-    }
-
-    pub fn substract(mut self, other: &Resources) -> Resources {
-        self.cru = if self.cru < other.cru {
-            0
-        } else {
-            self.cru - other.cru
-        };
-        self.sru = if self.sru < other.sru {
-            0
-        } else {
-            self.sru - other.sru
-        };
-        self.hru = if self.hru < other.hru {
-            0
-        } else {
-            self.hru - other.hru
-        };
-        self.mru = if self.mru < other.mru {
-            0
-        } else {
-            self.mru - other.mru
-        };
-
-        self
-    }
-}
-
-// Store Location long and lat as string
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct Location {
-    pub longitude: Vec<u8>,
-    pub latitude: Vec<u8>,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, TypeInfo, Copy)]

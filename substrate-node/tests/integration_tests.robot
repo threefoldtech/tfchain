@@ -7,9 +7,10 @@ Library            OperatingSystem
 
 
 *** Variables ***
-&{RESOURCES_N1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}
-&{RESOURCES_N2}    hru=${512}    sru=${256}    cru=${4}    mru=${8}
-&{RESOURCES_N3}    hru=${2048}    sru=${1024}    cru=${16}    mru=${32}
+${GIGABYTE}        ${1073741824}
+&{RESOURCES_N1}    hru=${${1024}*${GIGABYTE}}    sru=${${1024}*${GIGABYTE}}    cru=${8}    mru=${${16}*${GIGABYTE}}
+&{RESOURCES_N2}    hru=${${512}*${GIGABYTE}}    sru=${${512}*${GIGABYTE}}    cru=${4}    mru=${${8}*${GIGABYTE}}
+&{RESOURCES_N3}    hru=${${2048}*${GIGABYTE}}    sru=${${2048}*${GIGABYTE}}    cru=${16}    mru=${${32}*${GIGABYTE}}
 
 *** Keywords ***
 Public Ips Should Contain Ip
@@ -46,8 +47,8 @@ Setup Network And Create Three nodes
     Setup Predefined Account    who=Charlie
 
     Create Node    farm_id=${1}    resources=&{RESOURCES_N1}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent    who=Alice
-    Create Node    farm_id=${1}    resources=&{RESOURCES_N2}    longitude=872.15414    latitude=86748.6587    country=Belgium    city=Ghent    who=Bob
-    Create Node    farm_id=${1}    resources=&{RESOURCES_N3}    longitude=254.54545    latitude=3213.6987    country=Belgium    city=Ghent    who=Charlie
+    Create Node    farm_id=${1}    resources=&{RESOURCES_N2}    longitude=72.15414    latitude=48.6587    country=Belgium    city=Ghent    who=Bob
+    Create Node    farm_id=${1}    resources=&{RESOURCES_N3}    longitude=54.54545    latitude=13.6987    country=Belgium    city=Ghent    who=Charlie
 
 Create Interface
     [Arguments]    ${name}    ${mac}    ${ips}
@@ -227,12 +228,12 @@ Test Create Update Delete Node
     Create Node    farm_id=${1}    resources=&{RESOURCES_N1}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
     ${node} =    Get Node    ${1}
     Should Not Be Equal    ${node}    ${None}
-    Should Be Equal    ${node}[city]    Ghent
+    Should Be Equal    ${node}[location][city]    Ghent
 
     Update Node    node_id=${1}    farm_id=${1}    resources=&{RESOURCES_N1}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Celles
     ${node} =    Get Node    ${1}
     Should Not Be Equal    ${node}    ${None}
-    Should Be Equal    ${node}[city]    Celles
+    Should Be Equal    ${node}[location][city]    Celles
 
     Delete Node    ${1}
     ${node} =    Get Node    ${1}

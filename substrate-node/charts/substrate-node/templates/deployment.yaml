@@ -165,7 +165,7 @@ spec:
             "insert",
             "--keystore-path=/keystore",
             "--key-type", "smct",
-            "--suri","/keys/scmt",
+            "--suri","/keys/smct",
             "--scheme=sr25519"
           ]
           volumeMounts:

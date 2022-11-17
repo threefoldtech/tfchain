@@ -1,8 +1,6 @@
-use core::marker::PhantomData;
-
 use super::{types, Event as SmartContractEvent};
+use crate::cost;
 use crate::{mock::Event as MockEvent, mock::*, test_utils::*, Error};
-
 use frame_support::{
     assert_noop, assert_ok, bounded_vec,
     traits::{LockableCurrency, WithdrawReasons},
@@ -10,18 +8,20 @@ use frame_support::{
     BoundedVec,
 };
 use frame_system::{EventRecord, Phase, RawOrigin};
+use log::info;
+use pallet_tfgrid::{
+    types::{self as pallet_tfgrid_types, LocationInput},
+    ResourcesInput,
+};
 use sp_core::H256;
 use sp_runtime::{assert_eq_error_rate, traits::SaturatedConversion, Perbill, Percent};
 use sp_std::convert::{TryFrom, TryInto};
 use substrate_fixed::types::U64F64;
-
-use crate::cost;
-use log::info;
-use pallet_tfgrid::types as pallet_tfgrid_types;
 use tfchain_support::types::{
-    CapacityReservationPolicy, ConsumableResources, FarmCertification, Location, NodeCertification,
-    NodeFeatures, PowerTarget, PublicConfig, PublicIP, Resources, IP,
+    CapacityReservationPolicy, ConsumableResources, NodeFeatures, PowerState, PowerTarget,
+    PublicConfig, IP,
 };
+use tfchain_support::types::{FarmCertification, NodeCertification, PublicIP};
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -160,14 +160,14 @@ fn test_create_capacity_contract_reservation_finding_node_using_group() {
                 public_ips: 0,
                 resources: ConsumableResources {
                     total_resources: resources_c1(),
-                    used_resources: Resources::empty(),
+                    used_resources: ResourcesInput::empty(),
                 },
                 deployment_contracts: vec![],
             })
         );
         assert_eq!(
             TfgridModule::nodes(1).unwrap().resources.used_resources,
-            resources_c1().add(&resources_c1())
+            ResourcesInput::sum(&resources_c1(), &resources_c1())
         );
     });
 }
@@ -198,16 +198,13 @@ fn test_capacity_reservation_contract_with_policy_any_and_features_works() {
                 public_ips: 0,
                 resources: ConsumableResources {
                     total_resources: resources_c3(),
-                    used_resources: Resources::empty(),
+                    used_resources: ResourcesInput::empty(),
                 },
                 deployment_contracts: vec![],
             })
         );
 
-        assert_eq!(
-            TfgridModule::nodes(3).unwrap().power_target,
-            PowerTarget::Up
-        );
+        assert_eq!(TfgridModule::nodes(3).unwrap().power.state, PowerState::Up);
     });
 }
 
@@ -319,7 +316,7 @@ fn test_create_deployment_contract_with_public_ips_works() {
             generate_deployment_hash(),
             get_deployment_data(),
             get_resources(),
-            1,
+            2,
         ));
 
         let deployment_contract = SmartContractModule::contracts(1).unwrap();
@@ -329,15 +326,21 @@ fn test_create_deployment_contract_with_public_ips_works() {
                 let farm = TfgridModule::farms(1).unwrap();
                 assert_eq!(farm.public_ips[0].contract_id, 1);
 
-                assert_eq!(c.public_ips, 1);
+                assert_eq!(c.public_ips, 2);
 
                 let pub_ip = PublicIP {
-                    ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
-                    gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+                    ip: get_public_ip_ip(b"185.206.122.33/24"),
+                    gateway: get_public_ip_gw(b"185.206.122.1"),
                     contract_id: 1,
                 };
 
+                let pub_ip_2 = PublicIP {
+                    ip: get_public_ip_ip(b"185.206.122.34/24"),
+                    gateway: get_public_ip_gw(b"185.206.122.1"),
+                    contract_id: 1,
+                };
                 assert_eq!(c.public_ips_list[0], pub_ip);
+                assert_eq!(c.public_ips_list[1], pub_ip_2);
             }
             _ => (),
         }
@@ -443,7 +446,7 @@ fn test_create_capacity_reservation_contract_no_node_in_farm_with_enough_resourc
                 Origin::signed(alice()),
                 1,
                 CapacityReservationPolicy::Any {
-                    resources: Resources {
+                    resources: ResourcesInput {
                         cru: 10,
                         hru: 0,
                         mru: 2 * GIGABYTE,
@@ -478,7 +481,7 @@ fn test_create_capacity_reservation_contract_finding_a_node_failure() {
                 Origin::signed(alice()),
                 1,
                 CapacityReservationPolicy::Any {
-                    resources: Resources {
+                    resources: ResourcesInput {
                         hru: 4096 * GIGABYTE,
                         sru: 2048 * GIGABYTE,
                         cru: 32,
@@ -509,8 +512,8 @@ fn test_create_capacity_reservation_contract_reserving_full_node_then_deployment
             None,
         ));
         assert_eq!(
-            TfgridModule::nodes(node_id).unwrap().power_target,
-            PowerTarget::Up
+            TfgridModule::nodes(node_id).unwrap().power.state,
+            PowerState::Up
         );
         assert_eq!(
             TfgridModule::nodes(node_id)
@@ -572,7 +575,7 @@ fn test_create_capacity_reservation_contract_reserving_full_node_then_deployment
                 public_ips: 0,
                 resources: ConsumableResources {
                     total_resources: resources_n2(),
-                    used_resources: Resources::empty(),
+                    used_resources: ResourcesInput::empty(),
                 },
                 node_id: node_id,
                 deployment_contracts: vec![]
@@ -585,14 +588,14 @@ fn test_create_capacity_reservation_contract_reserving_full_node_then_deployment
             1
         ));
         assert_eq!(
-            TfgridModule::nodes(node_id).unwrap().power_target,
-            PowerTarget::Down
+            TfgridModule::nodes(node_id).unwrap().power.state,
+            PowerState::Down(1)
         );
         assert_eq!(
             TfgridModule::nodes(node_id).unwrap().resources,
             ConsumableResources {
                 total_resources: resources_n2(),
-                used_resources: Resources::empty(),
+                used_resources: ResourcesInput::empty(),
             }
         );
 
@@ -602,23 +605,23 @@ fn test_create_capacity_reservation_contract_reserving_full_node_then_deployment
         }
         // should have emitted one power up event and one power down
         assert_eq!(
-            our_events.contains(&record(MockEvent::SmartContractModule(
-                SmartContractEvent::<TestRuntime>::PowerTargetChanged {
-                    farm_id: 1,
-                    node_id: 2,
-                    power_target: PowerTarget::Up,
-                }
-            ))),
+            our_events.contains(&record(MockEvent::TfgridModule(pallet_tfgrid::Event::<
+                TestRuntime,
+            >::PowerTargetChanged {
+                farm_id: 1,
+                node_id: 2,
+                power_target: PowerTarget::Up,
+            }))),
             true
         );
         assert_eq!(
-            our_events.contains(&record(MockEvent::SmartContractModule(
-                SmartContractEvent::<TestRuntime>::PowerTargetChanged {
-                    farm_id: 1,
-                    node_id: 2,
-                    power_target: PowerTarget::Down,
-                }
-            ))),
+            our_events.contains(&record(MockEvent::TfgridModule(pallet_tfgrid::Event::<
+                TestRuntime,
+            >::PowerTargetChanged {
+                farm_id: 1,
+                node_id: 2,
+                power_target: PowerTarget::Down,
+            }))),
             true
         );
     });
@@ -629,10 +632,7 @@ fn test_cancel_capacity_reservation_contract_should_not_shutdown_first_node() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_farm_with_three_nodes();
-        assert_eq!(
-            TfgridModule::nodes(1).unwrap().power_target,
-            PowerTarget::Up
-        );
+        assert_eq!(TfgridModule::nodes(1).unwrap().power.state, PowerState::Up);
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
@@ -642,19 +642,13 @@ fn test_cancel_capacity_reservation_contract_should_not_shutdown_first_node() {
             },
             None,
         ));
-        assert_eq!(
-            TfgridModule::nodes(1).unwrap().power_target,
-            PowerTarget::Up
-        );
+        assert_eq!(TfgridModule::nodes(1).unwrap().power.state, PowerState::Up);
         assert_ok!(SmartContractModule::cancel_contract(
             Origin::signed(bob()),
             1
         ));
         // node should still be up as it is the first in the list of nodes of that farm
-        assert_eq!(
-            TfgridModule::nodes(1).unwrap().power_target,
-            PowerTarget::Up
-        );
+        assert_eq!(TfgridModule::nodes(1).unwrap().power.state, PowerState::Up);
     });
 }
 
@@ -669,17 +663,11 @@ fn test_cancel_capacity_reservation_contract_shutdown_node() {
             Origin::signed(alice()),
             2
         ));
+        assert_eq!(TfgridModule::nodes(1).unwrap().power.state, PowerState::Up);
+        assert_eq!(TfgridModule::nodes(2).unwrap().power.state, PowerState::Up);
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().power_target,
-            PowerTarget::Up
-        );
-        assert_eq!(
-            TfgridModule::nodes(2).unwrap().power_target,
-            PowerTarget::Up
-        );
-        assert_eq!(
-            TfgridModule::nodes(3).unwrap().power_target,
-            PowerTarget::Down
+            TfgridModule::nodes(3).unwrap().power.state,
+            PowerState::Down(1)
         );
         // on node 1 there is only one contract left => used resources of node 1 should equal resources of contract 1
         assert_eq!(
@@ -692,22 +680,19 @@ fn test_cancel_capacity_reservation_contract_shutdown_node() {
             Origin::signed(alice()),
             3
         ));
+        assert_eq!(TfgridModule::nodes(1).unwrap().power.state, PowerState::Up);
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().power_target,
-            PowerTarget::Up
+            TfgridModule::nodes(2).unwrap().power.state,
+            PowerState::Down(1)
         );
         assert_eq!(
-            TfgridModule::nodes(2).unwrap().power_target,
-            PowerTarget::Down
-        );
-        assert_eq!(
-            TfgridModule::nodes(3).unwrap().power_target,
-            PowerTarget::Down
+            TfgridModule::nodes(3).unwrap().power.state,
+            PowerState::Down(1)
         );
         // nothing else running on node 2 => used resources should be 0
         assert_eq!(
             TfgridModule::nodes(2).unwrap().resources.used_resources,
-            Resources::empty()
+            ResourcesInput::empty()
         );
 
         // cancel contract 1 (last contract running on node 1) => node may not be shutdown as it is the only
@@ -716,22 +701,19 @@ fn test_cancel_capacity_reservation_contract_shutdown_node() {
             Origin::signed(alice()),
             1
         ));
+        assert_eq!(TfgridModule::nodes(1).unwrap().power.state, PowerState::Up);
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().power_target,
-            PowerTarget::Up
+            TfgridModule::nodes(2).unwrap().power.state,
+            PowerState::Down(1)
         );
         assert_eq!(
-            TfgridModule::nodes(2).unwrap().power_target,
-            PowerTarget::Down
-        );
-        assert_eq!(
-            TfgridModule::nodes(3).unwrap().power_target,
-            PowerTarget::Down
+            TfgridModule::nodes(3).unwrap().power.state,
+            PowerState::Down(1)
         );
         // nothing else running on node 1 => used resources should be 0
         assert_eq!(
             TfgridModule::nodes(1).unwrap().resources.used_resources,
-            Resources::empty()
+            ResourcesInput::empty()
         );
 
         // check the power target events
@@ -740,13 +722,13 @@ fn test_cancel_capacity_reservation_contract_shutdown_node() {
             log::info!("Event: {:?}", event);
         }
         assert_eq!(
-            our_events.contains(&record(MockEvent::SmartContractModule(
-                SmartContractEvent::<TestRuntime>::PowerTargetChanged {
-                    farm_id: 1,
-                    node_id: 2,
-                    power_target: PowerTarget::Down,
-                }
-            ))),
+            our_events.contains(&record(MockEvent::TfgridModule(pallet_tfgrid::Event::<
+                TestRuntime,
+            >::PowerTargetChanged {
+                farm_id: 1,
+                node_id: 2,
+                power_target: PowerTarget::Down,
+            }))),
             true
         );
     });
@@ -767,7 +749,7 @@ fn test_update_capacity_reservation_contract_works() {
             None,
         ));
 
-        let updated_resources = Resources {
+        let updated_resources = ResourcesInput {
             cru: 1,             // decrease
             hru: 1 * GIGABYTE,  // increase
             mru: 2 * GIGABYTE,  // unmodified
@@ -790,7 +772,7 @@ fn test_update_capacity_reservation_contract_works() {
             public_ips: 0,
             resources: ConsumableResources {
                 total_resources: updated_resources,
-                used_resources: Resources::empty(),
+                used_resources: ResourcesInput::empty(),
             },
             deployment_contracts: vec![],
         };
@@ -834,7 +816,7 @@ fn test_update_capacity_reservation_contract_too_much_resources() {
             SmartContractModule::update_capacity_reservation_contract(
                 Origin::signed(alice()),
                 1,
-                Resources {
+                ResourcesInput {
                     hru: 1024 * GIGABYTE,
                     sru: 512 * GIGABYTE,
                     cru: 10,
@@ -868,7 +850,7 @@ fn test_capacity_reservation_contract_decrease_resources_fails_resources_used_by
             1,
             generate_deployment_hash(),
             get_deployment_data(),
-            Resources {
+            ResourcesInput {
                 cru: 1,
                 hru: 0,
                 mru: 1 * GIGABYTE,
@@ -877,7 +859,7 @@ fn test_capacity_reservation_contract_decrease_resources_fails_resources_used_by
             0
         ));
         // update the resources: sru is lower then what the deployment contract is using => failure
-        let updated_resources = Resources {
+        let updated_resources = ResourcesInput {
             cru: 1,
             hru: 0,
             mru: 1 * GIGABYTE,
@@ -931,7 +913,7 @@ fn test_update_capacity_reservation_contract_wrong_twins_fails() {
             SmartContractModule::update_capacity_reservation_contract(
                 Origin::signed(bob()),
                 1,
-                Resources {
+                ResourcesInput {
                     cru: 1,
                     hru: 0,
                     mru: 1 * GIGABYTE,
@@ -966,7 +948,7 @@ fn test_cancel_capacity_reservation_contract_works() {
 
         assert_eq!(
             TfgridModule::nodes(1).unwrap().resources.used_resources,
-            Resources::empty()
+            ResourcesInput::empty()
         );
 
         let deployment_contract = SmartContractModule::contracts(1);
@@ -1005,7 +987,7 @@ fn test_cancel_deployment_contract_free_resources_works() {
                 public_ips: 0,
                 resources: ConsumableResources {
                     total_resources: resources_c1(),
-                    used_resources: Resources::empty(),
+                    used_resources: ResourcesInput::empty(),
                 },
                 deployment_contracts: vec![],
             })
@@ -1025,11 +1007,12 @@ fn test_cancel_deployment_contract_frees_public_ips_works() {
             generate_deployment_hash(),
             get_deployment_data(),
             resources_c1(),
-            1,
+            2,
         ));
 
         let farm = TfgridModule::farms(1).unwrap();
         assert_eq!(farm.public_ips[0].contract_id, 2);
+        assert_eq!(farm.public_ips[1].contract_id, 2);
 
         assert_ok!(SmartContractModule::cancel_contract(
             Origin::signed(alice()),
@@ -1038,6 +1021,7 @@ fn test_cancel_deployment_contract_frees_public_ips_works() {
 
         let farm = TfgridModule::farms(1).unwrap();
         assert_eq!(farm.public_ips[0].contract_id, 0);
+        assert_eq!(farm.public_ips[1].contract_id, 0);
     });
 }
 
@@ -1654,7 +1638,7 @@ fn test_create_capacity_reservation_contract_reserving_all_resources_node_works(
             public_ips: 0,
             resources: ConsumableResources {
                 total_resources: resources_n1(),
-                used_resources: Resources::empty(),
+                used_resources: ResourcesInput::empty(),
             },
             deployment_contracts: vec![],
             node_id: 1,
@@ -1692,7 +1676,7 @@ fn test_cancel_capacity_reservation_contract_all_resources_of_node_works() {
                 public_ips: 0,
                 resources: ConsumableResources {
                     total_resources: resources_n1(),
-                    used_resources: Resources::empty(),
+                    used_resources: ResourcesInput::empty(),
                 },
                 deployment_contracts: vec![],
             })
@@ -1854,10 +1838,7 @@ fn test_cancel_capacity_reservation_contract_with_active_deployment_contracts_fa
             Error::<TestRuntime>::CapacityReservationHasActiveContracts
         );
         // node 1 should still be up after failed attempt to cancel capacity contract
-        assert_eq!(
-            TfgridModule::nodes(1).unwrap().power_target,
-            PowerTarget::Up
-        );
+        assert_eq!(TfgridModule::nodes(1).unwrap().power.state, PowerState::Up);
     });
 }
 
@@ -2176,7 +2157,8 @@ fn test_node_multiple_contract_billing_cycles() {
             0,
         ));
         // CAPACITY RESERVATION 2 with 1 deployment contract
-        let rest_of_the_resources_on_node_1 = resources_n1().substract(&resources_c1());
+        let rest_of_the_resources_on_node_1 =
+            ResourcesInput::subtraction(&resources_n1(), &resources_c1());
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(bob()),
             1,
@@ -2291,8 +2273,8 @@ fn test_deployment_contract_billing_cycles_delete_node_cancels_contract() {
         }
 
         let public_ip = PublicIP {
-            ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
-            gateway: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+            ip: get_public_ip_ip(b"185.206.122.33/24"),
+            gateway: get_public_ip_gw(b"185.206.122.1"),
             contract_id: 0,
         };
 
@@ -2346,7 +2328,7 @@ fn test_deployment_contract_only_public_ip_billing_cycles() {
             Origin::signed(bob()),
             1,
             CapacityReservationPolicy::Any {
-                resources: Resources::empty(), // no resources required
+                resources: ResourcesInput::empty(), // no resources required
                 features: None,
             },
             None
@@ -2356,7 +2338,7 @@ fn test_deployment_contract_only_public_ip_billing_cycles() {
             1,
             generate_deployment_hash(),
             get_deployment_data(),
-            Resources::empty(),
+            ResourcesInput::empty(),
             1,
         ));
         let contract_id = 1;
@@ -2766,6 +2748,9 @@ fn test_deployment_contract_grace_period_cancels_contract_when_grace_period_ends
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
         TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        let twin = TfgridModule::twins(3).unwrap();
+        let initial_total_issuance = Balances::total_issuance();
+        let initial_twin_balance = Balances::free_balance(&twin.account_id);
 
         assert_ok!(SmartContractModule::create_capacity_reservation_contract(
             Origin::signed(charlie()),
@@ -2815,20 +2800,26 @@ fn test_deployment_contract_grace_period_cancels_contract_when_grace_period_ends
         );
 
         // grace period stops after 100 blocknumbers, so after 121
-        for i in 1..10 {
+        for i in 1..11 {
             pool_state
                 .write()
                 .should_call_bill_contract(1, Ok(Pays::Yes.into()), 21 + i * 10);
         }
 
-        for i in 1..10 {
+        for i in 1..11 {
             run_to_block(21 + i * 10, Some(&mut pool_state));
         }
 
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 121);
-        run_to_block(121, Some(&mut pool_state));
+        // pool_state
+        //     .write()
+        //     .should_call_bill_contract(1, Ok(Pays::Yes.into()), 131);
+        // run_to_block(131, Some(&mut pool_state));
+
+        // The user's total free balance should be distributed
+        let free_balance = Balances::free_balance(&twin.account_id);
+        let total_amount_billed = initial_twin_balance - free_balance;
+
+        validate_distribution_rewards(initial_total_issuance, total_amount_billed, false);
 
         let c1 = SmartContractModule::contracts(1);
         assert_eq!(c1, None);
@@ -2903,7 +2894,7 @@ fn test_capacity_reservation_contract_full_node_billing() {
                 group_id: None,
                 resources: ConsumableResources {
                     total_resources: resources_n1(),
-                    used_resources: Resources::empty()
+                    used_resources: ResourcesInput::empty()
                 },
             })
         );
@@ -3112,20 +3103,10 @@ fn test_create_capacity_contract_full_node_canceled_due_to_out_of_funds_should_c
         // check_report_cost(1, 3, amount_due_as_u128, 12, discount_received);
 
         let our_events = System::events();
-        // Event 1: Price stored
-        // Event 2: Average Price stored
-        // Event 3: Capacity Reservation contract created
-        // Event 4: Deployment Contract created
-        // Event 5: Grace period started capacity reservation contract
-        // Event 6: Grace period started deployment contract
-        // Event 7: Capacity contract billed
-        // Event 7: Deployment contract canceled
-        // Event 8: Capacity reservation contract Canceled
-        assert_eq!(our_events.len(), 9);
-
         for e in our_events.clone().iter() {
             info!("event: {:?}", e);
         }
+        assert_eq!(our_events.len(), 10);
 
         assert_eq!(
             our_events[4],
@@ -3149,7 +3130,6 @@ fn test_create_capacity_contract_full_node_canceled_due_to_out_of_funds_should_c
                 block_number: 11
             }))
         );
-
         assert_eq!(
             our_events[7],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
@@ -3162,6 +3142,16 @@ fn test_create_capacity_contract_full_node_canceled_due_to_out_of_funds_should_c
         );
         assert_eq!(
             our_events[8],
+            record(MockEvent::TfgridModule(
+                pallet_tfgrid::Event::<TestRuntime>::PowerTargetChanged {
+                    farm_id: 1,
+                    node_id: 1,
+                    power_target: PowerTarget::Down,
+                }
+            ))
+        );
+        assert_eq!(
+            our_events[9],
             record(MockEvent::SmartContractModule(
                 SmartContractEvent::<TestRuntime>::CapacityReservationContractCanceled {
                     contract_id: 1,
@@ -3853,6 +3843,10 @@ pub fn prepare_farm(source: AccountId, dedicated: bool) {
         ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
         gw: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
     });
+    pub_ips.push(pallet_tfgrid_types::PublicIpInput {
+        ip: "185.206.122.34/24".as_bytes().to_vec().try_into().unwrap(),
+        gw: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+    });
 
     let su_policy = pallet_tfgrid_types::Policy {
         value: 194400,
@@ -3912,37 +3906,32 @@ pub fn prepare_farm_and_node() {
     TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
 
     create_farming_policies();
-
     prepare_twins();
-
     prepare_farm(alice(), false);
 
-    // random location
-    let location = Location {
-        longitude: "12.233213231".as_bytes().to_vec(),
-        latitude: "32.323112123".as_bytes().to_vec(),
+    let location = LocationInput {
+        city: get_city_name_input(b"Ghent"),
+        country: get_country_name_input(b"Belgium"),
+        latitude: get_latitude_input(b"12.233213231"),
+        longitude: get_longitude_input(b"32.323112123"),
     };
 
-    let country = "Belgium".as_bytes().to_vec();
-    let city = "Ghent".as_bytes().to_vec();
     TfgridModule::create_node(
         Origin::signed(alice()),
         1,
         resources_n1(),
         location,
-        country,
-        city,
         bounded_vec![],
         false,
         false,
-        "some_serial".as_bytes().to_vec(),
+        None,
     )
     .unwrap();
     assert_eq!(
         TfgridModule::nodes(1).unwrap().resources,
         ConsumableResources {
             total_resources: resources_n1(),
-            used_resources: Resources::empty(),
+            used_resources: ResourcesInput::empty(),
         }
     );
 }
@@ -3969,19 +3958,19 @@ pub fn prepare_farm_node_and_capacity_reservation() {
 }
 
 pub fn add_public_config(farm_id: u32, node_id: u32, account_id: AccountId) {
-    let ipv4 = get_pub_config_ip4(&"185.206.122.33/24".as_bytes().to_vec());
-    let ipv6 = get_pub_config_ip6(&"2a10:b600:1::0cc4:7a30:65b5/64".as_bytes().to_vec());
-    let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
-    let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
+    let ipv4 = get_pub_config_ip4_input(b"185.206.122.33/24");
+    let ipv6 = get_pub_config_ip6_input(b"2a10:b600:1::0cc4:7a30:65b5/64");
+    let gw4 = get_pub_config_gw4_input(b"185.206.122.1");
+    let gw6 = get_pub_config_gw6_input(b"2a10:b600:1::1");
 
     let pub_config = PublicConfig {
         ip4: IP {
-            ip: ipv4.clone().0,
-            gw: gw4.clone().0,
+            ip: ipv4.clone(),
+            gw: gw4.clone(),
         },
         ip6: Some(IP {
-            ip: ipv6.clone().0,
-            gw: gw6.clone().0,
+            ip: ipv6.clone(),
+            gw: gw6.clone(),
         }),
         domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
     };
@@ -4005,113 +3994,112 @@ pub fn prepare_farm_with_three_nodes() {
     prepare_farm_and_node();
 
     // SECOND NODE
-    let location = Location {
-        longitude: "45.233213231".as_bytes().to_vec(),
-        latitude: "241.323112123".as_bytes().to_vec(),
+    let location = LocationInput {
+        city: get_city_name_input(b"Belgium"),
+        country: get_country_name_input(b"Ghent"),
+        latitude: get_latitude_input(b"41.323112123"),
+        longitude: get_longitude_input(b"45.233213231"),
     };
 
-    let country = "Belgium".as_bytes().to_vec();
-    let city = "Ghent".as_bytes().to_vec();
     TfgridModule::create_node(
         Origin::signed(bob()),
         1,
         resources_n2(),
         location,
-        country,
-        city,
         bounded_vec![],
         false,
         false,
-        "some_serial".as_bytes().to_vec(),
+        None,
     )
     .unwrap();
     assert_eq!(
         TfgridModule::nodes(2).unwrap().resources,
         ConsumableResources {
             total_resources: resources_n2(),
-            used_resources: Resources::empty(),
+            used_resources: ResourcesInput::empty(),
         }
     );
+    // simulate zos calling this extrinsic to shutdown node 2 (where node 1 is the leader)
+    assert_ok!(TfgridModule::change_power_state(
+        Origin::signed(bob()),
+        PowerState::Down(1)
+    ));
 
     // THIRD NODE
-    let location = Location {
-        longitude: "6514.233213231".as_bytes().to_vec(),
-        latitude: "324.323112123".as_bytes().to_vec(),
+    let location = LocationInput {
+        city: get_city_name_input(b"Belgium"),
+        country: get_country_name_input(b"Ghent"),
+        latitude: get_latitude_input(b"24.323112123"),
+        longitude: get_longitude_input(b"64.233213231"),
     };
-
-    let country = "Belgium".as_bytes().to_vec();
-    let city = "Ghent".as_bytes().to_vec();
+      
     TfgridModule::create_node(
         Origin::signed(charlie()),
         1,
         resources_n3(),
         location,
-        country,
-        city,
         bounded_vec![],
         false,
         false,
-        "some_serial".as_bytes().to_vec(),
+        None,
     )
     .unwrap();
     assert_eq!(
         TfgridModule::nodes(3).unwrap().resources,
         ConsumableResources {
             total_resources: resources_n3(),
-            used_resources: Resources::empty(),
+            used_resources: ResourcesInput::empty(),
         }
     );
+    // simulate zos calling this extrinsic to shutdown node 3 (where node 1 is the leader)
+    assert_ok!(TfgridModule::change_power_state(
+        Origin::signed(charlie()),
+        PowerState::Down(1)
+    ));
 
     let nodes_from_farm = TfgridModule::nodes_by_farm_id(1);
     assert_eq!(nodes_from_farm.len(), 3);
+    assert_eq!(TfgridModule::nodes(1).unwrap().power.state, PowerState::Up);
     assert_eq!(
-        TfgridModule::nodes(1).unwrap().power_target,
-        PowerTarget::Up
+        TfgridModule::nodes(2).unwrap().power.state,
+        PowerState::Down(1)
     );
     assert_eq!(
-        TfgridModule::nodes(2).unwrap().power_target,
-        PowerTarget::Down
-    );
-    assert_eq!(
-        TfgridModule::nodes(3).unwrap().power_target,
-        PowerTarget::Down
+        TfgridModule::nodes(3).unwrap().power.state,
+        PowerState::Down(1)
     );
 }
 
 pub fn prepare_dedicated_farm_and_node() {
     TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
     create_farming_policies();
-
     prepare_twins();
-
     prepare_farm(alice(), true);
 
     // random location
-    let location = Location {
-        longitude: "12.233213231".as_bytes().to_vec(),
-        latitude: "32.323112123".as_bytes().to_vec(),
+    let location = LocationInput {
+        city: get_city_name_input(b"Ghent"),
+        country: get_country_name_input(b"Belgium"),
+        latitude: get_latitude_input(b"12.233213231"),
+        longitude: get_longitude_input(b"32.323112123"),
     };
 
-    let country = "Belgium".as_bytes().to_vec();
-    let city = "Ghent".as_bytes().to_vec();
     TfgridModule::create_node(
         Origin::signed(alice()),
         1,
         resources_n1(),
         location,
-        country,
-        city,
         bounded_vec![],
         false,
         false,
-        "some_serial".as_bytes().to_vec(),
+        None,
     )
     .unwrap();
 }
 
 pub fn create_capacity_reservation_and_add_to_group(
     farm_id: u32,
-    resources: Resources,
+    resources: ResourcesInput,
     features: Option<Vec<NodeFeatures>>,
     group_id: u32,
     expected_node_id: u32,
@@ -4142,15 +4130,15 @@ pub fn create_capacity_reservation_and_add_to_group(
             public_ips: 0,
             resources: ConsumableResources {
                 total_resources: resources,
-                used_resources: Resources::empty(),
+                used_resources: ResourcesInput::empty(),
             },
             deployment_contracts: vec![],
         })
     );
 
     assert_eq!(
-        TfgridModule::nodes(expected_node_id).unwrap().power_target,
-        PowerTarget::Up
+        TfgridModule::nodes(expected_node_id).unwrap().power.state,
+        PowerState::Up
     );
 
     let group = SmartContractModule::groups(group_id).unwrap();
@@ -4173,19 +4161,14 @@ pub fn create_capacity_reservation_and_add_to_group(
 }
 
 pub fn create_twin(origin: AccountId) {
-    let document = "some_link".as_bytes().to_vec();
-    let hash = "some_hash".as_bytes().to_vec();
-
     assert_ok!(TfgridModule::user_accept_tc(
         Origin::signed(origin.clone()),
-        document.clone(),
-        hash.clone(),
+        get_document_link_input(b"some_link"),
+        get_document_hash_input(b"some_hash"),
     ));
-    let ip = get_twin_ip(b"::1");
-    assert_ok!(TfgridModule::create_twin(
-        Origin::signed(origin),
-        ip.clone().0
-    ));
+
+    let ip = get_twin_ip_input(b"::1");
+    assert_ok!(TfgridModule::create_twin(Origin::signed(origin), ip));
 }
 
 fn create_farming_policies() {
@@ -4301,8 +4284,8 @@ fn get_updated_deployment_data() -> crate::DeploymentDataInput<TestRuntime> {
     .unwrap()
 }
 
-fn get_resources() -> Resources {
-    Resources {
+fn get_resources() -> ResourcesInput {
+    ResourcesInput {
         cru: 2,
         hru: 0,
         mru: 2 * GIGABYTE,
@@ -4310,35 +4293,35 @@ fn get_resources() -> Resources {
     }
 }
 
-pub fn resources_n1() -> Resources {
-    Resources {
+pub fn resources_n1() -> ResourcesInput {
+    ResourcesInput {
         hru: 1024 * GIGABYTE,
-        sru: 512 * GIGABYTE,
+        sru: 1024 * GIGABYTE,
         cru: 8,
         mru: 16 * GIGABYTE,
     }
 }
 
-pub fn resources_n2() -> Resources {
-    Resources {
+pub fn resources_n2() -> ResourcesInput {
+    ResourcesInput {
         hru: 2048 * GIGABYTE,
-        sru: 1024 * GIGABYTE,
+        sru: 2048 * GIGABYTE,
         cru: 16,
         mru: 32 * GIGABYTE,
     }
 }
 
-pub fn resources_n3() -> Resources {
-    Resources {
+pub fn resources_n3() -> ResourcesInput {
+    ResourcesInput {
         hru: 512 * GIGABYTE,
-        sru: 256 * GIGABYTE,
+        sru: 512 * GIGABYTE,
         cru: 4,
         mru: 8 * GIGABYTE,
     }
 }
 
-fn resources_c1() -> Resources {
-    Resources {
+fn resources_c1() -> ResourcesInput {
+    ResourcesInput {
         cru: 4,
         hru: 0,
         mru: 2 * GIGABYTE,
@@ -4346,8 +4329,8 @@ fn resources_c1() -> Resources {
     }
 }
 
-fn half_resources_c1() -> Resources {
-    Resources {
+fn half_resources_c1() -> ResourcesInput {
+    ResourcesInput {
         cru: 2,
         hru: 0,
         mru: 1 * GIGABYTE,
@@ -4355,8 +4338,8 @@ fn half_resources_c1() -> Resources {
     }
 }
 
-fn resources_c2() -> Resources {
-    Resources {
+fn resources_c2() -> ResourcesInput {
+    ResourcesInput {
         cru: 4,
         hru: 1000 * GIGABYTE,
         mru: 10 * GIGABYTE,
@@ -4364,8 +4347,8 @@ fn resources_c2() -> Resources {
     }
 }
 
-fn resources_c3() -> Resources {
-    Resources {
+fn resources_c3() -> ResourcesInput {
+    ResourcesInput {
         cru: 2,
         hru: 512 * GIGABYTE,
         mru: 4 * GIGABYTE,
@@ -4387,17 +4370,14 @@ fn prepare_farm_three_nodes_three_capacity_reservation_contracts() {
         None,
     ));
 
+    assert_eq!(TfgridModule::nodes(1).unwrap().power.state, PowerState::Up);
     assert_eq!(
-        TfgridModule::nodes(1).unwrap().power_target,
-        PowerTarget::Up
+        TfgridModule::nodes(2).unwrap().power.state,
+        PowerState::Down(1)
     );
     assert_eq!(
-        TfgridModule::nodes(2).unwrap().power_target,
-        PowerTarget::Down
-    );
-    assert_eq!(
-        TfgridModule::nodes(3).unwrap().power_target,
-        PowerTarget::Down
+        TfgridModule::nodes(3).unwrap().power.state,
+        PowerState::Down(1)
     );
     assert_eq!(
         TfgridModule::nodes(1).unwrap().resources.used_resources,
@@ -4411,7 +4391,7 @@ fn prepare_farm_three_nodes_three_capacity_reservation_contracts() {
             public_ips: 0,
             resources: ConsumableResources {
                 total_resources: resources_c1(),
-                used_resources: Resources::empty(),
+                used_resources: ResourcesInput::empty(),
             },
             deployment_contracts: vec![],
         })
@@ -4429,7 +4409,7 @@ fn prepare_farm_three_nodes_three_capacity_reservation_contracts() {
     ));
     assert_eq!(
         TfgridModule::nodes(1).unwrap().resources.used_resources,
-        resources_c1().add(&resources_c2())
+        ResourcesInput::sum(&resources_c1(), &resources_c2())
     );
     assert_eq!(
         SmartContractModule::contracts(2).unwrap().contract_type,
@@ -4439,7 +4419,7 @@ fn prepare_farm_three_nodes_three_capacity_reservation_contracts() {
             public_ips: 0,
             resources: ConsumableResources {
                 total_resources: resources_c2(),
-                used_resources: Resources::empty(),
+                used_resources: ResourcesInput::empty(),
             },
             deployment_contracts: vec![],
         })
@@ -4456,17 +4436,11 @@ fn prepare_farm_three_nodes_three_capacity_reservation_contracts() {
         None,
     ),);
 
+    assert_eq!(TfgridModule::nodes(1).unwrap().power.state, PowerState::Up);
+    assert_eq!(TfgridModule::nodes(2).unwrap().power.state, PowerState::Up);
     assert_eq!(
-        TfgridModule::nodes(1).unwrap().power_target,
-        PowerTarget::Up
-    );
-    assert_eq!(
-        TfgridModule::nodes(2).unwrap().power_target,
-        PowerTarget::Up
-    );
-    assert_eq!(
-        TfgridModule::nodes(3).unwrap().power_target,
-        PowerTarget::Down
+        TfgridModule::nodes(3).unwrap().power.state,
+        PowerState::Down(1)
     );
     assert_eq!(
         TfgridModule::nodes(2).unwrap().resources.used_resources,
@@ -4480,7 +4454,7 @@ fn prepare_farm_three_nodes_three_capacity_reservation_contracts() {
             public_ips: 0,
             resources: ConsumableResources {
                 total_resources: resources_c3(),
-                used_resources: Resources::empty(),
+                used_resources: ResourcesInput::empty(),
             },
             deployment_contracts: vec![],
         })

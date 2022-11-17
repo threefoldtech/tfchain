@@ -8,12 +8,12 @@ use frame_support::{pallet_prelude::ConstU32, BoundedVec, RuntimeDebugNoBound};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
 use substrate_fixed::types::U64F64;
-use tfchain_support::types::{ConsumableResources, Resources};
+use tfchain_support::{resources::Resources, types::ConsumableResources};
 
 pub type BlockNumber = u64;
 
 /// Utility type for managing upgrades/migrations.
-#[derive(Encode, Decode, Clone, Debug, PartialEq, TypeInfo, MaxEncodedLen)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, TypeInfo, MaxEncodedLen, PartialOrd)]
 pub enum StorageVersion {
     V1,
     V2,
@@ -21,11 +21,12 @@ pub enum StorageVersion {
     V4,
     V5,
     V6,
+    V7,
 }
 
 impl Default for StorageVersion {
     fn default() -> StorageVersion {
-        StorageVersion::V5
+        StorageVersion::V7
     }
 }
 
@@ -156,9 +157,9 @@ pub struct RentContract {
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub enum ContractData<T: Config> {
-    CapacityReservationContract(CapacityReservationContract),
     DeploymentContract(DeploymentContract<T>),
     NameContract(NameContract<T>),
+    CapacityReservationContract(CapacityReservationContract),
 }
 
 // impl<T: Config> Default for ContractData<T> {

@@ -17,6 +17,7 @@ version = '0.4.14'
 
 [dependencies]
 # Substrate packages
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 hex = { version = "0.4", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
 	"derive",
