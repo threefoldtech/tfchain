@@ -15,7 +15,10 @@ use pallet_tfgrid::{
 };
 use sp_core::H256;
 use sp_runtime::{assert_eq_error_rate, traits::SaturatedConversion, Perbill, Percent};
-use sp_std::convert::{TryFrom, TryInto};
+use sp_std::{
+    convert::{TryFrom, TryInto},
+    marker::PhantomData,
+};
 use substrate_fixed::types::U64F64;
 use tfchain_support::types::{
     CapacityReservationPolicy, ConsumableResources, NodeFeatures, PowerState, PowerTarget,
@@ -4032,7 +4035,7 @@ pub fn prepare_farm_with_three_nodes() {
         latitude: get_latitude_input(b"24.323112123"),
         longitude: get_longitude_input(b"64.233213231"),
     };
-      
+
     TfgridModule::create_node(
         Origin::signed(charlie()),
         1,

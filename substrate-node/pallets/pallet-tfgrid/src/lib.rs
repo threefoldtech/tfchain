@@ -9,8 +9,8 @@ use sp_std::prelude::*;
 use codec::Encode;
 use frame_support::dispatch::DispatchErrorWithPostInfo;
 use frame_support::{
-    ensure, pallet_prelude::DispatchResultWithPostInfo, traits::EnsureOrigin,
-    weights::Pays, BoundedVec,
+    ensure, pallet_prelude::DispatchResultWithPostInfo, traits::EnsureOrigin, weights::Pays,
+    BoundedVec,
 };
 use frame_system::{self as system, ensure_signed};
 use hex::FromHex;
@@ -1104,7 +1104,7 @@ pub mod pallet {
             };
 
             let created = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-            let power_target = if NodesByFarmID::<T>::get(farm_id).is_empty() {
+            let _power_target = if NodesByFarmID::<T>::get(farm_id).is_empty() {
                 PowerTarget::Up
             } else {
                 PowerTarget::Down
@@ -1898,7 +1898,7 @@ pub mod pallet {
                 farm_twin_id == farm_twin.id,
                 Error::<T>::FarmerNotAuthorized
             );
-            
+
             // Call node deleted
             T::NodeChanged::node_deleted(&node);
 
@@ -2195,10 +2195,7 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    fn _change_power_target_on_node(
-        node: &mut TfgridNode<T>,
-        power_target: PowerTarget,
-    ) {
+    fn _change_power_target_on_node(node: &mut TfgridNode<T>, power_target: PowerTarget) {
         Self::deposit_event(Event::PowerTargetChanged {
             farm_id: node.farm_id,
             node_id: node.id,

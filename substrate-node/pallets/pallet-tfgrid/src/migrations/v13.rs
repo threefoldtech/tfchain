@@ -5,6 +5,7 @@ use crate::{
 use frame_support::{pallet_prelude::Weight, traits::Get, traits::OnRuntimeUpgrade};
 use log::info;
 use pallet_timestamp as timestamp;
+use sp_runtime::SaturatedConversion;
 use sp_std::marker::PhantomData;
 use tfchain_support::resources::Resources;
 use tfchain_support::types::{ConsumableResources, Node, Power, PowerState, PowerTarget};
