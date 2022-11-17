@@ -379,6 +379,14 @@ pub fn translate_contract_objects<T: Config>(
                     crc_id = id;
                     contracts.insert(crc_id, crc);
                     bill_index_per_contract_id.insert(crc_id, *billing_index);
+                    node_changes.entry(nc.node_id).and_modify(|changes| {
+                        changes.active_contracts.push(crc_id);
+                        changes.used_resources.add(&used_resources);
+                    })
+                    .or_insert(NodeChanges {
+                        used_resources: used_resources,
+                        active_contracts: vec![crc_id],
+                    });
                 }
 
                 // remove the contract id from the billing as we don't bill deployment contracts
