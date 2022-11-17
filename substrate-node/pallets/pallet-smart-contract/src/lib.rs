@@ -421,7 +421,6 @@ pub mod pallet {
         NameNotValid,
         InvalidContractType,
         TFTPriceValueError,
-        NotEnoughResourcesOnNode,
         NodeNotAuthorizedToReportResources,
         MethodIsDeprecated,
         NodeHasActiveContracts,
@@ -1007,13 +1006,9 @@ impl<T: Config> Pallet<T> {
 
         let mut capacity_reservation_contract = Self::get_capacity_reservation_contract(&contract)?;
 
-        let resources_increase = capacity_reservation_contract
-            .resources
-            .calculate_increase_in_resources(&resources);
         let resources_reduction = capacity_reservation_contract
             .resources
             .calculate_reduction_in_resources(&resources);
-
         // we can only reduce as much as we have free resources in our reservation
         ensure!(
             capacity_reservation_contract
@@ -1021,18 +1016,11 @@ impl<T: Config> Pallet<T> {
                 .can_consume_resources(&resources_reduction),
             Error::<T>::ResourcesUsedByActiveContracts
         );
-        if !resources_increase.is_empty() {
-            Self::_claim_resources_on_node(
-                capacity_reservation_contract.node_id,
-                resources_increase,
-            )?;
-        }
-        if !resources_reduction.is_empty() {
-            Self::_unclaim_resources_on_node(
-                capacity_reservation_contract.node_id,
-                resources_reduction,
-            )?;
-        }
+        T::Tfgrid::change_used_resources_on_node(
+            capacity_reservation_contract.node_id,
+            capacity_reservation_contract.resources.total_resources,
+            resources,
+        )?;
 
         capacity_reservation_contract.resources.total_resources = resources;
 
@@ -1585,47 +1573,30 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    fn _claim_resources_on_capacity_reservation(
+    fn _change_used_resources_on_capacity_reservation(
         capacity_reservation_id: u64,
-        resources: Resources,
+        to_free: Resources,
+        to_consume: Resources,
     ) -> DispatchResultWithPostInfo {
         let mut contract = Contracts::<T>::get(capacity_reservation_id)
             .ok_or(Error::<T>::CapacityReservationNotExists)?;
         let mut capacity_reservation_contract = Self::get_capacity_reservation_contract(&contract)?;
+
+        capacity_reservation_contract.resources.free(&to_free);
 
         ensure!(
             capacity_reservation_contract
                 .resources
-                .can_consume_resources(&resources),
+                .can_consume_resources(&to_consume),
             Error::<T>::NotEnoughResourcesInCapacityReservation
         );
-
-        //update the available resources
-        capacity_reservation_contract.resources.consume(&resources);
+        capacity_reservation_contract.resources.consume(&to_consume);
 
         contract.contract_type =
             types::ContractData::CapacityReservationContract(capacity_reservation_contract);
 
-        Contracts::<T>::insert(capacity_reservation_id, contract);
-
-        Ok(().into())
-    }
-
-    fn _unclaim_resources_on_capacity_reservation(
-        capacity_reservation_id: u64,
-        resources: Resources,
-    ) -> DispatchResultWithPostInfo {
-        let mut contract = Contracts::<T>::get(capacity_reservation_id)
-            .ok_or(Error::<T>::CapacityReservationNotExists)?;
-        let mut capacity_reservation_contract = Self::get_capacity_reservation_contract(&contract)?;
-
-        //update the available resources
-        capacity_reservation_contract.resources.free(&resources);
-
-        contract.contract_type =
-            types::ContractData::CapacityReservationContract(capacity_reservation_contract);
-
-        Contracts::<T>::insert(capacity_reservation_id, contract);
+        Contracts::<T>::insert(capacity_reservation_id, &contract);
+        Self::deposit_event(Event::ContractUpdated(contract));
 
         Ok(().into())
     }
@@ -1742,8 +1713,9 @@ impl<T: Config> Pallet<T> {
         match contract_type {
             types::ContractData::DeploymentContract(ref mut c) => {
                 Self::_reserve_ip(id, c)?;
-                Self::_claim_resources_on_capacity_reservation(
+                Self::_change_used_resources_on_capacity_reservation(
                     c.capacity_reservation_id,
+                    Resources::empty(),
                     c.resources,
                 )?;
                 Self::_add_deployment_contract_to_capacity_reservation_contract(
@@ -1752,7 +1724,11 @@ impl<T: Config> Pallet<T> {
                 )?;
             }
             types::ContractData::CapacityReservationContract(ref mut c) => {
-                Self::_claim_resources_on_node(c.node_id, c.resources.total_resources)?;
+                T::Tfgrid::change_used_resources_on_node(
+                    c.node_id,
+                    Resources::empty(),
+                    c.resources.total_resources,
+                )?;
             }
             _ => {}
         }
@@ -1833,13 +1809,12 @@ impl<T: Config> Pallet<T> {
         // update the resources with the extra resources
         if let Some(resources) = resources {
             if deployment_contract.resources != resources {
-                // first unclaim all resources from deployment contract
-                Self::_unclaim_resources_on_capacity_reservation(
+                // we free the previously reserved resources and consume the new resources
+                Self::_change_used_resources_on_capacity_reservation(
                     cr_contract.contract_id,
                     deployment_contract.resources,
+                    resources,
                 )?;
-                // then claim the new required resources
-                Self::_claim_resources_on_capacity_reservation(cr_contract.contract_id, resources)?;
                 deployment_contract.resources = resources;
             }
         }
@@ -2309,9 +2284,10 @@ impl<T: Config> Pallet<T> {
                         }
                     }
                     // unclaim all resources used by this contract on the capacity reservation contract
-                    match Self::_unclaim_resources_on_capacity_reservation(
+                    match Self::_change_used_resources_on_capacity_reservation(
                         deployment_contract.capacity_reservation_id,
                         deployment_contract.resources,
+                        Resources::empty(),
                     ) {
                         Ok(_) => (),
                         Err(e) => {
@@ -2374,9 +2350,10 @@ impl<T: Config> Pallet<T> {
                     }
 
                     // unclaim the resources on the node
-                    match Self::_unclaim_resources_on_node(
+                    match T::Tfgrid::change_used_resources_on_node(
                         capacity_reservation_contract.node_id,
                         capacity_reservation_contract.resources.total_resources,
+                        Resources::empty(),
                     ) {
                         Ok(_) => (),
                         Err(e) => {

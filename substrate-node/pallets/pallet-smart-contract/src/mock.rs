@@ -251,55 +251,56 @@ impl tfchain_support::traits::Tfgrid<AccountId32, FarmName<TestRuntime>, Contrac
         TfgridModule::is_twin_owner(twin_id, who)
     }
 
-    fn node_resources_changed(node_id: u32) {
+    fn change_used_resources_on_node(
+        node_id: u32,
+        to_free: Resources,
+        to_consume: Resources,
+    ) -> DispatchResultWithPostInfo {
         let count = System::event_count();
-        TfgridModule::node_resources_changed(node_id);
+        TfgridModule::change_used_resources_on_node(node_id, to_free, to_consume)?;
         // We are simulating the extrinsic calls from zos here. Whenever zos receives a
         // PowerTargetChanged event it might change the state of the node using the extrinsic
-        // change_power_state.
+        // change_power_state.:
         if count < System::event_count() {
-            if System::event_count() - count > 1 {
-                panic!("This mock expected only one event to be triggered at this point");
-            }
             let events = System::events();
             let twin_id_node = TfgridModule::nodes(node_id).unwrap().twin_id;
             let account_id_node = get_account_id_from_twin_id(twin_id_node).unwrap();
-            match events[events.len() - 1].event.clone() {
-                mock::Event::TfgridModule(pallet_tfgrid::Event::PowerTargetChanged {
-                    farm_id,
-                    node_id,
-                    power_target,
-                }) => match power_target {
-                    PowerTarget::Up => {
-                        // zos will always put the state to up if the target is up
-                        assert_ok!(TfgridModule::change_power_state(
-                            Origin::signed(account_id_node),
-                            PowerState::Up
-                        ));
-                    }
-                    PowerTarget::Down => {
-                        // Zos will only shut down the node if it is not a manager node.
-                        // In most cases this will be the first node in the list of nodes of
-                        // that farm. There might be multiple manager nodes per farm (one
-                        // per segment of nodes in the same LAN). That doesn't matter here
-                        // as the chain only cares about finding nodes for capacity
-                        // reservation (preferably nodes that are Up).
-                        let node_id_first_node_in_farm = TfgridModule::nodes_by_farm_id(farm_id)[0];
-                        if node_id != node_id_first_node_in_farm {
+            for i in (count as usize)..events.len() {
+                match events[i].event.clone() {
+                    mock::Event::TfgridModule(pallet_tfgrid::Event::PowerTargetChanged {
+                        farm_id,
+                        node_id,
+                        power_target,
+                    }) => match power_target {
+                        PowerTarget::Up => {
+                            // zos will always put the state to up if the target is up
                             assert_ok!(TfgridModule::change_power_state(
-                                Origin::signed(account_id_node),
-                                PowerState::Down(node_id_first_node_in_farm)
+                                Origin::signed(account_id_node.clone()),
+                                PowerState::Up
                             ));
                         }
-                    }
-                },
-                _ => {
-                    panic!(
-                        "An unexpected event was triggered during the node_resources_changed call."
-                    );
+                        PowerTarget::Down => {
+                            // Zos will only shut down the node if it is not a manager node.
+                            // In most cases this will be the first node in the list of nodes of
+                            // that farm. There might be multiple manager nodes per farm (one
+                            // per segment of nodes in the same LAN). That doesn't matter here
+                            // as the chain only cares about finding nodes for capacity
+                            // reservation (preferably nodes that are Up).
+                            let node_id_first_node_in_farm =
+                                TfgridModule::nodes_by_farm_id(farm_id)[0];
+                            if node_id != node_id_first_node_in_farm {
+                                assert_ok!(TfgridModule::change_power_state(
+                                    Origin::signed(account_id_node.clone()),
+                                    PowerState::Down(node_id_first_node_in_farm)
+                                ));
+                            }
+                        }
+                    },
+                    _ => {}
                 }
             }
         }
+        Ok(().into())
     }
 }
 
