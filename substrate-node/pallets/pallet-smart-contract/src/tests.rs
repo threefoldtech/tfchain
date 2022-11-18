@@ -28,6 +28,10 @@ use tfchain_support::types::{FarmCertification, NodeCertification, PublicIP};
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
+const BASE_FEE: u64 = 1000;
+const VARIABLE_FEE: u64 = 1000;
+const VARIABLE_AMOUNT: u64 = 100;
+
 //  GROUP TESTS //
 // -------------------- //
 
@@ -1515,13 +1519,13 @@ fn test_service_contract_set_fees_works() {
         assert_ok!(SmartContractModule::service_contract_set_fees(
             Origin::signed(alice()),
             1,
-            100,
-            10,
+            BASE_FEE,
+            VARIABLE_FEE,
         ));
 
         let mut service_contract = get_service_contract();
-        service_contract.base_fee = 100;
-        service_contract.variable_fee = 10;
+        service_contract.base_fee = BASE_FEE;
+        service_contract.variable_fee = VARIABLE_FEE;
         assert_eq!(
             service_contract,
             SmartContractModule::service_contracts(1).unwrap(),
@@ -1536,8 +1540,8 @@ fn test_service_contract_approve_works() {
         prepare_service_consumer_contract();
 
         let mut service_contract = get_service_contract();
-        service_contract.base_fee = 100;
-        service_contract.variable_fee = 10;
+        service_contract.base_fee = BASE_FEE;
+        service_contract.variable_fee = VARIABLE_FEE;
         service_contract.metadata = BoundedVec::try_from(b"some_metadata".to_vec()).unwrap();
         service_contract.state = types::ServiceContractState::AgreementReady;
         assert_eq!(
@@ -1564,7 +1568,7 @@ fn test_service_contract_approve_works() {
         ));
 
         service_contract.accepted_by_consumer = true;
-        service_contract.last_bill = 1628082006;
+        service_contract.last_bill = get_timestamp_in_seconds(1);
         service_contract.state = types::ServiceContractState::ApprovedByBoth;
         assert_eq!(
             service_contract,
@@ -1612,9 +1616,97 @@ fn test_service_contract_reject_works() {
 }
 
 #[test]
-fn test_service_contract_send_bill_works() {
+fn test_service_contract_cancel_works() {
     new_test_ext().execute_with(|| {
-        // TODO
+        run_to_block(1, None);
+        create_service_consumer_contract();
+
+        assert_ok!(SmartContractModule::service_contract_cancel(
+            Origin::signed(alice()),
+            1,
+        ));
+
+        assert_eq!(SmartContractModule::service_contracts(1).is_none(), true);
+
+        let our_events = System::events();
+        assert_eq!(!our_events.is_empty(), true);
+        assert_eq!(
+            our_events.last().unwrap(),
+            &record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ServiceContractCanceled {
+                service_contract_id: 1,
+                cause: types::Cause::CanceledByUser,
+            })),
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_bill_works() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, None);
+        prepare_service_consumer_contract();
+
+        let service_contract = SmartContractModule::service_contracts(1).unwrap();
+        assert_eq!(service_contract.last_bill, 0);
+
+        approve_service_consumer_contract();
+
+        let service_contract = SmartContractModule::service_contracts(1).unwrap();
+        assert_eq!(service_contract.last_bill, get_timestamp_in_seconds(1));
+
+        let consumer_twin = TfgridModule::twins(2).unwrap();
+        let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
+        assert_eq!(consumer_balance, 2500000000); 
+
+        // Bill 20 min after contract approval (= service start)
+        run_to_block(201, Some(&mut pool_state));
+        assert_ok!(SmartContractModule::service_contract_bill(
+            Origin::signed(alice()),
+            1,
+            VARIABLE_AMOUNT,
+            b"bill_metadata".to_vec(),
+        ));
+
+        let service_contract = SmartContractModule::service_contracts(1).unwrap();
+        assert_eq!(service_contract.last_bill, get_timestamp_in_seconds(201));
+
+        let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
+        let window = get_timestamp_in_seconds(201) - get_timestamp_in_seconds(1);
+        let bill = types::ServiceContractBill {
+            variable_amount: VARIABLE_AMOUNT,
+            window,
+            metadata: bounded_vec![],
+        };
+        let billed_amount_1 = service_contract.calculate_bill_cost_tft(bill).unwrap();
+
+        assert_eq!(2500000000 - consumer_balance, billed_amount_1);
+
+        // Bill a second time, 1h10min after first billing
+        run_to_block(901, Some(&mut pool_state));
+        assert_ok!(SmartContractModule::service_contract_bill(
+            Origin::signed(alice()),
+            1,
+            VARIABLE_AMOUNT,
+            b"bill_metadata".to_vec(),
+        ));
+
+        let service_contract = SmartContractModule::service_contracts(1).unwrap();
+        assert_eq!(service_contract.last_bill, get_timestamp_in_seconds(901));
+
+        let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
+        let bill = types::ServiceContractBill {
+            variable_amount: VARIABLE_AMOUNT,
+            window: 3600, // force a 1h bill here
+            metadata: bounded_vec![],
+        };
+        let billed_amount_2 = service_contract.calculate_bill_cost_tft(bill).unwrap();
+
+        // Check that second billing was equivalent to a 1h
+        // billing even if window is greater than 1h
+        assert_eq!(2500000000 - consumer_balance - billed_amount_1, billed_amount_2);
     });
 }
 
@@ -3810,7 +3902,7 @@ fn push_nru_report_for_contract(contract_id: u64, block_number: u64) {
     consumption_reports.push(super::types::NruConsumption {
         contract_id,
         nru: 3 * gigabyte,
-        timestamp: 1628082000 + (6 * block_number),
+        timestamp: get_timestamp_in_seconds(block_number),
         window: 6 * block_number,
     });
 
@@ -3830,7 +3922,7 @@ fn check_report_cost(
 
     let contract_bill_event = types::ContractBill {
         contract_id,
-        timestamp: 1628082000 + (6 * block_number),
+        timestamp: get_timestamp_in_seconds(block_number),
         discount_level,
         amount_billed: amount_billed as u128,
     };
@@ -4511,8 +4603,21 @@ fn prepare_service_consumer_contract() {
     assert_ok!(SmartContractModule::service_contract_set_fees(
         Origin::signed(alice()),
         1,
-        100,
-        10,
+        BASE_FEE,
+        VARIABLE_FEE,
+    ));
+}
+
+fn approve_service_consumer_contract() {
+    // Service approves
+    assert_ok!(SmartContractModule::service_contract_approve(
+        Origin::signed(alice()),
+        1,
+    ));
+    // Consumer approves
+    assert_ok!(SmartContractModule::service_contract_approve(
+        Origin::signed(bob()),
+        1,
     ));
 }
 
@@ -4529,4 +4634,8 @@ fn get_service_contract() -> types::ServiceContract<TestRuntime> {
         state: types::ServiceContractState::Created,
         phantom: PhantomData,
     }
+}
+
+fn get_timestamp_in_seconds(block_number: u64) -> u64 {
+    1628082000 + (6 * block_number)
 }

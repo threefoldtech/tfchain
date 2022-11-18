@@ -1406,6 +1406,8 @@ impl<T: Config> Pallet<T> {
         );
 
         // Remove contract from service contract map
+        // Can be done at any state of contract 
+        // so no need to handle state validation
         ServiceContracts::<T>::remove(service_contract_id);
         Self::deposit_event(Event::ServiceContractCanceled {
             service_contract_id,
@@ -1504,12 +1506,6 @@ impl<T: Config> Pallet<T> {
             .ok_or(Error::<T>::TwinNotExists)?;
 
         let usable_balance = Self::get_usable_balance(&consumer_twin.account_id);
-
-        // Handle consumer out of funds
-        // ensure!(
-        //     usable_balance >= amount_due,
-        //     Error::<T>::ServiceContractNotEnoughFundToPayBill,
-        // );
 
         // If consumer is out of funds then contract is canceled
         // by service and removed from service contract map
