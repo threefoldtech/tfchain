@@ -459,7 +459,7 @@ pub mod pallet {
         ServiceContractBillingNotAllowed,
         ServiceContractBillMetadataTooLong,
         ServiceContractMetadataTooLong,
-        ServiceContractNotEnoughFundToPayBill,
+        ServiceContractNotEnoughFundsToPayBill,
     }
 
     #[pallet::genesis_config]
@@ -1524,7 +1524,7 @@ impl<T: Config> Pallet<T> {
                 types::Cause::OutOfFunds,
             )?;
             return Err(DispatchErrorWithPostInfo::from(
-                Error::<T>::ServiceContractNotEnoughFundToPayBill,
+                Error::<T>::ServiceContractNotEnoughFundsToPayBill,
             ));
         }
 

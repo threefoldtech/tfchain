@@ -1939,6 +1939,119 @@ fn test_service_contract_bill_works() {
     });
 }
 
+#[test]
+fn test_service_contract_bill_by_unauthorized_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_bill(
+                Origin::signed(bob()),
+                1,
+                VARIABLE_AMOUNT,
+                b"bill_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::TwinNotAuthorizedToBillServiceContract
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_bill_not_approved_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_bill(
+                Origin::signed(alice()),
+                1,
+                VARIABLE_AMOUNT,
+                b"bill_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::ServiceContractBillingNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_bill_variable_amount_too_high_fails() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, None);
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        // Bill 1h after contract approval (= service start)
+        run_to_block(601, Some(&mut pool_state));
+        assert_noop!(
+            SmartContractModule::service_contract_bill(
+                Origin::signed(alice()),
+                1,
+                VARIABLE_FEE + 1,  // variable_amount a bit higher than variable fee
+                b"bill_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::ServiceContractBillingNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_bill_metadata_too_long_fails() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, None);
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        // Bill 1h after contract approval (= service start)
+        run_to_block(601, Some(&mut pool_state));
+        assert_noop!(
+            SmartContractModule::service_contract_bill(
+                Origin::signed(alice()),
+                1,
+                VARIABLE_AMOUNT,
+                b"very_loooooooooooooooooooooooooooooooooooooooooooooooooong_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::ServiceContractBillMetadataTooLong
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_bill_out_of_funds_fails() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, None);
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        // Drain consumer account
+        let consumer_twin = TfgridModule::twins(2).unwrap();
+        let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
+        Balances::transfer(
+            Origin::signed(bob()),
+            alice(),
+            consumer_balance,
+        )
+        .unwrap();
+        let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
+        assert_eq!(consumer_balance, 0);
+
+        // Bill 1h after contract approval (= service start)
+        run_to_block(601, Some(&mut pool_state));
+        assert_noop!(
+            SmartContractModule::service_contract_bill(
+                Origin::signed(alice()),
+                1,
+                VARIABLE_AMOUNT,
+                b"bill_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::ServiceContractNotEnoughFundsToPayBill
+        );
+    });
+}
+
 //  CAPACITY CONTRACT RESERVING ALL RESOURCES OF NODE TESTS //
 // -------------------------------------------- //
 
