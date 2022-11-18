@@ -622,12 +622,12 @@ class TfChainClient:
                 node["resources"]["used_resources"]["mru"] == 0:
             self.bring_node_down(node_id, nodes[0], port=port)
 
-    def add_nru_reports(self, contract_id: int = 1, nru: int = 1, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+    def add_nru_reports(self, deployment_id: int = 1, nru: int = 1, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         block_number = self.get_block_number(port=port)
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         reports = [{
-            "contract_id": contract_id,
+            "contract_id": deployment_id,
             "nru": nru * GIGABYTE,
             "timestamp": block_number,
             "window": 6 * block_number

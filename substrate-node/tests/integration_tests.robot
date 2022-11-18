@@ -345,12 +345,12 @@ Test Create Update Cancel Deployment: Success
     Length Should Be    ${farm}[public_ips]    1    msg=There should only be one public ip in public_ips
     Should Be Equal    ${farm}[public_ips][0][ip]    185.206.122.33/24    msg=The public ip address should be 185.206.122.33/24
     Should Be Equal    ${farm}[public_ips][0][gateway]    185.206.122.1    msg=The gateway should be 185.206.122.1
-    Should Be Equal    ${farm}[public_ips][0][contract_id]    ${2}    msg=The public ip was claimed in contract with id 1 while the farm contains a different contract id for it
+    Should Be Equal    ${farm}[public_ips][0][contract_id]    ${1}    msg=The public ip was claimed in deployment with id 1 while the farm contains a different contract id for it
 
     ${updated_resources} =    Resources    hru=${512}    sru=${128}    cru=${1}    mru=${6}
-    Update Deployment    deployment_id=${2}    resources=${updated_resources}    who=Bob    port=9946
+    Update Deployment    deployment_id=${1}    resources=${updated_resources}    who=Bob    port=9946
 
-    Cancel Deployment    deployment_id=${2}    who=Bob    port=9946
+    Cancel Deployment    deployment_id=${1}    who=Bob    port=9946
 
     Tear Down Multi Node Network
 
@@ -477,12 +477,12 @@ Test Billing
     ${resources_dc} =    Resources    hru=${256}    sru=${128}    cru=${2}    mru=${4}
     Create Deployment    capacity_reservation_id=${1}    resources=${resources_dc}   port=${9946}    who=Bob
     Create Deployment    capacity_reservation_id=${1}    resources=${resources_dc}    public_ips=1    port=${9946}    who=Bob
-    Add Nru Reports    contract_id=${2}    nru=${3}
+    Add Nru Reports    deployment_id=${1}    nru=${3}
 
     # Let it run 6 blocks so that the user will be billed 1 time
     Wait X Blocks    ${6}
-    Cancel Deployment    deployment_id=${3}    who=Bob
     Cancel Deployment    deployment_id=${2}    who=Bob
+    Cancel Deployment    deployment_id=${1}    who=Bob
     Cancel Capacity Reservation Contract    contract_id=${1}    who=Bob
 
     # Balance should have decreased
@@ -524,11 +524,11 @@ Test Solution Provider
     Create Capacity Reservation Contract    farm_id=${1}    policy=${policy}    solution_provider_id=${1}    port=9946    who=Bob
     ${resources} =    Resources    hru=${20}    sru=${20}    cru=${2}    mru=${4}
     Create Deployment    resources=${resources}    port=9946    who=Bob
-    Add Nru Reports    contract_id=${2}    nru=${3}
+    Add Nru Reports    contract_id=${1}    nru=${3}
     # Wait 6 blocks: after 5 blocks Bob should be billed
     Wait X Blocks    ${6}
     # Cancel the contract so that the bill is distributed and so that the providers get their part
-    Cancel Deployment    contract_id=${2}    who=Bob
+    Cancel Deployment    deployment_id=${1}    who=Bob
     Cancel Capacity Reservation Contract    contract_id=${1}    who=Bob
 
     # Verification: both providers should have received their part
