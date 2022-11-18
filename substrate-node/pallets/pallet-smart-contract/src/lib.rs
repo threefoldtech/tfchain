@@ -359,15 +359,10 @@ pub mod pallet {
             node_id: u32,
             twin_id: u32,
         },
-        DeploymentContractCanceled {
-            contract_id: u64,
-            capacity_reservation_contract_id: u64,
-            twin_id: u32,
-        },
         DeploymentCreated(types::Deployment<T>),
         DeploymentUpdated(types::Deployment<T>),
         DeploymentCanceled {
-            deployment_id: u64
+            deployment_id: u64,
         },
     }
 
@@ -406,7 +401,6 @@ pub mod pallet {
         NoSuchSolutionProvider,
         SolutionProviderNotApproved,
         NoSuitableNodeInFarm,
-        NotAuthorizedToCreateDeploymentContract,
         GroupNotExists,
         TwinNotAuthorizedToDeleteGroup,
         GroupHasActiveMembers,
@@ -941,7 +935,7 @@ impl<T: Config> Pallet<T> {
         let capacity_reservation_contract = Self::get_capacity_reservation_contract(&cr_contract)?;
         ensure!(
             cr_contract.twin_id == twin_id,
-            Error::<T>::NotAuthorizedToCreateDeploymentContract
+            Error::<T>::TwinNotAuthorized
         );
 
         // If the contract with hash and node id exists and it's in any other state then
@@ -973,7 +967,7 @@ impl<T: Config> Pallet<T> {
         let mut id = DeploymentID::<T>::get();
         id = id + 1;
 
-        // Prepare DeploymentContract struct
+        // Prepare Deployment struct
         let mut deployment = types::Deployment {
             id,
             twin_id,
@@ -986,10 +980,7 @@ impl<T: Config> Pallet<T> {
         };
 
         Self::_reserve_ip(id, &mut deployment)?;
-        Self::_add_deployment_to_capacity_reservation_contract(
-            capacity_reservation_id,
-            id,
-        )?;
+        Self::_add_deployment_to_capacity_reservation_contract(capacity_reservation_id, id)?;
         Self::_change_used_resources_on_capacity_reservation(
             capacity_reservation_id,
             Resources::empty(),
@@ -1252,10 +1243,7 @@ impl<T: Config> Pallet<T> {
             Deployments::<T>::get(deployment_id).ok_or(Error::<T>::DeploymentNotExists)?;
         let twin =
             pallet_tfgrid::Twins::<T>::get(deployment.twin_id).ok_or(Error::<T>::TwinNotExists)?;
-        ensure!(
-            twin.account_id == account_id,
-            Error::<T>::TwinNotAuthorized
-        );
+        ensure!(twin.account_id == account_id, Error::<T>::TwinNotAuthorized);
 
         // Don't allow updates for contracts that are in grace state
 
@@ -1313,10 +1301,7 @@ impl<T: Config> Pallet<T> {
             Deployments::<T>::get(deployment_id).ok_or(Error::<T>::DeploymentNotExists)?;
         let twin =
             pallet_tfgrid::Twins::<T>::get(deployment.twin_id).ok_or(Error::<T>::TwinNotExists)?;
-        ensure!(
-            twin.account_id == account_id,
-            Error::<T>::TwinNotAuthorized
-        );
+        ensure!(twin.account_id == account_id, Error::<T>::TwinNotAuthorized);
 
         Self::remove_deployment(deployment_id)?;
 
@@ -1379,9 +1364,7 @@ impl<T: Config> Pallet<T> {
         // remove the contract by hash from storage
         ContractIDByNodeIDAndHash::<T>::remove(node_id, &deployment.deployment_hash);
 
-        Self::deposit_event(Event::DeploymentCanceled {
-            deployment_id,
-        });
+        Self::deposit_event(Event::DeploymentCanceled { deployment_id });
 
         Ok(().into())
     }
@@ -1441,7 +1424,8 @@ impl<T: Config> Pallet<T> {
             }
             // we know contract exists, fetch it
             // if the node is trying to send garbage data we can throw an error here
-            let deployment = Deployments::<T>::get(report.contract_id).ok_or(Error::<T>::DeploymentNotExists)?;
+            let deployment =
+                Deployments::<T>::get(report.contract_id).ok_or(Error::<T>::DeploymentNotExists)?;
             let contract_cr = Contracts::<T>::get(deployment.capacity_reservation_id)
                 .ok_or(Error::<T>::CapacityReservationNotExists)?;
             let capacity_reservation_contract =
@@ -1825,12 +1809,14 @@ impl<T: Config> Pallet<T> {
                 types::ContractData::CapacityReservationContract(capacity_reservation_contract) => {
                     // first remove all deployment contracts created with that reserved capacity
                     log::debug!("hello");
-                    for deployment_id in capacity_reservation_contract.deployments
-                    {
+                    for deployment_id in capacity_reservation_contract.deployments {
                         match Self::remove_deployment(deployment_id) {
                             Ok(_) => (),
                             Err(e) => {
-                                log::error!("error while removing the deployment contract: {:?}", e);
+                                log::error!(
+                                    "error while removing the deployment contract: {:?}",
+                                    e
+                                );
                             }
                         }
                     }
