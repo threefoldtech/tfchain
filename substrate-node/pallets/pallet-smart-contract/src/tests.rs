@@ -1708,6 +1708,53 @@ fn test_service_contract_approve_works() {
 }
 
 #[test]
+fn test_service_contract_approve_agreement_not_ready_fails() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_approve(
+                Origin::signed(alice()),
+                1,
+            ),
+            Error::<TestRuntime>::ServiceContractApprovalNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_approve_already_approved_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_approve(
+                Origin::signed(alice()),
+                1,
+            ),
+            Error::<TestRuntime>::ServiceContractApprovalNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_approve_by_unauthorized_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+        create_twin(charlie());
+
+        assert_noop!(
+            SmartContractModule::service_contract_approve(
+                Origin::signed(charlie()),
+                1,
+            ),
+            Error::<TestRuntime>::TwinNotAuthorizedToApproveServiceContract
+        );
+    });
+}
+
+#[test]
 fn test_service_contract_reject_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
@@ -1735,6 +1782,53 @@ fn test_service_contract_reject_works() {
 }
 
 #[test]
+fn test_service_contract_reject_agreement_not_ready_fails() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_reject(
+                Origin::signed(alice()),
+                1,
+            ),
+            Error::<TestRuntime>::ServiceContractRejectionNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_reject_already_approved_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_reject(
+                Origin::signed(alice()),
+                1,
+            ),
+            Error::<TestRuntime>::ServiceContractRejectionNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_reject_by_unauthorized_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+        create_twin(charlie());
+
+        assert_noop!(
+            SmartContractModule::service_contract_reject(
+                Origin::signed(charlie()),
+                1,
+            ),
+            Error::<TestRuntime>::TwinNotAuthorizedToRejectServiceContract
+        );
+    });
+}
+
+#[test]
 fn test_service_contract_cancel_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
@@ -1757,6 +1851,22 @@ fn test_service_contract_cancel_works() {
                 service_contract_id: 1,
                 cause: types::Cause::CanceledByUser,
             })),
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_cancel_by_unauthorized_fails() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+        create_twin(charlie());
+
+        assert_noop!(
+            SmartContractModule::service_contract_cancel(
+                Origin::signed(charlie()),
+                1,
+            ),
+            Error::<TestRuntime>::TwinNotAuthorizedToCancelServiceContract
         );
     });
 }
