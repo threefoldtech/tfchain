@@ -452,8 +452,10 @@ pub mod pallet {
         TwinNotAuthorizedToCancelServiceContract,
         TwinNotAuthorizedToBillServiceContract,
         ServiceContractNotExists,
+        ServiceContractCreationNotAllowed,
         ServiceContractModificationNotAllowed,
         ServiceContractApprovalNotAllowed,
+        ServiceContractRejectionNotAllowed,
         ServiceContractBillingNotAllowed,
         ServiceContractBillMetadataTooLong,
         ServiceContractMetadataTooLong,
@@ -1184,6 +1186,12 @@ impl<T: Config> Pallet<T> {
             Error::<T>::TwinNotAuthorizedToCreateServiceContract,
         );
 
+        // Service twin and consumer twin can not be the same
+        ensure!(
+            service_twin_id != consumer_twin_id,
+            Error::<T>::ServiceContractCreationNotAllowed,
+        );
+
         // Create service contract
         let service_contract = types::ServiceContract {
             service_twin_id,
@@ -1363,7 +1371,7 @@ impl<T: Config> Pallet<T> {
                 service_contract.state,
                 types::ServiceContractState::AgreementReady
             ),
-            Error::<T>::ServiceContractApprovalNotAllowed,
+            Error::<T>::ServiceContractRejectionNotAllowed,
         );
 
         // Only service or consumer can reject agreement

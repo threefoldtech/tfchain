@@ -1492,6 +1492,40 @@ fn test_service_contract_create_works() {
 }
 
 #[test]
+fn test_service_contract_create_by_anyone_fails() {
+    new_test_ext().execute_with(|| {
+        create_twin(alice());
+        create_twin(bob());
+        create_twin(charlie());
+    
+        assert_noop!(
+            SmartContractModule::service_contract_create(
+                Origin::signed(charlie()),
+                alice(),
+                bob(),
+            ),
+            Error::<TestRuntime>::TwinNotAuthorizedToCreateServiceContract
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_create_same_account_fails() {
+    new_test_ext().execute_with(|| {
+        create_twin(alice());
+    
+        assert_noop!(
+            SmartContractModule::service_contract_create(
+                Origin::signed(alice()),
+                alice(),
+                alice(),
+            ),
+            Error::<TestRuntime>::ServiceContractCreationNotAllowed
+        );
+    });
+}
+
+#[test]
 fn test_service_contract_set_metadata_works() {
     new_test_ext().execute_with(|| {
         create_service_consumer_contract();
@@ -1507,6 +1541,56 @@ fn test_service_contract_set_metadata_works() {
         assert_eq!(
             service_contract,
             SmartContractModule::service_contracts(1).unwrap(),
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_set_metadata_by_unauthorized_fails() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+        create_twin(charlie());
+
+        assert_noop!(
+            SmartContractModule::service_contract_set_metadata(
+                Origin::signed(charlie()),
+                1,
+                b"some_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::TwinNotAuthorizedToSetMetadata
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_set_metadata_already_approved_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_set_metadata(
+                Origin::signed(alice()),
+                1,
+                b"some_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::ServiceContractModificationNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_set_metadata_too_long_fails() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_set_metadata(
+                Origin::signed(alice()),
+                1,
+                b"very_loooooooooooooooooooooooooooooooooooooooooooooooooong_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::ServiceContractMetadataTooLong
         );
     });
 }
@@ -1529,6 +1613,41 @@ fn test_service_contract_set_fees_works() {
         assert_eq!(
             service_contract,
             SmartContractModule::service_contracts(1).unwrap(),
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_set_fees_by_unauthorized_fails() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_set_fees(
+                Origin::signed(bob()),
+                1,
+                BASE_FEE,
+                VARIABLE_FEE,
+            ),
+            Error::<TestRuntime>::TwinNotAuthorizedToSetFees
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_set_fees_already_approved_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_set_fees(
+                Origin::signed(alice()),
+                1,
+                BASE_FEE,
+                VARIABLE_FEE,
+            ),
+            Error::<TestRuntime>::ServiceContractModificationNotAllowed
         );
     });
 }
