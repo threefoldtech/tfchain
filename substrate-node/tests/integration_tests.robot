@@ -316,7 +316,7 @@ Test Add Public Config On Node: Failure InvalidDomain
     
     
 
-Test Create Update Cancel Deployment Contract: Success
+Test Create Update Cancel Deployment: Success
     [Documentation]    Testing api calls (create, update, cancel) for managing a node contract
     Setup Multi Node Network    log_name=test_create_node_contract
 
@@ -337,7 +337,7 @@ Test Create Update Cancel Deployment Contract: Success
     ${policy} =     Capacity Reservation Policy Any    ${resources_cr}
     Create Capacity Reservation Contract    farm_id=${1}    policy=${policy}    who=Bob    port=9946
     ${resources_dc} =    Resources    hru=${256}    sru=${256}    cru=${2}    mru=${4} 
-    Create Deployment Contract    capacity_reservation_id=${1}    resources=${resources_dc}    public_ips=${1}    who=Bob    port=9946
+    Create Deployment    capacity_reservation_id=${1}    resources=${resources_dc}    public_ips=${1}    who=Bob    port=9946
 
     ${farm} =     Get Farm    ${1}
     Should Not Be Equal    ${farm}    ${None}    msg=Farm with id 1 doesn't exist
@@ -348,13 +348,13 @@ Test Create Update Cancel Deployment Contract: Success
     Should Be Equal    ${farm}[public_ips][0][contract_id]    ${2}    msg=The public ip was claimed in contract with id 1 while the farm contains a different contract id for it
 
     ${updated_resources} =    Resources    hru=${512}    sru=${128}    cru=${1}    mru=${6}
-    Update Deployment Contract    contract_id=${2}    resources=${updated_resources}    who=Bob    port=9946
+    Update Deployment    deployment_id=${2}    resources=${updated_resources}    who=Bob    port=9946
 
-    Cancel Deployment Contract    contract_id=${2}    who=Bob    port=9946
+    Cancel Deployment    deployment_id=${2}    who=Bob    port=9946
 
     Tear Down Multi Node Network
 
-Test Create Deployment Contract: Failure Not Enough Public Ips
+Test Create Deployment: Failure Not Enough Public Ips
     [Documentation]    Testing creating a node contract and requesting too much pub ips
     Setup Multi Node Network    log_name=test_create_node_contract_failure_notenoughpubips
 
@@ -366,7 +366,7 @@ Test Create Deployment Contract: Failure Not Enough Public Ips
     # let's request 2 public ips which should result in an error
     ${resources} =    Resources
     Run Keyword And Expect Error    *'FarmHasNotEnoughPublicIPs'*
-    ...    Create Deployment Contract    capacity_reservation_id=${1}    public_ips=${2}    resources=${resources}
+    ...    Create Deployment    capacity_reservation_id=${1}    public_ips=${2}    resources=${resources}
 
     Tear Down Multi Node Network
 
@@ -473,16 +473,16 @@ Test Billing
     ${resources_cr} =    Resources    hru=${512}    sru=${256}    cru=${4}    mru=${8}
     ${policy} =     Capacity Reservation Policy Any    ${resources_cr}
     Create Capacity Reservation Contract    farm_id=${1}    policy=${policy}    port=${9946}    who=Bob
-    # Let's create two deployment contracts (simulating two vms on the node) both taking half of the resources of the capacity reservation contract
+    # Let's create two deployments (simulating two vms on the node) both taking half of the resources of the capacity reservation contract
     ${resources_dc} =    Resources    hru=${256}    sru=${128}    cru=${2}    mru=${4}
-    Create Deployment Contract    capacity_reservation_id=${1}    resources=${resources_dc}   port=${9946}    who=Bob
-    Create Deployment Contract    capacity_reservation_id=${1}    resources=${resources_dc}    public_ips=1    port=${9946}    who=Bob
+    Create Deployment    capacity_reservation_id=${1}    resources=${resources_dc}   port=${9946}    who=Bob
+    Create Deployment    capacity_reservation_id=${1}    resources=${resources_dc}    public_ips=1    port=${9946}    who=Bob
     Add Nru Reports    contract_id=${2}    nru=${3}
 
     # Let it run 6 blocks so that the user will be billed 1 time
     Wait X Blocks    ${6}
-    Cancel Deployment Contract    contract_id=${3}    who=Bob
-    Cancel Deployment Contract    contract_id=${2}    who=Bob
+    Cancel Deployment    deployment_id=${3}    who=Bob
+    Cancel Deployment    deployment_id=${2}    who=Bob
     Cancel Capacity Reservation Contract    contract_id=${1}    who=Bob
 
     # Balance should have decreased
@@ -523,12 +523,12 @@ Test Solution Provider
     ${policy} =    Capacity Reservation Policy Node    ${1}
     Create Capacity Reservation Contract    farm_id=${1}    policy=${policy}    solution_provider_id=${1}    port=9946    who=Bob
     ${resources} =    Resources    hru=${20}    sru=${20}    cru=${2}    mru=${4}
-    Create Deployment Contract    resources=${resources}    port=9946    who=Bob
+    Create Deployment    resources=${resources}    port=9946    who=Bob
     Add Nru Reports    contract_id=${2}    nru=${3}
     # Wait 6 blocks: after 5 blocks Bob should be billed
     Wait X Blocks    ${6}
     # Cancel the contract so that the bill is distributed and so that the providers get their part
-    Cancel Deployment Contract    contract_id=${2}    who=Bob
+    Cancel Deployment    contract_id=${2}    who=Bob
     Cancel Capacity Reservation Contract    contract_id=${1}    who=Bob
 
     # Verification: both providers should have received their part

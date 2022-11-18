@@ -1652,7 +1652,7 @@ fn test_create_deployment_using_someone_elses_capacity_reservation_contract_fail
                 get_resources(),
                 1,
             ),
-            Error::<TestRuntime>::NotAuthorizedToCreateDeploymentContract
+            Error::<TestRuntime>::TwinNotAuthorized
         );
     })
 }
