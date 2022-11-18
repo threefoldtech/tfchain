@@ -1687,7 +1687,7 @@ fn test_service_contract_approve_works() {
         ));
 
         service_contract.accepted_by_consumer = true;
-        service_contract.last_bill = get_timestamp_in_seconds(1);
+        service_contract.last_bill = get_timestamp_in_seconds_for_block(1);
         service_contract.state = types::ServiceContractState::ApprovedByBoth;
         assert_eq!(
             service_contract,
@@ -1884,13 +1884,13 @@ fn test_service_contract_bill_works() {
         approve_service_consumer_contract();
 
         let service_contract = SmartContractModule::service_contracts(1).unwrap();
-        assert_eq!(service_contract.last_bill, get_timestamp_in_seconds(1));
+        assert_eq!(service_contract.last_bill, get_timestamp_in_seconds_for_block(1));
 
         let consumer_twin = TfgridModule::twins(2).unwrap();
         let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
         assert_eq!(consumer_balance, 2500000000); 
 
-        // Bill 20 min after contract approval (= service start)
+        // Bill 20 min after contract approval
         run_to_block(201, Some(&mut pool_state));
         assert_ok!(SmartContractModule::service_contract_bill(
             Origin::signed(alice()),
@@ -1900,10 +1900,10 @@ fn test_service_contract_bill_works() {
         ));
 
         let service_contract = SmartContractModule::service_contracts(1).unwrap();
-        assert_eq!(service_contract.last_bill, get_timestamp_in_seconds(201));
+        assert_eq!(service_contract.last_bill, get_timestamp_in_seconds_for_block(201));
 
         let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
-        let window = get_timestamp_in_seconds(201) - get_timestamp_in_seconds(1);
+        let window = get_timestamp_in_seconds_for_block(201) - get_timestamp_in_seconds_for_block(1);
         let bill = types::ServiceContractBill {
             variable_amount: VARIABLE_AMOUNT,
             window,
@@ -1923,7 +1923,7 @@ fn test_service_contract_bill_works() {
         ));
 
         let service_contract = SmartContractModule::service_contracts(1).unwrap();
-        assert_eq!(service_contract.last_bill, get_timestamp_in_seconds(901));
+        assert_eq!(service_contract.last_bill, get_timestamp_in_seconds_for_block(901));
 
         let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
         let bill = types::ServiceContractBill {
@@ -1982,13 +1982,15 @@ fn test_service_contract_bill_variable_amount_too_high_fails() {
         prepare_service_consumer_contract();
         approve_service_consumer_contract();
 
-        // Bill 1h after contract approval (= service start)
+        // Bill 1h after contract approval
         run_to_block(601, Some(&mut pool_state));
+        // set variable amount a bit higher than variable fee to trigger error
+        let variable_amount = VARIABLE_FEE + 1;
         assert_noop!(
             SmartContractModule::service_contract_bill(
                 Origin::signed(alice()),
                 1,
-                VARIABLE_FEE + 1,  // variable_amount a bit higher than variable fee
+                variable_amount,
                 b"bill_metadata".to_vec(),
             ),
             Error::<TestRuntime>::ServiceContractBillingNotAllowed
@@ -2004,7 +2006,7 @@ fn test_service_contract_bill_metadata_too_long_fails() {
         prepare_service_consumer_contract();
         approve_service_consumer_contract();
 
-        // Bill 1h after contract approval (= service start)
+        // Bill 1h after contract approval
         run_to_block(601, Some(&mut pool_state));
         assert_noop!(
             SmartContractModule::service_contract_bill(
@@ -2038,7 +2040,7 @@ fn test_service_contract_bill_out_of_funds_fails() {
         let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
         assert_eq!(consumer_balance, 0);
 
-        // Bill 1h after contract approval (= service start)
+        // Bill 1h after contract approval
         run_to_block(601, Some(&mut pool_state));
         assert_noop!(
             SmartContractModule::service_contract_bill(
@@ -2047,7 +2049,7 @@ fn test_service_contract_bill_out_of_funds_fails() {
                 VARIABLE_AMOUNT,
                 b"bill_metadata".to_vec(),
             ),
-            Error::<TestRuntime>::ServiceContractNotEnoughFundsToPayBill
+            Error::<TestRuntime>::ServiceContractNotEnoughFundsToPayBill,
         );
     });
 }
@@ -4244,7 +4246,7 @@ fn push_nru_report_for_contract(contract_id: u64, block_number: u64) {
     consumption_reports.push(super::types::NruConsumption {
         contract_id,
         nru: 3 * gigabyte,
-        timestamp: get_timestamp_in_seconds(block_number),
+        timestamp: get_timestamp_in_seconds_for_block(block_number),
         window: 6 * block_number,
     });
 
@@ -4264,7 +4266,7 @@ fn check_report_cost(
 
     let contract_bill_event = types::ContractBill {
         contract_id,
-        timestamp: get_timestamp_in_seconds(block_number),
+        timestamp: get_timestamp_in_seconds_for_block(block_number),
         discount_level,
         amount_billed: amount_billed as u128,
     };
@@ -4978,6 +4980,6 @@ fn get_service_contract() -> types::ServiceContract<TestRuntime> {
     }
 }
 
-fn get_timestamp_in_seconds(block_number: u64) -> u64 {
+fn get_timestamp_in_seconds_for_block(block_number: u64) -> u64 {
     1628082000 + (6 * block_number)
 }
