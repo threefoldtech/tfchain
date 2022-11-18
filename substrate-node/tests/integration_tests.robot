@@ -524,7 +524,7 @@ Test Solution Provider
     Create Capacity Reservation Contract    farm_id=${1}    policy=${policy}    solution_provider_id=${1}    port=9946    who=Bob
     ${resources} =    Resources    hru=${20}    sru=${20}    cru=${2}    mru=${4}
     Create Deployment    resources=${resources}    port=9946    who=Bob
-    Add Nru Reports    contract_id=${1}    nru=${3}
+    Add Nru Reports    deployment_id=${1}    nru=${3}
     # Wait 6 blocks: after 5 blocks Bob should be billed
     Wait X Blocks    ${6}
     # Cancel the contract so that the bill is distributed and so that the providers get their part
