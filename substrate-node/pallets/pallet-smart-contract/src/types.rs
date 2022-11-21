@@ -3,11 +3,12 @@ use crate::pallet::{
 };
 use crate::Config;
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::{BoundedVec, RuntimeDebugNoBound};
+use frame_support::{pallet_prelude::ConstU32, BoundedVec, RuntimeDebugNoBound};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
 use substrate_fixed::types::U64F64;
 use tfchain_support::{resources::Resources, types::ConsumableResources};
+use core::marker::PhantomData;
 
 pub type BlockNumber = u64;
 
@@ -250,4 +251,39 @@ pub struct SolutionProvider<AccountId> {
 pub struct Provider<AccountId> {
     pub who: AccountId,
     pub take: u8,
+}
+
+// metadata length limited to 64 bytes (2 public keys)
+pub const MAX_METADATA_LENGTH: u32 = 64;
+
+#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(T))]
+#[codec(mel_bound())]
+pub struct ServiceContract<T: Config> {
+    pub service_twin_id: u32,
+    pub consumer_twin_id: u32,
+    pub base_fee: u64,
+    pub variable_fee: u64,
+    pub metadata: BoundedVec<u8, ConstU32<MAX_METADATA_LENGTH>>,
+    pub accepted_by_service: bool,
+    pub accepted_by_consumer: bool,
+    pub last_bill: u64,
+    pub state: ServiceContractState,
+    pub phantom: PhantomData<T>,
+}
+
+#[derive(
+    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
+)]
+pub struct ServiceContractBill {
+    pub variable_amount: u64, // variable amount which is billed
+    pub window: u64,          // amount of time (in seconds) covered since last bill
+    pub metadata: BoundedVec<u8, ConstU32<50>>, // limited to 50 bytes for now
+}
+
+#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
+pub enum ServiceContractState {
+    Created,
+    AgreementReady,
+    ApprovedByBoth,
 }
