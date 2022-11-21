@@ -53,10 +53,6 @@ impl<T: Config> Contract<T> {
         seconds_elapsed: u64,
     ) -> Result<u64, DispatchErrorWithPostInfo> {
         let total_cost = match &self.contract_type {
-            types::ContractData::DeploymentContract(_) => {
-                // cost is calculated in capacity reservation contracts
-                0
-            }
             types::ContractData::CapacityReservationContract(capacity_reservation_contract) => {
                 // Get the contract billing info to view the amount unbilled for NRU (network resource units)
                 let contract_billing_info = self.get_billing_info();
