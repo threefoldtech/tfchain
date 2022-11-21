@@ -63,7 +63,6 @@ impl<T: Config> Contract<T> {
     pub fn get_node_id(&self) -> u32 {
         match self.contract_type.clone() {
             ContractData::CapacityReservationContract(c) => c.node_id,
-            ContractData::DeploymentContract(_) => 0,
             ContractData::NameContract(_) => 0,
         }
     }
@@ -77,13 +76,15 @@ pub struct CapacityReservationContract {
     pub resources: ConsumableResources,
     pub group_id: Option<u32>,
     pub public_ips: u32,
-    pub deployment_contracts: Vec<u64>,
+    pub deployments: Vec<u64>,
 }
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
-pub struct DeploymentContract<T: Config> {
+pub struct Deployment<T: Config> {
+    pub id: u64,
+    pub twin_id: u32,
     pub capacity_reservation_id: u64,
     // Hash of the deployment, set by the user
     // Max 32 bytes
@@ -157,7 +158,6 @@ pub struct RentContract {
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub enum ContractData<T: Config> {
-    DeploymentContract(DeploymentContract<T>),
     NameContract(NameContract<T>),
     CapacityReservationContract(CapacityReservationContract),
 }

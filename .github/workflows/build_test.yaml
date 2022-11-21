@@ -48,7 +48,7 @@ jobs:
           robot -d _output_tests/ .
 
       - uses: actions/upload-artifact@v3
-        if: failure()
+        if: always()
         with:
           name: integration test output
           path: substrate-node/tests/_output_tests/

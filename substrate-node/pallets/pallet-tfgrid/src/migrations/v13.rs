@@ -79,7 +79,7 @@ impl<T: Config> OnRuntimeUpgrade for NodeMigration<T> {
         // Check number of nodes against pre-check result
         let pre_nodes_count = Self::get_temp_storage("pre_node_count").unwrap_or(0u64);
         assert_eq!(
-            Nodes::<T>::iter().count(),
+            Nodes::<T>::iter().count() as u64,
             pre_nodes_count,
             "Number of nodes migrated does not match"
         );
