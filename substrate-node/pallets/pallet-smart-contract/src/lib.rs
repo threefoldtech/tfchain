@@ -81,7 +81,7 @@ pub mod crypto {
 }
 
 pub mod cost;
-// pub mod migrations;
+pub mod migrations;
 pub mod name_contract;
 pub mod types;
 pub mod weights;
@@ -553,7 +553,7 @@ pub mod pallet {
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn update_deployment(
             origin: OriginFor<T>,
-            contract_id: u64,
+            deployment_id: u64,
             deployment_hash: DeploymentHash,
             deployment_data: DeploymentDataInput<T>,
             resources: Option<Resources>,
@@ -561,7 +561,7 @@ pub mod pallet {
             let account_id = ensure_signed(origin)?;
             Self::_update_deployment(
                 account_id,
-                contract_id,
+                deployment_id,
                 deployment_hash,
                 deployment_data,
                 resources,
@@ -1245,18 +1245,14 @@ impl<T: Config> Pallet<T> {
             pallet_tfgrid::Twins::<T>::get(deployment.twin_id).ok_or(Error::<T>::TwinNotExists)?;
         ensure!(twin.account_id == account_id, Error::<T>::TwinNotAuthorized);
 
-        // Don't allow updates for contracts that are in grace state
-
-        // TODO, is this needed?
-        // let is_grace_state = matches!(contract.state, types::ContractState::GracePeriod(_));
-        // ensure!(
-        //     !is_grace_state,
-        //     Error::<T>::CannotUpdateContractInGraceState
-        // );
-
         let cr_contract = Contracts::<T>::get(deployment.capacity_reservation_id)
             .ok_or(Error::<T>::ContractNotExists)?;
         let capacity_reservation_contract = Self::get_capacity_reservation_contract(&cr_contract)?;
+        // Don't allow updates for contracts that are in grace state
+        ensure!(
+            !matches!(cr_contract.state, types::ContractState::GracePeriod(_)),
+            Error::<T>::CannotUpdateContractInGraceState
+        );
 
         // remove and reinsert contract id by node id and hash because that hash can have changed
         ContractIDByNodeIDAndHash::<T>::remove(
@@ -1316,7 +1312,7 @@ impl<T: Config> Pallet<T> {
             Ok(n_id) => n_id,
             Err(e) => {
                 log::error!(
-                    "error while getting the node id from the deployment contract: {:?}",
+                    "error while getting the node id from the capacity reservation contract: {:?}",
                     e
                 );
                 0
@@ -1419,7 +1415,7 @@ impl<T: Config> Pallet<T> {
 
         // validation
         for report in &reports {
-            if !Contracts::<T>::contains_key(report.contract_id) {
+            if !Deployments::<T>::contains_key(report.contract_id) {
                 continue;
             }
             // we know contract exists, fetch it
@@ -1808,7 +1804,6 @@ impl<T: Config> Pallet<T> {
                 }
                 types::ContractData::CapacityReservationContract(capacity_reservation_contract) => {
                     // first remove all deployment contracts created with that reserved capacity
-                    log::debug!("hello");
                     for deployment_id in capacity_reservation_contract.deployments {
                         match Self::remove_deployment(deployment_id) {
                             Ok(_) => (),
@@ -1849,7 +1844,6 @@ impl<T: Config> Pallet<T> {
                             );
                         }
                     }
-                    ContractBillingInformationByID::<T>::remove(contract_id);
                     // remove the contract id from the active contracts on that node
                     Self::remove_active_node_contract(
                         capacity_reservation_contract.node_id,
@@ -1864,6 +1858,7 @@ impl<T: Config> Pallet<T> {
             };
             info!("removing contract");
             Contracts::<T>::remove(contract_id);
+            ContractBillingInformationByID::<T>::remove(contract_id);
             ContractLock::<T>::remove(contract_id);
         }
     }
@@ -2043,13 +2038,13 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn _reserve_ip(
-        contract_id: u64,
-        deployment_contract: &mut types::Deployment<T>,
+        deployment_id: u64,
+        deployment: &mut types::Deployment<T>,
     ) -> DispatchResultWithPostInfo {
-        let mut contract = Contracts::<T>::get(deployment_contract.capacity_reservation_id)
+        let mut contract = Contracts::<T>::get(deployment.capacity_reservation_id)
             .ok_or(Error::<T>::CapacityReservationNotExists)?;
         let mut capacity_reservation_contract = Self::get_capacity_reservation_contract(&contract)?;
-        if deployment_contract.public_ips == 0 {
+        if deployment.public_ips == 0 {
             return Ok(().into());
         }
         let node = pallet_tfgrid::Nodes::<T>::get(capacity_reservation_contract.node_id)
@@ -2061,10 +2056,10 @@ impl<T: Config> Pallet<T> {
         log::info!(
             "Number of farm ips {:?}, number of ips to reserve: {:?}",
             farm.public_ips.len(),
-            deployment_contract.public_ips as usize
+            deployment.public_ips as usize
         );
         ensure!(
-            farm.public_ips.len() >= deployment_contract.public_ips as usize,
+            farm.public_ips.len() >= deployment.public_ips as usize,
             Error::<T>::FarmHasNotEnoughPublicIPs
         );
 
@@ -2077,7 +2072,7 @@ impl<T: Config> Pallet<T> {
         > = vec![].try_into().unwrap();
 
         for i in 0..farm.public_ips.len() {
-            if ips.len() == deployment_contract.public_ips as usize {
+            if ips.len() == deployment.public_ips as usize {
                 break;
             }
 
@@ -2085,7 +2080,7 @@ impl<T: Config> Pallet<T> {
             // reserve it now
             if farm.public_ips[i].contract_id == 0 {
                 let mut ip = farm.public_ips[i].clone();
-                ip.contract_id = contract_id;
+                ip.contract_id = deployment_id;
                 farm.public_ips[i] = ip.clone();
                 ips.try_push(ip).or_else(|_| {
                     return Err(DispatchErrorWithPostInfo::from(
@@ -2097,11 +2092,11 @@ impl<T: Config> Pallet<T> {
 
         // Safeguard check if we actually have the amount of ips we wanted to reserve
         ensure!(
-            ips.len() == deployment_contract.public_ips as usize,
+            ips.len() == deployment.public_ips as usize,
             Error::<T>::FarmHasNotEnoughPublicIPsFree
         );
 
-        deployment_contract.public_ips_list = ips.try_into().or_else(|_| {
+        deployment.public_ips_list = ips.try_into().or_else(|_| {
             return Err(DispatchErrorWithPostInfo::from(
                 Error::<T>::FailedToReserveIP,
             ));
@@ -2111,7 +2106,7 @@ impl<T: Config> Pallet<T> {
         pallet_tfgrid::Farms::<T>::insert(farm.id, farm);
 
         // Update the capacity reservation contract for billing pub ips
-        capacity_reservation_contract.public_ips += deployment_contract.public_ips;
+        capacity_reservation_contract.public_ips += deployment.public_ips;
         contract.contract_type =
             types::ContractData::CapacityReservationContract(capacity_reservation_contract);
         Contracts::<T>::insert(contract.contract_id, &contract);
