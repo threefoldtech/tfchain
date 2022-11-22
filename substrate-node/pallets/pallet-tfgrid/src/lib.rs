@@ -53,6 +53,7 @@ pub mod pallet {
     use pallet_timestamp as timestamp;
     use sp_std::{convert::TryInto, fmt::Debug, vec::Vec};
     use tfchain_support::{
+        resources::has_changed,
         traits::ChangeNode,
         types::{
             Farm, FarmCertification, FarmingPolicyLimit, Interface, Node, NodeCertification,
@@ -1168,7 +1169,7 @@ pub mod pallet {
             let node_serial_number = Self::get_serial_number(serial_number)?;
 
             // If the resources on a certified node changed, reset the certification level to DIY
-            if !node_resources.has_changed(stored_node.resources, 1).is_ok()
+            if has_changed(&stored_node.resources, &node_resources, 1)
                 && stored_node.certification == NodeCertification::Certified
             {
                 stored_node.certification = NodeCertification::Diy;

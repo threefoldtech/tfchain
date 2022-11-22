@@ -80,30 +80,31 @@ impl Resources {
         let su = self.get_su();
         cu * 2 + su
     }
+}
 
-    pub fn has_changed(&self, other: Resources, tolerance: u8) -> Result<(), ()> {
-        let wiggle = |a: u64, b: u64| -> Result<(), ()> {
-            let p = Percent::from_percent(tolerance) * a;
-            let diff = (a as i64 - b as i64).abs() as u64;
-            if diff > p {
-                return Err(());
-            }
-            Ok(())
-        };
+pub fn has_changed(
+    resources_before: &Resources,
+    resources_after: &Resources,
+    tolerance: u8,
+) -> bool {
+    let wiggle = |a: u64, b: u64| -> bool {
+        let p = Percent::from_percent(tolerance) * a;
+        let diff = (a as i64 - b as i64).abs() as u64;
+        if diff > p {
+            return true;
+        }
+        return false;
+    };
 
-        wiggle(self.cru, other.cru)?;
-        wiggle(self.sru, other.sru)?;
-        wiggle(self.hru, other.hru)?;
-        wiggle(self.mru, other.mru)?;
-
-        Ok(())
-    }
+    return wiggle(resources_before.cru, resources_after.cru)
+        || wiggle(resources_before.sru, resources_after.sru)
+        || wiggle(resources_before.hru, resources_after.hru)
+        || wiggle(resources_before.mru, resources_after.mru);
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use frame_support::{assert_err, assert_ok};
 
     #[test]
     fn test_calc_cu_falsy_values() {
@@ -212,7 +213,7 @@ mod test {
             sru: 0,
         };
 
-        assert_ok!(new_resources.has_changed(resources, 1));
+        assert_eq!(has_changed(&resources, &new_resources, 1), false);
 
         let resources = Resources {
             hru: 4 * GIGABYTE as u64 * 1024,
@@ -228,6 +229,22 @@ mod test {
             sru: 0,
         };
 
-        assert_err!(new_resources.has_changed(resources, 1), ());
+        assert_eq!(has_changed(&resources, &new_resources, 1), true);
+
+        let resources = Resources {
+            hru: 4 * GIGABYTE as u64 * 1024,
+            cru: 64,
+            mru: 64 * GIGABYTE as u64,
+            sru: 1000 * GIGABYTE as u64,
+        };
+
+        let new_resources = Resources {
+            hru: 4 * GIGABYTE as u64 * 1024,
+            cru: 64,
+            mru: 64 * GIGABYTE as u64,
+            sru: 989 * GIGABYTE as u64,
+        };
+
+        assert_eq!(has_changed(&resources, &new_resources, 1), true);
     }
 }
