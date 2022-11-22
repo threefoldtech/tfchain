@@ -1,5 +1,6 @@
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
+use sp_runtime::Percent;
 
 /// A resources capacity that countains HRU, SRU, CRU and MRU in integer values.
 #[derive(
@@ -78,6 +79,26 @@ impl Resources {
         let cu = self.get_cu();
         let su = self.get_su();
         cu * 2 + su
+    }
+
+    pub fn has_changed(
+        resources_before: &Resources,
+        resources_after: &Resources,
+        tolerance: u8,
+    ) -> bool {
+        let wiggle = |a: u64, b: u64| -> bool {
+            let p = Percent::from_percent(tolerance) * a;
+            let diff = (a as i64 - b as i64).abs() as u64;
+            if diff > p {
+                return true;
+            }
+            return false;
+        };
+
+        return wiggle(resources_before.cru, resources_after.cru)
+            || wiggle(resources_before.sru, resources_after.sru)
+            || wiggle(resources_before.hru, resources_after.hru)
+            || wiggle(resources_before.mru, resources_after.mru);
     }
 }
 
@@ -174,5 +195,56 @@ mod test {
 
         let su = resources.get_su();
         assert_eq!(su, 3);
+    }
+
+    #[test]
+    fn test_resources_diff() {
+        let resources = Resources {
+            hru: 4 * GIGABYTE as u64 * 1024,
+            cru: 64,
+            mru: 64 * GIGABYTE as u64,
+            sru: 0,
+        };
+
+        let new_resources = Resources {
+            hru: 4 * GIGABYTE as u64 * 1024,
+            cru: 64,
+            mru: 64 * GIGABYTE as u64,
+            sru: 0,
+        };
+
+        assert_eq!(Resources::has_changed(&resources, &new_resources, 1), false);
+
+        let resources = Resources {
+            hru: 4 * GIGABYTE as u64 * 1024,
+            cru: 64,
+            mru: 64 * GIGABYTE as u64,
+            sru: 0,
+        };
+
+        let new_resources = Resources {
+            hru: 4 * GIGABYTE as u64 * 1024,
+            cru: 64,
+            mru: 40 * GIGABYTE as u64,
+            sru: 0,
+        };
+
+        assert_eq!(Resources::has_changed(&resources, &new_resources, 1), true);
+
+        let resources = Resources {
+            hru: 4 * GIGABYTE as u64 * 1024,
+            cru: 64,
+            mru: 64 * GIGABYTE as u64,
+            sru: 1000 * GIGABYTE as u64,
+        };
+
+        let new_resources = Resources {
+            hru: 4 * GIGABYTE as u64 * 1024,
+            cru: 64,
+            mru: 64 * GIGABYTE as u64,
+            sru: 989 * GIGABYTE as u64,
+        };
+
+        assert_eq!(Resources::has_changed(&resources, &new_resources, 1), true);
     }
 }
