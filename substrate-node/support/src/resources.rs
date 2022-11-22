@@ -80,26 +80,26 @@ impl Resources {
         let su = self.get_su();
         cu * 2 + su
     }
-}
 
-pub fn has_changed(
-    resources_before: &Resources,
-    resources_after: &Resources,
-    tolerance: u8,
-) -> bool {
-    let wiggle = |a: u64, b: u64| -> bool {
-        let p = Percent::from_percent(tolerance) * a;
-        let diff = (a as i64 - b as i64).abs() as u64;
-        if diff > p {
-            return true;
-        }
-        return false;
-    };
+    pub fn has_changed(
+        resources_before: &Resources,
+        resources_after: &Resources,
+        tolerance: u8,
+    ) -> bool {
+        let wiggle = |a: u64, b: u64| -> bool {
+            let p = Percent::from_percent(tolerance) * a;
+            let diff = (a as i64 - b as i64).abs() as u64;
+            if diff > p {
+                return true;
+            }
+            return false;
+        };
 
-    return wiggle(resources_before.cru, resources_after.cru)
-        || wiggle(resources_before.sru, resources_after.sru)
-        || wiggle(resources_before.hru, resources_after.hru)
-        || wiggle(resources_before.mru, resources_after.mru);
+        return wiggle(resources_before.cru, resources_after.cru)
+            || wiggle(resources_before.sru, resources_after.sru)
+            || wiggle(resources_before.hru, resources_after.hru)
+            || wiggle(resources_before.mru, resources_after.mru);
+    }
 }
 
 #[cfg(test)]
@@ -213,7 +213,7 @@ mod test {
             sru: 0,
         };
 
-        assert_eq!(has_changed(&resources, &new_resources, 1), false);
+        assert_eq!(Resources::has_changed(&resources, &new_resources, 1), false);
 
         let resources = Resources {
             hru: 4 * GIGABYTE as u64 * 1024,
@@ -229,7 +229,7 @@ mod test {
             sru: 0,
         };
 
-        assert_eq!(has_changed(&resources, &new_resources, 1), true);
+        assert_eq!(Resources::has_changed(&resources, &new_resources, 1), true);
 
         let resources = Resources {
             hru: 4 * GIGABYTE as u64 * 1024,
@@ -245,6 +245,6 @@ mod test {
             sru: 989 * GIGABYTE as u64,
         };
 
-        assert_eq!(has_changed(&resources, &new_resources, 1), true);
+        assert_eq!(Resources::has_changed(&resources, &new_resources, 1), true);
     }
 }
