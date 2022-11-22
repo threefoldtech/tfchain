@@ -7,7 +7,7 @@ use scale_info::TypeInfo;
 use sp_std::marker::PhantomData;
 
 pub const MIN_DOCUMENT_LINK_LENGTH: u32 = 1;
-pub const MAX_DOCUMENT_LINK_LENGTH: u32 = 50;
+pub const MAX_DOCUMENT_LINK_LENGTH: u32 = 2048;
 
 pub const MIN_DOCUMENT_HASH_LENGTH: u32 = 1;
 pub const MAX_DOCUMENT_HASH_LENGTH: u32 = 50;
