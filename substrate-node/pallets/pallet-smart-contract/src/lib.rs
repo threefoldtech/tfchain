@@ -621,6 +621,7 @@ impl<T: Config> Pallet<T> {
         };
 
         Groups::<T>::insert(id, &new_group);
+        GroupID::<T>::put(id);
 
         Self::deposit_event(Event::GroupCreated {
             group_id: id,
