@@ -533,7 +533,7 @@ class TfChainClient:
             "contract_policy": contract_policy
         }
         call = substrate.compose_call(
-            "SmartContractModule", "create_deployment", params)
+            "SmartContractModule", "deployment_create", params)
         expected_events = [{
             "module_id": "SmartContractModule",
             "event_id": "DeploymentCreated"
@@ -546,7 +546,7 @@ class TfChainClient:
                                    port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
-        call = substrate.compose_call("SmartContractModule", "update_deployment", {
+        call = substrate.compose_call("SmartContractModule", "deployment_update", {
             "deployment_id": deployment_id,
             "deployment_data": deployment_data,
             "deployment_hash": deployment_hash,
@@ -562,7 +562,7 @@ class TfChainClient:
     def cancel_deployment(self, deployment_id: int = 1, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
-        call = substrate.compose_call("SmartContractModule", "cancel_deployment",
+        call = substrate.compose_call("SmartContractModule", "deployment_cancel",
                                       {
                                           "deployment_id": deployment_id
                                       })
