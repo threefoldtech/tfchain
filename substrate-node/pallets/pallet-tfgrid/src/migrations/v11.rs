@@ -14,7 +14,7 @@ pub struct FixFarmingPolicy<T: Config>(PhantomData<T>);
 impl<T: Config> OnRuntimeUpgrade for FixFarmingPolicy<T> {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
-        assert!(PalletVersion::<T>::get() <= types::StorageVersion::V10Struct);
+        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V10Struct);
 
         // Store number of farms in temp storage
         let farms_count: u64 = Farms::<T>::iter_keys().count().saturated_into();

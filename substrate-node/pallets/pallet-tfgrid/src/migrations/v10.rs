@@ -15,7 +15,7 @@ pub struct FixFarmNodeIndexMap<T: Config>(PhantomData<T>);
 impl<T: Config> OnRuntimeUpgrade for FixFarmNodeIndexMap<T> {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
-        assert!(PalletVersion::<T>::get() == types::StorageVersion::V9Struct);
+        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V9Struct);
 
         // Store number of nodes in temp storage
         let nodes_count: u64 = Nodes::<T>::iter_keys().count().saturated_into();

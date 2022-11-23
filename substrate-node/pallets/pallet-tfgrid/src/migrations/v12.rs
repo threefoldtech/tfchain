@@ -6,6 +6,11 @@ use frame_support::{traits::Get, traits::OnRuntimeUpgrade, weights::Weight, Boun
 use log::info;
 use sp_std::marker::PhantomData;
 
+#[cfg(feature = "try-runtime")]
+use frame_support::traits::OnRuntimeUpgradeHelpersExt;
+#[cfg(feature = "try-runtime")]
+use sp_runtime::SaturatedConversion;
+
 pub mod deprecated {
     use codec::{Decode, Encode};
     use core::cmp::{Ord, PartialOrd};
@@ -58,7 +63,15 @@ pub struct InputValidation<T: Config>(PhantomData<T>);
 impl<T: Config> OnRuntimeUpgrade for InputValidation<T> {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
-        assert!(PalletVersion::<T>::get() <= types::StorageVersion::V11Struct);
+        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V11Struct);
+
+        // Store number of nodes in temp storage
+        let nodes_count: u64 = Nodes::<T>::iter_keys().count().saturated_into();
+        Self::set_temp_storage(nodes_count, "nodes_count");
+        log::info!(
+            "🔎 FixFarmingPolicy pre migration: Number of existing nodes {:?}",
+            nodes_count
+        );
 
         info!("👥  TFGrid pallet to v12 passes PRE migrate checks ✅",);
         Ok(())
@@ -71,6 +84,14 @@ impl<T: Config> OnRuntimeUpgrade for InputValidation<T> {
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
         assert!(PalletVersion::<T>::get() >= types::StorageVersion::V12Struct);
+
+        // Check number of nodes against pre-check result
+        let pre_nodes_count = Self::get_temp_storage("pre_nodes_count").unwrap_or(0u64);
+        assert_eq!(
+            Nodes::<T>::iter().count().saturated_into::<u64>(),
+            pre_nodes_count,
+            "Number of nodes migrated does not match"
+        );
 
         info!(
             "👥  TFGrid pallet migration to {:?} passes POST migrate checks ✅",
