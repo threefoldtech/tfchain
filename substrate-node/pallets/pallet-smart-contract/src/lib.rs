@@ -1,6 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use sp_std::prelude::*;
 use core::marker::PhantomData;
 use frame_support::{
     dispatch::DispatchErrorWithPostInfo,
@@ -30,6 +29,7 @@ use sp_runtime::{
     traits::{CheckedSub, SaturatedConversion},
     Perbill,
 };
+use sp_std::prelude::*;
 use substrate_fixed::types::U64F64;
 
 use tfchain_support::{
@@ -432,13 +432,6 @@ pub mod pallet {
         NotEnoughResourcesInCapacityReservation,
         DeploymentNotExists,
         TwinNotAuthorized,
-        TwinNotAuthorizedToCreateServiceContract,
-        TwinNotAuthorizedToSetMetadata,
-        TwinNotAuthorizedToSetFees,
-        TwinNotAuthorizedToApproveServiceContract,
-        TwinNotAuthorizedToRejectServiceContract,
-        TwinNotAuthorizedToCancelServiceContract,
-        TwinNotAuthorizedToBillServiceContract,
         ServiceContractNotExists,
         ServiceContractCreationNotAllowed,
         ServiceContractModificationNotAllowed,
@@ -2400,7 +2393,7 @@ impl<T: Config> Pallet<T> {
         // Only service or consumer can create contract
         ensure!(
             caller_twin_id == service_twin_id || caller_twin_id == consumer_twin_id,
-            Error::<T>::TwinNotAuthorizedToCreateServiceContract,
+            Error::<T>::TwinNotAuthorized,
         );
 
         // Service twin and consumer twin can not be the same
@@ -2456,7 +2449,7 @@ impl<T: Config> Pallet<T> {
         ensure!(
             twin_id == service_contract.service_twin_id
                 || twin_id == service_contract.consumer_twin_id,
-            Error::<T>::TwinNotAuthorizedToSetMetadata,
+            Error::<T>::TwinNotAuthorized,
         );
 
         // Only allow to modify metadata if contract still not approved by both parties
@@ -2468,7 +2461,6 @@ impl<T: Config> Pallet<T> {
             Error::<T>::ServiceContractModificationNotAllowed,
         );
 
-        // TODO create metadata input type to control size
         service_contract.metadata = BoundedVec::try_from(metadata)
             .map_err(|_| Error::<T>::ServiceContractMetadataTooLong)?;
 
@@ -2498,7 +2490,7 @@ impl<T: Config> Pallet<T> {
         // Only service can set fees
         ensure!(
             twin_id == service_contract.service_twin_id,
-            Error::<T>::TwinNotAuthorizedToSetFees,
+            Error::<T>::TwinNotAuthorized,
         );
 
         // Only allow to modify fees if contract still not approved by both parties
@@ -2550,7 +2542,7 @@ impl<T: Config> Pallet<T> {
             service_contract.accepted_by_consumer = true
         } else {
             return Err(DispatchErrorWithPostInfo::from(
-                Error::<T>::TwinNotAuthorizedToApproveServiceContract,
+                Error::<T>::TwinNotAuthorized,
             ));
         }
 
@@ -2592,13 +2584,11 @@ impl<T: Config> Pallet<T> {
         );
 
         // Only service or consumer can reject agreement
-        if twin_id != service_contract.service_twin_id
-            && twin_id != service_contract.consumer_twin_id
-        {
-            return Err(DispatchErrorWithPostInfo::from(
-                Error::<T>::TwinNotAuthorizedToRejectServiceContract,
-            ));
-        }
+        ensure!(
+            twin_id == service_contract.service_twin_id
+                || twin_id == service_contract.consumer_twin_id,
+            Error::<T>::TwinNotAuthorized,
+        );
 
         // If one party (service or consumer) rejects agreement
         // then contract is canceled and removed from service contract map
@@ -2626,11 +2616,11 @@ impl<T: Config> Pallet<T> {
         ensure!(
             twin_id == service_contract.service_twin_id
                 || twin_id == service_contract.consumer_twin_id,
-            Error::<T>::TwinNotAuthorizedToCancelServiceContract,
+            Error::<T>::TwinNotAuthorized,
         );
 
         // Remove contract from service contract map
-        // Can be done at any state of contract 
+        // Can be done at any state of contract
         // so no need to handle state validation
         ServiceContracts::<T>::remove(service_contract_id);
         Self::deposit_event(Event::ServiceContractCanceled {
@@ -2662,7 +2652,7 @@ impl<T: Config> Pallet<T> {
         // Only service can bill consumer for service contract
         ensure!(
             twin_id == service_contract.service_twin_id,
-            Error::<T>::TwinNotAuthorizedToBillServiceContract,
+            Error::<T>::TwinNotAuthorized,
         );
 
         // Allow to bill contract only if approved by both
@@ -2680,7 +2670,7 @@ impl<T: Config> Pallet<T> {
 
         // Billing time (window) is max 1h by design
         // So extra time will not be billed
-        // It is service responsability to bill on rigth frequency
+        // It is the service responsability to bill on right frequency
         let window = elapsed_seconds_since_last_bill.min(3600);
 
         // Billing variable amount is bounded by contract variable fee
@@ -2693,7 +2683,6 @@ impl<T: Config> Pallet<T> {
             Error::<T>::ServiceContractBillingNotAllowed,
         );
 
-        // TODO: create metadata input type to control size
         let bill_metadata = BoundedVec::try_from(metadata)
             .map_err(|_| Error::<T>::ServiceContractBillMetadataTooLong)?;
 

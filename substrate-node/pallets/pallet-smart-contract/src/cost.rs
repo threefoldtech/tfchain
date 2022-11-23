@@ -111,8 +111,8 @@ impl<T: Config> ServiceContract<T> {
 
     pub fn calculate_bill_cost(&self, service_bill: ServiceContractBill) -> u64 {
         // bill user for service usage for elpased usage (window) in seconds
-        let contract_cost = U64F64::from_num(self.base_fee)
-            * U64F64::from_num(service_bill.window) / 3600
+        let contract_cost = U64F64::from_num(self.base_fee) * U64F64::from_num(service_bill.window)
+            / 3600
             + U64F64::from_num(service_bill.variable_amount);
         contract_cost.round().to_num::<u64>()
     }
