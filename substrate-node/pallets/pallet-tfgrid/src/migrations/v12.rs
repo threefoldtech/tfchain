@@ -67,7 +67,7 @@ impl<T: Config> OnRuntimeUpgrade for InputValidation<T> {
 
         // Store number of nodes in temp storage
         let nodes_count: u64 = Nodes::<T>::iter_keys().count().saturated_into();
-        Self::set_temp_storage(nodes_count, "nodes_count");
+        Self::set_temp_storage(nodes_count, "pre_nodes_count");
         log::info!(
             "🔎 FixFarmingPolicy pre migration: Number of existing nodes {:?}",
             nodes_count
@@ -191,7 +191,7 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
         };
 
         let new_node = TfgridNode::<T> {
-            version: 6, // deprecated
+            version: 5, // deprecated
             id: node.id,
             farm_id: node.farm_id,
             twin_id: node.twin_id,
