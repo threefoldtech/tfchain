@@ -494,10 +494,7 @@ class TfChainClient:
                                              who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
-        call_function = substrate.get_metadata_call_function(
-            "SmartContractModule", "create_capacity_reservation_contract")
-
-        call = substrate.compose_call("SmartContractModule", "create_capacity_reservation_contract",
+        call = substrate.compose_call("SmartContractModule", "capacity_reservation_contract_create",
                                       {
                                           "farm_id": farm_id,
                                           "policy": dict(policy),

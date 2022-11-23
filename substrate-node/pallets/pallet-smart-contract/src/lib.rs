@@ -145,12 +145,6 @@ pub mod pallet {
     pub type ContractBillingInformationByID<T: Config> =
         StorageMap<_, Blake2_128Concat, u64, ContractBillingInformation, ValueQuery>;
 
-    // deprecated
-    #[pallet::storage]
-    #[pallet::getter(fn node_contract_resources)]
-    pub type NodeContractResources<T: Config> =
-        StorageMap<_, Blake2_128Concat, u64, ContractResources, ValueQuery>;
-
     #[pallet::storage]
     #[pallet::getter(fn node_contract_by_hash)]
     pub type ContractIDByNodeIDAndHash<T: Config> = StorageDoubleMap<
@@ -184,14 +178,6 @@ pub mod pallet {
     #[pallet::getter(fn contract_id_by_name_registration)]
     pub type ContractIDByNameRegistration<T: Config> =
         StorageMap<_, Blake2_128Concat, T::NameContractName, u64, ValueQuery>;
-
-    // deprecated
-    #[pallet::storage]
-    #[pallet::getter(fn active_rent_contracts)]
-    // A mapping between a Node ID and Contract ID
-    // If there is an active Rent Contract for a node, the value will be the contract ID
-    pub type ActiveRentContractForNode<T: Config> =
-        StorageMap<_, Blake2_128Concat, u32, u64, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn contract_id)]
@@ -448,30 +434,6 @@ pub mod pallet {
             Self::_delete_group(account_id, group_id)
         }
 
-        // DEPRECATED
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn create_node_contract(
-            _origin: OriginFor<T>,
-            _node_id: u32,
-            _deployment_hash: DeploymentHash,
-            _deployment_data: DeploymentDataInput<T>,
-            _public_ips: u32,
-            _solution_provider_id: Option<u64>,
-        ) -> DispatchResultWithPostInfo {
-            Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
-        }
-
-        // DEPRECATED
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn update_node_contract(
-            _origin: OriginFor<T>,
-            _contract_id: u64,
-            _deployment_hash: DeploymentHash,
-            _deployment_data: DeploymentDataInput<T>,
-        ) -> DispatchResultWithPostInfo {
-            Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
-        }
-
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn cancel_contract(
             origin: OriginFor<T>,
@@ -479,16 +441,6 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_cancel_contract(account_id, contract_id, types::Cause::CanceledByUser)
-        }
-
-        // DEPRECATED
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn add_reports(
-            _origin: OriginFor<T>,
-            _reports: Vec<types::Consumption>,
-        ) -> DispatchResultWithPostInfo {
-            // return error
-            Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
@@ -501,14 +453,14 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn create_capacity_reservation_contract(
+        pub fn capacity_reservation_contract_create(
             origin: OriginFor<T>,
             farm_id: u32,
             policy: CapacityReservationPolicy,
             solution_provider_id: Option<u64>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_create_capacity_reservation_contract(
+            Self::_capacity_reservation_contract_create(
                 account_id,
                 farm_id,
                 policy,
@@ -517,13 +469,13 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn update_capacity_reservation_contract(
+        pub fn capacity_reservation_contract_update(
             origin: OriginFor<T>,
             capacity_reservation_id: u64,
             resources: Resources,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_update_capacity_reservation_contract(
+            Self::_capacity_reservation_contract_update(
                 account_id,
                 capacity_reservation_id,
                 resources,
@@ -531,7 +483,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn create_deployment(
+        pub fn deployment_create(
             origin: OriginFor<T>,
             capacity_reservation_id: u64,
             deployment_hash: DeploymentHash,
@@ -540,7 +492,7 @@ pub mod pallet {
             public_ips: u32,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_create_deployment(
+            Self::_deployment_create(
                 account_id,
                 capacity_reservation_id,
                 deployment_hash,
@@ -551,7 +503,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn update_deployment(
+        pub fn deployment_update(
             origin: OriginFor<T>,
             deployment_id: u64,
             deployment_hash: DeploymentHash,
@@ -559,7 +511,7 @@ pub mod pallet {
             resources: Option<Resources>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_update_deployment(
+            Self::_deployment_update(
                 account_id,
                 deployment_id,
                 deployment_hash,
@@ -569,12 +521,12 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn cancel_deployment(
+        pub fn deployment_cancel(
             origin: OriginFor<T>,
             deployment_id: u64,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_cancel_deployment(account_id, deployment_id)
+            Self::_deployment_cancel(account_id, deployment_id)
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
@@ -584,26 +536,6 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_compute_reports(account_id, reports)
-        }
-
-        // DEPRECATED
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn report_contract_resources(
-            _origin: OriginFor<T>,
-            _contract_resources: Vec<types::ContractResources>,
-        ) -> DispatchResultWithPostInfo {
-            Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
-        }
-
-        // DEPRECATED
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn create_rent_contract(
-            _origin: OriginFor<T>,
-            _node_id: u32,
-            _solution_provider_id: Option<u64>,
-        ) -> DispatchResultWithPostInfo {
-            // return error
-            Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
@@ -762,7 +694,7 @@ impl<T: Config> Pallet<T> {
     }
 
     #[transactional]
-    pub fn _create_capacity_reservation_contract(
+    pub fn _capacity_reservation_contract_create(
         account_id: T::AccountId,
         farm_id: u32,
         policy: CapacityReservationPolicy,
@@ -867,7 +799,7 @@ impl<T: Config> Pallet<T> {
     }
 
     #[transactional]
-    pub fn _update_capacity_reservation_contract(
+    pub fn _capacity_reservation_contract_update(
         account_id: T::AccountId,
         capacity_reservation_id: u64,
         resources: Resources,
@@ -876,10 +808,7 @@ impl<T: Config> Pallet<T> {
             .ok_or(Error::<T>::CapacityReservationNotExists)?;
         let twin =
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
-        ensure!(
-            twin.account_id == account_id,
-            Error::<T>::TwinNotAuthorizedToUpdateContract
-        );
+        ensure!(twin.account_id == account_id, Error::<T>::TwinNotAuthorized);
 
         // Don't allow updates for contracts that are in grace state
         ensure!(
@@ -919,7 +848,7 @@ impl<T: Config> Pallet<T> {
     }
 
     #[transactional]
-    pub fn _create_deployment(
+    pub fn _deployment_create(
         account_id: T::AccountId,
         capacity_reservation_id: u64,
         deployment_hash: DeploymentHash,
@@ -930,7 +859,7 @@ impl<T: Config> Pallet<T> {
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
             .ok_or(Error::<T>::TwinNotExists)?;
 
-        let cr_contract = Contracts::<T>::get(capacity_reservation_id)
+        let mut cr_contract = Contracts::<T>::get(capacity_reservation_id)
             .ok_or(Error::<T>::CapacityReservationNotExists)?;
         let capacity_reservation_contract = Self::get_capacity_reservation_contract(&cr_contract)?;
         ensure!(
@@ -979,13 +908,14 @@ impl<T: Config> Pallet<T> {
             resources,
         };
 
-        Self::_reserve_ip(id, &mut deployment)?;
-        Self::_add_deployment_to_capacity_reservation_contract(capacity_reservation_id, id)?;
+        Self::_reserve_ip(id, &mut deployment, &mut cr_contract)?;
+        Self::_add_deployment_to_capacity_reservation_contract(id, &mut cr_contract)?;
         Self::_change_used_resources_on_capacity_reservation(
-            capacity_reservation_id,
-            Resources::empty(),
-            resources,
+            &mut cr_contract,
+            &Resources::empty(),
+            &resources,
         )?;
+        Contracts::<T>::insert(cr_contract.contract_id, &cr_contract);
 
         // Insert contract id by (node_id, hash)
         ContractIDByNodeIDAndHash::<T>::insert(
@@ -1055,41 +985,35 @@ impl<T: Config> Pallet<T> {
     }
 
     fn _change_used_resources_on_capacity_reservation(
-        capacity_reservation_id: u64,
-        to_free: Resources,
-        to_consume: Resources,
+        contract: &mut types::Contract<T>,
+        to_free: &Resources,
+        to_consume: &Resources,
     ) -> DispatchResultWithPostInfo {
-        let mut contract = Contracts::<T>::get(capacity_reservation_id)
-            .ok_or(Error::<T>::CapacityReservationNotExists)?;
         let mut capacity_reservation_contract = Self::get_capacity_reservation_contract(&contract)?;
 
-        capacity_reservation_contract.resources.free(&to_free);
+        capacity_reservation_contract.resources.free(to_free);
 
         ensure!(
             capacity_reservation_contract
                 .resources
-                .can_consume_resources(&to_consume),
+                .can_consume_resources(to_consume),
             Error::<T>::NotEnoughResourcesInCapacityReservation
         );
-        capacity_reservation_contract.resources.consume(&to_consume);
+        capacity_reservation_contract.resources.consume(to_consume);
 
         contract.contract_type =
             types::ContractData::CapacityReservationContract(capacity_reservation_contract);
 
-        Contracts::<T>::insert(capacity_reservation_id, &contract);
-        Self::deposit_event(Event::ContractUpdated(contract));
+        Self::deposit_event(Event::ContractUpdated(contract.clone()));
 
         Ok(().into())
     }
 
     fn _add_deployment_to_capacity_reservation_contract(
-        capacity_reservation_id: u64,
         deployment_id: u64,
+        contract: &mut types::Contract<T>,
     ) -> DispatchResultWithPostInfo {
-        let mut contract = Contracts::<T>::get(capacity_reservation_id)
-            .ok_or(Error::<T>::CapacityReservationNotExists)?;
         let mut capacity_reservation_contract = Self::get_capacity_reservation_contract(&contract)?;
-
         if !capacity_reservation_contract
             .deployments
             .contains(&deployment_id)
@@ -1097,24 +1021,18 @@ impl<T: Config> Pallet<T> {
             capacity_reservation_contract
                 .deployments
                 .push(deployment_id);
-
             contract.contract_type =
                 types::ContractData::CapacityReservationContract(capacity_reservation_contract);
-
-            Contracts::<T>::insert(capacity_reservation_id, contract);
         }
 
         Ok(().into())
     }
 
     fn _remove_deployment_from_capacity_reservation_contract(
-        capacity_reservation_id: u64,
         deployment_id: u64,
+        contract: &mut types::Contract<T>,
     ) -> DispatchResultWithPostInfo {
-        let mut contract = Contracts::<T>::get(capacity_reservation_id)
-            .ok_or(Error::<T>::CapacityReservationNotExists)?;
         let mut capacity_reservation_contract = Self::get_capacity_reservation_contract(&contract)?;
-
         if capacity_reservation_contract
             .deployments
             .contains(&deployment_id)
@@ -1122,11 +1040,8 @@ impl<T: Config> Pallet<T> {
             capacity_reservation_contract
                 .deployments
                 .retain(|&id| id != deployment_id);
-
             contract.contract_type =
                 types::ContractData::CapacityReservationContract(capacity_reservation_contract);
-
-            Contracts::<T>::insert(capacity_reservation_id, contract);
         }
 
         Ok(().into())
@@ -1232,7 +1147,7 @@ impl<T: Config> Pallet<T> {
     }
 
     #[transactional]
-    pub fn _update_deployment(
+    pub fn _deployment_update(
         account_id: T::AccountId,
         deployment_id: u64,
         deployment_hash: DeploymentHash,
@@ -1245,7 +1160,7 @@ impl<T: Config> Pallet<T> {
             pallet_tfgrid::Twins::<T>::get(deployment.twin_id).ok_or(Error::<T>::TwinNotExists)?;
         ensure!(twin.account_id == account_id, Error::<T>::TwinNotAuthorized);
 
-        let cr_contract = Contracts::<T>::get(deployment.capacity_reservation_id)
+        let mut cr_contract = Contracts::<T>::get(deployment.capacity_reservation_id)
             .ok_or(Error::<T>::ContractNotExists)?;
         let capacity_reservation_contract = Self::get_capacity_reservation_contract(&cr_contract)?;
         // Don't allow updates for contracts that are in grace state
@@ -1273,11 +1188,12 @@ impl<T: Config> Pallet<T> {
             if deployment.resources != resources {
                 // we free the previously reserved resources and consume the new resources
                 Self::_change_used_resources_on_capacity_reservation(
-                    deployment.capacity_reservation_id,
-                    deployment.resources,
-                    resources,
+                    &mut cr_contract,
+                    &deployment.resources,
+                    &resources,
                 )?;
                 deployment.resources = resources;
+                Contracts::<T>::insert(cr_contract.contract_id, &cr_contract);
             }
         }
 
@@ -1289,7 +1205,7 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn _cancel_deployment(
+    pub fn _deployment_cancel(
         account_id: T::AccountId,
         deployment_id: u64,
     ) -> DispatchResultWithPostInfo {
@@ -1321,41 +1237,48 @@ impl<T: Config> Pallet<T> {
         if node_id == 0 {
             return Ok(().into());
         }
-        // free the public ips requested by the contract
-        if deployment.public_ips > 0 {
-            match Self::_free_ip(deployment_id, &mut deployment) {
-                Ok(_) => (),
-                Err(e) => {
-                    log::error!("error while freeing ips: {:?}", e);
+        let cr_contract = Contracts::<T>::get(deployment.capacity_reservation_id);
+        if let Some(mut cr_contract) = cr_contract {
+            // free the public ips requested by the contract
+            if deployment.public_ips > 0 {
+                match Self::_free_ip(deployment_id, &mut deployment, &mut cr_contract) {
+                    Ok(_) => (),
+                    Err(e) => {
+                        log::error!("error while freeing ips: {:?}", e);
+                    }
                 }
             }
-        }
-        // unclaim all resources used by this contract on the capacity reservation contract
-        match Self::_change_used_resources_on_capacity_reservation(
-            deployment.capacity_reservation_id,
-            deployment.resources,
-            Resources::empty(),
-        ) {
-            Ok(_) => (),
-            Err(e) => {
-                log::error!(
-                    "error while freeing resources from deployment contract: {:?}",
+            // unclaim all resources used by this contract on the capacity reservation contract
+            match Self::_change_used_resources_on_capacity_reservation(
+                &mut cr_contract,
+                &deployment.resources,
+                &Resources::empty(),
+            ) {
+                Ok(_) => (),
+                Err(e) => {
+                    log::error!(
+                        "error while freeing resources from deployment contract: {:?}",
+                        e
+                    );
+                }
+            }
+            // remove the deployment contract from the capacity reservation contract
+            match Self::_remove_deployment_from_capacity_reservation_contract(
+                deployment_id,
+                &mut cr_contract,
+            ) {
+                Ok(_) => (),
+                Err(e) => {
+                    log::error!(
+                    "error while removing the deployment from the capacity reservation contract: {:?}", 
                     e
                 );
+                }
             }
-        }
-        // remove the deployment contract from the capacity reservation contract
-        match Self::_remove_deployment_from_capacity_reservation_contract(
-            deployment.capacity_reservation_id,
-            deployment_id,
-        ) {
-            Ok(_) => (),
-            Err(e) => {
-                log::error!(
-                    "error while removing the deployment contract from the capacity reservation contract: {:?}", 
-                    e
-                );
-            }
+
+            Contracts::<T>::insert(cr_contract.contract_id, &cr_contract);
+        } else {
+            log::error!("error while removing the deployment: capacity reservation contract {:?} doesn't exist!", deployment.capacity_reservation_id);
         }
         // remove the contract by hash from storage
         ContractIDByNodeIDAndHash::<T>::remove(node_id, &deployment.deployment_hash);
@@ -1390,7 +1313,7 @@ impl<T: Config> Pallet<T> {
         }
         contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
         contract.state = types::ContractState::Deleted(cause);
-        Contracts::<T>::insert(&contract.contract_id, contract.clone());
+        Contracts::<T>::insert(&contract.contract_id, &contract);
         Self::bill_contract(contract.contract_id)?;
         // Remove all associated storage
         Self::remove_contract(contract.contract_id);
@@ -1420,22 +1343,35 @@ impl<T: Config> Pallet<T> {
             }
             // we know contract exists, fetch it
             // if the node is trying to send garbage data we can throw an error here
-            let deployment =
-                Deployments::<T>::get(report.contract_id).ok_or(Error::<T>::DeploymentNotExists)?;
-            let contract_cr = Contracts::<T>::get(deployment.capacity_reservation_id)
-                .ok_or(Error::<T>::CapacityReservationNotExists)?;
-            let capacity_reservation_contract =
-                Self::get_capacity_reservation_contract(&contract_cr)?;
-            ensure!(
-                capacity_reservation_contract.node_id == node_id,
-                Error::<T>::NodeNotAuthorizedToComputeReport
-            );
-            if !ContractBillingInformationByID::<T>::contains_key(contract_cr.contract_id) {
-                continue;
-            }
+            if let Some(deployment) = Deployments::<T>::get(report.contract_id) {
+                let contract_cr = Contracts::<T>::get(deployment.capacity_reservation_id)
+                    .ok_or(Error::<T>::CapacityReservationNotExists)?;
+                let capacity_reservation_contract =
+                    Self::get_capacity_reservation_contract(&contract_cr)?;
+                ensure!(
+                    capacity_reservation_contract.node_id == node_id,
+                    Error::<T>::NodeNotAuthorizedToComputeReport
+                );
+                if !ContractBillingInformationByID::<T>::contains_key(contract_cr.contract_id) {
+                    ContractBillingInformationByID::<T>::insert(
+                        contract_cr.contract_id,
+                        types::ContractBillingInformation {
+                            last_updated: <timestamp::Pallet<T>>::get().saturated_into::<u64>()
+                                / 1000,
+                            amount_unbilled: 0,
+                            previous_nu_reported: 0,
+                        },
+                    );
+                }
 
-            Self::_calculate_report_cost(contract_cr.contract_id, &report, &pricing_policy);
-            Self::deposit_event(Event::NruConsumptionReportReceived(report.clone()));
+                Self::_calculate_report_cost(contract_cr.contract_id, &report, &pricing_policy);
+                Self::deposit_event(Event::NruConsumptionReportReceived(report.clone()));
+            } else {
+                log::error!(
+                    "Failure during add_nru_reports: Deployment {:?} does not exist!",
+                    report.contract_id
+                );
+            }
         }
 
         Ok(Pays::No.into())
@@ -2040,14 +1976,14 @@ impl<T: Config> Pallet<T> {
     pub fn _reserve_ip(
         deployment_id: u64,
         deployment: &mut types::Deployment<T>,
+        capacity_reservation_contract: &mut types::Contract<T>,
     ) -> DispatchResultWithPostInfo {
-        let mut contract = Contracts::<T>::get(deployment.capacity_reservation_id)
-            .ok_or(Error::<T>::CapacityReservationNotExists)?;
-        let mut capacity_reservation_contract = Self::get_capacity_reservation_contract(&contract)?;
+        let mut capacity_reservation_data =
+            Self::get_capacity_reservation_contract(&capacity_reservation_contract)?;
         if deployment.public_ips == 0 {
             return Ok(().into());
         }
-        let node = pallet_tfgrid::Nodes::<T>::get(capacity_reservation_contract.node_id)
+        let node = pallet_tfgrid::Nodes::<T>::get(capacity_reservation_data.node_id)
             .ok_or(Error::<T>::NodeNotExists)?;
 
         let mut farm =
@@ -2106,10 +2042,9 @@ impl<T: Config> Pallet<T> {
         pallet_tfgrid::Farms::<T>::insert(farm.id, farm);
 
         // Update the capacity reservation contract for billing pub ips
-        capacity_reservation_contract.public_ips += deployment.public_ips;
-        contract.contract_type =
-            types::ContractData::CapacityReservationContract(capacity_reservation_contract);
-        Contracts::<T>::insert(contract.contract_id, &contract);
+        capacity_reservation_data.public_ips += deployment.public_ips;
+        capacity_reservation_contract.contract_type =
+            types::ContractData::CapacityReservationContract(capacity_reservation_data);
 
         Ok(().into())
     }
@@ -2117,11 +2052,11 @@ impl<T: Config> Pallet<T> {
     pub fn _free_ip(
         contract_id: u64,
         deployment_contract: &mut types::Deployment<T>,
+        capacity_reservation_contract: &mut types::Contract<T>,
     ) -> DispatchResultWithPostInfo {
-        let mut contract = Contracts::<T>::get(deployment_contract.capacity_reservation_id)
-            .ok_or(Error::<T>::CapacityReservationNotExists)?;
-        let mut capacity_reservation_contract = Self::get_capacity_reservation_contract(&contract)?;
-        let node = pallet_tfgrid::Nodes::<T>::get(capacity_reservation_contract.node_id)
+        let mut capacity_reservation_data =
+            Self::get_capacity_reservation_contract(&capacity_reservation_contract)?;
+        let node = pallet_tfgrid::Nodes::<T>::get(capacity_reservation_data.node_id)
             .ok_or(Error::<T>::NodeNotExists)?;
 
         let mut farm =
@@ -2150,10 +2085,9 @@ impl<T: Config> Pallet<T> {
         pallet_tfgrid::Farms::<T>::insert(farm.id, farm);
 
         // Update the capacity reservation contract for billing pub ips
-        capacity_reservation_contract.public_ips -= deployment_contract.public_ips;
-        contract.contract_type =
-            types::ContractData::CapacityReservationContract(capacity_reservation_contract);
-        Contracts::<T>::insert(contract.contract_id, &contract);
+        capacity_reservation_data.public_ips -= deployment_contract.public_ips;
+        capacity_reservation_contract.contract_type =
+            types::ContractData::CapacityReservationContract(capacity_reservation_data);
 
         // Emit an event containing the IP's freed for this contract
         Self::deposit_event(Event::IPsFreed {

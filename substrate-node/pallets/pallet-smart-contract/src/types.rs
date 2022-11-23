@@ -224,6 +224,7 @@ pub struct ContractBill {
     pub amount_billed: u128,
 }
 
+// DEPRECATED
 #[derive(
     PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
 )]

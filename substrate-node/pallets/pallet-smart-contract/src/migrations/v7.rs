@@ -1,16 +1,16 @@
 use crate::{
     types::{
         CapacityReservationContract, Contract, ContractBillingInformation, ContractData,
-        Deployment, NameContract, StorageVersion,
+        Deployment, NameContract, StorageVersion, ContractResources
     },
     
-    ActiveNodeContracts, ActiveRentContractForNode, BalanceOf, BillingFrequency, Config,
+    ActiveNodeContracts, BalanceOf, BillingFrequency, Config,
     ContractBillingInformationByID, ContractID, ContractLock, Contracts as ContractsV7,
-    ContractsToBillAt, DeploymentID, Deployments, NodeContractResources, Pallet, 
+    ContractsToBillAt, DeploymentID, Deployments, Pallet, 
     PalletVersion, CONTRACT_VERSION,
 };
 use frame_support::{
-    pallet_prelude::OptionQuery, pallet_prelude::Weight, storage_alias, traits::Get,
+    pallet_prelude::{OptionQuery, ValueQuery}, pallet_prelude::Weight, storage_alias, traits::Get,
     traits::OnRuntimeUpgrade, Blake2_128Concat,
 };
 use log::info;
@@ -105,6 +105,14 @@ pub mod deprecated {
         pub struct Module<T: Config> for enum Call where origin: T::Origin { }
     }
 }
+
+#[storage_alias]
+pub type ActiveRentContractForNode<T: Config> =
+    StorageMap<Pallet<T>, Blake2_128Concat, u32, u64, OptionQuery>;
+
+#[storage_alias]
+type NodeContractResources<T: Config> =
+    StorageMap<Pallet<T>, Blake2_128Concat, u64, ContractResources, ValueQuery>;
 
 #[storage_alias]
 type Contracts<T: Config> =
