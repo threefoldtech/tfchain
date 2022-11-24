@@ -1066,12 +1066,12 @@ impl<T: Config> Pallet<T> {
         }
 
         // only keep nodes with enough resources
-        suitable_nodes.retain_mut(|node| node.resources.can_consume_resources(&resources));
+        suitable_nodes.retain(|node| node.resources.can_consume_resources(&resources));
 
         // only keep nodes that DON'T have a contract configured on them that belong to the same group
         if let Some(g_id) = group_id {
             ensure!(Groups::<T>::contains_key(g_id), Error::<T>::GroupNotExists);
-            suitable_nodes.retain_mut(|node| {
+            suitable_nodes.retain(|node| {
                 !CapacityReservationIDByNodeGroupConfig::<T>::contains_key(types::NodeGroupConfig {
                     node_id: node.id,
                     group_id: g_id,
@@ -1084,7 +1084,7 @@ impl<T: Config> Pallet<T> {
             for feature in features {
                 match feature {
                     NodeFeatures::PublicNode => {
-                        suitable_nodes.retain_mut(|node| node.public_config.is_some())
+                        suitable_nodes.retain(|node| node.public_config.is_some())
                     }
                 }
             }
