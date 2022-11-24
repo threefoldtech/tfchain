@@ -95,9 +95,7 @@ impl<T: Config> Clone for TermsAndConditions<T> {
 
 fn validate_document_link_input(input: &[u8]) -> bool {
     // TODO: find better alternative
-    input
-        .iter()
-        .all(|c| matches!(c, b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_'))
+    true
 }
 
 fn validate_document_hash_input(input: &[u8]) -> bool {
