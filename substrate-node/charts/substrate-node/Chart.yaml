@@ -2,5 +2,10 @@ apiVersion: v2
 name: substrate-node
 description: Tfchain node
 type: application
+<<<<<<< HEAD
 version: 0.2.6
 appVersion: "2.2.0-rc3"
+=======
+version: 0.2.5
+appVersion: "2.1.1"
+>>>>>>> 052d7a1 (chore: update chart)
