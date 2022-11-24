@@ -93,7 +93,7 @@ impl<T: Config> Clone for TermsAndConditions<T> {
     }
 }
 
-fn validate_document_link_input(input: &[u8]) -> bool {
+fn validate_document_link_input(_input: &[u8]) -> bool {
     // TODO: find better alternative
     true
 }
