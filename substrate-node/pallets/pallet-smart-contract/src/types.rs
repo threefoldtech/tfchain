@@ -12,7 +12,11 @@ use tfchain_support::{resources::Resources, types::ConsumableResources};
 pub type BlockNumber = u64;
 
 /// Utility type for managing upgrades/migrations.
+<<<<<<< HEAD
 #[derive(Encode, Decode, Clone, Debug, PartialEq, PartialOrd, TypeInfo, MaxEncodedLen)]
+=======
+#[derive(Encode, Decode, Clone, Debug, PartialEq, TypeInfo, MaxEncodedLen, PartialOrd)]
+>>>>>>> 7aa201a (small changes)
 pub enum StorageVersion {
     V1,
     V2,
