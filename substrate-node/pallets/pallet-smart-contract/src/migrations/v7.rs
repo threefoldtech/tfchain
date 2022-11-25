@@ -246,7 +246,6 @@ pub fn post_migration_checks<T: Config>() {
         count += 1;
     }
     info!("Checked the migration of resources in {:?} nodes. All good ✅", count);
-
 }
 
 pub fn is_in_contracts_to_bill<T: Config>(contract_id: u64) -> bool {
@@ -433,31 +432,34 @@ pub fn translate_contract_objects<T: Config>(
                 Some(ContractData::NameContract(NameContract { name: nc.name }))
             }
             deprecated::ContractData::RentContract(ref rc) => {
-                let node = pallet_tfgrid::Nodes::<T>::get(rc.node_id).unwrap();
-                reads += 2;
-                let crc = CapacityReservationContract {
-                    node_id: rc.node_id,
-                    deployments: vec![], // will be filled in later
-                    public_ips: 0,       // will be modified later
-                    resources: ConsumableResources {
-                        total_resources: node.resources.total_resources,
-                        used_resources: Resources::empty(), // will be modified later
-                    },
-                    group_id: None,
-                };
-                // gather the node changes
-                node_changes
-                    .entry(crc.node_id)
-                    .and_modify(|changes| {
-                        changes.active_contracts.push(ctr.contract_id);
-                        changes.used_resources.add(&crc.resources.total_resources);
-                    })
-                    .or_insert(NodeChanges {
-                        used_resources: crc.resources.total_resources,
-                        active_contracts: vec![ctr.contract_id],
-                    });
-
-                Some(ContractData::CapacityReservationContract(crc))
+                if let Some(node) = pallet_tfgrid::Nodes::<T>::get(rc.node_id) {
+                    reads += 2;
+                    let crc = CapacityReservationContract {
+                        node_id: rc.node_id,
+                        deployments: vec![], // will be filled in later
+                        public_ips: 0,       // will be modified later
+                        resources: ConsumableResources {
+                            total_resources: node.resources.total_resources,
+                            used_resources: Resources::empty(), // will be modified later
+                        },
+                        group_id: None,
+                    };
+                    // gather the node changes
+                    node_changes
+                        .entry(crc.node_id)
+                        .and_modify(|changes| {
+                            changes.active_contracts.push(ctr.contract_id);
+                            changes.used_resources.add(&crc.resources.total_resources);
+                        })
+                        .or_insert(NodeChanges {
+                            used_resources: crc.resources.total_resources,
+                            active_contracts: vec![ctr.contract_id],
+                        });
+                    Some(ContractData::CapacityReservationContract(crc))
+                } else {
+                    log::error!("Rencontract ({:?}) on a node ({:?}) that no longer exist.", ctr.contract_id, rc.node_id);
+                    None
+                }
             }
         };
         if let Some(contract_type) = contract_type {
@@ -484,40 +486,56 @@ pub fn translate_contract_objects<T: Config>(
         b"ActiveRentContractForNode",
         b"",
     );
-
     // apply the changes to the capacity reservations contracts that we gathered previously
     for (contract_id, contract_changes) in crc_changes {
-        let crc_contract = contracts.get_mut(&contract_id).unwrap();
-        let mut crc = match &crc_contract.contract_type {
-            ContractData::CapacityReservationContract(c) => Some(c.clone()),
-            _ => None,
-        }
-        .unwrap();
-        crc.resources.used_resources = contract_changes.used_resources;
-        crc.public_ips = contract_changes.public_ips;
-        crc.deployments = contract_changes.deployments;
-        crc_contract.contract_type = ContractData::CapacityReservationContract(crc);
+        if let Some(crc_contract) = contracts.get_mut(&contract_id) {
+            let crc = match &crc_contract.contract_type {
+                ContractData::CapacityReservationContract(c) => Some(c.clone()),
+                _ => None,
+            };
+            if let Some(mut crc) = crc {
+                crc.resources.used_resources = contract_changes.used_resources;
+                crc.public_ips = contract_changes.public_ips;
+                crc.deployments = contract_changes.deployments;
+                crc_contract.contract_type = ContractData::CapacityReservationContract(crc);
 
-        ContractBillingInformationByID::<T>::insert(contract_id, contract_changes.billing_info);
-        ContractLock::<T>::insert(contract_id, contract_changes.contract_lock);
-        writes += 2;
+                ContractBillingInformationByID::<T>::insert(contract_id, contract_changes.billing_info);
+                ContractLock::<T>::insert(contract_id, contract_changes.contract_lock);
+                writes += 2;
+            } else {
+                log::error!(
+                    "Contract {:?} is not a capacity reservation contract! This should not happen here!", 
+                    contract_id
+                );
+            }
+        } else {
+            log::error!(
+                "Failed to unwrap contract! Capacity Reservation Contract with id {:?} might have invalid data (used_resources, public_ips, deployments, billing information and contract lock. Please recalculate!", 
+                contract_id
+            );
+        }
     }
 
-    // fix the active node contracts storage and modif the node objects
+    // fix the active node contracts storage and modify the node objects
     frame_support::migration::remove_storage_prefix(
         b"SmartContractModule",
         b"ActiveNodeContracts",
         b"",
     );
     for (node_id, nc) in node_changes.iter() {
-        // modify storage
         ActiveNodeContracts::<T>::insert(node_id, &nc.active_contracts);
-        // modify used resources of node object
-        let mut node = pallet_tfgrid::Nodes::<T>::get(node_id).unwrap();
-        node.resources.used_resources = nc.used_resources;
-        pallet_tfgrid::Nodes::<T>::insert(node_id, &node);
-        reads += 1;
-        writes += 2;
+
+        if let Some(mut node) = pallet_tfgrid::Nodes::<T>::get(node_id) {
+            node.resources.used_resources = nc.used_resources;
+            pallet_tfgrid::Nodes::<T>::insert(node_id, &node);
+            reads += 1;
+            writes += 2;
+        } else {
+            log::error!(
+                "Node {:?} no longer exist! This should not happen here!", 
+                node_id
+            );
+        }
     }
 
     (reads, writes)
