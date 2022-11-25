@@ -1,8 +1,10 @@
 use crate::Config;
-use crate::InterfaceOf;
-use crate::PubConfigOf;
 use crate::*;
-use frame_support::{traits::Get, traits::OnRuntimeUpgrade, weights::Weight, BoundedVec};
+use crate::{InterfaceOf, LocationOf, Pallet, PubConfigOf, SerialNumberOf};
+use frame_support::{
+    pallet_prelude::OptionQuery, pallet_prelude::Weight, storage_alias, traits::Get,
+    traits::OnRuntimeUpgrade, Blake2_128Concat, BoundedVec,
+};
 use log::info;
 use sp_std::marker::PhantomData;
 
@@ -30,7 +32,7 @@ pub mod deprecated {
     }
 
     #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-    pub struct Node<PubConfig, If> {
+    pub struct NodeV11<PubConfig, If> {
         pub version: u32,
         pub id: u32,
         pub farm_id: u32,
@@ -52,11 +54,41 @@ pub mod deprecated {
     }
 
     #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+    pub struct NodeV12<PubConfig, Location, If, SerialNumber> {
+        pub version: u32,
+        pub id: u32,
+        pub farm_id: u32,
+        pub twin_id: u32,
+        pub resources: Resources,
+        pub location: Location,
+        // optional public config
+        pub public_config: Option<PubConfig>,
+        pub created: u64,
+        pub farming_policy_id: u32,
+        pub interfaces: Vec<If>,
+        pub certification: NodeCertification,
+        pub secure_boot: bool,
+        pub virtualized: bool,
+        pub serial_number: Option<SerialNumber>,
+        pub connection_price: u32,
+    }
+
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
     pub struct Location {
         pub longitude: Vec<u8>,
         pub latitude: Vec<u8>,
     }
 }
+
+// Storage alias from NodeV12 => write to this
+#[storage_alias]
+pub type Nodes<T: Config> = StorageMap<
+    Pallet<T>,
+    Blake2_128Concat,
+    u32,
+    deprecated::NodeV12<PubConfigOf<T>, LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
+    OptionQuery,
+>;
 
 pub struct InputValidation<T: Config>(PhantomData<T>);
 
@@ -173,7 +205,7 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
     let mut migrated_count = 0;
 
     // We transform the storage values from the old into the new format.
-    Nodes::<T>::translate::<deprecated::Node<PubConfigOf<T>, InterfaceOf<T>>, _>(|k, node| {
+    Nodes::<T>::translate::<deprecated::NodeV11<PubConfigOf<T>, InterfaceOf<T>>, _>(|k, node| {
         info!("     Migrated node for {:?}...", k);
 
         let location = match get_location::<T>(&node) {
@@ -190,7 +222,12 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
             Err(_) => None,
         };
 
-        let new_node = TfgridNode::<T> {
+        let new_node = deprecated::NodeV12::<
+            PubConfigOf<T>,
+            LocationOf<T>,
+            InterfaceOf<T>,
+            SerialNumberOf<T>,
+        > {
             version: 5, // deprecated
             id: node.id,
             farm_id: node.farm_id,
@@ -248,7 +285,7 @@ fn get_city_name<T: Config>(
 }
 
 fn get_location<T: Config>(
-    node: &deprecated::Node<PubConfigOf<T>, InterfaceOf<T>>,
+    node: &deprecated::NodeV11<PubConfigOf<T>, InterfaceOf<T>>,
 ) -> Result<LocationOf<T>, Error<T>> {
     let location_input = LocationInput {
         city: BoundedVec::try_from(node.city.clone()).map_err(|_| Error::<T>::CityNameTooLong)?,
@@ -264,7 +301,7 @@ fn get_location<T: Config>(
 }
 
 fn get_serial_number<T: Config>(
-    node: &deprecated::Node<PubConfigOf<T>, InterfaceOf<T>>,
+    node: &deprecated::NodeV11<PubConfigOf<T>, InterfaceOf<T>>,
 ) -> Result<SerialNumberOf<T>, Error<T>> {
     let serial_number_input: SerialNumberInput = BoundedVec::try_from(node.serial_number.clone())
         .map_err(|_| Error::<T>::SerialNumberTooLong)?;
