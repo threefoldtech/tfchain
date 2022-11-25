@@ -39,7 +39,10 @@ impl<T: Config> TryFrom<IP4Input> for IP4<T> {
             Self::Error::IP4TooLong
         );
         ensure!(IPv4Cidr::parse(&value).is_ok(), Self::Error::InvalidIP4);
-
+        ensure!(
+            IPv4Cidr::parse(&value).unwrap().is_public(),
+            Self::Error::InvalidIP4
+        );
         Ok(Self(value, PhantomData))
     }
 }

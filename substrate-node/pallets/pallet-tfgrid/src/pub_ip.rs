@@ -36,6 +36,10 @@ impl<T: Config> TryFrom<PublicIpIpInput> for PublicIP<T> {
             Self::Error::PublicIPTooLong
         );
         ensure!(CIDR::parse(&value).is_ok(), Self::Error::InvalidPublicIP);
+        ensure!(
+            CIDR::parse(&value).unwrap().is_public(),
+            Self::Error::InvalidIP4
+        );
         Ok(Self(value, PhantomData))
     }
 }
