@@ -34,8 +34,6 @@ pub mod deprecated {
         pub resources: ConsumableResources,
         pub location: Location,
         pub power: Power,
-        pub country: Vec<u8>,
-        pub city: Vec<u8>,
         // optional public config
         pub public_config: Option<PubConfig>,
         pub created: u64,
