@@ -15,7 +15,10 @@ use pallet_tfgrid::{
 };
 use sp_core::H256;
 use sp_runtime::{assert_eq_error_rate, traits::SaturatedConversion, Perbill, Percent};
-use sp_std::convert::{TryFrom, TryInto};
+use sp_std::{
+    convert::{TryFrom, TryInto},
+    marker::PhantomData,
+};
 use substrate_fixed::types::U64F64;
 use tfchain_support::types::{
     CapacityReservationPolicy, ConsumableResources, NodeFeatures, PowerState, PowerTarget,
@@ -24,6 +27,9 @@ use tfchain_support::types::{
 use tfchain_support::types::{FarmCertification, NodeCertification, PublicIP};
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
+const BASE_FEE: u64 = 1000;
+const VARIABLE_FEE: u64 = 1000;
+const VARIABLE_AMOUNT: u64 = 100;
 
 //  GROUP TESTS //
 // -------------------- //
@@ -3459,6 +3465,583 @@ fn test_capacity_reservation_contract_create_with_solution_provider_fails_if_not
     });
 }
 
+// SERVICE CONTRACT TESTS //
+// ---------------------- //
+
+#[test]
+fn test_service_contract_create_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        create_service_consumer_contract();
+
+        assert_eq!(
+            get_service_contract(),
+            SmartContractModule::service_contracts(1).unwrap(),
+        );
+
+        let our_events = System::events();
+        assert_eq!(!our_events.is_empty(), true);
+        assert_eq!(
+            our_events.last().unwrap(),
+            &record(MockEvent::SmartContractModule(
+                SmartContractEvent::ServiceContractCreated {
+                    service_contract_id: 1,
+                }
+            )),
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_create_by_anyone_fails() {
+    new_test_ext().execute_with(|| {
+        create_twin(alice());
+        create_twin(bob());
+        create_twin(charlie());
+
+        assert_noop!(
+            SmartContractModule::service_contract_create(
+                Origin::signed(charlie()),
+                alice(),
+                bob(),
+            ),
+            Error::<TestRuntime>::TwinNotAuthorized
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_create_same_account_fails() {
+    new_test_ext().execute_with(|| {
+        create_twin(alice());
+
+        assert_noop!(
+            SmartContractModule::service_contract_create(
+                Origin::signed(alice()),
+                alice(),
+                alice(),
+            ),
+            Error::<TestRuntime>::ServiceContractCreationNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_set_metadata_works() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+
+        assert_ok!(SmartContractModule::service_contract_set_metadata(
+            Origin::signed(alice()),
+            1,
+            b"some_metadata".to_vec(),
+        ));
+
+        let mut service_contract = get_service_contract();
+        service_contract.metadata = BoundedVec::try_from(b"some_metadata".to_vec()).unwrap();
+        assert_eq!(
+            service_contract,
+            SmartContractModule::service_contracts(1).unwrap(),
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_set_metadata_by_unauthorized_fails() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+        create_twin(charlie());
+
+        assert_noop!(
+            SmartContractModule::service_contract_set_metadata(
+                Origin::signed(charlie()),
+                1,
+                b"some_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::TwinNotAuthorized
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_set_metadata_already_approved_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_set_metadata(
+                Origin::signed(alice()),
+                1,
+                b"some_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::ServiceContractModificationNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_set_metadata_too_long_fails() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_set_metadata(
+                Origin::signed(alice()),
+                1,
+                b"very_loooooooooooooooooooooooooooooooooooooooooooooooooong_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::ServiceContractMetadataTooLong
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_set_fees_works() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+
+        assert_ok!(SmartContractModule::service_contract_set_fees(
+            Origin::signed(alice()),
+            1,
+            BASE_FEE,
+            VARIABLE_FEE,
+        ));
+
+        let mut service_contract = get_service_contract();
+        service_contract.base_fee = BASE_FEE;
+        service_contract.variable_fee = VARIABLE_FEE;
+        assert_eq!(
+            service_contract,
+            SmartContractModule::service_contracts(1).unwrap(),
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_set_fees_by_unauthorized_fails() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_set_fees(
+                Origin::signed(bob()),
+                1,
+                BASE_FEE,
+                VARIABLE_FEE,
+            ),
+            Error::<TestRuntime>::TwinNotAuthorized
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_set_fees_already_approved_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_set_fees(
+                Origin::signed(alice()),
+                1,
+                BASE_FEE,
+                VARIABLE_FEE,
+            ),
+            Error::<TestRuntime>::ServiceContractModificationNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_approve_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_service_consumer_contract();
+
+        let mut service_contract = get_service_contract();
+        service_contract.base_fee = BASE_FEE;
+        service_contract.variable_fee = VARIABLE_FEE;
+        service_contract.metadata = BoundedVec::try_from(b"some_metadata".to_vec()).unwrap();
+        service_contract.state = types::ServiceContractState::AgreementReady;
+        assert_eq!(
+            service_contract,
+            SmartContractModule::service_contracts(1).unwrap(),
+        );
+
+        // Service approves
+        assert_ok!(SmartContractModule::service_contract_approve(
+            Origin::signed(alice()),
+            1,
+        ));
+
+        service_contract.accepted_by_service = true;
+        assert_eq!(
+            service_contract,
+            SmartContractModule::service_contracts(1).unwrap(),
+        );
+
+        // Consumer approves
+        assert_ok!(SmartContractModule::service_contract_approve(
+            Origin::signed(bob()),
+            1,
+        ));
+
+        service_contract.accepted_by_consumer = true;
+        service_contract.last_bill = get_timestamp_in_seconds_for_block(1);
+        service_contract.state = types::ServiceContractState::ApprovedByBoth;
+        assert_eq!(
+            service_contract,
+            SmartContractModule::service_contracts(1).unwrap(),
+        );
+
+        let our_events = System::events();
+        assert_eq!(!our_events.is_empty(), true);
+        assert_eq!(
+            our_events.last().unwrap(),
+            &record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ServiceContractApproved {
+                service_contract_id: 1,
+            })),
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_approve_agreement_not_ready_fails() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_approve(Origin::signed(alice()), 1,),
+            Error::<TestRuntime>::ServiceContractApprovalNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_approve_already_approved_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_approve(Origin::signed(alice()), 1,),
+            Error::<TestRuntime>::ServiceContractApprovalNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_approve_by_unauthorized_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+        create_twin(charlie());
+
+        assert_noop!(
+            SmartContractModule::service_contract_approve(Origin::signed(charlie()), 1,),
+            Error::<TestRuntime>::TwinNotAuthorized
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_reject_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_service_consumer_contract();
+
+        assert_ok!(SmartContractModule::service_contract_reject(
+            Origin::signed(alice()),
+            1,
+        ));
+
+        assert_eq!(SmartContractModule::service_contracts(1).is_none(), true);
+
+        let our_events = System::events();
+        assert_eq!(!our_events.is_empty(), true);
+        assert_eq!(
+            our_events.last().unwrap(),
+            &record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ServiceContractCanceled {
+                service_contract_id: 1,
+                cause: types::Cause::CanceledByUser,
+            })),
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_reject_agreement_not_ready_fails() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_reject(Origin::signed(alice()), 1,),
+            Error::<TestRuntime>::ServiceContractRejectionNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_reject_already_approved_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_reject(Origin::signed(alice()), 1,),
+            Error::<TestRuntime>::ServiceContractRejectionNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_reject_by_unauthorized_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+        create_twin(charlie());
+
+        assert_noop!(
+            SmartContractModule::service_contract_reject(Origin::signed(charlie()), 1,),
+            Error::<TestRuntime>::TwinNotAuthorized
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_cancel_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        create_service_consumer_contract();
+
+        assert_ok!(SmartContractModule::service_contract_cancel(
+            Origin::signed(alice()),
+            1,
+        ));
+
+        assert_eq!(SmartContractModule::service_contracts(1).is_none(), true);
+
+        let our_events = System::events();
+        assert_eq!(!our_events.is_empty(), true);
+        assert_eq!(
+            our_events.last().unwrap(),
+            &record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ServiceContractCanceled {
+                service_contract_id: 1,
+                cause: types::Cause::CanceledByUser,
+            })),
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_cancel_by_unauthorized_fails() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+        create_twin(charlie());
+
+        assert_noop!(
+            SmartContractModule::service_contract_cancel(Origin::signed(charlie()), 1,),
+            Error::<TestRuntime>::TwinNotAuthorized
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_bill_works() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, None);
+        prepare_service_consumer_contract();
+
+        let service_contract = SmartContractModule::service_contracts(1).unwrap();
+        assert_eq!(service_contract.last_bill, 0);
+
+        approve_service_consumer_contract();
+
+        let service_contract = SmartContractModule::service_contracts(1).unwrap();
+        assert_eq!(
+            service_contract.last_bill,
+            get_timestamp_in_seconds_for_block(1)
+        );
+
+        let consumer_twin = TfgridModule::twins(2).unwrap();
+        let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
+        assert_eq!(consumer_balance, 2500000000);
+
+        // Bill 20 min after contract approval
+        run_to_block(201, Some(&mut pool_state));
+        assert_ok!(SmartContractModule::service_contract_bill(
+            Origin::signed(alice()),
+            1,
+            VARIABLE_AMOUNT,
+            b"bill_metadata".to_vec(),
+        ));
+
+        let service_contract = SmartContractModule::service_contracts(1).unwrap();
+        assert_eq!(
+            service_contract.last_bill,
+            get_timestamp_in_seconds_for_block(201)
+        );
+
+        let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
+        let window =
+            get_timestamp_in_seconds_for_block(201) - get_timestamp_in_seconds_for_block(1);
+        let bill = types::ServiceContractBill {
+            variable_amount: VARIABLE_AMOUNT,
+            window,
+            metadata: bounded_vec![],
+        };
+        let billed_amount_1 = service_contract.calculate_bill_cost_tft(bill).unwrap();
+
+        assert_eq!(2500000000 - consumer_balance, billed_amount_1);
+
+        // Bill a second time, 1h10min after first billing
+        run_to_block(901, Some(&mut pool_state));
+        assert_ok!(SmartContractModule::service_contract_bill(
+            Origin::signed(alice()),
+            1,
+            VARIABLE_AMOUNT,
+            b"bill_metadata".to_vec(),
+        ));
+
+        let service_contract = SmartContractModule::service_contracts(1).unwrap();
+        assert_eq!(
+            service_contract.last_bill,
+            get_timestamp_in_seconds_for_block(901)
+        );
+
+        let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
+        let bill = types::ServiceContractBill {
+            variable_amount: VARIABLE_AMOUNT,
+            window: 3600, // force a 1h bill here
+            metadata: bounded_vec![],
+        };
+        let billed_amount_2 = service_contract.calculate_bill_cost_tft(bill).unwrap();
+
+        // Check that second billing was equivalent to a 1h
+        // billing even if window is greater than 1h
+        assert_eq!(
+            2500000000 - consumer_balance - billed_amount_1,
+            billed_amount_2
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_bill_by_unauthorized_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_bill(
+                Origin::signed(bob()),
+                1,
+                VARIABLE_AMOUNT,
+                b"bill_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::TwinNotAuthorized
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_bill_not_approved_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_bill(
+                Origin::signed(alice()),
+                1,
+                VARIABLE_AMOUNT,
+                b"bill_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::ServiceContractBillingNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_bill_variable_amount_too_high_fails() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, None);
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        // Bill 1h after contract approval
+        run_to_block(601, Some(&mut pool_state));
+        // set variable amount a bit higher than variable fee to trigger error
+        let variable_amount = VARIABLE_FEE + 1;
+        assert_noop!(
+            SmartContractModule::service_contract_bill(
+                Origin::signed(alice()),
+                1,
+                variable_amount,
+                b"bill_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::ServiceContractBillingNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_bill_metadata_too_long_fails() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, None);
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        // Bill 1h after contract approval
+        run_to_block(601, Some(&mut pool_state));
+        assert_noop!(
+            SmartContractModule::service_contract_bill(
+                Origin::signed(alice()),
+                1,
+                VARIABLE_AMOUNT,
+                b"very_loooooooooooooooooooooooooooooooooooooooooooooooooong_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::ServiceContractBillMetadataTooLong
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_bill_out_of_funds_fails() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, None);
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        // Drain consumer account
+        let consumer_twin = TfgridModule::twins(2).unwrap();
+        let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
+        Balances::transfer(Origin::signed(bob()), alice(), consumer_balance).unwrap();
+        let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
+        assert_eq!(consumer_balance, 0);
+
+        // Bill 1h after contract approval
+        run_to_block(601, Some(&mut pool_state));
+        assert_noop!(
+            SmartContractModule::service_contract_bill(
+                Origin::signed(alice()),
+                1,
+                VARIABLE_AMOUNT,
+                b"bill_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::ServiceContractNotEnoughFundsToPayBill,
+        );
+    });
+}
+
 //  MODULE FUNCTION TESTS //
 // ---------------------- //
 
@@ -3601,7 +4184,7 @@ fn push_nru_report_for_contract(contract_id: u64, block_number: u64) {
     consumption_reports.push(super::types::NruConsumption {
         contract_id,
         nru: 3 * gigabyte,
-        timestamp: 1628082000 + (6 * block_number),
+        timestamp: get_timestamp_in_seconds_for_block(block_number),
         window: 6 * block_number,
     });
 
@@ -3621,7 +4204,7 @@ fn check_report_cost(
 
     let contract_bill_event = types::ContractBill {
         contract_id,
-        timestamp: 1628082000 + (6 * block_number),
+        timestamp: get_timestamp_in_seconds_for_block(block_number),
         discount_level,
         amount_billed: amount_billed as u128,
     };
@@ -4275,4 +4858,65 @@ fn prepare_farm_three_nodes_three_capacity_reservation_contracts() {
 
     assert_eq!(SmartContractModule::active_node_contracts(1).len(), 2);
     assert_eq!(SmartContractModule::active_node_contracts(2).len(), 1);
+}
+
+fn create_service_consumer_contract() {
+    create_twin(alice());
+    create_twin(bob());
+
+    // create contract between service (Alice) and consumer (Bob)
+    assert_ok!(SmartContractModule::service_contract_create(
+        Origin::signed(alice()),
+        alice(),
+        bob(),
+    ));
+}
+
+fn prepare_service_consumer_contract() {
+    create_service_consumer_contract();
+
+    assert_ok!(SmartContractModule::service_contract_set_metadata(
+        Origin::signed(alice()),
+        1,
+        b"some_metadata".to_vec(),
+    ));
+
+    assert_ok!(SmartContractModule::service_contract_set_fees(
+        Origin::signed(alice()),
+        1,
+        BASE_FEE,
+        VARIABLE_FEE,
+    ));
+}
+
+fn approve_service_consumer_contract() {
+    // Service approves
+    assert_ok!(SmartContractModule::service_contract_approve(
+        Origin::signed(alice()),
+        1,
+    ));
+    // Consumer approves
+    assert_ok!(SmartContractModule::service_contract_approve(
+        Origin::signed(bob()),
+        1,
+    ));
+}
+
+fn get_service_contract() -> types::ServiceContract<TestRuntime> {
+    types::ServiceContract::<TestRuntime> {
+        service_twin_id: 1,  //Alice
+        consumer_twin_id: 2, //Bob
+        base_fee: 0,
+        variable_fee: 0,
+        metadata: bounded_vec![],
+        accepted_by_service: false,
+        accepted_by_consumer: false,
+        last_bill: 0,
+        state: types::ServiceContractState::Created,
+        phantom: PhantomData,
+    }
+}
+
+fn get_timestamp_in_seconds_for_block(block_number: u64) -> u64 {
+    1628082000 + (6 * block_number)
 }
