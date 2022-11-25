@@ -5,6 +5,7 @@ use crate::*;
 use frame_support::{traits::Get, traits::OnRuntimeUpgrade, weights::Weight, BoundedVec};
 use log::info;
 use sp_std::marker::PhantomData;
+use tfchain_support::types::ConsumableResources;
 
 #[cfg(feature = "try-runtime")]
 use frame_support::traits::OnRuntimeUpgradeHelpersExt;
@@ -195,7 +196,15 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
             id: node.id,
             farm_id: node.farm_id,
             twin_id: node.twin_id,
-            resources: node.resources,
+            resources: ConsumableResources {
+                total_resources: node.resources,
+                used_resources: Resources::empty(),
+            },
+            power: Power {
+                target: PowerTarget::Up,
+                state: PowerState::Up,
+                last_uptime: 0,
+            },
             location,
             public_config: node.public_config,
             created: node.created,

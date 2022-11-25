@@ -402,6 +402,7 @@ impl pallet_smart_contract::Config for Runtime {
     type GracePeriod = GracePeriod;
     type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
     type NodeChanged = NodeChanged;
+    type Tfgrid = TfgridModule;
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
     type Call = Call;
     type MaxNameContractNameLength = MaxNameContractNameLength;
@@ -765,9 +766,14 @@ pub type Executive = frame_executive::Executive<
     AllPalletsWithSystem,
     (
         pallet_smart_contract::migrations::v6::ContractMigrationV5<Runtime>,
+        /*
         pallet_tfgrid::migrations::v10::FixFarmNodeIndexMap<Runtime>,
         pallet_tfgrid::migrations::v11::FixFarmingPolicy<Runtime>,
+        */
         pallet_tfgrid::migrations::v12::InputValidation<Runtime>,
+        
+        pallet_tfgrid::migrations::v13::NodeMigration<Runtime>,
+        pallet_smart_contract::migrations::v7::ContractMigrationV6<Runtime>,
     ),
 >;
 
