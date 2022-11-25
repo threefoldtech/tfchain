@@ -53,9 +53,9 @@ class TfChainClient:
 
         # This was a sudo call that failed
         for event in events:
-            if event["event_id"] == "Sudid" and "Err" in event["attributes"]:
-                raise Exception(event["attributes"])
-
+            if event["event_id"] == "Sudid" and "Err" in event["attributes"]["sudo_result"]:
+                raise Exception(event["attributes"]["sudo_result"])
+            
         for expected_event in expected_events:
             check = False
             for event in events:
