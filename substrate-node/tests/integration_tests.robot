@@ -62,18 +62,19 @@ Resources
     
 Capacity Reservation Policy Any
     [Arguments]    ${resources}    ${features}=${None}
-    ${args} =     Create List    ${resources}    ${features}
+    ${args} =     Create Dictionary    resources    ${resources}    features    ${features}
     ${dict} =    Create Dictionary    Any    ${args}
     [Return]    ${dict}
 
 Capacity Reservation Policy Node
     [Arguments]    ${node_id}
-    ${dict} =    Create Dictionary    Node    ${node_id}
+    ${args} =    Create Dictionary    node_id    ${node_id}
+    ${dict} =    Create Dictionary    Node    ${args}
     [Return]    ${dict}
 
 Capacity Reservation Policy Exclusive
     [Arguments]    ${group_id}    ${resources}    ${features}=${None}
-    ${args} =    Create List    ${group_id}    ${resources}    ${features}
+    ${args} =    Create Dictionary    group_id       ${group_id}    resources    ${resources}     features    ${features}
     ${dict} =    Create Dictionary    Exclusive    ${args}
     [Return]    ${dict}
 
