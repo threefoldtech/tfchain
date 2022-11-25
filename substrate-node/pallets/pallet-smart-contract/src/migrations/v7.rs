@@ -136,17 +136,17 @@ pub struct ContractChanges<T: Config> {
 impl<T: Config> OnRuntimeUpgrade for ContractMigrationV6<T> {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
-        info!("current pallet version: {:?}", PalletVersion::<T>::get());
-        let contract_counts: u64 = Contracts::<T>::iter_keys().count() as u64;
-        let mut expected_contract_count_after_migration = contract_counts;
+        info!(" --- Current Smart Contract pallet version: {:?}", PalletVersion::<T>::get());
+        let contracts_count: u64 = Contracts::<T>::iter_keys().count() as u64;
+        let mut expected_contract_count_after_migration = contracts_count;
         // all node contracts that were part of a rent contract will not be transformed into a capacity reservation contract
         for (node_id, _) in ActiveRentContractForNode::<T>::iter() {
             expected_contract_count_after_migration -= ActiveNodeContracts::<T>::get(node_id).len() as u64;
         }
         Self::set_temp_storage(expected_contract_count_after_migration, "expected_contract_count_after_migration");
         info!(
-            "👥  Smart Contract pallet to V6 passes PRE migrate checks ✅: {:?} contracts",
-            contract_counts
+            "👥  Smart Contract pallet to V7 passes PRE migrate checks ✅: {:?} contracts",
+            contracts_count
         );
         Ok(())
     }
@@ -155,7 +155,7 @@ impl<T: Config> OnRuntimeUpgrade for ContractMigrationV6<T> {
         if PalletVersion::<T>::get() == StorageVersion::V6 {
             migrate_to_version_7::<T>()
         } else {
-            info!(" >>> Unused migration");
+            info!(" >>> Unused Smart Contract pallet V7 migration");
             0
         }
     }
@@ -163,8 +163,8 @@ impl<T: Config> OnRuntimeUpgrade for ContractMigrationV6<T> {
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
         let expected_contract_count_after_migration = Self::get_temp_storage("expected_contract_count_after_migration").unwrap_or(0u64);
-        let post_contract_counts = ContractsV7::<T>::iter().count().saturated_into::<u64>();
-        assert_eq!(post_contract_counts,
+        let post_contracts_count = ContractsV7::<T>::iter().count().saturated_into::<u64>();
+        assert_eq!(post_contracts_count,
             expected_contract_count_after_migration, 
             "This migration failed: expectation did not equal the actual contract count!"
         );
@@ -287,7 +287,10 @@ pub fn migrate_to_version_7<T: Config>() -> frame_support::weights::Weight {
 
     // Update pallet storage version
     PalletVersion::<T>::set(StorageVersion::V7);
-    info!(" <<< Storage version upgraded");
+    info!(
+        " <<< Storage version Smart Contract pallet upgraded to {:?}",
+        PalletVersion::<T>::get()
+    );
 
     // Return the weight consumed by the migration.
     T::DbWeight::get().reads_writes(total_reads as Weight + 1, total_writes as Weight + 1)

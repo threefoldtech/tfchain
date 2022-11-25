@@ -101,7 +101,7 @@ impl<T: Config> OnRuntimeUpgrade for InputValidation<T> {
         let nodes_count: u64 = Nodes::<T>::iter_keys().count().saturated_into();
         Self::set_temp_storage(nodes_count, "pre_nodes_count");
         log::info!(
-            "🔎 FixFarmingPolicy pre migration: Number of existing nodes {:?}",
+            "🔎 NodeMigrationV12 pre migration: Number of existing nodes {:?}",
             nodes_count
         );
 
@@ -120,13 +120,13 @@ impl<T: Config> OnRuntimeUpgrade for InputValidation<T> {
         // Check number of nodes against pre-check result
         let pre_nodes_count = Self::get_temp_storage("pre_nodes_count").unwrap_or(0u64);
         assert_eq!(
-            Nodes::<T>::iter().count().saturated_into::<u64>(),
+            Nodes::<T>::iter_keys().count().saturated_into::<u64>(),
             pre_nodes_count,
             "Number of nodes migrated does not match"
         );
 
         info!(
-            "👥  TFGrid pallet migration to {:?} passes POST migrate checks ✅",
+            "👥  TFGrid pallet to {:?} passes POST migrate checks ✅",
             Pallet::<T>::pallet_version()
         );
 
@@ -138,7 +138,7 @@ fn migrate<T: Config>() -> frame_support::weights::Weight {
     if PalletVersion::<T>::get() == types::StorageVersion::V11Struct {
         migrate_entities::<T>() + migrate_nodes::<T>() + update_pallet_storage_version::<T>()
     } else {
-        info!(" >>> Unused migration");
+        info!(" >>> Unused TFGrid pallet V12 migration");
         0
     }
 }
@@ -260,7 +260,10 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
 
 fn update_pallet_storage_version<T: Config>() -> frame_support::weights::Weight {
     PalletVersion::<T>::set(types::StorageVersion::V12Struct);
-    info!(" <<< Storage version upgraded");
+    info!(
+        " <<< Storage version TFGrid pallet upgraded to {:?}",
+        PalletVersion::<T>::get()
+    );
 
     // Return the weight consumed by the migration.
     T::DbWeight::get().writes(1)

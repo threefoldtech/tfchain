@@ -31,8 +31,6 @@ pub mod deprecated {
         pub twin_id: u32,
         pub resources: Resources,
         pub location: Location,
-        pub country: Vec<u8>,
-        pub city: Vec<u8>,
         // optional public config
         pub public_config: Option<PubConfig>,
         pub created: u64,
@@ -54,7 +52,10 @@ pub struct NodeMigration<T: Config>(PhantomData<T>);
 impl<T: Config> OnRuntimeUpgrade for NodeMigration<T> {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
-        info!("current pallet version: {:?}", PalletVersion::<T>::get());
+        info!(
+            " --- Current TFGrid pallet version: {:?}",
+            PalletVersion::<T>::get()
+        );
         let nodes_count: u64 = Nodes::<T>::iter_keys().count() as u64;
         Self::set_temp_storage(nodes_count, "pre_node_count");
         log::info!(
@@ -65,27 +66,30 @@ impl<T: Config> OnRuntimeUpgrade for NodeMigration<T> {
     }
 
     fn on_runtime_upgrade() -> Weight {
-        if PalletVersion::<T>::get() == StorageVersion::V11Struct {
+        if PalletVersion::<T>::get() == StorageVersion::V12Struct {
             migrate_to_version_13::<T>()
         } else {
-            info!(" >>> Unused migration");
+            info!(" >>> Unused TFGrid pallet V13 migration");
             0
         }
     }
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
-        info!("current pallet version: {:?}", PalletVersion::<T>::get());
+        info!(
+            " --- Current TFGrid pallet version: {:?}",
+            PalletVersion::<T>::get()
+        );
         // Check number of nodes against pre-check result
         let pre_nodes_count = Self::get_temp_storage("pre_node_count").unwrap_or(0u64);
         assert_eq!(
-            Nodes::<T>::iter().count() as u64,
+            Nodes::<T>::iter_keys().count() as u64,
             pre_nodes_count,
             "Number of nodes migrated does not match"
         );
 
         info!(
-            "👥  NodeMigrationV13 post migration: migration to {:?} passes POST migrate checks ✅",
+            "👥  TFGrid pallet to {:?} passes POST migrate checks ✅",
             PalletVersion::<T>::get()
         );
 
@@ -143,7 +147,10 @@ pub fn migrate_to_version_13<T: Config>() -> frame_support::weights::Weight {
 
     // Update pallet storage version
     PalletVersion::<T>::set(StorageVersion::V13Struct);
-    info!(" <<< Storage version upgraded");
+    info!(
+        " <<< Storage version TFGrid pallet upgraded to {:?}",
+        PalletVersion::<T>::get()
+    );
 
     // Return the weight consumed by the migration.
     T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
