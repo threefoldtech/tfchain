@@ -54,7 +54,7 @@ pub mod deprecated {
     }
 
     #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-    pub struct NodeV12<PubConfig, Location, If, SerialNumber> {
+    pub struct NodeV12<Location, PubConfig, If, SerialNumber> {
         pub version: u32,
         pub id: u32,
         pub farm_id: u32,
@@ -86,7 +86,7 @@ pub type Nodes<T: Config> = StorageMap<
     Pallet<T>,
     Blake2_128Concat,
     u32,
-    deprecated::NodeV12<PubConfigOf<T>, LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
+    deprecated::NodeV12<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
     OptionQuery,
 >;
 
@@ -223,12 +223,12 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
         };
 
         let new_node = deprecated::NodeV12::<
-            PubConfigOf<T>,
             LocationOf<T>,
+            PubConfigOf<T>,
             InterfaceOf<T>,
             SerialNumberOf<T>,
         > {
-            version: 5, // deprecated
+            version: TFGRID_NODE_VERSION,
             id: node.id,
             farm_id: node.farm_id,
             twin_id: node.twin_id,
