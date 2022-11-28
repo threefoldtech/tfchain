@@ -13,80 +13,23 @@ use frame_support::traits::OnRuntimeUpgradeHelpersExt;
 #[cfg(feature = "try-runtime")]
 use sp_runtime::SaturatedConversion;
 
-pub mod deprecated {
-    use codec::{Decode, Encode};
-    use core::cmp::{Ord, PartialOrd};
-    use scale_info::TypeInfo;
-    use sp_std::prelude::*;
-    use sp_std::vec::Vec;
-    use tfchain_support::{resources::Resources, types::NodeCertification};
-
-    #[derive(Encode, Decode, Debug, Default, PartialEq, Eq, Clone, TypeInfo)]
-    pub struct Entity<AccountId> {
-        pub version: u32,
-        pub id: u32,
-        pub name: Vec<u8>,
-        pub account_id: AccountId,
-        pub country: Vec<u8>,
-        pub city: Vec<u8>,
-    }
-
-    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-    pub struct NodeV11<PubConfig, If> {
-        pub version: u32,
-        pub id: u32,
-        pub farm_id: u32,
-        pub twin_id: u32,
-        pub resources: Resources,
-        pub location: Location,
-        pub country: Vec<u8>,
-        pub city: Vec<u8>,
-        // optional public config
-        pub public_config: Option<PubConfig>,
-        pub created: u64,
-        pub farming_policy_id: u32,
-        pub interfaces: Vec<If>,
-        pub certification: NodeCertification,
-        pub secure_boot: bool,
-        pub virtualized: bool,
-        pub serial_number: Vec<u8>,
-        pub connection_price: u32,
-    }
-
-    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-    pub struct NodeV12<Location, PubConfig, If, SerialNumber> {
-        pub version: u32,
-        pub id: u32,
-        pub farm_id: u32,
-        pub twin_id: u32,
-        pub resources: Resources,
-        pub location: Location,
-        // optional public config
-        pub public_config: Option<PubConfig>,
-        pub created: u64,
-        pub farming_policy_id: u32,
-        pub interfaces: Vec<If>,
-        pub certification: NodeCertification,
-        pub secure_boot: bool,
-        pub virtualized: bool,
-        pub serial_number: Option<SerialNumber>,
-        pub connection_price: u32,
-    }
-
-    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-    pub struct Location {
-        pub longitude: Vec<u8>,
-        pub latitude: Vec<u8>,
-    }
-}
-
-// Storage alias from NodeV12 => write to this
+// Storage alias from Node v12
 #[storage_alias]
 pub type Nodes<T: Config> = StorageMap<
     Pallet<T>,
     Blake2_128Concat,
     u32,
-    deprecated::NodeV12<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
+    super::types::v12::Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
+    OptionQuery,
+>;
+
+// Storage alias from Entity v12
+#[storage_alias]
+pub type Entities<T: Config> = StorageMap<
+    _,
+    Blake2_128Concat,
+    u32,
+    super::types::v12::Entity<AccountIdOf<T>, CityNameOf<T>, CountryNameOf<T>>,
     OptionQuery,
 >;
 
@@ -149,7 +92,7 @@ fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
     let mut migrated_count = 0;
 
     // We transform the storage values from the old into the new format.
-    Entities::<T>::translate::<deprecated::Entity<AccountIdOf<T>>, _>(|k, entity| {
+    Entities::<T>::translate::<super::types::v11::Entity<AccountIdOf<T>>, _>(|k, entity| {
         info!("     Migrated entity for {:?}...", k);
 
         let country = match get_country_name::<T>(&entity) {
@@ -176,14 +119,15 @@ fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
             }
         };
 
-        let new_entity = TfgridEntity::<T> {
-            version: 2, // deprecated
-            id: entity.id,
-            name: entity.name,
-            account_id: entity.account_id,
-            country,
-            city,
-        };
+        let new_entity =
+            super::types::v12::Entity::<AccountIdOf<T>, CityNameOf<T>, CountryNameOf<T>> {
+                version: TFGRID_ENTITY_VERSION,
+                id: entity.id,
+                name: entity.name,
+                account_id: entity.account_id,
+                country,
+                city,
+            };
 
         migrated_count += 1;
 
@@ -205,50 +149,52 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
     let mut migrated_count = 0;
 
     // We transform the storage values from the old into the new format.
-    Nodes::<T>::translate::<deprecated::NodeV11<PubConfigOf<T>, InterfaceOf<T>>, _>(|k, node| {
-        info!("     Migrated node for {:?}...", k);
+    Nodes::<T>::translate::<super::types::v11::Node<PubConfigOf<T>, InterfaceOf<T>>, _>(
+        |k, node| {
+            info!("     Migrated node for {:?}...", k);
 
-        let location = match get_location::<T>(&node) {
-            Ok(loc) => loc,
-            Err(e) => {
-                info!("failed to parse location for node: {:?}, error: {:?}", k, e);
-                info!("set default location for node");
-                <T as Config>::Location::default()
-            }
-        };
+            let location = match get_location::<T>(&node) {
+                Ok(loc) => loc,
+                Err(e) => {
+                    info!("failed to parse location for node: {:?}, error: {:?}", k, e);
+                    info!("set default location for node");
+                    <T as Config>::Location::default()
+                }
+            };
 
-        let serial_number = match get_serial_number::<T>(&node) {
-            Ok(serial) => Some(serial),
-            Err(_) => None,
-        };
+            let serial_number = match get_serial_number::<T>(&node) {
+                Ok(serial) => Some(serial),
+                Err(_) => None,
+            };
 
-        let new_node = deprecated::NodeV12::<
-            LocationOf<T>,
-            PubConfigOf<T>,
-            InterfaceOf<T>,
-            SerialNumberOf<T>,
-        > {
-            version: TFGRID_NODE_VERSION,
-            id: node.id,
-            farm_id: node.farm_id,
-            twin_id: node.twin_id,
-            resources: node.resources,
-            location,
-            public_config: node.public_config,
-            created: node.created,
-            farming_policy_id: node.farming_policy_id,
-            interfaces: node.interfaces,
-            certification: node.certification,
-            secure_boot: node.secure_boot,
-            virtualized: node.virtualized,
-            serial_number,
-            connection_price: node.connection_price,
-        };
+            let new_node = super::types::v12::Node::<
+                LocationOf<T>,
+                PubConfigOf<T>,
+                InterfaceOf<T>,
+                SerialNumberOf<T>,
+            > {
+                version: TFGRID_NODE_VERSION,
+                id: node.id,
+                farm_id: node.farm_id,
+                twin_id: node.twin_id,
+                resources: node.resources,
+                location,
+                public_config: node.public_config,
+                created: node.created,
+                farming_policy_id: node.farming_policy_id,
+                interfaces: node.interfaces,
+                certification: node.certification,
+                secure_boot: node.secure_boot,
+                virtualized: node.virtualized,
+                serial_number,
+                connection_price: node.connection_price,
+            };
 
-        migrated_count += 1;
+            migrated_count += 1;
 
-        Some(new_node)
-    });
+            Some(new_node)
+        },
+    );
     info!(
         " <<< Node storage updated! Migrated {} nodes ✅",
         migrated_count
@@ -270,7 +216,7 @@ fn update_pallet_storage_version<T: Config>() -> frame_support::weights::Weight 
 }
 
 fn get_country_name<T: Config>(
-    node: &deprecated::Entity<AccountIdOf<T>>,
+    node: &super::types::v11::Entity<AccountIdOf<T>>,
 ) -> Result<CountryNameOf<T>, Error<T>> {
     let country_name_input: CountryNameInput =
         BoundedVec::try_from(node.country.clone()).map_err(|_| Error::<T>::CountryNameTooLong)?;
@@ -279,7 +225,7 @@ fn get_country_name<T: Config>(
 }
 
 fn get_city_name<T: Config>(
-    node: &deprecated::Entity<AccountIdOf<T>>,
+    node: &super::types::v11::Entity<AccountIdOf<T>>,
 ) -> Result<CityNameOf<T>, Error<T>> {
     let city_name_input: CityNameInput =
         BoundedVec::try_from(node.city.clone()).map_err(|_| Error::<T>::CityNameTooLong)?;
@@ -288,7 +234,7 @@ fn get_city_name<T: Config>(
 }
 
 fn get_location<T: Config>(
-    node: &deprecated::NodeV11<PubConfigOf<T>, InterfaceOf<T>>,
+    node: &super::types::v11::Node<PubConfigOf<T>, InterfaceOf<T>>,
 ) -> Result<LocationOf<T>, Error<T>> {
     let location_input = LocationInput {
         city: BoundedVec::try_from(node.city.clone()).map_err(|_| Error::<T>::CityNameTooLong)?,
@@ -304,7 +250,7 @@ fn get_location<T: Config>(
 }
 
 fn get_serial_number<T: Config>(
-    node: &deprecated::NodeV11<PubConfigOf<T>, InterfaceOf<T>>,
+    node: &super::types::v11::Node<PubConfigOf<T>, InterfaceOf<T>>,
 ) -> Result<SerialNumberOf<T>, Error<T>> {
     let serial_number_input: SerialNumberInput = BoundedVec::try_from(node.serial_number.clone())
         .map_err(|_| Error::<T>::SerialNumberTooLong)?;

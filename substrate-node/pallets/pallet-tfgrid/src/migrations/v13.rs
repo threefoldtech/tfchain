@@ -19,64 +19,13 @@ use tfchain_support::types::{ConsumableResources, Power, PowerState, PowerTarget
 #[cfg(feature = "try-runtime")]
 use frame_support::traits::OnRuntimeUpgradeHelpersExt;
 
-pub mod deprecated {
-    use codec::{Decode, Encode};
-    use scale_info::TypeInfo;
-    use sp_std::prelude::*;
-    use tfchain_support::{
-        resources::Resources,
-        types::{ConsumableResources, NodeCertification, Power},
-    };
-
-    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-    pub struct NodeV12<Location, PubConfig, If, SerialNumber> {
-        pub version: u32,
-        pub id: u32,
-        pub farm_id: u32,
-        pub twin_id: u32,
-        pub resources: Resources,
-        pub location: Location,
-        // optional public config
-        pub public_config: Option<PubConfig>,
-        pub created: u64,
-        pub farming_policy_id: u32,
-        pub interfaces: Vec<If>,
-        pub certification: NodeCertification,
-        pub secure_boot: bool,
-        pub virtualized: bool,
-        pub serial_number: Option<SerialNumber>,
-        pub connection_price: u32,
-    }
-
-    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-    pub struct NodeV13<Location, PubConfig, If, SerialNumber> {
-        pub version: u32,
-        pub id: u32,
-        pub farm_id: u32,
-        pub twin_id: u32,
-        pub resources: ConsumableResources,
-        pub location: Location,
-        pub power: Power,
-        // optional public config
-        pub public_config: Option<PubConfig>,
-        pub created: u64,
-        pub farming_policy_id: u32,
-        pub interfaces: Vec<If>,
-        pub certification: NodeCertification,
-        pub secure_boot: bool,
-        pub virtualized: bool,
-        pub serial_number: Option<SerialNumber>,
-        pub connection_price: u32,
-    }
-}
-
 // Storage alias from NodeV13 => write to this
 #[storage_alias]
 pub type Nodes<T: Config> = StorageMap<
     Pallet<T>,
     Blake2_128Concat,
     u32,
-    deprecated::NodeV13<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
+    super::types::v13::Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
     OptionQuery,
 >;
 
@@ -139,10 +88,10 @@ pub fn migrate_to_version_13<T: Config>() -> frame_support::weights::Weight {
     let mut migrated_count = 0;
 
     Nodes::<T>::translate::<
-        deprecated::NodeV12<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
+        super::types::v12::Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
         _,
     >(|k, n| {
-        let migrated_node = deprecated::NodeV13::<
+        let migrated_node = super::types::v13::Node::<
             LocationOf<T>,
             PubConfigOf<T>,
             InterfaceOf<T>,
