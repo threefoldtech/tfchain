@@ -93,14 +93,30 @@ impl<T: Config> Clone for TermsAndConditions<T> {
     }
 }
 
-fn validate_document_link_input(_input: &[u8]) -> bool {
-    // TODO: find better alternative
-    true
+fn validate_document_link_input(input: &[u8]) -> bool {
+    // ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;=
+    input
+        .iter()
+        .all(|c| matches!(c, b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' | b':' | b'/' | b'?' | b'#' | b'[' | b']' | b'@' | b'!' | b'$' | b'&' | b'\'' | b'(' | b')' | b'*' | b'+' | b',' | b';' | b'='))
 }
 
 fn validate_document_hash_input(input: &[u8]) -> bool {
-    // TODO: find better alternative
+    // ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_
     input
         .iter()
         .all(|c| matches!(c, b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_'))
+}
+
+#[test]
+fn test_validate_document_link_input_works() {
+    assert_eq!(
+        validate_document_link_input(
+            b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;="
+        ),
+        true
+    );
+    assert_eq!(
+        validate_document_link_input(b"http://zos.tf/terms/v0.1"),
+        true
+    );
 }
