@@ -26,7 +26,7 @@ jobs:
             ~/.cargo/git/db/
             substrate-node/target/
           key: ${{ runner.os }}-tfchain-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-tfchain-cargo-
+          restore-keys: ${{ runner.os }}-tfchain-cargo-1
 
       - name: Build
         run: |
