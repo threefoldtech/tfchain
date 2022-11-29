@@ -361,6 +361,7 @@ pub mod pallet {
         /// A Service contract is created
         ServiceContractCreated {
             service_contract_id: u64,
+            twin_id: u32,
         },
         /// A Service contract is approved
         ServiceContractApproved {
@@ -2363,6 +2364,7 @@ impl<T: Config> Pallet<T> {
         // Trigger event for service contract creation
         Self::deposit_event(Event::ServiceContractCreated {
             service_contract_id: id,
+            twin_id: caller_twin_id,
         });
 
         Ok(().into())

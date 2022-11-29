@@ -3486,6 +3486,7 @@ fn test_service_contract_create_works() {
             &record(MockEvent::SmartContractModule(
                 SmartContractEvent::ServiceContractCreated {
                     service_contract_id: 1,
+                    twin_id: 1,
                 }
             )),
         );
