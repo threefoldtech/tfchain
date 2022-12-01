@@ -1320,9 +1320,13 @@ pub mod pallet {
             );
             let node_id = NodeIdByTwinID::<T>::get(twin_id);
 
-            ensure!(Nodes::<T>::contains_key(node_id), Error::<T>::NodeNotExists);
+            let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
 
             let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+
+            node.power.last_uptime = now;
+
+            Nodes::<T>::insert(node_id, &node);
 
             Self::deposit_event(Event::NodeUptimeReported(node_id, now, uptime));
 
