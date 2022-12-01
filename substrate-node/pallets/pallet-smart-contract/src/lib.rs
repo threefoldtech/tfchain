@@ -100,7 +100,6 @@ pub mod pallet {
         traits::{Currency, Get, LockIdentifier, LockableCurrency, OnUnbalanced},
     };
     use frame_system::pallet_prelude::*;
-    use sp_core::H256;
     use sp_std::{
         convert::{TryFrom, TryInto},
         fmt::Debug,
@@ -126,7 +125,6 @@ pub mod pallet {
     pub type MaxNodeContractPublicIPs<T> = <T as Config>::MaxNodeContractPublicIps;
     pub type MaxDeploymentDataLength<T> = <T as Config>::MaxDeploymentDataLength;
     pub type DeploymentDataInput<T> = BoundedVec<u8, MaxDeploymentDataLength<T>>;
-    pub type DeploymentHash = H256;
     pub type NameContractNameOf<T> = <T as Config>::NameContractName;
     pub type ContractPublicIP<T> =
         PublicIP<<T as pallet_tfgrid::Config>::PublicIP, <T as pallet_tfgrid::Config>::GatewayIP>;
@@ -152,7 +150,7 @@ pub mod pallet {
         Blake2_128Concat,
         u32,
         Blake2_128Concat,
-        DeploymentHash,
+        HexHash,
         u64,
         ValueQuery,
     >;
@@ -489,7 +487,7 @@ pub mod pallet {
         pub fn deployment_create(
             origin: OriginFor<T>,
             capacity_reservation_id: u64,
-            deployment_hash: DeploymentHash,
+            deployment_hash: types::HexHash,
             deployment_data: DeploymentDataInput<T>,
             resources: Resources,
             public_ips: u32,
@@ -509,7 +507,7 @@ pub mod pallet {
         pub fn deployment_update(
             origin: OriginFor<T>,
             deployment_id: u64,
-            deployment_hash: DeploymentHash,
+            deployment_hash: types::HexHash,
             deployment_data: DeploymentDataInput<T>,
             resources: Option<Resources>,
         ) -> DispatchResultWithPostInfo {
@@ -855,7 +853,7 @@ impl<T: Config> Pallet<T> {
     pub fn _create_deployment(
         account_id: T::AccountId,
         capacity_reservation_id: u64,
-        deployment_hash: DeploymentHash,
+        deployment_hash: types::HexHash,
         deployment_data: DeploymentDataInput<T>,
         resources: Resources,
         public_ips: u32,
@@ -1154,7 +1152,7 @@ impl<T: Config> Pallet<T> {
     pub fn _update_deployment(
         account_id: T::AccountId,
         deployment_id: u64,
-        deployment_hash: DeploymentHash,
+        deployment_hash: types::HexHash,
         deployment_data: DeploymentDataInput<T>,
         resources: Option<Resources>,
     ) -> DispatchResultWithPostInfo {
