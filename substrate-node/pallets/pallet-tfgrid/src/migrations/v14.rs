@@ -212,7 +212,7 @@ where
 
     match IPv4Cidr::parse(&config_ip4.0) {
         Ok(ip) => {
-            if ip.is_public() {
+            if ip.is_public() && ip.is_unicast() {
                 return Ok(Some(config));
             } else {
                 info!("it's not public, resetting");
@@ -244,7 +244,7 @@ where
 
         match IPv4Cidr::parse(&parsed_ip.0) {
             Ok(ip) => {
-                if ip.is_public() {
+                if ip.is_public() && ip.is_unicast() {
                     let _ = parsed_public_ips.try_push(pub_ip);
                 } else {
                     if pub_ip.contract_id != 0 {

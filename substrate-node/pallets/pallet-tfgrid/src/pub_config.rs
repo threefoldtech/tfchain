@@ -38,12 +38,13 @@ impl<T: Config> TryFrom<IP4Input> for IP4<T> {
             value.len() <= MAX_IP4_LENGTH.saturated_into(),
             Self::Error::IP4TooLong
         );
-        ensure!(IPv4Cidr::parse(&value).is_ok(), Self::Error::InvalidIP4);
-        ensure!(
-            IPv4Cidr::parse(&value).unwrap().is_public(),
-            Self::Error::InvalidIP4
-        );
-        Ok(Self(value, PhantomData))
+
+        if let Ok(ip) = IPv4Cidr::parse(&value) {
+            ensure!(ip.is_public() && ip.is_unicast(), Self::Error::InvalidIP4);
+            Ok(Self(value, PhantomData))
+        } else {
+            Err(Self::Error::InvalidIP4)
+        }
     }
 }
 
@@ -89,9 +90,13 @@ impl<T: Config> TryFrom<GW4Input> for GW4<T> {
             value.len() <= MAX_GW4_LENGTH.saturated_into(),
             Self::Error::GW4TooLong
         );
-        ensure!(IPv4::parse(&value).is_ok(), Self::Error::InvalidGW4);
 
-        Ok(Self(value, PhantomData))
+        if let Ok(ip) = IPv4::parse(&value) {
+            ensure!(ip.is_public() && ip.is_unicast(), Self::Error::InvalidIP4);
+            Ok(Self(value, PhantomData))
+        } else {
+            Err(Self::Error::InvalidIP4)
+        }
     }
 }
 
@@ -137,9 +142,13 @@ impl<T: Config> TryFrom<IP6Input> for IP6<T> {
             value.len() <= MAX_IP6_LENGTH.saturated_into(),
             Self::Error::IP6TooLong
         );
-        ensure!(IPv6Cidr::parse(&value).is_ok(), Self::Error::InvalidIP6);
 
-        Ok(Self(value, PhantomData))
+        if let Ok(ip) = IPv6Cidr::parse(&value) {
+            ensure!(ip.is_public() && ip.is_unicast(), Self::Error::InvalidIP6);
+            Ok(Self(value, PhantomData))
+        } else {
+            Err(Self::Error::InvalidIP6)
+        }
     }
 }
 
@@ -185,9 +194,14 @@ impl<T: Config> TryFrom<GW6Input> for GW6<T> {
             value.len() <= MAX_GW6_LENGTH.saturated_into(),
             Self::Error::GW6TooLong
         );
-        ensure!(IPv6::parse(&value).is_ok(), Self::Error::InvalidGW6);
 
-        Ok(Self(value, PhantomData))
+        if let Ok(ip) = IPv6::parse(&value) {
+            // Todo, validate if unicast
+            ensure!(ip.is_public(), Self::Error::InvalidIP6);
+            Ok(Self(value, PhantomData))
+        } else {
+            Err(Self::Error::InvalidIP6)
+        }
     }
 }
 

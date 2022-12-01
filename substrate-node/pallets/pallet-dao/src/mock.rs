@@ -12,7 +12,7 @@ use pallet_tfgrid::{
     pub_ip::{GatewayIP, PublicIP},
     terms_cond::TermsAndConditions,
     twin::TwinIp,
-    DocumentHashInput, DocumentLinkInput, TwinIpInput,
+    DocumentHashInput, DocumentLinkInput, PublicIpOf, TwinIpInput,
 };
 use pallet_tfgrid::{CityNameInput, CountryNameInput, LatitudeInput, LongitudeInput};
 use pallet_timestamp;
@@ -22,7 +22,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use sp_std::convert::{TryFrom, TryInto};
-use tfchain_support::traits::ChangeNode;
+use tfchain_support::traits::{ChangeNode, PublicIpModifier};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -100,6 +100,11 @@ impl ChangeNode<Loc, PubConfig, Interface, Serial> for NodeChanged {
     }
 }
 
+pub struct PublicIpModifierType;
+impl PublicIpModifier<PublicIpOf<Test>> for PublicIpModifierType {
+    fn ip_removed(_ip: &PublicIpOf<Test>) {}
+}
+
 use super::weights;
 impl pallet_dao::Config for Test {
     type Event = Event;
@@ -146,6 +151,7 @@ impl pallet_tfgrid::Config for Test {
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Test>;
     type NodeChanged = NodeChanged;
+    type PublicIpModifier = PublicIpModifierType;
     type TermsAndConditions = TestTermsAndConditions;
     type TwinIp = TestTwinIp;
     type FarmName = TestFarmName;

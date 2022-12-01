@@ -5,7 +5,7 @@ use frame_support::{
 };
 use scale_info::TypeInfo;
 use sp_std::marker::PhantomData;
-use valip::ip4::{Ip, CIDR};
+use valip::ip4::{Ip, CIDR as IPv4Cidr};
 
 /// A Public IP.
 /// Needs to be valid format (ipv4 with cidr and in public range)
@@ -35,12 +35,13 @@ impl<T: Config> TryFrom<PublicIpIpInput> for PublicIP<T> {
             value.len() <= MAX_IP_LENGTH.saturated_into(),
             Self::Error::PublicIPTooLong
         );
-        ensure!(CIDR::parse(&value).is_ok(), Self::Error::InvalidPublicIP);
-        ensure!(
-            CIDR::parse(&value).unwrap().is_public(),
-            Self::Error::InvalidIP4
-        );
-        Ok(Self(value, PhantomData))
+
+        if let Ok(ip) = IPv4Cidr::parse(&value) {
+            ensure!(ip.is_public() && ip.is_unicast(), Self::Error::InvalidIP4);
+            Ok(Self(value, PhantomData))
+        } else {
+            Err(Self::Error::InvalidIP4)
+        }
     }
 }
 
@@ -86,8 +87,13 @@ impl<T: Config> TryFrom<PublicIpGatewayInput> for GatewayIP<T> {
             value.len() <= MAX_GATEWAY_LENGTH.saturated_into(),
             Self::Error::GatewayIPTooLong
         );
-        ensure!(Ip::parse(&value).is_ok(), Self::Error::InvalidPublicIP);
-        Ok(Self(value, PhantomData))
+
+        if let Ok(ip) = Ip::parse(&value) {
+            ensure!(ip.is_public() && ip.is_unicast(), Self::Error::InvalidIP4);
+            Ok(Self(value, PhantomData))
+        } else {
+            Err(Self::Error::InvalidIP4)
+        }
     }
 }
 
