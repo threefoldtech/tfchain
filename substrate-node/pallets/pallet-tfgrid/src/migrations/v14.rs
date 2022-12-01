@@ -6,7 +6,7 @@ use crate::{
 use frame_support::{
     pallet_prelude::Weight, traits::ConstU32, traits::Get, traits::OnRuntimeUpgrade, BoundedVec,
 };
-use log::info;
+use log::{debug, info};
 use sp_std::marker::PhantomData;
 use tfchain_support::types::{Farm, Node};
 
@@ -153,7 +153,7 @@ where
             serial_number: n.serial_number,
             connection_price: n.connection_price,
         };
-        info!("Node: {:?} succesfully migrated", k);
+        debug!("Node: {:?} succesfully migrated", k);
         Some(new_node)
     });
 
@@ -181,8 +181,6 @@ where
     let mut migrated_count = 0;
     // We transform the storage values from the old into the new format.
     Farms::<T>::translate::<FarmInfoOf<T>, _>(|k, farm| {
-        info!("     Migrated farm for {:?}...", k);
-
         let mut public_ips: BoundedVec<PublicIpOf<T>, ConstU32<256>> = vec![].try_into().unwrap();
 
         match validate_public_ips::<T>(&farm) {
@@ -211,6 +209,7 @@ where
 
         migrated_count += 1;
 
+        debug!("Farm: {:?} succesfully migrated", k);
         Some(new_farm)
     });
 

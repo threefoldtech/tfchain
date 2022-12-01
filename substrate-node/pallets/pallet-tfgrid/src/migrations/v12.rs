@@ -5,7 +5,7 @@ use frame_support::{
     pallet_prelude::OptionQuery, pallet_prelude::Weight, storage_alias, traits::Get,
     traits::OnRuntimeUpgrade, Blake2_128Concat, BoundedVec,
 };
-use log::info;
+use log::{debug, info};
 use sp_std::marker::PhantomData;
 
 #[cfg(feature = "try-runtime")]
@@ -53,7 +53,12 @@ impl<T: Config> OnRuntimeUpgrade for InputValidation<T> {
     }
 
     fn on_runtime_upgrade() -> Weight {
-        migrate::<T>()
+        if PalletVersion::<T>::get() == types::StorageVersion::V11Struct {
+            migrate_entities::<T>() + migrate_nodes::<T>() + update_pallet_storage_version::<T>()
+        } else {
+            info!(" >>> Unused TFGrid pallet V12 migration");
+            0
+        }
     }
 
     #[cfg(feature = "try-runtime")]
@@ -77,15 +82,6 @@ impl<T: Config> OnRuntimeUpgrade for InputValidation<T> {
     }
 }
 
-fn migrate<T: Config>() -> frame_support::weights::Weight {
-    if PalletVersion::<T>::get() == types::StorageVersion::V11Struct {
-        migrate_entities::<T>() + migrate_nodes::<T>() + update_pallet_storage_version::<T>()
-    } else {
-        info!(" >>> Unused TFGrid pallet V12 migration");
-        0
-    }
-}
-
 fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
     info!(" >>> Migrating entities storage...");
 
@@ -93,8 +89,6 @@ fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
 
     // We transform the storage values from the old into the new format.
     Entities::<T>::translate::<super::types::v11::Entity<AccountIdOf<T>>, _>(|k, entity| {
-        info!("     Migrated entity for {:?}...", k);
-
         let country = match get_country_name::<T>(&entity) {
             Ok(country_name) => country_name,
             Err(e) => {
@@ -131,6 +125,7 @@ fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
 
         migrated_count += 1;
 
+        debug!("Entity: {:?} succesfully migrated", k);
         Some(new_entity)
     });
 
@@ -151,8 +146,6 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
     // We transform the storage values from the old into the new format.
     Nodes::<T>::translate::<super::types::v11::Node<PubConfigOf<T>, InterfaceOf<T>>, _>(
         |k, node| {
-            info!("     Migrated node for {:?}...", k);
-
             let location = match get_location::<T>(&node) {
                 Ok(loc) => loc,
                 Err(e) => {
@@ -192,6 +185,7 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
 
             migrated_count += 1;
 
+            debug!("Node: {:?} succesfully migrated", k);
             Some(new_node)
         },
     );

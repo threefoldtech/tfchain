@@ -13,7 +13,7 @@ use frame_support::{
     pallet_prelude::{OptionQuery, ValueQuery}, pallet_prelude::Weight, storage_alias, traits::Get,
     traits::OnRuntimeUpgrade, Blake2_128Concat,
 };
-use log::info;
+use log::{info, debug};
 use sp_std::{cmp::max, collections::btree_map::BTreeMap, marker::PhantomData, vec, vec::Vec};
 use tfchain_support::{resources::Resources, types::ConsumableResources};
 
@@ -474,7 +474,7 @@ pub fn translate_contract_objects<T: Config>(
                 contract_type: contract_type,
                 solution_provider_id: ctr.solution_provider_id,
             };
-            info!("Contract: {:?} succesfully migrated", k);
+            debug!("Contract: {:?} succesfully migrated", k);
             contracts.insert(ctr.contract_id, new_contract);
         }
     }

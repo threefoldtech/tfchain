@@ -9,7 +9,7 @@ use frame_support::{
     traits::Get,
     traits::OnRuntimeUpgrade,
 };
-use log::info;
+use log::{debug, info};
 use pallet_timestamp as timestamp;
 use sp_runtime::SaturatedConversion;
 use sp_std::marker::PhantomData;
@@ -125,8 +125,7 @@ pub fn migrate_to_version_13<T: Config>() -> frame_support::weights::Weight {
 
         migrated_count += 1;
 
-        info!("Node: {:?} succesfully migrated", k);
-
+        debug!("Node: {:?} succesfully migrated", k);
         Some(migrated_node)
     });
 
