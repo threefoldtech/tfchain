@@ -37,10 +37,13 @@ impl<T: Config> TryFrom<PublicIpIpInput> for PublicIP<T> {
         );
 
         if let Ok(ip) = IPv4Cidr::parse(&value) {
-            ensure!(ip.is_public() && ip.is_unicast(), Self::Error::InvalidIP4);
+            ensure!(
+                ip.is_public() && ip.is_unicast(),
+                Self::Error::InvalidPublicIP
+            );
             Ok(Self(value, PhantomData))
         } else {
-            Err(Self::Error::InvalidIP4)
+            Err(Self::Error::InvalidPublicIP)
         }
     }
 }
@@ -89,10 +92,13 @@ impl<T: Config> TryFrom<PublicIpGatewayInput> for GatewayIP<T> {
         );
 
         if let Ok(ip) = Ip::parse(&value) {
-            ensure!(ip.is_public() && ip.is_unicast(), Self::Error::InvalidIP4);
+            ensure!(
+                ip.is_public() && ip.is_unicast(),
+                Self::Error::InvalidPublicIP
+            );
             Ok(Self(value, PhantomData))
         } else {
-            Err(Self::Error::InvalidIP4)
+            Err(Self::Error::InvalidPublicIP)
         }
     }
 }
