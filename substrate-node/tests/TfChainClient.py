@@ -211,7 +211,7 @@ class TfChainClient:
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         call = substrate.compose_call(
-            "SmartContractModule", "create_group", {})
+            "SmartContractModule", "group_create", {})
         expected_events = [{
             "module_id": "SmartContractModule",
             "event_id": "GroupCreated"
@@ -222,7 +222,7 @@ class TfChainClient:
     def delete_group(self, id: int = 1, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
-        call = substrate.compose_call("SmartContractModule", "delete_group",
+        call = substrate.compose_call("SmartContractModule", "group_delete",
                                       {
                                           "group_id": id
                                       })
@@ -493,7 +493,7 @@ class TfChainClient:
                                              who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
-        call = substrate.compose_call("SmartContractModule", "capacity_reservation_contract_create",
+        call = substrate.compose_call("SmartContractModule", "contract_capacity_reservation_create",
                                       {
                                           "farm_id": farm_id,
                                           "policy": dict(policy),
@@ -589,7 +589,7 @@ class TfChainClient:
     def _cancel_contract(self, contract_id: int = 1, type: str = "Name", port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
-        call = substrate.compose_call("SmartContractModule", "cancel_contract",
+        call = substrate.compose_call("SmartContractModule", "contract_cancel",
                                       {
                                           "contract_id": contract_id
                                       })

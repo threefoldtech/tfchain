@@ -426,19 +426,19 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn create_group(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+        pub fn group_create(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_create_group(account_id)
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn delete_group(origin: OriginFor<T>, group_id: u32) -> DispatchResultWithPostInfo {
+        pub fn group_delete(origin: OriginFor<T>, group_id: u32) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_delete_group(account_id, group_id)
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn cancel_contract(
+        pub fn contract_cancel(
             origin: OriginFor<T>,
             contract_id: u64,
         ) -> DispatchResultWithPostInfo {
@@ -447,7 +447,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn create_name_contract(
+        pub fn contract_name_create(
             origin: OriginFor<T>,
             name: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
@@ -456,14 +456,14 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn capacity_reservation_contract_create(
+        pub fn contract_capacity_reservation_create(
             origin: OriginFor<T>,
             farm_id: u32,
             policy: CapacityReservationPolicy,
             solution_provider_id: Option<u64>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_capacity_reservation_contract_create(
+            Self::_create_capacity_reservation_contract(
                 account_id,
                 farm_id,
                 policy,
@@ -472,7 +472,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn capacity_reservation_contract_update(
+        pub fn contract_capacity_reservation_update(
             origin: OriginFor<T>,
             capacity_reservation_id: u64,
             resources: Resources,
@@ -514,7 +514,7 @@ pub mod pallet {
             resources: Option<Resources>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_deployment_update(
+            Self::_update_deployment(
                 account_id,
                 deployment_id,
                 deployment_hash,
@@ -529,7 +529,7 @@ pub mod pallet {
             deployment_id: u64,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_deployment_cancel(account_id, deployment_id)
+            Self::_cancel_deployment(account_id, deployment_id)
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
@@ -542,7 +542,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn create_solution_provider(
+        pub fn solution_provider_create(
             origin: OriginFor<T>,
             description: Vec<u8>,
             link: Vec<u8>,
@@ -553,7 +553,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn approve_solution_provider(
+        pub fn solution_provider_approve(
             origin: OriginFor<T>,
             solution_provider_id: u64,
             approve: bool,
@@ -698,7 +698,7 @@ impl<T: Config> Pallet<T> {
     }
 
     #[transactional]
-    pub fn _capacity_reservation_contract_create(
+    pub fn _create_capacity_reservation_contract(
         account_id: T::AccountId,
         farm_id: u32,
         policy: CapacityReservationPolicy,
@@ -1151,7 +1151,7 @@ impl<T: Config> Pallet<T> {
     }
 
     #[transactional]
-    pub fn _deployment_update(
+    pub fn _update_deployment(
         account_id: T::AccountId,
         deployment_id: u64,
         deployment_hash: DeploymentHash,
@@ -1209,7 +1209,7 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn _deployment_cancel(
+    pub fn _cancel_deployment(
         account_id: T::AccountId,
         deployment_id: u64,
     ) -> DispatchResultWithPostInfo {

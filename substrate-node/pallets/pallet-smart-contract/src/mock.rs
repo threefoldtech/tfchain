@@ -357,23 +357,6 @@ where
     AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
-pub fn get_account_id_from_twin_id(twin_id: u32) -> Option<AccountId> {
-    if twin_id == TfgridModule::twin_ids_by_pubkey(alice()).unwrap_or(0) {
-        return Some(alice());
-    } else if twin_id == TfgridModule::twin_ids_by_pubkey(bob()).unwrap_or(0) {
-        return Some(bob());
-    } else if twin_id == TfgridModule::twin_ids_by_pubkey(charlie()).unwrap_or(0) {
-        return Some(charlie());
-    } else if twin_id == TfgridModule::twin_ids_by_pubkey(dave()).unwrap_or(0) {
-        return Some(dave());
-    } else if twin_id == TfgridModule::twin_ids_by_pubkey(eve()).unwrap_or(0) {
-        return Some(eve());
-    } else if twin_id == TfgridModule::twin_ids_by_pubkey(ferdie()).unwrap_or(0) {
-        return Some(ferdie());
-    }
-    None
-}
-
 pub fn alice() -> AccountId {
     get_account_id_from_seed::<sr25519::Public>("Alice")
 }
