@@ -8,48 +8,16 @@ use frame_support::{
 };
 use log::{debug, info};
 use sp_std::marker::PhantomData;
-use tfchain_support::types::{Farm, Node};
+use tfchain_support::{
+    traits::PublicIpModifier,
+    types::{Farm, Node},
+};
 
 use valip::ip4::CIDR as IPv4Cidr;
 
 #[cfg(feature = "try-runtime")]
 use frame_support::traits::OnRuntimeUpgradeHelpersExt;
 
-pub mod deprecated {
-    use crate::Config;
-    use codec::{Decode, Encode};
-    use frame_support::decl_module;
-
-    use scale_info::TypeInfo;
-    use sp_std::prelude::*;
-
-    use tfchain_support::types::{ConsumableResources, NodeCertification, Power};
-
-    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-    pub struct NodeV13Struct<Location, PubConfig, If, SerialNumber> {
-        pub version: u32,
-        pub id: u32,
-        pub farm_id: u32,
-        pub twin_id: u32,
-        pub resources: ConsumableResources,
-        pub location: Location,
-        pub power: Power,
-        // optional public config
-        pub public_config: Option<PubConfig>,
-        pub created: u64,
-        pub farming_policy_id: u32,
-        pub interfaces: Vec<If>,
-        pub certification: NodeCertification,
-        pub secure_boot: bool,
-        pub virtualized: bool,
-        pub serial_number: Option<SerialNumber>,
-        pub connection_price: u32,
-    }
-
-    decl_module! {
-        pub struct Module<T: Config> for enum Call where origin: T::Origin { }
-    }
-}
 pub struct FixPublicIP<T: Config>(PhantomData<T>);
 
 impl<T: Config> OnRuntimeUpgrade for FixPublicIP<T>
@@ -112,7 +80,7 @@ where
     let mut migrated_count = 0;
 
     Nodes::<T>::translate::<
-        deprecated::NodeV13Struct<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
+        super::types::v13::Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
         _,
     >(|k, n| {
         migrated_count += 1;
@@ -123,6 +91,9 @@ where
         if let Some(config) = n.public_config {
             match validate_public_config_ip4::<T>(config) {
                 Ok(config) => {
+                    if matches!(config, None) {
+                        info!("resetting pub config of node: {:?}", k);
+                    }
                     public_config = config;
                 }
                 Err(e) => {
@@ -244,10 +215,14 @@ where
             if ip.is_public() {
                 return Ok(Some(config));
             } else {
+                info!("it's not public, resetting");
                 return Ok(None);
             }
         }
-        Err(_) => return Ok(None),
+        Err(e) => {
+            info!("failed to parse ip: {:?}", e);
+            return Ok(None);
+        }
     }
 }
 
@@ -272,6 +247,10 @@ where
                 if ip.is_public() {
                     let _ = parsed_public_ips.try_push(pub_ip);
                 } else {
+                    if pub_ip.contract_id != 0 {
+                        T::PublicIpModifier::ip_removed(&pub_ip)
+                    }
+
                     continue;
                 }
             }

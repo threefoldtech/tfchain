@@ -22,7 +22,9 @@ use frame_system::{
 pub use pallet::*;
 use pallet_tfgrid;
 use pallet_tfgrid::farm::FarmName;
-use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, PubConfigOf, SerialNumberOf, TfgridNode};
+use pallet_tfgrid::pallet::{
+    InterfaceOf, LocationOf, PubConfigOf, PublicIpOf, SerialNumberOf, TfgridNode,
+};
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_timestamp as timestamp;
 use sp_core::crypto::KeyTypeId;
@@ -34,8 +36,8 @@ use substrate_fixed::types::U64F64;
 
 use tfchain_support::{
     resources::Resources,
-    traits::{ChangeNode, Tfgrid},
-    types::{CapacityReservationPolicy, ConsumableResources, NodeFeatures},
+    traits::{ChangeNode, PublicIpModifier, Tfgrid},
+    types::{CapacityReservationPolicy, ConsumableResources, NodeFeatures, PublicIP},
 };
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"smct");
@@ -106,7 +108,7 @@ pub mod pallet {
         fmt::Debug,
         vec::Vec,
     };
-    use tfchain_support::traits::ChangeNode;
+    use tfchain_support::traits::{ChangeNode, PublicIpModifier};
 
     pub type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
@@ -246,6 +248,7 @@ pub mod pallet {
             InterfaceOf<Self>,
             SerialNumberOf<Self>,
         >;
+        type PublicIpModifier: PublicIpModifier<PublicIpOf<Self>>;
         type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
         type Call: From<Call<Self>>;
         type Tfgrid: Tfgrid<Self::AccountId, FarmName<Self>, ContractPublicIP<Self>>;
@@ -605,9 +608,7 @@ pub mod pallet {
 
 use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 use pallet::NameContractNameOf;
-// use pallet_tfgrid::pub_ip::{GatewayIP, PublicIP as PalletTfgridPublicIP};
 use sp_std::convert::{TryFrom, TryInto};
-use tfchain_support::types::PublicIP;
 // Internal functions of the pallet
 impl<T: Config> Pallet<T> {
     pub fn _create_group(account_id: T::AccountId) -> DispatchResultWithPostInfo {
@@ -1292,7 +1293,7 @@ impl<T: Config> Pallet<T> {
             twin_id: deployment.twin_id,
             capacity_reservation_id: deployment.capacity_reservation_id,
             node_id: node_id,
-         });
+        });
 
         Ok(().into())
     }
@@ -2227,6 +2228,28 @@ impl<T: Config> ChangeNode<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, Serial
                 );
                 let _ = Self::bill_contract(contract_id);
                 Self::remove_contract(contract_id);
+            }
+        }
+    }
+}
+
+impl<T: Config> PublicIpModifier<PublicIpOf<T>> for Pallet<T> {
+    fn ip_removed(ip: &PublicIpOf<T>) {
+        if let Some(mut deployment) = Deployments::<T>::get(ip.contract_id) {
+            // Todo remove public ip from deployment and capacity contract
+            let cr_contract = Contracts::<T>::get(deployment.capacity_reservation_id);
+            if let Some(mut cr_contract) = cr_contract {
+                // free the public ips requested by the contract
+                if deployment.public_ips > 0 {
+                    match Self::_free_ip(ip.contract_id, &mut deployment, &mut cr_contract) {
+                        Ok(_) => (),
+                        Err(e) => {
+                            log::error!("error while freeing ips: {:?}", e);
+                        }
+                    }
+                }
+
+                Deployments::<T>::insert(ip.contract_id, deployment);
             }
         }
     }

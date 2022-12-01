@@ -26,7 +26,10 @@ use sp_std::{cmp::Ordering, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-use tfchain_support::traits::ChangeNode;
+use tfchain_support::{
+    traits::{ChangeNode, PublicIpModifier},
+    types::PublicIP,
+};
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -340,6 +343,16 @@ impl ChangeNode<Loc, PubConfig, Interface, Serial> for NodeChanged {
     }
 }
 
+pub type PublicIpIp = pallet_tfgrid::pallet::PublicIpIpOf<Runtime>;
+pub type PublicIpGw = pallet_tfgrid::pallet::PublicIpGatewayOf<Runtime>;
+
+pub struct PublicIpModifierType;
+impl PublicIpModifier<PublicIP<PublicIpIp, PublicIpGw>> for PublicIpModifierType {
+    fn ip_removed(ip: &PublicIP<PublicIpIp, PublicIpGw>) {
+        SmartContractModule::ip_removed(ip);
+    }
+}
+
 parameter_types! {
     pub const MaxFarmNameLength: u32 = 40;
     pub const MaxInterfaceIpsLength: u32 = 10;
@@ -352,6 +365,7 @@ impl pallet_tfgrid::Config for Runtime {
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Runtime>;
     type NodeChanged = NodeChanged;
+    type PublicIpModifier = SmartContractModule;
     type TermsAndConditions = pallet_tfgrid::terms_cond::TermsAndConditions<Runtime>;
     type TwinIp = pallet_tfgrid::twin::TwinIp<Runtime>;
     type MaxFarmNameLength = MaxFarmNameLength;
@@ -402,6 +416,7 @@ impl pallet_smart_contract::Config for Runtime {
     type GracePeriod = GracePeriod;
     type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
     type NodeChanged = NodeChanged;
+    type PublicIpModifier = PublicIpModifierType;
     type Tfgrid = TfgridModule;
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
     type Call = Call;

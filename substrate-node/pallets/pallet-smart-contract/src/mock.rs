@@ -46,7 +46,7 @@ use sp_runtime::{
 };
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::{
-    traits::ChangeNode,
+    traits::{ChangeNode, PublicIpModifier},
     types::{Farm, PowerState, PowerTarget},
 };
 
@@ -136,6 +136,7 @@ pub(crate) type Serial = pallet_tfgrid::pallet::SerialNumberOf<TestRuntime>;
 pub(crate) type Loc = pallet_tfgrid::pallet::LocationOf<TestRuntime>;
 pub(crate) type PubConfig = pallet_tfgrid::pallet::PubConfigOf<TestRuntime>;
 pub(crate) type Interface = pallet_tfgrid::pallet::InterfaceOf<TestRuntime>;
+pub(crate) type PublicIp = pallet_tfgrid::pallet::PublicIpOf<TestRuntime>;
 
 pub(crate) type TfgridNode = pallet_tfgrid::pallet::TfgridNode<TestRuntime>;
 
@@ -144,6 +145,13 @@ impl ChangeNode<Loc, PubConfig, Interface, Serial> for NodeChanged {
     fn node_changed(_old_node: Option<&TfgridNode>, _new_node: &TfgridNode) {}
     fn node_deleted(node: &TfgridNode) {
         SmartContractModule::node_deleted(node);
+    }
+}
+
+pub struct PublicIpModifierType;
+impl PublicIpModifier<PublicIp> for PublicIpModifierType {
+    fn ip_removed(ip: &PublicIp) {
+        SmartContractModule::ip_removed(ip);
     }
 }
 
@@ -181,6 +189,7 @@ impl pallet_tfgrid::Config for TestRuntime {
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
+    type PublicIpModifier = PublicIpModifierType;
     type TermsAndConditions = TestTermsAndConditions;
     type TwinIp = TestTwinIp;
     type FarmName = TestFarmName;
@@ -315,6 +324,7 @@ impl pallet_smart_contract::Config for TestRuntime {
     type GracePeriod = GracePeriod;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
+    type PublicIpModifier = PublicIpModifierType;
     type Tfgrid = TfgridMock;
     type MaxNameContractNameLength = MaxNameContractNameLength;
     type NameContractName = TestNameContractName;

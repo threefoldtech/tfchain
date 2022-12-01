@@ -11,7 +11,7 @@ use crate::{
     weights, CityNameInput, Config, CountryNameInput, DocumentHashInput, DocumentLinkInput,
     DomainInput, FarmNameInput, GW4Input, GW6Input, IP4Input, IP6Input, InterfaceIpInput,
     InterfaceMacInput, InterfaceNameInput, LatitudeInput, LongitudeInput, PublicIpGatewayInput,
-    PublicIpIpInput, TwinIpInput,
+    PublicIpIpInput, PublicIpOf, TwinIpInput,
 };
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
 use frame_system::EnsureRoot;
@@ -97,6 +97,11 @@ impl tfchain_support::traits::ChangeNode<Loc, PubConfig, Interface, Serial> for 
     fn node_deleted(_node: &TfgridNode) {}
 }
 
+pub struct PublicIpModifier;
+impl tfchain_support::traits::PublicIpModifier<PublicIpOf<TestRuntime>> for PublicIpModifier {
+    fn ip_removed(_ip: &PublicIpOf<TestRuntime>) {}
+}
+
 parameter_types! {
     pub const MaxFarmNameLength: u32 = 40;
     pub const MaxInterfaceIpsLength: u32 = 5;
@@ -131,6 +136,7 @@ impl Config for TestRuntime {
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
+    type PublicIpModifier = PublicIpModifier;
     type TermsAndConditions = TestTermsAndConditions;
     type TwinIp = TestTwinIp;
     type FarmName = TestFarmName;

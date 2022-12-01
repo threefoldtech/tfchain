@@ -55,7 +55,7 @@ pub mod pallet {
     use sp_std::{convert::TryInto, fmt::Debug, vec::Vec};
     use tfchain_support::{
         resources::Resources,
-        traits::ChangeNode,
+        traits::{ChangeNode, PublicIpModifier},
         types::{
             ConsumableResources, Farm, FarmCertification, FarmingPolicyLimit, Interface, Node,
             NodeCertification, PublicConfig, PublicIP, IP,
@@ -304,6 +304,8 @@ pub mod pallet {
             super::InterfaceOf<Self>,
             super::SerialNumberOf<Self>,
         >;
+
+        type PublicIpModifier: PublicIpModifier<super::PublicIpOf<Self>>;
 
         /// The type of terms and conditions.
         type TermsAndConditions: FullCodec
