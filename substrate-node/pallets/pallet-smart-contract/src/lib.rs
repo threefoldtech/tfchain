@@ -478,7 +478,7 @@ pub mod pallet {
             resources: Resources,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_capacity_reservation_contract_update(
+            Self::_update_capacity_reservation_contract(
                 account_id,
                 capacity_reservation_id,
                 resources,
@@ -495,7 +495,7 @@ pub mod pallet {
             public_ips: u32,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_deployment_create(
+            Self::_create_deployment(
                 account_id,
                 capacity_reservation_id,
                 deployment_hash,
@@ -803,7 +803,7 @@ impl<T: Config> Pallet<T> {
     }
 
     #[transactional]
-    pub fn _capacity_reservation_contract_update(
+    pub fn _update_capacity_reservation_contract(
         account_id: T::AccountId,
         capacity_reservation_id: u64,
         resources: Resources,
@@ -852,7 +852,7 @@ impl<T: Config> Pallet<T> {
     }
 
     #[transactional]
-    pub fn _deployment_create(
+    pub fn _create_deployment(
         account_id: T::AccountId,
         capacity_reservation_id: u64,
         deployment_hash: DeploymentHash,
