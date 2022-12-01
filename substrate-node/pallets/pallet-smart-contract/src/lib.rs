@@ -349,6 +349,9 @@ pub mod pallet {
         DeploymentUpdated(types::Deployment<T>),
         DeploymentCanceled {
             deployment_id: u64,
+            twin_id: u32,
+            node_id: u32,
+            capacity_reservation_id: u64,
         },
     }
 
@@ -1284,7 +1287,12 @@ impl<T: Config> Pallet<T> {
         // remove the contract by hash from storage
         ContractIDByNodeIDAndHash::<T>::remove(node_id, &deployment.deployment_hash);
 
-        Self::deposit_event(Event::DeploymentCanceled { deployment_id });
+        Self::deposit_event(Event::DeploymentCanceled {
+            deployment_id: deployment_id,
+            twin_id: deployment.twin_id,
+            capacity_reservation_id: deployment.capacity_reservation_id,
+            node_id: node_id,
+         });
 
         Ok(().into())
     }

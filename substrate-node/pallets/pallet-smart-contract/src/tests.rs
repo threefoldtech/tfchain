@@ -2145,7 +2145,12 @@ fn test_deployment_contract_billing_cycles_delete_node_cancels_contract() {
         );
         assert_eq!(
             our_events.contains(&record(MockEvent::SmartContractModule(
-                SmartContractEvent::<TestRuntime>::DeploymentCanceled { deployment_id: 1 }
+                SmartContractEvent::<TestRuntime>::DeploymentCanceled {
+                    deployment_id: 1,
+                    capacity_reservation_id: 1,
+                    node_id: 1,
+                    twin_id: 2,
+                }
             ))),
             true
         );
@@ -2975,6 +2980,9 @@ fn test_create_capacity_contract_full_node_canceled_due_to_out_of_funds_should_d
                 TestRuntime,
             >::DeploymentCanceled {
                 deployment_id: 1,
+                capacity_reservation_id: 1,
+                node_id: 1,
+                twin_id: 3,
             }))
         );
         assert_eq!(
@@ -3354,7 +3362,12 @@ fn test_capacity_reservation_contract_and_deployment_contract_canceled_when_node
         );
         assert_eq!(
             our_events.contains(&record(MockEvent::SmartContractModule(
-                SmartContractEvent::<TestRuntime>::DeploymentCanceled { deployment_id: 1 }
+                SmartContractEvent::<TestRuntime>::DeploymentCanceled {
+                    deployment_id: 1,
+                    node_id: 1,
+                    capacity_reservation_id: 1,
+                    twin_id: 2,
+                }
             ))),
             true
         );
