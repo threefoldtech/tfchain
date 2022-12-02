@@ -437,7 +437,7 @@ fn test_adding_misformatted_ip_to_farm_fails() {
                 get_public_ip_ip_input(b"185.206.122.125"),
                 get_public_ip_gw_input(b"185.206.122.1"),
             ),
-            Error::<TestRuntime>::InvalidPublicIP
+            Error::<TestRuntime>::InvalidIP4
         );
     });
 }

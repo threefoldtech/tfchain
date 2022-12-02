@@ -1,6 +1,10 @@
 use crate::{
-    pub_config::IP4, pub_ip::PublicIP as PalletPublicIP, types, types::StorageVersion, Config,
-    Error, FarmInfoOf, Farms, InterfaceOf, LocationOf, Nodes, PalletVersion, PubConfigOf,
+    pub_config::{GW4, GW6, IP4, IP6},
+    pub_ip::GatewayIP as PalletGatewayIP,
+    pub_ip::PublicIP as PalletPublicIP,
+    types,
+    types::StorageVersion,
+    Config, Error, FarmInfoOf, Farms, InterfaceOf, LocationOf, Nodes, PalletVersion, PubConfigOf,
     PublicIpOf, SerialNumberOf, TFGRID_NODE_VERSION,
 };
 use frame_support::{
@@ -13,7 +17,8 @@ use tfchain_support::{
     types::{Farm, Node},
 };
 
-use valip::ip4::CIDR as IPv4Cidr;
+use valip::ip4::{Ip as IPv4, CIDR as IPv4Cidr};
+use valip::ip6::{Ip as IPv6, CIDR as IPv6Cidr};
 
 #[cfg(feature = "try-runtime")]
 use frame_support::traits::OnRuntimeUpgradeHelpersExt;
@@ -23,7 +28,11 @@ pub struct FixPublicIP<T: Config>(PhantomData<T>);
 impl<T: Config> OnRuntimeUpgrade for FixPublicIP<T>
 where
     IP4<T>: From<<T as Config>::IP4>,
+    GW4<T>: From<<T as Config>::GW4>,
+    IP6<T>: From<<T as Config>::IP6>,
+    GW6<T>: From<<T as Config>::GW6>,
     PalletPublicIP<T>: From<<T as Config>::PublicIP>,
+    PalletGatewayIP<T>: From<<T as Config>::GatewayIP>,
 {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
@@ -71,6 +80,9 @@ where
 pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight
 where
     IP4<T>: From<<T as Config>::IP4>,
+    GW4<T>: From<<T as Config>::GW4>,
+    IP6<T>: From<<T as Config>::IP6>,
+    GW6<T>: From<<T as Config>::GW6>,
 {
     info!(
         " >>> Starting tfgrid pallet migration, pallet version: {:?}",
@@ -97,6 +109,7 @@ where
                     public_config = config;
                 }
                 Err(e) => {
+                    public_config = None;
                     info!(
                         "failed to parse pub config for node: {:?}, error: {:?}",
                         k, e
@@ -146,6 +159,7 @@ use sp_std::vec;
 pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight
 where
     PalletPublicIP<T>: From<<T as Config>::PublicIP>,
+    PalletGatewayIP<T>: From<<T as Config>::GatewayIP>,
 {
     info!(" >>> Migrating farms storage...");
 
@@ -202,6 +216,9 @@ fn validate_public_config_ip4<T: Config>(
 ) -> Result<Option<PubConfigOf<T>>, Error<T>>
 where
     IP4<T>: From<<T as Config>::IP4>,
+    GW4<T>: From<<T as Config>::GW4>,
+    IP6<T>: From<<T as Config>::IP6>,
+    GW6<T>: From<<T as Config>::GW6>,
 {
     let config_ip4: IP4<T> = config
         .clone()
@@ -210,19 +227,47 @@ where
         .try_into()
         .map_err(|_| Error::<T>::InvalidPublicIP)?;
 
-    match IPv4Cidr::parse(&config_ip4.0) {
-        Ok(ip) => {
-            if ip.is_public() && ip.is_unicast() {
+    let config_gw4: GW4<T> = config
+        .clone()
+        .ip4
+        .gw
+        .try_into()
+        .map_err(|_| Error::<T>::InvalidPublicIP)?;
+
+    let gw4 = IPv4::parse(&config_gw4.0).map_err(|_| Error::<T>::InvalidPublicIP)?;
+    let ip4 = IPv4Cidr::parse(&config_ip4.0).map_err(|_| Error::<T>::InvalidPublicIP)?;
+
+    if gw4.is_public()
+        && gw4.is_unicast()
+        && ip4.is_public()
+        && ip4.is_unicast()
+        && ip4.contains(gw4)
+    {
+        if let Some(ipv6) = config.clone().ip6 {
+            let ip6: IP6<T> = ipv6
+                .ip
+                .try_into()
+                .map_err(|_| Error::<T>::InvalidPublicIP)?;
+            let gw6: GW6<T> = ipv6
+                .gw
+                .try_into()
+                .map_err(|_| Error::<T>::InvalidPublicIP)?;
+
+            let ip6_parsed = IPv6Cidr::parse(&ip6.0).map_err(|_| Error::<T>::InvalidIP6)?;
+            let gw6_parsed = IPv6::parse(&gw6.0).map_err(|_| Error::<T>::InvalidIP6)?;
+            if ip6_parsed.is_public() && ip6_parsed.is_unicast() && gw6_parsed.is_public()
+            // && gw6_parsed.is_unicast()
+            // && gw6_parsed.contains(ip6_parsed)
+            {
                 return Ok(Some(config));
             } else {
-                info!("it's not public, resetting");
                 return Ok(None);
             }
-        }
-        Err(e) => {
-            info!("failed to parse ip: {:?}", e);
-            return Ok(None);
-        }
+        };
+
+        return Ok(Some(config));
+    } else {
+        return Ok(None);
     }
 }
 
@@ -231,6 +276,7 @@ fn validate_public_ips<T: Config>(
 ) -> Result<BoundedVec<PublicIpOf<T>, ConstU32<256>>, Error<T>>
 where
     PalletPublicIP<T>: From<<T as Config>::PublicIP>,
+    PalletGatewayIP<T>: From<<T as Config>::GatewayIP>,
 {
     let mut parsed_public_ips: BoundedVec<PublicIpOf<T>, ConstU32<256>> =
         vec![].try_into().unwrap();
@@ -242,19 +288,28 @@ where
             .try_into()
             .map_err(|_| Error::<T>::InvalidPublicIP)?;
 
-        match IPv4Cidr::parse(&parsed_ip.0) {
-            Ok(ip) => {
-                if ip.is_public() && ip.is_unicast() {
-                    let _ = parsed_public_ips.try_push(pub_ip);
-                } else {
-                    if pub_ip.contract_id != 0 {
-                        T::PublicIpModifier::ip_removed(&pub_ip)
-                    }
+        let parsed_gw: PalletGatewayIP<T> = pub_ip
+            .clone()
+            .gateway
+            .try_into()
+            .map_err(|_| Error::<T>::InvalidPublicIP)?;
 
-                    continue;
-                }
+        let gw4 = IPv4::parse(&parsed_gw.0).map_err(|_| Error::<T>::InvalidPublicIP)?;
+        let ip4 = IPv4Cidr::parse(&parsed_ip.0).map_err(|_| Error::<T>::InvalidPublicIP)?;
+
+        if gw4.is_public()
+            && gw4.is_unicast()
+            && ip4.is_public()
+            && ip4.is_unicast()
+            && ip4.contains(gw4)
+        {
+            let _ = parsed_public_ips.try_push(pub_ip);
+        } else {
+            if pub_ip.contract_id != 0 {
+                T::PublicIpModifier::ip_removed(&pub_ip)
             }
-            Err(_) => continue,
+
+            continue;
         }
     }
 

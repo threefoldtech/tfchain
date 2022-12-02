@@ -91,6 +91,7 @@ pub mod pallet {
     // Concrete type for Public IP type
     pub type PublicIpIpOf<T> = <T as Config>::PublicIP;
     pub type PublicIpGatewayOf<T> = <T as Config>::GatewayIP;
+    pub type FarmPublicIpValidator<T> = <T as Config>::FarmPublicIP;
     pub type PublicIpOf<T> = PublicIP<PublicIpIpOf<T>, PublicIpGatewayOf<T>>;
 
     // Input type for public ip list
@@ -353,6 +354,16 @@ pub mod pallet {
             + Clone
             + TypeInfo
             + TryFrom<PublicIpGatewayInput, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        /// The type of a gateway IP.
+        type FarmPublicIP: FullCodec
+            + Debug
+            + PartialEq
+            + Eq
+            + Clone
+            + TypeInfo
+            + TryFrom<FarmPublicIpInput, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of a IP4.
@@ -1002,6 +1013,11 @@ pub mod pallet {
                 twin.account_id == address,
                 Error::<T>::CannotUpdateFarmWrongTwin
             );
+
+            let _ = Self::validate_full_public_ip(types::PublicIpInput {
+                ip: ip.clone(),
+                gw: gateway.clone(),
+            })?;
 
             let parsed_ip = Self::get_public_ip_ip(ip)?;
             let parsed_gateway = Self::get_public_ip_gw(gateway)?;
@@ -2463,6 +2479,14 @@ impl<T: Config> Pallet<T> {
     ) -> Result<PublicIpGatewayOf<T>, DispatchErrorWithPostInfo> {
         let public_ip_gw_parsed = <T as Config>::GatewayIP::try_from(public_ip_gw)?;
         Ok(public_ip_gw_parsed)
+    }
+
+    fn validate_full_public_ip(
+        input: FarmPublicIpInput,
+    ) -> Result<FarmPublicIpValidator<T>, DispatchErrorWithPostInfo> {
+        let p = <T as Config>::FarmPublicIP::try_from(input)?;
+
+        Ok(p)
     }
 
     fn get_public_ips(

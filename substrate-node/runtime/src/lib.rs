@@ -373,6 +373,7 @@ impl pallet_tfgrid::Config for Runtime {
     type FarmName = pallet_tfgrid::farm::FarmName<Runtime>;
     type PublicIP = pallet_tfgrid::pub_ip::PublicIP<Runtime>;
     type GatewayIP = pallet_tfgrid::pub_ip::GatewayIP<Runtime>;
+    type FarmPublicIP = pallet_tfgrid::pub_ip::FarmPublicIp<Runtime>;
     type IP4 = pallet_tfgrid::pub_config::IP4<Runtime>;
     type GW4 = pallet_tfgrid::pub_config::GW4<Runtime>;
     type IP6 = pallet_tfgrid::pub_config::IP6<Runtime>;

@@ -5,7 +5,7 @@ use crate::{
     mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild,
     node::{CityName, CountryName, Location, SerialNumber},
     pub_config::{Domain, GW4, GW6, IP4, IP6},
-    pub_ip::{GatewayIP, PublicIP},
+    pub_ip::{FarmPublicIp, GatewayIP, PublicIP},
     terms_cond::TermsAndConditions,
     twin::TwinIp,
     weights, CityNameInput, Config, CountryNameInput, DocumentHashInput, DocumentLinkInput,
@@ -115,6 +115,7 @@ pub(crate) type TestTwinIp = TwinIp<TestRuntime>;
 pub(crate) type TestFarmName = FarmName<TestRuntime>;
 pub(crate) type TestPublicIP = PublicIP<TestRuntime>;
 pub(crate) type TestGatewayIP = GatewayIP<TestRuntime>;
+pub(crate) type TestFarmPublicIP = FarmPublicIp<TestRuntime>;
 
 pub(crate) type TestIP4 = IP4<TestRuntime>;
 pub(crate) type TestGW4 = GW4<TestRuntime>;
@@ -144,6 +145,7 @@ impl Config for TestRuntime {
     type MaxFarmPublicIps = MaxFarmPublicIps;
     type PublicIP = TestPublicIP;
     type GatewayIP = TestGatewayIP;
+    type FarmPublicIP = TestFarmPublicIP;
     type IP4 = TestIP4;
     type GW4 = TestGW4;
     type IP6 = TestIP6;
