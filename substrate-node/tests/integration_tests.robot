@@ -216,7 +216,7 @@ Test Add Public Ips: Failure InvalidPublicIP
 
     Setup Network And Create Farm
     # Add an ip in an invalid format
-    Run Keyword And Expect Error    *'InvalidPublicIP'*
+    Run Keyword And Expect Error    *'InvalidIP4'*
     ...    Add Farm Ip    id=${1}    ip="185.206.122.125"    gateway=185.206.122.1
 
     Tear Down Multi Node Network
