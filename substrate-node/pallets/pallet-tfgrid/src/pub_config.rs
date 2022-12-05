@@ -197,7 +197,7 @@ impl<T: Config> TryFrom<GW6Input> for GW6<T> {
 
         if let Ok(ip) = IPv6::parse(&value) {
             // Todo, validate if unicast
-            ensure!(ip.is_public(), Self::Error::InvalidIP6);
+            ensure!(ip.is_public() && ip.is_unicast(), Self::Error::InvalidIP6);
             Ok(Self(value, PhantomData))
         } else {
             Err(Self::Error::InvalidIP6)
