@@ -137,6 +137,12 @@ pub struct Power {
     pub last_uptime: u64,
 }
 
+impl Power {
+    pub fn is_target_up(&self) -> bool {
+        matches!(self.target, PowerTarget::Up)
+    }
+}
+
 #[derive(
     PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
 )]
@@ -146,6 +152,10 @@ pub struct ConsumableResources {
 }
 
 impl ConsumableResources {
+    pub fn has_consumed_resources(&self) -> bool {
+        !self.used_resources.is_empty()
+    }
+
     pub fn can_consume_resources(&self, resources: &Resources) -> bool {
         (self.total_resources.hru - self.used_resources.hru) >= resources.hru
             && (self.total_resources.sru - self.used_resources.sru) >= resources.sru
@@ -180,9 +190,7 @@ pub struct Node<Location, If, SerialNumber> {
     pub id: u32,
     pub farm_id: u32,
     pub twin_id: u32,
-    pub resources: ConsumableResources,
     pub location: Location,
-    pub power: Power,
     // optional public config
     pub public_config: Option<PublicConfig>,
     pub created: u64,
@@ -193,15 +201,6 @@ pub struct Node<Location, If, SerialNumber> {
     pub virtualized: bool,
     pub serial_number: Option<SerialNumber>,
     pub connection_price: u32,
-}
-
-impl<Location, If, SerialNumber> Node<Location, If, SerialNumber> {
-    pub fn can_be_shutdown(&self) -> bool {
-        self.resources.used_resources.is_empty()
-    }
-    pub fn is_target_up(&self) -> bool {
-        matches!(self.power.target, PowerTarget::Up)
-    }
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]

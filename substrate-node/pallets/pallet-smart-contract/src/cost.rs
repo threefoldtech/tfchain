@@ -56,9 +56,10 @@ impl<T: Config> Contract<T> {
             types::ContractData::CapacityReservationContract(capacity_reservation_contract) => {
                 // Get the contract billing info to view the amount unbilled for NRU (network resource units)
                 let contract_billing_info = self.get_billing_info();
-                // Get the node
-                let node = pallet_tfgrid::Nodes::<T>::get(capacity_reservation_contract.node_id)
-                    .ok_or(Error::<T>::NodeNotExists)?;
+                // Get the node resources
+                let node_resources =
+                    pallet_tfgrid::NodeResources::<T>::get(capacity_reservation_contract.node_id)
+                        .ok_or(Error::<T>::NodeResourcesNotExists)?;
 
                 let contract_cost = calculate_resources_cost::<T>(
                     &capacity_reservation_contract.resources.total_resources,
@@ -66,7 +67,7 @@ impl<T: Config> Contract<T> {
                     seconds_elapsed,
                     &pricing_policy,
                 );
-                if node.resources.total_resources
+                if node_resources.total_resources
                     == capacity_reservation_contract.resources.total_resources
                 {
                     Percent::from_percent(pricing_policy.discount_for_dedication_nodes)

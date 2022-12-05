@@ -102,17 +102,7 @@ pub fn migrate_to_version_13<T: Config>() -> frame_support::weights::Weight {
                 id: n.id,
                 farm_id: n.farm_id,
                 twin_id: n.twin_id,
-                resources: ConsumableResources {
-                    total_resources: n.resources,
-                    used_resources: Resources::empty(),
-                },
                 location: n.location,
-                power: Power {
-                    target: PowerTarget::Up,
-                    state: PowerState::Up,
-                    last_uptime: <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000,
-                },
-                // optional public config
                 public_config: n.public_config,
                 created: n.created,
                 farming_policy_id: n.farming_policy_id,
@@ -123,6 +113,21 @@ pub fn migrate_to_version_13<T: Config>() -> frame_support::weights::Weight {
                 serial_number: n.serial_number,
                 connection_price: n.connection_price,
             };
+        NodeResources::<T>::insert(
+            n.id,
+            &ConsumableResources {
+                total_resources: n.resources,
+                used_resources: Resources::empty(),
+            },
+        );
+        NodePower::<T>::insert(
+            n.id,
+            &Power {
+                target: PowerTarget::Up,
+                state: PowerState::Up,
+                last_uptime: <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000,
+            },
+        );
 
         migrated_count += 1;
 

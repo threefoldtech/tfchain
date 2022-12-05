@@ -711,7 +711,8 @@ fn update_certified_node_resources_loses_certification_works() {
         assert_eq!(node.certification, NodeCertification::Certified);
 
         // Change cores to 2
-        let mut node_resources: ResourcesInput = node.resources.total_resources;
+        let mut node_resources: ResourcesInput =
+            TfgridModule::node_resources(1).unwrap().total_resources;
         node_resources.cru = 2;
 
         let node_location = LocationInput {
@@ -768,7 +769,8 @@ fn update_certified_node_same_resources_keeps_certification_works() {
         let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(node.certification, NodeCertification::Certified);
 
-        let node_resources: ResourcesInput = node.resources.total_resources;
+        let node_resources: ResourcesInput =
+            TfgridModule::node_resources(1).unwrap().total_resources;
 
         let node_location = LocationInput {
             city: node.location.city.0,
@@ -859,7 +861,7 @@ fn change_power_state_works() {
         ));
 
         assert_eq!(
-            TfgridModule::nodes(2).unwrap().power.state,
+            TfgridModule::node_power(2).unwrap().state,
             PowerState::Down(1)
         );
     });
@@ -892,7 +894,7 @@ fn change_power_target_works() {
         create_extra_node();
 
         assert_eq!(
-            TfgridModule::nodes(2).unwrap().power.target,
+            TfgridModule::node_power(2).unwrap().target,
             PowerTarget::Down,
         );
 
@@ -903,7 +905,7 @@ fn change_power_target_works() {
         ));
 
         assert_eq!(
-            TfgridModule::nodes(2).unwrap().power.target,
+            TfgridModule::node_power(2).unwrap().target,
             PowerTarget::Up,
         );
     });
@@ -920,7 +922,7 @@ fn change_power_target_fails() {
         create_extra_node();
 
         assert_eq!(
-            TfgridModule::nodes(2).unwrap().power.target,
+            TfgridModule::node_power(2).unwrap().target,
             PowerTarget::Down,
         );
 
@@ -2440,12 +2442,13 @@ fn test_attach_farming_policy_flow(farming_policy_id: u32) {
 
     // Provide enough CU and SU limits to avoid attaching default policy to node
     // For node: [CU = 20; SU = 2]
+    let node_resources = TfgridModule::node_resources(node_id).unwrap();
     assert_eq!(
-        node.resources.total_resources.get_cu() <= limit.cu.unwrap(),
+        node_resources.total_resources.get_cu() <= limit.cu.unwrap(),
         true
     );
     assert_eq!(
-        node.resources.total_resources.get_su() <= limit.su.unwrap(),
+        node_resources.total_resources.get_su() <= limit.su.unwrap(),
         true
     );
 

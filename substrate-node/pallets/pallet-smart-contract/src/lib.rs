@@ -35,7 +35,7 @@ use substrate_fixed::types::U64F64;
 use tfchain_support::{
     resources::Resources,
     traits::{ChangeNode, PublicIpModifier, Tfgrid},
-    types::{CapacityReservationPolicy, ConsumableResources, NodeFeatures, PublicIP},
+    types::{CapacityReservationPolicy, ConsumableResources, NodeFeatures, PublicIP, PowerState},
 };
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"smct");
@@ -384,6 +384,8 @@ pub mod pallet {
         NotEnoughResourcesInCapacityReservation,
         DeploymentNotExists,
         TwinNotAuthorized,
+        NodeResourcesNotExists,
+        NodePowerNotExists,
     }
 
     #[pallet::genesis_config]
@@ -722,13 +724,13 @@ impl<T: Config> Pallet<T> {
                 (n_id, resources, Some(group_id))
             }
             CapacityReservationPolicy::Node { node_id } => {
-                let node =
-                    pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+                let node_resources = pallet_tfgrid::NodeResources::<T>::get(node_id)
+                    .ok_or(Error::<T>::NodeResourcesNotExists)?;
                 ensure!(
-                    node.resources.used_resources == Resources::empty(),
+                    node_resources.used_resources == Resources::empty(),
                     Error::<T>::NodeNotAvailableToDeploy
                 );
-                (node_id, node.resources.total_resources, None)
+                (node_id, node_resources.total_resources, None)
             }
         };
 
@@ -1043,11 +1045,13 @@ impl<T: Config> Pallet<T> {
         let mut suitable_nodes = Vec::new();
         for node_id in nodes_in_farm {
             let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-            suitable_nodes.push(node);
+            let node_resources = pallet_tfgrid::NodeResources::<T>::get(node.id)
+                .ok_or(Error::<T>::NodeResourcesNotExists)?;
+            // only keep nodes with enough resources
+            if node_resources.can_consume_resources(&resources) {
+                suitable_nodes.push(node);
+            }
         }
-
-        // only keep nodes with enough resources
-        suitable_nodes.retain(|node| node.resources.can_consume_resources(&resources));
 
         // only keep nodes that DON'T have a contract configured on them that belong to the same group
         if let Some(g_id) = group_id {
@@ -1073,10 +1077,18 @@ impl<T: Config> Pallet<T> {
 
         ensure!(!suitable_nodes.is_empty(), Error::<T>::NoSuitableNodeInFarm);
 
-        // sort the suitable nodes on power state: the nodes that are Up will be first in the list
-        suitable_nodes.sort_by(|a, b| a.power.state.cmp(&b.power.state));
+        // find the first node that is Up, if no such node then use the first node in the list
+        let mut node_id = suitable_nodes[0].id;
+        for node in &suitable_nodes {
+            let node_power = pallet_tfgrid::NodePower::<T>::get(node.id)
+                .ok_or(Error::<T>::NodePowerNotExists)?;
+            if node_power.state == PowerState::Up {
+                node_id = node.id;
+                break;
+            }
+        }
 
-        Ok(suitable_nodes[0].id)
+        Ok(node_id)
     }
 
     fn _create_contract(
@@ -1264,6 +1276,7 @@ impl<T: Config> Pallet<T> {
         }
         // remove the contract by hash from storage
         ContractIDByNodeIDAndHash::<T>::remove(node_id, &deployment.deployment_hash);
+        Deployments::<T>::remove(deployment_id);
 
         Self::deposit_event(Event::DeploymentCanceled {
             deployment_id: deployment_id,
@@ -2179,9 +2192,15 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for Pallet<T> {
-    fn node_changed(_node: Option<&TfgridNode<T>>, _new_node: &TfgridNode<T>) {}
+    fn node_changed(
+        _node: Option<&TfgridNode<T>>,
+        _resources: &Resources,
+        _new_node: &TfgridNode<T>,
+        _new_resources: &Resources,
+    ) {
+    }
 
-    fn node_deleted(node: &TfgridNode<T>) {
+    fn node_deleted(node: &TfgridNode<T>, _resources: &Resources) {
         // Clean up all active contracts
         for contract_id in ActiveNodeContracts::<T>::get(node.id) {
             if let Some(mut contract) = Contracts::<T>::get(contract_id) {

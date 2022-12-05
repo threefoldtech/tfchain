@@ -27,6 +27,7 @@ use sp_std::{cmp::Ordering, prelude::*};
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use tfchain_support::{
+    resources::Resources,
     traits::{ChangeNode, PublicIpModifier},
     types::PublicIP,
 };
@@ -332,13 +333,18 @@ pub type TfgridNode = pallet_tfgrid::pallet::TfgridNode<Runtime>;
 
 pub struct NodeChanged;
 impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
-    fn node_changed(old_node: Option<&TfgridNode>, new_node: &TfgridNode) {
-        Dao::node_changed(old_node, new_node)
+    fn node_changed(
+        old_node: Option<&TfgridNode>,
+        old_resources: &Resources,
+        new_node: &TfgridNode,
+        new_resources: &Resources,
+    ) {
+        Dao::node_changed(old_node, old_resources, new_node, new_resources)
     }
 
-    fn node_deleted(node: &TfgridNode) {
-        SmartContractModule::node_deleted(node);
-        Dao::node_deleted(node);
+    fn node_deleted(node: &TfgridNode, resources: &Resources) {
+        SmartContractModule::node_deleted(node, resources);
+        Dao::node_deleted(node, resources);
     }
 }
 

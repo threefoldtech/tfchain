@@ -228,7 +228,7 @@ pub fn post_migration_checks<T: Config>() {
     // check node resources
     count = 0;
     for (node_id, crc_ids) in ActiveNodeContracts::<T>::iter() {
-        let node = pallet_tfgrid::Nodes::<T>::get(node_id).unwrap();
+        let node_resources = pallet_tfgrid::NodeResources::<T>::get(node_id).unwrap();
         let mut resources_check = Resources::empty();
         for crc_id in crc_ids {
             let ctr = ContractsV7::<T>::get(crc_id).unwrap();
@@ -240,9 +240,9 @@ pub fn post_migration_checks<T: Config>() {
             resources_check.add(&crc.resources.total_resources);
         }
         assert_eq!(
-            node.resources.used_resources, resources_check,
+            node_resources.used_resources, resources_check,
             "Migration failure! The used resources of the node with id {:?} are incorrect!",
-            node.id,
+            node_id,
         );
         count += 1;
     }
@@ -436,14 +436,14 @@ pub fn translate_contract_objects<T: Config>(
                 Some(ContractData::NameContract(NameContract { name: nc.name }))
             }
             deprecated::ContractData::RentContract(ref rc) => {
-                if let Some(node) = pallet_tfgrid::Nodes::<T>::get(rc.node_id) {
+                if let Some(node_resources) = pallet_tfgrid::NodeResources::<T>::get(rc.node_id) {
                     reads += 2;
                     let crc = CapacityReservationContract {
                         node_id: rc.node_id,
                         deployments: vec![], // will be filled in later
                         public_ips: 0,       // will be modified later
                         resources: ConsumableResources {
-                            total_resources: node.resources.total_resources,
+                            total_resources: node_resources.total_resources,
                             used_resources: Resources::empty(), // will be modified later
                         },
                         group_id: None,
@@ -529,9 +529,9 @@ pub fn translate_contract_objects<T: Config>(
     for (node_id, nc) in node_changes.iter() {
         ActiveNodeContracts::<T>::insert(node_id, &nc.active_contracts);
 
-        if let Some(mut node) = pallet_tfgrid::Nodes::<T>::get(node_id) {
-            node.resources.used_resources = nc.used_resources;
-            pallet_tfgrid::Nodes::<T>::insert(node_id, &node);
+        if let Some(mut node_resources) = pallet_tfgrid::NodeResources::<T>::get(node_id) {
+            node_resources.used_resources = nc.used_resources;
+            pallet_tfgrid::NodeResources::<T>::insert(node_id, &node_resources);
             reads += 1;
             writes += 2;
         } else {

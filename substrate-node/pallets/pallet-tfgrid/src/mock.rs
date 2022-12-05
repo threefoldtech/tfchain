@@ -23,6 +23,7 @@ use sp_runtime::{
 use sp_std::prelude::*;
 
 use hex;
+use tfchain_support::resources::Resources;
 use tfchain_support::types::PublicIP;
 
 pub type Signature = MultiSignature;
@@ -90,8 +91,14 @@ pub(crate) type TfgridNode = crate::TfgridNode<TestRuntime>;
 
 pub struct NodeChanged;
 impl tfchain_support::traits::ChangeNode<Loc, Interface, Serial> for NodeChanged {
-    fn node_changed(_old_node: Option<&TfgridNode>, _new_node: &TfgridNode) {}
-    fn node_deleted(_node: &TfgridNode) {}
+    fn node_changed(
+        _old_node: Option<&TfgridNode>,
+        _old_resources: &Resources,
+        _new_node: &TfgridNode,
+        _new_resources: &Resources,
+    ) {
+    }
+    fn node_deleted(_node: &TfgridNode, _resources: &Resources) {}
 }
 
 pub struct PublicIpModifier;

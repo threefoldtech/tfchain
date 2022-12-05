@@ -20,6 +20,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use sp_std::convert::{TryFrom, TryInto};
+use tfchain_support::resources::Resources;
 use tfchain_support::traits::{ChangeNode, PublicIpModifier};
 use tfchain_support::types::PublicIP;
 
@@ -90,11 +91,16 @@ pub(crate) type TfgridNode = pallet_tfgrid::pallet::TfgridNode<Test>;
 
 pub struct NodeChanged;
 impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
-    fn node_changed(old_node: Option<&TfgridNode>, new_node: &TfgridNode) {
-        DaoModule::node_changed(old_node, new_node)
+    fn node_changed(
+        old_node: Option<&TfgridNode>,
+        old_resources: &Resources,
+        new_node: &TfgridNode,
+        new_resources: &Resources,
+    ) {
+        DaoModule::node_changed(old_node, old_resources, new_node, new_resources)
     }
-    fn node_deleted(node: &TfgridNode) {
-        DaoModule::node_deleted(node);
+    fn node_deleted(node: &TfgridNode, resources: &Resources) {
+        DaoModule::node_deleted(node, resources);
     }
 }
 

@@ -138,9 +138,15 @@ pub(crate) type TfgridNode = pallet_tfgrid::pallet::TfgridNode<TestRuntime>;
 
 pub struct NodeChanged;
 impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
-    fn node_changed(_old_node: Option<&TfgridNode>, _new_node: &TfgridNode) {}
-    fn node_deleted(node: &TfgridNode) {
-        SmartContractModule::node_deleted(node);
+    fn node_changed(
+        _old_node: Option<&TfgridNode>,
+        _old_resources: &Resources,
+        _new_node: &TfgridNode,
+        _new_resources: &Resources,
+    ) {
+    }
+    fn node_deleted(node: &TfgridNode, resources: &Resources) {
+        SmartContractModule::node_deleted(node, resources);
     }
 }
 

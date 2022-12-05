@@ -175,6 +175,15 @@ pub mod pallet {
     pub type NodeIdByTwinID<T> = StorageMap<_, Blake2_128Concat, u32, u32, ValueQuery>;
 
     #[pallet::storage]
+    #[pallet::getter(fn node_power)]
+    pub type NodePower<T> = StorageMap<_, Blake2_128Concat, u32, Power, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn node_resources)]
+    pub type NodeResources<T> =
+        StorageMap<_, Blake2_128Concat, u32, ConsumableResources, OptionQuery>;
+
+    #[pallet::storage]
     #[pallet::getter(fn entities)]
     pub type Entities<T: Config> =
         StorageMap<_, Blake2_128Concat, u32, TfgridEntity<T>, OptionQuery>;
@@ -445,6 +454,12 @@ pub mod pallet {
             node_id: u32,
             power_state: PowerState,
         },
+
+        NodeConsumableResourcesChanged {
+            farm_id: u32,
+            node_id: u32,
+            resources: ConsumableResources,
+        },
     }
 
     #[pallet::error]
@@ -577,7 +592,9 @@ pub mod pallet {
         UnauthorizedToChangePowerTarget,
         NotEnoughResourcesOnNode,
         ResourcesUsedByActiveContracts,
-
+        NodeResourcesNotExists,
+        NodePowerNotExists,
+        
         InvalidPublicConfig,
     }
 
@@ -1022,16 +1039,7 @@ pub mod pallet {
                 id,
                 farm_id,
                 twin_id,
-                resources: ConsumableResources {
-                    total_resources: node_resources,
-                    used_resources: Resources::empty(),
-                },
                 location: node_location,
-                power: Power {
-                    state: PowerState::Up,
-                    target: PowerTarget::Down,
-                    last_uptime: created,
-                },
                 public_config: None,
                 created,
                 farming_policy_id: 0,
@@ -1042,6 +1050,18 @@ pub mod pallet {
                 serial_number: node_serial_number,
                 connection_price: ConnectionPrice::<T>::get(),
             };
+            let power = Power {
+                state: PowerState::Up,
+                target: PowerTarget::Down,
+                last_uptime: created,
+            };
+            NodePower::<T>::insert(id, &power);
+
+            let resources = ConsumableResources {
+                total_resources: node_resources,
+                used_resources: Resources::empty(),
+            };
+            NodeResources::<T>::insert(id, &resources);
 
             let farming_policy = Self::get_farming_policy(&new_node)?;
             new_node.farming_policy_id = farming_policy.id;
@@ -1055,7 +1075,7 @@ pub mod pallet {
             nodes_by_farm.push(id);
             NodesByFarmID::<T>::insert(farm_id, nodes_by_farm);
 
-            T::NodeChanged::node_changed(None, &new_node);
+            T::NodeChanged::node_changed(None, &Resources::empty(), &new_node, &node_resources);
 
             // lets try to bring the node down if possible
             Self::deposit_event(Event::PowerTargetChanged {
@@ -1098,14 +1118,13 @@ pub mod pallet {
 
             ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
 
+            let mut node_resources =
+                NodeResources::<T>::get(node_id).ok_or(Error::<T>::NodeResourcesNotExists)?;
+
             // we can only reduce as much as we have free resources on our node
-            let resources_reduction = stored_node
-                .resources
-                .calculate_reduction_in_resources(&resources);
+            let resources_reduction = node_resources.calculate_reduction_in_resources(&resources);
             ensure!(
-                stored_node
-                    .resources
-                    .can_consume_resources(&resources_reduction),
+                node_resources.can_consume_resources(&resources_reduction),
                 Error::<T>::ResourcesUsedByActiveContracts
             );
 
@@ -1123,7 +1142,7 @@ pub mod pallet {
                 NodesByFarmID::<T>::insert(farm_id, nodes_by_farm);
             };
 
-            let node_resources = Self::get_resources(resources)?;
+            let new_node_resources = Self::get_resources(resources)?;
             let node_location = Self::get_location(location)?;
             let node_interfaces = Self::get_interfaces(&interfaces)?;
 
@@ -1134,7 +1153,7 @@ pub mod pallet {
             };
 
             // If the resources on a certified node changed, reset the certification level to DIY
-            if Resources::has_changed(&stored_node.resources.total_resources, &node_resources, 1)
+            if Resources::has_changed(&node_resources.total_resources, &new_node_resources, 1)
                 && stored_node.certification == NodeCertification::Certified
             {
                 stored_node.certification = NodeCertification::Diy;
@@ -1145,17 +1164,32 @@ pub mod pallet {
             }
 
             stored_node.farm_id = farm_id;
-            stored_node.resources.total_resources = node_resources;
             stored_node.location = node_location;
             stored_node.interfaces = node_interfaces;
             stored_node.secure_boot = secure_boot;
             stored_node.virtualized = virtualized;
             stored_node.serial_number = node_serial_number;
 
+            let old_resources = node_resources.total_resources;
+            if node_resources.total_resources != new_node_resources {
+                node_resources.total_resources = new_node_resources;
+                NodeResources::<T>::insert(stored_node.id, &node_resources);
+                Self::deposit_event(Event::<T>::NodeConsumableResourcesChanged {
+                    farm_id: farm_id,
+                    node_id: stored_node.id,
+                    resources: node_resources.clone(),
+                });
+            }
+
             // override node in storage
             Nodes::<T>::insert(stored_node.id, &stored_node);
 
-            T::NodeChanged::node_changed(Some(&old_node), &stored_node);
+            T::NodeChanged::node_changed(
+                Some(&old_node),
+                &old_resources,
+                &stored_node,
+                &node_resources.total_resources,
+            );
 
             Self::deposit_event(Event::NodeUpdated(stored_node));
 
@@ -1231,13 +1265,13 @@ pub mod pallet {
             );
             let node_id = NodeIdByTwinID::<T>::get(twin_id);
 
-            let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+            let mut node_power =
+                NodePower::<T>::get(node_id).ok_or(Error::<T>::NodePowerNotExists)?;
 
             let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+            node_power.last_uptime = now;
 
-            node.power.last_uptime = now;
-
-            Nodes::<T>::insert(node_id, &node);
+            NodePower::<T>::insert(node_id, &node_power);
 
             Self::deposit_event(Event::NodeUptimeReported(node_id, now, uptime));
 
@@ -1305,15 +1339,16 @@ pub mod pallet {
             nodes_by_farm.remove(location);
             NodesByFarmID::<T>::insert(stored_node.farm_id, nodes_by_farm);
 
+            let node_resources =
+                NodeResources::<T>::get(id).ok_or(Error::<T>::NodeResourcesNotExists)?;
             // Call node deleted
-            T::NodeChanged::node_deleted(&stored_node);
+            T::NodeChanged::node_deleted(&stored_node, &node_resources.total_resources);
 
             Nodes::<T>::remove(id);
+            NodeResources::<T>::remove(id);
+            NodePower::<T>::remove(id);
 
             Self::deposit_event(Event::NodeDeleted(id));
-
-            // Call node deleted
-            T::NodeChanged::node_deleted(&stored_node);
 
             Ok(().into())
         }
@@ -1823,7 +1858,9 @@ pub mod pallet {
             );
 
             // Call node deleted
-            T::NodeChanged::node_deleted(&node);
+            let node_resources =
+                NodeResources::<T>::get(node_id).ok_or(Error::<T>::NodeResourcesNotExists)?;
+            T::NodeChanged::node_deleted(&node, &node_resources.total_resources);
 
             let mut nodes_by_farm = NodesByFarmID::<T>::get(node.farm_id);
             let location = nodes_by_farm
@@ -1833,6 +1870,7 @@ pub mod pallet {
             NodesByFarmID::<T>::insert(node.farm_id, nodes_by_farm);
 
             Nodes::<T>::remove(node_id);
+            NodeResources::<T>::remove(node_id);
             NodeIdByTwinID::<T>::remove(node.twin_id);
 
             Self::deposit_event(Event::NodeDeleted(node_id));
@@ -2078,18 +2116,18 @@ impl<T: Config> Pallet<T> {
             Error::<T>::NodeNotExists
         );
         let node_id = NodeIdByTwinID::<T>::get(twin_id);
-        let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+        let node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+        let mut node_power = NodePower::<T>::get(node_id).ok_or(Error::<T>::NodePowerNotExists)?;
         //if the power state is not correct => change it and emit event
-        if node.power.state != power_state {
-            node.power.state = power_state.clone();
+        if node_power.state != power_state {
+            node_power.state = power_state.clone();
 
-            Nodes::<T>::insert(node.id, &node);
+            NodePower::<T>::insert(node_id, &node_power);
             Self::deposit_event(Event::PowerStateChanged {
                 farm_id: node.farm_id,
                 node_id: node_id,
                 power_state: power_state,
             });
-            Self::deposit_event(Event::NodeUpdated(node));
         }
 
         Ok(Pays::No.into())
@@ -2101,23 +2139,28 @@ impl<T: Config> Pallet<T> {
         power_target: PowerTarget,
     ) -> DispatchResultWithPostInfo {
         let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
-        let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+        let node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
         let farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
+        let mut node_power = NodePower::<T>::get(node_id).ok_or(Error::<T>::NodePowerNotExists)?;
         ensure!(
             twin_id == farm.twin_id && matches!(power_target, PowerTarget::Up),
             Error::<T>::UnauthorizedToChangePowerTarget
         );
 
-        Self::_change_power_target_on_node(&mut node, power_target);
+        Self::_change_power_target_on_node(&node, &mut node_power, power_target);
 
         Ok(().into())
     }
 
-    fn _change_power_target_on_node(node: &mut TfgridNode<T>, power_target: PowerTarget) {
+    fn _change_power_target_on_node(
+        node: &TfgridNode<T>,
+        node_power: &mut Power,
+        power_target: PowerTarget,
+    ) {
         let node_id = node.id;
         let farm_id = node.farm_id;
-        node.power.target = power_target.clone();
-        Nodes::<T>::insert(node_id, node);
+        node_power.target = power_target.clone();
+        NodePower::<T>::insert(node_id, node_power);
         Self::deposit_event(Event::PowerTargetChanged {
             farm_id: farm_id,
             node_id: node_id,
@@ -2130,26 +2173,32 @@ impl<T: Config> Pallet<T> {
         to_free: Resources,
         to_claim: Resources,
     ) -> DispatchResultWithPostInfo {
-        let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+        let node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+        let mut node_resources =
+            NodeResources::<T>::get(node_id).ok_or(Error::<T>::NodeResourcesNotExists)?;
+        let mut node_power = NodePower::<T>::get(node_id).ok_or(Error::<T>::NodePowerNotExists)?;
 
-        node.resources.free(&to_free);
-
+        node_resources.free(&to_free);
         ensure!(
-            node.resources.can_consume_resources(&to_claim),
+            node_resources.can_consume_resources(&to_claim),
             Error::<T>::NotEnoughResourcesOnNode
         );
-        node.resources.consume(&to_claim);
+        node_resources.consume(&to_claim);
 
-        if !node.is_target_up() && !node.can_be_shutdown() {
+        if !node_power.is_target_up() && node_resources.has_consumed_resources() {
             // is down and shouldn't be so bring it up
-            Self::_change_power_target_on_node(&mut node, PowerTarget::Up);
-        } else if node.is_target_up() && node.can_be_shutdown() {
+            Self::_change_power_target_on_node(&node, &mut node_power, PowerTarget::Up);
+        } else if node_power.is_target_up() && !node_resources.has_consumed_resources() {
             // is up and should be down
-            Self::_change_power_target_on_node(&mut node, PowerTarget::Down);
+            Self::_change_power_target_on_node(&node, &mut node_power, PowerTarget::Down);
         }
 
-        Nodes::<T>::insert(node.id, &node);
-        Self::deposit_event(Event::NodeUpdated(node));
+        NodeResources::<T>::insert(node.id, &node_resources);
+        Self::deposit_event(Event::<T>::NodeConsumableResourcesChanged {
+            farm_id: node.id,
+            node_id: node.farm_id,
+            resources: node_resources,
+        });
 
         Ok(().into())
     }
@@ -2195,6 +2244,8 @@ impl<T: Config> Pallet<T> {
         node: &TfgridNode<T>,
     ) -> Result<types::FarmingPolicy<T::BlockNumber>, DispatchErrorWithPostInfo> {
         let mut farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
+        let node_resources =
+            NodeResources::<T>::get(node.id).ok_or(Error::<T>::NodeResourcesNotExists)?;
 
         // If there is a farming policy defined on the
         // farm policy limits, use that one
@@ -2216,7 +2267,7 @@ impl<T: Config> Pallet<T> {
 
                 match limits.cu {
                     Some(cu_limit) => {
-                        let cu = node.resources.total_resources.get_cu();
+                        let cu = node_resources.total_resources.get_cu();
                         if cu > cu_limit {
                             return Self::get_default_farming_policy();
                         }
@@ -2227,7 +2278,7 @@ impl<T: Config> Pallet<T> {
 
                 match limits.su {
                     Some(su_limit) => {
-                        let su = node.resources.total_resources.get_su();
+                        let su = node_resources.total_resources.get_su();
                         if su > su_limit {
                             return Self::get_default_farming_policy();
                         }

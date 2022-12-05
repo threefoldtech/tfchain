@@ -166,7 +166,7 @@ fn test_create_capacity_contract_reservation_finding_node_using_group() {
             })
         );
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().resources.used_resources,
+            TfgridModule::node_resources(1).unwrap().used_resources,
             ResourcesInput::sum(&resources_c1(), &resources_c1())
         );
     });
@@ -204,10 +204,7 @@ fn test_capacity_reservation_contract_with_policy_any_and_features_works() {
             })
         );
 
-        assert_eq!(
-            TfgridModule::nodes(3).unwrap().power.target,
-            PowerTarget::Up
-        );
+        assert_eq!(TfgridModule::node_power(3).unwrap().target, PowerTarget::Up);
     });
 }
 
@@ -301,14 +298,11 @@ fn test_capacity_reservation_contract_create_works() {
         ));
 
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().resources.used_resources,
+            TfgridModule::node_resources(1).unwrap().used_resources,
             get_resources()
         );
 
-        assert_eq!(
-            TfgridModule::nodes(1).unwrap().power.target,
-            PowerTarget::Up,
-        )
+        assert_eq!(TfgridModule::node_power(1).unwrap().target, PowerTarget::Up,)
     });
 }
 
@@ -515,17 +509,15 @@ fn test_capacity_reservation_contract_create_reserving_full_node_then_deployment
             None,
         ));
         assert_eq!(
-            TfgridModule::nodes(node_id).unwrap().power.target,
+            TfgridModule::node_power(node_id).unwrap().target,
             PowerTarget::Up
         );
         assert_eq!(
-            TfgridModule::nodes(node_id)
+            TfgridModule::node_resources(node_id)
                 .unwrap()
-                .resources
                 .used_resources,
-            TfgridModule::nodes(node_id)
+            TfgridModule::node_resources(node_id)
                 .unwrap()
-                .resources
                 .total_resources
         );
         // creating the deployment contract should claim resources from the node
@@ -593,11 +585,11 @@ fn test_capacity_reservation_contract_create_reserving_full_node_then_deployment
             1
         ));
         assert_eq!(
-            TfgridModule::nodes(node_id).unwrap().power.target,
+            TfgridModule::node_power(node_id).unwrap().target,
             PowerTarget::Down
         );
         assert_eq!(
-            TfgridModule::nodes(node_id).unwrap().resources,
+            TfgridModule::node_resources(node_id).unwrap(),
             ConsumableResources {
                 total_resources: resources_n2(),
                 used_resources: ResourcesInput::empty(),
@@ -638,7 +630,7 @@ fn test_cancel_capacity_reservation_contract_should_not_shutdown_first_node() {
         run_to_block(1, None);
         prepare_farm_with_three_nodes();
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().power.target,
+            TfgridModule::node_power(1).unwrap().target,
             PowerTarget::Down
         );
         assert_ok!(SmartContractModule::contract_capacity_reservation_create(
@@ -650,17 +642,14 @@ fn test_cancel_capacity_reservation_contract_should_not_shutdown_first_node() {
             },
             None,
         ));
-        assert_eq!(
-            TfgridModule::nodes(1).unwrap().power.target,
-            PowerTarget::Up
-        );
+        assert_eq!(TfgridModule::node_power(1).unwrap().target, PowerTarget::Up);
         assert_ok!(SmartContractModule::contract_cancel(
             Origin::signed(bob()),
             1
         ));
         // node should try to shut down
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().power.target,
+            TfgridModule::node_power(1).unwrap().target,
             PowerTarget::Down
         );
     });
@@ -677,21 +666,15 @@ fn test_cancel_capacity_reservation_contract_shutdown_node() {
             Origin::signed(alice()),
             2
         ));
+        assert_eq!(TfgridModule::node_power(1).unwrap().target, PowerTarget::Up);
+        assert_eq!(TfgridModule::node_power(2).unwrap().target, PowerTarget::Up);
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().power.target,
-            PowerTarget::Up
-        );
-        assert_eq!(
-            TfgridModule::nodes(2).unwrap().power.target,
-            PowerTarget::Up
-        );
-        assert_eq!(
-            TfgridModule::nodes(3).unwrap().power.target,
+            TfgridModule::node_power(3).unwrap().target,
             PowerTarget::Down
         );
         // on node 1 there is only one contract left => used resources of node 1 should equal resources of contract 1
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().resources.used_resources,
+            TfgridModule::node_resources(1).unwrap().used_resources,
             resources_c1()
         );
 
@@ -700,21 +683,18 @@ fn test_cancel_capacity_reservation_contract_shutdown_node() {
             Origin::signed(alice()),
             3
         ));
+        assert_eq!(TfgridModule::node_power(1).unwrap().target, PowerTarget::Up);
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().power.target,
-            PowerTarget::Up
-        );
-        assert_eq!(
-            TfgridModule::nodes(2).unwrap().power.target,
+            TfgridModule::node_power(2).unwrap().target,
             PowerTarget::Down
         );
         assert_eq!(
-            TfgridModule::nodes(3).unwrap().power.target,
+            TfgridModule::node_power(3).unwrap().target,
             PowerTarget::Down
         );
         // nothing else running on node 2 => used resources should be 0
         assert_eq!(
-            TfgridModule::nodes(2).unwrap().resources.used_resources,
+            TfgridModule::node_resources(2).unwrap().used_resources,
             ResourcesInput::empty()
         );
 
@@ -725,20 +705,20 @@ fn test_cancel_capacity_reservation_contract_shutdown_node() {
             1
         ));
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().power.target,
+            TfgridModule::node_power(1).unwrap().target,
             PowerTarget::Down
         );
         assert_eq!(
-            TfgridModule::nodes(2).unwrap().power.target,
+            TfgridModule::node_power(2).unwrap().target,
             PowerTarget::Down
         );
         assert_eq!(
-            TfgridModule::nodes(3).unwrap().power.target,
+            TfgridModule::node_power(3).unwrap().target,
             PowerTarget::Down
         );
         // nothing else running on node 1 => used resources should be 0
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().resources.used_resources,
+            TfgridModule::node_resources(1).unwrap().used_resources,
             ResourcesInput::empty()
         );
 
@@ -788,7 +768,7 @@ fn test_capacity_reservation_contract_update_works() {
         ));
         // Used resources on node should be updated!
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().resources.used_resources,
+            TfgridModule::node_resources(1).unwrap().used_resources,
             updated_resources
         );
         // contract should look like this:
@@ -973,7 +953,7 @@ fn test_cancel_capacity_reservation_contract_works() {
         ));
 
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().resources.used_resources,
+            TfgridModule::node_resources(1).unwrap().used_resources,
             ResourcesInput::empty()
         );
 
@@ -999,11 +979,12 @@ fn test_deployment_cancel_contract_free_resources_works() {
             resources_c1(),
             0,
         ));
-
+        assert!(SmartContractModule::deployments(1).is_some());
         assert_ok!(SmartContractModule::deployment_cancel(
             Origin::signed(alice()),
             1
         ));
+        assert!(SmartContractModule::deployments(1).is_none());
         // used resources should be empty and deployment contracts should be an empty list
         assert_eq!(
             SmartContractModule::contracts(1).unwrap().contract_type,
@@ -1342,10 +1323,6 @@ fn test_update_contract_in_grace_state_fails() {
             SmartContractModule::contracts(1).unwrap().state,
             types::ContractState::GracePeriod(21)
         );
-        // assert_eq!(
-        //     SmartContractModule::contracts(2).unwrap().state,
-        //     types::ContractState::GracePeriod(21)
-        // );
         assert_noop!(
             SmartContractModule::contract_capacity_reservation_update(
                 Origin::signed(charlie()),
@@ -1354,16 +1331,6 @@ fn test_update_contract_in_grace_state_fails() {
             ),
             Error::<TestRuntime>::CannotUpdateContractInGraceState
         );
-        // assert_noop!(
-        //     SmartContractModule::deployment_update(
-        //         Origin::signed(charlie()),
-        //         1,
-        //         generate_deployment_hash(),
-        //         get_updated_deployment_data(),
-        //         Some(resources_n1()),
-        //     ),
-        //     Error::<TestRuntime>::CannotUpdateContractInGraceState
-        // );
     });
 }
 
@@ -1521,7 +1488,7 @@ fn test_capacity_reservation_contract_create_reserving_all_resources_node_works(
             node_id: 1,
         };
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().resources.used_resources,
+            TfgridModule::node_resources(1).unwrap().used_resources,
             resources_n1()
         );
         assert_eq!(
@@ -1715,10 +1682,7 @@ fn test_cancel_capacity_reservation_contract_with_active_deployment_contracts_fa
             Error::<TestRuntime>::CapacityReservationHasActiveContracts
         );
         // node 1 should still be up after failed attempt to cancel capacity contract
-        assert_eq!(
-            TfgridModule::nodes(1).unwrap().power.target,
-            PowerTarget::Up
-        );
+        assert_eq!(TfgridModule::node_power(1).unwrap().target, PowerTarget::Up);
     });
 }
 
@@ -2584,7 +2548,7 @@ fn test_restore_deployment_contract_in_grace_works() {
             })
         );
         assert_eq!(
-            TfgridModule::nodes(1).unwrap().resources.used_resources,
+            TfgridModule::node_resources(1).unwrap().used_resources,
             resources_c1()
         );
         let our_events = System::events();
@@ -3789,7 +3753,7 @@ pub fn prepare_farm_and_node() {
     )
     .unwrap();
     assert_eq!(
-        TfgridModule::nodes(1).unwrap().resources,
+        TfgridModule::node_resources(1).unwrap(),
         ConsumableResources {
             total_resources: resources_n1(),
             used_resources: ResourcesInput::empty(),
@@ -3810,7 +3774,7 @@ pub fn prepare_farm_node_and_capacity_reservation() {
         None,
     ));
     assert_eq!(
-        TfgridModule::nodes(1).unwrap().resources,
+        TfgridModule::node_resources(1).unwrap(),
         ConsumableResources {
             total_resources: resources_n1(),
             used_resources: resources_c1(),
@@ -3874,7 +3838,7 @@ pub fn prepare_farm_with_three_nodes() {
     )
     .unwrap();
     assert_eq!(
-        TfgridModule::nodes(2).unwrap().resources,
+        TfgridModule::node_resources(2).unwrap(),
         ConsumableResources {
             total_resources: resources_n2(),
             used_resources: ResourcesInput::empty(),
@@ -3900,7 +3864,7 @@ pub fn prepare_farm_with_three_nodes() {
     )
     .unwrap();
     assert_eq!(
-        TfgridModule::nodes(3).unwrap().resources,
+        TfgridModule::node_resources(3).unwrap(),
         ConsumableResources {
             total_resources: resources_n3(),
             used_resources: ResourcesInput::empty(),
@@ -3911,15 +3875,15 @@ pub fn prepare_farm_with_three_nodes() {
     // when creating a node it should try to go down
     assert_eq!(nodes_from_farm.len(), 3);
     assert_eq!(
-        TfgridModule::nodes(1).unwrap().power.target,
+        TfgridModule::node_power(1).unwrap().target,
         PowerTarget::Down
     );
     assert_eq!(
-        TfgridModule::nodes(2).unwrap().power.target,
+        TfgridModule::node_power(2).unwrap().target,
         PowerTarget::Down
     );
     assert_eq!(
-        TfgridModule::nodes(3).unwrap().power.target,
+        TfgridModule::node_power(3).unwrap().target,
         PowerTarget::Down
     );
 }
@@ -3991,7 +3955,7 @@ pub fn create_capacity_reservation_and_add_to_group(
     );
 
     assert_eq!(
-        TfgridModule::nodes(expected_node_id).unwrap().power.target,
+        TfgridModule::node_power(expected_node_id).unwrap().target,
         PowerTarget::Up
     );
 
@@ -4226,19 +4190,19 @@ fn prepare_farm_three_nodes_three_capacity_reservation_contracts() {
     ));
 
     assert_eq!(
-        TfgridModule::nodes(1).unwrap().power.target,
+        TfgridModule::node_power(1).unwrap().target,
         PowerTarget::Up
     );
     assert_eq!(
-        TfgridModule::nodes(2).unwrap().power.target,
+        TfgridModule::node_power(2).unwrap().target,
         PowerTarget::Down
     );
     assert_eq!(
-        TfgridModule::nodes(3).unwrap().power.target,
+        TfgridModule::node_power(3).unwrap().target,
         PowerTarget::Down
     );
     assert_eq!(
-        TfgridModule::nodes(1).unwrap().resources.used_resources,
+        TfgridModule::node_resources(1).unwrap().used_resources,
         resources_c1()
     );
     assert_eq!(
@@ -4266,7 +4230,7 @@ fn prepare_farm_three_nodes_three_capacity_reservation_contracts() {
         None,
     ));
     assert_eq!(
-        TfgridModule::nodes(1).unwrap().resources.used_resources,
+        TfgridModule::node_resources(1).unwrap().used_resources,
         ResourcesInput::sum(&resources_c1(), &resources_c2())
     );
     assert_eq!(
@@ -4295,19 +4259,19 @@ fn prepare_farm_three_nodes_three_capacity_reservation_contracts() {
     ),);
 
     assert_eq!(
-        TfgridModule::nodes(1).unwrap().power.target,
+        TfgridModule::node_power(1).unwrap().target,
         PowerTarget::Up
     );
     assert_eq!(
-        TfgridModule::nodes(2).unwrap().power.target,
+        TfgridModule::node_power(2).unwrap().target,
         PowerTarget::Up
     );
     assert_eq!(
-        TfgridModule::nodes(3).unwrap().power.target,
+        TfgridModule::node_power(3).unwrap().target,
         PowerTarget::Down
     );
     assert_eq!(
-        TfgridModule::nodes(2).unwrap().resources.used_resources,
+        TfgridModule::node_resources(2).unwrap().used_resources,
         resources_c3()
     );
     assert_eq!(

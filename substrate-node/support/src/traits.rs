@@ -17,8 +17,12 @@ pub trait ChangeNode<Loc, If, Serial> {
     fn node_changed(
         node: Option<&super::types::Node<Loc, If, Serial>>,
         new_node: &super::types::Node<Loc, If, Serial>,
+        new_resources: &super::resources::Resources,
     );
-    fn node_deleted(node: &super::types::Node<Loc, If, Serial>);
+    fn node_deleted(
+        node: &super::types::Node<Loc, If, Serial>,
+        resources: &super::resources::Resources,
+    );
 }
 
 pub trait PublicIpModifier {
