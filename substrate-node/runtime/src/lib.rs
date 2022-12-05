@@ -416,7 +416,7 @@ impl pallet_smart_contract::Config for Runtime {
 impl pallet_tft_bridge::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
-    type Burn = ();
+    type Withdraw = ();
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
     type RetryInterval = RetryInterval;
 }
@@ -771,9 +771,9 @@ pub type Executive = frame_executive::Executive<
         pallet_tfgrid::migrations::v11::FixFarmingPolicy<Runtime>,
         */
         pallet_tfgrid::migrations::v12::InputValidation<Runtime>,
-        
         pallet_tfgrid::migrations::v13::NodeMigration<Runtime>,
         pallet_smart_contract::migrations::v7::ContractMigrationV6<Runtime>,
+        pallet_tft_bridge::migration_burn_withdraw::RenameBurnToWithdraw<Runtime>,
     ),
 >;
 
