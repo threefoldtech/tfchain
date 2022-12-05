@@ -36,8 +36,7 @@ pub mod farm;
 pub mod interface;
 pub mod migrations;
 pub mod node;
-pub mod pub_config;
-pub mod pub_ip;
+pub mod ip;
 pub mod terms_cond;
 pub mod twin;
 
@@ -84,20 +83,27 @@ pub mod pallet {
     pub type FarmNameOf<T> = <T as Config>::FarmName;
 
     // Input type for IP4 (IP & GW)
-    pub type Ip4Input = BoundedVec<u8, ConstU32<{ pub_config::MAX_IP4_LENGTH }>>;
-    pub type Gw4Input = BoundedVec<u8, ConstU32<{ pub_config::MAX_GW4_LENGTH }>>;
+    pub type Ip4Input = BoundedVec<u8, ConstU32<{ ip::MAX_IP4_LENGTH }>>;
+    pub type Gw4Input = BoundedVec<u8, ConstU32<{ ip::MAX_GW4_LENGTH }>>;
     pub type FullIp4Input = IP<Ip4Input, Gw4Input>;
 
     // Input type for IP6 (IP & GW)
-    pub type Ip6Input = BoundedVec<u8, ConstU32<{ pub_config::MAX_IP6_LENGTH }>>;
-    pub type Gw6Input = BoundedVec<u8, ConstU32<{ pub_config::MAX_GW6_LENGTH }>>;
+    pub type Ip6Input = BoundedVec<u8, ConstU32<{ ip::MAX_IP6_LENGTH }>>;
+    pub type Gw6Input = BoundedVec<u8, ConstU32<{ ip::MAX_GW6_LENGTH }>>;
     pub type FullIp6Input = IP<Ip6Input, Gw6Input>;
 
-    // Concrete type for Public IP type
-    pub type PublicIpIpOf<T> = <T as Config>::IP4;
-    pub type PublicIpGatewayOf<T> = <T as Config>::GW4;
-    pub type PublicIpOf<T> = PublicIP<PublicIpIpOf<T>, PublicIpGatewayOf<T>>;
+    // IP4 & IP6 config alias
+    pub type Ip4Of<T> = <T as Config>::IP4;
+    pub type Gw4Of<T> = <T as Config>::GW4;
+    pub type Ip6Of<T> = <T as Config>::IP6;
+    pub type Gw6Of<T> = <T as Config>::GW6;
 
+    // Concrete type for Public IP type
+    // Public IP is an combination of (IP, GW and contract_id)
+    pub type PublicIpOf<T> = PublicIP<Ip4Of<T>, Gw4Of<T>>;
+
+    // Validators for a combination of IP/GW
+    // Needed because an IP with CIDR notation should be in the same range as the gateway
     pub type FullIp4Validator<T> = <T as Config>::FullIp4;
     pub type FullIp6Validator<T> = <T as Config>::FullIp6;
 
@@ -129,15 +135,12 @@ pub mod pallet {
     // Input type for public config
     pub type PubConfigIP4Input = IP<Ip4Input, Gw4Input>;
     pub type PubConfigIP6Input = IP<Ip6Input, Gw6Input>;
-    pub type DomainInput = BoundedVec<u8, ConstU32<{ pub_config::MAX_DOMAIN_NAME_LENGTH }>>;
+    pub type DomainInput = BoundedVec<u8, ConstU32<{ ip::MAX_DOMAIN_NAME_LENGTH }>>;
     pub type PubConfigInput =
         PublicConfig<PubConfigIP4Input, Option<PubConfigIP6Input>, Option<DomainInput>>;
-    // Concrete public config type
-    pub type Ip4Of<T> = <T as Config>::IP4;
-    pub type Gw4Of<T> = <T as Config>::GW4;
+    
+    // Concrete public config types
     pub type Ip4ConfigOf<T> = IP<Ip4Of<T>, Gw4Of<T>>;
-    pub type Ip6Of<T> = <T as Config>::IP6;
-    pub type Gw6Of<T> = <T as Config>::GW6;
     pub type Ip6ConfigOf<T> = IP<Ip6Of<T>, Gw6Of<T>>;
     pub type DomainOf<T> = <T as Config>::Domain;
     pub type PubConfigOf<T> =
@@ -1012,8 +1015,8 @@ pub mod pallet {
                 gw: gateway.clone(),
             })?;
 
-            let parsed_ip = Self::get_public_ip_ip(ip)?;
-            let parsed_gateway = Self::get_public_ip_gw(gateway)?;
+            let parsed_ip = Self::get_ip4(ip)?;
+            let parsed_gateway = Self::get_gw4(gateway)?;
 
             let new_ip = PublicIP {
                 ip: parsed_ip,
@@ -1054,7 +1057,7 @@ pub mod pallet {
                 Error::<T>::CannotUpdateFarmWrongTwin
             );
 
-            let parsed_ip = Self::get_public_ip_ip(ip)?;
+            let parsed_ip = Self::get_ip4(ip)?;
 
             match stored_farm
                 .public_ips
@@ -1971,7 +1974,7 @@ pub mod pallet {
             ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
             let mut stored_farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
-            let parsed_ip = Self::get_public_ip_ip(ip)?;
+            let parsed_ip = Self::get_ip4(ip)?;
 
             match stored_farm
                 .public_ips
@@ -2433,20 +2436,6 @@ impl<T: Config> Pallet<T> {
         Ok(name_parsed)
     }
 
-    fn get_public_ip_ip(
-        public_ip_ip: Ip4Input,
-    ) -> Result<PublicIpIpOf<T>, DispatchErrorWithPostInfo> {
-        let public_ip_ip_parsed = <T as Config>::IP4::try_from(public_ip_ip)?;
-        Ok(public_ip_ip_parsed)
-    }
-
-    fn get_public_ip_gw(
-        public_ip_gw: Gw4Input,
-    ) -> Result<PublicIpGatewayOf<T>, DispatchErrorWithPostInfo> {
-        let public_ip_gw_parsed = <T as Config>::GW4::try_from(public_ip_gw)?;
-        Ok(public_ip_gw_parsed)
-    }
-
     fn validate_full_public_ip4(
         input: FullIp4Input,
     ) -> Result<FullIp4Validator<T>, DispatchErrorWithPostInfo> {
@@ -2469,8 +2458,8 @@ impl<T: Config> Pallet<T> {
         let mut public_ips_list: PublicIpListOf<T> = vec![].try_into().unwrap();
 
         for ip in public_ips {
-            let public_ip_ip = Self::get_public_ip_ip(ip.ip)?;
-            let public_ip_gateway = Self::get_public_ip_gw(ip.gw)?;
+            let public_ip_ip = Self::get_ip4(ip.ip)?;
+            let public_ip_gateway = Self::get_gw4(ip.gw)?;
 
             if public_ips_list.contains(&PublicIP {
                 ip: public_ip_ip.clone(),

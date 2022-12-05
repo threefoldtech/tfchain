@@ -5,7 +5,7 @@ use crate::{
     mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild,
     node::{CityName, CountryName, Location, SerialNumber},
     pub_config::{Domain, FullPublicIp6, GW4, GW6, IP4, IP6},
-    pub_ip::{FullPublicIp4, GatewayIP, PublicIP},
+    pub_ip::{FullPublicIp4},
     terms_cond::TermsAndConditions,
     twin::TwinIp,
     weights, CityNameInput, Config, CountryNameInput, DocumentHashInput, DocumentLinkInput,

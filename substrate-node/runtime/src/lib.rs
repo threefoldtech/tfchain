@@ -343,8 +343,8 @@ impl ChangeNode<Loc, PubConfig, Interface, Serial> for NodeChanged {
     }
 }
 
-pub type PublicIpIp = pallet_tfgrid::pallet::PublicIpIpOf<Runtime>;
-pub type PublicIpGw = pallet_tfgrid::pallet::PublicIpGatewayOf<Runtime>;
+pub type PublicIpIp = pallet_tfgrid::pallet::Ip4Of<Runtime>;
+pub type PublicIpGw = pallet_tfgrid::pallet::Gw4Of<Runtime>;
 
 pub struct PublicIpModifierType;
 impl PublicIpModifier<PublicIP<PublicIpIp, PublicIpGw>> for PublicIpModifierType {
@@ -371,13 +371,13 @@ impl pallet_tfgrid::Config for Runtime {
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
     type FarmName = pallet_tfgrid::farm::FarmName<Runtime>;
-    type IP4 = pallet_tfgrid::pub_config::IP4<Runtime>;
-    type GW4 = pallet_tfgrid::pub_config::GW4<Runtime>;
-    type FullIp4 = pallet_tfgrid::pub_ip::FullPublicIp4<Runtime>;
-    type IP6 = pallet_tfgrid::pub_config::IP6<Runtime>;
-    type GW6 = pallet_tfgrid::pub_config::GW6<Runtime>;
-    type FullIp6 = pallet_tfgrid::pub_config::FullPublicIp6<Runtime>;
-    type Domain = pallet_tfgrid::pub_config::Domain<Runtime>;
+    type IP4 = pallet_tfgrid::ip::IP4<Runtime>;
+    type GW4 = pallet_tfgrid::ip::GW4<Runtime>;
+    type FullIp4 = pallet_tfgrid::ip::FullPublicIp4<Runtime>;
+    type IP6 = pallet_tfgrid::ip::IP6<Runtime>;
+    type GW6 = pallet_tfgrid::ip::GW6<Runtime>;
+    type FullIp6 = pallet_tfgrid::ip::FullPublicIp6<Runtime>;
+    type Domain = pallet_tfgrid::ip::Domain<Runtime>;
     type MaxInterfacesLength = MaxInterfacesLength;
     type InterfaceName = pallet_tfgrid::interface::InterfaceName<Runtime>;
     type InterfaceMac = pallet_tfgrid::interface::InterfaceMac<Runtime>;
