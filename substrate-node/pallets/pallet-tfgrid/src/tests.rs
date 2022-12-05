@@ -2,7 +2,7 @@ use super::Event as TfgridEvent;
 use crate::{
     mock::Event as MockEvent,
     mock::*,
-    types::{LocationInput, PublicIpInput},
+    types::{LocationInput},
     Error, InterfaceInput, InterfaceIpsInput, PubConfigInput, PublicIpListInput, ResourcesInput,
 };
 use frame_support::{assert_noop, assert_ok, bounded_vec, BoundedVec};
@@ -393,12 +393,12 @@ fn test_create_farm_with_double_ip_fails() {
         let gw = get_public_ip_gw_input(b"185.206.122.1");
 
         pub_ips
-            .try_push(PublicIpInput {
+            .try_push(IP {
                 ip: ip.clone(),
                 gw: gw.clone(),
             })
             .unwrap();
-        pub_ips.try_push(PublicIpInput { ip, gw }).unwrap();
+        pub_ips.try_push(IP { ip, gw }).unwrap();
 
         assert_noop!(
             TfgridModule::create_farm(Origin::signed(alice()), farm_name, pub_ips),
@@ -1306,7 +1306,7 @@ fn test_node_public_config_falsy_values_fails() {
                 1,
                 Some(pub_config_input)
             ),
-            Error::<TestRuntime>::IP4TooShort
+            Error::<TestRuntime>::PublicIPTooShort
         );
     });
 }
@@ -2166,7 +2166,7 @@ fn create_farm() {
     let ip = get_public_ip_ip_input(b"185.206.122.33/24");
     let gw = get_public_ip_gw_input(b"185.206.122.1");
 
-    pub_ips.try_push(PublicIpInput { ip, gw }).unwrap();
+    pub_ips.try_push(IP { ip, gw }).unwrap();
 
     assert_ok!(TfgridModule::create_farm(
         Origin::signed(alice()),
@@ -2185,7 +2185,7 @@ fn create_farm2() {
     let ip = get_public_ip_ip_input(b"185.206.122.33/24");
     let gw = get_public_ip_gw_input(b"185.206.122.1");
 
-    pub_ips.try_push(PublicIpInput { ip, gw }).unwrap();
+    pub_ips.try_push(IP { ip, gw }).unwrap();
 
     assert_ok!(TfgridModule::create_farm(
         Origin::signed(alice()),

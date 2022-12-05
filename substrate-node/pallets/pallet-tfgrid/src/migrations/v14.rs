@@ -31,8 +31,8 @@ where
     GW4<T>: From<<T as Config>::GW4>,
     IP6<T>: From<<T as Config>::IP6>,
     GW6<T>: From<<T as Config>::GW6>,
-    PalletPublicIP<T>: From<<T as Config>::PublicIP>,
-    PalletGatewayIP<T>: From<<T as Config>::GatewayIP>,
+    PalletPublicIP<T>: From<<T as Config>::IP4>,
+    PalletGatewayIP<T>: From<<T as Config>::GW4>,
 {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
@@ -158,8 +158,8 @@ use sp_std::vec;
 
 pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight
 where
-    PalletPublicIP<T>: From<<T as Config>::PublicIP>,
-    PalletGatewayIP<T>: From<<T as Config>::GatewayIP>,
+    PalletPublicIP<T>: From<<T as Config>::IP4>,
+    PalletGatewayIP<T>: From<<T as Config>::GW4>,
 {
     info!(" >>> Migrating farms storage...");
 
@@ -275,8 +275,8 @@ fn validate_public_ips<T: Config>(
     farm: &FarmInfoOf<T>,
 ) -> Result<BoundedVec<PublicIpOf<T>, ConstU32<256>>, Error<T>>
 where
-    PalletPublicIP<T>: From<<T as Config>::PublicIP>,
-    PalletGatewayIP<T>: From<<T as Config>::GatewayIP>,
+    PalletPublicIP<T>: From<<T as Config>::IP4>,
+    PalletGatewayIP<T>: From<<T as Config>::GW4>,
 {
     let mut parsed_public_ips: BoundedVec<PublicIpOf<T>, ConstU32<256>> =
         vec![].try_into().unwrap();

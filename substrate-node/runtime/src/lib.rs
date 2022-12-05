@@ -371,13 +371,12 @@ impl pallet_tfgrid::Config for Runtime {
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
     type FarmName = pallet_tfgrid::farm::FarmName<Runtime>;
-    type PublicIP = pallet_tfgrid::pub_ip::PublicIP<Runtime>;
-    type GatewayIP = pallet_tfgrid::pub_ip::GatewayIP<Runtime>;
-    type FarmPublicIP = pallet_tfgrid::pub_ip::FarmPublicIp<Runtime>;
     type IP4 = pallet_tfgrid::pub_config::IP4<Runtime>;
     type GW4 = pallet_tfgrid::pub_config::GW4<Runtime>;
+    type FullIp4 = pallet_tfgrid::pub_ip::FullPublicIp4<Runtime>;
     type IP6 = pallet_tfgrid::pub_config::IP6<Runtime>;
     type GW6 = pallet_tfgrid::pub_config::GW6<Runtime>;
+    type FullIp6 = pallet_tfgrid::pub_config::FullPublicIp6<Runtime>;
     type Domain = pallet_tfgrid::pub_config::Domain<Runtime>;
     type MaxInterfacesLength = MaxInterfacesLength;
     type InterfaceName = pallet_tfgrid::interface::InterfaceName<Runtime>;

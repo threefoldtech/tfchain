@@ -4,13 +4,12 @@ use frame_support::{construct_runtime, parameter_types, traits::ConstU32, Bounde
 use frame_system::EnsureRoot;
 use pallet_collective;
 use pallet_tfgrid::node::{CityName, CountryName};
-use pallet_tfgrid::pub_ip::FarmPublicIp;
 use pallet_tfgrid::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
     node::{Location, SerialNumber},
-    pub_config::{Domain, GW4, GW6, IP4, IP6},
-    pub_ip::{GatewayIP, PublicIP},
+    pub_config::{Domain, FullPublicIp6, GW4, GW6, IP4, IP6},
+    pub_ip::FullPublicIp4,
     terms_cond::TermsAndConditions,
     twin::TwinIp,
     DocumentHashInput, DocumentLinkInput, PublicIpOf, TwinIpInput,
@@ -129,15 +128,15 @@ pub(crate) type TestTermsAndConditions = TermsAndConditions<Test>;
 
 pub(crate) type TestTwinIp = TwinIp<Test>;
 pub(crate) type TestFarmName = FarmName<Test>;
-pub(crate) type TestPublicIP = PublicIP<Test>;
-pub(crate) type TestGatewayIP = GatewayIP<Test>;
-pub(crate) type TestFarmPublicIP = FarmPublicIp<Test>;
 
 pub(crate) type TestIP4 = IP4<Test>;
 pub(crate) type TestGW4 = GW4<Test>;
 pub(crate) type TestIP6 = IP6<Test>;
 pub(crate) type TestGW6 = GW6<Test>;
 pub(crate) type TestDomain = Domain<Test>;
+
+pub(crate) type TestFullIp4 = FullPublicIp4<Test>;
+pub(crate) type TestFullIp6 = FullPublicIp6<Test>;
 
 pub(crate) type TestInterfaceName = InterfaceName<Test>;
 pub(crate) type TestInterfaceMac = InterfaceMac<Test>;
@@ -159,13 +158,12 @@ impl pallet_tfgrid::Config for Test {
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
-    type PublicIP = TestPublicIP;
-    type GatewayIP = TestGatewayIP;
-    type FarmPublicIP = TestFarmPublicIP;
     type IP4 = TestIP4;
     type GW4 = TestGW4;
+    type FullIp4 = TestFullIp4;
     type IP6 = TestIP6;
     type GW6 = TestGW6;
+    type FullIp6 = TestFullIp6;
     type Domain = TestDomain;
     type MaxInterfacesLength = MaxInterfacesLength;
     type InterfaceName = TestInterfaceName;

@@ -1,4 +1,4 @@
-use crate::{Config, Error, FarmPublicIpInput, PublicIpGatewayInput, PublicIpIpInput};
+use crate::{Config, Error, FullIp4Input, Gw4Input, Ip4Input};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
@@ -13,26 +13,26 @@ use valip::ip4::{Ip, CIDR as IPv4Cidr};
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct PublicIP<T: Config>(
-    pub BoundedVec<u8, ConstU32<MAX_IP_LENGTH>>,
-    PhantomData<(T, ConstU32<MAX_IP_LENGTH>)>,
+    pub BoundedVec<u8, ConstU32<MAX_IP4_LENGTH>>,
+    PhantomData<(T, ConstU32<MAX_IP4_LENGTH>)>,
 );
 
-pub const MIN_IP_LENGTH: u32 = 9;
-pub const MAX_IP_LENGTH: u32 = 18;
+pub const MIN_IP4_LENGTH: u32 = 9;
+pub const MAX_IP4_LENGTH: u32 = 18;
 
-impl<T: Config> TryFrom<PublicIpIpInput> for PublicIP<T> {
+impl<T: Config> TryFrom<Ip4Input> for PublicIP<T> {
     type Error = Error<T>;
 
     /// Fallible initialization from a provided byte vector if it is below the
     /// minimum or exceeds the maximum allowed length or contains invalid ASCII
     /// characters.
-    fn try_from(value: PublicIpIpInput) -> Result<Self, Self::Error> {
+    fn try_from(value: Ip4Input) -> Result<Self, Self::Error> {
         ensure!(
-            value.len() >= MIN_IP_LENGTH.saturated_into(),
+            value.len() >= MIN_IP4_LENGTH.saturated_into(),
             Self::Error::PublicIPTooShort
         );
         ensure!(
-            value.len() <= MAX_IP_LENGTH.saturated_into(),
+            value.len() <= MAX_IP4_LENGTH.saturated_into(),
             Self::Error::PublicIPTooLong
         );
 
@@ -75,13 +75,13 @@ pub struct GatewayIP<T: Config>(
 pub const MIN_GATEWAY_LENGTH: u32 = 7;
 pub const MAX_GATEWAY_LENGTH: u32 = 15;
 
-impl<T: Config> TryFrom<PublicIpGatewayInput> for GatewayIP<T> {
+impl<T: Config> TryFrom<Gw4Input> for GatewayIP<T> {
     type Error = Error<T>;
 
     /// Fallible initialization from a provided byte vector if it is below the
     /// minimum or exceeds the maximum allowed length or contains invalid ASCII
     /// characters.
-    fn try_from(value: PublicIpGatewayInput) -> Result<Self, Self::Error> {
+    fn try_from(value: Gw4Input) -> Result<Self, Self::Error> {
         ensure!(
             value.len() >= MIN_GATEWAY_LENGTH.saturated_into(),
             Self::Error::GatewayIPTooShort
@@ -117,24 +117,24 @@ impl<T: Config> Clone for GatewayIP<T> {
     }
 }
 
-/// A Public IP Gateway.
-/// Needs to be valid format (ipv4 without cidr)
+/// A Full IP4.
+/// Needs to be valid IP and Gateway, IP must also fall in range of gateway
 #[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
-pub struct FarmPublicIp<T: Config> {
-    pub ip: BoundedVec<u8, ConstU32<MAX_IP_LENGTH>>,
+pub struct FullPublicIp4<T: Config> {
+    pub ip: BoundedVec<u8, ConstU32<MAX_IP4_LENGTH>>,
     pub gateway: BoundedVec<u8, ConstU32<MAX_GATEWAY_LENGTH>>,
     _marker: PhantomData<(T, ConstU32<MAX_GATEWAY_LENGTH>)>,
 }
 
-impl<T: Config> TryFrom<FarmPublicIpInput> for FarmPublicIp<T> {
+impl<T: Config> TryFrom<FullIp4Input> for FullPublicIp4<T> {
     type Error = Error<T>;
 
     /// Fallible initialization from a provided byte vector if it is below the
     /// minimum or exceeds the maximum allowed length or contains invalid ASCII
     /// characters.
-    fn try_from(value: FarmPublicIpInput) -> Result<Self, Self::Error> {
+    fn try_from(value: FullIp4Input) -> Result<Self, Self::Error> {
         ensure!(
             value.gw.len() >= MIN_GATEWAY_LENGTH.saturated_into(),
             Self::Error::GatewayIPTooShort
@@ -145,11 +145,11 @@ impl<T: Config> TryFrom<FarmPublicIpInput> for FarmPublicIp<T> {
         );
 
         ensure!(
-            value.ip.len() >= MIN_IP_LENGTH.saturated_into(),
+            value.ip.len() >= MIN_IP4_LENGTH.saturated_into(),
             Self::Error::PublicIPTooShort
         );
         ensure!(
-            value.ip.len() <= MAX_IP_LENGTH.saturated_into(),
+            value.ip.len() <= MAX_IP4_LENGTH.saturated_into(),
             Self::Error::PublicIPTooLong
         );
 
@@ -175,14 +175,14 @@ impl<T: Config> TryFrom<FarmPublicIpInput> for FarmPublicIp<T> {
 }
 
 // FIXME: did not find a way to automatically implement this.
-impl<T: Config> PartialEq for FarmPublicIp<T> {
+impl<T: Config> PartialEq for FullPublicIp4<T> {
     fn eq(&self, other: &Self) -> bool {
         self.ip == other.ip && self.gateway == other.gateway
     }
 }
 
 // FIXME: did not find a way to automatically implement this.
-impl<T: Config> Clone for FarmPublicIp<T> {
+impl<T: Config> Clone for FullPublicIp4<T> {
     fn clone(&self) -> Self {
         Self {
             ip: self.ip.clone(),

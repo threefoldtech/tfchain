@@ -1,4 +1,4 @@
-use crate::{Config, DomainInput, Error, GW4Input, GW6Input, IP4Input, IP6Input};
+use crate::{Config, DomainInput, Error, FullIp6Input, Gw4Input, Gw6Input, Ip4Input, Ip6Input};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
@@ -23,13 +23,13 @@ pub struct IP4<T: Config>(
 pub const MIN_IP4_LENGTH: u32 = 9;
 pub const MAX_IP4_LENGTH: u32 = 18;
 
-impl<T: Config> TryFrom<IP4Input> for IP4<T> {
+impl<T: Config> TryFrom<Ip4Input> for IP4<T> {
     type Error = Error<T>;
 
     /// Fallible initialization from a provided byte vector if it is below the
     /// minimum or exceeds the maximum allowed length or contains invalid ASCII
     /// characters.
-    fn try_from(value: IP4Input) -> Result<Self, Self::Error> {
+    fn try_from(value: Ip4Input) -> Result<Self, Self::Error> {
         ensure!(
             value.len() >= MIN_IP4_LENGTH.saturated_into(),
             Self::Error::IP4TooShort
@@ -75,13 +75,13 @@ pub struct GW4<T: Config>(
 pub const MIN_GW4_LENGTH: u32 = 7;
 pub const MAX_GW4_LENGTH: u32 = 15;
 
-impl<T: Config> TryFrom<GW4Input> for GW4<T> {
+impl<T: Config> TryFrom<Gw4Input> for GW4<T> {
     type Error = Error<T>;
 
     /// Fallible initialization from a provided byte vector if it is below the
     /// minimum or exceeds the maximum allowed length or contains invalid ASCII
     /// characters.
-    fn try_from(value: GW4Input) -> Result<Self, Self::Error> {
+    fn try_from(value: Gw4Input) -> Result<Self, Self::Error> {
         ensure!(
             value.len() >= MIN_GW4_LENGTH.saturated_into(),
             Self::Error::GW4TooShort
@@ -127,13 +127,13 @@ pub struct IP6<T: Config>(
 pub const MIN_IP6_LENGTH: u32 = 3;
 pub const MAX_IP6_LENGTH: u32 = 43;
 
-impl<T: Config> TryFrom<IP6Input> for IP6<T> {
+impl<T: Config> TryFrom<Ip6Input> for IP6<T> {
     type Error = Error<T>;
 
     /// Fallible initialization from a provided byte vector if it is below the
     /// minimum or exceeds the maximum allowed length or contains invalid ASCII
     /// characters.
-    fn try_from(value: IP6Input) -> Result<Self, Self::Error> {
+    fn try_from(value: Ip6Input) -> Result<Self, Self::Error> {
         ensure!(
             value.len() >= MIN_IP6_LENGTH.saturated_into(),
             Self::Error::IP6TooShort
@@ -179,13 +179,13 @@ pub struct GW6<T: Config>(
 pub const MIN_GW6_LENGTH: u32 = MIN_IP6_LENGTH;
 pub const MAX_GW6_LENGTH: u32 = 39;
 
-impl<T: Config> TryFrom<GW6Input> for GW6<T> {
+impl<T: Config> TryFrom<Gw6Input> for GW6<T> {
     type Error = Error<T>;
 
     /// Fallible initialization from a provided byte vector if it is below the
     /// minimum or exceeds the maximum allowed length or contains invalid ASCII
     /// characters.
-    fn try_from(value: GW6Input) -> Result<Self, Self::Error> {
+    fn try_from(value: Gw6Input) -> Result<Self, Self::Error> {
         ensure!(
             value.len() >= MIN_GW6_LENGTH.saturated_into(),
             Self::Error::GW6TooShort
@@ -268,4 +268,77 @@ fn validate_domain_name(input: &[u8]) -> bool {
     input
         .iter()
         .all(|c| matches!(c, b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'.'))
+}
+
+/// A Full IP4.
+/// Needs to be valid IP and Gateway, IP must also fall in range of gateway
+#[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(T))]
+#[codec(mel_bound())]
+pub struct FullPublicIp6<T: Config> {
+    pub ip: BoundedVec<u8, ConstU32<MAX_IP6_LENGTH>>,
+    pub gateway: BoundedVec<u8, ConstU32<MAX_GW6_LENGTH>>,
+    _marker: PhantomData<(T, ConstU32<MAX_GW6_LENGTH>)>,
+}
+
+impl<T: Config> TryFrom<FullIp6Input> for FullPublicIp6<T> {
+    type Error = Error<T>;
+
+    /// Fallible initialization from a provided byte vector
+    fn try_from(value: FullIp6Input) -> Result<Self, Self::Error> {
+        ensure!(
+            value.gw.len() >= MIN_GW6_LENGTH.saturated_into(),
+            Self::Error::GatewayIPTooShort
+        );
+        ensure!(
+            value.gw.len() <= MAX_GW6_LENGTH.saturated_into(),
+            Self::Error::GatewayIPTooLong
+        );
+
+        ensure!(
+            value.ip.len() >= MIN_IP6_LENGTH.saturated_into(),
+            Self::Error::PublicIPTooShort
+        );
+        ensure!(
+            value.ip.len() <= MAX_IP6_LENGTH.saturated_into(),
+            Self::Error::PublicIPTooLong
+        );
+
+        if let Ok(gw) = IPv6::parse(&value.gw) {
+            ensure!(gw.is_public() && gw.is_unicast(), Self::Error::InvalidGW4);
+            if let Ok(ip) = IPv6Cidr::parse(&value.ip) {
+                ensure!(
+                    ip.is_public() && ip.is_unicast() && ip.contains(gw),
+                    Self::Error::InvalidIP6
+                );
+            } else {
+                return Err(Self::Error::InvalidIP6);
+            }
+            Ok(Self {
+                ip: value.ip,
+                gateway: value.gw,
+                _marker: PhantomData,
+            })
+        } else {
+            Err(Self::Error::InvalidGW4)
+        }
+    }
+}
+
+// FIXME: did not find a way to automatically implement this.
+impl<T: Config> PartialEq for FullPublicIp6<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.ip == other.ip && self.gateway == other.gateway
+    }
+}
+
+// FIXME: did not find a way to automatically implement this.
+impl<T: Config> Clone for FullPublicIp6<T> {
+    fn clone(&self) -> Self {
+        Self {
+            ip: self.ip.clone(),
+            gateway: self.gateway.clone(),
+            _marker: PhantomData,
+        }
+    }
 }

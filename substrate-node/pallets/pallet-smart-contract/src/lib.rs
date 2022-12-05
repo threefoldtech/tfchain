@@ -129,7 +129,7 @@ pub mod pallet {
     pub type DeploymentDataInput<T> = BoundedVec<u8, MaxDeploymentDataLength<T>>;
     pub type NameContractNameOf<T> = <T as Config>::NameContractName;
     pub type ContractPublicIP<T> =
-        PublicIP<<T as pallet_tfgrid::Config>::PublicIP, <T as pallet_tfgrid::Config>::GatewayIP>;
+        PublicIP<<T as pallet_tfgrid::Config>::IP4, <T as pallet_tfgrid::Config>::GW4>;
 
     #[pallet::storage]
     #[pallet::getter(fn contracts)]
@@ -889,8 +889,8 @@ impl<T: Config> Pallet<T> {
 
         let public_ips_list: BoundedVec<
             PublicIP<
-                <T as pallet_tfgrid::Config>::PublicIP,
-                <T as pallet_tfgrid::Config>::GatewayIP,
+                <T as pallet_tfgrid::Config>::IP4,
+                <T as pallet_tfgrid::Config>::GW4,
             >,
             MaxNodeContractPublicIPs<T>,
         > = vec![].try_into().unwrap();
@@ -2009,8 +2009,8 @@ impl<T: Config> Pallet<T> {
 
         let mut ips: BoundedVec<
             PublicIP<
-                <T as pallet_tfgrid::Config>::PublicIP,
-                <T as pallet_tfgrid::Config>::GatewayIP,
+                <T as pallet_tfgrid::Config>::IP4,
+                <T as pallet_tfgrid::Config>::GW4,
             >,
             MaxNodeContractPublicIPs<T>,
         > = vec![].try_into().unwrap();
@@ -2072,8 +2072,8 @@ impl<T: Config> Pallet<T> {
 
         let mut public_ips: BoundedVec<
             PublicIP<
-                <T as pallet_tfgrid::Config>::PublicIP,
-                <T as pallet_tfgrid::Config>::GatewayIP,
+                <T as pallet_tfgrid::Config>::IP4,
+                <T as pallet_tfgrid::Config>::GW4,
             >,
             MaxNodeContractPublicIPs<T>,
         > = vec![].try_into().unwrap();

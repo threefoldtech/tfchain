@@ -20,8 +20,8 @@ use sp_std::convert::{TryFrom, TryInto};
 use substrate_fixed::types::U64F64;
 use tfchain_support::types::{
     CapacityReservationPolicy, ConsumableResources, NodeFeatures, PowerTarget, PublicConfig, IP,
+    FarmCertification, NodeCertification, PublicIP
 };
-use tfchain_support::types::{FarmCertification, NodeCertification, PublicIP};
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -2162,7 +2162,7 @@ fn test_deployment_contract_billing_cycles_delete_node_cancels_contract() {
         };
 
         let mut ips: BoundedVec<
-            PublicIP<TestPublicIP, TestGatewayIP>,
+            PublicIP<TestIP4, TestGW4>,
             crate::MaxNodeContractPublicIPs<TestRuntime>,
         > = vec![].try_into().unwrap();
         ips.try_push(public_ip).unwrap();
@@ -3702,11 +3702,11 @@ pub fn prepare_twins() {
 pub fn prepare_farm(source: AccountId, dedicated: bool) {
     let farm_name = "test_farm";
     let mut pub_ips = Vec::new();
-    pub_ips.push(pallet_tfgrid_types::PublicIpInput {
+    pub_ips.push(IP {
         ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
         gw: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
     });
-    pub_ips.push(pallet_tfgrid_types::PublicIpInput {
+    pub_ips.push(IP {
         ip: "185.206.122.34/24".as_bytes().to_vec().try_into().unwrap(),
         gw: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
     });

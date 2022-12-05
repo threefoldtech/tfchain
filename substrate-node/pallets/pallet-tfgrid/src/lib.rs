@@ -83,19 +83,26 @@ pub mod pallet {
     // Concrete Farm Name type
     pub type FarmNameOf<T> = <T as Config>::FarmName;
 
-    // Input type for public ip
-    pub type PublicIpIpInput = BoundedVec<u8, ConstU32<{ pub_ip::MAX_IP_LENGTH }>>;
-    pub type PublicIpGatewayInput = BoundedVec<u8, ConstU32<{ pub_ip::MAX_GATEWAY_LENGTH }>>;
-    pub type FarmPublicIpInput = types::PublicIpInput<PublicIpIpInput, PublicIpGatewayInput>;
+    // Input type for IP4 (IP & GW)
+    pub type Ip4Input = BoundedVec<u8, ConstU32<{ pub_config::MAX_IP4_LENGTH }>>;
+    pub type Gw4Input = BoundedVec<u8, ConstU32<{ pub_config::MAX_GW4_LENGTH }>>;
+    pub type FullIp4Input = IP<Ip4Input, Gw4Input>;
+
+    // Input type for IP6 (IP & GW)
+    pub type Ip6Input = BoundedVec<u8, ConstU32<{ pub_config::MAX_IP6_LENGTH }>>;
+    pub type Gw6Input = BoundedVec<u8, ConstU32<{ pub_config::MAX_GW6_LENGTH }>>;
+    pub type FullIp6Input = IP<Ip6Input, Gw6Input>;
 
     // Concrete type for Public IP type
-    pub type PublicIpIpOf<T> = <T as Config>::PublicIP;
-    pub type PublicIpGatewayOf<T> = <T as Config>::GatewayIP;
-    pub type FarmPublicIpValidator<T> = <T as Config>::FarmPublicIP;
+    pub type PublicIpIpOf<T> = <T as Config>::IP4;
+    pub type PublicIpGatewayOf<T> = <T as Config>::GW4;
     pub type PublicIpOf<T> = PublicIP<PublicIpIpOf<T>, PublicIpGatewayOf<T>>;
 
+    pub type FullIp4Validator<T> = <T as Config>::FullIp4;
+    pub type FullIp6Validator<T> = <T as Config>::FullIp6;
+
     // Input type for public ip list
-    pub type PublicIpListInput<T> = BoundedVec<FarmPublicIpInput, <T as Config>::MaxFarmPublicIps>;
+    pub type PublicIpListInput<T> = BoundedVec<FullIp4Input, <T as Config>::MaxFarmPublicIps>;
     // Concrete type for public ip list type
     pub type PublicIpListOf<T> = BoundedVec<PublicIpOf<T>, ConstU32<256>>;
 
@@ -120,12 +127,8 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, u32, Vec<u8>, ValueQuery>;
 
     // Input type for public config
-    pub type IP4Input = BoundedVec<u8, ConstU32<{ pub_config::MAX_IP4_LENGTH }>>;
-    pub type GW4Input = BoundedVec<u8, ConstU32<{ pub_config::MAX_GW4_LENGTH }>>;
-    pub type PubConfigIP4Input = IP<IP4Input, GW4Input>;
-    pub type IP6Input = BoundedVec<u8, ConstU32<{ pub_config::MAX_IP6_LENGTH }>>;
-    pub type GW6Input = BoundedVec<u8, ConstU32<{ pub_config::MAX_GW6_LENGTH }>>;
-    pub type PubConfigIP6Input = IP<IP6Input, GW6Input>;
+    pub type PubConfigIP4Input = IP<Ip4Input, Gw4Input>;
+    pub type PubConfigIP6Input = IP<Ip6Input, Gw6Input>;
     pub type DomainInput = BoundedVec<u8, ConstU32<{ pub_config::MAX_DOMAIN_NAME_LENGTH }>>;
     pub type PubConfigInput =
         PublicConfig<PubConfigIP4Input, Option<PubConfigIP6Input>, Option<DomainInput>>;
@@ -336,36 +339,6 @@ pub mod pallet {
             + Into<Vec<u8>>
             + MaxEncodedLen;
 
-        /// The type of a public IP.
-        type PublicIP: FullCodec
-            + Debug
-            + PartialEq
-            + Eq
-            + Clone
-            + TypeInfo
-            + TryFrom<PublicIpIpInput, Error = Error<Self>>
-            + MaxEncodedLen;
-
-        /// The type of a gateway IP.
-        type GatewayIP: FullCodec
-            + Debug
-            + PartialEq
-            + Eq
-            + Clone
-            + TypeInfo
-            + TryFrom<PublicIpGatewayInput, Error = Error<Self>>
-            + MaxEncodedLen;
-
-        /// The type of a gateway IP.
-        type FarmPublicIP: FullCodec
-            + Debug
-            + PartialEq
-            + Eq
-            + Clone
-            + TypeInfo
-            + TryFrom<FarmPublicIpInput, Error = Error<Self>>
-            + MaxEncodedLen;
-
         /// The type of a IP4.
         type IP4: FullCodec
             + Debug
@@ -373,7 +346,7 @@ pub mod pallet {
             + Eq
             + Clone
             + TypeInfo
-            + TryFrom<IP4Input, Error = Error<Self>>
+            + TryFrom<Ip4Input, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of a GW4.
@@ -383,7 +356,17 @@ pub mod pallet {
             + Eq
             + Clone
             + TypeInfo
-            + TryFrom<GW4Input, Error = Error<Self>>
+            + TryFrom<Gw4Input, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        /// The type of a full IP4.
+        type FullIp4: FullCodec
+            + Debug
+            + PartialEq
+            + Eq
+            + Clone
+            + TypeInfo
+            + TryFrom<FullIp4Input, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of a IP6.
@@ -393,7 +376,7 @@ pub mod pallet {
             + Eq
             + Clone
             + TypeInfo
-            + TryFrom<IP6Input, Error = Error<Self>>
+            + TryFrom<Ip6Input, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of a GW6.
@@ -403,7 +386,17 @@ pub mod pallet {
             + Eq
             + Clone
             + TypeInfo
-            + TryFrom<GW6Input, Error = Error<Self>>
+            + TryFrom<Gw6Input, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        /// The type of a full IP6.
+        type FullIp6: FullCodec
+            + Debug
+            + PartialEq
+            + Eq
+            + Clone
+            + TypeInfo
+            + TryFrom<FullIp6Input, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of a domain.
@@ -1001,8 +994,8 @@ pub mod pallet {
         pub fn add_farm_ip(
             origin: OriginFor<T>,
             id: u32,
-            ip: PublicIpIpInput,
-            gateway: PublicIpGatewayInput,
+            ip: Ip4Input,
+            gateway: Gw4Input,
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
@@ -1014,7 +1007,7 @@ pub mod pallet {
                 Error::<T>::CannotUpdateFarmWrongTwin
             );
 
-            let _ = Self::validate_full_public_ip(types::PublicIpInput {
+            let _ = Self::validate_full_public_ip4(IP {
                 ip: ip.clone(),
                 gw: gateway.clone(),
             })?;
@@ -1049,7 +1042,7 @@ pub mod pallet {
         pub fn remove_farm_ip(
             origin: OriginFor<T>,
             id: u32,
-            ip: PublicIpIpInput,
+            ip: Ip4Input,
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
@@ -1378,6 +1371,11 @@ pub mod pallet {
             ensure!(node.farm_id == farm_id, Error::<T>::NodeUpdateNotAuthorized);
 
             if let Some(config) = public_config {
+                let _ = Self::validate_full_public_ip4(IP {
+                    ip: config.ip4.ip.clone(),
+                    gw: config.ip4.gw.clone(),
+                })?;
+
                 let pub_config = Self::get_public_config(config)?;
                 // update the public config and save
                 node.public_config = Some(pub_config);
@@ -1966,7 +1964,7 @@ pub mod pallet {
         pub fn force_reset_farm_ip(
             origin: OriginFor<T>,
             farm_id: u32,
-            ip: PublicIpIpInput,
+            ip: Ip4Input,
         ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
@@ -2436,23 +2434,31 @@ impl<T: Config> Pallet<T> {
     }
 
     fn get_public_ip_ip(
-        public_ip_ip: PublicIpIpInput,
+        public_ip_ip: Ip4Input,
     ) -> Result<PublicIpIpOf<T>, DispatchErrorWithPostInfo> {
-        let public_ip_ip_parsed = <T as Config>::PublicIP::try_from(public_ip_ip)?;
+        let public_ip_ip_parsed = <T as Config>::IP4::try_from(public_ip_ip)?;
         Ok(public_ip_ip_parsed)
     }
 
     fn get_public_ip_gw(
-        public_ip_gw: PublicIpGatewayInput,
+        public_ip_gw: Gw4Input,
     ) -> Result<PublicIpGatewayOf<T>, DispatchErrorWithPostInfo> {
-        let public_ip_gw_parsed = <T as Config>::GatewayIP::try_from(public_ip_gw)?;
+        let public_ip_gw_parsed = <T as Config>::GW4::try_from(public_ip_gw)?;
         Ok(public_ip_gw_parsed)
     }
 
-    fn validate_full_public_ip(
-        input: FarmPublicIpInput,
-    ) -> Result<FarmPublicIpValidator<T>, DispatchErrorWithPostInfo> {
-        let p = <T as Config>::FarmPublicIP::try_from(input)?;
+    fn validate_full_public_ip4(
+        input: FullIp4Input,
+    ) -> Result<FullIp4Validator<T>, DispatchErrorWithPostInfo> {
+        let p = <T as Config>::FullIp4::try_from(input)?;
+
+        Ok(p)
+    }
+
+    fn validate_full_public_ip6(
+        input: FullIp6Input,
+    ) -> Result<FullIp6Validator<T>, DispatchErrorWithPostInfo> {
+        let p = <T as Config>::FullIp6::try_from(input)?;
 
         Ok(p)
     }
@@ -2489,22 +2495,22 @@ impl<T: Config> Pallet<T> {
         Ok(public_ips_list)
     }
 
-    fn get_ip4(ip4: IP4Input) -> Result<Ip4Of<T>, DispatchErrorWithPostInfo> {
+    fn get_ip4(ip4: Ip4Input) -> Result<Ip4Of<T>, DispatchErrorWithPostInfo> {
         let ip4_parsed = <T as Config>::IP4::try_from(ip4)?;
         Ok(ip4_parsed)
     }
 
-    fn get_gw4(gw4: GW4Input) -> Result<Gw4Of<T>, DispatchErrorWithPostInfo> {
+    fn get_gw4(gw4: Gw4Input) -> Result<Gw4Of<T>, DispatchErrorWithPostInfo> {
         let gw4_parsed = <T as Config>::GW4::try_from(gw4)?;
         Ok(gw4_parsed)
     }
 
-    fn get_ip6(ip6: IP6Input) -> Result<Ip6Of<T>, DispatchErrorWithPostInfo> {
+    fn get_ip6(ip6: Ip6Input) -> Result<Ip6Of<T>, DispatchErrorWithPostInfo> {
         let ip6_parsed = <T as Config>::IP6::try_from(ip6)?;
         Ok(ip6_parsed)
     }
 
-    fn get_gw6(gw6: GW6Input) -> Result<Gw6Of<T>, DispatchErrorWithPostInfo> {
+    fn get_gw6(gw6: Gw6Input) -> Result<Gw6Of<T>, DispatchErrorWithPostInfo> {
         let gw6_parsed = <T as Config>::GW6::try_from(gw6)?;
         Ok(gw6_parsed)
     }
@@ -2527,6 +2533,10 @@ impl<T: Config> Pallet<T> {
         };
 
         if let Some(ipv6_config) = config.ip6 {
+            Self::validate_full_public_ip6(IP {
+                ip: ipv6_config.ip.clone(),
+                gw: ipv6_config.gw.clone(),
+            })?;
             pub_config.ip6 = Some(IP {
                 ip: Self::get_ip6(ipv6_config.ip)?,
                 gw: Self::get_gw6(ipv6_config.gw)?,

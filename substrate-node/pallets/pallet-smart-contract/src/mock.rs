@@ -13,19 +13,18 @@ use frame_support::{
 };
 use frame_system::EnsureRoot;
 use pallet_tfgrid::node::{CityName, CountryName};
-use pallet_tfgrid::pub_ip::FarmPublicIp;
 use pallet_tfgrid::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
     node::{Location, SerialNumber},
-    pub_config::{Domain, GW4, GW6, IP4, IP6},
-    pub_ip::{GatewayIP, PublicIP},
+    pub_config::{Domain, FullPublicIp6, GW4, GW6, IP4, IP6},
+    pub_ip::{FullPublicIp4},
     terms_cond::TermsAndConditions,
     twin::TwinIp,
-    DocumentHashInput, DocumentLinkInput, PublicIpGatewayInput, PublicIpIpInput, TwinIpInput,
+    DocumentHashInput, DocumentLinkInput, TwinIpInput,
 };
 use pallet_tfgrid::{
-    CityNameInput, CountryNameInput, GW4Input, GW6Input, IP4Input, IP6Input, LatitudeInput,
+    CityNameInput, CountryNameInput, Gw4Input, Gw6Input, Ip4Input, Ip6Input, LatitudeInput,
     LongitudeInput,
 };
 use parking_lot::RwLock;
@@ -164,15 +163,15 @@ pub(crate) type TestTermsAndConditions = TermsAndConditions<TestRuntime>;
 
 pub(crate) type TestTwinIp = TwinIp<TestRuntime>;
 pub(crate) type TestFarmName = FarmName<TestRuntime>;
-pub(crate) type TestPublicIP = PublicIP<TestRuntime>;
-pub(crate) type TestGatewayIP = GatewayIP<TestRuntime>;
-pub(crate) type TestFarmPublicIP = FarmPublicIp<TestRuntime>;
 
 pub(crate) type TestIP4 = IP4<TestRuntime>;
 pub(crate) type TestGW4 = GW4<TestRuntime>;
 pub(crate) type TestIP6 = IP6<TestRuntime>;
 pub(crate) type TestGW6 = GW6<TestRuntime>;
 pub(crate) type TestDomain = Domain<TestRuntime>;
+
+pub(crate) type TestFullIp4 = FullPublicIp4<TestRuntime>;
+pub(crate) type TestFullIp6 = FullPublicIp6<TestRuntime>;
 
 pub(crate) type TestInterfaceName = InterfaceName<TestRuntime>;
 pub(crate) type TestInterfaceMac = InterfaceMac<TestRuntime>;
@@ -194,13 +193,12 @@ impl pallet_tfgrid::Config for TestRuntime {
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
-    type PublicIP = TestPublicIP;
-    type GatewayIP = TestGatewayIP;
-    type FarmPublicIP = TestFarmPublicIP;
     type IP4 = TestIP4;
     type GW4 = TestGW4;
+    type FullIp4 = TestFullIp4;
     type IP6 = TestIP6;
     type GW6 = TestGW6;
+    type FullIp6 = TestFullIp6;
     type Domain = TestDomain;
     type MaxInterfacesLength = MaxInterfacesLength;
     type InterfaceName = TestInterfaceName;
@@ -278,22 +276,22 @@ pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {
     BoundedVec::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
 }
 
-pub(crate) fn get_public_ip_ip_input(public_ip_ip_input: &[u8]) -> PublicIpIpInput {
+pub(crate) fn get_public_ip_ip_input(public_ip_ip_input: &[u8]) -> Ip4Input {
     BoundedVec::try_from(public_ip_ip_input.to_vec()).expect("Invalid public ip (ip) input.")
 }
 
-pub(crate) fn get_public_ip_gw_input(public_ip_gw_input: &[u8]) -> PublicIpGatewayInput {
+pub(crate) fn get_public_ip_gw_input(public_ip_gw_input: &[u8]) -> Gw4Input {
     BoundedVec::try_from(public_ip_gw_input.to_vec()).expect("Invalid public ip (gw) input.")
 }
 
-pub(crate) fn get_public_ip_ip(public_ip_ip_input: &[u8]) -> TestPublicIP {
+pub(crate) fn get_public_ip_ip(public_ip_ip_input: &[u8]) -> TestIP4 {
     let input = get_public_ip_ip_input(public_ip_ip_input);
-    TestPublicIP::try_from(input).expect("Invalid public ip (ip).")
+    TestIP4::try_from(input).expect("Invalid public ip (ip).")
 }
 
-pub(crate) fn get_public_ip_gw(public_ip_gw_input: &[u8]) -> TestGatewayIP {
+pub(crate) fn get_public_ip_gw(public_ip_gw_input: &[u8]) -> TestGW4 {
     let input = get_public_ip_gw_input(public_ip_gw_input);
-    TestGatewayIP::try_from(input).expect("Invalid public ip (gw).")
+    TestGW4::try_from(input).expect("Invalid public ip (gw).")
 }
 
 pub(crate) fn get_city_name_input(city_input: &[u8]) -> CityNameInput {
@@ -312,19 +310,19 @@ pub(crate) fn get_longitude_input(longitude_input: &[u8]) -> LongitudeInput {
     BoundedVec::try_from(longitude_input.to_vec()).expect("Invalid longitude input.")
 }
 
-pub(crate) fn get_pub_config_ip4_input(ip4_input: &[u8]) -> IP4Input {
+pub(crate) fn get_pub_config_ip4_input(ip4_input: &[u8]) -> Ip4Input {
     BoundedVec::try_from(ip4_input.to_vec()).expect("Invalid ip4 input.")
 }
 
-pub(crate) fn get_pub_config_gw4_input(gw4_input: &[u8]) -> GW4Input {
+pub(crate) fn get_pub_config_gw4_input(gw4_input: &[u8]) -> Gw4Input {
     BoundedVec::try_from(gw4_input.to_vec()).expect("Invalid gw4 input.")
 }
 
-pub(crate) fn get_pub_config_ip6_input(ip6_input: &[u8]) -> IP6Input {
+pub(crate) fn get_pub_config_ip6_input(ip6_input: &[u8]) -> Ip6Input {
     BoundedVec::try_from(ip6_input.to_vec()).expect("Invalid ip6 input.")
 }
 
-pub(crate) fn get_pub_config_gw6_input(gw6_input: &[u8]) -> GW6Input {
+pub(crate) fn get_pub_config_gw6_input(gw6_input: &[u8]) -> Gw6Input {
     BoundedVec::try_from(gw6_input.to_vec()).expect("Invalid gw6 input.")
 }
 

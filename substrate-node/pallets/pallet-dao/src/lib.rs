@@ -49,9 +49,11 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
     use pallet_tfgrid::farm::FarmName;
-    use pallet_tfgrid::pub_ip::{GatewayIP, PublicIP};
     use sp_std::convert::TryInto;
-    use tfchain_support::types::PublicIP as SupportPublicIP;
+    use tfchain_support::types::PublicIP;
+
+    type IP<T> =
+        PublicIP<<T as pallet_tfgrid::Config>::IP4, <T as pallet_tfgrid::Config>::GW4>;
 
     #[pallet::config]
     pub trait Config:
@@ -78,7 +80,7 @@ pub mod pallet {
         type Tfgrid: Tfgrid<
             Self::AccountId,
             FarmName<Self>,
-            SupportPublicIP<PublicIP<Self>, GatewayIP<Self>>,
+            IP<Self>,
         >;
         type NodeChanged: ChangeNode<
             LocationOf<Self>,
