@@ -34,7 +34,7 @@ default-features = false
 git = "https://github.com/threefoldtech/tfchain_tft_bridge"
 package = "pallet-tft-bridge"
 version = "2.4.0"
-#path = "../../../tfchain_tft/pallet-tft-bridge"
+#path = "../../../tfchain_tft_bridge/pallet-tft-bridge"
 
 [dependencies.pallet-tft-price]
 default-features = false
@@ -132,7 +132,8 @@ try-runtime = [
     "pallet-timestamp/try-runtime",
     "pallet-transaction-payment/try-runtime",
     "pallet-smart-contract/try-runtime",
-    "pallet-tfgrid/try-runtime"
+    "pallet-tfgrid/try-runtime",
+    "pallet-tft-bridge/try-runtime",
 ]
 std = [
     'codec/std',
