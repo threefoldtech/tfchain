@@ -4,6 +4,7 @@ use frame_support::{construct_runtime, parameter_types, traits::ConstU32, Bounde
 use frame_system::EnsureRoot;
 use pallet_collective;
 use pallet_tfgrid::node::{CityName, CountryName};
+use pallet_tfgrid::pub_ip::FarmPublicIp;
 use pallet_tfgrid::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
@@ -130,6 +131,7 @@ pub(crate) type TestTwinIp = TwinIp<Test>;
 pub(crate) type TestFarmName = FarmName<Test>;
 pub(crate) type TestPublicIP = PublicIP<Test>;
 pub(crate) type TestGatewayIP = GatewayIP<Test>;
+pub(crate) type TestFarmPublicIP = FarmPublicIp<Test>;
 
 pub(crate) type TestIP4 = IP4<Test>;
 pub(crate) type TestGW4 = GW4<Test>;
@@ -159,6 +161,7 @@ impl pallet_tfgrid::Config for Test {
     type MaxFarmPublicIps = MaxFarmPublicIps;
     type PublicIP = TestPublicIP;
     type GatewayIP = TestGatewayIP;
+    type FarmPublicIP = TestFarmPublicIP;
     type IP4 = TestIP4;
     type GW4 = TestGW4;
     type IP6 = TestIP6;
