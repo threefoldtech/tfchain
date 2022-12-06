@@ -326,13 +326,12 @@ impl pallet_sudo::Config for Runtime {
 
 pub type Serial = pallet_tfgrid::pallet::SerialNumberOf<Runtime>;
 pub type Loc = pallet_tfgrid::pallet::LocationOf<Runtime>;
-pub type PubConfig = pallet_tfgrid::pallet::PubConfigOf<Runtime>;
 pub type Interface = pallet_tfgrid::pallet::InterfaceOf<Runtime>;
 
 pub type TfgridNode = pallet_tfgrid::pallet::TfgridNode<Runtime>;
 
 pub struct NodeChanged;
-impl ChangeNode<Loc, PubConfig, Interface, Serial> for NodeChanged {
+impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
     fn node_changed(old_node: Option<&TfgridNode>, new_node: &TfgridNode) {
         Dao::node_changed(old_node, new_node)
     }
@@ -343,12 +342,9 @@ impl ChangeNode<Loc, PubConfig, Interface, Serial> for NodeChanged {
     }
 }
 
-pub type PublicIpIp = pallet_tfgrid::pallet::Ip4Of<Runtime>;
-pub type PublicIpGw = pallet_tfgrid::pallet::Gw4Of<Runtime>;
-
 pub struct PublicIpModifierType;
-impl PublicIpModifier<PublicIP<PublicIpIp, PublicIpGw>> for PublicIpModifierType {
-    fn ip_removed(ip: &PublicIP<PublicIpIp, PublicIpGw>) {
+impl PublicIpModifier for PublicIpModifierType {
+    fn ip_removed(ip: &PublicIP) {
         SmartContractModule::ip_removed(ip);
     }
 }
@@ -371,13 +367,6 @@ impl pallet_tfgrid::Config for Runtime {
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
     type FarmName = pallet_tfgrid::farm::FarmName<Runtime>;
-    type IP4 = pallet_tfgrid::ip::IP4<Runtime>;
-    type GW4 = pallet_tfgrid::ip::GW4<Runtime>;
-    type FullIp4 = pallet_tfgrid::ip::FullPublicIp4<Runtime>;
-    type IP6 = pallet_tfgrid::ip::IP6<Runtime>;
-    type GW6 = pallet_tfgrid::ip::GW6<Runtime>;
-    type FullIp6 = pallet_tfgrid::ip::FullPublicIp6<Runtime>;
-    type Domain = pallet_tfgrid::ip::Domain<Runtime>;
     type MaxInterfacesLength = MaxInterfacesLength;
     type InterfaceName = pallet_tfgrid::interface::InterfaceName<Runtime>;
     type InterfaceMac = pallet_tfgrid::interface::InterfaceMac<Runtime>;

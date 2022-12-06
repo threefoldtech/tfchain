@@ -7808,6 +7808,7 @@ dependencies = [
  "scale-info",
  "sp-runtime",
  "sp-std",
+ "valip",
 ]
 
 [[package]]

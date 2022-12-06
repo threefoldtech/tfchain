@@ -1,13 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "128"]
 
-use pallet_tfgrid::pallet::{
-    InterfaceOf,
-    LocationOf,
-    PubConfigOf,
-    SerialNumberOf,
-    TfgridNode,
-};
+use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf, TfgridNode};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
@@ -50,10 +44,6 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use pallet_tfgrid::farm::FarmName;
     use sp_std::convert::TryInto;
-    use tfchain_support::types::PublicIP;
-
-    type IP<T> =
-        PublicIP<<T as pallet_tfgrid::Config>::IP4, <T as pallet_tfgrid::Config>::GW4>;
 
     #[pallet::config]
     pub trait Config:
@@ -77,17 +67,8 @@ pub mod pallet {
         /// The minimum amount of vetos to dissaprove a proposal
         type MinVetos: Get<u32>;
 
-        type Tfgrid: Tfgrid<
-            Self::AccountId,
-            FarmName<Self>,
-            IP<Self>,
-        >;
-        type NodeChanged: ChangeNode<
-            LocationOf<Self>,
-            PubConfigOf<Self>,
-            InterfaceOf<Self>,
-            SerialNumberOf<Self>,
-        >;
+        type Tfgrid: Tfgrid<Self::AccountId, FarmName<Self>>;
+        type NodeChanged: ChangeNode<LocationOf<Self>, InterfaceOf<Self>, SerialNumberOf<Self>>;
 
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
@@ -524,10 +505,7 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-impl<T: Config>
-    ChangeNode<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>
-    for Pallet<T>
-{
+impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for Pallet<T> {
     fn node_changed(old_node: Option<&TfgridNode<T>>, new_node: &TfgridNode<T>) {
         let new_node_weight = new_node.resources.total_resources.get_node_weight();
         match old_node {

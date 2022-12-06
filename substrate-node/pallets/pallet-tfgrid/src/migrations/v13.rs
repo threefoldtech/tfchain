@@ -1,6 +1,6 @@
 use crate::{
-    types::StorageVersion, Config, InterfaceOf, LocationOf, Pallet, PalletVersion, PubConfigOf,
-    SerialNumberOf, TFGRID_NODE_VERSION,
+    types::StorageVersion, Config, InterfaceOf, LocationOf, Pallet, PalletVersion, SerialNumberOf,
+    TFGRID_NODE_VERSION,
 };
 use frame_support::Blake2_128Concat;
 use frame_support::{
@@ -25,7 +25,7 @@ pub type Nodes<T: Config> = StorageMap<
     Pallet<T>,
     Blake2_128Concat,
     u32,
-    super::types::v13::Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
+    super::types::v13::Node<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
     OptionQuery,
 >;
 
@@ -88,40 +88,36 @@ pub fn migrate_to_version_13<T: Config>() -> frame_support::weights::Weight {
     let mut migrated_count = 0;
 
     Nodes::<T>::translate::<
-        super::types::v12::Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
+        super::types::v12::Node<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
         _,
     >(|k, n| {
-        let migrated_node = super::types::v13::Node::<
-            LocationOf<T>,
-            PubConfigOf<T>,
-            InterfaceOf<T>,
-            SerialNumberOf<T>,
-        > {
-            version: TFGRID_NODE_VERSION,
-            id: n.id,
-            farm_id: n.farm_id,
-            twin_id: n.twin_id,
-            resources: ConsumableResources {
-                total_resources: n.resources,
-                used_resources: Resources::empty(),
-            },
-            location: n.location,
-            power: Power {
-                target: PowerTarget::Up,
-                state: PowerState::Up,
-                last_uptime: <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000,
-            },
-            // optional public config
-            public_config: n.public_config,
-            created: n.created,
-            farming_policy_id: n.farming_policy_id,
-            interfaces: n.interfaces,
-            certification: n.certification,
-            secure_boot: n.secure_boot,
-            virtualized: n.virtualized,
-            serial_number: n.serial_number,
-            connection_price: n.connection_price,
-        };
+        let migrated_node =
+            super::types::v13::Node::<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> {
+                version: TFGRID_NODE_VERSION,
+                id: n.id,
+                farm_id: n.farm_id,
+                twin_id: n.twin_id,
+                resources: ConsumableResources {
+                    total_resources: n.resources,
+                    used_resources: Resources::empty(),
+                },
+                location: n.location,
+                power: Power {
+                    target: PowerTarget::Up,
+                    state: PowerState::Up,
+                    last_uptime: <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000,
+                },
+                // optional public config
+                public_config: n.public_config,
+                created: n.created,
+                farming_policy_id: n.farming_policy_id,
+                interfaces: n.interfaces,
+                certification: n.certification,
+                secure_boot: n.secure_boot,
+                virtualized: n.virtualized,
+                serial_number: n.serial_number,
+                connection_price: n.connection_price,
+            };
 
         migrated_count += 1;
 

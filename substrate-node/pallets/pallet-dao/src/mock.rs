@@ -8,10 +8,9 @@ use pallet_tfgrid::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
     node::{Location, SerialNumber},
-    ip::{Domain, FullPublicIp4, FullPublicIp6, GW4, GW6, IP4, IP6},
     terms_cond::TermsAndConditions,
     twin::TwinIp,
-    DocumentHashInput, DocumentLinkInput, PublicIpOf, TwinIpInput,
+    DocumentHashInput, DocumentLinkInput, TwinIpInput,
 };
 use pallet_tfgrid::{CityNameInput, CountryNameInput, LatitudeInput, LongitudeInput};
 use pallet_timestamp;
@@ -22,6 +21,7 @@ use sp_runtime::{
 };
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::traits::{ChangeNode, PublicIpModifier};
+use tfchain_support::types::PublicIP;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -84,13 +84,12 @@ parameter_types! {
 
 pub(crate) type Serial = pallet_tfgrid::pallet::SerialNumberOf<Test>;
 pub(crate) type Loc = pallet_tfgrid::pallet::LocationOf<Test>;
-pub(crate) type PubConfig = pallet_tfgrid::pallet::PubConfigOf<Test>;
 pub(crate) type Interface = pallet_tfgrid::pallet::InterfaceOf<Test>;
 
 pub(crate) type TfgridNode = pallet_tfgrid::pallet::TfgridNode<Test>;
 
 pub struct NodeChanged;
-impl ChangeNode<Loc, PubConfig, Interface, Serial> for NodeChanged {
+impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
     fn node_changed(old_node: Option<&TfgridNode>, new_node: &TfgridNode) {
         DaoModule::node_changed(old_node, new_node)
     }
@@ -100,8 +99,8 @@ impl ChangeNode<Loc, PubConfig, Interface, Serial> for NodeChanged {
 }
 
 pub struct PublicIpModifierType;
-impl PublicIpModifier<PublicIpOf<Test>> for PublicIpModifierType {
-    fn ip_removed(_ip: &PublicIpOf<Test>) {}
+impl PublicIpModifier for PublicIpModifierType {
+    fn ip_removed(_ip: &PublicIP) {}
 }
 
 use super::weights;
@@ -128,15 +127,6 @@ pub(crate) type TestTermsAndConditions = TermsAndConditions<Test>;
 pub(crate) type TestTwinIp = TwinIp<Test>;
 pub(crate) type TestFarmName = FarmName<Test>;
 
-pub(crate) type TestIP4 = IP4<Test>;
-pub(crate) type TestGW4 = GW4<Test>;
-pub(crate) type TestIP6 = IP6<Test>;
-pub(crate) type TestGW6 = GW6<Test>;
-pub(crate) type TestDomain = Domain<Test>;
-
-pub(crate) type TestFullIp4 = FullPublicIp4<Test>;
-pub(crate) type TestFullIp6 = FullPublicIp6<Test>;
-
 pub(crate) type TestInterfaceName = InterfaceName<Test>;
 pub(crate) type TestInterfaceMac = InterfaceMac<Test>;
 pub(crate) type TestInterfaceIp = InterfaceIp<Test>;
@@ -157,13 +147,6 @@ impl pallet_tfgrid::Config for Test {
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
-    type IP4 = TestIP4;
-    type GW4 = TestGW4;
-    type FullIp4 = TestFullIp4;
-    type IP6 = TestIP6;
-    type GW6 = TestGW6;
-    type FullIp6 = TestFullIp6;
-    type Domain = TestDomain;
     type MaxInterfacesLength = MaxInterfacesLength;
     type InterfaceName = TestInterfaceName;
     type InterfaceMac = TestInterfaceMac;

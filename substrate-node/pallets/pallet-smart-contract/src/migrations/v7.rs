@@ -15,7 +15,7 @@ use frame_support::{
 };
 use log::{info, debug};
 use sp_std::{cmp::max, collections::btree_map::BTreeMap, marker::PhantomData, vec, vec::Vec};
-use tfchain_support::{resources::Resources, types::ConsumableResources};
+use tfchain_support::{resources::Resources, types::{ConsumableResources}};
 
 #[cfg(feature = "try-runtime")]
 use frame_support::traits::OnRuntimeUpgradeHelpersExt;
@@ -24,13 +24,14 @@ use sp_runtime::SaturatedConversion;
 
 pub mod deprecated {
     use crate::pallet::{
-        ContractPublicIP, MaxDeploymentDataLength, MaxNodeContractPublicIPs,
+        MaxDeploymentDataLength, MaxNodeContractPublicIPs,
     };
     use crate::types;
     use crate::Config;
     use codec::{Decode, Encode, MaxEncodedLen};
     use frame_support::decl_module;
     use frame_support::{BoundedVec, RuntimeDebugNoBound};
+    use tfchain_support::types::PublicIP;
 
     use scale_info::TypeInfo;
     use sp_std::prelude::*;
@@ -61,7 +62,7 @@ pub mod deprecated {
         pub deployment_hash: types::HexHash,
         pub deployment_data: BoundedVec<u8, MaxDeploymentDataLength<T>>,
         pub public_ips: u32,
-        pub public_ips_list: BoundedVec<ContractPublicIP<T>, MaxNodeContractPublicIPs<T>>,
+        pub public_ips_list: BoundedVec<PublicIP, MaxNodeContractPublicIPs<T>>,
     }
 
     #[derive(
