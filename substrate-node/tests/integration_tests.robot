@@ -287,7 +287,7 @@ Test Add Public Config On Node: Failure InvalidIP4
 
     Setup Network And Create Node
 
-    Run Keyword And Expect Error    *'InvalidPublicIP'*
+    Run Keyword And Expect Error    *'InvalidPublicConfig'*
     ...    Add Node Public Config    farm_id=${1}    node_id=${1}    ipv4=185.206.122.33    gw4=185.206.122.1    domain=some-domain
 
     Tear Down Multi Node Network
@@ -298,7 +298,7 @@ Test Add Public Config On Node: Failure InvalidIP6
 
     Setup Network And Create Node  
 
-    Run Keyword And Expect Error    *'InvalidPublicIP'*
+    Run Keyword And Expect Error    *'InvalidPublicConfig'*
     ...    Add Node Public Config    farm_id=${1}    node_id=${1}    ipv4=185.206.122.33/24    gw4=185.206.122.1    ipv6=2a10:b600:1::0cc4:7a30:65b5    gw6=2a10:b600:1::1    domain=some-domain
     
     Tear Down Multi Node Network

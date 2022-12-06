@@ -577,6 +577,8 @@ pub mod pallet {
         UnauthorizedToChangePowerTarget,
         NotEnoughResourcesOnNode,
         ResourcesUsedByActiveContracts,
+
+        InvalidPublicConfig,
     }
 
     #[pallet::genesis_config]
@@ -1268,7 +1270,9 @@ pub mod pallet {
             ensure!(node.farm_id == farm_id, Error::<T>::NodeUpdateNotAuthorized);
 
             if let Some(config) = public_config {
-                config.is_valid().map_err(|_| Error::<T>::InvalidPublicIP)?;
+                config
+                    .is_valid()
+                    .map_err(|_| Error::<T>::InvalidPublicConfig)?;
                 // update the public config and save
                 node.public_config = Some(config);
             } else {

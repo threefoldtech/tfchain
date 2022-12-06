@@ -1289,7 +1289,7 @@ fn test_node_public_config_falsy_values_fails() {
                 1,
                 Some(pub_config_input)
             ),
-            Error::<TestRuntime>::InvalidPublicIP
+            Error::<TestRuntime>::InvalidPublicConfig
         );
     });
 }

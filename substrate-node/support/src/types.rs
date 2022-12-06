@@ -230,6 +230,7 @@ pub enum PublicIpError {
     InvalidIp6,
     InvalidGw6,
     InvalidPublicIp,
+    InvalidDomain,
 }
 
 impl IP4 {
@@ -276,6 +277,12 @@ impl IP6 {
 
 impl PublicConfig {
     pub fn is_valid(&self) -> Result<(), PublicIpError> {
+        if let Some(domain) = &self.domain {
+            if !is_valid_domain(&domain) {
+                return Err(PublicIpError::InvalidDomain);
+            }
+        }
+
         self.ip4.is_valid()?;
 
         let gw4 = IPv4::parse(&self.ip4.gw).map_err(|_| PublicIpError::InvalidGw4)?;
@@ -296,6 +303,12 @@ impl PublicConfig {
             return Err(PublicIpError::InvalidPublicIp);
         }
     }
+}
+
+fn is_valid_domain(input: &[u8]) -> bool {
+    input
+        .iter()
+        .all(|c| matches!(c, b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'.'))
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, TypeInfo, Copy)]
