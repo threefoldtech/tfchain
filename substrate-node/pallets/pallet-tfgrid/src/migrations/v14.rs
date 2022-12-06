@@ -9,7 +9,7 @@ use log::{debug, info};
 use sp_std::marker::PhantomData;
 use tfchain_support::{
     traits::PublicIpModifier,
-    types::{Farm, Node, PublicConfig, PublicIP, IP4},
+    types::{Farm, Node, PublicIP, IP4},
 };
 
 #[cfg(feature = "try-runtime")]
@@ -73,25 +73,15 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
         super::types::v13::Node<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
         _,
     >(|k, n| {
-        migrated_count += 1;
-
         // By default initialize the public config to None
         let mut public_config = None;
-        // If the node has a valid public config we can assign it
         if let Some(config) = n.public_config {
-            match validate_public_config_ip4::<T>(config) {
-                Ok(config) => {
-                    if matches!(config, None) {
-                        info!("resetting pub config of node: {:?}", k);
-                    }
-                    public_config = config;
-                }
-                Err(e) => {
+            // If the config is valid, keep it, otherwise discard
+            match config.is_valid() {
+                Ok(_) => public_config = Some(config),
+                Err(_) => {
+                    info!("resetting pub config of node: {:?}", k);
                     public_config = None;
-                    info!(
-                        "failed to parse pub config for node: {:?}, error: {:?}",
-                        k, e
-                    );
                 }
             }
         }
@@ -104,8 +94,7 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
             resources: n.resources,
             location: n.location,
             power: n.power,
-            // optional public config
-            public_config: public_config,
+            public_config,
             created: n.created,
             farming_policy_id: n.farming_policy_id,
             interfaces: n.interfaces,
@@ -116,6 +105,7 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
             connection_price: n.connection_price,
         };
         debug!("Node: {:?} succesfully migrated", k);
+        migrated_count += 1;
         Some(new_node)
     });
 
@@ -123,10 +113,6 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
         " <<< Node storage updated! Migrated {} Nodes ✅",
         migrated_count
     );
-
-    // Update pallet storage version
-    PalletVersion::<T>::set(StorageVersion::V13Struct);
-    info!(" <<< Storage version upgraded");
 
     // Return the weight consumed by the migration.
     T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
@@ -185,15 +171,6 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
     T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
 }
 
-fn validate_public_config_ip4<T: Config>(
-    config: PublicConfig,
-) -> Result<Option<PublicConfig>, Error<T>> {
-    match config.is_valid() {
-        Ok(_) => Ok(Some(config)),
-        Err(_) => Ok(None),
-    }
-}
-
 fn validate_public_ips<T: Config>(
     farm: &FarmInfoOf<T>,
 ) -> Result<BoundedVec<PublicIP, ConstU32<256>>, Error<T>> {
@@ -210,6 +187,7 @@ fn validate_public_ips<T: Config>(
                 let _ = parsed_public_ips.try_push(pub_ip);
             }
             Err(_) => {
+                info!("resetting farm ip for farm {:?}", farm.id);
                 if pub_ip.contract_id != 0 {
                     T::PublicIpModifier::ip_removed(&pub_ip)
                 }
