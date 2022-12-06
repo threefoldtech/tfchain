@@ -1,8 +1,8 @@
 use crate::pallet;
 use crate::pallet::BalanceOf;
-use crate::pallet::Error;
 use crate::types;
 use crate::types::{Contract, ContractBillingInformation};
+use crate::CapacityReservationResources;
 use crate::Config;
 use frame_support::dispatch::DispatchErrorWithPostInfo;
 use pallet_tfgrid::types as pallet_tfgrid_types;
@@ -58,17 +58,17 @@ impl<T: Config> Contract<T> {
                 let contract_billing_info = self.get_billing_info();
                 // Get the node resources
                 let node_resources =
-                    pallet_tfgrid::NodeResources::<T>::get(capacity_reservation_contract.node_id)
-                        .ok_or(Error::<T>::NodeResourcesNotExists)?;
+                    pallet_tfgrid::NodeResources::<T>::get(capacity_reservation_contract.node_id);
+                let capacity_reservation_resources =
+                    CapacityReservationResources::<T>::get(self.contract_id);
 
                 let contract_cost = calculate_resources_cost::<T>(
-                    &capacity_reservation_contract.resources.total_resources,
+                    &capacity_reservation_resources.total_resources,
                     capacity_reservation_contract.public_ips,
                     seconds_elapsed,
                     &pricing_policy,
                 );
-                if node_resources.total_resources
-                    == capacity_reservation_contract.resources.total_resources
+                if node_resources.total_resources == capacity_reservation_resources.total_resources
                 {
                     Percent::from_percent(pricing_policy.discount_for_dedication_nodes)
                         * contract_cost

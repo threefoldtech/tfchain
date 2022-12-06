@@ -4,8 +4,8 @@ use crate::{
         Deployment, NameContract, StorageVersion, ContractResources,
     },
     
-    ActiveNodeContracts, BalanceOf, BillingFrequency, Config,
-    ContractBillingInformationByID, ContractID, ContractLock, Contracts as ContractsV7,
+    ActiveDeployments, ActiveNodeContracts, BalanceOf, BillingFrequency, CapacityReservationResources,
+    Config, ContractBillingInformationByID, ContractID, ContractLock, Contracts as ContractsV7,
     ContractsToBillAt, DeploymentID, Deployments, Pallet, 
     PalletVersion, CONTRACT_VERSION,
 };
@@ -194,13 +194,15 @@ pub fn post_migration_checks<T: Config>() {
             ContractData::CapacityReservationContract(crc) => {
                 let mut resources_check = Resources::empty();
                 let mut pub_ips = 0;
-                deployments_count += crc.deployments.len();
-                for d_id in crc.deployments {
+                let deployments = ActiveDeployments::<T>::get(contract.contract_id);
+                deployments_count += deployments.len();
+                for d_id in deployments {
                     let deployment = Deployments::<T>::get(d_id).unwrap();
                     resources_check.add(&deployment.resources);
                     pub_ips += deployment.public_ips;
                 }
-                assert_eq!(crc.resources.used_resources, resources_check, 
+                let crc_resources = CapacityReservationResources::<T>::get(contract.contract_id);
+                assert_eq!(crc_resources.used_resources, resources_check, 
                     "Migration failure! The used resources of capacity reservation contract with id {:?} are incorrect!",
                     contract.contract_id
                 );
@@ -228,16 +230,11 @@ pub fn post_migration_checks<T: Config>() {
     // check node resources
     count = 0;
     for (node_id, crc_ids) in ActiveNodeContracts::<T>::iter() {
-        let node_resources = pallet_tfgrid::NodeResources::<T>::get(node_id).unwrap();
+        let node_resources = pallet_tfgrid::NodeResources::<T>::get(node_id);
         let mut resources_check = Resources::empty();
         for crc_id in crc_ids {
-            let ctr = ContractsV7::<T>::get(crc_id).unwrap();
-            let crc = match ctr.contract_type {
-                ContractData::CapacityReservationContract(dc) => Some(dc),
-                _ => None,
-            }
-            .unwrap();
-            resources_check.add(&crc.resources.total_resources);
+            let crc_resources = CapacityReservationResources::<T>::get(crc_id);
+            resources_check.add(&crc_resources.total_resources);
         }
         assert_eq!(
             node_resources.used_resources, resources_check,
@@ -371,14 +368,16 @@ pub fn translate_contract_objects<T: Config>(
                     // required resource. The only deployment is the one created above. Also take the public ips from it.
                     let capacity_reservation_contract = CapacityReservationContract {
                             node_id: nc.node_id,
-                            deployments: vec![ctr.contract_id],
                             public_ips: nc.public_ips,
-                            resources: ConsumableResources {
-                                total_resources: used_resources.clone(),
-                                used_resources: used_resources.clone(),
-                            },
                             group_id: None,
                         };
+                    let deployments = vec![ctr.contract_id];
+                    ActiveDeployments::<T>::insert(crc_id, &deployments);
+                    CapacityReservationResources::<T>::insert(crc_id, &ConsumableResources {
+                        total_resources: used_resources.clone(),
+                        used_resources: used_resources.clone(),
+                    });
+                    writes += 2;
                     // gather the node changes
                     node_changes.entry(nc.node_id).and_modify(|changes| {
                         changes.active_contracts.push(crc_id);
@@ -436,27 +435,27 @@ pub fn translate_contract_objects<T: Config>(
                 Some(ContractData::NameContract(NameContract { name: nc.name }))
             }
             deprecated::ContractData::RentContract(ref rc) => {
-                if let Some(node_resources) = pallet_tfgrid::NodeResources::<T>::get(rc.node_id) {
+                if pallet_tfgrid::Nodes::<T>::contains_key(rc.node_id) {
+                    let node_resources = pallet_tfgrid::NodeResources::<T>::get(rc.node_id);
                     reads += 2;
                     let crc = CapacityReservationContract {
                         node_id: rc.node_id,
-                        deployments: vec![], // will be filled in later
                         public_ips: 0,       // will be modified later
-                        resources: ConsumableResources {
-                            total_resources: node_resources.total_resources,
-                            used_resources: Resources::empty(), // will be modified later
-                        },
                         group_id: None,
                     };
+                    CapacityReservationResources::<T>::insert(ctr.contract_id, &ConsumableResources {
+                        total_resources: node_resources.total_resources,
+                        used_resources: Resources::empty(), // will be modified later
+                    });
                     // gather the node changes
                     node_changes
                         .entry(crc.node_id)
                         .and_modify(|changes| {
                             changes.active_contracts.push(ctr.contract_id);
-                            changes.used_resources.add(&crc.resources.total_resources);
+                            changes.used_resources.add(&node_resources.total_resources);
                         })
                         .or_insert(NodeChanges {
-                            used_resources: crc.resources.total_resources,
+                            used_resources: node_resources.total_resources,
                             active_contracts: vec![ctr.contract_id],
                         });
                     Some(ContractData::CapacityReservationContract(crc))
@@ -498,14 +497,17 @@ pub fn translate_contract_objects<T: Config>(
                 _ => None,
             };
             if let Some(mut crc) = crc {
-                crc.resources.used_resources = contract_changes.used_resources;
                 crc.public_ips = contract_changes.public_ips;
-                crc.deployments = contract_changes.deployments;
                 crc_contract.contract_type = ContractData::CapacityReservationContract(crc);
 
+                let mut consumable_resources = CapacityReservationResources::<T>::get(contract_id);
+                consumable_resources.used_resources = contract_changes.used_resources;
+                CapacityReservationResources::<T>::insert(contract_id, &consumable_resources);
+                ActiveDeployments::<T>::insert(contract_id, contract_changes.deployments);
                 ContractBillingInformationByID::<T>::insert(contract_id, contract_changes.billing_info);
                 ContractLock::<T>::insert(contract_id, contract_changes.contract_lock);
-                writes += 2;
+                writes += 4;
+                reads += 1;
             } else {
                 log::error!(
                     "Contract {:?} is not a capacity reservation contract! This should not happen here!", 
@@ -529,7 +531,8 @@ pub fn translate_contract_objects<T: Config>(
     for (node_id, nc) in node_changes.iter() {
         ActiveNodeContracts::<T>::insert(node_id, &nc.active_contracts);
 
-        if let Some(mut node_resources) = pallet_tfgrid::NodeResources::<T>::get(node_id) {
+        if pallet_tfgrid::Nodes::<T>::contains_key(node_id) {
+            let mut node_resources = pallet_tfgrid::NodeResources::<T>::get(node_id);
             node_resources.used_resources = nc.used_resources;
             pallet_tfgrid::NodeResources::<T>::insert(node_id, &node_resources);
             reads += 1;

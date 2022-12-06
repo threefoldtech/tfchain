@@ -73,10 +73,8 @@ impl<T: Config> Contract<T> {
 #[codec(mel_bound())]
 pub struct CapacityReservationContract {
     pub node_id: u32,
-    pub resources: ConsumableResources,
     pub group_id: Option<u32>,
     pub public_ips: u32,
-    pub deployments: Vec<u64>,
 }
 
 // HexHash is hex encoded hash

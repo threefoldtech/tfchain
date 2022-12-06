@@ -176,12 +176,12 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn node_power)]
-    pub type NodePower<T> = StorageMap<_, Blake2_128Concat, u32, Power, OptionQuery>;
+    pub type NodePower<T> = StorageMap<_, Blake2_128Concat, u32, Power, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn node_resources)]
     pub type NodeResources<T> =
-        StorageMap<_, Blake2_128Concat, u32, ConsumableResources, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, u32, ConsumableResources, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn entities)]
@@ -592,8 +592,6 @@ pub mod pallet {
         UnauthorizedToChangePowerTarget,
         NotEnoughResourcesOnNode,
         ResourcesUsedByActiveContracts,
-        NodeResourcesNotExists,
-        NodePowerNotExists,
         
         InvalidPublicConfig,
     }
@@ -1118,8 +1116,7 @@ pub mod pallet {
 
             ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
 
-            let mut node_resources =
-                NodeResources::<T>::get(node_id).ok_or(Error::<T>::NodeResourcesNotExists)?;
+            let mut node_resources = NodeResources::<T>::get(node_id);
 
             // we can only reduce as much as we have free resources on our node
             let resources_reduction = node_resources.calculate_reduction_in_resources(&resources);
@@ -1265,8 +1262,7 @@ pub mod pallet {
             );
             let node_id = NodeIdByTwinID::<T>::get(twin_id);
 
-            let mut node_power =
-                NodePower::<T>::get(node_id).ok_or(Error::<T>::NodePowerNotExists)?;
+            let mut node_power = NodePower::<T>::get(node_id);
 
             let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
             node_power.last_uptime = now;
@@ -1339,8 +1335,7 @@ pub mod pallet {
             nodes_by_farm.remove(location);
             NodesByFarmID::<T>::insert(stored_node.farm_id, nodes_by_farm);
 
-            let node_resources =
-                NodeResources::<T>::get(id).ok_or(Error::<T>::NodeResourcesNotExists)?;
+            let node_resources = NodeResources::<T>::get(id);
             // Call node deleted
             T::NodeChanged::node_deleted(&stored_node, &node_resources.total_resources);
 
@@ -1858,8 +1853,7 @@ pub mod pallet {
             );
 
             // Call node deleted
-            let node_resources =
-                NodeResources::<T>::get(node_id).ok_or(Error::<T>::NodeResourcesNotExists)?;
+            let node_resources = NodeResources::<T>::get(node_id);
             T::NodeChanged::node_deleted(&node, &node_resources.total_resources);
 
             let mut nodes_by_farm = NodesByFarmID::<T>::get(node.farm_id);
@@ -2117,7 +2111,7 @@ impl<T: Config> Pallet<T> {
         );
         let node_id = NodeIdByTwinID::<T>::get(twin_id);
         let node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-        let mut node_power = NodePower::<T>::get(node_id).ok_or(Error::<T>::NodePowerNotExists)?;
+        let mut node_power = NodePower::<T>::get(node_id);
         //if the power state is not correct => change it and emit event
         if node_power.state != power_state {
             node_power.state = power_state.clone();
@@ -2141,7 +2135,7 @@ impl<T: Config> Pallet<T> {
         let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
         let node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
         let farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
-        let mut node_power = NodePower::<T>::get(node_id).ok_or(Error::<T>::NodePowerNotExists)?;
+        let mut node_power = NodePower::<T>::get(node_id);
         ensure!(
             twin_id == farm.twin_id && matches!(power_target, PowerTarget::Up),
             Error::<T>::UnauthorizedToChangePowerTarget
@@ -2174,9 +2168,8 @@ impl<T: Config> Pallet<T> {
         to_claim: Resources,
     ) -> DispatchResultWithPostInfo {
         let node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-        let mut node_resources =
-            NodeResources::<T>::get(node_id).ok_or(Error::<T>::NodeResourcesNotExists)?;
-        let mut node_power = NodePower::<T>::get(node_id).ok_or(Error::<T>::NodePowerNotExists)?;
+        let mut node_resources = NodeResources::<T>::get(node_id);
+        let mut node_power = NodePower::<T>::get(node_id);
 
         node_resources.free(&to_free);
         ensure!(
@@ -2244,8 +2237,7 @@ impl<T: Config> Pallet<T> {
         node: &TfgridNode<T>,
     ) -> Result<types::FarmingPolicy<T::BlockNumber>, DispatchErrorWithPostInfo> {
         let mut farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
-        let node_resources =
-            NodeResources::<T>::get(node.id).ok_or(Error::<T>::NodeResourcesNotExists)?;
+        let node_resources = NodeResources::<T>::get(node.id);
 
         // If there is a farming policy defined on the
         // farm policy limits, use that one
