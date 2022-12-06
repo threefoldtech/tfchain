@@ -17,7 +17,6 @@ use pallet_tfgrid::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
     node::{Location, SerialNumber},
-    ip::{Domain, FullPublicIp4, FullPublicIp6, GW4, GW6, IP4, IP6},
     terms_cond::TermsAndConditions,
     twin::TwinIp,
     DocumentHashInput, DocumentLinkInput, TwinIpInput,
@@ -44,7 +43,10 @@ use sp_runtime::{
     AccountId32,
 };
 use sp_std::convert::{TryFrom, TryInto};
-use tfchain_support::traits::{ChangeNode, PublicIpModifier};
+use tfchain_support::{
+    traits::{ChangeNode, PublicIpModifier},
+    types::PublicIP,
+};
 
 // set environment variable RUST_LOG=debug to see all logs when running the tests and call
 // env_logger::init() at the beginning of the test
@@ -130,14 +132,12 @@ impl pallet_balances::Config for TestRuntime {
 
 pub(crate) type Serial = pallet_tfgrid::pallet::SerialNumberOf<TestRuntime>;
 pub(crate) type Loc = pallet_tfgrid::pallet::LocationOf<TestRuntime>;
-pub(crate) type PubConfig = pallet_tfgrid::pallet::PubConfigOf<TestRuntime>;
 pub(crate) type Interface = pallet_tfgrid::pallet::InterfaceOf<TestRuntime>;
-pub(crate) type PublicIp = pallet_tfgrid::pallet::PublicIpOf<TestRuntime>;
 
 pub(crate) type TfgridNode = pallet_tfgrid::pallet::TfgridNode<TestRuntime>;
 
 pub struct NodeChanged;
-impl ChangeNode<Loc, PubConfig, Interface, Serial> for NodeChanged {
+impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
     fn node_changed(_old_node: Option<&TfgridNode>, _new_node: &TfgridNode) {}
     fn node_deleted(node: &TfgridNode) {
         SmartContractModule::node_deleted(node);
@@ -145,8 +145,8 @@ impl ChangeNode<Loc, PubConfig, Interface, Serial> for NodeChanged {
 }
 
 pub struct PublicIpModifierType;
-impl PublicIpModifier<PublicIp> for PublicIpModifierType {
-    fn ip_removed(ip: &PublicIp) {
+impl PublicIpModifier for PublicIpModifierType {
+    fn ip_removed(ip: &PublicIP) {
         SmartContractModule::ip_removed(ip);
     }
 }
@@ -162,15 +162,6 @@ pub(crate) type TestTermsAndConditions = TermsAndConditions<TestRuntime>;
 
 pub(crate) type TestTwinIp = TwinIp<TestRuntime>;
 pub(crate) type TestFarmName = FarmName<TestRuntime>;
-
-pub(crate) type TestIP4 = IP4<TestRuntime>;
-pub(crate) type TestGW4 = GW4<TestRuntime>;
-pub(crate) type TestIP6 = IP6<TestRuntime>;
-pub(crate) type TestGW6 = GW6<TestRuntime>;
-pub(crate) type TestDomain = Domain<TestRuntime>;
-
-pub(crate) type TestFullIp4 = FullPublicIp4<TestRuntime>;
-pub(crate) type TestFullIp6 = FullPublicIp6<TestRuntime>;
 
 pub(crate) type TestInterfaceName = InterfaceName<TestRuntime>;
 pub(crate) type TestInterfaceMac = InterfaceMac<TestRuntime>;
@@ -192,13 +183,6 @@ impl pallet_tfgrid::Config for TestRuntime {
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
-    type IP4 = TestIP4;
-    type GW4 = TestGW4;
-    type FullIp4 = TestFullIp4;
-    type IP6 = TestIP6;
-    type GW6 = TestGW6;
-    type FullIp6 = TestFullIp6;
-    type Domain = TestDomain;
     type MaxInterfacesLength = MaxInterfacesLength;
     type InterfaceName = TestInterfaceName;
     type InterfaceMac = TestInterfaceMac;
@@ -281,16 +265,6 @@ pub(crate) fn get_public_ip_ip_input(public_ip_ip_input: &[u8]) -> Ip4Input {
 
 pub(crate) fn get_public_ip_gw_input(public_ip_gw_input: &[u8]) -> Gw4Input {
     BoundedVec::try_from(public_ip_gw_input.to_vec()).expect("Invalid public ip (gw) input.")
-}
-
-pub(crate) fn get_public_ip_ip(public_ip_ip_input: &[u8]) -> TestIP4 {
-    let input = get_public_ip_ip_input(public_ip_ip_input);
-    TestIP4::try_from(input).expect("Invalid public ip (ip).")
-}
-
-pub(crate) fn get_public_ip_gw(public_ip_gw_input: &[u8]) -> TestGW4 {
-    let input = get_public_ip_gw_input(public_ip_gw_input);
-    TestGW4::try_from(input).expect("Invalid public ip (gw).")
 }
 
 pub(crate) fn get_city_name_input(city_input: &[u8]) -> CityNameInput {
