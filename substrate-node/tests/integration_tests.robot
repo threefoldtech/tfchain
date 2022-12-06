@@ -199,7 +199,7 @@ Test Add Remove Public Ips
     Setup Network And Create Farm
 
     # Add an ip to the farm
-    Add Farm Ip    id=${1}    ip=185.206.122.125/16    gateway=185.206.122.1
+    Add Farm Ip    id=${1}    ip=185.206.122.125/16    gw=185.206.122.1
     ${farm} =    Get Farm    ${1}
     Should Not Be Equal    ${farm}    ${None}
     Public Ips Should Contain Ip    ${farm}[public_ips]    185.206.122.125/16
@@ -217,7 +217,7 @@ Test Add Public Ips: Failure InvalidPublicIP
     Setup Network And Create Farm
     # Add an ip in an invalid format
     Run Keyword And Expect Error    *'InvalidIP4'*
-    ...    Add Farm Ip    id=${1}    ip="185.206.122.125"    gateway=185.206.122.1
+    ...    Add Farm Ip    id=${1}    ip="185.206.122.125"    gw=185.206.122.1
 
     Tear Down Multi Node Network
 
@@ -287,7 +287,7 @@ Test Add Public Config On Node: Failure InvalidIP4
 
     Setup Network And Create Node
 
-    Run Keyword And Expect Error    *'InvalidIP4'*
+    Run Keyword And Expect Error    *'InvalidPublicIP'*
     ...    Add Node Public Config    farm_id=${1}    node_id=${1}    ipv4=185.206.122.33    gw4=185.206.122.1    domain=some-domain
 
     Tear Down Multi Node Network
@@ -298,7 +298,7 @@ Test Add Public Config On Node: Failure InvalidIP6
 
     Setup Network And Create Node  
 
-    Run Keyword And Expect Error    *'InvalidIP6'*
+    Run Keyword And Expect Error    *'InvalidPublicIP'*
     ...    Add Node Public Config    farm_id=${1}    node_id=${1}    ipv4=185.206.122.33/24    gw4=185.206.122.1    ipv6=2a10:b600:1::0cc4:7a30:65b5    gw6=2a10:b600:1::1    domain=some-domain
     
     Tear Down Multi Node Network
