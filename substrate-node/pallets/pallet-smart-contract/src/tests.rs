@@ -1089,12 +1089,16 @@ fn test_deployment_update_increase_resources_works() {
         );
         let updated_data = get_updated_deployment_data();
         let updated_hash = generate_deployment_hash();
+        let mut updated_resources = half_resources_c1();
+        // dubbel the resources for cru and hru only (is still a valid increase in resources)
+        updated_resources.cru = updated_resources.cru * 2;
+        updated_resources.hru = updated_resources.hru * 2;
         assert_ok!(SmartContractModule::deployment_update(
             Origin::signed(alice()),
             1,
             updated_hash,
             updated_data.clone(),
-            Some(resources_c1()),
+            Some(updated_resources),
         ));
         assert_eq!(
             SmartContractModule::deployments(1).unwrap(),
@@ -1105,7 +1109,7 @@ fn test_deployment_update_increase_resources_works() {
                 deployment_data: updated_data,
                 deployment_hash: updated_hash,
                 public_ips: 0,
-                resources: resources_c1(),
+                resources: updated_resources,
                 public_ips_list: vec![].try_into().unwrap(),
             }
         );

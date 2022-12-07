@@ -313,10 +313,6 @@ Test Add Public Config On Node: Failure InvalidDomain
 
     Tear Down Multi Node Network
 
-#Test Create Update Cancel Capacity Reservation Contract: Success
-    
-    
-
 Test Create Update Cancel Deployment: Success
     [Documentation]    Testing api calls (create, update, cancel) for managing a node contract
     Setup Multi Node Network    log_name=test_create_node_contract
@@ -348,7 +344,7 @@ Test Create Update Cancel Deployment: Success
     Should Be Equal    ${farm}[public_ips][0][gateway]    185.206.122.1    msg=The gateway should be 185.206.122.1
     Should Be Equal    ${farm}[public_ips][0][contract_id]    ${1}    msg=The public ip was claimed in deployment with id 1 while the farm contains a different contract id for it
 
-    ${updated_resources} =    Resources    hru=${512}    sru=${128}    cru=${1}    mru=${6}
+    ${updated_resources} =    Resources    hru=${512}    sru=${256}    cru=${2}    mru=${4}
     Update Deployment    deployment_id=${1}    resources=${updated_resources}    who=Bob    port=9946
 
     Cancel Deployment    deployment_id=${1}    who=Bob    port=9946

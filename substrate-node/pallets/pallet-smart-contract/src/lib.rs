@@ -1200,12 +1200,9 @@ impl<T: Config> Pallet<T> {
 
         // update the resources with the extra resources
         if let Some(resources) = resources {
-            let capacity_reservation_resources =
-                CapacityReservationResources::<T>::get(cr_contract.contract_id);
             if deployment.resources != resources {
                 ensure!(
-                    capacity_reservation_resources.calculate_reduction_in_resources(&resources)
-                        == Resources::empty(),
+                    Resources::subtraction(&deployment.resources, &resources) == Resources::empty(),
                     Error::<T>::NotAllowedToReduceResources
                 );
                 // we free the previously reserved resources and consume the new resources
