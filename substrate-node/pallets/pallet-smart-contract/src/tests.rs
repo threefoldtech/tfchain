@@ -157,7 +157,6 @@ fn test_create_capacity_contract_reservation_finding_node_using_group() {
             types::ContractData::CapacityReservationContract(types::CapacityReservationContract {
                 node_id: 1,
                 group_id: None,
-                public_ips: 0,
             })
         );
         assert_eq!(
@@ -198,7 +197,6 @@ fn test_capacity_reservation_contract_with_policy_any_and_features_works() {
             types::ContractData::CapacityReservationContract(types::CapacityReservationContract {
                 node_id: 3,
                 group_id: None,
-                public_ips: 0,
             })
         );
         assert_eq!(
@@ -328,8 +326,8 @@ fn test_deployment_create_with_public_ips_works() {
 
         let deployment = SmartContractModule::deployments(1).unwrap();
 
-        let farm = TfgridModule::farms(1).unwrap();
-        assert_eq!(farm.public_ips[0].contract_id, 1);
+        let farm_public_ips = TfgridModule::farm_public_ips(1);
+        assert_eq!(farm_public_ips[0].contract_id, 1);
 
         assert_eq!(deployment.public_ips, 2);
 
@@ -534,7 +532,6 @@ fn test_capacity_reservation_contract_create_reserving_full_node_then_deployment
             SmartContractModule::contracts(1).unwrap().contract_type,
             types::ContractData::CapacityReservationContract(types::CapacityReservationContract {
                 group_id: None,
-                public_ips: 0,
                 node_id: node_id
             })
         );
@@ -570,7 +567,6 @@ fn test_capacity_reservation_contract_create_reserving_full_node_then_deployment
             SmartContractModule::contracts(1).unwrap().contract_type,
             types::ContractData::CapacityReservationContract(types::CapacityReservationContract {
                 group_id: None,
-                public_ips: 0,
                 node_id: node_id,
             })
         );
@@ -752,7 +748,6 @@ fn test_capacity_reservation_contract_update_works() {
         let capacity_reservation_contract = types::CapacityReservationContract {
             node_id: 1,
             group_id: None,
-            public_ips: 0,
         };
         let contract_type =
             types::ContractData::CapacityReservationContract(capacity_reservation_contract);
@@ -972,7 +967,6 @@ fn test_deployment_cancel_contract_free_resources_works() {
             types::ContractData::CapacityReservationContract(types::CapacityReservationContract {
                 node_id: 1,
                 group_id: None,
-                public_ips: 0,
             })
         );
         assert_eq!(
@@ -1000,18 +994,18 @@ fn test_deployment_cancel_contract_frees_public_ips_works() {
             2,
         ));
 
-        let farm = TfgridModule::farms(1).unwrap();
-        assert_eq!(farm.public_ips[0].contract_id, 1);
-        assert_eq!(farm.public_ips[1].contract_id, 1);
+        let farm_public_ips = TfgridModule::farm_public_ips(1);
+        assert_eq!(farm_public_ips[0].contract_id, 1);
+        assert_eq!(farm_public_ips[1].contract_id, 1);
 
         assert_ok!(SmartContractModule::deployment_cancel(
             Origin::signed(alice()),
             1
         ));
 
-        let farm = TfgridModule::farms(1).unwrap();
-        assert_eq!(farm.public_ips[0].contract_id, 0);
-        assert_eq!(farm.public_ips[1].contract_id, 0);
+        let farm_public_ips = TfgridModule::farm_public_ips(1);
+        assert_eq!(farm_public_ips[0].contract_id, 0);
+        assert_eq!(farm_public_ips[1].contract_id, 0);
     });
 }
 
@@ -1457,7 +1451,6 @@ fn test_capacity_reservation_contract_create_reserving_all_resources_node_works(
         let contract = SmartContractModule::contracts(1).unwrap();
         let rent_contract = types::CapacityReservationContract {
             group_id: None,
-            public_ips: 0,
             node_id: 1,
         };
         assert_eq!(SmartContractModule::active_deployments(1).len(), 0);
@@ -1498,7 +1491,6 @@ fn test_cancel_capacity_reservation_contract_all_resources_of_node_works() {
             types::ContractData::CapacityReservationContract(types::CapacityReservationContract {
                 node_id: node_id,
                 group_id: None,
-                public_ips: 0,
             })
         );
         assert_eq!(SmartContractModule::active_deployments(1).len(), 0);
@@ -2523,7 +2515,6 @@ fn test_restore_deployment_contract_in_grace_works() {
             SmartContractModule::contracts(1).unwrap().contract_type,
             types::ContractData::CapacityReservationContract(types::CapacityReservationContract {
                 node_id: 1,
-                public_ips: 0,
                 group_id: None,
             })
         );
@@ -2712,7 +2703,6 @@ fn test_capacity_reservation_contract_full_node_billing() {
             SmartContractModule::contracts(1).unwrap().contract_type,
             types::ContractData::CapacityReservationContract(types::CapacityReservationContract {
                 node_id: node_id,
-                public_ips: 0,
                 group_id: None,
             })
         );
@@ -3931,7 +3921,6 @@ pub fn create_capacity_reservation_and_add_to_group(
         types::ContractData::CapacityReservationContract(types::CapacityReservationContract {
             node_id: expected_node_id,
             group_id: Some(group_id),
-            public_ips: 0,
         })
     );
     assert_eq!(
@@ -4193,7 +4182,6 @@ fn prepare_farm_three_nodes_three_capacity_reservation_contracts() {
         types::ContractData::CapacityReservationContract(types::CapacityReservationContract {
             node_id: 1,
             group_id: None,
-            public_ips: 0,
         })
     );
     assert_eq!(SmartContractModule::active_deployments(1).len(), 0);
@@ -4224,7 +4212,6 @@ fn prepare_farm_three_nodes_three_capacity_reservation_contracts() {
         types::ContractData::CapacityReservationContract(types::CapacityReservationContract {
             node_id: 1,
             group_id: None,
-            public_ips: 0,
         })
     );
     assert_eq!(SmartContractModule::active_deployments(2).len(), 0);
@@ -4259,7 +4246,6 @@ fn prepare_farm_three_nodes_three_capacity_reservation_contracts() {
         types::ContractData::CapacityReservationContract(types::CapacityReservationContract {
             node_id: 2,
             group_id: None,
-            public_ips: 0,
         })
     );
     assert_eq!(SmartContractModule::active_deployments(3).len(), 0);

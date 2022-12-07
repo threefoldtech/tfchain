@@ -104,6 +104,11 @@ pub mod pallet {
     pub type Farms<T: Config> = StorageMap<_, Blake2_128Concat, u32, FarmInfoOf<T>, OptionQuery>;
 
     #[pallet::storage]
+    #[pallet::getter(fn farm_public_ips)]
+    pub type FarmPublicIps<T: Config> =
+        StorageMap<_, Blake2_128Concat, u32, BoundedVec<PublicIpOf<T>, ConstU32<256>>, ValueQuery>;
+
+    #[pallet::storage]
     #[pallet::getter(fn nodes_by_farm_id)]
     pub type NodesByFarmID<T: Config> = StorageMap<_, Blake2_128Concat, u32, Vec<u32>, ValueQuery>;
 
@@ -460,6 +465,11 @@ pub mod pallet {
             node_id: u32,
             resources: ConsumableResources,
         },
+
+        FarmPublicIpsChanged {
+            farm_id: u32,
+            public_ips: PublicIpListOf<T>,
+        },
     }
 
     #[pallet::error]
@@ -809,12 +819,12 @@ pub mod pallet {
                 name: farm_name,
                 pricing_policy_id: 1,
                 certification: FarmCertification::NotCertified,
-                public_ips: public_ips_list,
                 dedicated_farm: false,
                 farming_policy_limits: None,
             };
 
             Farms::<T>::insert(id, &new_farm);
+            FarmPublicIps::<T>::insert(id, &public_ips_list);
             FarmIdByName::<T>::insert(name.to_vec(), id);
             FarmID::<T>::put(id);
 
@@ -919,13 +929,14 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
-            let mut stored_farm = Farms::<T>::get(id).ok_or(Error::<T>::FarmNotExists)?;
+            let stored_farm = Farms::<T>::get(id).ok_or(Error::<T>::FarmNotExists)?;
 
             let twin = Twins::<T>::get(stored_farm.twin_id).ok_or(Error::<T>::TwinNotExists)?;
             ensure!(
                 twin.account_id == address,
                 Error::<T>::CannotUpdateFarmWrongTwin
             );
+            let mut farm_public_ips = FarmPublicIps::<T>::get(id);
 
             // Check if it's a valid IP4
             let ip4 = IP4 { ip, gw };
@@ -937,19 +948,20 @@ pub mod pallet {
                 contract_id: 0,
             };
 
-            match stored_farm
-                .public_ips
+            match farm_public_ips
                 .iter()
                 .position(|public_ip| public_ip.ip == new_ip.ip)
             {
                 Some(_) => return Err(Error::<T>::IpExists.into()),
                 None => {
-                    stored_farm
-                        .public_ips
+                    farm_public_ips
                         .try_push(new_ip)
                         .map_err(|_| Error::<T>::InvalidPublicIP)?;
-                    Farms::<T>::insert(stored_farm.id, &stored_farm);
-                    Self::deposit_event(Event::FarmUpdated(stored_farm));
+                    FarmPublicIps::<T>::insert(stored_farm.id, &farm_public_ips);
+                    Self::deposit_event(Event::FarmPublicIpsChanged {
+                        farm_id: stored_farm.id,
+                        public_ips: farm_public_ips,
+                    });
                     return Ok(().into());
                 }
             };
@@ -963,23 +975,26 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
-            let mut stored_farm = Farms::<T>::get(id).ok_or(Error::<T>::FarmNotExists)?;
+            let stored_farm = Farms::<T>::get(id).ok_or(Error::<T>::FarmNotExists)?;
 
             let twin = Twins::<T>::get(stored_farm.twin_id).ok_or(Error::<T>::TwinNotExists)?;
             ensure!(
                 twin.account_id == address,
                 Error::<T>::CannotUpdateFarmWrongTwin
             );
+            let mut farm_public_ips = FarmPublicIps::<T>::get(id);
 
-            match stored_farm
-                .public_ips
+            match farm_public_ips
                 .iter()
                 .position(|pubip| pubip.ip == ip && pubip.contract_id == 0)
             {
                 Some(index) => {
-                    stored_farm.public_ips.remove(index);
-                    Farms::<T>::insert(stored_farm.id, &stored_farm);
-                    Self::deposit_event(Event::FarmUpdated(stored_farm));
+                    farm_public_ips.remove(index);
+                    FarmPublicIps::<T>::insert(stored_farm.id, &farm_public_ips);
+                    Self::deposit_event(Event::FarmPublicIpsChanged {
+                        farm_id: stored_farm.id,
+                        public_ips: farm_public_ips,
+                    });
                     Ok(().into())
                 }
                 None => Err(Error::<T>::IpNotExists.into()),
@@ -1898,10 +1913,10 @@ pub mod pallet {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
             ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
-            let mut stored_farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
-            match stored_farm
-                .public_ips
+            let mut farm_public_ips = FarmPublicIps::<T>::get(farm_id);
+
+            match farm_public_ips
                 .iter_mut()
                 .find(|pubip| pubip.ip == ip)
             {
@@ -1911,9 +1926,12 @@ pub mod pallet {
                 None => return Err(Error::<T>::IpNotExists.into()),
             };
 
-            Farms::<T>::insert(stored_farm.id, &stored_farm);
+            FarmPublicIps::<T>::insert(farm_id, &farm_public_ips);
 
-            Self::deposit_event(Event::FarmUpdated(stored_farm));
+            Self::deposit_event(Event::FarmPublicIpsChanged {
+                farm_id: farm_id,
+                public_ips: farm_public_ips,
+            });
 
             Ok(().into())
         }

@@ -2,6 +2,7 @@ use crate::{
     types::StorageVersion, Config, InterfaceOf, LocationOf, Pallet, PalletVersion, SerialNumberOf,
     TFGRID_NODE_VERSION,
 };
+use crate::{FarmPublicIps, PublicIpOf, TFGRID_FARM_VERSION};
 use frame_support::Blake2_128Concat;
 use frame_support::{
     pallet_prelude::{OptionQuery, Weight},
@@ -29,6 +30,16 @@ pub type Nodes<T: Config> = StorageMap<
     OptionQuery,
 >;
 
+// Storage alias from FarmV13 => write to this
+#[storage_alias]
+pub type Farms<T: Config> = StorageMap<
+    Pallet<T>,
+    Blake2_128Concat,
+    u32,
+    super::types::v13::Farm<<T as Config>::FarmName>,
+    OptionQuery,
+>;
+
 pub struct NodeMigration<T: Config>(PhantomData<T>);
 
 impl<T: Config> OnRuntimeUpgrade for NodeMigration<T> {
@@ -41,7 +52,7 @@ impl<T: Config> OnRuntimeUpgrade for NodeMigration<T> {
             PalletVersion::<T>::get()
         );
         let nodes_count: u64 = Nodes::<T>::iter_keys().count() as u64;
-        Self::set_temp_storage(nodes_count, "pre_node_count");
+        Self::set_temp_storage(nodes_count, "pre_node_count");        
         debug!(
             "🔎 NodeMigrationV13 pre migration: Number of existing nodes {:?}",
             nodes_count
@@ -139,6 +150,29 @@ pub fn migrate_to_version_13<T: Config>() -> frame_support::weights::Weight {
         " <<< Node storage updated! Migrated {} Nodes ✅",
         migrated_count
     );
+
+    migrated_count = 0;
+
+    Farms::<T>::translate::<super::types::v12::Farm<T::FarmName, PublicIpOf<T>>, _>(|k, f| {
+        let migrated_farm = super::types::v13::Farm::<T::FarmName> {
+            version: TFGRID_FARM_VERSION,
+            id: f.id,
+            name: f.name,
+            twin_id: f.twin_id,
+            pricing_policy_id: f.pricing_policy_id,
+            certification: f.certification,
+            dedicated_farm: f.dedicated_farm,
+            farming_policy_limits: f.farming_policy_limits,
+        };
+
+        FarmPublicIps::<T>::insert(f.id, &f.public_ips);
+
+        migrated_count += 1;
+
+        info!("Farm: {:?} succesfully migrated", k);
+
+        Some(migrated_farm)
+    });
 
     // Update pallet storage version
     PalletVersion::<T>::set(StorageVersion::V13Struct);

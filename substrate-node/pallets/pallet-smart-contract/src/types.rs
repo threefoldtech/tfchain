@@ -74,7 +74,6 @@ impl<T: Config> Contract<T> {
 pub struct CapacityReservationContract {
     pub node_id: u32,
     pub group_id: Option<u32>,
-    pub public_ips: u32,
 }
 
 // HexHash is hex encoded hash

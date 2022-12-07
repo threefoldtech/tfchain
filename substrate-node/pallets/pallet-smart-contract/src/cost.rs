@@ -4,6 +4,7 @@ use crate::types;
 use crate::types::{Contract, ContractBillingInformation};
 use crate::CapacityReservationResources;
 use crate::Config;
+use crate::PublicIpsToBillWithCapacityReservation;
 use frame_support::dispatch::DispatchErrorWithPostInfo;
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use sp_runtime::Percent;
@@ -61,10 +62,12 @@ impl<T: Config> Contract<T> {
                     pallet_tfgrid::NodeResources::<T>::get(capacity_reservation_contract.node_id);
                 let capacity_reservation_resources =
                     CapacityReservationResources::<T>::get(self.contract_id);
+                let amt_public_ips =
+                    PublicIpsToBillWithCapacityReservation::<T>::get(self.contract_id);
 
                 let contract_cost = calculate_resources_cost::<T>(
                     &capacity_reservation_resources.total_resources,
-                    capacity_reservation_contract.public_ips,
+                    amt_public_ips,
                     seconds_elapsed,
                     &pricing_policy,
                 );

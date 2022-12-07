@@ -7,7 +7,7 @@ use crate::{
     ActiveDeployments, ActiveNodeContracts, BalanceOf, BillingFrequency, CapacityReservationResources,
     Config, ContractBillingInformationByID, ContractID, ContractLock, Contracts as ContractsV7,
     ContractsToBillAt, DeploymentID, Deployments, Pallet, 
-    PalletVersion, CONTRACT_VERSION,
+    PalletVersion, CONTRACT_VERSION, PublicIpsToBillWithCapacityReservation
 };
 use frame_support::{
     pallet_prelude::{OptionQuery, ValueQuery}, pallet_prelude::Weight, storage_alias, traits::Get,
@@ -191,7 +191,7 @@ pub fn post_migration_checks<T: Config>() {
         );
         match contract.contract_type {
             ContractData::NameContract(_) => { }
-            ContractData::CapacityReservationContract(crc) => {
+            ContractData::CapacityReservationContract(_) => {
                 let mut resources_check = Resources::empty();
                 let mut pub_ips = 0;
                 let deployments = ActiveDeployments::<T>::get(contract.contract_id);
@@ -206,8 +206,9 @@ pub fn post_migration_checks<T: Config>() {
                     "Migration failure! The used resources of capacity reservation contract with id {:?} are incorrect!",
                     contract.contract_id
                 );
+                let amt_public_ips = PublicIpsToBillWithCapacityReservation::<T>::get(contract.contract_id);
                 assert_eq!(
-                    crc.public_ips, pub_ips,
+                    amt_public_ips, pub_ips,
                     "Migration failure! The amount of public ips for contract {:?} is incorrect!",
                     contract.contract_id
                 );
@@ -368,16 +369,16 @@ pub fn translate_contract_objects<T: Config>(
                     // required resource. The only deployment is the one created above. Also take the public ips from it.
                     let capacity_reservation_contract = CapacityReservationContract {
                             node_id: nc.node_id,
-                            public_ips: nc.public_ips,
                             group_id: None,
                         };
                     let deployments = vec![ctr.contract_id];
                     ActiveDeployments::<T>::insert(crc_id, &deployments);
+                    PublicIpsToBillWithCapacityReservation::<T>::insert(crc_id, nc.public_ips);
                     CapacityReservationResources::<T>::insert(crc_id, &ConsumableResources {
                         total_resources: used_resources.clone(),
                         used_resources: used_resources.clone(),
                     });
-                    writes += 2;
+                    writes += 3;
                     // gather the node changes
                     node_changes.entry(nc.node_id).and_modify(|changes| {
                         changes.active_contracts.push(crc_id);
@@ -440,7 +441,6 @@ pub fn translate_contract_objects<T: Config>(
                     reads += 2;
                     let crc = CapacityReservationContract {
                         node_id: rc.node_id,
-                        public_ips: 0,       // will be modified later
                         group_id: None,
                     };
                     CapacityReservationResources::<T>::insert(ctr.contract_id, &ConsumableResources {
@@ -496,13 +496,11 @@ pub fn translate_contract_objects<T: Config>(
                 ContractData::CapacityReservationContract(c) => Some(c.clone()),
                 _ => None,
             };
-            if let Some(mut crc) = crc {
-                crc.public_ips = contract_changes.public_ips;
-                crc_contract.contract_type = ContractData::CapacityReservationContract(crc);
-
+            if crc.is_some() {
                 let mut consumable_resources = CapacityReservationResources::<T>::get(contract_id);
                 consumable_resources.used_resources = contract_changes.used_resources;
                 CapacityReservationResources::<T>::insert(contract_id, &consumable_resources);
+                PublicIpsToBillWithCapacityReservation::<T>::insert(contract_id, contract_changes.public_ips);
                 ActiveDeployments::<T>::insert(contract_id, contract_changes.deployments);
                 ContractBillingInformationByID::<T>::insert(contract_id, contract_changes.billing_info);
                 ContractLock::<T>::insert(contract_id, contract_changes.contract_lock);

@@ -200,15 +200,17 @@ Test Add Remove Public Ips
 
     # Add an ip to the farm
     Add Farm Ip    id=${1}    ip=185.206.122.125/16    gateway=185.206.122.1
-    ${farm} =    Get Farm    ${1}
-    Should Not Be Equal    ${farm}    ${None}
-    Public Ips Should Contain Ip    ${farm}[public_ips]    185.206.122.125/16
+    ${farm_public_ips} =    Get Farm Public Ips   ${1}
+    Should Not Be Equal    ${farm_public_ips}    ${None}
+    Length Should Be    ${farm_public_ips}    ${1}
+    Public Ips Should Contain Ip    ${farm_public_ips}    185.206.122.125/16
 
     # Remove the ip that we added
     Remove Farm Ip    id=${1}    ip=185.206.122.125/16
-    ${farm} =    Get Farm    ${1}
-    Should Not Be Equal    ${farm}    ${None}
-    Public Ips Should Not Contain Ip    ${farm}[public_ips]    185.206.122.125/16
+    ${farm_public_ips} =    Get Farm Public Ips   ${1}
+    Should Not Be Equal    ${farm_public_ips}    ${None}
+    Length Should Be    ${farm_public_ips}    ${0}
+    Public Ips Should Not Contain Ip    ${farm_public_ips}    185.206.122.125/16
 
 Test Add Public Ips: Failure InvalidPublicIP
     [Documentation]    Testing adding an invalid public IP
@@ -336,13 +338,13 @@ Test Create Update Cancel Deployment: Success
     ${resources_dc} =    Resources    hru=${256}    sru=${256}    cru=${2}    mru=${4} 
     Create Deployment    capacity_reservation_id=${1}    resources=${resources_dc}    public_ips=${1}    who=Bob    port=9946
 
-    ${farm} =     Get Farm    ${1}
-    Should Not Be Equal    ${farm}    ${None}    msg=Farm with id 1 doesn't exist
-    Dictionary Should Contain Key    ${farm}    public_ips    msg=The farm doesn't have a key public_ips
-    Length Should Be    ${farm}[public_ips]    1    msg=There should only be one public ip in public_ips
-    Should Be Equal    ${farm}[public_ips][0][ip]    185.206.122.33/24    msg=The public ip address should be 185.206.122.33/24
-    Should Be Equal    ${farm}[public_ips][0][gateway]    185.206.122.1    msg=The gateway should be 185.206.122.1
-    Should Be Equal    ${farm}[public_ips][0][contract_id]    ${1}    msg=The public ip was claimed in deployment with id 1 while the farm contains a different contract id for it
+    ${farm_public_ips} =     Get Farm Public Ips    ${1}
+
+    Should Not Be Equal    ${farm_public_ips}    ${None}    msg=Farm with id 1 doesn't exist
+    Length Should Be    ${farm_public_ips}    1    msg=There should only be one public ip in public_ips
+    Should Be Equal    ${farm_public_ips}[0][ip]    185.206.122.33/24    msg=The public ip address should be 185.206.122.33/24
+    Should Be Equal    ${farm_public_ips}[0][gateway]    185.206.122.1    msg=The gateway should be 185.206.122.1
+    Should Be Equal    ${farm_public_ips}[0][contract_id]    ${1}    msg=The public ip was claimed in deployment with id 1 while the farm contains a different contract id for it
 
     ${updated_resources} =    Resources    hru=${512}    sru=${256}    cru=${2}    mru=${4}
     Update Deployment    deployment_id=${1}    resources=${updated_resources}    who=Bob    port=9946

@@ -47,13 +47,14 @@ pub mod v11 {
 }
 
 pub mod v12 {
-    use codec::{Decode, Encode};
+    use codec::{Decode, Encode, MaxEncodedLen};
     use core::cmp::{Ord, PartialOrd};
+    use frame_support::{traits::ConstU32, BoundedVec};
     use scale_info::TypeInfo;
     use sp_std::{prelude::*, vec::Vec};
     use tfchain_support::{
         resources::Resources,
-        types::{NodeCertification, PublicConfig},
+        types::{FarmCertification, FarmingPolicyLimit, NodeCertification, PublicConfig},
     };
 
     #[derive(Encode, Decode, Debug, Default, PartialEq, Eq, Clone, TypeInfo)]
@@ -84,14 +85,39 @@ pub mod v12 {
         pub serial_number: Option<SerialNumber>,
         pub connection_price: u32,
     }
+
+    #[derive(
+        PartialEq,
+        Eq,
+        PartialOrd,
+        Ord,
+        Clone,
+        Encode,
+        Decode,
+        Default,
+        Debug,
+        TypeInfo,
+        MaxEncodedLen,
+    )]
+    pub struct Farm<Name, PublicIP> {
+        pub version: u32,
+        pub id: u32,
+        pub name: Name,
+        pub twin_id: u32,
+        pub pricing_policy_id: u32,
+        pub certification: FarmCertification,
+        pub public_ips: BoundedVec<PublicIP, ConstU32<256>>,
+        pub dedicated_farm: bool,
+        pub farming_policy_limits: Option<FarmingPolicyLimit>,
+    }
 }
 
 pub mod v13 {
-    use codec::{Decode, Encode};
+    use codec::{Decode, Encode, MaxEncodedLen};
     use core::cmp::{Ord, PartialOrd};
     use scale_info::TypeInfo;
     use sp_std::{prelude::*, vec::Vec};
-    use tfchain_support::types::{ConsumableResources, NodeCertification, Power, PublicConfig};
+    use tfchain_support::types::{FarmCertification, FarmingPolicyLimit, NodeCertification, PublicConfig};
 
     #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
     pub struct Node<Location, If, SerialNumber> {
@@ -109,5 +135,29 @@ pub mod v13 {
         pub virtualized: bool,
         pub serial_number: Option<SerialNumber>,
         pub connection_price: u32,
+    }
+
+    #[derive(
+        PartialEq,
+        Eq,
+        PartialOrd,
+        Ord,
+        Clone,
+        Encode,
+        Decode,
+        Default,
+        Debug,
+        TypeInfo,
+        MaxEncodedLen,
+    )]
+    pub struct Farm<Name> {
+        pub version: u32,
+        pub id: u32,
+        pub name: Name,
+        pub twin_id: u32,
+        pub pricing_policy_id: u32,
+        pub certification: FarmCertification,
+        pub dedicated_farm: bool,
+        pub farming_policy_limits: Option<FarmingPolicyLimit>,
     }
 }

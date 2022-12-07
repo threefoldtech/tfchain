@@ -191,6 +191,11 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, u64, ConsumableResources, ValueQuery>;
 
     #[pallet::storage]
+    #[pallet::getter(fn public_ips_to_bill_with_capacity_reservation)]
+    pub type PublicIpsToBillWithCapacityReservation<T> =
+        StorageMap<_, Blake2_128Concat, u64, u32, ValueQuery>;
+
+    #[pallet::storage]
     #[pallet::getter(fn active_deployments)]
     pub type ActiveDeployments<T> = StorageMap<_, Blake2_128Concat, u64, Vec<u64>, ValueQuery>;
 
@@ -760,7 +765,6 @@ impl<T: Config> Pallet<T> {
         let new_capacity_reservation = types::CapacityReservationContract {
             node_id: node_id,
             group_id: group_id,
-            public_ips: 0,
         };
 
         // Create contract
@@ -769,6 +773,9 @@ impl<T: Config> Pallet<T> {
             types::ContractData::CapacityReservationContract(new_capacity_reservation.clone()),
             solution_provider_id,
         )?;
+
+        // insert amount of public ips to bill
+        PublicIpsToBillWithCapacityReservation::<T>::insert(contract.contract_id, 0);
 
         // insert contract resource information
         let consumable_resources = ConsumableResources {
@@ -1816,6 +1823,7 @@ impl<T: Config> Pallet<T> {
                     );
                     ActiveDeployments::<T>::remove(contract_id);
                     CapacityReservationResources::<T>::remove(contract_id);
+                    PublicIpsToBillWithCapacityReservation::<T>::remove(contract_id);
                     Self::deposit_event(Event::CapacityReservationContractCanceled {
                         contract_id: contract_id,
                         node_id: capacity_reservation_contract.node_id,
@@ -2007,9 +2015,9 @@ impl<T: Config> Pallet<T> {
     pub fn _reserve_ip(
         deployment_id: u64,
         deployment: &mut types::Deployment<T>,
-        capacity_reservation_contract: &mut types::Contract<T>,
+        capacity_reservation_contract: &types::Contract<T>,
     ) -> DispatchResultWithPostInfo {
-        let mut capacity_reservation_data =
+        let capacity_reservation_data =
             Self::get_capacity_reservation_contract(&capacity_reservation_contract)?;
         if deployment.public_ips == 0 {
             return Ok(().into());
@@ -2017,32 +2025,35 @@ impl<T: Config> Pallet<T> {
         let node = pallet_tfgrid::Nodes::<T>::get(capacity_reservation_data.node_id)
             .ok_or(Error::<T>::NodeNotExists)?;
 
-        let mut farm =
-            pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
+        ensure!(
+            pallet_tfgrid::Farms::<T>::contains_key(node.farm_id),
+            Error::<T>::FarmNotExists
+        );
+        let mut farm_public_ips = pallet_tfgrid::FarmPublicIps::<T>::get(node.farm_id);
 
         log::info!(
             "Number of farm ips {:?}, number of ips to reserve: {:?}",
-            farm.public_ips.len(),
+            farm_public_ips.len(),
             deployment.public_ips as usize
         );
         ensure!(
-            farm.public_ips.len() >= deployment.public_ips as usize,
+            farm_public_ips.len() >= deployment.public_ips as usize,
             Error::<T>::FarmHasNotEnoughPublicIPs
         );
 
         let mut ips: BoundedVec<PublicIP, MaxNodeContractPublicIPs<T>> = vec![].try_into().unwrap();
 
-        for i in 0..farm.public_ips.len() {
+        for i in 0..farm_public_ips.len() {
             if ips.len() == deployment.public_ips as usize {
                 break;
             }
 
             // if an ip has contract id 0 it means it's not reserved
             // reserve it now
-            if farm.public_ips[i].contract_id == 0 {
-                let mut ip = farm.public_ips[i].clone();
+            if farm_public_ips[i].contract_id == 0 {
+                let mut ip = farm_public_ips[i].clone();
                 ip.contract_id = deployment_id;
-                farm.public_ips[i] = ip.clone();
+                farm_public_ips[i] = ip.clone();
                 ips.try_push(ip).or_else(|_| {
                     return Err(DispatchErrorWithPostInfo::from(
                         Error::<T>::FailedToReserveIP,
@@ -2064,12 +2075,17 @@ impl<T: Config> Pallet<T> {
         })?;
 
         // Update the farm with the reserved ips
-        pallet_tfgrid::Farms::<T>::insert(farm.id, farm);
+        pallet_tfgrid::FarmPublicIps::<T>::insert(node.farm_id, &farm_public_ips);
 
-        // Update the capacity reservation contract for billing pub ips
-        capacity_reservation_data.public_ips += deployment.public_ips;
-        capacity_reservation_contract.contract_type =
-            types::ContractData::CapacityReservationContract(capacity_reservation_data);
+        // Update the PublicIpsToBillWithCapacityReservation storage
+        let mut amt_public_ips = PublicIpsToBillWithCapacityReservation::<T>::get(
+            capacity_reservation_contract.contract_id,
+        );
+        amt_public_ips += deployment.public_ips;
+        PublicIpsToBillWithCapacityReservation::<T>::insert(
+            capacity_reservation_contract.contract_id,
+            &amt_public_ips,
+        );
 
         Ok(().into())
     }
@@ -2077,37 +2093,45 @@ impl<T: Config> Pallet<T> {
     pub fn _free_ip(
         contract_id: u64,
         deployment_contract: &mut types::Deployment<T>,
-        capacity_reservation_contract: &mut types::Contract<T>,
+        capacity_reservation_contract: &types::Contract<T>,
     ) -> DispatchResultWithPostInfo {
-        let mut capacity_reservation_data =
+        let capacity_reservation_data =
             Self::get_capacity_reservation_contract(&capacity_reservation_contract)?;
         let node = pallet_tfgrid::Nodes::<T>::get(capacity_reservation_data.node_id)
             .ok_or(Error::<T>::NodeNotExists)?;
 
-        let mut farm =
-            pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
+        ensure!(
+            pallet_tfgrid::Farms::<T>::contains_key(node.farm_id),
+            Error::<T>::FarmNotExists
+        );
+        let mut farm_public_ips = pallet_tfgrid::FarmPublicIps::<T>::get(node.farm_id);
 
         let mut public_ips: BoundedVec<PublicIP, MaxNodeContractPublicIPs<T>> =
             vec![].try_into().unwrap();
-        for i in 0..farm.public_ips.len() {
+        for i in 0..farm_public_ips.len() {
             // if an ip has contract id 0 it means it's not reserved
             // reserve it now
-            if farm.public_ips[i].contract_id == contract_id {
-                let mut ip = farm.public_ips[i].clone();
+            if farm_public_ips[i].contract_id == contract_id {
+                let mut ip = farm_public_ips[i].clone();
                 ip.contract_id = 0;
-                farm.public_ips[i] = ip.clone();
+                farm_public_ips[i] = ip.clone();
                 public_ips.try_push(ip).or_else(|_| {
                     return Err(DispatchErrorWithPostInfo::from(Error::<T>::FailedToFreeIPs));
                 })?;
             }
         }
 
-        pallet_tfgrid::Farms::<T>::insert(farm.id, farm);
+        // Update the farm with the reserved ips
+        pallet_tfgrid::FarmPublicIps::<T>::insert(node.farm_id, &farm_public_ips);
 
-        // Update the capacity reservation contract for billing pub ips
-        capacity_reservation_data.public_ips -= deployment_contract.public_ips;
-        capacity_reservation_contract.contract_type =
-            types::ContractData::CapacityReservationContract(capacity_reservation_data);
+        // Update the PublicIpsToBillWithCapacityReservation storage
+        let amt_public_ips = PublicIpsToBillWithCapacityReservation::<T>::get(
+            capacity_reservation_contract.contract_id,
+        ) - deployment_contract.public_ips;
+        PublicIpsToBillWithCapacityReservation::<T>::insert(
+            capacity_reservation_contract.contract_id,
+            amt_public_ips,
+        );
 
         // Emit an event containing the IP's freed for this contract
         Self::deposit_event(Event::IPsFreed {

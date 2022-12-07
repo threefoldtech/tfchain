@@ -270,6 +270,11 @@ class TfChainClient:
         q = substrate.query("TfgridModule", "Farms", [id])
         return q.value
 
+    def get_farm_public_ips(self, id: int = 1, port: int = DEFAULT_PORT):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+        q = substrate.query("TfgridModule", "FarmPublicIps", [id])
+        return q.value
+
     def add_farm_ip(self, id: int = 1, ip: str = "", gateway: str = "", port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
@@ -281,7 +286,7 @@ class TfChainClient:
                                       })
         expected_events = [{
             "module_id": "TfgridModule",
-            "event_id": "FarmUpdated"
+            "event_id": "FarmPublicIpsChanged"
         }]
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
@@ -296,7 +301,7 @@ class TfChainClient:
                                       })
         expected_events = [{
             "module_id": "TfgridModule",
-            "event_id": "FarmUpdated"
+            "event_id": "FarmPublicIpsChanged"
         }]
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
