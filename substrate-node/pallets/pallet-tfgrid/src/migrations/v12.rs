@@ -48,7 +48,7 @@ impl<T: Config> OnRuntimeUpgrade for InputValidation<T> {
             nodes_count
         );
 
-        info!("👥  TFGrid pallet to v12 passes PRE migrate checks ✅",);
+        info!("👥  TFGrid pallet to V12 passes PRE migrate checks ✅",);
         Ok(())
     }
 

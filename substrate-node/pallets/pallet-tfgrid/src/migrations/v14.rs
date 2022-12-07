@@ -29,6 +29,8 @@ impl<T: Config> OnRuntimeUpgrade for FixPublicIP<T> {
             "🔎 FixPublicIPV13 pre migration: Number of existing nodes {:?}",
             nodes_count
         );
+
+        info!("👥  TFGrid pallet to V14 passes PRE migrate checks ✅",);
         Ok(())
     }
 
@@ -80,7 +82,7 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
             match config.is_valid() {
                 Ok(_) => public_config = Some(config),
                 Err(_) => {
-                    info!("resetting pub config of node: {:?}", k);
+                    debug!("resetting pub config of node: {:?}", k);
                     public_config = None;
                 }
             }
@@ -133,7 +135,7 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
                 public_ips = ips;
             }
             Err(e) => {
-                info!(
+                debug!(
                     "failed to parse public ips for farm: {:?}, error: {:?}",
                     k, e
                 )
@@ -187,7 +189,7 @@ fn validate_public_ips<T: Config>(
                 let _ = parsed_public_ips.try_push(pub_ip);
             }
             Err(_) => {
-                info!("resetting farm ip for farm {:?}", farm.id);
+                debug!("resetting farm ip for farm {:?}", farm.id);
                 if pub_ip.contract_id != 0 {
                     T::PublicIpModifier::ip_removed(&pub_ip)
                 }

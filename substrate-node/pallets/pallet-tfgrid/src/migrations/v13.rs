@@ -34,16 +34,20 @@ pub struct NodeMigration<T: Config>(PhantomData<T>);
 impl<T: Config> OnRuntimeUpgrade for NodeMigration<T> {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
+        assert!(PalletVersion::<T>::get() <= StorageVersion::V12Struct);
+
         info!(
             " --- Current TFGrid pallet version: {:?}",
             PalletVersion::<T>::get()
         );
         let nodes_count: u64 = Nodes::<T>::iter_keys().count() as u64;
         Self::set_temp_storage(nodes_count, "pre_node_count");
-        log::info!(
+        debug!(
             "🔎 NodeMigrationV13 pre migration: Number of existing nodes {:?}",
             nodes_count
         );
+
+        info!("👥  TFGrid pallet to V13 passes PRE migrate checks ✅",);
         Ok(())
     }
 
@@ -58,6 +62,7 @@ impl<T: Config> OnRuntimeUpgrade for NodeMigration<T> {
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
+        assert!(PalletVersion::<T>::get() >= StorageVersion::V13Struct);
         info!(
             " --- Current TFGrid pallet version: {:?}",
             PalletVersion::<T>::get()
