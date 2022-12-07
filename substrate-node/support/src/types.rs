@@ -224,6 +224,7 @@ pub struct IP4 {
     pub gw: BoundedVec<u8, ConstU32<MAX_GW4_LENGTH>>,
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum PublicIpError {
     InvalidIp4,
     InvalidGw4,
@@ -244,9 +245,9 @@ impl IP4 {
             && ip4.is_unicast()
             && ip4.contains(gw4)
         {
-            return Ok(());
+            Ok(())
         } else {
-            return Err(PublicIpError::InvalidPublicIp);
+            Err(PublicIpError::InvalidPublicIp)
         }
     }
 }
@@ -268,39 +269,30 @@ impl IP6 {
             && ipv6.is_unicast()
             && ipv6.contains(gw6)
         {
-            return Ok(());
+            Ok(())
         } else {
-            return Err(PublicIpError::InvalidPublicIp);
+            Err(PublicIpError::InvalidPublicIp)
         }
     }
 }
 
 impl PublicConfig {
     pub fn is_valid(&self) -> Result<(), PublicIpError> {
+        // Validate domain
         if let Some(domain) = &self.domain {
             if !is_valid_domain(&domain) {
                 return Err(PublicIpError::InvalidDomain);
             }
         }
 
+        // Validate ip4 config
         self.ip4.is_valid()?;
 
-        let gw4 = IPv4::parse(&self.ip4.gw).map_err(|_| PublicIpError::InvalidGw4)?;
-        let ip4 = IPv4Cidr::parse(&self.ip4.ip).map_err(|_| PublicIpError::InvalidIp4)?;
-
-        if gw4.is_public()
-            && gw4.is_unicast()
-            && ip4.is_public()
-            && ip4.is_unicast()
-            && ip4.contains(gw4)
-        {
-            if let Some(ip6) = &self.ip6 {
-                return Ok(ip6.is_valid()?);
-            } else {
-                return Ok(());
-            }
+        // If ip6 config, validate
+        if let Some(ip6) = &self.ip6 {
+            Ok(ip6.is_valid()?)
         } else {
-            return Err(PublicIpError::InvalidPublicIp);
+            Ok(())
         }
     }
 }

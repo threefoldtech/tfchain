@@ -2205,11 +2205,10 @@ impl<T: Config> PublicIpModifier for Pallet<T> {
             if let Some(mut cr_contract) = cr_contract {
                 // free the public ips requested by the contract
                 if deployment.public_ips > 0 {
-                    match Self::_free_ip(ip.contract_id, &mut deployment, &mut cr_contract) {
-                        Ok(_) => (),
-                        Err(e) => {
-                            log::error!("error while freeing ips: {:?}", e);
-                        }
+                    if let Err(e) =
+                        Self::_free_ip(ip.contract_id, &mut deployment, &mut cr_contract)
+                    {
+                        log::error!("error while freeing ips: {:?}", e);
                     }
                 }
 

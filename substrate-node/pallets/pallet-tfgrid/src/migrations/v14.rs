@@ -6,7 +6,7 @@ use frame_support::{
     pallet_prelude::Weight, traits::ConstU32, traits::Get, traits::OnRuntimeUpgrade, BoundedVec,
 };
 use log::{debug, info};
-use sp_std::marker::PhantomData;
+use sp_std::{marker::PhantomData, vec};
 use tfchain_support::{
     traits::PublicIpModifier,
     types::{Farm, Node, PublicIP, IP4},
@@ -119,8 +119,6 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
     // Return the weight consumed by the migration.
     T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
 }
-
-use sp_std::vec;
 
 pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
     info!(" >>> Migrating farms storage...");

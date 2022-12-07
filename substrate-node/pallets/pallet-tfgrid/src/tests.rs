@@ -8,7 +8,7 @@ use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
 use tfchain_support::types::{
     FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, PowerState, PowerTarget,
-    PublicConfig, IP4, IP6,
+    PublicConfig, PublicIpError, IP4, IP6,
 };
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -1294,43 +1294,80 @@ fn test_node_public_config_falsy_values_fails() {
     });
 }
 
-// #[test]
-// #[should_panic(expected = "InvalidIP4")]
-// fn test_validate_invalid_ip4_1() {
-//     ExternalityBuilder::build().execute_with(|| {
-//         let input = get_pub_config_ip4_input(b"185.206.122.33");
-//         TestIP4::try_from(input).expect("fails");
-//     });
-// }
+#[test]
+fn test_validate_pub_config_invalid_ip4() {
+    ExternalityBuilder::build().execute_with(|| {
+        let ipv4 = get_pub_config_ip4_input(b"185.206.122.33");
+        let ipv6 = get_pub_config_ip6_input(b"2a10:b600:1::0cc4:7a30:65b5/64");
+        let gw4 = get_pub_config_gw4_input(b"185.206.122.1");
+        let gw6 = get_pub_config_gw6_input(b"2a10:b600:1::1");
+        let domain = get_pub_config_domain_input(b"some-domain");
 
-// #[test]
-// #[should_panic(expected = "IP4TooShort")]
-// fn test_validate_invalid_ip4_2() {
-//     ExternalityBuilder::build().execute_with(|| {
-//         let input = get_pub_config_ip4_input(b"185.206");
-//         TestIP4::try_from(input).expect("fails");
-//     });
-// }
+        let pub_conf = PublicConfig {
+            ip4: IP4 {
+                ip: ipv4.clone(),
+                gw: gw4.clone(),
+            },
+            ip6: Some(IP6 {
+                ip: ipv6.clone(),
+                gw: gw6.clone(),
+            }),
+            domain: Some(domain.clone()),
+        };
 
-// #[test]
-// #[should_panic(expected = "IP4TooLong")]
-// fn test_validate_invalid_ip4_3() {
-//     ExternalityBuilder::build().execute_with(|| {
-//         // TODO: handle this case
-//         let input = BoundedVec::try_from(b"185.206.12.12.1232123".to_vec())
-//             .map_err(|_| Error::<TestRuntime>::IP4TooLong);
-//         TestIP4::try_from(input.unwrap()).expect("fails");
-//     });
-// }
+        assert_noop!(pub_conf.is_valid(), PublicIpError::InvalidIp4);
+    });
+}
 
-// #[test]
-// #[should_panic(expected = "InvalidIP4")]
-// fn test_validate_invalid_ip4_4() {
-//     ExternalityBuilder::build().execute_with(|| {
-//         let input = get_pub_config_ip4_input(b"garbage data");
-//         TestIP4::try_from(input).expect("fails");
-//     });
-// }
+#[test]
+fn test_validate_pub_config_invalid_gw4() {
+    ExternalityBuilder::build().execute_with(|| {
+        let ipv4 = get_pub_config_ip4_input(b"185.206.122.33/24");
+        let ipv6 = get_pub_config_ip6_input(b"2a10:b600:1::0cc4:7a30:65b5/64");
+        let gw4 = get_pub_config_gw4_input(b"185.206.132.1");
+        let gw6 = get_pub_config_gw6_input(b"2a10:b600:1::1");
+        let domain = get_pub_config_domain_input(b"some-domain");
+
+        let pub_conf = PublicConfig {
+            ip4: IP4 {
+                ip: ipv4.clone(),
+                gw: gw4.clone(),
+            },
+            ip6: Some(IP6 {
+                ip: ipv6.clone(),
+                gw: gw6.clone(),
+            }),
+            domain: Some(domain.clone()),
+        };
+
+        assert_noop!(pub_conf.is_valid(), PublicIpError::InvalidPublicIp);
+    });
+}
+
+#[test]
+fn test_validate_pub_config_invalid_ip6() {
+    ExternalityBuilder::build().execute_with(|| {
+        let ipv4 = get_pub_config_ip4_input(b"185.206.122.33/24");
+        let ipv6 = get_pub_config_ip6_input(b"2a10::0cc4:7a30:65b5/32");
+        let gw4 = get_pub_config_gw4_input(b"185.206.122.1");
+        let gw6 = get_pub_config_gw6_input(b"2a10:b600:1::1");
+        let domain = get_pub_config_domain_input(b"some-domain");
+
+        let pub_conf = PublicConfig {
+            ip4: IP4 {
+                ip: ipv4.clone(),
+                gw: gw4.clone(),
+            },
+            ip6: Some(IP6 {
+                ip: ipv6.clone(),
+                gw: gw6.clone(),
+            }),
+            domain: Some(domain.clone()),
+        };
+
+        assert_noop!(pub_conf.is_valid(), PublicIpError::InvalidPublicIp);
+    });
+}
 
 #[test]
 fn create_node_with_same_pubkey_fails() {

@@ -929,9 +929,10 @@ pub mod pallet {
             {
                 Some(_) => return Err(Error::<T>::IpExists.into()),
                 None => {
-                    stored_farm.public_ips.try_push(new_ip).or_else(|_| {
-                        return Err(DispatchErrorWithPostInfo::from(Error::<T>::InvalidPublicIP));
-                    })?;
+                    stored_farm
+                        .public_ips
+                        .try_push(new_ip)
+                        .map_err(|_| Error::<T>::InvalidPublicIP)?;
                     Farms::<T>::insert(stored_farm.id, &stored_farm);
                     Self::deposit_event(Event::FarmUpdated(stored_farm));
                     return Ok(().into());
@@ -2330,27 +2331,23 @@ impl<T: Config> Pallet<T> {
     fn get_public_ips(
         public_ips: PublicIpListInput<T>,
     ) -> Result<PublicIpListOf, DispatchErrorWithPostInfo> {
-        let mut public_ips_list: PublicIpListOf = vec![].try_into().unwrap();
+        let mut public_ips_list: PublicIpListOf =
+            vec![].try_into().map_err(|_| Error::<T>::InvalidPublicIP)?;
 
         for ip in public_ips {
-            if public_ips_list.contains(&PublicIP {
-                ip: ip.ip.clone(),
-                gateway: ip.gw.clone(),
+            let pub_ip = PublicIP {
+                ip: ip.ip,
+                gateway: ip.gw,
                 contract_id: 0,
-            }) {
+            };
+
+            if public_ips_list.contains(&pub_ip) {
                 return Err(DispatchErrorWithPostInfo::from(Error::<T>::IpExists));
             }
 
             public_ips_list
-                .try_push(PublicIP {
-                    ip: ip.ip,
-                    gateway: ip.gw,
-                    contract_id: 0,
-                })
-                .or_else(|_| {
-                    return Err(DispatchErrorWithPostInfo::from(Error::<T>::InvalidPublicIP));
-                })
-                .ok();
+                .try_push(pub_ip)
+                .map_err(|_| Error::<T>::InvalidPublicIP)?;
         }
 
         Ok(public_ips_list)
@@ -2403,11 +2400,15 @@ impl<T: Config> Pallet<T> {
             let mut parsed_interfaces_ips: BoundedVec<
                 InterfaceIpOf<T>,
                 <T as Config>::MaxInterfaceIpsLength,
-            > = vec![].try_into().unwrap();
+            > = vec![]
+                .try_into()
+                .map_err(|_| Error::<T>::InvalidInterfaceIP)?;
 
             for ip in intf.ips.iter() {
                 let intf_ip = Self::get_interface_ip(ip.clone())?;
-                let _ = parsed_interfaces_ips.try_push(intf_ip);
+                parsed_interfaces_ips
+                    .try_push(intf_ip)
+                    .map_err(|_| Error::<T>::InvalidInterfaceIP)?;
             }
 
             parsed_interfaces.push(Interface {
