@@ -339,12 +339,13 @@ Test Create Update Cancel Deployment: Success
     Create Deployment    capacity_reservation_id=${1}    resources=${resources_dc}    public_ips=${1}    who=Bob    port=9946
 
     ${farm_public_ips} =     Get Farm Public Ips    ${1}
-
     Should Not Be Equal    ${farm_public_ips}    ${None}    msg=Farm with id 1 doesn't exist
-    Length Should Be    ${farm_public_ips}    1    msg=There should only be one public ip in public_ips
-    Should Be Equal    ${farm_public_ips}[0][ip]    185.206.122.33/24    msg=The public ip address should be 185.206.122.33/24
-    Should Be Equal    ${farm_public_ips}[0][gateway]    185.206.122.1    msg=The gateway should be 185.206.122.1
-    Should Be Equal    ${farm_public_ips}[0][contract_id]    ${1}    msg=The public ip was claimed in deployment with id 1 while the farm contains a different contract id for it
+    Length Should Be    ${farm_public_ips}    0    msg=There should be no more unused public ips
+
+    ${deployment} =    Get Deployment    ${1}
+    Length Should Be     ${deployment}[public_ips_list]    ${1}
+    Should Be Equal    ${deployment}[public_ips_list][0][ip]    185.206.122.33/24    msg=The public ip address should be 185.206.122.33/24
+    Should Be Equal    ${deployment}[public_ips_list][0][gw]    185.206.122.1    msg=The gateway should be 185.206.122.1
 
     ${updated_resources} =    Resources    hru=${512}    sru=${256}    cru=${2}    mru=${4}
     Update Deployment    deployment_id=${1}    resources=${updated_resources}    who=Bob    port=9946

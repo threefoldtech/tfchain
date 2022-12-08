@@ -272,7 +272,7 @@ class TfChainClient:
 
     def get_farm_public_ips(self, id: int = 1, port: int = DEFAULT_PORT):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
-        q = substrate.query("TfgridModule", "FarmPublicIps", [id])
+        q = substrate.query("TfgridModule", "FarmUnusedPublicIps", [id])
         return q.value
 
     def add_farm_ip(self, id: int = 1, ip: str = "", gateway: str = "", port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
@@ -431,6 +431,13 @@ class TfChainClient:
 
         q = substrate.query("TfgridModule", "NodeID", [])
         return q.value
+
+    def get_deployment(self, id: int = 1, port: int = DEFAULT_PORT):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+
+        q = substrate.query("SmartContractModule", "Deployments", [id])
+
+        return q.value 
 
     def get_contract(self, id: int = 1, port: int = DEFAULT_PORT):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
