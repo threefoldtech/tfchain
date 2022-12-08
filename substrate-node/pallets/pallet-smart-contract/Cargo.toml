@@ -47,7 +47,7 @@ frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch =
 
 [dev-dependencies]
 parking_lot = '0.12.1'
-sp-keystore =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+sp-keystore =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.31", default-features = false }
 env_logger = "*"
 
 [features]
