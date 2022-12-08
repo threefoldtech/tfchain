@@ -265,7 +265,7 @@ pub mod pallet {
 
             // Set state to approved
             validator.state = types::ValidatorRequestState::Approved;
-            <Validator<T>>::insert(v.clone(), &validator);
+            <Validator<T>>::insert(validator_account.clone(), &validator);
 
             // Add the validator as a council member
             pallet_membership::Pallet::<T, pallet_membership::Instance1>::add_member(

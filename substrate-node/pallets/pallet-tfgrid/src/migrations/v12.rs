@@ -26,7 +26,7 @@ pub type Nodes<T: Config> = StorageMap<
 // Storage alias from Entity v12
 #[storage_alias]
 pub type Entities<T: Config> = StorageMap<
-    _,
+    Pallet<T>,
     Blake2_128Concat,
     u32,
     super::types::v12::Entity<AccountIdOf<T>, CityNameOf<T>, CountryNameOf<T>>,
@@ -82,7 +82,7 @@ fn migrate<T: Config>() -> frame_support::weights::Weight {
         migrate_entities::<T>() + migrate_nodes::<T>() + update_pallet_storage_version::<T>()
     } else {
         info!(" >>> Unused TFGrid pallet V12 migration");
-        0
+        Weight::zero()
     }
 }
 
@@ -140,7 +140,7 @@ fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
     );
 
     // Return the weight consumed by the migration.
-    T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
+    T::DbWeight::get().reads_writes(migrated_count + 1, migrated_count + 1)
 }
 
 fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
@@ -201,7 +201,7 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
     );
 
     // Return the weight consumed by the migration.
-    T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
+    T::DbWeight::get().reads_writes(migrated_count + 1, migrated_count + 1)
 }
 
 fn update_pallet_storage_version<T: Config>() -> frame_support::weights::Weight {

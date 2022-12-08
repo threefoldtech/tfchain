@@ -33,7 +33,7 @@ impl<T: Config> OnRuntimeUpgrade for FixFarmingPolicy<T> {
             fix_farming_policy_migration_::<T>()
         } else {
             info!(" >>> Unused TFGrid pallet V11 migration");
-            return 0;
+            Weight::zero()
         }
     }
 
@@ -81,5 +81,5 @@ pub fn fix_farming_policy_migration_<T: Config>() -> frame_support::weights::Wei
     );
 
     // Return the weight consumed by the migration.
-    T::DbWeight::get().reads_writes(read_writes as Weight, read_writes as Weight)
+    T::DbWeight::get().reads_writes(read_writes, read_writes)
 }

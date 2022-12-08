@@ -8,7 +8,7 @@ use sp_std::prelude::*;
 use codec::Encode;
 use frame_support::dispatch::DispatchErrorWithPostInfo;
 use frame_support::{
-    ensure, pallet_prelude::DispatchResultWithPostInfo, traits::EnsureOrigin, weights::Pays,
+    dispatch::Pays, ensure, pallet_prelude::DispatchResultWithPostInfo, traits::EnsureOrigin,
     BoundedVec,
 };
 use frame_system::{self as system, ensure_signed};
@@ -1251,7 +1251,7 @@ pub mod pallet {
             Ok(Pays::No.into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn change_power_state(
             origin: OriginFor<T>,
             power_state: PowerState,
@@ -1260,7 +1260,7 @@ pub mod pallet {
             Self::_change_power_state(account_id, power_state)
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn change_power_target(
             origin: OriginFor<T>,
             node_id: u32,
@@ -1270,7 +1270,7 @@ pub mod pallet {
             Self::_change_power_target(account_id, node_id, power_target)
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn set_node_certification(
             origin: OriginFor<T>,
             node_id: u32,

@@ -102,7 +102,7 @@ pub mod deprecated {
     }
 
     decl_module! {
-        pub struct Module<T: Config> for enum Call where origin: T::Origin { }
+        pub struct Module<T: Config> for enum Call where origin: T::RuntimeOrigin { }
     }
 }
 
@@ -156,7 +156,7 @@ impl<T: Config> OnRuntimeUpgrade for ContractMigrationV6<T> {
             migrate_to_version_7::<T>()
         } else {
             info!(" >>> Unused Smart Contract pallet V7 migration");
-            0
+            Weight::zero()
         }
     }
 
@@ -293,7 +293,7 @@ pub fn migrate_to_version_7<T: Config>() -> frame_support::weights::Weight {
     );
 
     // Return the weight consumed by the migration.
-    T::DbWeight::get().reads_writes(total_reads as Weight + 1, total_writes as Weight + 1)
+    T::DbWeight::get().reads_writes(total_reads as u64 + 1, total_writes as u64 + 1)
 }
 
 pub fn write_contracts_to_storage<T: Config>(contracts: &BTreeMap<u64, Contract<T>>) -> u32 {
@@ -479,16 +479,20 @@ pub fn translate_contract_objects<T: Config>(
         }
     }
 
-    frame_support::migration::remove_storage_prefix(
+    let _ = frame_support::migration::clear_storage_prefix(
         b"SmartContractModule",
         b"NodeContractResources",
         b"",
-    );
-    frame_support::migration::remove_storage_prefix(
+        None,
+        None,
+    ); // TODO check parameters
+    let _ = frame_support::migration::clear_storage_prefix(
         b"SmartContractModule",
         b"ActiveRentContractForNode",
         b"",
-    );
+        None,
+        None,
+    ); // TODO check parameters
     // apply the changes to the capacity reservations contracts that we gathered previously
     for (contract_id, contract_changes) in crc_changes {
         if let Some(crc_contract) = contracts.get_mut(&contract_id) {
@@ -520,11 +524,13 @@ pub fn translate_contract_objects<T: Config>(
     }
 
     // fix the active node contracts storage and modify the node objects
-    frame_support::migration::remove_storage_prefix(
+    let _ = frame_support::migration::clear_storage_prefix(
         b"SmartContractModule",
         b"ActiveNodeContracts",
         b"",
-    );
+        None,
+        None,
+    ); // TODO check parameters
     for (node_id, nc) in node_changes.iter() {
         ActiveNodeContracts::<T>::insert(node_id, &nc.active_contracts);
 

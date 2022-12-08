@@ -1,6 +1,6 @@
 use crate::Config;
 use crate::*;
-use frame_support::{traits::Get, traits::OnRuntimeUpgrade, weights::Weight};
+use frame_support::{dispatch::Weight, traits::Get, traits::OnRuntimeUpgrade};
 use log::{debug, info};
 use sp_std::collections::btree_map::BTreeMap;
 use sp_std::marker::PhantomData;
@@ -34,7 +34,7 @@ impl<T: Config> OnRuntimeUpgrade for FixFarmNodeIndexMap<T> {
             add_farm_nodes_index::<T>()
         } else {
             info!(" >>> Unused TFGrid pallet V10 migration");
-            return 0;
+            Weight::zero()
         }
     }
 
@@ -62,7 +62,7 @@ impl<T: Config> OnRuntimeUpgrade for FixFarmNodeIndexMap<T> {
 pub fn add_farm_nodes_index<T: Config>() -> frame_support::weights::Weight {
     info!(" >>> Migrating nodes storage...");
 
-    NodesByFarmID::<T>::remove_all(None);
+    let _ = NodesByFarmID::<T>::clear(0, None); // TODO check clear() parameters
 
     let mut reads = 0;
     let mut writes = 0;
@@ -96,5 +96,5 @@ pub fn add_farm_nodes_index<T: Config>() -> frame_support::weights::Weight {
     );
 
     // Return the weight consumed by the migration.
-    T::DbWeight::get().reads_writes(reads as Weight, writes as Weight)
+    T::DbWeight::get().reads_writes(reads, writes)
 }

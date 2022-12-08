@@ -52,7 +52,7 @@ impl<T: Config> OnRuntimeUpgrade for NodeMigration<T> {
             migrate_to_version_13::<T>()
         } else {
             info!(" >>> Unused TFGrid pallet V13 migration");
-            0
+            Weight::zero()
         }
     }
 
@@ -143,5 +143,5 @@ pub fn migrate_to_version_13<T: Config>() -> frame_support::weights::Weight {
     );
 
     // Return the weight consumed by the migration.
-    T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
+    T::DbWeight::get().reads_writes(migrated_count + 1, migrated_count + 1)
 }

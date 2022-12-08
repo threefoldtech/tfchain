@@ -73,11 +73,13 @@ pub fn migrate_to_version_6<T: Config>() -> frame_support::weights::Weight {
         let contracts_to_bill_at = ContractsToBillAt::<T>::iter().collect::<Vec<_>>();
 
         // Remove all items under ContractsToBillAt
-        frame_support::migration::remove_storage_prefix(
+        let _ = frame_support::migration::clear_storage_prefix(
             b"SmartContractModule",
             b"ContractsToBillAt",
             b"",
-        );
+            None,
+            None,
+        ); // TODO check parameters
 
         let billing_freq = 600;
         BillingFrequency::<T>::put(billing_freq);
@@ -108,9 +110,9 @@ pub fn migrate_to_version_6<T: Config>() -> frame_support::weights::Weight {
         );
 
         // Return the weight consumed by the migration.
-        T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
+        T::DbWeight::get().reads_writes(migrated_count + 1, migrated_count + 1)
     } else {
         info!(" >>> Unused Smart Contract pallet V6 migration");
-        return 0;
+        Weight::zero()
     }
 }

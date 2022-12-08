@@ -414,19 +414,19 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn group_create(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_create_group(account_id)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn group_delete(origin: OriginFor<T>, group_id: u32) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_delete_group(account_id, group_id)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn contract_cancel(
             origin: OriginFor<T>,
             contract_id: u64,
@@ -435,7 +435,7 @@ pub mod pallet {
             Self::_cancel_contract(account_id, contract_id, types::Cause::CanceledByUser)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn contract_name_create(
             origin: OriginFor<T>,
             name: Vec<u8>,
@@ -444,7 +444,7 @@ pub mod pallet {
             Self::_create_name_contract(account_id, name)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn contract_capacity_reservation_create(
             origin: OriginFor<T>,
             farm_id: u32,
@@ -460,7 +460,7 @@ pub mod pallet {
             )
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn contract_capacity_reservation_update(
             origin: OriginFor<T>,
             capacity_reservation_id: u64,
@@ -474,7 +474,7 @@ pub mod pallet {
             )
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn deployment_create(
             origin: OriginFor<T>,
             capacity_reservation_id: u64,
@@ -494,7 +494,7 @@ pub mod pallet {
             )
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn deployment_update(
             origin: OriginFor<T>,
             deployment_id: u64,
@@ -512,7 +512,7 @@ pub mod pallet {
             )
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn deployment_cancel(
             origin: OriginFor<T>,
             deployment_id: u64,
@@ -521,7 +521,7 @@ pub mod pallet {
             Self::_cancel_deployment(account_id, deployment_id)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn add_nru_reports(
             origin: OriginFor<T>,
             reports: Vec<types::NruConsumption>,
@@ -530,7 +530,7 @@ pub mod pallet {
             Self::_compute_reports(account_id, reports)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn solution_provider_create(
             origin: OriginFor<T>,
             description: Vec<u8>,
@@ -541,7 +541,7 @@ pub mod pallet {
             Self::_create_solution_provider(description, link, providers)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn solution_provider_approve(
             origin: OriginFor<T>,
             solution_provider_id: u64,
@@ -551,7 +551,7 @@ pub mod pallet {
             Self::_approve_solution_provider(solution_provider_id, approve)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn bill_contract_for_block(
             origin: OriginFor<T>,
             contract_id: u64,
