@@ -4279,6 +4279,7 @@ dependencies = [
 name = "pallet-smart-contract"
 version = "3.0.0"
 dependencies = [
+ "env_logger",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -4289,9 +4290,11 @@ dependencies = [
  "pallet-tft-price",
  "pallet-timestamp",
  "parity-scale-codec 3.2.1",
+ "parking_lot 0.12.1",
  "scale-info",
  "sp-core",
  "sp-io",
+ "sp-keystore",
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
  "substrate-fixed",
@@ -4329,6 +4332,7 @@ dependencies = [
  "pallet-timestamp",
  "parity-scale-codec 3.2.1",
  "scale-info",
+ "serde_json",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -4458,7 +4462,9 @@ version = "1.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "pallet-collective",
  "pallet-membership",
+ "pallet-session",
  "parity-scale-codec 3.2.1",
  "scale-info",
  "sp-core",
@@ -7931,7 +7937,7 @@ checksum = "949517c0cf1bf4ee812e2e07e08ab448e3ae0d23472aee8a06c985f0c8815b16"
 
 [[package]]
 name = "tfchain"
-version = "2.1.1"
+version = "2.2.0-rc4"
 dependencies = [
  "clap 3.2.22",
  "frame-benchmarking",
@@ -7985,7 +7991,7 @@ dependencies = [
 
 [[package]]
 name = "tfchain-runtime"
-version = "2.1.1"
+version = "2.2.0-rc4"
 dependencies = [
  "frame-benchmarking",
  "frame-executive",

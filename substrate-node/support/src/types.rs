@@ -1,3 +1,4 @@
+use super::resources::Resources;
 use codec::{Decode, Encode, MaxEncodedLen};
 use core::cmp::{Ord, Ordering, PartialOrd};
 use frame_support::{traits::ConstU32, BoundedVec};
@@ -68,16 +69,112 @@ pub struct FarmingPolicyLimit {
     pub node_certification: bool,
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
+pub enum CapacityReservationPolicy {
+    Any {
+        resources: Resources,
+        features: Option<Vec<NodeFeatures>>,
+    },
+    Exclusive {
+        group_id: u32,
+        resources: Resources,
+        features: Option<Vec<NodeFeatures>>,
+    },
+    Node {
+        node_id: u32,
+    },
+}
+impl Default for CapacityReservationPolicy {
+    fn default() -> CapacityReservationPolicy {
+        CapacityReservationPolicy::Any {
+            resources: Resources::empty(),
+            features: None,
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
+pub enum NodeFeatures {
+    PublicNode,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
+pub enum PowerTarget {
+    Up,
+    Down,
+}
+
+impl Default for PowerTarget {
+    fn default() -> PowerTarget {
+        PowerTarget::Down
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
+pub enum PowerState {
+    Up,
+    Down(u32),
+}
+
+impl Default for PowerState {
+    fn default() -> PowerState {
+        PowerState::Up
+    }
+}
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct Node<PubConfig, If> {
+pub struct Power {
+    pub target: PowerTarget,
+    pub state: PowerState,
+    pub last_uptime: u64,
+}
+
+#[derive(
+    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
+)]
+pub struct ConsumableResources {
+    pub total_resources: Resources,
+    pub used_resources: Resources,
+}
+
+impl ConsumableResources {
+    pub fn can_consume_resources(&self, resources: &Resources) -> bool {
+        (self.total_resources.hru - self.used_resources.hru) >= resources.hru
+            && (self.total_resources.sru - self.used_resources.sru) >= resources.sru
+            && (self.total_resources.cru - self.used_resources.cru) >= resources.cru
+            && (self.total_resources.mru - self.used_resources.mru) >= resources.mru
+    }
+
+    pub fn consume(&mut self, resources: &Resources) {
+        self.used_resources.add(&resources);
+    }
+
+    pub fn free(&mut self, resources: &Resources) {
+        self.used_resources.substract(&resources);
+    }
+
+    pub fn calculate_increase_in_resources(&self, resources: &Resources) -> Resources {
+        let mut increase = resources.clone();
+        increase.substract(&self.total_resources);
+        increase
+    }
+
+    pub fn calculate_reduction_in_resources(&self, resources: &Resources) -> Resources {
+        let mut reduction = self.total_resources.clone();
+        reduction.substract(&resources);
+        reduction
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+pub struct Node<Location, PubConfig, If, SerialNumber> {
     pub version: u32,
     pub id: u32,
     pub farm_id: u32,
     pub twin_id: u32,
-    pub resources: Resources,
+    pub resources: ConsumableResources,
     pub location: Location,
-    pub country: Vec<u8>,
-    pub city: Vec<u8>,
+    pub power: Power,
     // optional public config
     pub public_config: Option<PubConfig>,
     pub created: u64,
@@ -86,8 +183,17 @@ pub struct Node<PubConfig, If> {
     pub certification: NodeCertification,
     pub secure_boot: bool,
     pub virtualized: bool,
-    pub serial_number: Vec<u8>,
+    pub serial_number: Option<SerialNumber>,
     pub connection_price: u32,
+}
+
+impl<Location, PubConfig, If, SerialNumber> Node<Location, PubConfig, If, SerialNumber> {
+    pub fn can_be_shutdown(&self) -> bool {
+        self.resources.used_resources.is_empty()
+    }
+    pub fn is_target_up(&self) -> bool {
+        matches!(self.power.target, PowerTarget::Up)
+    }
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
@@ -108,44 +214,6 @@ pub struct PublicConfig<IP4, IP6, Domain> {
 pub struct IP<IpAddr, Gw> {
     pub ip: IpAddr,
     pub gw: Gw,
-}
-
-#[derive(
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Clone,
-    Encode,
-    Decode,
-    Default,
-    Debug,
-    TypeInfo,
-    Copy,
-    MaxEncodedLen,
-)]
-pub struct Resources {
-    pub hru: u64,
-    pub sru: u64,
-    pub cru: u64,
-    pub mru: u64,
-}
-
-impl Resources {
-    pub fn add(mut self, other: &Resources) -> Resources {
-        self.cru += other.cru;
-        self.sru += other.sru;
-        self.hru += other.hru;
-        self.mru += other.mru;
-        self
-    }
-}
-
-// Store Location long and lat as string
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct Location {
-    pub longitude: Vec<u8>,
-    pub latitude: Vec<u8>,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, TypeInfo, Copy)]

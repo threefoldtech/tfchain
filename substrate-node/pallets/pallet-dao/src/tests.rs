@@ -2,11 +2,14 @@ use super::Event as DaoEvent;
 use crate::{mock::RuntimeEvent as MockEvent, mock::*, Error};
 use frame_support::{assert_noop, assert_ok, bounded_vec, dispatch::GetDispatchInfo};
 use frame_system::{EventRecord, Phase, RawOrigin};
-use pallet_tfgrid::types::PublicIpInput;
+use pallet_tfgrid::{
+    types::{LocationInput, PublicIpInput},
+    ResourcesInput,
+};
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Hash};
 use std::convert::TryInto;
-use tfchain_support::types::{FarmCertification, Location, NodeCertification, Resources};
+use tfchain_support::types::{FarmCertification, NodeCertification};
 
 #[test]
 fn farmers_vote_no_farm_fails() {
@@ -191,7 +194,7 @@ fn close_works() {
         );
 
         assert_eq!(
-            e[8],
+            e[9],
             record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 10,
                 proposal_hash: hash,
@@ -202,7 +205,7 @@ fn close_works() {
         );
 
         assert_eq!(
-            e[12],
+            e[14],
             record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 11,
                 proposal_hash: hash,
@@ -217,7 +220,7 @@ fn close_works() {
         let total_weight = farm_1_weight + farm_2_weight;
 
         assert_eq!(
-            e[13],
+            e[15],
             record(MockEvent::DaoModule(DaoEvent::Closed {
                 proposal_hash: hash,
                 yes: 2,
@@ -228,7 +231,7 @@ fn close_works() {
         );
 
         assert_eq!(
-            e[14],
+            e[16],
             record(MockEvent::DaoModule(DaoEvent::Approved {
                 proposal_hash: hash,
             }))
@@ -276,7 +279,7 @@ fn close_if_not_council_member_fails() {
             None
         ));
 
-        let not_council_member = RuntimeOrigin::signed(4); // [1,2,3] are council members
+        let not_council_member = Origin::signed(4); // [1, 2, 3] are council members
 
         assert_noop!(
             DaoModule::close(not_council_member, hash.clone(), 0,),
@@ -343,7 +346,7 @@ fn motion_approval_works() {
         );
 
         assert_eq!(
-            e[8],
+            e[9],
             record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 10,
                 proposal_hash: hash,
@@ -354,7 +357,7 @@ fn motion_approval_works() {
         );
 
         assert_eq!(
-            e[12],
+            e[14],
             record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 11,
                 proposal_hash: hash,
@@ -369,7 +372,7 @@ fn motion_approval_works() {
         let total_weight = farm_1_weight + farm_2_weight;
 
         assert_eq!(
-            e[13],
+            e[15],
             record(MockEvent::DaoModule(DaoEvent::Closed {
                 proposal_hash: hash,
                 yes: 2,
@@ -380,14 +383,14 @@ fn motion_approval_works() {
         );
 
         assert_eq!(
-            e[14],
+            e[16],
             record(MockEvent::DaoModule(DaoEvent::Approved {
                 proposal_hash: hash,
             }))
         );
 
         assert_eq!(
-            e[16],
+            e[18],
             record(MockEvent::DaoModule(DaoEvent::Executed {
                 proposal_hash: hash,
                 result: Ok(())
@@ -564,7 +567,7 @@ fn weighted_voting_works() {
         );
 
         assert_eq!(
-            e[8],
+            e[9],
             record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 10,
                 proposal_hash: hash,
@@ -575,7 +578,7 @@ fn weighted_voting_works() {
         );
 
         assert_eq!(
-            e[12],
+            e[14],
             record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 11,
                 proposal_hash: hash,
@@ -589,7 +592,7 @@ fn weighted_voting_works() {
         let farm_2_weight = DaoModule::get_vote_weight(2).unwrap();
 
         assert_eq!(
-            e[13],
+            e[15],
             record(MockEvent::DaoModule(DaoEvent::Closed {
                 proposal_hash: hash,
                 yes: 1,
@@ -602,7 +605,7 @@ fn weighted_voting_works() {
         // Outcome should be negative since the 2nd farmer which has more weight because he
         // has more stake in the network voted no
         assert_eq!(
-            e[14],
+            e[16],
             record(MockEvent::DaoModule(DaoEvent::Disapproved {
                 proposal_hash: hash,
             }))
@@ -673,7 +676,7 @@ fn voting_tfgridmodule_call_works() {
         );
 
         assert_eq!(
-            e[8],
+            e[9],
             record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 10,
                 proposal_hash: hash,
@@ -684,7 +687,7 @@ fn voting_tfgridmodule_call_works() {
         );
 
         assert_eq!(
-            e[12],
+            e[14],
             record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 11,
                 proposal_hash: hash,
@@ -699,7 +702,7 @@ fn voting_tfgridmodule_call_works() {
         let total_weight = farm_1_weight + farm_2_weight;
 
         assert_eq!(
-            e[13],
+            e[15],
             record(MockEvent::DaoModule(DaoEvent::Closed {
                 proposal_hash: hash,
                 yes: 2,
@@ -710,14 +713,14 @@ fn voting_tfgridmodule_call_works() {
         );
 
         assert_eq!(
-            e[14],
+            e[16],
             record(MockEvent::DaoModule(DaoEvent::Approved {
                 proposal_hash: hash,
             }))
         );
 
         assert_eq!(
-            e[16],
+            e[18],
             record(MockEvent::DaoModule(DaoEvent::Executed {
                 proposal_hash: hash,
                 result: Ok(())
@@ -827,80 +830,70 @@ pub fn prepare_twin_farm_and_big_node(account_id: u64, farm_name: Vec<u8>, farm_
 }
 
 pub fn prepare_twin(account_id: u64) {
-    let document = "some_link".as_bytes().to_vec();
-    let hash = "some_hash".as_bytes().to_vec();
-
     assert_ok!(TfgridModule::user_accept_tc(
-        RuntimeOrigin::signed(account_id),
-        document.clone(),
-        hash.clone(),
+        Origin::signed(account_id),
+        get_document_link_input(b"some_link"),
+        get_document_hash_input(b"some_hash"),
     ));
 
-    let ip = get_twin_ip(b"::1");
-    assert_ok!(TfgridModule::create_twin(
-        RuntimeOrigin::signed(account_id),
-        ip.clone().0
-    ));
+    let ip = get_twin_ip_input(b"::1");
+    assert_ok!(TfgridModule::create_twin(Origin::signed(account_id), ip));
 }
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 fn prepare_node(account_id: u64, farm_id: u32) {
-    // random location
-    let location = Location {
-        longitude: "12.233213231".as_bytes().to_vec(),
-        latitude: "32.323112123".as_bytes().to_vec(),
-    };
-
-    let resources = Resources {
+    let resources = ResourcesInput {
         hru: 1024 * GIGABYTE,
         sru: 512 * GIGABYTE,
         cru: 8,
         mru: 16 * GIGABYTE,
     };
 
-    let country = "Belgium".as_bytes().to_vec();
-    let city = "Ghent".as_bytes().to_vec();
+    // random location
+    let location = LocationInput {
+        city: get_city_name_input(b"Ghent"),
+        country: get_country_name_input(b"Belgium"),
+        latitude: get_latitude_input(b"12.233213231"),
+        longitude: get_longitude_input(b"32.323112123"),
+    };
+
     assert_ok!(TfgridModule::create_node(
-        RuntimeOrigin::signed(account_id),
+        Origin::signed(account_id),
         farm_id,
         resources,
         location,
-        country,
-        city,
         bounded_vec![],
         false,
         false,
-        "some_serial".as_bytes().to_vec(),
+        None,
     ));
 }
 
 fn prepare_big_node(account_id: u64, farm_id: u32) {
-    // random location
-    let location = Location {
-        longitude: "12.233213231".as_bytes().to_vec(),
-        latitude: "32.323112123".as_bytes().to_vec(),
-    };
-
-    let resources = Resources {
+    let resources = ResourcesInput {
         hru: 20024 * GIGABYTE,
         sru: 2024 * GIGABYTE,
         cru: 16,
         mru: 64 * GIGABYTE,
     };
 
-    let country = "Belgium".as_bytes().to_vec();
-    let city = "Ghent".as_bytes().to_vec();
+    // random location
+    let location = LocationInput {
+        city: get_city_name_input(b"Ghent"),
+        country: get_country_name_input(b"Belgium"),
+        latitude: get_latitude_input(b"12.233213231"),
+        longitude: get_longitude_input(b"32.323112123"),
+    };
+
     assert_ok!(TfgridModule::create_node(
-        RuntimeOrigin::signed(account_id),
+        Origin::signed(account_id),
         farm_id,
         resources,
         location,
-        country,
-        city,
         bounded_vec![],
         false,
         false,
-        "some_serial".as_bytes().to_vec(),
+        None,
     ));
 }
 

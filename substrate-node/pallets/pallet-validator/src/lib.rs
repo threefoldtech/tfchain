@@ -16,6 +16,12 @@ use substrate_validator_set;
 pub mod types;
 pub use pallet::*;
 
+#[cfg(test)]
+mod tests;
+
+#[cfg(test)]
+mod mock;
+
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
@@ -53,8 +59,8 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         Bonded(T::AccountId),
-        ValidatorCreated(T::AccountId, types::Validator<T::AccountId>),
-        ValidatorApproved(types::Validator<T::AccountId>),
+        ValidatorRequestCreated(T::AccountId, types::Validator<T::AccountId>),
+        ValidatorRequestApproved(types::Validator<T::AccountId>),
         ValidatorActivated(types::Validator<T::AccountId>),
         ValidatorRemoved(types::Validator<T::AccountId>),
         NodeValidatorChanged(T::AccountId),
@@ -64,16 +70,17 @@ pub mod pallet {
     #[pallet::error]
     pub enum Error<T> {
         BadOrigin,
+        NotCouncilMember,
         AlreadyBonded,
-        StashNotBonded,
-        StashBondedWithWrongValidator,
-        CannotBondWithSameAccount,
+        StashNotBonded,                // TOCHECK: Unused
+        StashBondedWithWrongValidator, // TOCHECK: Unused
+        CannotBondWithSameAccount,     // TOCHECK: Unused
         DuplicateValidator,
         ValidatorNotFound,
         ValidatorNotApproved,
-        UnauthorizedToActivateValidator,
+        UnauthorizedToActivateValidator, // TOCHECK: Unused
         ValidatorValidatingAlready,
-        ValidatorNotValidating,
+        ValidatorNotValidating, // TOCHECK: Unused
     }
 
     #[pallet::hooks]
@@ -105,11 +112,11 @@ pub mod pallet {
         /// Validator node account: the account that will validate on consensus layer
         /// Stash account: the "bank" account of the validator (where rewards should be sent to) the stash should be bonded to a validator
         /// Description: why someone wants to become a validator
-        /// Tf Connect ID: the threefold connect ID of the persion who wants to become a validator
+        /// Tf Connect ID: the threefold connect ID of the person who wants to become a validator
         /// Info: some public info about the validator (website link, blog link, ..)
         /// A user can only have 1 validator request at a time
         #[pallet::weight(100_000_000)]
-        pub fn create_validator(
+        pub fn create_validator_request(
             origin: OriginFor<T>,
             validator_node_account: T::AccountId,
             stash_account: T::AccountId,
@@ -137,7 +144,7 @@ pub mod pallet {
             // Create a validator request object
             <Validator<T>>::insert(&address, &request);
 
-            Self::deposit_event(Event::ValidatorCreated(address, request.clone()));
+            Self::deposit_event(Event::ValidatorRequestCreated(address, request.clone()));
 
             Ok(().into())
         }
@@ -191,10 +198,6 @@ pub mod pallet {
             let mut validator = <Validator<T>>::get(&address)
                 .ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
 
-            // Set the new validator node account on the validator struct
-            validator.validator_node_account = new_node_validator_account.clone();
-            <Validator<T>>::insert(address, &validator);
-
             // if validator is validating, also remove old one from consensus and add new one.
             if validator.state == types::ValidatorRequestState::Validating {
                 // Remove the old validator and rotate session
@@ -211,13 +214,19 @@ pub mod pallet {
                     frame_system::RawOrigin::Root.into(),
                     new_node_validator_account.clone(),
                 )?;
-                Self::deposit_event(Event::NodeValidatorChanged(new_node_validator_account));
+                Self::deposit_event(Event::NodeValidatorChanged(
+                    new_node_validator_account.clone(),
+                ));
             }
+
+            // Set the new validator node account on the validator struct
+            validator.validator_node_account = new_node_validator_account;
+            <Validator<T>>::insert(address, &validator);
 
             Ok(().into())
         }
 
-        /// Bond an account to to a validator account
+        /// Bond an account to a validator account
         /// Just proves that the stash account is indeed under control of the validator account
         #[pallet::weight(100_000_000)]
         pub fn bond(
@@ -230,6 +239,7 @@ pub mod pallet {
                 Err(Error::<T>::AlreadyBonded)?
             }
             let validator = T::Lookup::lookup(validator)?;
+            // TOCHECK: enough to identify validator?
 
             <Bonded<T>>::insert(&stash, &validator);
 
@@ -246,11 +256,11 @@ pub mod pallet {
             origin: OriginFor<T>,
             validator_account: <T::Lookup as StaticLookup>::Source,
         ) -> DispatchResultWithPostInfo {
-            T::CouncilOrigin::ensure_origin(origin)?;
+            let who = ensure_signed(origin)?;
 
-            let v = T::Lookup::lookup(validator_account.clone())?;
+            Self::is_council_member(who)?;
 
-            let mut validator = <Validator<T>>::get(&v)
+            let mut validator = <Validator<T>>::get(&validator_account)
                 .ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
 
             // Set state to approved
@@ -263,7 +273,7 @@ pub mod pallet {
                 validator_account,
             )?;
 
-            Self::deposit_event(Event::ValidatorApproved(validator));
+            Self::deposit_event(Event::ValidatorRequestApproved(validator));
 
             Ok(().into())
         }
@@ -279,11 +289,9 @@ pub mod pallet {
             origin: OriginFor<T>,
             validator_account: <T::Lookup as StaticLookup>::Source,
         ) -> DispatchResultWithPostInfo {
-            let v = T::Lookup::lookup(validator_account.clone())?;
+            let who = ensure_signed(origin.clone())?;
 
-            if !(ensure_signed(origin.clone())? == v
-                || T::CouncilOrigin::ensure_origin(origin).is_ok())
-            {
+            if !(who == validator || Self::is_council_member(who).is_ok()) {
                 Err(Error::<T>::BadOrigin)?
             }
 
@@ -320,5 +328,16 @@ pub mod pallet {
 
             Ok(().into())
         }
+    }
+}
+
+impl<T: Config> Pallet<T> {
+    fn is_council_member(who: T::AccountId) -> DispatchResultWithPostInfo {
+        let council_members =
+            pallet_membership::Pallet::<T, pallet_membership::Instance1>::members();
+
+        ensure!(council_members.contains(&who), Error::<T>::NotCouncilMember,);
+
+        Ok(().into())
     }
 }

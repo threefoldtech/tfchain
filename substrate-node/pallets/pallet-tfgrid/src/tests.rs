@@ -1,15 +1,16 @@
 use super::Event as TfgridEvent;
 use crate::{
-    mock::RuntimeEvent as MockEvent, mock::*, types::PublicIpInput, Error, InterfaceInput,
-    InterfaceIpsInput, PublicIpListInput,
+    mock::Event as MockEvent,
+    mock::*,
+    types::{LocationInput, PublicIpInput},
+    Error, InterfaceInput, InterfaceIpsInput, PubConfigInput, PublicIpListInput, ResourcesInput,
 };
 use frame_support::{assert_noop, assert_ok, bounded_vec, BoundedVec};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
-use tfchain_support::resources;
 use tfchain_support::types::{
-    FarmCertification, FarmingPolicyLimit, Interface, Location, NodeCertification, PublicConfig,
-    Resources, IP,
+    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, PowerState, PowerTarget,
+    PublicConfig, IP,
 };
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -32,16 +33,14 @@ fn test_update_entity_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
 
-        let country = "Belgium".as_bytes().to_vec();
-        let city = "Ghent".as_bytes().to_vec();
         // Change name to barfoo
-        let name = "barfoo".as_bytes().to_vec();
+        let name = b"barfoo".to_vec();
 
         assert_ok!(TfgridModule::update_entity(
             RuntimeOrigin::signed(test_ed25519()),
             name,
-            country,
-            city
+            get_country_name_input(b"Belgium"),
+            get_city_name_input(b"Ghent"),
         ));
     });
 }
@@ -51,13 +50,16 @@ fn test_update_entity_fails_if_signed_by_someone_else() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
 
-        let country = "Belgium".as_bytes().to_vec();
-        let city = "Ghent".as_bytes().to_vec();
         // Change name to barfoo
-        let name = "barfoo".as_bytes().to_vec();
+        let name = b"barfoo".to_vec();
 
         assert_noop!(
-            TfgridModule::update_entity(RuntimeOrigin::signed(bob()), name, country, city),
+            TfgridModule::update_entity(
+                Origin::signed(bob()),
+                name,
+                get_country_name_input(b"Belgium"),
+                get_city_name_input(b"Ghent"),
+            ),
             Error::<TestRuntime>::EntityNotExists
         );
     });
@@ -68,10 +70,11 @@ fn test_create_entity_double_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
 
-        let name = "foobar".as_bytes().to_vec();
-        let country = "Belgium".as_bytes().to_vec();
-        let city = "Ghent".as_bytes().to_vec();
-        let signature = sign_create_entity(name.clone(), country.clone(), city.clone());
+        let name = b"foobar".to_vec();
+        let country = get_country_name_input(b"Belgium");
+        let city = get_city_name_input(b"Ghent");
+
+        let signature = sign_create_entity(name.clone(), country.to_vec(), city.to_vec());
 
         assert_noop!(
             TfgridModule::create_entity(
@@ -80,7 +83,7 @@ fn test_create_entity_double_fails() {
                 name,
                 country,
                 city,
-                signature
+                signature,
             ),
             Error::<TestRuntime>::EntityWithNameExists
         );
@@ -92,11 +95,11 @@ fn test_create_entity_double_fails_with_same_pubkey() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
 
-        let name = "barfoo".as_bytes().to_vec();
-        let country = "Belgium".as_bytes().to_vec();
-        let city = "Ghent".as_bytes().to_vec();
+        let name = b"barfoo".to_vec();
+        let country = get_country_name_input(b"Belgium");
+        let city = get_city_name_input(b"Ghent");
 
-        let signature = sign_create_entity(name.clone(), country.clone(), city.clone());
+        let signature = sign_create_entity(name.clone(), country.to_vec(), city.to_vec());
 
         assert_noop!(
             TfgridModule::create_entity(
@@ -105,7 +108,7 @@ fn test_create_entity_double_fails_with_same_pubkey() {
                 name,
                 country,
                 city,
-                signature
+                signature,
             ),
             Error::<TestRuntime>::EntityWithPubkeyExists
         );
@@ -138,19 +141,16 @@ fn test_delete_entity_fails_if_signed_by_someone_else() {
 #[test]
 fn test_create_twin_works() {
     ExternalityBuilder::build().execute_with(|| {
-        let document = "some_link".as_bytes().to_vec();
-        let hash = "some_hash".as_bytes().to_vec();
-
         assert_ok!(TfgridModule::user_accept_tc(
-            RuntimeOrigin::signed(test_ed25519()),
-            document,
-            hash,
+            Origin::signed(test_ed25519()),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
         ));
 
-        let ip = get_twin_ip(b"::1");
+        let ip = get_twin_ip_input(b"::1");
         assert_ok!(TfgridModule::create_twin(
-            RuntimeOrigin::signed(test_ed25519()),
-            ip.clone().0
+            Origin::signed(test_ed25519()),
+            ip,
         ));
     });
 }
@@ -158,20 +158,14 @@ fn test_create_twin_works() {
 #[test]
 fn test_delete_twin_works() {
     ExternalityBuilder::build().execute_with(|| {
-        let document = "some_link".as_bytes().to_vec();
-        let hash = "some_hash".as_bytes().to_vec();
-
         assert_ok!(TfgridModule::user_accept_tc(
-            RuntimeOrigin::signed(alice()),
-            document,
-            hash,
+            Origin::signed(alice()),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
         ));
 
-        let ip = get_twin_ip(b"::1");
-        assert_ok!(TfgridModule::create_twin(
-            RuntimeOrigin::signed(alice()),
-            ip.clone().0
-        ));
+        let ip = get_twin_ip_input(b"::1");
+        assert_ok!(TfgridModule::create_twin(Origin::signed(alice()), ip));
 
         let twin_id = 1;
         assert_ok!(TfgridModule::delete_twin(
@@ -301,9 +295,9 @@ fn test_create_twin_double_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
 
-        let ip = get_twin_ip(b"::1");
+        let ip = get_twin_ip_input(b"::1");
         assert_noop!(
-            TfgridModule::create_twin(RuntimeOrigin::signed(alice()), ip.clone().0),
+            TfgridModule::create_twin(Origin::signed(alice()), ip),
             Error::<TestRuntime>::TwinWithPubkeyExists
         );
     });
@@ -324,25 +318,25 @@ fn test_create_farm_invalid_name_fails() {
         create_entity();
         create_twin();
 
-        let farm_name = BoundedVec::try_from(b"test.farm".to_vec()).unwrap();
+        let farm_name = get_farm_name_input(b"test.farm");
         assert_noop!(
             TfgridModule::create_farm(RuntimeOrigin::signed(alice()), farm_name, bounded_vec![]),
             Error::<TestRuntime>::InvalidFarmName
         );
 
-        let farm_name = BoundedVec::try_from(b"test farm".to_vec()).unwrap();
+        let farm_name = get_farm_name_input(b"test farm");
         assert_noop!(
             TfgridModule::create_farm(RuntimeOrigin::signed(alice()), farm_name, bounded_vec![]),
             Error::<TestRuntime>::InvalidFarmName
         );
 
-        let farm_name = BoundedVec::try_from(b"".to_vec()).unwrap();
+        let farm_name = get_farm_name_input(b"");
         assert_noop!(
             TfgridModule::create_farm(RuntimeOrigin::signed(alice()), farm_name, bounded_vec![]),
             Error::<TestRuntime>::FarmNameTooShort
         );
 
-        let farm_name = BoundedVec::try_from(b"12".to_vec()).unwrap();
+        let farm_name = get_farm_name_input(b"12");
         assert_noop!(
             TfgridModule::create_farm(RuntimeOrigin::signed(alice()), farm_name, bounded_vec![]),
             Error::<TestRuntime>::FarmNameTooShort
@@ -357,19 +351,19 @@ fn test_update_farm_name_works() {
         create_farm();
 
         create_twin_bob();
-        let farm_name = get_farm_name(b"bob_farm");
+
+        let farm_name = get_farm_name_input(b"bob_farm");
         assert_ok!(TfgridModule::create_farm(
-            RuntimeOrigin::signed(bob()),
-            farm_name.0.clone(),
+            Origin::signed(bob()),
+            farm_name,
             bounded_vec![]
         ));
 
-        let farm_name = get_farm_name(b"bob_updated_farm");
+        let farm_name = get_farm_name_input(b"bob_updated_farm");
         assert_ok!(TfgridModule::update_farm(
             RuntimeOrigin::signed(bob()),
             2,
-            farm_name.0.clone(),
-            1
+            farm_name,
         ));
     });
 }
@@ -379,25 +373,25 @@ fn test_update_farm_existing_name_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
 
-        let farm_name = get_farm_name(b"alice_farm");
-
+        let farm_name = get_farm_name_input(b"alice_farm");
         assert_ok!(TfgridModule::create_farm(
-            RuntimeOrigin::signed(alice()),
-            farm_name.0.clone(),
+            Origin::signed(alice()),
+            farm_name,
             bounded_vec![]
         ));
 
         create_twin_bob();
-        let farm_name = get_farm_name(b"bob_farm");
+
+        let farm_name = get_farm_name_input(b"bob_farm");
         assert_ok!(TfgridModule::create_farm(
-            RuntimeOrigin::signed(bob()),
-            farm_name.0.clone(),
+            Origin::signed(bob()),
+            farm_name,
             bounded_vec![]
         ));
 
-        let farm_name = get_farm_name(b"alice_farm");
+        let farm_name = get_farm_name_input(b"alice_farm");
         assert_noop!(
-            TfgridModule::update_farm(RuntimeOrigin::signed(bob()), 2, farm_name.0.clone(), 1),
+            TfgridModule::update_farm(Origin::signed(bob()), 2, farm_name),
             Error::<TestRuntime>::InvalidFarmName
         );
     });
@@ -409,12 +403,12 @@ fn test_create_farm_with_double_ip_fails() {
         create_entity();
         create_twin();
 
-        let farm_name = get_farm_name(b"test_farm");
+        let farm_name = get_farm_name_input(b"test_farm");
 
         let mut pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
 
-        let ip = get_public_ip_ip(&"185.206.122.33/24".as_bytes().to_vec()).0;
-        let gw = get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec()).0;
+        let ip = get_public_ip_ip_input(b"185.206.122.33/24");
+        let gw = get_public_ip_gw_input(b"185.206.122.1");
 
         pub_ips
             .try_push(PublicIpInput {
@@ -425,7 +419,7 @@ fn test_create_farm_with_double_ip_fails() {
         pub_ips.try_push(PublicIpInput { ip, gw }).unwrap();
 
         assert_noop!(
-            TfgridModule::create_farm(RuntimeOrigin::signed(alice()), farm_name.0.clone(), pub_ips),
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name, pub_ips),
             Error::<TestRuntime>::IpExists
         );
     });
@@ -441,8 +435,8 @@ fn test_adding_ip_to_farm_works() {
         assert_ok!(TfgridModule::add_farm_ip(
             RuntimeOrigin::signed(alice()),
             1,
-            get_public_ip_ip(&"185.206.122.125/16".as_bytes().to_vec()).0,
-            get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec()).0
+            get_public_ip_ip_input(b"185.206.122.125/16"),
+            get_public_ip_gw_input(b"185.206.122.1"),
         ));
     });
 }
@@ -458,8 +452,8 @@ fn test_adding_misformatted_ip_to_farm_fails() {
             TfgridModule::add_farm_ip(
                 RuntimeOrigin::signed(alice()),
                 1,
-                "185.206.122.125".as_bytes().to_vec().try_into().unwrap(),
-                get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec()).0
+                get_public_ip_ip_input(b"185.206.122.125"),
+                get_public_ip_gw_input(b"185.206.122.1"),
             ),
             Error::<TestRuntime>::InvalidPublicIP
         );
@@ -489,16 +483,16 @@ fn test_adding_ip_duplicate_to_farm_fails() {
         assert_ok!(TfgridModule::add_farm_ip(
             RuntimeOrigin::signed(alice()),
             1,
-            get_public_ip_ip(&"185.206.122.125/16".as_bytes().to_vec()).0,
-            get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec()).0
+            get_public_ip_ip_input(b"185.206.122.125/16"),
+            get_public_ip_gw_input(b"185.206.122.1"),
         ));
 
         assert_noop!(
             TfgridModule::add_farm_ip(
                 RuntimeOrigin::signed(alice()),
                 1,
-                get_public_ip_ip(&"185.206.122.125/16".as_bytes().to_vec()).0,
-                get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec()).0
+                get_public_ip_ip_input(b"185.206.122.125/16"),
+                get_public_ip_gw_input(b"185.206.122.1"),
             ),
             Error::<TestRuntime>::IpExists
         );
@@ -553,35 +547,28 @@ fn test_update_twin_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
 
-        let ip = get_twin_ip(b"::1");
-        assert_ok!(TfgridModule::update_twin(
-            RuntimeOrigin::signed(alice()),
-            ip.clone().0
-        ));
+        let ip = get_twin_ip_input(b"::1");
+        assert_ok!(TfgridModule::update_twin(Origin::signed(alice()), ip));
     });
 }
 
 #[test]
 fn test_update_twin_fails_if_signed_by_someone_else() {
     ExternalityBuilder::build().execute_with(|| {
-        let document = "some_link".as_bytes().to_vec();
-        let hash = "some_hash".as_bytes().to_vec();
-
         assert_ok!(TfgridModule::user_accept_tc(
-            RuntimeOrigin::signed(alice()),
-            document,
-            hash,
+            Origin::signed(alice()),
+            get_document_link_input(b"some_link"),
+            get_document_hash_input(b"some_hash"),
         ));
 
-        let ip = get_twin_ip(b"::1");
+        let ip = get_twin_ip_input(b"::1");
         assert_ok!(TfgridModule::create_twin(
-            RuntimeOrigin::signed(alice()),
-            ip.clone().0
+            Origin::signed(alice()),
+            ip.clone()
         ));
 
-        let ip = get_twin_ip(b"::1");
         assert_noop!(
-            TfgridModule::update_twin(RuntimeOrigin::signed(bob()), ip.clone().0),
+            TfgridModule::update_twin(Origin::signed(bob()), ip),
             Error::<TestRuntime>::TwinNotExists
         );
     });
@@ -594,12 +581,12 @@ fn test_create_farm_with_same_name_fails() {
         create_twin();
         create_farm();
 
-        let farm_name = get_farm_name(b"test_farm");
+        let farm_name = get_farm_name_input(b"test_farm");
 
         let pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
 
         assert_noop!(
-            TfgridModule::create_farm(RuntimeOrigin::signed(alice()), farm_name.0.clone(), pub_ips),
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name, pub_ips),
             Error::<TestRuntime>::FarmExists
         );
     });
@@ -683,33 +670,31 @@ fn update_node_moved_from_farm_list_works() {
         assert_eq!(nodes.len(), 1);
         assert_eq!(nodes[0], 1);
 
-        let country = "Belgium".as_bytes().to_vec();
-        let city = "Ghent".as_bytes().to_vec();
-
-        // random location
-        let location = Location {
-            longitude: "12.233213231".as_bytes().to_vec(),
-            latitude: "32.323112123".as_bytes().to_vec(),
-        };
-
-        let resources = Resources {
+        let resources = ResourcesInput {
             hru: 1024 * GIGABYTE,
             sru: 512 * GIGABYTE,
             cru: 8,
             mru: 16 * GIGABYTE,
         };
+
+        // random location
+        let location = LocationInput {
+            city: get_city_name_input(b"Ghent"),
+            country: get_country_name_input(b"Belgium"),
+            latitude: get_latitude_input(b"12.233213231"),
+            longitude: get_longitude_input(b"32.323112123"),
+        };
+
         assert_ok!(TfgridModule::update_node(
             RuntimeOrigin::signed(alice()),
             1,
             2,
             resources,
             location,
-            country,
-            city,
-            Vec::new().try_into().unwrap(),
+            bounded_vec![],
             true,
             true,
-            "some_serial".as_bytes().to_vec(),
+            None,
         ));
 
         // should be removed from farm 1 nodes
@@ -746,21 +731,26 @@ fn update_certified_node_resources_loses_certification_works() {
         assert_eq!(node.certification, NodeCertification::Certified);
 
         // Change cores to 2
-        let mut node_resources = node.resources;
+        let mut node_resources: ResourcesInput = node.resources.total_resources;
         node_resources.cru = 2;
+
+        let node_location = LocationInput {
+            city: node.location.city.0,
+            country: node.location.country.0,
+            latitude: node.location.latitude,
+            longitude: node.location.longitude,
+        };
 
         assert_ok!(TfgridModule::update_node(
             RuntimeOrigin::signed(alice()),
             1,
             1,
             node_resources,
-            node.location,
-            node.country,
-            node.city,
-            Vec::new().try_into().unwrap(),
+            node_location,
+            bounded_vec![],
             true,
             true,
-            "some_serial".as_bytes().to_vec(),
+            None,
         ));
 
         let our_events = System::events();
@@ -798,19 +788,26 @@ fn update_certified_node_same_resources_keeps_certification_works() {
         let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(node.certification, NodeCertification::Certified);
 
+        let node_resources: ResourcesInput = node.resources.total_resources;
+
+        let node_location = LocationInput {
+            city: node.location.city.0,
+            country: node.location.country.0,
+            latitude: node.location.latitude,
+            longitude: node.location.longitude,
+        };
+
         // Don't change resources
         assert_ok!(TfgridModule::update_node(
             RuntimeOrigin::signed(alice()),
             1,
             1,
-            node.resources,
-            node.location,
-            node.country,
-            node.city,
-            Vec::new().try_into().unwrap(),
+            node_resources,
+            node_location,
+            bounded_vec![],
             true,
             true,
-            "some_serial".as_bytes().to_vec(),
+            None,
         ));
 
         let node = TfgridModule::nodes(1).unwrap();
@@ -825,32 +822,28 @@ fn create_node_with_interfaces_works() {
         create_twin();
         create_farm();
 
-        let country = "Belgium".as_bytes().to_vec();
-        let city = "Ghent".as_bytes().to_vec();
-
-        // random location
-        let location = Location {
-            longitude: "12.233213231".as_bytes().to_vec(),
-            latitude: "32.323112123".as_bytes().to_vec(),
-        };
-
-        let resources = Resources {
+        let resources = ResourcesInput {
             hru: 1024 * GIGABYTE,
             sru: 512 * GIGABYTE,
             cru: 8,
             mru: 16 * GIGABYTE,
         };
 
-        let mut interface_ips: InterfaceIpsInput<TestRuntime> = bounded_vec![];
-        let intf_ip_1 = get_interface_ip(&"10.2.3.3".as_bytes().to_vec());
-        interface_ips.try_push(intf_ip_1.0).unwrap();
+        // random location
+        let location = LocationInput {
+            city: get_city_name_input(b"Ghent"),
+            country: get_country_name_input(b"Belgium"),
+            latitude: get_latitude_input(b"12.233213231"),
+            longitude: get_longitude_input(b"32.323112123"),
+        };
 
-        let name = get_interface_name(&"zos".as_bytes().to_vec()).0;
-        let mac = get_interface_mac(&"00:00:5e:00:53:af".as_bytes().to_vec()).0;
+        let mut interface_ips: InterfaceIpsInput<TestRuntime> = bounded_vec![];
+        let intf_ip = get_interface_ip_input(b"10.2.3.3");
+        interface_ips.try_push(intf_ip).unwrap();
 
         let interface = Interface {
-            name,
-            mac,
+            name: get_interface_name_input(b"zos"),
+            mac: get_interface_mac_input(b"00:00:5e:00:53:af"),
             ips: interface_ips,
         };
 
@@ -862,13 +855,99 @@ fn create_node_with_interfaces_works() {
             1,
             resources,
             location,
-            country,
-            city,
             interfaces,
             true,
             true,
-            "some_serial".as_bytes().to_vec()
+            None,
         ));
+    });
+}
+
+#[test]
+fn change_power_state_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+        create_twin_bob();
+        create_extra_node();
+
+        assert_ok!(TfgridModule::change_power_state(
+            Origin::signed(bob()),
+            PowerState::Down(1)
+        ));
+
+        assert_eq!(
+            TfgridModule::nodes(2).unwrap().power.state,
+            PowerState::Down(1)
+        );
+    });
+}
+
+#[test]
+fn change_power_state_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+        create_twin_bob();
+        //try changing the power state using another twin_id
+        assert_noop!(
+            TfgridModule::change_power_state(Origin::signed(bob()), PowerState::Down(1)),
+            Error::<TestRuntime>::NodeNotExists
+        );
+    });
+}
+
+#[test]
+fn change_power_target_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+        create_twin_bob();
+        create_extra_node();
+
+        assert_eq!(
+            TfgridModule::nodes(2).unwrap().power.target,
+            PowerTarget::Down,
+        );
+
+        assert_ok!(TfgridModule::change_power_target(
+            Origin::signed(alice()),
+            2,
+            PowerTarget::Up,
+        ));
+
+        assert_eq!(
+            TfgridModule::nodes(2).unwrap().power.target,
+            PowerTarget::Up,
+        );
+    });
+}
+
+#[test]
+fn change_power_target_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+        create_twin_bob();
+        create_extra_node();
+
+        assert_eq!(
+            TfgridModule::nodes(2).unwrap().power.target,
+            PowerTarget::Down,
+        );
+
+        assert_noop!(
+            TfgridModule::change_power_target(Origin::signed(bob()), 2, PowerTarget::Up,),
+            Error::<TestRuntime>::UnauthorizedToChangePowerTarget
+        );
     });
 }
 
@@ -1041,37 +1120,45 @@ fn node_add_public_config_works() {
         create_farm();
         create_node();
 
-        let ipv4 = get_pub_config_ip4(&"185.206.122.33/24".as_bytes().to_vec());
-        let ipv6 = get_pub_config_ip6(&"2a10:b600:1::0cc4:7a30:65b5/64".as_bytes().to_vec());
-        let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
-        let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
+        let ipv4 = get_pub_config_ip4_input(b"185.206.122.33/24");
+        let ipv6 = get_pub_config_ip6_input(b"2a10:b600:1::0cc4:7a30:65b5/64");
+        let gw4 = get_pub_config_gw4_input(b"185.206.122.1");
+        let gw6 = get_pub_config_gw6_input(b"2a10:b600:1::1");
+        let domain = get_pub_config_domain_input(b"some-domain");
 
-        let pub_config = PublicConfig {
+        let pub_config_input = PubConfigInput {
             ip4: IP {
-                ip: ipv4.clone().0,
-                gw: gw4.clone().0,
+                ip: ipv4.clone(),
+                gw: gw4.clone(),
             },
             ip6: Some(IP {
-                ip: ipv6.clone().0,
-                gw: gw6.clone().0,
+                ip: ipv6.clone(),
+                gw: gw6.clone(),
             }),
-            domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
+            domain: Some(domain.clone()),
         };
 
         assert_ok!(TfgridModule::add_node_public_config(
             RuntimeOrigin::signed(alice()),
             1,
             1,
-            Some(pub_config.clone())
+            Some(pub_config_input)
         ));
 
         let node = TfgridModule::nodes(1).unwrap();
+
+        let ipv4 = get_pub_config_ip4(ipv4);
+        let ipv6 = get_pub_config_ip6(ipv6);
+        let gw4 = get_pub_config_gw4(gw4);
+        let gw6 = get_pub_config_gw6(gw6);
+        let domain = get_pub_config_domain(domain);
+
         assert_eq!(
             node.public_config,
-            Some(PublicConfig {
+            Some(PubConfig {
                 ip4: IP { ip: ipv4, gw: gw4 },
                 ip6: Some(IP { ip: ipv6, gw: gw6 }),
-                domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
+                domain: Some(domain),
             })
         );
     });
@@ -1085,13 +1172,13 @@ fn node_add_public_config_without_ipv6_and_domain_works() {
         create_farm();
         create_node();
 
-        let ipv4 = get_pub_config_ip4(&"185.206.122.33/24".as_bytes().to_vec());
-        let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
+        let ipv4 = get_pub_config_ip4_input(b"185.206.122.33/24");
+        let gw4 = get_pub_config_gw4_input(b"185.206.122.1");
 
-        let pub_config = PublicConfig {
+        let pub_config_input = PubConfigInput {
             ip4: IP {
-                ip: ipv4.clone().0,
-                gw: gw4.clone().0,
+                ip: ipv4.clone(),
+                gw: gw4.clone(),
             },
             ip6: None,
             domain: None,
@@ -1101,8 +1188,11 @@ fn node_add_public_config_without_ipv6_and_domain_works() {
             RuntimeOrigin::signed(alice()),
             1,
             1,
-            Some(pub_config.clone())
+            Some(pub_config_input)
         ));
+
+        let ipv4 = get_pub_config_ip4(ipv4);
+        let gw4 = get_pub_config_gw4(gw4);
 
         let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(
@@ -1124,21 +1214,16 @@ fn node_add_public_config_fails_if_signature_incorrect() {
         create_farm();
         create_node();
 
-        let ipv4 = get_pub_config_ip4(&"185.206.122.33/24".as_bytes().to_vec());
-        let ipv6 = get_pub_config_ip6(&"2a10:b600:1::0cc4:7a30:65b5/64".as_bytes().to_vec());
-        let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
-        let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
-
-        let pub_config = PublicConfig {
+        let pub_config_input = PubConfigInput {
             ip4: IP {
-                ip: ipv4.clone().0,
-                gw: gw4.clone().0,
+                ip: get_pub_config_ip4_input(b"185.206.122.33/24"),
+                gw: get_pub_config_gw4_input(b"185.206.122.1"),
             },
             ip6: Some(IP {
-                ip: ipv6.clone().0,
-                gw: gw6.clone().0,
+                ip: get_pub_config_ip6_input(b"2a10:b600:1::0cc4:7a30:65b5/64"),
+                gw: get_pub_config_gw6_input(b"2a10:b600:1::1"),
             }),
-            domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
+            domain: Some(get_pub_config_domain_input(b"some-domain")),
         };
 
         assert_noop!(
@@ -1146,7 +1231,7 @@ fn node_add_public_config_fails_if_signature_incorrect() {
                 RuntimeOrigin::signed(bob()),
                 1,
                 1,
-                Some(pub_config.clone())
+                Some(pub_config_input)
             ),
             Error::<TestRuntime>::CannotUpdateFarmWrongTwin
         );
@@ -1161,37 +1246,45 @@ fn test_unsetting_node_public_config_works() {
         create_farm();
         create_node();
 
-        let ipv4 = get_pub_config_ip4(&"185.206.122.33/24".as_bytes().to_vec());
-        let ipv6 = get_pub_config_ip6(&"2a10:b600:1::0cc4:7a30:65b5/64".as_bytes().to_vec());
-        let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
-        let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
+        let ipv4 = get_pub_config_ip4_input(b"185.206.122.33/24");
+        let ipv6 = get_pub_config_ip6_input(b"2a10:b600:1::0cc4:7a30:65b5/64");
+        let gw4 = get_pub_config_gw4_input(b"185.206.122.1");
+        let gw6 = get_pub_config_gw6_input(b"2a10:b600:1::1");
+        let domain = get_pub_config_domain_input(b"some-domain");
 
-        let pub_config = PublicConfig {
+        let pub_config_input = PubConfigInput {
             ip4: IP {
-                ip: ipv4.clone().0,
-                gw: gw4.clone().0,
+                ip: ipv4.clone(),
+                gw: gw4.clone(),
             },
             ip6: Some(IP {
-                ip: ipv6.clone().0,
-                gw: gw6.clone().0,
+                ip: ipv6.clone(),
+                gw: gw6.clone(),
             }),
-            domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
+            domain: Some(domain.clone()),
         };
 
         assert_ok!(TfgridModule::add_node_public_config(
             RuntimeOrigin::signed(alice()),
             1,
             1,
-            Some(pub_config.clone())
+            Some(pub_config_input)
         ));
 
         let node = TfgridModule::nodes(1).unwrap();
+
+        let ipv4 = get_pub_config_ip4(ipv4);
+        let ipv6 = get_pub_config_ip6(ipv6);
+        let gw4 = get_pub_config_gw4(gw4);
+        let gw6 = get_pub_config_gw6(gw6);
+        let domain = get_pub_config_domain(domain);
+
         assert_eq!(
             node.public_config,
             Some(PublicConfig {
                 ip4: IP { ip: ipv4, gw: gw4 },
                 ip6: Some(IP { ip: ipv6, gw: gw6 }),
-                domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
+                domain: Some(domain),
             })
         );
 
@@ -1215,21 +1308,16 @@ fn test_node_public_config_falsy_values_fails() {
         create_farm();
         create_node();
 
-        // let ipv4 = get_pub_config_ip4(&"1.1.1.1".as_bytes().to_vec());
-        let ipv6 = get_pub_config_ip6(&"2a10:b600:1::0cc4:7a30:65b5/64".as_bytes().to_vec());
-        let gw4 = get_pub_config_gw4(&"185.206.122.1".as_bytes().to_vec());
-        let gw6 = get_pub_config_gw6(&"2a10:b600:1::1".as_bytes().to_vec());
-
-        let pub_config = PublicConfig {
+        let pub_config_input = PubConfigInput {
             ip4: IP {
-                ip: "1.1.1.1".as_bytes().to_vec().try_into().unwrap(),
-                gw: gw4.clone().0,
+                ip: get_pub_config_ip4_input(b"1.1.1.1"), // Too short
+                gw: get_pub_config_gw4_input(b"185.206.122.1"),
             },
             ip6: Some(IP {
-                ip: ipv6.clone().0,
-                gw: gw6.clone().0,
+                ip: get_pub_config_ip6_input(b"2a10:b600:1::0cc4:7a30:65b5/64"),
+                gw: get_pub_config_gw6_input(b"2a10:b600:1::1"),
             }),
-            domain: Some("some-domain".as_bytes().to_vec().try_into().unwrap()),
+            domain: Some(get_pub_config_domain_input(b"some-domain")),
         };
 
         assert_noop!(
@@ -1237,9 +1325,9 @@ fn test_node_public_config_falsy_values_fails() {
                 RuntimeOrigin::signed(alice()),
                 1,
                 1,
-                Some(pub_config.clone())
+                Some(pub_config_input)
             ),
-            Error::<TestRuntime>::IP4ToShort
+            Error::<TestRuntime>::IP4TooShort
         );
     });
 }
@@ -1248,23 +1336,28 @@ fn test_node_public_config_falsy_values_fails() {
 #[should_panic(expected = "InvalidIP4")]
 fn test_validate_invalid_ip4_1() {
     ExternalityBuilder::build().execute_with(|| {
-        TestIP4::try_from("185.206.122.33".as_bytes().to_vec()).expect("fails");
+        let input = get_pub_config_ip4_input(b"185.206.122.33");
+        TestIP4::try_from(input).expect("fails");
     });
 }
 
 #[test]
-#[should_panic(expected = "IP4ToShort")]
+#[should_panic(expected = "IP4TooShort")]
 fn test_validate_invalid_ip4_2() {
     ExternalityBuilder::build().execute_with(|| {
-        TestIP4::try_from("185.206".as_bytes().to_vec()).expect("fails");
+        let input = get_pub_config_ip4_input(b"185.206");
+        TestIP4::try_from(input).expect("fails");
     });
 }
 
 #[test]
-#[should_panic(expected = "IP4ToLong")]
+#[should_panic(expected = "IP4TooLong")]
 fn test_validate_invalid_ip4_3() {
     ExternalityBuilder::build().execute_with(|| {
-        TestIP4::try_from("185.206.12.12.1232123".as_bytes().to_vec()).expect("fails");
+        // TODO: handle this case
+        let input = BoundedVec::try_from(b"185.206.12.12.1232123".to_vec())
+            .map_err(|_| Error::<TestRuntime>::IP4TooLong);
+        TestIP4::try_from(input.unwrap()).expect("fails");
     });
 }
 
@@ -1272,7 +1365,8 @@ fn test_validate_invalid_ip4_3() {
 #[should_panic(expected = "InvalidIP4")]
 fn test_validate_invalid_ip4_4() {
     ExternalityBuilder::build().execute_with(|| {
-        TestIP4::try_from("garbage data".as_bytes().to_vec()).expect("fails");
+        let input = get_pub_config_ip4_input(b"garbage data");
+        TestIP4::try_from(input).expect("fails");
     });
 }
 
@@ -1284,23 +1378,20 @@ fn create_node_with_same_pubkey_fails() {
         create_farm();
         create_node();
 
-        // random location
-        let location = Location {
-            longitude: "12.233213231".as_bytes().to_vec(),
-            latitude: "32.323112123".as_bytes().to_vec(),
-        };
-
-        let resources = Resources {
+        let resources = ResourcesInput {
             hru: 1,
             sru: 1,
             cru: 1,
             mru: 1,
         };
 
-        let country = "Belgium".as_bytes().to_vec();
-        let city = "Ghent".as_bytes().to_vec();
-
-        let interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
+        // random location
+        let location = LocationInput {
+            city: get_city_name_input(b"Ghent"),
+            country: get_country_name_input(b"Belgium"),
+            latitude: get_latitude_input(b"12.233213231"),
+            longitude: get_longitude_input(b"32.323112123"),
+        };
 
         assert_noop!(
             TfgridModule::create_node(
@@ -1308,12 +1399,10 @@ fn create_node_with_same_pubkey_fails() {
                 1,
                 resources,
                 location,
-                country,
-                city,
-                interfaces,
+                bounded_vec![],
                 true,
                 true,
-                "some_serial".as_bytes().to_vec()
+                None,
             ),
             Error::<TestRuntime>::NodeWithTwinIdExists
         );
@@ -2037,124 +2126,111 @@ fn test_set_invalid_zos_version_fails() {
 }
 
 fn create_entity() {
-    let name = "foobar".as_bytes().to_vec();
-    let country = "Belgium".as_bytes().to_vec();
-    let city = "Ghent".as_bytes().to_vec();
+    let name = b"foobar".to_vec();
+    let country = get_country_name_input(b"Belgium");
+    let city = get_city_name_input(b"Ghent");
 
-    let signature = sign_create_entity(name.clone(), country.clone(), city.clone());
+    let signature = sign_create_entity(name.clone(), country.to_vec(), city.to_vec());
     assert_ok!(TfgridModule::create_entity(
         RuntimeOrigin::signed(alice()),
         test_ed25519(),
         name,
         country,
         city,
-        signature.clone()
+        signature,
     ));
 }
 
 fn create_entity_sr() {
-    let name = "foobar".as_bytes().to_vec();
-    let country = "Belgium".as_bytes().to_vec();
-    let city = "Ghent".as_bytes().to_vec();
+    let name = b"foobar".to_vec();
+    let country = get_country_name_input(b"Belgium");
+    let city = get_city_name_input(b"Ghent");
 
-    let signature = sign_create_entity_sr(name.clone(), country.clone(), city.clone());
+    let signature = sign_create_entity_sr(name.clone(), country.to_vec(), city.to_vec());
     assert_ok!(TfgridModule::create_entity(
         RuntimeOrigin::signed(alice()),
         test_sr25519(),
         name,
         country,
         city,
-        signature.clone()
+        signature,
     ));
 }
 
 fn create_twin() {
-    let document = "some_link".as_bytes().to_vec();
-    let hash = "some_hash".as_bytes().to_vec();
-
     assert_ok!(TfgridModule::user_accept_tc(
-        RuntimeOrigin::signed(alice()),
-        document,
-        hash,
+        Origin::signed(alice()),
+        get_document_link_input(b"some_link"),
+        get_document_hash_input(b"some_hash"),
     ));
 
-    let ip = get_twin_ip(b"::1");
-    assert_ok!(TfgridModule::create_twin(
-        RuntimeOrigin::signed(alice()),
-        ip.clone().0
-    ));
+    let ip = get_twin_ip_input(b"::1");
+    assert_ok!(TfgridModule::create_twin(Origin::signed(alice()), ip));
 }
 
 fn create_twin_bob() {
-    let document = "some_link".as_bytes().to_vec();
-    let hash = "some_hash".as_bytes().to_vec();
-
     assert_ok!(TfgridModule::user_accept_tc(
-        RuntimeOrigin::signed(bob()),
-        document,
-        hash,
+        Origin::signed(bob()),
+        get_document_link_input(b"some_link"),
+        get_document_hash_input(b"some_hash"),
     ));
 
-    let ip = get_twin_ip(b"::1");
-    assert_ok!(TfgridModule::create_twin(
-        RuntimeOrigin::signed(bob()),
-        ip.clone().0
-    ));
+    let ip = get_twin_ip_input(b"::1");
+    assert_ok!(TfgridModule::create_twin(Origin::signed(bob()), ip));
 }
 
 fn create_farm() {
-    let farm_name = get_farm_name(b"test_farm");
+    let farm_name = get_farm_name_input(b"test_farm");
 
     let mut pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
 
-    let ip = get_public_ip_ip(&"185.206.122.33/24".as_bytes().to_vec()).0;
-    let gw = get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec()).0;
+    let ip = get_public_ip_ip_input(b"185.206.122.33/24");
+    let gw = get_public_ip_gw_input(b"185.206.122.1");
 
     pub_ips.try_push(PublicIpInput { ip, gw }).unwrap();
 
     assert_ok!(TfgridModule::create_farm(
-        RuntimeOrigin::signed(alice()),
-        farm_name.0.clone(),
-        pub_ips.clone()
+        Origin::signed(alice()),
+        farm_name,
+        pub_ips,
     ));
 
     create_farming_policies()
 }
 
 fn create_farm2() {
-    let farm_name = get_farm_name(b"test_farm2");
+    let farm_name = get_farm_name_input(b"test_farm2");
 
     let mut pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
 
-    let ip = get_public_ip_ip(&"185.206.122.33/24".as_bytes().to_vec()).0;
-    let gw = get_public_ip_gateway(&"185.206.122.1".as_bytes().to_vec()).0;
+    let ip = get_public_ip_ip_input(b"185.206.122.33/24");
+    let gw = get_public_ip_gw_input(b"185.206.122.1");
 
     pub_ips.try_push(PublicIpInput { ip, gw }).unwrap();
 
     assert_ok!(TfgridModule::create_farm(
-        RuntimeOrigin::signed(alice()),
-        farm_name.0.clone(),
-        pub_ips.clone()
+        Origin::signed(alice()),
+        farm_name,
+        pub_ips,
     ));
 
     create_farming_policies()
 }
 
 fn create_node() {
-    let country = "Belgium".as_bytes().to_vec();
-    let city = "Ghent".as_bytes().to_vec();
-
-    // random location
-    let location = Location {
-        longitude: "12.233213231".as_bytes().to_vec(),
-        latitude: "32.323112123".as_bytes().to_vec(),
-    };
-
-    let resources = Resources {
+    let resources = ResourcesInput {
         hru: 1024 * GIGABYTE,
         sru: 512 * GIGABYTE,
         cru: 8,
         mru: 16 * GIGABYTE,
+    };
+
+    // random location
+    let location = LocationInput {
+        city: get_city_name_input(b"Ghent"),
+        country: get_country_name_input(b"Belgium"),
+        latitude: get_latitude_input(b"12.233213231"),
+        longitude: get_longitude_input(b"32.323112123"),
     };
 
     let interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
@@ -2164,30 +2240,38 @@ fn create_node() {
         1,
         resources,
         location,
-        country,
-        city,
         interfaces,
         true,
         true,
-        "some_serial".as_bytes().to_vec()
+        None,
     ));
+
+    assert_eq!(
+        System::events().contains(&record(MockEvent::TfgridModule(
+            TfgridEvent::PowerTargetChanged {
+                farm_id: 1,
+                node_id: 1,
+                power_target: PowerTarget::Down
+            }
+        ))),
+        true
+    );
 }
 
 fn create_extra_node() {
-    let country = "Brazil".as_bytes().to_vec();
-    let city = "Rio de Janeiro".as_bytes().to_vec();
-
-    // random location
-    let location = Location {
-        longitude: "43.1868".as_bytes().to_vec(),
-        latitude: "22.9694".as_bytes().to_vec(),
-    };
-
-    let resources = Resources {
+    let resources = ResourcesInput {
         hru: 1024 * GIGABYTE,
         sru: 512 * GIGABYTE,
         cru: 8,
         mru: 16 * GIGABYTE,
+    };
+
+    // random location
+    let location = LocationInput {
+        city: get_city_name_input(b"Rio de Janeiro"),
+        country: get_country_name_input(b"Brazil"),
+        latitude: get_latitude_input(b"43.1868"),
+        longitude: get_longitude_input(b"22.9694"),
     };
 
     assert_ok!(TfgridModule::create_node(
@@ -2195,13 +2279,22 @@ fn create_extra_node() {
         1,
         resources,
         location,
-        country,
-        city,
-        Vec::new().try_into().unwrap(),
+        bounded_vec![],
         true,
         true,
-        "some_serial".as_bytes().to_vec()
+        None,
     ));
+
+    assert_eq!(
+        System::events().contains(&record(MockEvent::TfgridModule(
+            TfgridEvent::PowerTargetChanged {
+                farm_id: 1,
+                node_id: 2,
+                power_target: PowerTarget::Down
+            }
+        ))),
+        true
+    );
 }
 
 fn create_farming_policies() {
@@ -2348,8 +2441,14 @@ fn test_attach_farming_policy_flow(farming_policy_id: u32) {
 
     // Provide enough CU and SU limits to avoid attaching default policy to node
     // For node: [CU = 20; SU = 2]
-    assert_eq!(resources::get_cu(node.resources) <= limit.cu.unwrap(), true);
-    assert_eq!(resources::get_su(node.resources) <= limit.su.unwrap(), true);
+    assert_eq!(
+        node.resources.total_resources.get_cu() <= limit.cu.unwrap(),
+        true
+    );
+    assert_eq!(
+        node.resources.total_resources.get_su() <= limit.su.unwrap(),
+        true
+    );
 
     // Link farming policy to farm
     assert_ok!(TfgridModule::attach_policy_to_farm(

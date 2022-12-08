@@ -53,52 +53,29 @@ impl<T: Config> Contract<T> {
         seconds_elapsed: u64,
     ) -> Result<u64, DispatchErrorWithPostInfo> {
         let total_cost = match &self.contract_type {
-            // Calculate total cost for a node contract
-            types::ContractData::NodeContract(node_contract) => {
+            types::ContractData::CapacityReservationContract(capacity_reservation_contract) => {
                 // Get the contract billing info to view the amount unbilled for NRU (network resource units)
                 let contract_billing_info = self.get_billing_info();
                 // Get the node
-                if !pallet_tfgrid::Nodes::<T>::contains_key(node_contract.node_id) {
-                    return Err(DispatchErrorWithPostInfo::from(Error::<T>::NodeNotExists));
-                }
-
-                // We know the contract is using resources, now calculate the cost for each used resource
-
-                let node_contract_resources =
-                    pallet::Pallet::<T>::node_contract_resources(self.contract_id);
-
-                let mut bill_resources = true;
-                // If this node contract is deployed on a node which has a rent contract
-                // We can ignore billing for the resources used by this node contract
-                if pallet::ActiveRentContractForNode::<T>::contains_key(node_contract.node_id) {
-                    bill_resources = false
-                }
+                let node = pallet_tfgrid::Nodes::<T>::get(capacity_reservation_contract.node_id)
+                    .ok_or(Error::<T>::NodeNotExists)?;
 
                 let contract_cost = calculate_resources_cost::<T>(
-                    node_contract_resources.used,
-                    node_contract.public_ips,
+                    &capacity_reservation_contract.resources.total_resources,
+                    capacity_reservation_contract.public_ips,
                     seconds_elapsed,
                     &pricing_policy,
-                    bill_resources,
                 );
-                contract_cost + contract_billing_info.amount_unbilled
-            }
-            types::ContractData::RentContract(rent_contract) => {
-                if !pallet_tfgrid::Nodes::<T>::contains_key(rent_contract.node_id) {
-                    return Err(DispatchErrorWithPostInfo::from(Error::<T>::NodeNotExists));
+                if node.resources.total_resources
+                    == capacity_reservation_contract.resources.total_resources
+                {
+                    Percent::from_percent(pricing_policy.discount_for_dedication_nodes)
+                        * contract_cost
+                        + contract_billing_info.amount_unbilled
+                } else {
+                    contract_cost + contract_billing_info.amount_unbilled
                 }
-                let node = pallet_tfgrid::Nodes::<T>::get(rent_contract.node_id).unwrap();
-
-                let contract_cost = calculate_resources_cost::<T>(
-                    node.resources,
-                    0,
-                    seconds_elapsed,
-                    &pricing_policy,
-                    true,
-                );
-                Percent::from_percent(pricing_policy.discount_for_dedication_nodes) * contract_cost
             }
-            // Calculate total cost for a name contract
             types::ContractData::NameContract(_) => {
                 // bill user for name usage for number of seconds elapsed
                 let total_cost_u64f64 = (U64F64::from_num(pricing_policy.unique_name.value) / 3600)
@@ -113,36 +90,30 @@ impl<T: Config> Contract<T> {
 
 // Calculates the total cost of a node contract.
 pub fn calculate_resources_cost<T: Config>(
-    resources: Resources,
+    resources: &Resources,
     ipu: u32,
     seconds_elapsed: u64,
     pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
-    bill_resources: bool,
 ) -> u64 {
-    let mut total_cost = U64F64::from_num(0);
+    let hru = U64F64::from_num(resources.hru) / pricing_policy.su.factor_base_1024();
+    let sru = U64F64::from_num(resources.sru) / pricing_policy.su.factor_base_1024();
+    let mru = U64F64::from_num(resources.mru) / pricing_policy.cu.factor_base_1024();
+    let cru = U64F64::from_num(resources.cru);
 
-    if bill_resources {
-        let hru = U64F64::from_num(resources.hru) / pricing_policy.su.factor_base_1024();
-        let sru = U64F64::from_num(resources.sru) / pricing_policy.su.factor_base_1024();
-        let mru = U64F64::from_num(resources.mru) / pricing_policy.cu.factor_base_1024();
-        let cru = U64F64::from_num(resources.cru);
+    let su_used = hru / 1200 + sru / 200;
+    // the pricing policy su cost value is expressed in 1 hours or 3600 seconds.
+    // we bill every 3600 seconds but here we need to calculate the cost per second and multiply it by the seconds elapsed.
+    let su_cost = (U64F64::from_num(pricing_policy.su.value) / 3600)
+        * U64F64::from_num(seconds_elapsed)
+        * su_used;
+    log::debug!("su cost: {:?}", su_cost);
 
-        let su_used = hru / 1200 + sru / 200;
-        // the pricing policy su cost value is expressed in 1 hours or 3600 seconds.
-        // we bill every 3600 seconds but here we need to calculate the cost per second and multiply it by the seconds elapsed.
-        let su_cost = (U64F64::from_num(pricing_policy.su.value) / 3600)
-            * U64F64::from_num(seconds_elapsed)
-            * su_used;
-        log::debug!("su cost: {:?}", su_cost);
+    let cu = calculate_cu(cru, mru);
 
-        let cu = calculate_cu(cru, mru);
-
-        let cu_cost = (U64F64::from_num(pricing_policy.cu.value) / 3600)
-            * U64F64::from_num(seconds_elapsed)
-            * cu;
-        log::debug!("cu cost: {:?}", cu_cost);
-        total_cost = su_cost + cu_cost;
-    }
+    let cu_cost =
+        (U64F64::from_num(pricing_policy.cu.value) / 3600) * U64F64::from_num(seconds_elapsed) * cu;
+    log::debug!("cu cost: {:?}", cu_cost);
+    let mut total_cost = su_cost + cu_cost;
 
     if ipu > 0 {
         let total_ip_cost = U64F64::from_num(ipu)
