@@ -11,7 +11,7 @@ jobs:
         id: srtool_build
         uses: chevdor/srtool-actions@v0.6.0
         with:
-          chain: tfchain
+          # chain: tfchain
           runtime_dir: runtime
           package: tfchain-runtime
       - name: Summary
