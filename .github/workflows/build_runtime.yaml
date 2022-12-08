@@ -28,6 +28,11 @@ jobs:
           echo '${{ steps.srtool_build.outputs.json }}' | jq . > tfchain-srtool-digest.json
           cat tfchain-srtool-digest.json
           echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
+      - name: Upload tfchain srtool json
+        uses: actions/upload-artifact@v3
+        with:
+          name: tfchain-srtool-digest-json
+          path: tfchain-srtool-digest.json
       - name: Upload runtime
         uses: actions/upload-artifact@v3
         with:
