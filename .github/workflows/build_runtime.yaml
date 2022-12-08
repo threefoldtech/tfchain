@@ -20,6 +20,7 @@ jobs:
       - name: Summary
         run: |
           cd substrate-node
+          ls
           echo '${{ steps.srtool_build.outputs.json }}' | jq . > ${{ matrix.chain }}-srtool-digest.json
           cat ${{ matrix.chain }}-srtool-digest.json
           echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
