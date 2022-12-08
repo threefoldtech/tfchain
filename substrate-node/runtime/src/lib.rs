@@ -29,7 +29,7 @@ use sp_version::RuntimeVersion;
 use tfchain_support::{
     resources::Resources,
     traits::{ChangeNode, PublicIpModifier},
-    types::PublicIP,
+    types::IP4,
 };
 
 // A few exports that help ease life for downstream crates.
@@ -350,8 +350,8 @@ impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
 
 pub struct PublicIpModifierType;
 impl PublicIpModifier for PublicIpModifierType {
-    fn ip_removed(ip: &PublicIP) {
-        SmartContractModule::ip_removed(ip);
+    fn ip_removed(contract_id: u64, ip: &IP4) {
+        SmartContractModule::ip_removed(contract_id, ip);
     }
 }
 

@@ -22,7 +22,7 @@ use sp_runtime::{
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::resources::Resources;
 use tfchain_support::traits::{ChangeNode, PublicIpModifier};
-use tfchain_support::types::PublicIP;
+use tfchain_support::types::IP4;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -106,7 +106,7 @@ impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
 
 pub struct PublicIpModifierType;
 impl PublicIpModifier for PublicIpModifierType {
-    fn ip_removed(_ip: &PublicIP) {}
+    fn ip_removed(_contract_id: u64, _ip: &IP4) {}
 }
 
 use super::weights;

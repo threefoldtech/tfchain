@@ -1,5 +1,5 @@
 use crate::{
-    types, types::StorageVersion, Config, Error, FarmPublicIps, Farms, InterfaceOf,
+    types, types::StorageVersion, Config, Error, FarmUnusedPublicIps, Farms, InterfaceOf,
     LocationOf, Nodes, PalletVersion, SerialNumberOf, TFGRID_NODE_VERSION,
 };
 use frame_support::{
@@ -9,7 +9,7 @@ use log::{debug, info};
 use sp_std::{marker::PhantomData, vec};
 use tfchain_support::{
     traits::PublicIpModifier,
-    types::{Farm, Node, PublicIP, IP4},
+    types::{Farm, Node, IP4},
 };
 
 #[cfg(feature = "try-runtime")]
@@ -124,7 +124,7 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
     let mut migrated_count = 0;
     // We transform the storage values from the old into the new format.
     Farms::<T>::translate::<super::types::v13::Farm<T::FarmName>, _>(|k, farm| {
-        let mut public_ips: BoundedVec<PublicIP, ConstU32<256>> = vec![].try_into().unwrap();
+        let mut public_ips: BoundedVec<IP4, ConstU32<256>> = vec![].try_into().unwrap();
 
         match validate_public_ips::<T>(&farm) {
             Ok(ips) => {
@@ -149,7 +149,7 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
             farming_policy_limits: farm.farming_policy_limits,
         };
 
-        FarmPublicIps::<T>::insert(farm.id, &public_ips);
+        FarmUnusedPublicIps::<T>::insert(farm.id, &public_ips);
 
         migrated_count += 1;
 
@@ -172,8 +172,8 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
 
 fn validate_public_ips<T: Config>(
     farm: &super::types::v13::Farm<T::FarmName>,
-) -> Result<BoundedVec<PublicIP, ConstU32<256>>, Error<T>> {
-    let mut parsed_public_ips: BoundedVec<PublicIP, ConstU32<256>> = vec![].try_into().unwrap();
+) -> Result<BoundedVec<IP4, ConstU32<256>>, Error<T>> {
+    let mut parsed_public_ips: BoundedVec<IP4, ConstU32<256>> = vec![].try_into().unwrap();
 
     for pub_ip in farm.public_ips.clone().into_iter() {
         let ip4 = IP4 {
@@ -183,13 +183,13 @@ fn validate_public_ips<T: Config>(
 
         match ip4.is_valid() {
             Ok(_) => {
-                let _ = parsed_public_ips.try_push(pub_ip);
+                let _ = parsed_public_ips.try_push(ip4);
             }
             Err(_) => {
                 debug!("resetting farm ip for farm {:?}", farm.id);
-                if pub_ip.contract_id != 0 {
-                    T::PublicIpModifier::ip_removed(&pub_ip)
-                }
+                //if pub_ip.contract_id != 0 {
+                T::PublicIpModifier::ip_removed(pub_ip.contract_id, &ip4);
+                //}
 
                 continue;
             }

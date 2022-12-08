@@ -24,7 +24,7 @@ use sp_std::prelude::*;
 
 use hex;
 use tfchain_support::resources::Resources;
-use tfchain_support::types::PublicIP;
+use tfchain_support::types::IP4;
 
 pub type Signature = MultiSignature;
 
@@ -103,7 +103,7 @@ impl tfchain_support::traits::ChangeNode<Loc, Interface, Serial> for NodeChanged
 
 pub struct PublicIpModifier;
 impl tfchain_support::traits::PublicIpModifier for PublicIpModifier {
-    fn ip_removed(_ip: &PublicIP) {}
+    fn ip_removed(_deployment_id: u64, _ip: &IP4) {}
 }
 
 parameter_types! {

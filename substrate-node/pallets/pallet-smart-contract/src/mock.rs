@@ -45,7 +45,7 @@ use sp_runtime::{
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::{
     traits::{ChangeNode, PublicIpModifier},
-    types::PublicIP,
+    types::IP4,
 };
 
 // set environment variable RUST_LOG=debug to see all logs when running the tests and call
@@ -152,8 +152,8 @@ impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
 
 pub struct PublicIpModifierType;
 impl PublicIpModifier for PublicIpModifierType {
-    fn ip_removed(ip: &PublicIP) {
-        SmartContractModule::ip_removed(ip);
+    fn ip_removed(contract_id: u64, ip: &IP4) {
+        SmartContractModule::ip_removed(contract_id, ip);
     }
 }
 

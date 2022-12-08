@@ -20,7 +20,7 @@ use sp_std::convert::{TryFrom, TryInto};
 use substrate_fixed::types::U64F64;
 use tfchain_support::types::{
     CapacityReservationPolicy, ConsumableResources, FarmCertification, NodeCertification,
-    NodeFeatures, PowerTarget, PublicConfig, PublicIP, IP4, IP6,
+    NodeFeatures, PowerTarget, PublicConfig, IP4, IP6,
 };
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
@@ -326,21 +326,18 @@ fn test_deployment_create_with_public_ips_works() {
 
         let deployment = SmartContractModule::deployments(1).unwrap();
 
-        let farm_public_ips = TfgridModule::farm_public_ips(1);
-        assert_eq!(farm_public_ips[0].contract_id, 1);
+        assert_eq!(TfgridModule::farm_unused_public_ips(1).len(), 0);
 
         assert_eq!(deployment.public_ips, 2);
 
-        let pub_ip = PublicIP {
+        let pub_ip = IP4 {
             ip: get_public_ip_ip_input(b"185.206.122.33/24"),
-            gateway: get_public_ip_gw_input(b"185.206.122.1"),
-            contract_id: 1,
+            gw: get_public_ip_gw_input(b"185.206.122.1"),
         };
 
-        let pub_ip_2 = PublicIP {
+        let pub_ip_2 = IP4 {
             ip: get_public_ip_ip_input(b"185.206.122.34/24"),
-            gateway: get_public_ip_gw_input(b"185.206.122.1"),
-            contract_id: 1,
+            gw: get_public_ip_gw_input(b"185.206.122.1"),
         };
         assert_eq!(deployment.public_ips_list[0], pub_ip);
         assert_eq!(deployment.public_ips_list[1], pub_ip_2);
@@ -994,18 +991,28 @@ fn test_deployment_cancel_contract_frees_public_ips_works() {
             2,
         ));
 
-        let farm_public_ips = TfgridModule::farm_public_ips(1);
-        assert_eq!(farm_public_ips[0].contract_id, 1);
-        assert_eq!(farm_public_ips[1].contract_id, 1);
+        assert_eq!(TfgridModule::farm_unused_public_ips(1).len(), 0);
 
         assert_ok!(SmartContractModule::deployment_cancel(
             Origin::signed(alice()),
             1
         ));
 
-        let farm_public_ips = TfgridModule::farm_public_ips(1);
-        assert_eq!(farm_public_ips[0].contract_id, 0);
-        assert_eq!(farm_public_ips[1].contract_id, 0);
+        assert_eq!(TfgridModule::farm_unused_public_ips(1).len(), 2);
+        assert_eq!(
+            TfgridModule::farm_unused_public_ips(1)[0],
+            IP4 {
+                ip: get_public_ip_ip_input(b"185.206.122.33/24"),
+                gw: get_public_ip_gw_input(b"185.206.122.1"),
+            }
+        );
+        assert_eq!(
+            TfgridModule::farm_unused_public_ips(1)[1],
+            IP4 {
+                ip: get_public_ip_ip_input(b"185.206.122.34/24"),
+                gw: get_public_ip_gw_input(b"185.206.122.1"),
+            }
+        );
     });
 }
 
@@ -2096,13 +2103,12 @@ fn test_deployment_contract_billing_cycles_delete_node_cancels_contract() {
             info!("{:?}", e);
         }
 
-        let public_ip = PublicIP {
+        let public_ip = IP4 {
             ip: get_public_ip_ip_input(b"185.206.122.33/24"),
-            gateway: get_public_ip_gw_input(b"185.206.122.1"),
-            contract_id: 0,
+            gw: get_public_ip_gw_input(b"185.206.122.1"),
         };
 
-        let mut ips: BoundedVec<PublicIP, crate::MaxNodeContractPublicIPs<TestRuntime>> =
+        let mut ips: BoundedVec<IP4, crate::MaxNodeContractPublicIPs<TestRuntime>> =
             vec![].try_into().unwrap();
         ips.try_push(public_ip).unwrap();
 

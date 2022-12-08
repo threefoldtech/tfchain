@@ -6,16 +6,17 @@ use crate::{
     
     ActiveDeployments, ActiveNodeContracts, BalanceOf, BillingFrequency, CapacityReservationResources,
     Config, ContractBillingInformationByID, ContractID, ContractLock, Contracts as ContractsV7,
-    ContractsToBillAt, DeploymentID, Deployments, Pallet, 
+    ContractsToBillAt, DeploymentID, Deployments, MaxNodeContractPublicIPs, Pallet, 
     PalletVersion, CONTRACT_VERSION, PublicIpsToBillWithCapacityReservation
 };
+use core::convert::TryInto;
 use frame_support::{
     pallet_prelude::{OptionQuery, ValueQuery}, pallet_prelude::Weight, storage_alias, traits::Get,
-    traits::OnRuntimeUpgrade, Blake2_128Concat,
+    traits::OnRuntimeUpgrade, Blake2_128Concat, BoundedVec
 };
 use log::{info, debug};
 use sp_std::{cmp::max, collections::btree_map::BTreeMap, marker::PhantomData, vec, vec::Vec};
-use tfchain_support::{resources::Resources, types::{ConsumableResources}};
+use tfchain_support::{resources::Resources, types::{ConsumableResources, IP4}};
 
 #[cfg(feature = "try-runtime")]
 use frame_support::traits::OnRuntimeUpgradeHelpersExt;
@@ -31,7 +32,7 @@ pub mod deprecated {
     use codec::{Decode, Encode, MaxEncodedLen};
     use frame_support::decl_module;
     use frame_support::{BoundedVec, RuntimeDebugNoBound};
-    use tfchain_support::types::PublicIP;
+    use pallet_tfgrid::migrations::types::v13::PublicIP;
 
     use scale_info::TypeInfo;
     use sp_std::prelude::*;
@@ -349,6 +350,18 @@ pub fn translate_contract_objects<T: Config>(
                 let crc_id = ActiveRentContractForNode::<T>::get(nc.node_id).unwrap_or(ctr.contract_id);
                 reads += 2;
 
+                let mut public_ips_list : BoundedVec<IP4, MaxNodeContractPublicIPs<T>> = vec![].try_into().unwrap();
+                for public_ip in nc.public_ips_list.clone() {
+                    let ip = IP4{
+                        ip: public_ip.ip.clone(),
+                        gw: public_ip.gateway.clone(),
+                    };
+                    match public_ips_list.try_push(ip.clone()){
+                        Ok(_) => (),
+                        Err(_) => log::error!("Failed to add ip: {:?}", ip)
+                    }
+                }
+
                 // create the deployment it gets the node contracts' id as an id
                 // see https://github.com/threefoldtech/tfchain/discussions/509
                 let dc = Deployment {
@@ -358,7 +371,7 @@ pub fn translate_contract_objects<T: Config>(
                     deployment_hash: nc.deployment_hash.clone(),
                     deployment_data: nc.deployment_data.clone(),
                     public_ips: nc.public_ips,
-                    public_ips_list: nc.public_ips_list.clone(),
+                    public_ips_list: public_ips_list,
                     resources: used_resources,
                 };
                 Deployments::<T>::insert(ctr.contract_id, &dc);

@@ -1,7 +1,6 @@
 use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 
-use crate::resources::Resources;
-use crate::types::PublicIP;
+use crate::{resources::Resources, types::IP4};
 pub trait Tfgrid<AccountId, Name> {
     fn get_farm(farm_id: u32) -> Option<super::types::Farm<Name>>;
     fn is_farm_owner(farm_id: u32, who: AccountId) -> bool;
@@ -27,5 +26,5 @@ pub trait ChangeNode<Loc, If, Serial> {
 }
 
 pub trait PublicIpModifier {
-    fn ip_removed(ip: &PublicIP);
+    fn ip_removed(deployment_id: u64, ip: &IP4);
 }

@@ -28,15 +28,6 @@ pub struct Farm<Name> {
 }
 
 #[derive(
-    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
-)]
-pub struct PublicIP {
-    pub ip: BoundedVec<u8, ConstU32<MAX_IP4_LENGTH>>,
-    pub gateway: BoundedVec<u8, ConstU32<MAX_GW4_LENGTH>>,
-    pub contract_id: u64,
-}
-
-#[derive(
     PartialEq, PartialOrd, Eq, Clone, Encode, Decode, Debug, Copy, TypeInfo, MaxEncodedLen,
 )]
 pub enum FarmCertification {
@@ -216,7 +207,9 @@ pub struct PublicConfig {
     pub domain: Option<BoundedVec<u8, ConstU32<MAX_DOMAIN_NAME_LENGTH>>>,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+#[derive(
+    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
+)]
 pub struct IP4 {
     pub ip: BoundedVec<u8, ConstU32<MAX_IP4_LENGTH>>,
     pub gw: BoundedVec<u8, ConstU32<MAX_GW4_LENGTH>>,

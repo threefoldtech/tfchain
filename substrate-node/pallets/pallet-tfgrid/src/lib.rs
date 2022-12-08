@@ -17,7 +17,7 @@ use pallet_timestamp as timestamp;
 use sp_runtime::SaturatedConversion;
 use tfchain_support::{
     resources::Resources,
-    types::{Interface, Power, PowerState, PowerTarget, PublicIP},
+    types::{Interface, IP4, Power, PowerState, PowerTarget},
 };
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
@@ -57,7 +57,7 @@ pub mod pallet {
         traits::{ChangeNode, PublicIpModifier},
         types::{
             ConsumableResources, Farm, FarmCertification, FarmingPolicyLimit, Interface, Node,
-            NodeCertification, PublicConfig, PublicIP, IP4, MAX_DOMAIN_NAME_LENGTH, MAX_GW4_LENGTH,
+            NodeCertification, PublicConfig, IP4, MAX_DOMAIN_NAME_LENGTH, MAX_GW4_LENGTH,
             MAX_GW6_LENGTH, MAX_IP4_LENGTH, MAX_IP6_LENGTH,
         },
     };
@@ -94,7 +94,7 @@ pub mod pallet {
     // Input type for public ip list
     pub type PublicIpListInput<T> = BoundedVec<IP4, <T as Config>::MaxFarmPublicIps>;
     // Concrete type for public ip list type
-    pub type PublicIpListOf = BoundedVec<PublicIP, ConstU32<256>>;
+    pub type PublicIpListOf = BoundedVec<IP4, ConstU32<256>>;
 
     // Farm information type
     pub type FarmInfoOf<T> = Farm<<T as Config>::FarmName>;
@@ -104,9 +104,9 @@ pub mod pallet {
     pub type Farms<T: Config> = StorageMap<_, Blake2_128Concat, u32, FarmInfoOf<T>, OptionQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn farm_public_ips)]
-    pub type FarmPublicIps<T: Config> =
-        StorageMap<_, Blake2_128Concat, u32, BoundedVec<PublicIP, ConstU32<256>>, ValueQuery>;
+    #[pallet::getter(fn farm_unused_public_ips)]
+    pub type FarmUnusedPublicIps<T: Config> =
+        StorageMap<_, Blake2_128Concat, u32, BoundedVec<IP4, ConstU32<256>>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn nodes_by_farm_id)]
@@ -824,7 +824,7 @@ pub mod pallet {
             };
 
             Farms::<T>::insert(id, &new_farm);
-            FarmPublicIps::<T>::insert(id, &public_ips_list);
+            FarmUnusedPublicIps::<T>::insert(id, &public_ips_list);
             FarmIdByName::<T>::insert(name.to_vec(), id);
             FarmID::<T>::put(id);
 
@@ -936,16 +936,15 @@ pub mod pallet {
                 twin.account_id == address,
                 Error::<T>::CannotUpdateFarmWrongTwin
             );
-            let mut farm_public_ips = FarmPublicIps::<T>::get(id);
+            let mut farm_public_ips = FarmUnusedPublicIps::<T>::get(id);
 
             // Check if it's a valid IP4
             let ip4 = IP4 { ip, gw };
             ip4.is_valid().map_err(|_| Error::<T>::InvalidPublicIP)?;
 
-            let new_ip = PublicIP {
+            let new_ip = IP4 {
                 ip: ip4.ip,
-                gateway: ip4.gw,
-                contract_id: 0,
+                gw: ip4.gw,
             };
 
             match farm_public_ips
@@ -957,7 +956,7 @@ pub mod pallet {
                     farm_public_ips
                         .try_push(new_ip)
                         .map_err(|_| Error::<T>::InvalidPublicIP)?;
-                    FarmPublicIps::<T>::insert(stored_farm.id, &farm_public_ips);
+                    FarmUnusedPublicIps::<T>::insert(stored_farm.id, &farm_public_ips);
                     Self::deposit_event(Event::FarmPublicIpsChanged {
                         farm_id: stored_farm.id,
                         public_ips: farm_public_ips,
@@ -982,15 +981,12 @@ pub mod pallet {
                 twin.account_id == address,
                 Error::<T>::CannotUpdateFarmWrongTwin
             );
-            let mut farm_public_ips = FarmPublicIps::<T>::get(id);
+            let mut farm_public_ips = FarmUnusedPublicIps::<T>::get(id);
 
-            match farm_public_ips
-                .iter()
-                .position(|pubip| pubip.ip == ip && pubip.contract_id == 0)
-            {
+            match farm_public_ips.iter().position(|pubip| pubip.ip == ip) {
                 Some(index) => {
                     farm_public_ips.remove(index);
-                    FarmPublicIps::<T>::insert(stored_farm.id, &farm_public_ips);
+                    FarmUnusedPublicIps::<T>::insert(stored_farm.id, &farm_public_ips);
                     Self::deposit_event(Event::FarmPublicIpsChanged {
                         farm_id: stored_farm.id,
                         public_ips: farm_public_ips,
@@ -1905,35 +1901,6 @@ pub mod pallet {
         }
 
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
-        pub fn force_reset_farm_ip(
-            origin: OriginFor<T>,
-            farm_id: u32,
-            ip: Ip4Input,
-        ) -> DispatchResultWithPostInfo {
-            T::RestrictedOrigin::ensure_origin(origin)?;
-
-            ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
-
-            let mut farm_public_ips = FarmPublicIps::<T>::get(farm_id);
-
-            match farm_public_ips.iter_mut().find(|pubip| pubip.ip == ip) {
-                Some(ip) => {
-                    ip.contract_id = 0;
-                }
-                None => return Err(Error::<T>::IpNotExists.into()),
-            };
-
-            FarmPublicIps::<T>::insert(farm_id, &farm_public_ips);
-
-            Self::deposit_event(Event::FarmPublicIpsChanged {
-                farm_id: farm_id,
-                public_ips: farm_public_ips,
-            });
-
-            Ok(().into())
-        }
-
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
         pub fn set_connection_price(
             origin: OriginFor<T>,
             price: u32,
@@ -2393,10 +2360,9 @@ impl<T: Config> Pallet<T> {
             vec![].try_into().map_err(|_| Error::<T>::InvalidPublicIP)?;
 
         for ip in public_ips {
-            let pub_ip = PublicIP {
+            let pub_ip = IP4 {
                 ip: ip.ip,
-                gateway: ip.gw,
-                contract_id: 0,
+                gw: ip.gw,
             };
 
             if public_ips_list.contains(&pub_ip) {

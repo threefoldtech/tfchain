@@ -93,7 +93,8 @@ pub mod v13 {
     use scale_info::TypeInfo;
     use sp_std::{prelude::*, vec::Vec};
     use tfchain_support::types::{
-        FarmCertification, FarmingPolicyLimit, NodeCertification, PublicConfig, PublicIP,
+        FarmCertification, FarmingPolicyLimit, NodeCertification, PublicConfig, MAX_GW4_LENGTH,
+        MAX_IP4_LENGTH,
     };
 
     #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
@@ -112,6 +113,25 @@ pub mod v13 {
         pub virtualized: bool,
         pub serial_number: Option<SerialNumber>,
         pub connection_price: u32,
+    }
+
+    #[derive(
+        PartialEq,
+        Eq,
+        PartialOrd,
+        Ord,
+        Clone,
+        Encode,
+        Decode,
+        Default,
+        Debug,
+        TypeInfo,
+        MaxEncodedLen,
+    )]
+    pub struct PublicIP {
+        pub ip: BoundedVec<u8, ConstU32<MAX_IP4_LENGTH>>,
+        pub gateway: BoundedVec<u8, ConstU32<MAX_GW4_LENGTH>>,
+        pub contract_id: u64,
     }
 
     #[derive(
