@@ -15,7 +15,8 @@ jobs:
         uses: chevdor/srtool-actions@v0.6.0
         with:
           chain: ${{ matrix.chain }}
-          runtime_dir: tfchain-runtime
+          runtime_dir: runtime
+          package: tfchain-runtime
       - name: Summary
         run: |
           cd substrate-node
