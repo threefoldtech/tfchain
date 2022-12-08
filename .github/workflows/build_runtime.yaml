@@ -5,15 +5,16 @@ on: push
 jobs:
   srtool:
     runs-on: ubuntu-latest
+    env:
+      RUNTIME_DIR: runtime
+      PACKAGE: tfchain-runtime
     steps:
       - uses: actions/checkout@v3
       - name: Srtool build
         id: srtool_build
         uses: chevdor/srtool-actions@v0.6.0
         with:
-          # chain: tfchain
-          runtime_dir: runtime
-          package: tfchain-runtime
+          chain: tfchain
       - name: Summary
         run: |
           cd substrate-node
