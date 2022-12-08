@@ -25,4 +25,4 @@ jobs:
         with:
           name: tfchain-runtime
           path: |
-            ${{ steps.srtool_build.outputs.wasm_compressed }}
+            substrate-node/${{ steps.srtool_build.outputs.wasm_compressed }}
