@@ -15,9 +15,10 @@ jobs:
         uses: chevdor/srtool-actions@v0.6.0
         with:
           chain: ${{ matrix.chain }}
-          runtime_dir: substrate-node/runtime
+          runtime_dir: runtime
       - name: Summary
         run: |
+          cd substrate-node
           echo '${{ steps.srtool_build.outputs.json }}' | jq . > ${{ matrix.chain }}-srtool-digest.json
           cat ${{ matrix.chain }}-srtool-digest.json
           echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
