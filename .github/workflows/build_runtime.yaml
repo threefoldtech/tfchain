@@ -1,4 +1,4 @@
-name: Srtool build
+name: Build runtime
 
 on: push
 
@@ -15,7 +15,7 @@ jobs:
         uses: chevdor/srtool-actions@v0.6.0
         with:
           chain: ${{ matrix.chain }}
-          runtime_dir: runtime
+          runtime_dir: tfchain-runtime
       - name: Summary
         run: |
           cd substrate-node
