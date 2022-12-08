@@ -8,14 +8,14 @@ jobs:
     env:
       RUNTIME_DIR: runtime
       PACKAGE: tfchain-runtime
+      WORKDIR: /home/runner/work/tfchain/tfchain/substrate-node
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
       - name: Srtool build
         id: srtool_build
-        uses: chevdor/srtool-actions@v0.6.0
+        uses: paritytech/srtool-actions@v0.6.0
         with:
-          path: substrate-node
           package: tfchain-runtime
           runtime_dir: runtime
       - name: Summary
