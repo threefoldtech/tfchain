@@ -8,11 +8,19 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
+      - name: Cache target dir
+        uses: actions/cache@v3
+        with:
+          path: '${{ github.workspace }}/substrate-node/runtime/tfchain/target'
+          key: srtool-target-tfchain-${{ github.sha }}
+          restore-keys: |
+            srtool-target-tfchain-
+            srtool-target-
       - name: Srtool build
         id: srtool_build
         uses: chevdor/srtool-actions@v0.6.0
         with:
-          workdir: /home/runner/work/tfchain/tfchain/substrate-node
+          workdir: '${{ github.workspace }}/substrate-node'
           package: tfchain-runtime
           runtime_dir: runtime
       - name: Summary
