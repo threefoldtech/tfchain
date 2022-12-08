@@ -9,15 +9,24 @@ jobs:
       RUNTIME_DIR: runtime
       PACKAGE: tfchain-runtime
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout source
+        uses: actions/checkout@v3
       - name: Srtool build
         id: srtool_build
         uses: chevdor/srtool-actions@v0.6.0
         with:
+          path: substrate-node
           package: tfchain-runtime
+          runtime_dir: runtime
       - name: Summary
         run: |
           cd substrate-node
           echo '${{ steps.srtool_build.outputs.json }}' | jq . > tfchain-srtool-digest.json
           cat tfchain-srtool-digest.json
           echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
+      - name: Upload runtime
+        uses: actions/upload/artifact@v3
+        with:
+          name: tfchain-runtime
+          path: |
+            ${{ steps.srtool_build.outputs.wasm_compressed }}
