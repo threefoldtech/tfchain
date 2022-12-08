@@ -2,6 +2,10 @@ name: Build runtime
 
 on: push
 
+defaults:
+  run:
+    working-directory: substrate-node
+
 jobs:
   srtool:
     runs-on: ubuntu-latest
@@ -15,13 +19,11 @@ jobs:
       - name: Srtool build
         id: srtool_build
         uses: chevdor/srtool-actions@v0.6.0
-        working-directory: substrate-node
         with:
           package: tfchain-runtime
           runtime_dir: runtime
       - name: Summary
         run: |
-          cd substrate-node
           echo '${{ steps.srtool_build.outputs.json }}' | jq . > tfchain-srtool-digest.json
           cat tfchain-srtool-digest.json
           echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
