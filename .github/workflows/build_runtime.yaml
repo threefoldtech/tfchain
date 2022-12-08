@@ -15,8 +15,7 @@ jobs:
       - name: Srtool build
         id: srtool_build
         uses: chevdor/srtool-actions@v0.6.0
-        path: |
-          substrate-node
+        working-directory: substrate-node
         with:
           package: tfchain-runtime
           runtime_dir: runtime
