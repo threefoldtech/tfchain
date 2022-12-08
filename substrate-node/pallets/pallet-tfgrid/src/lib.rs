@@ -106,7 +106,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn farm_public_ips)]
     pub type FarmPublicIps<T: Config> =
-        StorageMap<_, Blake2_128Concat, u32, BoundedVec<PublicIpOf<T>, ConstU32<256>>, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, u32, BoundedVec<PublicIP, ConstU32<256>>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn nodes_by_farm_id)]
@@ -468,7 +468,7 @@ pub mod pallet {
 
         FarmPublicIpsChanged {
             farm_id: u32,
-            public_ips: PublicIpListOf<T>,
+            public_ips: PublicIpListOf,
         },
     }
 
@@ -602,7 +602,7 @@ pub mod pallet {
         UnauthorizedToChangePowerTarget,
         NotEnoughResourcesOnNode,
         ResourcesUsedByActiveContracts,
-        
+
         InvalidPublicConfig,
     }
 
@@ -1916,10 +1916,7 @@ pub mod pallet {
 
             let mut farm_public_ips = FarmPublicIps::<T>::get(farm_id);
 
-            match farm_public_ips
-                .iter_mut()
-                .find(|pubip| pubip.ip == ip)
-            {
+            match farm_public_ips.iter_mut().find(|pubip| pubip.ip == ip) {
                 Some(ip) => {
                     ip.contract_id = 0;
                 }

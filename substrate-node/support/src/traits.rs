@@ -16,6 +16,7 @@ pub trait Tfgrid<AccountId, Name> {
 pub trait ChangeNode<Loc, If, Serial> {
     fn node_changed(
         node: Option<&super::types::Node<Loc, If, Serial>>,
+        resources: &super::resources::Resources,
         new_node: &super::types::Node<Loc, If, Serial>,
         new_resources: &super::resources::Resources,
     );

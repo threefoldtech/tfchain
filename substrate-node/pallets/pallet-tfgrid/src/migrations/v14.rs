@@ -1,6 +1,6 @@
 use crate::{
-    types, types::StorageVersion, Config, Error, FarmInfoOf, Farms, InterfaceOf, LocationOf, Nodes,
-    PalletVersion, SerialNumberOf, TFGRID_NODE_VERSION,
+    types, types::StorageVersion, Config, Error, FarmPublicIps, Farms, InterfaceOf,
+    LocationOf, Nodes, PalletVersion, SerialNumberOf, TFGRID_NODE_VERSION,
 };
 use frame_support::{
     pallet_prelude::Weight, traits::ConstU32, traits::Get, traits::OnRuntimeUpgrade, BoundedVec,
@@ -93,9 +93,7 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
             id: n.id,
             farm_id: n.farm_id,
             twin_id: n.twin_id,
-            resources: n.resources,
             location: n.location,
-            power: n.power,
             public_config,
             created: n.created,
             farming_policy_id: n.farming_policy_id,
@@ -125,7 +123,7 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
 
     let mut migrated_count = 0;
     // We transform the storage values from the old into the new format.
-    Farms::<T>::translate::<FarmInfoOf<T>, _>(|k, farm| {
+    Farms::<T>::translate::<super::types::v13::Farm<T::FarmName>, _>(|k, farm| {
         let mut public_ips: BoundedVec<PublicIP, ConstU32<256>> = vec![].try_into().unwrap();
 
         match validate_public_ips::<T>(&farm) {
@@ -147,10 +145,11 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
             twin_id: farm.twin_id,
             pricing_policy_id: farm.pricing_policy_id,
             certification: farm.certification,
-            public_ips,
             dedicated_farm: farm.dedicated_farm,
             farming_policy_limits: farm.farming_policy_limits,
         };
+
+        FarmPublicIps::<T>::insert(farm.id, &public_ips);
 
         migrated_count += 1;
 
@@ -172,7 +171,7 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
 }
 
 fn validate_public_ips<T: Config>(
-    farm: &FarmInfoOf<T>,
+    farm: &super::types::v13::Farm<T::FarmName>,
 ) -> Result<BoundedVec<PublicIP, ConstU32<256>>, Error<T>> {
     let mut parsed_public_ips: BoundedVec<PublicIP, ConstU32<256>> = vec![].try_into().unwrap();
 
