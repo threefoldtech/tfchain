@@ -1,11 +1,11 @@
 use crate::Config;
 use crate::*;
-use crate::{InterfaceOf, LocationOf, Pallet, PubConfigOf, SerialNumberOf};
+use crate::{InterfaceOf, LocationOf, Pallet, SerialNumberOf};
 use frame_support::{
     pallet_prelude::OptionQuery, pallet_prelude::Weight, storage_alias, traits::Get,
     traits::OnRuntimeUpgrade, Blake2_128Concat, BoundedVec,
 };
-use log::info;
+use log::{debug, info};
 use sp_std::marker::PhantomData;
 
 #[cfg(feature = "try-runtime")]
@@ -19,7 +19,7 @@ pub type Nodes<T: Config> = StorageMap<
     Pallet<T>,
     Blake2_128Concat,
     u32,
-    super::types::v12::Node<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
+    super::types::v12::Node<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
     OptionQuery,
 >;
 
@@ -48,12 +48,17 @@ impl<T: Config> OnRuntimeUpgrade for InputValidation<T> {
             nodes_count
         );
 
-        info!("👥  TFGrid pallet to v12 passes PRE migrate checks ✅",);
+        info!("👥  TFGrid pallet to V12 passes PRE migrate checks ✅",);
         Ok(())
     }
 
     fn on_runtime_upgrade() -> Weight {
-        migrate::<T>()
+        if PalletVersion::<T>::get() == types::StorageVersion::V11Struct {
+            migrate_entities::<T>() + migrate_nodes::<T>() + update_pallet_storage_version::<T>()
+        } else {
+            info!(" >>> Unused TFGrid pallet V12 migration");
+            0
+        }
     }
 
     #[cfg(feature = "try-runtime")]
@@ -77,15 +82,6 @@ impl<T: Config> OnRuntimeUpgrade for InputValidation<T> {
     }
 }
 
-fn migrate<T: Config>() -> frame_support::weights::Weight {
-    if PalletVersion::<T>::get() == types::StorageVersion::V11Struct {
-        migrate_entities::<T>() + migrate_nodes::<T>() + update_pallet_storage_version::<T>()
-    } else {
-        info!(" >>> Unused TFGrid pallet V12 migration");
-        0
-    }
-}
-
 fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
     info!(" >>> Migrating entities storage...");
 
@@ -93,8 +89,6 @@ fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
 
     // We transform the storage values from the old into the new format.
     Entities::<T>::translate::<super::types::v11::Entity<AccountIdOf<T>>, _>(|k, entity| {
-        info!("     Migrated entity for {:?}...", k);
-
         let country = match get_country_name::<T>(&entity) {
             Ok(country_name) => country_name,
             Err(e) => {
@@ -131,6 +125,7 @@ fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
 
         migrated_count += 1;
 
+        debug!("Entity: {:?} succesfully migrated", k);
         Some(new_entity)
     });
 
@@ -149,52 +144,44 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
     let mut migrated_count = 0;
 
     // We transform the storage values from the old into the new format.
-    Nodes::<T>::translate::<super::types::v11::Node<PubConfigOf<T>, InterfaceOf<T>>, _>(
-        |k, node| {
-            info!("     Migrated node for {:?}...", k);
+    Nodes::<T>::translate::<super::types::v11::Node<InterfaceOf<T>>, _>(|k, node| {
+        let location = match get_location::<T>(&node) {
+            Ok(loc) => loc,
+            Err(e) => {
+                info!("failed to parse location for node: {:?}, error: {:?}", k, e);
+                info!("set default location for node");
+                <T as Config>::Location::default()
+            }
+        };
 
-            let location = match get_location::<T>(&node) {
-                Ok(loc) => loc,
-                Err(e) => {
-                    info!("failed to parse location for node: {:?}, error: {:?}", k, e);
-                    info!("set default location for node");
-                    <T as Config>::Location::default()
-                }
-            };
+        let serial_number = match get_serial_number::<T>(&node) {
+            Ok(serial) => Some(serial),
+            Err(_) => None,
+        };
 
-            let serial_number = match get_serial_number::<T>(&node) {
-                Ok(serial) => Some(serial),
-                Err(_) => None,
-            };
+        let new_node = super::types::v12::Node::<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> {
+            version: TFGRID_NODE_VERSION,
+            id: node.id,
+            farm_id: node.farm_id,
+            twin_id: node.twin_id,
+            resources: node.resources,
+            location,
+            public_config: node.public_config,
+            created: node.created,
+            farming_policy_id: node.farming_policy_id,
+            interfaces: node.interfaces,
+            certification: node.certification,
+            secure_boot: node.secure_boot,
+            virtualized: node.virtualized,
+            serial_number,
+            connection_price: node.connection_price,
+        };
 
-            let new_node = super::types::v12::Node::<
-                LocationOf<T>,
-                PubConfigOf<T>,
-                InterfaceOf<T>,
-                SerialNumberOf<T>,
-            > {
-                version: TFGRID_NODE_VERSION,
-                id: node.id,
-                farm_id: node.farm_id,
-                twin_id: node.twin_id,
-                resources: node.resources,
-                location,
-                public_config: node.public_config,
-                created: node.created,
-                farming_policy_id: node.farming_policy_id,
-                interfaces: node.interfaces,
-                certification: node.certification,
-                secure_boot: node.secure_boot,
-                virtualized: node.virtualized,
-                serial_number,
-                connection_price: node.connection_price,
-            };
+        migrated_count += 1;
 
-            migrated_count += 1;
-
-            Some(new_node)
-        },
-    );
+        debug!("Node: {:?} succesfully migrated", k);
+        Some(new_node)
+    });
     info!(
         " <<< Node storage updated! Migrated {} nodes ✅",
         migrated_count
@@ -234,7 +221,7 @@ fn get_city_name<T: Config>(
 }
 
 fn get_location<T: Config>(
-    node: &super::types::v11::Node<PubConfigOf<T>, InterfaceOf<T>>,
+    node: &super::types::v11::Node<InterfaceOf<T>>,
 ) -> Result<LocationOf<T>, Error<T>> {
     let location_input = LocationInput {
         city: BoundedVec::try_from(node.city.clone()).map_err(|_| Error::<T>::CityNameTooLong)?,
@@ -250,7 +237,7 @@ fn get_location<T: Config>(
 }
 
 fn get_serial_number<T: Config>(
-    node: &super::types::v11::Node<PubConfigOf<T>, InterfaceOf<T>>,
+    node: &super::types::v11::Node<InterfaceOf<T>>,
 ) -> Result<SerialNumberOf<T>, Error<T>> {
     let serial_number_input: SerialNumberInput = BoundedVec::try_from(node.serial_number.clone())
         .map_err(|_| Error::<T>::SerialNumberTooLong)?;

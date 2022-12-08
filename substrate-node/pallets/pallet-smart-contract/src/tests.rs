@@ -19,9 +19,9 @@ use sp_runtime::{assert_eq_error_rate, traits::SaturatedConversion, Perbill, Per
 use sp_std::convert::{TryFrom, TryInto};
 use substrate_fixed::types::U64F64;
 use tfchain_support::types::{
-    CapacityReservationPolicy, ConsumableResources, NodeFeatures, PowerTarget, PublicConfig, IP,
+    CapacityReservationPolicy, ConsumableResources, FarmCertification, NodeCertification,
+    NodeFeatures, PowerTarget, PublicConfig, PublicIP, IP4, IP6,
 };
-use tfchain_support::types::{FarmCertification, NodeCertification, PublicIP};
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -335,14 +335,14 @@ fn test_deployment_create_with_public_ips_works() {
         assert_eq!(deployment.public_ips, 2);
 
         let pub_ip = PublicIP {
-            ip: get_public_ip_ip(b"185.206.122.33/24"),
-            gateway: get_public_ip_gw(b"185.206.122.1"),
+            ip: get_public_ip_ip_input(b"185.206.122.33/24"),
+            gateway: get_public_ip_gw_input(b"185.206.122.1"),
             contract_id: 1,
         };
 
         let pub_ip_2 = PublicIP {
-            ip: get_public_ip_ip(b"185.206.122.34/24"),
-            gateway: get_public_ip_gw(b"185.206.122.1"),
+            ip: get_public_ip_ip_input(b"185.206.122.34/24"),
+            gateway: get_public_ip_gw_input(b"185.206.122.1"),
             contract_id: 1,
         };
         assert_eq!(deployment.public_ips_list[0], pub_ip);
@@ -2156,15 +2156,13 @@ fn test_deployment_contract_billing_cycles_delete_node_cancels_contract() {
         }
 
         let public_ip = PublicIP {
-            ip: get_public_ip_ip(b"185.206.122.33/24"),
-            gateway: get_public_ip_gw(b"185.206.122.1"),
+            ip: get_public_ip_ip_input(b"185.206.122.33/24"),
+            gateway: get_public_ip_gw_input(b"185.206.122.1"),
             contract_id: 0,
         };
 
-        let mut ips: BoundedVec<
-            PublicIP<TestPublicIP, TestGatewayIP>,
-            crate::MaxNodeContractPublicIPs<TestRuntime>,
-        > = vec![].try_into().unwrap();
+        let mut ips: BoundedVec<PublicIP, crate::MaxNodeContractPublicIPs<TestRuntime>> =
+            vec![].try_into().unwrap();
         ips.try_push(public_ip).unwrap();
 
         assert_eq!(
@@ -3702,11 +3700,11 @@ pub fn prepare_twins() {
 pub fn prepare_farm(source: AccountId, dedicated: bool) {
     let farm_name = "test_farm";
     let mut pub_ips = Vec::new();
-    pub_ips.push(pallet_tfgrid_types::PublicIpInput {
+    pub_ips.push(IP4 {
         ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
         gw: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
     });
-    pub_ips.push(pallet_tfgrid_types::PublicIpInput {
+    pub_ips.push(IP4 {
         ip: "185.206.122.34/24".as_bytes().to_vec().try_into().unwrap(),
         gw: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
     });
@@ -3827,11 +3825,11 @@ pub fn add_public_config(farm_id: u32, node_id: u32, account_id: AccountId) {
     let gw6 = get_pub_config_gw6_input(b"2a10:b600:1::1");
 
     let pub_config = PublicConfig {
-        ip4: IP {
+        ip4: IP4 {
             ip: ipv4.clone(),
             gw: gw4.clone(),
         },
-        ip6: Some(IP {
+        ip6: Some(IP6 {
             ip: ipv6.clone(),
             gw: gw6.clone(),
         }),

@@ -2,14 +2,11 @@ use super::Event as DaoEvent;
 use crate::{mock::Event as MockEvent, mock::*, Error};
 use frame_support::{assert_noop, assert_ok, bounded_vec, weights::GetDispatchInfo};
 use frame_system::{EventRecord, Phase, RawOrigin};
-use pallet_tfgrid::{
-    types::{LocationInput, PublicIpInput},
-    ResourcesInput,
-};
+use pallet_tfgrid::{types::LocationInput, ResourcesInput};
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Hash};
 use std::convert::TryInto;
-use tfchain_support::types::{FarmCertification, NodeCertification};
+use tfchain_support::types::{FarmCertification, NodeCertification, IP4};
 
 #[test]
 fn farmers_vote_no_farm_fails() {
@@ -843,7 +840,7 @@ fn prepare_big_node(account_id: u64, farm_id: u32) {
 
 pub fn prepare_farm(account_id: u64, farm_name: Vec<u8>) {
     let mut pub_ips = Vec::new();
-    pub_ips.push(PublicIpInput {
+    pub_ips.push(IP4 {
         ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
         gw: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
     });
