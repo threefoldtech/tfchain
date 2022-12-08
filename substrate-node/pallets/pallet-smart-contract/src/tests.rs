@@ -69,14 +69,14 @@ fn test_create_node_contract_with_public_ips_works() {
                 assert_eq!(c.public_ips, 2);
 
                 let pub_ip = PublicIP {
-                    ip: get_public_ip_ip(b"185.206.122.33/24"),
-                    gateway: get_public_ip_gw(b"185.206.122.1"),
+            ip: get_public_ip_ip_input(b"185.206.122.33/24"),
+            gateway: get_public_ip_gw_input(b"185.206.122.1"),
                     contract_id: 1,
                 };
 
                 let pub_ip_2 = PublicIP {
-                    ip: get_public_ip_ip(b"185.206.122.34/24"),
-                    gateway: get_public_ip_gw(b"185.206.122.1"),
+            ip: get_public_ip_ip_input(b"185.206.122.34/24"),
+            gateway: get_public_ip_gw_input(b"185.206.122.1"),
                     contract_id: 1,
                 };
                 assert_eq!(c.public_ips_list[0], pub_ip);
@@ -1094,15 +1094,13 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
         }
 
         let public_ip = PublicIP {
-            ip: get_public_ip_ip(b"185.206.122.33/24"),
-            gateway: get_public_ip_gw(b"185.206.122.1"),
+            ip: get_public_ip_ip_input(b"185.206.122.33/24"),
+            gateway: get_public_ip_gw_input(b"185.206.122.1"),
             contract_id: 0,
         };
 
-        let mut ips: BoundedVec<
-            PublicIP<TestPublicIP, TestGatewayIP>,
-            crate::MaxNodeContractPublicIPs<TestRuntime>,
-        > = vec![].try_into().unwrap();
+        let mut ips: BoundedVec<PublicIP, crate::MaxNodeContractPublicIPs<TestRuntime>> =
+            vec![].try_into().unwrap();
         ips.try_push(public_ip).unwrap();
 
         assert_eq!(
@@ -2581,11 +2579,11 @@ pub fn prepare_twins() {
 pub fn prepare_farm(source: AccountId, dedicated: bool) {
     let farm_name = "test_farm";
     let mut pub_ips = Vec::new();
-    pub_ips.push(pallet_tfgrid_types::PublicIpInput {
+    pub_ips.push(IP4 {
         ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
         gw: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
     });
-    pub_ips.push(pallet_tfgrid_types::PublicIpInput {
+    pub_ips.push(IP4 {
         ip: "185.206.122.34/24".as_bytes().to_vec().try_into().unwrap(),
         gw: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
     });

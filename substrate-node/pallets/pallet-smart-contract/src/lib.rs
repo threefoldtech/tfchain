@@ -11,6 +11,7 @@ use frame_support::{
         Currency, EnsureOrigin, ExistenceRequirement, ExistenceRequirement::KeepAlive, Get,
         LockableCurrency, OnUnbalanced, WithdrawReasons,
     },
+    transactional,
     weights::Pays,
     BoundedVec,
 };
@@ -20,7 +21,8 @@ use frame_system::{
 };
 pub use pallet::*;
 use pallet_tfgrid;
-use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, PubConfigOf, SerialNumberOf, TfgridNode};
+use pallet_tfgrid::farm::FarmName;
+use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf, TfgridNode};
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_timestamp as timestamp;
 use sp_core::crypto::KeyTypeId;
@@ -29,7 +31,12 @@ use sp_runtime::{
     Perbill,
 };
 use substrate_fixed::types::U64F64;
-use tfchain_support::traits::ChangeNode;
+
+use tfchain_support::{
+    resources::Resources,
+    traits::{ChangeNode, PublicIpModifier, Tfgrid},
+    types::{CapacityReservationPolicy, ConsumableResources, NodeFeatures, PublicIP},
+};
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"smct");
 
@@ -93,13 +100,12 @@ pub mod pallet {
         traits::{Currency, Get, LockIdentifier, LockableCurrency, OnUnbalanced},
     };
     use frame_system::pallet_prelude::*;
-    use sp_core::H256;
     use sp_std::{
         convert::{TryFrom, TryInto},
         fmt::Debug,
         vec::Vec,
     };
-    use tfchain_support::traits::ChangeNode;
+    use tfchain_support::traits::{ChangeNode, PublicIpModifier};
 
     pub type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
@@ -119,10 +125,7 @@ pub mod pallet {
     pub type MaxNodeContractPublicIPs<T> = <T as Config>::MaxNodeContractPublicIps;
     pub type MaxDeploymentDataLength<T> = <T as Config>::MaxDeploymentDataLength;
     pub type DeploymentDataInput<T> = BoundedVec<u8, MaxDeploymentDataLength<T>>;
-    pub type DeploymentHash = H256;
     pub type NameContractNameOf<T> = <T as Config>::NameContractName;
-    pub type ContractPublicIP<T> =
-        PublicIP<<T as pallet_tfgrid::Config>::PublicIP, <T as pallet_tfgrid::Config>::GatewayIP>;
 
     #[pallet::storage]
     #[pallet::getter(fn contracts)]
@@ -140,15 +143,8 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn node_contract_by_hash)]
-    pub type ContractIDByNodeIDAndHash<T: Config> = StorageDoubleMap<
-        _,
-        Blake2_128Concat,
-        u32,
-        Blake2_128Concat,
-        DeploymentHash,
-        u64,
-        ValueQuery,
-    >;
+    pub type ContractIDByNodeIDAndHash<T: Config> =
+        StorageDoubleMap<_, Blake2_128Concat, u32, Blake2_128Concat, HexHash, u64, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn active_node_contracts)]
@@ -223,12 +219,8 @@ pub mod pallet {
         type DistributionFrequency: Get<u16>;
         type GracePeriod: Get<u64>;
         type WeightInfo: WeightInfo;
-        type NodeChanged: ChangeNode<
-            LocationOf<Self>,
-            PubConfigOf<Self>,
-            InterfaceOf<Self>,
-            SerialNumberOf<Self>,
-        >;
+        type NodeChanged: ChangeNode<LocationOf<Self>, InterfaceOf<Self>, SerialNumberOf<Self>>;
+        type PublicIpModifier: PublicIpModifier;
         type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
         type Call: From<Call<Self>>;
 
@@ -274,13 +266,13 @@ pub mod pallet {
         /// IP got reserved by a Node contract
         IPsReserved {
             contract_id: u64,
-            public_ips: BoundedVec<ContractPublicIP<T>, MaxNodeContractPublicIPs<T>>,
+            public_ips: BoundedVec<PublicIP, MaxNodeContractPublicIPs<T>>,
         },
         /// IP got freed by a Node contract
         IPsFreed {
             contract_id: u64,
             // public ip as a string
-            public_ips: BoundedVec<ContractPublicIP<T>, MaxNodeContractPublicIPs<T>>,
+            public_ips: BoundedVec<PublicIP, MaxNodeContractPublicIPs<T>>,
         },
         /// Deprecated event
         ContractDeployed(u64, T::AccountId),
@@ -529,9 +521,7 @@ pub mod pallet {
 
 use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 use pallet::NameContractNameOf;
-// use pallet_tfgrid::pub_ip::{GatewayIP, PublicIP as PalletTfgridPublicIP};
 use sp_std::convert::{TryFrom, TryInto};
-use tfchain_support::types::PublicIP;
 // Internal functions of the pallet
 impl<T: Config> Pallet<T> {
     pub fn _create_node_contract(
@@ -1530,13 +1520,7 @@ impl<T: Config> Pallet<T> {
             Error::<T>::FarmHasNotEnoughPublicIPs
         );
 
-        let mut ips: BoundedVec<
-            PublicIP<
-                <T as pallet_tfgrid::Config>::PublicIP,
-                <T as pallet_tfgrid::Config>::GatewayIP,
-            >,
-            MaxNodeContractPublicIPs<T>,
-        > = vec![].try_into().unwrap();
+        let mut ips: BoundedVec<PublicIP, MaxNodeContractPublicIPs<T>> = vec![].try_into().unwrap();
 
         for i in 0..farm.public_ips.len() {
             if ips.len() == node_contract.public_ips as usize {
@@ -1585,13 +1569,8 @@ impl<T: Config> Pallet<T> {
         let mut farm =
             pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
-        let mut public_ips: BoundedVec<
-            PublicIP<
-                <T as pallet_tfgrid::Config>::PublicIP,
-                <T as pallet_tfgrid::Config>::GatewayIP,
-            >,
-            MaxNodeContractPublicIPs<T>,
-        > = vec![].try_into().unwrap();
+        let mut public_ips: BoundedVec<PublicIP, MaxNodeContractPublicIPs<T>> =
+            vec![].try_into().unwrap();
         for i in 0..farm.public_ips.len() {
             // if an ip has contract id 0 it means it's not reserved
             // reserve it now
@@ -1733,9 +1712,7 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-impl<T: Config> ChangeNode<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>
-    for Pallet<T>
-{
+impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for Pallet<T> {
     fn node_changed(_node: Option<&TfgridNode<T>>, _new_node: &TfgridNode<T>) {}
 
     fn node_deleted(node: &TfgridNode<T>) {
@@ -1752,17 +1729,25 @@ impl<T: Config> ChangeNode<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, Serial
                 Self::remove_contract(node_contract_id);
             }
         }
+    }
+}
 
-        // First clean up rent contract if it exists
-        if let Some(rc_id) = ActiveRentContractForNode::<T>::get(node.id) {
-            if let Some(mut contract) = Contracts::<T>::get(rc_id) {
-                // Bill contract
-                let _ = Self::_update_contract_state(
-                    &mut contract,
-                    &types::ContractState::Deleted(types::Cause::CanceledByUser),
-                );
-                let _ = Self::bill_contract(contract.contract_id);
-                Self::remove_contract(contract.contract_id);
+impl<T: Config> PublicIpModifier for Pallet<T> {
+    fn ip_removed(ip: &PublicIP) {
+        if let Some(mut deployment) = Deployments::<T>::get(ip.contract_id) {
+            // Todo remove public ip from deployment and capacity contract
+            let cr_contract = Contracts::<T>::get(deployment.capacity_reservation_id);
+            if let Some(mut cr_contract) = cr_contract {
+                // free the public ips requested by the contract
+                if deployment.public_ips > 0 {
+                    if let Err(e) =
+                        Self::_free_ip(ip.contract_id, &mut deployment, &mut cr_contract)
+                    {
+                        log::error!("error while freeing ips: {:?}", e);
+                    }
+                }
+
+                Deployments::<T>::insert(ip.contract_id, deployment);
             }
         }
     }

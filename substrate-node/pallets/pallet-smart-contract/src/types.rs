@@ -1,13 +1,14 @@
-use crate::pallet::{
-    ContractPublicIP, DeploymentHash, MaxDeploymentDataLength, MaxNodeContractPublicIPs,
-};
+use crate::pallet::{MaxDeploymentDataLength, MaxNodeContractPublicIPs};
 use crate::Config;
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{BoundedVec, RuntimeDebugNoBound};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
 use substrate_fixed::types::U64F64;
-use tfchain_support::resources::Resources;
+use tfchain_support::{
+    resources::Resources,
+    types::{ConsumableResources, PublicIP},
+};
 
 pub type BlockNumber = u64;
 
@@ -64,7 +65,7 @@ pub struct NodeContract<T: Config> {
     pub deployment_hash: DeploymentHash,
     pub deployment_data: BoundedVec<u8, MaxDeploymentDataLength<T>>,
     pub public_ips: u32,
-    pub public_ips_list: BoundedVec<ContractPublicIP<T>, MaxNodeContractPublicIPs<T>>,
+    pub public_ips_list: BoundedVec<PublicIP, MaxNodeContractPublicIPs<T>>,
 }
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
