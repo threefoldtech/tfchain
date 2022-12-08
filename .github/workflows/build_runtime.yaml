@@ -21,7 +21,7 @@ jobs:
         uses: chevdor/srtool-actions@v0.6.0
         with:
           package: tfchain-runtime
-          runtime_dir: runtime
+          runtime_dir: substrate-node/runtime
       - name: Summary
         run: |
           echo '${{ steps.srtool_build.outputs.json }}' | jq . > tfchain-srtool-digest.json
