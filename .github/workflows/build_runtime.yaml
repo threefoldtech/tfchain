@@ -25,7 +25,7 @@ jobs:
           cat tfchain-srtool-digest.json
           echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
       - name: Upload runtime
-        uses: actions/upload/artifact@v3
+        uses: actions/upload-artifact@v3
         with:
           name: tfchain-runtime
           path: |
