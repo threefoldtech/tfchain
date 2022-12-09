@@ -247,10 +247,20 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
         })
     };
 
-    let aura_compatible_until_block = match config.chain_spec.id() {
-        "tfchain_devnet" => 1195403,
-        "tfchain_qa_net" => 608253,
-        _ => 1,
+    let compatibility_mode = match config.chain_spec.id() {
+        "tfchain_devnet" => {
+            sc_consensus_aura::CompatibilityMode::UseInitializeBlock { until: 1195403 }
+        }
+        "tfchain_qa_net" => {
+            sc_consensus_aura::CompatibilityMode::UseInitializeBlock { until: 608253 }
+        }
+        "tfchain_testnet" => {
+            sc_consensus_aura::CompatibilityMode::UseInitializeBlock { until: 4740026 }
+        }
+        "tfchain_mainnet" => {
+            sc_consensus_aura::CompatibilityMode::UseInitializeBlock { until: 4231659 }
+        }
+        _ => sc_consensus_aura::CompatibilityMode::None,
     };
 
     let _rpc_handlers = sc_service::spawn_tasks(sc_service::SpawnTasksParams {
@@ -304,9 +314,7 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
                 block_proposal_slot_portion: SlotProportion::new(2f32 / 3f32),
                 max_block_proposal_slot_portion: None,
                 telemetry: telemetry.as_ref().map(|x| x.handle()),
-                compatibility_mode: sc_consensus_aura::CompatibilityMode::UseInitializeBlock {
-                    until: aura_compatible_until_block,
-                },
+                compatibility_mode,
             },
         )?;
 
