@@ -404,7 +404,7 @@ impl pallet_smart_contract::Config for Runtime {
     type NodeChanged = NodeChanged;
     type Tfgrid = TfgridModule;
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
-    type Call = Call;
+    type Call = RuntimeCall;
     type MaxNameContractNameLength = MaxNameContractNameLength;
     type NameContractName = pallet_smart_contract::name_contract::NameContractName<Runtime>;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
@@ -603,8 +603,7 @@ impl pallet_scheduler::Config for Runtime {
     type MaxScheduledPerBlock = MaxScheduledPerBlock;
     type WeightInfo = ();
     type OriginPrivilegeCmp = OriginPrivilegeCmp;
-    type PreimageProvider = ();
-    type NoPreimagePostponement = NoPreimagePostponement;
+    type Preimages = ();
 }
 
 parameter_types! {
@@ -772,7 +771,6 @@ pub type Executive = frame_executive::Executive<
         pallet_tfgrid::migrations::v11::FixFarmingPolicy<Runtime>,
         */
         pallet_tfgrid::migrations::v12::InputValidation<Runtime>,
-        
         pallet_tfgrid::migrations::v13::NodeMigration<Runtime>,
         pallet_smart_contract::migrations::v7::ContractMigrationV6<Runtime>,
     ),

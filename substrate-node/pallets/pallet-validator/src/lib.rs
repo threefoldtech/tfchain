@@ -258,14 +258,15 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
-            Self::is_council_member(who)?;
+            Self::is_council_member(&who)?;
 
-            let mut validator = <Validator<T>>::get(&validator_account)
+            let v = T::Lookup::lookup(validator_account.clone())?;
+            let mut validator = <Validator<T>>::get(&v)
                 .ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
 
             // Set state to approved
             validator.state = types::ValidatorRequestState::Approved;
-            <Validator<T>>::insert(validator_account.clone(), &validator);
+            <Validator<T>>::insert(v.clone(), &validator);
 
             // Add the validator as a council member
             pallet_membership::Pallet::<T, pallet_membership::Instance1>::add_member(
@@ -289,13 +290,13 @@ pub mod pallet {
             origin: OriginFor<T>,
             validator_account: <T::Lookup as StaticLookup>::Source,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin.clone())?;
+            let validator = ensure_signed(origin.clone())?;
 
-            if !(who == validator || Self::is_council_member(who).is_ok()) {
+            if !(Self::is_council_member(&validator).is_ok()) {
                 Err(Error::<T>::BadOrigin)?
             }
 
-            let _ = <Validator<T>>::get(&v)
+            let _ = <Validator<T>>::get(&validator)
                 .ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
 
             // Remove the validator as a council member
@@ -305,7 +306,7 @@ pub mod pallet {
             )?;
 
             // Remove the entry from the storage map
-            <Validator<T>>::remove(v);
+            <Validator<T>>::remove(validator);
 
             // let node_validators = substrate_validator_set::Validators::<T>::get();
 
@@ -332,7 +333,7 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-    fn is_council_member(who: T::AccountId) -> DispatchResultWithPostInfo {
+    fn is_council_member(who: &T::AccountId) -> DispatchResultWithPostInfo {
         let council_members =
             pallet_membership::Pallet::<T, pallet_membership::Instance1>::members();
 
