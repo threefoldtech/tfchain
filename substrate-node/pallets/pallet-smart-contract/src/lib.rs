@@ -192,11 +192,14 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn public_ips_to_bill_with_capacity_reservation)]
+    // A map from capacity reservation contract id to the amount of public ips that needs
+    // to be billed with that capacity reservation (due to its deployments)
     pub type PublicIpsToBillWithCapacityReservation<T> =
         StorageMap<_, Blake2_128Concat, u64, u32, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn active_deployments)]
+    // A map from capacity reservation contract id to active deployments
     pub type ActiveDeployments<T> = StorageMap<_, Blake2_128Concat, u64, Vec<u64>, ValueQuery>;
 
     #[pallet::storage]
@@ -774,9 +777,6 @@ impl<T: Config> Pallet<T> {
             solution_provider_id,
         )?;
 
-        // insert amount of public ips to bill
-        PublicIpsToBillWithCapacityReservation::<T>::insert(contract.contract_id, 0);
-
         // insert contract resource information
         let consumable_resources = ConsumableResources {
             total_resources: resources,
@@ -840,27 +840,34 @@ impl<T: Config> Pallet<T> {
         let capacity_reservation_contract = Self::get_capacity_reservation_contract(&contract)?;
         let mut consumable_resources =
             CapacityReservationResources::<T>::get(capacity_reservation_id);
+            
+        // only modify the resources if it's actually different
+        if consumable_resources.total_resources != resources {
+            let resources_reduction =
+                consumable_resources.calculate_reduction_in_resources(&resources);
+            // we can only reduce as much as we have free resources in our reservation
+            ensure!(
+                consumable_resources.can_consume_resources(&resources_reduction),
+                Error::<T>::ResourcesUsedByActiveContracts
+            );
+            T::Tfgrid::change_used_resources_on_node(
+                capacity_reservation_contract.node_id,
+                consumable_resources.total_resources,
+                resources,
+            )?;
 
-        let resources_reduction = consumable_resources.calculate_reduction_in_resources(&resources);
-        // we can only reduce as much as we have free resources in our reservation
-        ensure!(
-            consumable_resources.can_consume_resources(&resources_reduction),
-            Error::<T>::ResourcesUsedByActiveContracts
-        );
-        T::Tfgrid::change_used_resources_on_node(
-            capacity_reservation_contract.node_id,
-            consumable_resources.total_resources,
-            resources,
-        )?;
+            consumable_resources.total_resources = resources;
 
-        consumable_resources.total_resources = resources;
+            CapacityReservationResources::<T>::insert(
+                capacity_reservation_id,
+                &consumable_resources,
+            );
 
-        CapacityReservationResources::<T>::insert(capacity_reservation_id, &consumable_resources);
-
-        Self::deposit_event(Event::CapacityReservationConsumableResourcesChanged {
-            contract_id: capacity_reservation_id,
-            resources: consumable_resources,
-        });
+            Self::deposit_event(Event::CapacityReservationConsumableResourcesChanged {
+                contract_id: capacity_reservation_id,
+                resources: consumable_resources,
+            });
+        }
 
         Ok(().into())
     }

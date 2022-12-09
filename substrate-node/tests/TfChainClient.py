@@ -286,7 +286,7 @@ class TfChainClient:
                                       })
         expected_events = [{
             "module_id": "TfgridModule",
-            "event_id": "FarmPublicIpsChanged"
+            "event_id": "FarmUnusedPublicIpsChanged"
         }]
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
@@ -301,7 +301,7 @@ class TfChainClient:
                                       })
         expected_events = [{
             "module_id": "TfgridModule",
-            "event_id": "FarmPublicIpsChanged"
+            "event_id": "FarmUnusedPublicIpsChanged"
         }]
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)

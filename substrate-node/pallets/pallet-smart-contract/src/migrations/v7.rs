@@ -460,6 +460,7 @@ pub fn translate_contract_objects<T: Config>(
                         total_resources: node_resources.total_resources,
                         used_resources: Resources::empty(), // will be modified later
                     });
+                    writes += 1;
                     // gather the node changes
                     node_changes
                         .entry(crc.node_id)

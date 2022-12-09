@@ -65,7 +65,7 @@ impl<T: Config> Contract<T> {
                 let amt_public_ips =
                     PublicIpsToBillWithCapacityReservation::<T>::get(self.contract_id);
 
-                let contract_cost = calculate_resources_cost::<T>(
+                let mut contract_cost = calculate_resources_cost::<T>(
                     &capacity_reservation_resources.total_resources,
                     amt_public_ips,
                     seconds_elapsed,
@@ -73,12 +73,11 @@ impl<T: Config> Contract<T> {
                 );
                 if node_resources.total_resources == capacity_reservation_resources.total_resources
                 {
-                    Percent::from_percent(pricing_policy.discount_for_dedication_nodes)
-                        * contract_cost
-                        + contract_billing_info.amount_unbilled
-                } else {
-                    contract_cost + contract_billing_info.amount_unbilled
+                    contract_cost =
+                        Percent::from_percent(pricing_policy.discount_for_dedication_nodes)
+                            * contract_cost;
                 }
+                contract_cost + contract_billing_info.amount_unbilled
             }
             types::ContractData::NameContract(_) => {
                 // bill user for name usage for number of seconds elapsed
