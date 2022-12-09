@@ -164,6 +164,10 @@ pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
 pub const HOURS: BlockNumber = MINUTES * 60;
 pub const DAYS: BlockNumber = HOURS * 24;
 
+// Polkadot v0.9.31 introduces the new field proof_size in the Weight struct
+// https://substrate.stackexchange.com/questions/5557/construct-runtime-integrity-test-failing
+pub const MAX_POV_SIZE: u64 = u64::MAX;
+
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {
@@ -180,11 +184,11 @@ parameter_types! {
     pub const BlockHashCount: BlockNumber = 2400;
     /// We allow for 2 seconds of compute with a 6 second average block time.
     pub BlockWeights: frame_system::limits::BlockWeights = frame_system::limits::BlockWeights
-        ::with_sensible_defaults(2u64 * WEIGHT_PER_SECOND, NORMAL_DISPATCH_RATIO);
+        ::with_sensible_defaults(WEIGHT_PER_SECOND.saturating_mul(2).set_proof_size(MAX_POV_SIZE), NORMAL_DISPATCH_RATIO);
     pub BlockLength: frame_system::limits::BlockLength = frame_system::limits::BlockLength
         ::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
     pub const SS58Prefix: u8 = 42;
-    pub const MaximumBlockWeight: Weight = WEIGHT_PER_SECOND.saturating_mul(2);
+    pub const MaximumBlockWeight: Weight = WEIGHT_PER_SECOND.saturating_mul(2).set_proof_size(MAX_POV_SIZE);
 
     pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) * MaximumBlockWeight::get();
     pub const MaxScheduledPerBlock: u32 = 50;
