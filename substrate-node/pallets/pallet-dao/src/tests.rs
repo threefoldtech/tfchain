@@ -9,7 +9,7 @@ use pallet_tfgrid::{
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Hash};
 use std::convert::TryInto;
-use tfchain_support::types::{FarmCertification, NodeCertification};
+use tfchain_support::types::{FarmCertification, NodeCertification, IP4};
 
 #[test]
 fn farmers_vote_no_farm_fails() {

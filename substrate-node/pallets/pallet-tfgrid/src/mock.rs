@@ -4,14 +4,11 @@ use crate::{
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
     mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild,
     node::{CityName, CountryName, Location, SerialNumber},
-    pub_config::{Domain, GW4, GW6, IP4, IP6},
-    pub_ip::{GatewayIP, PublicIP},
     terms_cond::TermsAndConditions,
     twin::TwinIp,
     weights, CityNameInput, Config, CountryNameInput, DocumentHashInput, DocumentLinkInput,
-    DomainInput, FarmNameInput, GW4Input, GW6Input, IP4Input, IP6Input, InterfaceIpInput,
-    InterfaceMacInput, InterfaceNameInput, LatitudeInput, LongitudeInput, PublicIpGatewayInput,
-    PublicIpIpInput, TwinIpInput,
+    DomainInput, FarmNameInput, Gw4Input, Gw6Input, InterfaceIpInput, InterfaceMacInput,
+    InterfaceNameInput, Ip4Input, Ip6Input, LatitudeInput, LongitudeInput, TwinIpInput,
 };
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
 use frame_system::EnsureRoot;
@@ -25,6 +22,7 @@ use sp_runtime::{
 use sp_std::prelude::*;
 
 use hex;
+use tfchain_support::types::PublicIP;
 
 pub type Signature = MultiSignature;
 
@@ -83,15 +81,19 @@ impl frame_system::Config for TestRuntime {
 
 pub(crate) type Serial = crate::SerialNumberOf<TestRuntime>;
 pub(crate) type Loc = crate::LocationOf<TestRuntime>;
-pub(crate) type PubConfig = crate::PubConfigOf<TestRuntime>;
 pub(crate) type Interface = crate::InterfaceOf<TestRuntime>;
 
 pub(crate) type TfgridNode = crate::TfgridNode<TestRuntime>;
 
 pub struct NodeChanged;
-impl tfchain_support::traits::ChangeNode<Loc, PubConfig, Interface, Serial> for NodeChanged {
+impl tfchain_support::traits::ChangeNode<Loc, Interface, Serial> for NodeChanged {
     fn node_changed(_old_node: Option<&TfgridNode>, _new_node: &TfgridNode) {}
     fn node_deleted(_node: &TfgridNode) {}
+}
+
+pub struct PublicIpModifier;
+impl tfchain_support::traits::PublicIpModifier for PublicIpModifier {
+    fn ip_removed(_ip: &PublicIP) {}
 }
 
 parameter_types! {
@@ -105,14 +107,6 @@ pub(crate) type TestTermsAndConditions = TermsAndConditions<TestRuntime>;
 
 pub(crate) type TestTwinIp = TwinIp<TestRuntime>;
 pub(crate) type TestFarmName = FarmName<TestRuntime>;
-pub(crate) type TestPublicIP = PublicIP<TestRuntime>;
-pub(crate) type TestGatewayIP = GatewayIP<TestRuntime>;
-
-pub(crate) type TestIP4 = IP4<TestRuntime>;
-pub(crate) type TestGW4 = GW4<TestRuntime>;
-pub(crate) type TestIP6 = IP6<TestRuntime>;
-pub(crate) type TestGW6 = GW6<TestRuntime>;
-pub(crate) type TestDomain = Domain<TestRuntime>;
 
 pub(crate) type TestInterfaceName = InterfaceName<TestRuntime>;
 pub(crate) type TestInterfaceMac = InterfaceMac<TestRuntime>;
@@ -128,18 +122,12 @@ impl Config for TestRuntime {
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
+    type PublicIpModifier = PublicIpModifier;
     type TermsAndConditions = TestTermsAndConditions;
     type TwinIp = TestTwinIp;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
-    type PublicIP = TestPublicIP;
-    type GatewayIP = TestGatewayIP;
-    type IP4 = TestIP4;
-    type GW4 = TestGW4;
-    type IP6 = TestIP6;
-    type GW6 = TestGW6;
-    type Domain = TestDomain;
     type InterfaceName = TestInterfaceName;
     type InterfaceMac = TestInterfaceMac;
     type InterfaceIP = TestInterfaceIp;
@@ -257,52 +245,32 @@ pub(crate) fn get_farm_name_input(farm_name_input: &[u8]) -> FarmNameInput<TestR
     BoundedVec::try_from(farm_name_input.to_vec()).expect("Invalid farm name input.")
 }
 
-pub(crate) fn get_public_ip_ip_input(ip_input: &[u8]) -> PublicIpIpInput {
+pub(crate) fn get_public_ip_ip_input(ip_input: &[u8]) -> Ip4Input {
     BoundedVec::try_from(ip_input.to_vec()).expect("Invalid public ip (ip) input.")
 }
 
-pub(crate) fn get_public_ip_gw_input(gw_input: &[u8]) -> PublicIpGatewayInput {
+pub(crate) fn get_public_ip_gw_input(gw_input: &[u8]) -> Gw4Input {
     BoundedVec::try_from(gw_input.to_vec()).expect("Invalid public ip (gw) input.")
 }
 
-pub(crate) fn get_pub_config_ip4_input(ip4_input: &[u8]) -> IP4Input {
+pub(crate) fn get_pub_config_ip4_input(ip4_input: &[u8]) -> Ip4Input {
     BoundedVec::try_from(ip4_input.to_vec()).expect("Invalid ip4 input.")
 }
 
-pub(crate) fn get_pub_config_gw4_input(gw4_input: &[u8]) -> GW4Input {
+pub(crate) fn get_pub_config_gw4_input(gw4_input: &[u8]) -> Gw4Input {
     BoundedVec::try_from(gw4_input.to_vec()).expect("Invalid gw4 input.")
 }
 
-pub(crate) fn get_pub_config_ip6_input(ip6_input: &[u8]) -> IP6Input {
+pub(crate) fn get_pub_config_ip6_input(ip6_input: &[u8]) -> Ip6Input {
     BoundedVec::try_from(ip6_input.to_vec()).expect("Invalid ip6 input.")
 }
 
-pub(crate) fn get_pub_config_gw6_input(gw6_input: &[u8]) -> GW6Input {
+pub(crate) fn get_pub_config_gw6_input(gw6_input: &[u8]) -> Gw6Input {
     BoundedVec::try_from(gw6_input.to_vec()).expect("Invalid gw6 input.")
 }
 
 pub(crate) fn get_pub_config_domain_input(domain_input: &[u8]) -> DomainInput {
     BoundedVec::try_from(domain_input.to_vec()).expect("Invalid domain input.")
-}
-
-pub(crate) fn get_pub_config_ip4(ip4_input: IP4Input) -> TestIP4 {
-    IP4::try_from(ip4_input).expect("Invalid ip4.")
-}
-
-pub(crate) fn get_pub_config_gw4(gw4_input: GW4Input) -> TestGW4 {
-    GW4::try_from(gw4_input).expect("Invalid gw4.")
-}
-
-pub(crate) fn get_pub_config_ip6(ip6_input: IP6Input) -> TestIP6 {
-    IP6::try_from(ip6_input).expect("Invalid ip6.")
-}
-
-pub(crate) fn get_pub_config_gw6(gw6_input: GW6Input) -> TestGW6 {
-    GW6::try_from(gw6_input).expect("Invalid gw6.")
-}
-
-pub(crate) fn get_pub_config_domain(domain_input: DomainInput) -> TestDomain {
-    Domain::try_from(domain_input).expect("Invalid domain.")
 }
 
 pub(crate) fn get_interface_name_input(if_name_input: &[u8]) -> InterfaceNameInput {

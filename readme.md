@@ -10,6 +10,7 @@ Ensure you have the following installed first:
 - libclang-dev
 - clang lldb lld
 - build-essential
+- protoc
 
 You will also need rust and nightly installed.
 

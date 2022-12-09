@@ -7968,6 +7968,7 @@ dependencies = [
  "scale-info",
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.31)",
+ "valip",
 ]
 
 [[package]]
@@ -8469,9 +8470,9 @@ dependencies = [
 
 [[package]]
 name = "valip"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "19bff85cc0b5bf6728a74934372fc925cbbb4433116f25aa3351f417e089cf79"
+checksum = "dfbab1f81fcf258f4e5c7822b4b38425520b8ec5065863df813ac76ba040be81"
 
 [[package]]
 name = "valuable"

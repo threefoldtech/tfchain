@@ -13,9 +13,9 @@ use frame_support::{
     pallet_prelude::{OptionQuery, ValueQuery}, pallet_prelude::Weight, storage_alias, traits::Get,
     traits::OnRuntimeUpgrade, Blake2_128Concat,
 };
-use log::info;
+use log::{info, debug};
 use sp_std::{cmp::max, collections::btree_map::BTreeMap, marker::PhantomData, vec, vec::Vec};
-use tfchain_support::{resources::Resources, types::ConsumableResources};
+use tfchain_support::{resources::Resources, types::{ConsumableResources}};
 
 #[cfg(feature = "try-runtime")]
 use frame_support::traits::OnRuntimeUpgradeHelpersExt;
@@ -24,13 +24,14 @@ use sp_runtime::SaturatedConversion;
 
 pub mod deprecated {
     use crate::pallet::{
-        ContractPublicIP, MaxDeploymentDataLength, MaxNodeContractPublicIPs,
+        MaxDeploymentDataLength, MaxNodeContractPublicIPs,
     };
     use crate::types;
     use crate::Config;
     use codec::{Decode, Encode, MaxEncodedLen};
     use frame_support::decl_module;
     use frame_support::{BoundedVec, RuntimeDebugNoBound};
+    use tfchain_support::types::PublicIP;
 
     use scale_info::TypeInfo;
     use sp_std::prelude::*;
@@ -61,7 +62,7 @@ pub mod deprecated {
         pub deployment_hash: types::HexHash,
         pub deployment_data: BoundedVec<u8, MaxDeploymentDataLength<T>>,
         pub public_ips: u32,
-        pub public_ips_list: BoundedVec<ContractPublicIP<T>, MaxNodeContractPublicIPs<T>>,
+        pub public_ips_list: BoundedVec<PublicIP, MaxNodeContractPublicIPs<T>>,
     }
 
     #[derive(
@@ -474,7 +475,7 @@ pub fn translate_contract_objects<T: Config>(
                 contract_type: contract_type,
                 solution_provider_id: ctr.solution_provider_id,
             };
-            info!("Contract: {:?} succesfully migrated", k);
+            debug!("Contract: {:?} succesfully migrated", k);
             contracts.insert(ctr.contract_id, new_contract);
         }
     }
