@@ -39,8 +39,8 @@ use sp_keystore::{testing::KeyStore, KeystoreExt, SyncCryptoStore};
 use sp_runtime::{
     offchain::TransactionPool,
     testing::{Header, TestXt},
-    traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentityLookup},
-    AccountId32, IdentifyAccount, MultiSignature, Verify,
+    traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentifyAccount, IdentityLookup, Verify},
+    AccountId32, MultiSignature,
 };
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::traits::ChangeNode;
@@ -240,7 +240,7 @@ impl pallet_smart_contract::Config for TestRuntime {
     type MaxDeploymentDataLength = MaxDeploymentDataLength;
     type MaxNodeContractPublicIps = MaxNodeContractPublicIPs;
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
-    type Call = Call<TestRuntime>;
+    type Call = RuntimeCall;
 }
 
 type AccountPublic = <MultiSignature as Verify>::Signer;
@@ -509,7 +509,7 @@ impl TransactionPool for MockedTransactionPoolExt {
             log::debug!("Call {:?}: {:?}", i, extrinsic_decoded.call);
             // the extrinsic should match the expected call at position i
             if extrinsic_decoded.call
-                != Call::SmartContractModule(self.0.read().expected_calls[i].0.clone())
+                != pallet::Call::SmartContractModule(self.0.read().expected_calls[i].0.clone())
             {
                 panic!(
                     "\nEXPECTED call: {:?}\nACTUAL call: {:?}\n",

@@ -290,13 +290,15 @@ pub mod pallet {
             origin: OriginFor<T>,
             validator_account: <T::Lookup as StaticLookup>::Source,
         ) -> DispatchResultWithPostInfo {
-            let validator = ensure_signed(origin.clone())?;
+            let who = ensure_signed(origin.clone())?;
 
-            if !(Self::is_council_member(&validator).is_ok()) {
+            let v = T::Lookup::lookup(validator_account.clone())?;
+
+            if !(v == who || Self::is_council_member(&who).is_ok()) {
                 Err(Error::<T>::BadOrigin)?
             }
 
-            let _ = <Validator<T>>::get(&validator)
+            let _ = <Validator<T>>::get(&v)
                 .ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
 
             // Remove the validator as a council member
@@ -306,7 +308,7 @@ pub mod pallet {
             )?;
 
             // Remove the entry from the storage map
-            <Validator<T>>::remove(validator);
+            <Validator<T>>::remove(v);
 
             // let node_validators = substrate_validator_set::Validators::<T>::get();
 

@@ -4,8 +4,8 @@ use crate::types::HexHash;
 use crate::{mock::RuntimeEvent as MockEvent, mock::*, test_utils::*, Error};
 use frame_support::{
     assert_noop, assert_ok, bounded_vec,
-    traits::{LockableCurrency, WithdrawReasons},
     dispatch::Pays,
+    traits::{LockableCurrency, WithdrawReasons},
     BoundedVec,
 };
 use frame_system::{EventRecord, Phase, RawOrigin};
@@ -4030,18 +4030,15 @@ pub fn create_capacity_reservation_and_add_to_group(
     );
 }
 
-pub fn create_twin(RuntimeOrigin: AccountId) {
+pub fn create_twin(origin: AccountId) {
     assert_ok!(TfgridModule::user_accept_tc(
-        RuntimeOrigin::signed(RuntimeOrigin.clone()),
+        RuntimeOrigin::signed(origin.clone()),
         get_document_link_input(b"some_link"),
         get_document_hash_input(b"some_hash"),
     ));
 
     let ip = get_twin_ip_input(b"::1");
-    assert_ok!(TfgridModule::create_twin(
-        RuntimeOrigin::signed(RuntimeOrigin),
-        ip
-    ));
+    assert_ok!(TfgridModule::create_twin(RuntimeOrigin::signed(origin), ip));
 }
 
 fn create_farming_policies() {
