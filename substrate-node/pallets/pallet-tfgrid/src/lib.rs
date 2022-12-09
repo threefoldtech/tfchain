@@ -466,7 +466,7 @@ pub mod pallet {
             resources: ConsumableResources,
         },
 
-        FarmPublicIpsChanged {
+        FarmUnusedPublicIpsChanged {
             farm_id: u32,
             public_ips: PublicIpListOf,
         },
@@ -957,7 +957,7 @@ pub mod pallet {
                         .try_push(new_ip)
                         .map_err(|_| Error::<T>::InvalidPublicIP)?;
                     FarmUnusedPublicIps::<T>::insert(stored_farm.id, &farm_public_ips);
-                    Self::deposit_event(Event::FarmPublicIpsChanged {
+                    Self::deposit_event(Event::FarmUnusedPublicIpsChanged {
                         farm_id: stored_farm.id,
                         public_ips: farm_public_ips,
                     });
@@ -987,7 +987,7 @@ pub mod pallet {
                 Some(index) => {
                     farm_public_ips.remove(index);
                     FarmUnusedPublicIps::<T>::insert(stored_farm.id, &farm_public_ips);
-                    Self::deposit_event(Event::FarmPublicIpsChanged {
+                    Self::deposit_event(Event::FarmUnusedPublicIpsChanged {
                         farm_id: stored_farm.id,
                         public_ips: farm_public_ips,
                     });
