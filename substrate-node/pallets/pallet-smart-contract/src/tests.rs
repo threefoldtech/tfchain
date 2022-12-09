@@ -1872,13 +1872,14 @@ fn test_multiple_contracts_billing_loop_works() {
         // PowerTargetChanged
         // NodeConsumableResourcesChanged
         // Contract Created (capacity reservation)
+        // CapacityReservationConsumableResourcesChanged
         // ActiveDeploymentsChanged
         // CapacityReservationConsumableResourcesChanged
         // Contract Created (deployment contract)
         // Contract Created (name contract)
         // Contract Billed (capacity contract)
         // Contract Billed (name contract)
-        assert_eq!(our_events.len(), 11);
+        assert_eq!(our_events.len(), 12);
     })
 }
 
@@ -2877,6 +2878,7 @@ fn test_create_capacity_contract_full_node_and_deployment_contract_should_bill_f
         // PowerTargetChanged
         // NodeConsumableResourcesChanged
         // CapacityReservation Contract created
+        // CapacityReservationConsumableResourcesChanged
         // ActiveDeploymentsChanged
         // CapacityReservationConsumableResourcesChanged
         // Deployment Contract created
@@ -2884,7 +2886,7 @@ fn test_create_capacity_contract_full_node_and_deployment_contract_should_bill_f
         for e in our_events.clone().iter() {
             log::info!("{:?}", e);
         }
-        assert_eq!(our_events.len(), 9);
+        assert_eq!(our_events.len(), 10);
     });
 }
 
@@ -2937,6 +2939,7 @@ fn test_create_capacity_contract_full_node_canceled_due_to_out_of_funds_should_d
         // PowerTargetChanged
         // NodeConsumableResourcesChanged
         // ContractCreated (Capacity Reservation)
+        // CapacityReservationConsumableResourcesChanged
         // ActiveDeploymentsChanged
         // CapacityReservationConsumableResourcesChanged
         // ContractCreated (Deployment Contract)
@@ -2948,10 +2951,10 @@ fn test_create_capacity_contract_full_node_canceled_due_to_out_of_funds_should_d
         // PowerTargetChanged
         // NodeConsumableResourcesChanged
         // CapacityReservationContractCanceled
-        assert_eq!(our_events.len(), 17);
+        assert_eq!(our_events.len(), 18);
 
         assert_eq!(
-            our_events[8],
+            our_events[9],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::ContractGracePeriodStarted {
@@ -2962,7 +2965,7 @@ fn test_create_capacity_contract_full_node_canceled_due_to_out_of_funds_should_d
             }))
         );
         assert_eq!(
-            our_events[13],
+            our_events[14],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::DeploymentCanceled {
@@ -2973,7 +2976,7 @@ fn test_create_capacity_contract_full_node_canceled_due_to_out_of_funds_should_d
             }))
         );
         assert_eq!(
-            our_events[14],
+            our_events[15],
             record(MockEvent::TfgridModule(
                 pallet_tfgrid::Event::<TestRuntime>::PowerTargetChanged {
                     farm_id: 1,
@@ -2983,7 +2986,7 @@ fn test_create_capacity_contract_full_node_canceled_due_to_out_of_funds_should_d
             ))
         );
         assert_eq!(
-            our_events[16],
+            our_events[17],
             record(MockEvent::SmartContractModule(
                 SmartContractEvent::<TestRuntime>::CapacityReservationContractCanceled {
                     contract_id: 1,
@@ -3039,11 +3042,12 @@ fn test_capacity_reservation_contract_create_and_deployment_contract_with_ip_bil
         // PowerTargetChanged
         // NodeConsumableResourcesChanged
         // Capacity Reservation contract created
+        // CapacityReservationConsumableResourcesChanged
         // ActiveDeploymentsChanged
         // CapacityReservationConsumableResourcesChanged
         // Deployment Contract created
         // Capacity Reservation contract billed
-        assert_eq!(our_events.len(), 9);
+        assert_eq!(our_events.len(), 10);
     });
 }
 
@@ -3116,7 +3120,7 @@ fn test_restore_capacity_reservation_contract_in_grace_works() {
 
         let our_events = System::events();
         assert_eq!(
-            our_events[5],
+            our_events[6],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::ContractGracePeriodStarted {
@@ -3190,7 +3194,7 @@ fn test_restore_capacity_reservation_contract_and_deployment_contracts_in_grace_
 
         let our_events = System::events();
         assert_eq!(
-            our_events[9],
+            our_events[10],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::ContractGracePeriodStarted {
@@ -3230,7 +3234,7 @@ fn test_restore_capacity_reservation_contract_and_deployment_contracts_in_grace_
         let our_events = System::events();
 
         assert_eq!(
-            our_events[11],
+            our_events[12],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::ContractGracePeriodEnded {

@@ -814,6 +814,10 @@ impl<T: Config> Pallet<T> {
             &capacity_reservation_contracts,
         );
 
+        Self::deposit_event(Event::CapacityReservationConsumableResourcesChanged {
+            contract_id: contract.contract_id,
+            resources: consumable_resources,
+        });
         Self::deposit_event(Event::ContractCreated(contract));
 
         Ok(().into())
@@ -840,7 +844,7 @@ impl<T: Config> Pallet<T> {
         let capacity_reservation_contract = Self::get_capacity_reservation_contract(&contract)?;
         let mut consumable_resources =
             CapacityReservationResources::<T>::get(capacity_reservation_id);
-            
+
         // only modify the resources if it's actually different
         if consumable_resources.total_resources != resources {
             let resources_reduction =
