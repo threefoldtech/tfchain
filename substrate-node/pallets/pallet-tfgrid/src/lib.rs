@@ -17,7 +17,7 @@ use pallet_timestamp as timestamp;
 use sp_runtime::SaturatedConversion;
 use tfchain_support::{
     resources::Resources,
-    types::{Interface, IP4, Power, PowerState, PowerTarget},
+    types::{Interface, Power, PowerState, PowerTarget, IP4},
 };
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
@@ -1091,6 +1091,12 @@ pub mod pallet {
                 farm_id: farm_id,
                 node_id: new_node.id,
                 power_target: PowerTarget::Down,
+            });
+
+            Self::deposit_event(Event::<T>::NodeConsumableResourcesChanged {
+                farm_id: farm_id,
+                node_id: new_node.id,
+                resources: resources,
             });
 
             Self::deposit_event(Event::NodeStored(new_node));

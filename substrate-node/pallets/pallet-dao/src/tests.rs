@@ -171,7 +171,7 @@ fn close_works() {
         );
 
         assert_eq!(
-            e[9],
+            e[10],
             record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 10,
                 proposal_hash: hash,
@@ -182,7 +182,7 @@ fn close_works() {
         );
 
         assert_eq!(
-            e[14],
+            e[16],
             record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 11,
                 proposal_hash: hash,
@@ -197,7 +197,7 @@ fn close_works() {
         let total_weight = farm_1_weight + farm_2_weight;
 
         assert_eq!(
-            e[15],
+            e[17],
             record(MockEvent::DaoModule(DaoEvent::Closed {
                 proposal_hash: hash,
                 yes: 2,
@@ -208,7 +208,7 @@ fn close_works() {
         );
 
         assert_eq!(
-            e[16],
+            e[18],
             record(MockEvent::DaoModule(DaoEvent::Approved {
                 proposal_hash: hash,
             }))
@@ -313,7 +313,7 @@ fn motion_approval_works() {
         );
 
         assert_eq!(
-            e[9],
+            e[10],
             record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 10,
                 proposal_hash: hash,
@@ -324,7 +324,7 @@ fn motion_approval_works() {
         );
 
         assert_eq!(
-            e[14],
+            e[16],
             record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 11,
                 proposal_hash: hash,
@@ -339,7 +339,7 @@ fn motion_approval_works() {
         let total_weight = farm_1_weight + farm_2_weight;
 
         assert_eq!(
-            e[15],
+            e[17],
             record(MockEvent::DaoModule(DaoEvent::Closed {
                 proposal_hash: hash,
                 yes: 2,
@@ -350,14 +350,14 @@ fn motion_approval_works() {
         );
 
         assert_eq!(
-            e[16],
+            e[18],
             record(MockEvent::DaoModule(DaoEvent::Approved {
                 proposal_hash: hash,
             }))
         );
 
         assert_eq!(
-            e[18],
+            e[20],
             record(MockEvent::DaoModule(DaoEvent::Executed {
                 proposal_hash: hash,
                 result: Ok(())
@@ -524,7 +524,7 @@ fn weighted_voting_works() {
         );
 
         assert_eq!(
-            e[9],
+            e[10],
             record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 10,
                 proposal_hash: hash,
@@ -535,7 +535,7 @@ fn weighted_voting_works() {
         );
 
         assert_eq!(
-            e[14],
+            e[16],
             record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 11,
                 proposal_hash: hash,
@@ -549,7 +549,7 @@ fn weighted_voting_works() {
         let farm_2_weight = DaoModule::get_vote_weight(2).unwrap();
 
         assert_eq!(
-            e[15],
+            e[17],
             record(MockEvent::DaoModule(DaoEvent::Closed {
                 proposal_hash: hash,
                 yes: 1,
@@ -562,7 +562,7 @@ fn weighted_voting_works() {
         // Outcome should be negative since the 2nd farmer which has more weight because he
         // has more stake in the network voted no
         assert_eq!(
-            e[16],
+            e[18],
             record(MockEvent::DaoModule(DaoEvent::Disapproved {
                 proposal_hash: hash,
             }))
@@ -611,6 +611,7 @@ fn voting_tfgridmodule_call_works() {
         for (idx, event) in e.clone().iter().enumerate() {
             println!("index: {:?}, event: {:?}", idx, event);
         }
+        
         assert_eq!(
             e[4],
             record(MockEvent::DaoModule(DaoEvent::Proposed {
@@ -622,7 +623,7 @@ fn voting_tfgridmodule_call_works() {
         );
 
         assert_eq!(
-            e[9],
+            e[10],
             record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 10,
                 proposal_hash: hash,
@@ -633,7 +634,7 @@ fn voting_tfgridmodule_call_works() {
         );
 
         assert_eq!(
-            e[14],
+            e[16],
             record(MockEvent::DaoModule(DaoEvent::Voted {
                 account: 11,
                 proposal_hash: hash,
@@ -648,7 +649,7 @@ fn voting_tfgridmodule_call_works() {
         let total_weight = farm_1_weight + farm_2_weight;
 
         assert_eq!(
-            e[15],
+            e[17],
             record(MockEvent::DaoModule(DaoEvent::Closed {
                 proposal_hash: hash,
                 yes: 2,
@@ -659,14 +660,14 @@ fn voting_tfgridmodule_call_works() {
         );
 
         assert_eq!(
-            e[16],
+            e[18],
             record(MockEvent::DaoModule(DaoEvent::Approved {
                 proposal_hash: hash,
             }))
         );
 
         assert_eq!(
-            e[18],
+            e[20],
             record(MockEvent::DaoModule(DaoEvent::Executed {
                 proposal_hash: hash,
                 result: Ok(())
