@@ -1,6 +1,4 @@
 #![cfg(test)]
-use std::{panic, thread};
-
 use super::*;
 use crate::name_contract::NameContractName;
 use crate::{self as pallet_smart_contract};
@@ -43,6 +41,7 @@ use sp_runtime::{
     AccountId32, MultiSignature,
 };
 use sp_std::convert::{TryFrom, TryInto};
+use std::{panic, thread};
 use tfchain_support::traits::ChangeNode;
 
 // set environment variable RUST_LOG=debug to see all logs when running the tests and call
@@ -54,7 +53,7 @@ pub type Signature = MultiSignature;
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 pub type Moment = u64;
 
-pub type Extrinsic = TestXt<Call<TestRuntime>, ()>;
+pub type Extrinsic = TestXt<RuntimeCall, ()>;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime>;
 type Block = frame_system::mocking::MockBlock<TestRuntime>;
 
@@ -502,14 +501,21 @@ impl TransactionPool for MockedTransactionPoolExt {
             return Ok(());
         }
 
-        let extrinsic_decoded: Extrinsic = Decode::decode(&mut &*extrinsic).unwrap();
+        let extrinsic_decoded: Extrinsic = match Decode::decode(&mut &*extrinsic) {
+            Ok(xt) => xt,
+            Err(e) => {
+                log::debug!("Unable to decode extrinsic: {:?}: {}", extrinsic, e);
+                return Err(());
+            }
+        };
+
         if self.0.read().i < self.0.read().expected_calls.len() {
             let i = self.0.read().i.clone();
 
             log::debug!("Call {:?}: {:?}", i, extrinsic_decoded.call);
             // the extrinsic should match the expected call at position i
             if extrinsic_decoded.call
-                != pallet::Call::SmartContractModule(self.0.read().expected_calls[i].0.clone())
+                != RuntimeCall::SmartContractModule(self.0.read().expected_calls[i].0.clone())
             {
                 panic!(
                     "\nEXPECTED call: {:?}\nACTUAL call: {:?}\n",
