@@ -6,26 +6,25 @@ use crate::name_contract::NameContractName;
 use crate::{self as pallet_smart_contract};
 use codec::{alloc::sync::Arc, Decode};
 use frame_support::{
-    construct_runtime, parameter_types,
+    construct_runtime,
+    dispatch::PostDispatchInfo,
+    parameter_types,
     traits::{ConstU32, GenesisBuild},
-    weights::PostDispatchInfo,
     BoundedVec,
 };
 use frame_system::EnsureRoot;
-use pallet_tfgrid::node::{CityName, CountryName};
 use pallet_tfgrid::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
+    node::{CityName, CountryName},
     node::{Location, SerialNumber},
     pub_config::{Domain, GW4, GW6, IP4, IP6},
     pub_ip::{GatewayIP, PublicIP},
     terms_cond::TermsAndConditions,
     twin::TwinIp,
-    DocumentHashInput, DocumentLinkInput, PublicIpGatewayInput, PublicIpIpInput, TwinIpInput,
-};
-use pallet_tfgrid::{
-    CityNameInput, CountryNameInput, GW4Input, GW6Input, IP4Input, IP6Input, LatitudeInput,
-    LongitudeInput,
+    CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, GW4Input, GW6Input,
+    IP4Input, IP6Input, LatitudeInput, LongitudeInput, PublicIpGatewayInput, PublicIpIpInput,
+    TwinIpInput,
 };
 use parking_lot::RwLock;
 use sp_core::{
@@ -37,12 +36,11 @@ use sp_core::{
     sr25519, Pair, Public, H256,
 };
 use sp_keystore::{testing::KeyStore, KeystoreExt, SyncCryptoStore};
-use sp_runtime::traits::{IdentifyAccount, Verify};
-use sp_runtime::{offchain::TransactionPool, MultiSignature};
 use sp_runtime::{
-    testing::Header,
+    offchain::TransactionPool,
+    testing::{Header, TestXt},
     traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentityLookup},
-    AccountId32,
+    AccountId32, IdentifyAccount, MultiSignature, Verify,
 };
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::traits::ChangeNode;
@@ -56,7 +54,7 @@ pub type Signature = MultiSignature;
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 pub type Moment = u64;
 
-pub type Extrinsic = TestXt<Call, ()>;
+pub type Extrinsic = TestXt<Call<TestRuntime>, ()>;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime>;
 type Block = frame_system::mocking::MockBlock<TestRuntime>;
 
@@ -242,7 +240,7 @@ impl pallet_smart_contract::Config for TestRuntime {
     type MaxDeploymentDataLength = MaxDeploymentDataLength;
     type MaxNodeContractPublicIps = MaxNodeContractPublicIPs;
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
-    type Call = Call;
+    type Call = Call<TestRuntime>;
 }
 
 type AccountPublic = <MultiSignature as Verify>::Signer;
@@ -448,7 +446,10 @@ impl PoolState {
             let result = match call_to_execute.0 {
                 // matches bill_contract_for_block
                 crate::Call::bill_contract_for_block { contract_id } => {
-                    SmartContractModule::bill_contract_for_block(Origin::signed(bob()), contract_id)
+                    SmartContractModule::bill_contract_for_block(
+                        RuntimeOrigin::signed(bob()),
+                        contract_id,
+                    )
                 }
                 // did not match anything => unkown call => this means you should add
                 // a capture for that function here
