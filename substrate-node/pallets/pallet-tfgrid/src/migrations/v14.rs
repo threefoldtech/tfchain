@@ -39,7 +39,7 @@ impl<T: Config> OnRuntimeUpgrade for FixPublicIP<T> {
             migrate_nodes::<T>() + migrate_farms::<T>()
         } else {
             info!(" >>> Unused migration");
-            0
+            Weight::zero()
         }
     }
 
@@ -117,7 +117,7 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
     );
 
     // Return the weight consumed by the migration.
-    T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
+    T::DbWeight::get().reads_writes(migrated_count + 1, migrated_count + 1)
 }
 
 pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
@@ -168,7 +168,7 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
     info!(" <<< Storage version upgraded");
 
     // Return the weight consumed by the migration.
-    T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
+    T::DbWeight::get().reads_writes(migrated_count + 1, migrated_count + 1)
 }
 
 fn validate_public_ips<T: Config>(

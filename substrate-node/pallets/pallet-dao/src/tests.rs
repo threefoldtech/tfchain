@@ -2,10 +2,7 @@ use super::Event as DaoEvent;
 use crate::{mock::RuntimeEvent as MockEvent, mock::*, Error};
 use frame_support::{assert_noop, assert_ok, bounded_vec, dispatch::GetDispatchInfo};
 use frame_system::{EventRecord, Phase, RawOrigin};
-use pallet_tfgrid::{
-    types::{LocationInput, PublicIpInput},
-    PublicIpListInput, ResourcesInput,
-};
+use pallet_tfgrid::{types::LocationInput, PublicIpListInput, ResourcesInput};
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Hash};
 use std::convert::TryInto;
@@ -906,7 +903,7 @@ pub fn prepare_farm(account_id: u64, farm_name: Vec<u8>) {
     let ip = get_public_ip_ip_input(b"185.206.122.33/24");
     let gw = get_public_ip_gw_input(b"185.206.122.1");
 
-    pub_ips.try_push(PublicIpInput { ip, gw }).unwrap();
+    pub_ips.try_push(IP4 { ip, gw }).unwrap();
 
     assert_ok!(TfgridModule::create_farm(
         RuntimeOrigin::signed(account_id),

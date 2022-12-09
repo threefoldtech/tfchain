@@ -57,7 +57,7 @@ impl<T: Config> OnRuntimeUpgrade for InputValidation<T> {
             migrate_entities::<T>() + migrate_nodes::<T>() + update_pallet_storage_version::<T>()
         } else {
             info!(" >>> Unused TFGrid pallet V12 migration");
-            0
+            Weight::zero()
         }
     }
 

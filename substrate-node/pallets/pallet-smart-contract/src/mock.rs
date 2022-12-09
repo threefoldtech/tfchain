@@ -18,9 +18,8 @@ use pallet_tfgrid::{
     node::{Location, SerialNumber},
     terms_cond::TermsAndConditions,
     twin::TwinIp,
-    CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, GW4Input, GW6Input,
-    IP4Input, IP6Input, LatitudeInput, LongitudeInput, PublicIpGatewayInput, PublicIpIpInput,
-    TwinIpInput,
+    CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, Gw4Input, Gw6Input,
+    Ip4Input, Ip6Input, LatitudeInput, LongitudeInput, TwinIpInput,
 };
 use parking_lot::RwLock;
 use sp_core::{

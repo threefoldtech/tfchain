@@ -13,8 +13,7 @@ use pallet_tfgrid::{
     DocumentHashInput, DocumentLinkInput, TwinIpInput,
 };
 use pallet_tfgrid::{
-    CityNameInput, CountryNameInput, LatitudeInput, LongitudeInput, PublicIpGatewayInput,
-    PublicIpIpInput,
+    CityNameInput, CountryNameInput, Gw4Input, Ip4Input, LatitudeInput, LongitudeInput,
 };
 use pallet_timestamp;
 use sp_core::H256;
@@ -208,11 +207,11 @@ pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {
     BoundedVec::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
 }
 
-pub(crate) fn get_public_ip_ip_input(ip_input: &[u8]) -> PublicIpIpInput {
+pub(crate) fn get_public_ip_ip_input(ip_input: &[u8]) -> Ip4Input {
     BoundedVec::try_from(ip_input.to_vec()).expect("Invalid public ip (ip) input.")
 }
 
-pub(crate) fn get_public_ip_gw_input(gw_input: &[u8]) -> PublicIpGatewayInput {
+pub(crate) fn get_public_ip_gw_input(gw_input: &[u8]) -> Gw4Input {
     BoundedVec::try_from(gw_input.to_vec()).expect("Invalid public ip (gw) input.")
 }
 
