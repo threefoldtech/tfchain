@@ -1669,6 +1669,40 @@ fn test_cancel_capacity_reservation_contract_with_active_deployment_contracts_fa
     });
 }
 
+#[test]
+fn test_deployment_create_not_enough_resources_on_capacity_reservation_fails() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        prepare_farm_and_node();
+        run_to_block(1, Some(&mut pool_state));
+        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+
+        assert_ok!(SmartContractModule::contract_capacity_reservation_create(
+            Origin::signed(bob()),
+            1,
+            CapacityReservationPolicy::Any {
+                resources: resources_c1(),
+                features: None,
+            },
+            None,
+        ));
+        // lets ask for 2 times the amount of available cru
+        let mut resources_deployment = resources_c1();
+        resources_deployment.cru = resources_deployment.cru * 2;
+        assert_noop!(
+            SmartContractModule::deployment_create(
+                Origin::signed(bob()),
+                1,
+                generate_deployment_hash(),
+                get_deployment_data(),
+                resources_deployment,
+                0,
+            ),
+            Error::<TestRuntime>::NotEnoughResourcesInCapacityReservation
+        );
+    });
+}
+
 //  CONTRACT BILLING TESTS //
 // ----------------------- //
 
@@ -1875,12 +1909,11 @@ fn test_multiple_contracts_billing_loop_works() {
         // CapacityReservationConsumableResourcesChanged
         // ActiveDeploymentsChanged
         // CapacityReservationConsumableResourcesChanged
-        // IPsReserved
         // Deployment Created
         // Contract Created (name contract)
         // Contract Billed (capacity contract)
         // Contract Billed (name contract)
-        assert_eq!(our_events.len(), 13);
+        assert_eq!(our_events.len(), 12);
     })
 }
 
@@ -2114,25 +2147,6 @@ fn test_deployment_contract_billing_cycles_delete_node_cancels_contract() {
             vec![].try_into().unwrap();
         ips.try_push(public_ip).unwrap();
 
-        assert_eq!(
-            our_events.contains(&record(MockEvent::SmartContractModule(
-                SmartContractEvent::<TestRuntime>::IPsReserved {
-                    deployment_id: 1,
-                    public_ips: ips.clone(),
-                }
-            ))),
-            true
-        );
-
-        assert_eq!(
-            our_events.contains(&record(MockEvent::SmartContractModule(
-                SmartContractEvent::<TestRuntime>::IPsFreed {
-                    deployment_id: 1,
-                    public_ips: ips,
-                }
-            ))),
-            true
-        );
         assert_eq!(
             our_events.contains(&record(MockEvent::SmartContractModule(
                 SmartContractEvent::<TestRuntime>::DeploymentCanceled {
@@ -3056,10 +3070,9 @@ fn test_capacity_reservation_contract_create_and_deployment_contract_with_ip_bil
         // CapacityReservationConsumableResourcesChanged
         // ActiveDeploymentsChanged
         // CapacityReservationConsumableResourcesChanged
-        // IPsReserved
         // Deployment created
         // Capacity Reservation contract billed
-        assert_eq!(our_events.len(), 11);
+        assert_eq!(our_events.len(), 10);
     });
 }
 
