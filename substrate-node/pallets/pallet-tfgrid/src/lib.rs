@@ -1086,6 +1086,8 @@ pub mod pallet {
 
             T::NodeChanged::node_changed(None, &Resources::empty(), &new_node, &node_resources);
 
+            Self::deposit_event(Event::NodeStored(new_node.clone()));
+
             // lets try to bring the node down if possible
             Self::deposit_event(Event::PowerTargetChanged {
                 farm_id: farm_id,
@@ -1098,8 +1100,6 @@ pub mod pallet {
                 node_id: new_node.id,
                 resources: resources,
             });
-
-            Self::deposit_event(Event::NodeStored(new_node));
 
             Ok(().into())
         }

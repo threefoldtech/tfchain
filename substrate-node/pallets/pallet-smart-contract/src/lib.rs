@@ -291,12 +291,12 @@ pub mod pallet {
         NameContractCanceled {
             contract_id: u64,
         },
-        /// IP got reserved by a Deployment
+        /// Deprecated event
         IPsReserved {
             deployment_id: u64,
             public_ips: BoundedVec<IP4, MaxNodeContractPublicIPs<T>>,
         },
-        /// IP got freed by a Deployment
+        /// Deprecated event
         IPsFreed {
             deployment_id: u64,
             // public ip as a string
@@ -355,12 +355,10 @@ pub mod pallet {
             node_id: u32,
             capacity_reservation_id: u64,
         },
-
         CapacityReservationConsumableResourcesChanged {
             contract_id: u64,
             resources: ConsumableResources,
         },
-
         ActiveDeploymentsChanged {
             contract_id: u64,
             deployments: Vec<u64>,
@@ -814,12 +812,12 @@ impl<T: Config> Pallet<T> {
             &capacity_reservation_contracts,
         );
 
+        Self::deposit_event(Event::ContractCreated(contract.clone()));
+
         Self::deposit_event(Event::CapacityReservationConsumableResourcesChanged {
             contract_id: contract.contract_id,
             resources: consumable_resources,
         });
-        Self::deposit_event(Event::ContractCreated(contract));
-
         Ok(().into())
     }
 
@@ -888,7 +886,7 @@ impl<T: Config> Pallet<T> {
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
             .ok_or(Error::<T>::TwinNotExists)?;
 
-        let mut cr_contract = Contracts::<T>::get(capacity_reservation_id)
+        let cr_contract = Contracts::<T>::get(capacity_reservation_id)
             .ok_or(Error::<T>::CapacityReservationNotExists)?;
         let capacity_reservation_contract = Self::get_capacity_reservation_contract(&cr_contract)?;
         ensure!(
@@ -931,15 +929,7 @@ impl<T: Config> Pallet<T> {
             public_ips_list,
             resources,
         };
-
-        Self::_reserve_ip(&mut deployment, &mut cr_contract)?;
-        Self::_add_deployment_to_capacity_reservation_contract(id, capacity_reservation_id)?;
-        Self::_change_used_resources_on_capacity_reservation(
-            capacity_reservation_id,
-            &Resources::empty(),
-            &resources,
-        )?;
-        Contracts::<T>::insert(cr_contract.contract_id, &cr_contract);
+        Self::_reserve_ip(&mut deployment, &cr_contract)?;
 
         // Insert contract id by (node_id, hash)
         ContractIDByNodeIDAndHash::<T>::insert(
@@ -952,6 +942,13 @@ impl<T: Config> Pallet<T> {
         DeploymentID::<T>::put(id);
 
         Self::deposit_event(Event::DeploymentCreated(deployment));
+
+        Self::_add_deployment_to_capacity_reservation_contract(id, capacity_reservation_id)?;
+        Self::_change_used_resources_on_capacity_reservation(
+            capacity_reservation_id,
+            &Resources::empty(),
+            &resources,
+        )?;
 
         Ok(().into())
     }
@@ -2001,11 +1998,6 @@ impl<T: Config> Pallet<T> {
             &amt_public_ips,
         );
 
-        Self::deposit_event(Event::IPsReserved {
-            deployment_id: deployment.id,
-            public_ips: deployment.public_ips_list.clone(),
-        });
-
         Ok(().into())
     }
 
@@ -2043,12 +2035,6 @@ impl<T: Config> Pallet<T> {
             capacity_reservation_contract.contract_id,
             amt_public_ips,
         );
-
-        // Emit an event containing the IP's freed for this contract
-        Self::deposit_event(Event::IPsFreed {
-            deployment_id: deployment.id,
-            public_ips: used_public_ips,
-        });
 
         Ok(().into())
     }
