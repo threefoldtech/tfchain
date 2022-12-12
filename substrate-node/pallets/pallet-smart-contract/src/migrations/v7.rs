@@ -5,7 +5,7 @@ use crate::{
     },
     
     ActiveDeployments, ActiveNodeContracts, BalanceOf, BillingFrequency, CapacityReservationResources,
-    Config, ContractBillingInformationByID, ContractID, ContractLock, Contracts as ContractsV7,
+    Config, ContractBillingInformationByID, ContractID, ContractLock, Contracts,
     ContractsToBillAt, DeploymentID, Deployments, MaxNodeContractPublicIPs, Pallet, 
     PalletVersion, CONTRACT_VERSION, PublicIpsToBillWithCapacityReservation
 };
@@ -116,9 +116,9 @@ pub type ActiveRentContractForNode<T: Config> =
 type NodeContractResources<T: Config> =
     StorageMap<Pallet<T>, Blake2_128Concat, u64, ContractResources, ValueQuery>;
 
-#[storage_alias]
-type Contracts<T: Config> =
-    StorageMap<Pallet<T>, Blake2_128Concat, u64, deprecated::ContractV6<T>, OptionQuery>;
+// #[storage_alias]
+// type Contracts<T: Config> =
+//     StorageMap<Pallet<T>, Blake2_128Concat, u64, deprecated::ContractV6<T>, OptionQuery>;
 
 pub struct ContractMigrationV6<T: Config>(PhantomData<T>);
 
@@ -165,7 +165,7 @@ impl<T: Config> OnRuntimeUpgrade for ContractMigrationV6<T> {
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
         let expected_contract_count_after_migration = Self::get_temp_storage("expected_contract_count_after_migration").unwrap_or(0u64);
-        let post_contracts_count = ContractsV7::<T>::iter().count().saturated_into::<u64>();
+        let post_contracts_count = Contracts::<T>::iter().count().saturated_into::<u64>();
         assert_eq!(post_contracts_count,
             expected_contract_count_after_migration, 
             "This migration failed: expectation did not equal the actual contract count!"
@@ -184,7 +184,7 @@ pub fn post_migration_checks<T: Config>() {
     // lets check the contracts
     let mut count = 0;
     let mut deployments_count = 0;
-    for (_, contract) in ContractsV7::<T>::iter() {
+    for (_, contract) in Contracts::<T>::iter() {
         assert!(
             is_in_contracts_to_bill::<T>(contract.contract_id), 
             "Contract with id {:?} should be in ContractsToBill!", 
@@ -223,7 +223,7 @@ pub fn post_migration_checks<T: Config>() {
     assert_eq!(deployments_count, Deployments::<T>::iter().count(), "Migration failure! The amount of deployments doesn't equal the deployment ids found in the capacity reservations!");
     for (_, deployment) in Deployments::<T>::iter() {
         assert!(
-            ContractsV7::<T>::contains_key(deployment.capacity_reservation_id),
+            Contracts::<T>::contains_key(deployment.capacity_reservation_id),
             "Migration failure! Capacity Reservation Contract with id {:?} not found!",
             deployment.capacity_reservation_id
         );
@@ -265,22 +265,17 @@ pub fn migrate_to_version_7<T: Config>() -> frame_support::weights::Weight {
 
     let mut total_reads = 0;
     let mut total_writes = 0;
-    let mut contracts: BTreeMap<u64, Contract<T>> = BTreeMap::new();
 
     let (mut bill_index_per_contract_id, reads) = get_bill_index_per_contract_id::<T>();
     total_reads += reads;
 
     let (reads, writes) =
-        translate_contract_objects::<T>(&mut contracts, &mut bill_index_per_contract_id);
+        translate_contracts::<T>(&mut bill_index_per_contract_id);
     total_reads += reads;
     total_writes += writes;
-    info!("translated {:?} contracts", contracts.len());
 
     let (reads, writes) = write_contracts_to_bill_at::<T>(&bill_index_per_contract_id);
     total_reads += reads;
-    total_writes += writes;
-
-    let writes = write_contracts_to_storage::<T>(&contracts);
     total_writes += writes;
 
     info!(" <<< Contracts storage updated! Migrated all Contracts ✅");
@@ -294,13 +289,6 @@ pub fn migrate_to_version_7<T: Config>() -> frame_support::weights::Weight {
 
     // Return the weight consumed by the migration.
     T::DbWeight::get().reads_writes(total_reads as Weight + 1, total_writes as Weight + 1)
-}
-
-pub fn write_contracts_to_storage<T: Config>(contracts: &BTreeMap<u64, Contract<T>>) -> u32 {
-    for (contract_id, contract) in contracts {
-        ContractsV7::<T>::insert(contract_id, contract);
-    }
-    contracts.len() as u32
 }
 
 pub fn write_contracts_to_bill_at<T: Config>(
@@ -326,10 +314,9 @@ pub fn write_contracts_to_bill_at<T: Config>(
     (1, writes)
 }
 
-pub fn translate_contract_objects<T: Config>(
-    contracts: &mut BTreeMap<u64, Contract<T>>,
+pub fn translate_contracts<T: Config>(
     bill_index_per_contract_id: &mut BTreeMap<u64, u64>,
-) -> (u32, u32) {
+) ->  (u32, u32) {
     let mut reads = 0;
     let mut writes = 0;
     let mut crc_changes: BTreeMap<u64, ContractChanges<T>> = BTreeMap::new();
@@ -340,8 +327,10 @@ pub fn translate_contract_objects<T: Config>(
     reads += 1;
     writes +=1;
 
-    for (k, ctr) in Contracts::<T>::drain() {
-        reads += 1;
+    let amt_contracts = Contracts::<T>::iter_keys().count() as u32;
+    reads += amt_contracts;
+    writes += amt_contracts;
+    Contracts::<T>::translate::<deprecated::ContractV6<T>, _>(|k, ctr| {
         let contract_type = match ctr.contract_type {
             deprecated::ContractData::NodeContract(ref nc) => {
                 let used_resources = NodeContractResources::<T>::get(ctr.contract_id).used;
@@ -473,6 +462,7 @@ pub fn translate_contract_objects<T: Config>(
                 }
             }
         };
+        
         if let Some(contract_type) = contract_type {
             let new_contract = Contract {
                 version: CONTRACT_VERSION,
@@ -483,9 +473,11 @@ pub fn translate_contract_objects<T: Config>(
                 solution_provider_id: ctr.solution_provider_id,
             };
             debug!("Contract: {:?} succesfully migrated", k);
-            contracts.insert(ctr.contract_id, new_contract);
+            Some(new_contract)
+        } else {
+            None
         }
-    }
+    });
 
     frame_support::migration::remove_storage_prefix(
         b"SmartContractModule",
@@ -499,33 +491,15 @@ pub fn translate_contract_objects<T: Config>(
     );
     // apply the changes to the capacity reservations contracts that we gathered previously
     for (contract_id, contract_changes) in crc_changes {
-        if let Some(crc_contract) = contracts.get_mut(&contract_id) {
-            let crc = match &crc_contract.contract_type {
-                ContractData::CapacityReservationContract(c) => Some(c.clone()),
-                _ => None,
-            };
-            if crc.is_some() {
-                let mut consumable_resources = CapacityReservationResources::<T>::get(contract_id);
-                consumable_resources.used_resources = contract_changes.used_resources;
-                CapacityReservationResources::<T>::insert(contract_id, &consumable_resources);
-                PublicIpsToBillWithCapacityReservation::<T>::insert(contract_id, contract_changes.public_ips);
-                ActiveDeployments::<T>::insert(contract_id, contract_changes.deployments);
-                ContractBillingInformationByID::<T>::insert(contract_id, contract_changes.billing_info);
-                ContractLock::<T>::insert(contract_id, contract_changes.contract_lock);
-                writes += 4;
-                reads += 1;
-            } else {
-                log::error!(
-                    "Contract {:?} is not a capacity reservation contract! This should not happen here!", 
-                    contract_id
-                );
-            }
-        } else {
-            log::error!(
-                "Failed to unwrap contract! Capacity Reservation Contract with id {:?} might have invalid data (used_resources, public_ips, deployments, billing information and contract lock. Please recalculate!", 
-                contract_id
-            );
-        }
+        let mut consumable_resources = CapacityReservationResources::<T>::get(contract_id);
+        consumable_resources.used_resources = contract_changes.used_resources;
+        CapacityReservationResources::<T>::insert(contract_id, &consumable_resources);
+        PublicIpsToBillWithCapacityReservation::<T>::insert(contract_id, contract_changes.public_ips);
+        ActiveDeployments::<T>::insert(contract_id, contract_changes.deployments);
+        ContractBillingInformationByID::<T>::insert(contract_id, contract_changes.billing_info);
+        ContractLock::<T>::insert(contract_id, contract_changes.contract_lock);
+        writes += 4;
+        reads += 1;
     }
 
     // fix the active node contracts storage and modify the node objects
