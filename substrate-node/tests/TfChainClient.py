@@ -233,13 +233,12 @@ class TfChainClient:
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
 
-    def create_farm(self, name: str = "myfarm", public_ips: list = [], port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+    def create_farm(self, name: str = "myfarm", port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         call = substrate.compose_call("TfgridModule", "create_farm",
                                       {
-                                          "name": f"{name}",
-                                          "public_ips": public_ips
+                                          "name": f"{name}"
                                       })
         expected_events = [{
             "module_id": "TfgridModule",
@@ -275,18 +274,18 @@ class TfChainClient:
         q = substrate.query("TfgridModule", "FarmUnusedPublicIps", [id])
         return q.value
 
-    def add_farm_ip(self, id: int = 1, ip: str = "", gateway: str = "", port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+    def add_farm_ip(self, id: int = 1, ip: str = "", gw: str = "", port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         call = substrate.compose_call("TfgridModule", "add_farm_ip",
                                       {
                                           "id": id,
                                           "ip": ip,
-                                          "gw": gateway
+                                          "gw": gw
                                       })
         expected_events = [{
             "module_id": "TfgridModule",
-            "event_id": "FarmUnusedPublicIpsChanged"
+            "event_id": "PublicIPAdded"
         }]
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
@@ -301,7 +300,7 @@ class TfChainClient:
                                       })
         expected_events = [{
             "module_id": "TfgridModule",
-            "event_id": "FarmUnusedPublicIpsChanged"
+            "event_id": "PublicIPRemoved"
         }]
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
@@ -437,7 +436,7 @@ class TfChainClient:
 
         q = substrate.query("SmartContractModule", "Deployments", [id])
 
-        return q.value 
+        return q.value
 
     def get_contract(self, id: int = 1, port: int = DEFAULT_PORT):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")

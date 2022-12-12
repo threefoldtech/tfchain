@@ -17,7 +17,7 @@ use pallet_timestamp as timestamp;
 use sp_runtime::SaturatedConversion;
 use tfchain_support::{
     resources::Resources,
-    types::{Interface, Power, PowerState, PowerTarget, IP4},
+    types::{Interface, Power, PowerState, PowerTarget},
 };
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
@@ -2357,30 +2357,6 @@ impl<T: Config> Pallet<T> {
     fn get_farm_name(name: FarmNameInput<T>) -> Result<FarmNameOf<T>, DispatchErrorWithPostInfo> {
         let name_parsed = <T as Config>::FarmName::try_from(name)?;
         Ok(name_parsed)
-    }
-
-    fn get_public_ips(
-        public_ips: PublicIpListInput<T>,
-    ) -> Result<PublicIpListOf, DispatchErrorWithPostInfo> {
-        let mut public_ips_list: PublicIpListOf =
-            vec![].try_into().map_err(|_| Error::<T>::InvalidPublicIP)?;
-
-        for ip in public_ips {
-            let pub_ip = IP4 {
-                ip: ip.ip,
-                gw: ip.gw,
-            };
-
-            if public_ips_list.contains(&pub_ip) {
-                return Err(DispatchErrorWithPostInfo::from(Error::<T>::IpExists));
-            }
-
-            public_ips_list
-                .try_push(pub_ip)
-                .map_err(|_| Error::<T>::InvalidPublicIP)?;
-        }
-
-        Ok(public_ips_list)
     }
 
     pub fn get_resources(

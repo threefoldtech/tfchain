@@ -199,7 +199,7 @@ Test Add Remove Public Ips
     Setup Network And Create Farm
 
     # Add an ip to the farm
-    Add Farm Ip    id=${1}    ip=185.206.122.125/16    gateway=185.206.122.1
+    Add Farm Ip    id=${1}    ip=185.206.122.125/16    gw=185.206.122.1
     ${farm_public_ips} =    Get Farm Public Ips   ${1}
     Should Not Be Equal    ${farm_public_ips}    ${None}
     Length Should Be    ${farm_public_ips}    ${1}
@@ -219,7 +219,7 @@ Test Add Public Ips: Failure InvalidPublicIP
     Setup Network And Create Farm
     # Add an ip in an invalid format
     Run Keyword And Expect Error    *'InvalidPublicIP'*
-    ...    Add Farm Ip    id=${1}    ip="185.206.122.125"    gateway=185.206.122.1
+    ...    Add Farm Ip    id=${1}    ip="185.206.122.125"    gw=185.206.122.1
 
     Tear Down Multi Node Network
 
@@ -322,9 +322,8 @@ Test Create Update Cancel Deployment: Success
     Setup Predefined Account    who=Alice
     Setup Predefined Account    who=Bob
     
-    ${ip_1} =     Create Dictionary    ip    185.206.122.33/24    gw    185.206.122.1
-    ${public_ips} =    Create List    ${ip_1}
-    Create Farm    name=alice_farm    public_ips=${public_ips}
+    Create Farm    name=alice_farm
+    Add Farm Ip    id=${1}    ip=185.206.122.33/24    gw=185.206.122.1
     
     ${interface_ips} =     Create List    10.2.3.3
     ${interface_1} =     Create Interface    name=zos    mac=00:00:5e:00:53:af    ips=${interface_ips}
@@ -463,7 +462,8 @@ Test Billing
 
     ${ip_1} =     Create Dictionary    ip    185.206.122.33/24    gw    185.206.122.1
     ${public_ips} =    Create List    ${ip_1}
-    Create Farm    name=alice_farm    public_ips=${public_ips}
+    Create Farm    name=alice_farm    
+    Add Farm Ip    id=${1}    ip=185.206.122.33/24    gw=185.206.122.1
     Create Node    farm_id=${1}    resources=&{RESOURCES_N1}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
 
     ${balance_alice} =    Balance Data    who=Alice

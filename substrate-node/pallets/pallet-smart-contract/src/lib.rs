@@ -291,14 +291,14 @@ pub mod pallet {
         NameContractCanceled {
             contract_id: u64,
         },
-        /// IP got reserved by a Node contract
+        /// IP got reserved by a Deployment
         IPsReserved {
-            contract_id: u64,
+            deployment_id: u64,
             public_ips: BoundedVec<IP4, MaxNodeContractPublicIPs<T>>,
         },
-        /// IP got freed by a Node contract
+        /// IP got freed by a Deployment
         IPsFreed {
-            contract_id: u64,
+            deployment_id: u64,
             // public ip as a string
             public_ips: BoundedVec<IP4, MaxNodeContractPublicIPs<T>>,
         },
@@ -1267,7 +1267,7 @@ impl<T: Config> Pallet<T> {
 
         // free the public ips requested by the contract
         if deployment.public_ips > 0 {
-            Self::_free_ip(deployment_id, &mut deployment, &cr_contract)?;
+            Self::_free_ip(&mut deployment, &cr_contract)?;
         }
 
         // unclaim all resources used by this contract on the capacity reservation contract
@@ -1560,11 +1560,6 @@ impl<T: Config> Pallet<T> {
                         node_id,
                         twin_id: contract.twin_id,
                     });
-                    // If the contract is a rent contract, also move state on associated node contracts
-                    Self::handle_grace_capacity_reservation_contract(
-                        contract,
-                        types::ContractState::Created,
-                    )?;
                 } else {
                     let diff = current_block - grace_start;
                     // If the contract grace period ran out, we can decomission the contract
@@ -1597,55 +1592,12 @@ impl<T: Config> Pallet<T> {
                         twin_id: contract.twin_id,
                         block_number: current_block.saturated_into(),
                     });
-                    // If the contract is a rent contract, also move associated node contract to grace period
-                    Self::handle_grace_capacity_reservation_contract(
-                        contract,
-                        types::ContractState::GracePeriod(current_block),
-                    )?;
                 }
             }
             _ => (),
         }
 
         Ok(contract)
-    }
-
-    fn handle_grace_capacity_reservation_contract(
-        contract: &mut types::Contract<T>,
-        state: types::ContractState,
-    ) -> DispatchResultWithPostInfo {
-        match &contract.contract_type {
-            types::ContractData::CapacityReservationContract(c) => {
-                let deployments = ActiveDeployments::<T>::get(contract.contract_id);
-                for ctr_id in deployments {
-                    let mut ctr =
-                        Contracts::<T>::get(ctr_id).ok_or(Error::<T>::ContractNotExists)?;
-                    Self::_update_contract_state(&mut ctr, &state)?;
-
-                    match state {
-                        types::ContractState::Created => {
-                            Self::deposit_event(Event::ContractGracePeriodEnded {
-                                contract_id: ctr_id,
-                                node_id: c.node_id,
-                                twin_id: ctr.twin_id,
-                            });
-                        }
-                        types::ContractState::GracePeriod(block_number) => {
-                            Self::deposit_event(Event::ContractGracePeriodStarted {
-                                contract_id: ctr_id,
-                                node_id: c.node_id,
-                                twin_id: ctr.twin_id,
-                                block_number,
-                            });
-                        }
-                        _ => (),
-                    };
-                }
-            }
-            _ => (),
-        };
-
-        Ok(().into())
     }
 
     fn handle_lock(
@@ -2049,12 +2001,16 @@ impl<T: Config> Pallet<T> {
             &amt_public_ips,
         );
 
+        Self::deposit_event(Event::IPsReserved {
+            deployment_id: deployment.id,
+            public_ips: deployment.public_ips_list.clone(),
+        });
+
         Ok(().into())
     }
 
     pub fn _free_ip(
-        contract_id: u64,
-        deployment_contract: &mut types::Deployment<T>,
+        deployment: &mut types::Deployment<T>,
         capacity_reservation_contract: &types::Contract<T>,
     ) -> DispatchResultWithPostInfo {
         let capacity_reservation_data =
@@ -2067,8 +2023,8 @@ impl<T: Config> Pallet<T> {
             Error::<T>::FarmNotExists
         );
         let mut farm_public_ips = pallet_tfgrid::FarmUnusedPublicIps::<T>::get(node.farm_id);
-        let used_public_ips = deployment_contract.public_ips_list.clone();
-        deployment_contract.public_ips_list = vec![].try_into().unwrap();
+        let used_public_ips = deployment.public_ips_list.clone();
+        deployment.public_ips_list = vec![].try_into().unwrap();
 
         for public_ip in used_public_ips.clone() {
             farm_public_ips.try_push(public_ip).or_else(|_| {
@@ -2082,7 +2038,7 @@ impl<T: Config> Pallet<T> {
         // Update the PublicIpsToBillWithCapacityReservation storage
         let amt_public_ips = PublicIpsToBillWithCapacityReservation::<T>::get(
             capacity_reservation_contract.contract_id,
-        ) - deployment_contract.public_ips;
+        ) - deployment.public_ips;
         PublicIpsToBillWithCapacityReservation::<T>::insert(
             capacity_reservation_contract.contract_id,
             amt_public_ips,
@@ -2090,7 +2046,7 @@ impl<T: Config> Pallet<T> {
 
         // Emit an event containing the IP's freed for this contract
         Self::deposit_event(Event::IPsFreed {
-            contract_id,
+            deployment_id: deployment.id,
             public_ips: used_public_ips,
         });
 
@@ -2233,8 +2189,7 @@ impl<T: Config> PublicIpModifier for Pallet<T> {
             if let Some(mut cr_contract) = cr_contract {
                 // free the public ips requested by the contract
                 if deployment.public_ips > 0 {
-                    if let Err(e) = Self::_free_ip(deployment_id, &mut deployment, &mut cr_contract)
-                    {
+                    if let Err(e) = Self::_free_ip(&mut deployment, &mut cr_contract) {
                         log::error!("error while freeing ips: {:?}", e);
                     }
                 }
