@@ -3709,11 +3709,20 @@ pub fn prepare_farm(source: AccountId, dedicated: bool) {
     .unwrap();
 
     TfgridModule::create_farm(
-        Origin::signed(source),
+        Origin::signed(source.clone()),
         farm_name.as_bytes().to_vec().try_into().unwrap(),
-        pub_ips.clone().try_into().unwrap(),
     )
     .unwrap();
+
+    for public_ip in pub_ips {
+        TfgridModule::add_farm_ip(
+            Origin::signed(source.clone()),
+            1,
+            public_ip.ip,
+            public_ip.gw,
+        )
+        .unwrap();
+    }
 
     if !dedicated {
         return;

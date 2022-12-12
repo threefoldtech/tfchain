@@ -466,9 +466,13 @@ pub mod pallet {
             resources: ConsumableResources,
         },
 
-        FarmUnusedPublicIpsChanged {
+        PublicIPAdded {
             farm_id: u32,
-            public_ips: PublicIpListOf,
+            public_ip: IP4,
+        },
+        PublicIPRemoved {
+            farm_id: u32,
+            public_ip: IP4,
         },
     }
 
@@ -790,7 +794,6 @@ pub mod pallet {
         pub fn create_farm(
             origin: OriginFor<T>,
             name: FarmNameInput<T>,
-            public_ips: PublicIpListInput<T>,
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
@@ -810,8 +813,6 @@ pub mod pallet {
             );
             let farm_name = Self::get_farm_name(name.clone())?;
 
-            let public_ips_list = Self::get_public_ips(public_ips)?;
-
             let new_farm = Farm {
                 version: TFGRID_FARM_VERSION,
                 id,
@@ -824,7 +825,6 @@ pub mod pallet {
             };
 
             Farms::<T>::insert(id, &new_farm);
-            FarmUnusedPublicIps::<T>::insert(id, &public_ips_list);
             FarmIdByName::<T>::insert(name.to_vec(), id);
             FarmID::<T>::put(id);
 
@@ -954,12 +954,12 @@ pub mod pallet {
                 Some(_) => return Err(Error::<T>::IpExists.into()),
                 None => {
                     farm_public_ips
-                        .try_push(new_ip)
+                        .try_push(new_ip.clone())
                         .map_err(|_| Error::<T>::InvalidPublicIP)?;
                     FarmUnusedPublicIps::<T>::insert(stored_farm.id, &farm_public_ips);
-                    Self::deposit_event(Event::FarmUnusedPublicIpsChanged {
+                    Self::deposit_event(Event::PublicIPAdded {
                         farm_id: stored_farm.id,
-                        public_ips: farm_public_ips,
+                        public_ip: new_ip,
                     });
                     return Ok(().into());
                 }
@@ -985,11 +985,11 @@ pub mod pallet {
 
             match farm_public_ips.iter().position(|pubip| pubip.ip == ip) {
                 Some(index) => {
-                    farm_public_ips.remove(index);
+                    let public_ip = farm_public_ips.remove(index);
                     FarmUnusedPublicIps::<T>::insert(stored_farm.id, &farm_public_ips);
-                    Self::deposit_event(Event::FarmUnusedPublicIpsChanged {
+                    Self::deposit_event(Event::PublicIPRemoved {
                         farm_id: stored_farm.id,
-                        public_ips: farm_public_ips,
+                        public_ip: public_ip,
                     });
                     Ok(().into())
                 }

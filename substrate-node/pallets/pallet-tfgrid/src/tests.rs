@@ -300,25 +300,25 @@ fn test_create_farm_invalid_name_fails() {
 
         let farm_name = get_farm_name_input(b"test.farm");
         assert_noop!(
-            TfgridModule::create_farm(Origin::signed(alice()), farm_name, bounded_vec![]),
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name),
             Error::<TestRuntime>::InvalidFarmName
         );
 
         let farm_name = get_farm_name_input(b"test farm");
         assert_noop!(
-            TfgridModule::create_farm(Origin::signed(alice()), farm_name, bounded_vec![]),
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name),
             Error::<TestRuntime>::InvalidFarmName
         );
 
         let farm_name = get_farm_name_input(b"");
         assert_noop!(
-            TfgridModule::create_farm(Origin::signed(alice()), farm_name, bounded_vec![]),
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name),
             Error::<TestRuntime>::FarmNameTooShort
         );
 
         let farm_name = get_farm_name_input(b"12");
         assert_noop!(
-            TfgridModule::create_farm(Origin::signed(alice()), farm_name, bounded_vec![]),
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name),
             Error::<TestRuntime>::FarmNameTooShort
         );
     });
@@ -333,11 +333,7 @@ fn test_update_farm_name_works() {
         create_twin_bob();
 
         let farm_name = get_farm_name_input(b"bob_farm");
-        assert_ok!(TfgridModule::create_farm(
-            Origin::signed(bob()),
-            farm_name,
-            bounded_vec![]
-        ));
+        assert_ok!(TfgridModule::create_farm(Origin::signed(bob()), farm_name,));
 
         let farm_name = get_farm_name_input(b"bob_updated_farm");
         assert_ok!(TfgridModule::update_farm(
@@ -357,17 +353,12 @@ fn test_update_farm_existing_name_fails() {
         assert_ok!(TfgridModule::create_farm(
             Origin::signed(alice()),
             farm_name,
-            bounded_vec![]
         ));
 
         create_twin_bob();
 
         let farm_name = get_farm_name_input(b"bob_farm");
-        assert_ok!(TfgridModule::create_farm(
-            Origin::signed(bob()),
-            farm_name,
-            bounded_vec![]
-        ));
+        assert_ok!(TfgridModule::create_farm(Origin::signed(bob()), farm_name));
 
         let farm_name = get_farm_name_input(b"alice_farm");
         assert_noop!(
@@ -385,21 +376,21 @@ fn test_create_farm_with_double_ip_fails() {
 
         let farm_name = get_farm_name_input(b"test_farm");
 
-        let mut pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
-
         let ip = get_public_ip_ip_input(b"185.206.122.33/24");
         let gw = get_public_ip_gw_input(b"185.206.122.1");
 
-        pub_ips
-            .try_push(IP4 {
-                ip: ip.clone(),
-                gw: gw.clone(),
-            })
-            .unwrap();
-        pub_ips.try_push(IP4 { ip, gw }).unwrap();
-
+        assert_ok!(TfgridModule::create_farm(
+            Origin::signed(alice()),
+            farm_name
+        ));
+        assert_ok!(TfgridModule::add_farm_ip(
+            Origin::signed(alice()),
+            1,
+            ip.clone(),
+            gw.clone(),
+        ));
         assert_noop!(
-            TfgridModule::create_farm(Origin::signed(alice()), farm_name, pub_ips),
+            TfgridModule::add_farm_ip(Origin::signed(alice()), 1, ip, gw),
             Error::<TestRuntime>::IpExists
         );
     });
@@ -563,10 +554,8 @@ fn test_create_farm_with_same_name_fails() {
 
         let farm_name = get_farm_name_input(b"test_farm");
 
-        let pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
-
         assert_noop!(
-            TfgridModule::create_farm(Origin::signed(alice()), farm_name, pub_ips),
+            TfgridModule::create_farm(Origin::signed(alice()), farm_name),
             Error::<TestRuntime>::FarmExists
         );
     });
@@ -711,8 +700,7 @@ fn update_certified_node_resources_loses_certification_works() {
         assert_eq!(node.certification, NodeCertification::Certified);
 
         // Change cores to 2
-        let mut node_resources: ResourcesInput =
-            TfgridModule::node_resources(1).total_resources;
+        let mut node_resources: ResourcesInput = TfgridModule::node_resources(1).total_resources;
         node_resources.cru = 2;
 
         let node_location = LocationInput {
@@ -769,8 +757,7 @@ fn update_certified_node_same_resources_keeps_certification_works() {
         let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(node.certification, NodeCertification::Certified);
 
-        let node_resources: ResourcesInput =
-            TfgridModule::node_resources(1).total_resources;
+        let node_resources: ResourcesInput = TfgridModule::node_resources(1).total_resources;
 
         let node_location = LocationInput {
             city: node.location.city.0,
@@ -860,10 +847,7 @@ fn change_power_state_works() {
             PowerState::Down(1)
         ));
 
-        assert_eq!(
-            TfgridModule::node_power(2).state,
-            PowerState::Down(1)
-        );
+        assert_eq!(TfgridModule::node_power(2).state, PowerState::Down(1));
     });
 }
 
@@ -893,10 +877,7 @@ fn change_power_target_works() {
         create_twin_bob();
         create_extra_node();
 
-        assert_eq!(
-            TfgridModule::node_power(2).target,
-            PowerTarget::Down,
-        );
+        assert_eq!(TfgridModule::node_power(2).target, PowerTarget::Down,);
 
         assert_ok!(TfgridModule::change_power_target(
             Origin::signed(alice()),
@@ -904,10 +885,7 @@ fn change_power_target_works() {
             PowerTarget::Up,
         ));
 
-        assert_eq!(
-            TfgridModule::node_power(2).target,
-            PowerTarget::Up,
-        );
+        assert_eq!(TfgridModule::node_power(2).target, PowerTarget::Up,);
     });
 }
 
@@ -921,10 +899,7 @@ fn change_power_target_fails() {
         create_twin_bob();
         create_extra_node();
 
-        assert_eq!(
-            TfgridModule::node_power(2).target,
-            PowerTarget::Down,
-        );
+        assert_eq!(TfgridModule::node_power(2).target, PowerTarget::Down,);
 
         assert_noop!(
             TfgridModule::change_power_target(Origin::signed(bob()), 2, PowerTarget::Up,),
@@ -2193,8 +2168,15 @@ fn create_farm() {
     assert_ok!(TfgridModule::create_farm(
         Origin::signed(alice()),
         farm_name,
-        pub_ips,
     ));
+    for public_ip in pub_ips {
+        assert_ok!(TfgridModule::add_farm_ip(
+            Origin::signed(alice()),
+            1,
+            public_ip.ip,
+            public_ip.gw,
+        ));
+    }
 
     create_farming_policies()
 }
@@ -2202,17 +2184,18 @@ fn create_farm() {
 fn create_farm2() {
     let farm_name = get_farm_name_input(b"test_farm2");
 
-    let mut pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
-
     let ip = get_public_ip_ip_input(b"185.206.122.33/24");
     let gw = get_public_ip_gw_input(b"185.206.122.1");
-
-    pub_ips.try_push(IP4 { ip, gw }).unwrap();
 
     assert_ok!(TfgridModule::create_farm(
         Origin::signed(alice()),
         farm_name,
-        pub_ips,
+    ));
+    assert_ok!(TfgridModule::add_farm_ip(
+        Origin::signed(alice()),
+        TfgridModule::farm_id(),
+        ip,
+        gw,
     ));
 
     create_farming_policies()
