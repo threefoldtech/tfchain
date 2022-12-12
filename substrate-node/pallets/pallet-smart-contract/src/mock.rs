@@ -305,12 +305,12 @@ impl frame_system::offchain::SigningTypes for TestRuntime {
     type Signature = Signature;
 }
 
-impl<C> frame_system::offchain::SendTransactionTypes<C> for TestRuntime
+impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for TestRuntime
 where
-    RuntimeCall: From<C>,
+    RuntimeCall: From<LocalCall>,
 {
     type OverarchingCall = RuntimeCall;
-    type Extrinsic = UncheckedExtrinsic;
+    type Extrinsic = Extrinsic;
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for TestRuntime
@@ -320,13 +320,10 @@ where
     fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
         call: RuntimeCall,
         _public: <Signature as Verify>::Signer,
-        account: AccountId,
-        _nonce: u64,
-    ) -> Option<(
-        RuntimeCall,
-        <UncheckedExtrinsic as ExtrinsicT>::SignaturePayload,
-    )> {
-        Some((call, (account, (), ())))
+        _account: AccountId,
+        nonce: u64,
+    ) -> Option<(RuntimeCall, <Extrinsic as ExtrinsicT>::SignaturePayload)> {
+        Some((call, (nonce, ())))
     }
 }
 
@@ -487,7 +484,7 @@ impl TransactionPool for MockedTransactionPoolExt {
         let extrinsic_decoded: Extrinsic = match Decode::decode(&mut &*extrinsic) {
             Ok(xt) => xt,
             Err(e) => {
-                log::debug!("Unable to decode extrinsic: {:?}: {}", extrinsic, e);
+                log::error!("Unable to decode extrinsic: {:?}: {}", extrinsic, e);
                 return Err(());
             }
         };
