@@ -440,7 +440,7 @@ pub fn translate_contract_objects<T: Config>(
                         billing_info: billing_info_nc,
                         contract_lock: contract_lock_nc,
                     });
-                    // the rent contract should be remove from billing
+                    // the rent contract should be removed from billing
                     bill_index_per_contract_id.remove(&ctr.contract_id);
                     None
                 }
@@ -462,16 +462,10 @@ pub fn translate_contract_objects<T: Config>(
                     });
                     writes += 1;
                     // gather the node changes
-                    node_changes
-                        .entry(crc.node_id)
-                        .and_modify(|changes| {
-                            changes.active_contracts.push(ctr.contract_id);
-                            changes.used_resources.add(&node_resources.total_resources);
-                        })
-                        .or_insert(NodeChanges {
+                    node_changes.insert(crc.node_id, NodeChanges {
                             used_resources: node_resources.total_resources,
                             active_contracts: vec![ctr.contract_id],
-                        });
+                    });
                     Some(ContractData::CapacityReservationContract(crc))
                 } else {
                     log::error!("Rencontract ({:?}) on a node ({:?}) that no longer exist.", ctr.contract_id, rc.node_id);
@@ -575,18 +569,4 @@ pub fn get_bill_index_per_contract_id<T: Config>() -> (BTreeMap<u64, u64>, u32) 
     );
 
     (bill_index_per_contract_id, reads)
-}
-
-pub fn find_bill_index<T: Config>(contract_id: u64) -> (Option<u64>, u32) {
-    let mut reads = 1;
-    for index in 0..BillingFrequency::<T>::get() {
-        for ctr_id in ContractsToBillAt::<T>::get(index) {
-            reads += 1;
-            if ctr_id == contract_id {
-                return (Some(index), reads);
-            }
-        }
-    }
-    info!("Reads for finding bill index {:?}", reads);
-    (None, reads)
 }
