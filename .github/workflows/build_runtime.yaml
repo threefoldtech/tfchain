@@ -12,7 +12,7 @@ jobs:
   srtool:
     runs-on: [self-hosted, poc]
     container:
-      image: threefolddev/tfchain:1
+      image: docker
       env:
         DEBIAN_FRONTEND: noninteractive
     steps:
