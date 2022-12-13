@@ -1359,6 +1359,7 @@ pub mod pallet {
             Nodes::<T>::remove(id);
             NodeResources::<T>::remove(id);
             NodePower::<T>::remove(id);
+            NodeIdByTwinID::<T>::remove(stored_node.twin_id);
 
             Self::deposit_event(Event::NodeDeleted(id));
 
@@ -1882,6 +1883,7 @@ pub mod pallet {
 
             Nodes::<T>::remove(node_id);
             NodeResources::<T>::remove(node_id);
+            NodePower::<T>::remove(node_id);
             NodeIdByTwinID::<T>::remove(node.twin_id);
 
             Self::deposit_event(Event::NodeDeleted(node_id));

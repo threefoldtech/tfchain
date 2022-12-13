@@ -1944,11 +1944,11 @@ impl<T: Config> Pallet<T> {
         deployment: &mut types::Deployment<T>,
         capacity_reservation_contract: &types::Contract<T>,
     ) -> DispatchResultWithPostInfo {
-        let capacity_reservation_data =
-            Self::get_capacity_reservation_contract(&capacity_reservation_contract)?;
         if deployment.public_ips == 0 {
             return Ok(().into());
         }
+        let capacity_reservation_data =
+            Self::get_capacity_reservation_contract(&capacity_reservation_contract)?;
         let node = pallet_tfgrid::Nodes::<T>::get(capacity_reservation_data.node_id)
             .ok_or(Error::<T>::NodeNotExists)?;
 
@@ -2028,9 +2028,15 @@ impl<T: Config> Pallet<T> {
         pallet_tfgrid::FarmUnusedPublicIps::<T>::insert(node.farm_id, &farm_public_ips);
 
         // Update the PublicIpsToBillWithCapacityReservation storage
-        let amt_public_ips = PublicIpsToBillWithCapacityReservation::<T>::get(
+        let mut amt_public_ips = PublicIpsToBillWithCapacityReservation::<T>::get(
             capacity_reservation_contract.contract_id,
-        ) - deployment.public_ips;
+        );
+        // safety to prevent overflow
+        amt_public_ips = if amt_public_ips <= deployment.public_ips {
+            0
+        } else {
+            amt_public_ips - deployment.public_ips
+        };
         PublicIpsToBillWithCapacityReservation::<T>::insert(
             capacity_reservation_contract.contract_id,
             amt_public_ips,
@@ -2178,9 +2184,8 @@ impl<T: Config> PublicIpModifier for Pallet<T> {
                     if let Err(e) = Self::_free_ip(&mut deployment, &mut cr_contract) {
                         log::error!("error while freeing ips: {:?}", e);
                     }
+                    Deployments::<T>::insert(deployment_id, deployment);
                 }
-
-                Deployments::<T>::insert(deployment_id, deployment);
             }
         }
     }
