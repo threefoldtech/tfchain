@@ -38,46 +38,44 @@
 // --template
 // ./.maintain/frame-weight-template.hbs
 
+
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{
-    traits::Get,
-    weights::{constants::RocksDbWeight, Weight},
-};
+use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use sp_std::marker::PhantomData;
 
 /// Weight functions needed for pallet_smart_contract.
 pub trait WeightInfo {
-    fn create_node_contract() -> Weight;
-    fn add_reports() -> Weight;
+	fn create_node_contract() -> Weight;
+	fn add_reports() -> Weight;
 }
 
 /// Weights for pallet_smart_contract using the Substrate node and recommended hardware.
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
-    fn create_node_contract() -> Weight {
-        (926_396_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(8 as Weight))
-            .saturating_add(T::DbWeight::get().writes(8 as Weight))
-    }
-    fn add_reports() -> Weight {
-        (832_738_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(7 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
-    }
+	fn create_node_contract() -> Weight {
+		(926_396_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(8 as Weight))
+			.saturating_add(T::DbWeight::get().writes(8 as Weight))
+	}
+	fn add_reports() -> Weight {
+		(832_738_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(7 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-    fn create_node_contract() -> Weight {
-        (926_396_000 as Weight)
-            .saturating_add(RocksDbWeight::get().reads(8 as Weight))
-            .saturating_add(RocksDbWeight::get().writes(8 as Weight))
-    }
-    fn add_reports() -> Weight {
-        (832_738_000 as Weight)
-            .saturating_add(RocksDbWeight::get().reads(7 as Weight))
-            .saturating_add(RocksDbWeight::get().writes(1 as Weight))
-    }
+	fn create_node_contract() -> Weight {
+		(926_396_000 as Weight)
+			.saturating_add(RocksDbWeight::get().reads(8 as Weight))
+			.saturating_add(RocksDbWeight::get().writes(8 as Weight))
+	}
+	fn add_reports() -> Weight {
+		(832_738_000 as Weight)
+			.saturating_add(RocksDbWeight::get().reads(7 as Weight))
+			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+	}
 }
