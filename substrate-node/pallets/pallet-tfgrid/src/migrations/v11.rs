@@ -1,6 +1,6 @@
 use crate::Config;
 use crate::*;
-use frame_support::{traits::Get, traits::OnRuntimeUpgrade, weights::Weight};
+use frame_support::{traits::Get, weights::Weight, traits::OnRuntimeUpgrade};
 use log::{debug, info};
 use sp_std::marker::PhantomData;
 
@@ -32,7 +32,7 @@ impl<T: Config> OnRuntimeUpgrade for FixFarmingPolicy<T> {
         if PalletVersion::<T>::get() == types::StorageVersion::V10Struct {
             fix_farming_policy_migration_::<T>()
         } else {
-            info!(" >>> Unused TFGrid pallet V11 migration");
+            info!(" >>> Unused migration");
             return 0;
         }
     }
@@ -44,13 +44,13 @@ impl<T: Config> OnRuntimeUpgrade for FixFarmingPolicy<T> {
         // Check number of farms against pre-check result
         let pre_farms_count = Self::get_temp_storage("pre_farms_count").unwrap_or(0u64);
         assert_eq!(
-            Farms::<T>::iter_keys().count().saturated_into::<u64>(),
+            Farms::<T>::iter().count().saturated_into::<u64>(),
             pre_farms_count,
             "Number of farms migrated does not match"
         );
 
         info!(
-            "👥  TFGrid pallet to {:?} passes POST migrate checks ✅",
+            "👥  TFGrid pallet migration to {:?} passes POST migrate checks ✅",
             Pallet::<T>::pallet_version()
         );
 
@@ -75,10 +75,7 @@ pub fn fix_farming_policy_migration_<T: Config>() -> frame_support::weights::Wei
 
     // Update pallet storage version
     PalletVersion::<T>::set(types::StorageVersion::V11Struct);
-    info!(
-        " <<< Storage version TFGrid pallet upgraded to {:?}",
-        PalletVersion::<T>::get()
-    );
+    info!(" <<< Storage version upgraded");
 
     // Return the weight consumed by the migration.
     T::DbWeight::get().reads_writes(read_writes as Weight, read_writes as Weight)

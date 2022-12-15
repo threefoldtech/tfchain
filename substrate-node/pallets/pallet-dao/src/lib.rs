@@ -1,13 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "128"]
 
-use pallet_tfgrid::pallet::{
-    InterfaceOf,
-    LocationOf,
-    PubConfigOf,
-    SerialNumberOf,
-    TfgridNode,
-};
+use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf, TfgridNode};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
@@ -49,9 +43,7 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
     use pallet_tfgrid::farm::FarmName;
-    use pallet_tfgrid::pub_ip::{GatewayIP, PublicIP};
     use sp_std::convert::TryInto;
-    use tfchain_support::types::PublicIP as SupportPublicIP;
 
     #[pallet::config]
     pub trait Config:
@@ -75,17 +67,8 @@ pub mod pallet {
         /// The minimum amount of vetos to dissaprove a proposal
         type MinVetos: Get<u32>;
 
-        type Tfgrid: Tfgrid<
-            Self::AccountId,
-            FarmName<Self>,
-            SupportPublicIP<PublicIP<Self>, GatewayIP<Self>>,
-        >;
-        type NodeChanged: ChangeNode<
-            LocationOf<Self>,
-            PubConfigOf<Self>,
-            InterfaceOf<Self>,
-            SerialNumberOf<Self>,
-        >;
+        type Tfgrid: Tfgrid<Self::AccountId, FarmName<Self>>;
+        type NodeChanged: ChangeNode<LocationOf<Self>, InterfaceOf<Self>, SerialNumberOf<Self>>;
 
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
@@ -522,15 +505,12 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-impl<T: Config>
-    ChangeNode<LocationOf<T>, PubConfigOf<T>, InterfaceOf<T>, SerialNumberOf<T>>
-    for Pallet<T>
-{
+impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for Pallet<T> {
     fn node_changed(old_node: Option<&TfgridNode<T>>, new_node: &TfgridNode<T>) {
-        let new_node_weight = new_node.resources.total_resources.get_node_weight();
+        let new_node_weight = new_node.resources.get_node_weight();
         match old_node {
             Some(node) => {
-                let old_node_weight = node.resources.total_resources.get_node_weight();
+                let old_node_weight = node.resources.get_node_weight();
 
                 if node.farm_id != new_node.farm_id {
                     let mut old_farm_weight = FarmWeight::<T>::get(node.farm_id);
@@ -558,7 +538,7 @@ impl<T: Config>
     }
 
     fn node_deleted(node: &TfgridNode<T>) {
-        let node_weight = node.resources.total_resources.get_node_weight();
+        let node_weight = node.resources.get_node_weight();
         let mut farm_weight = FarmWeight::<T>::get(node.farm_id);
         farm_weight = farm_weight.checked_sub(node_weight).unwrap_or(0);
         FarmWeight::<T>::insert(node.farm_id, farm_weight);
