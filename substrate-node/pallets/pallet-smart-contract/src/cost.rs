@@ -101,7 +101,8 @@ impl<T: Config> Contract<T> {
             // Calculate total cost for a name contract
             types::ContractData::NameContract(_) => {
                 // bill user for name usage for number of seconds elapsed
-                let total_cost_u64f64 = (U64F64::from_num(pricing_policy.unique_name.value) / 3600)
+                let total_cost_u64f64 = (U64F64::from_num(pricing_policy.unique_name.value)
+                    / U64F64::from_num(crate::SECS_PER_HOUR))
                     * U64F64::from_num(seconds_elapsed);
                 total_cost_u64f64.to_num::<u64>()
             }
@@ -135,7 +136,7 @@ impl<T: Config> ServiceContract<T> {
     pub fn calculate_bill_cost(&self, service_bill: ServiceContractBill) -> u64 {
         // bill user for service usage for elpased usage (window) in seconds
         let contract_cost = U64F64::from_num(self.base_fee) * U64F64::from_num(service_bill.window)
-            / 3600
+            / U64F64::from_num(crate::SECS_PER_HOUR)
             + U64F64::from_num(service_bill.variable_amount);
         contract_cost.round().to_num::<u64>()
     }
@@ -160,14 +161,16 @@ pub fn calculate_resources_cost<T: Config>(
         let su_used = hru / 1200 + sru / 200;
         // the pricing policy su cost value is expressed in 1 hours or 3600 seconds.
         // we bill every 3600 seconds but here we need to calculate the cost per second and multiply it by the seconds elapsed.
-        let su_cost = (U64F64::from_num(pricing_policy.su.value) / 3600)
+        let su_cost = (U64F64::from_num(pricing_policy.su.value)
+            / U64F64::from_num(crate::SECS_PER_HOUR))
             * U64F64::from_num(seconds_elapsed)
             * su_used;
         log::debug!("su cost: {:?}", su_cost);
 
         let cu = calculate_cu(cru, mru);
 
-        let cu_cost = (U64F64::from_num(pricing_policy.cu.value) / 3600)
+        let cu_cost = (U64F64::from_num(pricing_policy.cu.value)
+            / U64F64::from_num(crate::SECS_PER_HOUR))
             * U64F64::from_num(seconds_elapsed)
             * cu;
         log::debug!("cu cost: {:?}", cu_cost);
@@ -176,7 +179,7 @@ pub fn calculate_resources_cost<T: Config>(
 
     if ipu > 0 {
         let total_ip_cost = U64F64::from_num(ipu)
-            * (U64F64::from_num(pricing_policy.ipu.value) / 3600)
+            * (U64F64::from_num(pricing_policy.ipu.value) / U64F64::from_num(crate::SECS_PER_HOUR))
             * U64F64::from_num(seconds_elapsed);
         log::debug!("ip cost: {:?}", total_ip_cost);
         total_cost += total_ip_cost;

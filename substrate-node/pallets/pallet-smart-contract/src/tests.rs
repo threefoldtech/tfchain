@@ -77,14 +77,14 @@ fn test_create_node_contract_with_public_ips_works() {
                 assert_eq!(c.public_ips, 2);
 
                 let pub_ip = PublicIP {
-            ip: get_public_ip_ip_input(b"185.206.122.33/24"),
-            gateway: get_public_ip_gw_input(b"185.206.122.1"),
+                    ip: get_public_ip_ip_input(b"185.206.122.33/24"),
+                    gateway: get_public_ip_gw_input(b"185.206.122.1"),
                     contract_id: 1,
                 };
 
                 let pub_ip_2 = PublicIP {
-            ip: get_public_ip_ip_input(b"185.206.122.34/24"),
-            gateway: get_public_ip_gw_input(b"185.206.122.1"),
+                    ip: get_public_ip_ip_input(b"185.206.122.34/24"),
+                    gateway: get_public_ip_gw_input(b"185.206.122.1"),
                     contract_id: 1,
                 };
                 assert_eq!(c.public_ips_list[0], pub_ip);
@@ -2829,7 +2829,7 @@ fn test_service_contract_bill_works() {
         let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
         let bill = types::ServiceContractBill {
             variable_amount: VARIABLE_AMOUNT,
-            window: 3600, // force a 1h bill here
+            window: crate::SECS_PER_HOUR, // force a 1h bill here
             metadata: bounded_vec![],
         };
         let billed_amount_2 = service_contract.calculate_bill_cost_tft(bill).unwrap();
@@ -2873,7 +2873,7 @@ fn test_service_contract_bill_not_approved_fails() {
                 VARIABLE_AMOUNT,
                 b"bill_metadata".to_vec(),
             ),
-            Error::<TestRuntime>::ServiceContractBillingNotAllowed
+            Error::<TestRuntime>::ServiceContractBillingNotApprovedByBoth
         );
     });
 }
@@ -2897,7 +2897,7 @@ fn test_service_contract_bill_variable_amount_too_high_fails() {
                 variable_amount,
                 b"bill_metadata".to_vec(),
             ),
-            Error::<TestRuntime>::ServiceContractBillingNotAllowed
+            Error::<TestRuntime>::ServiceContractBillingVariableAmountTooHigh
         );
     });
 }

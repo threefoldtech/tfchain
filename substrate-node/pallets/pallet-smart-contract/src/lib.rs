@@ -36,6 +36,7 @@ use tfchain_support::{
 };
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"smct");
+pub const SECS_PER_HOUR: u64 = 36000;
 
 #[cfg(test)]
 mod mock;
@@ -372,7 +373,8 @@ pub mod pallet {
         ServiceContractModificationNotAllowed,
         ServiceContractApprovalNotAllowed,
         ServiceContractRejectionNotAllowed,
-        ServiceContractBillingNotAllowed,
+        ServiceContractBillingNotApprovedByBoth,
+        ServiceContractBillingVariableAmountTooHigh,
         ServiceContractBillMetadataTooLong,
         ServiceContractMetadataTooLong,
         ServiceContractNotEnoughFundsToPayBill,
@@ -579,8 +581,12 @@ pub mod pallet {
             service_contract_id: u64,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
+
+            let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
+                .ok_or(Error::<T>::TwinNotExists)?;
+
             Self::_service_contract_cancel(
-                account_id,
+                twin_id,
                 service_contract_id,
                 types::Cause::CanceledByUser,
             )
@@ -1019,7 +1025,7 @@ impl<T: Config> Pallet<T> {
         // calculate NRU used and the cost
         let used_nru = U64F64::from_num(report.nru) / pricing_policy.nu.factor_base_1000();
         let nu_cost = used_nru
-            * (U64F64::from_num(pricing_policy.nu.value) / 3600)
+            * (U64F64::from_num(pricing_policy.nu.value) / U64F64::from_num(SECS_PER_HOUR))
             * U64F64::from_num(seconds_elapsed);
         log::info!("nu cost: {:?}", nu_cost);
 
@@ -2016,6 +2022,13 @@ impl<T: Config> Pallet<T> {
         let service_contract = ServiceContracts::<T>::get(service_contract_id)
             .ok_or(Error::<T>::ServiceContractNotExists)?;
 
+        // Only service or consumer can reject agreement
+        ensure!(
+            twin_id == service_contract.service_twin_id
+                || twin_id == service_contract.consumer_twin_id,
+            Error::<T>::TwinNotAuthorized,
+        );
+
         // Allow to reject contract only if agreement is ready
         ensure!(
             matches!(
@@ -2025,32 +2038,18 @@ impl<T: Config> Pallet<T> {
             Error::<T>::ServiceContractRejectionNotAllowed,
         );
 
-        // Only service or consumer can reject agreement
-        ensure!(
-            twin_id == service_contract.service_twin_id
-                || twin_id == service_contract.consumer_twin_id,
-            Error::<T>::TwinNotAuthorized,
-        );
-
         // If one party (service or consumer) rejects agreement
         // then contract is canceled and removed from service contract map
-        Self::_service_contract_cancel(
-            account_id,
-            service_contract_id,
-            types::Cause::CanceledByUser,
-        )?;
+        Self::_service_contract_cancel(twin_id, service_contract_id, types::Cause::CanceledByUser)?;
 
         Ok(().into())
     }
 
     pub fn _service_contract_cancel(
-        account_id: T::AccountId,
+        twin_id: u32,
         service_contract_id: u64,
         cause: types::Cause,
     ) -> DispatchResultWithPostInfo {
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
-            .ok_or(Error::<T>::TwinNotExists)?;
-
         let service_contract = ServiceContracts::<T>::get(service_contract_id)
             .ok_or(Error::<T>::ServiceContractNotExists)?;
 
@@ -2103,7 +2102,7 @@ impl<T: Config> Pallet<T> {
                 service_contract.state,
                 types::ServiceContractState::ApprovedByBoth
             ),
-            Error::<T>::ServiceContractBillingNotAllowed,
+            Error::<T>::ServiceContractBillingNotApprovedByBoth,
         );
 
         // Get elapsed time (in seconds) to bill for service
@@ -2113,16 +2112,16 @@ impl<T: Config> Pallet<T> {
         // Billing time (window) is max 1h by design
         // So extra time will not be billed
         // It is the service responsability to bill on right frequency
-        let window = elapsed_seconds_since_last_bill.min(3600);
+        let window = elapsed_seconds_since_last_bill.min(SECS_PER_HOUR);
 
         // Billing variable amount is bounded by contract variable fee
         ensure!(
             variable_amount
-                <= ((U64F64::from_num(window) / 3600)
+                <= ((U64F64::from_num(window) / U64F64::from_num(SECS_PER_HOUR))
                     * U64F64::from_num(service_contract.variable_fee))
                 .round()
                 .to_num::<u64>(),
-            Error::<T>::ServiceContractBillingNotAllowed,
+            Error::<T>::ServiceContractBillingVariableAmountTooHigh,
         );
 
         let bill_metadata = BoundedVec::try_from(metadata)
@@ -2155,8 +2154,9 @@ impl<T: Config> Pallet<T> {
             .ok_or(Error::<T>::ServiceContractNotExists)?;
         let amount_due = service_contract.calculate_bill_cost_tft(bill)?;
 
-        let service_twin = pallet_tfgrid::Twins::<T>::get(service_contract.service_twin_id)
-            .ok_or(Error::<T>::TwinNotExists)?;
+        let service_twin_id = service_contract.service_twin_id;
+        let service_twin =
+            pallet_tfgrid::Twins::<T>::get(service_twin_id).ok_or(Error::<T>::TwinNotExists)?;
 
         let consumer_twin = pallet_tfgrid::Twins::<T>::get(service_contract.consumer_twin_id)
             .ok_or(Error::<T>::TwinNotExists)?;
@@ -2167,7 +2167,7 @@ impl<T: Config> Pallet<T> {
         // by service and removed from service contract map
         if usable_balance < amount_due {
             Self::_service_contract_cancel(
-                service_twin.account_id,
+                service_twin_id,
                 service_contract_id,
                 types::Cause::OutOfFunds,
             )?;
