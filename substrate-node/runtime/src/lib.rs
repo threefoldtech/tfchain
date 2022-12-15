@@ -406,7 +406,6 @@ impl pallet_smart_contract::Config for Runtime {
     type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
     type NodeChanged = NodeChanged;
     type PublicIpModifier = PublicIpModifierType;
-    type Tfgrid = TfgridModule;
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
     type Call = Call;
     type MaxNameContractNameLength = MaxNameContractNameLength;
@@ -773,9 +772,7 @@ pub type Executive = frame_executive::Executive<
         pallet_tfgrid::migrations::v10::FixFarmNodeIndexMap<Runtime>,
         pallet_tfgrid::migrations::v11::FixFarmingPolicy<Runtime>,
         pallet_tfgrid::migrations::v12::InputValidation<Runtime>,
-        pallet_tfgrid::migrations::v13::NodeMigration<Runtime>,
-        pallet_tfgrid::migrations::v14::FixPublicIP<Runtime>,
-        pallet_smart_contract::migrations::v7::ContractMigrationV6<Runtime>,
+        pallet_tfgrid::migrations::v13::FixPublicIP<Runtime>,
     ),
 >;
 

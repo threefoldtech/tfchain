@@ -1,9 +1,9 @@
 use crate::Config;
+use crate::InterfaceOf;
 use crate::*;
-use crate::{InterfaceOf, LocationOf, Pallet, SerialNumberOf};
 use frame_support::{
-    pallet_prelude::OptionQuery, pallet_prelude::Weight, storage_alias, traits::Get,
-    traits::OnRuntimeUpgrade, Blake2_128Concat, BoundedVec,
+    pallet_prelude::OptionQuery, storage_alias, traits::Get, traits::OnRuntimeUpgrade,
+    weights::Weight, Blake2_128Concat, BoundedVec,
 };
 use log::{debug, info};
 use sp_std::marker::PhantomData;
@@ -23,15 +23,52 @@ pub type Nodes<T: Config> = StorageMap<
     OptionQuery,
 >;
 
-// Storage alias from Entity v12
-#[storage_alias]
-pub type Entities<T: Config> = StorageMap<
-    _,
-    Blake2_128Concat,
-    u32,
-    super::types::v12::Entity<AccountIdOf<T>, CityNameOf<T>, CountryNameOf<T>>,
-    OptionQuery,
->;
+pub mod deprecated {
+    use codec::{Decode, Encode};
+    use core::cmp::{Ord, PartialOrd};
+    use scale_info::TypeInfo;
+    use sp_std::prelude::*;
+    use sp_std::vec::Vec;
+    use tfchain_support::{resources::Resources, types::NodeCertification};
+
+    #[derive(Encode, Decode, Debug, Default, PartialEq, Eq, Clone, TypeInfo)]
+    pub struct Entity<AccountId> {
+        pub version: u32,
+        pub id: u32,
+        pub name: Vec<u8>,
+        pub account_id: AccountId,
+        pub country: Vec<u8>,
+        pub city: Vec<u8>,
+    }
+
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+    pub struct Node<PubConfig, If> {
+        pub version: u32,
+        pub id: u32,
+        pub farm_id: u32,
+        pub twin_id: u32,
+        pub resources: Resources,
+        pub location: Location,
+        pub country: Vec<u8>,
+        pub city: Vec<u8>,
+        // optional public config
+        pub public_config: Option<PubConfig>,
+        pub created: u64,
+        pub farming_policy_id: u32,
+        pub interfaces: Vec<If>,
+        pub certification: NodeCertification,
+        pub secure_boot: bool,
+        pub virtualized: bool,
+        pub serial_number: Vec<u8>,
+        pub connection_price: u32,
+    }
+
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+    pub struct Location {
+        pub longitude: Vec<u8>,
+        pub latitude: Vec<u8>,
+    }
+}
 
 pub struct InputValidation<T: Config>(PhantomData<T>);
 
@@ -44,7 +81,7 @@ impl<T: Config> OnRuntimeUpgrade for InputValidation<T> {
         let nodes_count: u64 = Nodes::<T>::iter_keys().count().saturated_into();
         Self::set_temp_storage(nodes_count, "pre_nodes_count");
         log::info!(
-            "🔎 NodeMigrationV12 pre migration: Number of existing nodes {:?}",
+            "🔎 FixFarmingPolicy pre migration: Number of existing nodes {:?}",
             nodes_count
         );
 
@@ -68,13 +105,13 @@ impl<T: Config> OnRuntimeUpgrade for InputValidation<T> {
         // Check number of nodes against pre-check result
         let pre_nodes_count = Self::get_temp_storage("pre_nodes_count").unwrap_or(0u64);
         assert_eq!(
-            Nodes::<T>::iter_keys().count().saturated_into::<u64>(),
+            Nodes::<T>::iter().count().saturated_into::<u64>(),
             pre_nodes_count,
             "Number of nodes migrated does not match"
         );
 
         info!(
-            "👥  TFGrid pallet to {:?} passes POST migrate checks ✅",
+            "👥  TFGrid pallet migration to {:?} passes POST migrate checks ✅",
             Pallet::<T>::pallet_version()
         );
 
@@ -88,7 +125,7 @@ fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
     let mut migrated_count = 0;
 
     // We transform the storage values from the old into the new format.
-    Entities::<T>::translate::<super::types::v11::Entity<AccountIdOf<T>>, _>(|k, entity| {
+    Entities::<T>::translate::<deprecated::Entity<AccountIdOf<T>>, _>(|k, entity| {
         let country = match get_country_name::<T>(&entity) {
             Ok(country_name) => country_name,
             Err(e) => {
@@ -113,15 +150,14 @@ fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
             }
         };
 
-        let new_entity =
-            super::types::v12::Entity::<AccountIdOf<T>, CityNameOf<T>, CountryNameOf<T>> {
-                version: TFGRID_ENTITY_VERSION,
-                id: entity.id,
-                name: entity.name,
-                account_id: entity.account_id,
-                country,
-                city,
-            };
+        let new_entity = TfgridEntity::<T> {
+            version: 2, // deprecated
+            id: entity.id,
+            name: entity.name,
+            account_id: entity.account_id,
+            country,
+            city,
+        };
 
         migrated_count += 1;
 
@@ -193,17 +229,14 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
 
 fn update_pallet_storage_version<T: Config>() -> frame_support::weights::Weight {
     PalletVersion::<T>::set(types::StorageVersion::V12Struct);
-    info!(
-        " <<< Storage version TFGrid pallet upgraded to {:?}",
-        PalletVersion::<T>::get()
-    );
+    info!(" <<< Storage version upgraded");
 
     // Return the weight consumed by the migration.
     T::DbWeight::get().writes(1)
 }
 
 fn get_country_name<T: Config>(
-    node: &super::types::v11::Entity<AccountIdOf<T>>,
+    node: &deprecated::Entity<AccountIdOf<T>>,
 ) -> Result<CountryNameOf<T>, Error<T>> {
     let country_name_input: CountryNameInput =
         BoundedVec::try_from(node.country.clone()).map_err(|_| Error::<T>::CountryNameTooLong)?;
@@ -212,7 +245,7 @@ fn get_country_name<T: Config>(
 }
 
 fn get_city_name<T: Config>(
-    node: &super::types::v11::Entity<AccountIdOf<T>>,
+    node: &deprecated::Entity<AccountIdOf<T>>,
 ) -> Result<CityNameOf<T>, Error<T>> {
     let city_name_input: CityNameInput =
         BoundedVec::try_from(node.city.clone()).map_err(|_| Error::<T>::CityNameTooLong)?;

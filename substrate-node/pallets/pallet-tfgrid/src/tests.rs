@@ -7,7 +7,7 @@ use frame_support::{assert_noop, assert_ok, bounded_vec};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
 use tfchain_support::types::{
-    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, PowerState, PowerTarget,
+    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, 
     PublicConfig, PublicIpError, IP4, IP6,
 };
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
@@ -711,7 +711,7 @@ fn update_certified_node_resources_loses_certification_works() {
         assert_eq!(node.certification, NodeCertification::Certified);
 
         // Change cores to 2
-        let mut node_resources: ResourcesInput = node.resources.total_resources;
+        let mut node_resources: ResourcesInput = node.resources;
         node_resources.cru = 2;
 
         let node_location = LocationInput {
@@ -768,7 +768,7 @@ fn update_certified_node_same_resources_keeps_certification_works() {
         let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(node.certification, NodeCertification::Certified);
 
-        let node_resources: ResourcesInput = node.resources.total_resources;
+        let node_resources: ResourcesInput = node.resources;
 
         let node_location = LocationInput {
             city: node.location.city.0,
@@ -840,94 +840,6 @@ fn create_node_with_interfaces_works() {
             true,
             None,
         ));
-    });
-}
-
-#[test]
-fn change_power_state_works() {
-    ExternalityBuilder::build().execute_with(|| {
-        create_entity();
-        create_twin();
-        create_farm();
-        create_node();
-        create_twin_bob();
-        create_extra_node();
-
-        assert_ok!(TfgridModule::change_power_state(
-            Origin::signed(bob()),
-            PowerState::Down(1)
-        ));
-
-        assert_eq!(
-            TfgridModule::nodes(2).unwrap().power.state,
-            PowerState::Down(1)
-        );
-    });
-}
-
-#[test]
-fn change_power_state_fails() {
-    ExternalityBuilder::build().execute_with(|| {
-        create_entity();
-        create_twin();
-        create_farm();
-        create_node();
-        create_twin_bob();
-        //try changing the power state using another twin_id
-        assert_noop!(
-            TfgridModule::change_power_state(Origin::signed(bob()), PowerState::Down(1)),
-            Error::<TestRuntime>::NodeNotExists
-        );
-    });
-}
-
-#[test]
-fn change_power_target_works() {
-    ExternalityBuilder::build().execute_with(|| {
-        create_entity();
-        create_twin();
-        create_farm();
-        create_node();
-        create_twin_bob();
-        create_extra_node();
-
-        assert_eq!(
-            TfgridModule::nodes(2).unwrap().power.target,
-            PowerTarget::Down,
-        );
-
-        assert_ok!(TfgridModule::change_power_target(
-            Origin::signed(alice()),
-            2,
-            PowerTarget::Up,
-        ));
-
-        assert_eq!(
-            TfgridModule::nodes(2).unwrap().power.target,
-            PowerTarget::Up,
-        );
-    });
-}
-
-#[test]
-fn change_power_target_fails() {
-    ExternalityBuilder::build().execute_with(|| {
-        create_entity();
-        create_twin();
-        create_farm();
-        create_node();
-        create_twin_bob();
-        create_extra_node();
-
-        assert_eq!(
-            TfgridModule::nodes(2).unwrap().power.target,
-            PowerTarget::Down,
-        );
-
-        assert_noop!(
-            TfgridModule::change_power_target(Origin::signed(bob()), 2, PowerTarget::Up,),
-            Error::<TestRuntime>::UnauthorizedToChangePowerTarget
-        );
     });
 }
 
@@ -2244,17 +2156,6 @@ fn create_node() {
         true,
         None,
     ));
-
-    assert_eq!(
-        System::events().contains(&record(MockEvent::TfgridModule(
-            TfgridEvent::PowerTargetChanged {
-                farm_id: 1,
-                node_id: 1,
-                power_target: PowerTarget::Down
-            }
-        ))),
-        true
-    );
 }
 
 fn create_extra_node() {
@@ -2283,17 +2184,6 @@ fn create_extra_node() {
         true,
         None,
     ));
-
-    assert_eq!(
-        System::events().contains(&record(MockEvent::TfgridModule(
-            TfgridEvent::PowerTargetChanged {
-                farm_id: 1,
-                node_id: 2,
-                power_target: PowerTarget::Down
-            }
-        ))),
-        true
-    );
 }
 
 fn create_farming_policies() {
@@ -2440,14 +2330,8 @@ fn test_attach_farming_policy_flow(farming_policy_id: u32) {
 
     // Provide enough CU and SU limits to avoid attaching default policy to node
     // For node: [CU = 20; SU = 2]
-    assert_eq!(
-        node.resources.total_resources.get_cu() <= limit.cu.unwrap(),
-        true
-    );
-    assert_eq!(
-        node.resources.total_resources.get_su() <= limit.su.unwrap(),
-        true
-    );
+    assert_eq!(node.resources.get_cu() <= limit.cu.unwrap(), true);
+    assert_eq!(node.resources.get_su() <= limit.su.unwrap(), true);
 
     // Link farming policy to farm
     assert_ok!(TfgridModule::attach_policy_to_farm(

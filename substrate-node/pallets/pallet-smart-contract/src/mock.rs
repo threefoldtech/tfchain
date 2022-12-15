@@ -21,10 +21,7 @@ use pallet_tfgrid::{
     twin::TwinIp,
     DocumentHashInput, DocumentLinkInput, TwinIpInput,
 };
-use pallet_tfgrid::{
-    CityNameInput, CountryNameInput, Gw4Input, Gw6Input, Ip4Input, Ip6Input, LatitudeInput,
-    LongitudeInput,
-};
+use pallet_tfgrid::{CityNameInput, CountryNameInput, LatitudeInput, LongitudeInput, Ip4Input, Gw4Input};
 use parking_lot::RwLock;
 use sp_core::{
     crypto::Ss58Codec,
@@ -43,10 +40,7 @@ use sp_runtime::{
     AccountId32,
 };
 use sp_std::convert::{TryFrom, TryInto};
-use tfchain_support::{
-    traits::{ChangeNode, PublicIpModifier},
-    types::PublicIP,
-};
+use tfchain_support::traits::ChangeNode;
 
 // set environment variable RUST_LOG=debug to see all logs when running the tests and call
 // env_logger::init() at the beginning of the test
@@ -230,8 +224,6 @@ impl pallet_smart_contract::Config for TestRuntime {
     type GracePeriod = GracePeriod;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
-    type PublicIpModifier = PublicIpModifierType;
-    type Tfgrid = TfgridModule;
     type MaxNameContractNameLength = MaxNameContractNameLength;
     type NameContractName = TestNameContractName;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
@@ -239,6 +231,7 @@ impl pallet_smart_contract::Config for TestRuntime {
     type MaxNodeContractPublicIps = MaxNodeContractPublicIPs;
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
     type Call = Call;
+    type PublicIpModifier = PublicIpModifierType;
 }
 
 type AccountPublic = <MultiSignature as Verify>::Signer;
@@ -281,22 +274,6 @@ pub(crate) fn get_latitude_input(latitude_input: &[u8]) -> LatitudeInput {
 
 pub(crate) fn get_longitude_input(longitude_input: &[u8]) -> LongitudeInput {
     BoundedVec::try_from(longitude_input.to_vec()).expect("Invalid longitude input.")
-}
-
-pub(crate) fn get_pub_config_ip4_input(ip4_input: &[u8]) -> Ip4Input {
-    BoundedVec::try_from(ip4_input.to_vec()).expect("Invalid ip4 input.")
-}
-
-pub(crate) fn get_pub_config_gw4_input(gw4_input: &[u8]) -> Gw4Input {
-    BoundedVec::try_from(gw4_input.to_vec()).expect("Invalid gw4 input.")
-}
-
-pub(crate) fn get_pub_config_ip6_input(ip6_input: &[u8]) -> Ip6Input {
-    BoundedVec::try_from(ip6_input.to_vec()).expect("Invalid ip6 input.")
-}
-
-pub(crate) fn get_pub_config_gw6_input(gw6_input: &[u8]) -> Gw6Input {
-    BoundedVec::try_from(gw6_input.to_vec()).expect("Invalid gw6 input.")
 }
 
 /// Helper function to generate a crypto pair from seed
