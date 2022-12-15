@@ -2,33 +2,53 @@ use crate::{
     types::StorageVersion, Config, InterfaceOf, LocationOf, Pallet, PalletVersion, SerialNumberOf,
     TFGRID_NODE_VERSION,
 };
-use frame_support::Blake2_128Concat;
-use frame_support::{
-    pallet_prelude::{OptionQuery, Weight},
-    storage_alias,
-    traits::Get,
-    traits::OnRuntimeUpgrade,
-};
+use frame_support::{pallet_prelude::Weight, traits::Get, traits::OnRuntimeUpgrade};
 use log::{debug, info};
 use pallet_timestamp as timestamp;
 use sp_runtime::SaturatedConversion;
 use sp_std::marker::PhantomData;
 use tfchain_support::resources::Resources;
-use tfchain_support::types::{ConsumableResources, Power, PowerState, PowerTarget};
+use tfchain_support::types::{ConsumableResources, Node, Power, PowerState, PowerTarget};
 
 #[cfg(feature = "try-runtime")]
 use frame_support::traits::OnRuntimeUpgradeHelpersExt;
 
-// Storage alias from NodeV13 => write to this
-#[storage_alias]
-pub type Nodes<T: Config> = StorageMap<
-    Pallet<T>,
-    Blake2_128Concat,
-    u32,
-    super::types::v13::Node<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
-    OptionQuery,
->;
+pub mod deprecated {
+    use crate::Config;
+    use codec::{Decode, Encode};
+    use frame_support::decl_module;
 
+    use scale_info::TypeInfo;
+    use sp_std::prelude::*;
+
+    use tfchain_support::{resources::Resources, types::NodeCertification};
+
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
+    pub struct NodeV12Struct<Location, PubConfig, If, SerialNumber> {
+        pub version: u32,
+        pub id: u32,
+        pub farm_id: u32,
+        pub twin_id: u32,
+        pub resources: Resources,
+        pub location: Location,
+        pub country: Vec<u8>,
+        pub city: Vec<u8>,
+        // optional public config
+        pub public_config: Option<PubConfig>,
+        pub created: u64,
+        pub farming_policy_id: u32,
+        pub interfaces: Vec<If>,
+        pub certification: NodeCertification,
+        pub secure_boot: bool,
+        pub virtualized: bool,
+        pub serial_number: Option<SerialNumber>,
+        pub connection_price: u32,
+    }
+
+    decl_module! {
+        pub struct Module<T: Config> for enum Call where origin: T::Origin { }
+    }
+}
 pub struct NodeMigration<T: Config>(PhantomData<T>);
 
 impl<T: Config> OnRuntimeUpgrade for NodeMigration<T> {
@@ -36,10 +56,6 @@ impl<T: Config> OnRuntimeUpgrade for NodeMigration<T> {
     fn pre_upgrade() -> Result<(), &'static str> {
         assert!(PalletVersion::<T>::get() <= StorageVersion::V12Struct);
 
-        info!(
-            " --- Current TFGrid pallet version: {:?}",
-            PalletVersion::<T>::get()
-        );
         let nodes_count: u64 = Nodes::<T>::iter_keys().count() as u64;
         Self::set_temp_storage(nodes_count, "pre_node_count");
         debug!(
@@ -52,10 +68,10 @@ impl<T: Config> OnRuntimeUpgrade for NodeMigration<T> {
     }
 
     fn on_runtime_upgrade() -> Weight {
-        if PalletVersion::<T>::get() == StorageVersion::V12Struct {
+        if PalletVersion::<T>::get() == StorageVersion::V11Struct {
             migrate_to_version_13::<T>()
         } else {
-            info!(" >>> Unused TFGrid pallet V13 migration");
+            info!(" >>> Unused migration");
             0
         }
     }
@@ -63,20 +79,16 @@ impl<T: Config> OnRuntimeUpgrade for NodeMigration<T> {
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
         assert!(PalletVersion::<T>::get() >= StorageVersion::V13Struct);
-        info!(
-            " --- Current TFGrid pallet version: {:?}",
-            PalletVersion::<T>::get()
-        );
         // Check number of nodes against pre-check result
         let pre_nodes_count = Self::get_temp_storage("pre_node_count").unwrap_or(0u64);
         assert_eq!(
-            Nodes::<T>::iter_keys().count() as u64,
+            Nodes::<T>::iter().count() as u64,
             pre_nodes_count,
             "Number of nodes migrated does not match"
         );
 
         info!(
-            "👥  TFGrid pallet to {:?} passes POST migrate checks ✅",
+            "👥  NodeMigrationV13 post migration: migration to {:?} passes POST migrate checks ✅",
             PalletVersion::<T>::get()
         );
 
@@ -123,11 +135,8 @@ pub fn migrate_to_version_13<T: Config>() -> frame_support::weights::Weight {
                 serial_number: n.serial_number,
                 connection_price: n.connection_price,
             };
-
-        migrated_count += 1;
-
         debug!("Node: {:?} succesfully migrated", k);
-        Some(migrated_node)
+        Some(migrated_contract)
     });
 
     info!(
@@ -137,10 +146,7 @@ pub fn migrate_to_version_13<T: Config>() -> frame_support::weights::Weight {
 
     // Update pallet storage version
     PalletVersion::<T>::set(StorageVersion::V13Struct);
-    info!(
-        " <<< Storage version TFGrid pallet upgraded to {:?}",
-        PalletVersion::<T>::get()
-    );
+    info!(" <<< Storage version upgraded");
 
     // Return the weight consumed by the migration.
     T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
