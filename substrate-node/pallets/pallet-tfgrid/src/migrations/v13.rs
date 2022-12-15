@@ -20,22 +20,22 @@ pub struct FixPublicIP<T: Config>(PhantomData<T>);
 impl<T: Config> OnRuntimeUpgrade for FixPublicIP<T> {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
-        assert!(PalletVersion::<T>::get() <= types::StorageVersion::V13Struct);
+        assert!(PalletVersion::<T>::get() <= types::StorageVersion::V12Struct);
 
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
         let nodes_count: u64 = Nodes::<T>::iter_keys().count() as u64;
         Self::set_temp_storage(nodes_count, "pre_node_count");
         log::info!(
-            "🔎 FixPublicIPV13 pre migration: Number of existing nodes {:?}",
+            "🔎 FixPublicIP pre migration: Number of existing nodes {:?}",
             nodes_count
         );
 
-        info!("👥  TFGrid pallet to V14 passes PRE migrate checks ✅",);
+        info!("👥  TFGrid pallet to V13 passes PRE migrate checks ✅",);
         Ok(())
     }
 
     fn on_runtime_upgrade() -> Weight {
-        if PalletVersion::<T>::get() == StorageVersion::V13Struct {
+        if PalletVersion::<T>::get() == StorageVersion::V12Struct {
             migrate_nodes::<T>() + migrate_farms::<T>()
         } else {
             info!(" >>> Unused migration");
@@ -45,7 +45,7 @@ impl<T: Config> OnRuntimeUpgrade for FixPublicIP<T> {
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
-        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V14);
+        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V13Struct);
         // Check number of nodes against pre-check result
         let pre_nodes_count = Self::get_temp_storage("pre_node_count").unwrap_or(0u64);
         assert_eq!(
@@ -55,7 +55,7 @@ impl<T: Config> OnRuntimeUpgrade for FixPublicIP<T> {
         );
 
         info!(
-            "👥  FixPublicIPV13 post migration: migration to {:?} passes POST migrate checks ✅",
+            "👥  FixPublicIP post migration: migration to {:?} passes POST migrate checks ✅",
             PalletVersion::<T>::get()
         );
 
@@ -72,7 +72,7 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
     let mut migrated_count = 0;
 
     Nodes::<T>::translate::<
-        super::types::v13::Node<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
+        super::types::v12::Node<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
         _,
     >(|k, n| {
         // By default initialize the public config to None
@@ -95,7 +95,6 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
             twin_id: n.twin_id,
             resources: n.resources,
             location: n.location,
-            power: n.power,
             public_config,
             created: n.created,
             farming_policy_id: n.farming_policy_id,
@@ -164,7 +163,7 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
     );
 
     // Update pallet storage version
-    PalletVersion::<T>::set(types::StorageVersion::V14);
+    PalletVersion::<T>::set(types::StorageVersion::V13Struct);
     info!(" <<< Storage version upgraded");
 
     // Return the weight consumed by the migration.

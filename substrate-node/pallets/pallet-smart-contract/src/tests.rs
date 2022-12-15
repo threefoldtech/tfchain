@@ -1,5 +1,6 @@
 use super::{types, Event as SmartContractEvent};
 use crate::cost;
+use crate::types::HexHash;
 use crate::{mock::Event as MockEvent, mock::*, test_utils::*, Error};
 use frame_support::{
     assert_noop, assert_ok, bounded_vec,
@@ -17,6 +18,7 @@ use sp_core::H256;
 use sp_runtime::{assert_eq_error_rate, traits::SaturatedConversion, Perbill, Percent};
 use sp_std::convert::{TryFrom, TryInto};
 use substrate_fixed::types::U64F64;
+use tfchain_support::types::IP4;
 use tfchain_support::{
     resources::Resources,
     types::{FarmCertification, NodeCertification, PublicIP},
@@ -2817,8 +2819,9 @@ fn record(event: Event) -> EventRecord<Event, H256> {
     }
 }
 
-fn generate_deployment_hash() -> H256 {
-    H256::random()
+fn generate_deployment_hash() -> HexHash {
+    let hash: [u8; 32] = H256::random().to_fixed_bytes();
+    hash
 }
 
 fn get_deployment_data() -> crate::DeploymentDataInput<TestRuntime> {

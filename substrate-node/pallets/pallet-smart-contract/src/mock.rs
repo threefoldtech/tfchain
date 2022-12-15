@@ -21,7 +21,7 @@ use pallet_tfgrid::{
     twin::TwinIp,
     DocumentHashInput, DocumentLinkInput, TwinIpInput,
 };
-use pallet_tfgrid::{CityNameInput, CountryNameInput, LatitudeInput, LongitudeInput};
+use pallet_tfgrid::{CityNameInput, CountryNameInput, LatitudeInput, LongitudeInput, Ip4Input, Gw4Input};
 use parking_lot::RwLock;
 use sp_core::{
     crypto::Ss58Codec,
@@ -231,6 +231,7 @@ impl pallet_smart_contract::Config for TestRuntime {
     type MaxNodeContractPublicIps = MaxNodeContractPublicIPs;
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
     type Call = Call;
+    type PublicIpModifier = PublicIpModifierType;
 }
 
 type AccountPublic = <MultiSignature as Verify>::Signer;

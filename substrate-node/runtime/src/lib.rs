@@ -772,7 +772,7 @@ pub type Executive = frame_executive::Executive<
         pallet_tfgrid::migrations::v10::FixFarmNodeIndexMap<Runtime>,
         pallet_tfgrid::migrations::v11::FixFarmingPolicy<Runtime>,
         pallet_tfgrid::migrations::v12::InputValidation<Runtime>,
-        pallet_tfgrid::migrations::v14::FixPublicIP<Runtime>,
+        pallet_tfgrid::migrations::v13::FixPublicIP<Runtime>,
     ),
 >;
 
