@@ -1,16 +1,27 @@
 use crate::Config;
 use crate::InterfaceOf;
-use crate::PubConfigOf;
 use crate::*;
-use frame_support::{traits::Get, traits::OnRuntimeUpgrade, weights::Weight, BoundedVec};
-use log::info;
+use frame_support::{
+    pallet_prelude::OptionQuery, storage_alias, traits::Get, traits::OnRuntimeUpgrade,
+    weights::Weight, Blake2_128Concat, BoundedVec,
+};
+use log::{debug, info};
 use sp_std::marker::PhantomData;
-use tfchain_support::types::ConsumableResources;
 
 #[cfg(feature = "try-runtime")]
 use frame_support::traits::OnRuntimeUpgradeHelpersExt;
 #[cfg(feature = "try-runtime")]
 use sp_runtime::SaturatedConversion;
+
+// Storage alias from Node v12
+#[storage_alias]
+pub type Nodes<T: Config> = StorageMap<
+    Pallet<T>,
+    Blake2_128Concat,
+    u32,
+    super::types::v12::Node<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
+    OptionQuery,
+>;
 
 pub mod deprecated {
     use codec::{Decode, Encode};
@@ -74,12 +85,17 @@ impl<T: Config> OnRuntimeUpgrade for InputValidation<T> {
             nodes_count
         );
 
-        info!("👥  TFGrid pallet to v12 passes PRE migrate checks ✅",);
+        info!("👥  TFGrid pallet to V12 passes PRE migrate checks ✅",);
         Ok(())
     }
 
     fn on_runtime_upgrade() -> Weight {
-        migrate::<T>()
+        if PalletVersion::<T>::get() == types::StorageVersion::V11Struct {
+            migrate_entities::<T>() + migrate_nodes::<T>() + update_pallet_storage_version::<T>()
+        } else {
+            info!(" >>> Unused TFGrid pallet V12 migration");
+            0
+        }
     }
 
     #[cfg(feature = "try-runtime")]
@@ -103,15 +119,6 @@ impl<T: Config> OnRuntimeUpgrade for InputValidation<T> {
     }
 }
 
-fn migrate<T: Config>() -> frame_support::weights::Weight {
-    if PalletVersion::<T>::get() == types::StorageVersion::V11Struct {
-        migrate_entities::<T>() + migrate_nodes::<T>() + update_pallet_storage_version::<T>()
-    } else {
-        info!(" >>> Unused migration");
-        0
-    }
-}
-
 fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
     info!(" >>> Migrating entities storage...");
 
@@ -119,8 +126,6 @@ fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
 
     // We transform the storage values from the old into the new format.
     Entities::<T>::translate::<deprecated::Entity<AccountIdOf<T>>, _>(|k, entity| {
-        info!("     Migrated entity for {:?}...", k);
-
         let country = match get_country_name::<T>(&entity) {
             Ok(country_name) => country_name,
             Err(e) => {
@@ -156,6 +161,7 @@ fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
 
         migrated_count += 1;
 
+        debug!("Entity: {:?} succesfully migrated", k);
         Some(new_entity)
     });
 
@@ -174,9 +180,7 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
     let mut migrated_count = 0;
 
     // We transform the storage values from the old into the new format.
-    Nodes::<T>::translate::<deprecated::Node<PubConfigOf<T>, InterfaceOf<T>>, _>(|k, node| {
-        info!("     Migrated node for {:?}...", k);
-
+    Nodes::<T>::translate::<super::types::v11::Node<InterfaceOf<T>>, _>(|k, node| {
         let location = match get_location::<T>(&node) {
             Ok(loc) => loc,
             Err(e) => {
@@ -191,20 +195,12 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
             Err(_) => None,
         };
 
-        let new_node = TfgridNode::<T> {
-            version: 5, // deprecated
+        let new_node = super::types::v12::Node::<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> {
+            version: TFGRID_NODE_VERSION,
             id: node.id,
             farm_id: node.farm_id,
             twin_id: node.twin_id,
-            resources: ConsumableResources {
-                total_resources: node.resources,
-                used_resources: Resources::empty(),
-            },
-            power: Power {
-                target: PowerTarget::Up,
-                state: PowerState::Up,
-                last_uptime: 0,
-            },
+            resources: node.resources,
             location,
             public_config: node.public_config,
             created: node.created,
@@ -219,6 +215,7 @@ fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
 
         migrated_count += 1;
 
+        debug!("Node: {:?} succesfully migrated", k);
         Some(new_node)
     });
     info!(
@@ -257,7 +254,7 @@ fn get_city_name<T: Config>(
 }
 
 fn get_location<T: Config>(
-    node: &deprecated::Node<PubConfigOf<T>, InterfaceOf<T>>,
+    node: &super::types::v11::Node<InterfaceOf<T>>,
 ) -> Result<LocationOf<T>, Error<T>> {
     let location_input = LocationInput {
         city: BoundedVec::try_from(node.city.clone()).map_err(|_| Error::<T>::CityNameTooLong)?,
@@ -273,7 +270,7 @@ fn get_location<T: Config>(
 }
 
 fn get_serial_number<T: Config>(
-    node: &deprecated::Node<PubConfigOf<T>, InterfaceOf<T>>,
+    node: &super::types::v11::Node<InterfaceOf<T>>,
 ) -> Result<SerialNumberOf<T>, Error<T>> {
     let serial_number_input: SerialNumberInput = BoundedVec::try_from(node.serial_number.clone())
         .map_err(|_| Error::<T>::SerialNumberTooLong)?;

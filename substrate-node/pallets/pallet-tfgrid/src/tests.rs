@@ -1,16 +1,14 @@
 use super::Event as TfgridEvent;
 use crate::{
-    mock::Event as MockEvent,
-    mock::*,
-    types::{LocationInput, PublicIpInput},
-    Error, InterfaceInput, InterfaceIpsInput, PubConfigInput, PublicIpListInput, ResourcesInput,
+    mock::Event as MockEvent, mock::*, types::LocationInput, Error, InterfaceInput,
+    InterfaceIpsInput, PublicIpListInput, ResourcesInput,
 };
-use frame_support::{assert_noop, assert_ok, bounded_vec, BoundedVec};
+use frame_support::{assert_noop, assert_ok, bounded_vec};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
 use tfchain_support::types::{
-    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, PowerState, PowerTarget,
-    PublicConfig, IP,
+    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, 
+    PublicConfig, PublicIpError, IP4, IP6,
 };
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -393,12 +391,12 @@ fn test_create_farm_with_double_ip_fails() {
         let gw = get_public_ip_gw_input(b"185.206.122.1");
 
         pub_ips
-            .try_push(PublicIpInput {
+            .try_push(IP4 {
                 ip: ip.clone(),
                 gw: gw.clone(),
             })
             .unwrap();
-        pub_ips.try_push(PublicIpInput { ip, gw }).unwrap();
+        pub_ips.try_push(IP4 { ip, gw }).unwrap();
 
         assert_noop!(
             TfgridModule::create_farm(Origin::signed(alice()), farm_name, pub_ips),
@@ -713,7 +711,7 @@ fn update_certified_node_resources_loses_certification_works() {
         assert_eq!(node.certification, NodeCertification::Certified);
 
         // Change cores to 2
-        let mut node_resources: ResourcesInput = node.resources.total_resources;
+        let mut node_resources: ResourcesInput = node.resources;
         node_resources.cru = 2;
 
         let node_location = LocationInput {
@@ -770,7 +768,7 @@ fn update_certified_node_same_resources_keeps_certification_works() {
         let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(node.certification, NodeCertification::Certified);
 
-        let node_resources: ResourcesInput = node.resources.total_resources;
+        let node_resources: ResourcesInput = node.resources;
 
         let node_location = LocationInput {
             city: node.location.city.0,
@@ -842,94 +840,6 @@ fn create_node_with_interfaces_works() {
             true,
             None,
         ));
-    });
-}
-
-#[test]
-fn change_power_state_works() {
-    ExternalityBuilder::build().execute_with(|| {
-        create_entity();
-        create_twin();
-        create_farm();
-        create_node();
-        create_twin_bob();
-        create_extra_node();
-
-        assert_ok!(TfgridModule::change_power_state(
-            Origin::signed(bob()),
-            PowerState::Down(1)
-        ));
-
-        assert_eq!(
-            TfgridModule::nodes(2).unwrap().power.state,
-            PowerState::Down(1)
-        );
-    });
-}
-
-#[test]
-fn change_power_state_fails() {
-    ExternalityBuilder::build().execute_with(|| {
-        create_entity();
-        create_twin();
-        create_farm();
-        create_node();
-        create_twin_bob();
-        //try changing the power state using another twin_id
-        assert_noop!(
-            TfgridModule::change_power_state(Origin::signed(bob()), PowerState::Down(1)),
-            Error::<TestRuntime>::NodeNotExists
-        );
-    });
-}
-
-#[test]
-fn change_power_target_works() {
-    ExternalityBuilder::build().execute_with(|| {
-        create_entity();
-        create_twin();
-        create_farm();
-        create_node();
-        create_twin_bob();
-        create_extra_node();
-
-        assert_eq!(
-            TfgridModule::nodes(2).unwrap().power.target,
-            PowerTarget::Down,
-        );
-
-        assert_ok!(TfgridModule::change_power_target(
-            Origin::signed(alice()),
-            2,
-            PowerTarget::Up,
-        ));
-
-        assert_eq!(
-            TfgridModule::nodes(2).unwrap().power.target,
-            PowerTarget::Up,
-        );
-    });
-}
-
-#[test]
-fn change_power_target_fails() {
-    ExternalityBuilder::build().execute_with(|| {
-        create_entity();
-        create_twin();
-        create_farm();
-        create_node();
-        create_twin_bob();
-        create_extra_node();
-
-        assert_eq!(
-            TfgridModule::nodes(2).unwrap().power.target,
-            PowerTarget::Down,
-        );
-
-        assert_noop!(
-            TfgridModule::change_power_target(Origin::signed(bob()), 2, PowerTarget::Up,),
-            Error::<TestRuntime>::UnauthorizedToChangePowerTarget
-        );
     });
 }
 
@@ -1105,12 +1015,12 @@ fn node_add_public_config_works() {
         let gw6 = get_pub_config_gw6_input(b"2a10:b600:1::1");
         let domain = get_pub_config_domain_input(b"some-domain");
 
-        let pub_config_input = PubConfigInput {
-            ip4: IP {
+        let pub_config_input = PublicConfig {
+            ip4: IP4 {
                 ip: ipv4.clone(),
                 gw: gw4.clone(),
             },
-            ip6: Some(IP {
+            ip6: Some(IP6 {
                 ip: ipv6.clone(),
                 gw: gw6.clone(),
             }),
@@ -1126,17 +1036,11 @@ fn node_add_public_config_works() {
 
         let node = TfgridModule::nodes(1).unwrap();
 
-        let ipv4 = get_pub_config_ip4(ipv4);
-        let ipv6 = get_pub_config_ip6(ipv6);
-        let gw4 = get_pub_config_gw4(gw4);
-        let gw6 = get_pub_config_gw6(gw6);
-        let domain = get_pub_config_domain(domain);
-
         assert_eq!(
             node.public_config,
-            Some(PubConfig {
-                ip4: IP { ip: ipv4, gw: gw4 },
-                ip6: Some(IP { ip: ipv6, gw: gw6 }),
+            Some(PublicConfig {
+                ip4: IP4 { ip: ipv4, gw: gw4 },
+                ip6: Some(IP6 { ip: ipv6, gw: gw6 }),
                 domain: Some(domain),
             })
         );
@@ -1154,8 +1058,8 @@ fn node_add_public_config_without_ipv6_and_domain_works() {
         let ipv4 = get_pub_config_ip4_input(b"185.206.122.33/24");
         let gw4 = get_pub_config_gw4_input(b"185.206.122.1");
 
-        let pub_config_input = PubConfigInput {
-            ip4: IP {
+        let pub_config_input = PublicConfig {
+            ip4: IP4 {
                 ip: ipv4.clone(),
                 gw: gw4.clone(),
             },
@@ -1170,14 +1074,11 @@ fn node_add_public_config_without_ipv6_and_domain_works() {
             Some(pub_config_input)
         ));
 
-        let ipv4 = get_pub_config_ip4(ipv4);
-        let gw4 = get_pub_config_gw4(gw4);
-
         let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(
             node.public_config,
             Some(PublicConfig {
-                ip4: IP { ip: ipv4, gw: gw4 },
+                ip4: IP4 { ip: ipv4, gw: gw4 },
                 ip6: None,
                 domain: None,
             })
@@ -1193,12 +1094,12 @@ fn node_add_public_config_fails_if_signature_incorrect() {
         create_farm();
         create_node();
 
-        let pub_config_input = PubConfigInput {
-            ip4: IP {
+        let pub_config_input = PublicConfig {
+            ip4: IP4 {
                 ip: get_pub_config_ip4_input(b"185.206.122.33/24"),
                 gw: get_pub_config_gw4_input(b"185.206.122.1"),
             },
-            ip6: Some(IP {
+            ip6: Some(IP6 {
                 ip: get_pub_config_ip6_input(b"2a10:b600:1::0cc4:7a30:65b5/64"),
                 gw: get_pub_config_gw6_input(b"2a10:b600:1::1"),
             }),
@@ -1231,12 +1132,12 @@ fn test_unsetting_node_public_config_works() {
         let gw6 = get_pub_config_gw6_input(b"2a10:b600:1::1");
         let domain = get_pub_config_domain_input(b"some-domain");
 
-        let pub_config_input = PubConfigInput {
-            ip4: IP {
+        let pub_config_input = PublicConfig {
+            ip4: IP4 {
                 ip: ipv4.clone(),
                 gw: gw4.clone(),
             },
-            ip6: Some(IP {
+            ip6: Some(IP6 {
                 ip: ipv6.clone(),
                 gw: gw6.clone(),
             }),
@@ -1252,17 +1153,11 @@ fn test_unsetting_node_public_config_works() {
 
         let node = TfgridModule::nodes(1).unwrap();
 
-        let ipv4 = get_pub_config_ip4(ipv4);
-        let ipv6 = get_pub_config_ip6(ipv6);
-        let gw4 = get_pub_config_gw4(gw4);
-        let gw6 = get_pub_config_gw6(gw6);
-        let domain = get_pub_config_domain(domain);
-
         assert_eq!(
             node.public_config,
             Some(PublicConfig {
-                ip4: IP { ip: ipv4, gw: gw4 },
-                ip6: Some(IP { ip: ipv6, gw: gw6 }),
+                ip4: IP4 { ip: ipv4, gw: gw4 },
+                ip6: Some(IP6 { ip: ipv6, gw: gw6 }),
                 domain: Some(domain),
             })
         );
@@ -1287,12 +1182,12 @@ fn test_node_public_config_falsy_values_fails() {
         create_farm();
         create_node();
 
-        let pub_config_input = PubConfigInput {
-            ip4: IP {
+        let pub_config_input = PublicConfig {
+            ip4: IP4 {
                 ip: get_pub_config_ip4_input(b"1.1.1.1"), // Too short
                 gw: get_pub_config_gw4_input(b"185.206.122.1"),
             },
-            ip6: Some(IP {
+            ip6: Some(IP6 {
                 ip: get_pub_config_ip6_input(b"2a10:b600:1::0cc4:7a30:65b5/64"),
                 gw: get_pub_config_gw6_input(b"2a10:b600:1::1"),
             }),
@@ -1306,46 +1201,83 @@ fn test_node_public_config_falsy_values_fails() {
                 1,
                 Some(pub_config_input)
             ),
-            Error::<TestRuntime>::IP4TooShort
+            Error::<TestRuntime>::InvalidPublicConfig
         );
     });
 }
 
 #[test]
-#[should_panic(expected = "InvalidIP4")]
-fn test_validate_invalid_ip4_1() {
+fn test_validate_pub_config_invalid_ip4() {
     ExternalityBuilder::build().execute_with(|| {
-        let input = get_pub_config_ip4_input(b"185.206.122.33");
-        TestIP4::try_from(input).expect("fails");
+        let ipv4 = get_pub_config_ip4_input(b"185.206.122.33");
+        let ipv6 = get_pub_config_ip6_input(b"2a10:b600:1::0cc4:7a30:65b5/64");
+        let gw4 = get_pub_config_gw4_input(b"185.206.122.1");
+        let gw6 = get_pub_config_gw6_input(b"2a10:b600:1::1");
+        let domain = get_pub_config_domain_input(b"some-domain");
+
+        let pub_conf = PublicConfig {
+            ip4: IP4 {
+                ip: ipv4.clone(),
+                gw: gw4.clone(),
+            },
+            ip6: Some(IP6 {
+                ip: ipv6.clone(),
+                gw: gw6.clone(),
+            }),
+            domain: Some(domain.clone()),
+        };
+
+        assert_noop!(pub_conf.is_valid(), PublicIpError::InvalidIp4);
     });
 }
 
 #[test]
-#[should_panic(expected = "IP4TooShort")]
-fn test_validate_invalid_ip4_2() {
+fn test_validate_pub_config_invalid_gw4() {
     ExternalityBuilder::build().execute_with(|| {
-        let input = get_pub_config_ip4_input(b"185.206");
-        TestIP4::try_from(input).expect("fails");
+        let ipv4 = get_pub_config_ip4_input(b"185.206.122.33/24");
+        let ipv6 = get_pub_config_ip6_input(b"2a10:b600:1::0cc4:7a30:65b5/64");
+        let gw4 = get_pub_config_gw4_input(b"185.206.132.1");
+        let gw6 = get_pub_config_gw6_input(b"2a10:b600:1::1");
+        let domain = get_pub_config_domain_input(b"some-domain");
+
+        let pub_conf = PublicConfig {
+            ip4: IP4 {
+                ip: ipv4.clone(),
+                gw: gw4.clone(),
+            },
+            ip6: Some(IP6 {
+                ip: ipv6.clone(),
+                gw: gw6.clone(),
+            }),
+            domain: Some(domain.clone()),
+        };
+
+        assert_noop!(pub_conf.is_valid(), PublicIpError::InvalidPublicIp);
     });
 }
 
 #[test]
-#[should_panic(expected = "IP4TooLong")]
-fn test_validate_invalid_ip4_3() {
+fn test_validate_pub_config_invalid_ip6() {
     ExternalityBuilder::build().execute_with(|| {
-        // TODO: handle this case
-        let input = BoundedVec::try_from(b"185.206.12.12.1232123".to_vec())
-            .map_err(|_| Error::<TestRuntime>::IP4TooLong);
-        TestIP4::try_from(input.unwrap()).expect("fails");
-    });
-}
+        let ipv4 = get_pub_config_ip4_input(b"185.206.122.33/24");
+        let ipv6 = get_pub_config_ip6_input(b"2a10::0cc4:7a30:65b5/32");
+        let gw4 = get_pub_config_gw4_input(b"185.206.122.1");
+        let gw6 = get_pub_config_gw6_input(b"2a10:b600:1::1");
+        let domain = get_pub_config_domain_input(b"some-domain");
 
-#[test]
-#[should_panic(expected = "InvalidIP4")]
-fn test_validate_invalid_ip4_4() {
-    ExternalityBuilder::build().execute_with(|| {
-        let input = get_pub_config_ip4_input(b"garbage data");
-        TestIP4::try_from(input).expect("fails");
+        let pub_conf = PublicConfig {
+            ip4: IP4 {
+                ip: ipv4.clone(),
+                gw: gw4.clone(),
+            },
+            ip6: Some(IP6 {
+                ip: ipv6.clone(),
+                gw: gw6.clone(),
+            }),
+            domain: Some(domain.clone()),
+        };
+
+        assert_noop!(pub_conf.is_valid(), PublicIpError::InvalidPublicIp);
     });
 }
 
@@ -2166,7 +2098,7 @@ fn create_farm() {
     let ip = get_public_ip_ip_input(b"185.206.122.33/24");
     let gw = get_public_ip_gw_input(b"185.206.122.1");
 
-    pub_ips.try_push(PublicIpInput { ip, gw }).unwrap();
+    pub_ips.try_push(IP4 { ip, gw }).unwrap();
 
     assert_ok!(TfgridModule::create_farm(
         Origin::signed(alice()),
@@ -2185,7 +2117,7 @@ fn create_farm2() {
     let ip = get_public_ip_ip_input(b"185.206.122.33/24");
     let gw = get_public_ip_gw_input(b"185.206.122.1");
 
-    pub_ips.try_push(PublicIpInput { ip, gw }).unwrap();
+    pub_ips.try_push(IP4 { ip, gw }).unwrap();
 
     assert_ok!(TfgridModule::create_farm(
         Origin::signed(alice()),
@@ -2224,17 +2156,6 @@ fn create_node() {
         true,
         None,
     ));
-
-    assert_eq!(
-        System::events().contains(&record(MockEvent::TfgridModule(
-            TfgridEvent::PowerTargetChanged {
-                farm_id: 1,
-                node_id: 1,
-                power_target: PowerTarget::Down
-            }
-        ))),
-        true
-    );
 }
 
 fn create_extra_node() {
@@ -2263,17 +2184,6 @@ fn create_extra_node() {
         true,
         None,
     ));
-
-    assert_eq!(
-        System::events().contains(&record(MockEvent::TfgridModule(
-            TfgridEvent::PowerTargetChanged {
-                farm_id: 1,
-                node_id: 2,
-                power_target: PowerTarget::Down
-            }
-        ))),
-        true
-    );
 }
 
 fn create_farming_policies() {
@@ -2420,14 +2330,8 @@ fn test_attach_farming_policy_flow(farming_policy_id: u32) {
 
     // Provide enough CU and SU limits to avoid attaching default policy to node
     // For node: [CU = 20; SU = 2]
-    assert_eq!(
-        node.resources.total_resources.get_cu() <= limit.cu.unwrap(),
-        true
-    );
-    assert_eq!(
-        node.resources.total_resources.get_su() <= limit.su.unwrap(),
-        true
-    );
+    assert_eq!(node.resources.get_cu() <= limit.cu.unwrap(), true);
+    assert_eq!(node.resources.get_su() <= limit.su.unwrap(), true);
 
     // Link farming policy to farm
     assert_ok!(TfgridModule::attach_policy_to_farm(

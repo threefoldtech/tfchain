@@ -6,7 +6,7 @@ use crate::name_contract::NameContractName;
 use crate::{self as pallet_smart_contract};
 use codec::{alloc::sync::Arc, Decode};
 use frame_support::{
-    assert_ok, construct_runtime, parameter_types,
+    construct_runtime, parameter_types,
     traits::{ConstU32, GenesisBuild},
     weights::PostDispatchInfo,
     BoundedVec,
@@ -17,16 +17,11 @@ use pallet_tfgrid::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
     node::{Location, SerialNumber},
-    pub_config::{Domain, GW4, GW6, IP4, IP6},
-    pub_ip::{GatewayIP, PublicIP},
     terms_cond::TermsAndConditions,
     twin::TwinIp,
-    DocumentHashInput, DocumentLinkInput, PublicIpGatewayInput, PublicIpIpInput, TwinIpInput,
+    DocumentHashInput, DocumentLinkInput, TwinIpInput,
 };
-use pallet_tfgrid::{
-    CityNameInput, CountryNameInput, GW4Input, GW6Input, IP4Input, IP6Input, LatitudeInput,
-    LongitudeInput,
-};
+use pallet_tfgrid::{CityNameInput, CountryNameInput, LatitudeInput, LongitudeInput, Ip4Input, Gw4Input};
 use parking_lot::RwLock;
 use sp_core::{
     crypto::Ss58Codec,
@@ -45,10 +40,7 @@ use sp_runtime::{
     AccountId32,
 };
 use sp_std::convert::{TryFrom, TryInto};
-use tfchain_support::{
-    traits::ChangeNode,
-    types::{Farm, PowerState, PowerTarget},
-};
+use tfchain_support::traits::ChangeNode;
 
 // set environment variable RUST_LOG=debug to see all logs when running the tests and call
 // env_logger::init() at the beginning of the test
@@ -134,16 +126,22 @@ impl pallet_balances::Config for TestRuntime {
 
 pub(crate) type Serial = pallet_tfgrid::pallet::SerialNumberOf<TestRuntime>;
 pub(crate) type Loc = pallet_tfgrid::pallet::LocationOf<TestRuntime>;
-pub(crate) type PubConfig = pallet_tfgrid::pallet::PubConfigOf<TestRuntime>;
 pub(crate) type Interface = pallet_tfgrid::pallet::InterfaceOf<TestRuntime>;
 
 pub(crate) type TfgridNode = pallet_tfgrid::pallet::TfgridNode<TestRuntime>;
 
 pub struct NodeChanged;
-impl ChangeNode<Loc, PubConfig, Interface, Serial> for NodeChanged {
+impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
     fn node_changed(_old_node: Option<&TfgridNode>, _new_node: &TfgridNode) {}
     fn node_deleted(node: &TfgridNode) {
         SmartContractModule::node_deleted(node);
+    }
+}
+
+pub struct PublicIpModifierType;
+impl PublicIpModifier for PublicIpModifierType {
+    fn ip_removed(ip: &PublicIP) {
+        SmartContractModule::ip_removed(ip);
     }
 }
 
@@ -158,14 +156,6 @@ pub(crate) type TestTermsAndConditions = TermsAndConditions<TestRuntime>;
 
 pub(crate) type TestTwinIp = TwinIp<TestRuntime>;
 pub(crate) type TestFarmName = FarmName<TestRuntime>;
-pub(crate) type TestPublicIP = PublicIP<TestRuntime>;
-pub(crate) type TestGatewayIP = GatewayIP<TestRuntime>;
-
-pub(crate) type TestIP4 = IP4<TestRuntime>;
-pub(crate) type TestGW4 = GW4<TestRuntime>;
-pub(crate) type TestIP6 = IP6<TestRuntime>;
-pub(crate) type TestGW6 = GW6<TestRuntime>;
-pub(crate) type TestDomain = Domain<TestRuntime>;
 
 pub(crate) type TestInterfaceName = InterfaceName<TestRuntime>;
 pub(crate) type TestInterfaceMac = InterfaceMac<TestRuntime>;
@@ -181,18 +171,12 @@ impl pallet_tfgrid::Config for TestRuntime {
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
+    type PublicIpModifier = PublicIpModifierType;
     type TermsAndConditions = TestTermsAndConditions;
     type TwinIp = TestTwinIp;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
-    type PublicIP = TestPublicIP;
-    type GatewayIP = TestGatewayIP;
-    type IP4 = TestIP4;
-    type GW4 = TestGW4;
-    type IP6 = TestIP6;
-    type GW6 = TestGW6;
-    type Domain = TestDomain;
     type MaxInterfacesLength = MaxInterfacesLength;
     type InterfaceName = TestInterfaceName;
     type InterfaceMac = TestInterfaceMac;
@@ -229,81 +213,6 @@ parameter_types! {
 
 pub(crate) type TestNameContractName = NameContractName<TestRuntime>;
 
-pub(crate) type ContractPublicIp =
-    tfchain_support::types::PublicIP<PublicIP<TestRuntime>, GatewayIP<TestRuntime>>;
-
-// This struct mocks the trait implementaition of Tfgrid for pallet-tfgrid
-// It calls the original functions while adding extra functionality for the function
-// node_resources_changed
-pub struct TfgridMock;
-impl tfchain_support::traits::Tfgrid<AccountId32, FarmName<TestRuntime>, ContractPublicIp>
-    for TfgridMock
-{
-    fn get_farm(farm_id: u32) -> Option<Farm<FarmName<TestRuntime>, ContractPublicIp>> {
-        TfgridModule::get_farm(farm_id)
-    }
-
-    fn is_farm_owner(farm_id: u32, who: AccountId) -> bool {
-        TfgridModule::is_farm_owner(farm_id, who)
-    }
-
-    fn is_twin_owner(twin_id: u32, who: AccountId) -> bool {
-        TfgridModule::is_twin_owner(twin_id, who)
-    }
-
-    fn change_used_resources_on_node(
-        node_id: u32,
-        to_free: Resources,
-        to_consume: Resources,
-    ) -> DispatchResultWithPostInfo {
-        let count = System::event_count();
-        TfgridModule::change_used_resources_on_node(node_id, to_free, to_consume)?;
-        // We are simulating the extrinsic calls from zos here. Whenever zos receives a
-        // PowerTargetChanged event it might change the state of the node using the extrinsic
-        // change_power_state.:
-        if count < System::event_count() {
-            let events = System::events();
-            let twin_id_node = TfgridModule::nodes(node_id).unwrap().twin_id;
-            let account_id_node = get_account_id_from_twin_id(twin_id_node).unwrap();
-            for i in (count as usize)..events.len() {
-                match events[i].event.clone() {
-                    mock::Event::TfgridModule(pallet_tfgrid::Event::PowerTargetChanged {
-                        farm_id,
-                        node_id,
-                        power_target,
-                    }) => match power_target {
-                        PowerTarget::Up => {
-                            // zos will always put the state to up if the target is up
-                            assert_ok!(TfgridModule::change_power_state(
-                                Origin::signed(account_id_node.clone()),
-                                PowerState::Up
-                            ));
-                        }
-                        PowerTarget::Down => {
-                            // Zos will only shut down the node if it is not a manager node.
-                            // In most cases this will be the first node in the list of nodes of
-                            // that farm. There might be multiple manager nodes per farm (one
-                            // per segment of nodes in the same LAN). That doesn't matter here
-                            // as the chain only cares about finding nodes for capacity
-                            // reservation (preferably nodes that are Up).
-                            let node_id_first_node_in_farm =
-                                TfgridModule::nodes_by_farm_id(farm_id)[0];
-                            if node_id != node_id_first_node_in_farm {
-                                assert_ok!(TfgridModule::change_power_state(
-                                    Origin::signed(account_id_node.clone()),
-                                    PowerState::Down(node_id_first_node_in_farm)
-                                ));
-                            }
-                        }
-                    },
-                    _ => {}
-                }
-            }
-        }
-        Ok(().into())
-    }
-}
-
 use weights;
 impl pallet_smart_contract::Config for TestRuntime {
     type Event = Event;
@@ -315,7 +224,6 @@ impl pallet_smart_contract::Config for TestRuntime {
     type GracePeriod = GracePeriod;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
-    type Tfgrid = TfgridMock;
     type MaxNameContractNameLength = MaxNameContractNameLength;
     type NameContractName = TestNameContractName;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
@@ -323,6 +231,7 @@ impl pallet_smart_contract::Config for TestRuntime {
     type MaxNodeContractPublicIps = MaxNodeContractPublicIPs;
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
     type Call = Call;
+    type PublicIpModifier = PublicIpModifierType;
 }
 
 type AccountPublic = <MultiSignature as Verify>::Signer;
@@ -343,22 +252,12 @@ pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {
     BoundedVec::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
 }
 
-pub(crate) fn get_public_ip_ip_input(public_ip_ip_input: &[u8]) -> PublicIpIpInput {
+pub(crate) fn get_public_ip_ip_input(public_ip_ip_input: &[u8]) -> Ip4Input {
     BoundedVec::try_from(public_ip_ip_input.to_vec()).expect("Invalid public ip (ip) input.")
 }
 
-pub(crate) fn get_public_ip_gw_input(public_ip_gw_input: &[u8]) -> PublicIpGatewayInput {
+pub(crate) fn get_public_ip_gw_input(public_ip_gw_input: &[u8]) -> Gw4Input {
     BoundedVec::try_from(public_ip_gw_input.to_vec()).expect("Invalid public ip (gw) input.")
-}
-
-pub(crate) fn get_public_ip_ip(public_ip_ip_input: &[u8]) -> TestPublicIP {
-    let input = get_public_ip_ip_input(public_ip_ip_input);
-    TestPublicIP::try_from(input).expect("Invalid public ip (ip).")
-}
-
-pub(crate) fn get_public_ip_gw(public_ip_gw_input: &[u8]) -> TestGatewayIP {
-    let input = get_public_ip_gw_input(public_ip_gw_input);
-    TestGatewayIP::try_from(input).expect("Invalid public ip (gw).")
 }
 
 pub(crate) fn get_city_name_input(city_input: &[u8]) -> CityNameInput {
@@ -375,22 +274,6 @@ pub(crate) fn get_latitude_input(latitude_input: &[u8]) -> LatitudeInput {
 
 pub(crate) fn get_longitude_input(longitude_input: &[u8]) -> LongitudeInput {
     BoundedVec::try_from(longitude_input.to_vec()).expect("Invalid longitude input.")
-}
-
-pub(crate) fn get_pub_config_ip4_input(ip4_input: &[u8]) -> IP4Input {
-    BoundedVec::try_from(ip4_input.to_vec()).expect("Invalid ip4 input.")
-}
-
-pub(crate) fn get_pub_config_gw4_input(gw4_input: &[u8]) -> GW4Input {
-    BoundedVec::try_from(gw4_input.to_vec()).expect("Invalid gw4 input.")
-}
-
-pub(crate) fn get_pub_config_ip6_input(ip6_input: &[u8]) -> IP6Input {
-    BoundedVec::try_from(ip6_input.to_vec()).expect("Invalid ip6 input.")
-}
-
-pub(crate) fn get_pub_config_gw6_input(gw6_input: &[u8]) -> GW6Input {
-    BoundedVec::try_from(gw6_input.to_vec()).expect("Invalid gw6 input.")
 }
 
 /// Helper function to generate a crypto pair from seed
@@ -433,23 +316,6 @@ where
     AccountPublic: From<<TPublic::Pair as Pair>::Public>,
 {
     AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
-}
-
-pub fn get_account_id_from_twin_id(twin_id: u32) -> Option<AccountId> {
-    if twin_id == TfgridModule::twin_ids_by_pubkey(alice()).unwrap_or(0) {
-        return Some(alice());
-    } else if twin_id == TfgridModule::twin_ids_by_pubkey(bob()).unwrap_or(0) {
-        return Some(bob());
-    } else if twin_id == TfgridModule::twin_ids_by_pubkey(charlie()).unwrap_or(0) {
-        return Some(charlie());
-    } else if twin_id == TfgridModule::twin_ids_by_pubkey(dave()).unwrap_or(0) {
-        return Some(dave());
-    } else if twin_id == TfgridModule::twin_ids_by_pubkey(eve()).unwrap_or(0) {
-        return Some(eve());
-    } else if twin_id == TfgridModule::twin_ids_by_pubkey(ferdie()).unwrap_or(0) {
-        return Some(ferdie());
-    }
-    None
 }
 
 pub fn alice() -> AccountId {

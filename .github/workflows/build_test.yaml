@@ -25,8 +25,8 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             substrate-node/target/
-          key: ${{ runner.os }}-tfchain-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-tfchain-cargo-
+          key: ${{ runner.os }}-tfchain-build-cache-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-tfchain-build-cache
 
       - name: Build
         run: |
@@ -43,7 +43,7 @@ jobs:
 
       - name: Integration tests
         run: |
-          python3.10 -m pip install robotframework cryptography substrate-interface
+          python3.10 -m pip install robotframework==5.0.1 cryptography==3.4.8 substrate-interface==1.4.0
           cd substrate-node/tests
           robot -d _output_tests/ .
 

@@ -184,12 +184,6 @@ pub struct TermsAndConditionsInput<AccountId, DocLink, DocHash> {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct PublicIpInput<IP, GW> {
-    pub ip: IP,
-    pub gw: GW,
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct LocationInput<City, Country, Latitude, Longitude> {
     pub city: City,
     pub country: Country,
