@@ -14,7 +14,7 @@ use pallet_timestamp as timestamp;
 use sp_runtime::SaturatedConversion;
 use tfchain_support::{
     resources::Resources,
-    types::{Interface, PublicConfig, PublicIP, IP},
+    types::{Interface, PublicIP},
 };
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
@@ -55,8 +55,8 @@ pub mod pallet {
         traits::{ChangeNode, PublicIpModifier},
         types::{
             Farm, FarmCertification, FarmingPolicyLimit, Interface, Node, NodeCertification,
-            PublicConfig, PublicIP, IP,
-            MAX_GW6_LENGTH, MAX_IP4_LENGTH, MAX_IP6_LENGTH,
+            PublicConfig, PublicIP, IP4, MAX_DOMAIN_NAME_LENGTH, MAX_GW4_LENGTH, MAX_GW6_LENGTH,
+            MAX_IP4_LENGTH, MAX_IP6_LENGTH,
         },
     };
 
@@ -1244,9 +1244,6 @@ pub mod pallet {
 
             Self::deposit_event(Event::NodeDeleted(id));
 
-            // Call node deleted
-            T::NodeChanged::node_deleted(&stored_node);
-
             Ok(().into())
         }
 
@@ -1766,9 +1763,6 @@ pub mod pallet {
 
             Nodes::<T>::remove(node_id);
             NodeIdByTwinID::<T>::remove(node.twin_id);
-
-            // Call node deleted
-            T::NodeChanged::node_deleted(&node);
 
             Self::deposit_event(Event::NodeDeleted(node_id));
 

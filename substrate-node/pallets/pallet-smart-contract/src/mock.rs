@@ -21,7 +21,9 @@ use pallet_tfgrid::{
     twin::TwinIp,
     DocumentHashInput, DocumentLinkInput, TwinIpInput,
 };
-use pallet_tfgrid::{CityNameInput, CountryNameInput, LatitudeInput, LongitudeInput};
+use pallet_tfgrid::{
+    CityNameInput, CountryNameInput, Gw4Input, Ip4Input, LatitudeInput, LongitudeInput,
+};
 use parking_lot::RwLock;
 use sp_core::{
     crypto::Ss58Codec,
@@ -255,12 +257,12 @@ pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {
     BoundedVec::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
 }
 
-pub(crate) fn get_public_ip_ip_input(public_ip_ip_input: &[u8]) -> Ip4Input {
-    BoundedVec::try_from(public_ip_ip_input.to_vec()).expect("Invalid public ip (ip) input.")
+pub(crate) fn get_public_ip_ip_input(ip_input: &[u8]) -> Ip4Input {
+    BoundedVec::try_from(ip_input.to_vec()).expect("Invalid public ip (ip) input.")
 }
 
-pub(crate) fn get_public_ip_gw_input(public_ip_gw_input: &[u8]) -> Gw4Input {
-    BoundedVec::try_from(public_ip_gw_input.to_vec()).expect("Invalid public ip (gw) input.")
+pub(crate) fn get_public_ip_gw_input(gw_input: &[u8]) -> Gw4Input {
+    BoundedVec::try_from(gw_input.to_vec()).expect("Invalid public ip (gw) input.")
 }
 
 pub(crate) fn get_city_name_input(city_input: &[u8]) -> CityNameInput {

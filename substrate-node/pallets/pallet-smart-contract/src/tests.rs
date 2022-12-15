@@ -1,5 +1,6 @@
 use super::{types, Event as SmartContractEvent};
 use crate::cost;
+use crate::types::HexHash;
 use crate::{mock::Event as MockEvent, mock::*, test_utils::*, Error};
 use frame_support::{
     assert_noop, assert_ok, bounded_vec,
@@ -17,6 +18,7 @@ use sp_core::H256;
 use sp_runtime::{assert_eq_error_rate, traits::SaturatedConversion, Perbill, Percent};
 use sp_std::convert::{TryFrom, TryInto};
 use substrate_fixed::types::U64F64;
+use tfchain_support::types::IP4;
 use tfchain_support::{
     resources::Resources,
     types::{FarmCertification, NodeCertification, PublicIP},
@@ -69,14 +71,14 @@ fn test_create_node_contract_with_public_ips_works() {
                 assert_eq!(c.public_ips, 2);
 
                 let pub_ip = PublicIP {
-            ip: get_public_ip_ip_input(b"185.206.122.33/24"),
-            gateway: get_public_ip_gw_input(b"185.206.122.1"),
+                    ip: get_public_ip_ip_input(b"185.206.122.33/24"),
+                    gateway: get_public_ip_gw_input(b"185.206.122.1"),
                     contract_id: 1,
                 };
 
                 let pub_ip_2 = PublicIP {
-            ip: get_public_ip_ip_input(b"185.206.122.34/24"),
-            gateway: get_public_ip_gw_input(b"185.206.122.1"),
+                    ip: get_public_ip_ip_input(b"185.206.122.34/24"),
+                    gateway: get_public_ip_gw_input(b"185.206.122.1"),
                     contract_id: 1,
                 };
                 assert_eq!(c.public_ips_list[0], pub_ip);
@@ -2817,10 +2819,10 @@ fn record(event: Event) -> EventRecord<Event, H256> {
     }
 }
 
-fn generate_deployment_hash() -> H256 {
-    H256::random()
+fn generate_deployment_hash() -> HexHash {
+    let hash: [u8; 32] = H256::random().to_fixed_bytes();
+    hash
 }
-
 fn get_deployment_data() -> crate::DeploymentDataInput<TestRuntime> {
     BoundedVec::<u8, crate::MaxDeploymentDataLength<TestRuntime>>::try_from(
         "some_data".as_bytes().to_vec(),

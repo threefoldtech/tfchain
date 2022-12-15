@@ -1,8 +1,10 @@
 use crate::Config;
 use crate::InterfaceOf;
-use crate::PubConfigOf;
 use crate::*;
-use frame_support::{traits::Get, traits::OnRuntimeUpgrade, weights::Weight, BoundedVec};
+use frame_support::{
+    pallet_prelude::OptionQuery, storage_alias, traits::Get, traits::OnRuntimeUpgrade,
+    weights::Weight, Blake2_128Concat, BoundedVec,
+};
 use log::{debug, info};
 use sp_std::marker::PhantomData;
 
@@ -10,6 +12,16 @@ use sp_std::marker::PhantomData;
 use frame_support::traits::OnRuntimeUpgradeHelpersExt;
 #[cfg(feature = "try-runtime")]
 use sp_runtime::SaturatedConversion;
+
+// Storage alias from Node v12
+#[storage_alias]
+pub type Nodes<T: Config> = StorageMap<
+    Pallet<T>,
+    Blake2_128Concat,
+    u32,
+    super::types::v12::Node<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>>,
+    OptionQuery,
+>;
 
 pub mod deprecated {
     use codec::{Decode, Encode};

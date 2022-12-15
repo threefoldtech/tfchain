@@ -7,7 +7,7 @@ use frame_support::{assert_noop, assert_ok, bounded_vec};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
 use tfchain_support::types::{
-    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, PublicConfig, IP,
+    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, PublicConfig, IP4, IP6, PublicIpError,
 };
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
