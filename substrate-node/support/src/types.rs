@@ -199,8 +199,8 @@ impl<Location, If, SerialNumber> Node<Location, If, SerialNumber> {
     pub fn can_be_shutdown(&self) -> bool {
         self.resources.used_resources.is_empty()
     }
-    pub fn is_target_up(&self) -> bool {
-        matches!(self.power.target, PowerTarget::Up)
+    pub fn is_up(&self) -> bool {
+        matches!(self.power.state, PowerState::Up)
     }
 }
 

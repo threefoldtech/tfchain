@@ -1,7 +1,7 @@
 use crate::{
     types::{
         CapacityReservationContract, Contract, ContractBillingInformation, ContractData,
-        Deployment, NameContract, StorageVersion, ContractResources,
+        Deployment, NameContract, StorageVersion, ContractResources
     },
     
     ActiveNodeContracts, BalanceOf, BillingFrequency, Config,
@@ -59,7 +59,7 @@ pub mod deprecated {
         pub node_id: u32,
         // Hash of the deployment, set by the user
         // Max 32 bytes
-        pub deployment_hash: types::HexHash,
+        pub deployment_hash: DeploymentHash,
         pub deployment_data: BoundedVec<u8, MaxDeploymentDataLength<T>>,
         pub public_ips: u32,
         pub public_ips_list: BoundedVec<PublicIP, MaxNodeContractPublicIPs<T>>,
@@ -357,7 +357,7 @@ pub fn translate_contract_objects<T: Config>(
                     id: ctr.contract_id,
                     twin_id: ctr.twin_id,
                     capacity_reservation_id: crc_id,
-                    deployment_hash: nc.deployment_hash.clone(),
+                    deployment_hash: nc.deployment_hash,
                     deployment_data: nc.deployment_data.clone(),
                     public_ips: nc.public_ips,
                     public_ips_list: nc.public_ips_list.clone(),

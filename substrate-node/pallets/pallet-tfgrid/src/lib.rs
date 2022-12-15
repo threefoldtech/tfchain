@@ -1231,13 +1231,9 @@ pub mod pallet {
             );
             let node_id = NodeIdByTwinID::<T>::get(twin_id);
 
-            let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+            ensure!(Nodes::<T>::contains_key(node_id), Error::<T>::NodeNotExists);
 
             let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-
-            node.power.last_uptime = now;
-
-            Nodes::<T>::insert(node_id, &node);
 
             Self::deposit_event(Event::NodeUptimeReported(node_id, now, uptime));
 
@@ -2140,16 +2136,52 @@ impl<T: Config> Pallet<T> {
         );
         node.resources.consume(&to_claim);
 
-        if !node.is_target_up() && !node.can_be_shutdown() {
+        if !node.is_up() && !node.can_be_shutdown() {
             // is down and shouldn't be so bring it up
             Self::_change_power_target_on_node(&mut node, PowerTarget::Up);
-        } else if node.is_target_up() && node.can_be_shutdown() {
+        } else if node.is_up() && node.can_be_shutdown() {
             // is up and should be down
             Self::_change_power_target_on_node(&mut node, PowerTarget::Down);
         }
 
         Nodes::<T>::insert(node.id, &node);
         Self::deposit_event(Event::NodeUpdated(node));
+
+        Ok(().into())
+    }
+
+    fn _claim_resources_on_node(node_id: u32, resources: Resources) -> DispatchResultWithPostInfo {
+        let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+
+        ensure!(
+            node.resources.can_consume_resources(&resources),
+            Error::<T>::NotEnoughResourcesOnNode
+        );
+        //update the available resources
+        node.resources.consume(&resources);
+
+        if !node.is_up() {
+            Self::_change_power_target_on_node(&mut node, PowerTarget::Up);
+        }
+
+        Nodes::<T>::insert(node.id, &node);
+
+        Ok(().into())
+    }
+
+    fn _unclaim_resources_on_node(
+        node_id: u32,
+        resources: Resources,
+    ) -> DispatchResultWithPostInfo {
+        let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+
+        node.resources.free(&resources);
+
+        if node.can_be_shutdown() {
+            Self::_change_power_target_on_node(&mut node, PowerTarget::Down);
+        }
+
+        Nodes::<T>::insert(node.id, &node);
 
         Ok(().into())
     }

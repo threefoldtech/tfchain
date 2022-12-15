@@ -79,9 +79,6 @@ pub struct CapacityReservationContract {
     pub deployments: Vec<u64>,
 }
 
-// HexHash is hex encoded hash
-pub type HexHash = [u8; 32];
-
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
@@ -91,7 +88,7 @@ pub struct Deployment<T: Config> {
     pub capacity_reservation_id: u64,
     // Hash of the deployment, set by the user
     // Max 32 bytes
-    pub deployment_hash: HexHash,
+    pub deployment_hash: DeploymentHash,
     pub deployment_data: BoundedVec<u8, MaxDeploymentDataLength<T>>,
     pub public_ips: u32,
     pub public_ips_list: BoundedVec<PublicIP, MaxNodeContractPublicIPs<T>>,
