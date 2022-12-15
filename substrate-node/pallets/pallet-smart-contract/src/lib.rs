@@ -927,7 +927,6 @@ impl<T: Config> Pallet<T> {
 
     fn bill_contract_using_signed_transaction(contract_id: u64) -> Result<(), Error<T>> {
         let author = <pallet_authorship::Pallet<T>>::author();
-        log::info!("author of block: {:?}", author.clone());
         let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::any_account();
 
         // Only allow the author of the block to trigger the billing
@@ -935,9 +934,7 @@ impl<T: Config> Pallet<T> {
         if let Some(signed_message_data) = signed_message {
             if let Some(block_author) = author {
                 if signed_message_data.0.id != block_author {
-                    log::info!("author can't sign?");
                     return Err(<Error<T>>::OffchainSignedTxError);
-                    // signer = signer.with_filter(vec![signed_message_data.0.public]);
                 }
             }
         }
