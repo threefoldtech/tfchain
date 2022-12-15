@@ -939,7 +939,6 @@ impl<T: Config> Pallet<T> {
             }
         }
 
-        // let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::with_filter(author);
         if !signer.can_sign() {
             log::error!(
                 "failed billing contract {:?} account cannot be used to sign transaction",
