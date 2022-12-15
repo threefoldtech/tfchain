@@ -18,7 +18,9 @@ use frame_system::{
     self as system, ensure_signed,
     offchain::{AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer},
 };
+
 pub use pallet::*;
+use pallet_authorship;
 use pallet_tfgrid;
 use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf, TfgridNode};
 use pallet_tfgrid::types as pallet_tfgrid_types;
@@ -29,6 +31,7 @@ use sp_runtime::{
     Perbill,
 };
 use substrate_fixed::types::U64F64;
+use system::offchain::SignMessage;
 use tfchain_support::{
     traits::{ChangeNode, PublicIpModifier},
     types::PublicIP,
@@ -207,6 +210,7 @@ pub mod pallet {
         + pallet_balances::Config
         + pallet_tfgrid::Config
         + pallet_tft_price::Config
+        + pallet_authorship::Config
     {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: LockableCurrency<Self::AccountId>;
@@ -922,7 +926,20 @@ impl<T: Config> Pallet<T> {
     }
 
     fn bill_contract_using_signed_transaction(contract_id: u64) -> Result<(), Error<T>> {
-        let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::any_account();
+        let author = <pallet_authorship::Pallet<T>>::author();
+        let mut signer = Signer::<T, <T as pallet::Config>::AuthorityId>::any_account();
+
+        // Only allow the author of the block to trigger the billing
+        let signed_message = signer.sign_message(&[0]);
+        if let Some(signed_message_data) = signed_message {
+            if let Some(block_author) = author {
+                if signed_message_data.0.id == block_author {
+                    signer = signer.with_filter(vec![signed_message_data.0.public]);
+                }
+            }
+        }
+
+        // let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::with_filter(author);
         if !signer.can_sign() {
             log::error!(
                 "failed billing contract {:?} account cannot be used to sign transaction",

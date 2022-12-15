@@ -4161,6 +4161,7 @@ dependencies = [
  "frame-system",
  "frame-try-runtime",
  "log",
+ "pallet-authorship",
  "pallet-balances",
  "pallet-tfgrid",
  "pallet-tft-price",
