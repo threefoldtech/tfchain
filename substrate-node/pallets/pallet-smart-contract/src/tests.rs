@@ -2275,6 +2275,7 @@ fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
 
 //  SOLUTION PROVIDER TESTS //
 // ------------------------ //
+
 #[test]
 fn test_create_solution_provider_works() {
     new_test_ext().execute_with(|| {

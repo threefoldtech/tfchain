@@ -36,7 +36,7 @@ use tfchain_support::{
 };
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"smct");
-pub const SECS_PER_HOUR: u64 = 36000;
+pub const SECS_PER_HOUR: u64 = 3600;
 
 #[cfg(test)]
 mod mock;
