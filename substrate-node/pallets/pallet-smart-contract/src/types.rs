@@ -1,15 +1,11 @@
 use crate::pallet::{MaxDeploymentDataLength, MaxNodeContractPublicIPs};
 use crate::Config;
 use codec::{Decode, Encode, MaxEncodedLen};
-use core::marker::PhantomData;
 use frame_support::{pallet_prelude::ConstU32, BoundedVec, RuntimeDebugNoBound};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
 use substrate_fixed::types::U64F64;
-use tfchain_support::{
-    resources::Resources,
-    types::PublicIP,
-};
+use tfchain_support::{resources::Resources, types::PublicIP};
 
 pub type BlockNumber = u64;
 
@@ -237,7 +233,7 @@ pub const MAX_BILL_METADATA_LENGTH: u32 = 50; // limited to 50 bytes for now
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
-pub struct ServiceContract<T: Config> {
+pub struct ServiceContract {
     pub service_twin_id: u32,
     pub consumer_twin_id: u32,
     pub base_fee: u64,
@@ -247,7 +243,6 @@ pub struct ServiceContract<T: Config> {
     pub accepted_by_consumer: bool,
     pub last_bill: u64,
     pub state: ServiceContractState,
-    pub phantom: PhantomData<T>,
 }
 
 #[derive(

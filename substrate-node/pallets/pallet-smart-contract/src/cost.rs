@@ -112,8 +112,8 @@ impl<T: Config> Contract<T> {
     }
 }
 
-impl<T: Config> ServiceContract<T> {
-    pub fn calculate_bill_cost_tft(
+impl ServiceContract {
+    pub fn calculate_bill_cost_tft<T: Config>(
         &self,
         service_bill: ServiceContractBill,
     ) -> Result<BalanceOf<T>, DispatchErrorWithPostInfo> {

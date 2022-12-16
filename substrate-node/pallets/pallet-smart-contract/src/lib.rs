@@ -1,6 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use core::marker::PhantomData;
 use frame_support::{
     dispatch::DispatchErrorWithPostInfo,
     ensure,
@@ -204,7 +203,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn service_contracts)]
     pub type ServiceContracts<T: Config> =
-        StorageMap<_, Blake2_128Concat, u64, ServiceContract<T>, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, u64, ServiceContract, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn service_contract_id)]
@@ -1860,7 +1859,6 @@ impl<T: Config> Pallet<T> {
             accepted_by_consumer: false,
             last_bill: 0,
             state: types::ServiceContractState::Created,
-            phantom: PhantomData,
         };
 
         // Get the service contract ID map and increment
@@ -2152,7 +2150,7 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         let service_contract = ServiceContracts::<T>::get(service_contract_id)
             .ok_or(Error::<T>::ServiceContractNotExists)?;
-        let amount_due = service_contract.calculate_bill_cost_tft(bill)?;
+        let amount_due = service_contract.calculate_bill_cost_tft::<T>(bill)?;
 
         let service_twin_id = service_contract.service_twin_id;
         let service_twin =

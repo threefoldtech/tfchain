@@ -16,15 +16,11 @@ use pallet_tfgrid::{
 };
 use sp_core::H256;
 use sp_runtime::{assert_eq_error_rate, traits::SaturatedConversion, Perbill, Percent};
-use sp_std::{
-    convert::{TryFrom, TryInto},
-    marker::PhantomData,
-};
+use sp_std::convert::{TryFrom, TryInto};
 use substrate_fixed::types::U64F64;
-use tfchain_support::types::IP4;
 use tfchain_support::{
     resources::Resources,
-    types::{FarmCertification, NodeCertification, PublicIP},
+    types::{FarmCertification, NodeCertification, PublicIP, IP4},
 };
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
@@ -2808,7 +2804,9 @@ fn test_service_contract_bill_works() {
             window,
             metadata: bounded_vec![],
         };
-        let billed_amount_1 = service_contract.calculate_bill_cost_tft(bill).unwrap();
+        let billed_amount_1 = service_contract
+            .calculate_bill_cost_tft::<TestRuntime>(bill)
+            .unwrap();
 
         assert_eq!(2500000000 - consumer_balance, billed_amount_1);
 
@@ -2833,7 +2831,9 @@ fn test_service_contract_bill_works() {
             window: crate::SECS_PER_HOUR, // force a 1h bill here
             metadata: bounded_vec![],
         };
-        let billed_amount_2 = service_contract.calculate_bill_cost_tft(bill).unwrap();
+        let billed_amount_2 = service_contract
+            .calculate_bill_cost_tft::<TestRuntime>(bill)
+            .unwrap();
 
         // Check that second billing was equivalent to a 1h
         // billing even if window is greater than 1h
@@ -3458,8 +3458,8 @@ fn approve_service_consumer_contract() {
     ));
 }
 
-fn get_service_contract() -> types::ServiceContract<TestRuntime> {
-    types::ServiceContract::<TestRuntime> {
+fn get_service_contract() -> types::ServiceContract {
+    types::ServiceContract {
         service_twin_id: 1,  //Alice
         consumer_twin_id: 2, //Bob
         base_fee: 0,
@@ -3469,7 +3469,6 @@ fn get_service_contract() -> types::ServiceContract<TestRuntime> {
         accepted_by_consumer: false,
         last_bill: 0,
         state: types::ServiceContractState::Created,
-        phantom: PhantomData,
     }
 }
 
