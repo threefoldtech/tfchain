@@ -4,6 +4,7 @@ use sp_std::prelude::*;
 
 use frame_support::{
     dispatch::DispatchErrorWithPostInfo,
+    dispatch::DispatchResultWithPostInfo,
     ensure,
     log::info,
     pallet_prelude::DispatchResult,
@@ -96,10 +97,7 @@ pub mod pallet {
     use codec::FullCodec;
     use frame_support::pallet_prelude::*;
     use frame_support::traits::Hooks;
-    use frame_support::{
-        dispatch::DispatchResultWithPostInfo,
-        traits::{Currency, Get, LockIdentifier, LockableCurrency, OnUnbalanced},
-    };
+    use frame_support::traits::{Currency, Get, LockIdentifier, LockableCurrency, OnUnbalanced};
     use frame_system::pallet_prelude::*;
     use sp_core::H256;
     use sp_std::{
@@ -342,7 +340,10 @@ pub mod pallet {
         NodeNotAvailableToDeploy,
         CannotUpdateContractInGraceState,
         NumOverflow,
-        OffchainSignedTxError,
+        OffchainSignedTxNotBlockAuthor,
+        OffchainSignedTxCannotSign,
+        OffchainSignedTxAlreadySent,
+        OffchainSignedTxNoLocalAccountAvailable,
         NameContractNameTooShort,
         NameContractNameTooLong,
         InvalidProviderConfiguration,
@@ -534,7 +535,6 @@ pub mod pallet {
 }
 
 use crate::types::HexHash;
-use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 use pallet::NameContractNameOf;
 use sp_std::convert::{TryFrom, TryInto};
 // Internal functions of the pallet
@@ -938,25 +938,17 @@ impl<T: Config> Pallet<T> {
     }
 
     fn bill_contract_using_signed_transaction(contract_id: u64) -> Result<(), Error<T>> {
-        let author = <pallet_authorship::Pallet<T>>::author();
         let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::any_account();
 
         // Only allow the author of the block to trigger the billing
-        let signed_message = signer.sign_message(&[0]);
-        if let Some(signed_message_data) = signed_message {
-            if let Some(block_author) = author {
-                if signed_message_data.0.id != block_author {
-                    return Err(<Error<T>>::OffchainSignedTxError);
-                }
-            }
-        }
+        Self::is_block_author(&signer)?;
 
         if !signer.can_sign() {
             log::error!(
                 "failed billing contract {:?} account cannot be used to sign transaction",
                 contract_id,
             );
-            return Err(<Error<T>>::OffchainSignedTxError);
+            return Err(<Error<T>>::OffchainSignedTxCannotSign);
         }
         let result =
             signer.send_signed_transaction(|_acct| Call::bill_contract_for_block { contract_id });
@@ -972,12 +964,12 @@ impl<T: Config> Pallet<T> {
                     contract_id,
                     acc.id
                 );
-                return Err(<Error<T>>::OffchainSignedTxError);
+                return Err(<Error<T>>::OffchainSignedTxAlreadySent);
             }
             return Ok(());
         }
         log::error!("No local account available");
-        return Err(<Error<T>>::OffchainSignedTxError);
+        return Err(<Error<T>>::OffchainSignedTxNoLocalAccountAvailable);
     }
 
     // Bills a contract (NodeContract or NameContract)
@@ -1796,5 +1788,22 @@ impl<T: Config> PublicIpModifier for Pallet<T> {
                 _ => {}
             }
         }
+    }
+}
+
+impl<T: Config> Pallet<T> {
+    fn is_block_author(signer: &Signer<T, <T as Config>::AuthorityId>) -> Result<(), Error<T>> {
+        let author = <pallet_authorship::Pallet<T>>::author();
+
+        let signed_message = signer.sign_message(&[0]);
+        if let Some(signed_message_data) = signed_message {
+            if let Some(block_author) = author {
+                if signed_message_data.0.id != block_author {
+                    return Err(Error::<T>::OffchainSignedTxNotBlockAuthor);
+                }
+            }
+        }
+
+        Ok(().into())
     }
 }
