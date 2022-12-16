@@ -48,6 +48,9 @@ mod tests;
 #[cfg(test)]
 mod test_utils;
 
+#[cfg(feature = "runtime-benchmarks")]
+pub mod benchmarking;
+
 pub mod crypto {
     use crate::KEY_TYPE;
     use sp_core::sr25519::Signature as Sr25519Signature;
@@ -87,7 +90,6 @@ pub mod weights;
 
 #[frame_support::pallet]
 pub mod pallet {
-
     use super::types::*;
     use super::weights::WeightInfo;
     use super::*;
@@ -372,7 +374,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(<T as Config>::WeightInfo::create_node_contract())]
         pub fn create_node_contract(
             origin: OriginFor<T>,
             node_id: u32,
@@ -431,7 +433,7 @@ pub mod pallet {
             Self::_create_name_contract(account_id, name)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(<T as Config>::WeightInfo::add_nru_reports())]
         pub fn add_nru_reports(
             origin: OriginFor<T>,
             reports: Vec<types::NruConsumption>,
@@ -480,7 +482,7 @@ pub mod pallet {
             Self::_approve_solution_provider(solution_provider_id, approve)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(<T as Config>::WeightInfo::bill_contract_for_block())]
         pub fn bill_contract_for_block(
             origin: OriginFor<T>,
             contract_id: u64,
