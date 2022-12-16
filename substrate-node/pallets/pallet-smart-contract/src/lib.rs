@@ -348,6 +348,7 @@ pub mod pallet {
         InvalidProviderConfiguration,
         NoSuchSolutionProvider,
         SolutionProviderNotApproved,
+        CanOnlyIncreaseFrequency,
     }
 
     #[pallet::genesis_config]
@@ -489,6 +490,15 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let _account_id = ensure_signed(origin)?;
             Self::bill_contract(contract_id)
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        pub fn change_billing_frequency(
+            origin: OriginFor<T>,
+            frequency: u64,
+        ) -> DispatchResultWithPostInfo {
+            <T as Config>::RestrictedOrigin::ensure_origin(origin)?;
+            Self::_change_billing_frequency(frequency)
         }
     }
 
@@ -1721,6 +1731,18 @@ impl<T: Config> Pallet<T> {
     pub fn get_contract_index() -> u64 {
         let now = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
         now % BillingFrequency::<T>::get()
+    }
+
+    pub fn _change_billing_frequency(frequency: u64) -> DispatchResultWithPostInfo {
+        let billing_frequency = BillingFrequency::<T>::get();
+        ensure!(
+            frequency > billing_frequency,
+            Error::<T>::CanOnlyIncreaseFrequency
+        );
+
+        BillingFrequency::<T>::put(frequency);
+
+        Ok(().into())
     }
 }
 

@@ -71,14 +71,14 @@ fn test_create_node_contract_with_public_ips_works() {
                 assert_eq!(c.public_ips, 2);
 
                 let pub_ip = PublicIP {
-            ip: get_public_ip_ip_input(b"185.206.122.33/24"),
-            gateway: get_public_ip_gw_input(b"185.206.122.1"),
+                    ip: get_public_ip_ip_input(b"185.206.122.33/24"),
+                    gateway: get_public_ip_gw_input(b"185.206.122.1"),
                     contract_id: 1,
                 };
 
                 let pub_ip_2 = PublicIP {
-            ip: get_public_ip_ip_input(b"185.206.122.34/24"),
-            gateway: get_public_ip_gw_input(b"185.206.122.1"),
+                    ip: get_public_ip_ip_input(b"185.206.122.34/24"),
+                    gateway: get_public_ip_gw_input(b"185.206.122.1"),
                     contract_id: 1,
                 };
                 assert_eq!(c.public_ips_list[0], pub_ip);
@@ -2420,6 +2420,35 @@ fn test_lock() {
 
         let locked_balance = free_balance - usable_balance;
         assert_eq!(locked_balance, 200);
+    })
+}
+
+#[test]
+fn test_change_billing_frequency_works() {
+    new_test_ext().execute_with(|| {
+        let new_frequency = 900;
+
+        assert_ok!(SmartContractModule::change_billing_frequency(
+            RawOrigin::Root.into(),
+            new_frequency
+        ));
+
+        assert_eq!(SmartContractModule::billing_frequency(), new_frequency);
+    })
+}
+
+#[test]
+fn test_change_billing_frequency_fails_if_frequency_lower() {
+    new_test_ext().execute_with(|| {
+        let initial_frequency = SmartContractModule::billing_frequency();
+        let new_frequency = initial_frequency - 1;
+
+        assert_noop!(
+            SmartContractModule::change_billing_frequency(RawOrigin::Root.into(), new_frequency),
+            Error::<TestRuntime>::CanOnlyIncreaseFrequency
+        );
+
+        assert_eq!(initial_frequency, SmartContractModule::billing_frequency());
     })
 }
 
