@@ -45,13 +45,13 @@ impl<T: Config> OnRuntimeUpgrade for FixFarmNodeIndexMap<T> {
         // Check number of nodes against pre-check result
         let pre_nodes_count = Self::get_temp_storage("pre_nodes_count").unwrap_or(0u64);
         assert_eq!(
-            Nodes::<T>::iter_keys().count().saturated_into::<u64>(),
+            Nodes::<T>::iter().count().saturated_into::<u64>(),
             pre_nodes_count,
             "Number of nodes migrated does not match"
         );
 
         info!(
-            "👥  TFGrid pallet to {:?} passes POST migrate checks ✅",
+            "👥  TFGrid pallet migration to {:?} passes POST migrate checks ✅",
             Pallet::<T>::pallet_version()
         );
 
@@ -90,10 +90,7 @@ pub fn add_farm_nodes_index<T: Config>() -> frame_support::weights::Weight {
 
     // Update pallet storage version
     PalletVersion::<T>::set(types::StorageVersion::V10Struct);
-    info!(
-        " <<< Storage version TFGrid pallet upgraded to {:?}",
-        PalletVersion::<T>::get()
-    );
+    info!(" <<< Storage version upgraded");
 
     // Return the weight consumed by the migration.
     T::DbWeight::get().reads_writes(reads, writes)

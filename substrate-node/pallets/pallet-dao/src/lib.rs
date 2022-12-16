@@ -508,10 +508,10 @@ impl<T: Config> Pallet<T> {
 
 impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for Pallet<T> {
     fn node_changed(old_node: Option<&TfgridNode<T>>, new_node: &TfgridNode<T>) {
-        let new_node_weight = new_node.resources.total_resources.get_node_weight();
+        let new_node_weight = new_node.resources.get_node_weight();
         match old_node {
             Some(node) => {
-                let old_node_weight = node.resources.total_resources.get_node_weight();
+                let old_node_weight = node.resources.get_node_weight();
 
                 if node.farm_id != new_node.farm_id {
                     let mut old_farm_weight = FarmWeight::<T>::get(node.farm_id);
@@ -539,7 +539,7 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
     }
 
     fn node_deleted(node: &TfgridNode<T>) {
-        let node_weight = node.resources.total_resources.get_node_weight();
+        let node_weight = node.resources.get_node_weight();
         let mut farm_weight = FarmWeight::<T>::get(node.farm_id);
         farm_weight = farm_weight.checked_sub(node_weight).unwrap_or(0);
         FarmWeight::<T>::insert(node.farm_id, farm_weight);
