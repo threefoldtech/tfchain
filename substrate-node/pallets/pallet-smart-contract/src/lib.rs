@@ -309,6 +309,7 @@ pub mod pallet {
         },
         SolutionProviderCreated(types::SolutionProvider<T::AccountId>),
         SolutionProviderApproved(u64, bool),
+        BillingFrequencyChanged(u64),
     }
 
     #[pallet::error]
@@ -1733,6 +1734,8 @@ impl<T: Config> Pallet<T> {
         );
 
         BillingFrequency::<T>::put(frequency);
+
+        Self::deposit_event(Event::BillingFrequencyChanged(frequency));
 
         Ok(().into())
     }

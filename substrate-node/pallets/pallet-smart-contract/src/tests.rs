@@ -2425,7 +2425,9 @@ fn test_lock() {
 
 #[test]
 fn test_change_billing_frequency_works() {
-    new_test_ext().execute_with(|| {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, Some(&mut pool_state));
         let new_frequency = 900;
 
         assert_ok!(SmartContractModule::change_billing_frequency(
@@ -2434,6 +2436,14 @@ fn test_change_billing_frequency_works() {
         ));
 
         assert_eq!(SmartContractModule::billing_frequency(), new_frequency);
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::BillingFrequencyChanged(new_frequency)
+            ))),
+            true
+        );
     })
 }
 
@@ -2576,7 +2586,7 @@ fn check_report_cost(
 ) {
     let our_events = System::events();
 
-    let contract_bill_event = types::ContractBill {
+    let contract_bill = types::ContractBill {
         contract_id,
         timestamp: 1628082000 + (6 * block_number),
         discount_level,
@@ -2585,7 +2595,7 @@ fn check_report_cost(
 
     assert_eq!(
         our_events.contains(&record(MockEvent::SmartContractModule(
-            SmartContractEvent::<TestRuntime>::ContractBilled(contract_bill_event)
+            SmartContractEvent::<TestRuntime>::ContractBilled(contract_bill)
         ))),
         true
     );
