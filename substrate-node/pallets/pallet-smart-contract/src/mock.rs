@@ -21,8 +21,7 @@ use pallet_tfgrid::{
     DocumentHashInput, DocumentLinkInput, TwinIpInput,
 };
 use pallet_tfgrid::{
-    CityNameInput, CountryNameInput, Gw4Input, Gw6Input, Ip4Input, Ip6Input, LatitudeInput,
-    LongitudeInput,
+    CityNameInput, CountryNameInput, Gw4Input, Ip4Input, LatitudeInput, LongitudeInput,
 };
 use parking_lot::RwLock;
 use sp_core::{

@@ -44,7 +44,7 @@ impl<T: Config> OnRuntimeUpgrade for InputValidation<T> {
         let nodes_count: u64 = Nodes::<T>::iter_keys().count().saturated_into();
         Self::set_temp_storage(nodes_count, "pre_nodes_count");
         log::info!(
-            "🔎 FixFarmingPolicy pre migration: Number of existing nodes {:?}",
+            "🔎 InputValidation pre migration: Number of existing nodes {:?}",
             nodes_count
         );
 
@@ -88,7 +88,7 @@ fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
     let mut migrated_count = 0;
 
     // We transform the storage values from the old into the new format.
-    Entities::<T>::translate::<deprecated::Entity<AccountIdOf<T>>, _>(|k, entity| {
+    Entities::<T>::translate::<super::types::v11::Entity<AccountIdOf<T>>, _>(|k, entity| {
         let country = match get_country_name::<T>(&entity) {
             Ok(country_name) => country_name,
             Err(e) => {
@@ -113,14 +113,15 @@ fn migrate_entities<T: Config>() -> frame_support::weights::Weight {
             }
         };
 
-        let new_entity = TfgridEntity::<T> {
-            version: 2, // deprecated
-            id: entity.id,
-            name: entity.name,
-            account_id: entity.account_id,
-            country,
-            city,
-        };
+        let new_entity =
+            super::types::v12::Entity::<AccountIdOf<T>, CityNameOf<T>, CountryNameOf<T>> {
+                version: 2, // deprecated
+                id: entity.id,
+                name: entity.name,
+                account_id: entity.account_id,
+                country,
+                city,
+            };
 
         migrated_count += 1;
 
@@ -199,7 +200,7 @@ fn update_pallet_storage_version<T: Config>() -> frame_support::weights::Weight 
 }
 
 fn get_country_name<T: Config>(
-    node: &deprecated::Entity<AccountIdOf<T>>,
+    node: &super::types::v11::Entity<AccountIdOf<T>>,
 ) -> Result<CountryNameOf<T>, Error<T>> {
     let country_name_input: CountryNameInput =
         BoundedVec::try_from(node.country.clone()).map_err(|_| Error::<T>::CountryNameTooLong)?;
@@ -208,7 +209,7 @@ fn get_country_name<T: Config>(
 }
 
 fn get_city_name<T: Config>(
-    node: &deprecated::Entity<AccountIdOf<T>>,
+    node: &super::types::v11::Entity<AccountIdOf<T>>,
 ) -> Result<CityNameOf<T>, Error<T>> {
     let city_name_input: CityNameInput =
         BoundedVec::try_from(node.city.clone()).map_err(|_| Error::<T>::CityNameTooLong)?;

@@ -116,7 +116,7 @@ pub fn migrate_nodes<T: Config>() -> frame_support::weights::Weight {
     );
 
     // Return the weight consumed by the migration.
-    T::DbWeight::get().reads_writes(migrated_count as Weight + 1, migrated_count as Weight + 1)
+    T::DbWeight::get().reads_writes(migrated_count + 1, migrated_count + 1)
 }
 
 pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
@@ -168,4 +168,33 @@ pub fn migrate_farms<T: Config>() -> frame_support::weights::Weight {
 
     // Return the weight consumed by the migration.
     T::DbWeight::get().reads_writes(migrated_count + 1, migrated_count + 1)
+}
+
+fn validate_public_ips<T: Config>(
+    farm: &FarmInfoOf<T>,
+) -> Result<BoundedVec<PublicIP, ConstU32<256>>, Error<T>> {
+    let mut parsed_public_ips: BoundedVec<PublicIP, ConstU32<256>> = vec![].try_into().unwrap();
+
+    for pub_ip in farm.public_ips.clone().into_iter() {
+        let ip4 = IP4 {
+            ip: pub_ip.ip.clone(),
+            gw: pub_ip.gateway.clone(),
+        };
+
+        match ip4.is_valid() {
+            Ok(_) => {
+                let _ = parsed_public_ips.try_push(pub_ip);
+            }
+            Err(_) => {
+                debug!("resetting farm ip for farm {:?}", farm.id);
+                if pub_ip.contract_id != 0 {
+                    T::PublicIpModifier::ip_removed(&pub_ip)
+                }
+
+                continue;
+            }
+        }
+    }
+
+    Ok(parsed_public_ips)
 }

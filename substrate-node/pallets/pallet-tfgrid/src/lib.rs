@@ -1120,7 +1120,7 @@ pub mod pallet {
             Ok(Pays::No.into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn set_node_certification(
             origin: OriginFor<T>,
             node_id: u32,

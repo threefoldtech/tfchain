@@ -11,8 +11,6 @@ use frame_support::{
         Currency, EnsureOrigin, ExistenceRequirement, ExistenceRequirement::KeepAlive, Get,
         LockableCurrency, OnUnbalanced, WithdrawReasons,
     },
-    transactional,
-    weights::Pays,
     BoundedVec,
 };
 use frame_system::{
