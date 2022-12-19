@@ -11,10 +11,6 @@ on:
 jobs:
   srtool:
     runs-on: [self-hosted, poc]
-    container:
-      image: docker
-      env:
-        DEBIAN_FRONTEND: noninteractive
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
