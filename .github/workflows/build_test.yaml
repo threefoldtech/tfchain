@@ -4,6 +4,7 @@ on:
     branches:
       - development
   pull_request:
+
 jobs:
   build-and-test:
     runs-on: [self-hosted, poc]
@@ -53,3 +54,38 @@ jobs:
           name: integration test output
           path: substrate-node/tests/_output_tests/
 
+  srtool:
+    needs: build-and-test
+    runs-on: [self-hosted, poc]
+    steps:
+      - name: Cache target dir
+        uses: actions/cache@v3
+        with:
+          path: '${{ github.workspace }}/substrate-node/runtime/target'
+          key: srtool-target-tfchain-${{ github.sha }}
+          restore-keys: |
+            srtool-target-tfchain-
+            srtool-target-
+      - name: Srtool build
+        id: srtool_build
+        uses: chevdor/srtool-actions@v0.6.0
+        with:
+          workdir: '${{ github.workspace }}/substrate-node'
+          package: tfchain-runtime
+          runtime_dir: runtime
+      - name: Summary
+        run: |
+          echo '${{ steps.srtool_build.outputs.json }}' | jq . > tfchain-srtool-digest.json
+          cat tfchain-srtool-digest.json
+          echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
+      - name: Upload tfchain srtool json
+        uses: actions/upload-artifact@v3
+        with:
+          name: tfchain-srtool-digest-json
+          path: tfchain-srtool-digest.json
+      - name: Upload runtime
+        uses: actions/upload-artifact@v3
+        with:
+          name: tfchain-runtime
+          path: |
+            substrate-node/${{ steps.srtool_build.outputs.wasm_compressed }}
