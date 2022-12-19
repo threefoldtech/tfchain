@@ -341,7 +341,6 @@ pub mod pallet {
         NodeNotAvailableToDeploy,
         CannotUpdateContractInGraceState,
         NumOverflow,
-        OffchainSignedTxNotBlockAuthor,
         OffchainSignedTxCannotSign,
         OffchainSignedTxAlreadySent,
         OffchainSignedTxNoLocalAccountAvailable,
@@ -351,6 +350,8 @@ pub mod pallet {
         NoSuchSolutionProvider,
         SolutionProviderNotApproved,
         CanOnlyIncreaseFrequency,
+        IsNotAnAuthority,
+        WrongAuthority,
     }
 
     #[pallet::genesis_config]
@@ -941,8 +942,8 @@ impl<T: Config> Pallet<T> {
     fn bill_contract_using_signed_transaction(contract_id: u64) -> Result<(), Error<T>> {
         let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::any_account();
 
-        // Only allow the author of the block to trigger the billing
-        Self::is_block_author(&signer)?;
+        // Only allow the author of the next block to trigger the billing
+        Self::is_next_block_author(&signer)?;
 
         if !signer.can_sign() {
             log::error!(
@@ -1795,30 +1796,36 @@ impl<T: Config> PublicIpModifier for Pallet<T> {
 }
 
 impl<T: Config> Pallet<T> {
-    fn is_block_author(signer: &Signer<T, <T as Config>::AuthorityId>) -> Result<(), Error<T>> {
+    // Validates if the given signer is the next block author based on the validators in session
+    // This can be used if an extrinsic should be refunded by the author in the same block
+    // It also requires that the keytype inserted for the offchain workers is the validator key
+    fn is_next_block_author(
+        signer: &Signer<T, <T as Config>::AuthorityId>,
+    ) -> Result<(), Error<T>> {
         let author = <pallet_authorship::Pallet<T>>::author();
         let validators = <pallet_session::Pallet<T>>::validators();
 
+        // Sign some arbitrary data in order to get the AccountId, maybe there is another way to do this?
         let signed_message = signer.sign_message(&[0]);
         if let Some(signed_message_data) = signed_message {
             if let Some(block_author) = author {
                 let validator =
                     <T as pallet_session::Config>::ValidatorIdOf::convert(block_author.clone())
-                        .ok_or(Error::<T>::OffchainSignedTxNotBlockAuthor)?;
+                        .ok_or(Error::<T>::IsNotAnAuthority)?;
 
                 let validator_count = validators.len();
                 let author_index = (validators.iter().position(|a| a == &validator).unwrap_or(0)
                     + 1)
                     % validator_count;
 
-                // the next author in the list should also bill contracts
                 let signer_validator_account =
                     <T as pallet_session::Config>::ValidatorIdOf::convert(
                         signed_message_data.0.id.clone(),
                     )
-                    .ok_or(Error::<T>::OffchainSignedTxNotBlockAuthor)?;
+                    .ok_or(Error::<T>::IsNotAnAuthority)?;
+
                 if signer_validator_account != validators[author_index] {
-                    return Err(Error::<T>::OffchainSignedTxNotBlockAuthor);
+                    return Err(Error::<T>::WrongAuthority);
                 }
             }
         }
