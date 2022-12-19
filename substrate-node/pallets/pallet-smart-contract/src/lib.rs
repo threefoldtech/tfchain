@@ -19,7 +19,6 @@ use frame_system::{
     self as system, ensure_signed,
     offchain::{AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer},
 };
-
 pub use pallet::*;
 use pallet_authorship;
 use pallet_tfgrid;
@@ -28,7 +27,7 @@ use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_timestamp as timestamp;
 use sp_core::crypto::KeyTypeId;
 use sp_runtime::{
-    traits::{CheckedSub, SaturatedConversion},
+    traits::{CheckedSub, Convert, SaturatedConversion},
     Perbill,
 };
 use substrate_fixed::types::U64F64;
@@ -211,6 +210,7 @@ pub mod pallet {
         + pallet_tfgrid::Config
         + pallet_tft_price::Config
         + pallet_authorship::Config
+        + pallet_session::Config
     {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: LockableCurrency<Self::AccountId>;
@@ -1797,11 +1797,27 @@ impl<T: Config> PublicIpModifier for Pallet<T> {
 impl<T: Config> Pallet<T> {
     fn is_block_author(signer: &Signer<T, <T as Config>::AuthorityId>) -> Result<(), Error<T>> {
         let author = <pallet_authorship::Pallet<T>>::author();
+        let validators = <pallet_session::Pallet<T>>::validators();
 
         let signed_message = signer.sign_message(&[0]);
         if let Some(signed_message_data) = signed_message {
             if let Some(block_author) = author {
-                if signed_message_data.0.id != block_author {
+                let validator =
+                    <T as pallet_session::Config>::ValidatorIdOf::convert(block_author.clone())
+                        .ok_or(Error::<T>::OffchainSignedTxNotBlockAuthor)?;
+
+                let validator_count = validators.len();
+                let author_index = (validators.iter().position(|a| a == &validator).unwrap_or(0)
+                    + 1)
+                    % validator_count;
+
+                // the next author in the list should also bill contracts
+                let signer_validator_account =
+                    <T as pallet_session::Config>::ValidatorIdOf::convert(
+                        signed_message_data.0.id.clone(),
+                    )
+                    .ok_or(Error::<T>::OffchainSignedTxNotBlockAuthor)?;
+                if signer_validator_account != validators[author_index] {
                     return Err(Error::<T>::OffchainSignedTxNotBlockAuthor);
                 }
             }
