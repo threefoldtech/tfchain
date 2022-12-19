@@ -66,7 +66,8 @@ construct_runtime!(
         TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         SmartContractModule: pallet_smart_contract::{Pallet, Call, Storage, Event<T>},
-        TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Event<T>}
+        TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Event<T>},
+        Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
     }
 );
 
@@ -232,6 +233,17 @@ impl pallet_smart_contract::Config for TestRuntime {
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
     type Call = Call;
     type PublicIpModifier = PublicIpModifierType;
+}
+
+parameter_types! {
+    pub const UncleGenerations: u32 = 0;
+}
+
+impl pallet_authorship::Config for TestRuntime {
+    type FindAuthor = ();
+    type UncleGenerations = UncleGenerations;
+    type FilterUncle = ();
+    type EventHandler = ();
 }
 
 type AccountPublic = <MultiSignature as Verify>::Signer;

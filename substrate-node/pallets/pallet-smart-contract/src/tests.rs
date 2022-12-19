@@ -71,14 +71,14 @@ fn test_create_node_contract_with_public_ips_works() {
                 assert_eq!(c.public_ips, 2);
 
                 let pub_ip = PublicIP {
-            ip: get_public_ip_ip_input(b"185.206.122.33/24"),
-            gateway: get_public_ip_gw_input(b"185.206.122.1"),
+                    ip: get_public_ip_ip_input(b"185.206.122.33/24"),
+                    gateway: get_public_ip_gw_input(b"185.206.122.1"),
                     contract_id: 1,
                 };
 
                 let pub_ip_2 = PublicIP {
-            ip: get_public_ip_ip_input(b"185.206.122.34/24"),
-            gateway: get_public_ip_gw_input(b"185.206.122.1"),
+                    ip: get_public_ip_ip_input(b"185.206.122.34/24"),
+                    gateway: get_public_ip_gw_input(b"185.206.122.1"),
                     contract_id: 1,
                 };
                 assert_eq!(c.public_ips_list[0], pub_ip);
@@ -2424,6 +2424,45 @@ fn test_lock() {
 }
 
 #[test]
+fn test_change_billing_frequency_works() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, Some(&mut pool_state));
+        let new_frequency = 900;
+
+        assert_ok!(SmartContractModule::change_billing_frequency(
+            RawOrigin::Root.into(),
+            new_frequency
+        ));
+
+        assert_eq!(SmartContractModule::billing_frequency(), new_frequency);
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::BillingFrequencyChanged(new_frequency)
+            ))),
+            true
+        );
+    })
+}
+
+#[test]
+fn test_change_billing_frequency_fails_if_frequency_lower() {
+    new_test_ext().execute_with(|| {
+        let initial_frequency = SmartContractModule::billing_frequency();
+        let new_frequency = initial_frequency - 1;
+
+        assert_noop!(
+            SmartContractModule::change_billing_frequency(RawOrigin::Root.into(), new_frequency),
+            Error::<TestRuntime>::CanOnlyIncreaseFrequency
+        );
+
+        assert_eq!(initial_frequency, SmartContractModule::billing_frequency());
+    })
+}
+
+#[test]
 fn test_percent() {
     let cost: u64 = 1000;
     let new_cost = Percent::from_percent(25) * cost;
@@ -2547,7 +2586,7 @@ fn check_report_cost(
 ) {
     let our_events = System::events();
 
-    let contract_bill_event = types::ContractBill {
+    let contract_bill = types::ContractBill {
         contract_id,
         timestamp: 1628082000 + (6 * block_number),
         discount_level,
@@ -2556,7 +2595,7 @@ fn check_report_cost(
 
     assert_eq!(
         our_events.contains(&record(MockEvent::SmartContractModule(
-            SmartContractEvent::<TestRuntime>::ContractBilled(contract_bill_event)
+            SmartContractEvent::<TestRuntime>::ContractBilled(contract_bill)
         ))),
         true
     );
