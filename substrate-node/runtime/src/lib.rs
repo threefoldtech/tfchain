@@ -27,6 +27,7 @@ use sp_std::{cmp::Ordering, prelude::*};
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use tfchain_support::{
+    constants::time::*,
     traits::{ChangeNode, PublicIpModifier},
     types::PublicIP,
 };
@@ -148,21 +149,6 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     transaction_version: 2,
     state_version: 0,
 };
-
-/// This determines the average expected block time that we are targeting.
-/// Blocks will be produced at a minimum duration defined by `SLOT_DURATION`.
-/// `SLOT_DURATION` is picked up by `pallet_timestamp` which is in turn picked
-/// up by `pallet_aura` to implement `fn slot_duration()`.
-///
-/// Change this to adjust the block time.
-pub const MILLISECS_PER_BLOCK: u64 = 6000;
-
-pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
-
-// Time is measured by number of blocks.
-pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
-pub const HOURS: BlockNumber = MINUTES * 60;
-pub const DAYS: BlockNumber = HOURS * 24;
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -381,6 +367,7 @@ impl pallet_tfgrid::Config for Runtime {
 parameter_types! {
     pub StakingPoolAccount: AccountId = get_staking_pool_account();
     pub BillingFrequency: u64 = 600;
+    pub BillingReferencePeriod: u64 = SECS_PER_HOUR;
     pub GracePeriod: u64 = (14 * DAYS).into();
     pub DistributionFrequency: u16 = 24;
     pub RetryInterval: u32 = 20;
@@ -401,6 +388,7 @@ impl pallet_smart_contract::Config for Runtime {
     type Currency = Balances;
     type StakingPoolAccount = StakingPoolAccount;
     type BillingFrequency = BillingFrequency;
+    type BillingReferencePeriod = BillingReferencePeriod;
     type DistributionFrequency = DistributionFrequency;
     type GracePeriod = GracePeriod;
     type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;

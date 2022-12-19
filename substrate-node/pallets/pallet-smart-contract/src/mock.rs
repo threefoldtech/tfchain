@@ -1,6 +1,4 @@
 #![cfg(test)]
-use std::{panic, thread};
-
 use super::*;
 use crate::name_contract::NameContractName;
 use crate::{self as pallet_smart_contract};
@@ -12,17 +10,15 @@ use frame_support::{
     BoundedVec,
 };
 use frame_system::EnsureRoot;
-use pallet_tfgrid::node::{CityName, CountryName};
 use pallet_tfgrid::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
+    node::{CityName, CountryName},
     node::{Location, SerialNumber},
     terms_cond::TermsAndConditions,
     twin::TwinIp,
-    DocumentHashInput, DocumentLinkInput, TwinIpInput,
-};
-use pallet_tfgrid::{
-    CityNameInput, CountryNameInput, Gw4Input, Ip4Input, LatitudeInput, LongitudeInput,
+    CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, Gw4Input, Ip4Input,
+    LatitudeInput, LongitudeInput, TwinIpInput,
 };
 use parking_lot::RwLock;
 use sp_core::{
@@ -45,8 +41,11 @@ use sp_runtime::{
     AccountId32, MultiSignature,
 };
 use sp_std::convert::{TryFrom, TryInto};
-use std::cell::RefCell;
-use tfchain_support::{constants::time::MINUTES, traits::ChangeNode};
+use std::{cell::RefCell, panic, thread};
+use tfchain_support::{
+    constants::time::{MINUTES, SECS_PER_HOUR},
+    traits::ChangeNode,
+};
 
 impl_opaque_keys! {
     pub struct MockSessionKeys {
@@ -249,11 +248,13 @@ impl pallet_timestamp::Config for TestRuntime {
 
 parameter_types! {
     pub const BillingFrequency: u64 = 10;
+    pub const BillingReferencePeriod: u64 = SECS_PER_HOUR;
     pub const GracePeriod: u64 = 100;
     pub const DistributionFrequency: u16 = 24;
     pub const MaxNameContractNameLength: u32 = 64;
     pub const MaxNodeContractPublicIPs: u32 = 512;
     pub const MaxDeploymentDataLength: u32 = 512;
+    pub const SecondsPerHour: u64 = 3600;
 }
 
 pub(crate) type TestNameContractName = NameContractName<TestRuntime>;
@@ -265,6 +266,7 @@ impl pallet_smart_contract::Config for TestRuntime {
     type Burn = ();
     type StakingPoolAccount = StakingPoolAccount;
     type BillingFrequency = BillingFrequency;
+    type BillingReferencePeriod = BillingReferencePeriod;
     type DistributionFrequency = DistributionFrequency;
     type GracePeriod = GracePeriod;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;

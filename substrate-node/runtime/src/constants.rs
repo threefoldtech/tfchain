@@ -28,22 +28,6 @@ pub mod currency {
     }
 }
 
-/// Time and blocks.
-pub mod time {
-    use crate::BlockNumber;
-    pub const MILLISECS_PER_BLOCK: u64 = 6000;
-    pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
-    pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 1 * HOURS;
-
-    // These time units are defined in number of blocks.
-    pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
-    pub const HOURS: BlockNumber = MINUTES * 60;
-    pub const DAYS: BlockNumber = HOURS * 24;
-
-    // 1 in 4 blocks (on average, not counting collisions) will be primary babe blocks.
-    pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
-}
-
 /// Fee-related.
 pub mod fee {
     use crate::Balance;
@@ -103,8 +87,8 @@ mod tests {
         let max_block_weight: u128 = (MaximumBlockWeight::get() as u128) * precision;
         let ext_base_weight: u128 = ExtrinsicBaseWeight::get() as u128;
         let x = WeightToFeeStruct::weight_to_fee(&MaximumBlockWeight::get());
-        let cost_extrinsic:u128 = WeightToFeeStruct::weight_to_fee(&ExtrinsicBaseWeight::get());
-        let y:u128 = (cost_extrinsic * (max_block_weight/ext_base_weight)) / precision;
+        let cost_extrinsic: u128 = WeightToFeeStruct::weight_to_fee(&ExtrinsicBaseWeight::get());
+        let y: u128 = (cost_extrinsic * (max_block_weight / ext_base_weight)) / precision;
         // Difference should be less then the cost of an extrinsic devided by 2 as we can execute Z amount of extrinsics and Z was calculated by deviding
         // the max amount of weight per block by the weight of one extrinsic. That operation results in a loss of precision (from float to integer).
         assert!(x.max(y) - x.min(y) < cost_extrinsic / 2);

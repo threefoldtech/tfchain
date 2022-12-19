@@ -18,6 +18,7 @@ use sp_core::H256;
 use sp_runtime::{assert_eq_error_rate, traits::SaturatedConversion, Perbill, Percent};
 use sp_std::convert::{TryFrom, TryInto};
 use substrate_fixed::types::U64F64;
+use tfchain_support::constants::time::SECS_PER_HOUR;
 use tfchain_support::{
     resources::Resources,
     types::{FarmCertification, NodeCertification, PublicIP, IP4},
@@ -2841,7 +2842,7 @@ fn test_service_contract_bill_works() {
         let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
         let bill_2 = types::ServiceContractBill {
             variable_amount: VARIABLE_AMOUNT,
-            window: crate::SECS_PER_HOUR, // force a 1h bill here
+            window: SECS_PER_HOUR, // force a 1h bill here
             metadata: BoundedVec::try_from(b"bill_metadata_2".to_vec()).unwrap(),
         };
         let billed_amount_2 = service_contract

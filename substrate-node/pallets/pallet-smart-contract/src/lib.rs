@@ -38,7 +38,6 @@ use tfchain_support::{
 };
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"aura");
-pub const SECS_PER_HOUR: u64 = 3600;
 
 #[cfg(test)]
 mod mock;
@@ -122,6 +121,7 @@ pub mod pallet {
     // Version constant that referenced the struct version
     pub const CONTRACT_VERSION: u32 = 4;
 
+    pub type BillingReferencePeriod<T> = <T as Config>::BillingReferencePeriod;
     pub type MaxNodeContractPublicIPs<T> = <T as Config>::MaxNodeContractPublicIps;
     pub type MaxDeploymentDataLength<T> = <T as Config>::MaxDeploymentDataLength;
     pub type DeploymentDataInput<T> = BoundedVec<u8, MaxDeploymentDataLength<T>>;
@@ -228,6 +228,7 @@ pub mod pallet {
         type Burn: OnUnbalanced<NegativeImbalanceOf<Self>>;
         type StakingPoolAccount: Get<Self::AccountId>;
         type BillingFrequency: Get<u64>;
+        type BillingReferencePeriod: Get<u64>;
         type DistributionFrequency: Get<u16>;
         type GracePeriod: Get<u64>;
         type WeightInfo: WeightInfo;
@@ -1045,7 +1046,8 @@ impl<T: Config> Pallet<T> {
         // calculate NRU used and the cost
         let used_nru = U64F64::from_num(report.nru) / pricing_policy.nu.factor_base_1000();
         let nu_cost = used_nru
-            * (U64F64::from_num(pricing_policy.nu.value) / U64F64::from_num(SECS_PER_HOUR))
+            * (U64F64::from_num(pricing_policy.nu.value)
+                / U64F64::from_num(T::BillingReferencePeriod::get()))
             * U64F64::from_num(seconds_elapsed);
         log::info!("nu cost: {:?}", nu_cost);
 
@@ -2137,12 +2139,13 @@ impl<T: Config> Pallet<T> {
         // Billing time (window) is max 1h by design
         // So extra time will not be billed
         // It is the service responsability to bill on right frequency
-        let window = elapsed_seconds_since_last_bill.min(SECS_PER_HOUR);
+        let window = elapsed_seconds_since_last_bill.min(T::BillingReferencePeriod::get());
 
         // Billing variable amount is bounded by contract variable fee
         ensure!(
             variable_amount
-                <= ((U64F64::from_num(window) / U64F64::from_num(SECS_PER_HOUR))
+                <= ((U64F64::from_num(window)
+                    / U64F64::from_num(T::BillingReferencePeriod::get()))
                     * U64F64::from_num(service_contract.variable_fee))
                 .round()
                 .to_num::<u64>(),
