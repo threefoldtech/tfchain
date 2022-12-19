@@ -4163,6 +4163,7 @@ dependencies = [
  "log",
  "pallet-authorship",
  "pallet-balances",
+ "pallet-session",
  "pallet-tfgrid",
  "pallet-tft-price",
  "pallet-timestamp",
@@ -4175,6 +4176,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "substrate-fixed",
+ "substrate-validator-set",
  "tfchain-support",
 ]
 
