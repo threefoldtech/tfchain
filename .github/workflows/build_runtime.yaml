@@ -11,6 +11,10 @@ on:
 jobs:
   srtool:
     runs-on: [self-hosted, poc]
+    container:
+      image: docker:latest
+      env:
+        DEBIAN_FRONTEND: noninteractive
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
@@ -45,3 +49,10 @@ jobs:
           name: tfchain-runtime
           path: |
             substrate-node/${{ steps.srtool_build.outputs.wasm_compressed }}
+
+  test:
+    runs-on: [self-hosted, poc]
+    container:
+      image: threefolddev/tfchain:1
+      env:
+        DEBIAN_FRONTEND: noninteractive
