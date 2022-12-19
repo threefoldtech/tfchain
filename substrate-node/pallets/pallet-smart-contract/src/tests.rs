@@ -2785,7 +2785,7 @@ fn test_service_contract_bill_works() {
             Origin::signed(alice()),
             1,
             VARIABLE_AMOUNT,
-            b"bill_metadata".to_vec(),
+            b"bill_metadata_1".to_vec(),
         ));
 
         let service_contract = SmartContractModule::service_contracts(1).unwrap();
@@ -2794,19 +2794,33 @@ fn test_service_contract_bill_works() {
             get_timestamp_in_seconds_for_block(201)
         );
 
+        // Check consumer balance after first billing
         let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
         let window =
             get_timestamp_in_seconds_for_block(201) - get_timestamp_in_seconds_for_block(1);
-        let bill = types::ServiceContractBill {
+        let bill_1 = types::ServiceContractBill {
             variable_amount: VARIABLE_AMOUNT,
             window,
-            metadata: bounded_vec![],
+            metadata: BoundedVec::try_from(b"bill_metadata_1".to_vec()).unwrap(),
         };
         let billed_amount_1 = service_contract
-            .calculate_bill_cost_tft::<TestRuntime>(bill)
+            .calculate_bill_cost_tft::<TestRuntime>(bill_1.clone())
             .unwrap();
-
         assert_eq!(2500000000 - consumer_balance, billed_amount_1);
+
+        // Check event triggering
+        let our_events = System::events();
+        assert_eq!(!our_events.is_empty(), true);
+        assert_eq!(
+            our_events.last().unwrap(),
+            &record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ServiceContractBilled {
+                service_contract_id: 1,
+                bill: bill_1,
+                amount: billed_amount_1,
+            })),
+        );
 
         // Bill a second time, 1h10min after first billing
         run_to_block(901, Some(&mut pool_state));
@@ -2814,7 +2828,7 @@ fn test_service_contract_bill_works() {
             Origin::signed(alice()),
             1,
             VARIABLE_AMOUNT,
-            b"bill_metadata".to_vec(),
+            b"bill_metadata_2".to_vec(),
         ));
 
         let service_contract = SmartContractModule::service_contracts(1).unwrap();
@@ -2823,21 +2837,35 @@ fn test_service_contract_bill_works() {
             get_timestamp_in_seconds_for_block(901)
         );
 
+        // Check consumer balance after second billing
         let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
-        let bill = types::ServiceContractBill {
+        let bill_2 = types::ServiceContractBill {
             variable_amount: VARIABLE_AMOUNT,
             window: crate::SECS_PER_HOUR, // force a 1h bill here
-            metadata: bounded_vec![],
+            metadata: BoundedVec::try_from(b"bill_metadata_2".to_vec()).unwrap(),
         };
         let billed_amount_2 = service_contract
-            .calculate_bill_cost_tft::<TestRuntime>(bill)
+            .calculate_bill_cost_tft::<TestRuntime>(bill_2.clone())
             .unwrap();
-
-        // Check that second billing was equivalent to a 1h
+        // Second billing was equivalent to a 1h
         // billing even if window is greater than 1h
         assert_eq!(
             2500000000 - consumer_balance - billed_amount_1,
             billed_amount_2
+        );
+
+        // Check event triggering
+        let our_events = System::events();
+        assert_eq!(!our_events.is_empty(), true);
+        assert_eq!(
+            our_events.last().unwrap(),
+            &record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ServiceContractBilled {
+                service_contract_id: 1,
+                bill: bill_2,
+                amount: billed_amount_2,
+            })),
         );
     });
 }

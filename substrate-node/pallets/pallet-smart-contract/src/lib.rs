@@ -330,6 +330,12 @@ pub mod pallet {
             service_contract_id: u64,
             cause: types::Cause,
         },
+        /// A Service contract is billed
+        ServiceContractBilled {
+            service_contract_id: u64,
+            bill: types::ServiceContractBill,
+            amount: BalanceOf<T>,
+        },
         BillingFrequencyChanged(u64),
     }
 
@@ -2011,6 +2017,8 @@ impl<T: Config> Pallet<T> {
         if service_contract.accepted_by_service && service_contract.accepted_by_consumer {
             // Change contract state to approved and emit event
             service_contract.state = types::ServiceContractState::ApprovedByBoth;
+
+            // Trigger event for service contract approval
             Self::deposit_event(Event::ServiceContractApproved {
                 service_contract_id,
             });
@@ -2077,6 +2085,8 @@ impl<T: Config> Pallet<T> {
         // Can be done at any state of contract
         // so no need to handle state validation
         ServiceContracts::<T>::remove(service_contract_id);
+
+        // Trigger event for service contract cancelation
         Self::deposit_event(Event::ServiceContractCanceled {
             service_contract_id,
             cause,
@@ -2165,7 +2175,7 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         let service_contract = ServiceContracts::<T>::get(service_contract_id)
             .ok_or(Error::<T>::ServiceContractNotExists)?;
-        let amount_due = service_contract.calculate_bill_cost_tft::<T>(bill)?;
+        let amount = service_contract.calculate_bill_cost_tft::<T>(bill.clone())?;
 
         let service_twin_id = service_contract.service_twin_id;
         let service_twin =
@@ -2178,7 +2188,7 @@ impl<T: Config> Pallet<T> {
 
         // If consumer is out of funds then contract is canceled
         // by service and removed from service contract map
-        if usable_balance < amount_due {
+        if usable_balance < amount {
             Self::_service_contract_cancel(
                 service_twin_id,
                 service_contract_id,
@@ -2193,9 +2203,16 @@ impl<T: Config> Pallet<T> {
         <T as Config>::Currency::transfer(
             &consumer_twin.account_id,
             &service_twin.account_id,
-            amount_due,
+            amount,
             ExistenceRequirement::KeepAlive,
         )?;
+
+        // Trigger event for service contract billing
+        Self::deposit_event(Event::ServiceContractBilled {
+            service_contract_id,
+            bill,
+            amount,
+        });
 
         log::info!(
             "bill successfully payed by consumer for service contract with id {:?}",
