@@ -49,10 +49,3 @@ jobs:
           name: tfchain-runtime
           path: |
             substrate-node/${{ steps.srtool_build.outputs.wasm_compressed }}
-
-  test:
-    runs-on: [self-hosted, poc]
-    container:
-      image: threefolddev/tfchain:1
-      env:
-        DEBIAN_FRONTEND: noninteractive
