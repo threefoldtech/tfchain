@@ -609,6 +609,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_service_contract_bill(account_id, service_contract_id, variable_amount, metadata)
+        }
 
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
         pub fn change_billing_frequency(
@@ -2206,6 +2207,9 @@ impl<T: Config> Pallet<T> {
             "bill successfully payed by consumer for service contract with id {:?}",
             service_contract_id,
         );
+
+        Ok(().into())
+    }
 
     pub fn _change_billing_frequency(frequency: u64) -> DispatchResultWithPostInfo {
         let billing_frequency = BillingFrequency::<T>::get();
