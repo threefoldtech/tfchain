@@ -35,18 +35,18 @@ jobs:
           $HOME/.cargo/bin/rustup target add wasm32-unknown-unknown --toolchain nightly-2022-05-11
           $HOME/.cargo/bin/cargo +nightly-2022-05-11 build --release
 
-      - name: Unit tests
-        run: |
-          cd substrate-node
-          $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
-          cd pallets
-          $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
+      # - name: Unit tests
+      #   run: |
+      #     cd substrate-node
+      #     $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
+      #     cd pallets
+      #     $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
 
-      - name: Integration tests
-        run: |
-          python3.10 -m pip install robotframework==5.0.1 cryptography==3.4.8 substrate-interface==1.4.0
-          cd substrate-node/tests
-          robot -d _output_tests/ .
+      # - name: Integration tests
+      #   run: |
+      #     python3.10 -m pip install robotframework==5.0.1 cryptography==3.4.8 substrate-interface==1.4.0
+      #     cd substrate-node/tests
+      #     robot -d _output_tests/ .
 
       - uses: actions/upload-artifact@v3
         if: always()
