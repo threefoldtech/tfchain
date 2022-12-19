@@ -234,6 +234,7 @@ pub const MAX_BILL_METADATA_LENGTH: u32 = 50; // limited to 50 bytes for now
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct ServiceContract {
+    pub service_contract_id: u64,
     pub service_twin_id: u32,
     pub consumer_twin_id: u32,
     pub base_fee: u64,

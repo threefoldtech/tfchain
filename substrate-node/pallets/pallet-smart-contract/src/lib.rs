@@ -1873,8 +1873,13 @@ impl<T: Config> Pallet<T> {
             Error::<T>::ServiceContractCreationNotAllowed,
         );
 
+        // Get the service contract ID map and increment
+        let mut id = ServiceContractID::<T>::get();
+        id = id + 1;
+
         // Create service contract
         let service_contract = types::ServiceContract {
+            service_contract_id: id,
             service_twin_id,
             consumer_twin_id,
             base_fee: 0,
@@ -1885,10 +1890,6 @@ impl<T: Config> Pallet<T> {
             last_bill: 0,
             state: types::ServiceContractState::Created,
         };
-
-        // Get the service contract ID map and increment
-        let mut id = ServiceContractID::<T>::get();
-        id = id + 1;
 
         // Insert into service contract map
         ServiceContracts::<T>::insert(id, &service_contract);

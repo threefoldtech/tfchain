@@ -3525,6 +3525,7 @@ fn approve_service_consumer_contract() {
 
 fn get_service_contract() -> types::ServiceContract {
     types::ServiceContract {
+        service_contract_id: 1,
         service_twin_id: 1,  //Alice
         consumer_twin_id: 2, //Bob
         base_fee: 0,
