@@ -2,6 +2,7 @@
 
 use frame_support::{
     dispatch::DispatchErrorWithPostInfo,
+    dispatch::DispatchResultWithPostInfo,
     ensure,
     log::info,
     pallet_prelude::DispatchResult,
@@ -17,7 +18,9 @@ use frame_system::{
     self as system, ensure_signed,
     offchain::{AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer},
 };
+
 pub use pallet::*;
+use pallet_authorship;
 use pallet_tfgrid;
 use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf, TfgridNode};
 use pallet_tfgrid::types as pallet_tfgrid_types;
@@ -29,6 +32,7 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 use substrate_fixed::types::U64F64;
+use system::offchain::SignMessage;
 use tfchain_support::{
     traits::{ChangeNode, PublicIpModifier},
     types::PublicIP,
@@ -45,6 +49,9 @@ mod tests;
 
 #[cfg(test)]
 mod test_utils;
+
+#[cfg(feature = "runtime-benchmarks")]
+pub mod benchmarking;
 
 pub mod crypto {
     use crate::KEY_TYPE;
@@ -85,17 +92,13 @@ pub mod weights;
 
 #[frame_support::pallet]
 pub mod pallet {
-
     use super::types::*;
     use super::weights::WeightInfo;
     use super::*;
     use codec::FullCodec;
     use frame_support::pallet_prelude::*;
     use frame_support::traits::Hooks;
-    use frame_support::{
-        dispatch::DispatchResultWithPostInfo,
-        traits::{Currency, Get, LockIdentifier, LockableCurrency, OnUnbalanced},
-    };
+    use frame_support::traits::{Currency, Get, LockIdentifier, LockableCurrency, OnUnbalanced};
     use frame_system::pallet_prelude::*;
     use sp_core::H256;
     use sp_std::{
@@ -217,6 +220,7 @@ pub mod pallet {
         + pallet_balances::Config
         + pallet_tfgrid::Config
         + pallet_tft_price::Config
+        + pallet_authorship::Config
     {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: LockableCurrency<Self::AccountId>;
@@ -329,6 +333,7 @@ pub mod pallet {
             service_contract_id: u64,
             cause: types::Cause,
         },
+        BillingFrequencyChanged(u64),
     }
 
     #[pallet::error]
@@ -360,7 +365,10 @@ pub mod pallet {
         NodeNotAvailableToDeploy,
         CannotUpdateContractInGraceState,
         NumOverflow,
-        OffchainSignedTxError,
+        OffchainSignedTxNotBlockAuthor,
+        OffchainSignedTxCannotSign,
+        OffchainSignedTxAlreadySent,
+        OffchainSignedTxNoLocalAccountAvailable,
         NameContractNameTooShort,
         NameContractNameTooLong,
         InvalidProviderConfiguration,
@@ -377,6 +385,7 @@ pub mod pallet {
         ServiceContractBillMetadataTooLong,
         ServiceContractMetadataTooLong,
         ServiceContractNotEnoughFundsToPayBill,
+        CanOnlyIncreaseFrequency,
     }
 
     #[pallet::genesis_config]
@@ -403,7 +412,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(<T as Config>::WeightInfo::create_node_contract())]
         pub fn create_node_contract(
             origin: OriginFor<T>,
             node_id: u32,
@@ -462,7 +471,7 @@ pub mod pallet {
             Self::_create_name_contract(account_id, name)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(<T as Config>::WeightInfo::add_nru_reports())]
         pub fn add_nru_reports(
             origin: OriginFor<T>,
             reports: Vec<types::NruConsumption>,
@@ -511,7 +520,7 @@ pub mod pallet {
             Self::_approve_solution_provider(solution_provider_id, approve)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(<T as Config>::WeightInfo::bill_contract_for_block())]
         pub fn bill_contract_for_block(
             origin: OriginFor<T>,
             contract_id: u64,
@@ -600,6 +609,14 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_service_contract_bill(account_id, service_contract_id, variable_amount, metadata)
+
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        pub fn change_billing_frequency(
+            origin: OriginFor<T>,
+            frequency: u64,
+        ) -> DispatchResultWithPostInfo {
+            <T as Config>::RestrictedOrigin::ensure_origin(origin)?;
+            Self::_change_billing_frequency(frequency)
         }
     }
 
@@ -635,7 +652,6 @@ pub mod pallet {
 }
 
 use crate::types::HexHash;
-use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 use pallet::NameContractNameOf;
 use sp_std::convert::{TryFrom, TryInto};
 // Internal functions of the pallet
@@ -1040,12 +1056,16 @@ impl<T: Config> Pallet<T> {
 
     fn bill_contract_using_signed_transaction(contract_id: u64) -> Result<(), Error<T>> {
         let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::any_account();
+
+        // Only allow the author of the block to trigger the billing
+        Self::is_block_author(&signer)?;
+
         if !signer.can_sign() {
             log::error!(
                 "failed billing contract {:?} account cannot be used to sign transaction",
                 contract_id,
             );
-            return Err(<Error<T>>::OffchainSignedTxError);
+            return Err(<Error<T>>::OffchainSignedTxCannotSign);
         }
         let result =
             signer.send_signed_transaction(|_acct| Call::bill_contract_for_block { contract_id });
@@ -1061,12 +1081,12 @@ impl<T: Config> Pallet<T> {
                     contract_id,
                     acc.id
                 );
-                return Err(<Error<T>>::OffchainSignedTxError);
+                return Err(<Error<T>>::OffchainSignedTxAlreadySent);
             }
             return Ok(());
         }
         log::error!("No local account available");
-        return Err(<Error<T>>::OffchainSignedTxError);
+        return Err(<Error<T>>::OffchainSignedTxNoLocalAccountAvailable);
     }
 
     // Bills a contract (NodeContract or NameContract)
@@ -2187,6 +2207,17 @@ impl<T: Config> Pallet<T> {
             service_contract_id,
         );
 
+    pub fn _change_billing_frequency(frequency: u64) -> DispatchResultWithPostInfo {
+        let billing_frequency = BillingFrequency::<T>::get();
+        ensure!(
+            frequency > billing_frequency,
+            Error::<T>::CanOnlyIncreaseFrequency
+        );
+
+        BillingFrequency::<T>::put(frequency);
+
+        Self::deposit_event(Event::BillingFrequencyChanged(frequency));
+
         Ok(().into())
     }
 }
@@ -2241,5 +2272,22 @@ impl<T: Config> PublicIpModifier for Pallet<T> {
                 _ => {}
             }
         }
+    }
+}
+
+impl<T: Config> Pallet<T> {
+    fn is_block_author(signer: &Signer<T, <T as Config>::AuthorityId>) -> Result<(), Error<T>> {
+        let author = <pallet_authorship::Pallet<T>>::author();
+
+        let signed_message = signer.sign_message(&[0]);
+        if let Some(signed_message_data) = signed_message {
+            if let Some(block_author) = author {
+                if signed_message_data.0.id != block_author {
+                    return Err(Error::<T>::OffchainSignedTxNotBlockAuthor);
+                }
+            }
+        }
+
+        Ok(().into())
     }
 }

@@ -142,7 +142,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 119,
+    spec_version: 120,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -776,6 +776,27 @@ pub type Executive = frame_executive::Executive<
     ),
 >;
 
+// follows Substrate's non destructive way of eliminating  otherwise required
+// repetion: https://github.com/paritytech/substrate/pull/10592
+#[cfg(feature = "runtime-benchmarks")]
+#[macro_use]
+extern crate frame_benchmarking;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benches {
+    define_benchmarks!(
+        // KILT
+        [pallet_smart_contract, SmartContractModule]
+        // Substrate
+        [frame_benchmarking::baseline, Baseline::<Runtime>]
+        [frame_system, SystemBench::<Runtime>]
+        // [pallet_session, Session]
+        [pallet_balances, Balances]
+        [pallet_collective, Council]
+        [pallet_timestamp, Timestamp]
+    );
+}
+
 impl_runtime_apis! {
     impl sp_api::Core<Block> for Runtime {
         fn version() -> RuntimeVersion {
@@ -915,13 +936,33 @@ impl_runtime_apis! {
 
     #[cfg(feature = "runtime-benchmarks")]
     impl frame_benchmarking::Benchmark<Block> for Runtime {
+        fn benchmark_metadata(extra: bool) -> (
+            Vec<frame_benchmarking::BenchmarkList>,
+            Vec<frame_support::traits::StorageInfo>,
+        ) {
+            use frame_benchmarking::{Benchmarking, BenchmarkList};
+            use frame_support::traits::StorageInfoTrait;
+
+            use frame_system_benchmarking::Pallet as SystemBench;
+            use frame_benchmarking::baseline::Pallet as Baseline;
+
+            let mut list = Vec::<BenchmarkList>::new();
+            list_benchmarks!(list, extra);
+
+            let storage_info = AllPalletsWithSystem::storage_info();
+
+            (list, storage_info)
+        }
+
         fn dispatch_benchmark(
             config: frame_benchmarking::BenchmarkConfig
         ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-            use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
+            use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
+            use frame_system_benchmarking::Pallet as SystemBench;
+            use frame_benchmarking::baseline::Pallet as Baseline;
 
-            use frame_system_benchmarking::Module as SystemBench;
             impl frame_system_benchmarking::Config for Runtime {}
+            impl frame_benchmarking::baseline::Config for Runtime {}
 
             let whitelist: Vec<TrackedStorageKey> = vec![
                 // Block Number
@@ -944,12 +985,7 @@ impl_runtime_apis! {
             let mut batches = Vec::<BenchmarkBatch>::new();
             let params = (&config, &whitelist);
 
-            add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
-            add_benchmark!(params, batches, pallet_balances, Balances);
-            add_benchmark!(params, batches, pallet_timestamp, Timestamp);
-            add_benchmark!(params, batches, pallet_tfgrid, TfgridModule);
-            add_benchmark!(params, batches, pallet_smart_contract, SmartContractModule);
-            add_benchmark!(params, batches, pallet_dao, Dao);
+            add_benchmarks!(params, batches);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)
