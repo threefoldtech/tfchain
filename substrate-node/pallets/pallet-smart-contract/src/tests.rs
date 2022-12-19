@@ -2381,8 +2381,9 @@ fn test_service_contract_create_works() {
         run_to_block(1, None);
         create_service_consumer_contract();
 
+        let service_contract = get_service_contract();
         assert_eq!(
-            get_service_contract(),
+            service_contract,
             SmartContractModule::service_contracts(1).unwrap(),
         );
 
@@ -2391,10 +2392,7 @@ fn test_service_contract_create_works() {
         assert_eq!(
             our_events.last().unwrap(),
             &record(MockEvent::SmartContractModule(
-                SmartContractEvent::ServiceContractCreated {
-                    service_contract_id: 1,
-                    twin_id: 1,
-                }
+                SmartContractEvent::ServiceContractCreated(service_contract)
             )),
         );
     });

@@ -320,10 +320,7 @@ pub mod pallet {
         SolutionProviderCreated(types::SolutionProvider<T::AccountId>),
         SolutionProviderApproved(u64, bool),
         /// A Service contract is created
-        ServiceContractCreated {
-            service_contract_id: u64,
-            twin_id: u32,
-        },
+        ServiceContractCreated(types::ServiceContract),
         /// A Service contract is approved
         ServiceContractApproved {
             service_contract_id: u64,
@@ -1893,10 +1890,7 @@ impl<T: Config> Pallet<T> {
         ServiceContractID::<T>::put(id);
 
         // Trigger event for service contract creation
-        Self::deposit_event(Event::ServiceContractCreated {
-            service_contract_id: id,
-            twin_id: caller_twin_id,
-        });
+        Self::deposit_event(Event::ServiceContractCreated(service_contract));
 
         Ok(().into())
     }
