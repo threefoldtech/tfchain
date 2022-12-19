@@ -18,7 +18,6 @@ use frame_system::{
     self as system, ensure_signed,
     offchain::{AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer},
 };
-
 pub use pallet::*;
 use pallet_authorship;
 use pallet_tfgrid;
@@ -27,7 +26,7 @@ use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_timestamp as timestamp;
 use sp_core::crypto::KeyTypeId;
 use sp_runtime::{
-    traits::{CheckedSub, SaturatedConversion},
+    traits::{CheckedSub, Convert, SaturatedConversion},
     Perbill,
 };
 use sp_std::prelude::*;
@@ -38,7 +37,7 @@ use tfchain_support::{
     types::PublicIP,
 };
 
-pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"smct");
+pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"aura");
 pub const SECS_PER_HOUR: u64 = 3600;
 
 #[cfg(test)]
@@ -221,6 +220,7 @@ pub mod pallet {
         + pallet_tfgrid::Config
         + pallet_tft_price::Config
         + pallet_authorship::Config
+        + pallet_session::Config
     {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: LockableCurrency<Self::AccountId>;
@@ -368,7 +368,6 @@ pub mod pallet {
         NodeNotAvailableToDeploy,
         CannotUpdateContractInGraceState,
         NumOverflow,
-        OffchainSignedTxNotBlockAuthor,
         OffchainSignedTxCannotSign,
         OffchainSignedTxAlreadySent,
         OffchainSignedTxNoLocalAccountAvailable,
@@ -389,6 +388,8 @@ pub mod pallet {
         ServiceContractMetadataTooLong,
         ServiceContractNotEnoughFundsToPayBill,
         CanOnlyIncreaseFrequency,
+        IsNotAnAuthority,
+        WrongAuthority,
     }
 
     #[pallet::genesis_config]
@@ -1061,8 +1062,8 @@ impl<T: Config> Pallet<T> {
     fn bill_contract_using_signed_transaction(contract_id: u64) -> Result<(), Error<T>> {
         let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::any_account();
 
-        // Only allow the author of the block to trigger the billing
-        Self::is_block_author(&signer)?;
+        // Only allow the author of the next block to trigger the billing
+        Self::is_next_block_author(&signer)?;
 
         if !signer.can_sign() {
             log::error!(
@@ -2291,14 +2292,36 @@ impl<T: Config> PublicIpModifier for Pallet<T> {
 }
 
 impl<T: Config> Pallet<T> {
-    fn is_block_author(signer: &Signer<T, <T as Config>::AuthorityId>) -> Result<(), Error<T>> {
+    // Validates if the given signer is the next block author based on the validators in session
+    // This can be used if an extrinsic should be refunded by the author in the same block
+    // It also requires that the keytype inserted for the offchain workers is the validator key
+    fn is_next_block_author(
+        signer: &Signer<T, <T as Config>::AuthorityId>,
+    ) -> Result<(), Error<T>> {
         let author = <pallet_authorship::Pallet<T>>::author();
+        let validators = <pallet_session::Pallet<T>>::validators();
 
+        // Sign some arbitrary data in order to get the AccountId, maybe there is another way to do this?
         let signed_message = signer.sign_message(&[0]);
         if let Some(signed_message_data) = signed_message {
             if let Some(block_author) = author {
-                if signed_message_data.0.id != block_author {
-                    return Err(Error::<T>::OffchainSignedTxNotBlockAuthor);
+                let validator =
+                    <T as pallet_session::Config>::ValidatorIdOf::convert(block_author.clone())
+                        .ok_or(Error::<T>::IsNotAnAuthority)?;
+
+                let validator_count = validators.len();
+                let author_index = (validators.iter().position(|a| a == &validator).unwrap_or(0)
+                    + 1)
+                    % validator_count;
+
+                let signer_validator_account =
+                    <T as pallet_session::Config>::ValidatorIdOf::convert(
+                        signed_message_data.0.id.clone(),
+                    )
+                    .ok_or(Error::<T>::IsNotAnAuthority)?;
+
+                if signer_validator_account != validators[author_index] {
+                    return Err(Error::<T>::WrongAuthority);
                 }
             }
         }
