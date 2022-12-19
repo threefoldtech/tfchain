@@ -58,14 +58,14 @@ jobs:
     needs: build-and-test
     runs-on: [self-hosted, poc]
     steps:
-      - name: Cache target dir
-        uses: actions/cache@v3
-        with:
-          path: '${{ github.workspace }}/substrate-node/runtime/target'
-          key: srtool-target-tfchain-${{ github.sha }}
-          restore-keys: |
-            srtool-target-tfchain-
-            srtool-target-
+      # - name: Cache target dir
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: '${{ github.workspace }}/substrate-node/runtime/target'
+      #     key: srtool-target-tfchain-${{ github.sha }}
+      #     restore-keys: |
+      #       srtool-target-tfchain-
+      #       srtool-target-
       - name: Srtool build
         id: srtool_build
         uses: chevdor/srtool-actions@v0.6.0
