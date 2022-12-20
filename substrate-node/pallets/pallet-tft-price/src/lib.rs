@@ -50,7 +50,6 @@ pub mod pallet {
     use sp_core::sr25519::Signature as Sr25519Signature;
     use sp_runtime::{
         app_crypto::{app_crypto, sr25519},
-        traits::Convert,
         traits::Verify,
         MultiSignature, MultiSigner,
     };
@@ -158,19 +157,13 @@ pub mod pallet {
             block_number: T::BlockNumber,
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
-            let validators = <pallet_session::Pallet<T>>::validators();
 
-            // Only validator can effectively set a price
-            if validators.iter().any(|validator| {
-                match <T as pallet_session::Config>::ValidatorIdOf::convert(address.clone()) {
-                    Some(signer) => &signer == validator,
-                    None => false,
-                }
-            }) {
-                Self::calculate_and_set_price(price, block_number)?;
-            }
+            ensure!(
+                Self::is_validator(address),
+                Error::<T>::AccountUnauthorizedToSetPrice
+            );
 
-            Ok(().into())
+            Self::calculate_and_set_price(price, block_number)
         }
 
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
@@ -443,5 +436,16 @@ impl<T: Config> Pallet<T> {
         }
 
         Ok(().into())
+    }
+
+    fn is_validator(account: T::AccountId) -> bool {
+        let validators = <pallet_session::Pallet<T>>::validators();
+
+        validators.iter().any(|validator| {
+            match <T as pallet_session::Config>::ValidatorIdOf::convert(account.clone()) {
+                Some(signer) => &signer == validator,
+                None => false,
+            }
+        })
     }
 }

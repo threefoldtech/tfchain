@@ -275,7 +275,6 @@ impl ExternalityBuilder {
             .build_storage::<TestRuntime>()
             .unwrap();
 
-        // TODO
         let session_gensis = pallet_session::GenesisConfig::<TestRuntime> {
             keys: vec![(alice(), alice(), MockSessionKeys::from(UintAuthorityId(1)))],
         };
