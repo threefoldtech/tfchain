@@ -712,7 +712,7 @@ fn test_cancel_rent_contract_with_active_node_contracts_fails() {
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -746,7 +746,7 @@ fn test_node_contract_billing_details() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         let twin = TfgridModule::twins(2).unwrap();
         let initial_twin_balance = Balances::free_balance(&twin.account_id);
@@ -833,7 +833,7 @@ fn test_node_contract_billing_details_with_solution_provider() {
         prepare_solution_provider();
 
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         let twin = TfgridModule::twins(2).unwrap();
         let initial_twin_balance = Balances::free_balance(&twin.account_id);
@@ -880,7 +880,7 @@ fn test_multiple_contracts_billing_loop_works() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
@@ -924,7 +924,7 @@ fn test_node_contract_billing_cycles() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
@@ -988,7 +988,7 @@ fn test_node_multiple_contract_billing_cycles() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
@@ -1043,7 +1043,7 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
@@ -1136,7 +1136,7 @@ fn test_node_contract_only_public_ip_billing_cycles() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
@@ -1186,7 +1186,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(bob()),
@@ -1283,7 +1283,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         let twin = TfgridModule::twins(2).unwrap();
         let initial_twin_balance = Balances::free_balance(&twin.account_id);
@@ -1363,7 +1363,7 @@ fn test_node_contract_out_of_funds_should_move_state_to_graceperiod_works() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(charlie()),
@@ -1413,7 +1413,7 @@ fn test_restore_node_contract_in_grace_works() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
             Origin::signed(charlie()),
@@ -1472,7 +1472,7 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
         let twin = TfgridModule::twins(3).unwrap();
         let initial_total_issuance = Balances::total_issuance();
         let initial_twin_balance = Balances::free_balance(&twin.account_id);
@@ -1550,7 +1550,7 @@ fn test_name_contract_billing() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_name_contract(
             Origin::signed(bob()),
@@ -1593,7 +1593,7 @@ fn test_rent_contract_billing() {
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -1626,7 +1626,7 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -1696,7 +1696,7 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -1744,7 +1744,7 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -1789,7 +1789,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -1878,7 +1878,7 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -1931,7 +1931,7 @@ fn test_rent_contract_out_of_funds_should_move_state_to_graceperiod_works() {
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -1971,7 +1971,7 @@ fn test_restore_rent_contract_in_grace_works() {
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -2036,7 +2036,7 @@ fn test_restore_rent_contract_and_node_contracts_in_grace_works() {
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, None);
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -2159,7 +2159,7 @@ fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -2212,7 +2212,7 @@ fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -3296,7 +3296,7 @@ pub fn prepare_farm(source: AccountId, dedicated: bool) {
 }
 
 pub fn prepare_farm_and_node() {
-    TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+    TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
 
     create_farming_policies();
     prepare_twins();
@@ -3331,7 +3331,7 @@ pub fn prepare_farm_and_node() {
 }
 
 pub fn prepare_dedicated_farm_and_node() {
-    TFTPriceModule::set_prices(Origin::signed(bob()), 50, 101).unwrap();
+    TFTPriceModule::set_prices(Origin::signed(alice()), 50, 101).unwrap();
     create_farming_policies();
     prepare_twins();
     prepare_farm(alice(), true);

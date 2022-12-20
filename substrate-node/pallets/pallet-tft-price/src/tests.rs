@@ -5,30 +5,6 @@ use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
 
 #[test]
-fn test_set_allowed_origin_works() {
-    let mut t = ExternalityBuilder::build();
-    t.execute_with(|| {
-        assert_ok!(TFTPriceModule::set_allowed_origin(
-            RawOrigin::Root.into(),
-            bob(),
-        ));
-
-        assert_eq!(TFTPriceModule::allowed_origin(), Some(bob()));
-    })
-}
-
-#[test]
-fn test_set_allowed_origin_by_wrong_origin_fails() {
-    let mut t = ExternalityBuilder::build();
-    t.execute_with(|| {
-        assert_noop!(
-            TFTPriceModule::set_allowed_origin(Origin::signed(bob()), bob()),
-            BadOrigin,
-        );
-    })
-}
-
-#[test]
 fn test_calc_avg_rounding_works() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
@@ -54,11 +30,10 @@ fn test_calc_avg_rounding_works() {
 fn test_set_prices_works() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
-        let acct = allowed_account();
         for i in 1..1441 {
             let target_block = i * 100; // we set the price every 100 blocks
             run_to_block(target_block);
-            match TFTPriceModule::set_prices(Origin::signed(acct.clone()), 500, target_block) {
+            match TFTPriceModule::set_prices(Origin::signed(alice()), 500, target_block) {
                 Ok(_) => (),
                 Err(_) => panic!("Couldn't set tft_price"),
             }
@@ -76,8 +51,7 @@ fn test_set_prices_works() {
 fn test_set_price_works() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
-        let acct = allowed_account();
-        assert_ok!(TFTPriceModule::set_prices(Origin::signed(acct), 500, 1));
+        assert_ok!(TFTPriceModule::set_prices(Origin::signed(alice()), 500, 1));
 
         assert_eq!(TFTPriceModule::tft_price(), 500);
         assert_eq!(TFTPriceModule::average_tft_price(), 500);
@@ -88,8 +62,7 @@ fn test_set_price_works() {
 fn test_set_price_below_min_price_works() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
-        let acct = allowed_account();
-        assert_ok!(TFTPriceModule::set_prices(Origin::signed(acct), 5, 1));
+        assert_ok!(TFTPriceModule::set_prices(Origin::signed(alice()), 5, 1));
 
         let our_events = System::events();
         assert_eq!(
@@ -111,8 +84,7 @@ fn test_set_price_below_min_price_works() {
 fn test_set_price_above_max_price_works() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
-        let acct = allowed_account();
-        assert_ok!(TFTPriceModule::set_prices(Origin::signed(acct), 2000, 1));
+        assert_ok!(TFTPriceModule::set_prices(Origin::signed(alice()), 2000, 1));
 
         let our_events = System::events();
         assert_eq!(
@@ -131,7 +103,7 @@ fn test_set_price_above_max_price_works() {
 }
 
 #[test]
-fn test_set_price_wrong_origin_fails() {
+fn test_set_price_not_validator_fails() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
         assert_noop!(
