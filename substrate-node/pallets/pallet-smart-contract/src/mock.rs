@@ -485,10 +485,10 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     };
     genesis.assimilate_storage(&mut storage).unwrap();
 
-    let session_gensis = pallet_session::GenesisConfig::<TestRuntime> {
+    let session_genesis = pallet_session::GenesisConfig::<TestRuntime> {
         keys: vec![(alice(), alice(), MockSessionKeys::from(UintAuthorityId(1)))],
     };
-    session_gensis.assimilate_storage(&mut storage).unwrap();
+    session_genesis.assimilate_storage(&mut storage).unwrap();
 
     let genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
         min_tft_price: 10,

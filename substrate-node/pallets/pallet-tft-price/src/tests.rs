@@ -103,7 +103,7 @@ fn test_set_price_above_max_price_works() {
 }
 
 #[test]
-fn test_set_price_wrong_origin_fails() {
+fn test_set_price_not_validator_fails() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
         assert_noop!(
