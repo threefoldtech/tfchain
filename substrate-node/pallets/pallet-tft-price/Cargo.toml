@@ -32,6 +32,12 @@ sp-std =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-keystore =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", optional = true }
 sp-core =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
 sp-io =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+pallet-authorship =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+pallet-session =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+
+[dev-dependencies]
+tfchain-support = { path = "../../support", default-features = false }
+substrate-validator-set = { path = '../substrate-validator-set' }
 
 [features]
 default = ['std']
@@ -47,5 +53,7 @@ std = [
 	'sp-keystore',
 	'serde/std',
 	'log/std',
-	'scale-info/std'
+	'scale-info/std',
+	'pallet-authorship/std',
+	'pallet-session/std'
 ]

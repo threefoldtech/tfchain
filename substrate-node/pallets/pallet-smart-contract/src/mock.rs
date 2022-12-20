@@ -45,6 +45,7 @@ use sp_runtime::{
     AccountId32, MultiSignature,
 };
 use sp_std::convert::{TryFrom, TryInto};
+use sp_std::marker::PhantomData;
 use std::cell::RefCell;
 use tfchain_support::{constants::time::MINUTES, traits::ChangeNode};
 
@@ -484,10 +485,15 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     };
     genesis.assimilate_storage(&mut storage).unwrap();
 
+    let session_genesis = pallet_session::GenesisConfig::<TestRuntime> {
+        keys: vec![(alice(), alice(), MockSessionKeys::from(UintAuthorityId(1)))],
+    };
+    session_genesis.assimilate_storage(&mut storage).unwrap();
+
     let genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
-        allowed_origin: Some(bob()),
         min_tft_price: 10,
         max_tft_price: 1000,
+        _data: PhantomData,
     };
     genesis.assimilate_storage(&mut storage).unwrap();
 
