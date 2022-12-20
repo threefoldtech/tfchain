@@ -54,7 +54,6 @@ pub mod pallet {
         MultiSignature, MultiSigner,
     };
     use sp_std::convert::TryFrom;
-    use sp_std::marker::PhantomData;
 
     app_crypto!(sr25519, KEY_TYPE);
 
