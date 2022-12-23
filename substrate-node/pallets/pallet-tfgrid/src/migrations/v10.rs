@@ -1,9 +1,7 @@
-use crate::Config;
 use crate::*;
 use frame_support::{dispatch::Weight, traits::Get, traits::OnRuntimeUpgrade};
 use log::{debug, info};
-use sp_std::collections::btree_map::BTreeMap;
-use sp_std::marker::PhantomData;
+use sp_std::{collections::btree_map::BTreeMap, marker::PhantomData};
 
 #[cfg(feature = "try-runtime")]
 use codec::Decode;
@@ -15,9 +13,9 @@ pub struct FixFarmNodeIndexMap<T: Config>(PhantomData<T>);
 impl<T: Config> OnRuntimeUpgrade for FixFarmNodeIndexMap<T> {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+        info!("current pallet version: {:?}", PalletVersion::<T>::get());
         assert!(PalletVersion::<T>::get() >= types::StorageVersion::V9Struct);
 
-        // Store number of nodes in temp storage
         let nodes_count: u64 = Nodes::<T>::iter().count() as u64;
         log::info!(
             "🔎 FixFarmingPolicy pre migration: Number of existing nodes {:?}",
@@ -39,6 +37,7 @@ impl<T: Config> OnRuntimeUpgrade for FixFarmNodeIndexMap<T> {
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade(pre_nodes_count: Vec<u8>) -> Result<(), &'static str> {
+        info!("current pallet version: {:?}", PalletVersion::<T>::get());
         assert!(PalletVersion::<T>::get() >= types::StorageVersion::V10Struct);
 
         // Check number of nodes against pre-check result
