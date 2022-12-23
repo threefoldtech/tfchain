@@ -146,6 +146,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn set_prices(
             origin: OriginFor<T>,
@@ -163,6 +164,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(1)]
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn set_allowed_origin(
             origin: OriginFor<T>,
@@ -173,6 +175,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(2)]
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn set_min_tft_price(origin: OriginFor<T>, price: u32) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
@@ -184,6 +187,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(3)]
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn set_max_tft_price(origin: OriginFor<T>, price: u32) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;

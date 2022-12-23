@@ -367,6 +367,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn create_node_contract(
             origin: OriginFor<T>,
@@ -387,6 +388,7 @@ pub mod pallet {
             )
         }
 
+        #[pallet::call_index(1)]
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn update_node_contract(
             origin: OriginFor<T>,
@@ -398,6 +400,7 @@ pub mod pallet {
             Self::_update_node_contract(account_id, contract_id, deployment_hash, deployment_data)
         }
 
+        #[pallet::call_index(2)]
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn cancel_contract(
             origin: OriginFor<T>,
@@ -408,6 +411,7 @@ pub mod pallet {
         }
 
         // DEPRECATED
+        #[pallet::call_index(3)]
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn add_reports(
             _origin: OriginFor<T>,
@@ -417,6 +421,7 @@ pub mod pallet {
             Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
         }
 
+        #[pallet::call_index(4)]
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn create_name_contract(
             origin: OriginFor<T>,
@@ -426,6 +431,7 @@ pub mod pallet {
             Self::_create_name_contract(account_id, name)
         }
 
+        #[pallet::call_index(5)]
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn add_nru_reports(
             origin: OriginFor<T>,
@@ -435,6 +441,7 @@ pub mod pallet {
             Self::_compute_reports(account_id, reports)
         }
 
+        #[pallet::call_index(6)]
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn report_contract_resources(
             origin: OriginFor<T>,
@@ -444,6 +451,7 @@ pub mod pallet {
             Self::_report_contract_resources(account_id, contract_resources)
         }
 
+        #[pallet::call_index(7)]
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn create_rent_contract(
             origin: OriginFor<T>,
@@ -454,6 +462,7 @@ pub mod pallet {
             Self::_create_rent_contract(account_id, node_id, solution_provider_id)
         }
 
+        #[pallet::call_index(8)]
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn create_solution_provider(
             origin: OriginFor<T>,
@@ -465,6 +474,7 @@ pub mod pallet {
             Self::_create_solution_provider(description, link, providers)
         }
 
+        #[pallet::call_index(9)]
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn approve_solution_provider(
             origin: OriginFor<T>,
@@ -475,6 +485,7 @@ pub mod pallet {
             Self::_approve_solution_provider(solution_provider_id, approve)
         }
 
+        #[pallet::call_index(10)]
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn bill_contract_for_block(
             origin: OriginFor<T>,

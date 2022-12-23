@@ -36,7 +36,9 @@ pub use frame_support::{
     construct_runtime, parameter_types,
     traits::{ConstU8, EitherOfDiverse, FindAuthor, KeyOwnerProofSystem, PrivilegeCmp, Randomness},
     weights::{
-        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
+        constants::{
+            BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND,
+        },
         ConstantMultiplier, IdentityFee, Weight,
     },
     StorageValue,
@@ -183,14 +185,16 @@ parameter_types! {
     pub const Version: RuntimeVersion = VERSION;
     pub const BlockHashCount: BlockNumber = 2400;
     /// We allow for 2 seconds of compute with a 6 second average block time.
-    pub BlockWeights: frame_system::limits::BlockWeights = frame_system::limits::BlockWeights
-        ::with_sensible_defaults(WEIGHT_PER_SECOND.saturating_mul(2).set_proof_size(MAX_POV_SIZE), NORMAL_DISPATCH_RATIO);
+    pub BlockWeights: frame_system::limits::BlockWeights =
+    frame_system::limits::BlockWeights::with_sensible_defaults(
+        Weight::from_parts(2u64 * WEIGHT_REF_TIME_PER_SECOND, u64::MAX),
+        NORMAL_DISPATCH_RATIO,
+    );
     pub BlockLength: frame_system::limits::BlockLength = frame_system::limits::BlockLength
         ::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
     pub const SS58Prefix: u8 = 42;
-    pub const MaximumBlockWeight: Weight = WEIGHT_PER_SECOND.saturating_mul(2).set_proof_size(MAX_POV_SIZE);
 
-    pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) * MaximumBlockWeight::get();
+    pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) * BlockWeights::get().max_block;
     pub const MaxScheduledPerBlock: u32 = 50;
     pub const NoPreimagePostponement: Option<BlockNumber> = Some(10);
 }

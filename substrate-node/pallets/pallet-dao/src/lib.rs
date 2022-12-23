@@ -187,6 +187,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
         #[pallet::weight((<T as pallet::Config>::WeightInfo::propose(), DispatchClass::Operational))]
         pub fn propose(
             origin: OriginFor<T>,
@@ -253,6 +254,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(1)]
         #[pallet::weight((<T as pallet::Config>::WeightInfo::vote(), DispatchClass::Operational))]
         pub fn vote(
             origin: OriginFor<T>,
@@ -333,6 +335,7 @@ pub mod pallet {
             }
         }
 
+        #[pallet::call_index(2)]
         #[pallet::weight((<T as pallet::Config>::WeightInfo::vote(), DispatchClass::Operational))]
         pub fn veto(origin: OriginFor<T>, proposal_hash: T::Hash) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
@@ -367,6 +370,7 @@ pub mod pallet {
             return Ok(Pays::No.into());
         }
 
+        #[pallet::call_index(3)]
         #[pallet::weight((<T as pallet::Config>::WeightInfo::close(), DispatchClass::Operational))]
         pub fn close(
             origin: OriginFor<T>,

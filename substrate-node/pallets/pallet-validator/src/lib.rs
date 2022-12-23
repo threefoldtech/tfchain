@@ -115,6 +115,7 @@ pub mod pallet {
         /// Tf Connect ID: the threefold connect ID of the person who wants to become a validator
         /// Info: some public info about the validator (website link, blog link, ..)
         /// A user can only have 1 validator request at a time
+        #[pallet::call_index(0)]
         #[pallet::weight(100_000_000)]
         pub fn create_validator_request(
             origin: OriginFor<T>,
@@ -153,6 +154,7 @@ pub mod pallet {
         /// Will activate the Validator node account on consensus level
         /// A user can only call this if his request to be a validator is approved by the council
         /// Should be called when his node is synced and ready to start validating
+        #[pallet::call_index(1)]
         #[pallet::weight(100_000_000)]
         pub fn activate_validator_node(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
@@ -188,6 +190,7 @@ pub mod pallet {
         /// In case the Validator wishes to change his validator node account
         /// he can call this method with the new node validator account
         /// this new account will be added as a new consensus validator if he is validating already
+        #[pallet::call_index(2)]
         #[pallet::weight(100_000_000)]
         pub fn change_validator_node_account(
             origin: OriginFor<T>,
@@ -228,6 +231,7 @@ pub mod pallet {
 
         /// Bond an account to a validator account
         /// Just proves that the stash account is indeed under control of the validator account
+        #[pallet::call_index(3)]
         #[pallet::weight(100_000_000)]
         pub fn bond(
             origin: OriginFor<T>,
@@ -251,6 +255,7 @@ pub mod pallet {
         /// Approve validator (council)
         /// Approves a validator to be added as a council member and
         /// to participate in consensus
+        #[pallet::call_index(4)]
         #[pallet::weight(100_000_000)]
         pub fn approve_validator(
             origin: OriginFor<T>,
@@ -285,6 +290,7 @@ pub mod pallet {
         /// 2. Storage
         /// 3. Consensus
         /// Can only be called by the user or the council
+        #[pallet::call_index(5)]
         #[pallet::weight(100_000_000)]
         pub fn remove_validator(
             origin: OriginFor<T>,
