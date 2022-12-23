@@ -117,8 +117,6 @@ pub fn development_config() -> Result<ChainSpec, String> {
 			],
 			// Bridge fee account
 			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-			// TFT price pallet allow account
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
             // TFT price pallet min price
             10,
             // TFT price pallet max price
@@ -207,8 +205,6 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 			],
 			// Bridge fee account
 			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-			// TFT price pallet allow account
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
             // TFT price pallet min price
             10,
             // TFT price pallet max price
@@ -242,7 +238,6 @@ fn testnet_genesis(
     _enable_println: bool,
     bridge_validator_accounts: Vec<AccountId>,
     bridge_fee_account: AccountId,
-    tft_price_allowed_account: AccountId,
     min_tft_price: u32,
     max_tft_price: u32,
     billing_frequency: u64,
@@ -334,9 +329,9 @@ fn testnet_genesis(
         },
         // just some default for development
         tft_price_module: TFTPriceModuleConfig {
-            allowed_origin: Some(tft_price_allowed_account),
             min_tft_price,
             max_tft_price,
+            _data: std::marker::PhantomData,
         },
         smart_contract_module: SmartContractModuleConfig {
             billing_frequency: billing_frequency,

@@ -5,11 +5,11 @@
 image:
   repository: tfchainnode
   pullPolicy: IfNotPresent
-  tag: ""
+  tag: ''
 
 imagePullSecrets: []
-nameOverride: ""
-fullnameOverride: ""
+nameOverride: ''
+fullnameOverride: ''
 
 serviceAccount:
   # Specifies whether a service account should be created
@@ -18,7 +18,7 @@ serviceAccount:
   annotations: {}
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
-  name: ""
+  name: ''
 
 podAnnotations: {}
 
@@ -39,15 +39,15 @@ service:
   type: ClusterIP
   port: 80
 
-name: "tfchainnode01"
+name: 'tfchainnode01'
 port: 30333
 ws_port: 9944
 rpc_port: 9933
 is_validator: true
-chainspec: "/etc/chainspecs/dev/chainSpecRaw.json"
+chainspec: '/etc/chainspecs/dev/chainSpecRaw.json'
 ws_max_connections: 1048576
 #rpc_methods: "Unsafe"
-rpc_methods: "safe"
+rpc_methods: 'safe'
 disable_offchain_worker: true
 # telemetry_url: ""
 
@@ -58,11 +58,6 @@ keys: []
 #   secret: "kkjghjfkkj kjhgkkhhgg"
 # - name: node
 #   secret: 1a...
-# - name: tft
-#   secret: "kkjghjfkkj kjhgkkhhgg"
-## Smart contract billing offchain worker key
-# - name: smct
-#   secret: "fsfdsfsdf"
 
 # boot_node: "/ip4/10.42.1.134/tcp/30333/p2p/12D3KooWGX8JFxZu2dDmGVpa9t9enZnFCLhH4NUBA7PDuhEVQTMg"
 
@@ -94,10 +89,10 @@ resources:
 
 volume:
   size: 10Gi
-  existingpersistentVolumeClaim: ""
+  existingpersistentVolumeClaim: ''
   persistentVolume:
     create: true
-    hostPath: "/chain01"
+    hostPath: '/chain01'
 
 nodeSelector: {}
 
@@ -106,4 +101,4 @@ tolerations: []
 affinity: {}
 
 threefoldVdc:
-  backup: ""
+  backup: ''

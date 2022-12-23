@@ -18,13 +18,16 @@ use sp_core::H256;
 use sp_runtime::{assert_eq_error_rate, traits::SaturatedConversion, Perbill, Percent};
 use sp_std::convert::{TryFrom, TryInto};
 use substrate_fixed::types::U64F64;
-use tfchain_support::types::IP4;
+use tfchain_support::constants::time::SECS_PER_HOUR;
 use tfchain_support::{
     resources::Resources,
-    types::{FarmCertification, NodeCertification, PublicIP},
+    types::{FarmCertification, NodeCertification, PublicIP, IP4},
 };
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
+const BASE_FEE: u64 = 1000;
+const VARIABLE_FEE: u64 = 1000;
+const VARIABLE_AMOUNT: u64 = 100;
 
 //  NODE CONTRACT TESTS //
 // -------------------- //
@@ -709,7 +712,7 @@ fn test_cancel_rent_contract_with_active_node_contracts_fails() {
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -743,7 +746,7 @@ fn test_node_contract_billing_details() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         let twin = TfgridModule::twins(2).unwrap();
         let initial_twin_balance = Balances::free_balance(&twin.account_id);
@@ -830,7 +833,7 @@ fn test_node_contract_billing_details_with_solution_provider() {
         prepare_solution_provider();
 
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         let twin = TfgridModule::twins(2).unwrap();
         let initial_twin_balance = Balances::free_balance(&twin.account_id);
@@ -877,7 +880,7 @@ fn test_multiple_contracts_billing_loop_works() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
             RuntimeOrigin::signed(bob()),
@@ -921,7 +924,7 @@ fn test_node_contract_billing_cycles() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
             RuntimeOrigin::signed(bob()),
@@ -985,7 +988,7 @@ fn test_node_multiple_contract_billing_cycles() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
             RuntimeOrigin::signed(bob()),
@@ -1040,7 +1043,7 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
             RuntimeOrigin::signed(bob()),
@@ -1133,7 +1136,7 @@ fn test_node_contract_only_public_ip_billing_cycles() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
             RuntimeOrigin::signed(bob()),
@@ -1183,7 +1186,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
             RuntimeOrigin::signed(bob()),
@@ -1280,7 +1283,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         let twin = TfgridModule::twins(2).unwrap();
         let initial_twin_balance = Balances::free_balance(&twin.account_id);
@@ -1360,7 +1363,7 @@ fn test_node_contract_out_of_funds_should_move_state_to_graceperiod_works() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
             RuntimeOrigin::signed(charlie()),
@@ -1410,7 +1413,7 @@ fn test_restore_node_contract_in_grace_works() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_node_contract(
             RuntimeOrigin::signed(charlie()),
@@ -1469,7 +1472,7 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
         let twin = TfgridModule::twins(3).unwrap();
         let initial_total_issuance = Balances::total_issuance();
         let initial_twin_balance = Balances::free_balance(&twin.account_id);
@@ -1547,7 +1550,7 @@ fn test_name_contract_billing() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_name_contract(
             RuntimeOrigin::signed(bob()),
@@ -1590,7 +1593,7 @@ fn test_rent_contract_billing() {
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -1623,7 +1626,7 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -1693,7 +1696,7 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -1741,7 +1744,7 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -1786,7 +1789,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -1875,7 +1878,7 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -1928,7 +1931,7 @@ fn test_rent_contract_out_of_funds_should_move_state_to_graceperiod_works() {
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -1968,7 +1971,7 @@ fn test_restore_rent_contract_in_grace_works() {
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -2033,7 +2036,7 @@ fn test_restore_rent_contract_and_node_contracts_in_grace_works() {
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, None);
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -2156,7 +2159,7 @@ fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -2209,7 +2212,7 @@ fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
         run_to_block(1, Some(&mut pool_state));
-        TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -2269,6 +2272,7 @@ fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
 
 //  SOLUTION PROVIDER TESTS //
 // ------------------------ //
+
 #[test]
 fn test_create_solution_provider_works() {
     new_test_ext().execute_with(|| {
@@ -2369,6 +2373,614 @@ fn test_create_node_contract_with_solution_provider_fails_if_not_approved() {
     });
 }
 
+// SERVICE CONTRACT TESTS //
+// ---------------------- //
+
+#[test]
+fn test_service_contract_create_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        create_service_consumer_contract();
+
+        let service_contract = get_service_contract();
+        assert_eq!(
+            service_contract,
+            SmartContractModule::service_contracts(1).unwrap(),
+        );
+
+        let our_events = System::events();
+        assert_eq!(!our_events.is_empty(), true);
+        assert_eq!(
+            our_events.last().unwrap(),
+            &record(MockEvent::SmartContractModule(
+                SmartContractEvent::ServiceContractCreated(service_contract)
+            )),
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_create_by_anyone_fails() {
+    new_test_ext().execute_with(|| {
+        create_twin(alice());
+        create_twin(bob());
+        create_twin(charlie());
+
+        assert_noop!(
+            SmartContractModule::service_contract_create(
+                RuntimeOrigin::signed(charlie()),
+                alice(),
+                bob(),
+            ),
+            Error::<TestRuntime>::TwinNotAuthorized
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_create_same_account_fails() {
+    new_test_ext().execute_with(|| {
+        create_twin(alice());
+
+        assert_noop!(
+            SmartContractModule::service_contract_create(
+                RuntimeOrigin::signed(alice()),
+                alice(),
+                alice(),
+            ),
+            Error::<TestRuntime>::ServiceContractCreationNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_set_metadata_works() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+
+        assert_ok!(SmartContractModule::service_contract_set_metadata(
+            RuntimeOrigin::signed(alice()),
+            1,
+            b"some_metadata".to_vec(),
+        ));
+
+        let mut service_contract = get_service_contract();
+        service_contract.metadata = BoundedVec::try_from(b"some_metadata".to_vec()).unwrap();
+        assert_eq!(
+            service_contract,
+            SmartContractModule::service_contracts(1).unwrap(),
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_set_metadata_by_unauthorized_fails() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+        create_twin(charlie());
+
+        assert_noop!(
+            SmartContractModule::service_contract_set_metadata(
+                RuntimeOrigin::signed(charlie()),
+                1,
+                b"some_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::TwinNotAuthorized
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_set_metadata_already_approved_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_set_metadata(
+                RuntimeOrigin::signed(alice()),
+                1,
+                b"some_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::ServiceContractModificationNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_set_metadata_too_long_fails() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_set_metadata(
+                RuntimeOrigin::signed(alice()),
+                1,
+                b"very_loooooooooooooooooooooooooooooooooooooooooooooooooong_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::ServiceContractMetadataTooLong
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_set_fees_works() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+
+        assert_ok!(SmartContractModule::service_contract_set_fees(
+            RuntimeOrigin::signed(alice()),
+            1,
+            BASE_FEE,
+            VARIABLE_FEE,
+        ));
+
+        let mut service_contract = get_service_contract();
+        service_contract.base_fee = BASE_FEE;
+        service_contract.variable_fee = VARIABLE_FEE;
+        assert_eq!(
+            service_contract,
+            SmartContractModule::service_contracts(1).unwrap(),
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_set_fees_by_unauthorized_fails() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_set_fees(
+                RuntimeOrigin::signed(bob()),
+                1,
+                BASE_FEE,
+                VARIABLE_FEE,
+            ),
+            Error::<TestRuntime>::TwinNotAuthorized
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_set_fees_already_approved_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_set_fees(
+                RuntimeOrigin::signed(alice()),
+                1,
+                BASE_FEE,
+                VARIABLE_FEE,
+            ),
+            Error::<TestRuntime>::ServiceContractModificationNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_approve_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_service_consumer_contract();
+
+        let mut service_contract = get_service_contract();
+        service_contract.base_fee = BASE_FEE;
+        service_contract.variable_fee = VARIABLE_FEE;
+        service_contract.metadata = BoundedVec::try_from(b"some_metadata".to_vec()).unwrap();
+        service_contract.state = types::ServiceContractState::AgreementReady;
+        assert_eq!(
+            service_contract,
+            SmartContractModule::service_contracts(1).unwrap(),
+        );
+
+        // Service approves
+        assert_ok!(SmartContractModule::service_contract_approve(
+            RuntimeOrigin::signed(alice()),
+            1,
+        ));
+
+        service_contract.accepted_by_service = true;
+        assert_eq!(
+            service_contract,
+            SmartContractModule::service_contracts(1).unwrap(),
+        );
+
+        // Consumer approves
+        assert_ok!(SmartContractModule::service_contract_approve(
+            RuntimeOrigin::signed(bob()),
+            1,
+        ));
+
+        service_contract.accepted_by_consumer = true;
+        service_contract.last_bill = get_timestamp_in_seconds_for_block(1);
+        service_contract.state = types::ServiceContractState::ApprovedByBoth;
+        assert_eq!(
+            service_contract,
+            SmartContractModule::service_contracts(1).unwrap(),
+        );
+
+        let our_events = System::events();
+        assert_eq!(!our_events.is_empty(), true);
+        assert_eq!(
+            our_events.last().unwrap(),
+            &record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ServiceContractApproved {
+                service_contract_id: 1,
+            })),
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_approve_agreement_not_ready_fails() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_approve(RuntimeOrigin::signed(alice()), 1,),
+            Error::<TestRuntime>::ServiceContractApprovalNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_approve_already_approved_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_approve(RuntimeOrigin::signed(alice()), 1,),
+            Error::<TestRuntime>::ServiceContractApprovalNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_approve_by_unauthorized_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+        create_twin(charlie());
+
+        assert_noop!(
+            SmartContractModule::service_contract_approve(RuntimeOrigin::signed(charlie()), 1,),
+            Error::<TestRuntime>::TwinNotAuthorized
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_reject_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_service_consumer_contract();
+
+        assert_ok!(SmartContractModule::service_contract_reject(
+            RuntimeOrigin::signed(alice()),
+            1,
+        ));
+
+        assert_eq!(SmartContractModule::service_contracts(1).is_none(), true);
+
+        let our_events = System::events();
+        assert_eq!(!our_events.is_empty(), true);
+        assert_eq!(
+            our_events.last().unwrap(),
+            &record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ServiceContractCanceled {
+                service_contract_id: 1,
+                cause: types::Cause::CanceledByUser,
+            })),
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_reject_agreement_not_ready_fails() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_reject(RuntimeOrigin::signed(alice()), 1,),
+            Error::<TestRuntime>::ServiceContractRejectionNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_reject_already_approved_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_reject(RuntimeOrigin::signed(alice()), 1,),
+            Error::<TestRuntime>::ServiceContractRejectionNotAllowed
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_reject_by_unauthorized_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+        create_twin(charlie());
+
+        assert_noop!(
+            SmartContractModule::service_contract_reject(RuntimeOrigin::signed(charlie()), 1,),
+            Error::<TestRuntime>::TwinNotAuthorized
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_cancel_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        create_service_consumer_contract();
+
+        assert_ok!(SmartContractModule::service_contract_cancel(
+            RuntimeOrigin::signed(alice()),
+            1,
+        ));
+
+        assert_eq!(SmartContractModule::service_contracts(1).is_none(), true);
+
+        let our_events = System::events();
+        assert_eq!(!our_events.is_empty(), true);
+        assert_eq!(
+            our_events.last().unwrap(),
+            &record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ServiceContractCanceled {
+                service_contract_id: 1,
+                cause: types::Cause::CanceledByUser,
+            })),
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_cancel_by_unauthorized_fails() {
+    new_test_ext().execute_with(|| {
+        create_service_consumer_contract();
+        create_twin(charlie());
+
+        assert_noop!(
+            SmartContractModule::service_contract_cancel(RuntimeOrigin::signed(charlie()), 1,),
+            Error::<TestRuntime>::TwinNotAuthorized
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_bill_works() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, None);
+        prepare_service_consumer_contract();
+
+        let service_contract = SmartContractModule::service_contracts(1).unwrap();
+        assert_eq!(service_contract.last_bill, 0);
+
+        approve_service_consumer_contract();
+
+        let service_contract = SmartContractModule::service_contracts(1).unwrap();
+        assert_eq!(
+            service_contract.last_bill,
+            get_timestamp_in_seconds_for_block(1)
+        );
+
+        let consumer_twin = TfgridModule::twins(2).unwrap();
+        let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
+        assert_eq!(consumer_balance, 2500000000);
+
+        // Bill 20 min after contract approval
+        run_to_block(201, Some(&mut pool_state));
+        assert_ok!(SmartContractModule::service_contract_bill(
+            RuntimeOrigin::signed(alice()),
+            1,
+            VARIABLE_AMOUNT,
+            b"bill_metadata_1".to_vec(),
+        ));
+
+        let service_contract = SmartContractModule::service_contracts(1).unwrap();
+        assert_eq!(
+            service_contract.last_bill,
+            get_timestamp_in_seconds_for_block(201)
+        );
+
+        // Check consumer balance after first billing
+        let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
+        let window =
+            get_timestamp_in_seconds_for_block(201) - get_timestamp_in_seconds_for_block(1);
+        let bill_1 = types::ServiceContractBill {
+            variable_amount: VARIABLE_AMOUNT,
+            window,
+            metadata: BoundedVec::try_from(b"bill_metadata_1".to_vec()).unwrap(),
+        };
+        let billed_amount_1 = service_contract
+            .calculate_bill_cost_tft::<TestRuntime>(bill_1.clone())
+            .unwrap();
+        assert_eq!(2500000000 - consumer_balance, billed_amount_1);
+
+        // Check event triggering
+        let our_events = System::events();
+        assert_eq!(!our_events.is_empty(), true);
+        assert_eq!(
+            our_events.last().unwrap(),
+            &record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ServiceContractBilled {
+                service_contract_id: 1,
+                bill: bill_1,
+                amount: billed_amount_1,
+            })),
+        );
+
+        // Bill a second time, 1h10min after first billing
+        run_to_block(901, Some(&mut pool_state));
+        assert_ok!(SmartContractModule::service_contract_bill(
+            RuntimeOrigin::signed(alice()),
+            1,
+            VARIABLE_AMOUNT,
+            b"bill_metadata_2".to_vec(),
+        ));
+
+        let service_contract = SmartContractModule::service_contracts(1).unwrap();
+        assert_eq!(
+            service_contract.last_bill,
+            get_timestamp_in_seconds_for_block(901)
+        );
+
+        // Check consumer balance after second billing
+        let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
+        let bill_2 = types::ServiceContractBill {
+            variable_amount: VARIABLE_AMOUNT,
+            window: SECS_PER_HOUR, // force a 1h bill here
+            metadata: BoundedVec::try_from(b"bill_metadata_2".to_vec()).unwrap(),
+        };
+        let billed_amount_2 = service_contract
+            .calculate_bill_cost_tft::<TestRuntime>(bill_2.clone())
+            .unwrap();
+        // Second billing was equivalent to a 1h
+        // billing even if window is greater than 1h
+        assert_eq!(
+            2500000000 - consumer_balance - billed_amount_1,
+            billed_amount_2
+        );
+
+        // Check event triggering
+        let our_events = System::events();
+        assert_eq!(!our_events.is_empty(), true);
+        assert_eq!(
+            our_events.last().unwrap(),
+            &record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ServiceContractBilled {
+                service_contract_id: 1,
+                bill: bill_2,
+                amount: billed_amount_2,
+            })),
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_bill_by_unauthorized_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_bill(
+                RuntimeOrigin::signed(bob()),
+                1,
+                VARIABLE_AMOUNT,
+                b"bill_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::TwinNotAuthorized
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_bill_not_approved_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_service_consumer_contract();
+
+        assert_noop!(
+            SmartContractModule::service_contract_bill(
+                RuntimeOrigin::signed(alice()),
+                1,
+                VARIABLE_AMOUNT,
+                b"bill_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::ServiceContractBillingNotApprovedByBoth
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_bill_variable_amount_too_high_fails() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, None);
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        // Bill 1h after contract approval
+        run_to_block(601, Some(&mut pool_state));
+        // set variable amount a bit higher than variable fee to trigger error
+        let variable_amount = VARIABLE_FEE + 1;
+        assert_noop!(
+            SmartContractModule::service_contract_bill(
+                RuntimeOrigin::signed(alice()),
+                1,
+                variable_amount,
+                b"bill_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::ServiceContractBillingVariableAmountTooHigh
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_bill_metadata_too_long_fails() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, None);
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        // Bill 1h after contract approval
+        run_to_block(601, Some(&mut pool_state));
+        assert_noop!(
+            SmartContractModule::service_contract_bill(
+                RuntimeOrigin::signed(alice()),
+                1,
+                VARIABLE_AMOUNT,
+                b"very_loooooooooooooooooooooooooooooooooooooooooooooooooong_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::ServiceContractBillMetadataTooLong
+        );
+    });
+}
+
+#[test]
+fn test_service_contract_bill_out_of_funds_fails() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, None);
+        prepare_service_consumer_contract();
+        approve_service_consumer_contract();
+
+        // Drain consumer account
+        let consumer_twin = TfgridModule::twins(2).unwrap();
+        let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
+        Balances::transfer(RuntimeOrigin::signed(bob()), alice(), consumer_balance).unwrap();
+        let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
+        assert_eq!(consumer_balance, 0);
+
+        // Bill 1h after contract approval
+        run_to_block(601, Some(&mut pool_state));
+        assert_noop!(
+            SmartContractModule::service_contract_bill(
+                RuntimeOrigin::signed(alice()),
+                1,
+                VARIABLE_AMOUNT,
+                b"bill_metadata".to_vec(),
+            ),
+            Error::<TestRuntime>::ServiceContractNotEnoughFundsToPayBill,
+        );
+    });
+}
+
 //  MODULE FUNCTION TESTS //
 // ---------------------- //
 
@@ -2420,6 +3032,45 @@ fn test_lock() {
 
         let locked_balance = free_balance - usable_balance;
         assert_eq!(locked_balance, 200);
+    })
+}
+
+#[test]
+fn test_change_billing_frequency_works() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, Some(&mut pool_state));
+        let new_frequency = 900;
+
+        assert_ok!(SmartContractModule::change_billing_frequency(
+            RawOrigin::Root.into(),
+            new_frequency
+        ));
+
+        assert_eq!(SmartContractModule::billing_frequency(), new_frequency);
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::BillingFrequencyChanged(new_frequency)
+            ))),
+            true
+        );
+    })
+}
+
+#[test]
+fn test_change_billing_frequency_fails_if_frequency_lower() {
+    new_test_ext().execute_with(|| {
+        let initial_frequency = SmartContractModule::billing_frequency();
+        let new_frequency = initial_frequency - 1;
+
+        assert_noop!(
+            SmartContractModule::change_billing_frequency(RawOrigin::Root.into(), new_frequency),
+            Error::<TestRuntime>::CanOnlyIncreaseFrequency
+        );
+
+        assert_eq!(initial_frequency, SmartContractModule::billing_frequency());
     })
 }
 
@@ -2511,7 +3162,7 @@ fn push_nru_report_for_contract(contract_id: u64, block_number: u64) {
     consumption_reports.push(super::types::NruConsumption {
         contract_id,
         nru: 3 * gigabyte,
-        timestamp: 1628082000 + (6 * block_number),
+        timestamp: get_timestamp_in_seconds_for_block(block_number),
         window: 6 * block_number,
     });
 
@@ -2547,16 +3198,16 @@ fn check_report_cost(
 ) {
     let our_events = System::events();
 
-    let contract_bill_event = types::ContractBill {
+    let contract_bill = types::ContractBill {
         contract_id,
-        timestamp: 1628082000 + (6 * block_number),
+        timestamp: get_timestamp_in_seconds_for_block(block_number),
         discount_level,
         amount_billed: amount_billed as u128,
     };
 
     assert_eq!(
         our_events.contains(&record(MockEvent::SmartContractModule(
-            SmartContractEvent::<TestRuntime>::ContractBilled(contract_bill_event)
+            SmartContractEvent::<TestRuntime>::ContractBilled(contract_bill)
         ))),
         true
     );
@@ -2645,7 +3296,7 @@ pub fn prepare_farm(source: AccountId, dedicated: bool) {
 }
 
 pub fn prepare_farm_and_node() {
-    TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+    TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
     create_farming_policies();
     prepare_twins();
@@ -2680,7 +3331,7 @@ pub fn prepare_farm_and_node() {
 }
 
 pub fn prepare_dedicated_farm_and_node() {
-    TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 50, 101).unwrap();
+    TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
     create_farming_policies();
     prepare_twins();
     prepare_farm(alice(), true);
@@ -2829,4 +3480,65 @@ fn get_deployment_data() -> crate::DeploymentDataInput<TestRuntime> {
         "some_data".as_bytes().to_vec(),
     )
     .unwrap()
+}
+
+fn create_service_consumer_contract() {
+    create_twin(alice());
+    create_twin(bob());
+
+    // create contract between service (Alice) and consumer (Bob)
+    assert_ok!(SmartContractModule::service_contract_create(
+        RuntimeOrigin::signed(alice()),
+        alice(),
+        bob(),
+    ));
+}
+
+fn prepare_service_consumer_contract() {
+    create_service_consumer_contract();
+
+    assert_ok!(SmartContractModule::service_contract_set_metadata(
+        RuntimeOrigin::signed(alice()),
+        1,
+        b"some_metadata".to_vec(),
+    ));
+
+    assert_ok!(SmartContractModule::service_contract_set_fees(
+        RuntimeOrigin::signed(alice()),
+        1,
+        BASE_FEE,
+        VARIABLE_FEE,
+    ));
+}
+
+fn approve_service_consumer_contract() {
+    // Service approves
+    assert_ok!(SmartContractModule::service_contract_approve(
+        RuntimeOrigin::signed(alice()),
+        1,
+    ));
+    // Consumer approves
+    assert_ok!(SmartContractModule::service_contract_approve(
+        RuntimeOrigin::signed(bob()),
+        1,
+    ));
+}
+
+fn get_service_contract() -> types::ServiceContract {
+    types::ServiceContract {
+        service_contract_id: 1,
+        service_twin_id: 1,  //Alice
+        consumer_twin_id: 2, //Bob
+        base_fee: 0,
+        variable_fee: 0,
+        metadata: bounded_vec![],
+        accepted_by_service: false,
+        accepted_by_consumer: false,
+        last_bill: 0,
+        state: types::ServiceContractState::Created,
+    }
+}
+
+fn get_timestamp_in_seconds_for_block(block_number: u64) -> u64 {
+    1628082000 + (6 * block_number)
 }

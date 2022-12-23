@@ -18,13 +18,12 @@ use pallet_tfgrid::{
     node::{Location, SerialNumber},
     terms_cond::TermsAndConditions,
     twin::TwinIp,
-    DocumentHashInput, DocumentLinkInput, TwinIpInput,
-};
-use pallet_tfgrid::{
-    CityNameInput, CountryNameInput, Gw4Input, Ip4Input, LatitudeInput, LongitudeInput,
+    CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, Gw4Input, Ip4Input,
+    LatitudeInput, LongitudeInput, TwinIpInput,
 };
 use parking_lot::RwLock;
 use sp_core::{
+    crypto::key_types::DUMMY,
     crypto::Ss58Codec,
     offchain::{
         testing::{self},
@@ -34,18 +33,58 @@ use sp_core::{
 };
 use sp_keystore::{testing::KeyStore, KeystoreExt, SyncCryptoStore};
 use sp_runtime::{
+    impl_opaque_keys,
     offchain::TransactionPool,
-    testing::{Header, TestXt},
-    traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentifyAccount, IdentityLookup, Verify},
+    testing::{Header, TestXt, UintAuthorityId},
+    traits::{
+        BlakeTwo256, Extrinsic as ExtrinsicT, IdentifyAccount, IdentityLookup, OpaqueKeys, Verify,
+    },
     AccountId32, MultiSignature,
 };
 use sp_std::convert::{TryFrom, TryInto};
-use std::{panic, thread};
+use sp_std::marker::PhantomData;
+use std::{cell::RefCell, panic, thread};
 use tfchain_support::{
-    traits::{ChangeNode, PublicIpModifier},
-    types::PublicIP,
+    constants::time::{MINUTES, SECS_PER_HOUR},
+    traits::ChangeNode,
 };
 
+impl_opaque_keys! {
+    pub struct MockSessionKeys {
+        pub dummy: UintAuthorityId,
+    }
+}
+
+impl From<UintAuthorityId> for MockSessionKeys {
+    fn from(dummy: UintAuthorityId) -> Self {
+        Self { dummy }
+    }
+}
+
+pub const KEY_ID_A: KeyTypeId = KeyTypeId([4; 4]);
+pub const KEY_ID_B: KeyTypeId = KeyTypeId([9; 4]);
+
+#[derive(Debug, Clone, codec::Encode, codec::Decode, PartialEq, Eq)]
+pub struct PreUpgradeMockSessionKeys {
+    pub a: [u8; 32],
+    pub b: [u8; 64],
+}
+
+impl OpaqueKeys for PreUpgradeMockSessionKeys {
+    type KeyTypeIdProviders = ();
+
+    fn key_ids() -> &'static [KeyTypeId] {
+        &[KEY_ID_A, KEY_ID_B]
+    }
+
+    fn get_raw(&self, i: KeyTypeId) -> &[u8] {
+        match i {
+            i if i == KEY_ID_A => &self.a[..],
+            i if i == KEY_ID_B => &self.b[..],
+            _ => &[],
+        }
+    }
+}
 // set environment variable RUST_LOG=debug to see all logs when running the tests and call
 // env_logger::init() at the beginning of the test
 use env_logger;
@@ -70,7 +109,10 @@ construct_runtime!(
         TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         SmartContractModule: pallet_smart_contract::{Pallet, Call, Storage, Event<T>},
-        TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Event<T>}
+        TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Event<T>},
+        Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
+        ValidatorSet: substrate_validator_set::{Pallet, Call, Storage, Event<T>, Config<T>},
+        Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
     }
 );
 
@@ -206,11 +248,13 @@ impl pallet_timestamp::Config for TestRuntime {
 
 parameter_types! {
     pub const BillingFrequency: u64 = 10;
+    pub const BillingReferencePeriod: u64 = SECS_PER_HOUR;
     pub const GracePeriod: u64 = 100;
     pub const DistributionFrequency: u16 = 24;
     pub const MaxNameContractNameLength: u32 = 64;
     pub const MaxNodeContractPublicIPs: u32 = 512;
     pub const MaxDeploymentDataLength: u32 = 512;
+    pub const SecondsPerHour: u64 = 3600;
 }
 
 pub(crate) type TestNameContractName = NameContractName<TestRuntime>;
@@ -222,6 +266,7 @@ impl pallet_smart_contract::Config for TestRuntime {
     type Burn = ();
     type StakingPoolAccount = StakingPoolAccount;
     type BillingFrequency = BillingFrequency;
+    type BillingReferencePeriod = BillingReferencePeriod;
     type DistributionFrequency = DistributionFrequency;
     type GracePeriod = GracePeriod;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
@@ -234,6 +279,83 @@ impl pallet_smart_contract::Config for TestRuntime {
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
     type Call = RuntimeCall;
     type PublicIpModifier = PublicIpModifierType;
+}
+
+parameter_types! {
+    pub const UncleGenerations: u32 = 0;
+}
+
+impl pallet_authorship::Config for TestRuntime {
+    type FindAuthor = ();
+    type UncleGenerations = UncleGenerations;
+    type FilterUncle = ();
+    type EventHandler = ();
+}
+
+parameter_types! {
+    pub const Period: u32 = 60 * MINUTES;
+    pub const Offset: u32 = 0;
+}
+
+thread_local! {
+    pub static VALIDATORS: RefCell<Vec<u64>> = RefCell::new(vec![1, 2, 3]);
+    pub static NEXT_VALIDATORS: RefCell<Vec<u64>> = RefCell::new(vec![1, 2, 3]);
+    pub static AUTHORITIES: RefCell<Vec<UintAuthorityId>> =
+        RefCell::new(vec![UintAuthorityId(1), UintAuthorityId(2), UintAuthorityId(3)]);
+    pub static FORCE_SESSION_END: RefCell<bool> = RefCell::new(false);
+    pub static SESSION_LENGTH: RefCell<u64> = RefCell::new(2);
+    pub static SESSION_CHANGED: RefCell<bool> = RefCell::new(false);
+    pub static DISABLED: RefCell<bool> = RefCell::new(false);
+    pub static BEFORE_SESSION_END_CALLED: RefCell<bool> = RefCell::new(false);
+}
+
+use pallet_session::SessionHandler;
+use sp_runtime::RuntimeAppPublic;
+pub struct TestSessionHandler;
+impl SessionHandler<AccountId> for TestSessionHandler {
+    const KEY_TYPE_IDS: &'static [sp_runtime::KeyTypeId] = &[UintAuthorityId::ID];
+    fn on_genesis_session<T: OpaqueKeys>(_validators: &[(AccountId, T)]) {}
+    fn on_new_session<T: OpaqueKeys>(
+        changed: bool,
+        validators: &[(AccountId, T)],
+        _queued_validators: &[(AccountId, T)],
+    ) {
+        SESSION_CHANGED.with(|l| *l.borrow_mut() = changed);
+        AUTHORITIES.with(|l| {
+            *l.borrow_mut() = validators
+                .iter()
+                .map(|(_, id)| id.get::<UintAuthorityId>(DUMMY).unwrap_or_default())
+                .collect()
+        });
+    }
+    fn on_disabled(_validator_index: u32) {
+        DISABLED.with(|l| *l.borrow_mut() = true)
+    }
+    fn on_before_session_ending() {
+        BEFORE_SESSION_END_CALLED.with(|b| *b.borrow_mut() = true);
+    }
+}
+
+parameter_types! {
+    pub const MinAuthorities: u32 = 2;
+}
+
+impl substrate_validator_set::Config for TestRuntime {
+    type AddRemoveOrigin = EnsureRoot<Self::AccountId>;
+    type RuntimeEvent = RuntimeEvent;
+    type MinAuthorities = MinAuthorities;
+}
+
+impl pallet_session::Config for TestRuntime {
+    type RuntimeEvent = RuntimeEvent;
+    type ValidatorId = <Self as frame_system::Config>::AccountId;
+    type ValidatorIdOf = substrate_validator_set::ValidatorOf<Self>;
+    type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
+    type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
+    type SessionManager = ();
+    type SessionHandler = TestSessionHandler;
+    type Keys = MockSessionKeys;
+    type WeightInfo = ();
 }
 
 type AccountPublic = <MultiSignature as Verify>::Signer;
@@ -364,10 +486,15 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     };
     genesis.assimilate_storage(&mut storage).unwrap();
 
+    let session_genesis = pallet_session::GenesisConfig::<TestRuntime> {
+        keys: vec![(alice(), alice(), MockSessionKeys::from(UintAuthorityId(1)))],
+    };
+    session_genesis.assimilate_storage(&mut storage).unwrap();
+
     let genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
-        allowed_origin: Some(bob()),
         min_tft_price: 10,
         max_tft_price: 1000,
+        _data: PhantomData,
     };
     genesis.assimilate_storage(&mut storage).unwrap();
 

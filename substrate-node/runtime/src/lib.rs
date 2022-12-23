@@ -27,6 +27,7 @@ use sp_std::{cmp::Ordering, prelude::*};
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use tfchain_support::{
+    constants::time::*,
     traits::{ChangeNode, PublicIpModifier},
     types::PublicIP,
 };
@@ -144,31 +145,12 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 119,
+    spec_version: 122,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
     state_version: 0,
 };
-
-/// This determines the average expected block time that we are targeting.
-/// Blocks will be produced at a minimum duration defined by `SLOT_DURATION`.
-/// `SLOT_DURATION` is picked up by `pallet_timestamp` which is in turn picked
-/// up by `pallet_aura` to implement `fn slot_duration()`.
-///
-/// Change this to adjust the block time.
-pub const MILLISECS_PER_BLOCK: u64 = 6000;
-
-pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
-
-// Time is measured by number of blocks.
-pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
-pub const HOURS: BlockNumber = MINUTES * 60;
-pub const DAYS: BlockNumber = HOURS * 24;
-
-// Polkadot v0.9.31 introduces the new field proof_size in the Weight struct
-// https://substrate.stackexchange.com/questions/5557/construct-runtime-integrity-test-failing
-pub const MAX_POV_SIZE: u64 = u64::MAX;
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -389,6 +371,7 @@ impl pallet_tfgrid::Config for Runtime {
 parameter_types! {
     pub StakingPoolAccount: AccountId = get_staking_pool_account();
     pub BillingFrequency: u64 = 600;
+    pub BillingReferencePeriod: u64 = SECS_PER_HOUR;
     pub GracePeriod: u64 = (14 * DAYS).into();
     pub DistributionFrequency: u16 = 24;
     pub RetryInterval: u32 = 20;
@@ -409,6 +392,7 @@ impl pallet_smart_contract::Config for Runtime {
     type Currency = Balances;
     type StakingPoolAccount = StakingPoolAccount;
     type BillingFrequency = BillingFrequency;
+    type BillingReferencePeriod = BillingReferencePeriod;
     type DistributionFrequency = DistributionFrequency;
     type GracePeriod = GracePeriod;
     type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
@@ -784,6 +768,27 @@ pub type Executive = frame_executive::Executive<
     ),
 >;
 
+// follows Substrate's non destructive way of eliminating  otherwise required
+// repetion: https://github.com/paritytech/substrate/pull/10592
+#[cfg(feature = "runtime-benchmarks")]
+#[macro_use]
+extern crate frame_benchmarking;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benches {
+    define_benchmarks!(
+        // KILT
+        [pallet_smart_contract, SmartContractModule]
+        // Substrate
+        [frame_benchmarking::baseline, Baseline::<Runtime>]
+        [frame_system, SystemBench::<Runtime>]
+        // [pallet_session, Session]
+        [pallet_balances, Balances]
+        [pallet_collective, Council]
+        [pallet_timestamp, Timestamp]
+    );
+}
+
 impl_runtime_apis! {
     impl sp_api::Core<Block> for Runtime {
         fn version() -> RuntimeVersion {
@@ -923,13 +928,33 @@ impl_runtime_apis! {
 
     #[cfg(feature = "runtime-benchmarks")]
     impl frame_benchmarking::Benchmark<Block> for Runtime {
+        fn benchmark_metadata(extra: bool) -> (
+            Vec<frame_benchmarking::BenchmarkList>,
+            Vec<frame_support::traits::StorageInfo>,
+        ) {
+            use frame_benchmarking::{Benchmarking, BenchmarkList};
+            use frame_support::traits::StorageInfoTrait;
+
+            use frame_system_benchmarking::Pallet as SystemBench;
+            use frame_benchmarking::baseline::Pallet as Baseline;
+
+            let mut list = Vec::<BenchmarkList>::new();
+            list_benchmarks!(list, extra);
+
+            let storage_info = AllPalletsWithSystem::storage_info();
+
+            (list, storage_info)
+        }
+
         fn dispatch_benchmark(
             config: frame_benchmarking::BenchmarkConfig
         ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-            use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
+            use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
+            use frame_system_benchmarking::Pallet as SystemBench;
+            use frame_benchmarking::baseline::Pallet as Baseline;
 
-            use frame_system_benchmarking::Module as SystemBench;
             impl frame_system_benchmarking::Config for Runtime {}
+            impl frame_benchmarking::baseline::Config for Runtime {}
 
             let whitelist: Vec<TrackedStorageKey> = vec![
                 // Block Number
@@ -952,12 +977,7 @@ impl_runtime_apis! {
             let mut batches = Vec::<BenchmarkBatch>::new();
             let params = (&config, &whitelist);
 
-            add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
-            add_benchmark!(params, batches, pallet_balances, Balances);
-            add_benchmark!(params, batches, pallet_timestamp, Timestamp);
-            add_benchmark!(params, batches, pallet_tfgrid, TfgridModule);
-            add_benchmark!(params, batches, pallet_smart_contract, SmartContractModule);
-            add_benchmark!(params, batches, pallet_dao, Dao);
+            add_benchmarks!(params, batches);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)

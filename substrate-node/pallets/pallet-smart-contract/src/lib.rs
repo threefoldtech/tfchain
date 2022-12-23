@@ -1,9 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use sp_std::prelude::*;
-
 use frame_support::{
-    dispatch::{DispatchErrorWithPostInfo, Pays},
+    dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo, Pays},
     ensure,
     log::info,
     pallet_prelude::DispatchResult,
@@ -11,29 +9,32 @@ use frame_support::{
         Currency, EnsureOrigin, ExistenceRequirement, ExistenceRequirement::KeepAlive, Get,
         LockableCurrency, OnUnbalanced, WithdrawReasons,
     },
-    BoundedVec,
+    transactional, BoundedVec,
 };
 use frame_system::{
     self as system, ensure_signed,
     offchain::{AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer},
 };
 pub use pallet::*;
+use pallet_authorship;
 use pallet_tfgrid;
 use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf, TfgridNode};
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_timestamp as timestamp;
 use sp_core::crypto::KeyTypeId;
 use sp_runtime::{
-    traits::{CheckedSub, SaturatedConversion},
+    traits::{CheckedSub, Convert, SaturatedConversion},
     Perbill,
 };
+use sp_std::prelude::*;
 use substrate_fixed::types::U64F64;
+use system::offchain::SignMessage;
 use tfchain_support::{
     traits::{ChangeNode, PublicIpModifier},
     types::PublicIP,
 };
 
-pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"smct");
+pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"aura");
 
 #[cfg(test)]
 mod mock;
@@ -43,6 +44,9 @@ mod tests;
 
 #[cfg(test)]
 mod test_utils;
+
+#[cfg(feature = "runtime-benchmarks")]
+pub mod benchmarking;
 
 pub mod crypto {
     use crate::KEY_TYPE;
@@ -83,17 +87,13 @@ pub mod weights;
 
 #[frame_support::pallet]
 pub mod pallet {
-
     use super::types::*;
     use super::weights::WeightInfo;
     use super::*;
     use codec::FullCodec;
     use frame_support::pallet_prelude::*;
     use frame_support::traits::Hooks;
-    use frame_support::{
-        dispatch::DispatchResultWithPostInfo,
-        traits::{Currency, Get, LockIdentifier, LockableCurrency, OnUnbalanced},
-    };
+    use frame_support::traits::{Currency, Get, LockIdentifier, LockableCurrency, OnUnbalanced};
     use frame_system::pallet_prelude::*;
     use sp_core::H256;
     use sp_std::{
@@ -118,6 +118,7 @@ pub mod pallet {
     // Version constant that referenced the struct version
     pub const CONTRACT_VERSION: u32 = 4;
 
+    pub type BillingReferencePeriod<T> = <T as Config>::BillingReferencePeriod;
     pub type MaxNodeContractPublicIPs<T> = <T as Config>::MaxNodeContractPublicIps;
     pub type MaxDeploymentDataLength<T> = <T as Config>::MaxDeploymentDataLength;
     pub type DeploymentDataInput<T> = BoundedVec<u8, MaxDeploymentDataLength<T>>;
@@ -198,6 +199,15 @@ pub mod pallet {
     #[pallet::getter(fn billing_frequency)]
     pub type BillingFrequency<T> = StorageValue<_, u64, ValueQuery, DefaultBillingFrequency<T>>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn service_contracts)]
+    pub type ServiceContracts<T: Config> =
+        StorageMap<_, Blake2_128Concat, u64, ServiceContract, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn service_contract_id)]
+    pub type ServiceContractID<T> = StorageValue<_, u64, ValueQuery>;
+
     #[pallet::config]
     pub trait Config:
         CreateSignedTransaction<Call<Self>>
@@ -206,6 +216,8 @@ pub mod pallet {
         + pallet_balances::Config
         + pallet_tfgrid::Config
         + pallet_tft_price::Config
+        + pallet_authorship::Config
+        + pallet_session::Config
     {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type Currency: LockableCurrency<Self::AccountId>;
@@ -213,6 +225,7 @@ pub mod pallet {
         type Burn: OnUnbalanced<NegativeImbalanceOf<Self>>;
         type StakingPoolAccount: Get<Self::AccountId>;
         type BillingFrequency: Get<u64>;
+        type BillingReferencePeriod: Get<u64>;
         type DistributionFrequency: Get<u16>;
         type GracePeriod: Get<u64>;
         type WeightInfo: WeightInfo;
@@ -304,6 +317,24 @@ pub mod pallet {
         },
         SolutionProviderCreated(types::SolutionProvider<T::AccountId>),
         SolutionProviderApproved(u64, bool),
+        /// A Service contract is created
+        ServiceContractCreated(types::ServiceContract),
+        /// A Service contract is approved
+        ServiceContractApproved {
+            service_contract_id: u64,
+        },
+        /// A Service contract is canceled
+        ServiceContractCanceled {
+            service_contract_id: u64,
+            cause: types::Cause,
+        },
+        /// A Service contract is billed
+        ServiceContractBilled {
+            service_contract_id: u64,
+            bill: types::ServiceContractBill,
+            amount: BalanceOf<T>,
+        },
+        BillingFrequencyChanged(u64),
     }
 
     #[pallet::error]
@@ -335,12 +366,28 @@ pub mod pallet {
         NodeNotAvailableToDeploy,
         CannotUpdateContractInGraceState,
         NumOverflow,
-        OffchainSignedTxError,
+        OffchainSignedTxCannotSign,
+        OffchainSignedTxAlreadySent,
+        OffchainSignedTxNoLocalAccountAvailable,
         NameContractNameTooShort,
         NameContractNameTooLong,
         InvalidProviderConfiguration,
         NoSuchSolutionProvider,
         SolutionProviderNotApproved,
+        TwinNotAuthorized,
+        ServiceContractNotExists,
+        ServiceContractCreationNotAllowed,
+        ServiceContractModificationNotAllowed,
+        ServiceContractApprovalNotAllowed,
+        ServiceContractRejectionNotAllowed,
+        ServiceContractBillingNotApprovedByBoth,
+        ServiceContractBillingVariableAmountTooHigh,
+        ServiceContractBillMetadataTooLong,
+        ServiceContractMetadataTooLong,
+        ServiceContractNotEnoughFundsToPayBill,
+        CanOnlyIncreaseFrequency,
+        IsNotAnAuthority,
+        WrongAuthority,
     }
 
     #[pallet::genesis_config]
@@ -368,7 +415,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::call_index(0)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::create_node_contract())]
         pub fn create_node_contract(
             origin: OriginFor<T>,
             node_id: u32,
@@ -432,7 +479,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(5)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::add_nru_reports())]
         pub fn add_nru_reports(
             origin: OriginFor<T>,
             reports: Vec<types::NruConsumption>,
@@ -486,13 +533,112 @@ pub mod pallet {
         }
 
         #[pallet::call_index(10)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::bill_contract_for_block())]
         pub fn bill_contract_for_block(
             origin: OriginFor<T>,
             contract_id: u64,
         ) -> DispatchResultWithPostInfo {
             let _account_id = ensure_signed(origin)?;
             Self::bill_contract(contract_id)
+        }
+
+        #[pallet::call_index(11)]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        pub fn service_contract_create(
+            origin: OriginFor<T>,
+            service_account: T::AccountId,
+            consumer_account: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            let caller_account = ensure_signed(origin)?;
+            Self::_service_contract_create(caller_account, service_account, consumer_account)
+        }
+
+        #[pallet::call_index(12)]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        pub fn service_contract_set_metadata(
+            origin: OriginFor<T>,
+            service_contract_id: u64,
+            metadata: Vec<u8>,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_service_contract_set_metadata(account_id, service_contract_id, metadata)
+        }
+
+        #[pallet::call_index(13)]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        pub fn service_contract_set_fees(
+            origin: OriginFor<T>,
+            service_contract_id: u64,
+            base_fee: u64,
+            variable_fee: u64,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_service_contract_set_fees(
+                account_id,
+                service_contract_id,
+                base_fee,
+                variable_fee,
+            )
+        }
+
+        #[pallet::call_index(14)]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        pub fn service_contract_approve(
+            origin: OriginFor<T>,
+            service_contract_id: u64,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_service_contract_approve(account_id, service_contract_id)
+        }
+
+        #[pallet::call_index(15)]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        pub fn service_contract_reject(
+            origin: OriginFor<T>,
+            service_contract_id: u64,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_service_contract_reject(account_id, service_contract_id)
+        }
+
+        #[pallet::call_index(16)]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        pub fn service_contract_cancel(
+            origin: OriginFor<T>,
+            service_contract_id: u64,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+
+            let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
+                .ok_or(Error::<T>::TwinNotExists)?;
+
+            Self::_service_contract_cancel(
+                twin_id,
+                service_contract_id,
+                types::Cause::CanceledByUser,
+            )
+        }
+
+        #[pallet::call_index(17)]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        pub fn service_contract_bill(
+            origin: OriginFor<T>,
+            service_contract_id: u64,
+            variable_amount: u64,
+            metadata: Vec<u8>,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_service_contract_bill(account_id, service_contract_id, variable_amount, metadata)
+        }
+
+        #[pallet::call_index(18)]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        pub fn change_billing_frequency(
+            origin: OriginFor<T>,
+            frequency: u64,
+        ) -> DispatchResultWithPostInfo {
+            <T as Config>::RestrictedOrigin::ensure_origin(origin)?;
+            Self::_change_billing_frequency(frequency)
         }
     }
 
@@ -528,7 +674,6 @@ pub mod pallet {
 }
 
 use crate::types::HexHash;
-use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 use pallet::NameContractNameOf;
 use sp_std::convert::{TryFrom, TryInto};
 // Internal functions of the pallet
@@ -917,7 +1062,8 @@ impl<T: Config> Pallet<T> {
         // calculate NRU used and the cost
         let used_nru = U64F64::from_num(report.nru) / pricing_policy.nu.factor_base_1000();
         let nu_cost = used_nru
-            * (U64F64::from_num(pricing_policy.nu.value) / 3600)
+            * (U64F64::from_num(pricing_policy.nu.value)
+                / U64F64::from_num(T::BillingReferencePeriod::get()))
             * U64F64::from_num(seconds_elapsed);
         log::info!("nu cost: {:?}", nu_cost);
 
@@ -933,12 +1079,16 @@ impl<T: Config> Pallet<T> {
 
     fn bill_contract_using_signed_transaction(contract_id: u64) -> Result<(), Error<T>> {
         let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::any_account();
+
+        // Only allow the author of the next block to trigger the billing
+        Self::is_next_block_author(&signer)?;
+
         if !signer.can_sign() {
             log::error!(
                 "failed billing contract {:?} account cannot be used to sign transaction",
                 contract_id,
             );
-            return Err(<Error<T>>::OffchainSignedTxError);
+            return Err(<Error<T>>::OffchainSignedTxCannotSign);
         }
         let result =
             signer.send_signed_transaction(|_acct| Call::bill_contract_for_block { contract_id });
@@ -954,12 +1104,12 @@ impl<T: Config> Pallet<T> {
                     contract_id,
                     acc.id
                 );
-                return Err(<Error<T>>::OffchainSignedTxError);
+                return Err(<Error<T>>::OffchainSignedTxAlreadySent);
             }
             return Ok(());
         }
         log::error!("No local account available");
-        return Err(<Error<T>>::OffchainSignedTxError);
+        return Err(<Error<T>>::OffchainSignedTxNoLocalAccountAvailable);
     }
 
     // Bills a contract (NodeContract or NameContract)
@@ -1714,6 +1864,398 @@ impl<T: Config> Pallet<T> {
         let now = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
         now % BillingFrequency::<T>::get()
     }
+
+    pub fn _service_contract_create(
+        caller: T::AccountId,
+        service: T::AccountId,
+        consumer: T::AccountId,
+    ) -> DispatchResultWithPostInfo {
+        let caller_twin_id =
+            pallet_tfgrid::TwinIdByAccountID::<T>::get(&caller).ok_or(Error::<T>::TwinNotExists)?;
+
+        let service_twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&service)
+            .ok_or(Error::<T>::TwinNotExists)?;
+
+        let consumer_twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&consumer)
+            .ok_or(Error::<T>::TwinNotExists)?;
+
+        // Only service or consumer can create contract
+        ensure!(
+            caller_twin_id == service_twin_id || caller_twin_id == consumer_twin_id,
+            Error::<T>::TwinNotAuthorized,
+        );
+
+        // Service twin and consumer twin can not be the same
+        ensure!(
+            service_twin_id != consumer_twin_id,
+            Error::<T>::ServiceContractCreationNotAllowed,
+        );
+
+        // Get the service contract ID map and increment
+        let mut id = ServiceContractID::<T>::get();
+        id = id + 1;
+
+        // Create service contract
+        let service_contract = types::ServiceContract {
+            service_contract_id: id,
+            service_twin_id,
+            consumer_twin_id,
+            base_fee: 0,
+            variable_fee: 0,
+            metadata: vec![].try_into().unwrap(),
+            accepted_by_service: false,
+            accepted_by_consumer: false,
+            last_bill: 0,
+            state: types::ServiceContractState::Created,
+        };
+
+        // Insert into service contract map
+        ServiceContracts::<T>::insert(id, &service_contract);
+
+        // Update Contract ID
+        ServiceContractID::<T>::put(id);
+
+        // Trigger event for service contract creation
+        Self::deposit_event(Event::ServiceContractCreated(service_contract));
+
+        Ok(().into())
+    }
+
+    pub fn _service_contract_set_metadata(
+        account_id: T::AccountId,
+        service_contract_id: u64,
+        metadata: Vec<u8>,
+    ) -> DispatchResultWithPostInfo {
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
+            .ok_or(Error::<T>::TwinNotExists)?;
+
+        let mut service_contract = ServiceContracts::<T>::get(service_contract_id)
+            .ok_or(Error::<T>::ServiceContractNotExists)?;
+
+        // Only service or consumer can set metadata
+        ensure!(
+            twin_id == service_contract.service_twin_id
+                || twin_id == service_contract.consumer_twin_id,
+            Error::<T>::TwinNotAuthorized,
+        );
+
+        // Only allow to modify metadata if contract still not approved by both parties
+        ensure!(
+            !matches!(
+                service_contract.state,
+                types::ServiceContractState::ApprovedByBoth
+            ),
+            Error::<T>::ServiceContractModificationNotAllowed,
+        );
+
+        service_contract.metadata = BoundedVec::try_from(metadata)
+            .map_err(|_| Error::<T>::ServiceContractMetadataTooLong)?;
+
+        // If base_fee is set and non-zero (mandatory)
+        if service_contract.base_fee != 0 {
+            service_contract.state = types::ServiceContractState::AgreementReady;
+        }
+
+        // Update service contract in map after modification
+        ServiceContracts::<T>::insert(service_contract_id, service_contract);
+
+        Ok(().into())
+    }
+
+    pub fn _service_contract_set_fees(
+        account_id: T::AccountId,
+        service_contract_id: u64,
+        base_fee: u64,
+        variable_fee: u64,
+    ) -> DispatchResultWithPostInfo {
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
+            .ok_or(Error::<T>::TwinNotExists)?;
+
+        let mut service_contract = ServiceContracts::<T>::get(service_contract_id)
+            .ok_or(Error::<T>::ServiceContractNotExists)?;
+
+        // Only service can set fees
+        ensure!(
+            twin_id == service_contract.service_twin_id,
+            Error::<T>::TwinNotAuthorized,
+        );
+
+        // Only allow to modify fees if contract still not approved by both parties
+        ensure!(
+            !matches!(
+                service_contract.state,
+                types::ServiceContractState::ApprovedByBoth
+            ),
+            Error::<T>::ServiceContractModificationNotAllowed,
+        );
+
+        service_contract.base_fee = base_fee;
+        service_contract.variable_fee = variable_fee;
+
+        // If metadata is filled and not empty (mandatory)
+        if !service_contract.metadata.is_empty() {
+            service_contract.state = types::ServiceContractState::AgreementReady;
+        }
+
+        // Update service contract in map after modification
+        ServiceContracts::<T>::insert(service_contract_id, service_contract);
+
+        Ok(().into())
+    }
+
+    pub fn _service_contract_approve(
+        account_id: T::AccountId,
+        service_contract_id: u64,
+    ) -> DispatchResultWithPostInfo {
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
+            .ok_or(Error::<T>::TwinNotExists)?;
+
+        let mut service_contract = ServiceContracts::<T>::get(service_contract_id)
+            .ok_or(Error::<T>::ServiceContractNotExists)?;
+
+        // Allow to approve contract only if agreement is ready
+        ensure!(
+            matches!(
+                service_contract.state,
+                types::ServiceContractState::AgreementReady
+            ),
+            Error::<T>::ServiceContractApprovalNotAllowed,
+        );
+
+        // Only service or consumer can accept agreement
+        if twin_id == service_contract.service_twin_id {
+            service_contract.accepted_by_service = true;
+        } else if twin_id == service_contract.consumer_twin_id {
+            service_contract.accepted_by_consumer = true
+        } else {
+            return Err(DispatchErrorWithPostInfo::from(
+                Error::<T>::TwinNotAuthorized,
+            ));
+        }
+
+        // If both parties (service and consumer) accept then contract is approved and can be billed
+        if service_contract.accepted_by_service && service_contract.accepted_by_consumer {
+            // Change contract state to approved and emit event
+            service_contract.state = types::ServiceContractState::ApprovedByBoth;
+
+            // Trigger event for service contract approval
+            Self::deposit_event(Event::ServiceContractApproved {
+                service_contract_id,
+            });
+            // Initialize billing time
+            let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+            service_contract.last_bill = now;
+        }
+
+        // Update service contract in map after modification
+        ServiceContracts::<T>::insert(service_contract_id, service_contract);
+
+        Ok(().into())
+    }
+
+    pub fn _service_contract_reject(
+        account_id: T::AccountId,
+        service_contract_id: u64,
+    ) -> DispatchResultWithPostInfo {
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
+            .ok_or(Error::<T>::TwinNotExists)?;
+
+        let service_contract = ServiceContracts::<T>::get(service_contract_id)
+            .ok_or(Error::<T>::ServiceContractNotExists)?;
+
+        // Only service or consumer can reject agreement
+        ensure!(
+            twin_id == service_contract.service_twin_id
+                || twin_id == service_contract.consumer_twin_id,
+            Error::<T>::TwinNotAuthorized,
+        );
+
+        // Allow to reject contract only if agreement is ready
+        ensure!(
+            matches!(
+                service_contract.state,
+                types::ServiceContractState::AgreementReady
+            ),
+            Error::<T>::ServiceContractRejectionNotAllowed,
+        );
+
+        // If one party (service or consumer) rejects agreement
+        // then contract is canceled and removed from service contract map
+        Self::_service_contract_cancel(twin_id, service_contract_id, types::Cause::CanceledByUser)?;
+
+        Ok(().into())
+    }
+
+    pub fn _service_contract_cancel(
+        twin_id: u32,
+        service_contract_id: u64,
+        cause: types::Cause,
+    ) -> DispatchResultWithPostInfo {
+        let service_contract = ServiceContracts::<T>::get(service_contract_id)
+            .ok_or(Error::<T>::ServiceContractNotExists)?;
+
+        // Only service or consumer can cancel contract
+        ensure!(
+            twin_id == service_contract.service_twin_id
+                || twin_id == service_contract.consumer_twin_id,
+            Error::<T>::TwinNotAuthorized,
+        );
+
+        // Remove contract from service contract map
+        // Can be done at any state of contract
+        // so no need to handle state validation
+        ServiceContracts::<T>::remove(service_contract_id);
+
+        // Trigger event for service contract cancelation
+        Self::deposit_event(Event::ServiceContractCanceled {
+            service_contract_id,
+            cause,
+        });
+
+        log::info!(
+            "successfully removed service contract with id {:?}",
+            service_contract_id,
+        );
+
+        Ok(().into())
+    }
+
+    #[transactional]
+    pub fn _service_contract_bill(
+        account_id: T::AccountId,
+        service_contract_id: u64,
+        variable_amount: u64,
+        metadata: Vec<u8>,
+    ) -> DispatchResultWithPostInfo {
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
+            .ok_or(Error::<T>::TwinNotExists)?;
+
+        let mut service_contract = ServiceContracts::<T>::get(service_contract_id)
+            .ok_or(Error::<T>::ServiceContractNotExists)?;
+
+        // Only service can bill consumer for service contract
+        ensure!(
+            twin_id == service_contract.service_twin_id,
+            Error::<T>::TwinNotAuthorized,
+        );
+
+        // Allow to bill contract only if approved by both
+        ensure!(
+            matches!(
+                service_contract.state,
+                types::ServiceContractState::ApprovedByBoth
+            ),
+            Error::<T>::ServiceContractBillingNotApprovedByBoth,
+        );
+
+        // Get elapsed time (in seconds) to bill for service
+        let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+        let elapsed_seconds_since_last_bill = now - service_contract.last_bill;
+
+        // Billing time (window) is max 1h by design
+        // So extra time will not be billed
+        // It is the service responsability to bill on right frequency
+        let window = elapsed_seconds_since_last_bill.min(T::BillingReferencePeriod::get());
+
+        // Billing variable amount is bounded by contract variable fee
+        ensure!(
+            variable_amount
+                <= ((U64F64::from_num(window)
+                    / U64F64::from_num(T::BillingReferencePeriod::get()))
+                    * U64F64::from_num(service_contract.variable_fee))
+                .round()
+                .to_num::<u64>(),
+            Error::<T>::ServiceContractBillingVariableAmountTooHigh,
+        );
+
+        let bill_metadata = BoundedVec::try_from(metadata)
+            .map_err(|_| Error::<T>::ServiceContractBillMetadataTooLong)?;
+
+        // Create service contract bill
+        let service_contract_bill = types::ServiceContractBill {
+            variable_amount,
+            window,
+            metadata: bill_metadata,
+        };
+
+        // Make consumer pay for service contract bill
+        Self::_service_contract_pay_bill(service_contract_id, service_contract_bill)?;
+
+        // Update contract in list after modification
+        service_contract.last_bill = now;
+        ServiceContracts::<T>::insert(service_contract_id, service_contract);
+
+        Ok(().into())
+    }
+
+    // Pay a service contract bill
+    // Calculates how much TFT is due by the consumer and pay the amount to the service
+    fn _service_contract_pay_bill(
+        service_contract_id: u64,
+        bill: types::ServiceContractBill,
+    ) -> DispatchResultWithPostInfo {
+        let service_contract = ServiceContracts::<T>::get(service_contract_id)
+            .ok_or(Error::<T>::ServiceContractNotExists)?;
+        let amount = service_contract.calculate_bill_cost_tft::<T>(bill.clone())?;
+
+        let service_twin_id = service_contract.service_twin_id;
+        let service_twin =
+            pallet_tfgrid::Twins::<T>::get(service_twin_id).ok_or(Error::<T>::TwinNotExists)?;
+
+        let consumer_twin = pallet_tfgrid::Twins::<T>::get(service_contract.consumer_twin_id)
+            .ok_or(Error::<T>::TwinNotExists)?;
+
+        let usable_balance = Self::get_usable_balance(&consumer_twin.account_id);
+
+        // If consumer is out of funds then contract is canceled
+        // by service and removed from service contract map
+        if usable_balance < amount {
+            Self::_service_contract_cancel(
+                service_twin_id,
+                service_contract_id,
+                types::Cause::OutOfFunds,
+            )?;
+            return Err(DispatchErrorWithPostInfo::from(
+                Error::<T>::ServiceContractNotEnoughFundsToPayBill,
+            ));
+        }
+
+        // Transfer amount due from consumer account to service account
+        <T as Config>::Currency::transfer(
+            &consumer_twin.account_id,
+            &service_twin.account_id,
+            amount,
+            ExistenceRequirement::KeepAlive,
+        )?;
+
+        // Trigger event for service contract billing
+        Self::deposit_event(Event::ServiceContractBilled {
+            service_contract_id,
+            bill,
+            amount,
+        });
+
+        log::info!(
+            "bill successfully payed by consumer for service contract with id {:?}",
+            service_contract_id,
+        );
+
+        Ok(().into())
+    }
+
+    pub fn _change_billing_frequency(frequency: u64) -> DispatchResultWithPostInfo {
+        let billing_frequency = BillingFrequency::<T>::get();
+        ensure!(
+            frequency > billing_frequency,
+            Error::<T>::CanOnlyIncreaseFrequency
+        );
+
+        BillingFrequency::<T>::put(frequency);
+
+        Self::deposit_event(Event::BillingFrequencyChanged(frequency));
+
+        Ok(().into())
+    }
 }
 
 impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for Pallet<T> {
@@ -1766,5 +2308,44 @@ impl<T: Config> PublicIpModifier for Pallet<T> {
                 _ => {}
             }
         }
+    }
+}
+
+impl<T: Config> Pallet<T> {
+    // Validates if the given signer is the next block author based on the validators in session
+    // This can be used if an extrinsic should be refunded by the author in the same block
+    // It also requires that the keytype inserted for the offchain workers is the validator key
+    fn is_next_block_author(
+        signer: &Signer<T, <T as Config>::AuthorityId>,
+    ) -> Result<(), Error<T>> {
+        let author = <pallet_authorship::Pallet<T>>::author();
+        let validators = <pallet_session::Pallet<T>>::validators();
+
+        // Sign some arbitrary data in order to get the AccountId, maybe there is another way to do this?
+        let signed_message = signer.sign_message(&[0]);
+        if let Some(signed_message_data) = signed_message {
+            if let Some(block_author) = author {
+                let validator =
+                    <T as pallet_session::Config>::ValidatorIdOf::convert(block_author.clone())
+                        .ok_or(Error::<T>::IsNotAnAuthority)?;
+
+                let validator_count = validators.len();
+                let author_index = (validators.iter().position(|a| a == &validator).unwrap_or(0)
+                    + 1)
+                    % validator_count;
+
+                let signer_validator_account =
+                    <T as pallet_session::Config>::ValidatorIdOf::convert(
+                        signed_message_data.0.id.clone(),
+                    )
+                    .ok_or(Error::<T>::IsNotAnAuthority)?;
+
+                if signer_validator_account != validators[author_index] {
+                    return Err(Error::<T>::WrongAuthority);
+                }
+            }
+        }
+
+        Ok(().into())
     }
 }
