@@ -125,6 +125,7 @@ runtime-benchmarks = [
 try-runtime = [
     "frame-executive/try-runtime",
     "frame-try-runtime",
+    "frame-support/try-runtime",
     "frame-system/try-runtime",
     "pallet-aura/try-runtime",
     "pallet-balances/try-runtime",
@@ -134,7 +135,21 @@ try-runtime = [
     "pallet-timestamp/try-runtime",
     "pallet-transaction-payment/try-runtime",
     "pallet-smart-contract/try-runtime",
-    "pallet-tfgrid/try-runtime"
+    "pallet-tfgrid/try-runtime",
+    "validatorset/try-runtime",
+    "pallet-session/try-runtime",
+    "pallet-authorship/try-runtime",
+    "pallet-tft-bridge/try-runtime",
+    "pallet-tft-price/try-runtime",
+    "pallet-scheduler/try-runtime",
+    "pallet-burning/try-runtime",
+    "pallet-kvstore/try-runtime",
+    "pallet-collective/try-runtime",
+    "pallet-membership/try-runtime",
+    "pallet-runtime-upgrade/try-runtime",
+    "pallet-validator/try-runtime",
+    "pallet-dao/try-runtime",
+    "pallet-utility/try-runtime",
 ]
 std = [
     'codec/std',
