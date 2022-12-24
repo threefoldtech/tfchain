@@ -35,10 +35,7 @@ use tfchain_support::{
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
     construct_runtime, parameter_types,
-    traits::{
-        ConstU8, EitherOfDiverse, FindAuthor, KeyOwnerProofSystem, PrivilegeCmp, Randomness,
-        TryStateSelect,
-    },
+    traits::{ConstU8, EitherOfDiverse, FindAuthor, KeyOwnerProofSystem, PrivilegeCmp, Randomness},
     weights::{
         constants::{
             BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND,

@@ -3,11 +3,9 @@ use crate::{
     cli::{Cli, Subcommand},
     command_helper::{inherent_benchmark_data, BenchmarkExtrinsicBuilder},
     service,
-    service::ExecutorDispatch,
 };
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 use sc_cli::{ChainSpec, RuntimeVersion, SubstrateCli};
-use sc_executor::{sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch};
 use sc_service::PartialComponents;
 use tfchain_runtime::Block;
 
@@ -187,6 +185,8 @@ pub fn run() -> sc_cli::Result<()> {
         }
         #[cfg(feature = "try-runtime")]
         Some(Subcommand::TryRuntime(cmd)) => {
+            use crate::service::ExecutorDispatch;
+            use sc_executor::{sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch};
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
                 // we don't need any of the components of new_partial, just a runtime, or a task
