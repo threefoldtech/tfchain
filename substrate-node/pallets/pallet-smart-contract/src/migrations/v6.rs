@@ -4,9 +4,7 @@ use log::debug;
 use sp_std::marker::PhantomData;
 
 #[cfg(feature = "try-runtime")]
-use codec::Decode;
-#[cfg(feature = "try-runtime")]
-use codec::Encode;
+use codec::{Decode, Encode};
 #[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
 
