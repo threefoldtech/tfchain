@@ -3,9 +3,11 @@ use crate::{
     cli::{Cli, Subcommand},
     command_helper::{inherent_benchmark_data, BenchmarkExtrinsicBuilder},
     service,
+    service::ExecutorDispatch,
 };
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 use sc_cli::{ChainSpec, RuntimeVersion, SubstrateCli};
+use sc_executor::{sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch};
 use sc_service::PartialComponents;
 use tfchain_runtime::Block;
 
@@ -194,7 +196,10 @@ pub fn run() -> sc_cli::Result<()> {
                     sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
                         .map_err(|e| sc_cli::Error::Service(sc_service::Error::Prometheus(e)))?;
                 Ok((
-                    cmd.run::<Block, service::ExecutorDispatch>(config),
+                    cmd.run::<Block, ExtendedHostFunctions<
+                        sp_io::SubstrateHostFunctions,
+                        <ExecutorDispatch as NativeExecutionDispatch>::ExtendHostFunctions,
+                    >>(),
                     task_manager,
                 ))
             })

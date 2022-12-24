@@ -35,7 +35,10 @@ use tfchain_support::{
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
     construct_runtime, parameter_types,
-    traits::{ConstU8, EitherOfDiverse, FindAuthor, KeyOwnerProofSystem, PrivilegeCmp, Randomness},
+    traits::{
+        ConstU8, EitherOfDiverse, FindAuthor, KeyOwnerProofSystem, PrivilegeCmp, Randomness,
+        TryStateSelect,
+    },
     weights::{
         constants::{
             BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND,
@@ -759,14 +762,18 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    (
-        pallet_smart_contract::migrations::v6::ContractMigrationV5<Runtime>,
-        pallet_tfgrid::migrations::v10::FixFarmNodeIndexMap<Runtime>,
-        pallet_tfgrid::migrations::v11::FixFarmingPolicy<Runtime>,
-        pallet_tfgrid::migrations::v12::InputValidation<Runtime>,
-        pallet_tfgrid::migrations::v13::FixPublicIP<Runtime>,
-    ),
+    Migrations,
 >;
+
+// All migrations executed on runtime upgrade as a nested tuple of types implementing
+// `OnRuntimeUpgrade`.
+type Migrations = (
+    pallet_smart_contract::migrations::v6::ContractMigrationV5<Runtime>,
+    pallet_tfgrid::migrations::v10::FixFarmNodeIndexMap<Runtime>,
+    pallet_tfgrid::migrations::v11::FixFarmingPolicy<Runtime>,
+    pallet_tfgrid::migrations::v12::InputValidation<Runtime>,
+    pallet_tfgrid::migrations::v13::FixPublicIP<Runtime>,
+);
 
 // follows Substrate's non destructive way of eliminating  otherwise required
 // repetion: https://github.com/paritytech/substrate/pull/10592
@@ -830,10 +837,6 @@ impl_runtime_apis! {
         ) -> sp_inherents::CheckInherentsResult {
             data.check_extrinsics(&block)
         }
-
-        // fn random_seed() -> <Block as BlockT>::Hash {
-        // 	RandomnessCollectiveFlip::random_seed().0
-        // }
     }
 
     impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
@@ -986,19 +989,23 @@ impl_runtime_apis! {
 
     #[cfg(feature = "try-runtime")]
     impl frame_try_runtime::TryRuntime<Block> for Runtime {
-        fn on_runtime_upgrade() -> (frame_support::weights::Weight, frame_support::weights::Weight) {
-            log::info!("try-runtime::on_runtime_upgrade.");
+        fn on_runtime_upgrade(checks: bool) -> (Weight, Weight) {
             // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
             // have a backtrace here. If any of the pre/post migration checks fail, we shall stop
             // right here and right now.
-            let weight = Executive::try_runtime_upgrade().map_err(|err|{
-                log::error!("try-runtime::on_runtime_upgrade failed with: {:?}", err);
-                err
-            }).unwrap();
+            let weight = Executive::try_runtime_upgrade(checks).unwrap();
             (weight, BlockWeights::get().max_block)
         }
-        fn execute_block_no_check(block: Block) -> frame_support::weights::Weight {
-            Executive::execute_block_no_check(block)
+
+        fn execute_block(
+            block: Block,
+            state_root_check: bool,
+            signature_check: bool,
+            select: frame_try_runtime::TryStateSelect
+        ) -> Weight {
+            // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+            // have a backtrace here.
+            Executive::try_execute_block(block, state_root_check, signature_check, select).expect("execute-block failed")
         }
     }
 }
