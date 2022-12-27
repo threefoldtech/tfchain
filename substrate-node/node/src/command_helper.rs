@@ -66,9 +66,6 @@ impl frame_benchmarking_cli::ExtrinsicBuilder for BenchmarkExtrinsicBuilder {
     fn pallet(&self) -> &str {
         todo!()
     }
-
-    // fn remark(&self, nonce: u32) -> std::result::Result<OpaqueExtrinsic, &'static str> {
-    // }
 }
 
 /// Create a transaction using the given `call`.

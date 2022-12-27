@@ -61,7 +61,7 @@ impl<T: Config> OnRuntimeUpgrade for FixFarmNodeIndexMap<T> {
 pub fn add_farm_nodes_index<T: Config>() -> frame_support::weights::Weight {
     info!(" >>> Migrating nodes storage...");
 
-    let _ = NodesByFarmID::<T>::clear(0, None); // TODO check clear() parameters
+    let _ = NodesByFarmID::<T>::clear(0, None);
 
     let mut reads = 0;
     let mut writes = 0;

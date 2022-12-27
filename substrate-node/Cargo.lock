@@ -3948,9 +3948,11 @@ dependencies = [
 name = "pallet-dao"
 version = "3.0.0"
 dependencies = [
+ "env_logger 0.9.3",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "log",
  "pallet-collective",
  "pallet-membership",
  "pallet-tfgrid",
@@ -7728,6 +7730,7 @@ dependencies = [
  "sp-core",
  "sp-finality-grandpa",
  "sp-inherents",
+ "sp-io",
  "sp-keyring",
  "sp-runtime",
  "sp-timestamp",
@@ -8196,6 +8199,7 @@ source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.3
 dependencies = [
  "clap 4.0.32",
  "frame-remote-externalities",
+ "frame-try-runtime",
  "hex",
  "log",
  "parity-scale-codec 3.2.1",

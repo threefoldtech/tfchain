@@ -12,6 +12,10 @@ repository = "https://github.com/substrate-developer-hub/substrate-node-template
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
+[dependencies.log]
+default-features = false
+version = '0.4.14'
+
 [dependencies]
 serde = { version = '1.0.100', default-features = false, features = ['derive'], optional = true }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
@@ -34,6 +38,7 @@ pallet-tfgrid = { path = "../pallet-tfgrid", default-features = false }
 
 [dev-dependencies]
 sp-core =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
+env_logger = "*"
 
 [features]
 default = ["std"]
@@ -52,6 +57,7 @@ std = [
 	"tfchain-support/std",
 	'scale-info/std',
 	'serde/std',
+	'log/std'
 ]
 try-runtime = [
     "frame-support/try-runtime",

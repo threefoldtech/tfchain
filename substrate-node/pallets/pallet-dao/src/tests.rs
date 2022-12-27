@@ -2,6 +2,7 @@ use super::Event as DaoEvent;
 use crate::{mock::RuntimeEvent as MockEvent, mock::*, Error};
 use frame_support::{assert_noop, assert_ok, bounded_vec, dispatch::GetDispatchInfo};
 use frame_system::{EventRecord, Phase, RawOrigin};
+use log::info;
 use pallet_tfgrid::{types::LocationInput, PublicIpListInput, ResourcesInput};
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Hash};
@@ -438,7 +439,7 @@ fn motion_veto_works() {
         );
 
         for event in e.clone() {
-            println!("event: {:?}", event);
+            info!("event: {:?}", event);
         }
 
         assert_eq!(
@@ -660,7 +661,7 @@ fn voting_tfgridmodule_call_works() {
 
         let e = System::events();
         for (idx, event) in e.clone().iter().enumerate() {
-            println!("index: {:?}, event: {:?}", idx, event);
+            info!("index: {:?}, event: {:?}", idx, event);
         }
         assert_eq!(
             e[4],
