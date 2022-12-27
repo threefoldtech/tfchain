@@ -2436,6 +2436,7 @@ fn test_service_contract_create_same_account_fails() {
 #[test]
 fn test_service_contract_set_metadata_works() {
     new_test_ext().execute_with(|| {
+        run_to_block(1, None);
         create_service_consumer_contract();
 
         assert_ok!(SmartContractModule::service_contract_set_metadata(
@@ -2449,6 +2450,15 @@ fn test_service_contract_set_metadata_works() {
         assert_eq!(
             service_contract,
             SmartContractModule::service_contracts(1).unwrap(),
+        );
+
+        let our_events = System::events();
+        assert_eq!(!our_events.is_empty(), true);
+        assert_eq!(
+            our_events.last().unwrap(),
+            &record(MockEvent::SmartContractModule(
+                SmartContractEvent::ServiceContractMetadataSet(service_contract)
+            )),
         );
     });
 }
@@ -2506,6 +2516,7 @@ fn test_service_contract_set_metadata_too_long_fails() {
 #[test]
 fn test_service_contract_set_fees_works() {
     new_test_ext().execute_with(|| {
+        run_to_block(1, None);
         create_service_consumer_contract();
 
         assert_ok!(SmartContractModule::service_contract_set_fees(
@@ -2521,6 +2532,15 @@ fn test_service_contract_set_fees_works() {
         assert_eq!(
             service_contract,
             SmartContractModule::service_contracts(1).unwrap(),
+        );
+
+        let our_events = System::events();
+        assert_eq!(!our_events.is_empty(), true);
+        assert_eq!(
+            our_events.last().unwrap(),
+            &record(MockEvent::SmartContractModule(
+                SmartContractEvent::ServiceContractFeesSet(service_contract)
+            )),
         );
     });
 }
@@ -2588,6 +2608,17 @@ fn test_service_contract_approve_works() {
             SmartContractModule::service_contracts(1).unwrap(),
         );
 
+        let our_events = System::events();
+        assert_eq!(!our_events.is_empty(), true);
+        assert_eq!(
+            our_events.last().unwrap(),
+            &record(MockEvent::SmartContractModule(SmartContractEvent::<
+                TestRuntime,
+            >::ServiceContractApproved(
+                service_contract.clone()
+            ))),
+        );
+
         // Consumer approves
         assert_ok!(SmartContractModule::service_contract_approve(
             Origin::signed(bob()),
@@ -2608,9 +2639,9 @@ fn test_service_contract_approve_works() {
             our_events.last().unwrap(),
             &record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
-            >::ServiceContractApproved {
-                service_contract_id: 1,
-            })),
+            >::ServiceContractApproved(
+                service_contract
+            ))),
         );
     });
 }
@@ -2817,7 +2848,7 @@ fn test_service_contract_bill_works() {
             &record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::ServiceContractBilled {
-                service_contract_id: 1,
+                service_contract,
                 bill: bill_1,
                 amount: billed_amount_1,
             })),
@@ -2863,7 +2894,7 @@ fn test_service_contract_bill_works() {
             &record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::ServiceContractBilled {
-                service_contract_id: 1,
+                service_contract,
                 bill: bill_2,
                 amount: billed_amount_2,
             })),
