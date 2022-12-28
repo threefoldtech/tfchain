@@ -4,9 +4,10 @@ use crate::name_contract::NameContractName;
 use crate::{self as pallet_smart_contract};
 use codec::{alloc::sync::Arc, Decode};
 use frame_support::{
-    construct_runtime, parameter_types,
+    construct_runtime,
+    dispatch::PostDispatchInfo,
+    parameter_types,
     traits::{ConstU32, GenesisBuild},
-    weights::PostDispatchInfo,
     BoundedVec,
 };
 use frame_system::EnsureRoot;
@@ -41,12 +42,12 @@ use sp_runtime::{
     AccountId32, MultiSignature,
 };
 use sp_std::convert::{TryFrom, TryInto};
+use sp_std::marker::PhantomData;
 use std::{cell::RefCell, panic, thread};
 use tfchain_support::{
     constants::time::{MINUTES, SECS_PER_HOUR},
     traits::ChangeNode,
 };
-use sp_std::marker::PhantomData;
 
 impl_opaque_keys! {
     pub struct MockSessionKeys {
@@ -93,7 +94,7 @@ pub type Signature = MultiSignature;
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 pub type Moment = u64;
 
-pub type Extrinsic = TestXt<Call, ()>;
+pub type Extrinsic = TestXt<RuntimeCall, ()>;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime>;
 type Block = frame_system::mocking::MockBlock<TestRuntime>;
 
@@ -117,9 +118,6 @@ construct_runtime!(
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
-    pub BlockWeights: frame_system::limits::BlockWeights =
-        frame_system::limits::BlockWeights::simple_max(1024);
-    pub const ExistentialDeposit: u64 = 1;
     pub StakingPoolAccount: AccountId = get_staking_pool_account();
 }
 
@@ -127,16 +125,16 @@ impl frame_system::Config for TestRuntime {
     type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     type Index = u64;
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
@@ -153,6 +151,7 @@ impl frame_system::Config for TestRuntime {
 parameter_types! {
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
+    pub const ExistentialDeposit: u64 = 1;
 }
 
 impl pallet_balances::Config for TestRuntime {
@@ -162,7 +161,7 @@ impl pallet_balances::Config for TestRuntime {
     /// The type for recording an account's balance.
     type Balance = u64;
     /// The ubiquitous event type.
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
@@ -212,7 +211,7 @@ pub(crate) type TestLocation = Location<TestRuntime>;
 pub(crate) type TestSerialNumber = SerialNumber<TestRuntime>;
 
 impl pallet_tfgrid::Config for TestRuntime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
@@ -234,9 +233,9 @@ impl pallet_tfgrid::Config for TestRuntime {
 }
 
 impl pallet_tft_price::Config for TestRuntime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type AuthorityId = pallet_tft_price::AuthId;
-    type Call = Call;
+    type Call = RuntimeCall;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
 }
 
@@ -262,7 +261,7 @@ pub(crate) type TestNameContractName = NameContractName<TestRuntime>;
 
 use weights;
 impl pallet_smart_contract::Config for TestRuntime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type Burn = ();
     type StakingPoolAccount = StakingPoolAccount;
@@ -278,7 +277,7 @@ impl pallet_smart_contract::Config for TestRuntime {
     type MaxDeploymentDataLength = MaxDeploymentDataLength;
     type MaxNodeContractPublicIps = MaxNodeContractPublicIPs;
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
-    type Call = Call;
+    type Call = RuntimeCall;
     type PublicIpModifier = PublicIpModifierType;
 }
 
@@ -343,12 +342,12 @@ parameter_types! {
 
 impl substrate_validator_set::Config for TestRuntime {
     type AddRemoveOrigin = EnsureRoot<Self::AccountId>;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type MinAuthorities = MinAuthorities;
 }
 
 impl pallet_session::Config for TestRuntime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ValidatorId = <Self as frame_system::Config>::AccountId;
     type ValidatorIdOf = substrate_validator_set::ValidatorOf<Self>;
     type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
@@ -413,24 +412,24 @@ impl frame_system::offchain::SigningTypes for TestRuntime {
     type Signature = Signature;
 }
 
-impl<C> frame_system::offchain::SendTransactionTypes<C> for TestRuntime
+impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for TestRuntime
 where
-    Call: From<C>,
+    RuntimeCall: From<LocalCall>,
 {
-    type OverarchingCall = Call;
+    type OverarchingCall = RuntimeCall;
     type Extrinsic = Extrinsic;
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for TestRuntime
 where
-    Call: From<LocalCall>,
+    RuntimeCall: From<LocalCall>,
 {
     fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
-        call: Call,
+        call: RuntimeCall,
         _public: <Signature as Verify>::Signer,
         _account: AccountId,
         nonce: u64,
-    ) -> Option<(Call, <Extrinsic as ExtrinsicT>::SignaturePayload)> {
+    ) -> Option<(RuntimeCall, <Extrinsic as ExtrinsicT>::SignaturePayload)> {
         Some((call, (nonce, ())))
     }
 }
@@ -538,7 +537,10 @@ impl PoolState {
             let result = match call_to_execute.0 {
                 // matches bill_contract_for_block
                 crate::Call::bill_contract_for_block { contract_id } => {
-                    SmartContractModule::bill_contract_for_block(Origin::signed(bob()), contract_id)
+                    SmartContractModule::bill_contract_for_block(
+                        RuntimeOrigin::signed(bob()),
+                        contract_id,
+                    )
                 }
                 // did not match anything => unkown call => this means you should add
                 // a capture for that function here
@@ -591,14 +593,21 @@ impl TransactionPool for MockedTransactionPoolExt {
             return Ok(());
         }
 
-        let extrinsic_decoded: Extrinsic = Decode::decode(&mut &*extrinsic).unwrap();
+        let extrinsic_decoded: Extrinsic = match Decode::decode(&mut &*extrinsic) {
+            Ok(xt) => xt,
+            Err(e) => {
+                log::error!("Unable to decode extrinsic: {:?}: {}", extrinsic, e);
+                return Err(());
+            }
+        };
+
         if self.0.read().i < self.0.read().expected_calls.len() {
             let i = self.0.read().i.clone();
 
             log::debug!("Call {:?}: {:?}", i, extrinsic_decoded.call);
             // the extrinsic should match the expected call at position i
             if extrinsic_decoded.call
-                != Call::SmartContractModule(self.0.read().expected_calls[i].0.clone())
+                != RuntimeCall::SmartContractModule(self.0.read().expected_calls[i].0.clone())
             {
                 panic!(
                     "\nEXPECTED call: {:?}\nACTUAL call: {:?}\n",

@@ -61,31 +61,25 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn create_node_contract() -> Weight {
-        (133_943_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads_writes(10 as Weight, 8 as Weight))
+        Weight::from_ref_time(926_396_000).saturating_add(T::DbWeight::get().reads_writes(8, 8))
     }
     fn add_nru_reports() -> Weight {
-        (99_753_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads_writes(7 as Weight, 1 as Weight))
+        Weight::from_ref_time(99_753_000).saturating_add(T::DbWeight::get().reads_writes(7, 1))
     }
     fn bill_contract_for_block() -> Weight {
-        (131_686_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads_writes(14 as Weight, 2 as Weight))
+        Weight::from_ref_time(131_686_000).saturating_add(T::DbWeight::get().reads_writes(14, 2))
     }
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn create_node_contract() -> Weight {
-        (133_943_000 as Weight)
-            .saturating_add(RocksDbWeight::get().reads_writes(10 as Weight, 8 as Weight))
+        Weight::from_ref_time(926_396_000).saturating_add(RocksDbWeight::get().reads_writes(8, 8))
     }
     fn add_nru_reports() -> Weight {
-        (99_753_000 as Weight)
-            .saturating_add(RocksDbWeight::get().reads_writes(7 as Weight, 1 as Weight))
+        Weight::from_ref_time(99_753_000).saturating_add(RocksDbWeight::get().reads_writes(7, 1))
     }
     fn bill_contract_for_block() -> Weight {
-        (131_686_000 as Weight)
-            .saturating_add(RocksDbWeight::get().reads_writes(14 as Weight, 2 as Weight))
+        Weight::from_ref_time(131_686_000).saturating_add(RocksDbWeight::get().reads_writes(14, 2))
     }
 }

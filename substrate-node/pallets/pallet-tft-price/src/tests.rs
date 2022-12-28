@@ -1,5 +1,5 @@
 use super::Event as TftPriceEvent;
-use crate::{mock::Event as MockEvent, mock::*, Error};
+use crate::{mock::RuntimeEvent as MockEvent, mock::*, Error};
 use frame_support::{assert_noop, assert_ok, error::BadOrigin};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
@@ -33,7 +33,7 @@ fn test_set_prices_works() {
         for i in 1..1441 {
             let target_block = i * 100; // we set the price every 100 blocks
             run_to_block(target_block);
-            match TFTPriceModule::set_prices(Origin::signed(alice()), 500, target_block) {
+            match TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 500, target_block) {
                 Ok(_) => (),
                 Err(_) => panic!("Couldn't set tft_price"),
             }
@@ -51,7 +51,11 @@ fn test_set_prices_works() {
 fn test_set_price_works() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
-        assert_ok!(TFTPriceModule::set_prices(Origin::signed(alice()), 500, 1));
+        assert_ok!(TFTPriceModule::set_prices(
+            RuntimeOrigin::signed(alice()),
+            500,
+            1
+        ));
 
         assert_eq!(TFTPriceModule::tft_price(), 500);
         assert_eq!(TFTPriceModule::average_tft_price(), 500);
@@ -62,7 +66,11 @@ fn test_set_price_works() {
 fn test_set_price_below_min_price_works() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
-        assert_ok!(TFTPriceModule::set_prices(Origin::signed(alice()), 5, 1));
+        assert_ok!(TFTPriceModule::set_prices(
+            RuntimeOrigin::signed(alice()),
+            5,
+            1
+        ));
 
         let our_events = System::events();
         assert_eq!(
@@ -84,7 +92,11 @@ fn test_set_price_below_min_price_works() {
 fn test_set_price_above_max_price_works() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
-        assert_ok!(TFTPriceModule::set_prices(Origin::signed(alice()), 2000, 1));
+        assert_ok!(TFTPriceModule::set_prices(
+            RuntimeOrigin::signed(alice()),
+            2000,
+            1
+        ));
 
         let our_events = System::events();
         assert_eq!(
@@ -107,7 +119,7 @@ fn test_set_price_not_validator_fails() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
         assert_noop!(
-            TFTPriceModule::set_prices(Origin::signed(bob()), 500, 1),
+            TFTPriceModule::set_prices(RuntimeOrigin::signed(bob()), 500, 1),
             Error::<TestRuntime>::AccountUnauthorizedToSetPrice
         );
     })
@@ -165,7 +177,7 @@ fn test_set_min_tft_price_wrong_origin_fails() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
         assert_noop!(
-            TFTPriceModule::set_min_tft_price(Origin::signed(bob()), 20),
+            TFTPriceModule::set_min_tft_price(RuntimeOrigin::signed(bob()), 20),
             BadOrigin,
         );
     })
@@ -200,7 +212,7 @@ fn test_set_max_tft_price_wrong_origin_fails() {
     let mut t = ExternalityBuilder::build();
     t.execute_with(|| {
         assert_noop!(
-            TFTPriceModule::set_max_tft_price(Origin::signed(bob()), 2000),
+            TFTPriceModule::set_max_tft_price(RuntimeOrigin::signed(bob()), 2000),
             BadOrigin,
         );
     })
@@ -217,7 +229,7 @@ fn test_set_max_tft_price_too_low_fails() {
     })
 }
 
-fn record(event: Event) -> EventRecord<Event, H256> {
+fn record(event: RuntimeEvent) -> EventRecord<RuntimeEvent, H256> {
     EventRecord {
         phase: Phase::Initialization,
         event,

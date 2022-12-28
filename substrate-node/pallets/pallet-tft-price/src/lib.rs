@@ -3,7 +3,7 @@
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
-use frame_support::{dispatch::DispatchResultWithPostInfo, weights::Pays};
+use frame_support::dispatch::{DispatchResultWithPostInfo, Pays};
 use frame_system::offchain::{SendSignedTransaction, SignMessage, Signer};
 use log;
 use sp_runtime::offchain::{http, Duration};
@@ -83,13 +83,13 @@ pub mod pallet {
         + pallet_authorship::Config
         + pallet_session::Config
     {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         // Add other types and constants required to configure this pallet.
         type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
         type Call: From<Call<Self>>;
         /// Origin for restricted extrinsics
         /// Can be the root or another origin configured in the runtime
-        type RestrictedOrigin: EnsureOrigin<Self::Origin>;
+        type RestrictedOrigin: EnsureOrigin<Self::RuntimeOrigin>;
     }
 
     #[pallet::event]
@@ -149,7 +149,8 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        #[pallet::call_index(0)]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn set_prices(
             origin: OriginFor<T>,
             price: u32,
@@ -165,7 +166,8 @@ pub mod pallet {
             Self::calculate_and_set_price(price, block_number)
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        #[pallet::call_index(2)]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn set_min_tft_price(origin: OriginFor<T>, price: u32) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
             ensure!(
@@ -176,7 +178,8 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
+        #[pallet::call_index(3)]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn set_max_tft_price(origin: OriginFor<T>, price: u32) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
             ensure!(
