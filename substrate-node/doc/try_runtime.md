@@ -11,10 +11,8 @@ List of available endpoints for our networks:
 
 ## Select a network you wish to try the runtime upgrade upon
 
-For that network, compile the current deployed version. To see which version is deployed open de PolkadotJS UI and check which specVersion is deployed. Then check which release that corresponds to. Compile that release and copy the runtime wasm: `cp target/release/wbuild/tfchain-runtime/tfchain_runtime.compact.wasm ./runtimeX.wasm`.
-
 Now go the release you want to test with try-runtime and compile as following:
 
 ```
-cargo run --release --features=try-runtime try-runtime --runtime ./runtimeX.wasm --chain chainspecs/NETWORK/chainSpecRaw.json on-runtime-upgrade live --uri NETWORK_URL
+cargo run --release --features=try-runtime try-runtime --runtime ./target/release/wbuild/tfchain-runtime/tfchain_runtime.compact.wasm --chain chainspecs/NETWORK/chainSpecRaw.json on-runtime-upgrade live --uri NETWORK_URL
 ```
