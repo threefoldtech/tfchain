@@ -319,10 +319,12 @@ pub mod pallet {
         SolutionProviderApproved(u64, bool),
         /// A Service contract is created
         ServiceContractCreated(types::ServiceContract),
+        /// A Service contract metadata is set
+        ServiceContractMetadataSet(types::ServiceContract),
+        /// A Service contract fees are set
+        ServiceContractFeesSet(types::ServiceContract),
         /// A Service contract is approved
-        ServiceContractApproved {
-            service_contract_id: u64,
-        },
+        ServiceContractApproved(types::ServiceContract),
         /// A Service contract is canceled
         ServiceContractCanceled {
             service_contract_id: u64,
@@ -330,7 +332,7 @@ pub mod pallet {
         },
         /// A Service contract is billed
         ServiceContractBilled {
-            service_contract_id: u64,
+            service_contract: types::ServiceContract,
             bill: types::ServiceContractBill,
             amount: BalanceOf<T>,
         },
@@ -1957,7 +1959,10 @@ impl<T: Config> Pallet<T> {
         }
 
         // Update service contract in map after modification
-        ServiceContracts::<T>::insert(service_contract_id, service_contract);
+        ServiceContracts::<T>::insert(service_contract_id, service_contract.clone());
+
+        // Trigger event for service contract metadata setting
+        Self::deposit_event(Event::ServiceContractMetadataSet(service_contract));
 
         Ok(().into())
     }
@@ -1998,7 +2003,10 @@ impl<T: Config> Pallet<T> {
         }
 
         // Update service contract in map after modification
-        ServiceContracts::<T>::insert(service_contract_id, service_contract);
+        ServiceContracts::<T>::insert(service_contract_id, service_contract.clone());
+
+        // Trigger event for service contract fees setting
+        Self::deposit_event(Event::ServiceContractFeesSet(service_contract));
 
         Ok(().into())
     }
@@ -2038,17 +2046,16 @@ impl<T: Config> Pallet<T> {
             // Change contract state to approved and emit event
             service_contract.state = types::ServiceContractState::ApprovedByBoth;
 
-            // Trigger event for service contract approval
-            Self::deposit_event(Event::ServiceContractApproved {
-                service_contract_id,
-            });
             // Initialize billing time
             let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
             service_contract.last_bill = now;
         }
 
         // Update service contract in map after modification
-        ServiceContracts::<T>::insert(service_contract_id, service_contract);
+        ServiceContracts::<T>::insert(service_contract_id, service_contract.clone());
+
+        // Trigger event for service contract approval
+        Self::deposit_event(Event::ServiceContractApproved(service_contract));
 
         Ok(().into())
     }
@@ -2179,11 +2186,19 @@ impl<T: Config> Pallet<T> {
         };
 
         // Make consumer pay for service contract bill
-        Self::_service_contract_pay_bill(service_contract_id, service_contract_bill)?;
+        let amount =
+            Self::_service_contract_pay_bill(service_contract_id, service_contract_bill.clone())?;
 
         // Update contract in list after modification
         service_contract.last_bill = now;
-        ServiceContracts::<T>::insert(service_contract_id, service_contract);
+        ServiceContracts::<T>::insert(service_contract_id, service_contract.clone());
+
+        // Trigger event for service contract billing
+        Self::deposit_event(Event::ServiceContractBilled {
+            service_contract,
+            bill: service_contract_bill,
+            amount,
+        });
 
         Ok(().into())
     }
@@ -2193,7 +2208,7 @@ impl<T: Config> Pallet<T> {
     fn _service_contract_pay_bill(
         service_contract_id: u64,
         bill: types::ServiceContractBill,
-    ) -> DispatchResultWithPostInfo {
+    ) -> Result<BalanceOf<T>, DispatchErrorWithPostInfo> {
         let service_contract = ServiceContracts::<T>::get(service_contract_id)
             .ok_or(Error::<T>::ServiceContractNotExists)?;
         let amount = service_contract.calculate_bill_cost_tft::<T>(bill.clone())?;
@@ -2228,19 +2243,12 @@ impl<T: Config> Pallet<T> {
             ExistenceRequirement::KeepAlive,
         )?;
 
-        // Trigger event for service contract billing
-        Self::deposit_event(Event::ServiceContractBilled {
-            service_contract_id,
-            bill,
-            amount,
-        });
-
         log::info!(
             "bill successfully payed by consumer for service contract with id {:?}",
             service_contract_id,
         );
 
-        Ok(().into())
+        Ok(amount)
     }
 
     pub fn _change_billing_frequency(frequency: u64) -> DispatchResultWithPostInfo {
