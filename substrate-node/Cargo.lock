@@ -7690,7 +7690,7 @@ dependencies = [
 
 [[package]]
 name = "tfchain"
-version = "2.2.0-rc7"
+version = "2.2.0-rc8"
 dependencies = [
  "clap 4.0.32",
  "frame-benchmarking",
@@ -7745,7 +7745,7 @@ dependencies = [
 
 [[package]]
 name = "tfchain-runtime"
-version = "2.2.0-rc7"
+version = "2.2.0-rc8"
 dependencies = [
  "frame-benchmarking",
  "frame-executive",
