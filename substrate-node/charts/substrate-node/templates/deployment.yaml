@@ -74,6 +74,7 @@ spec:
             {{ if .Values.is_validator }}
             "--node-key-file","/keys/node",
             "--validator",
+            "--pruning", "archive",
             {{ else }}
             "--ws-external",
             "--pruning", "archive",
