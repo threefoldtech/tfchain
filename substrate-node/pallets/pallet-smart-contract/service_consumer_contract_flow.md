@@ -97,22 +97,27 @@ service_contract_bill(
 )
 ~~~
 
-⚠️ Important: because a service should not charge the user if it doesn't work, it is required that bills be send every hour.
-Any bigger interval will result in a 1 hour bill, so extra time will not be billed.
-It is the service responsability to bill on right frequency.
+⚠️ Important: because a service should not charge the user if it doesn't work, it is required that bills be send in less than 1 hour intervals.
+Any bigger interval will result in a bounded 1 hour bill (in other words, extra time will not be billed).
+It is the service responsability to bill on right frequency!
 
-When the bill is received, the chain calculates the bill amount based on the agreements values as follows: 
+When the bill is received, the chain calculates the bill amount based on the agreement values as follows: 
 
 ~~~
 amount = base_fee * T / 3600 + variable_amount 
 ~~~
 
-where `T` is the elapsed time, in seconds and bounded by 3600 (see below), since last effective billing operation occured.
+where `T` is the elapsed time, in seconds and bounded by 3600 (see above), since last effective billing operation occured.
 
 Note that if `variable_amount` is too high (i.e `variable_amount >  variable_fee * T / 3600`) the billing extrinsic will fail.
+The `variable_fee` value in the contract is interpreted as being "per hour" and acts as a protection mecanism to avoid consumer draining.
+Indeed, as it is technically possible for the service to send a bill every second, there would be no gain for that (unless overloading the chain uselessly).
+So it is also the service responsability to set a suitable `variable_amount` according to the billing frequency!
+
 Also be aware that if the consumer is out of funds the billing will fail AND the contract will be canceled.
 
-Then, if all goes well the calculated amount is transferred from the consumer twin account to the service twin account.
+Then, if all goes well the consumer pays for the due amount calculated from the bill (see detail above).
+In practice the amount is transferred from the consumer twin account to the service twin account.
 
 
 ## Step 5: Cancel the contract
