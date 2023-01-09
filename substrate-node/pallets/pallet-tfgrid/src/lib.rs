@@ -191,9 +191,10 @@ pub mod pallet {
 
     pub type TwinIndex = u32;
     pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-    type TwinInfoOf<T> = types::Twin<<T as Config>::TwinIp, AccountIdOf<T>>;
-    pub type TwinIpInput = BoundedVec<u8, ConstU32<{ twin::MAX_IP_LENGTH }>>;
-    pub type TwinIpOf<T> = <T as Config>::TwinIp;
+    type TwinInfoOf<T> = types::Twin<<T as Config>::Relay, AccountIdOf<T>>;
+    pub type RelayInput = BoundedVec<u8, ConstU32<{ twin::MAX_RELAY_LENGTH }>>;
+    pub type PkInput = BoundedVec<u8, ConstU32<{ types::MAX_PK_LENGTH }>>;
+    pub type RelayOf<T> = <T as Config>::Relay;
 
     #[pallet::storage]
     #[pallet::getter(fn twins)]
@@ -295,12 +296,12 @@ pub mod pallet {
             + MaxEncodedLen;
 
         /// The type of a twin IP.
-        type TwinIp: FullCodec
+        type Relay: FullCodec
             + Debug
             + PartialEq
             + Clone
             + TypeInfo
-            + TryFrom<TwinIpInput, Error = Error<Self>>
+            + TryFrom<RelayInput, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of a farm name.
@@ -413,8 +414,8 @@ pub mod pallet {
         EntityUpdated(TfgridEntity<T>),
         EntityDeleted(u32),
 
-        TwinStored(types::Twin<T::TwinIp, T::AccountId>),
-        TwinUpdated(types::Twin<T::TwinIp, T::AccountId>),
+        TwinStored(types::Twin<T::Relay, T::AccountId>),
+        TwinUpdated(types::Twin<T::Relay, T::AccountId>),
 
         TwinEntityStored(u32, u32, Vec<u8>),
         TwinEntityRemoved(u32, u32),
@@ -492,9 +493,9 @@ pub mod pallet {
 
         FarmingPolicyNotExists,
 
-        TwinIpTooShort,
-        TwinIpTooLong,
-        InvalidTwinIp,
+        RelayTooShort,
+        RelayTooLong,
+        InvalidRelay,
 
         FarmNameTooShort,
         FarmNameTooLong,
@@ -1403,7 +1404,11 @@ pub mod pallet {
 
         #[pallet::call_index(17)]
         #[pallet::weight(<T as Config>::WeightInfo::create_twin())]
-        pub fn create_twin(origin: OriginFor<T>, ip: TwinIpInput) -> DispatchResultWithPostInfo {
+        pub fn create_twin(
+            origin: OriginFor<T>,
+            ip: RelayInput,
+            pk: PkInput,
+        ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
             ensure!(
@@ -1421,12 +1426,13 @@ pub mod pallet {
 
             let twin_ip = Self::get_twin_ip(ip)?;
 
-            let twin = types::Twin::<T::TwinIp, T::AccountId> {
+            let twin = types::Twin::<T::Relay, T::AccountId> {
                 version: TFGRID_TWIN_VERSION,
                 id: twin_id,
                 account_id: account_id.clone(),
-                entities: Vec::new(),
                 ip: twin_ip,
+                entities: Vec::new(),
+                pk,
             };
 
             Twins::<T>::insert(&twin_id, &twin);
@@ -1442,7 +1448,11 @@ pub mod pallet {
 
         #[pallet::call_index(18)]
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(3).ref_time())]
-        pub fn update_twin(origin: OriginFor<T>, ip: TwinIpInput) -> DispatchResultWithPostInfo {
+        pub fn update_twin(
+            origin: OriginFor<T>,
+            ip: RelayInput,
+            pk: PkInput,
+        ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
             let twin_id =
@@ -1459,6 +1469,7 @@ pub mod pallet {
             let twin_ip = Self::get_twin_ip(ip)?;
 
             twin.ip = twin_ip;
+            twin.pk = pk;
 
             Twins::<T>::insert(&twin_id, &twin);
 
@@ -2199,9 +2210,9 @@ impl<T: Config> Pallet<T> {
         Ok(parsed_terms_cond)
     }
 
-    fn get_twin_ip(ip: TwinIpInput) -> Result<TwinIpOf<T>, DispatchErrorWithPostInfo> {
-        let ip_parsed = <T as Config>::TwinIp::try_from(ip)?;
-        Ok(ip_parsed)
+    fn get_twin_ip(relay: RelayInput) -> Result<RelayOf<T>, DispatchErrorWithPostInfo> {
+        let relay_parsed = <T as Config>::Relay::try_from(relay)?;
+        Ok(relay_parsed)
     }
 
     fn get_farm_name(name: FarmNameInput<T>) -> Result<FarmNameOf<T>, DispatchErrorWithPostInfo> {
