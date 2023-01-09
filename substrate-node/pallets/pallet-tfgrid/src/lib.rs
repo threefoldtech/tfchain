@@ -1406,7 +1406,7 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::create_twin())]
         pub fn create_twin(
             origin: OriginFor<T>,
-            ip: RelayInput,
+            relay: RelayInput,
             pk: PkInput,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
@@ -1424,13 +1424,12 @@ pub mod pallet {
             let mut twin_id = TwinID::<T>::get();
             twin_id = twin_id + 1;
 
-            let twin_ip = Self::get_twin_ip(ip)?;
+            let relay = Self::get_twin_relay(relay)?;
 
             let twin = types::Twin::<T::Relay, T::AccountId> {
-                version: TFGRID_TWIN_VERSION,
                 id: twin_id,
                 account_id: account_id.clone(),
-                ip: twin_ip,
+                relay,
                 entities: Vec::new(),
                 pk,
             };
@@ -1450,7 +1449,7 @@ pub mod pallet {
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(3).ref_time())]
         pub fn update_twin(
             origin: OriginFor<T>,
-            ip: RelayInput,
+            relay: RelayInput,
             pk: PkInput,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
@@ -1466,9 +1465,9 @@ pub mod pallet {
                 Error::<T>::UnauthorizedToUpdateTwin
             );
 
-            let twin_ip = Self::get_twin_ip(ip)?;
+            let twin_relay = Self::get_twin_relay(relay)?;
 
-            twin.ip = twin_ip;
+            twin.relay = twin_relay;
             twin.pk = pk;
 
             Twins::<T>::insert(&twin_id, &twin);
@@ -2210,7 +2209,7 @@ impl<T: Config> Pallet<T> {
         Ok(parsed_terms_cond)
     }
 
-    fn get_twin_ip(relay: RelayInput) -> Result<RelayOf<T>, DispatchErrorWithPostInfo> {
+    fn get_twin_relay(relay: RelayInput) -> Result<RelayOf<T>, DispatchErrorWithPostInfo> {
         let relay_parsed = <T as Config>::Relay::try_from(relay)?;
         Ok(relay_parsed)
     }

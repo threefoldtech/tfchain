@@ -21,6 +21,7 @@ pub enum StorageVersion {
     V11Struct,
     V12Struct,
     V13Struct,
+    V14Struct,
 }
 
 impl Default for StorageVersion {
@@ -44,12 +45,11 @@ pub const MAX_PK_LENGTH: u32 = 128; // limited to 128 bytes
 //digital twin
 #[derive(Clone, Encode, Decode, Debug, Eq, PartialEq, Default, TypeInfo)]
 pub struct Twin<Relay, AccountId> {
-    pub version: u32,
     pub id: u32,
     // substrate account id = public key (32 bytes)
     pub account_id: AccountId,
     // relay address (proxy)
-    pub ip: Relay,
+    pub relay: Relay,
     // link to person's or companies who own this twin
     pub entities: Vec<EntityProof>,
     // public key of the encryption key used in rmb

@@ -85,3 +85,23 @@ pub mod v12 {
         pub connection_price: u32,
     }
 }
+
+pub mod v14 {
+    use crate::types;
+    use codec::{Decode, Encode};
+    use core::cmp::{Ord, PartialOrd};
+    use scale_info::TypeInfo;
+    use sp_std::{prelude::*, vec::Vec};
+
+    #[derive(Clone, Encode, Decode, Debug, Eq, PartialEq, Default, TypeInfo)]
+    pub struct Twin<TwinIp, AccountId> {
+        pub version: u32,
+        pub id: u32,
+        //substrate account id = public key (32 bytes)
+        //also used by PAN network
+        pub account_id: AccountId,
+        pub ip: TwinIp,
+        //link to person's or companies who own this twin
+        pub entities: Vec<types::EntityProof>,
+    }
+}
