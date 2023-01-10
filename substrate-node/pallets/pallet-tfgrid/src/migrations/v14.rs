@@ -1,8 +1,5 @@
 use crate::*;
-use frame_support::{
-    pallet_prelude::OptionQuery, storage_alias, traits::Get, traits::OnRuntimeUpgrade,
-    weights::Weight, Blake2_128Concat,
-};
+use frame_support::{traits::Get, traits::OnRuntimeUpgrade, weights::Weight};
 use log::{debug, info};
 use sp_std::marker::PhantomData;
 
@@ -12,16 +9,6 @@ use codec::Decode;
 use sp_std::vec::Vec;
 
 pub struct MigrateTwinsV14<T: Config>(PhantomData<T>);
-
-// // Storage alias from Twins v14
-// #[storage_alias]
-// pub type Twins<T: Config> = StorageMap<
-//     Pallet<T>,
-//     Blake2_128Concat,
-//     u32,
-//     super::types::v14::Twin<Vec<u8>, AccountIdOf<T>>,
-//     OptionQuery,
-// >;
 
 impl<T: Config> OnRuntimeUpgrade for MigrateTwinsV14<T> {
     #[cfg(feature = "try-runtime")]
@@ -82,9 +69,9 @@ pub fn migrate_twins<T: Config>() -> frame_support::weights::Weight {
         let new_twin = types::Twin {
             id: twin.id,
             account_id: twin.account_id,
-            relay: twin.ip.try_into().unwrap(),
+            relay: Some(twin.ip.try_into().unwrap()),
             entities: twin.entities,
-            pk: Vec::new().try_into().unwrap(),
+            pk: None,
         };
 
         read_writes += 1;

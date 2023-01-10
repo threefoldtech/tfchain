@@ -50,11 +50,11 @@ pub struct Twin<AccountId> {
     // substrate account id = public key (32 bytes)
     pub account_id: AccountId,
     // relay address (proxy)
-    pub relay: BoundedVec<u8, ConstU32<MAX_RELAY_LENGTH>>,
+    pub relay: Option<BoundedVec<u8, ConstU32<MAX_RELAY_LENGTH>>>,
     // link to person's or companies who own this twin
     pub entities: Vec<EntityProof>,
     // public key of the encryption key used in rmb
-    pub pk: BoundedVec<u8, ConstU32<MAX_PK_LENGTH>>,
+    pub pk: Option<BoundedVec<u8, ConstU32<MAX_PK_LENGTH>>>,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]

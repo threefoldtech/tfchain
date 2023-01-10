@@ -191,8 +191,8 @@ pub mod pallet {
     pub type TwinIndex = u32;
     pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     type TwinInfoOf<T> = types::Twin<AccountIdOf<T>>;
-    pub type RelayInput = BoundedVec<u8, ConstU32<{ types::MAX_RELAY_LENGTH }>>;
-    pub type PkInput = BoundedVec<u8, ConstU32<{ types::MAX_PK_LENGTH }>>;
+    pub type RelayInput = Option<BoundedVec<u8, ConstU32<{ types::MAX_RELAY_LENGTH }>>>;
+    pub type PkInput = Option<BoundedVec<u8, ConstU32<{ types::MAX_PK_LENGTH }>>>;
 
     #[pallet::storage]
     #[pallet::getter(fn twins)]
