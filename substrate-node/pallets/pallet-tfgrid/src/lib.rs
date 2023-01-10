@@ -39,7 +39,6 @@ pub mod interface;
 pub mod migrations;
 pub mod node;
 pub mod terms_cond;
-pub mod twin;
 
 // Definition of the pallet logic, to be aggregated at runtime definition
 // through `construct_runtime`.
@@ -191,10 +190,9 @@ pub mod pallet {
 
     pub type TwinIndex = u32;
     pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-    type TwinInfoOf<T> = types::Twin<<T as Config>::Relay, AccountIdOf<T>>;
-    pub type RelayInput = BoundedVec<u8, ConstU32<{ twin::MAX_RELAY_LENGTH }>>;
+    type TwinInfoOf<T> = types::Twin<AccountIdOf<T>>;
+    pub type RelayInput = BoundedVec<u8, ConstU32<{ types::MAX_RELAY_LENGTH }>>;
     pub type PkInput = BoundedVec<u8, ConstU32<{ types::MAX_PK_LENGTH }>>;
-    pub type RelayOf<T> = <T as Config>::Relay;
 
     #[pallet::storage]
     #[pallet::getter(fn twins)]
@@ -293,15 +291,6 @@ pub mod pallet {
             + Clone
             + TypeInfo
             + TryFrom<TermsAndConditionsInput<Self>, Error = Error<Self>>
-            + MaxEncodedLen;
-
-        /// The type of a twin IP.
-        type Relay: FullCodec
-            + Debug
-            + PartialEq
-            + Clone
-            + TypeInfo
-            + TryFrom<RelayInput, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of a farm name.
@@ -414,8 +403,8 @@ pub mod pallet {
         EntityUpdated(TfgridEntity<T>),
         EntityDeleted(u32),
 
-        TwinStored(types::Twin<T::Relay, T::AccountId>),
-        TwinUpdated(types::Twin<T::Relay, T::AccountId>),
+        TwinStored(types::Twin<T::AccountId>),
+        TwinUpdated(types::Twin<T::AccountId>),
 
         TwinEntityStored(u32, u32, Vec<u8>),
         TwinEntityRemoved(u32, u32),
@@ -1424,9 +1413,7 @@ pub mod pallet {
             let mut twin_id = TwinID::<T>::get();
             twin_id = twin_id + 1;
 
-            let relay = Self::get_twin_relay(relay)?;
-
-            let twin = types::Twin::<T::Relay, T::AccountId> {
+            let twin = types::Twin::<T::AccountId> {
                 id: twin_id,
                 account_id: account_id.clone(),
                 relay,
@@ -1465,9 +1452,7 @@ pub mod pallet {
                 Error::<T>::UnauthorizedToUpdateTwin
             );
 
-            let twin_relay = Self::get_twin_relay(relay)?;
-
-            twin.relay = twin_relay;
+            twin.relay = relay;
             twin.pk = pk;
 
             Twins::<T>::insert(&twin_id, &twin);
@@ -2207,11 +2192,6 @@ impl<T: Config> Pallet<T> {
     ) -> Result<TermsAndConditionsOf<T>, DispatchErrorWithPostInfo> {
         let parsed_terms_cond = <T as Config>::TermsAndConditions::try_from(terms_cond)?;
         Ok(parsed_terms_cond)
-    }
-
-    fn get_twin_relay(relay: RelayInput) -> Result<RelayOf<T>, DispatchErrorWithPostInfo> {
-        let relay_parsed = <T as Config>::Relay::try_from(relay)?;
-        Ok(relay_parsed)
     }
 
     fn get_farm_name(name: FarmNameInput<T>) -> Result<FarmNameOf<T>, DispatchErrorWithPostInfo> {

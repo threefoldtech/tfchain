@@ -353,7 +353,6 @@ impl pallet_tfgrid::Config for Runtime {
     type NodeChanged = NodeChanged;
     type PublicIpModifier = SmartContractModule;
     type TermsAndConditions = pallet_tfgrid::terms_cond::TermsAndConditions<Runtime>;
-    type TwinIp = pallet_tfgrid::twin::TwinIp<Runtime>;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
     type FarmName = pallet_tfgrid::farm::FarmName<Runtime>;
@@ -765,11 +764,12 @@ pub type Executive = frame_executive::Executive<
 // All migrations executed on runtime upgrade as a nested tuple of types implementing
 // `OnRuntimeUpgrade`.
 type Migrations = (
-    pallet_smart_contract::migrations::v6::ContractMigrationV5<Runtime>,
-    pallet_tfgrid::migrations::v10::FixFarmNodeIndexMap<Runtime>,
-    pallet_tfgrid::migrations::v11::FixFarmingPolicy<Runtime>,
-    pallet_tfgrid::migrations::v12::InputValidation<Runtime>,
-    pallet_tfgrid::migrations::v13::FixPublicIP<Runtime>,
+    // pallet_smart_contract::migrations::v6::ContractMigrationV5<Runtime>,
+    // pallet_tfgrid::migrations::v10::FixFarmNodeIndexMap<Runtime>,
+    // pallet_tfgrid::migrations::v11::FixFarmingPolicy<Runtime>,
+    // pallet_tfgrid::migrations::v12::InputValidation<Runtime>,
+    // pallet_tfgrid::migrations::v13::FixPublicIP<Runtime>,
+    pallet_tfgrid::migrations::v14::MigrateTwinsV14<Runtime>,
 );
 
 // follows Substrate's non destructive way of eliminating  otherwise required

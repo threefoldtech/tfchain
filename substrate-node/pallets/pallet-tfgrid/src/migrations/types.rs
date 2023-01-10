@@ -89,7 +89,6 @@ pub mod v12 {
 pub mod v14 {
     use crate::types;
     use codec::{Decode, Encode};
-    use core::cmp::{Ord, PartialOrd};
     use scale_info::TypeInfo;
     use sp_std::{prelude::*, vec::Vec};
 
