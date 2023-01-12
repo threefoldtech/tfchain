@@ -1,4 +1,15 @@
-# TFchain
+# TFchain &middot; ![Build and Test](https://github.com/github/docs/actions/workflows/main.yml/badge.svg)
+
+<p align="center">
+  <img src="/substrate-node/.maintain/media/kilt.png">
+</p>
+
+Threefold blockchain serves as a registry for Nodes, Farm, Digital Twins and Deployment contracts.
+It is the backbone of [ZOS](https://github.com/threefoldtech/zos) and other components.
+
+## Docs
+
+see [docs](./docs/readme.md) for more information on how to work with this component.
 
 ## Installation
 
