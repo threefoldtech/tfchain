@@ -30,18 +30,6 @@ If not, this command will fetch the latest version of Rust and install it.
 
 `curl https://sh.rustup.rs -sSf | sh -s -- -y`
 
-To install nightly:
-
-```
-rustup install nightly-2021-06-09
-```
-
-Add Wasm toolchain:
-
-```
-rustup target add wasm32-unknown-unknown --toolchain nightly-2021-06-09
-```
-
 > If you do not have "curl" installed, run "sudo apt install curl"
 
 To configure your shell, run the following command.
@@ -82,24 +70,19 @@ ntpd will be started automatically after install. You can query ntpd for status 
 
 You will need to build the tfchain binary from the threefoldtech/tfchain repository on GitHub.
 
-Release to use for different networks:
-
-- Mainnet: 1.0.0 (git checkout 1.0.0)
-- Testnet: 1.0.0-b1 (git checkout 1.0.0-b1)
-- Devnet: 1.0.0-b9 (git checkout 1.0.0-b9)
+Check release page on github to check which binary to use.
 
 Note: If you prefer to use SSH rather than HTTPS, you can replace the first line of the below with git clone git@github.com:threefoldtech/tfchain.git.
 
 ```
 git clone https://github.com/threefoldtech/tfchain.git
 cd substrate-node
-git checkout 1.0.0
 ```
 
 Now build the binary
 
 ```
-cargo +nightly-2021-06-09 build --release
+cargo build --release
 ```
 
 This step will take a while (generally 10 - 40 minutes, depending on your hardware).
@@ -131,19 +114,19 @@ The `--chain chainspecs/network/chainSpec.json` flag is different for every netw
 if you do not want to start in validator mode right away.
 
 ```
-2022-02-18 15:45:22  Substrate Node    
-2022-02-18 15:45:22  ✌️  version 3.0.0-138e5f5-x86_64-linux-gnu    
-2022-02-18 15:45:22  ❤️  by Substrate DevHub <https://github.com/substrate-developer-hub>, 2017-2022    
-2022-02-18 15:45:22  📋 Chain specification: Tfchain Mainnet    
-2022-02-18 15:45:22  🏷 Node name: milky-woman-6216    
-2022-02-18 15:45:22  👤 Role: AUTHORITY    
-2022-02-18 15:45:22  💾 Database: RocksDb at /home/user/.local/share/tfchain/chains/tfchain_mainnet/db    
-2022-02-18 15:45:22  ⛓  Native runtime: substrate-threefold-40 (substrate-threefold-1.tx1.au1)    
-2022-02-18 15:45:23  🔨 Initializing Genesis block/state (state: 0x7526…4fb6, header-hash: 0x84cb…5e7b)    
-2022-02-18 15:45:23  👴 Loading GRANDPA authority set from genesis on what appears to be first startup.    
-2022-02-18 15:45:23  ⏱  Loaded block-time = 6000 milliseconds from genesis on first-launch    
-2022-02-18 15:45:23  Using default protocol ID "sup" because none is configured in the chain specs    
-2022-02-18 15:45:23  🏷 Local node identity is: 12D3KooWPyq94pmzZ9RQAvrU1SsShjmEVgfgMvyeBifFGf98wdf6    
+2022-02-18 15:45:22  Substrate Node
+2022-02-18 15:45:22  ✌️  version 3.0.0-138e5f5-x86_64-linux-gnu
+2022-02-18 15:45:22  ❤️  by Substrate DevHub <https://github.com/substrate-developer-hub>, 2017-2022
+2022-02-18 15:45:22  📋 Chain specification: Tfchain Mainnet
+2022-02-18 15:45:22  🏷 Node name: milky-woman-6216
+2022-02-18 15:45:22  👤 Role: AUTHORITY
+2022-02-18 15:45:22  💾 Database: RocksDb at /home/user/.local/share/tfchain/chains/tfchain_mainnet/db
+2022-02-18 15:45:22  ⛓  Native runtime: substrate-threefold-40 (substrate-threefold-1.tx1.au1)
+2022-02-18 15:45:23  🔨 Initializing Genesis block/state (state: 0x7526…4fb6, header-hash: 0x84cb…5e7b)
+2022-02-18 15:45:23  👴 Loading GRANDPA authority set from genesis on what appears to be first startup.
+2022-02-18 15:45:23  ⏱  Loaded block-time = 6000 milliseconds from genesis on first-launch
+2022-02-18 15:45:23  Using default protocol ID "sup" because none is configured in the chain specs
+2022-02-18 15:45:23  🏷 Local node identity is: 12D3KooWPyq94pmzZ9RQAvrU1SsShjmEVgfgMvyeBifFGf98wdf6
 2022-02-18 15:45:23  📦 Highest known block at #1231
 ```
 
@@ -171,7 +154,7 @@ If you are interested in determining how much longer you have to go, your server
 Open polkadot js link in the browser based on the network you want to validate on.
 
 - Browse to `accounts` and click `Add Account`, create an account and name it `VALIDATOR_ACCOUNT`. Take note of the mnemonic.
-This account will be your account that manages the Validator and manages your council membership (voting). Make sure to send some TFT to this account.
+  This account will be your account that manages the Validator and manages your council membership (voting). Make sure to send some TFT to this account.
 - (Optional) Create another account and name it `ANYNAME_STASH`. This account will be your stash account.
 - Create one more account and call it `VALIDATOR_NODE_ACCOUNT`, this account will be used to participate in consensus.
 
@@ -183,13 +166,13 @@ Note: Both `VALIDATOR_ACCOUNT` and `VALIDATOR_NODE_ACCOUNT` need atleast 0.1 TFT
 
 Now go to `Developer` -> `Extrinsicis` and Select your `Stash` account. Now from the left dropdown (modules) search `validator`
 
-![bond](./bond.png)
+![bond](./assets/bond.png)
 
 Select `bond(validator)` and select the target account to be your account that manages the Validator and manages your council membership (voting). (You previously created).
 
 Now click `Submit Transaction`.
 
-![create](./create_val.png)
+![create](./assets/create_val.png)
 
 Now go to `Developer` -> `Extrinsicis` and Select your `VALIDATOR_ACCOUNT` account. Now from the left dropdown (modules) search `validator` and select the method: `createValidator(...)`
 
@@ -274,7 +257,7 @@ If your request is approved by the council AND your tfchain node is fully synced
 
 Now go to `Developer` -> `Extrinsicis` and Select your account that manages the Validator and manages your council membership (voting). (You previously created).. Now from the left dropdown (modules) search `validator`.
 
-![activate](./activate.png)
+![activate](./assets/activate.png)
 
 Select `ActivateValidatorNode` and click Submit Transaction.
 

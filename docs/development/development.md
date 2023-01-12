@@ -21,6 +21,10 @@ cargo build
 ./target/debug/tfchain --dev --ws-external --pruning archive
 ```
 
+## Running multi node local tfchain network
+
+See [local](./local_multinode.md)
+
 ## Code changes?
 
 Wipe data and recompile.

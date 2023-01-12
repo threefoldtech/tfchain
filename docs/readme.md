@@ -6,7 +6,7 @@ For information about the development process, see: [development](./development/
 
 ## Production
 
-For information about the process to deploy on production, see [production](./production.md)
+For information about the process to deploy on production, see [production](./production/production.md)
 
 ## Testing
 
