@@ -1,7 +1,7 @@
 # TFchain &middot; ![Build & Tests](https://github.com/threefoldtech/tfchain/actions/workflows/build_test.yaml/badge.svg)
 
 <p align="center">
-  <img src="/substrate-node/.maintain/media/header.png">
+  <img src="./substrate-node/.maintain/media/header.png">
 </p>
 
 Threefold blockchain serves as a registry for Nodes, Farm, Digital Twins and Deployment contracts.
