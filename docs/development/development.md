@@ -36,3 +36,7 @@ To wipe data run:
 ```
 ./target/debug/tfchain purge-chain --dev
 ```
+
+## Writing tests for pallets
+
+Check https://docs.substrate.io/reference/how-to-guides/testing/ for learning how to write tests for pallets.

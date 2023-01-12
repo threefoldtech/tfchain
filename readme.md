@@ -7,6 +7,12 @@
 Threefold blockchain serves as a registry for Nodes, Farm, Digital Twins and Deployment contracts.
 It is the backbone of [ZOS](https://github.com/threefoldtech/zos) and other components.
 
+## Structure
+
+- Node: defines the way the node communicates with other nodes.
+- Pallet: defines runtime behaviour, these are modules that can work together or independantly.
+- Runtime: The runtime determines whether transactions are valid or invalid and is responsible for handling changes to the blockchain's state transition function. It also enabled configuration of pallets.
+
 ## Docs
 
 see [docs](./docs/readme.md) for more information on how to work with this component.
