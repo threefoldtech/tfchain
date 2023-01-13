@@ -17,7 +17,7 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
     }
 
     #[pallet::event]
@@ -63,6 +63,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
         #[pallet::weight(100_000_000)]
         pub fn mint(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let _ = ensure_signed(origin)?;
