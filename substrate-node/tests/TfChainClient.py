@@ -13,6 +13,7 @@ TIMEOUT_WAIT_FOR_BLOCK = 6
 
 DEFAULT_SIGNER = "Alice"
 DEFAULT_PORT = 9945
+DEFAULT_SERIAL_NUMBER = "DefaultSerialNumber"
 
 FARM_CERTIFICATION_NOTCERTIFIED = "NotCertified"
 FARM_CERTIFICATION_GOLD = "Gold"
@@ -50,9 +51,9 @@ class TfChainClient:
 
         # This was a sudo call that failed
         for event in events:
-            if event["event_id"] == "Sudid" and "Err" in event["attributes"]:
-                raise Exception(event["attributes"])
-
+            if event["event_id"] == "Sudid" and "Err" in event["attributes"]["sudo_result"]:
+                raise Exception(event["attributes"]["sudo_result"])
+            
         for expected_event in expected_events:
             check = False
             for event in events:
@@ -225,7 +226,7 @@ class TfChainClient:
                                       {
                                           "id": id,
                                           "ip": ip,
-                                          "gateway": gateway
+                                          "gw": gateway
                                       })
         expected_events = [{
             "module_id": "TfgridModule",
@@ -251,8 +252,8 @@ class TfChainClient:
 
     def create_node(self, farm_id: int = 1, hru: int = 0, sru: int = 0, cru: int = 0, mru: int = 0,
                     longitude: str = "", latitude: str = "", country: str = "", city: str = "", interfaces: list = [],
-                    secure_boot: bool = False, virtualized: bool = False, serial_number: str = "", port: int = DEFAULT_PORT,
-                    who: str = DEFAULT_SIGNER):
+                    secure_boot: bool = False, virtualized: bool = False, serial_number: str = DEFAULT_SERIAL_NUMBER,
+                    port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         params = {
@@ -264,11 +265,11 @@ class TfChainClient:
                 "mru": mru * GIGABYTE
             },
             "location": {
+                "city": city,
+                "country": country,
                 "longitude": f"{longitude}",
                 "latitude": f"{latitude}"
             },
-            "country": country,
-            "city": city,
             "interfaces": interfaces,
             "secure_boot": secure_boot,
             "virtualized": virtualized,
@@ -285,8 +286,8 @@ class TfChainClient:
 
     def update_node(self, node_id: int = 1, farm_id: int = 1, hru: int = 0, sru: int = 0, cru: int = 0, mru: int = 0,
                     longitude: str = "", latitude: str = "", country: str = "", city: str = "",
-                    secure_boot: bool = False, virtualized: bool = False, serial_number: str = "", port: int = DEFAULT_PORT,
-                    who: str = DEFAULT_SIGNER):
+                    secure_boot: bool = False, virtualized: bool = False, serial_number: str = DEFAULT_SERIAL_NUMBER,
+                    port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         params = {
@@ -299,11 +300,11 @@ class TfChainClient:
                 "mru": mru * GIGABYTE
             },
             "location": {
+                "city": city,
+                "country": country,
                 "longitude": f"{longitude}",
                 "latitude": f"{latitude}"
             },
-            "country": country,
-            "city": city,
             "interfaces": [],
             "secure_boot": secure_boot,
             "virtualized": virtualized,

@@ -26,14 +26,20 @@ use sp_std::{cmp::Ordering, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-use tfchain_support::{traits::ChangeNode, types::Node};
+use tfchain_support::{
+    constants::time::*,
+    traits::{ChangeNode, PublicIpModifier},
+    types::PublicIP,
+};
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
     construct_runtime, parameter_types,
-    traits::{ConstU8, EnsureOneOf, FindAuthor, KeyOwnerProofSystem, PrivilegeCmp, Randomness},
+    traits::{ConstU8, EitherOfDiverse, FindAuthor, KeyOwnerProofSystem, PrivilegeCmp, Randomness},
     weights::{
-        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
+        constants::{
+            BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND,
+        },
         ConstantMultiplier, IdentityFee, Weight,
     },
     StorageValue,
@@ -141,27 +147,12 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 115,
+    spec_version: 123,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
     state_version: 0,
 };
-
-/// This determines the average expected block time that we are targeting.
-/// Blocks will be produced at a minimum duration defined by `SLOT_DURATION`.
-/// `SLOT_DURATION` is picked up by `pallet_timestamp` which is in turn picked
-/// up by `pallet_aura` to implement `fn slot_duration()`.
-///
-/// Change this to adjust the block time.
-pub const MILLISECS_PER_BLOCK: u64 = 6000;
-
-pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
-
-// Time is measured by number of blocks.
-pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
-pub const HOURS: BlockNumber = MINUTES * 60;
-pub const DAYS: BlockNumber = HOURS * 24;
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -178,14 +169,16 @@ parameter_types! {
     pub const Version: RuntimeVersion = VERSION;
     pub const BlockHashCount: BlockNumber = 2400;
     /// We allow for 2 seconds of compute with a 6 second average block time.
-    pub BlockWeights: frame_system::limits::BlockWeights = frame_system::limits::BlockWeights
-        ::with_sensible_defaults(2 * WEIGHT_PER_SECOND, NORMAL_DISPATCH_RATIO);
+    pub BlockWeights: frame_system::limits::BlockWeights =
+    frame_system::limits::BlockWeights::with_sensible_defaults(
+        Weight::from_parts(2u64 * WEIGHT_REF_TIME_PER_SECOND, u64::MAX),
+        NORMAL_DISPATCH_RATIO,
+    );
     pub BlockLength: frame_system::limits::BlockLength = frame_system::limits::BlockLength
         ::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
     pub const SS58Prefix: u8 = 42;
-    pub const MaximumBlockWeight: Weight = 2 * WEIGHT_PER_SECOND;
 
-    pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) * MaximumBlockWeight::get();
+    pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) * BlockWeights::get().max_block;
     pub const MaxScheduledPerBlock: u32 = 50;
     pub const NoPreimagePostponement: Option<BlockNumber> = Some(10);
 }
@@ -202,7 +195,7 @@ impl frame_system::Config for Runtime {
     /// The identifier used to distinguish between accounts.
     type AccountId = AccountId;
     /// The aggregated dispatch type that is available for extrinsics.
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     /// The lookup mechanism to get account ID from whatever is passed in dispatchers.
     type Lookup = AccountIdLookup<AccountId, ()>;
     /// The index type for storing how many extrinsics an account has signed.
@@ -216,9 +209,9 @@ impl frame_system::Config for Runtime {
     /// The header type.
     type Header = generic::Header<BlockNumber, BlakeTwo256>;
     /// The ubiquitous event type.
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     /// The ubiquitous origin type.
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     /// Maximum number of block number to block hash mappings to keep (oldest pruned first).
     type BlockHashCount = BlockHashCount;
     /// The weight of database operations that the runtime can invoke.
@@ -255,8 +248,7 @@ impl pallet_aura::Config for Runtime {
 }
 
 impl pallet_grandpa::Config for Runtime {
-    type Event = Event;
-    type Call = Call;
+    type RuntimeEvent = RuntimeEvent;
 
     type KeyOwnerProofSystem = ();
 
@@ -299,7 +291,7 @@ impl pallet_balances::Config for Runtime {
     /// The type for recording an account's balance.
     type Balance = Balance;
     /// The ubiquitous event type.
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
@@ -311,6 +303,7 @@ parameter_types! {
 }
 
 impl pallet_transaction_payment::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
     type OnChargeTransaction = CurrencyAdapter<Balances, impls::DealWithFees<Runtime>>;
     type OperationalFeeMultiplier = ConstU8<5>;
     type WeightToFee = WeightToFeeStruct;
@@ -319,24 +312,32 @@ impl pallet_transaction_payment::Config for Runtime {
 }
 
 impl pallet_sudo::Config for Runtime {
-    type Event = Event;
-    type Call = Call;
+    type RuntimeEvent = RuntimeEvent;
+    type RuntimeCall = RuntimeCall;
 }
 
-pub type PubConfig = pallet_tfgrid::pallet::PubConfigOf<Runtime>;
+pub type Serial = pallet_tfgrid::pallet::SerialNumberOf<Runtime>;
+pub type Loc = pallet_tfgrid::pallet::LocationOf<Runtime>;
 pub type Interface = pallet_tfgrid::pallet::InterfaceOf<Runtime>;
+
+pub type TfgridNode = pallet_tfgrid::pallet::TfgridNode<Runtime>;
+
 pub struct NodeChanged;
-impl ChangeNode<PubConfig, Interface> for NodeChanged {
-    fn node_changed(
-        old_node: Option<&Node<PubConfig, Interface>>,
-        new_node: &Node<PubConfig, Interface>,
-    ) {
+impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
+    fn node_changed(old_node: Option<&TfgridNode>, new_node: &TfgridNode) {
         Dao::node_changed(old_node, new_node)
     }
 
-    fn node_deleted(node: &Node<PubConfig, Interface>) {
+    fn node_deleted(node: &TfgridNode) {
         SmartContractModule::node_deleted(node);
         Dao::node_deleted(node);
+    }
+}
+
+pub struct PublicIpModifierType;
+impl PublicIpModifier for PublicIpModifierType {
+    fn ip_removed(ip: &PublicIP) {
+        SmartContractModule::ip_removed(ip);
     }
 }
 
@@ -348,31 +349,31 @@ parameter_types! {
 }
 
 impl pallet_tfgrid::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Runtime>;
     type NodeChanged = NodeChanged;
+    type PublicIpModifier = SmartContractModule;
+    type TermsAndConditions = pallet_tfgrid::terms_cond::TermsAndConditions<Runtime>;
     type TwinIp = pallet_tfgrid::twin::TwinIp<Runtime>;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
     type FarmName = pallet_tfgrid::farm::FarmName<Runtime>;
-    type PublicIP = pallet_tfgrid::pub_ip::PublicIP<Runtime>;
-    type GatewayIP = pallet_tfgrid::pub_ip::GatewayIP<Runtime>;
-    type IP4 = pallet_tfgrid::pub_config::IP4<Runtime>;
-    type GW4 = pallet_tfgrid::pub_config::GW4<Runtime>;
-    type IP6 = pallet_tfgrid::pub_config::IP6<Runtime>;
-    type GW6 = pallet_tfgrid::pub_config::GW6<Runtime>;
-    type Domain = pallet_tfgrid::pub_config::Domain<Runtime>;
     type MaxInterfacesLength = MaxInterfacesLength;
     type InterfaceName = pallet_tfgrid::interface::InterfaceName<Runtime>;
     type InterfaceMac = pallet_tfgrid::interface::InterfaceMac<Runtime>;
     type InterfaceIP = pallet_tfgrid::interface::InterfaceIp<Runtime>;
     type MaxInterfaceIpsLength = MaxInterfaceIpsLength;
+    type CountryName = pallet_tfgrid::node::CountryName<Runtime>;
+    type CityName = pallet_tfgrid::node::CityName<Runtime>;
+    type Location = pallet_tfgrid::node::Location<Runtime>;
+    type SerialNumber = pallet_tfgrid::node::SerialNumber<Runtime>;
 }
 
 parameter_types! {
     pub StakingPoolAccount: AccountId = get_staking_pool_account();
     pub BillingFrequency: u64 = 600;
+    pub BillingReferencePeriod: u64 = SECS_PER_HOUR;
     pub GracePeriod: u64 = (14 * DAYS).into();
     pub DistributionFrequency: u16 = 24;
     pub RetryInterval: u32 = 20;
@@ -389,14 +390,18 @@ pub fn get_staking_pool_account() -> AccountId {
 }
 
 impl pallet_smart_contract::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type StakingPoolAccount = StakingPoolAccount;
     type BillingFrequency = BillingFrequency;
+    type BillingReferencePeriod = BillingReferencePeriod;
     type DistributionFrequency = DistributionFrequency;
     type GracePeriod = GracePeriod;
     type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
     type NodeChanged = NodeChanged;
+    type PublicIpModifier = PublicIpModifierType;
+    type AuthorityId = pallet_smart_contract::crypto::AuthId;
+    type Call = RuntimeCall;
     type MaxNameContractNameLength = MaxNameContractNameLength;
     type NameContractName = pallet_smart_contract::name_contract::NameContractName<Runtime>;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
@@ -406,7 +411,7 @@ impl pallet_smart_contract::Config for Runtime {
 }
 
 impl pallet_tft_bridge::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type Burn = ();
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
@@ -414,7 +419,7 @@ impl pallet_tft_bridge::Config for Runtime {
 }
 
 impl pallet_burning::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type Burn = ();
 }
@@ -424,18 +429,18 @@ impl pallet_minting::Config for Runtime {
 }
 
 impl pallet_kvstore::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
 }
 
 impl pallet_tft_price::Config for Runtime {
     type AuthorityId = pallet_tft_price::AuthId;
-    type Call = Call;
-    type Event = Event;
+    type Call = RuntimeCall;
+    type RuntimeEvent = RuntimeEvent;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
 }
 
 impl pallet_validator::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type CouncilOrigin = EnsureRootOrCouncilApproval;
     type Currency = Balances;
 }
@@ -445,7 +450,7 @@ parameter_types! {
 }
 
 impl validatorset::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type AddRemoveOrigin = EnsureRootOrCouncilApproval;
     type MinAuthorities = MinAuthorities;
 }
@@ -456,9 +461,9 @@ parameter_types! {
 }
 
 impl pallet_dao::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type CouncilOrigin = EnsureRootOrCouncilApproval;
-    type Proposal = Call;
+    type Proposal = RuntimeCall;
     type MotionDuration = DaoMotionDuration;
     type Tfgrid = TfgridModule;
     type NodeChanged = NodeChanged;
@@ -501,22 +506,22 @@ impl pallet_session::Config for Runtime {
     type SessionHandler = <opaque::SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
     type Keys = opaque::SessionKeys;
     type WeightInfo = ();
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     // type DisabledValidatorsThreshold = ();
 }
 
-pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
+pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
 where
-    Call: From<LocalCall>,
+    RuntimeCall: From<LocalCall>,
 {
     fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
-        call: Call,
+        call: RuntimeCall,
         public: <Signature as sp_runtime::traits::Verify>::Signer,
         account: AccountId,
         index: Index,
     ) -> Option<(
-        Call,
+        RuntimeCall,
         <UncheckedExtrinsic as sp_runtime::traits::Extrinsic>::SignaturePayload,
     )> {
         let period = BlockHashCount::get() as u64;
@@ -560,9 +565,9 @@ impl frame_system::offchain::SigningTypes for Runtime {
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
 where
-    Call: From<C>,
+    RuntimeCall: From<C>,
 {
-    type OverarchingCall = Call;
+    type OverarchingCall = RuntimeCall;
     type Extrinsic = UncheckedExtrinsic;
 }
 
@@ -590,17 +595,16 @@ impl PrivilegeCmp<OriginCaller> for OriginPrivilegeCmp {
 }
 
 impl pallet_scheduler::Config for Runtime {
-    type Event = Event;
-    type Origin = Origin;
+    type RuntimeEvent = RuntimeEvent;
+    type RuntimeOrigin = RuntimeOrigin;
     type PalletsOrigin = OriginCaller;
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type MaximumWeight = MaximumSchedulerWeight;
     type ScheduleOrigin = frame_system::EnsureRoot<AccountId>;
     type MaxScheduledPerBlock = MaxScheduledPerBlock;
     type WeightInfo = ();
     type OriginPrivilegeCmp = OriginPrivilegeCmp;
-    type PreimageProvider = ();
-    type NoPreimagePostponement = NoPreimagePostponement;
+    type Preimages = ();
 }
 
 parameter_types! {
@@ -611,9 +615,9 @@ parameter_types! {
 
 type CouncilCollective = pallet_collective::Instance1;
 impl pallet_collective::Config<CouncilCollective> for Runtime {
-    type Origin = Origin;
-    type Proposal = Call;
-    type Event = Event;
+    type RuntimeOrigin = RuntimeOrigin;
+    type Proposal = RuntimeCall;
+    type RuntimeEvent = RuntimeEvent;
     type MotionDuration = CouncilMotionDuration;
     type MaxProposals = CouncilMaxProposals;
     type MaxMembers = CouncilMaxMembers;
@@ -622,7 +626,7 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 }
 
 impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type AddOrigin = EnsureRootOrCouncilApproval;
     type RemoveOrigin = EnsureRootOrCouncilApproval;
     type SwapOrigin = EnsureRootOrCouncilApproval;
@@ -648,7 +652,7 @@ impl ChangeMembers<AccountId> for MembershipChangedGroup {
     }
 }
 
-type EnsureRootOrCouncilApproval = EnsureOneOf<
+type EnsureRootOrCouncilApproval = EitherOfDiverse<
     EnsureRoot<AccountId>,
     pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 5>,
 >;
@@ -688,8 +692,8 @@ impl pallet_authorship::Config for Runtime {
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
 impl pallet_utility::Config for Runtime {
-    type Event = Event;
-    type Call = Call;
+    type RuntimeEvent = RuntimeEvent;
+    type RuntimeCall = RuntimeCall;
     type PalletsOrigin = OriginCaller;
     type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
 }
@@ -709,7 +713,7 @@ construct_runtime!(
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
         Aura: pallet_aura::{Pallet, Config<T>},
         Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event},
-        TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
+        TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
         Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
         TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>, Config<T>},
@@ -751,9 +755,10 @@ pub type SignedExtra = (
     pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this runtime.
-pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
+pub type UncheckedExtrinsic =
+    generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
 /// Extrinsic type that has already been checked.
-pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Call, SignedExtra>;
+pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra>;
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
     Runtime,
@@ -761,8 +766,39 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    (),
+    Migrations,
 >;
+
+// All migrations executed on runtime upgrade as a nested tuple of types implementing
+// `OnRuntimeUpgrade`.
+type Migrations = (
+    pallet_smart_contract::migrations::v6::ContractMigrationV5<Runtime>,
+    pallet_tfgrid::migrations::v10::FixFarmNodeIndexMap<Runtime>,
+    pallet_tfgrid::migrations::v11::FixFarmingPolicy<Runtime>,
+    pallet_tfgrid::migrations::v12::InputValidation<Runtime>,
+    pallet_tfgrid::migrations::v13::FixPublicIP<Runtime>,
+);
+
+// follows Substrate's non destructive way of eliminating  otherwise required
+// repetion: https://github.com/paritytech/substrate/pull/10592
+#[cfg(feature = "runtime-benchmarks")]
+#[macro_use]
+extern crate frame_benchmarking;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benches {
+    define_benchmarks!(
+        // KILT
+        [pallet_smart_contract, SmartContractModule]
+        // Substrate
+        [frame_benchmarking::baseline, Baseline::<Runtime>]
+        [frame_system, SystemBench::<Runtime>]
+        // [pallet_session, Session]
+        [pallet_balances, Balances]
+        [pallet_collective, Council]
+        [pallet_timestamp, Timestamp]
+    );
+}
 
 impl_runtime_apis! {
     impl sp_api::Core<Block> for Runtime {
@@ -805,10 +841,6 @@ impl_runtime_apis! {
         ) -> sp_inherents::CheckInherentsResult {
             data.check_extrinsics(&block)
         }
-
-        // fn random_seed() -> <Block as BlockT>::Hash {
-        // 	RandomnessCollectiveFlip::random_seed().0
-        // }
     }
 
     impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
@@ -903,13 +935,33 @@ impl_runtime_apis! {
 
     #[cfg(feature = "runtime-benchmarks")]
     impl frame_benchmarking::Benchmark<Block> for Runtime {
+        fn benchmark_metadata(extra: bool) -> (
+            Vec<frame_benchmarking::BenchmarkList>,
+            Vec<frame_support::traits::StorageInfo>,
+        ) {
+            use frame_benchmarking::{Benchmarking, BenchmarkList};
+            use frame_support::traits::StorageInfoTrait;
+
+            use frame_system_benchmarking::Pallet as SystemBench;
+            use frame_benchmarking::baseline::Pallet as Baseline;
+
+            let mut list = Vec::<BenchmarkList>::new();
+            list_benchmarks!(list, extra);
+
+            let storage_info = AllPalletsWithSystem::storage_info();
+
+            (list, storage_info)
+        }
+
         fn dispatch_benchmark(
             config: frame_benchmarking::BenchmarkConfig
         ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-            use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
+            use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
+            use frame_system_benchmarking::Pallet as SystemBench;
+            use frame_benchmarking::baseline::Pallet as Baseline;
 
-            use frame_system_benchmarking::Module as SystemBench;
             impl frame_system_benchmarking::Config for Runtime {}
+            impl frame_benchmarking::baseline::Config for Runtime {}
 
             let whitelist: Vec<TrackedStorageKey> = vec![
                 // Block Number
@@ -932,12 +984,7 @@ impl_runtime_apis! {
             let mut batches = Vec::<BenchmarkBatch>::new();
             let params = (&config, &whitelist);
 
-            add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
-            add_benchmark!(params, batches, pallet_balances, Balances);
-            add_benchmark!(params, batches, pallet_timestamp, Timestamp);
-            add_benchmark!(params, batches, pallet_tfgrid, TfgridModule);
-            add_benchmark!(params, batches, pallet_smart_contract, SmartContractModule);
-            add_benchmark!(params, batches, pallet_dao, Dao);
+            add_benchmarks!(params, batches);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)
@@ -946,19 +993,23 @@ impl_runtime_apis! {
 
     #[cfg(feature = "try-runtime")]
     impl frame_try_runtime::TryRuntime<Block> for Runtime {
-        fn on_runtime_upgrade() -> (frame_support::weights::Weight, frame_support::weights::Weight) {
-            log::info!("try-runtime::on_runtime_upgrade.");
+        fn on_runtime_upgrade(checks: bool) -> (Weight, Weight) {
             // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
             // have a backtrace here. If any of the pre/post migration checks fail, we shall stop
             // right here and right now.
-            let weight = Executive::try_runtime_upgrade().map_err(|err|{
-                log::error!("try-runtime::on_runtime_upgrade failed with: {:?}", err);
-                err
-            }).unwrap();
+            let weight = Executive::try_runtime_upgrade(checks).unwrap();
             (weight, BlockWeights::get().max_block)
         }
-        fn execute_block_no_check(block: Block) -> frame_support::weights::Weight {
-            Executive::execute_block_no_check(block)
+
+        fn execute_block(
+            block: Block,
+            state_root_check: bool,
+            signature_check: bool,
+            select: frame_try_runtime::TryStateSelect
+        ) -> Weight {
+            // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+            // have a backtrace here.
+            Executive::try_execute_block(block, state_root_check, signature_check, select).expect("execute-block failed")
         }
     }
 }

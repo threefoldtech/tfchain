@@ -191,12 +191,12 @@ Test Create Update Delete Node
     Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
     ${node} =    Get Node    ${1}
     Should Not Be Equal    ${node}    ${None}
-    Should Be Equal    ${node}[city]    Ghent
+    Should Be Equal    ${node}[location][city]    Ghent
 
     Update Node    node_id=${1}    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Celles
     ${node} =    Get Node    ${1}
     Should Not Be Equal    ${node}    ${None}
-    Should Be Equal    ${node}[city]    Celles
+    Should Be Equal    ${node}[location][city]    Celles
 
     Delete Node    ${1}
     ${node} =    Get Node    ${1}
@@ -249,7 +249,7 @@ Test Add Public Config On Node: Failure InvalidIP4
 
     Setup Network And Create Node
 
-    Run Keyword And Expect Error    *'InvalidIP4'*
+    Run Keyword And Expect Error    *'InvalidPublicConfig'*
     ...    Add Node Public Config    farm_id=${1}    node_id=${1}    ipv4=185.206.122.33    gw4=185.206.122.1    domain=some-domain
 
     Tear Down Multi Node Network
@@ -260,7 +260,7 @@ Test Add Public Config On Node: Failure InvalidIP6
 
     Setup Network And Create Node  
 
-    Run Keyword And Expect Error    *'InvalidIP6'*
+    Run Keyword And Expect Error    *'InvalidPublicConfig'*
     ...    Add Node Public Config    farm_id=${1}    node_id=${1}    ipv4=185.206.122.33/24    gw4=185.206.122.1    ipv6=2a10:b600:1::0cc4:7a30:65b5    gw6=2a10:b600:1::1    domain=some-domain
     
     Tear Down Multi Node Network
@@ -270,7 +270,7 @@ Test Add Public Config On Node: Failure InvalidDomain
     Setup Multi Node Network    log_name=test_add_pub_config_node_failure_invaliddomain
 
     Setup Network And Create Node
-    Run Keyword And Expect Error    *'InvalidDomain'*
+    Run Keyword And Expect Error    *'InvalidPublicConfig'*
     ...    Add Node Public Config    farm_id=${1}    node_id=${1}    ipv4=185.206.122.33/24    gw4=185.206.122.1    ipv6=2a10:b600:1::0cc4:7a30:65b5/64    gw6=2a10:b600:1::1    domain=some_invalid_domain
 
     Tear Down Multi Node Network

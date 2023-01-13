@@ -46,16 +46,12 @@ def wait_till_node_ready(log_file: str, timeout_in_seconds=TIMEOUT_STARTUP_IN_SE
                 if RE_NODE_STARTED.search(line):
                     return
 
-def setup_offchain_workers(port: int, worker_tft: str = "Alice", worker_smct: str = "Bob"):
+def setup_offchain_workers(port: int, worker_account: str = "Alice"):
     logging.info("Setting up offchain workers")
     substrate = SubstrateInterface(url=f"ws://127.0.0.1:{port}", ss58_format=42, type_registry_preset='polkadot')
     
     insert_key_params = [
-            "tft!", f"//{worker_tft}", PREDEFINED_KEYS[worker_tft].public_key.hex()]
-    substrate.rpc_request("author_insertKey", insert_key_params)
-
-    insert_key_params = [
-            "smct", f"//{worker_smct}", PREDEFINED_KEYS[worker_smct].public_key.hex()]
+            "tft!", f"//{worker_account}", PREDEFINED_KEYS[worker_account].public_key.hex()]
     substrate.rpc_request("author_insertKey", insert_key_params)
 
 def execute_command(cmd: list, log_file: str | None = None):
@@ -128,7 +124,7 @@ class SubstrateNetwork:
         self._nodes["alice"] = run_node(log_file_alice, "/tmp/alice", "alice", port, ws_port,
                                         rpc_port, node_key="0000000000000000000000000000000000000000000000000000000000000001")
         wait_till_node_ready(log_file_alice)
-        setup_offchain_workers(ws_port)
+        setup_offchain_workers(ws_port, "Alice")
 
         log_file = ""
         for x in range(1, amt):
@@ -140,7 +136,7 @@ class SubstrateNetwork:
             self._nodes[name] = run_node(log_file, f"/tmp/{name}", name, port, ws_port, rpc_port, node_key=None,
                                          bootnodes="/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp")
             wait_till_node_ready(log_file)
-            setup_offchain_workers(ws_port)
+            setup_offchain_workers(ws_port, "Bob")
 
         logging.info("Network is up and running.")
 
