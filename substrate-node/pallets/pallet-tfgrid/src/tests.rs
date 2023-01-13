@@ -351,7 +351,6 @@ fn test_update_farm_name_works() {
             Origin::signed(bob()),
             2,
             farm_name.0.clone(),
-            1
         ));
     });
 }
@@ -379,7 +378,7 @@ fn test_update_farm_existing_name_fails() {
 
         let farm_name = get_farm_name(b"alice_farm");
         assert_noop!(
-            TfgridModule::update_farm(Origin::signed(bob()), 2, farm_name.0.clone(), 1),
+            TfgridModule::update_farm(Origin::signed(bob()), 2, farm_name.0.clone()),
             Error::<TestRuntime>::InvalidFarmName
         );
     });
@@ -906,7 +905,7 @@ fn remove_node_certifier_works() {
 }
 
 #[test]
-fn set_certification_type_node_works() {
+fn set_certification_type_node_allowed_certifier_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
         create_twin();
@@ -933,6 +932,69 @@ fn set_certification_type_node_works() {
         ));
         let node = TfgridModule::nodes(1).unwrap();
         assert_eq!(node.certification, NodeCertification::Diy);
+    });
+}
+
+#[test]
+fn set_certification_type_node_not_allowed_certifier_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        assert_noop!(
+            TfgridModule::set_node_certification(
+                Origin::signed(alice()),
+                1,
+                NodeCertification::Certified
+            ),
+            Error::<TestRuntime>::NotAllowedToCertifyNode
+        );
+    });
+}
+
+#[test]
+fn set_certification_type_node_council_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        assert_ok!(TfgridModule::set_node_certification(
+            RawOrigin::Root.into(),
+            1,
+            NodeCertification::Certified
+        ));
+        let node = TfgridModule::nodes(1).unwrap();
+        assert_eq!(node.certification, NodeCertification::Certified);
+
+        assert_ok!(TfgridModule::set_node_certification(
+            RawOrigin::Root.into(),
+            1,
+            NodeCertification::Diy
+        ));
+        let node = TfgridModule::nodes(1).unwrap();
+        assert_eq!(node.certification, NodeCertification::Diy);
+    });
+}
+
+#[test]
+fn set_certification_type_node_not_exists_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+
+        assert_noop!(
+            TfgridModule::set_node_certification(
+                RawOrigin::Root.into(),
+                1,
+                NodeCertification::Certified
+            ),
+            Error::<TestRuntime>::NodeNotExists
+        );
     });
 }
 

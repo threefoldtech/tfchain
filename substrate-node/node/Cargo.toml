@@ -7,7 +7,7 @@ homepage = 'https://substrate.dev'
 license = 'Unlicense'
 name = 'tfchain'
 repository = 'https://github.com/substrate-developer-hub/substrate-node-template/'
-version = '2.1.1'
+version = '2.1.3'
 
 [[bin]]
 name = 'tfchain'
@@ -37,7 +37,7 @@ frame-benchmarking-cli = {git = "https://github.com/paritytech/substrate.git", b
 pallet-transaction-payment-rpc = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24"}
 pallet-transaction-payment = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24"}
 sc-basic-authorship = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24"}
-sc-cli = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24"}
+sc-cli = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", features = ["wasmtime"]}
 sc-client-api = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24"}
 sc-executor = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24"}
 sc-service = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24"}

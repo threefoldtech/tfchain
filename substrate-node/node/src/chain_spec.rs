@@ -7,7 +7,8 @@ use tfchain_runtime::opaque::SessionKeys;
 use tfchain_runtime::{
     AccountId, AuraConfig, BalancesConfig, CouncilConfig, CouncilMembershipConfig, GenesisConfig,
     GrandpaConfig, SessionConfig, Signature, SudoConfig, SystemConfig, TFTBridgeModuleConfig,
-    TFTPriceModuleConfig, TfgridModuleConfig, ValidatorSetConfig, WASM_BINARY,
+    SmartContractModuleConfig, TFTPriceModuleConfig, TfgridModuleConfig, ValidatorSetConfig, 
+    WASM_BINARY,
 };
 
 // The URL for the telemetry server.
@@ -121,6 +122,8 @@ pub fn development_config() -> Result<ChainSpec, String> {
             10,
             // TFT price pallet max price
             1000,
+            // billing frequency
+            10
 		)
         },
         // Bootnodes
@@ -209,6 +212,8 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
             10,
             // TFT price pallet max price
             1000,
+            // billing frequency
+            5
 		)
         },
         // Bootnodes
@@ -239,6 +244,7 @@ fn testnet_genesis(
     tft_price_allowed_account: AccountId,
     min_tft_price: u32,
     max_tft_price: u32,
+    billing_frequency: u64
 ) -> GenesisConfig {
     GenesisConfig {
         system: SystemConfig {
@@ -328,6 +334,9 @@ fn testnet_genesis(
             allowed_origin: Some(tft_price_allowed_account),
             min_tft_price,
             max_tft_price,
+        },
+        smart_contract_module: SmartContractModuleConfig {
+            billing_frequency: billing_frequency
         },
     }
 }

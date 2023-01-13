@@ -11,7 +11,7 @@ use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{crypto::KeyTypeId, sr25519, Encode, OpaqueMetadata};
+use sp_core::{crypto::KeyTypeId, Encode, OpaqueMetadata};
 use sp_runtime::traits::{
     AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, NumberFor, OpaqueKeys,
     SaturatedConversion, Verify,
@@ -139,7 +139,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 114,
+    spec_version: 116,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -375,7 +375,6 @@ parameter_types! {
     pub DistributionFrequency: u16 = 24;
     pub RetryInterval: u32 = 20;
     pub MaxNameContractNameLength: u32 = 64;
-    pub MaxNodeContractPublicIPs: u32 = 1;
     pub MaxDeploymentDataLength: u32 = 512;
 }
 
@@ -400,7 +399,7 @@ impl pallet_smart_contract::Config for Runtime {
     type NameContractName = pallet_smart_contract::name_contract::NameContractName<Runtime>;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
     type MaxDeploymentDataLength = MaxDeploymentDataLength;
-    type MaxNodeContractPublicIps = MaxNodeContractPublicIPs;
+    type MaxNodeContractPublicIps = MaxFarmPublicIps;
     type Burn = ();
 }
 
@@ -708,7 +707,7 @@ construct_runtime!(
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
         Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
         TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>, Config<T>},
-        SmartContractModule: pallet_smart_contract::{Pallet, Call, Storage, Event<T>},
+        SmartContractModule: pallet_smart_contract::{Pallet, Call, Config, Storage, Event<T>},
         TFTBridgeModule: pallet_tft_bridge::{Pallet, Call, Config<T>, Storage, Event<T>},
         TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Config<T>, Event<T>},
         Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>},
@@ -755,7 +754,10 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    (),
+    (
+        pallet_tfgrid::nodes_migration::v9::FixFarmNodeIndexMap<Runtime>,
+        pallet_tfgrid::farm_migration::v10::FixFarmingPolicy<Runtime>,
+    ),
 >;
 
 impl_runtime_apis! {
@@ -827,14 +829,7 @@ impl_runtime_apis! {
         }
 
         fn authorities() -> Vec<AuraId> {
-            ValidatorSet::validators()
-                .iter()
-                .map(|account| {
-                    let mut bytes = [0u8; 32];
-                    bytes.copy_from_slice(&account.encode());
-                    sr25519::Public::from_raw(bytes).into()
-                })
-                .collect()
+            Aura::authorities().into_inner()
         }
     }
 
