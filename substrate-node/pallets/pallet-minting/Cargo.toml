@@ -11,6 +11,10 @@ version = '0.0.1'
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
+[dependencies.log]
+default-features = false
+version = '0.4.14'
+
 [dependencies]
 # Substrate packages
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
@@ -22,6 +26,16 @@ frame-system =  { git = "https://github.com/paritytech/substrate", branch = "pol
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 sp-std =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 sp-io =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
+pallet-timestamp =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
+pallet-balances =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
+
+# Local dependencies
+pallet-tfgrid = { path = "../pallet-tfgrid" }
+tfchain-support = { path = "../../support", default-features = false }
+
+[dev-dependencies]
+sp-core =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
+env_logger = "*"
 
 [features]
 default = ['std']
@@ -33,4 +47,9 @@ std = [
 	'sp-runtime/std',
 	'sp-std/std',
 	'sp-io/std',
+	'pallet-timestamp/std',
+	'pallet-balances/std',
+	'pallet-tfgrid/std',
+	'tfchain-support/std',
+	'log/std'
 ]

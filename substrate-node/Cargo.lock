@@ -4026,13 +4026,20 @@ dependencies = [
 name = "pallet-minting"
 version = "0.0.1"
 dependencies = [
+ "env_logger 0.9.3",
  "frame-support",
  "frame-system",
+ "log",
+ "pallet-balances",
+ "pallet-tfgrid",
+ "pallet-timestamp",
  "parity-scale-codec 3.2.1",
  "scale-info",
+ "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std 5.0.0",
+ "tfchain-support",
 ]
 
 [[package]]
