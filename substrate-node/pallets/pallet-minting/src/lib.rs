@@ -6,6 +6,11 @@ use pallet_timestamp as timestamp;
 use sp_runtime::traits::SaturatedConversion;
 pub mod types;
 pub use pallet::*;
+use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf, TfgridNode};
+use tfchain_support::{
+    resources::Resources,
+    traits::{ChangeNode, MintingHook},
+};
 
 #[cfg(test)]
 mod mock;
@@ -79,6 +84,11 @@ pub mod pallet {
     #[pallet::getter(fn node_periods)]
     pub type NodeReport<T: Config> =
         StorageMap<_, Blake2_128Concat, NodeId, types::Report, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn node_counters)]
+    pub type NodeCounters<T: Config> =
+        StorageMap<_, Blake2_128Concat, NodeId, types::NodeCounters, ValueQuery>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -159,6 +169,7 @@ impl<T: Config> Pallet<T> {
             _ => now.checked_sub(node_report.last_updated).unwrap_or(0),
         };
         // Δuptime
+        // If the saved report uptime is 0, initialize with the current sent uptime
         let uptime_diff = match node_report.uptime {
             0 => uptime,
             _ => uptime.checked_sub(node_report.uptime).unwrap_or(0),
@@ -190,5 +201,67 @@ impl<T: Config> Pallet<T> {
 
     pub fn get_unix_timestamp() -> u64 {
         <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000
+    }
+}
+
+impl<T: Config> MintingHook<T::AccountId> for Pallet<T> {
+    fn report_uptime(source: &T::AccountId, uptime: u64) -> DispatchResultWithPostInfo {
+        Self::process_uptime_report(source, uptime)
+    }
+
+    fn report_nru(source: &T::AccountId, nru: u64, window: u64) -> DispatchResultWithPostInfo {
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(source)
+            .ok_or(pallet_tfgrid::Error::<T>::TwinNotExists)?;
+
+        let node_id = pallet_tfgrid::NodeIdByTwinID::<T>::get(twin_id);
+
+        let mut node_counters = NodeCounters::<T>::get(node_id);
+        node_counters.nru = nru * window;
+        NodeCounters::<T>::insert(node_id, node_counters);
+
+        Ok(().into())
+    }
+
+    fn report_used_resources(
+        _source: &T::AccountId,
+        _resources: Resources,
+    ) -> DispatchResultWithPostInfo {
+        // Todo, update used resources counters
+        unimplemented!()
+    }
+}
+
+impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for Pallet<T> {
+    fn node_changed(node: Option<&TfgridNode<T>>, new_node: &TfgridNode<T>) {
+        match node {
+            // If an old node is passed, it means the node got updated
+            Some(old_node) => {
+                if Resources::has_changed(&old_node.resources, &new_node.resources, 1) {
+                    let mut node_counters = NodeCounters::<T>::get(new_node.id);
+                    // If the resources are increased we need to update the max capacity
+                    // But we also need to check if the connectionprice is still the same as when the node connected
+                    // Otherwise we will not allow an update
+                    if new_node.resources > node_counters.max_capacity
+                        && new_node.connection_price == pallet_tfgrid::ConnectionPrice::<T>::get()
+                    {
+                        node_counters.max_capacity = new_node.resources.clone();
+                    }
+                    // Update counters
+                    NodeCounters::<T>::insert(new_node.id, node_counters);
+                }
+            }
+            // If no old node is passed, it means we got a new node
+            None => {
+                // Save a new node's min/max resources to current resources
+                let mut node_counters = NodeCounters::<T>::get(new_node.id);
+                node_counters.min_capacity = new_node.resources.clone();
+                node_counters.max_capacity = node_counters.min_capacity.clone();
+                NodeCounters::<T>::insert(new_node.id, node_counters);
+            }
+        }
+    }
+
+    fn node_deleted(_node: &TfgridNode<T>) {
+        // TODO: handle payout?
     }
 }

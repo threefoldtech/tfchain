@@ -5,7 +5,7 @@ use crate::{self as pallet_smart_contract};
 use codec::{alloc::sync::Arc, Decode};
 use frame_support::{
     construct_runtime,
-    dispatch::PostDispatchInfo,
+    dispatch::{DispatchResultWithPostInfo, PostDispatchInfo},
     parameter_types,
     traits::{ConstU32, GenesisBuild},
     BoundedVec,
@@ -46,7 +46,7 @@ use sp_std::marker::PhantomData;
 use std::{cell::RefCell, panic, thread};
 use tfchain_support::{
     constants::time::{MINUTES, SECS_PER_HOUR},
-    traits::ChangeNode,
+    traits::{ChangeNode, MintingHook, PublicIpModifier},
 };
 
 impl_opaque_keys! {
@@ -189,6 +189,22 @@ impl PublicIpModifier for PublicIpModifierType {
     }
 }
 
+pub struct MintingHookType;
+impl MintingHook<AccountId> for MintingHookType {
+    fn report_nru(_source: &AccountId, _nru: u64, _window: u64) -> DispatchResultWithPostInfo {
+        Ok(().into())
+    }
+    fn report_uptime(_source: &AccountId, _uptime: u64) -> DispatchResultWithPostInfo {
+        Ok(().into())
+    }
+    fn report_used_resources(
+        _source: &AccountId,
+        _resources: tfchain_support::resources::Resources,
+    ) -> DispatchResultWithPostInfo {
+        Ok(().into())
+    }
+}
+
 parameter_types! {
     pub const MaxFarmNameLength: u32 = 40;
     pub const MaxInterfaceIpsLength: u32 = 5;
@@ -230,6 +246,7 @@ impl pallet_tfgrid::Config for TestRuntime {
     type CityName = TestCityName;
     type Location = TestLocation;
     type SerialNumber = TestSerialNumber;
+    type MintingHook = MintingHookType;
 }
 
 impl pallet_tft_price::Config for TestRuntime {
@@ -270,7 +287,6 @@ impl pallet_smart_contract::Config for TestRuntime {
     type DistributionFrequency = DistributionFrequency;
     type GracePeriod = GracePeriod;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
-    type NodeChanged = NodeChanged;
     type MaxNameContractNameLength = MaxNameContractNameLength;
     type NameContractName = TestNameContractName;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
@@ -278,7 +294,7 @@ impl pallet_smart_contract::Config for TestRuntime {
     type MaxNodeContractPublicIps = MaxNodeContractPublicIPs;
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
     type Call = RuntimeCall;
-    type PublicIpModifier = PublicIpModifierType;
+    type MintingHook = MintingHookType;
 }
 
 parameter_types! {

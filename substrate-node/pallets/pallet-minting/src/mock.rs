@@ -1,7 +1,10 @@
 use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
 use crate::{self as pallet_minting};
 use env_logger;
-use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
+use frame_support::{
+    construct_runtime, dispatch::DispatchResultWithPostInfo, parameter_types, traits::ConstU32,
+    BoundedVec,
+};
 use frame_system::EnsureRoot;
 use pallet_tfgrid::node::{CityName, CountryName};
 use pallet_tfgrid::{
@@ -22,7 +25,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use sp_std::convert::{TryFrom, TryInto};
-use tfchain_support::traits::{ChangeNode, PublicIpModifier};
+use tfchain_support::traits::{ChangeNode, MintingHook, PublicIpModifier};
 use tfchain_support::types::PublicIP;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -47,6 +50,8 @@ parameter_types! {
     pub const BlockHashCount: u64 = 250;
 }
 
+type AccountId = u64;
+
 impl frame_system::Config for Test {
     type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
@@ -57,7 +62,7 @@ impl frame_system::Config for Test {
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = u64;
+    type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
     type RuntimeEvent = RuntimeEvent;
@@ -95,6 +100,22 @@ impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
 pub struct PublicIpModifierType;
 impl PublicIpModifier for PublicIpModifierType {
     fn ip_removed(_ip: &PublicIP) {}
+}
+
+pub struct MintingHookType;
+impl MintingHook<AccountId> for MintingHookType {
+    fn report_nru(source: &AccountId, nru: u64, window: u64) -> DispatchResultWithPostInfo {
+        MintingModule::report_nru(source, nru, window)
+    }
+    fn report_uptime(source: &AccountId, uptime: u64) -> DispatchResultWithPostInfo {
+        MintingModule::process_uptime_report(source, uptime)
+    }
+    fn report_used_resources(
+        source: &AccountId,
+        resources: tfchain_support::resources::Resources,
+    ) -> DispatchResultWithPostInfo {
+        MintingModule::report_used_resources(source, resources)
+    }
 }
 
 parameter_types! {
@@ -150,6 +171,7 @@ impl pallet_tfgrid::Config for Test {
     type CityName = TestCityName;
     type Location = TestLocation;
     type SerialNumber = TestSerialNumber;
+    type MintingHook = MintingHookType;
 }
 
 impl pallet_timestamp::Config for Test {

@@ -10,7 +10,10 @@ use crate::{
     DomainInput, FarmNameInput, Gw4Input, Gw6Input, InterfaceIpInput, InterfaceMacInput,
     InterfaceNameInput, Ip4Input, Ip6Input, LatitudeInput, LongitudeInput, TwinIpInput,
 };
-use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
+use frame_support::{
+    construct_runtime, dispatch::DispatchResultWithPostInfo, parameter_types, traits::ConstU32,
+    BoundedVec,
+};
 use frame_system::EnsureRoot;
 use sp_core::{ed25519, sr25519, Pair, Public, H256};
 use sp_io::TestExternalities;
@@ -22,7 +25,7 @@ use sp_runtime::{
 use sp_std::prelude::*;
 
 use hex;
-use tfchain_support::types::PublicIP;
+use tfchain_support::{traits::MintingHook, types::PublicIP};
 
 pub type Signature = MultiSignature;
 
@@ -117,6 +120,22 @@ pub(crate) type TestCityName = CityName<TestRuntime>;
 pub(crate) type TestLocation = Location<TestRuntime>;
 pub(crate) type TestSerialNumber = SerialNumber<TestRuntime>;
 
+pub struct MintingHookType;
+impl MintingHook<AccountId> for MintingHookType {
+    fn report_nru(_source: &AccountId, _nru: u64, _window: u64) -> DispatchResultWithPostInfo {
+        Ok(().into())
+    }
+    fn report_uptime(_source: &AccountId, _uptime: u64) -> DispatchResultWithPostInfo {
+        Ok(().into())
+    }
+    fn report_used_resources(
+        _source: &AccountId,
+        _resources: tfchain_support::resources::Resources,
+    ) -> DispatchResultWithPostInfo {
+        Ok(().into())
+    }
+}
+
 impl Config for TestRuntime {
     type RuntimeEvent = RuntimeEvent;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
@@ -137,6 +156,7 @@ impl Config for TestRuntime {
     type CityName = TestCityName;
     type Location = TestLocation;
     type SerialNumber = TestSerialNumber;
+    type MintingHook = MintingHookType;
 }
 
 parameter_types! {

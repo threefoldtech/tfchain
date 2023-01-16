@@ -55,7 +55,7 @@ pub mod pallet {
     use sp_std::{convert::TryInto, fmt::Debug, vec::Vec};
     use tfchain_support::{
         resources::Resources,
-        traits::{ChangeNode, PublicIpModifier},
+        traits::{ChangeNode, MintingHook, PublicIpModifier},
         types::{
             Farm, FarmCertification, FarmingPolicyLimit, Interface, Node, NodeCertification,
             PublicConfig, PublicIP, IP4, MAX_DOMAIN_NAME_LENGTH, MAX_GW4_LENGTH, MAX_GW6_LENGTH,
@@ -284,6 +284,8 @@ pub mod pallet {
         >;
 
         type PublicIpModifier: PublicIpModifier;
+
+        type MintingHook: MintingHook<Self::AccountId>;
 
         /// The type of terms and conditions.
         type TermsAndConditions: FullCodec
@@ -1174,7 +1176,7 @@ pub mod pallet {
             let account_id = ensure_signed(origin)?;
 
             let twin_id =
-                TwinIdByAccountID::<T>::get(account_id).ok_or(Error::<T>::TwinNotExists)?;
+                TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
 
             ensure!(
                 NodeIdByTwinID::<T>::contains_key(twin_id),
@@ -1187,6 +1189,8 @@ pub mod pallet {
             let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
             Self::deposit_event(Event::NodeUptimeReported(node_id, now, uptime));
+
+            T::MintingHook::report_uptime(&account_id, uptime)?;
 
             Ok(Pays::No.into())
         }

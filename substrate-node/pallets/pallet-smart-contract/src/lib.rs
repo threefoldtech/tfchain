@@ -30,7 +30,7 @@ use sp_std::prelude::*;
 use substrate_fixed::types::U64F64;
 use system::offchain::SignMessage;
 use tfchain_support::{
-    traits::{ChangeNode, PublicIpModifier},
+    traits::{ChangeNode, MintingHook, PublicIpModifier},
     types::PublicIP,
 };
 
@@ -101,7 +101,7 @@ pub mod pallet {
         fmt::Debug,
         vec::Vec,
     };
-    use tfchain_support::traits::{ChangeNode, PublicIpModifier};
+    use tfchain_support::traits::MintingHook;
 
     pub type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
@@ -229,10 +229,10 @@ pub mod pallet {
         type DistributionFrequency: Get<u16>;
         type GracePeriod: Get<u64>;
         type WeightInfo: WeightInfo;
-        type NodeChanged: ChangeNode<LocationOf<Self>, InterfaceOf<Self>, SerialNumberOf<Self>>;
-        type PublicIpModifier: PublicIpModifier;
         type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
         type Call: From<Call<Self>>;
+
+        type MintingHook: MintingHook<Self::AccountId>;
 
         #[pallet::constant]
         type MaxNameContractNameLength: Get<u32>;
@@ -1039,6 +1039,7 @@ impl<T: Config> Pallet<T> {
 
             Self::_calculate_report_cost(&report, &pricing_policy);
             Self::deposit_event(Event::NruConsumptionReportReceived(report.clone()));
+            <T as Config>::MintingHook::report_nru(&source, report.nru, report.window)?;
         }
 
         Ok(Pays::No.into())
