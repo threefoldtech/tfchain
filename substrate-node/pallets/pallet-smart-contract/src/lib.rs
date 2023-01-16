@@ -1161,6 +1161,20 @@ impl<T: Config> Pallet<T> {
             return Ok(().into());
         };
 
+        // Report contract resources to subscribers
+        match Self::get_node_contract(&contract.clone()) {
+            Ok(nc) => {
+                let resources = NodeContractResources::<T>::get(contract.contract_id);
+                <T as Config>::MintingHook::report_used_resources(
+                    nc.node_id,
+                    false,
+                    resources.used,
+                    seconds_elapsed,
+                )?;
+            }
+            Err(_) => (),
+        };
+
         // Handle grace
         let contract = Self::handle_grace(&mut contract, usable_balance, amount_due)?;
 

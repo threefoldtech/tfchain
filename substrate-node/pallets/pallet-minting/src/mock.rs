@@ -111,10 +111,12 @@ impl MintingHook<AccountId> for MintingHookType {
         MintingModule::process_uptime_report(source, uptime)
     }
     fn report_used_resources(
-        source: &AccountId,
+        node_id: u32,
+        dedicated: bool,
         resources: tfchain_support::resources::Resources,
+        window: u64,
     ) -> DispatchResultWithPostInfo {
-        MintingModule::report_used_resources(source, resources)
+        MintingModule::report_used_resources(node_id, dedicated, resources, window)
     }
 }
 

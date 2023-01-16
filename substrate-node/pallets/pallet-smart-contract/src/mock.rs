@@ -198,8 +198,10 @@ impl MintingHook<AccountId> for MintingHookType {
         Ok(().into())
     }
     fn report_used_resources(
-        _source: &AccountId,
+        _node_id: u32,
+        _dedicated: bool,
         _resources: tfchain_support::resources::Resources,
+        _window: u64,
     ) -> DispatchResultWithPostInfo {
         Ok(().into())
     }

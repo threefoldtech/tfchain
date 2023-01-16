@@ -21,6 +21,7 @@ pub struct Report {
 pub struct NodeCounters {
     pub max_capacity: Resources,
     pub min_capacity: Resources,
+    pub running_capacity: ResourceCounter,
     pub used_capacity: ResourceCounter,
     // Ipu is the amount of ip addresses assigned to the node in unit seconds
     pub ipu: u64,
@@ -30,9 +31,17 @@ pub struct NodeCounters {
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, PartialOrd, TypeInfo, Default)]
 pub struct ResourceCounter {
-    pub resources: Resources,
+    pub resources: ResourceSeconds,
     // Window is a time in seconds the above resources are used.
     pub window: u64,
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, PartialOrd, TypeInfo, Default)]
+pub struct ResourceSeconds {
+    pub hru: u128,
+    pub sru: u128,
+    pub cru: u128,
+    pub mru: u128,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, PartialOrd, TypeInfo)]

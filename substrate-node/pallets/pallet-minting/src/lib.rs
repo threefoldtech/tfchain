@@ -223,11 +223,20 @@ impl<T: Config> MintingHook<T::AccountId> for Pallet<T> {
     }
 
     fn report_used_resources(
-        _source: &T::AccountId,
-        _resources: Resources,
+        node_id: u32,
+        dedicated: bool,
+        resources: Resources,
+        window: u64,
     ) -> DispatchResultWithPostInfo {
         // Todo, update used resources counters
-        unimplemented!()
+        let _ = pallet_tfgrid::Nodes::<T>::get(node_id)
+            .ok_or(pallet_tfgrid::Error::<T>::NodeNotExists)?;
+
+        let mut _node_counters = NodeCounters::<T>::get(node_id);
+
+        // TODO: process used resources for a node
+
+        Ok(().into())
     }
 }
 
