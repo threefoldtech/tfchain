@@ -63,8 +63,6 @@ default-features = false
 path = "../pallets/pallet-dao"
 
 [dependencies]
-getrandom = { version = "0.2", features = ["js"] }
-
 smallvec = "1.4.0"
 log = { version = "0.4.14", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [

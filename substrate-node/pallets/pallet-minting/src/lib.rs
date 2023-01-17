@@ -24,7 +24,7 @@ pub mod pallet {
     use frame_support::pallet_prelude::{OptionQuery, *};
     use frame_support::{traits::Currency, Blake2_128Concat};
     use frame_system::pallet_prelude::*;
-    use sp_std::convert::TryInto;
+    use sp_std::{convert::TryInto, vec::Vec};
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]

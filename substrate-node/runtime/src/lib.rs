@@ -28,7 +28,7 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use tfchain_support::{
     constants::time::*,
-    traits::{ChangeNode, PublicIpModifier},
+    traits::{ChangeNode, MintingHook, PublicIpModifier},
     types::PublicIP,
 };
 
@@ -368,6 +368,7 @@ impl pallet_tfgrid::Config for Runtime {
     type CityName = pallet_tfgrid::node::CityName<Runtime>;
     type Location = pallet_tfgrid::node::Location<Runtime>;
     type SerialNumber = pallet_tfgrid::node::SerialNumber<Runtime>;
+    type MintingHook = MintingHookType;
 }
 
 parameter_types! {
@@ -398,8 +399,6 @@ impl pallet_smart_contract::Config for Runtime {
     type DistributionFrequency = DistributionFrequency;
     type GracePeriod = GracePeriod;
     type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
-    type NodeChanged = NodeChanged;
-    type PublicIpModifier = PublicIpModifierType;
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
     type Call = RuntimeCall;
     type MaxNameContractNameLength = MaxNameContractNameLength;
@@ -408,6 +407,7 @@ impl pallet_smart_contract::Config for Runtime {
     type MaxDeploymentDataLength = MaxDeploymentDataLength;
     type MaxNodeContractPublicIps = MaxFarmPublicIps;
     type Burn = ();
+    type MintingHook = MintingHookType;
 }
 
 impl pallet_tft_bridge::Config for Runtime {
@@ -424,8 +424,37 @@ impl pallet_burning::Config for Runtime {
     type Burn = ();
 }
 
+pub struct MintingHookType;
+impl MintingHook<AccountId> for MintingHookType {
+    fn report_nru(node_id: u32, nru: u64, window: u64) {
+        MintingModule::report_nru(node_id, nru, window)
+    }
+    fn report_uptime(
+        source: &AccountId,
+        uptime: u64,
+    ) -> frame_support::pallet_prelude::DispatchResultWithPostInfo {
+        MintingModule::process_uptime_report(source, uptime)
+    }
+    fn report_used_resources(
+        node_id: u32,
+        resources: tfchain_support::resources::Resources,
+        window: u64,
+        ipu: u32,
+    ) {
+        MintingModule::report_used_resources(node_id, resources, window, ipu)
+    }
+}
+
+parameter_types! {
+    pub const AllowedUptimeDrift: u64 = 60 * 5;
+    pub const PeriodTreshold: u64 = (30 * DAYS) as u64;
+}
+
 impl pallet_minting::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
+    type Currency = Balances;
+    type AllowedUptimeDrift = AllowedUptimeDrift;
+    type PeriodTreshold = PeriodTreshold;
 }
 
 impl pallet_kvstore::Config for Runtime {
@@ -722,7 +751,6 @@ construct_runtime!(
         TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Config<T>, Event<T>},
         Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>},
         BurningModule: pallet_burning::{Pallet, Call, Storage, Event<T>},
-        MintingModule: pallet_minting::{Pallet, Call, Storage, Event<T>},
         TFKVStore: pallet_kvstore::{Pallet, Call, Storage, Event<T>},
         Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
         CouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
@@ -730,6 +758,7 @@ construct_runtime!(
         Validator: pallet_validator::{Pallet, Call, Storage, Event<T>},
         Dao: pallet_dao::{Pallet, Call, Storage, Event<T>},
         Utility: pallet_utility::{Pallet, Call, Event},
+        MintingModule: pallet_minting::{Pallet, Call, Storage, Event<T>},
     }
 );
 
