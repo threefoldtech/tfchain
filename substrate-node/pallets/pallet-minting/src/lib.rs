@@ -115,54 +115,68 @@ impl<T: Config> Pallet<T> {
             .ok_or(pallet_tfgrid::Error::<T>::TwinNotExists)?;
 
         let node_id = pallet_tfgrid::NodeIdByTwinID::<T>::get(twin_id);
-        let _ = pallet_tfgrid::Nodes::<T>::get(node_id)
+        let node = pallet_tfgrid::Nodes::<T>::get(node_id)
             .ok_or(pallet_tfgrid::Error::<T>::NodeNotExists)?;
 
         let now = Self::get_unix_timestamp();
 
+        let mut node_counters = NodeCounters::<T>::get(node_id);
         let mut node_report = NodeReport::<T>::get(node_id);
+
+        let uptime = Self::validate_uptime_report(now, uptime, &node_report)?;
+        // Save report
+        node_report.last_updated = now;
+        node_report.uptime += uptime;
 
         if node_report.period_start == 0 {
             // If it's the first node report, start the period
             node_report.period_start = now;
+            // Save farming policy
+            node_counters.farming_policy = node.farming_policy_id;
+            // Deposit event
             Self::deposit_event(Event::NodePeriodStarted {
                 node_id,
                 start: now,
             });
         } else if now >= node_report.period_start + T::PeriodTreshold::get() {
-            let time_elapsed_period = now - node_report.period_start;
-            // TODO:
-            // - calculate up / down time
-            let down_time = time_elapsed_period
-                .checked_sub(node_report.uptime)
-                .unwrap_or(0);
-            // - calculate remaining seconds in old period and subtract from downtime, if not sufficient, subtract from uptime
-            let period_remaining_seconds = time_elapsed_period
-                .checked_sub(T::PeriodTreshold::get())
-                .unwrap_or(0);
-
-            let mut diff = 0;
-            if down_time > 0 {
-                diff = down_time.checked_sub(period_remaining_seconds).unwrap_or(0);
-            }
-            if diff > 0 {
-                node_report.uptime.checked_sub(down_time).unwrap_or(0);
-            }
-            // TODO - calculate minting rewards for this period
-
-            // Advance node period start with threshold
-            node_report.period_start = node_report.period_start + T::PeriodTreshold::get();
-            // Save last period uptime for future calculation
-            node_report.last_period_uptime = uptime;
+            Self::end_period(
+                now,
+                node.farming_policy_id,
+                &mut node_report,
+                &mut node_counters,
+            );
         }
 
-        // Validate report
-        // There might be some network latency. As such, it is required to implement a small window for which the report will be accepted,
-        // in which case the uptime increment is equal to the difference of uptimes.
-        // If the difference of uptime is Δuptime and the difference of report times is Δr, then a report is
-        // valid if Δr - allowed_drift_time <= Δuptime <= Δr + allowed_drift_time. We choose Δuptime as the amount to increment uptime because this is the amount reported
-        // by the node and should be free of any latency issues w.r.t. network or block production.
+        // Save report
+        NodeReport::<T>::insert(node_id, &node_report);
 
+        // Add running capacity
+        // Running capacity is the minimal capacity that is expressed in seconds
+        node_counters
+            .running_capacity
+            .add(node_counters.min_capacity, uptime);
+        NodeCounters::<T>::insert(node_id, node_counters);
+
+        Self::deposit_event(Event::UptimeReportReceived {
+            node_id,
+            uptime: node_report.uptime,
+        });
+
+        Ok(().into())
+    }
+
+    // Validate report
+    // There might be some network latency. As such, it is required to implement a small window for which the report will be accepted,
+    // in which case the uptime increment is equal to the difference of uptimes.
+    // If the difference of uptime is Δuptime and the difference of report times is Δr, then a report is
+    // valid if Δr - allowed_drift_time <= Δuptime <= Δr + allowed_drift_time. We choose Δuptime as the amount to increment uptime because this is the amount reported
+    // by the node and should be free of any latency issues w.r.t. network or block production.
+    // Returns uptime difference between previous uptime
+    pub fn validate_uptime_report(
+        now: u64,
+        uptime: u64,
+        node_report: &types::Report,
+    ) -> Result<u64, Error<T>> {
         // Δr
         let report_diff = match node_report.last_updated {
             0 => 0,
@@ -189,22 +203,42 @@ impl<T: Config> Pallet<T> {
             ensure!(valid_report, Error::<T>::UptimeReportInvalid);
         }
 
-        // Save report
-        node_report.last_updated = now;
-        node_report.uptime += uptime_diff;
-        NodeReport::<T>::insert(node_id, node_report);
+        Ok(uptime_diff)
+    }
 
-        // Add running capacity
-        // Running capacity is the minimal capacity that is expressed in seconds
-        let node_counters = NodeCounters::<T>::get(node_id);
-        node_counters
-            .running_capacity
-            .add(node_counters.min_capacity, uptime_diff);
-        NodeCounters::<T>::insert(node_id, node_counters);
+    // Ends a minting period for a node
+    pub fn end_period(
+        now: u64,
+        farming_policy_id: u32,
+        mut node_report: &mut types::Report,
+        mut node_counters: &mut types::NodeCounters,
+    ) {
+        let time_elapsed_period = now - node_report.period_start;
+        // TODO:
+        // - calculate up / down time
+        let down_time = time_elapsed_period
+            .checked_sub(node_report.uptime)
+            .unwrap_or(0);
+        // - calculate remaining seconds in old period and subtract from downtime, if not sufficient, subtract from uptime
+        let period_remaining_seconds = time_elapsed_period
+            .checked_sub(T::PeriodTreshold::get())
+            .unwrap_or(0);
 
-        Self::deposit_event(Event::UptimeReportReceived { node_id, uptime });
+        let mut diff = 0;
+        if down_time > 0 {
+            diff = down_time.checked_sub(period_remaining_seconds).unwrap_or(0);
+        }
+        if diff > 0 {
+            node_report.uptime.checked_sub(down_time).unwrap_or(0);
+        }
+        // TODO - calculate minting rewards for this period
 
-        Ok(().into())
+        // Advance node period start with threshold
+        node_report.period_start = node_report.period_start + T::PeriodTreshold::get();
+        // Save last period uptime for future calculation
+        node_report.last_period_uptime = node_report.uptime;
+        // Refetch farming policy
+        node_counters.farming_policy = farming_policy_id;
     }
 
     pub fn get_unix_timestamp() -> u64 {

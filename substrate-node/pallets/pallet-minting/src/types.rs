@@ -27,6 +27,8 @@ pub struct NodeCounters {
     pub ipu: u128,
     // Nru is the amount of public traffic used on the node (in bytes)
     pub nru: u64,
+    // Farming policy link for a node during a period
+    pub farming_policy: u32,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, PartialOrd, TypeInfo, Default, Copy)]
