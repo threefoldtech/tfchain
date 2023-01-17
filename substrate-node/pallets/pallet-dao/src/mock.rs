@@ -1,6 +1,9 @@
 use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
 use crate::{self as pallet_dao};
-use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
+use frame_support::{
+    construct_runtime, dispatch::DispatchResultWithPostInfo, parameter_types, traits::ConstU32,
+    BoundedVec,
+};
 use frame_system::EnsureRoot;
 use pallet_collective;
 use pallet_tfgrid::node::{CityName, CountryName};
@@ -22,7 +25,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use sp_std::convert::{TryFrom, TryInto};
-use tfchain_support::traits::{ChangeNode, PublicIpModifier};
+use tfchain_support::traits::{ChangeNode, MintingHook, PublicIpModifier};
 use tfchain_support::types::PublicIP;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -48,6 +51,8 @@ parameter_types! {
     pub const BlockHashCount: u64 = 250;
 }
 
+pub type AccountId = u64;
+
 impl frame_system::Config for Test {
     type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
@@ -58,7 +63,7 @@ impl frame_system::Config for Test {
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = u64;
+    type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
     type RuntimeEvent = RuntimeEvent;
@@ -135,6 +140,23 @@ pub(crate) type TestCityName = CityName<Test>;
 pub(crate) type TestLocation = Location<Test>;
 pub(crate) type TestSerialNumber = SerialNumber<Test>;
 
+pub struct MintingHookType;
+impl MintingHook<AccountId> for MintingHookType {
+    fn report_nru(_source: &AccountId, _nru: u64, _window: u64) -> DispatchResultWithPostInfo {
+        Ok(().into())
+    }
+    fn report_uptime(_source: &AccountId, _uptime: u64) -> DispatchResultWithPostInfo {
+        Ok(().into())
+    }
+    fn report_used_resources(
+        _node_id: u32,
+        _resources: tfchain_support::resources::Resources,
+        _window: u64,
+    ) -> DispatchResultWithPostInfo {
+        Ok(().into())
+    }
+}
+
 impl pallet_tfgrid::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
@@ -155,6 +177,7 @@ impl pallet_tfgrid::Config for Test {
     type CityName = TestCityName;
     type Location = TestLocation;
     type SerialNumber = TestSerialNumber;
+    type MintingHook = MintingHookType;
 }
 
 impl pallet_timestamp::Config for Test {

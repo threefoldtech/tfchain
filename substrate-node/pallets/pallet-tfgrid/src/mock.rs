@@ -130,7 +130,6 @@ impl MintingHook<AccountId> for MintingHookType {
     }
     fn report_used_resources(
         _node_id: u32,
-        _dedicated: bool,
         _resources: tfchain_support::resources::Resources,
         _window: u64,
     ) -> DispatchResultWithPostInfo {

@@ -17,31 +17,34 @@ pub struct Report {
     pub last_period_uptime: u64,
 }
 
-#[derive(Encode, Decode, Clone, Debug, PartialEq, PartialOrd, TypeInfo, Default)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, PartialOrd, TypeInfo, Default, Copy)]
 pub struct NodeCounters {
     pub max_capacity: Resources,
     pub min_capacity: Resources,
-    pub running_capacity: ResourceCounter,
-    pub used_capacity: ResourceCounter,
+    pub running_capacity: ResourceSeconds,
+    pub used_capacity: ResourceSeconds,
     // Ipu is the amount of ip addresses assigned to the node in unit seconds
     pub ipu: u64,
     // Nru is the amount of public traffic used on the node (in bytes)
     pub nru: u64,
 }
 
-#[derive(Encode, Decode, Clone, Debug, PartialEq, PartialOrd, TypeInfo, Default)]
-pub struct ResourceCounter {
-    pub resources: ResourceSeconds,
-    // Window is a time in seconds the above resources are used.
-    pub window: u64,
-}
-
-#[derive(Encode, Decode, Clone, Debug, PartialEq, PartialOrd, TypeInfo, Default)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, PartialOrd, TypeInfo, Default, Copy)]
 pub struct ResourceSeconds {
     pub hru: u128,
     pub sru: u128,
     pub cru: u128,
     pub mru: u128,
+}
+
+impl ResourceSeconds {
+    pub fn add(mut self, capacity: Resources, seconds: u64) -> ResourceSeconds {
+        self.cru += (capacity.cru * seconds) as u128;
+        self.sru += (capacity.sru * seconds) as u128;
+        self.hru += (capacity.hru * seconds) as u128;
+        self.mru += (capacity.mru * seconds) as u128;
+        self
+    }
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, PartialOrd, TypeInfo)]

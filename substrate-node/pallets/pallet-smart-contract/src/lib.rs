@@ -675,7 +675,7 @@ pub mod pallet {
     }
 }
 
-use crate::types::HexHash;
+use crate::types::{ContractData, HexHash};
 use pallet::NameContractNameOf;
 use sp_std::convert::{TryFrom, TryInto};
 // Internal functions of the pallet
@@ -1161,18 +1161,28 @@ impl<T: Config> Pallet<T> {
             return Ok(().into());
         };
 
-        // Report contract resources to subscribers
-        match Self::get_node_contract(&contract.clone()) {
-            Ok(nc) => {
-                let resources = NodeContractResources::<T>::get(contract.contract_id);
+        // Report contract used resources to subscribers
+        match contract.clone().contract_type {
+            ContractData::NodeContract(nc) => {
+                if !ActiveRentContractForNode::<T>::contains_key(nc.node_id) {
+                    let resources = NodeContractResources::<T>::get(contract.contract_id);
+                    <T as Config>::MintingHook::report_used_resources(
+                        nc.node_id,
+                        resources.used,
+                        seconds_elapsed,
+                    )?;
+                }
+            }
+            ContractData::RentContract(rc) => {
+                let node =
+                    pallet_tfgrid::Nodes::<T>::get(rc.node_id).ok_or(Error::<T>::NodeNotExists)?;
                 <T as Config>::MintingHook::report_used_resources(
-                    nc.node_id,
-                    false,
-                    resources.used,
+                    rc.node_id,
+                    node.resources,
                     seconds_elapsed,
                 )?;
             }
-            Err(_) => (),
+            _ => (),
         };
 
         // Handle grace

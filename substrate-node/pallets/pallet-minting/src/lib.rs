@@ -194,6 +194,14 @@ impl<T: Config> Pallet<T> {
         node_report.uptime += uptime_diff;
         NodeReport::<T>::insert(node_id, node_report);
 
+        // Add running capacity
+        // Running capacity is the minimal capacity that is expressed in seconds
+        let node_counters = NodeCounters::<T>::get(node_id);
+        node_counters
+            .running_capacity
+            .add(node_counters.min_capacity, uptime_diff);
+        NodeCounters::<T>::insert(node_id, node_counters);
+
         Self::deposit_event(Event::UptimeReportReceived { node_id, uptime });
 
         Ok(().into())
@@ -224,17 +232,20 @@ impl<T: Config> MintingHook<T::AccountId> for Pallet<T> {
 
     fn report_used_resources(
         node_id: u32,
-        dedicated: bool,
         resources: Resources,
         window: u64,
     ) -> DispatchResultWithPostInfo {
-        // Todo, update used resources counters
+        // Early return if resources are empty
+        if resources.is_empty() {
+            return Ok(().into());
+        }
+
         let _ = pallet_tfgrid::Nodes::<T>::get(node_id)
             .ok_or(pallet_tfgrid::Error::<T>::NodeNotExists)?;
 
-        let mut _node_counters = NodeCounters::<T>::get(node_id);
-
-        // TODO: process used resources for a node
+        let node_counters = NodeCounters::<T>::get(node_id);
+        node_counters.used_capacity.add(resources, window);
+        NodeCounters::<T>::insert(node_id, node_counters);
 
         Ok(().into())
     }
