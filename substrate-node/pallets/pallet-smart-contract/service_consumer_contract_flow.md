@@ -11,8 +11,10 @@ Multiple use cases can benefit from this feature, here are some examples of appl
 //TODO give some examples of applications
 
 Initial requirements:
-- Both service and consumer need to have there respective twin created (see how to create a twin on TFChain //TODO link)
+- Both service and consumer need to have their respective twin created
 - Consumer account needs to be funded (lack of funds will simply result in the contract cancelation)
+
+NB: A twin is automatically created when user first register to TFGrid via TFConnect app or Dashboard. For devnet purpose, see [here](docs/create_farm.md#step-5-create-a-twin) how to create a twin on TFChain.
 
 In the following steps we detail the sequence of extrinsic that need to be called for executing such contract.
  
@@ -23,8 +25,8 @@ The contract creation can be iniciated by both service or consumer using the fol
 
 ~~~rust
 service_contract_create(
-    service_account: T::AccountId,
-    consumer_account: T::AccountId,
+    service_account: AccountId32,
+    consumer_account: AccountId32,
 )
 ~~~
 
@@ -53,7 +55,7 @@ and also filled with some metadata with the description of the service for examp
 ~~~rust
 service_contract_set_metadata(
     service_contract_id: u64,
-    metadata: Vec<u8>,
+    metadata: Bytes,
 )
 ~~~
 
@@ -93,7 +95,7 @@ Only the service can bill the consumer using the following extrincic:
 service_contract_bill(
     service_contract_id: u64,
     variable_amount: u64,
-    metadata: Vec<u8>,
+    metadata: Bytes,
 )
 ~~~
 
