@@ -217,37 +217,19 @@ impl<T: Config> MintingHook<T::AccountId> for Pallet<T> {
         Self::process_uptime_report(source, uptime)
     }
 
-    fn report_nru(source: &T::AccountId, nru: u64, window: u64) -> DispatchResultWithPostInfo {
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(source)
-            .ok_or(pallet_tfgrid::Error::<T>::TwinNotExists)?;
-
-        let node_id = pallet_tfgrid::NodeIdByTwinID::<T>::get(twin_id);
-
+    fn report_nru(node_id: NodeId, nru: u64, window: u64) {
         let mut node_counters = NodeCounters::<T>::get(node_id);
         node_counters.nru = nru * window;
         NodeCounters::<T>::insert(node_id, node_counters);
-
-        Ok(().into())
     }
 
-    fn report_used_resources(
-        node_id: u32,
-        resources: Resources,
-        window: u64,
-    ) -> DispatchResultWithPostInfo {
-        // Early return if resources are empty
-        if resources.is_empty() {
-            return Ok(().into());
+    fn report_used_resources(node_id: NodeId, resources: Resources, window: u64, ipu: u32) {
+        let mut node_counters = NodeCounters::<T>::get(node_id);
+        if !resources.is_empty() {
+            node_counters.used_capacity.add(resources, window);
         }
-
-        let _ = pallet_tfgrid::Nodes::<T>::get(node_id)
-            .ok_or(pallet_tfgrid::Error::<T>::NodeNotExists)?;
-
-        let node_counters = NodeCounters::<T>::get(node_id);
-        node_counters.used_capacity.add(resources, window);
+        node_counters.ipu += (ipu as u64 * window) as u128;
         NodeCounters::<T>::insert(node_id, node_counters);
-
-        Ok(().into())
     }
 }
 

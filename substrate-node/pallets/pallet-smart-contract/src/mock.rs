@@ -191,9 +191,7 @@ impl PublicIpModifier for PublicIpModifierType {
 
 pub struct MintingHookType;
 impl MintingHook<AccountId> for MintingHookType {
-    fn report_nru(_source: &AccountId, _nru: u64, _window: u64) -> DispatchResultWithPostInfo {
-        Ok(().into())
-    }
+    fn report_nru(_node_id: u32, _nru: u64, _window: u64) {}
     fn report_uptime(_source: &AccountId, _uptime: u64) -> DispatchResultWithPostInfo {
         Ok(().into())
     }
@@ -201,8 +199,8 @@ impl MintingHook<AccountId> for MintingHookType {
         _node_id: u32,
         _resources: tfchain_support::resources::Resources,
         _window: u64,
-    ) -> DispatchResultWithPostInfo {
-        Ok(().into())
+        _public_ips: u32,
+    ) {
     }
 }
 

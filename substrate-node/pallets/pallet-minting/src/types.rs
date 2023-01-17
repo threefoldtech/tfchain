@@ -24,7 +24,7 @@ pub struct NodeCounters {
     pub running_capacity: ResourceSeconds,
     pub used_capacity: ResourceSeconds,
     // Ipu is the amount of ip addresses assigned to the node in unit seconds
-    pub ipu: u64,
+    pub ipu: u128,
     // Nru is the amount of public traffic used on the node (in bytes)
     pub nru: u64,
 }

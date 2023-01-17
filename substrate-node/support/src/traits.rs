@@ -21,10 +21,6 @@ pub trait PublicIpModifier {
 
 pub trait MintingHook<AccountId> {
     fn report_uptime(source: &AccountId, uptime: u64) -> DispatchResultWithPostInfo;
-    fn report_nru(source: &AccountId, nru: u64, window: u64) -> DispatchResultWithPostInfo;
-    fn report_used_resources(
-        node_id: u32,
-        resources: Resources,
-        window: u64,
-    ) -> DispatchResultWithPostInfo;
+    fn report_nru(node_id: u32, nru: u64, window: u64);
+    fn report_used_resources(node_id: u32, resources: Resources, window: u64, ipu: u32);
 }

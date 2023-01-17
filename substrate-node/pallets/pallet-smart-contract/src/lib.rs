@@ -30,6 +30,7 @@ use sp_std::prelude::*;
 use substrate_fixed::types::U64F64;
 use system::offchain::SignMessage;
 use tfchain_support::{
+    resources::Resources,
     traits::{ChangeNode, MintingHook, PublicIpModifier},
     types::PublicIP,
 };
@@ -1039,7 +1040,7 @@ impl<T: Config> Pallet<T> {
 
             Self::_calculate_report_cost(&report, &pricing_policy);
             Self::deposit_event(Event::NruConsumptionReportReceived(report.clone()));
-            <T as Config>::MintingHook::report_nru(&source, report.nru, report.window)?;
+            <T as Config>::MintingHook::report_nru(node_id, report.nru, report.window);
         }
 
         Ok(Pays::No.into())
@@ -1164,14 +1165,19 @@ impl<T: Config> Pallet<T> {
         // Report contract used resources to subscribers
         match contract.clone().contract_type {
             ContractData::NodeContract(nc) => {
+                let mut resources = Resources::default();
+
+                // Only set resources when there is no active rent contract for that node
                 if !ActiveRentContractForNode::<T>::contains_key(nc.node_id) {
-                    let resources = NodeContractResources::<T>::get(contract.contract_id);
-                    <T as Config>::MintingHook::report_used_resources(
-                        nc.node_id,
-                        resources.used,
-                        seconds_elapsed,
-                    )?;
+                    resources = NodeContractResources::<T>::get(contract.contract_id).used;
                 }
+
+                <T as Config>::MintingHook::report_used_resources(
+                    nc.node_id,
+                    resources,
+                    seconds_elapsed,
+                    nc.public_ips,
+                );
             }
             ContractData::RentContract(rc) => {
                 let node =
@@ -1180,7 +1186,9 @@ impl<T: Config> Pallet<T> {
                     rc.node_id,
                     node.resources,
                     seconds_elapsed,
-                )?;
+                    // Rent contract don't have public ips
+                    0,
+                );
             }
             _ => (),
         };
