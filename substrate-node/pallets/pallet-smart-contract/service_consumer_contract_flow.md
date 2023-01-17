@@ -14,7 +14,7 @@ Initial requirements:
 - Both service and consumer need to have their respective twin created
 - Consumer account needs to be funded (lack of funds will simply result in the contract cancelation)
 
-NB: A twin is automatically created when user first register to TFGrid via TFConnect app or Dashboard. For devnet purpose, see [here](docs/create_farm.md#step-5-create-a-twin) how to create a twin on TFChain.
+NB: A twin is automatically created when user first register to TFGrid via TFConnect app or Dashboard. For devnet purpose, see [here](/docs/create_farm.md#step-5-create-a-twin) how to create a twin on TFChain.
 
 In the following steps we detail the sequence of extrinsic that need to be called for executing such contract.
  
