@@ -4,8 +4,6 @@ use tfchain_support::resources::Resources;
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, PartialOrd, TypeInfo, Default)]
 pub struct Report {
-    // Total uptime of a period
-    pub uptime: u64,
     // Timestamp indicating when a previous report was received
     pub last_updated: u64,
     // Timestmap indicating when a period started, this will be set the first time a node sends
@@ -15,10 +13,17 @@ pub struct Report {
     // This to calculate the uptime for current period since the nodes just
     // send uptime from the moment they are booted and we need to track uptime in a period
     pub last_period_uptime: u64,
+    // Internal counters
+    pub counters: NodePeriodInformation,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, PartialOrd, TypeInfo, Default, Copy)]
-pub struct NodeCounters {
+pub struct NodePeriodInformation {
+    // Total uptime of a period
+    pub uptime: u64,
+    // Farming policy link for a node during a period
+    pub farming_policy: u32,
+    // Capacity trackers
     pub max_capacity: Resources,
     pub min_capacity: Resources,
     pub running_capacity: ResourceSeconds,
@@ -27,8 +32,6 @@ pub struct NodeCounters {
     pub ipu: u128,
     // Nru is the amount of public traffic used on the node (in bytes)
     pub nru: u64,
-    // Farming policy link for a node during a period
-    pub farming_policy: u32,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, PartialOrd, TypeInfo, Default, Copy)]

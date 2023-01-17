@@ -35,8 +35,8 @@ pub mod pallet {
     pub type Period = u64;
     pub type NodeId = u32;
 
-    type BalanceOf<T> =
-        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    // type BalanceOf<T> =
+    //     <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
     #[pallet::config]
     pub trait Config:
@@ -71,24 +71,14 @@ pub mod pallet {
     pub type Mints<T> = StorageValue<_, u64, OptionQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn payable_mints)]
-    pub type PayableMints<T> = StorageMap<
-        _,
-        Blake2_128Concat,
-        NodeId,
-        Vec<types::MintingPayout<BalanceOf<T>>>,
-        OptionQuery,
-    >;
-
-    #[pallet::storage]
     #[pallet::getter(fn node_periods)]
     pub type NodeReport<T: Config> =
         StorageMap<_, Blake2_128Concat, NodeId, types::Report, ValueQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn node_counters)]
-    pub type NodeCounters<T: Config> =
-        StorageMap<_, Blake2_128Concat, NodeId, types::NodeCounters, ValueQuery>;
+    #[pallet::getter(fn payable_periods)]
+    pub type PayablePeriods<T> =
+        StorageMap<_, Blake2_128Concat, NodeId, Vec<types::NodePeriodInformation>, ValueQuery>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -100,6 +90,16 @@ pub mod pallet {
             Self::process_uptime_report(&account_id, uptime)?;
 
             Ok(Pays::No.into())
+        }
+
+        #[pallet::call_index(1)]
+        #[pallet::weight(100_000_000)]
+        pub fn payout_periods(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+
+            Self::payout_node_periods(&account_id)?;
+
+            Ok(Pays::Yes.into())
         }
     }
 }
@@ -120,31 +120,25 @@ impl<T: Config> Pallet<T> {
 
         let now = Self::get_unix_timestamp();
 
-        let mut node_counters = NodeCounters::<T>::get(node_id);
         let mut node_report = NodeReport::<T>::get(node_id);
 
         let uptime = Self::validate_uptime_report(now, uptime, &node_report)?;
         // Save report
         node_report.last_updated = now;
-        node_report.uptime += uptime;
+        node_report.counters.uptime += uptime;
 
         if node_report.period_start == 0 {
             // If it's the first node report, start the period
             node_report.period_start = now;
             // Save farming policy
-            node_counters.farming_policy = node.farming_policy_id;
+            node_report.counters.farming_policy = node.farming_policy_id;
             // Deposit event
             Self::deposit_event(Event::NodePeriodStarted {
                 node_id,
                 start: now,
             });
         } else if now >= node_report.period_start + T::PeriodTreshold::get() {
-            Self::end_period(
-                now,
-                node.farming_policy_id,
-                &mut node_report,
-                &mut node_counters,
-            );
+            Self::end_period(node_id, now, node.farming_policy_id, &mut node_report);
         }
 
         // Save report
@@ -152,14 +146,15 @@ impl<T: Config> Pallet<T> {
 
         // Add running capacity
         // Running capacity is the minimal capacity that is expressed in seconds
-        node_counters
+        node_report
+            .counters
             .running_capacity
-            .add(node_counters.min_capacity, uptime);
-        NodeCounters::<T>::insert(node_id, node_counters);
+            .add(node_report.counters.min_capacity, uptime);
+        NodeReport::<T>::insert(node_id, &node_report);
 
         Self::deposit_event(Event::UptimeReportReceived {
             node_id,
-            uptime: node_report.uptime,
+            uptime: node_report.counters.uptime,
         });
 
         Ok(().into())
@@ -184,9 +179,9 @@ impl<T: Config> Pallet<T> {
         };
         // Δuptime
         // If the saved report uptime is 0, initialize with the current sent uptime
-        let uptime_diff = match node_report.uptime {
+        let uptime_diff = match node_report.counters.uptime {
             0 => uptime,
-            _ => uptime.checked_sub(node_report.uptime).unwrap_or(0),
+            _ => uptime.checked_sub(node_report.counters.uptime).unwrap_or(0),
         };
 
         log::info!("report diff: {:?}", report_diff);
@@ -208,16 +203,16 @@ impl<T: Config> Pallet<T> {
 
     // Ends a minting period for a node
     pub fn end_period(
+        node_id: u32,
         now: u64,
         farming_policy_id: u32,
         mut node_report: &mut types::Report,
-        mut node_counters: &mut types::NodeCounters,
     ) {
         let time_elapsed_period = now - node_report.period_start;
         // TODO:
         // - calculate up / down time
         let down_time = time_elapsed_period
-            .checked_sub(node_report.uptime)
+            .checked_sub(node_report.counters.uptime)
             .unwrap_or(0);
         // - calculate remaining seconds in old period and subtract from downtime, if not sufficient, subtract from uptime
         let period_remaining_seconds = time_elapsed_period
@@ -229,16 +224,43 @@ impl<T: Config> Pallet<T> {
             diff = down_time.checked_sub(period_remaining_seconds).unwrap_or(0);
         }
         if diff > 0 {
-            node_report.uptime.checked_sub(down_time).unwrap_or(0);
+            node_report
+                .counters
+                .uptime
+                .checked_sub(down_time)
+                .unwrap_or(0);
         }
         // TODO - calculate minting rewards for this period
 
         // Advance node period start with threshold
         node_report.period_start = node_report.period_start + T::PeriodTreshold::get();
         // Save last period uptime for future calculation
-        node_report.last_period_uptime = node_report.uptime;
+        node_report.last_period_uptime = node_report.counters.uptime;
         // Refetch farming policy
-        node_counters.farming_policy = farming_policy_id;
+        node_report.counters.farming_policy = farming_policy_id;
+
+        let mut payable_periods = PayablePeriods::<T>::get(node_id);
+        payable_periods.push(node_report.counters);
+        PayablePeriods::<T>::insert(node_id, payable_periods);
+
+        // Reset counters
+        node_report.counters = types::NodePeriodInformation::default();
+    }
+
+    // This method will calculate the minting rewards for all the periods that the node has accumulated
+    pub fn payout_node_periods(account_id: &T::AccountId) -> DispatchResultWithPostInfo {
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
+            .ok_or(pallet_tfgrid::Error::<T>::TwinNotExists)?;
+
+        let node_id = pallet_tfgrid::NodeIdByTwinID::<T>::get(twin_id);
+        let _ = pallet_tfgrid::Nodes::<T>::get(node_id)
+            .ok_or(pallet_tfgrid::Error::<T>::NodeNotExists)?;
+
+        let _payable_periods = PayablePeriods::<T>::get(node_id);
+
+        // TODO: calculate and payout minting rewards
+
+        Ok(().into())
     }
 
     pub fn get_unix_timestamp() -> u64 {
@@ -252,18 +274,18 @@ impl<T: Config> MintingHook<T::AccountId> for Pallet<T> {
     }
 
     fn report_nru(node_id: NodeId, nru: u64, window: u64) {
-        let mut node_counters = NodeCounters::<T>::get(node_id);
-        node_counters.nru = nru * window;
-        NodeCounters::<T>::insert(node_id, node_counters);
+        let mut node_report = NodeReport::<T>::get(node_id);
+        node_report.counters.nru = nru * window;
+        NodeReport::<T>::insert(node_id, node_report);
     }
 
     fn report_used_resources(node_id: NodeId, resources: Resources, window: u64, ipu: u32) {
-        let mut node_counters = NodeCounters::<T>::get(node_id);
+        let mut node_report = NodeReport::<T>::get(node_id);
         if !resources.is_empty() {
-            node_counters.used_capacity.add(resources, window);
+            node_report.counters.used_capacity.add(resources, window);
         }
-        node_counters.ipu += (ipu as u64 * window) as u128;
-        NodeCounters::<T>::insert(node_id, node_counters);
+        node_report.counters.ipu += (ipu as u64 * window) as u128;
+        NodeReport::<T>::insert(node_id, node_report);
     }
 }
 
@@ -273,26 +295,26 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
             // If an old node is passed, it means the node got updated
             Some(old_node) => {
                 if Resources::has_changed(&old_node.resources, &new_node.resources, 1) {
-                    let mut node_counters = NodeCounters::<T>::get(new_node.id);
+                    let mut node_report = NodeReport::<T>::get(new_node.id);
                     // If the resources are increased we need to update the max capacity
                     // But we also need to check if the connectionprice is still the same as when the node connected
                     // Otherwise we will not allow an update
-                    if new_node.resources > node_counters.max_capacity
+                    if new_node.resources > node_report.counters.max_capacity
                         && new_node.connection_price == pallet_tfgrid::ConnectionPrice::<T>::get()
                     {
-                        node_counters.max_capacity = new_node.resources.clone();
+                        node_report.counters.max_capacity = new_node.resources.clone();
                     }
                     // Update counters
-                    NodeCounters::<T>::insert(new_node.id, node_counters);
+                    NodeReport::<T>::insert(new_node.id, node_report);
                 }
             }
             // If no old node is passed, it means we got a new node
             None => {
                 // Save a new node's min/max resources to current resources
-                let mut node_counters = NodeCounters::<T>::get(new_node.id);
-                node_counters.min_capacity = new_node.resources.clone();
-                node_counters.max_capacity = node_counters.min_capacity.clone();
-                NodeCounters::<T>::insert(new_node.id, node_counters);
+                let mut node_report = NodeReport::<T>::get(new_node.id);
+                node_report.counters.min_capacity = new_node.resources.clone();
+                node_report.counters.max_capacity = node_report.counters.min_capacity.clone();
+                NodeReport::<T>::insert(new_node.id, node_report);
             }
         }
     }
