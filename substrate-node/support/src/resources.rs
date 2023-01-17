@@ -86,6 +86,10 @@ impl Resources {
         result as u64
     }
 
+    pub fn get_cu_su(&self) -> (u64, u64) {
+        (self.get_cu(), self.get_su())
+    }
+
     pub fn get_node_weight(&self) -> u64 {
         let cu = self.get_cu();
         let su = self.get_su();

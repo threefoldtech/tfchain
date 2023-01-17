@@ -1,6 +1,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{dispatch::DispatchResultWithPostInfo, ensure, traits::Get};
+use frame_support::{
+    dispatch::DispatchResultWithPostInfo,
+    ensure,
+    traits::{Currency, Get},
+};
 // use log::info;
 use pallet_timestamp as timestamp;
 use sp_runtime::traits::SaturatedConversion;
@@ -21,7 +25,7 @@ mod tests;
 #[frame_support::pallet]
 pub mod pallet {
     use super::types;
-    use frame_support::pallet_prelude::{OptionQuery, *};
+    use frame_support::pallet_prelude::*;
     use frame_support::{traits::Currency, Blake2_128Concat};
     use frame_system::pallet_prelude::*;
     use sp_std::{convert::TryInto, vec::Vec};
@@ -35,8 +39,8 @@ pub mod pallet {
     pub type Period = u64;
     pub type NodeId = u32;
 
-    // type BalanceOf<T> =
-    //     <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    pub type BalanceOf<T> =
+        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
     #[pallet::config]
     pub trait Config:
@@ -57,18 +61,25 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         MintTransactionCreated(),
-        NodePeriodStarted { node_id: NodeId, start: Period },
-        UptimeReportReceived { node_id: NodeId, uptime: u64 },
+        NodePeriodStarted {
+            node_id: NodeId,
+            start: Period,
+        },
+        UptimeReportReceived {
+            node_id: NodeId,
+            uptime: u64,
+        },
+        NodePeriodPaidOut {
+            node_id: NodeId,
+            amount: BalanceOf<T>,
+            period_info: types::NodePeriodInformation,
+        },
     }
 
     #[pallet::error]
     pub enum Error<T> {
         UptimeReportInvalid,
     }
-
-    #[pallet::storage]
-    #[pallet::getter(fn mints)]
-    pub type Mints<T> = StorageValue<_, u64, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn node_periods)]
@@ -209,7 +220,6 @@ impl<T: Config> Pallet<T> {
         mut node_report: &mut types::Report,
     ) {
         let time_elapsed_period = now - node_report.period_start;
-        // TODO:
         // - calculate up / down time
         let down_time = time_elapsed_period
             .checked_sub(node_report.counters.uptime)
@@ -230,7 +240,6 @@ impl<T: Config> Pallet<T> {
                 .checked_sub(down_time)
                 .unwrap_or(0);
         }
-        // TODO - calculate minting rewards for this period
 
         // Advance node period start with threshold
         node_report.period_start = node_report.period_start + T::PeriodTreshold::get();
@@ -253,12 +262,65 @@ impl<T: Config> Pallet<T> {
             .ok_or(pallet_tfgrid::Error::<T>::TwinNotExists)?;
 
         let node_id = pallet_tfgrid::NodeIdByTwinID::<T>::get(twin_id);
-        let _ = pallet_tfgrid::Nodes::<T>::get(node_id)
+        let node = pallet_tfgrid::Nodes::<T>::get(node_id)
             .ok_or(pallet_tfgrid::Error::<T>::NodeNotExists)?;
 
-        let _payable_periods = PayablePeriods::<T>::get(node_id);
+        let mut payable_periods = PayablePeriods::<T>::get(node_id);
+        payable_periods = payable_periods
+            .into_iter()
+            .filter(|period| {
+                match Self::payout_period(node_id, node.farm_id, node.connection_price, period) {
+                    Ok(_) => true,
+                    Err(e) => {
+                        log::debug!("payout failed: {:?}", e);
+                        false
+                    }
+                }
+            })
+            .collect();
+        PayablePeriods::<T>::insert(node_id, payable_periods);
 
-        // TODO: calculate and payout minting rewards
+        Ok(().into())
+    }
+
+    pub fn payout_period(
+        node_id: u32,
+        farm_id: u32,
+        connection_price: u32,
+        period: &types::NodePeriodInformation,
+    ) -> DispatchResultWithPostInfo {
+        let (cu, su) = period.min_capacity.get_cu_su();
+        let period_length = T::PeriodTreshold::get();
+
+        let farming_policy = pallet_tfgrid::FarmingPoliciesMap::<T>::get(period.farming_policy);
+
+        let cu_reward = (cu * farming_policy.cu as u64 * period.uptime) / period_length;
+        let su_reward = (su * farming_policy.su as u64 * period.uptime) / period_length;
+        // todo, express period NRU as GiB
+        let nru_reward = (period.nru * farming_policy.nu as u64) as u128;
+        let ipu_reward = (period.ipu * period.uptime as u128 / 3600) * farming_policy.ipv4 as u128;
+
+        let farm = pallet_tfgrid::Farms::<T>::get(farm_id)
+            .ok_or(pallet_tfgrid::Error::<T>::FarmNotExists)?;
+        let farm_twin = pallet_tfgrid::Twins::<T>::get(farm.twin_id)
+            .ok_or(pallet_tfgrid::Error::<T>::TwinNotExists)?;
+
+        let total_musd_reward = cu_reward as u128 + su_reward as u128 + nru_reward + ipu_reward;
+        let total_tft_reward = (total_musd_reward / connection_price as u128) * 10_000_000;
+
+        log::info!(
+            "Minting: {:?} to farmer twin {:?}",
+            total_tft_reward,
+            &farm_twin.account_id,
+        );
+        let amount_as_balance = BalanceOf::<T>::saturated_from(total_tft_reward);
+        <T as Config>::Currency::deposit_creating(&farm_twin.account_id, amount_as_balance);
+
+        Self::deposit_event(Event::NodePeriodPaidOut {
+            node_id,
+            amount: amount_as_balance,
+            period_info: period.clone(),
+        });
 
         Ok(().into())
     }
