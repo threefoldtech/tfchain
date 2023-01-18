@@ -50,7 +50,7 @@ parameter_types! {
     pub const BlockHashCount: u64 = 250;
 }
 
-type AccountId = u64;
+pub type AccountId = u64;
 
 impl frame_system::Config for Test {
     type BaseCallFilter = frame_support::traits::Everything;
@@ -123,7 +123,7 @@ impl MintingHook<AccountId> for MintingHookType {
 parameter_types! {
     pub const AllowedUptimeDrift: u64 = 60;
     pub const PeriodTreshold: u64 = 60;
-    pub const HeartbeatInterval: u64 = 60;
+    pub const HeartbeatInterval: u64 = 120;
 }
 
 impl pallet_minting::Config for Test {

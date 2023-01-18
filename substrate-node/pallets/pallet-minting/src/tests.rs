@@ -6,7 +6,10 @@ use frame_system::{EventRecord, Phase, RawOrigin};
 use pallet_tfgrid::{types::LocationInput, PublicIpListInput, ResourcesInput};
 use sp_core::H256;
 use std::convert::TryInto;
-use tfchain_support::types::{FarmCertification, NodeCertification, IP4};
+use tfchain_support::{
+    traits::MintingHook,
+    types::{FarmCertification, NodeCertification, IP4},
+};
 
 #[test]
 fn pushing_uptime_works() {
@@ -135,6 +138,109 @@ fn period_rotation_results_in_payable_period_works() {
                 RuntimeOrigin::signed(10),
                 6 * i,
             ));
+        }
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::MintingModule(
+                MintingEvent::<Test>::NodePeriodEnded { node_id: 1 }
+            ))),
+            true
+        );
+
+        let payable_periods = MintingModule::payable_periods(1);
+        assert_eq!(payable_periods.len(), 1);
+
+        let node_resources = ResourcesInput {
+            hru: 1024 * GIGABYTE,
+            sru: 512 * GIGABYTE,
+            cru: 8,
+            mru: 16 * GIGABYTE,
+        };
+        assert_eq!(
+            payable_periods[0],
+            types::NodePeriodInformation {
+                uptime: 60,
+                farming_policy: 1,
+                ipu: 0,
+                nru: 0,
+                max_capacity: ResourcesInput::default(),
+                min_capacity: node_resources,
+                running_capacity: types::ResourceSeconds {
+                    cru: (node_resources.cru * 60) as u128,
+                    hru: (node_resources.hru * 60) as u128,
+                    mru: (node_resources.mru * 60) as u128,
+                    sru: (node_resources.sru * 60) as u128
+                },
+                used_capacity: types::ResourceSeconds::default()
+            }
+        );
+    })
+}
+
+#[test]
+fn test_report_uptime_trait_works() {
+    new_test_ext().execute_with(|| {
+        System::set_block_number(1);
+        Timestamp::set_timestamp(1628082000000);
+
+        create_farming_policies();
+
+        prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
+
+        assert_ok!(MintingModule::report_uptime(
+            RuntimeOrigin::signed(10),
+            1000,
+        ));
+
+        Timestamp::set_timestamp(162808300000);
+
+        assert_ok!(super::mock::MintingHookType::report_uptime(&10, 2000));
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::MintingModule(
+                MintingEvent::<Test>::UptimeReportReceived {
+                    node_id: 1,
+                    uptime: 1000
+                }
+            ))),
+            true
+        );
+    });
+}
+
+#[test]
+fn period_rotation_with_utilisation_works() {
+    new_test_ext().execute_with(|| {
+        System::set_block_number(1);
+        Timestamp::set_timestamp(1628082000000);
+
+        create_farming_policies();
+
+        prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
+
+        // period lenght is 10 blocks
+        for i in 1..12 {
+            Timestamp::set_timestamp((1628082000 * 1000) + (6000 * i));
+
+            assert_ok!(MintingModule::report_uptime(
+                RuntimeOrigin::signed(10),
+                6 * i,
+            ));
+
+            MintingModule::report_nru(10, 1 * GIGABYTE, 6);
+            MintingModule::report_used_resources(
+                10,
+                ResourcesInput {
+                    cru: 1,
+                    hru: 0,
+                    mru: 4 * GIGABYTE,
+                    sru: 10 * GIGABYTE,
+                },
+                6,
+                1,
+            );
         }
 
         let our_events = System::events();

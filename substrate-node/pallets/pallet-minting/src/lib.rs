@@ -144,6 +144,10 @@ impl<T: Config> Pallet<T> {
         // Save report
         node_report.last_updated = now;
 
+        log::debug!(
+            "updated last updated field for node report: {}",
+            node_report.last_updated
+        );
         log::debug!("now: {}", now);
         log::debug!("period start: {}", node_report.period_start);
 
@@ -162,14 +166,10 @@ impl<T: Config> Pallet<T> {
                 start: now,
             });
         } else if now >= node_report.period_start + T::PeriodTreshold::get() {
-            log::debug!("period ended");
             Self::end_period(node_id, now, node.farming_policy_id, &mut node_report);
         }
 
         node_report.counters.uptime += uptime;
-
-        // Save report
-        NodeReport::<T>::insert(node_id, &node_report);
 
         // Add running capacity
         // Running capacity is the minimal capacity that is expressed in seconds
@@ -177,6 +177,9 @@ impl<T: Config> Pallet<T> {
             .counters
             .running_capacity
             .add(node_report.counters.min_capacity, uptime);
+
+        log::debug!("----SAVING REPORT BECAUSE OF UPDATE------");
+        log::debug!("report: {:?}", node_report.clone());
         NodeReport::<T>::insert(node_id, &node_report);
 
         Self::deposit_event(Event::UptimeReportReceived {
@@ -210,9 +213,6 @@ impl<T: Config> Pallet<T> {
             0 => uptime,
             _ => uptime.checked_sub(node_report.counters.uptime).unwrap_or(0),
         };
-
-        log::info!("report diff: {:?}", report_diff);
-        log::info!("uptime diff: {:?}", uptime_diff);
 
         if uptime_diff > 0 && report_diff > 0 {
             // Validate report
@@ -371,22 +371,21 @@ impl<T: Config> Pallet<T> {
     pub fn get_unix_timestamp() -> u64 {
         <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000
     }
-}
 
-impl<T: Config> MintingHook<T::AccountId> for Pallet<T> {
-    fn report_uptime(source: &T::AccountId, uptime: u64) -> DispatchResultWithPostInfo {
-        Self::process_uptime_report(source, uptime)
-    }
-
-    fn report_nru(node_id: NodeId, nru: u64, window: u64) {
+    pub fn report_nru(node_id: u32, nru: u64, window: u64) {
+        log::debug!("NODE ID : {}", node_id);
         let mut node_report = NodeReport::<T>::get(node_id);
-        node_report.counters.nru = nru * window;
+        node_report.counters.nru += nru * window;
+        log::debug!("new node report nru counter: {}", node_report.counters.nru);
         NodeReport::<T>::insert(node_id, node_report);
     }
 
-    fn report_used_resources(node_id: NodeId, resources: Resources, window: u64, ipu: u32) {
+    fn report_used_resources(node_id: u32, resources: Resources, window: u64, ipu: u32) {
         let mut node_report = NodeReport::<T>::get(node_id);
 
+        log::debug!("found reported resources");
+        log::debug!("report last updated: {}", node_report.last_updated);
+        log::debug!("node report: {:?}", node_report);
         let now = Self::get_unix_timestamp();
         // We ignore all reports for used resources if the node has not sent a heartbeat within the allowed interval
         if now > node_report.last_updated + T::HeartbeatInterval::get() {
@@ -402,6 +401,20 @@ impl<T: Config> MintingHook<T::AccountId> for Pallet<T> {
         }
         node_report.counters.ipu += (ipu as u64 * window) as u128;
         NodeReport::<T>::insert(node_id, node_report);
+    }
+}
+
+impl<T: Config> MintingHook<T::AccountId> for Pallet<T> {
+    fn report_uptime(source: &T::AccountId, uptime: u64) -> DispatchResultWithPostInfo {
+        Self::process_uptime_report(source, uptime)
+    }
+
+    fn report_nru(node_id: u32, nru: u64, window: u64) {
+        Self::report_nru(node_id, nru, window)
+    }
+
+    fn report_used_resources(node_id: u32, resources: Resources, window: u64, ipu: u32) {
+        Self::report_used_resources(node_id, resources, window, ipu)
     }
 }
 
