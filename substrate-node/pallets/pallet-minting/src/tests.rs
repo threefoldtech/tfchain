@@ -1,5 +1,5 @@
 use super::Event as MintingEvent;
-use crate::{mock::RuntimeEvent as MockEvent, mock::*, Error};
+use crate::{mock::RuntimeEvent as MockEvent, mock::*, types, Error};
 use frame_support::{assert_noop, assert_ok, bounded_vec};
 use frame_system::{EventRecord, Phase, RawOrigin};
 // use log::info;
@@ -82,6 +82,97 @@ fn pushing_uptime_timedrift_boundrary_fails() {
             Error::<Test>::UptimeReportInvalid
         );
     });
+}
+
+#[test]
+fn period_rotation_works() {
+    new_test_ext().execute_with(|| {
+        System::set_block_number(1);
+        Timestamp::set_timestamp(1628082000000);
+
+        create_farming_policies();
+
+        prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
+
+        // period lenght is 10 blocks
+        for i in 1..12 {
+            Timestamp::set_timestamp((1628082000 * 1000) + (6000 * i));
+
+            assert_ok!(MintingModule::report_uptime(
+                RuntimeOrigin::signed(10),
+                6 * i,
+            ));
+        }
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::MintingModule(
+                MintingEvent::<Test>::NodePeriodEnded { node_id: 1 }
+            ))),
+            true
+        );
+
+        let payable_periods = MintingModule::payable_periods(1);
+        assert_eq!(payable_periods.len(), 1);
+    })
+}
+
+#[test]
+fn period_rotation_results_in_payable_period_works() {
+    new_test_ext().execute_with(|| {
+        System::set_block_number(1);
+        Timestamp::set_timestamp(1628082000000);
+
+        create_farming_policies();
+
+        prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
+
+        // period lenght is 10 blocks
+        for i in 1..12 {
+            Timestamp::set_timestamp((1628082000 * 1000) + (6000 * i));
+
+            assert_ok!(MintingModule::report_uptime(
+                RuntimeOrigin::signed(10),
+                6 * i,
+            ));
+        }
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::MintingModule(
+                MintingEvent::<Test>::NodePeriodEnded { node_id: 1 }
+            ))),
+            true
+        );
+
+        let payable_periods = MintingModule::payable_periods(1);
+        assert_eq!(payable_periods.len(), 1);
+
+        let node_resources = ResourcesInput {
+            hru: 1024 * GIGABYTE,
+            sru: 512 * GIGABYTE,
+            cru: 8,
+            mru: 16 * GIGABYTE,
+        };
+        assert_eq!(
+            payable_periods[0],
+            types::NodePeriodInformation {
+                uptime: 60,
+                farming_policy: 1,
+                ipu: 0,
+                nru: 0,
+                max_capacity: ResourcesInput::default(),
+                min_capacity: node_resources,
+                running_capacity: types::ResourceSeconds {
+                    cru: (node_resources.cru * 60) as u128,
+                    hru: (node_resources.hru * 60) as u128,
+                    mru: (node_resources.mru * 60) as u128,
+                    sru: (node_resources.sru * 60) as u128
+                },
+                used_capacity: types::ResourceSeconds::default()
+            }
+        );
+    })
 }
 
 fn record(event: RuntimeEvent) -> EventRecord<RuntimeEvent, H256> {

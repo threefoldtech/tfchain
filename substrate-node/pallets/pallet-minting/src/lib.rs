@@ -71,6 +71,9 @@ pub mod pallet {
             node_id: NodeId,
             uptime: u64,
         },
+        NodePeriodEnded {
+            node_id: NodeId,
+        },
         NodePeriodPaidOut {
             node_id: NodeId,
             amount: BalanceOf<T>,
@@ -140,28 +143,37 @@ impl<T: Config> Pallet<T> {
         let uptime = Self::validate_uptime_report(now, uptime, &node_report)?;
         // Save report
         node_report.last_updated = now;
-        node_report.counters.uptime += uptime;
+
+        log::debug!("now: {}", now);
+        log::debug!("period start: {}", node_report.period_start);
 
         if node_report.period_start == 0 {
             // If it's the first node report, start the period
             node_report.period_start = now;
             // Save farming policy
             node_report.counters.farming_policy = node.farming_policy_id;
+            // Initialise min capacity
+            if node_report.counters.min_capacity == Resources::default() {
+                node_report.counters.min_capacity = node.resources;
+            }
             // Deposit event
             Self::deposit_event(Event::NodePeriodStarted {
                 node_id,
                 start: now,
             });
         } else if now >= node_report.period_start + T::PeriodTreshold::get() {
+            log::debug!("period ended");
             Self::end_period(node_id, now, node.farming_policy_id, &mut node_report);
         }
+
+        node_report.counters.uptime += uptime;
 
         // Save report
         NodeReport::<T>::insert(node_id, &node_report);
 
         // Add running capacity
         // Running capacity is the minimal capacity that is expressed in seconds
-        node_report
+        node_report.counters.running_capacity = node_report
             .counters
             .running_capacity
             .add(node_report.counters.min_capacity, uptime);
@@ -256,6 +268,7 @@ impl<T: Config> Pallet<T> {
         payable_periods.push(node_report.counters);
         PayablePeriods::<T>::insert(node_id, payable_periods);
 
+        Self::deposit_event(Event::NodePeriodEnded { node_id });
         // Reset counters
         node_report.counters = types::NodePeriodInformation::default();
     }
