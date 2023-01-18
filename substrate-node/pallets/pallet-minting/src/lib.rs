@@ -12,7 +12,7 @@ pub mod types;
 pub use pallet::*;
 use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf, TfgridNode};
 use tfchain_support::{
-    resources::Resources,
+    resources::{Resources, GIGABYTE},
     traits::{ChangeNode, MintingHook},
 };
 
@@ -79,6 +79,8 @@ pub mod pallet {
     #[pallet::error]
     pub enum Error<T> {
         UptimeReportInvalid,
+        UnauthorizedToTriggerPayout,
+        UptimeNotMetInPeriodFollowingSla,
     }
 
     #[pallet::storage]
@@ -105,10 +107,10 @@ pub mod pallet {
 
         #[pallet::call_index(1)]
         #[pallet::weight(100_000_000)]
-        pub fn payout_periods(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+        pub fn payout_periods(origin: OriginFor<T>, node_id: u32) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
-            Self::payout_node_periods(&account_id)?;
+            Self::payout_node_periods(&account_id, node_id)?;
 
             Ok(Pays::Yes.into())
         }
@@ -257,13 +259,24 @@ impl<T: Config> Pallet<T> {
     }
 
     // This method will calculate the minting rewards for all the periods that the node has accumulated
-    pub fn payout_node_periods(account_id: &T::AccountId) -> DispatchResultWithPostInfo {
+    // Can only called by the farmer that owns the node
+    pub fn payout_node_periods(
+        account_id: &T::AccountId,
+        node_id: u32,
+    ) -> DispatchResultWithPostInfo {
+        let node = pallet_tfgrid::Nodes::<T>::get(node_id)
+            .ok_or(pallet_tfgrid::Error::<T>::NodeNotExists)?;
+
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
             .ok_or(pallet_tfgrid::Error::<T>::TwinNotExists)?;
 
-        let node_id = pallet_tfgrid::NodeIdByTwinID::<T>::get(twin_id);
-        let node = pallet_tfgrid::Nodes::<T>::get(node_id)
-            .ok_or(pallet_tfgrid::Error::<T>::NodeNotExists)?;
+        let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id)
+            .ok_or(pallet_tfgrid::Error::<T>::FarmNotExists)?;
+
+        ensure!(
+            twin_id == farm.twin_id,
+            Error::<T>::UnauthorizedToTriggerPayout
+        );
 
         let mut payable_periods = PayablePeriods::<T>::get(node_id);
         payable_periods = payable_periods
@@ -293,17 +306,31 @@ impl<T: Config> Pallet<T> {
         let period_length = T::PeriodTreshold::get();
 
         let farming_policy = pallet_tfgrid::FarmingPoliciesMap::<T>::get(period.farming_policy);
-
-        let cu_reward = (cu * farming_policy.cu as u64 * period.uptime) / period_length;
-        let su_reward = (su * farming_policy.su as u64 * period.uptime) / period_length;
-        // todo, express period NRU as GiB
-        let nru_reward = (period.nru * farming_policy.nu as u64) as u128;
-        let ipu_reward = (period.ipu * period.uptime as u128 / 3600) * farming_policy.ipv4 as u128;
-
         let farm = pallet_tfgrid::Farms::<T>::get(farm_id)
             .ok_or(pallet_tfgrid::Error::<T>::FarmNotExists)?;
         let farm_twin = pallet_tfgrid::Twins::<T>::get(farm.twin_id)
             .ok_or(pallet_tfgrid::Error::<T>::TwinNotExists)?;
+
+        let mut cu_reward = 0;
+        let mut su_reward = 0;
+
+        if farming_policy.id == 1 || farming_policy.id == 2 {
+            // CU/SU rewards are the amount of CU/SU for the minimal capacity scaled on a period
+            cu_reward = (cu * farming_policy.cu as u64 * period.uptime) / period_length;
+            su_reward = (su * farming_policy.su as u64 * period.uptime) / period_length;
+        } else {
+            let minimal_uptime_sla = period.uptime
+                - ((period.uptime / farming_policy.minimal_uptime as u64 * 1000) - period.uptime);
+            if minimal_uptime_sla < period.uptime {
+                return Err(Error::<T>::UptimeNotMetInPeriodFollowingSla.into());
+            }
+        }
+
+        // Network traffic rewards are per Gigabyte for a period
+        let nru_reward = (period.nru as u128 / GIGABYTE) * farming_policy.nu as u128;
+        // Public IP rewards are per public ip per hour for a period
+        let period_hours = (period.uptime / 3600) as u128;
+        let ipu_reward = period.ipu * period_hours * farming_policy.ipv4 as u128;
 
         let total_musd_reward = cu_reward as u128 + su_reward as u128 + nru_reward + ipu_reward;
         let total_tft_reward = (total_musd_reward / connection_price as u128) * 10_000_000;
@@ -314,6 +341,7 @@ impl<T: Config> Pallet<T> {
             &farm_twin.account_id,
         );
         let amount_as_balance = BalanceOf::<T>::saturated_from(total_tft_reward);
+        // This call mints tokens on the target account
         <T as Config>::Currency::deposit_creating(&farm_twin.account_id, amount_as_balance);
 
         Self::deposit_event(Event::NodePeriodPaidOut {
