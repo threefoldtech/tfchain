@@ -12,7 +12,7 @@ pub mod types;
 pub use pallet::*;
 use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf, TfgridNode};
 use tfchain_support::{
-    resources::{Resources, GIGABYTE},
+    resources::{Resources, GIGABYTE, ONE_MILL},
     traits::{ChangeNode, MintingHook},
 };
 
@@ -288,7 +288,7 @@ impl<T: Config> Pallet<T> {
         payable_periods = payable_periods
             .into_iter()
             .filter(|period| {
-                match Self::payout_period(node_id, node.farm_id, node.connection_price, period) {
+                match Self::payout_period(&node, node.farm_id, node.connection_price, period) {
                     Ok(_) => true,
                     Err(e) => {
                         log::debug!("payout failed: {:?}", e);
@@ -303,12 +303,15 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn payout_period(
-        node_id: u32,
+        node: &pallet_tfgrid::TfgridNode<T>,
         farm_id: u32,
         connection_price: u32,
         period: &types::NodePeriodInformation,
     ) -> DispatchResultWithPostInfo {
-        let (cu, su) = period.min_capacity.get_cu_su();
+        log::debug!("min capacity: {:?}", period.min_capacity);
+        let (cu, su) = period.min_capacity.cloud_units_permill();
+        log::debug!("cu: {}", cu);
+        log::debug!("su: {}", su);
         let period_length = T::PeriodTreshold::get();
 
         let farming_policy = pallet_tfgrid::FarmingPoliciesMap::<T>::get(period.farming_policy);
@@ -332,14 +335,30 @@ impl<T: Config> Pallet<T> {
             }
         }
 
+        log::debug!("cu reward: {}", cu_reward);
+        log::debug!("su reward: {}", su_reward);
+
         // Network traffic rewards are per Gigabyte for a period
-        let nru_reward = (period.nru as u128 / GIGABYTE) * farming_policy.nu as u128;
+        let nru_reward = (period.nru as u128 * ONE_MILL / GIGABYTE) * farming_policy.nu as u128;
+        log::debug!("nru reward: {}", nru_reward);
+
         // Public IP rewards are per public ip per hour for a period
         let period_hours = (period.uptime / 3600) as u128;
         let ipu_reward = period.ipu * period_hours * farming_policy.ipv4 as u128;
+        log::debug!("ipu reward: {}", ipu_reward);
 
-        let total_musd_reward = cu_reward as u128 + su_reward as u128 + nru_reward + ipu_reward;
-        let total_tft_reward = (total_musd_reward / connection_price as u128) * 10_000_000;
+        let mut base_payout =
+            (cu_reward as u128 + su_reward as u128 + nru_reward) / ONE_MILL + ipu_reward;
+        log::debug!("total musd reward: {}", base_payout);
+
+        if matches!(
+            node.certification,
+            tfchain_support::types::NodeCertification::Certified
+        ) && node.farming_policy_id == 1
+        {
+            base_payout = base_payout * 5 / 4;
+        }
+        let total_tft_reward = (base_payout / connection_price as u128) * 10_000_000;
 
         log::info!(
             "Minting: {:?} to farmer twin {:?}",
@@ -351,7 +370,7 @@ impl<T: Config> Pallet<T> {
         <T as Config>::Currency::deposit_creating(&farm_twin.account_id, amount_as_balance);
 
         Self::deposit_event(Event::NodePeriodPaidOut {
-            node_id,
+            node_id: node.id,
             amount: amount_as_balance,
             period_info: period.clone(),
         });

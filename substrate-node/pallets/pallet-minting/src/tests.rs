@@ -285,6 +285,54 @@ fn period_rotation_with_utilisation_works() {
     })
 }
 
+#[test]
+fn farmer_can_claim_rewards_after_period_ends_works() {
+    new_test_ext().execute_with(|| {
+        System::set_block_number(1);
+        Timestamp::set_timestamp(1628082000000);
+
+        create_farming_policies();
+
+        prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
+
+        let used_resources_mock = ResourcesInput {
+            cru: 1,
+            hru: 0,
+            mru: 4 * GIGABYTE,
+            sru: 10 * GIGABYTE,
+        };
+        let used_ipu = 1;
+        let used_nru = 1 * GIGABYTE;
+        // period lenght is 10 blocks
+        for i in 1..12 {
+            Timestamp::set_timestamp((1628082000 * 1000) + (6000 * i));
+
+            assert_ok!(MintingModule::report_uptime(
+                RuntimeOrigin::signed(10),
+                6 * i,
+            ));
+
+            MintingModule::report_nru(1, used_nru, 6);
+            MintingModule::report_used_resources(1, used_resources_mock, 6, used_ipu);
+        }
+
+        assert_ok!(MintingModule::payout_periods(RuntimeOrigin::signed(10), 1));
+
+        let our_events = System::events();
+
+        for e in our_events.clone() {
+            log::debug!("event: {:?}", e);
+        }
+
+        assert_eq!(
+            our_events.contains(&record(MockEvent::MintingModule(
+                MintingEvent::<Test>::NodePeriodEnded { node_id: 1 }
+            ))),
+            true
+        );
+    })
+}
+
 fn record(event: RuntimeEvent) -> EventRecord<RuntimeEvent, H256> {
     EventRecord {
         phase: Phase::Initialization,

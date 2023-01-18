@@ -25,6 +25,7 @@ pub struct Resources {
 }
 
 pub const ONE_THOUSAND: u128 = 1_000;
+pub const ONE_MILL: u128 = 1_000_000;
 pub const GIGABYTE: u128 = 1024 * 1024 * 1024;
 
 impl Resources {
@@ -56,10 +57,38 @@ impl Resources {
         self.mru as u128 >= 2 * GIGABYTE
     }
 
+    /// Compute the CU, SU and NU for the node. The result is expressed in a "permill" way. So the
+    /// actual CU, SU and NU are obtained by dividing the results by 1_000_000.
+    ///
+    /// In order for this to be accurate, the data about network and IP usage needs to already have
+    /// been aggregated on the node object.
+    ///
+    /// Calculation taken from [the
+    /// wiki](https://library.threefold.me/info/threefold#/tfgrid/farming/threefold__resource_units_calc_cloudunits)
+    /// on 31-01-2022 as follows:
+    ///   CU: MIN(cru * 4 / 2, (mru - 1) / 4, sru / 50)
+    ///   SU: hru / 1200 + sru * 0.8 / 200
+    pub fn cloud_units_permill(&self) -> (u64, u64) {
+        // Calculate CU first. Mru and sru are in bytes, but are expressed in GB in the formula.
+        // Rather than dividing first, we multiply cru first, then take the MIN, and finally
+        // divide. This eliminates the issue of rounding errors _BEFORE_ the MIN. Also multiply by
+        // 1000000 so we have precision without working with floats.
+        //
+        // MIN is associative.
+        let cu_intermediate = sp_std::cmp::min(
+            self.cru as u128 * 2 * GIGABYTE * ONE_MILL,
+            (self.mru as u128 - 1 * GIGABYTE) * ONE_MILL / 4,
+        );
+        let cu = sp_std::cmp::min(cu_intermediate, self.sru as u128 * ONE_MILL / 50);
+        let su = self.hru as u128 * ONE_MILL / 1200 + self.sru as u128 * ONE_MILL / 250;
+        ((cu / GIGABYTE) as u64, (su / GIGABYTE) as u64)
+    }
+
     pub fn get_cu(&self) -> u64 {
         let cu = self.calc_cu();
-        let calculated_cu = 2 * (cu as u128 / GIGABYTE / ONE_THOUSAND);
-        calculated_cu as u64
+        // let calculated_cu = 2 * (cu as u128 / GIGABYTE / ONE_THOUSAND);
+        // calculated_cu as u64
+        cu
     }
 
     fn calc_cu(&self) -> u64 {
@@ -214,6 +243,19 @@ mod test {
 
         let su = resources.get_su();
         assert_eq!(su, 3);
+    }
+
+    #[test]
+    fn test_calc_cu_5() {
+        let resources = Resources {
+            hru: 1024 * GIGABYTE as u64,
+            sru: 512 * GIGABYTE as u64,
+            cru: 8,
+            mru: 16 * GIGABYTE as u64,
+        };
+
+        let cu = resources.get_cu();
+        assert_eq!(cu, 2);
     }
 
     #[test]
