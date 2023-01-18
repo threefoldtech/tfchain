@@ -51,10 +51,12 @@ pub mod pallet {
     {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type Currency: Currency<Self::AccountId>;
-        // Allowed time for an uptime to drift
+        // Allowed time for an uptime to drift in seconds
         type AllowedUptimeDrift: Get<u64>;
-        // Treshold for period, indicates how long a period lasts
+        // Treshold for period, indicates how long a period lasts in seconds
         type PeriodTreshold: Get<u64>;
+        // Heartbeat interval indicates the maximum interval in seconds where a node can send uptime reports
+        type HeartbeatInterval: Get<u64>;
     }
 
     #[pallet::event]
@@ -371,6 +373,17 @@ impl<T: Config> MintingHook<T::AccountId> for Pallet<T> {
 
     fn report_used_resources(node_id: NodeId, resources: Resources, window: u64, ipu: u32) {
         let mut node_report = NodeReport::<T>::get(node_id);
+
+        let now = Self::get_unix_timestamp();
+        // We ignore all reports for used resources if the node has not sent a heartbeat within the allowed interval
+        if now > node_report.last_updated + T::HeartbeatInterval::get() {
+            log::debug!(
+                "got a used resources report from node: {}, but that node is not online",
+                node_id
+            );
+            return;
+        }
+
         if !resources.is_empty() {
             node_report.counters.used_capacity.add(resources, window);
         }
