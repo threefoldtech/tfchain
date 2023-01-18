@@ -220,6 +220,14 @@ fn period_rotation_with_utilisation_works() {
 
         prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
 
+        let used_resources_mock = ResourcesInput {
+            cru: 1,
+            hru: 0,
+            mru: 4 * GIGABYTE,
+            sru: 10 * GIGABYTE,
+        };
+        let used_ipu = 1;
+        let used_nru = 1 * GIGABYTE;
         // period lenght is 10 blocks
         for i in 1..12 {
             Timestamp::set_timestamp((1628082000 * 1000) + (6000 * i));
@@ -229,18 +237,8 @@ fn period_rotation_with_utilisation_works() {
                 6 * i,
             ));
 
-            MintingModule::report_nru(10, 1 * GIGABYTE, 6);
-            MintingModule::report_used_resources(
-                10,
-                ResourcesInput {
-                    cru: 1,
-                    hru: 0,
-                    mru: 4 * GIGABYTE,
-                    sru: 10 * GIGABYTE,
-                },
-                6,
-                1,
-            );
+            MintingModule::report_nru(1, used_nru, 6);
+            MintingModule::report_used_resources(1, used_resources_mock, 6, used_ipu);
         }
 
         let our_events = System::events();
@@ -260,13 +258,14 @@ fn period_rotation_with_utilisation_works() {
             cru: 8,
             mru: 16 * GIGABYTE,
         };
+
         assert_eq!(
             payable_periods[0],
             types::NodePeriodInformation {
                 uptime: 60,
                 farming_policy: 1,
-                ipu: 0,
-                nru: 0,
+                ipu: (used_ipu * 60) as u128,
+                nru: used_nru * 60,
                 max_capacity: ResourcesInput::default(),
                 min_capacity: node_resources,
                 running_capacity: types::ResourceSeconds {
@@ -275,7 +274,12 @@ fn period_rotation_with_utilisation_works() {
                     mru: (node_resources.mru * 60) as u128,
                     sru: (node_resources.sru * 60) as u128
                 },
-                used_capacity: types::ResourceSeconds::default()
+                used_capacity: types::ResourceSeconds {
+                    cru: (used_resources_mock.cru * 60) as u128,
+                    hru: (used_resources_mock.hru * 60) as u128,
+                    mru: (used_resources_mock.mru * 60) as u128,
+                    sru: (used_resources_mock.sru * 60) as u128,
+                }
             }
         );
     })

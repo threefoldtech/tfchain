@@ -144,13 +144,6 @@ impl<T: Config> Pallet<T> {
         // Save report
         node_report.last_updated = now;
 
-        log::debug!(
-            "updated last updated field for node report: {}",
-            node_report.last_updated
-        );
-        log::debug!("now: {}", now);
-        log::debug!("period start: {}", node_report.period_start);
-
         if node_report.period_start == 0 {
             // If it's the first node report, start the period
             node_report.period_start = now;
@@ -178,8 +171,6 @@ impl<T: Config> Pallet<T> {
             .running_capacity
             .add(node_report.counters.min_capacity, uptime);
 
-        log::debug!("----SAVING REPORT BECAUSE OF UPDATE------");
-        log::debug!("report: {:?}", node_report.clone());
         NodeReport::<T>::insert(node_id, &node_report);
 
         Self::deposit_event(Event::UptimeReportReceived {
@@ -373,19 +364,14 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn report_nru(node_id: u32, nru: u64, window: u64) {
-        log::debug!("NODE ID : {}", node_id);
         let mut node_report = NodeReport::<T>::get(node_id);
         node_report.counters.nru += nru * window;
-        log::debug!("new node report nru counter: {}", node_report.counters.nru);
         NodeReport::<T>::insert(node_id, node_report);
     }
 
     fn report_used_resources(node_id: u32, resources: Resources, window: u64, ipu: u32) {
         let mut node_report = NodeReport::<T>::get(node_id);
 
-        log::debug!("found reported resources");
-        log::debug!("report last updated: {}", node_report.last_updated);
-        log::debug!("node report: {:?}", node_report);
         let now = Self::get_unix_timestamp();
         // We ignore all reports for used resources if the node has not sent a heartbeat within the allowed interval
         if now > node_report.last_updated + T::HeartbeatInterval::get() {
@@ -397,7 +383,8 @@ impl<T: Config> Pallet<T> {
         }
 
         if !resources.is_empty() {
-            node_report.counters.used_capacity.add(resources, window);
+            node_report.counters.used_capacity =
+                node_report.counters.used_capacity.add(resources, window);
         }
         node_report.counters.ipu += (ipu as u64 * window) as u128;
         NodeReport::<T>::insert(node_id, node_report);
