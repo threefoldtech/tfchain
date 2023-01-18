@@ -328,9 +328,9 @@ impl<T: Config> Pallet<T> {
             cu_reward = (cu * farming_policy.cu as u64 * period.uptime) / period_length;
             su_reward = (su * farming_policy.su as u64 * period.uptime) / period_length;
         } else {
-            let minimal_uptime_sla = period.uptime
-                - ((period.uptime / farming_policy.minimal_uptime as u64 * 1000) - period.uptime);
-            if minimal_uptime_sla < period.uptime {
+            let minimal_uptime_met =
+                period.uptime < (period_length * farming_policy.minimal_uptime as u64) / 1000;
+            if !minimal_uptime_met {
                 return Err(Error::<T>::UptimeNotMetInPeriodFollowingSla.into());
             }
         }
@@ -343,8 +343,7 @@ impl<T: Config> Pallet<T> {
         log::debug!("nru reward: {}", nru_reward);
 
         // Public IP rewards are per public ip per hour for a period
-        let period_hours = (period.uptime / 3600) as u128;
-        let ipu_reward = period.ipu * period_hours * farming_policy.ipv4 as u128;
+        let ipu_reward = period.ipu * farming_policy.ipv4 as u128 / 3600;
         log::debug!("ipu reward: {}", ipu_reward);
 
         let mut base_payout =
