@@ -47,6 +47,41 @@ fn pushing_uptime_works() {
 }
 
 #[test]
+fn pushing_uptime_has_no_effect_before_minting_is_enabled() {
+    new_test_ext().execute_with(|| {
+        System::set_block_number(1);
+        Timestamp::set_timestamp(1628072000000);
+
+        create_farming_policies();
+
+        prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
+
+        assert_ok!(MintingModule::report_uptime(
+            RuntimeOrigin::signed(10),
+            1000,
+        ));
+
+        Timestamp::set_timestamp(1628083000000);
+
+        assert_ok!(MintingModule::report_uptime(
+            RuntimeOrigin::signed(10),
+            2000,
+        ));
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::MintingModule(
+                MintingEvent::<Test>::UptimeReportReceived {
+                    node_id: 1,
+                    uptime: 1000
+                }
+            ))),
+            false
+        );
+    });
+}
+
+#[test]
 fn pushing_0_uptime_fails() {
     new_test_ext().execute_with(|| {
         System::set_block_number(1);
