@@ -569,14 +569,14 @@ pub mod pallet {
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
-        pub su_price_value: u32,
-        pub su_price_unit: u32,
-        pub nu_price_value: u32,
-        pub nu_price_unit: u32,
-        pub ipu_price_value: u32,
-        pub ipu_price_unit: u32,
-        pub cu_price_value: u32,
-        pub cu_price_unit: u32,
+        pub su_price_value: u32,  // expressed in mUSD / minting period
+        pub su_price_unit: u32,   // never used
+        pub nu_price_value: u32,  // expressed in mUSD / GB
+        pub nu_price_unit: u32,   // never used
+        pub ipu_price_value: u32, // expressed in mUSD / hour
+        pub ipu_price_unit: u32,  // never used
+        pub cu_price_value: u32,  // expressed in mUSD / minting period
+        pub cu_price_unit: u32,   // never used
         pub domain_name_price_value: u32,
         pub unique_name_price_value: u32,
         pub foundation_account: Option<T::AccountId>,

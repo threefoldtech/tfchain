@@ -136,11 +136,11 @@ pub struct FarmingPolicy<BlockNumber> {
     pub version: u32,
     pub id: u32,
     pub name: Vec<u8>,
-    // CU: expressed as mUSD / period
+    // CU: expressed as mUSD / minting period
     pub cu: u32,
-    // SU: expressed as mUSD / period
+    // SU: expressed as mUSD / minting period
     pub su: u32,
-    // NU: epxressed as mUSD
+    // NU: epxressed as mUSD / GB
     pub nu: u32,
     // IPV4: expressed as mUSD / hour
     pub ipv4: u32,

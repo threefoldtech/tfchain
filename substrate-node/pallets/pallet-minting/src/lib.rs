@@ -54,8 +54,8 @@ pub mod pallet {
         type Currency: Currency<Self::AccountId>;
         // Allowed time for an uptime to drift in seconds
         type AllowedUptimeDrift: Get<u64>;
-        // Treshold for period, indicates how long a period lasts in seconds
-        type PeriodTreshold: Get<u64>;
+        // The Minting period duration, indicates how long the period lasts in seconds
+        type MintingPeriodDuration: Get<u64>;
         // Heartbeat interval indicates the maximum interval in seconds where a node can send uptime reports
         type HeartbeatInterval: Get<u64>;
         type EnableMintingUnixTime: Get<u64>;
@@ -163,7 +163,7 @@ impl<T: Config> Pallet<T> {
                 node_id,
                 start: now,
             });
-        } else if now >= node_report.period_start + T::PeriodTreshold::get() {
+        } else if now >= node_report.period_start + T::MintingPeriodDuration::get() {
             Self::end_period(node_id, now, node.farming_policy_id, &mut node_report);
         }
 
@@ -238,7 +238,7 @@ impl<T: Config> Pallet<T> {
             .unwrap_or(0);
         // - calculate remaining seconds in old period and subtract from downtime, if not sufficient, subtract from uptime
         let period_remaining_seconds = time_elapsed_period
-            .checked_sub(T::PeriodTreshold::get())
+            .checked_sub(T::MintingPeriodDuration::get())
             .unwrap_or(0);
 
         let mut diff = 0;
@@ -254,7 +254,7 @@ impl<T: Config> Pallet<T> {
         }
 
         // Advance node period start with threshold
-        node_report.period_start = node_report.period_start + T::PeriodTreshold::get();
+        node_report.period_start = node_report.period_start + T::MintingPeriodDuration::get();
         // Save last period uptime for future calculation
         node_report.last_period_uptime = node_report.counters.uptime;
         // Refetch farming policy
@@ -318,7 +318,7 @@ impl<T: Config> Pallet<T> {
         let (cu, su) = period.min_capacity.cloud_units_permill();
         log::debug!("cu: {}", cu);
         log::debug!("su: {}", su);
-        let period_length = T::PeriodTreshold::get();
+        let period_length = T::MintingPeriodDuration::get();
 
         let farming_policy = pallet_tfgrid::FarmingPoliciesMap::<T>::get(period.farming_policy);
         let farm = pallet_tfgrid::Farms::<T>::get(farm_id)
@@ -328,7 +328,9 @@ impl<T: Config> Pallet<T> {
 
         let uptime_percentage = (period.uptime * 1_000 / period_length) as u128;
 
+        // cu reward (mUSD) = cu * cu price (mUSD/cu)
         let cu_reward = cu * farming_policy.cu as u64;
+        // su reward (mUSD) = su * su price (mUSD/su)
         let su_reward = su * farming_policy.su as u64;
 
         if farming_policy.farm_certification == FarmCertification::Gold {
@@ -347,10 +349,12 @@ impl<T: Config> Pallet<T> {
         log::debug!("su reward: {}", su_reward);
 
         // Network traffic rewards are per Gigabyte for a period
+        // nru reward (mUSD) = ( nru (byte) / 1204*1024*1024 (byte/GB) ) * nu price (mUSD/GB)
         let nru_reward = (period.nru as u128 * ONE_MILL / GIGABYTE) * farming_policy.nu as u128;
         log::debug!("nru reward: {}", nru_reward);
 
         // Public IP rewards are per public ip per hour for a period
+        // ipu reward (mUSD) = ipu uptime (sec) * ipv4 price (mUSD/hour) / 3600 (sec/hour)
         let ipu_reward = period.ipu * ONE_MILL * farming_policy.ipv4 as u128 / 3600;
         log::debug!("ipu reward: {}", ipu_reward);
 
@@ -378,7 +382,7 @@ impl<T: Config> Pallet<T> {
 
         log::info!("connection price: {}", connection_price);
         // Calculate the amount of TFT rewarded (Units TFT in 7 decimals notation)
-        // Divide by connection price expressed in mUSD
+        // Divide by connection price expressed in mUSD/TFT
         let total_tft_reward = base_payout / connection_price as u128;
 
         log::info!(

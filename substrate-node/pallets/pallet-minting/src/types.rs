@@ -4,12 +4,12 @@ use tfchain_support::resources::Resources;
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, PartialOrd, TypeInfo, Default)]
 pub struct Report {
-    // Timestamp indicating when a previous report was received
+    // Timestamp indicating when a previous report was received (in seconds)
     pub last_updated: u64,
-    // Timestmap indicating when a period started, this will be set the first time a node sends
-    // a report
+    // Timestmap indicating when a period started (in seconds),
+    // this will be set the first time a node sends a report
     pub period_start: u64,
-    // Last Period Uptime indicates the uptime at the end of last period
+    // Last Period Uptime indicates the uptime at the end of last period (in seconds)
     // This to calculate the uptime for current period since the nodes just
     // send uptime from the moment they are booted and we need to track uptime in a period
     pub last_period_uptime: u64,
@@ -19,7 +19,7 @@ pub struct Report {
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, PartialOrd, TypeInfo, Default, Copy)]
 pub struct NodePeriodInformation {
-    // Total uptime of a period
+    // Total uptime of a period (in seconds)
     pub uptime: u64,
     // Farming policy link for a node during a period
     pub farming_policy: u32,
@@ -36,10 +36,10 @@ pub struct NodePeriodInformation {
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, PartialOrd, TypeInfo, Default, Copy)]
 pub struct ResourceSeconds {
-    pub hru: u128,
-    pub sru: u128,
-    pub cru: u128,
-    pub mru: u128,
+    pub hru: u128, // HDD Storage resource units in time (in bytes * seconds)
+    pub sru: u128, // SSD Storage resource units in time (in bytes * seconds)
+    pub cru: u128, // Compute resource units in time (in vCPU * seconds)
+    pub mru: u128, // Memory resource units in time (in bytes * seconds)
 }
 
 impl ResourceSeconds {

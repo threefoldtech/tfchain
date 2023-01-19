@@ -122,7 +122,7 @@ impl MintingHook<AccountId> for MintingHookType {
 
 parameter_types! {
     pub const AllowedUptimeDrift: u64 = 60;
-    pub const PeriodTreshold: u64 = 60;
+    pub const MintingPeriodDuration: u64 = 60;
     pub const HeartbeatInterval: u64 = 120;
     pub const EnableMintingUnixTime: u64 = 1628080000;
 }
@@ -131,7 +131,7 @@ impl pallet_minting::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type AllowedUptimeDrift = AllowedUptimeDrift;
-    type PeriodTreshold = PeriodTreshold;
+    type MintingPeriodDuration = MintingPeriodDuration;
     type HeartbeatInterval = HeartbeatInterval;
     type EnableMintingUnixTime = EnableMintingUnixTime;
 }

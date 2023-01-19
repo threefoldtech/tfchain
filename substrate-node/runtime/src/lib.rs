@@ -449,7 +449,7 @@ parameter_types! {
     // 5 minutes
     pub const AllowedUptimeDrift: u64 = 60 * 5;
     // 30 days
-    pub const PeriodTreshold: u64 = (30 * DAYS) as u64;
+    pub const MintingPeriodDuration: u64 = (30 * DAYS) as u64;
     // 2 hours
     pub const HeartbeatInterval: u64 = 7200;
     // TBD for each network what time we want to enable minting on chain
@@ -460,7 +460,7 @@ impl pallet_minting::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type AllowedUptimeDrift = AllowedUptimeDrift;
-    type PeriodTreshold = PeriodTreshold;
+    type MintingPeriodDuration = MintingPeriodDuration;
     type HeartbeatInterval = HeartbeatInterval;
     type EnableMintingUnixTime = EnableMintingUnixTime;
 }

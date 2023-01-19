@@ -70,10 +70,11 @@ impl Resources {
     ///   SU: hru / 1200 + sru * 0.8 / 200
     pub fn cloud_units_permill(&self) -> (u64, u64) {
         // Calculate CU first. Mru and sru are in bytes, but are expressed in GB in the formula.
-        // Rather than dividing first, we multiply cru first, then take the MIN, and finally
-        // divide. This eliminates the issue of rounding errors _BEFORE_ the MIN. Also multiply by
-        // 1000000 so we have precision without working with floats.
-        //
+        // Rather than converting mru and sru to GB (by dividing first), we multiply cru first
+        // instead (to put the values at same scale), then take the MIN, and finally divide the
+        // returning values at the end of function. This eliminates the issue of rounding errors
+        // _BEFORE_ the MIN. Also multiply by 1000000 so we have precision without working with
+        // floats.
         // MIN is associative.
         let cu_intermediate = sp_std::cmp::min(
             self.cru as u128 * 2 * GIGABYTE * ONE_MILL,
