@@ -323,10 +323,12 @@ impl<T: Config> Pallet<T> {
         let mut cu_reward = 0;
         let mut su_reward = 0;
 
+        let uptime_percentage = (period.uptime * 1_000 / period_length) as u128;
+
         if farming_policy.id == 1 || farming_policy.id == 2 {
             // CU/SU rewards are the amount of CU/SU for the minimal capacity scaled on a period
-            cu_reward = (cu * farming_policy.cu as u64 * period.uptime) / period_length;
-            su_reward = (su * farming_policy.su as u64 * period.uptime) / period_length;
+            cu_reward = cu * farming_policy.cu as u64;
+            su_reward = su * farming_policy.su as u64;
         } else {
             let minimal_uptime_met =
                 period.uptime < (period_length * farming_policy.minimal_uptime as u64) / 1000;
@@ -349,15 +351,22 @@ impl<T: Config> Pallet<T> {
         let mut base_payout =
             (cu_reward as u128 + su_reward as u128 + nru_reward) / ONE_MILL + ipu_reward;
         log::debug!("total musd reward: {}", base_payout);
+        // Caculate actual payout for the period uptime
+        base_payout = base_payout * uptime_percentage / 1_000;
+        // Inflate base payout for more precision
+        base_payout = base_payout * 100_000_000;
+        log::debug!("total musd reward after inflation: {}", base_payout);
 
         if matches!(
             node.certification,
             tfchain_support::types::NodeCertification::Certified
-        ) && node.farming_policy_id == 1
-        {
+        ) {
             base_payout = base_payout * 5 / 4;
         }
-        let total_tft_reward = (base_payout / connection_price as u128) * 10_000_000;
+
+        log::info!("connection price: {}", connection_price);
+        // Calculate the amount of TFT rewarded
+        let total_tft_reward = base_payout / connection_price as u128;
 
         log::info!(
             "Minting: {:?} to farmer twin {:?}",
