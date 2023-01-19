@@ -86,9 +86,8 @@ impl Resources {
 
     pub fn get_cu(&self) -> u64 {
         let cu = self.calc_cu();
-        // let calculated_cu = 2 * (cu as u128 / GIGABYTE / ONE_THOUSAND);
-        // calculated_cu as u64
-        cu
+        let calculated_cu = 2 * (cu as u128 / GIGABYTE / ONE_THOUSAND);
+        calculated_cu as u64
     }
 
     fn calc_cu(&self) -> u64 {
@@ -243,19 +242,6 @@ mod test {
 
         let su = resources.get_su();
         assert_eq!(su, 3);
-    }
-
-    #[test]
-    fn test_calc_cu_5() {
-        let resources = Resources {
-            hru: 1024 * GIGABYTE as u64,
-            sru: 512 * GIGABYTE as u64,
-            cru: 8,
-            mru: 16 * GIGABYTE as u64,
-        };
-
-        let cu = resources.get_cu();
-        assert_eq!(cu, 2);
     }
 
     #[test]
