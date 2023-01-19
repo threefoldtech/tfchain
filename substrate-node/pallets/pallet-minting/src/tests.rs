@@ -26,7 +26,7 @@ fn pushing_uptime_works() {
             1000,
         ));
 
-        Timestamp::set_timestamp(162808300000);
+        Timestamp::set_timestamp(1628083000000);
 
         assert_ok!(MintingModule::report_uptime(
             RuntimeOrigin::signed(10),

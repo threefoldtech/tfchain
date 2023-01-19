@@ -57,6 +57,7 @@ pub mod pallet {
         type PeriodTreshold: Get<u64>;
         // Heartbeat interval indicates the maximum interval in seconds where a node can send uptime reports
         type HeartbeatInterval: Get<u64>;
+        type EnableMintingUnixTime: Get<u64>;
     }
 
     #[pallet::event]
@@ -127,6 +128,11 @@ impl<T: Config> Pallet<T> {
         account_id: &T::AccountId,
         uptime: u64,
     ) -> DispatchResultWithPostInfo {
+        let now = Self::get_unix_timestamp();
+        if now < T::EnableMintingUnixTime::get() {
+            return Ok(().into());
+        }
+
         ensure!(uptime > 0, Error::<T>::UptimeReportInvalid);
 
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
@@ -135,8 +141,6 @@ impl<T: Config> Pallet<T> {
         let node_id = pallet_tfgrid::NodeIdByTwinID::<T>::get(twin_id);
         let node = pallet_tfgrid::Nodes::<T>::get(node_id)
             .ok_or(pallet_tfgrid::Error::<T>::NodeNotExists)?;
-
-        let now = Self::get_unix_timestamp();
 
         let mut node_report = NodeReport::<T>::get(node_id);
 
@@ -420,14 +424,23 @@ impl<T: Config> Pallet<T> {
 
 impl<T: Config> MintingHook<T::AccountId> for Pallet<T> {
     fn report_uptime(source: &T::AccountId, uptime: u64) -> DispatchResultWithPostInfo {
+        if Self::get_unix_timestamp() < T::EnableMintingUnixTime::get() {
+            return Ok(().into());
+        }
         Self::process_uptime_report(source, uptime)
     }
 
     fn report_nru(node_id: u32, nru: u64, window: u64) {
+        if Self::get_unix_timestamp() < T::EnableMintingUnixTime::get() {
+            return;
+        }
         Self::report_nru(node_id, nru, window)
     }
 
     fn report_used_resources(node_id: u32, resources: Resources, window: u64, ipu: u32) {
+        if Self::get_unix_timestamp() < T::EnableMintingUnixTime::get() {
+            return;
+        }
         Self::report_used_resources(node_id, resources, window, ipu)
     }
 }

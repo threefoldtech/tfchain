@@ -124,6 +124,7 @@ parameter_types! {
     pub const AllowedUptimeDrift: u64 = 60;
     pub const PeriodTreshold: u64 = 60;
     pub const HeartbeatInterval: u64 = 120;
+    pub const EnableMintingUnixTime: u64 = 1628080000;
 }
 
 impl pallet_minting::Config for Test {
@@ -132,6 +133,7 @@ impl pallet_minting::Config for Test {
     type AllowedUptimeDrift = AllowedUptimeDrift;
     type PeriodTreshold = PeriodTreshold;
     type HeartbeatInterval = HeartbeatInterval;
+    type EnableMintingUnixTime = EnableMintingUnixTime;
 }
 
 parameter_types! {

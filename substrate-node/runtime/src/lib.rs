@@ -452,6 +452,8 @@ parameter_types! {
     pub const PeriodTreshold: u64 = (30 * DAYS) as u64;
     // 2 hours
     pub const HeartbeatInterval: u64 = 7200;
+    // TBD for each network what time we want to enable minting on chain
+    pub const EnableMintingUnixTime: u64 = 0;
 }
 
 impl pallet_minting::Config for Runtime {
@@ -460,6 +462,7 @@ impl pallet_minting::Config for Runtime {
     type AllowedUptimeDrift = AllowedUptimeDrift;
     type PeriodTreshold = PeriodTreshold;
     type HeartbeatInterval = HeartbeatInterval;
+    type EnableMintingUnixTime = EnableMintingUnixTime;
 }
 
 impl pallet_kvstore::Config for Runtime {
