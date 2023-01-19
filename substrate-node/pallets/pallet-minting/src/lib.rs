@@ -368,6 +368,7 @@ impl<T: Config> Pallet<T> {
             base_payout
         );
 
+        // Certified nodes receive 25% more rewards
         if matches!(
             node.certification,
             tfchain_support::types::NodeCertification::Certified
@@ -376,7 +377,8 @@ impl<T: Config> Pallet<T> {
         }
 
         log::info!("connection price: {}", connection_price);
-        // Calculate the amount of TFT rewarded
+        // Calculate the amount of TFT rewarded (Units TFT in 7 decimals notation)
+        // Divide by connection price expressed in mUSD
         let total_tft_reward = base_payout / connection_price as u128;
 
         log::info!(
