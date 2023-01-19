@@ -17,8 +17,6 @@ fn pushing_uptime_works() {
         System::set_block_number(1);
         Timestamp::set_timestamp(1628082000000);
 
-        create_farming_policies();
-
         prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
 
         assert_ok!(MintingModule::report_uptime(
@@ -51,8 +49,6 @@ fn pushing_uptime_has_no_effect_before_minting_is_enabled() {
     new_test_ext().execute_with(|| {
         System::set_block_number(1);
         Timestamp::set_timestamp(1628072000000);
-
-        create_farming_policies();
 
         prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
 
@@ -87,8 +83,6 @@ fn pushing_0_uptime_fails() {
         System::set_block_number(1);
         Timestamp::set_timestamp(1628082000000);
 
-        create_farming_policies();
-
         prepare_twin_farm_and_big_node(10, "farm1".as_bytes().to_vec(), 1);
 
         assert_noop!(
@@ -103,8 +97,6 @@ fn pushing_uptime_timedrift_boundrary_fails() {
     new_test_ext().execute_with(|| {
         System::set_block_number(1);
         Timestamp::set_timestamp(1628082000000);
-
-        create_farming_policies();
 
         prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
 
@@ -127,8 +119,6 @@ fn period_rotation_works() {
     new_test_ext().execute_with(|| {
         System::set_block_number(1);
         Timestamp::set_timestamp(1628082000000);
-
-        create_farming_policies();
 
         prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
 
@@ -160,8 +150,6 @@ fn period_rotation_results_in_payable_period_works() {
     new_test_ext().execute_with(|| {
         System::set_block_number(1);
         Timestamp::set_timestamp(1628082000000);
-
-        create_farming_policies();
 
         prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
 
@@ -219,8 +207,6 @@ fn test_report_uptime_trait_works() {
         System::set_block_number(1);
         Timestamp::set_timestamp(1628082000000);
 
-        create_farming_policies();
-
         prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
 
         assert_ok!(MintingModule::report_uptime(
@@ -250,8 +236,6 @@ fn period_rotation_with_utilisation_works() {
     new_test_ext().execute_with(|| {
         System::set_block_number(1);
         Timestamp::set_timestamp(1628082000000);
-
-        create_farming_policies();
 
         prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
 
@@ -325,8 +309,6 @@ fn farmer_can_claim_rewards_after_period_ends_works() {
     new_test_ext().execute_with(|| {
         System::set_block_number(1);
         Timestamp::set_timestamp(1628082000000);
-
-        create_farming_policies();
 
         prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
 
@@ -411,8 +393,6 @@ fn reward_distribution_scales_to_uptime_works() {
         System::set_block_number(1);
         Timestamp::set_timestamp(1628082000000);
 
-        create_farming_policies();
-
         prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
 
         let used_resources_mock = ResourcesInput {
@@ -483,6 +463,104 @@ fn reward_distribution_scales_to_uptime_works() {
                             hru: (used_resources_mock.hru * 30) as u128,
                             mru: (used_resources_mock.mru * 30) as u128,
                             sru: (used_resources_mock.sru * 30) as u128,
+                        }
+                    }
+                }
+            ))),
+            true
+        )
+    })
+}
+
+#[test]
+fn gold_farming_rewards_works() {
+    new_test_ext().execute_with(|| {
+        System::set_block_number(1);
+        Timestamp::set_timestamp(1628082000000);
+
+        create_gold_farming_policy();
+
+        prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
+
+        assert_ok!(TfgridModule::set_farm_certification(
+            RuntimeOrigin::root(),
+            1,
+            FarmCertification::Gold
+        ));
+
+        assert_ok!(TfgridModule::set_node_certification(
+            RuntimeOrigin::root(),
+            1,
+            NodeCertification::Certified
+        ));
+
+        let used_resources_mock = ResourcesInput {
+            cru: 1,
+            hru: 0,
+            mru: 4 * GIGABYTE,
+            sru: 10 * GIGABYTE,
+        };
+        let used_ipu = 1;
+        let used_nru = 1 * GIGABYTE;
+        // period lenght is 10 blocks
+        for i in 1..12 {
+            Timestamp::set_timestamp((1628082000 * 1000) + (6000 * i));
+
+            assert_ok!(MintingModule::report_uptime(
+                RuntimeOrigin::signed(10),
+                6 * i,
+            ));
+
+            MintingModule::report_nru(1, used_nru, 6);
+            MintingModule::report_used_resources(1, used_resources_mock, 6, used_ipu);
+        }
+
+        assert_ok!(MintingModule::payout_periods(RuntimeOrigin::signed(10), 1));
+
+        let our_events = System::events();
+
+        for e in our_events.clone() {
+            log::debug!("event: {:?}", e);
+        }
+
+        assert_eq!(
+            our_events.contains(&record(MockEvent::MintingModule(
+                MintingEvent::<Test>::NodePeriodEnded { node_id: 1 }
+            ))),
+            true
+        );
+
+        let node_resources = ResourcesInput {
+            hru: 1024 * GIGABYTE,
+            sru: 512 * GIGABYTE,
+            cru: 8,
+            mru: 16 * GIGABYTE,
+        };
+        assert_eq!(
+            our_events.contains(&record(MockEvent::MintingModule(
+                MintingEvent::<Test>::NodePeriodPaidOut {
+                    node_id: 1,
+                    // 171.26 TFT
+                    amount: 3551250000,
+                    period_info: types::NodePeriodInformation {
+                        uptime: 60,
+                        // Gold Policy
+                        farming_policy: 3,
+                        ipu: (used_ipu * 60) as u128,
+                        nru: used_nru * 60,
+                        max_capacity: ResourcesInput::default(),
+                        min_capacity: node_resources,
+                        running_capacity: types::ResourceSeconds {
+                            cru: (node_resources.cru * 60) as u128,
+                            hru: (node_resources.hru * 60) as u128,
+                            mru: (node_resources.mru * 60) as u128,
+                            sru: (node_resources.sru * 60) as u128
+                        },
+                        used_capacity: types::ResourceSeconds {
+                            cru: (used_resources_mock.cru * 60) as u128,
+                            hru: (used_resources_mock.hru * 60) as u128,
+                            mru: (used_resources_mock.mru * 60) as u128,
+                            sru: (used_resources_mock.sru * 60) as u128,
                         }
                     }
                 }
@@ -598,68 +676,20 @@ pub fn prepare_farm(account_id: u64, farm_name: Vec<u8>) {
     ));
 }
 
-fn create_farming_policies() {
-    let name = "farm_1".as_bytes().to_vec();
+fn create_gold_farming_policy() {
+    let name = "gold".as_bytes().to_vec();
     assert_ok!(TfgridModule::create_farming_policy(
         RawOrigin::Root.into(),
         name,
-        12,
-        15,
-        10,
-        8,
-        9999,
-        System::block_number() + 100,
-        true,
-        true,
-        NodeCertification::Diy,
-        FarmCertification::Gold,
-    ));
-
-    let name = "farm2".as_bytes().to_vec();
-    assert_ok!(TfgridModule::create_farming_policy(
-        RawOrigin::Root.into(),
-        name,
-        12,
-        15,
-        10,
-        8,
-        9999,
-        System::block_number() + 100,
-        true,
-        true,
-        NodeCertification::Diy,
-        FarmCertification::NotCertified,
-    ));
-
-    let name = "farm3".as_bytes().to_vec();
-    assert_ok!(TfgridModule::create_farming_policy(
-        RawOrigin::Root.into(),
-        name,
-        12,
-        15,
-        10,
-        8,
-        9999,
+        2250,
+        3600,
+        45,
+        5,
+        998,
         System::block_number() + 100,
         true,
         true,
         NodeCertification::Certified,
         FarmCertification::Gold,
-    ));
-
-    let name = "farm1".as_bytes().to_vec();
-    assert_ok!(TfgridModule::create_farming_policy(
-        RawOrigin::Root.into(),
-        name,
-        12,
-        15,
-        10,
-        8,
-        9999,
-        System::block_number() + 100,
-        true,
-        true,
-        NodeCertification::Certified,
-        FarmCertification::NotCertified,
     ));
 }

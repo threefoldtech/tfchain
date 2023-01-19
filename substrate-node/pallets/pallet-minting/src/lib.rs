@@ -14,6 +14,7 @@ use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf, TfgridNode}
 use tfchain_support::{
     resources::{Resources, GIGABYTE, ONE_MILL},
     traits::{ChangeNode, MintingHook},
+    types::FarmCertification,
 };
 
 #[cfg(test)]
@@ -209,9 +210,6 @@ impl<T: Config> Pallet<T> {
             _ => uptime.checked_sub(node_report.counters.uptime).unwrap_or(0),
         };
 
-        log::debug!("report diff: {}", report_diff);
-        log::debug!("uptime diff: {}", uptime_diff);
-
         if uptime_diff > 0 && report_diff > 0 {
             // Validate report
             let valid_report = report_diff
@@ -292,6 +290,7 @@ impl<T: Config> Pallet<T> {
         );
 
         let mut payable_periods = PayablePeriods::<T>::get(node_id);
+        log::debug!("period: {:?}", payable_periods.clone());
         payable_periods = payable_periods
             .into_iter()
             .filter(|period| {
@@ -327,18 +326,18 @@ impl<T: Config> Pallet<T> {
         let farm_twin = pallet_tfgrid::Twins::<T>::get(farm.twin_id)
             .ok_or(pallet_tfgrid::Error::<T>::TwinNotExists)?;
 
-        let mut cu_reward = 0;
-        let mut su_reward = 0;
-
         let uptime_percentage = (period.uptime * 1_000 / period_length) as u128;
 
-        if farming_policy.id == 1 || farming_policy.id == 2 {
-            // CU/SU rewards are the amount of CU/SU for the minimal capacity scaled on a period
-            cu_reward = cu * farming_policy.cu as u64;
-            su_reward = su * farming_policy.su as u64;
-        } else {
+        let cu_reward = cu * farming_policy.cu as u64;
+        let su_reward = su * farming_policy.su as u64;
+
+        if farming_policy.farm_certification == FarmCertification::Gold {
+            log::debug!(
+                "check: {:?}",
+                (period_length * farming_policy.minimal_uptime as u64) / 100
+            );
             let minimal_uptime_met =
-                period.uptime < (period_length * farming_policy.minimal_uptime as u64) / 1000;
+                period.uptime > (period_length * farming_policy.minimal_uptime as u64) / 1000;
             if !minimal_uptime_met {
                 return Err(Error::<T>::UptimeNotMetInPeriodFollowingSla.into());
             }
