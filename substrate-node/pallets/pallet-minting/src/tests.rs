@@ -365,6 +365,130 @@ fn farmer_can_claim_rewards_after_period_ends_works() {
             ))),
             true
         );
+
+        let node_resources = ResourcesInput {
+            hru: 1024 * GIGABYTE,
+            sru: 512 * GIGABYTE,
+            cru: 8,
+            mru: 16 * GIGABYTE,
+        };
+        assert_eq!(
+            our_events.contains(&record(MockEvent::MintingModule(
+                MintingEvent::<Test>::NodePeriodPaidOut {
+                    node_id: 1,
+                    // 171.26 TFT
+                    amount: 1712625000,
+                    period_info: types::NodePeriodInformation {
+                        uptime: 60,
+                        farming_policy: 1,
+                        ipu: (used_ipu * 60) as u128,
+                        nru: used_nru * 60,
+                        max_capacity: ResourcesInput::default(),
+                        min_capacity: node_resources,
+                        running_capacity: types::ResourceSeconds {
+                            cru: (node_resources.cru * 60) as u128,
+                            hru: (node_resources.hru * 60) as u128,
+                            mru: (node_resources.mru * 60) as u128,
+                            sru: (node_resources.sru * 60) as u128
+                        },
+                        used_capacity: types::ResourceSeconds {
+                            cru: (used_resources_mock.cru * 60) as u128,
+                            hru: (used_resources_mock.hru * 60) as u128,
+                            mru: (used_resources_mock.mru * 60) as u128,
+                            sru: (used_resources_mock.sru * 60) as u128,
+                        }
+                    }
+                }
+            ))),
+            true
+        )
+    })
+}
+
+#[test]
+fn reward_distribution_scales_to_uptime_works() {
+    new_test_ext().execute_with(|| {
+        System::set_block_number(1);
+        Timestamp::set_timestamp(1628082000000);
+
+        create_farming_policies();
+
+        prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
+
+        let used_resources_mock = ResourcesInput {
+            cru: 1,
+            hru: 0,
+            mru: 4 * GIGABYTE,
+            sru: 10 * GIGABYTE,
+        };
+        let used_ipu = 1;
+        let used_nru = 1 * GIGABYTE;
+        // period lenght is 10 blocks
+        for i in 1..14 {
+            Timestamp::set_timestamp((1628082000 * 1000) + (6000 * i));
+
+            if i % 2 == 0 {
+                assert_ok!(MintingModule::report_uptime(
+                    RuntimeOrigin::signed(10),
+                    (6 * i) / 2,
+                ));
+
+                MintingModule::report_nru(1, used_nru, 6);
+                MintingModule::report_used_resources(1, used_resources_mock, 6, used_ipu);
+            }
+        }
+
+        assert_ok!(MintingModule::payout_periods(RuntimeOrigin::signed(10), 1));
+
+        let our_events = System::events();
+
+        for e in our_events.clone() {
+            log::debug!("event: {:?}", e);
+        }
+
+        assert_eq!(
+            our_events.contains(&record(MockEvent::MintingModule(
+                MintingEvent::<Test>::NodePeriodEnded { node_id: 1 }
+            ))),
+            true
+        );
+
+        let node_resources = ResourcesInput {
+            hru: 1024 * GIGABYTE,
+            sru: 512 * GIGABYTE,
+            cru: 8,
+            mru: 16 * GIGABYTE,
+        };
+        assert_eq!(
+            our_events.contains(&record(MockEvent::MintingModule(
+                MintingEvent::<Test>::NodePeriodPaidOut {
+                    node_id: 1,
+                    // 171.26 TFT
+                    amount: 800062500,
+                    period_info: types::NodePeriodInformation {
+                        uptime: 30,
+                        farming_policy: 1,
+                        ipu: (used_ipu * 30) as u128,
+                        nru: used_nru * 30,
+                        max_capacity: ResourcesInput::default(),
+                        min_capacity: node_resources,
+                        running_capacity: types::ResourceSeconds {
+                            cru: (node_resources.cru * 30) as u128,
+                            hru: (node_resources.hru * 30) as u128,
+                            mru: (node_resources.mru * 30) as u128,
+                            sru: (node_resources.sru * 30) as u128
+                        },
+                        used_capacity: types::ResourceSeconds {
+                            cru: (used_resources_mock.cru * 30) as u128,
+                            hru: (used_resources_mock.hru * 30) as u128,
+                            mru: (used_resources_mock.mru * 30) as u128,
+                            sru: (used_resources_mock.sru * 30) as u128,
+                        }
+                    }
+                }
+            ))),
+            true
+        )
     })
 }
 

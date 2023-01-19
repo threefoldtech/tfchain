@@ -209,6 +209,9 @@ impl<T: Config> Pallet<T> {
             _ => uptime.checked_sub(node_report.counters.uptime).unwrap_or(0),
         };
 
+        log::debug!("report diff: {}", report_diff);
+        log::debug!("uptime diff: {}", uptime_diff);
+
         if uptime_diff > 0 && report_diff > 0 {
             // Validate report
             let valid_report = report_diff
@@ -349,17 +352,22 @@ impl<T: Config> Pallet<T> {
         log::debug!("nru reward: {}", nru_reward);
 
         // Public IP rewards are per public ip per hour for a period
-        let ipu_reward = period.ipu * farming_policy.ipv4 as u128 / 3600;
+        let ipu_reward = period.ipu * ONE_MILL * farming_policy.ipv4 as u128 / 3600;
         log::debug!("ipu reward: {}", ipu_reward);
 
+        // Base payout is expressed in mUSD (milli USD)
         let mut base_payout =
-            (cu_reward as u128 + su_reward as u128 + nru_reward) / ONE_MILL + ipu_reward;
+            (cu_reward as u128 + su_reward as u128 + nru_reward + ipu_reward) / ONE_MILL;
         log::debug!("total musd reward: {}", base_payout);
-        // Caculate actual payout for the period uptime
-        base_payout = base_payout * uptime_percentage / 1_000;
+
         // Inflate base payout for more precision
         base_payout = base_payout * 100_000_000;
-        log::debug!("total musd reward after inflation: {}", base_payout);
+        // Caculate actual payout for the period uptime
+        base_payout = base_payout * uptime_percentage / 1_000;
+        log::debug!(
+            "total musd reward after inflation and uptime calculation: {}",
+            base_payout
+        );
 
         if matches!(
             node.certification,
