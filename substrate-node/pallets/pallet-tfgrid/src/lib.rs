@@ -962,6 +962,7 @@ pub mod pallet {
             }
         }
 
+        // DEPRECATED
         #[pallet::call_index(7)]
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2).ref_time() + T::DbWeight::get().reads(2).ref_time())]
         pub fn delete_farm(_origin: OriginFor<T>, _id: u32) -> DispatchResultWithPostInfo {
@@ -1559,26 +1560,11 @@ pub mod pallet {
             Ok(().into())
         }
 
+        // DEPRECATED
         #[pallet::call_index(21)]
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2).ref_time() + T::DbWeight::get().reads(1).ref_time())]
-        pub fn delete_twin(origin: OriginFor<T>, twin_id: u32) -> DispatchResultWithPostInfo {
-            let account_id = ensure_signed(origin)?;
-
-            let twin = Twins::<T>::get(&twin_id).ok_or(Error::<T>::TwinNotExists)?;
-            // Make sure only the owner of this twin can call this method
-            ensure!(
-                twin.account_id == account_id,
-                Error::<T>::UnauthorizedToUpdateTwin
-            );
-
-            Twins::<T>::remove(&twin_id);
-
-            // remove twin id from this users map of twin ids
-            TwinIdByAccountID::<T>::remove(&account_id.clone());
-
-            Self::deposit_event(Event::TwinDeleted(twin_id));
-
-            Ok(().into())
+        pub fn delete_twin(_origin: OriginFor<T>, _twin_id: u32) -> DispatchResultWithPostInfo {
+            Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
         }
 
         #[pallet::call_index(22)]

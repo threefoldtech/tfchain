@@ -154,7 +154,7 @@ fn test_create_twin_works() {
 }
 
 #[test]
-fn test_delete_twin_works() {
+fn test_delete_twin_fails() {
     ExternalityBuilder::build().execute_with(|| {
         assert_ok!(TfgridModule::user_accept_tc(
             RuntimeOrigin::signed(alice()),
@@ -169,10 +169,13 @@ fn test_delete_twin_works() {
         ));
 
         let twin_id = 1;
-        assert_ok!(TfgridModule::delete_twin(
-            RuntimeOrigin::signed(alice()),
-            twin_id
-        ));
+        assert_noop!(
+            TfgridModule::delete_twin(RuntimeOrigin::signed(alice()), twin_id),
+            Error::<TestRuntime>::MethodIsDeprecated
+        );
+
+        assert_eq!(TfgridModule::twins(1).is_some(), true);
+        assert_eq!(TfgridModule::twin_ids_by_pubkey(alice()), Some(1));
     });
 }
 
@@ -467,10 +470,16 @@ fn test_delete_farm_fails() {
         create_entity();
         create_twin();
         create_farm();
+        create_node();
+
         assert_noop!(
             TfgridModule::delete_farm(RuntimeOrigin::signed(alice()), 1),
             Error::<TestRuntime>::MethodIsDeprecated
         );
+
+        assert_eq!(TfgridModule::farms(1).is_some(), true);
+        assert_eq!(TfgridModule::farms_by_name_id(b"test_farm".to_vec()), 1);
+        assert_eq!(TfgridModule::nodes_by_farm_id(1), [1]);
     });
 }
 

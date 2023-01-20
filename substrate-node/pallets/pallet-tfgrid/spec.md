@@ -185,7 +185,7 @@ Twins:
 
 - create_twin(..)
 - update_twin(..)
-- delete_twin(..)
+- delete_twin(..) // Deprecated
 
 Entity-Twin Relation:
 
@@ -202,7 +202,7 @@ Farms:
 
 - createFarm(..)
 - updateFarm(..)
-- deleteFarm(..)
+- deleteFarm(..) // Deprecated
 - addFarmIp(..)
 - removeFarmIp(..)
 
