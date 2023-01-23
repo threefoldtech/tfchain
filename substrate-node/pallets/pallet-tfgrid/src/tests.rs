@@ -154,32 +154,6 @@ fn test_create_twin_works() {
 }
 
 #[test]
-fn test_delete_twin_fails() {
-    ExternalityBuilder::build().execute_with(|| {
-        assert_ok!(TfgridModule::user_accept_tc(
-            RuntimeOrigin::signed(alice()),
-            get_document_link_input(b"some_link"),
-            get_document_hash_input(b"some_hash"),
-        ));
-
-        let ip = get_twin_ip_input(b"::1");
-        assert_ok!(TfgridModule::create_twin(
-            RuntimeOrigin::signed(alice()),
-            ip
-        ));
-
-        let twin_id = 1;
-        assert_noop!(
-            TfgridModule::delete_twin(RuntimeOrigin::signed(alice()), twin_id),
-            Error::<TestRuntime>::MethodIsDeprecated
-        );
-
-        assert_eq!(TfgridModule::twins(1).is_some(), true);
-        assert_eq!(TfgridModule::twin_ids_by_pubkey(alice()), Some(1));
-    });
-}
-
-#[test]
 fn test_delete_node_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();

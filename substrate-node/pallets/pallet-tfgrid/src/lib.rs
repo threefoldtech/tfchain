@@ -1560,13 +1560,6 @@ pub mod pallet {
             Ok(().into())
         }
 
-        // DEPRECATED
-        #[pallet::call_index(21)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2).ref_time() + T::DbWeight::get().reads(1).ref_time())]
-        pub fn delete_twin(_origin: OriginFor<T>, _twin_id: u32) -> DispatchResultWithPostInfo {
-            Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
-        }
-
         #[pallet::call_index(22)]
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(3).ref_time() + T::DbWeight::get().reads(2).ref_time())]
         pub fn create_pricing_policy(

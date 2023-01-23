@@ -185,7 +185,6 @@ Twins:
 
 - create_twin(..)
 - update_twin(..)
-- delete_twin(..) // Deprecated
 
 Entity-Twin Relation:
 
