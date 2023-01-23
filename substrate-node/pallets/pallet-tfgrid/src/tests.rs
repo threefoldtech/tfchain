@@ -439,25 +439,6 @@ fn test_adding_misformatted_ip_to_farm_fails() {
 }
 
 #[test]
-fn test_delete_farm_fails() {
-    ExternalityBuilder::build().execute_with(|| {
-        create_entity();
-        create_twin();
-        create_farm();
-        create_node();
-
-        assert_noop!(
-            TfgridModule::delete_farm(RuntimeOrigin::signed(alice()), 1),
-            Error::<TestRuntime>::MethodIsDeprecated
-        );
-
-        assert_eq!(TfgridModule::farms(1).is_some(), true);
-        assert_eq!(TfgridModule::farms_by_name_id(b"test_farm".to_vec()), 1);
-        assert_eq!(TfgridModule::nodes_by_farm_id(1), [1]);
-    });
-}
-
-#[test]
 fn test_adding_ip_duplicate_to_farm_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();

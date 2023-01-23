@@ -201,7 +201,6 @@ Farms:
 
 - createFarm(..)
 - updateFarm(..)
-- deleteFarm(..) // Deprecated
 - addFarmIp(..)
 - removeFarmIp(..)
 

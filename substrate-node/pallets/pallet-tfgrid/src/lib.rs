@@ -962,13 +962,6 @@ pub mod pallet {
             }
         }
 
-        // DEPRECATED
-        #[pallet::call_index(7)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2).ref_time() + T::DbWeight::get().reads(2).ref_time())]
-        pub fn delete_farm(_origin: OriginFor<T>, _id: u32) -> DispatchResultWithPostInfo {
-            Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
-        }
-
         #[pallet::call_index(8)]
         #[pallet::weight(<T as Config>::WeightInfo::create_node())]
         pub fn create_node(
