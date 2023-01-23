@@ -361,6 +361,7 @@ pub mod pallet {
         TFTPriceValueError,
         NotEnoughResourcesOnNode,
         NodeNotAuthorizedToReportResources,
+        MethodIsDeprecated,
         NodeHasActiveContracts,
         NodeHasRentContract,
         NodeIsNotDedicated,

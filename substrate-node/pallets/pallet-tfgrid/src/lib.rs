@@ -452,6 +452,10 @@ pub mod pallet {
         FarmNotExists,
         CannotCreateFarmWrongTwin,
         CannotUpdateFarmWrongTwin,
+        CannotDeleteFarm,
+        CannotDeleteFarmWithPublicIPs,
+        CannotDeleteFarmWithNodesAssigned,
+        CannotDeleteFarmWrongTwin,
         IpExists,
         IpNotExists,
 
@@ -515,6 +519,7 @@ pub mod pallet {
         DomainTooShort,
         DomainTooLong,
         InvalidDomain,
+        MethodIsDeprecated,
         InterfaceNameTooShort,
         InterfaceNameTooLong,
         InvalidInterfaceName,
