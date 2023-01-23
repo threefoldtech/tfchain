@@ -1,0 +1,4 @@
+[build]
+# By default, on musl linux, statically linked binaries are produced.
+# Rocksdb doesn't like that
+rustflags = ["-C", "target-feature=-crt-static"]
