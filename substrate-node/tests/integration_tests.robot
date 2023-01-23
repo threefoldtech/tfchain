@@ -61,7 +61,7 @@ Test Start And Stop Network
 
     Tear Down Multi Node Network
 
-Test Create Update Delete Twin
+Test Create Update Twin
     [Documentation]    Testing api calls (create, update) for managing twins
     Setup Multi Node Network    log_name=test_create_update_twin
 
