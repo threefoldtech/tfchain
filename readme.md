@@ -11,7 +11,7 @@ It is the backbone of [ZOS](https://github.com/threefoldtech/zos) and other comp
 
 see [docs](./docs/readme.md) for more information on how to work with this component.
 
-## Feature list
+## Modules list
 
 - [Tfgrid Module](./substrate-node/pallets/pallet-tfgrid/readme.md): registry for Nodes / Farms / Twins
 - [Smart Contract Module](./substrate-node/pallets/pallet-smart-contract/readme.md): node and rent contracts
