@@ -21,6 +21,8 @@ cargo build
 ./target/debug/tfchain --dev --ws-external --pruning archive
 ```
 
+This will run the node in default development mode.
+
 ## Running multi node local tfchain network
 
 If you want to run tfchain in a multi node network (more than one node), see [local](./local_multinode.md)
@@ -39,4 +41,7 @@ To wipe data run:
 
 ## Writing tests for pallets
 
-Check https://docs.substrate.io/reference/how-to-guides/testing/ for learning how to write tests for pallets.
+Every pallet should have all functionality tested, you can write unit tests and integration tests for a pallet:
+
+- unit test: heck https://docs.substrate.io/reference/how-to-guides/testing/
+- integration test: [see](../../substrate-node/tests/readme.md)
