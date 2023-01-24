@@ -4,7 +4,7 @@
   <img height="50%" width="50%" src="./substrate-node/.maintain/header.png">
 </p>
 
-Threefold blockchain serves as a registry for Nodes, Farm, Digital Twins and Deployment contracts.
+Threefold blockchain serves as a registry for Nodes, Farms, Digital Twins and Deployment contracts.
 It is the backbone of [ZOS](https://github.com/threefoldtech/zos) and other components.
 
 ## Docs

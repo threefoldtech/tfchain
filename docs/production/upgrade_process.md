@@ -1,30 +1,19 @@
 # Upgrading runtime
 
-## Update runtime pallets
+## Check first
 
-If you updated the pallets functionality and pushed it's default branch on github you can update the dependency as following:
-
-```
-cargo update -p pallet-tfgrid
-cargo update -p pallet-smart-contract
-```
-
-Alternatively you can compile runtime modules in your runtime from a local path. You can change the git dependency to a local path dependency like:
-
-```
-[dependencies.pallet-smart-contract]
-default-features = false
-#path = "somepath/tfchain_pallets/pallet-smart-contract"
-```
+- Make sure CI passes and it compiles locally
+- Test migrations (if any) with the tools described in [try-runtime](../misc/try_runtime.md) and [tools](../../tools/fork-off-substrate/README.md)
 
 ## Increment spec version
 
-Open `substrate-node/runtime/src/lib.rs` and increment the spec version with the current spec version. You can see what spec version a node is running on the polkadot ui. 
+Open `substrate-node/runtime/src/lib.rs` and increment the spec version with the current spec version. You can see what spec version a node is running on the polkadot ui.
 In the top left you should see something like: `substrate-threefold/1` which means it's running the runtime `substrate-threefold` with spec version `1`.
 
 ## Compile a runtime wasm build
 
 You can pass an optional release flag.
+
 ```
 cargo build [--release] -p tfchain-runtime
 ```
@@ -39,7 +28,6 @@ Now select a `Root` account to upgrade the runtime with, if the node is running 
 
 Select `Sudo` -> `sudoUncheckedWeight` -> `System` -> `setCode` -> Toggle `file upload` and click the box.
 
-
 Navigate to `tfchain/substrate-node/target/release/wbuild/tfchain-runtime/tfchain_runtime.compact.wasm` and upload that file.
 
 Submit the transaction, wait a couple of seconds and the runtime version should be incremented and the code will be live.
@@ -53,4 +41,3 @@ There are several ways to work around that but none are advised. More informatio
 ### Upgrade grapqhl
 
 [graphql upgrade documentation](../graphql/docs/readme.md)
-

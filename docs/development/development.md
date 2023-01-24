@@ -23,7 +23,7 @@ cargo build
 
 ## Running multi node local tfchain network
 
-See [local](./local_multinode.md)
+If you want to run tfchain in a multi node network (more than one node), see [local](./local_multinode.md)
 
 ## Code changes?
 

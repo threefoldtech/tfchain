@@ -26,3 +26,5 @@ For integration tests, see [integration-tests](../substrate-node/tests/readme.md
 - Build and Test: with every commit, tfchain will be built and all tests (unit / integration) tests will run.
 
 ## Release process
+
+See [upgrade-process](./production/upgrade_process.md)

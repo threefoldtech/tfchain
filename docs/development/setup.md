@@ -1,25 +1,13 @@
 # Setup
 
-Ensure you have the following installed first:
-
-- librocksdb-dev
-- libclang-dev
-- clang lldb lld
-- build-essential
-- protoc
-
-You will also need to install rust.
-
-To install Rust:
-
-```
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
+Prepare your dev environment: https://docs.substrate.io/install/
 
 # Editor configuration
 
 For Vscode, install https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer
 
 # Key generation tool:
+
+(Used to generate accounts for users or validators)
 
 Subkey: https://docs.substrate.io/reference/command-line-tools/subkey/
