@@ -31,7 +31,7 @@ use substrate_fixed::types::U64F64;
 use system::offchain::SignMessage;
 use tfchain_support::{
     traits::{ChangeNode, PublicIpModifier},
-    types::PublicIP,
+    types::{NodePowerState, PublicIP},
 };
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"aura");
@@ -692,6 +692,14 @@ impl<T: Config> Pallet<T> {
             .ok_or(Error::<T>::TwinNotExists)?;
 
         let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+
+        match pallet_tfgrid::NodePower::<T>::get(node_id) {
+            NodePowerState::Down(_) => {
+                return Err(Error::<T>::NodeNotAvailableToDeploy.into());
+            }
+            _ => (),
+        };
+
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
         if farm.dedicated_farm && !ActiveRentContractForNode::<T>::contains_key(node_id) {
@@ -776,6 +784,13 @@ impl<T: Config> Pallet<T> {
             pallet_tfgrid::Farms::<T>::contains_key(node.farm_id),
             Error::<T>::FarmNotExists
         );
+
+        match pallet_tfgrid::NodePower::<T>::get(node_id) {
+            NodePowerState::Down(_) => {
+                return Err(Error::<T>::NodeNotAvailableToDeploy.into());
+            }
+            _ => (),
+        };
 
         let active_node_contracts = ActiveNodeContracts::<T>::get(node_id);
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
