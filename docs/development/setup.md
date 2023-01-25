@@ -2,6 +2,10 @@
 
 Prepare your dev environment: https://docs.substrate.io/install/
 
+## Rust setup
+
+see [rust-setup](./rust-setup.md)
+
 # Editor configuration
 
 For Vscode, install https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer

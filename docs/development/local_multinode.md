@@ -25,6 +25,8 @@ In a terminal window execute the following command:
     --validator
 ```
 
+This will start a first node.
+
 In a second terminal window executing the following command:
 
 ```
@@ -39,6 +41,8 @@ In a second terminal window executing the following command:
     --validator \
     --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp
 ```
+
+This will start a second node.
 
 ## Verify that they are creating blocks
 
