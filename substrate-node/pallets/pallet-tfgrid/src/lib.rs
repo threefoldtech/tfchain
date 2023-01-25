@@ -17,7 +17,7 @@ use pallet_timestamp as timestamp;
 use sp_runtime::SaturatedConversion;
 use tfchain_support::{
     resources::Resources,
-    types::{Interface, PublicIP},
+    types::{Interface, NodePowerState, PublicIP},
 };
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
@@ -48,7 +48,7 @@ pub mod pallet {
     use super::types;
     use super::weights::WeightInfo;
     use super::*;
-    use frame_support::pallet_prelude::*;
+    use frame_support::{pallet_prelude::*, Blake2_128Concat};
     use frame_support::{traits::ConstU32, BoundedVec};
     use frame_system::pallet_prelude::*;
     use pallet_timestamp as timestamp;
@@ -267,6 +267,13 @@ pub mod pallet {
     #[pallet::getter(fn zos_version)]
     pub type ZosVersion<T> = StorageValue<_, Vec<u8>, ValueQuery>;
 
+    // This storage map maps a node ID to a power state, they node can modify this state
+    // to indicate that it has shut down or came back alive
+    #[pallet::storage]
+    #[pallet::getter(fn node_power_state)]
+    pub type NodePower<T: Config> =
+        StorageMap<_, Blake2_128Concat, u32, NodePowerState<T::BlockNumber>, ValueQuery>;
+
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_timestamp::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -434,6 +441,8 @@ pub mod pallet {
         FarmCertificationSet(u32, FarmCertification),
 
         ZosVersionUpdated(Vec<u8>),
+
+        NodePowerStateChanged(u32, NodePowerState<T::BlockNumber>),
     }
 
     #[pallet::error]
@@ -2027,6 +2036,30 @@ pub mod pallet {
             ZosVersion::<T>::put(&zos_version);
 
             Self::deposit_event(Event::ZosVersionUpdated(zos_version));
+
+            Ok(().into())
+        }
+
+        #[pallet::call_index(35)]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        pub fn set_power_state(origin: OriginFor<T>, up: bool) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+
+            let twin_id =
+                TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
+
+            let node_id = NodeIdByTwinID::<T>::get(twin_id);
+            let _ = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+
+            let mut power_state = NodePowerState::Up;
+
+            if !up {
+                power_state = NodePowerState::Down(<frame_system::Pallet<T>>::block_number());
+            }
+
+            NodePower::<T>::insert(node_id, &power_state);
+
+            Self::deposit_event(Event::NodePowerStateChanged(node_id, power_state));
 
             Ok(().into())
         }

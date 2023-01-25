@@ -227,3 +227,16 @@ impl Default for NodeCertification {
         NodeCertification::Diy
     }
 }
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
+pub enum NodePowerState<B> {
+    Up,
+    // Down holding the block when it has shut down
+    Down(B),
+}
+
+impl<B> Default for NodePowerState<B> {
+    fn default() -> Self {
+        NodePowerState::Up
+    }
+}

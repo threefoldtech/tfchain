@@ -7,8 +7,8 @@ use frame_support::{assert_noop, assert_ok, bounded_vec};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
 use tfchain_support::types::{
-    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, PublicConfig,
-    PublicIpError, IP4, IP6,
+    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, NodePowerState,
+    PublicConfig, PublicIpError, IP4, IP6,
 };
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -1025,6 +1025,57 @@ fn node_report_uptime_works() {
             RuntimeOrigin::signed(alice()),
             500
         ));
+    });
+}
+
+#[test]
+fn node_set_power_state_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        Timestamp::set_timestamp(1628082000);
+        assert_ok!(TfgridModule::set_power_state(
+            RuntimeOrigin::signed(alice()),
+            false
+        ));
+
+        assert_eq!(TfgridModule::node_power_state(1), NodePowerState::Down(1));
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::TfgridModule(
+                TfgridEvent::<TestRuntime>::NodePowerStateChanged(1, NodePowerState::Down(1))
+            ))),
+            true
+        );
+    });
+}
+
+#[test]
+fn toggle_node_power_state_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        Timestamp::set_timestamp(1628082000);
+        assert_ok!(TfgridModule::set_power_state(
+            RuntimeOrigin::signed(alice()),
+            false
+        ));
+
+        assert_eq!(TfgridModule::node_power_state(1), NodePowerState::Down(1));
+
+        assert_ok!(TfgridModule::set_power_state(
+            RuntimeOrigin::signed(alice()),
+            true
+        ));
+
+        assert_eq!(TfgridModule::node_power_state(1), NodePowerState::Up);
     });
 }
 
