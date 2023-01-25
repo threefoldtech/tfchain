@@ -1,10 +1,11 @@
 use crate::*;
+#[cfg(feature = "try-runtime")]
+use codec::{Decode, Encode};
 use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
+use log::debug;
 use sp_std::collections::btree_map::BTreeMap;
 use sp_std::marker::PhantomData;
 
-#[cfg(feature = "try-runtime")]
-use codec::{Decode, Encode};
 #[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
 
@@ -13,10 +14,10 @@ pub struct FixTwinLockedBalances<T: Config>(PhantomData<T>);
 impl<T: Config> OnRuntimeUpgrade for FixTwinLockedBalances<T> {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
-        info!("current pallet version: {:?}", PalletVersion::<T>::get());
+        debug!("current pallet version: {:?}", PalletVersion::<T>::get());
         assert!(PalletVersion::<T>::get() >= types::StorageVersion::V6);
 
-        info!("👥  Smart Contract pallet to V7 passes PRE migrate checks ✅",);
+        debug!("👥  Smart Contract pallet to V7 passes PRE migrate checks ✅",);
         Ok(vec![])
     }
 
@@ -24,17 +25,17 @@ impl<T: Config> OnRuntimeUpgrade for FixTwinLockedBalances<T> {
         if PalletVersion::<T>::get() == types::StorageVersion::V6 {
             migrate_to_version_7::<T>()
         } else {
-            info!(" >>> Unused Smart Contract pallet V7 migration");
+            debug!(" >>> Unused Smart Contract pallet V7 migration");
             Weight::zero()
         }
     }
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade(pre_contracts_count: Vec<u8>) -> Result<(), &'static str> {
-        info!("current pallet version: {:?}", PalletVersion::<T>::get());
+        debug!("current pallet version: {:?}", PalletVersion::<T>::get());
         assert!(PalletVersion::<T>::get() >= types::StorageVersion::V7);
 
-        info!(
+        debug!(
             "👥  Smart Contract pallet to {:?} passes POST migrate checks ✅",
             PalletVersion::<T>::get()
         );
@@ -44,7 +45,7 @@ impl<T: Config> OnRuntimeUpgrade for FixTwinLockedBalances<T> {
 }
 
 pub fn migrate_to_version_7<T: Config>() -> frame_support::weights::Weight {
-    info!(
+    debug!(
         " >>> Starting contract pallet migration, pallet version: {:?}",
         PalletVersion::<T>::get()
     );
@@ -76,21 +77,24 @@ pub fn migrate_to_version_7<T: Config>() -> frame_support::weights::Weight {
                 let total_lock_balances = get_locked_balance::<T>(&twin.account_id);
 
                 if total_lock_balances != total_contract_locked_balance {
-                    log::info!(
+                    debug!(
                         "total locked balance on twin {} account: {:?}",
-                        t,
-                        total_lock_balances
+                        t, total_lock_balances
                     );
-                    log::info!(
+                    debug!(
                         "should have locked only: {:?}",
                         total_contract_locked_balance
                     );
 
+                    // get the total balance of the twin - minimum existence requirement
                     let total_balance = <T as Config>::Currency::total_balance(&twin.account_id)
                         - <T as Config>::Currency::minimum_balance();
 
+                    // lock only an amount up to the total balance
+                    // this will make sure the locked balance will not exceed the total balance on the twin's account
                     let amount_that_we_can_lock = total_balance.min(total_contract_locked_balance);
-                    log::info!("we can lock up to: {:?}", amount_that_we_can_lock);
+                    debug!("we can lock up to: {:?}", amount_that_we_can_lock);
+
                     // Unlock all balance & relock real locked amount
                     <T as Config>::Currency::remove_lock(GRID_LOCK_ID, &twin.account_id);
                     <T as Config>::Currency::set_lock(
@@ -103,14 +107,14 @@ pub fn migrate_to_version_7<T: Config>() -> frame_support::weights::Weight {
                 }
             }
             None => {
-                log::info!("twin {} not found", t);
+                debug!("twin {} not found", t);
             }
         }
     }
 
     // Update pallet storage version
     PalletVersion::<T>::set(types::StorageVersion::V7);
-    info!(" <<< Storage version upgraded");
+    debug!(" <<< Storage version upgraded");
 
     // Return the weight consumed by the migration.
     T::DbWeight::get().reads(read_writes + 1)
