@@ -6,9 +6,7 @@ It is now possible to create generic contract between two TFChain users (without
 ## How does it work?
 
 The initial scenario is when two parties, a service provider an a consumer of the service, want to use TFChain to automatically handle the billing/payment process for an agreement they want to make.
-Multiple use cases can benefit from this feature, here are some examples of applications:
-
-//TODO give some examples of applications
+Multiple use cases can benefit from this feature.
 
 Initial requirements:
 - Both service and consumer need to have their respective twin created
@@ -124,7 +122,8 @@ In practice the amount is transferred from the consumer twin account to the serv
 
 ## Step 5: Cancel the contract
 
-At every moment of the flow since the contract is created it can be canceled (and definitively removed) by calling the following:
+At every moment of the flow since the contract is created it can be canceled (and definitively removed).
+Only the service or the consumer can do it by calling the following:
 
 ~~~rust
 service_contract_cancel(
