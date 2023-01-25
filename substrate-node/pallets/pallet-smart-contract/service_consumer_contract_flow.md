@@ -5,7 +5,7 @@ It is now possible to create generic contract between two TFChain users (without
 
 ## How does it work?
 
-The initial scenario is when two parties, a service provider an a consumer of the service, want to use TFChain to automatically handle the billing/payment process for an agreement they want to make.
+The initial scenario is when two parties, a service provider and a consumer of the service, want to use TFChain to automatically handle the billing/payment process for an agreement they want to make.
 Multiple use cases can benefit from this feature.
 
 Initial requirements:
@@ -19,7 +19,7 @@ In the following steps we detail the sequence of extrinsic that need to be calle
 
 ## Step 1: Create the contract and get its unique ID
 
-The contract creation can be iniciated by both service or consumer using the following extrinsic:
+The contract creation can be initiated by both service or consumer using the following extrinsic:
 
 ~~~rust
 service_contract_create(
@@ -87,7 +87,7 @@ Before reaching this state, if one of the parties decides to call the rejection 
 ## Step 4: Bill for the service
 
 Once the contract is accepted by both it can be billed.
-Only the service can bill the consumer using the following extrincic:
+Only the service can bill the consumer using the following extrinsic:
 
 ~~~rust
 service_contract_bill(
@@ -110,7 +110,7 @@ amount = base_fee * T / 3600 + variable_amount
 where `T` is the elapsed time, in seconds and bounded by 3600 (see above), since last effective billing operation occured.
 
 Note that if `variable_amount` is too high (i.e `variable_amount >  variable_fee * T / 3600`) the billing extrinsic will fail.
-The `variable_fee` value in the contract is interpreted as being "per hour" and acts as a protection mecanism to avoid consumer draining.
+The `variable_fee` value in the contract is interpreted as being "per hour" and acts as a protection mechanism to avoid consumer draining.
 Indeed, as it is technically possible for the service to send a bill every second, there would be no gain for that (unless overloading the chain uselessly).
 So it is also the service responsability to set a suitable `variable_amount` according to the billing frequency!
 
