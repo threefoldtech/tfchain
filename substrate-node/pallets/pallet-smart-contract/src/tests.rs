@@ -55,9 +55,9 @@ fn test_create_node_contract_on_offline_node_fails() {
         run_to_block(1, None);
         prepare_farm_and_node();
 
-        assert_ok!(TfgridModule::set_power_state(
+        assert_ok!(TfgridModule::change_power_state(
             RuntimeOrigin::signed(alice()),
-            false
+            tfchain_support::types::NodePowerState::Down(1)
         ));
 
         assert_noop!(
@@ -598,9 +598,9 @@ fn test_create_rent_contract_on_offline_node_fails() {
         run_to_block(1, None);
         prepare_dedicated_farm_and_node();
 
-        assert_ok!(TfgridModule::set_power_state(
+        assert_ok!(TfgridModule::change_power_state(
             RuntimeOrigin::signed(alice()),
-            false
+            tfchain_support::types::NodePowerState::Down(1)
         ));
 
         let node_id = 1;

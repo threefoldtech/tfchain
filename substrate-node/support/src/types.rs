@@ -228,6 +228,12 @@ impl Default for NodeCertification {
     }
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo, Default)]
+pub struct NodePower<B> {
+    pub state: NodePowerState<B>,
+    pub target: NodePowerTarget,
+}
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
 pub enum NodePowerState<B> {
     Up,
@@ -238,5 +244,17 @@ pub enum NodePowerState<B> {
 impl<B> Default for NodePowerState<B> {
     fn default() -> Self {
         NodePowerState::Up
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
+pub enum NodePowerTarget {
+    Up,
+    Down,
+}
+
+impl Default for NodePowerTarget {
+    fn default() -> Self {
+        NodePowerTarget::Up
     }
 }

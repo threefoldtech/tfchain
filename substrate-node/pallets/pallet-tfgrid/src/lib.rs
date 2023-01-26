@@ -17,7 +17,7 @@ use pallet_timestamp as timestamp;
 use sp_runtime::SaturatedConversion;
 use tfchain_support::{
     resources::Resources,
-    types::{Interface, NodePowerState, PublicIP},
+    types::{Interface, NodePower as NodePowerType, NodePowerState, NodePowerTarget, PublicIP},
 };
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
@@ -272,7 +272,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn node_power_state)]
     pub type NodePower<T: Config> =
-        StorageMap<_, Blake2_128Concat, u32, NodePowerState<T::BlockNumber>, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, u32, NodePowerType<T::BlockNumber>, ValueQuery>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_timestamp::Config {
@@ -442,7 +442,17 @@ pub mod pallet {
 
         ZosVersionUpdated(Vec<u8>),
 
-        NodePowerStateChanged(u32, NodePowerState<T::BlockNumber>),
+        /// Send an event to zero os to change its state
+        PowerTargetChanged {
+            farm_id: u32,
+            node_id: u32,
+            power_target: NodePowerTarget,
+        },
+        PowerStateChanged {
+            farm_id: u32,
+            node_id: u32,
+            power_state: NodePowerState<T::BlockNumber>,
+        },
     }
 
     #[pallet::error]
@@ -572,6 +582,7 @@ pub mod pallet {
         InvalidDocumentHashInput,
 
         InvalidPublicConfig,
+        UnauthorizedToChangePowerTarget,
     }
 
     #[pallet::genesis_config]
@@ -2040,28 +2051,49 @@ pub mod pallet {
             Ok(().into())
         }
 
+        // #[pallet::call_index(35)]
+        // #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        // pub fn set_power_state(origin: OriginFor<T>, up: bool) -> DispatchResultWithPostInfo {
+        //     let account_id = ensure_signed(origin)?;
+
+        //     let twin_id =
+        //         TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
+
+        //     let node_id = NodeIdByTwinID::<T>::get(twin_id);
+        //     let _ = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+
+        //     let mut power_state = NodePowerState::Up;
+
+        //     if !up {
+        //         power_state = NodePowerState::Down(<frame_system::Pallet<T>>::block_number());
+        //     }
+
+        //     NodePower::<T>::insert(node_id, &power_state);
+
+        //     Self::deposit_event(Event::PowerStateChanged(node_id, power_state));
+
+        //     Ok(().into())
+        // }
+
         #[pallet::call_index(35)]
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
-        pub fn set_power_state(origin: OriginFor<T>, up: bool) -> DispatchResultWithPostInfo {
+        pub fn change_power_state(
+            origin: OriginFor<T>,
+            power_state: NodePowerState<T::BlockNumber>,
+        ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
+            Self::_change_power_state(account_id, power_state)
+        }
 
-            let twin_id =
-                TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
-
-            let node_id = NodeIdByTwinID::<T>::get(twin_id);
-            let _ = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-
-            let mut power_state = NodePowerState::Up;
-
-            if !up {
-                power_state = NodePowerState::Down(<frame_system::Pallet<T>>::block_number());
-            }
-
-            NodePower::<T>::insert(node_id, &power_state);
-
-            Self::deposit_event(Event::NodePowerStateChanged(node_id, power_state));
-
-            Ok(().into())
+        #[pallet::call_index(36)]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        pub fn change_power_target(
+            origin: OriginFor<T>,
+            node_id: u32,
+            power_target: NodePowerTarget,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_change_power_target(account_id, node_id, power_target)
         }
     }
 }
@@ -2359,6 +2391,64 @@ impl<T: Config> Pallet<T> {
     ) -> Result<SerialNumberOf<T>, DispatchErrorWithPostInfo> {
         let parsed_serial_number = <T as Config>::SerialNumber::try_from(serial_number)?;
         Ok(parsed_serial_number)
+    }
+
+    fn _change_power_state(
+        account_id: T::AccountId,
+        power_state: NodePowerState<T::BlockNumber>,
+    ) -> DispatchResultWithPostInfo {
+        let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
+        ensure!(
+            NodeIdByTwinID::<T>::contains_key(twin_id),
+            Error::<T>::NodeNotExists
+        );
+        let node_id = NodeIdByTwinID::<T>::get(twin_id);
+        let node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+
+        let mut node_power = NodePower::<T>::get(node_id);
+        //if the power state is not correct => change it and emit event
+        if node_power.state != power_state {
+            node_power.state = power_state.clone();
+
+            NodePower::<T>::insert(node_id, node_power);
+            Self::deposit_event(Event::PowerStateChanged {
+                farm_id: node.farm_id,
+                node_id,
+                power_state,
+            });
+        }
+
+        Ok(Pays::No.into())
+    }
+
+    fn _change_power_target(
+        account_id: T::AccountId,
+        node_id: u32,
+        power_target: NodePowerTarget,
+    ) -> DispatchResultWithPostInfo {
+        let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
+        let node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+        let farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
+        ensure!(
+            twin_id == farm.twin_id,
+            Error::<T>::UnauthorizedToChangePowerTarget
+        );
+
+        Self::_change_power_target_on_node(node.id, node.farm_id, power_target);
+
+        Ok(().into())
+    }
+
+    fn _change_power_target_on_node(node_id: u32, farm_id: u32, power_target: NodePowerTarget) {
+        let mut node_power = NodePower::<T>::get(node_id);
+        node_power.target = power_target.clone();
+        NodePower::<T>::insert(node_id, &node_power);
+
+        Self::deposit_event(Event::PowerTargetChanged {
+            farm_id,
+            node_id,
+            power_target,
+        });
     }
 }
 

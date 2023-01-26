@@ -693,7 +693,8 @@ impl<T: Config> Pallet<T> {
 
         let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
 
-        match pallet_tfgrid::NodePower::<T>::get(node_id) {
+        let node_power = pallet_tfgrid::NodePower::<T>::get(node_id);
+        match node_power.state {
             NodePowerState::Down(_) => {
                 return Err(Error::<T>::NodeNotAvailableToDeploy.into());
             }
@@ -785,7 +786,8 @@ impl<T: Config> Pallet<T> {
             Error::<T>::FarmNotExists
         );
 
-        match pallet_tfgrid::NodePower::<T>::get(node_id) {
+        let node_power = pallet_tfgrid::NodePower::<T>::get(node_id);
+        match node_power.state {
             NodePowerState::Down(_) => {
                 return Err(Error::<T>::NodeNotAvailableToDeploy.into());
             }
