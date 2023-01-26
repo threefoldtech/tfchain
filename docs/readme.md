@@ -14,7 +14,7 @@ To fire all unit tests:
 
 Make sure you have setup your work environment (see development).
 
-```
+```bash
 cd substrate-node
 cargo test
 ```

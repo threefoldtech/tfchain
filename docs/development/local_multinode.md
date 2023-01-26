@@ -4,7 +4,7 @@ This document will explain how to run a local multi node tfchain network.
 
 ## Compile release build
 
-```
+```sh
 cd substrate-node
 cargo build --release
 ```
@@ -13,7 +13,7 @@ cargo build --release
 
 In a terminal window execute the following command:
 
-```
+```sh
 ./target/release/tfchain \
     --base-path /tmp/alice \
     --chain local \
@@ -29,7 +29,7 @@ This will start a first node.
 
 In a second terminal window executing the following command:
 
-```
+```sh
 ./target/release/tfchain \
     --base-path /tmp/bob \
     --chain local \
@@ -52,7 +52,7 @@ To verify blocks are being finalized:
 
 Verify that you see lines similar to the following in the terminal where you started the first node:
 
-```
+```sh
 2022-08-16 15:32:33 discovered: 12D3KooWBCbmQovz78Hq7MzPxdx9d1gZzXMsn6HtWj29bW51YUKB /ip4/127.0.0.1/tcp/30334
 2022-08-16 15:32:33 discovered: 12D3KooWBCbmQovz78Hq7MzPxdx9d1gZzXMsn6HtWj29bW51YUKB /ip6/::1/tcp/30334
 2022-08-16 15:32:36 🙌 Starting consensus session on top of parent 0x2cdce15d31548063e89e10bd201faa63c623023bbc320346b9580ed3c40fa07f

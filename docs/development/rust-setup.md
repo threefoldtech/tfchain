@@ -22,7 +22,7 @@ interact with Substrate from the command line.
 
 Use a terminal shell to execute the following commands:
 
-```bash
+```sh
 sudo apt update
 # May prompt for location information
 sudo apt install -y git clang curl libssl-dev llvm libudev-dev
@@ -32,7 +32,7 @@ sudo apt install -y git clang curl libssl-dev llvm libudev-dev
 
 Run these commands from a terminal:
 
-```bash
+```sh
 pacman -Syu --needed --noconfirm curl git clang
 ```
 
@@ -40,7 +40,7 @@ pacman -Syu --needed --noconfirm curl git clang
 
 Run these commands from a terminal:
 
-```bash
+```sh
 sudo dnf update
 sudo dnf install clang curl git openssl-devel
 ```
@@ -49,7 +49,7 @@ sudo dnf install clang curl git openssl-devel
 
 Run these commands from a terminal:
 
-```bash
+```sh
 sudo zypper install clang curl git openssl-devel llvm-devel libudev-devel
 ```
 
@@ -62,7 +62,7 @@ sudo zypper install clang curl git openssl-devel llvm-devel libudev-devel
 
 Open the Terminal application and execute the following commands:
 
-```bash
+```sh
 # Install Homebrew if necessary https://brew.sh/
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
 
@@ -84,7 +84,7 @@ Please refer to the separate
 This guide uses <https://rustup.rs> installer and the `rustup` tool to manage the Rust toolchain.
 First install and configure `rustup`:
 
-```bash
+```sh
 # Install
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 # Configure
@@ -93,7 +93,7 @@ source ~/.cargo/env
 
 Configure the Rust toolchain to default to the latest stable version, add nightly and the nightly wasm target:
 
-```bash
+```sh
 rustup default stable
 rustup update
 rustup update nightly
@@ -114,7 +114,7 @@ to compile out of the box. Here are some tips to help you work through that.
 
 To see what Rust toolchain you are presently using, run:
 
-```bash
+```sh
 rustup show
 ```
 
@@ -166,7 +166,7 @@ Rust stable and nightly. This is because the Substrate codebase follows the tip 
 which means that changes in Substrate often depend on upstream changes in the Rust nightly compiler.
 To ensure your Rust compiler is always up to date, you should run:
 
-```bash
+```sh
 rustup update
 rustup update nightly
 rustup target add wasm32-unknown-unknown --toolchain nightly
@@ -188,7 +188,7 @@ project and different projects may use different mechanisms to communicate this 
 developers. For instance, the Polkadot client specifies this information in its
 [release notes](https://github.com/paritytech/polkadot/releases).
 
-```bash
+```sh
 # Specify the specific nightly toolchain in the date below:
 rustup install nightly-<yyyy-MM-dd>
 ```
@@ -197,7 +197,7 @@ rustup install nightly-<yyyy-MM-dd>
 
 Now, configure the nightly version to work with the Wasm compilation target:
 
-```bash
+```sh
 rustup target add wasm32-unknown-unknown --toolchain nightly-<yyyy-MM-dd>
 ```
 
@@ -206,7 +206,7 @@ rustup target add wasm32-unknown-unknown --toolchain nightly-<yyyy-MM-dd>
 Use the `WASM_BUILD_TOOLCHAIN` environment variable to specify the Rust nightly version a Substrate
 project should use for Wasm compilation:
 
-```bash
+```sh
 WASM_BUILD_TOOLCHAIN=nightly-<yyyy-MM-dd> cargo build --release
 ```
 
@@ -218,7 +218,7 @@ WASM_BUILD_TOOLCHAIN=nightly-<yyyy-MM-dd> cargo build --release
 If your computer is configured to use the latest Rust nightly and you would like to downgrade to a
 specific nightly version, follow these steps:
 
-```bash
+```sh
 rustup uninstall nightly
 rustup install nightly-<yyyy-MM-dd>
 rustup target add wasm32-unknown-unknown --toolchain nightly-<yyyy-MM-dd>

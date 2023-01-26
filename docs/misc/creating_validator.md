@@ -68,20 +68,20 @@ ntpd will be started automatically after install. You can query ntpd for status 
 
 ## TFchain Binary
 
-You will need to build the tfchain binary from the threefoldtech/tfchain repository on GitHub.
+You will need to build the tfchain binary from the threefoldtech/tfchain [releases](https://github.com/threefoldtech/tfchain/releases) on GitHub.
 
 Check release page on github to check which binary to use.
 
 Note: If you prefer to use SSH rather than HTTPS, you can replace the first line of the below with git clone git@github.com:threefoldtech/tfchain.git.
 
-```
+```sh
 git clone https://github.com/threefoldtech/tfchain.git
 cd substrate-node
 ```
 
 Now build the binary
 
-```
+```sh
 cargo build --release
 ```
 
@@ -91,7 +91,7 @@ This step will take a while (generally 10 - 40 minutes, depending on your hardwa
 
 If you are interested in generating keys locally, you can also install subkey from the same directory. You may then take the generated subkey executable and transfer it to an air-gapped machine for extra security.
 
-```
+```sh
 cargo install --force --git https://github.com/paritytech/substrate subkey
 ```
 
@@ -113,7 +113,7 @@ The `--chain chainspecs/network/chainSpec.json` flag is different for every netw
 
 if you do not want to start in validator mode right away.
 
-```
+```sh
 2022-02-18 15:45:22  Substrate Node
 2022-02-18 15:45:22  ✌️  version 3.0.0-138e5f5-x86_64-linux-gnu
 2022-02-18 15:45:22  ❤️  by Substrate DevHub <https://github.com/substrate-developer-hub>, 2017-2022
@@ -132,7 +132,7 @@ if you do not want to start in validator mode right away.
 
 Example of node sync:
 
-```
+```sh
 2021-06-17 03:07:39 🔍 Discovered new external address for our node: /ip4/10.26.16.1/tcp/30333/ws/p2p/12D3KooWLtXFWf1oGrnxMGmPKPW54xWCHAXHbFh4Eap6KXmxoi9u
 2021-06-17 03:07:40 ⚙️  Syncing 218.8 bps, target=#5553764 (17 peers), best: #24034 (0x08af…dcf5), finalized #23552 (0xd4f0…2642), ⬇ 173.5kiB/s ⬆ 12.7kiB/s
 2021-06-17 03:07:45 ⚙️  Syncing 214.8 bps, target=#5553765 (20 peers), best: #25108 (0xb272…e800), finalized #25088 (0x94e6…8a9f), ⬇ 134.3kiB/s ⬆ 7.4kiB/s
@@ -194,7 +194,7 @@ Mnemonic: Words from the created account (`VALIDATOR_NODE_ACCOUNT`) created in a
 
 Transfer some balance to this account (you can see the address in the polkadot UI). (0.1 TFT should be enough). You can transfer the balance to this account from the polkadot UI.
 
-```
+```sh
 ./target/release/tfchain key insert --key-type aura --suri "<VALIDATOR_NODE_ACCOUNT_WORDS>" --chain chainspecs/main/chainSpecRaw.json
 ./target/release/tfchain key insert --key-type gran --suri "<VALIDATOR_NODE_ACCOUNT_WORDS>" --chain chainspecs/main/chainSpecRaw.json
 ```

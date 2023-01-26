@@ -14,7 +14,7 @@ In the top left you should see something like: `substrate-threefold/1` which mea
 
 You can pass an optional release flag.
 
-```
+```sh
 cargo build [--release] -p tfchain-runtime
 ```
 

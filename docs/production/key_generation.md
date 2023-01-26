@@ -2,7 +2,7 @@
 
 Keys are generated using [subkey](https://substrate.dev/docs/en/knowledgebase/integrate/subkey) or use `tfchain key`.
 
-For each validator generate a key:
+For each [validator](../misc/terminology.md) generate a key:
 
 ```sh
 subkey generate --scheme sr25519

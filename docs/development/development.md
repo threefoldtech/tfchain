@@ -8,13 +8,13 @@ See [setup](./setup.md)
 
 ## Get the code
 
-```
+```sh
 git clone git@github.com:threefoldtech/tfchain.git
 ```
 
 ## Installing and running tfchain in dev mode
 
-```
+```sh
 cd tfchain/substrate-node
 cargo build
 
@@ -35,7 +35,7 @@ Wipe data and recompile.
 
 To wipe data run:
 
-```
+```sh
 ./target/debug/tfchain purge-chain --dev
 ```
 
