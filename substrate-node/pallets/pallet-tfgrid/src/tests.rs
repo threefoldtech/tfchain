@@ -7,8 +7,8 @@ use frame_support::{assert_noop, assert_ok, bounded_vec};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
 use tfchain_support::types::{
-    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, NodePowerState,
-    NodePowerTarget, PublicConfig, PublicIpError, IP4, IP6,
+    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, Power, PowerState,
+    PublicConfig, PublicIpError, IP4, IP6,
 };
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -1040,13 +1040,10 @@ fn change_power_state_works() {
 
         assert_ok!(TfgridModule::change_power_state(
             RuntimeOrigin::signed(bob()),
-            NodePowerState::Down(1)
+            Power::Down
         ));
 
-        assert_eq!(
-            TfgridModule::node_power_state(2).state,
-            NodePowerState::Down(1)
-        );
+        assert_eq!(TfgridModule::node_power_state(2).state, PowerState::Down(1));
     });
 }
 
@@ -1060,7 +1057,7 @@ fn change_power_state_fails() {
         create_twin_bob();
         //try changing the power state using another twin_id
         assert_noop!(
-            TfgridModule::change_power_state(RuntimeOrigin::signed(bob()), NodePowerState::Down(1)),
+            TfgridModule::change_power_state(RuntimeOrigin::signed(bob()), Power::Down),
             Error::<TestRuntime>::NodeNotExists
         );
     });
@@ -1074,21 +1071,15 @@ fn change_power_target_works() {
         create_farm();
         create_node();
 
-        assert_eq!(
-            TfgridModule::node_power_state(1).target,
-            NodePowerTarget::Up,
-        );
+        assert_eq!(TfgridModule::node_power_state(1).target, Power::Up,);
 
         assert_ok!(TfgridModule::change_power_target(
             RuntimeOrigin::signed(alice()),
             1,
-            NodePowerTarget::Down,
+            Power::Down,
         ));
 
-        assert_eq!(
-            TfgridModule::node_power_state(1).target,
-            NodePowerTarget::Down,
-        );
+        assert_eq!(TfgridModule::node_power_state(1).target, Power::Down,);
     });
 }
 
@@ -1102,17 +1093,10 @@ fn change_power_target_fails() {
         create_twin_bob();
         create_extra_node();
 
-        assert_eq!(
-            TfgridModule::node_power_state(2).target,
-            NodePowerTarget::Up,
-        );
+        assert_eq!(TfgridModule::node_power_state(2).target, Power::Up,);
 
         assert_noop!(
-            TfgridModule::change_power_target(
-                RuntimeOrigin::signed(bob()),
-                2,
-                NodePowerTarget::Down,
-            ),
+            TfgridModule::change_power_target(RuntimeOrigin::signed(bob()), 2, Power::Down,),
             Error::<TestRuntime>::UnauthorizedToChangePowerTarget
         );
     });

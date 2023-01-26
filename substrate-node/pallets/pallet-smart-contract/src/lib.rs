@@ -31,7 +31,7 @@ use substrate_fixed::types::U64F64;
 use system::offchain::SignMessage;
 use tfchain_support::{
     traits::{ChangeNode, PublicIpModifier},
-    types::{NodePowerState, PublicIP},
+    types::{PowerState, PublicIP},
 };
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"aura");
@@ -695,7 +695,7 @@ impl<T: Config> Pallet<T> {
 
         let node_power = pallet_tfgrid::NodePower::<T>::get(node_id);
         match node_power.state {
-            NodePowerState::Down(_) => {
+            PowerState::Down(_) => {
                 return Err(Error::<T>::NodeNotAvailableToDeploy.into());
             }
             _ => (),
@@ -788,7 +788,7 @@ impl<T: Config> Pallet<T> {
 
         let node_power = pallet_tfgrid::NodePower::<T>::get(node_id);
         match node_power.state {
-            NodePowerState::Down(_) => {
+            PowerState::Down(_) => {
                 return Err(Error::<T>::NodeNotAvailableToDeploy.into());
             }
             _ => (),

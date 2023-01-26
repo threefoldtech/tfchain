@@ -17,7 +17,7 @@ use pallet_timestamp as timestamp;
 use sp_runtime::SaturatedConversion;
 use tfchain_support::{
     resources::Resources,
-    types::{Interface, NodePower as NodePowerType, NodePowerState, NodePowerTarget, PublicIP},
+    types::{Interface, NodePower as NodePowerType, Power, PowerState, PublicIP},
 };
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
@@ -446,12 +446,12 @@ pub mod pallet {
         PowerTargetChanged {
             farm_id: u32,
             node_id: u32,
-            power_target: NodePowerTarget,
+            power_target: Power,
         },
         PowerStateChanged {
             farm_id: u32,
             node_id: u32,
-            power_state: NodePowerState<T::BlockNumber>,
+            power_state: PowerState<T::BlockNumber>,
         },
     }
 
@@ -2055,7 +2055,7 @@ pub mod pallet {
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn change_power_state(
             origin: OriginFor<T>,
-            power_state: NodePowerState<T::BlockNumber>,
+            power_state: Power,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_change_power_state(account_id, power_state)
@@ -2066,7 +2066,7 @@ pub mod pallet {
         pub fn change_power_target(
             origin: OriginFor<T>,
             node_id: u32,
-            power_target: NodePowerTarget,
+            power_target: Power,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_change_power_target(account_id, node_id, power_target)
@@ -2371,7 +2371,7 @@ impl<T: Config> Pallet<T> {
 
     fn _change_power_state(
         account_id: T::AccountId,
-        power_state: NodePowerState<T::BlockNumber>,
+        power_state: Power,
     ) -> DispatchResultWithPostInfo {
         let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
         ensure!(
@@ -2381,8 +2381,14 @@ impl<T: Config> Pallet<T> {
         let node_id = NodeIdByTwinID::<T>::get(twin_id);
         let node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
 
+        let power_state = match power_state {
+            Power::Up => PowerState::Up,
+            Power::Down => PowerState::Down(system::Pallet::<T>::block_number()),
+        };
+
         let mut node_power = NodePower::<T>::get(node_id);
-        //if the power state is not correct => change it and emit event
+
+        // if the power state is not correct => change it and emit event
         if node_power.state != power_state {
             node_power.state = power_state.clone();
 
@@ -2400,7 +2406,7 @@ impl<T: Config> Pallet<T> {
     fn _change_power_target(
         account_id: T::AccountId,
         node_id: u32,
-        power_target: NodePowerTarget,
+        power_target: Power,
     ) -> DispatchResultWithPostInfo {
         let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
         let node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
@@ -2415,7 +2421,7 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    fn _change_power_target_on_node(node_id: u32, farm_id: u32, power_target: NodePowerTarget) {
+    fn _change_power_target_on_node(node_id: u32, farm_id: u32, power_target: Power) {
         let mut node_power = NodePower::<T>::get(node_id);
         node_power.target = power_target.clone();
         NodePower::<T>::insert(node_id, &node_power);

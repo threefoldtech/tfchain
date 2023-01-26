@@ -230,31 +230,31 @@ impl Default for NodeCertification {
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo, Default)]
 pub struct NodePower<B> {
-    pub state: NodePowerState<B>,
-    pub target: NodePowerTarget,
+    pub state: PowerState<B>,
+    pub target: Power,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
-pub enum NodePowerState<B> {
+pub enum PowerState<B> {
     Up,
     // Down holding the block when it has shut down
     Down(B),
 }
 
-impl<B> Default for NodePowerState<B> {
+impl<B> Default for PowerState<B> {
     fn default() -> Self {
-        NodePowerState::Up
+        PowerState::Up
     }
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
-pub enum NodePowerTarget {
+pub enum Power {
     Up,
     Down,
 }
 
-impl Default for NodePowerTarget {
+impl Default for Power {
     fn default() -> Self {
-        NodePowerTarget::Up
+        Power::Up
     }
 }
