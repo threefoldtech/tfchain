@@ -2051,30 +2051,6 @@ pub mod pallet {
             Ok(().into())
         }
 
-        // #[pallet::call_index(35)]
-        // #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
-        // pub fn set_power_state(origin: OriginFor<T>, up: bool) -> DispatchResultWithPostInfo {
-        //     let account_id = ensure_signed(origin)?;
-
-        //     let twin_id =
-        //         TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
-
-        //     let node_id = NodeIdByTwinID::<T>::get(twin_id);
-        //     let _ = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-
-        //     let mut power_state = NodePowerState::Up;
-
-        //     if !up {
-        //         power_state = NodePowerState::Down(<frame_system::Pallet<T>>::block_number());
-        //     }
-
-        //     NodePower::<T>::insert(node_id, &power_state);
-
-        //     Self::deposit_event(Event::PowerStateChanged(node_id, power_state));
-
-        //     Ok(().into())
-        // }
-
         #[pallet::call_index(35)]
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
         pub fn change_power_state(
