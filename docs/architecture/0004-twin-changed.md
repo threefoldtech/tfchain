@@ -1,4 +1,4 @@
-# 3. Third party service contract
+# 4. Twin relay address
 
 Date: 2023-01-11
 

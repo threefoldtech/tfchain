@@ -1,7 +1,13 @@
 use crate::*;
-use frame_support::{traits::Get, traits::OnRuntimeUpgrade, weights::Weight};
+use frame_support::{
+    traits::OnRuntimeUpgrade,
+    traits::{ConstU32, Get},
+    weights::Weight,
+    BoundedVec,
+};
 use log::{debug, info};
 use sp_std::marker::PhantomData;
+use types::MAX_RELAY_LENGTH;
 
 #[cfg(feature = "try-runtime")]
 use codec::Decode;
@@ -66,10 +72,18 @@ pub fn migrate_twins<T: Config>() -> frame_support::weights::Weight {
     Twins::<T>::translate::<super::types::v14::Twin<Vec<u8>, AccountIdOf<T>>, _>(|k, twin| {
         debug!("migrated twin: {:?}", k);
 
+        let relay: Option<BoundedVec<u8, ConstU32<MAX_RELAY_LENGTH>>> = match twin.ip.try_into() {
+            Ok(ip) => Some(ip),
+            Err(_) => {
+                debug!("failed to parse twin {}, ip", k);
+                None
+            }
+        };
+
         let new_twin = types::Twin {
             id: twin.id,
             account_id: twin.account_id,
-            relay: Some(twin.ip.try_into().unwrap()),
+            relay,
             entities: twin.entities,
             pk: None,
         };
@@ -80,7 +94,7 @@ pub fn migrate_twins<T: Config>() -> frame_support::weights::Weight {
 
     // Update pallet storage version
     PalletVersion::<T>::set(types::StorageVersion::V14Struct);
-    info!(" <<< Storage version upgraded");
+    info!(" <<< Twin migration success, storage version upgraded");
 
     // Return the weight consumed by the migration.
     T::DbWeight::get().reads_writes(read_writes, read_writes)
