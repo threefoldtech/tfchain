@@ -2415,6 +2415,11 @@ impl<T: Config> Pallet<T> {
             twin_id == farm.twin_id,
             Error::<T>::UnauthorizedToChangePowerTarget
         );
+        // Make sure only the farmer that owns this node can change the power target
+        ensure!(
+            node.farm_id == farm.id,
+            Error::<T>::UnauthorizedToChangePowerTarget
+        );
 
         Self::_change_power_target_on_node(node.id, node.farm_id, power_target);
 

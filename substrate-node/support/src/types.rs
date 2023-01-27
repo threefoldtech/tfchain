@@ -234,6 +234,12 @@ pub struct NodePower<B> {
     pub target: Power,
 }
 
+impl<B> NodePower<B> {
+    pub fn is_down(&self) -> bool {
+        matches!(self.state, PowerState::Down(_)) || matches!(self.target, Power::Down)
+    }
+}
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
 pub enum PowerState<B> {
     Up,
