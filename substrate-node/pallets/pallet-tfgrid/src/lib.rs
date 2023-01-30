@@ -553,6 +553,7 @@ pub mod pallet {
         InvalidDocumentHashInput,
 
         InvalidPublicConfig,
+        InvalidRelayAddress,
     }
 
     #[pallet::genesis_config]
@@ -1413,6 +1414,13 @@ pub mod pallet {
             let mut twin_id = TwinID::<T>::get();
             twin_id = twin_id + 1;
 
+            if let Some(relay_addr) = relay.clone() {
+                ensure!(
+                    Self::validate_relay_address(relay_addr.into()),
+                    Error::<T>::InvalidRelayAddress
+                );
+            }
+
             let twin = types::Twin::<T::AccountId> {
                 id: twin_id,
                 account_id: account_id.clone(),
@@ -1451,6 +1459,13 @@ pub mod pallet {
                 twin.account_id == account_id,
                 Error::<T>::UnauthorizedToUpdateTwin
             );
+
+            if let Some(relay_addr) = relay.clone() {
+                ensure!(
+                    Self::validate_relay_address(relay_addr.into()),
+                    Error::<T>::InvalidRelayAddress
+                );
+            }
 
             twin.relay = relay;
             twin.pk = pk;
@@ -2316,6 +2331,34 @@ impl<T: Config> Pallet<T> {
     ) -> Result<SerialNumberOf<T>, DispatchErrorWithPostInfo> {
         let parsed_serial_number = <T as Config>::SerialNumber::try_from(serial_number)?;
         Ok(parsed_serial_number)
+    }
+
+    fn validate_relay_address(relay_input: Vec<u8>) -> bool {
+        if relay_input.len() == 0 {
+            return false;
+        }
+
+        if relay_input[relay_input.len() - 1] == b'.' {
+            return false;
+        }
+
+        let mut prev_idx = 0;
+
+        for (idx, c) in relay_input.iter().enumerate() {
+            match c {
+                b'.' => {
+                    if idx == 0 || idx - prev_idx == 1 {
+                        return false;
+                    } else {
+                        prev_idx = idx
+                    }
+                }
+                b'a'..=b'z' | b'A'..=b'Z' | b'-' | b'_' => (),
+                _ => return false,
+            }
+        }
+
+        true
     }
 }
 

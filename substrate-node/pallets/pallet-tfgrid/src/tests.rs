@@ -145,7 +145,8 @@ fn test_create_twin_works() {
             get_document_hash_input(b"some_hash"),
         ));
 
-        let relay = get_relay_input(b"wss://somerelay.io");
+        log::info!("relay from tesT: {:?}", b"somerelay.io");
+        let relay = get_relay_input(b"somerelay.io");
         let pk = get_public_key_input(
             b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901",
         );
@@ -167,7 +168,7 @@ fn test_delete_twin_works() {
             get_document_hash_input(b"some_hash"),
         ));
 
-        let relay = get_relay_input(b"wss://somerelay.io");
+        let relay = get_relay_input(b"somerelay.io");
         let pk = get_public_key_input(
             b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901",
         );
@@ -306,7 +307,7 @@ fn test_create_twin_double_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
 
-        let relay = get_relay_input(b"wss://somerelay.io");
+        let relay = get_relay_input(b"somerelay.io");
         let pk = get_public_key_input(
             b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901",
         );
@@ -562,7 +563,7 @@ fn test_update_twin_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
 
-        let relay = get_relay_input(b"wss://somerelay.io");
+        let relay = get_relay_input(b"somerelay.io");
         let pk = get_public_key_input(
             b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901",
         );
@@ -584,7 +585,7 @@ fn test_update_twin_fails_if_signed_by_someone_else() {
             get_document_hash_input(b"some_hash"),
         ));
 
-        let relay = get_relay_input(b"wss://somerelay.io");
+        let relay = get_relay_input(b"somerelay.io");
         let pk = get_public_key_input(
             b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901",
         );
@@ -2126,7 +2127,7 @@ fn create_twin() {
         get_document_hash_input(b"some_hash"),
     ));
 
-    let relay = get_relay_input(b"wss://somerelay.io");
+    let relay = get_relay_input(b"somerelay.io");
     let pk =
         get_public_key_input(b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901");
 
@@ -2144,7 +2145,7 @@ fn create_twin_bob() {
         get_document_hash_input(b"some_hash"),
     ));
 
-    let relay = get_relay_input(b"wss://somerelay.io");
+    let relay = get_relay_input(b"somerelay.io");
     let pk =
         get_public_key_input(b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901");
 

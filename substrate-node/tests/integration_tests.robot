@@ -67,10 +67,10 @@ Test Create Update Delete Twin
 
     User Accept Tc
 
-    Create Twin    relay=wss://somerelay.io  pk=0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901
+    Create Twin    relay=somerelay.io  pk=0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901
     ${twin} =    Get Twin    ${1}
     Should Not Be Equal    ${twin}    ${None}
-    Should Be Equal    ${twin}[relay]    wss://somerelay.io
+    Should Be Equal    ${twin}[relay]    somerelay.io
 
     Update Twin    relay=wss://somerelay1.io  pk=0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901
     ${twin} =    Get Twin    ${1}

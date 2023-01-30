@@ -9,6 +9,7 @@ use crate::{
     DomainInput, FarmNameInput, Gw4Input, Gw6Input, InterfaceIpInput, InterfaceMacInput,
     InterfaceNameInput, Ip4Input, Ip6Input, LatitudeInput, LongitudeInput, PkInput, RelayInput,
 };
+use env_logger;
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
 use frame_system::EnsureRoot;
 use sp_core::{ed25519, sr25519, Pair, Public, H256};
@@ -197,6 +198,8 @@ pub struct ExternalityBuilder;
 
 impl ExternalityBuilder {
     pub fn build() -> TestExternalities {
+        let _ = env_logger::try_init();
+
         let storage = frame_system::GenesisConfig::default()
             .build_storage::<TestRuntime>()
             .unwrap();
@@ -208,6 +211,8 @@ impl ExternalityBuilder {
 type AccountPublic = <MultiSignature as Verify>::Signer;
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
+    let _ = env_logger::try_init();
+
     let mut t = frame_system::GenesisConfig::default()
         .build_storage::<TestRuntime>()
         .unwrap();

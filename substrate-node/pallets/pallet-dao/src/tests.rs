@@ -834,7 +834,7 @@ pub fn prepare_twin(account_id: u64) {
         get_document_hash_input(b"some_hash"),
     ));
 
-    let relay = get_relay_input(b"wss://somerelay.io");
+    let relay = get_relay_input(b"somerelay.io");
     let pk =
         get_public_key_input(b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901");
     assert_ok!(TfgridModule::create_twin(
