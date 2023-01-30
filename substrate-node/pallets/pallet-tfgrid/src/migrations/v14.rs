@@ -72,18 +72,10 @@ pub fn migrate_twins<T: Config>() -> frame_support::weights::Weight {
     Twins::<T>::translate::<super::types::v14::Twin<Vec<u8>, AccountIdOf<T>>, _>(|k, twin| {
         debug!("migrated twin: {:?}", k);
 
-        let relay: Option<BoundedVec<u8, ConstU32<MAX_RELAY_LENGTH>>> = match twin.ip.try_into() {
-            Ok(ip) => Some(ip),
-            Err(_) => {
-                debug!("failed to parse twin {}, ip", k);
-                None
-            }
-        };
-
         let new_twin = types::Twin {
             id: twin.id,
             account_id: twin.account_id,
-            relay,
+            relay: None,
             entities: twin.entities,
             pk: None,
         };
