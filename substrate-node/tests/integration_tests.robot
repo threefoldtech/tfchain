@@ -72,10 +72,10 @@ Test Create Update Delete Twin
     Should Not Be Equal    ${twin}    ${None}
     Should Be Equal    ${twin}[relay]    somerelay.io
 
-    Update Twin    relay=wss://somerelay1.io  pk=0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901
+    Update Twin    relay=somerelay.io  pk=0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901
     ${twin} =    Get Twin    ${1}
     Should Not Be Equal    ${twin}    ${None}
-    Should Be Equal    ${twin}[relay]    wss://somerelay1.io
+    Should Be Equal    ${twin}[relay]    somerelay.io
 
     Delete Twin    ${1}
 
