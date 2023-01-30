@@ -1,22 +1,16 @@
 use crate::*;
-use frame_support::{
-    traits::OnRuntimeUpgrade,
-    traits::{ConstU32, Get},
-    weights::Weight,
-    BoundedVec,
-};
+use frame_support::{traits::Get, traits::OnRuntimeUpgrade, weights::Weight};
 use log::{debug, info};
 use sp_std::marker::PhantomData;
-use types::MAX_RELAY_LENGTH;
 
 #[cfg(feature = "try-runtime")]
 use codec::Decode;
 #[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
 
-pub struct MigrateTwinsV14<T: Config>(PhantomData<T>);
+pub struct MigrateTwinsV15<T: Config>(PhantomData<T>);
 
-impl<T: Config> OnRuntimeUpgrade for MigrateTwinsV14<T> {
+impl<T: Config> OnRuntimeUpgrade for MigrateTwinsV15<T> {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
@@ -24,7 +18,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateTwinsV14<T> {
 
         let twins_count: u64 = Twins::<T>::iter().count() as u64;
         log::info!(
-            "🔎 MigrateTwinsV14 pre migration: Number of existing farms {:?}",
+            "🔎 MigrateTwinsV15 pre migration: Number of existing twins {:?}",
             twins_count
         );
 
@@ -89,5 +83,5 @@ pub fn migrate_twins<T: Config>() -> frame_support::weights::Weight {
     info!(" <<< Twin migration success, storage version upgraded");
 
     // Return the weight consumed by the migration.
-    T::DbWeight::get().reads_writes(read_writes, read_writes)
+    T::DbWeight::get().reads_writes(read_writes, read_writes + 1)
 }
