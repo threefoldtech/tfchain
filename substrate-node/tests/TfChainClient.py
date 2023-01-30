@@ -106,7 +106,7 @@ class TfChainClient:
                                       })
         self._sign_extrinsic_submit_check_response(substrate, call, who)
 
-    def create_twin(self, relay: str = "::1", pk: str = "0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901", port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+    def create_twin(self, relay: str = "somerelay.io", pk: str = "0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901", port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         call = substrate.compose_call(
@@ -118,7 +118,7 @@ class TfChainClient:
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
 
-    def update_twin(self, relay: str = "::1", pk: str = "0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901", port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+    def update_twin(self, relay: str = "somerelay.io", pk: str = "0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901", port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         call = substrate.compose_call("TfgridModule", "update_twin", {
