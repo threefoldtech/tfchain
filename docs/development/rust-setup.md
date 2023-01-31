@@ -2,7 +2,7 @@
 title: Installation
 ---
 
-This guide is for reference only, please check the latest information on getting starting with Substrate
+This guide is for reference only, please check the latest information on getting started with Substrate
 [here](https://docs.substrate.io/main-docs/install/).
 
 This page will guide you through the **2 steps** needed to prepare a computer for **Substrate** development.

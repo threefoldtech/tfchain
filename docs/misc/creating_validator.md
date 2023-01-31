@@ -2,7 +2,7 @@
 
 ### Requirements
 
-The most common way for a beginner to run a validator is on a cloud server running Linux. You may choose whatever VPS provider that your prefer, and whatever operating system you are comfortable with.
+The most common way for a beginner to run a validator is on a cloud server running Linux. You may choose whatever VPS provider that you prefer, and whatever operating system you are comfortable with.
 For this guide we will be using Ubuntu 18.04, but the instructions should be similar for other platforms.
 
 The transactions weights in TFchain were benchmarked on standard hardware. It is recommended that validators run at least the standard hardware in order to ensure they are able to process all blocks in time. The following are not minimum requirements but if you decide to run with less than this beware that you might have performance issue.
@@ -18,7 +18,7 @@ The specs posted above are by no means the minimum specs that you could use when
 
 ## Node Prerequisites: Install Rust and Dependencies
 
-Once you choose your cloud service provider and set-up your new server, the first thing you will do is install Rust.
+Once you choose your cloud service provider and set up your new server, the first thing you will do is install Rust.
 
 If you have never installed Rust, you should do this first.
 
@@ -160,7 +160,7 @@ Open polkadot js link in the browser based on the network you want to validate o
 
 You now should have 3 accounts.
 
-Note: Both `VALIDATOR_ACCOUNT` and `VALIDATOR_NODE_ACCOUNT` need atleast 0.1 TFT in order to make a validator object.
+Note: Both `VALIDATOR_ACCOUNT` and `VALIDATOR_NODE_ACCOUNT` need at least 0.1 TFT in order to make a validator object.
 
 > Bonding an account is optional, you can skip this step and continue to the next step.
 
@@ -190,7 +190,7 @@ If all information is filled in correctly. Click on `Submit transaction` and sig
 
 ### Insert AURA/GRAN Keys
 
-Mnemonic: Words from the created account (`VALIDATOR_NODE_ACCOUNT`) created in a the previous steps.
+Mnemonic: Words from the created account (`VALIDATOR_NODE_ACCOUNT`) created in the previous steps.
 
 Transfer some balance to this account (you can see the address in the polkadot UI). (0.1 TFT should be enough). You can transfer the balance to this account from the polkadot UI.
 
@@ -220,7 +220,7 @@ yarn
 yarn start
 ```
 
-Browse to <http://localhost:3000> and connect to the new node over it's public ip. Make sure to specify the port, like: ws://YOUR_MACHINE_PUBLIC_IP:9944
+Browse to <http://localhost:3000> and connect to the new node over its public ip. Make sure to specify the port, like: ws://YOUR_MACHINE_PUBLIC_IP:9944
 
 First insert the types: Go to `Settings` -> `Developer` -> Copy paste output of following [file](https://raw.githubusercontent.com/threefoldtech/tfchain_client_js/master/types.json)
 
@@ -236,7 +236,7 @@ curl -H "Content-Type: application/json" -d '{"id":1, "jsonrpc":"2.0", "method":
 
 If you used polkadotjs to generate the session key, use the one you installed. If not, you can use the [public ones](../../docs/chaininfo.md) connected to the network you are installing a validator for.
 
-Go to `Extrinsics` -> `session` -> `setKeys` -> (make sure to use the created node account (`VALIDATOR_NODE_ACCOUNT`), created above) You will need to import this account into this local polkadot js apps UI. Make sure it has atleast 0.1 TFT.
+Go to `Extrinsics` -> `session` -> `setKeys` -> (make sure to use the created node account (`VALIDATOR_NODE_ACCOUNT`), created above) You will need to import this account into this local polkadot js apps UI. Make sure it has at least 0.1 TFT.
 
 input:
 
