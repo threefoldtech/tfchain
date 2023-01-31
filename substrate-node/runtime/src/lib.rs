@@ -766,6 +766,7 @@ pub type Executive = frame_executive::Executive<
 type Migrations = (
     pallet_tfgrid::migrations::v14::FixFarmingPoliciesMap<Runtime>,
     pallet_tfgrid::migrations::v15::MigrateTwinsV15<Runtime>,
+    pallet_smart_contract::migrations::v7::FixTwinLockedBalances<Runtime>,
 );
 
 // follows Substrate's non destructive way of eliminating  otherwise required

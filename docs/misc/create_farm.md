@@ -17,7 +17,7 @@ Open the following URL based on your setup:
 - Using a private node: https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/settings/developer
 - Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.threefold.io#/settings/developer
 
-Paste the types in in the box and hit `save`
+Paste the types in the box and hit `save`
 
 ![img](./assets/copy_types_1.png)
 
@@ -27,7 +27,7 @@ Open the following URL based on your setup:
 - Using a private node:https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/accounts
 - Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.threefold.io#/accounts
 
-click `Add account`, take note of the seed. Click on the `Advanced creation options` arrow, and select keypair crypto type: `Edwards(ed25519, alternative)`
+Click `Add account`, take note of the seed. Click on the `Advanced creation options` arrow, and select keypair crypto type: `Edwards(ed25519, alternative)`
 
 Click `I have saved my mnemonic seed safely` and click next and fill in the required fields.
 

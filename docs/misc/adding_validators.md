@@ -14,7 +14,7 @@ Create a node key
 subkey generate-node-key
 ```
 
-This will write the node adress on std err followed by the node private key on stdout.
+This will write the node address on std err followed by the node private key on stdout.
 
 ## Start node
 
@@ -110,7 +110,7 @@ keys:
     secret: <node private key generated in step 1>
 ```
 
-Create a Peristent volume claim of 100Gi and assign it using
+Create a Persistent volume claim of 100Gi and assign it using
 
 ```yaml
 volume:

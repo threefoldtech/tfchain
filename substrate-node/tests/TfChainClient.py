@@ -130,18 +130,6 @@ class TfChainClient:
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
 
-    def delete_twin(self, twin_id: int = 1, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
-        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
-
-        call = substrate.compose_call("TfgridModule", "delete_twin", {
-            "twin_id": twin_id})
-        expected_events = [{
-            "module_id": "TfgridModule",
-            "event_id": "TwinDeleted"
-        }]
-        self._sign_extrinsic_submit_check_response(
-            substrate, call, who, expected_events=expected_events)
-
     def get_twin(self, id: int = 1, port: int = DEFAULT_PORT):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
