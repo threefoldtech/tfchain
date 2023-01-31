@@ -18,7 +18,7 @@ impl<T: Config> OnRuntimeUpgrade for FixFarmNodeIndexMap<T> {
 
         let nodes_count: u64 = Nodes::<T>::iter().count() as u64;
         log::info!(
-            "🔎 FixFarmingPolicy pre migration: Number of existing nodes {:?}",
+            "🔎 FixFarmNodeIndexMap pre migration: Number of existing nodes {:?}",
             nodes_count
         );
 

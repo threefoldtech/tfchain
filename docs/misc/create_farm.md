@@ -45,7 +45,7 @@ Open the following URL based on your setup:
 - Using a private node: https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/extrinsics
 - Using a public node: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.threefold.io#/extrinsics
 
-and select your account from the list. Next, select `tfgridModule` -> `createTwin(ip)` from the list.
+and select your account from the list. First, sign some dummy terms and conditions by selecting `tfgridModule` -> `userAcceptTc(documentLink, documentHash)` and providing some dummy link and hash. Next, select `tfgridModule` -> `createTwin(ip)` from the list.
 
 Fill in your [Yggdrasil](https://github.com/yggdrasil-network/yggdrasil-go) IPV6. And click on submit transaction and sign it with your account.
 
