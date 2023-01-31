@@ -770,6 +770,7 @@ type Migrations = (
     pallet_tfgrid::migrations::v11::FixFarmingPolicy<Runtime>,
     pallet_tfgrid::migrations::v12::InputValidation<Runtime>,
     pallet_tfgrid::migrations::v13::FixPublicIP<Runtime>,
+    pallet_tfgrid::migrations::v14::FixFarmingPoliciesMap<Runtime>,
 );
 
 // follows Substrate's non destructive way of eliminating  otherwise required
