@@ -14,7 +14,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateTwinsV15<T> {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
-        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V13Struct);
+        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V14Struct);
 
         let twins_count: u64 = Twins::<T>::iter().count() as u64;
         log::info!(
@@ -27,10 +27,10 @@ impl<T: Config> OnRuntimeUpgrade for MigrateTwinsV15<T> {
     }
 
     fn on_runtime_upgrade() -> Weight {
-        if PalletVersion::<T>::get() == types::StorageVersion::V13Struct {
+        if PalletVersion::<T>::get() == types::StorageVersion::V14Struct {
             migrate_twins::<T>()
         } else {
-            info!(" >>> Unused TFGrid pallet V14 migration");
+            info!(" >>> Unused TFGrid pallet V15 migration");
             Weight::zero()
         }
     }
@@ -38,7 +38,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateTwinsV15<T> {
     #[cfg(feature = "try-runtime")]
     fn post_upgrade(pre_twins_count: Vec<u8>) -> Result<(), &'static str> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
-        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V14Struct);
+        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V15Struct);
 
         // Check number of twins against pre-check result
         let pre_twins_count: u64 = Decode::decode(&mut pre_twins_count.as_slice())
