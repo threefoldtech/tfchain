@@ -1,5 +1,4 @@
 use crate::*;
-#[cfg(feature = "try-runtime")]
 use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
 use log::debug;
 use sp_std::collections::btree_map::BTreeMap;
