@@ -43,5 +43,5 @@ To wipe data run:
 
 Every pallet should have all functionality tested, you can write unit tests and integration tests for a pallet:
 
-- unit test: heck https://docs.substrate.io/reference/how-to-guides/testing/
+- unit test: check https://docs.substrate.io/reference/how-to-guides/testing/
 - integration test: [see](../../substrate-node/tests/readme.md)
