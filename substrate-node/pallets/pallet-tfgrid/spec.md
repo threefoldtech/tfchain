@@ -185,7 +185,6 @@ Twins:
 
 - create_twin(..)
 - update_twin(..)
-- delete_twin(..)
 
 Entity-Twin Relation:
 
@@ -202,7 +201,6 @@ Farms:
 
 - createFarm(..)
 - updateFarm(..)
-- deleteFarm(..)
 - addFarmIp(..)
 - removeFarmIp(..)
 

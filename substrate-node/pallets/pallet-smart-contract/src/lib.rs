@@ -459,17 +459,6 @@ pub mod pallet {
             Self::_cancel_contract(account_id, contract_id, types::Cause::CanceledByUser)
         }
 
-        // DEPRECATED
-        #[pallet::call_index(3)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
-        pub fn add_reports(
-            _origin: OriginFor<T>,
-            _reports: Vec<types::Consumption>,
-        ) -> DispatchResultWithPostInfo {
-            // return error
-            Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
-        }
-
         #[pallet::call_index(4)]
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn create_name_contract(

@@ -154,29 +154,6 @@ fn test_create_twin_works() {
 }
 
 #[test]
-fn test_delete_twin_works() {
-    ExternalityBuilder::build().execute_with(|| {
-        assert_ok!(TfgridModule::user_accept_tc(
-            RuntimeOrigin::signed(alice()),
-            get_document_link_input(b"some_link"),
-            get_document_hash_input(b"some_hash"),
-        ));
-
-        let ip = get_twin_ip_input(b"::1");
-        assert_ok!(TfgridModule::create_twin(
-            RuntimeOrigin::signed(alice()),
-            ip
-        ));
-
-        let twin_id = 1;
-        assert_ok!(TfgridModule::delete_twin(
-            RuntimeOrigin::signed(alice()),
-            twin_id
-        ));
-    });
-}
-
-#[test]
 fn test_delete_node_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
@@ -457,19 +434,6 @@ fn test_adding_misformatted_ip_to_farm_fails() {
                 get_public_ip_gw_input(b"185.206.122.1"),
             ),
             Error::<TestRuntime>::InvalidPublicIP
-        );
-    });
-}
-
-#[test]
-fn test_delete_farm_fails() {
-    ExternalityBuilder::build().execute_with(|| {
-        create_entity();
-        create_twin();
-        create_farm();
-        assert_noop!(
-            TfgridModule::delete_farm(RuntimeOrigin::signed(alice()), 1),
-            Error::<TestRuntime>::MethodIsDeprecated
         );
     });
 }
