@@ -145,33 +145,16 @@ fn test_create_twin_works() {
             get_document_hash_input(b"some_hash"),
         ));
 
-        let ip = get_twin_ip_input(b"::1");
+        log::info!("relay from tesT: {:?}", b"somerelay.io");
+        let relay = get_relay_input(b"somerelay.io");
+        let pk = get_public_key_input(
+            b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901",
+        );
+
         assert_ok!(TfgridModule::create_twin(
             RuntimeOrigin::signed(test_ed25519()),
-            ip,
-        ));
-    });
-}
-
-#[test]
-fn test_delete_twin_works() {
-    ExternalityBuilder::build().execute_with(|| {
-        assert_ok!(TfgridModule::user_accept_tc(
-            RuntimeOrigin::signed(alice()),
-            get_document_link_input(b"some_link"),
-            get_document_hash_input(b"some_hash"),
-        ));
-
-        let ip = get_twin_ip_input(b"::1");
-        assert_ok!(TfgridModule::create_twin(
-            RuntimeOrigin::signed(alice()),
-            ip
-        ));
-
-        let twin_id = 1;
-        assert_ok!(TfgridModule::delete_twin(
-            RuntimeOrigin::signed(alice()),
-            twin_id
+            relay,
+            pk,
         ));
     });
 }
@@ -296,9 +279,13 @@ fn test_create_twin_double_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
 
-        let ip = get_twin_ip_input(b"::1");
+        let relay = get_relay_input(b"somerelay.io");
+        let pk = get_public_key_input(
+            b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901",
+        );
+
         assert_noop!(
-            TfgridModule::create_twin(RuntimeOrigin::signed(alice()), ip),
+            TfgridModule::create_twin(RuntimeOrigin::signed(alice()), relay, pk),
             Error::<TestRuntime>::TwinWithPubkeyExists
         );
     });
@@ -462,19 +449,6 @@ fn test_adding_misformatted_ip_to_farm_fails() {
 }
 
 #[test]
-fn test_delete_farm_fails() {
-    ExternalityBuilder::build().execute_with(|| {
-        create_entity();
-        create_twin();
-        create_farm();
-        assert_noop!(
-            TfgridModule::delete_farm(RuntimeOrigin::signed(alice()), 1),
-            Error::<TestRuntime>::MethodIsDeprecated
-        );
-    });
-}
-
-#[test]
 fn test_adding_ip_duplicate_to_farm_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
@@ -548,10 +522,15 @@ fn test_update_twin_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
 
-        let ip = get_twin_ip_input(b"::1");
+        let relay = get_relay_input(b"somerelay.io");
+        let pk = get_public_key_input(
+            b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901",
+        );
+
         assert_ok!(TfgridModule::update_twin(
             RuntimeOrigin::signed(alice()),
-            ip
+            relay,
+            pk,
         ));
     });
 }
@@ -565,14 +544,19 @@ fn test_update_twin_fails_if_signed_by_someone_else() {
             get_document_hash_input(b"some_hash"),
         ));
 
-        let ip = get_twin_ip_input(b"::1");
+        let relay = get_relay_input(b"somerelay.io");
+        let pk = get_public_key_input(
+            b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901",
+        );
+
         assert_ok!(TfgridModule::create_twin(
             RuntimeOrigin::signed(alice()),
-            ip.clone()
+            relay.clone(),
+            pk.clone()
         ));
 
         assert_noop!(
-            TfgridModule::update_twin(RuntimeOrigin::signed(bob()), ip),
+            TfgridModule::update_twin(RuntimeOrigin::signed(bob()), relay, pk),
             Error::<TestRuntime>::TwinNotExists
         );
     });
@@ -2199,10 +2183,14 @@ fn create_twin() {
         get_document_hash_input(b"some_hash"),
     ));
 
-    let ip = get_twin_ip_input(b"::1");
+    let relay = get_relay_input(b"somerelay.io");
+    let pk =
+        get_public_key_input(b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901");
+
     assert_ok!(TfgridModule::create_twin(
         RuntimeOrigin::signed(alice()),
-        ip
+        relay,
+        pk,
     ));
 }
 
@@ -2213,8 +2201,15 @@ fn create_twin_bob() {
         get_document_hash_input(b"some_hash"),
     ));
 
-    let ip = get_twin_ip_input(b"::1");
-    assert_ok!(TfgridModule::create_twin(RuntimeOrigin::signed(bob()), ip));
+    let relay = get_relay_input(b"somerelay.io");
+    let pk =
+        get_public_key_input(b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901");
+
+    assert_ok!(TfgridModule::create_twin(
+        RuntimeOrigin::signed(bob()),
+        relay,
+        pk
+    ));
 }
 
 fn create_farm() {

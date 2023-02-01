@@ -1281,47 +1281,6 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
 }
 
 #[test]
-fn test_node_contract_billing_fails() {
-    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
-    ext.execute_with(|| {
-        run_to_block(1, Some(&mut pool_state));
-        // Creates a farm and node and sets the price of tft to 0 which raises an error later
-        prepare_farm_and_node();
-
-        assert_ok!(SmartContractModule::create_node_contract(
-            RuntimeOrigin::signed(bob()),
-            1,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            1,
-            None
-        ));
-
-        let contracts_to_bill_at_block = SmartContractModule::contract_to_bill_at_block(1);
-        assert_eq!(contracts_to_bill_at_block.len(), 1);
-
-        let contract_id = contracts_to_bill_at_block[0];
-
-        // delete twin to make the billing fail
-        assert_ok!(TfgridModule::delete_twin(
-            RuntimeOrigin::signed(bob()),
-            SmartContractModule::contracts(contract_id).unwrap().twin_id,
-        ));
-
-        // the offchain worker should save the failed ids in local storage and try again
-        // in subsequent blocks (which will also fail)
-        for i in 1..3 {
-            pool_state.write().should_call_bill_contract(
-                1,
-                Err(Error::<TestRuntime>::TwinNotExists.into()),
-                1 + i * 10,
-            );
-            run_to_block(11 * i, Some(&mut pool_state));
-        }
-    });
-}
-
-#[test]
 fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balance_works() {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
@@ -3446,8 +3405,14 @@ pub fn create_twin(origin: AccountId) {
         get_document_hash_input(b"some_hash"),
     ));
 
-    let ip = get_twin_ip_input(b"::1");
-    assert_ok!(TfgridModule::create_twin(RuntimeOrigin::signed(origin), ip));
+    let relay = get_relay_input(b"somerelay.io");
+    let pk =
+        get_public_key_input(b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901");
+    assert_ok!(TfgridModule::create_twin(
+        RuntimeOrigin::signed(origin),
+        relay,
+        pk
+    ));
 }
 
 fn create_farming_policies() {

@@ -14,7 +14,7 @@ Create a node key
 subkey generate-node-key
 ```
 
-This will write the node adress on std err followed by the node private key on stdout.
+This will write the node address on std err followed by the node private key on stdout.
 
 ## Start node
 
@@ -36,19 +36,19 @@ Insert Aura and Grandpa key for this new node:
 
 Aura:
 
-```
+```sh
 ./tfchain key insert --base-path /storage --chain /etc/chainspecs/dev/chainSpecRaw.json --key-type aura --suri "<mnemonic>" --scheme sr25519
 ```
 
 Grandpa
 
-```
+```sh
 ./tfchain key insert --base-path /storage --chain /etc/chainspecs/dev/chainSpecRaw.json --key-type gran --suri "<mnemonic>" --scheme ed25519
 ```
 
 Smart contract billing:
 
-```
+```sh
 ./tfchain key insert --base-path /storage --chain /etc/chainspecs/dev/chainSpecRaw.json --key-type smct --suri "<mnemonic>" --scheme sr25519
 ```
 
@@ -101,20 +101,20 @@ Add the keys:
 ```yaml
 keys:
   - name: aura
-    secret: "<mnemonic created by `subkey generate` in step 1>"
+    secret: '<mnemonic created by `subkey generate` in step 1>'
   - name: grandpa
-    secret: "<mnemonic created by `subkey generate` in step 1>"
+    secret: '<mnemonic created by `subkey generate` in step 1>'
   - name: smct
-    secret: "<mnemonic created by `subkey generate` in step 1>"
+    secret: '<mnemonic created by `subkey generate` in step 1>'
   - name: node
     secret: <node private key generated in step 1>
 ```
 
-Create a Peristent volume claim of 100Gi and assign it using
+Create a Persistent volume claim of 100Gi and assign it using
 
 ```yaml
 volume:
-  existingpersistentVolumeClaim: "your-pvc-name"
+  existingpersistentVolumeClaim: 'your-pvc-name'
   persistentVolume:
     create: false
 ```
@@ -124,8 +124,8 @@ Make sure to set the following values too:
 ```yaml
 is_validator: true
 disable_offchain_worker: true
-chainspec: "/etc/chainspecs/main/chainSpecRaw.json"
-boot_node: "/ip4/185.206.122.83/tcp/30333/p2p/12D3KooWLtsdtQHswnXkLRH7e8vZJHktsh7gfuL5PoADV51JJ6wY"
+chainspec: '/etc/chainspecs/main/chainSpecRaw.json'
+boot_node: '/ip4/185.206.122.83/tcp/30333/p2p/12D3KooWLtsdtQHswnXkLRH7e8vZJHktsh7gfuL5PoADV51JJ6wY'
 ```
 
 for now, disable the ingress:

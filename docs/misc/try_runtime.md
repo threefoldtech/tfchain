@@ -13,6 +13,6 @@ List of available endpoints for our networks:
 
 Now go the release you want to test with try-runtime and compile as following:
 
-```
+```sh
 cargo run --release --features=try-runtime try-runtime --runtime ./target/release/wbuild/tfchain-runtime/tfchain_runtime.compact.wasm --chain chainspecs/NETWORK/chainSpecRaw.json on-runtime-upgrade live --uri NETWORK_URL
 ```
