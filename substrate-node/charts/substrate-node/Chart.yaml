@@ -3,4 +3,4 @@ name: substrate-node
 description: Tfchain node
 type: application
 version: 0.2.9
-appVersion: '2.2.0-rc8'
+appVersion: '2.3.0-rc1'
