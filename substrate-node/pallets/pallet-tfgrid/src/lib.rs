@@ -39,7 +39,6 @@ pub mod interface;
 pub mod migrations;
 pub mod node;
 pub mod terms_cond;
-pub mod twin;
 
 // Definition of the pallet logic, to be aggregated at runtime definition
 // through `construct_runtime`.
@@ -191,9 +190,9 @@ pub mod pallet {
 
     pub type TwinIndex = u32;
     pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-    type TwinInfoOf<T> = types::Twin<<T as Config>::TwinIp, AccountIdOf<T>>;
-    pub type TwinIpInput = BoundedVec<u8, ConstU32<{ twin::MAX_IP_LENGTH }>>;
-    pub type TwinIpOf<T> = <T as Config>::TwinIp;
+    type TwinInfoOf<T> = types::Twin<AccountIdOf<T>>;
+    pub type RelayInput = Option<BoundedVec<u8, ConstU32<{ types::MAX_RELAY_LENGTH }>>>;
+    pub type PkInput = Option<BoundedVec<u8, ConstU32<{ types::MAX_PK_LENGTH }>>>;
 
     #[pallet::storage]
     #[pallet::getter(fn twins)]
@@ -292,15 +291,6 @@ pub mod pallet {
             + Clone
             + TypeInfo
             + TryFrom<TermsAndConditionsInput<Self>, Error = Error<Self>>
-            + MaxEncodedLen;
-
-        /// The type of a twin IP.
-        type TwinIp: FullCodec
-            + Debug
-            + PartialEq
-            + Clone
-            + TypeInfo
-            + TryFrom<TwinIpInput, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of a farm name.
@@ -413,8 +403,8 @@ pub mod pallet {
         EntityUpdated(TfgridEntity<T>),
         EntityDeleted(u32),
 
-        TwinStored(types::Twin<T::TwinIp, T::AccountId>),
-        TwinUpdated(types::Twin<T::TwinIp, T::AccountId>),
+        TwinStored(types::Twin<T::AccountId>),
+        TwinUpdated(types::Twin<T::AccountId>),
 
         TwinEntityStored(u32, u32, Vec<u8>),
         TwinEntityRemoved(u32, u32),
@@ -492,9 +482,9 @@ pub mod pallet {
 
         FarmingPolicyNotExists,
 
-        TwinIpTooShort,
-        TwinIpTooLong,
-        InvalidTwinIp,
+        RelayTooShort,
+        RelayTooLong,
+        InvalidRelay,
 
         FarmNameTooShort,
         FarmNameTooLong,
@@ -563,6 +553,7 @@ pub mod pallet {
         InvalidDocumentHashInput,
 
         InvalidPublicConfig,
+        InvalidRelayAddress,
     }
 
     #[pallet::genesis_config]
@@ -1397,7 +1388,11 @@ pub mod pallet {
 
         #[pallet::call_index(17)]
         #[pallet::weight(<T as Config>::WeightInfo::create_twin())]
-        pub fn create_twin(origin: OriginFor<T>, ip: TwinIpInput) -> DispatchResultWithPostInfo {
+        pub fn create_twin(
+            origin: OriginFor<T>,
+            relay: RelayInput,
+            pk: PkInput,
+        ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
             ensure!(
@@ -1413,14 +1408,19 @@ pub mod pallet {
             let mut twin_id = TwinID::<T>::get();
             twin_id = twin_id + 1;
 
-            let twin_ip = Self::get_twin_ip(ip)?;
+            if let Some(relay_addr) = relay.clone() {
+                ensure!(
+                    Self::validate_relay_address(relay_addr.into()),
+                    Error::<T>::InvalidRelayAddress
+                );
+            }
 
-            let twin = types::Twin::<T::TwinIp, T::AccountId> {
-                version: TFGRID_TWIN_VERSION,
+            let twin = types::Twin::<T::AccountId> {
                 id: twin_id,
                 account_id: account_id.clone(),
+                relay,
                 entities: Vec::new(),
-                ip: twin_ip,
+                pk,
             };
 
             Twins::<T>::insert(&twin_id, &twin);
@@ -1436,7 +1436,11 @@ pub mod pallet {
 
         #[pallet::call_index(18)]
         #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(3).ref_time())]
-        pub fn update_twin(origin: OriginFor<T>, ip: TwinIpInput) -> DispatchResultWithPostInfo {
+        pub fn update_twin(
+            origin: OriginFor<T>,
+            relay: RelayInput,
+            pk: PkInput,
+        ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
             let twin_id =
@@ -1450,9 +1454,15 @@ pub mod pallet {
                 Error::<T>::UnauthorizedToUpdateTwin
             );
 
-            let twin_ip = Self::get_twin_ip(ip)?;
+            if let Some(relay_addr) = relay.clone() {
+                ensure!(
+                    Self::validate_relay_address(relay_addr.into()),
+                    Error::<T>::InvalidRelayAddress
+                );
+            }
 
-            twin.ip = twin_ip;
+            twin.relay = relay;
+            twin.pk = pk;
 
             Twins::<T>::insert(&twin_id, &twin);
 
@@ -2171,11 +2181,6 @@ impl<T: Config> Pallet<T> {
         Ok(parsed_terms_cond)
     }
 
-    fn get_twin_ip(ip: TwinIpInput) -> Result<TwinIpOf<T>, DispatchErrorWithPostInfo> {
-        let ip_parsed = <T as Config>::TwinIp::try_from(ip)?;
-        Ok(ip_parsed)
-    }
-
     fn get_farm_name(name: FarmNameInput<T>) -> Result<FarmNameOf<T>, DispatchErrorWithPostInfo> {
         let name_parsed = <T as Config>::FarmName::try_from(name)?;
         Ok(name_parsed)
@@ -2298,6 +2303,34 @@ impl<T: Config> Pallet<T> {
     ) -> Result<SerialNumberOf<T>, DispatchErrorWithPostInfo> {
         let parsed_serial_number = <T as Config>::SerialNumber::try_from(serial_number)?;
         Ok(parsed_serial_number)
+    }
+
+    fn validate_relay_address(relay_input: Vec<u8>) -> bool {
+        if relay_input.len() == 0 {
+            return false;
+        }
+
+        if relay_input[relay_input.len() - 1] == b'.' {
+            return false;
+        }
+
+        let mut prev_idx = 0;
+
+        for (idx, c) in relay_input.iter().enumerate() {
+            match c {
+                b'.' => {
+                    if idx == 0 || idx - prev_idx == 1 {
+                        return false;
+                    } else {
+                        prev_idx = idx
+                    }
+                }
+                b'a'..=b'z' | b'A'..=b'Z' | b'-' | b'_' => (),
+                _ => return false,
+            }
+        }
+
+        true
     }
 }
 

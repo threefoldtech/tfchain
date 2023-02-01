@@ -1,6 +1,4 @@
 use crate::*;
-#[cfg(feature = "try-runtime")]
-use codec::{Decode, Encode};
 use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
 use log::debug;
 use sp_std::collections::btree_map::BTreeMap;
@@ -31,7 +29,7 @@ impl<T: Config> OnRuntimeUpgrade for FixTwinLockedBalances<T> {
     }
 
     #[cfg(feature = "try-runtime")]
-    fn post_upgrade(pre_contracts_count: Vec<u8>) -> Result<(), &'static str> {
+    fn post_upgrade(_: Vec<u8>) -> Result<(), &'static str> {
         debug!("current pallet version: {:?}", PalletVersion::<T>::get());
         assert!(PalletVersion::<T>::get() >= types::StorageVersion::V7);
 

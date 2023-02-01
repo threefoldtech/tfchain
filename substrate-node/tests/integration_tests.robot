@@ -67,15 +67,15 @@ Test Create Update Twin
 
     User Accept Tc
 
-    Create Twin    ip=::1
+    Create Twin    relay=somerelay.io  pk=0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901
     ${twin} =    Get Twin    ${1}
     Should Not Be Equal    ${twin}    ${None}
-    Should Be Equal    ${twin}[ip]    ::1
+    Should Be Equal    ${twin}[relay]    somerelay.io
 
-    Update Twin    ip=0000:0000:0000:0000:0000:0000:0000:0001
+    Update Twin    relay=somerelay.io  pk=0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901
     ${twin} =    Get Twin    ${1}
     Should Not Be Equal    ${twin}    ${None}
-    Should Be Equal    ${twin}[ip]    0000:0000:0000:0000:0000:0000:0000:0001
+    Should Be Equal    ${twin}[relay]    somerelay.io
 
     Tear Down Multi Node Network
 
