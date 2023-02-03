@@ -2,7 +2,7 @@
 
 ### Requirements
 
-The most common way for a beginner to run a validator is on a cloud server running Linux. You may choose whatever VPS provider that your prefer, and whatever operating system you are comfortable with.
+The most common way for a beginner to run a validator is on a cloud server running Linux. You may choose whatever VPS provider that you prefer, and whatever operating system you are comfortable with.
 For this guide we will be using Ubuntu 18.04, but the instructions should be similar for other platforms.
 
 The transactions weights in TFchain were benchmarked on standard hardware. It is recommended that validators run at least the standard hardware in order to ensure they are able to process all blocks in time. The following are not minimum requirements but if you decide to run with less than this beware that you might have performance issue.
@@ -18,7 +18,7 @@ The specs posted above are by no means the minimum specs that you could use when
 
 ## Node Prerequisites: Install Rust and Dependencies
 
-Once you choose your cloud service provider and set-up your new server, the first thing you will do is install Rust.
+Once you choose your cloud service provider and set up your new server, the first thing you will do is install Rust.
 
 If you have never installed Rust, you should do this first.
 
@@ -29,18 +29,6 @@ If you have already installed Rust, run the following command to make sure you a
 If not, this command will fetch the latest version of Rust and install it.
 
 `curl https://sh.rustup.rs -sSf | sh -s -- -y`
-
-To install nightly:
-
-```
-rustup install nightly-2021-06-09
-```
-
-Add Wasm toolchain:
-
-```
-rustup target add wasm32-unknown-unknown --toolchain nightly-2021-06-09
-```
 
 > If you do not have "curl" installed, run "sudo apt install curl"
 
@@ -80,26 +68,21 @@ ntpd will be started automatically after install. You can query ntpd for status 
 
 ## TFchain Binary
 
-You will need to build the tfchain binary from the threefoldtech/tfchain repository on GitHub.
+You will need to build the tfchain binary from the threefoldtech/tfchain [releases](https://github.com/threefoldtech/tfchain/releases) on GitHub.
 
-Release to use for different networks:
-
-- Mainnet: 1.0.0 (git checkout 1.0.0)
-- Testnet: 1.0.0-b1 (git checkout 1.0.0-b1)
-- Devnet: 1.0.0-b9 (git checkout 1.0.0-b9)
+Check release page on github to check which binary to use.
 
 Note: If you prefer to use SSH rather than HTTPS, you can replace the first line of the below with git clone git@github.com:threefoldtech/tfchain.git.
 
-```
+```sh
 git clone https://github.com/threefoldtech/tfchain.git
 cd substrate-node
-git checkout 1.0.0
 ```
 
 Now build the binary
 
-```
-cargo +nightly-2021-06-09 build --release
+```sh
+cargo build --release
 ```
 
 This step will take a while (generally 10 - 40 minutes, depending on your hardware).
@@ -108,7 +91,7 @@ This step will take a while (generally 10 - 40 minutes, depending on your hardwa
 
 If you are interested in generating keys locally, you can also install subkey from the same directory. You may then take the generated subkey executable and transfer it to an air-gapped machine for extra security.
 
-```
+```sh
 cargo install --force --git https://github.com/paritytech/substrate subkey
 ```
 
@@ -130,26 +113,26 @@ The `--chain chainspecs/network/chainSpec.json` flag is different for every netw
 
 if you do not want to start in validator mode right away.
 
-```
-2022-02-18 15:45:22  Substrate Node    
-2022-02-18 15:45:22  ✌️  version 3.0.0-138e5f5-x86_64-linux-gnu    
-2022-02-18 15:45:22  ❤️  by Substrate DevHub <https://github.com/substrate-developer-hub>, 2017-2022    
-2022-02-18 15:45:22  📋 Chain specification: Tfchain Mainnet    
-2022-02-18 15:45:22  🏷 Node name: milky-woman-6216    
-2022-02-18 15:45:22  👤 Role: AUTHORITY    
-2022-02-18 15:45:22  💾 Database: RocksDb at /home/user/.local/share/tfchain/chains/tfchain_mainnet/db    
-2022-02-18 15:45:22  ⛓  Native runtime: substrate-threefold-40 (substrate-threefold-1.tx1.au1)    
-2022-02-18 15:45:23  🔨 Initializing Genesis block/state (state: 0x7526…4fb6, header-hash: 0x84cb…5e7b)    
-2022-02-18 15:45:23  👴 Loading GRANDPA authority set from genesis on what appears to be first startup.    
-2022-02-18 15:45:23  ⏱  Loaded block-time = 6000 milliseconds from genesis on first-launch    
-2022-02-18 15:45:23  Using default protocol ID "sup" because none is configured in the chain specs    
-2022-02-18 15:45:23  🏷 Local node identity is: 12D3KooWPyq94pmzZ9RQAvrU1SsShjmEVgfgMvyeBifFGf98wdf6    
+```sh
+2022-02-18 15:45:22  Substrate Node
+2022-02-18 15:45:22  ✌️  version 3.0.0-138e5f5-x86_64-linux-gnu
+2022-02-18 15:45:22  ❤️  by Substrate DevHub <https://github.com/substrate-developer-hub>, 2017-2022
+2022-02-18 15:45:22  📋 Chain specification: Tfchain Mainnet
+2022-02-18 15:45:22  🏷 Node name: milky-woman-6216
+2022-02-18 15:45:22  👤 Role: AUTHORITY
+2022-02-18 15:45:22  💾 Database: RocksDb at /home/user/.local/share/tfchain/chains/tfchain_mainnet/db
+2022-02-18 15:45:22  ⛓  Native runtime: substrate-threefold-40 (substrate-threefold-1.tx1.au1)
+2022-02-18 15:45:23  🔨 Initializing Genesis block/state (state: 0x7526…4fb6, header-hash: 0x84cb…5e7b)
+2022-02-18 15:45:23  👴 Loading GRANDPA authority set from genesis on what appears to be first startup.
+2022-02-18 15:45:23  ⏱  Loaded block-time = 6000 milliseconds from genesis on first-launch
+2022-02-18 15:45:23  Using default protocol ID "sup" because none is configured in the chain specs
+2022-02-18 15:45:23  🏷 Local node identity is: 12D3KooWPyq94pmzZ9RQAvrU1SsShjmEVgfgMvyeBifFGf98wdf6
 2022-02-18 15:45:23  📦 Highest known block at #1231
 ```
 
 Example of node sync:
 
-```
+```sh
 2021-06-17 03:07:39 🔍 Discovered new external address for our node: /ip4/10.26.16.1/tcp/30333/ws/p2p/12D3KooWLtXFWf1oGrnxMGmPKPW54xWCHAXHbFh4Eap6KXmxoi9u
 2021-06-17 03:07:40 ⚙️  Syncing 218.8 bps, target=#5553764 (17 peers), best: #24034 (0x08af…dcf5), finalized #23552 (0xd4f0…2642), ⬇ 173.5kiB/s ⬆ 12.7kiB/s
 2021-06-17 03:07:45 ⚙️  Syncing 214.8 bps, target=#5553765 (20 peers), best: #25108 (0xb272…e800), finalized #25088 (0x94e6…8a9f), ⬇ 134.3kiB/s ⬆ 7.4kiB/s
@@ -171,25 +154,25 @@ If you are interested in determining how much longer you have to go, your server
 Open polkadot js link in the browser based on the network you want to validate on.
 
 - Browse to `accounts` and click `Add Account`, create an account and name it `VALIDATOR_ACCOUNT`. Take note of the mnemonic.
-This account will be your account that manages the Validator and manages your council membership (voting). Make sure to send some TFT to this account.
+  This account will be your account that manages the Validator and manages your council membership (voting). Make sure to send some TFT to this account.
 - (Optional) Create another account and name it `ANYNAME_STASH`. This account will be your stash account.
 - Create one more account and call it `VALIDATOR_NODE_ACCOUNT`, this account will be used to participate in consensus.
 
 You now should have 3 accounts.
 
-Note: Both `VALIDATOR_ACCOUNT` and `VALIDATOR_NODE_ACCOUNT` need atleast 0.1 TFT in order to make a validator object.
+Note: Both `VALIDATOR_ACCOUNT` and `VALIDATOR_NODE_ACCOUNT` need at least 0.1 TFT in order to make a validator object.
 
 > Bonding an account is optional, you can skip this step and continue to the next step.
 
 Now go to `Developer` -> `Extrinsicis` and Select your `Stash` account. Now from the left dropdown (modules) search `validator`
 
-![bond](./bond.png)
+![bond](./assets/bond.png)
 
 Select `bond(validator)` and select the target account to be your account that manages the Validator and manages your council membership (voting). (You previously created).
 
 Now click `Submit Transaction`.
 
-![create](./create_val.png)
+![create](./assets/create_val.png)
 
 Now go to `Developer` -> `Extrinsicis` and Select your `VALIDATOR_ACCOUNT` account. Now from the left dropdown (modules) search `validator` and select the method: `createValidator(...)`
 
@@ -207,11 +190,11 @@ If all information is filled in correctly. Click on `Submit transaction` and sig
 
 ### Insert AURA/GRAN Keys
 
-Mnemonic: Words from the created account (`VALIDATOR_NODE_ACCOUNT`) created in a the previous steps.
+Mnemonic: Words from the created account (`VALIDATOR_NODE_ACCOUNT`) created in the previous steps.
 
 Transfer some balance to this account (you can see the address in the polkadot UI). (0.1 TFT should be enough). You can transfer the balance to this account from the polkadot UI.
 
-```
+```sh
 ./target/release/tfchain key insert --key-type aura --suri "<VALIDATOR_NODE_ACCOUNT_WORDS>" --chain chainspecs/main/chainSpecRaw.json
 ./target/release/tfchain key insert --key-type gran --suri "<VALIDATOR_NODE_ACCOUNT_WORDS>" --chain chainspecs/main/chainSpecRaw.json
 ```
@@ -237,7 +220,7 @@ yarn
 yarn start
 ```
 
-Browse to <http://localhost:3000> and connect to the new node over it's public ip. Make sure to specify the port, like: ws://YOUR_MACHINE_PUBLIC_IP:9944
+Browse to <http://localhost:3000> and connect to the new node over its public ip. Make sure to specify the port, like: ws://YOUR_MACHINE_PUBLIC_IP:9944
 
 First insert the types: Go to `Settings` -> `Developer` -> Copy paste output of following [file](https://raw.githubusercontent.com/threefoldtech/tfchain_client_js/master/types.json)
 
@@ -253,7 +236,7 @@ curl -H "Content-Type: application/json" -d '{"id":1, "jsonrpc":"2.0", "method":
 
 If you used polkadotjs to generate the session key, use the one you installed. If not, you can use the [public ones](../../docs/chaininfo.md) connected to the network you are installing a validator for.
 
-Go to `Extrinsics` -> `session` -> `setKeys` -> (make sure to use the created node account (`VALIDATOR_NODE_ACCOUNT`), created above) You will need to import this account into this local polkadot js apps UI. Make sure it has atleast 0.1 TFT.
+Go to `Extrinsics` -> `session` -> `setKeys` -> (make sure to use the created node account (`VALIDATOR_NODE_ACCOUNT`), created above) You will need to import this account into this local polkadot js apps UI. Make sure it has at least 0.1 TFT.
 
 input:
 
@@ -274,7 +257,7 @@ If your request is approved by the council AND your tfchain node is fully synced
 
 Now go to `Developer` -> `Extrinsicis` and Select your account that manages the Validator and manages your council membership (voting). (You previously created).. Now from the left dropdown (modules) search `validator`.
 
-![activate](./activate.png)
+![activate](./assets/activate.png)
 
 Select `ActivateValidatorNode` and click Submit Transaction.
 

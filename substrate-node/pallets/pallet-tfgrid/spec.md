@@ -169,6 +169,14 @@ A Node object has following fields:
 }
 ```
 
+## Node Power states
+
+Node power state and target are tracked on tfchain. A farmer can choose to power down nodes by calling `change_power_target(node_id, power_target(Up/Down))`.
+When a node actually is going to shut down because of the changed power target, it will set it's power state to `down` on chain by calling `change_power_state(PowerState(Up/Down))`.
+Likewise, when the farmer changes back the power target of the node to Up, the node will change it's power state to `up` when it's fully booted again.
+
+When creating contracts (rent/node) the power state is checked before the contract is created, thus preventing contracts to be created on Nodes that are shutdown physically.
+
 ## Creating / updating / deleting objects
 
 A user can create / update / delete objects on substrate by calling `Extrinsics` on the TfgridModule. Every extrinsic costs some amount of tokens.
@@ -185,7 +193,6 @@ Twins:
 
 - create_twin(..)
 - update_twin(..)
-- delete_twin(..)
 
 Entity-Twin Relation:
 
@@ -202,7 +209,6 @@ Farms:
 
 - createFarm(..)
 - updateFarm(..)
-- deleteFarm(..)
 - addFarmIp(..)
 - removeFarmIp(..)
 

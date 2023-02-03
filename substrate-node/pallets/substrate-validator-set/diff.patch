@@ -8,7 +8,7 @@ index 4f65d9c..67a3cb7 100644
  		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 -
 -		/// Origin for adding or removing a validator.
--		type ExternalOrigin: EnsureOrigin<Self::Origin>;
+-		type ExternalOrigin: EnsureOrigin<Self::RuntimeOrigin>;
  	}
  
  	#[pallet::pallet]

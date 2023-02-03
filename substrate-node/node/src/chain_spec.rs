@@ -3,11 +3,12 @@ use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{ed25519, sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{IdentifyAccount, Verify};
+use std::convert::TryInto;
 use tfchain_runtime::opaque::SessionKeys;
 use tfchain_runtime::{
     AccountId, AuraConfig, BalancesConfig, CouncilConfig, CouncilMembershipConfig, GenesisConfig,
-    GrandpaConfig, SessionConfig, Signature, SudoConfig, SystemConfig, TFTBridgeModuleConfig,
-    SmartContractModuleConfig, TFTPriceModuleConfig, TfgridModuleConfig, ValidatorSetConfig, 
+    GrandpaConfig, SessionConfig, Signature, SmartContractModuleConfig, SudoConfig, SystemConfig,
+    TFTBridgeModuleConfig, TFTPriceModuleConfig, TfgridModuleConfig, ValidatorSetConfig,
     WASM_BINARY,
 };
 
@@ -116,14 +117,17 @@ pub fn development_config() -> Result<ChainSpec, String> {
 			],
 			// Bridge fee account
 			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-			// TFT price pallet allow account
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
             // TFT price pallet min price
             10,
             // TFT price pallet max price
             1000,
             // billing frequency
-            10
+            10,
+            vec![
+                get_account_id_from_seed::<sr25519::Public>("Alice"),
+                get_account_id_from_seed::<sr25519::Public>("Bob"),
+                get_account_id_from_seed::<sr25519::Public>("Ferdie")
+            ],
 		)
         },
         // Bootnodes
@@ -206,15 +210,78 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 			],
 			// Bridge fee account
 			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-			// TFT price pallet allow account
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
             // TFT price pallet min price
             10,
             // TFT price pallet max price
             1000,
             // billing frequency
-            5
+            5,
+            vec![
+                get_account_id_from_seed::<sr25519::Public>("Alice"),
+                get_account_id_from_seed::<sr25519::Public>("Bob"),
+                get_account_id_from_seed::<sr25519::Public>("Ferdie")
+            ],
 		)
+        },
+        // Bootnodes
+        vec![],
+        None,
+        // Telemetry
+        None,
+        // Protocol ID
+        None,
+        // Properties
+        properties,
+        // Extensions
+        None,
+    ))
+}
+
+pub fn live_config() -> Result<ChainSpec, String> {
+    let wasm_binary =
+        WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
+
+    let properties = Some(
+        serde_json::json!({
+            "tokenDecimals": 7,
+            "tokenSymbol": "TFT",
+        })
+        .as_object()
+        .expect("Map given; qed")
+        .clone(),
+    );
+
+    Ok(ChainSpec::from_genesis(
+        // Name
+        "TF Chain Live",
+        // ID
+        "tfchain_live",
+        ChainType::Local,
+        move || {
+            testnet_genesis(
+                wasm_binary,
+                // Initial PoA authorities
+                vec![authority_keys_from_seed("Alice")],
+                // Sudo account
+                get_account_id_from_seed::<sr25519::Public>("Alice"),
+                // Foundation account
+                get_account_id_from_seed::<sr25519::Public>("Alice"),
+                // Sales account
+                get_account_id_from_seed::<sr25519::Public>("Alice"),
+                // Pre-funded accounts
+                vec![get_account_id_from_seed::<sr25519::Public>("Alice")],
+                true,
+                vec![],
+                // Bridge fee account
+                get_account_id_from_seed::<sr25519::Public>("Alice"),
+                // TFT price pallet min price
+                10,
+                // TFT price pallet max price
+                1000,
+                // billing frequency
+                5,
+                vec![get_account_id_from_seed::<sr25519::Public>("Alice")],
+            )
         },
         // Bootnodes
         vec![],
@@ -241,10 +308,10 @@ fn testnet_genesis(
     _enable_println: bool,
     bridge_validator_accounts: Vec<AccountId>,
     bridge_fee_account: AccountId,
-    tft_price_allowed_account: AccountId,
     min_tft_price: u32,
     max_tft_price: u32,
-    billing_frequency: u64
+    billing_frequency: u64,
+    council_members: Vec<AccountId>,
 ) -> GenesisConfig {
     GenesisConfig {
         system: SystemConfig {
@@ -289,16 +356,16 @@ fn testnet_genesis(
             key: Some(root_key),
         },
         tfgrid_module: TfgridModuleConfig {
-            su_price_value: 100000,
+            su_price_value: 50000,
             su_price_unit: 4,
-            nu_price_value: 30000,
+            nu_price_value: 15000,
             nu_price_unit: 4,
-            cu_price_value: 200000,
+            cu_price_value: 100000,
             cu_price_unit: 4,
-            ipu_price_value: 50000,
+            ipu_price_value: 40000,
             ipu_price_unit: 4,
-            unique_name_price_value: 10000,
-            domain_name_price_value: 20000,
+            unique_name_price_value: 2500,
+            domain_name_price_value: 5000,
             foundation_account: Some(foundation_account),
             sales_account: Some(sales_account),
             farming_policy_diy_cu: 2400,
@@ -322,21 +389,17 @@ fn testnet_genesis(
         },
         council: CouncilConfig::default(),
         council_membership: CouncilMembershipConfig {
-            members: vec![
-                get_account_id_from_seed::<sr25519::Public>("Alice"),
-                get_account_id_from_seed::<sr25519::Public>("Bob"),
-                get_account_id_from_seed::<sr25519::Public>("Eve"),
-            ],
+            members: council_members.try_into().unwrap(),
             phantom: Default::default(),
         },
         // just some default for development
         tft_price_module: TFTPriceModuleConfig {
-            allowed_origin: Some(tft_price_allowed_account),
             min_tft_price,
             max_tft_price,
+            _data: std::marker::PhantomData,
         },
         smart_contract_module: SmartContractModuleConfig {
-            billing_frequency: billing_frequency
+            billing_frequency: billing_frequency,
         },
     }
 }

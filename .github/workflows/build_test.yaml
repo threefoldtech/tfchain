@@ -8,7 +8,7 @@ jobs:
   build-and-test:
     runs-on: [self-hosted, poc]
     container:
-      image: threefolddev/tfchain:1
+      image: threefolddev/tfchain:2
       env:
         DEBIAN_FRONTEND: noninteractive
     steps:

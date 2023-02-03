@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use crate::mock::{PoolState, SmartContractModule, System, Timestamp};
 
 use codec::alloc::sync::Arc;

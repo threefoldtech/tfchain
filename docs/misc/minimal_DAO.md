@@ -2,7 +2,7 @@
 
 Based on https://docs.google.com/document/d/1qK51Dsg4jj3FJ76CWeh-WdNftQPFV8CtBmpLTlqaFk4/edit#
 
-The goal is to have a minimal DAO implemented on TFChain were farmers can vote on proposals. Only farmers can vote (see below), and only selected people (council, see below) can submit a proposal to be voted on.
+The goal is to have a minimal DAO implemented on TFChain where farmers can vote on proposals. Only farmers can vote (see below), and only selected people (council, see below) can submit a proposal to be voted on.
 
 ## Council
 
@@ -11,7 +11,7 @@ A council member is a person with slightly elevated privileges, represented by a
 - Create a new voting proposal.
 - Link an existing farming policy to a farm, with suggested limits (see farming policy section).
 - Council only vote (nobody except council member can vote for this) to add or remove a member. For the result of this vote, strict majority is used, i.e. vote passes if `votes_for > votes_against`. There must also be a time limit on the vote, any council member who doesn't vote before this time implicitly abstains. Note that in case of removal, the member to be removed can vote against that (no special logic to prevent this).
-- Set the certification level of a farm (see bellow).
+- Set the certification level of a farm (see below).
 
 ## Certified node verifier
 
@@ -28,7 +28,7 @@ A farming policy has the following fields:
 
 - id (used to link policies)
 - name
-- Default. This indicates if the policy can be used by any new node (if the parent farm does not have a dedicated attached policy). Essentially, a `Default` policy serves as a base which can be overriden per farm by linking a non default policy to said farm.
+- Default. This indicates if the policy can be used by any new node (if the parent farm does not have a dedicated attached policy). Essentially, a `Default` policy serves as a base which can be overridden per farm by linking a non default policy to said farm.
 - Reward tft per CU, SU and NU
 - Minimal uptime needed in percentage (can be decimal e.g. 99.8%)
 - Policy end date (After this data the policy can not be linked to new farms any more)
@@ -46,14 +46,14 @@ In case a farming policy is not attached to a farm, new nodes will pick the most
 - Check for policy without farming certification but certified nodes
 - Last check for a policy without any kind of certification
 
-Important here is that certification of a node only happens after it comes live for the first time. As such, when a node gets certified, farming certification needs to be re evaluated, but only if the currently attached farming policy on the node is a `Default` policy (as specifically linked policies have priority over default ones). When evaluating again, we first consider if we are eligible for the farming policy linked to the farm, if any.
+Important here is that certification of a node only happens after it comes live for the first time. As such, when a node gets certified, farming certification needs to be re-evaluated, but only if the currently attached farming policy on the node is a `Default` policy (as specifically linked policies have priority over default ones). When evaluating again, we first consider if we are eligible for the farming policy linked to the farm, if any.
 
 ### Limits on linked policy
 
 When a council member attaches a policy to a farm, limits can be set. These limits define how much a policy can be used for nodes, before it becomes unusable and gets removed. The limits currently are:
 
-- CU. Every time a node is added in the farm, it's CU is calculated and deducted from this amount. If the amount drops below 0, the maximum amount of CU that can be attached to this policy is reached.
-- SU. Every time a node is added in the farm, it's SU is calculated and deducted from this amount. If the amount drops below 0, the maximum amount of SU that can be attached to this policy is reached.
+- CU. Every time a node is added in the farm, its CU is calculated and deducted from this amount. If the amount drops below 0, the maximum amount of CU that can be attached to this policy is reached.
+- SU. Every time a node is added in the farm, its SU is calculated and deducted from this amount. If the amount drops below 0, the maximum amount of SU that can be attached to this policy is reached.
 - End date. After this date the policy is not effective anymore and can't be used. It is removed from the farm and a default policy is used.
 - Certification. If set, only certified nodes can get this policy. Non certified nodes get a default policy.
 
@@ -84,14 +84,14 @@ Important: we will also reserve some space for some text in the certification st
 
 ## Treasury
 
-Currently 50% of the contract cost goes to a "certified sales channel" which is just an account. This will be removed in favor of a treasury. The treasury is essentially an account (though it should be a special account with no private key so it can't be spend from). Spending from the treasury happens through means of a vote proposed by the council. The description in the proposal should indicate the reason of the spending.
+Currently 50% of the contract cost goes to a "certified sales channel" which is just an account. This will be removed in favor of a treasury. The treasury is essentially an account (though it should be a special account with no private key so it can't be spent from). Spending from the treasury happens through means of a vote proposed by the council. The description in the proposal should indicate the reason of the spending.
 
 ## Solution reward
 
 A "solution" is something running on the grid, created by a community member. This can be brought forward to the council, who can vote on it to recognize it as a solution. On contract creation, a recognized solution can be referenced, in which case part of the payment goes toward the address coupled to the solution. On chain a solution looks as follows:
 
 - Description (should be some text, limited in length. Limit should be rather low, if a longer one is desired a link can be inserted. 160 characters should be enough imo).
-- Up to 5 payout addresses, each with a payout percentage. This is the percentage of the payout received by the associated address. The amount is deducted from the payout to the treasury and specified as percentage of the total contract cost. As such, the sum of these percentages can never exceed 50%. If this value is not 50%, the remainder is payed to the treasure. Example: 10% payout percentage to addr 1, 5% payout to addr 2. This means 15% goes to the 2 listed addresses combined and 35% goes to the treasury (instead of usual 50). Rest remains as is. If the cost would be 10TFT, 1TFT goes to the address1, 0.5TFT goes to address 2, 3.5TFT goes to the treasury, instead of the default 5TFT to the treasury
+- Up to 5 payout addresses, each with a payout percentage. This is the percentage of the payout received by the associated address. The amount is deducted from the payout to the treasury and specified as percentage of the total contract cost. As such, the sum of these percentages can never exceed 50%. If this value is not 50%, the remainder is paid to the treasure. Example: 10% payout percentage to addr 1, 5% payout to addr 2. This means 15% goes to the 2 listed addresses combined and 35% goes to the treasury (instead of usual 50). Rest remains as is. If the cost would be 10TFT, 1TFT goes to the address1, 0.5TFT goes to address 2, 3.5TFT goes to the treasury, instead of the default 5TFT to the treasury
 - A unique code. This code is used to link a solution to the contract.
 
 This means contracts need to carry an optional solution code. If the code is not specified (default), the 50% goes entirely to the treasury (as is always the case today).

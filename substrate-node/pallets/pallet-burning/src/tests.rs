@@ -6,7 +6,7 @@ use sp_runtime::traits::SaturatedConversion;
 fn test_burn() {
     new_test_ext().execute_with(|| {
         assert_ok!(BurningModule::burn_tft(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             900000000000,
             "some_message".as_bytes().to_vec()
         ));
@@ -22,7 +22,7 @@ fn test_burn_to_much_fails() {
     new_test_ext().execute_with(|| {
         assert_noop!(
             BurningModule::burn_tft(
-                Origin::signed(alice()),
+                RuntimeOrigin::signed(alice()),
                 1200000000000,
                 "some_message".as_bytes().to_vec()
             ),

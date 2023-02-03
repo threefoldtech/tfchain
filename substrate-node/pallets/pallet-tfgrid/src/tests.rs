@@ -1,13 +1,13 @@
 use super::Event as TfgridEvent;
 use crate::{
-    mock::Event as MockEvent, mock::*, types::LocationInput, Error, InterfaceInput,
+    mock::RuntimeEvent as MockEvent, mock::*, types::LocationInput, Error, InterfaceInput,
     InterfaceIpsInput, PublicIpListInput, ResourcesInput,
 };
 use frame_support::{assert_noop, assert_ok, bounded_vec};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
 use tfchain_support::types::{
-    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, 
+    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, Power, PowerState,
     PublicConfig, PublicIpError, IP4, IP6,
 };
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
@@ -35,7 +35,7 @@ fn test_update_entity_works() {
         let name = b"barfoo".to_vec();
 
         assert_ok!(TfgridModule::update_entity(
-            Origin::signed(test_ed25519()),
+            RuntimeOrigin::signed(test_ed25519()),
             name,
             get_country_name_input(b"Belgium"),
             get_city_name_input(b"Ghent"),
@@ -53,7 +53,7 @@ fn test_update_entity_fails_if_signed_by_someone_else() {
 
         assert_noop!(
             TfgridModule::update_entity(
-                Origin::signed(bob()),
+                RuntimeOrigin::signed(bob()),
                 name,
                 get_country_name_input(b"Belgium"),
                 get_city_name_input(b"Ghent"),
@@ -76,7 +76,7 @@ fn test_create_entity_double_fails() {
 
         assert_noop!(
             TfgridModule::create_entity(
-                Origin::signed(alice()),
+                RuntimeOrigin::signed(alice()),
                 test_ed25519(),
                 name,
                 country,
@@ -101,7 +101,7 @@ fn test_create_entity_double_fails_with_same_pubkey() {
 
         assert_noop!(
             TfgridModule::create_entity(
-                Origin::signed(alice()),
+                RuntimeOrigin::signed(alice()),
                 test_ed25519(),
                 name,
                 country,
@@ -118,7 +118,9 @@ fn test_delete_entity_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
 
-        assert_ok!(TfgridModule::delete_entity(Origin::signed(test_ed25519())));
+        assert_ok!(TfgridModule::delete_entity(RuntimeOrigin::signed(
+            test_ed25519()
+        )));
     });
 }
 
@@ -128,7 +130,7 @@ fn test_delete_entity_fails_if_signed_by_someone_else() {
         create_entity();
 
         assert_noop!(
-            TfgridModule::delete_entity(Origin::signed(bob())),
+            TfgridModule::delete_entity(RuntimeOrigin::signed(bob())),
             Error::<TestRuntime>::EntityNotExists
         );
     });
@@ -138,33 +140,22 @@ fn test_delete_entity_fails_if_signed_by_someone_else() {
 fn test_create_twin_works() {
     ExternalityBuilder::build().execute_with(|| {
         assert_ok!(TfgridModule::user_accept_tc(
-            Origin::signed(test_ed25519()),
+            RuntimeOrigin::signed(test_ed25519()),
             get_document_link_input(b"some_link"),
             get_document_hash_input(b"some_hash"),
         ));
 
-        let ip = get_twin_ip_input(b"::1");
+        log::info!("relay from tesT: {:?}", b"somerelay.io");
+        let relay = get_relay_input(b"somerelay.io");
+        let pk = get_public_key_input(
+            b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901",
+        );
+
         assert_ok!(TfgridModule::create_twin(
-            Origin::signed(test_ed25519()),
-            ip,
+            RuntimeOrigin::signed(test_ed25519()),
+            relay,
+            pk,
         ));
-    });
-}
-
-#[test]
-fn test_delete_twin_works() {
-    ExternalityBuilder::build().execute_with(|| {
-        assert_ok!(TfgridModule::user_accept_tc(
-            Origin::signed(alice()),
-            get_document_link_input(b"some_link"),
-            get_document_hash_input(b"some_hash"),
-        ));
-
-        let ip = get_twin_ip_input(b"::1");
-        assert_ok!(TfgridModule::create_twin(Origin::signed(alice()), ip));
-
-        let twin_id = 1;
-        assert_ok!(TfgridModule::delete_twin(Origin::signed(alice()), twin_id));
     });
 }
 
@@ -179,7 +170,10 @@ fn test_delete_node_works() {
         assert_eq!(nodes.len(), 1);
         assert_eq!(nodes[0], 1);
 
-        assert_ok!(TfgridModule::delete_node_farm(Origin::signed(alice()), 1));
+        assert_ok!(TfgridModule::delete_node_farm(
+            RuntimeOrigin::signed(alice()),
+            1
+        ));
 
         let nodes = TfgridModule::nodes_by_farm_id(1);
         assert_eq!(nodes.len(), 0);
@@ -195,7 +189,7 @@ fn test_delete_node_fails_if_not_authorized() {
         create_node();
 
         assert_noop!(
-            TfgridModule::delete_node_farm(Origin::signed(bob()), 1),
+            TfgridModule::delete_node_farm(RuntimeOrigin::signed(bob()), 1),
             Error::<TestRuntime>::FarmerNotAuthorized
         );
     });
@@ -215,7 +209,7 @@ fn test_add_entity_to_twin() {
 
         // Bob adds someone as entity to his twin
         assert_ok!(TfgridModule::add_twin_entity(
-            Origin::signed(bob()),
+            RuntimeOrigin::signed(bob()),
             twin_id,
             entity_id,
             signature
@@ -236,7 +230,12 @@ fn test_add_entity_to_twin_fails_with_invalid_signature() {
         let entity_id = 1;
 
         assert_noop!(
-            TfgridModule::add_twin_entity(Origin::signed(bob()), twin_id, entity_id, signature),
+            TfgridModule::add_twin_entity(
+                RuntimeOrigin::signed(bob()),
+                twin_id,
+                entity_id,
+                signature
+            ),
             Error::<TestRuntime>::EntitySignatureDoesNotMatch
         );
     });
@@ -257,14 +256,19 @@ fn test_add_entity_to_twin_fails_if_entity_is_added_twice() {
         let entity_id = 1;
 
         assert_ok!(TfgridModule::add_twin_entity(
-            Origin::signed(bob()),
+            RuntimeOrigin::signed(bob()),
             twin_id,
             entity_id,
             signature.clone()
         ));
 
         assert_noop!(
-            TfgridModule::add_twin_entity(Origin::signed(bob()), twin_id, entity_id, signature),
+            TfgridModule::add_twin_entity(
+                RuntimeOrigin::signed(bob()),
+                twin_id,
+                entity_id,
+                signature
+            ),
             Error::<TestRuntime>::EntityWithSignatureAlreadyExists
         );
     });
@@ -275,9 +279,13 @@ fn test_create_twin_double_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
 
-        let ip = get_twin_ip_input(b"::1");
+        let relay = get_relay_input(b"somerelay.io");
+        let pk = get_public_key_input(
+            b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901",
+        );
+
         assert_noop!(
-            TfgridModule::create_twin(Origin::signed(alice()), ip),
+            TfgridModule::create_twin(RuntimeOrigin::signed(alice()), relay, pk),
             Error::<TestRuntime>::TwinWithPubkeyExists
         );
     });
@@ -300,25 +308,25 @@ fn test_create_farm_invalid_name_fails() {
 
         let farm_name = get_farm_name_input(b"test.farm");
         assert_noop!(
-            TfgridModule::create_farm(Origin::signed(alice()), farm_name, bounded_vec![]),
+            TfgridModule::create_farm(RuntimeOrigin::signed(alice()), farm_name, bounded_vec![]),
             Error::<TestRuntime>::InvalidFarmName
         );
 
         let farm_name = get_farm_name_input(b"test farm");
         assert_noop!(
-            TfgridModule::create_farm(Origin::signed(alice()), farm_name, bounded_vec![]),
+            TfgridModule::create_farm(RuntimeOrigin::signed(alice()), farm_name, bounded_vec![]),
             Error::<TestRuntime>::InvalidFarmName
         );
 
         let farm_name = get_farm_name_input(b"");
         assert_noop!(
-            TfgridModule::create_farm(Origin::signed(alice()), farm_name, bounded_vec![]),
+            TfgridModule::create_farm(RuntimeOrigin::signed(alice()), farm_name, bounded_vec![]),
             Error::<TestRuntime>::FarmNameTooShort
         );
 
         let farm_name = get_farm_name_input(b"12");
         assert_noop!(
-            TfgridModule::create_farm(Origin::signed(alice()), farm_name, bounded_vec![]),
+            TfgridModule::create_farm(RuntimeOrigin::signed(alice()), farm_name, bounded_vec![]),
             Error::<TestRuntime>::FarmNameTooShort
         );
     });
@@ -334,14 +342,14 @@ fn test_update_farm_name_works() {
 
         let farm_name = get_farm_name_input(b"bob_farm");
         assert_ok!(TfgridModule::create_farm(
-            Origin::signed(bob()),
+            RuntimeOrigin::signed(bob()),
             farm_name,
             bounded_vec![]
         ));
 
         let farm_name = get_farm_name_input(b"bob_updated_farm");
         assert_ok!(TfgridModule::update_farm(
-            Origin::signed(bob()),
+            RuntimeOrigin::signed(bob()),
             2,
             farm_name,
         ));
@@ -355,7 +363,7 @@ fn test_update_farm_existing_name_fails() {
 
         let farm_name = get_farm_name_input(b"alice_farm");
         assert_ok!(TfgridModule::create_farm(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             farm_name,
             bounded_vec![]
         ));
@@ -364,14 +372,14 @@ fn test_update_farm_existing_name_fails() {
 
         let farm_name = get_farm_name_input(b"bob_farm");
         assert_ok!(TfgridModule::create_farm(
-            Origin::signed(bob()),
+            RuntimeOrigin::signed(bob()),
             farm_name,
             bounded_vec![]
         ));
 
         let farm_name = get_farm_name_input(b"alice_farm");
         assert_noop!(
-            TfgridModule::update_farm(Origin::signed(bob()), 2, farm_name),
+            TfgridModule::update_farm(RuntimeOrigin::signed(bob()), 2, farm_name),
             Error::<TestRuntime>::InvalidFarmName
         );
     });
@@ -399,7 +407,7 @@ fn test_create_farm_with_double_ip_fails() {
         pub_ips.try_push(IP4 { ip, gw }).unwrap();
 
         assert_noop!(
-            TfgridModule::create_farm(Origin::signed(alice()), farm_name, pub_ips),
+            TfgridModule::create_farm(RuntimeOrigin::signed(alice()), farm_name, pub_ips),
             Error::<TestRuntime>::IpExists
         );
     });
@@ -413,7 +421,7 @@ fn test_adding_ip_to_farm_works() {
         create_farm();
 
         assert_ok!(TfgridModule::add_farm_ip(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             1,
             get_public_ip_ip_input(b"185.206.122.125/16"),
             get_public_ip_gw_input(b"185.206.122.1"),
@@ -430,25 +438,12 @@ fn test_adding_misformatted_ip_to_farm_fails() {
 
         assert_noop!(
             TfgridModule::add_farm_ip(
-                Origin::signed(alice()),
+                RuntimeOrigin::signed(alice()),
                 1,
                 get_public_ip_ip_input(b"185.206.122.125"),
                 get_public_ip_gw_input(b"185.206.122.1"),
             ),
             Error::<TestRuntime>::InvalidPublicIP
-        );
-    });
-}
-
-#[test]
-fn test_delete_farm_fails() {
-    ExternalityBuilder::build().execute_with(|| {
-        create_entity();
-        create_twin();
-        create_farm();
-        assert_noop!(
-            TfgridModule::delete_farm(Origin::signed(alice()), 1),
-            Error::<TestRuntime>::MethodIsDeprecated
         );
     });
 }
@@ -461,7 +456,7 @@ fn test_adding_ip_duplicate_to_farm_fails() {
         create_farm();
 
         assert_ok!(TfgridModule::add_farm_ip(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             1,
             get_public_ip_ip_input(b"185.206.122.125/16"),
             get_public_ip_gw_input(b"185.206.122.1"),
@@ -469,7 +464,7 @@ fn test_adding_ip_duplicate_to_farm_fails() {
 
         assert_noop!(
             TfgridModule::add_farm_ip(
-                Origin::signed(alice()),
+                RuntimeOrigin::signed(alice()),
                 1,
                 get_public_ip_ip_input(b"185.206.122.125/16"),
                 get_public_ip_gw_input(b"185.206.122.1"),
@@ -527,8 +522,16 @@ fn test_update_twin_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
 
-        let ip = get_twin_ip_input(b"::1");
-        assert_ok!(TfgridModule::update_twin(Origin::signed(alice()), ip));
+        let relay = get_relay_input(b"somerelay.io");
+        let pk = get_public_key_input(
+            b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901",
+        );
+
+        assert_ok!(TfgridModule::update_twin(
+            RuntimeOrigin::signed(alice()),
+            relay,
+            pk,
+        ));
     });
 }
 
@@ -536,19 +539,24 @@ fn test_update_twin_works() {
 fn test_update_twin_fails_if_signed_by_someone_else() {
     ExternalityBuilder::build().execute_with(|| {
         assert_ok!(TfgridModule::user_accept_tc(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             get_document_link_input(b"some_link"),
             get_document_hash_input(b"some_hash"),
         ));
 
-        let ip = get_twin_ip_input(b"::1");
+        let relay = get_relay_input(b"somerelay.io");
+        let pk = get_public_key_input(
+            b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901",
+        );
+
         assert_ok!(TfgridModule::create_twin(
-            Origin::signed(alice()),
-            ip.clone()
+            RuntimeOrigin::signed(alice()),
+            relay.clone(),
+            pk.clone()
         ));
 
         assert_noop!(
-            TfgridModule::update_twin(Origin::signed(bob()), ip),
+            TfgridModule::update_twin(RuntimeOrigin::signed(bob()), relay, pk),
             Error::<TestRuntime>::TwinNotExists
         );
     });
@@ -566,7 +574,7 @@ fn test_create_farm_with_same_name_fails() {
         let pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
 
         assert_noop!(
-            TfgridModule::create_farm(Origin::signed(alice()), farm_name, pub_ips),
+            TfgridModule::create_farm(RuntimeOrigin::signed(alice()), farm_name, pub_ips),
             Error::<TestRuntime>::FarmExists
         );
     });
@@ -581,14 +589,14 @@ fn test_farm_add_stellar_payout_address() {
 
         let addr = "some_address".as_bytes().to_vec();
         assert_ok!(TfgridModule::add_stellar_payout_v2address(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             1,
             addr
         ));
 
         let addr2 = "some_other_address".as_bytes().to_vec();
         assert_ok!(TfgridModule::add_stellar_payout_v2address(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             1,
             addr2
         ));
@@ -666,7 +674,7 @@ fn update_node_moved_from_farm_list_works() {
         };
 
         assert_ok!(TfgridModule::update_node(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             1,
             2,
             resources,
@@ -702,7 +710,7 @@ fn update_certified_node_resources_loses_certification_works() {
         ));
 
         assert_ok!(TfgridModule::set_node_certification(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             1,
             NodeCertification::Certified
         ));
@@ -722,7 +730,7 @@ fn update_certified_node_resources_loses_certification_works() {
         };
 
         assert_ok!(TfgridModule::update_node(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             1,
             1,
             node_resources,
@@ -760,7 +768,7 @@ fn update_certified_node_same_resources_keeps_certification_works() {
         ));
 
         assert_ok!(TfgridModule::set_node_certification(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             1,
             NodeCertification::Certified
         ));
@@ -779,7 +787,7 @@ fn update_certified_node_same_resources_keeps_certification_works() {
 
         // Don't change resources
         assert_ok!(TfgridModule::update_node(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             1,
             1,
             node_resources,
@@ -831,7 +839,7 @@ fn create_node_with_interfaces_works() {
         interfaces.try_push(interface).unwrap();
 
         assert_ok!(TfgridModule::create_node(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             1,
             resources,
             location,
@@ -908,7 +916,7 @@ fn set_certification_type_node_allowed_certifier_works() {
         ));
 
         assert_ok!(TfgridModule::set_node_certification(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             1,
             NodeCertification::Certified
         ));
@@ -916,7 +924,7 @@ fn set_certification_type_node_allowed_certifier_works() {
         assert_eq!(node.certification, NodeCertification::Certified);
 
         assert_ok!(TfgridModule::set_node_certification(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             1,
             NodeCertification::Diy
         ));
@@ -935,7 +943,7 @@ fn set_certification_type_node_not_allowed_certifier_fails() {
 
         assert_noop!(
             TfgridModule::set_node_certification(
-                Origin::signed(alice()),
+                RuntimeOrigin::signed(alice()),
                 1,
                 NodeCertification::Certified
             ),
@@ -997,7 +1005,107 @@ fn node_report_uptime_works() {
         create_node();
 
         Timestamp::set_timestamp(1628082000);
-        assert_ok!(TfgridModule::report_uptime(Origin::signed(alice()), 500));
+        assert_ok!(TfgridModule::report_uptime(
+            RuntimeOrigin::signed(alice()),
+            500
+        ));
+    });
+}
+
+#[test]
+fn change_power_state_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        assert_ok!(TfgridModule::change_power_state(
+            RuntimeOrigin::signed(alice()),
+            Power::Down
+        ));
+
+        assert_eq!(TfgridModule::node_power_state(1).state, PowerState::Down(1));
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::TfgridModule(
+                TfgridEvent::<TestRuntime>::PowerStateChanged {
+                    farm_id: 1,
+                    node_id: 1,
+                    power_state: PowerState::Down(1)
+                }
+            ))),
+            true
+        );
+    });
+}
+
+#[test]
+fn change_power_state_twin_has_no_node_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+        create_twin_bob();
+        //try changing the power state using another twin_id
+        assert_noop!(
+            TfgridModule::change_power_state(RuntimeOrigin::signed(bob()), Power::Down),
+            Error::<TestRuntime>::NodeNotExists
+        );
+    });
+}
+
+#[test]
+fn change_power_target_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        assert_eq!(TfgridModule::node_power_state(1).target, Power::Up,);
+
+        assert_ok!(TfgridModule::change_power_target(
+            RuntimeOrigin::signed(alice()),
+            1,
+            Power::Down,
+        ));
+
+        assert_eq!(TfgridModule::node_power_state(1).target, Power::Down,);
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::TfgridModule(
+                TfgridEvent::<TestRuntime>::PowerTargetChanged {
+                    farm_id: 1,
+                    node_id: 1,
+                    power_target: Power::Down
+                }
+            ))),
+            true
+        );
+    });
+}
+
+#[test]
+fn change_power_target_unauthorized_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        // Create farms with Bob
+        create_twin_bob();
+        create_farm_bob();
+
+        // Try to change power target as Bob on Alice's farm
+        assert_noop!(
+            TfgridModule::change_power_target(RuntimeOrigin::signed(bob()), 1, Power::Down,),
+            Error::<TestRuntime>::UnauthorizedToChangePowerTarget
+        );
     });
 }
 
@@ -1028,7 +1136,7 @@ fn node_add_public_config_works() {
         };
 
         assert_ok!(TfgridModule::add_node_public_config(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             1,
             1,
             Some(pub_config_input)
@@ -1068,7 +1176,7 @@ fn node_add_public_config_without_ipv6_and_domain_works() {
         };
 
         assert_ok!(TfgridModule::add_node_public_config(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             1,
             1,
             Some(pub_config_input)
@@ -1108,7 +1216,7 @@ fn node_add_public_config_fails_if_signature_incorrect() {
 
         assert_noop!(
             TfgridModule::add_node_public_config(
-                Origin::signed(bob()),
+                RuntimeOrigin::signed(bob()),
                 1,
                 1,
                 Some(pub_config_input)
@@ -1145,7 +1253,7 @@ fn test_unsetting_node_public_config_works() {
         };
 
         assert_ok!(TfgridModule::add_node_public_config(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             1,
             1,
             Some(pub_config_input)
@@ -1163,7 +1271,7 @@ fn test_unsetting_node_public_config_works() {
         );
 
         assert_ok!(TfgridModule::add_node_public_config(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             1,
             1,
             None
@@ -1196,7 +1304,7 @@ fn test_node_public_config_falsy_values_fails() {
 
         assert_noop!(
             TfgridModule::add_node_public_config(
-                Origin::signed(alice()),
+                RuntimeOrigin::signed(alice()),
                 1,
                 1,
                 Some(pub_config_input)
@@ -1306,7 +1414,7 @@ fn create_node_with_same_pubkey_fails() {
 
         assert_noop!(
             TfgridModule::create_node(
-                Origin::signed(alice()),
+                RuntimeOrigin::signed(alice()),
                 1,
                 resources,
                 location,
@@ -1649,7 +1757,7 @@ fn node_switches_farming_policy_when_marked_as_certified_works() {
             alice()
         ));
         assert_ok!(TfgridModule::set_node_certification(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             1,
             NodeCertification::Certified,
         ));
@@ -1680,7 +1788,7 @@ fn node_switches_farming_policy_when_marked_as_certified_toggle_works() {
             alice()
         ));
         assert_ok!(TfgridModule::set_node_certification(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             1,
             NodeCertification::Certified,
         ));
@@ -1693,7 +1801,7 @@ fn node_switches_farming_policy_when_marked_as_certified_toggle_works() {
         );
 
         assert_ok!(TfgridModule::set_node_certification(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             1,
             NodeCertification::Diy,
         ));
@@ -1731,7 +1839,7 @@ fn node_switches_farming_policy_when_marked_as_certified_and_gold_farm_works() {
         ));
         // Mark node as certified
         assert_ok!(TfgridModule::set_node_certification(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             1,
             NodeCertification::Certified,
         ));
@@ -2043,7 +2151,7 @@ fn create_entity() {
 
     let signature = sign_create_entity(name.clone(), country.to_vec(), city.to_vec());
     assert_ok!(TfgridModule::create_entity(
-        Origin::signed(alice()),
+        RuntimeOrigin::signed(alice()),
         test_ed25519(),
         name,
         country,
@@ -2059,7 +2167,7 @@ fn create_entity_sr() {
 
     let signature = sign_create_entity_sr(name.clone(), country.to_vec(), city.to_vec());
     assert_ok!(TfgridModule::create_entity(
-        Origin::signed(alice()),
+        RuntimeOrigin::signed(alice()),
         test_sr25519(),
         name,
         country,
@@ -2070,24 +2178,38 @@ fn create_entity_sr() {
 
 fn create_twin() {
     assert_ok!(TfgridModule::user_accept_tc(
-        Origin::signed(alice()),
+        RuntimeOrigin::signed(alice()),
         get_document_link_input(b"some_link"),
         get_document_hash_input(b"some_hash"),
     ));
 
-    let ip = get_twin_ip_input(b"::1");
-    assert_ok!(TfgridModule::create_twin(Origin::signed(alice()), ip));
+    let relay = get_relay_input(b"somerelay.io");
+    let pk =
+        get_public_key_input(b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901");
+
+    assert_ok!(TfgridModule::create_twin(
+        RuntimeOrigin::signed(alice()),
+        relay,
+        pk,
+    ));
 }
 
 fn create_twin_bob() {
     assert_ok!(TfgridModule::user_accept_tc(
-        Origin::signed(bob()),
+        RuntimeOrigin::signed(bob()),
         get_document_link_input(b"some_link"),
         get_document_hash_input(b"some_hash"),
     ));
 
-    let ip = get_twin_ip_input(b"::1");
-    assert_ok!(TfgridModule::create_twin(Origin::signed(bob()), ip));
+    let relay = get_relay_input(b"somerelay.io");
+    let pk =
+        get_public_key_input(b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901");
+
+    assert_ok!(TfgridModule::create_twin(
+        RuntimeOrigin::signed(bob()),
+        relay,
+        pk
+    ));
 }
 
 fn create_farm() {
@@ -2101,7 +2223,7 @@ fn create_farm() {
     pub_ips.try_push(IP4 { ip, gw }).unwrap();
 
     assert_ok!(TfgridModule::create_farm(
-        Origin::signed(alice()),
+        RuntimeOrigin::signed(alice()),
         farm_name,
         pub_ips,
     ));
@@ -2120,12 +2242,29 @@ fn create_farm2() {
     pub_ips.try_push(IP4 { ip, gw }).unwrap();
 
     assert_ok!(TfgridModule::create_farm(
-        Origin::signed(alice()),
+        RuntimeOrigin::signed(alice()),
         farm_name,
         pub_ips,
     ));
 
     create_farming_policies()
+}
+
+fn create_farm_bob() {
+    let farm_name = get_farm_name_input(b"bob_farm");
+
+    let mut pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
+
+    let ip = get_public_ip_ip_input(b"185.206.122.33/24");
+    let gw = get_public_ip_gw_input(b"185.206.122.1");
+
+    pub_ips.try_push(IP4 { ip, gw }).unwrap();
+
+    assert_ok!(TfgridModule::create_farm(
+        RuntimeOrigin::signed(bob()),
+        farm_name,
+        pub_ips,
+    ));
 }
 
 fn create_node() {
@@ -2147,7 +2286,7 @@ fn create_node() {
     let interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
 
     assert_ok!(TfgridModule::create_node(
-        Origin::signed(alice()),
+        RuntimeOrigin::signed(alice()),
         1,
         resources,
         location,
@@ -2175,7 +2314,7 @@ fn create_extra_node() {
     };
 
     assert_ok!(TfgridModule::create_node(
-        Origin::signed(bob()),
+        RuntimeOrigin::signed(bob()),
         1,
         resources,
         location,
@@ -2286,7 +2425,7 @@ fn create_custom_farming_policies() {
     ));
 }
 
-fn record(event: Event) -> EventRecord<Event, H256> {
+fn record(event: RuntimeEvent) -> EventRecord<RuntimeEvent, H256> {
     EventRecord {
         phase: Phase::Initialization,
         event,
