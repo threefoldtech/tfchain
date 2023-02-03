@@ -17,7 +17,7 @@ use pallet_timestamp as timestamp;
 use sp_runtime::SaturatedConversion;
 use tfchain_support::{
     resources::Resources,
-    types::{Interface, PublicIP},
+    types::{Interface, NodePower as NodePowerType, Power, PowerState, PublicIP},
 };
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
@@ -47,7 +47,7 @@ pub mod pallet {
     use super::types;
     use super::weights::WeightInfo;
     use super::*;
-    use frame_support::pallet_prelude::*;
+    use frame_support::{pallet_prelude::*, Blake2_128Concat};
     use frame_support::{traits::ConstU32, BoundedVec};
     use frame_system::pallet_prelude::*;
     use pallet_timestamp as timestamp;
@@ -266,6 +266,13 @@ pub mod pallet {
     #[pallet::getter(fn zos_version)]
     pub type ZosVersion<T> = StorageValue<_, Vec<u8>, ValueQuery>;
 
+    // This storage map maps a node ID to a power state, they node can modify this state
+    // to indicate that it has shut down or came back alive
+    #[pallet::storage]
+    #[pallet::getter(fn node_power_state)]
+    pub type NodePower<T: Config> =
+        StorageMap<_, Blake2_128Concat, u32, NodePowerType<T::BlockNumber>, ValueQuery>;
+
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_timestamp::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -424,6 +431,18 @@ pub mod pallet {
         FarmCertificationSet(u32, FarmCertification),
 
         ZosVersionUpdated(Vec<u8>),
+
+        /// Send an event to zero os to change its state
+        PowerTargetChanged {
+            farm_id: u32,
+            node_id: u32,
+            power_target: Power,
+        },
+        PowerStateChanged {
+            farm_id: u32,
+            node_id: u32,
+            power_state: PowerState<T::BlockNumber>,
+        },
     }
 
     #[pallet::error]
@@ -553,6 +572,7 @@ pub mod pallet {
         InvalidDocumentHashInput,
 
         InvalidPublicConfig,
+        UnauthorizedToChangePowerTarget,
         InvalidRelayAddress,
     }
 
@@ -2012,6 +2032,27 @@ pub mod pallet {
 
             Ok(().into())
         }
+
+        #[pallet::call_index(35)]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        pub fn change_power_state(
+            origin: OriginFor<T>,
+            power_state: Power,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_change_power_state(account_id, power_state)
+        }
+
+        #[pallet::call_index(36)]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        pub fn change_power_target(
+            origin: OriginFor<T>,
+            node_id: u32,
+            power_target: Power,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_change_power_target(account_id, node_id, power_target)
+        }
     }
 }
 
@@ -2303,6 +2344,75 @@ impl<T: Config> Pallet<T> {
     ) -> Result<SerialNumberOf<T>, DispatchErrorWithPostInfo> {
         let parsed_serial_number = <T as Config>::SerialNumber::try_from(serial_number)?;
         Ok(parsed_serial_number)
+    }
+
+    fn _change_power_state(
+        account_id: T::AccountId,
+        power_state: Power,
+    ) -> DispatchResultWithPostInfo {
+        let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
+        ensure!(
+            NodeIdByTwinID::<T>::contains_key(twin_id),
+            Error::<T>::NodeNotExists
+        );
+        let node_id = NodeIdByTwinID::<T>::get(twin_id);
+        let node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+
+        let power_state = match power_state {
+            Power::Up => PowerState::Up,
+            Power::Down => PowerState::Down(system::Pallet::<T>::block_number()),
+        };
+
+        let mut node_power = NodePower::<T>::get(node_id);
+
+        // if the power state is not correct => change it and emit event
+        if node_power.state != power_state {
+            node_power.state = power_state.clone();
+
+            NodePower::<T>::insert(node_id, node_power);
+            Self::deposit_event(Event::PowerStateChanged {
+                farm_id: node.farm_id,
+                node_id,
+                power_state,
+            });
+        }
+
+        Ok(Pays::No.into())
+    }
+
+    fn _change_power_target(
+        account_id: T::AccountId,
+        node_id: u32,
+        power_target: Power,
+    ) -> DispatchResultWithPostInfo {
+        let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
+        let node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+        let farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
+        ensure!(
+            twin_id == farm.twin_id,
+            Error::<T>::UnauthorizedToChangePowerTarget
+        );
+        // Make sure only the farmer that owns this node can change the power target
+        ensure!(
+            node.farm_id == farm.id,
+            Error::<T>::UnauthorizedToChangePowerTarget
+        );
+
+        Self::_change_power_target_on_node(node.id, node.farm_id, power_target);
+
+        Ok(().into())
+    }
+
+    fn _change_power_target_on_node(node_id: u32, farm_id: u32, power_target: Power) {
+        let mut node_power = NodePower::<T>::get(node_id);
+        node_power.target = power_target.clone();
+        NodePower::<T>::insert(node_id, &node_power);
+
+        Self::deposit_event(Event::PowerTargetChanged {
+            farm_id,
+            node_id,
+            power_target,
+        });
     }
 
     fn validate_relay_address(relay_input: Vec<u8>) -> bool {

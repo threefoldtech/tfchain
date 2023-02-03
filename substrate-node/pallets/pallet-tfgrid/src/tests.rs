@@ -7,8 +7,8 @@ use frame_support::{assert_noop, assert_ok, bounded_vec};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use sp_core::H256;
 use tfchain_support::types::{
-    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, PublicConfig,
-    PublicIpError, IP4, IP6,
+    FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, Power, PowerState,
+    PublicConfig, PublicIpError, IP4, IP6,
 };
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
@@ -1009,6 +1009,103 @@ fn node_report_uptime_works() {
             RuntimeOrigin::signed(alice()),
             500
         ));
+    });
+}
+
+#[test]
+fn change_power_state_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        assert_ok!(TfgridModule::change_power_state(
+            RuntimeOrigin::signed(alice()),
+            Power::Down
+        ));
+
+        assert_eq!(TfgridModule::node_power_state(1).state, PowerState::Down(1));
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::TfgridModule(
+                TfgridEvent::<TestRuntime>::PowerStateChanged {
+                    farm_id: 1,
+                    node_id: 1,
+                    power_state: PowerState::Down(1)
+                }
+            ))),
+            true
+        );
+    });
+}
+
+#[test]
+fn change_power_state_twin_has_no_node_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+        create_twin_bob();
+        //try changing the power state using another twin_id
+        assert_noop!(
+            TfgridModule::change_power_state(RuntimeOrigin::signed(bob()), Power::Down),
+            Error::<TestRuntime>::NodeNotExists
+        );
+    });
+}
+
+#[test]
+fn change_power_target_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        assert_eq!(TfgridModule::node_power_state(1).target, Power::Up,);
+
+        assert_ok!(TfgridModule::change_power_target(
+            RuntimeOrigin::signed(alice()),
+            1,
+            Power::Down,
+        ));
+
+        assert_eq!(TfgridModule::node_power_state(1).target, Power::Down,);
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::TfgridModule(
+                TfgridEvent::<TestRuntime>::PowerTargetChanged {
+                    farm_id: 1,
+                    node_id: 1,
+                    power_target: Power::Down
+                }
+            ))),
+            true
+        );
+    });
+}
+
+#[test]
+fn change_power_target_unauthorized_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        // Create farms with Bob
+        create_twin_bob();
+        create_farm_bob();
+
+        // Try to change power target as Bob on Alice's farm
+        assert_noop!(
+            TfgridModule::change_power_target(RuntimeOrigin::signed(bob()), 1, Power::Down,),
+            Error::<TestRuntime>::UnauthorizedToChangePowerTarget
+        );
     });
 }
 
@@ -2151,6 +2248,23 @@ fn create_farm2() {
     ));
 
     create_farming_policies()
+}
+
+fn create_farm_bob() {
+    let farm_name = get_farm_name_input(b"bob_farm");
+
+    let mut pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
+
+    let ip = get_public_ip_ip_input(b"185.206.122.33/24");
+    let gw = get_public_ip_gw_input(b"185.206.122.1");
+
+    pub_ips.try_push(IP4 { ip, gw }).unwrap();
+
+    assert_ok!(TfgridModule::create_farm(
+        RuntimeOrigin::signed(bob()),
+        farm_name,
+        pub_ips,
+    ));
 }
 
 fn create_node() {

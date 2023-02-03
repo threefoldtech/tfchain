@@ -681,6 +681,10 @@ impl<T: Config> Pallet<T> {
             .ok_or(Error::<T>::TwinNotExists)?;
 
         let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+
+        let node_power = pallet_tfgrid::NodePower::<T>::get(node_id);
+        ensure!(!node_power.is_down(), Error::<T>::NodeNotAvailableToDeploy);
+
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
         if farm.dedicated_farm && !ActiveRentContractForNode::<T>::contains_key(node_id) {
@@ -765,6 +769,9 @@ impl<T: Config> Pallet<T> {
             pallet_tfgrid::Farms::<T>::contains_key(node.farm_id),
             Error::<T>::FarmNotExists
         );
+
+        let node_power = pallet_tfgrid::NodePower::<T>::get(node_id);
+        ensure!(!node_power.is_down(), Error::<T>::NodeNotAvailableToDeploy);
 
         let active_node_contracts = ActiveNodeContracts::<T>::get(node_id);
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
