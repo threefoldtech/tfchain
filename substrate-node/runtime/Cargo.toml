@@ -34,7 +34,7 @@ default-features = false
 git = "https://github.com/threefoldtech/tfchain_tft_bridge"
 package = "pallet-tft-bridge"
 branch = "feat_upgrade_polkadot-0.9.36"
-#version = "2.4.0"
+#version = "2.5.3"
 #path = "../../../tfchain_tft_bridge/pallet-tft-bridge"
 
 [dependencies.pallet-tft-price]

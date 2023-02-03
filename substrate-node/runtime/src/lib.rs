@@ -767,7 +767,7 @@ type Migrations = (
     pallet_tfgrid::migrations::v14::FixFarmingPoliciesMap<Runtime>,
     pallet_tfgrid::migrations::v15::MigrateTwinsV15<Runtime>,
     pallet_smart_contract::migrations::v7::FixTwinLockedBalances<Runtime>,
-    pallet_tft_bridge::migration_burn_withdraw::RenameBurnToWithdraw<Runtime>,
+    pallet_tft_bridge::migrations::v2::RenameBurnToWithdraw<Runtime>,
 );
 
 // follows Substrate's non destructive way of eliminating  otherwise required
