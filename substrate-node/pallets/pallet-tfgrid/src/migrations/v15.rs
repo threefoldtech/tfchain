@@ -28,13 +28,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateTwinsV15<T> {
 
     fn on_runtime_upgrade() -> Weight {
         if PalletVersion::<T>::get() == types::StorageVersion::V14Struct {
-            // Comment for now to fix devnet storage version
-            // migrate_twins::<T>()
-
-            // Set correct storage version
-            PalletVersion::<T>::set(types::StorageVersion::V15Struct);
-            info!(" <<< Storage version upgraded to V15");
-            Weight::zero()
+            migrate_twins::<T>()
         } else {
             info!(" >>> Unused TFGrid pallet V15 migration");
             Weight::zero()
