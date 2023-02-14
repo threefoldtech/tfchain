@@ -2293,7 +2293,7 @@ fn create_node() {
         interfaces,
         true,
         true,
-        Some("Default String".as_bytes().to_vec().try_into().unwrap()),
+        Some(b"Default String".to_vec().try_into().unwrap()),
     ));
 }
 
