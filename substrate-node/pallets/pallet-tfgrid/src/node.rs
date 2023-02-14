@@ -294,7 +294,7 @@ pub fn validate_longitude_input(input: &[u8]) -> bool {
         }
 }
 
-pub const MIN_SERIAL_NUMBER_LENGTH: u32 = 10;
+pub const MIN_SERIAL_NUMBER_LENGTH: u32 = 1;
 pub const MAX_SERIAL_NUMBER_LENGTH: u32 = 50;
 pub const DEFAULT_SERIAL_NUMBER: &[u8] = b"Not Specified";
 
@@ -358,9 +358,9 @@ impl<T: Config> Clone for SerialNumber<T> {
 
 pub fn validate_serial_number(input: &[u8]) -> bool {
     input == DEFAULT_SERIAL_NUMBER
-        || input
-            .iter()
-            .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'-' | b'_' | b'.'))
+        || input.iter().all(|c| {
+            c.is_ascii_alphanumeric() || c.is_ascii_whitespace() || matches!(c, b'-' | b'_' | b'.')
+        })
 }
 
 #[test]
