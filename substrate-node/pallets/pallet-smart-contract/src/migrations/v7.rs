@@ -1,6 +1,6 @@
 use crate::*;
 use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
-use log::debug;
+use log::{debug, info};
 use sp_std::collections::btree_map::BTreeMap;
 use sp_std::marker::PhantomData;
 
@@ -23,7 +23,7 @@ impl<T: Config> OnRuntimeUpgrade for FixTwinLockedBalances<T> {
         if PalletVersion::<T>::get() == types::StorageVersion::V6 {
             migrate_to_version_7::<T>()
         } else {
-            debug!(" >>> Unused Smart Contract pallet V7 migration");
+            info!(" >>> Unused Smart Contract pallet V7 migration");
             Weight::zero()
         }
     }
