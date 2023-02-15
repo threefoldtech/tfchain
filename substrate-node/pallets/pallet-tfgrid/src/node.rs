@@ -294,8 +294,7 @@ pub fn validate_longitude_input(input: &[u8]) -> bool {
         }
 }
 
-pub const MIN_SERIAL_NUMBER_LENGTH: u32 = 10;
-pub const MAX_SERIAL_NUMBER_LENGTH: u32 = 50;
+pub const MAX_SERIAL_NUMBER_LENGTH: u32 = 128;
 pub const DEFAULT_SERIAL_NUMBER: &[u8] = b"Not Specified";
 
 /// A serial number in ASCI Characters.
@@ -314,10 +313,6 @@ impl<T: Config> TryFrom<SerialNumberInput> for SerialNumber<T> {
     /// minimum or exceeds the maximum allowed length or contains invalid ASCII
     /// characters.
     fn try_from(value: SerialNumberInput) -> Result<Self, Self::Error> {
-        ensure!(
-            value.len() >= MIN_SERIAL_NUMBER_LENGTH.saturated_into(),
-            Self::Error::SerialNumberTooShort
-        );
         ensure!(
             value.len() <= MAX_SERIAL_NUMBER_LENGTH.saturated_into(),
             Self::Error::SerialNumberTooLong
@@ -358,9 +353,9 @@ impl<T: Config> Clone for SerialNumber<T> {
 
 pub fn validate_serial_number(input: &[u8]) -> bool {
     input == DEFAULT_SERIAL_NUMBER
-        || input
-            .iter()
-            .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'-' | b'_' | b'.'))
+        || input.iter().all(|c| {
+            c.is_ascii_alphanumeric() || c.is_ascii_whitespace() || matches!(c, b'-' | b'_' | b'.')
+        })
 }
 
 #[test]
