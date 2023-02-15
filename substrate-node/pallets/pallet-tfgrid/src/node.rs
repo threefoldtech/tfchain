@@ -294,7 +294,7 @@ pub fn validate_longitude_input(input: &[u8]) -> bool {
         }
 }
 
-pub const MAX_SERIAL_NUMBER_LENGTH: u32 = 50;
+pub const MAX_SERIAL_NUMBER_LENGTH: u32 = 128;
 pub const DEFAULT_SERIAL_NUMBER: &[u8] = b"Not Specified";
 
 /// A serial number in ASCI Characters.
