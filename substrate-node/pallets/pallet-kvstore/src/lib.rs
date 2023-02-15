@@ -20,7 +20,7 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
     }
 
     #[pallet::event]
@@ -57,6 +57,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Set the value stored at a particular key
+        #[pallet::call_index(0)]
         #[pallet::weight(100_000_000)]
         pub fn set(
             origin: OriginFor<T>,
@@ -74,6 +75,7 @@ pub mod pallet {
 
         /// Read the value stored at a particular key, while removing it from the map.
         /// Also emit the read value in an event
+        #[pallet::call_index(1)]
         #[pallet::weight(100_000_000)]
         pub fn delete(origin: OriginFor<T>, key: Vec<u8>) -> DispatchResultWithPostInfo {
             // A user can only take (delete) their own entry

@@ -36,9 +36,9 @@ pub mod pallet {
         + pallet_membership::Config<pallet_membership::Instance1>
     {
         /// Because this pallet emits events, it depends on the runtime's definition of an event
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type Currency: Currency<Self::AccountId>;
-        type CouncilOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+        type CouncilOrigin: EnsureOrigin<Self::RuntimeOrigin>;
     }
 
     #[pallet::pallet]
@@ -115,6 +115,7 @@ pub mod pallet {
         /// Tf Connect ID: the threefold connect ID of the person who wants to become a validator
         /// Info: some public info about the validator (website link, blog link, ..)
         /// A user can only have 1 validator request at a time
+        #[pallet::call_index(0)]
         #[pallet::weight(100_000_000)]
         pub fn create_validator_request(
             origin: OriginFor<T>,
@@ -153,6 +154,7 @@ pub mod pallet {
         /// Will activate the Validator node account on consensus level
         /// A user can only call this if his request to be a validator is approved by the council
         /// Should be called when his node is synced and ready to start validating
+        #[pallet::call_index(1)]
         #[pallet::weight(100_000_000)]
         pub fn activate_validator_node(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
@@ -188,6 +190,7 @@ pub mod pallet {
         /// In case the Validator wishes to change his validator node account
         /// he can call this method with the new node validator account
         /// this new account will be added as a new consensus validator if he is validating already
+        #[pallet::call_index(2)]
         #[pallet::weight(100_000_000)]
         pub fn change_validator_node_account(
             origin: OriginFor<T>,
@@ -228,6 +231,7 @@ pub mod pallet {
 
         /// Bond an account to a validator account
         /// Just proves that the stash account is indeed under control of the validator account
+        #[pallet::call_index(3)]
         #[pallet::weight(100_000_000)]
         pub fn bond(
             origin: OriginFor<T>,
@@ -251,26 +255,28 @@ pub mod pallet {
         /// Approve validator (council)
         /// Approves a validator to be added as a council member and
         /// to participate in consensus
+        #[pallet::call_index(4)]
         #[pallet::weight(100_000_000)]
         pub fn approve_validator(
             origin: OriginFor<T>,
-            validator_account: T::AccountId,
+            validator_account: <T::Lookup as StaticLookup>::Source,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
-            Self::is_council_member(who)?;
+            Self::is_council_member(&who)?;
 
-            let mut validator = <Validator<T>>::get(&validator_account)
+            let v = T::Lookup::lookup(validator_account.clone())?;
+            let mut validator = <Validator<T>>::get(&v)
                 .ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
 
             // Set state to approved
             validator.state = types::ValidatorRequestState::Approved;
-            <Validator<T>>::insert(validator_account.clone(), &validator);
+            <Validator<T>>::insert(v.clone(), &validator);
 
             // Add the validator as a council member
             pallet_membership::Pallet::<T, pallet_membership::Instance1>::add_member(
                 frame_system::RawOrigin::Root.into(),
-                validator_account.clone(),
+                validator_account,
             )?;
 
             Self::deposit_event(Event::ValidatorRequestApproved(validator));
@@ -284,28 +290,31 @@ pub mod pallet {
         /// 2. Storage
         /// 3. Consensus
         /// Can only be called by the user or the council
+        #[pallet::call_index(5)]
         #[pallet::weight(100_000_000)]
         pub fn remove_validator(
             origin: OriginFor<T>,
-            validator: T::AccountId,
+            validator_account: <T::Lookup as StaticLookup>::Source,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin.clone())?;
 
-            if !(who == validator || Self::is_council_member(who).is_ok()) {
+            let v = T::Lookup::lookup(validator_account.clone())?;
+
+            if !(v == who || Self::is_council_member(&who).is_ok()) {
                 Err(Error::<T>::BadOrigin)?
             }
 
-            let _ = <Validator<T>>::get(&validator)
+            let _ = <Validator<T>>::get(&v)
                 .ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
 
             // Remove the validator as a council member
             pallet_membership::Pallet::<T, pallet_membership::Instance1>::remove_member(
                 frame_system::RawOrigin::Root.into(),
-                validator.clone(),
+                validator_account,
             )?;
 
             // Remove the entry from the storage map
-            <Validator<T>>::remove(validator);
+            <Validator<T>>::remove(v);
 
             // let node_validators = substrate_validator_set::Validators::<T>::get();
 
@@ -332,7 +341,7 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-    fn is_council_member(who: T::AccountId) -> DispatchResultWithPostInfo {
+    fn is_council_member(who: &T::AccountId) -> DispatchResultWithPostInfo {
         let council_members =
             pallet_membership::Pallet::<T, pallet_membership::Instance1>::members();
 

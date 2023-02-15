@@ -277,7 +277,7 @@ class TfChainClient:
                                       {
                                           "id": id,
                                           "ip": ip,
-                                          "gateway": gateway
+                                          "gw": gateway
                                       })
         expected_events = [{
             "module_id": "TfgridModule",
