@@ -103,7 +103,7 @@ benchmarks! {
 
         push_contract_resources::<T>(a1.clone());
 
-        let stamp: u64 = 1628082000 * 1000 * 10 * 6000;
+        let stamp: u64 = 1628082000 * 1000 + 10 * 6000;
         pallet_timestamp::Pallet::<T>::set_timestamp(stamp.try_into().unwrap());
         // run_to_block::<T>(10);
     }: _ (RawOrigin::Signed(a1.clone()), 1)
