@@ -9,7 +9,7 @@ where
     R: pallet_balances::Config,
     <R as frame_system::Config>::AccountId: From<AccountId>,
     <R as frame_system::Config>::AccountId: Into<AccountId>,
-    <R as frame_system::Config>::RuntimeEvent: From<pallet_balances::Event<R>>,
+    <R as frame_system::Config>::Event: From<pallet_balances::Event<R>>,
 {
     fn on_nonzero_unbalanced(amount: NegativeImbalance) {
         if let Some(author) = Authorship::author() {

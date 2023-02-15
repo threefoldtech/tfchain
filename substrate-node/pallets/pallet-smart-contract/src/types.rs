@@ -1,28 +1,29 @@
-use crate::pallet::{MaxDeploymentDataLength, MaxNodeContractPublicIPs};
+use crate::pallet::{
+    ContractPublicIP, DeploymentHash, MaxDeploymentDataLength, MaxNodeContractPublicIPs,
+};
 use crate::Config;
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::{pallet_prelude::ConstU32, BoundedVec, RuntimeDebugNoBound};
+use frame_support::{BoundedVec, RuntimeDebugNoBound};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
 use substrate_fixed::types::U64F64;
-use tfchain_support::{resources::Resources, types::PublicIP};
+use tfchain_support::types::Resources;
 
 pub type BlockNumber = u64;
 
 /// Utility type for managing upgrades/migrations.
-#[derive(Encode, Decode, Clone, Debug, PartialEq, PartialOrd, TypeInfo, MaxEncodedLen)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, TypeInfo, MaxEncodedLen)]
 pub enum StorageVersion {
     V1,
     V2,
     V3,
     V4,
     V5,
-    V6,
 }
 
 impl Default for StorageVersion {
     fn default() -> StorageVersion {
-        StorageVersion::V5
+        StorageVersion::V3
     }
 }
 
@@ -52,9 +53,6 @@ impl<T: Config> Contract<T> {
     }
 }
 
-// HexHash is hex encoded hash
-pub type HexHash = [u8; 32];
-
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
@@ -62,10 +60,10 @@ pub struct NodeContract<T: Config> {
     pub node_id: u32,
     // Hash of the deployment, set by the user
     // Max 32 bytes
-    pub deployment_hash: HexHash,
+    pub deployment_hash: DeploymentHash,
     pub deployment_data: BoundedVec<u8, MaxDeploymentDataLength<T>>,
     pub public_ips: u32,
-    pub public_ips_list: BoundedVec<PublicIP, MaxNodeContractPublicIPs<T>>,
+    pub public_ips_list: BoundedVec<ContractPublicIP<T>, MaxNodeContractPublicIPs<T>>,
 }
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
@@ -225,39 +223,4 @@ pub struct SolutionProvider<AccountId> {
 pub struct Provider<AccountId> {
     pub who: AccountId,
     pub take: u8,
-}
-
-pub const MAX_METADATA_LENGTH: u32 = 64; // limited to 64 bytes (2 public keys)
-pub const MAX_BILL_METADATA_LENGTH: u32 = 50; // limited to 50 bytes for now
-
-#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
-#[scale_info(skip_type_params(T))]
-#[codec(mel_bound())]
-pub struct ServiceContract {
-    pub service_contract_id: u64,
-    pub service_twin_id: u32,
-    pub consumer_twin_id: u32,
-    pub base_fee: u64,
-    pub variable_fee: u64,
-    pub metadata: BoundedVec<u8, ConstU32<MAX_METADATA_LENGTH>>,
-    pub accepted_by_service: bool,
-    pub accepted_by_consumer: bool,
-    pub last_bill: u64,
-    pub state: ServiceContractState,
-}
-
-#[derive(
-    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
-)]
-pub struct ServiceContractBill {
-    pub variable_amount: u64, // variable amount which is billed
-    pub window: u64,          // amount of time (in seconds) covered since last bill
-    pub metadata: BoundedVec<u8, ConstU32<MAX_BILL_METADATA_LENGTH>>,
-}
-
-#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
-pub enum ServiceContractState {
-    Created,
-    AgreementReady,
-    ApprovedByBoth,
 }

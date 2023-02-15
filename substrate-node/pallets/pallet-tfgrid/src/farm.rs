@@ -1,10 +1,10 @@
-use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::traits::Get;
-use frame_support::{ensure, sp_runtime::SaturatedConversion, BoundedVec, RuntimeDebug};
-use scale_info::TypeInfo;
 use sp_std::{marker::PhantomData, vec::Vec};
 
-use crate::{Config, Error, FarmNameInput};
+use codec::{Decode, Encode, MaxEncodedLen};
+use frame_support::{ensure, sp_runtime::SaturatedConversion, BoundedVec, RuntimeDebug};
+use scale_info::TypeInfo;
+
+use crate::{Config, Error};
 
 /// A Farm name (ASCI Characters).
 ///
@@ -19,23 +19,24 @@ pub struct FarmName<T: Config>(
 
 pub const MIN_FARM_NAME_LENGTH: u32 = 3;
 
-impl<T: Config> TryFrom<FarmNameInput<T>> for FarmName<T> {
+impl<T: Config> TryFrom<Vec<u8>> for FarmName<T> {
     type Error = Error<T>;
 
     /// Fallible initialization from a provided byte vector if it is below the
     /// minimum or exceeds the maximum allowed length or contains invalid ASCII
     /// characters.
-    fn try_from(value: FarmNameInput<T>) -> Result<Self, Self::Error> {
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         ensure!(
             value.len() >= MIN_FARM_NAME_LENGTH.saturated_into(),
             Self::Error::FarmNameTooShort
         );
+        let bounded_vec: BoundedVec<u8, T::MaxFarmNameLength> =
+            BoundedVec::try_from(value).map_err(|_| Self::Error::FarmNameTooLong)?;
         ensure!(
-            value.len() <= T::MaxFarmNameLength::get() as usize,
-            Self::Error::FarmNameTooLong
+            validate_farm_name(&bounded_vec),
+            Self::Error::InvalidFarmName
         );
-        ensure!(validate_farm_name(&value), Self::Error::InvalidFarmName);
-        Ok(Self(value, PhantomData))
+        Ok(Self(bounded_vec, PhantomData))
     }
 }
 

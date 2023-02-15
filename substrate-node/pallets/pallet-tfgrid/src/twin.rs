@@ -1,11 +1,10 @@
-use crate::{Config, Error, TwinIpInput};
+use sp_std::{marker::PhantomData, vec::Vec};
+
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::{
-    ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
-};
+use frame_support::{ensure, sp_runtime::SaturatedConversion, BoundedVec, RuntimeDebug, traits::ConstU32};
 use scale_info::TypeInfo;
-use sp_std::marker::PhantomData;
-use valip::ip6::Ip;
+use crate::{Config, Error};
+use valip::{{ip6::Ip}};
 
 /// A Twin planetary IP (ipv6).
 ///
@@ -14,30 +13,27 @@ use valip::ip6::Ip;
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct TwinIp<T: Config>(
-    pub BoundedVec<u8, ConstU32<MAX_IP_LENGTH>>,
-    PhantomData<(T, ConstU32<MAX_IP_LENGTH>)>,
+    pub BoundedVec<u8, ConstU32<39>>,
+    PhantomData<(T, ConstU32<39>)>,
 );
 
-pub const MIN_IP_LENGTH: u32 = 3;
-pub const MAX_IP_LENGTH: u32 = 39;
+pub const MIN_IP_LENGHT: u32 = 3;
 
-impl<T: Config> TryFrom<TwinIpInput> for TwinIp<T> {
+impl<T: Config> TryFrom<Vec<u8>> for TwinIp<T> {
     type Error = Error<T>;
 
     /// Fallible initialization from a provided byte vector if it is below the
     /// minimum or exceeds the maximum allowed length or contains invalid ASCII
     /// characters.
-    fn try_from(value: TwinIpInput) -> Result<Self, Self::Error> {
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         ensure!(
-            value.len() >= MIN_IP_LENGTH.saturated_into(),
+            value.len() >= MIN_IP_LENGHT.saturated_into(),
             Self::Error::TwinIpTooShort
         );
-        ensure!(
-            value.len() <= MAX_IP_LENGTH.saturated_into(),
-            Self::Error::TwinIpTooLong
-        );
-        ensure!(Ip::parse(&value).is_ok(), Self::Error::InvalidTwinIp);
-        Ok(Self(value, PhantomData))
+        let bounded_vec: BoundedVec<u8, ConstU32<39>> =
+            BoundedVec::try_from(value).map_err(|_| Self::Error::TwinIpTooLong)?;
+        ensure!(Ip::parse(&bounded_vec).is_ok(), Self::Error::InvalidTwinIp);
+        Ok(Self(bounded_vec, PhantomData))
     }
 }
 

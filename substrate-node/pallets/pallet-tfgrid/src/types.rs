@@ -18,24 +18,22 @@ pub enum StorageVersion {
     V9Struct,
     V10Struct,
     V11Struct,
-    V12Struct,
-    V13Struct,
 }
 
 impl Default for StorageVersion {
     fn default() -> StorageVersion {
-        StorageVersion::V13Struct
+        StorageVersion::V11Struct
     }
 }
 
 #[derive(Encode, Decode, Debug, Default, PartialEq, Eq, Clone, TypeInfo)]
-pub struct Entity<AccountId, City, Country> {
+pub struct Entity<AccountId> {
     pub version: u32,
     pub id: u32,
     pub name: Vec<u8>,
     pub account_id: AccountId,
-    pub country: Country,
-    pub city: City,
+    pub country: Vec<u8>,
+    pub city: Vec<u8>,
 }
 
 //digital twin
@@ -160,13 +158,19 @@ pub struct FarmingPolicy<BlockNumber> {
     pub farm_certification: FarmCertification,
 }
 
-impl<B: Ord> PartialOrd for FarmingPolicy<B> {
+impl<B> PartialOrd for FarmingPolicy<B>
+where
+    B: Ord,
+{
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<B: Ord> Ord for FarmingPolicy<B> {
+impl<B> Ord for FarmingPolicy<B>
+where
+    B: Ord,
+{
     fn cmp(&self, other: &Self) -> Ordering {
         match self.farm_certification.cmp(&other.farm_certification) {
             Ordering::Equal => self.node_certification.cmp(&other.node_certification),
@@ -176,17 +180,15 @@ impl<B: Ord> Ord for FarmingPolicy<B> {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct TermsAndConditionsInput<AccountId, DocLink, DocHash> {
+pub struct TermsAndConditions<AccountId> {
     pub account_id: AccountId,
     pub timestamp: u64,
-    pub document_link: DocLink,
-    pub document_hash: DocHash,
+    pub document_link: Vec<u8>,
+    pub document_hash: Vec<u8>,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct LocationInput<City, Country, Latitude, Longitude> {
-    pub city: City,
-    pub country: Country,
-    pub latitude: Latitude,
-    pub longitude: Longitude,
+pub struct PublicIpInput<IP, GW> {
+    pub ip: IP,
+    pub gw: GW,
 }

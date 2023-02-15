@@ -1,7 +1,7 @@
 use super::*;
 use crate as pallet_validator;
 use core::cell::RefCell;
-use frame_support::{bounded_vec, construct_runtime, parameter_types, traits::ConstU32};
+use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::EnsureRoot;
 use pallet_session::{SessionHandler, ShouldEndSession};
 use sp_core::{crypto::key_types::DUMMY, H256};
@@ -32,7 +32,7 @@ construct_runtime!(
 );
 
 impl pallet_validator::Config for TestRuntime {
-    type RuntimeEvent = RuntimeEvent;
+    type Event = Event;
     type CouncilOrigin = EnsureRoot<Self::AccountId>;
     type Currency = ();
 }
@@ -45,16 +45,16 @@ impl frame_system::Config for TestRuntime {
     type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
-    type RuntimeOrigin = RuntimeOrigin;
+    type Origin = Origin;
     type Index = u64;
-    type RuntimeCall = RuntimeCall;
+    type Call = Call;
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = u64;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type RuntimeEvent = RuntimeEvent;
+    type Event = Event;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
@@ -73,7 +73,7 @@ parameter_types! {
 }
 
 impl substrate_validator_set::Config for TestRuntime {
-    type RuntimeEvent = RuntimeEvent;
+    type Event = Event;
     type AddRemoveOrigin = EnsureRoot<Self::AccountId>;
     type MinAuthorities = MinAuthorities;
 }
@@ -141,7 +141,7 @@ impl pallet_session::Config for TestRuntime {
     type SessionHandler = TestSessionHandler;
     type Keys = MockSessionKeys;
     type WeightInfo = ();
-    type RuntimeEvent = RuntimeEvent;
+    type Event = Event;
 }
 
 pub type BlockNumber = u32;
@@ -153,9 +153,9 @@ parameter_types! {
 
 pub type CouncilCollective = pallet_collective::Instance1;
 impl pallet_collective::Config<CouncilCollective> for TestRuntime {
-    type RuntimeOrigin = RuntimeOrigin;
-    type Proposal = RuntimeCall;
-    type RuntimeEvent = RuntimeEvent;
+    type Origin = Origin;
+    type Proposal = Call;
+    type Event = Event;
     type MotionDuration = CouncilMotionDuration;
     type MaxProposals = CouncilMaxProposals;
     type MaxMembers = CouncilMaxMembers;
@@ -164,7 +164,7 @@ impl pallet_collective::Config<CouncilCollective> for TestRuntime {
 }
 
 impl pallet_membership::Config<pallet_membership::Instance1> for TestRuntime {
-    type RuntimeEvent = RuntimeEvent;
+    type Event = Event;
     type AddOrigin = EnsureRoot<Self::AccountId>;
     type RemoveOrigin = EnsureRoot<Self::AccountId>;
     type SwapOrigin = EnsureRoot<Self::AccountId>;
@@ -185,7 +185,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     genesis.assimilate_storage(&mut t).unwrap();
 
     let genesis = pallet_membership::GenesisConfig::<TestRuntime, pallet_membership::Instance1> {
-        members: bounded_vec![1, 2, 3], // [1, 2, 3] accounts are council members
+        members: vec![1, 2, 3], // [1, 2, 3] accounts are council members
         phantom: Default::default(),
     };
     genesis.assimilate_storage(&mut t).unwrap();

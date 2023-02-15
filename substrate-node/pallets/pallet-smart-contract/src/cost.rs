@@ -2,11 +2,12 @@ use crate::pallet;
 use crate::pallet::BalanceOf;
 use crate::pallet::Error;
 use crate::types;
-use crate::types::{Contract, ContractBillingInformation, ServiceContract, ServiceContractBill};
+use crate::types::{Contract, ContractBillingInformation};
 use crate::Config;
-use frame_support::{dispatch::DispatchErrorWithPostInfo, traits::Get};
+use frame_support::dispatch::DispatchErrorWithPostInfo;
 use pallet_tfgrid::types as pallet_tfgrid_types;
-use sp_runtime::{Percent, SaturatedConversion};
+use sp_runtime::Percent;
+use sp_runtime::SaturatedConversion;
 use substrate_fixed::types::U64F64;
 use tfchain_support::{resources::Resources, types::NodeCertification};
 
@@ -100,44 +101,13 @@ impl<T: Config> Contract<T> {
             // Calculate total cost for a name contract
             types::ContractData::NameContract(_) => {
                 // bill user for name usage for number of seconds elapsed
-                let total_cost_u64f64 = (U64F64::from_num(pricing_policy.unique_name.value)
-                    / U64F64::from_num(T::BillingReferencePeriod::get()))
+                let total_cost_u64f64 = (U64F64::from_num(pricing_policy.unique_name.value) / 3600)
                     * U64F64::from_num(seconds_elapsed);
                 total_cost_u64f64.to_num::<u64>()
             }
         };
 
         Ok(total_cost)
-    }
-}
-
-impl ServiceContract {
-    pub fn calculate_bill_cost_tft<T: Config>(
-        &self,
-        service_bill: ServiceContractBill,
-    ) -> Result<BalanceOf<T>, DispatchErrorWithPostInfo> {
-        // Calculate the cost in mUSD for service contract bill
-        let total_cost = self.calculate_bill_cost::<T>(service_bill);
-
-        if total_cost == 0 {
-            return Ok(BalanceOf::<T>::saturated_from(0 as u128));
-        }
-
-        // Calculate the cost in TFT for service contract
-        let total_cost_tft_64 = calculate_cost_in_tft_from_musd::<T>(total_cost)?;
-
-        // convert to balance object
-        let amount_due: BalanceOf<T> = BalanceOf::<T>::saturated_from(total_cost_tft_64);
-
-        return Ok(amount_due);
-    }
-
-    pub fn calculate_bill_cost<T: Config>(&self, service_bill: ServiceContractBill) -> u64 {
-        // bill user for service usage for elpased usage (window) in seconds
-        let contract_cost = U64F64::from_num(self.base_fee) * U64F64::from_num(service_bill.window)
-            / U64F64::from_num(T::BillingReferencePeriod::get())
-            + U64F64::from_num(service_bill.variable_amount);
-        contract_cost.round().to_num::<u64>()
     }
 }
 
@@ -160,16 +130,14 @@ pub fn calculate_resources_cost<T: Config>(
         let su_used = hru / 1200 + sru / 200;
         // the pricing policy su cost value is expressed in 1 hours or 3600 seconds.
         // we bill every 3600 seconds but here we need to calculate the cost per second and multiply it by the seconds elapsed.
-        let su_cost = (U64F64::from_num(pricing_policy.su.value)
-            / U64F64::from_num(T::BillingReferencePeriod::get()))
+        let su_cost = (U64F64::from_num(pricing_policy.su.value) / 3600)
             * U64F64::from_num(seconds_elapsed)
             * su_used;
         log::debug!("su cost: {:?}", su_cost);
 
         let cu = calculate_cu(cru, mru);
 
-        let cu_cost = (U64F64::from_num(pricing_policy.cu.value)
-            / U64F64::from_num(T::BillingReferencePeriod::get()))
+        let cu_cost = (U64F64::from_num(pricing_policy.cu.value) / 3600)
             * U64F64::from_num(seconds_elapsed)
             * cu;
         log::debug!("cu cost: {:?}", cu_cost);
@@ -178,8 +146,7 @@ pub fn calculate_resources_cost<T: Config>(
 
     if ipu > 0 {
         let total_ip_cost = U64F64::from_num(ipu)
-            * (U64F64::from_num(pricing_policy.ipu.value)
-                / U64F64::from_num(T::BillingReferencePeriod::get()))
+            * (U64F64::from_num(pricing_policy.ipu.value) / 3600)
             * U64F64::from_num(seconds_elapsed);
         log::debug!("ip cost: {:?}", total_ip_cost);
         total_cost += total_ip_cost;

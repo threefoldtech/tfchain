@@ -8,7 +8,7 @@ jobs:
   build-and-test:
     runs-on: [self-hosted, poc]
     container:
-      image: threefolddev/tfchain:2
+      image: threefolddev/tfchain:1
       env:
         DEBIAN_FRONTEND: noninteractive
     steps:
@@ -25,8 +25,8 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             substrate-node/target/
-          key: ${{ runner.os }}-tfchain-build-cache-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-tfchain-build-cache
+          key: ${{ runner.os }}-tfchain-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-tfchain-cargo-
 
       - name: Build
         run: |
@@ -46,10 +46,4 @@ jobs:
           python3.10 -m pip install robotframework==5.0.1 cryptography==3.4.8 substrate-interface==1.4.0
           cd substrate-node/tests
           robot -d _output_tests/ .
-
-      - uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: integration test output
-          path: substrate-node/tests/_output_tests/
 

@@ -1,57 +1,52 @@
+// This file is part of Substrate.
+
+// Copyright (C) 2022 Threefold Tech
+// Copyright (C) 2020-2021 Parity Technologies (UK) Ltd.
+// SPDX-License-Identifier: Apache-2.0
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! Vesting pallet benchmarking.
+
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
 
-use crate::Pallet as SmartContractModule;
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
-use frame_support::assert_ok;
+use crate::Module as SmartContractModule;
+use frame_benchmarking::{account, benchmarks, whitelisted_caller};
+use frame_support::traits::{Box, Vec};
 use frame_system::RawOrigin;
-use sp_std::{
-    convert::{TryFrom, TryInto},
-    fmt::Debug,
-    vec,
-};
+use sp_std::vec;
 
-use pallet_tfgrid::{
-    types::{self as pallet_tfgrid_types, LocationInput},
-    CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, LatitudeInput,
-    LongitudeInput, ResourcesInput, TwinIpInput,
-};
-use tfchain_support::{resources::Resources, types::IP4};
-const GIGABYTE: u64 = 1024 * 1024 * 1024;
+use tfchain_support::types::{Location, Resources, PublicIP};
+use pallet_tfgrid;
 
 benchmarks! {
-    where_clause {
-        where
-        <T as pallet_timestamp::Config>::Moment: TryFrom<u64>,
-        <<T as pallet_timestamp::Config>::Moment as  TryFrom<u64>>::Error: Debug,
-    }
-
     create_node_contract {
         let a1: T::AccountId = account("Alice", 0, 0);
         prepare_farm_and_node::<T>(a1);
 
         let caller: T::AccountId = whitelisted_caller();
         create_twin::<T>(caller.clone());
-    }: _ (RawOrigin::Signed(
-        caller.clone()),
-        1,
-        "858f8fb2184b15ecb8c0be8b95398c81".as_bytes().to_vec().try_into().unwrap(),
-        "some_data".as_bytes().to_vec().try_into().unwrap(),
-        1,
-        None
-    )
+    }: _ (RawOrigin::Signed(caller.clone()), 1, "some_data".as_bytes().to_vec(), "hash".as_bytes().to_vec(), 1)
     verify {
-        let contract = SmartContractModule::<T>::contracts(1).unwrap();
+        let contract = SmartContractModule::<T>::contracts(1);
         assert_eq!(
             contract.contract_id, 1
         );
     }
 
-    add_nru_reports {
-        let stamp: u64 = 1628082000 * 1000;
-        pallet_timestamp::Pallet::<T>::set_timestamp(stamp.try_into().unwrap());
-
+    add_reports {
         let a1: T::AccountId = account("Alice", 0, 0);
         prepare_farm_and_node::<T>(a1.clone());
 
@@ -61,58 +56,25 @@ benchmarks! {
 
         let mut reports = Vec::new();
 
-        reports.push(types::NruConsumption {
-            contract_id: 1,
-            timestamp: 1628082000 * 1000,
-            window: 1000,
-            nru: 10 * GIGABYTE,
-        });
-
-    }: _ (RawOrigin::Signed(a1.clone()), reports)
-    verify {
-        let contract = SmartContractModule::<T>::contracts(1).unwrap();
-        assert_eq!(
-            contract.contract_id, 1
-        );
-    }
-
-    bill_contract_for_block {
-        let stamp: u64 = 1628082000 * 1000;
-        pallet_timestamp::Pallet::<T>::set_timestamp(stamp.try_into().unwrap());
-        let a1: T::AccountId = account("Alice", 0, 0);
-        prepare_farm_and_node::<T>(a1.clone());
-
-        let caller: T::AccountId = whitelisted_caller();
-        create_twin::<T>(caller.clone());
-        create_contract::<T>(caller.clone());
-
-        let mut reports = Vec::new();
-
+        let gigabyte = 1000 * 1000 * 1000;
         reports.push(types::Consumption {
             contract_id: 1,
             cru: 2,
             hru: 0,
-            mru: 8 * GIGABYTE,
-            sru: 25 * GIGABYTE,
+            mru: 8 * gigabyte,
+            sru: 25 * gigabyte,
             nru: 0,
             timestamp: 0,
         });
 
-        push_contract_resources::<T>(a1.clone());
-
-        let stamp: u64 = 1628082000 * 1000 * 10 * 6000;
-        pallet_timestamp::Pallet::<T>::set_timestamp(stamp.try_into().unwrap());
-        // run_to_block::<T>(10);
-    }: _ (RawOrigin::Signed(a1.clone()), 1)
+    }: _ (RawOrigin::Signed(a1.clone()), reports)
     verify {
-        let contract = SmartContractModule::<T>::contracts(1).unwrap();
+        let contract = SmartContractModule::<T>::contracts(1);
         assert_eq!(
             contract.contract_id, 1
         );
     }
 }
-
-impl_benchmark_test_suite! {Pallet, crate::tests::new_test_ext(), crate::tests::Test}
 
 #[cfg(test)]
 mod benchmarktests {
@@ -124,66 +86,70 @@ mod benchmarktests {
     fn test_benchmarks() {
         new_test_ext().execute_with(|| {
             assert_ok!(test_benchmark_create_node_contract::<TestRuntime>());
-            assert_ok!(test_benchmark_add_nru_reports::<TestRuntime>());
+            assert_ok!(test_benchmark_add_reports::<TestRuntime>());
         });
     }
 }
 
 pub fn create_twin<T: Config>(source: T::AccountId) {
-    assert_ok!(pallet_tfgrid::Pallet::<T>::user_accept_tc(
-        RawOrigin::Signed(source.clone()).into(),
-        get_document_link_input(b"some_link"),
-        get_document_hash_input(b"some_hash"),
-    ));
+    let document = "some_link".as_bytes().to_vec();
+    let hash = "some_hash".as_bytes().to_vec();
 
-    let ip = get_twin_ip_input(b"::1");
-    assert_ok!(pallet_tfgrid::Pallet::<T>::create_twin(
+    pallet_tfgrid::Module::<T>::user_accept_tc(
+        RawOrigin::Signed(source.clone()).into(),
+        document.clone(),
+        hash.clone(),
+    )
+    .unwrap();
+    let ip = "10.2.3.3";
+    pallet_tfgrid::Module::<T>::create_twin(
         RawOrigin::Signed(source).into(),
-        ip
-    ));
+        ip.as_bytes().to_vec(),
+    )
+    .unwrap();
 }
 
 pub fn prepare_farm_and_node<T: Config>(source: T::AccountId) {
     create_twin::<T>(source.clone());
     prepare_farm::<T>(source.clone());
 
-    let resources = ResourcesInput {
-        hru: 1024 * GIGABYTE,
-        sru: 512 * GIGABYTE,
-        cru: 8,
-        mru: 16 * GIGABYTE,
-    };
-
     // random location
-    let location = LocationInput {
-        city: get_city_name_input(b"Ghent"),
-        country: get_country_name_input(b"Belgium"),
-        latitude: get_latitude_input(b"12.233213231"),
-        longitude: get_longitude_input(b"32.323112123"),
+    let location = Location {
+        longitude: "12.233213231".as_bytes().to_vec(),
+        latitude: "32.323112123".as_bytes().to_vec(),
     };
 
-    assert_ok!(pallet_tfgrid::Pallet::<T>::create_node(
-        RawOrigin::Signed(source.clone()).into(),
+    let resources = Resources {
+        hru: 1,
+        sru: 1,
+        cru: 1,
+        mru: 1,
+    };
+
+    let country = "Belgium".as_bytes().to_vec();
+    let city = "Ghent".as_bytes().to_vec();
+    pallet_tfgrid::Module::<T>::create_node(
+        RawOrigin::Signed(source).into(),
         1,
         resources,
         location,
-        Vec::new().try_into().unwrap(),
+        country,
+        city,
+        Vec::new(),
         false,
         false,
-        None,
-    ));
+        "some_serial".as_bytes().to_vec(),
+    )
+    .unwrap();
 }
 
 pub fn prepare_farm<T: Config>(source: T::AccountId) {
-    let farm_name = "testfarm";
+    let farm_name = "test_farm";
     let mut pub_ips = Vec::new();
-    pub_ips.push(IP4 {
-        ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
-        gw: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
-    });
-    pub_ips.push(IP4 {
-        ip: "185.206.122.34/24".as_bytes().to_vec().try_into().unwrap(),
-        gw: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
+    pub_ips.push(PublicIP {
+        ip: "1.1.1.0".as_bytes().to_vec(),
+        gateway: "1.1.1.1".as_bytes().to_vec(),
+        contract_id: 0,
     });
 
     let su_policy = pallet_tfgrid_types::Policy {
@@ -214,7 +180,7 @@ pub fn prepare_farm<T: Config>(source: T::AccountId) {
     let x1 = account("ferdie", 0, 2);
     let x2 = account("eve", 0, 3);
 
-    assert_ok!(pallet_tfgrid::Pallet::<T>::create_pricing_policy(
+    pallet_tfgrid::Module::<T>::create_pricing_policy(
         RawOrigin::Root.into(),
         "policy_1".as_bytes().to_vec(),
         su_policy,
@@ -225,72 +191,24 @@ pub fn prepare_farm<T: Config>(source: T::AccountId) {
         domain_name_policy,
         x1,
         x2,
-        80,
-    ));
+        80
+    )
+    .unwrap();
 
-    assert_ok!(pallet_tfgrid::Pallet::<T>::create_farm(
+    pallet_tfgrid::Module::<T>::create_farm(
         RawOrigin::Signed(source).into(),
-        farm_name.as_bytes().to_vec().try_into().unwrap(),
-        pub_ips.clone().try_into().unwrap(),
-    ));
+        farm_name.as_bytes().to_vec(),
+        pub_ips.clone(),
+    )
+    .unwrap();
 }
 
 pub fn create_contract<T: Config>(source: T::AccountId) {
-    assert_ok!(SmartContractModule::<T>::create_node_contract(
+    SmartContractModule::<T>::create_node_contract(
         RawOrigin::Signed(source).into(),
         1,
-        "858f8fb2184b15ecb8c0be8b95398c81"
-            .as_bytes()
-            .to_vec()
-            .try_into()
-            .unwrap(),
-        "some_data123".as_bytes().to_vec().try_into().unwrap(),
-        0,
-        None,
-    ));
-}
-
-pub fn push_contract_resources<T: Config>(source: T::AccountId) {
-    let contract_resources = vec![types::ContractResources {
-        contract_id: 1,
-        used: Resources {
-            sru: 150 * GIGABYTE,
-            cru: 16,
-            mru: 8 * GIGABYTE,
-            hru: 0,
-        },
-    }];
-
-    assert_ok!(SmartContractModule::<T>::report_contract_resources(
-        RawOrigin::Signed(source).into(),
-        contract_resources,
-    ));
-}
-
-pub(crate) fn get_city_name_input(city_input: &[u8]) -> CityNameInput {
-    BoundedVec::try_from(city_input.to_vec()).expect("Invalid city name input.")
-}
-
-pub(crate) fn get_country_name_input(country_input: &[u8]) -> CountryNameInput {
-    BoundedVec::try_from(country_input.to_vec()).expect("Invalid country name input.")
-}
-
-pub(crate) fn get_latitude_input(latitude_input: &[u8]) -> LatitudeInput {
-    BoundedVec::try_from(latitude_input.to_vec()).expect("Invalid latitude input.")
-}
-
-pub(crate) fn get_longitude_input(longitude_input: &[u8]) -> LongitudeInput {
-    BoundedVec::try_from(longitude_input.to_vec()).expect("Invalid longitude input.")
-}
-
-pub(crate) fn get_document_link_input(document_link_input: &[u8]) -> DocumentLinkInput {
-    BoundedVec::try_from(document_link_input.to_vec()).expect("Invalid document link input.")
-}
-
-pub(crate) fn get_document_hash_input(document_hash_input: &[u8]) -> DocumentHashInput {
-    BoundedVec::try_from(document_hash_input.to_vec()).expect("Invalid document hash input.")
-}
-
-pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {
-    BoundedVec::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
+        "some_data123".as_bytes().to_vec(),
+        "hash123".as_bytes().to_vec(),
+        0
+    ).unwrap()
 }

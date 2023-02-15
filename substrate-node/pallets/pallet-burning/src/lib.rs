@@ -52,7 +52,7 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// Currency type for this pallet.
         type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
         /// Handler for the unbalanced decrement when slashing (burning collateral)
@@ -77,7 +77,6 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::call_index(0)]
         #[pallet::weight(100_000_000)]
         pub fn burn_tft(
             origin: OriginFor<T>,

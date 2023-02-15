@@ -26,22 +26,24 @@ construct_runtime!(
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
+    pub BlockWeights: frame_system::limits::BlockWeights =
+        frame_system::limits::BlockWeights::simple_max(1024);
 }
 
 impl frame_system::Config for TestRuntime {
     type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
-    type RuntimeOrigin = RuntimeOrigin;
+    type Origin = Origin;
     type Index = u64;
-    type RuntimeCall = RuntimeCall;
+    type Call = Call;
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = u64;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type RuntimeEvent = RuntimeEvent;
+    type Event = Event;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
@@ -56,7 +58,7 @@ impl frame_system::Config for TestRuntime {
 }
 
 impl Config for TestRuntime {
-    type RuntimeEvent = RuntimeEvent;
+    type Event = Event;
 }
 
 struct ExternalityBuilder;
@@ -79,7 +81,7 @@ fn test_set_and_get() {
         let value = "nametest";
         // make sure Entry does not exists
         assert_ok!(TFKVStoreModule::set(
-            RuntimeOrigin::signed(1),
+            Origin::signed(1),
             key.as_bytes().to_vec(),
             value.as_bytes().to_vec()
         ));
@@ -87,13 +89,13 @@ fn test_set_and_get() {
         let our_events = System::events();
 
         assert_eq!(
-            our_events.contains(&record(RuntimeEvent::TFKVStoreModule(KvStoreEvent::<
-                TestRuntime,
-            >::EntrySet(
-                1,
-                key.as_bytes().to_vec(),
-                value.as_bytes().to_vec(),
-            )))),
+            our_events.contains(&record(Event::TFKVStoreModule(
+                KvStoreEvent::<TestRuntime>::EntrySet(
+                    1,
+                    key.as_bytes().to_vec(),
+                    value.as_bytes().to_vec(),
+                )
+            ))),
             true
         );
 
@@ -108,7 +110,7 @@ fn test_delete() {
         let key = "Address";
         let value = "Cairo";
         assert_ok!(TFKVStoreModule::set(
-            RuntimeOrigin::signed(1),
+            Origin::signed(1),
             key.as_bytes().to_vec(),
             value.as_bytes().to_vec()
         ));
@@ -116,31 +118,31 @@ fn test_delete() {
         let our_events = System::events();
 
         assert_eq!(
-            our_events.contains(&record(RuntimeEvent::TFKVStoreModule(KvStoreEvent::<
-                TestRuntime,
-            >::EntrySet(
-                1,
-                key.as_bytes().to_vec(),
-                value.as_bytes().to_vec(),
-            )))),
+            our_events.contains(&record(Event::TFKVStoreModule(
+                KvStoreEvent::<TestRuntime>::EntrySet(
+                    1,
+                    key.as_bytes().to_vec(),
+                    value.as_bytes().to_vec(),
+                )
+            ))),
             true
         );
 
         assert_ok!(TFKVStoreModule::delete(
-            RuntimeOrigin::signed(1),
+            Origin::signed(1),
             key.as_bytes().to_vec()
         ));
 
         let our_events = System::events();
 
         assert_eq!(
-            our_events.contains(&record(RuntimeEvent::TFKVStoreModule(KvStoreEvent::<
-                TestRuntime,
-            >::EntryTaken(
-                1,
-                key.as_bytes().to_vec(),
-                value.as_bytes().to_vec(),
-            )))),
+            our_events.contains(&record(Event::TFKVStoreModule(
+                KvStoreEvent::<TestRuntime>::EntryTaken(
+                    1,
+                    key.as_bytes().to_vec(),
+                    value.as_bytes().to_vec(),
+                )
+            ))),
             true
         );
 
@@ -151,7 +153,7 @@ fn test_delete() {
     })
 }
 
-fn record(event: RuntimeEvent) -> EventRecord<RuntimeEvent, H256> {
+fn record(event: Event) -> EventRecord<Event, H256> {
     EventRecord {
         phase: Phase::Initialization,
         event,

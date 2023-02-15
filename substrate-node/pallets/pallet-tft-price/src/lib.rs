@@ -3,11 +3,11 @@
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
-use frame_support::dispatch::{DispatchResultWithPostInfo, Pays};
-use frame_system::offchain::{SendSignedTransaction, SignMessage, Signer};
+use frame_support::{dispatch::DispatchResultWithPostInfo, weights::Pays};
+use frame_system::offchain::{SendSignedTransaction, Signer};
 use log;
 use sp_runtime::offchain::{http, Duration};
-use sp_runtime::traits::{Convert, SaturatedConversion};
+use sp_runtime::traits::SaturatedConversion;
 use sp_std::{boxed::Box, vec::Vec};
 mod ringbuffer;
 use ringbuffer::{RingBufferTrait, RingBufferTransient};
@@ -16,7 +16,7 @@ use serde_json::Value;
 use sp_core::crypto::KeyTypeId;
 use substrate_fixed::types::U32F32;
 
-pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"aura");
+pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"tft!");
 
 const SRC_CODE: &str = "USDC";
 const SRC_ISSUER: &str = "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
@@ -77,19 +77,14 @@ pub mod pallet {
     }
 
     #[pallet::config]
-    pub trait Config:
-        frame_system::Config
-        + CreateSignedTransaction<Call<Self>>
-        + pallet_authorship::Config
-        + pallet_session::Config
-    {
-        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+    pub trait Config: frame_system::Config + CreateSignedTransaction<Call<Self>> {
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         // Add other types and constants required to configure this pallet.
         type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
         type Call: From<Call<Self>>;
         /// Origin for restricted extrinsics
         /// Can be the root or another origin configured in the runtime
-        type RestrictedOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+        type RestrictedOrigin: EnsureOrigin<Self::Origin>;
     }
 
     #[pallet::event]
@@ -110,8 +105,6 @@ pub mod pallet {
         AccountUnauthorizedToSetPrice,
         MaxPriceBelowMinPriceError,
         MinPriceAboveMaxPriceError,
-        IsNotAnAuthority,
-        WrongAuthority,
     }
 
     #[pallet::pallet]
@@ -140,6 +133,10 @@ pub mod pallet {
     pub type BufferRange<T> = StorageValue<_, (BufferIndex, BufferIndex), ValueQuery>;
 
     #[pallet::storage]
+    #[pallet::getter(fn allowed_origin)]
+    pub type AllowedOrigin<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
+
+    #[pallet::storage]
     #[pallet::getter(fn min_tft_price)]
     pub type MinTftPrice<T> = StorageValue<_, u32, ValueQuery>;
 
@@ -149,25 +146,34 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::call_index(0)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
         pub fn set_prices(
             origin: OriginFor<T>,
             price: u32,
             block_number: T::BlockNumber,
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
-
-            ensure!(
-                Self::is_validator(address),
-                Error::<T>::AccountUnauthorizedToSetPrice
-            );
-
-            Self::calculate_and_set_price(price, block_number)
+            if let Some(allowed_origin) = AllowedOrigin::<T>::get() {
+                ensure!(
+                    allowed_origin == address,
+                    Error::<T>::AccountUnauthorizedToSetPrice
+                );
+                Self::calculate_and_set_price(price, block_number)?;
+            }
+            Ok(().into())
         }
 
-        #[pallet::call_index(2)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1))]
+        pub fn set_allowed_origin(
+            origin: OriginFor<T>,
+            target: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            T::RestrictedOrigin::ensure_origin(origin)?;
+            AllowedOrigin::<T>::set(Some(target));
+            Ok(().into())
+        }
+
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
         pub fn set_min_tft_price(origin: OriginFor<T>, price: u32) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
             ensure!(
@@ -178,8 +184,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(3)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
         pub fn set_max_tft_price(origin: OriginFor<T>, price: u32) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
             ensure!(
@@ -203,18 +208,18 @@ pub mod pallet {
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
+        pub allowed_origin: Option<T::AccountId>,
         pub min_tft_price: u32,
         pub max_tft_price: u32,
-        pub _data: PhantomData<T>,
     }
 
     #[cfg(feature = "std")]
     impl<T: Config> Default for GenesisConfig<T> {
         fn default() -> Self {
             Self {
+                allowed_origin: None,
                 min_tft_price: 10,
                 max_tft_price: 1000,
-                _data: PhantomData,
             }
         }
     }
@@ -222,6 +227,7 @@ pub mod pallet {
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
+            AllowedOrigin::<T>::set(self.allowed_origin.clone());
             MinTftPrice::<T>::put(self.min_tft_price);
             MaxTftPrice::<T>::put(self.max_tft_price);
         }
@@ -319,14 +325,6 @@ impl<T: Config> Pallet<T> {
     }
 
     fn offchain_signed_tx(block_number: T::BlockNumber) -> Result<(), Error<T>> {
-        let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::any_account();
-
-        // Only allow the author of the next block to trigger the billing
-        match Self::is_next_block_author(&signer) {
-            Ok(_) => (),
-            Err(_) => return Ok(()),
-        }
-
         let last_block_set: T::BlockNumber = LastBlockSet::<T>::get();
         // Fetch the price every 1 minutes
         if block_number.saturated_into::<u64>() - last_block_set.saturated_into::<u64>() < 10 {
@@ -339,6 +337,8 @@ impl<T: Config> Pallet<T> {
                 return Err(<Error<T>>::ErrFetchingPrice);
             }
         };
+
+        let signer = Signer::<T, T::AuthorityId>::any_account();
 
         let result = signer.send_signed_transaction(|_acct| Call::set_prices {
             price,
@@ -404,53 +404,5 @@ impl<T: Config> Pallet<T> {
         (U32F32::from_num(sum) / U32F32::from_num(items.len()))
             .round()
             .to_num::<u32>()
-    }
-
-    // Validates if the given signer is the next block author based on the validators in session
-    // This can be used if an extrinsic should be refunded by the author in the same block
-    // It also requires that the keytype inserted for the offchain workers is the validator key
-    fn is_next_block_author(
-        signer: &Signer<T, <T as Config>::AuthorityId>,
-    ) -> Result<(), Error<T>> {
-        let author = <pallet_authorship::Pallet<T>>::author();
-        let validators = <pallet_session::Pallet<T>>::validators();
-
-        // Sign some arbitrary data in order to get the AccountId, maybe there is another way to do this?
-        let signed_message = signer.sign_message(&[0]);
-        if let Some(signed_message_data) = signed_message {
-            if let Some(block_author) = author {
-                let validator =
-                    <T as pallet_session::Config>::ValidatorIdOf::convert(block_author.clone())
-                        .ok_or(Error::<T>::IsNotAnAuthority)?;
-
-                let validator_count = validators.len();
-                let author_index = (validators.iter().position(|a| a == &validator).unwrap_or(0)
-                    + 1)
-                    % validator_count;
-
-                let signer_validator_account =
-                    <T as pallet_session::Config>::ValidatorIdOf::convert(
-                        signed_message_data.0.id.clone(),
-                    )
-                    .ok_or(Error::<T>::IsNotAnAuthority)?;
-
-                if signer_validator_account != validators[author_index] {
-                    return Err(Error::<T>::WrongAuthority);
-                }
-            }
-        }
-
-        Ok(().into())
-    }
-
-    fn is_validator(account: T::AccountId) -> bool {
-        let validators = <pallet_session::Pallet<T>>::validators();
-
-        validators.iter().any(|validator| {
-            match <T as pallet_session::Config>::ValidatorIdOf::convert(account.clone()) {
-                Some(signer) => &signer == validator,
-                None => false,
-            }
-        })
     }
 }

@@ -7,17 +7,15 @@ use sp_std::prelude::*;
 
 use codec::Encode;
 use frame_support::dispatch::DispatchErrorWithPostInfo;
-use frame_support::{
-    dispatch::Pays, ensure, pallet_prelude::DispatchResultWithPostInfo, traits::EnsureOrigin,
-    BoundedVec,
-};
+use frame_support::{ensure, traits::ConstU32, traits::EnsureOrigin, BoundedVec};
 use frame_system::{self as system, ensure_signed};
 use hex::FromHex;
 use pallet_timestamp as timestamp;
 use sp_runtime::SaturatedConversion;
+use tfchain_support::types::PublicIP;
 use tfchain_support::{
-    resources::Resources,
-    types::{Interface, PublicIP},
+    resources,
+    types::{Interface, Node, PublicConfig, IP},
 };
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
@@ -34,11 +32,11 @@ pub mod weights;
 pub mod types;
 
 pub mod farm;
+pub mod farm_migration;
 pub mod interface;
-// pub mod ip;
-pub mod migrations;
-pub mod node;
-pub mod terms_cond;
+pub mod nodes_migration;
+pub mod pub_config;
+pub mod pub_ip;
 pub mod twin;
 
 // Definition of the pallet logic, to be aggregated at runtime definition
@@ -54,12 +52,10 @@ pub mod pallet {
     use pallet_timestamp as timestamp;
     use sp_std::{convert::TryInto, fmt::Debug, vec::Vec};
     use tfchain_support::{
-        resources::Resources,
-        traits::{ChangeNode, PublicIpModifier},
+        traits::ChangeNode,
         types::{
-            Farm, FarmCertification, FarmingPolicyLimit, Interface, Node, NodeCertification,
-            PublicConfig, PublicIP, IP4, MAX_DOMAIN_NAME_LENGTH, MAX_GW4_LENGTH, MAX_GW6_LENGTH,
-            MAX_IP4_LENGTH, MAX_IP6_LENGTH,
+            Farm, FarmCertification, FarmingPolicyLimit, Interface, Location, Node,
+            NodeCertification, PublicConfig, PublicIP, Resources, IP,
         },
     };
 
@@ -84,21 +80,19 @@ pub mod pallet {
     // Concrete Farm Name type
     pub type FarmNameOf<T> = <T as Config>::FarmName;
 
-    // Input type for IP4 (IP & GW)
-    pub type Ip4Input = BoundedVec<u8, ConstU32<{ MAX_IP4_LENGTH }>>;
-    pub type Gw4Input = BoundedVec<u8, ConstU32<{ MAX_GW4_LENGTH }>>;
+    // Input type for public ip
+    pub type PublicIpIpInput = BoundedVec<u8, ConstU32<{ pub_ip::MAX_IP_LENGTH }>>;
+    pub type PublicIpGatewayInput = BoundedVec<u8, ConstU32<{ pub_ip::MAX_GATEWAY_LENGTH }>>;
+    pub type FarmPublicIpInput = types::PublicIpInput<PublicIpIpInput, PublicIpGatewayInput>;
 
-    // Input type for IP6 (IP & GW)
-    pub type Ip6Input = BoundedVec<u8, ConstU32<{ MAX_IP6_LENGTH }>>;
-    pub type Gw6Input = BoundedVec<u8, ConstU32<{ MAX_GW6_LENGTH }>>;
+    // Concrete type for Public IP type
+    pub type PublicIpOf<T> = PublicIP<<T as Config>::PublicIP, <T as Config>::GatewayIP>;
 
     // Input type for public ip list
-    pub type PublicIpListInput<T> = BoundedVec<IP4, <T as Config>::MaxFarmPublicIps>;
-    // Concrete type for public ip list type
-    pub type PublicIpListOf = BoundedVec<PublicIP, ConstU32<256>>;
+    pub type PublicIpListInput<T> = BoundedVec<FarmPublicIpInput, <T as Config>::MaxFarmPublicIps>;
 
     // Farm information type
-    pub type FarmInfoOf<T> = Farm<<T as Config>::FarmName>;
+    pub type FarmInfoOf<T> = Farm<<T as Config>::FarmName, PublicIpOf<T>>;
 
     #[pallet::storage]
     #[pallet::getter(fn farms)]
@@ -117,59 +111,49 @@ pub mod pallet {
     pub type FarmPayoutV2AddressByFarmID<T: Config> =
         StorageMap<_, Blake2_128Concat, u32, Vec<u8>, ValueQuery>;
 
-    pub type DomainInput = BoundedVec<u8, ConstU32<{ MAX_DOMAIN_NAME_LENGTH }>>;
+    // Input type for public config
+    pub type PubConfigIP4Input = IP<
+        BoundedVec<u8, ConstU32<{ pub_config::MAX_IP_LENGTH }>>,
+        BoundedVec<u8, ConstU32<{ pub_config::MAX_GATEWAY_LENGTH }>>,
+    >;
+    pub type PubConfigIP6Input = IP<
+        BoundedVec<u8, ConstU32<{ pub_config::MAX_IP6_LENGTH }>>,
+        BoundedVec<u8, ConstU32<{ pub_config::MAX_GW6_LENGTH }>>,
+    >;
+    pub type PubConfigInput = PublicConfig<
+        PubConfigIP4Input,
+        Option<PubConfigIP6Input>,
+        Option<BoundedVec<u8, ConstU32<{ pub_config::MAX_DOMAIN_NAME_LENGTH }>>>,
+    >;
+    // Concrete public config type
+    pub type Ip4ConfigOf<T> = IP<<T as Config>::IP4, <T as Config>::GW4>;
+    pub type Ip6ConfigOf<T> = IP<<T as Config>::IP6, <T as Config>::GW6>;
+    pub type PubConfigOf<T> =
+        PublicConfig<Ip4ConfigOf<T>, Option<Ip6ConfigOf<T>>, Option<<T as Config>::Domain>>;
+
     // Input type for interfaces
-    pub type InterfaceNameInput = BoundedVec<u8, ConstU32<{ interface::MAX_INTF_NAME_LENGTH }>>;
-    pub type InterfaceMacInput = BoundedVec<u8, ConstU32<{ interface::INTERFACE_MAC_LENGTH }>>;
     pub type InterfaceIpInput = BoundedVec<u8, ConstU32<{ interface::MAX_INTERFACE_IP_LENGTH }>>;
     pub type InterfaceIpsInput<T> =
         BoundedVec<InterfaceIpInput, <T as Config>::MaxInterfacesLength>;
     pub type InterfaceInput<T> = BoundedVec<
-        Interface<InterfaceNameInput, InterfaceMacInput, InterfaceIpsInput<T>>,
+        Interface<
+            BoundedVec<u8, ConstU32<{ interface::MAX_INTF_NAME_LENGTH }>>,
+            BoundedVec<u8, ConstU32<{ interface::INTERFACE_MAC_LENGTH }>>,
+            InterfaceIpsInput<T>,
+        >,
         <T as Config>::MaxInterfaceIpsLength,
     >;
     // Concrete type for interfaces
-    pub type InterfaceNameOf<T> = <T as Config>::InterfaceName;
-    pub type InterfaceMacOf<T> = <T as Config>::InterfaceMac;
-    pub type InterfaceIpOf<T> = <T as Config>::InterfaceIP;
-    pub type InterfaceIpsOf<T> = BoundedVec<InterfaceIpOf<T>, <T as Config>::MaxInterfaceIpsLength>;
-    pub type InterfaceOf<T> = Interface<InterfaceNameOf<T>, InterfaceMacOf<T>, InterfaceIpsOf<T>>;
-
-    // Input type for location
-    pub type CityNameInput = BoundedVec<u8, ConstU32<{ node::MAX_CITY_NAME_LENGTH }>>;
-    pub type CountryNameInput = BoundedVec<u8, ConstU32<{ node::MAX_COUNTRY_NAME_LENGTH }>>;
-    pub type LatitudeInput = BoundedVec<u8, ConstU32<{ node::MAX_LATITUDE_LENGTH }>>;
-    pub type LongitudeInput = BoundedVec<u8, ConstU32<{ node::MAX_LONGITUDE_LENGTH }>>;
-    pub type LocationInput =
-        types::LocationInput<CityNameInput, CountryNameInput, LatitudeInput, LongitudeInput>;
-    // Concrete type for location
-    pub type CityNameOf<T> = <T as Config>::CityName;
-    pub type CountryNameOf<T> = <T as Config>::CountryName;
-    pub type LocationOf<T> = <T as Config>::Location;
-
-    // Input type for serial number
-    pub type SerialNumberInput = BoundedVec<u8, ConstU32<{ node::MAX_SERIAL_NUMBER_LENGTH }>>;
-    // Concrete type for location
-    pub type SerialNumberOf<T> = <T as Config>::SerialNumber;
-
-    // Input type for resources
-    pub type ResourcesInput = Resources;
-
-    // Input type for terms and conditions
-    pub type DocumentLinkInput = BoundedVec<u8, ConstU32<{ terms_cond::MAX_DOCUMENT_LINK_LENGTH }>>;
-    pub type DocumentHashInput = BoundedVec<u8, ConstU32<{ terms_cond::MAX_DOCUMENT_HASH_LENGTH }>>;
-    pub type TermsAndConditionsInput<T> =
-        types::TermsAndConditionsInput<AccountIdOf<T>, DocumentLinkInput, DocumentHashInput>;
-
-    // Concrete type for node
-    pub type TfgridNode<T> = Node<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>>;
-
-    // Concrete type for entity
-    pub type TfgridEntity<T> = types::Entity<AccountIdOf<T>, CityNameOf<T>, CountryNameOf<T>>;
+    pub type InterfaceIp<T> = <T as Config>::InterfaceIP;
+    pub type InterfaceIpsOf<T> =
+        BoundedVec<<T as Config>::InterfaceIP, <T as Config>::MaxInterfaceIpsLength>;
+    pub type InterfaceOf<T> =
+        Interface<<T as Config>::InterfaceName, <T as Config>::InterfaceMac, InterfaceIpsOf<T>>;
 
     #[pallet::storage]
     #[pallet::getter(fn nodes)]
-    pub type Nodes<T> = StorageMap<_, Blake2_128Concat, u32, TfgridNode<T>, OptionQuery>;
+    pub type Nodes<T> =
+        StorageMap<_, Blake2_128Concat, u32, Node<PubConfigOf<T>, InterfaceOf<T>>, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn node_by_twin_id)]
@@ -178,7 +162,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn entities)]
     pub type Entities<T: Config> =
-        StorageMap<_, Blake2_128Concat, u32, TfgridEntity<T>, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, u32, types::Entity<T::AccountId>, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn entities_by_pubkey_id)]
@@ -190,9 +174,9 @@ pub mod pallet {
     pub type EntityIdByName<T> = StorageMap<_, Blake2_128Concat, Vec<u8>, u32, ValueQuery>;
 
     pub type TwinIndex = u32;
-    pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+    type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     type TwinInfoOf<T> = types::Twin<<T as Config>::TwinIp, AccountIdOf<T>>;
-    pub type TwinIpInput = BoundedVec<u8, ConstU32<{ twin::MAX_IP_LENGTH }>>;
+    pub type TwinIpInput = BoundedVec<u8, ConstU32<39>>;
     pub type TwinIpOf<T> = <T as Config>::TwinIp;
 
     #[pallet::storage]
@@ -219,13 +203,15 @@ pub mod pallet {
     pub type FarmingPoliciesMap<T: Config> =
         StorageMap<_, Blake2_128Concat, u32, types::FarmingPolicy<T::BlockNumber>, ValueQuery>;
 
-    // Concrete type for location
-    pub type TermsAndConditionsOf<T> = <T as Config>::TermsAndConditions;
-
     #[pallet::storage]
     #[pallet::getter(fn users_terms_and_condition)]
-    pub type UsersTermsAndConditions<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, Vec<TermsAndConditionsOf<T>>, OptionQuery>;
+    pub type UsersTermsAndConditions<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        T::AccountId,
+        Vec<types::TermsAndConditions<T::AccountId>>,
+        OptionQuery,
+    >;
 
     #[pallet::storage]
     #[pallet::getter(fn allowed_node_certifiers)]
@@ -269,48 +255,103 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_timestamp::Config {
-        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
         /// Origin for restricted extrinsics
         /// Can be the root or another origin configured in the runtime
-        type RestrictedOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+        type RestrictedOrigin: EnsureOrigin<Self::Origin>;
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
 
-        type NodeChanged: ChangeNode<
-            super::LocationOf<Self>,
-            super::InterfaceOf<Self>,
-            super::SerialNumberOf<Self>,
-        >;
+        type NodeChanged: ChangeNode<super::PubConfigOf<Self>, super::InterfaceOf<Self>>;
 
-        type PublicIpModifier: PublicIpModifier;
-
-        /// The type of terms and conditions.
-        type TermsAndConditions: FullCodec
-            + Debug
-            + PartialEq
-            + Clone
-            + TypeInfo
-            + TryFrom<TermsAndConditionsInput<Self>, Error = Error<Self>>
-            + MaxEncodedLen;
-
-        /// The type of a twin IP.
+        /// The type of a name.
         type TwinIp: FullCodec
             + Debug
             + PartialEq
             + Clone
             + TypeInfo
-            + TryFrom<TwinIpInput, Error = Error<Self>>
+            + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
-        /// The type of a farm name.
+        /// The type of a name.
         type FarmName: FullCodec
             + Debug
             + PartialEq
             + Clone
             + TypeInfo
-            + TryFrom<FarmNameInput<Self>, Error = Error<Self>>
+            + TryFrom<Vec<u8>, Error = Error<Self>>
             + Into<Vec<u8>>
+            + MaxEncodedLen;
+
+        /// The type of a name.
+        type PublicIP: FullCodec
+            + Debug
+            + PartialEq
+            + Eq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        /// The type of a name.
+        type GatewayIP: FullCodec
+            + Debug
+            + PartialEq
+            + Eq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        /// The type of a name.
+        type IP4: FullCodec
+            + Debug
+            + PartialEq
+            + Eq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        /// The type of a name.
+        type GW4: FullCodec
+            + Debug
+            + PartialEq
+            + Eq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        /// The type of a name.
+        type IP6: FullCodec
+            + Debug
+            + PartialEq
+            + Eq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        /// The type of a name.
+        type GW6: FullCodec
+            + Debug
+            + PartialEq
+            + Eq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
+            + MaxEncodedLen;
+
+        /// The type of a name.
+        type Domain: FullCodec
+            + Debug
+            + PartialEq
+            + Eq
+            + Clone
+            + TypeInfo
+            + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of an interface name.
@@ -320,7 +361,7 @@ pub mod pallet {
             + Eq
             + Clone
             + TypeInfo
-            + TryFrom<InterfaceNameInput, Error = Error<Self>>
+            + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of an interface mac address.
@@ -330,7 +371,7 @@ pub mod pallet {
             + Eq
             + Clone
             + TypeInfo
-            + TryFrom<InterfaceMacInput, Error = Error<Self>>
+            + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of an interface IP.
@@ -340,47 +381,7 @@ pub mod pallet {
             + Eq
             + Clone
             + TypeInfo
-            + TryFrom<InterfaceIpInput, Error = Error<Self>>
-            + MaxEncodedLen;
-
-        /// The type of a city name.
-        type CityName: FullCodec
-            + Debug
-            + Default
-            + PartialEq
-            + Clone
-            + TypeInfo
-            + TryFrom<CityNameInput, Error = Error<Self>>
-            + MaxEncodedLen;
-
-        /// The type of a country name.
-        type CountryName: FullCodec
-            + Debug
-            + Default
-            + PartialEq
-            + Clone
-            + TypeInfo
-            + TryFrom<CountryNameInput, Error = Error<Self>>
-            + MaxEncodedLen;
-
-        /// The type of a location.
-        type Location: FullCodec
-            + Debug
-            + Default
-            + PartialEq
-            + Clone
-            + TypeInfo
-            + TryFrom<LocationInput, Error = Error<Self>>
-            + MaxEncodedLen;
-
-        /// The type of a serial number.
-        type SerialNumber: FullCodec
-            + Debug
-            + Default
-            + PartialEq
-            + Clone
-            + TypeInfo
-            + TryFrom<SerialNumberInput, Error = Error<Self>>
+            + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
         #[pallet::constant]
@@ -403,14 +404,14 @@ pub mod pallet {
         FarmUpdated(FarmInfoOf<T>),
         FarmDeleted(u32),
 
-        NodeStored(TfgridNode<T>),
-        NodeUpdated(TfgridNode<T>),
+        NodeStored(Node<pallet::PubConfigOf<T>, pallet::InterfaceOf<T>>),
+        NodeUpdated(Node<pallet::PubConfigOf<T>, pallet::InterfaceOf<T>>),
         NodeDeleted(u32),
         NodeUptimeReported(u32, u64, u64),
-        NodePublicConfigStored(u32, Option<pallet::PublicConfig>),
+        NodePublicConfigStored(u32, Option<pallet::PubConfigOf<T>>),
 
-        EntityStored(TfgridEntity<T>),
-        EntityUpdated(TfgridEntity<T>),
+        EntityStored(types::Entity<T::AccountId>),
+        EntityUpdated(types::Entity<T::AccountId>),
         EntityDeleted(u32),
 
         TwinStored(types::Twin<T::TwinIp, T::AccountId>),
@@ -466,7 +467,7 @@ pub mod pallet {
         EntityWithSignatureAlreadyExists,
         CannotUpdateEntity,
         CannotDeleteEntity,
-        SignatureLengthIsIncorrect,
+        SignatureLenghtIsIncorrect,
 
         TwinExists,
         TwinNotExists,
@@ -499,70 +500,38 @@ pub mod pallet {
         FarmNameTooShort,
         FarmNameTooLong,
         InvalidPublicIP,
-        PublicIPTooShort,
-        PublicIPTooLong,
-        GatewayIPTooShort,
-        GatewayIPTooLong,
+        PublicIPToShort,
+        PublicIPToLong,
+        GatewayIPToShort,
+        GatewayIPToLong,
 
-        IP4TooShort,
-        IP4TooLong,
+        IP4ToShort,
+        IP4ToLong,
         InvalidIP4,
-        GW4TooShort,
-        GW4TooLong,
+        GW4ToShort,
+        GW4ToLong,
         InvalidGW4,
-        IP6TooShort,
-        IP6TooLong,
+        IP6ToShort,
+        IP6ToLong,
         InvalidIP6,
-        GW6TooShort,
-        GW6TooLong,
+        GW6ToShort,
+        GW6ToLong,
         InvalidGW6,
-        DomainTooShort,
-        DomainTooLong,
+        DomainToShort,
+        DomainToLong,
         InvalidDomain,
         MethodIsDeprecated,
-        InterfaceNameTooShort,
-        InterfaceNameTooLong,
+        InterfaceNameToShort,
+        InterfaceNameToLong,
         InvalidInterfaceName,
-        InterfaceMacTooShort,
-        InterfaceMacTooLong,
+        InterfaceMacToShort,
+        InterfaceMacToLong,
         InvalidMacAddress,
-        InterfaceIpTooShort,
-        InterfaceIpTooLong,
+        InterfaceIpToShort,
+        InterfaceIpToLong,
         InvalidInterfaceIP,
         InvalidZosVersion,
         FarmingPolicyExpired,
-
-        InvalidHRUInput,
-        InvalidSRUInput,
-        InvalidCRUInput,
-        InvalidMRUInput,
-
-        LatitudeInputTooShort,
-        LatitudeInputTooLong,
-        InvalidLatitudeInput,
-        LongitudeInputTooShort,
-        LongitudeInputTooLong,
-        InvalidLongitudeInput,
-        CountryNameTooShort,
-        CountryNameTooLong,
-        InvalidCountryName,
-        CityNameTooShort,
-        CityNameTooLong,
-        InvalidCityName,
-        InvalidCountryCityPair,
-
-        SerialNumberTooShort,
-        SerialNumberTooLong,
-        InvalidSerialNumber,
-
-        DocumentLinkInputTooShort,
-        DocumentLinkInputTooLong,
-        InvalidDocumentLinkInput,
-        DocumentHashInputTooShort,
-        DocumentHashInputTooLong,
-        InvalidDocumentHashInput,
-
-        InvalidPublicConfig,
     }
 
     #[pallet::genesis_config]
@@ -733,8 +702,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::call_index(0)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn set_storage_version(
             origin: OriginFor<T>,
             version: types::StorageVersion,
@@ -746,8 +714,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(1)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn create_farm(
             origin: OriginFor<T>,
             name: FarmNameInput<T>,
@@ -755,9 +722,13 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
-            let mut id = FarmID::<T>::get();
-            id = id + 1;
+            let farm_name = FarmNameOf::<T>::try_from(name.clone().to_vec())
+                .map_err(DispatchErrorWithPostInfo::from)?;
 
+            ensure!(
+                !FarmIdByName::<T>::contains_key(name.clone()),
+                Error::<T>::FarmExists
+            );
             let twin_id = TwinIdByAccountID::<T>::get(&address).ok_or(Error::<T>::TwinNotExists)?;
             let twin = Twins::<T>::get(twin_id).ok_or(Error::<T>::TwinNotExists)?;
             ensure!(
@@ -765,11 +736,8 @@ pub mod pallet {
                 Error::<T>::CannotCreateFarmWrongTwin
             );
 
-            ensure!(
-                !FarmIdByName::<T>::contains_key(name.clone()),
-                Error::<T>::FarmExists
-            );
-            let farm_name = Self::get_farm_name(name.clone())?;
+            let mut id = FarmID::<T>::get();
+            id = id + 1;
 
             let public_ips_list = Self::get_public_ips(public_ips)?;
 
@@ -786,7 +754,7 @@ pub mod pallet {
             };
 
             Farms::<T>::insert(id, &new_farm);
-            FarmIdByName::<T>::insert(name.to_vec(), id);
+            FarmIdByName::<T>::insert(name.to_vec().clone(), id);
             FarmID::<T>::put(id);
 
             Self::deposit_event(Event::FarmStored(new_farm));
@@ -794,8 +762,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(2)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(3).ref_time() + T::DbWeight::get().reads(2).ref_time())]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2))]
         pub fn update_farm(
             origin: OriginFor<T>,
             id: u32,
@@ -803,7 +770,8 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
-            let new_farm_name = Self::get_farm_name(name.clone())?;
+            let new_farm_name = FarmNameOf::<T>::try_from(name.to_vec())
+                .map_err(DispatchErrorWithPostInfo::from)?;
 
             let twin_id = TwinIdByAccountID::<T>::get(&address).ok_or(Error::<T>::TwinNotExists)?;
 
@@ -836,8 +804,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(3)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(2).ref_time())]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2))]
         pub fn add_stellar_payout_v2address(
             origin: OriginFor<T>,
             farm_id: u32,
@@ -864,8 +831,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(4)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
         pub fn set_farm_certification(
             origin: OriginFor<T>,
             farm_id: u32,
@@ -884,13 +850,12 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(5)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(2).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2))]
         pub fn add_farm_ip(
             origin: OriginFor<T>,
             id: u32,
-            ip: Ip4Input,
-            gw: Gw4Input,
+            ip: PublicIpIpInput,
+            gateway: PublicIpGatewayInput,
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
@@ -902,13 +867,15 @@ pub mod pallet {
                 Error::<T>::CannotUpdateFarmWrongTwin
             );
 
-            // Check if it's a valid IP4
-            let ip4 = IP4 { ip, gw };
-            ip4.is_valid().map_err(|_| Error::<T>::InvalidPublicIP)?;
+            let parsed_ip = <T as Config>::PublicIP::try_from(ip.into_inner())
+                .map_err(DispatchErrorWithPostInfo::from)?;
+
+            let parsed_gateway = <T as Config>::GatewayIP::try_from(gateway.into_inner())
+                .map_err(DispatchErrorWithPostInfo::from)?;
 
             let new_ip = PublicIP {
-                ip: ip4.ip,
-                gateway: ip4.gw,
+                ip: parsed_ip,
+                gateway: parsed_gateway,
                 contract_id: 0,
             };
 
@@ -919,10 +886,9 @@ pub mod pallet {
             {
                 Some(_) => return Err(Error::<T>::IpExists.into()),
                 None => {
-                    stored_farm
-                        .public_ips
-                        .try_push(new_ip)
-                        .map_err(|_| Error::<T>::InvalidPublicIP)?;
+                    stored_farm.public_ips.try_push(new_ip).or_else(|_| {
+                        return Err(DispatchErrorWithPostInfo::from(Error::<T>::InvalidPublicIP));
+                    })?;
                     Farms::<T>::insert(stored_farm.id, &stored_farm);
                     Self::deposit_event(Event::FarmUpdated(stored_farm));
                     return Ok(().into());
@@ -930,12 +896,11 @@ pub mod pallet {
             };
         }
 
-        #[pallet::call_index(6)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(2).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2))]
         pub fn remove_farm_ip(
             origin: OriginFor<T>,
             id: u32,
-            ip: Ip4Input,
+            ip: PublicIpIpInput,
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
@@ -947,10 +912,13 @@ pub mod pallet {
                 Error::<T>::CannotUpdateFarmWrongTwin
             );
 
+            let parsed_ip = <T as Config>::PublicIP::try_from(ip.into_inner())
+                .map_err(DispatchErrorWithPostInfo::from)?;
+
             match stored_farm
                 .public_ips
                 .iter()
-                .position(|pubip| pubip.ip == ip && pubip.contract_id == 0)
+                .position(|pubip| pubip.ip == parsed_ip && pubip.contract_id == 0)
             {
                 Some(index) => {
                     stored_farm.public_ips.remove(index);
@@ -962,23 +930,23 @@ pub mod pallet {
             }
         }
 
-        #[pallet::call_index(7)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2).ref_time() + T::DbWeight::get().reads(2).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2) + T::DbWeight::get().reads(2))]
         pub fn delete_farm(_origin: OriginFor<T>, _id: u32) -> DispatchResultWithPostInfo {
             Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
         }
 
-        #[pallet::call_index(8)]
         #[pallet::weight(<T as Config>::WeightInfo::create_node())]
         pub fn create_node(
             origin: OriginFor<T>,
             farm_id: u32,
-            resources: ResourcesInput,
-            location: LocationInput,
+            resources: Resources,
+            location: Location,
+            country: Vec<u8>,
+            city: Vec<u8>,
             interfaces: InterfaceInput<T>,
             secure_boot: bool,
             virtualized: bool,
-            serial_number: Option<SerialNumberInput>,
+            serial_number: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -995,18 +963,10 @@ pub mod pallet {
                 Error::<T>::NodeWithTwinIdExists
             );
 
-            let mut id = NodeID::<T>::get();
-            id = id + 1;
-
-            let node_resources = Self::get_resources(resources)?;
-            let node_location = Self::get_location(location)?;
             let node_interfaces = Self::get_interfaces(&interfaces)?;
 
-            let node_serial_number = if let Some(serial_input) = serial_number {
-                Some(Self::get_serial_number(serial_input)?)
-            } else {
-                None
-            };
+            let mut id = NodeID::<T>::get();
+            id = id + 1;
 
             let created = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
@@ -1015,8 +975,10 @@ pub mod pallet {
                 id,
                 farm_id,
                 twin_id,
-                resources: node_resources,
-                location: node_location,
+                resources,
+                location,
+                country,
+                city,
                 public_config: None,
                 created,
                 farming_policy_id: 0,
@@ -1024,7 +986,7 @@ pub mod pallet {
                 certification: NodeCertification::default(),
                 secure_boot,
                 virtualized,
-                serial_number: node_serial_number,
+                serial_number,
                 connection_price: ConnectionPrice::<T>::get(),
             };
 
@@ -1047,18 +1009,19 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(9)]
         #[pallet::weight(<T as Config>::WeightInfo::update_node())]
         pub fn update_node(
             origin: OriginFor<T>,
             node_id: u32,
             farm_id: u32,
-            resources: ResourcesInput,
-            location: LocationInput,
-            interfaces: InterfaceInput<T>,
+            resources: Resources,
+            location: Location,
+            country: Vec<u8>,
+            city: Vec<u8>,
+            interfaces: Vec<pallet::InterfaceOf<T>>,
             secure_boot: bool,
             virtualized: bool,
-            serial_number: Option<SerialNumberInput>,
+            serial_number: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1091,18 +1054,8 @@ pub mod pallet {
                 NodesByFarmID::<T>::insert(farm_id, nodes_by_farm);
             };
 
-            let node_resources = Self::get_resources(resources)?;
-            let node_location = Self::get_location(location)?;
-            let node_interfaces = Self::get_interfaces(&interfaces)?;
-
-            let node_serial_number = if let Some(serial_input) = serial_number {
-                Some(Self::get_serial_number(serial_input)?)
-            } else {
-                None
-            };
-
             // If the resources on a certified node changed, reset the certification level to DIY
-            if Resources::has_changed(&stored_node.resources, &node_resources, 1)
+            if stored_node.resources != resources
                 && stored_node.certification == NodeCertification::Certified
             {
                 stored_node.certification = NodeCertification::Diy;
@@ -1113,12 +1066,14 @@ pub mod pallet {
             }
 
             stored_node.farm_id = farm_id;
-            stored_node.resources = node_resources;
-            stored_node.location = node_location;
-            stored_node.interfaces = node_interfaces;
+            stored_node.resources = resources;
+            stored_node.location = location;
+            stored_node.country = country;
+            stored_node.city = city;
+            stored_node.interfaces = interfaces;
             stored_node.secure_boot = secure_boot;
             stored_node.virtualized = virtualized;
-            stored_node.serial_number = node_serial_number;
+            stored_node.serial_number = serial_number;
 
             // override node in storage
             Nodes::<T>::insert(stored_node.id, &stored_node);
@@ -1130,8 +1085,7 @@ pub mod pallet {
             Ok(Pays::No.into())
         }
 
-        #[pallet::call_index(10)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
         pub fn set_node_certification(
             origin: OriginFor<T>,
             node_id: u32,
@@ -1168,7 +1122,6 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(11)]
         #[pallet::weight(<T as Config>::WeightInfo::report_uptime())]
         pub fn report_uptime(origin: OriginFor<T>, uptime: u64) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
@@ -1191,13 +1144,12 @@ pub mod pallet {
             Ok(Pays::No.into())
         }
 
-        #[pallet::call_index(12)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(3).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(3))]
         pub fn add_node_public_config(
             origin: OriginFor<T>,
             farm_id: u32,
             node_id: u32,
-            public_config: Option<PublicConfig>,
+            public_config: Option<PubConfigInput>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1219,11 +1171,9 @@ pub mod pallet {
             ensure!(node.farm_id == farm_id, Error::<T>::NodeUpdateNotAuthorized);
 
             if let Some(config) = public_config {
-                config
-                    .is_valid()
-                    .map_err(|_| Error::<T>::InvalidPublicConfig)?;
+                let pub_config = Self::get_public_config(config)?;
                 // update the public config and save
-                node.public_config = Some(config);
+                node.public_config = Some(pub_config);
             } else {
                 node.public_config = None;
             }
@@ -1234,8 +1184,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(13)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(2).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2))]
         pub fn delete_node(origin: OriginFor<T>, id: u32) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1261,17 +1210,19 @@ pub mod pallet {
 
             Self::deposit_event(Event::NodeDeleted(id));
 
+            // Call node deleted
+            T::NodeChanged::node_deleted(&stored_node);
+
             Ok(().into())
         }
 
-        #[pallet::call_index(14)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(4).ref_time() + T::DbWeight::get().reads(3).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(4) + T::DbWeight::get().reads(3))]
         pub fn create_entity(
             origin: OriginFor<T>,
             target: T::AccountId,
             name: Vec<u8>,
-            country: CountryNameInput,
-            city: CityNameInput,
+            country: Vec<u8>,
+            city: Vec<u8>,
             signature: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             let _ = ensure_signed(origin)?;
@@ -1286,7 +1237,7 @@ pub mod pallet {
             );
             ensure!(
                 signature.len() == 128,
-                Error::<T>::SignatureLengthIsIncorrect
+                Error::<T>::SignatureLenghtIsIncorrect
             );
             let decoded_signature_as_byteslice =
                 <[u8; 64]>::from_hex(signature.clone()).expect("Decoding failed");
@@ -1303,12 +1254,12 @@ pub mod pallet {
             let mut id = EntityID::<T>::get();
             id = id + 1;
 
-            let entity = TfgridEntity::<T> {
+            let entity = types::Entity::<T::AccountId> {
                 version: TFGRID_ENTITY_VERSION,
                 id,
                 name: name.clone(),
-                country: Self::get_country_name(country)?,
-                city: Self::get_city_name(city)?,
+                country,
+                city,
                 account_id: target.clone(),
             };
 
@@ -1322,13 +1273,12 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(15)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(3).ref_time() + T::DbWeight::get().reads(3).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(3))]
         pub fn update_entity(
             origin: OriginFor<T>,
             name: Vec<u8>,
-            country: CountryNameInput,
-            city: CityNameInput,
+            country: Vec<u8>,
+            city: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1356,8 +1306,8 @@ pub mod pallet {
             EntityIdByName::<T>::remove(&stored_entity.name);
 
             stored_entity.name = name.clone();
-            stored_entity.country = Self::get_country_name(country)?;
-            stored_entity.city = Self::get_city_name(city)?;
+            stored_entity.country = country;
+            stored_entity.city = city;
 
             // overwrite entity
             Entities::<T>::insert(&stored_entity_id, &stored_entity);
@@ -1371,8 +1321,7 @@ pub mod pallet {
         }
 
         // TODO: delete all object that have an entity id reference?
-        #[pallet::call_index(16)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(3).ref_time() + T::DbWeight::get().reads(2).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2))]
         pub fn delete_entity(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1401,7 +1350,6 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(17)]
         #[pallet::weight(<T as Config>::WeightInfo::create_twin())]
         pub fn create_twin(origin: OriginFor<T>, ip: TwinIpInput) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
@@ -1419,7 +1367,7 @@ pub mod pallet {
             let mut twin_id = TwinID::<T>::get();
             twin_id = twin_id + 1;
 
-            let twin_ip = Self::get_twin_ip(ip)?;
+            let twin_ip = Self::check_twin_ip(ip)?;
 
             let twin = types::Twin::<T::TwinIp, T::AccountId> {
                 version: TFGRID_TWIN_VERSION,
@@ -1440,8 +1388,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(18)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(3).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(3))]
         pub fn update_twin(origin: OriginFor<T>, ip: TwinIpInput) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1456,7 +1403,7 @@ pub mod pallet {
                 Error::<T>::UnauthorizedToUpdateTwin
             );
 
-            let twin_ip = Self::get_twin_ip(ip)?;
+            let twin_ip = Self::check_twin_ip(ip)?;
 
             twin.ip = twin_ip;
 
@@ -1467,8 +1414,7 @@ pub mod pallet {
         }
 
         // Method for twins only
-        #[pallet::call_index(19)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(2).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2))]
         pub fn add_twin_entity(
             origin: OriginFor<T>,
             twin_id: u32,
@@ -1523,8 +1469,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(20)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
         pub fn delete_twin_entity(
             origin: OriginFor<T>,
             twin_id: u32,
@@ -1559,8 +1504,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(21)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2) + T::DbWeight::get().reads(1))]
         pub fn delete_twin(origin: OriginFor<T>, twin_id: u32) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1581,8 +1525,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(22)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(3).ref_time() + T::DbWeight::get().reads(2).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2))]
         pub fn create_pricing_policy(
             origin: OriginFor<T>,
             name: Vec<u8>,
@@ -1629,8 +1572,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(23)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(4).ref_time() + T::DbWeight::get().reads(2).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(4) + T::DbWeight::get().reads(2))]
         pub fn update_pricing_policy(
             origin: OriginFor<T>,
             id: u32,
@@ -1684,8 +1626,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(24)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2).ref_time() + T::DbWeight::get().reads(3).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2) + T::DbWeight::get().reads(3))]
         pub fn create_farming_policy(
             origin: OriginFor<T>,
             name: Vec<u8>,
@@ -1732,24 +1673,21 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(25)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(2).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(2))]
         pub fn user_accept_tc(
             origin: OriginFor<T>,
-            document_link: DocumentLinkInput,
-            document_hash: DocumentHashInput,
+            document_link: Vec<u8>,
+            document_hash: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             let timestamp = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
-            let input = TermsAndConditionsInput::<T> {
+            let t_and_c = types::TermsAndConditions {
                 account_id: account_id.clone(),
                 timestamp,
                 document_link,
                 document_hash,
             };
-
-            let t_and_c = Self::get_terms_and_conditions(input)?;
 
             let mut users_terms_and_condition =
                 UsersTermsAndConditions::<T>::get(account_id.clone()).unwrap_or(vec![]);
@@ -1759,8 +1697,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(26)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2).ref_time() + T::DbWeight::get().reads(5).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2) + T::DbWeight::get().reads(5))]
         pub fn delete_node_farm(origin: OriginFor<T>, node_id: u32) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1794,13 +1731,15 @@ pub mod pallet {
             Nodes::<T>::remove(node_id);
             NodeIdByTwinID::<T>::remove(node.twin_id);
 
+            // Call node deleted
+            T::NodeChanged::node_deleted(&node);
+
             Self::deposit_event(Event::NodeDeleted(node_id));
 
             Ok(().into())
         }
 
-        #[pallet::call_index(27)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(3).ref_time() + T::DbWeight::get().reads(2).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(3) + T::DbWeight::get().reads(2))]
         pub fn set_farm_dedicated(
             origin: OriginFor<T>,
             farm_id: u32,
@@ -1817,22 +1756,24 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(28)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
         pub fn force_reset_farm_ip(
             origin: OriginFor<T>,
             farm_id: u32,
-            ip: Ip4Input,
+            ip: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
 
             ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
             let mut stored_farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
+            let parsed_ip =
+                <T as Config>::PublicIP::try_from(ip).map_err(DispatchErrorWithPostInfo::from)?;
+
             match stored_farm
                 .public_ips
                 .iter_mut()
-                .find(|pubip| pubip.ip == ip)
+                .find(|pubip| pubip.ip == parsed_ip)
             {
                 Some(ip) => {
                     ip.contract_id = 0;
@@ -1847,8 +1788,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(29)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
         pub fn set_connection_price(
             origin: OriginFor<T>,
             price: u32,
@@ -1862,8 +1802,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(30)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
         pub fn add_node_certifier(
             origin: OriginFor<T>,
             who: T::AccountId,
@@ -1891,8 +1830,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(31)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
         pub fn remove_node_certifier(
             origin: OriginFor<T>,
             who: T::AccountId,
@@ -1912,8 +1850,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(32)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
         pub fn update_farming_policy(
             origin: OriginFor<T>,
             id: u32,
@@ -1955,8 +1892,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(33)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
         pub fn attach_policy_to_farm(
             origin: OriginFor<T>,
             farm_id: u32,
@@ -2011,8 +1947,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(34)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1) + T::DbWeight::get().reads(1))]
         pub fn set_zos_version(
             origin: OriginFor<T>,
             zos_version: Vec<u8>,
@@ -2033,11 +1968,17 @@ pub mod pallet {
     }
 }
 
+use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 // Internal functions of the pallet
 impl<T: Config> Pallet<T> {
     pub fn verify_signature(signature: [u8; 64], target: &T::AccountId, payload: &Vec<u8>) -> bool {
-        Self::verify_ed_signature(signature, target, payload)
-            || Self::verify_sr_signature(signature, target, payload)
+        if Self::verify_ed_signature(signature, target, payload) {
+            return true;
+        } else if Self::verify_sr_signature(signature, target, payload) {
+            return true;
+        }
+
+        false
     }
 
     fn verify_ed_signature(signature: [u8; 64], target: &T::AccountId, payload: &Vec<u8>) -> bool {
@@ -2073,7 +2014,7 @@ impl<T: Config> Pallet<T> {
     }
 
     fn get_farming_policy(
-        node: &TfgridNode<T>,
+        node: &Node<pallet::PubConfigOf<T>, pallet::InterfaceOf<T>>,
     ) -> Result<types::FarmingPolicy<T::BlockNumber>, DispatchErrorWithPostInfo> {
         let mut farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
@@ -2097,7 +2038,7 @@ impl<T: Config> Pallet<T> {
 
                 match limits.cu {
                     Some(cu_limit) => {
-                        let cu = node.resources.get_cu();
+                        let cu = resources::get_cu(node.resources);
                         if cu > cu_limit {
                             return Self::get_default_farming_policy();
                         }
@@ -2108,7 +2049,7 @@ impl<T: Config> Pallet<T> {
 
                 match limits.su {
                     Some(su_limit) => {
-                        let su = node.resources.get_su();
+                        let su = resources::get_su(node.resources);
                         if su > su_limit {
                             return Self::get_default_farming_policy();
                         }
@@ -2192,104 +2133,57 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    fn get_terms_and_conditions(
-        terms_cond: TermsAndConditionsInput<T>,
-    ) -> Result<TermsAndConditionsOf<T>, DispatchErrorWithPostInfo> {
-        let parsed_terms_cond = <T as Config>::TermsAndConditions::try_from(terms_cond)?;
-        Ok(parsed_terms_cond)
+    fn check_twin_ip(ip: TwinIpInput) -> Result<TwinIpOf<T>, DispatchErrorWithPostInfo> {
+        let ip = TwinIpOf::<T>::try_from(ip.to_vec()).map_err(DispatchErrorWithPostInfo::from)?;
+
+        Ok(ip)
     }
 
-    fn get_twin_ip(ip: TwinIpInput) -> Result<TwinIpOf<T>, DispatchErrorWithPostInfo> {
-        let ip_parsed = <T as Config>::TwinIp::try_from(ip)?;
-        Ok(ip_parsed)
-    }
+    fn get_public_config(config: pallet::PubConfigInput) -> Result<PubConfigOf<T>, Error<T>> {
+        let ipv4 = <T as Config>::IP4::try_from(config.ip4.ip.into_inner())?;
+        let gw4 = <T as Config>::GW4::try_from(config.ip4.gw.into_inner())?;
 
-    fn get_farm_name(name: FarmNameInput<T>) -> Result<FarmNameOf<T>, DispatchErrorWithPostInfo> {
-        let name_parsed = <T as Config>::FarmName::try_from(name)?;
-        Ok(name_parsed)
-    }
+        let mut pub_config = PublicConfig {
+            ip4: IP { ip: ipv4, gw: gw4 },
+            ip6: None,
+            domain: None,
+        };
 
-    fn get_public_ips(
-        public_ips: PublicIpListInput<T>,
-    ) -> Result<PublicIpListOf, DispatchErrorWithPostInfo> {
-        let mut public_ips_list: PublicIpListOf =
-            vec![].try_into().map_err(|_| Error::<T>::InvalidPublicIP)?;
+        if let Some(ipv6_config) = config.ip6 {
+            let ipv6 = <T as Config>::IP6::try_from(ipv6_config.ip.into_inner())?;
+            let gw6 = <T as Config>::GW6::try_from(ipv6_config.gw.into_inner())?;
 
-        for ip in public_ips {
-            let pub_ip = PublicIP {
-                ip: ip.ip,
-                gateway: ip.gw,
-                contract_id: 0,
-            };
-
-            if public_ips_list.contains(&pub_ip) {
-                return Err(DispatchErrorWithPostInfo::from(Error::<T>::IpExists));
-            }
-
-            public_ips_list
-                .try_push(pub_ip)
-                .map_err(|_| Error::<T>::InvalidPublicIP)?;
+            pub_config.ip6 = Some(IP { ip: ipv6, gw: gw6 });
         }
 
-        Ok(public_ips_list)
-    }
+        if let Some(domain) = config.domain {
+            let p_domain = <T as Config>::Domain::try_from(domain.into_inner())?;
+            pub_config.domain = Some(p_domain)
+        }
 
-    pub fn get_resources(
-        resources: pallet::ResourcesInput,
-    ) -> Result<Resources, DispatchErrorWithPostInfo> {
-        ensure!(resources.validate_hru(), Error::<T>::InvalidHRUInput);
-        ensure!(resources.validate_sru(), Error::<T>::InvalidSRUInput);
-        ensure!(resources.validate_cru(), Error::<T>::InvalidCRUInput);
-        ensure!(resources.validate_mru(), Error::<T>::InvalidMRUInput);
-
-        Ok(resources)
-    }
-
-    fn get_interface_name(
-        if_name: InterfaceNameInput,
-    ) -> Result<InterfaceNameOf<T>, DispatchErrorWithPostInfo> {
-        let if_name_parsed = <T as Config>::InterfaceName::try_from(if_name)?;
-        Ok(if_name_parsed)
-    }
-
-    fn get_interface_mac(
-        if_mac: InterfaceMacInput,
-    ) -> Result<InterfaceMacOf<T>, DispatchErrorWithPostInfo> {
-        let if_mac_parsed = <T as Config>::InterfaceMac::try_from(if_mac)?;
-        Ok(if_mac_parsed)
-    }
-
-    fn get_interface_ip(
-        if_ip: InterfaceIpInput,
-    ) -> Result<InterfaceIpOf<T>, DispatchErrorWithPostInfo> {
-        let if_ip_parsed = <T as Config>::InterfaceIP::try_from(if_ip)?;
-        Ok(if_ip_parsed)
+        Ok(pub_config)
     }
 
     fn get_interfaces(
-        interfaces: &InterfaceInput<T>,
-    ) -> Result<Vec<InterfaceOf<T>>, DispatchErrorWithPostInfo> {
+        interfaces: &pallet::InterfaceInput<T>,
+    ) -> Result<Vec<InterfaceOf<T>>, Error<T>> {
         let mut parsed_interfaces = Vec::new();
         if interfaces.len() == 0 {
             return Ok(parsed_interfaces);
         }
 
         for intf in interfaces.iter() {
-            let intf_name = Self::get_interface_name(intf.name.clone())?;
-            let intf_mac = Self::get_interface_mac(intf.mac.clone())?;
+            let intf_name = <T as Config>::InterfaceName::try_from(intf.name.to_vec())?;
+            let intf_mac = <T as Config>::InterfaceMac::try_from(intf.mac.to_vec())?;
 
             let mut parsed_interfaces_ips: BoundedVec<
-                InterfaceIpOf<T>,
+                InterfaceIp<T>,
                 <T as Config>::MaxInterfaceIpsLength,
-            > = vec![]
-                .try_into()
-                .map_err(|_| Error::<T>::InvalidInterfaceIP)?;
+            > = vec![].try_into().unwrap();
 
             for ip in intf.ips.iter() {
-                let intf_ip = Self::get_interface_ip(ip.clone())?;
-                parsed_interfaces_ips
-                    .try_push(intf_ip)
-                    .map_err(|_| Error::<T>::InvalidInterfaceIP)?;
+                let intf_ip = <T as Config>::InterfaceIP::try_from(ip.to_vec())?;
+                let _ = parsed_interfaces_ips.try_push(intf_ip);
             }
 
             parsed_interfaces.push(Interface {
@@ -2302,35 +2196,46 @@ impl<T: Config> Pallet<T> {
         Ok(parsed_interfaces)
     }
 
-    pub fn get_city_name(city: CityNameInput) -> Result<CityNameOf<T>, DispatchErrorWithPostInfo> {
-        let parsed_city = <T as Config>::CityName::try_from(city)?;
-        Ok(parsed_city)
-    }
+    fn get_public_ips(
+        public_ips: pallet::PublicIpListInput<T>,
+    ) -> Result<BoundedVec<PublicIpOf<T>, ConstU32<256>>, Error<T>> {
+        let mut public_ips_list: BoundedVec<PublicIP<T::PublicIP, T::GatewayIP>, ConstU32<256>> =
+            vec![].try_into().unwrap();
 
-    pub fn get_country_name(
-        country: CountryNameInput,
-    ) -> Result<CountryNameOf<T>, DispatchErrorWithPostInfo> {
-        let parsed_country = <T as Config>::CountryName::try_from(country)?;
-        Ok(parsed_country)
-    }
+        for ip in public_ips {
+            let public_ip_ip = <T as Config>::PublicIP::try_from(ip.ip.into_inner())?;
+            let public_ip_gateway = <T as Config>::GatewayIP::try_from(ip.gw.into_inner())?;
 
-    pub fn get_location(
-        location: pallet::LocationInput,
-    ) -> Result<LocationOf<T>, DispatchErrorWithPostInfo> {
-        let parsed_location = <T as Config>::Location::try_from(location)?;
-        Ok(parsed_location)
-    }
+            if public_ips_list.contains(&PublicIP {
+                ip: public_ip_ip.clone(),
+                gateway: public_ip_gateway.clone(),
+                contract_id: 0,
+            }) {
+                return Err(Error::<T>::IpExists);
+            }
 
-    fn get_serial_number(
-        serial_number: pallet::SerialNumberInput,
-    ) -> Result<SerialNumberOf<T>, DispatchErrorWithPostInfo> {
-        let parsed_serial_number = <T as Config>::SerialNumber::try_from(serial_number)?;
-        Ok(parsed_serial_number)
+            public_ips_list
+                .try_push(PublicIP {
+                    ip: public_ip_ip,
+                    gateway: public_ip_gateway,
+                    contract_id: 0,
+                })
+                .or_else(|_| {
+                    return Err(DispatchErrorWithPostInfo::from(Error::<T>::InvalidPublicIP));
+                })
+                .ok();
+        }
+
+        Ok(public_ips_list)
     }
 }
 
-impl<T: Config> tfchain_support::traits::Tfgrid<T::AccountId, T::FarmName> for Pallet<T> {
-    fn get_farm(farm_id: u32) -> Option<tfchain_support::types::Farm<T::FarmName>> {
+impl<T: Config> tfchain_support::traits::Tfgrid<T::AccountId, T::FarmName, pallet::PublicIpOf<T>>
+    for Pallet<T>
+{
+    fn get_farm(
+        farm_id: u32,
+    ) -> Option<tfchain_support::types::Farm<T::FarmName, pallet::PublicIpOf<T>>> {
         Farms::<T>::get(farm_id)
     }
 

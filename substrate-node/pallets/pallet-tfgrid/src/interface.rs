@@ -1,11 +1,13 @@
-use crate::{Config, Error, InterfaceIpInput, InterfaceMacInput, InterfaceNameInput};
+use sp_std::{marker::PhantomData, vec::Vec};
+
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
 };
 use scale_info::TypeInfo;
-use sp_std::marker::PhantomData;
 use valip::{ip4::Ip as IPv4, ip6::Ip as IPv6, mac::Mac};
+
+use crate::{Config, Error};
 
 /// An Interface Name.
 #[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -16,29 +18,27 @@ pub struct InterfaceName<T: Config>(
     PhantomData<(T, ConstU32<MAX_INTF_NAME_LENGTH>)>,
 );
 
-pub const MIN_INTF_NAME_LENGTH: u32 = 3;
+pub const MIN_INTF_NAME_LENGHT: u32 = 3;
 pub const MAX_INTF_NAME_LENGTH: u32 = 20;
 
-impl<T: Config> TryFrom<InterfaceNameInput> for InterfaceName<T> {
+impl<T: Config> TryFrom<Vec<u8>> for InterfaceName<T> {
     type Error = Error<T>;
 
     /// Fallible initialization from a provided byte vector if it is below the
     /// minimum or exceeds the maximum allowed length or contains invalid ASCII
     /// characters.
-    fn try_from(value: InterfaceNameInput) -> Result<Self, Self::Error> {
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         ensure!(
-            value.len() >= MIN_INTF_NAME_LENGTH.saturated_into(),
-            Self::Error::InterfaceNameTooShort
+            value.len() >= MIN_INTF_NAME_LENGHT.saturated_into(),
+            Self::Error::InterfaceNameToShort
         );
-        ensure!(
-            value.len() <= MAX_INTF_NAME_LENGTH.saturated_into(),
-            Self::Error::InterfaceNameTooLong
-        );
+        let bounded_vec: BoundedVec<u8, ConstU32<MAX_INTF_NAME_LENGTH>> =
+            BoundedVec::try_from(value.clone()).map_err(|_| Self::Error::InterfaceNameToLong)?;
         ensure!(
             validate_interface_name(&value),
             Self::Error::InvalidInterfaceName
         );
-        Ok(Self(value, PhantomData))
+        Ok(Self(bounded_vec, PhantomData))
     }
 }
 
@@ -74,23 +74,24 @@ pub struct InterfaceMac<T: Config>(
 
 pub const INTERFACE_MAC_LENGTH: u32 = 17;
 
-impl<T: Config> TryFrom<InterfaceMacInput> for InterfaceMac<T> {
+impl<T: Config> TryFrom<Vec<u8>> for InterfaceMac<T> {
     type Error = Error<T>;
 
     /// Fallible initialization from a provided byte vector if it is below the
     /// minimum or exceeds the maximum allowed length or contains invalid ASCII
     /// characters.
-    fn try_from(value: InterfaceMacInput) -> Result<Self, Self::Error> {
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         ensure!(
             value.len() >= INTERFACE_MAC_LENGTH.saturated_into(),
-            Self::Error::InterfaceMacTooShort
+            Self::Error::InterfaceMacToShort
         );
+        let bounded_vec: BoundedVec<u8, ConstU32<INTERFACE_MAC_LENGTH>> =
+            BoundedVec::try_from(value).map_err(|_| Self::Error::InterfaceMacToLong)?;
         ensure!(
-            value.len() <= INTERFACE_MAC_LENGTH.saturated_into(),
-            Self::Error::InterfaceMacTooLong
+            Mac::parse(&bounded_vec).is_ok(),
+            Self::Error::InvalidMacAddress
         );
-        ensure!(Mac::parse(&value).is_ok(), Self::Error::InvalidMacAddress);
-        Ok(Self(value, PhantomData))
+        Ok(Self(bounded_vec, PhantomData))
     }
 }
 
@@ -118,29 +119,27 @@ pub struct InterfaceIp<T: Config>(
     PhantomData<(T, ConstU32<MAX_INTERFACE_IP_LENGTH>)>,
 );
 
-pub const MIN_INTERFACE_IP_LENGTH: u32 = 7;
 pub const MAX_INTERFACE_IP_LENGTH: u32 = 42;
+pub const MIN_INTERFACE_IP_LENGTH: u32 = 7;
 
-impl<T: Config> TryFrom<InterfaceIpInput> for InterfaceIp<T> {
+impl<T: Config> TryFrom<Vec<u8>> for InterfaceIp<T> {
     type Error = Error<T>;
 
     /// Fallible initialization from a provided byte vector if it is below the
     /// minimum or exceeds the maximum allowed length or contains invalid ASCII
     /// characters.
-    fn try_from(value: InterfaceIpInput) -> Result<Self, Self::Error> {
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         ensure!(
             value.len() >= MIN_INTERFACE_IP_LENGTH.saturated_into(),
-            Self::Error::InterfaceIpTooShort
+            Self::Error::InterfaceIpToShort
         );
+        let bounded_vec: BoundedVec<u8, ConstU32<MAX_INTERFACE_IP_LENGTH>> =
+            BoundedVec::try_from(value).map_err(|_| Self::Error::InterfaceIpToLong)?;
         ensure!(
-            value.len() <= MAX_INTERFACE_IP_LENGTH.saturated_into(),
-            Self::Error::InterfaceIpTooLong
-        );
-        ensure!(
-            IPv4::parse(&value).is_ok() || IPv6::parse(&value).is_ok(),
+            IPv4::parse(&bounded_vec).is_ok() || IPv6::parse(&bounded_vec).is_ok(),
             Self::Error::InvalidInterfaceIP
         );
-        Ok(Self(value, PhantomData))
+        Ok(Self(bounded_vec, PhantomData))
     }
 }
 
