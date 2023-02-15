@@ -1,23 +1,26 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
-
 use crate::Pallet as SmartContractModule;
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
+use pallet_tfgrid::{
+    types::{self as pallet_tfgrid_types, LocationInput},
+    CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, LatitudeInput,
+    LongitudeInput, PkInput, RelayInput, ResourcesInput,
+};
+use sp_runtime::traits::Bounded;
 use sp_std::{
     convert::{TryFrom, TryInto},
     fmt::Debug,
     vec,
 };
-
-use pallet_tfgrid::{
-    types::{self as pallet_tfgrid_types, LocationInput},
-    CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, LatitudeInput,
-    LongitudeInput, ResourcesInput, TwinIpInput,
+use tfchain_support::{
+    resources::Resources,
+    types::{FarmCertification, NodeCertification, IP4},
 };
-use tfchain_support::{resources::Resources, types::IP4};
+
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 
 benchmarks! {
@@ -29,15 +32,15 @@ benchmarks! {
 
     create_node_contract {
         let a1: T::AccountId = account("Alice", 0, 0);
-        prepare_farm_and_node::<T>(a1);
+        prepare_farm_with_node::<T>(a1);
 
         let caller: T::AccountId = whitelisted_caller();
         create_twin::<T>(caller.clone());
     }: _ (RawOrigin::Signed(
         caller.clone()),
         1,
-        "858f8fb2184b15ecb8c0be8b95398c81".as_bytes().to_vec().try_into().unwrap(),
-        "some_data".as_bytes().to_vec().try_into().unwrap(),
+        b"858f8fb2184b15ecb8c0be8b95398c81".to_vec().try_into().unwrap(),
+        b"some_data".to_vec().try_into().unwrap(),
         1,
         None
     )
@@ -53,7 +56,7 @@ benchmarks! {
         pallet_timestamp::Pallet::<T>::set_timestamp(stamp.try_into().unwrap());
 
         let a1: T::AccountId = account("Alice", 0, 0);
-        prepare_farm_and_node::<T>(a1.clone());
+        prepare_farm_with_node::<T>(a1.clone());
 
         let caller: T::AccountId = whitelisted_caller();
         create_twin::<T>(caller.clone());
@@ -80,7 +83,7 @@ benchmarks! {
         let stamp: u64 = 1628082000 * 1000;
         pallet_timestamp::Pallet::<T>::set_timestamp(stamp.try_into().unwrap());
         let a1: T::AccountId = account("Alice", 0, 0);
-        prepare_farm_and_node::<T>(a1.clone());
+        prepare_farm_with_node::<T>(a1.clone());
 
         let caller: T::AccountId = whitelisted_caller();
         create_twin::<T>(caller.clone());
@@ -110,23 +113,80 @@ benchmarks! {
             contract.contract_id, 1
         );
     }
+
+    // Calling the `impl_benchmark_test_suite` macro inside the `benchmarks`
+    // block will generate one #[test] function per benchmark
+    impl_benchmark_test_suite! (SmartContractModule, crate::mock::new_test_ext(), crate::mock::TestRuntime)
 }
 
-impl_benchmark_test_suite! {Pallet, crate::tests::new_test_ext(), crate::tests::Test}
+pub fn prepare_farm_with_node<T: Config>(source: T::AccountId) {
+    create_pricing_policy::<T>();
+    create_farming_policy::<T>();
+    create_twin::<T>(source.clone());
+    create_farm::<T>(source.clone());
+    create_node::<T>(source.clone());
+}
 
-#[cfg(test)]
-mod benchmarktests {
-    use super::*;
-    use crate::mock::{new_test_ext, TestRuntime};
-    use frame_support::assert_ok;
+fn create_pricing_policy<T: Config>() {
+    let su_policy = pallet_tfgrid_types::Policy {
+        value: 194400,
+        unit: pallet_tfgrid_types::Unit::Gigabytes,
+    };
+    let nu_policy = pallet_tfgrid_types::Policy {
+        value: 50000,
+        unit: pallet_tfgrid_types::Unit::Gigabytes,
+    };
+    let cu_policy = pallet_tfgrid_types::Policy {
+        value: 305600,
+        unit: pallet_tfgrid_types::Unit::Gigabytes,
+    };
+    let ipu_policy = pallet_tfgrid_types::Policy {
+        value: 69400,
+        unit: pallet_tfgrid_types::Unit::Gigabytes,
+    };
+    let unique_name_policy = pallet_tfgrid_types::Policy {
+        value: 13900,
+        unit: pallet_tfgrid_types::Unit::Gigabytes,
+    };
+    let domain_name_policy = pallet_tfgrid_types::Policy {
+        value: 27800,
+        unit: pallet_tfgrid_types::Unit::Gigabytes,
+    };
 
-    #[test]
-    fn test_benchmarks() {
-        new_test_ext().execute_with(|| {
-            assert_ok!(test_benchmark_create_node_contract::<TestRuntime>());
-            assert_ok!(test_benchmark_add_nru_reports::<TestRuntime>());
-        });
-    }
+    let x1 = account("Ferdie", 0, 2);
+    let x2 = account("Eve", 0, 3);
+
+    assert_ok!(pallet_tfgrid::Pallet::<T>::create_pricing_policy(
+        RawOrigin::Root.into(),
+        b"policy_1".to_vec(),
+        su_policy,
+        cu_policy,
+        nu_policy,
+        ipu_policy,
+        unique_name_policy,
+        domain_name_policy,
+        x1,
+        x2,
+        80,
+    ));
+}
+
+fn create_farming_policy<T: Config>() {
+    let name = b"fp".to_vec();
+    assert_ok!(pallet_tfgrid::Pallet::<T>::create_farming_policy(
+        RawOrigin::Root.into(),
+        name,
+        12,
+        15,
+        10,
+        8,
+        9999,
+        <T as frame_system::Config>::BlockNumber::max_value(),
+        true,
+        true,
+        NodeCertification::Diy,
+        FarmCertification::NotCertified,
+    ));
 }
 
 pub fn create_twin<T: Config>(source: T::AccountId) {
@@ -136,17 +196,37 @@ pub fn create_twin<T: Config>(source: T::AccountId) {
         get_document_hash_input(b"some_hash"),
     ));
 
-    let ip = get_twin_ip_input(b"::1");
+    let relay = get_relay_input(b"somerelay.io");
+    let pk =
+        get_public_key_input(b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901");
+
     assert_ok!(pallet_tfgrid::Pallet::<T>::create_twin(
         RawOrigin::Signed(source).into(),
-        ip
+        relay,
+        pk
     ));
 }
 
-pub fn prepare_farm_and_node<T: Config>(source: T::AccountId) {
-    create_twin::<T>(source.clone());
-    prepare_farm::<T>(source.clone());
+pub fn create_farm<T: Config>(source: T::AccountId) {
+    let farm_name = b"testfarm";
+    let mut pub_ips = Vec::new();
+    pub_ips.push(IP4 {
+        ip: b"185.206.122.33/24".to_vec().try_into().unwrap(),
+        gw: b"185.206.122.1".to_vec().try_into().unwrap(),
+    });
+    pub_ips.push(IP4 {
+        ip: b"185.206.122.34/24".to_vec().try_into().unwrap(),
+        gw: b"185.206.122.1".to_vec().try_into().unwrap(),
+    });
 
+    assert_ok!(pallet_tfgrid::Pallet::<T>::create_farm(
+        RawOrigin::Signed(source).into(),
+        farm_name.to_vec().try_into().unwrap(),
+        pub_ips.clone().try_into().unwrap(),
+    ));
+}
+
+pub fn create_node<T: Config>(source: T::AccountId) {
     let resources = ResourcesInput {
         hru: 1024 * GIGABYTE,
         sru: 512 * GIGABYTE,
@@ -174,73 +254,11 @@ pub fn prepare_farm_and_node<T: Config>(source: T::AccountId) {
     ));
 }
 
-pub fn prepare_farm<T: Config>(source: T::AccountId) {
-    let farm_name = "testfarm";
-    let mut pub_ips = Vec::new();
-    pub_ips.push(IP4 {
-        ip: "185.206.122.33/24".as_bytes().to_vec().try_into().unwrap(),
-        gw: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
-    });
-    pub_ips.push(IP4 {
-        ip: "185.206.122.34/24".as_bytes().to_vec().try_into().unwrap(),
-        gw: "185.206.122.1".as_bytes().to_vec().try_into().unwrap(),
-    });
-
-    let su_policy = pallet_tfgrid_types::Policy {
-        value: 194400,
-        unit: pallet_tfgrid_types::Unit::Gigabytes,
-    };
-    let nu_policy = pallet_tfgrid_types::Policy {
-        value: 50000,
-        unit: pallet_tfgrid_types::Unit::Gigabytes,
-    };
-    let cu_policy = pallet_tfgrid_types::Policy {
-        value: 305600,
-        unit: pallet_tfgrid_types::Unit::Gigabytes,
-    };
-    let ipu_policy = pallet_tfgrid_types::Policy {
-        value: 69400,
-        unit: pallet_tfgrid_types::Unit::Gigabytes,
-    };
-    let unique_name_policy = pallet_tfgrid_types::Policy {
-        value: 13900,
-        unit: pallet_tfgrid_types::Unit::Gigabytes,
-    };
-    let domain_name_policy = pallet_tfgrid_types::Policy {
-        value: 27800,
-        unit: pallet_tfgrid_types::Unit::Gigabytes,
-    };
-
-    let x1 = account("ferdie", 0, 2);
-    let x2 = account("eve", 0, 3);
-
-    assert_ok!(pallet_tfgrid::Pallet::<T>::create_pricing_policy(
-        RawOrigin::Root.into(),
-        "policy_1".as_bytes().to_vec(),
-        su_policy,
-        cu_policy,
-        nu_policy,
-        ipu_policy,
-        unique_name_policy,
-        domain_name_policy,
-        x1,
-        x2,
-        80,
-    ));
-
-    assert_ok!(pallet_tfgrid::Pallet::<T>::create_farm(
-        RawOrigin::Signed(source).into(),
-        farm_name.as_bytes().to_vec().try_into().unwrap(),
-        pub_ips.clone().try_into().unwrap(),
-    ));
-}
-
 pub fn create_contract<T: Config>(source: T::AccountId) {
     assert_ok!(SmartContractModule::<T>::create_node_contract(
         RawOrigin::Signed(source).into(),
         1,
-        "858f8fb2184b15ecb8c0be8b95398c81"
-            .as_bytes()
+        b"858f8fb2184b15ecb8c0be8b95398c81"
             .to_vec()
             .try_into()
             .unwrap(),
@@ -291,6 +309,10 @@ pub(crate) fn get_document_hash_input(document_hash_input: &[u8]) -> DocumentHas
     BoundedVec::try_from(document_hash_input.to_vec()).expect("Invalid document hash input.")
 }
 
-pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {
-    BoundedVec::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
+pub(crate) fn get_relay_input(relay_input: &[u8]) -> RelayInput {
+    Some(BoundedVec::try_from(relay_input.to_vec()).expect("Invalid relay input."))
+}
+
+pub(crate) fn get_public_key_input(pk_input: &[u8]) -> PkInput {
+    Some(BoundedVec::try_from(pk_input.to_vec()).expect("Invalid document public key input."))
 }
