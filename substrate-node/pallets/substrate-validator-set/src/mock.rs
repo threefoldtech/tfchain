@@ -155,26 +155,24 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 parameter_types! {
     pub const MinimumPeriod: u64 = 5;
     pub const BlockHashCount: u64 = 250;
-    pub BlockWeights: frame_system::limits::BlockWeights =
-        frame_system::limits::BlockWeights::simple_max(1024);
 }
 
 impl frame_system::Config for Test {
     type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
-    type DbWeight = ();
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     type Index = u64;
+    type RuntimeCall = RuntimeCall;
     type BlockNumber = u64;
-    type Call = Call;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = u64;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
+    type DbWeight = ();
     type Version = ();
     type PalletInfo = PalletInfo;
     type AccountData = ();
@@ -192,7 +190,7 @@ parameter_types! {
 
 impl validator_set::Config for Test {
     type AddRemoveOrigin = EnsureRoot<Self::AccountId>;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type MinAuthorities = MinAuthorities;
 }
 
@@ -205,5 +203,5 @@ impl pallet_session::Config for Test {
     type SessionHandler = TestSessionHandler;
     type Keys = MockSessionKeys;
     type WeightInfo = ();
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
 }

@@ -1,22 +1,22 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "128"]
 
-use pallet_tfgrid::pallet::{InterfaceOf, PubConfigOf};
+use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf, TfgridNode};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
 use frame_support::{
     dispatch::{
-        DispatchError, DispatchResult, DispatchResultWithPostInfo, Dispatchable, PostDispatchInfo,
+        DispatchError, DispatchResult, DispatchResultWithPostInfo, Dispatchable, GetDispatchInfo,
+        PostDispatchInfo,
     },
     ensure,
     traits::{EnsureOrigin, Get},
-    weights::{GetDispatchInfo, Weight},
+    weights::Weight,
 };
 use tfchain_support::{
-    constants, resources,
+    constants,
     traits::{ChangeNode, Tfgrid},
-    types::{Node, Resources},
 };
 
 pub use pallet::*;
@@ -44,9 +44,7 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
     use pallet_tfgrid::farm::FarmName;
-    use pallet_tfgrid::pub_ip::{GatewayIP, PublicIP};
     use sp_std::convert::TryInto;
-    use tfchain_support::types::PublicIP as SupportPublicIP;
 
     #[pallet::config]
     pub trait Config:
@@ -55,12 +53,12 @@ pub mod pallet {
         + pallet_tfgrid::Config
     {
         /// Because this pallet emits events, it depends on the runtime's definition of an event
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-        type CouncilOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+        type CouncilOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// The outer call dispatch type.
         type Proposal: Parameter
-            + Dispatchable<Origin = Self::Origin, PostInfo = PostDispatchInfo>
+            + Dispatchable<RuntimeOrigin = Self::RuntimeOrigin, PostInfo = PostDispatchInfo>
             + From<frame_system::Call<Self>>
             + GetDispatchInfo;
 
@@ -70,12 +68,8 @@ pub mod pallet {
         /// The minimum amount of vetos to dissaprove a proposal
         type MinVetos: Get<u32>;
 
-        type Tfgrid: Tfgrid<
-            Self::AccountId,
-            FarmName<Self>,
-            SupportPublicIP<PublicIP<Self>, GatewayIP<Self>>,
-        >;
-        type NodeChanged: ChangeNode<PubConfigOf<Self>, InterfaceOf<Self>>;
+        type Tfgrid: Tfgrid<Self::AccountId, FarmName<Self>>;
+        type NodeChanged: ChangeNode<LocationOf<Self>, InterfaceOf<Self>, SerialNumberOf<Self>>;
 
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
@@ -193,6 +187,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
         #[pallet::weight((<T as pallet::Config>::WeightInfo::propose(), DispatchClass::Operational))]
         pub fn propose(
             origin: OriginFor<T>,
@@ -259,6 +254,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(1)]
         #[pallet::weight((<T as pallet::Config>::WeightInfo::vote(), DispatchClass::Operational))]
         pub fn vote(
             origin: OriginFor<T>,
@@ -339,6 +335,7 @@ pub mod pallet {
             }
         }
 
+        #[pallet::call_index(2)]
         #[pallet::weight((<T as pallet::Config>::WeightInfo::vote(), DispatchClass::Operational))]
         pub fn veto(origin: OriginFor<T>, proposal_hash: T::Hash) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
@@ -373,6 +370,7 @@ pub mod pallet {
             return Ok(Pays::No.into());
         }
 
+        #[pallet::call_index(3)]
         #[pallet::weight((<T as pallet::Config>::WeightInfo::close(), DispatchClass::Operational))]
         pub fn close(
             origin: OriginFor<T>,
@@ -502,12 +500,6 @@ impl<T: Config> Pallet<T> {
         ProposalList::<T>::set(active_proposals);
     }
 
-    pub fn get_node_weight(resources: Resources) -> u64 {
-        let cu = resources::get_cu(resources);
-        let su = resources::get_su(resources);
-        cu * 2 + su
-    }
-
     fn is_council_member(who: T::AccountId) -> DispatchResultWithPostInfo {
         let council_members =
             pallet_membership::Pallet::<T, pallet_membership::Instance1>::members();
@@ -518,15 +510,12 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-impl<T: Config> ChangeNode<PubConfigOf<T>, InterfaceOf<T>> for Pallet<T> {
-    fn node_changed(
-        old_node: Option<&Node<PubConfigOf<T>, InterfaceOf<T>>>,
-        new_node: &Node<PubConfigOf<T>, InterfaceOf<T>>,
-    ) {
-        let new_node_weight = Self::get_node_weight(new_node.resources);
+impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for Pallet<T> {
+    fn node_changed(old_node: Option<&TfgridNode<T>>, new_node: &TfgridNode<T>) {
+        let new_node_weight = new_node.resources.get_node_weight();
         match old_node {
             Some(node) => {
-                let old_node_weight = Self::get_node_weight(node.resources);
+                let old_node_weight = node.resources.get_node_weight();
 
                 if node.farm_id != new_node.farm_id {
                     let mut old_farm_weight = FarmWeight::<T>::get(node.farm_id);
@@ -553,8 +542,8 @@ impl<T: Config> ChangeNode<PubConfigOf<T>, InterfaceOf<T>> for Pallet<T> {
         };
     }
 
-    fn node_deleted(node: &Node<PubConfigOf<T>, InterfaceOf<T>>) {
-        let node_weight = Self::get_node_weight(node.resources);
+    fn node_deleted(node: &TfgridNode<T>) {
+        let node_weight = node.resources.get_node_weight();
         let mut farm_weight = FarmWeight::<T>::get(node.farm_id);
         farm_weight = farm_weight.checked_sub(node_weight).unwrap_or(0);
         FarmWeight::<T>::insert(node.farm_id, farm_weight);

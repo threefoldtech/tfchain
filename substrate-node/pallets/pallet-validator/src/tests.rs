@@ -1,5 +1,5 @@
 use super::Event as ValidatorEvent;
-use crate::{mock::Event as MockEvent, mock::*, Error};
+use crate::{mock::RuntimeEvent as MockEvent, mock::*, Error};
 use frame_support::{assert_noop, assert_ok};
 use frame_system::{EventRecord, Phase};
 use sp_core::H256;
@@ -34,7 +34,7 @@ fn test_create_validator_request_duplicate_fails() {
 
         assert_noop!(
             ValidatorModule::create_validator_request(
-                Origin::signed(10), // same origin
+                RuntimeOrigin::signed(10), // same origin
                 13,
                 14,
                 b"other_description".to_vec(),
@@ -73,7 +73,7 @@ fn test_approve_validator_works() {
 fn test_approve_validator_by_unauthorized_fails() {
     new_test_ext().execute_with(|| {
         assert_noop!(
-            ValidatorModule::approve_validator(Origin::signed(10), 10,),
+            ValidatorModule::approve_validator(RuntimeOrigin::signed(10), 10,),
             Error::<TestRuntime>::NotCouncilMember,
         );
     });
@@ -83,7 +83,7 @@ fn test_approve_validator_by_unauthorized_fails() {
 fn test_approve_validator_not_found_fails() {
     new_test_ext().execute_with(|| {
         assert_noop!(
-            ValidatorModule::approve_validator(Origin::signed(1), 10,),
+            ValidatorModule::approve_validator(RuntimeOrigin::signed(1), 10,),
             Error::<TestRuntime>::ValidatorNotFound,
         );
     });
@@ -94,7 +94,9 @@ fn test_activate_validator_node_works() {
     new_test_ext().execute_with(|| {
         create_validator_and_approve();
 
-        assert_ok!(ValidatorModule::activate_validator_node(Origin::signed(10),));
+        assert_ok!(ValidatorModule::activate_validator_node(
+            RuntimeOrigin::signed(10),
+        ));
 
         let validator_validating = get_validator(crate::types::ValidatorRequestState::Validating);
 
@@ -118,7 +120,7 @@ fn test_activate_validator_node_works() {
 fn test_activate_validator_not_found_fails() {
     new_test_ext().execute_with(|| {
         assert_noop!(
-            ValidatorModule::activate_validator_node(Origin::signed(10),),
+            ValidatorModule::activate_validator_node(RuntimeOrigin::signed(10),),
             Error::<TestRuntime>::ValidatorNotFound,
         );
     });
@@ -130,7 +132,7 @@ fn test_activate_validator_not_approved_fails() {
         create_validator();
 
         assert_noop!(
-            ValidatorModule::activate_validator_node(Origin::signed(10),),
+            ValidatorModule::activate_validator_node(RuntimeOrigin::signed(10),),
             Error::<TestRuntime>::ValidatorNotApproved,
         );
     });
@@ -141,10 +143,12 @@ fn test_activate_validator_already_validating_fails() {
     new_test_ext().execute_with(|| {
         create_validator_and_approve();
 
-        assert_ok!(ValidatorModule::activate_validator_node(Origin::signed(10),));
+        assert_ok!(ValidatorModule::activate_validator_node(
+            RuntimeOrigin::signed(10),
+        ));
 
         assert_noop!(
-            ValidatorModule::activate_validator_node(Origin::signed(10),),
+            ValidatorModule::activate_validator_node(RuntimeOrigin::signed(10),),
             Error::<TestRuntime>::ValidatorValidatingAlready,
         );
     });
@@ -156,7 +160,7 @@ fn test_change_validator_node_account_works() {
         create_validator_and_approve();
 
         assert_ok!(ValidatorModule::change_validator_node_account(
-            Origin::signed(10),
+            RuntimeOrigin::signed(10),
             13,
         ));
 
@@ -175,10 +179,12 @@ fn test_change_validator_node_account_validating_works() {
     new_test_ext().execute_with(|| {
         create_validator_and_approve();
 
-        assert_ok!(ValidatorModule::activate_validator_node(Origin::signed(10),));
+        assert_ok!(ValidatorModule::activate_validator_node(
+            RuntimeOrigin::signed(10),
+        ));
 
         assert_ok!(ValidatorModule::change_validator_node_account(
-            Origin::signed(10),
+            RuntimeOrigin::signed(10),
             13,
         ));
 
@@ -212,7 +218,7 @@ fn test_change_validator_node_account_validating_works() {
 fn test_change_validator_node_account_not_found_fails() {
     new_test_ext().execute_with(|| {
         assert_noop!(
-            ValidatorModule::change_validator_node_account(Origin::signed(10), 13,),
+            ValidatorModule::change_validator_node_account(RuntimeOrigin::signed(10), 13,),
             Error::<TestRuntime>::ValidatorNotFound,
         );
     });
@@ -221,7 +227,7 @@ fn test_change_validator_node_account_not_found_fails() {
 #[test]
 fn test_bond_works() {
     new_test_ext().execute_with(|| {
-        assert_ok!(ValidatorModule::bond(Origin::signed(12), 10,));
+        assert_ok!(ValidatorModule::bond(RuntimeOrigin::signed(12), 10,));
 
         assert_eq!(ValidatorModule::bonded(12), Some(10),);
 
@@ -239,10 +245,10 @@ fn test_bond_works() {
 #[test]
 fn test_bond_already_bounded_fails() {
     new_test_ext().execute_with(|| {
-        assert_ok!(ValidatorModule::bond(Origin::signed(12), 10,));
+        assert_ok!(ValidatorModule::bond(RuntimeOrigin::signed(12), 10,));
 
         assert_noop!(
-            ValidatorModule::bond(Origin::signed(12), 10,),
+            ValidatorModule::bond(RuntimeOrigin::signed(12), 10,),
             Error::<TestRuntime>::AlreadyBonded,
         );
     });
@@ -253,7 +259,10 @@ fn test_remove_validator_works() {
     new_test_ext().execute_with(|| {
         create_validator_and_approve();
 
-        assert_ok!(ValidatorModule::remove_validator(Origin::signed(1), 10,));
+        assert_ok!(ValidatorModule::remove_validator(
+            RuntimeOrigin::signed(1),
+            10,
+        ));
 
         assert_eq!(ValidatorModule::validator_requests(10), None,);
     });
@@ -264,7 +273,10 @@ fn test_remove_validator_by_himself_works() {
     new_test_ext().execute_with(|| {
         create_validator_and_approve();
 
-        assert_ok!(ValidatorModule::remove_validator(Origin::signed(10), 10,));
+        assert_ok!(ValidatorModule::remove_validator(
+            RuntimeOrigin::signed(10),
+            10,
+        ));
 
         assert_eq!(ValidatorModule::validator_requests(10), None,);
     });
@@ -274,7 +286,7 @@ fn test_remove_validator_by_himself_works() {
 fn test_remove_validator_by_unauthorized_fails() {
     new_test_ext().execute_with(|| {
         assert_noop!(
-            ValidatorModule::remove_validator(Origin::signed(4), 10,),
+            ValidatorModule::remove_validator(RuntimeOrigin::signed(4), 10,),
             Error::<TestRuntime>::BadOrigin,
         );
     });
@@ -284,13 +296,13 @@ fn test_remove_validator_by_unauthorized_fails() {
 fn test_remove_validator_not_found_fails() {
     new_test_ext().execute_with(|| {
         assert_noop!(
-            ValidatorModule::remove_validator(Origin::signed(1), 10,),
+            ValidatorModule::remove_validator(RuntimeOrigin::signed(1), 10,),
             Error::<TestRuntime>::ValidatorNotFound,
         );
     });
 }
 
-fn record(event: Event) -> EventRecord<Event, H256> {
+fn record(event: RuntimeEvent) -> EventRecord<RuntimeEvent, H256> {
     EventRecord {
         phase: Phase::Initialization,
         event,
@@ -311,7 +323,7 @@ fn get_validator(state: crate::types::ValidatorRequestState) -> crate::types::Va
 
 fn create_validator() {
     assert_ok!(ValidatorModule::create_validator_request(
-        Origin::signed(10),
+        RuntimeOrigin::signed(10),
         11,
         12,
         b"description".to_vec(),
@@ -323,5 +335,8 @@ fn create_validator() {
 fn create_validator_and_approve() {
     create_validator();
 
-    assert_ok!(ValidatorModule::approve_validator(Origin::signed(1), 10,));
+    assert_ok!(ValidatorModule::approve_validator(
+        RuntimeOrigin::signed(1),
+        10,
+    ));
 }
