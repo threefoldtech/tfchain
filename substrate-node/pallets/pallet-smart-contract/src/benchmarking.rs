@@ -3,14 +3,19 @@
 use super::*;
 use crate::Pallet as SmartContractModule;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
-use frame_support::assert_ok;
-use frame_system::RawOrigin;
-use pallet_tfgrid::{
-    types::{self as pallet_tfgrid_types, LocationInput},
-    CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, LatitudeInput,
-    LongitudeInput, PkInput, RelayInput, ResourcesInput,
+use frame_support::{
+    assert_ok,
+    traits::{OnFinalize, OnInitialize},
 };
-use sp_runtime::traits::Bounded;
+use frame_system::{EventRecord, Pallet as System, RawOrigin};
+use pallet_balances::Pallet as Balances;
+use pallet_tfgrid::{
+    types::{self as tfgrid_types, LocationInput},
+    CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, LatitudeInput,
+    LongitudeInput, Pallet as Tfgrid, PkInput, RelayInput, ResourcesInput,
+};
+use pallet_timestamp::Pallet as Timestamp;
+use sp_runtime::traits::{Bounded, One, StaticLookup};
 use sp_std::{
     convert::{TryFrom, TryInto},
     fmt::Debug,
@@ -22,6 +27,7 @@ use tfchain_support::{
 };
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
+const TIMESTAMP_INIT_MILLISECS: u64 = 1628082000 * 1000;
 
 benchmarks! {
     where_clause {
@@ -31,12 +37,12 @@ benchmarks! {
     }
 
     create_node_contract {
-        let a1: T::AccountId = account("Alice", 0, 0);
-        prepare_farm_with_node::<T>(a1);
+        let farmer: T::AccountId = account("Alice", 0, 0);
+        prepare_farm_with_node::<T>(farmer);
 
         let caller: T::AccountId = whitelisted_caller();
         create_twin::<T>(caller.clone());
-    }: _ (RawOrigin::Signed(
+    }: _(RawOrigin::Signed(
         caller.clone()),
         1,
         b"858f8fb2184b15ecb8c0be8b95398c81".to_vec().try_into().unwrap(),
@@ -45,78 +51,95 @@ benchmarks! {
         None
     )
     verify {
+        assert!(SmartContractModule::<T>::contracts(1).is_some());
         let contract = SmartContractModule::<T>::contracts(1).unwrap();
         assert_eq!(
             contract.contract_id, 1
         );
+        assert_last_event::<T>(Event::ContractCreated(contract).into());
     }
 
     add_nru_reports {
-        let stamp: u64 = 1628082000 * 1000;
-        pallet_timestamp::Pallet::<T>::set_timestamp(stamp.try_into().unwrap());
-
-        let a1: T::AccountId = account("Alice", 0, 0);
-        prepare_farm_with_node::<T>(a1.clone());
+        let farmer: T::AccountId = account("Alice", 0, 0);
+        prepare_farm_with_node::<T>(farmer.clone());
 
         let caller: T::AccountId = whitelisted_caller();
         create_twin::<T>(caller.clone());
         create_contract::<T>(caller.clone());
+        let contract_id = 1;
 
-        let mut reports = Vec::new();
-
-        reports.push(types::NruConsumption {
-            contract_id: 1,
-            timestamp: 1628082000 * 1000,
+        let report = types::NruConsumption {
+            contract_id: contract_id,
+            timestamp: TIMESTAMP_INIT_MILLISECS,
             window: 1000,
             nru: 10 * GIGABYTE,
-        });
+        };
+        let mut reports = Vec::new();
+        reports.push(report.clone());
 
-    }: _ (RawOrigin::Signed(a1.clone()), reports)
+    }: _(RawOrigin::Signed(farmer.clone()), reports)
     verify {
-        let contract = SmartContractModule::<T>::contracts(1).unwrap();
+        assert!(SmartContractModule::<T>::contracts(1).is_some());
+        let contract = SmartContractModule::<T>::contracts(contract_id).unwrap();
         assert_eq!(
-            contract.contract_id, 1
+            contract.contract_id, contract_id
         );
+        assert_last_event::<T>(Event::NruConsumptionReportReceived(report).into());
     }
 
     bill_contract_for_block {
-        let stamp: u64 = 1628082000 * 1000;
-        pallet_timestamp::Pallet::<T>::set_timestamp(stamp.try_into().unwrap());
-        let a1: T::AccountId = account("Alice", 0, 0);
-        prepare_farm_with_node::<T>(a1.clone());
+        let farmer: T::AccountId = account("Alice", 0, 0);
+        prepare_farm_with_node::<T>(farmer.clone());
 
         let caller: T::AccountId = whitelisted_caller();
+        let caller_lookup = T::Lookup::unlookup(caller.clone());
+        let balance_init_amount = <T as pallet_balances::Config>::Balance::saturated_from(100000000 as u128);
+        Balances::<T>::set_balance(RawOrigin::Root.into(), caller_lookup, balance_init_amount, balance_init_amount).unwrap();
         create_twin::<T>(caller.clone());
         create_contract::<T>(caller.clone());
+        let contract_id = 1;
 
-        let mut reports = Vec::new();
+        push_contract_used_resources_report::<T>(farmer.clone());
+        push_contract_nru_consumption_report::<T>(farmer.clone());
 
-        reports.push(types::Consumption {
-            contract_id: 1,
-            cru: 2,
-            hru: 0,
-            mru: 8 * GIGABYTE,
-            sru: 25 * GIGABYTE,
-            nru: 0,
-            timestamp: 0,
-        });
-
-        push_contract_resources::<T>(a1.clone());
-
-        let stamp: u64 = 1628082000 * 1000 + 10 * 6000;
-        pallet_timestamp::Pallet::<T>::set_timestamp(stamp.try_into().unwrap());
-        // run_to_block::<T>(10);
-    }: _ (RawOrigin::Signed(a1.clone()), 1)
+    }: _(RawOrigin::Signed(farmer.clone()), contract_id)
     verify {
-        let contract = SmartContractModule::<T>::contracts(1).unwrap();
+        assert!(SmartContractModule::<T>::contracts(contract_id).is_some());
+        let contract = SmartContractModule::<T>::contracts(contract_id).unwrap();
         assert_eq!(
-            contract.contract_id, 1
+            contract.contract_id, contract_id
         );
+        let amount_billed = 3175199 as u128;
+        let contract_bill = types::ContractBill {
+            contract_id,
+            timestamp: <Timestamp<T>>::get().saturated_into::<u64>() / 1000,
+            discount_level: types::DiscountLevel::None,
+            amount_billed,
+        };
+        assert_last_event::<T>(Event::ContractBilled(contract_bill).into());
+        assert_eq!((Balances::<T>::free_balance(&caller) - Balances::<T>::usable_balance(&caller)).saturated_into::<u128>(), amount_billed);
     }
 
     // Calling the `impl_benchmark_test_suite` macro inside the `benchmarks`
     // block will generate one #[test] function per benchmark
     impl_benchmark_test_suite! (SmartContractModule, crate::mock::new_test_ext(), crate::mock::TestRuntime)
+}
+
+fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
+    let events = System::<T>::events();
+    let system_event: <T as frame_system::Config>::RuntimeEvent = generic_event.into();
+    let EventRecord { event, .. } = &events[events.len() - 1];
+    assert_eq!(event, &system_event);
+}
+
+pub fn run_to_block<T: Config>(n: T::BlockNumber) {
+    while System::<T>::block_number() < n {
+        crate::Pallet::<T>::on_finalize(System::<T>::block_number());
+        System::<T>::on_finalize(System::<T>::block_number());
+        System::<T>::set_block_number(System::<T>::block_number() + One::one());
+        System::<T>::on_initialize(System::<T>::block_number());
+        crate::Pallet::<T>::on_initialize(System::<T>::block_number());
+    }
 }
 
 pub fn prepare_farm_with_node<T: Config>(source: T::AccountId) {
@@ -128,35 +151,35 @@ pub fn prepare_farm_with_node<T: Config>(source: T::AccountId) {
 }
 
 fn create_pricing_policy<T: Config>() {
-    let su_policy = pallet_tfgrid_types::Policy {
+    let su_policy = tfgrid_types::Policy {
         value: 194400,
-        unit: pallet_tfgrid_types::Unit::Gigabytes,
+        unit: tfgrid_types::Unit::Gigabytes,
     };
-    let nu_policy = pallet_tfgrid_types::Policy {
+    let nu_policy = tfgrid_types::Policy {
         value: 50000,
-        unit: pallet_tfgrid_types::Unit::Gigabytes,
+        unit: tfgrid_types::Unit::Gigabytes,
     };
-    let cu_policy = pallet_tfgrid_types::Policy {
+    let cu_policy = tfgrid_types::Policy {
         value: 305600,
-        unit: pallet_tfgrid_types::Unit::Gigabytes,
+        unit: tfgrid_types::Unit::Gigabytes,
     };
-    let ipu_policy = pallet_tfgrid_types::Policy {
+    let ipu_policy = tfgrid_types::Policy {
         value: 69400,
-        unit: pallet_tfgrid_types::Unit::Gigabytes,
+        unit: tfgrid_types::Unit::Gigabytes,
     };
-    let unique_name_policy = pallet_tfgrid_types::Policy {
+    let unique_name_policy = tfgrid_types::Policy {
         value: 13900,
-        unit: pallet_tfgrid_types::Unit::Gigabytes,
+        unit: tfgrid_types::Unit::Gigabytes,
     };
-    let domain_name_policy = pallet_tfgrid_types::Policy {
+    let domain_name_policy = tfgrid_types::Policy {
         value: 27800,
-        unit: pallet_tfgrid_types::Unit::Gigabytes,
+        unit: tfgrid_types::Unit::Gigabytes,
     };
 
     let x1 = account("Ferdie", 0, 2);
     let x2 = account("Eve", 0, 3);
 
-    assert_ok!(pallet_tfgrid::Pallet::<T>::create_pricing_policy(
+    assert_ok!(Tfgrid::<T>::create_pricing_policy(
         RawOrigin::Root.into(),
         b"policy_1".to_vec(),
         su_policy,
@@ -173,7 +196,7 @@ fn create_pricing_policy<T: Config>() {
 
 fn create_farming_policy<T: Config>() {
     let name = b"fp".to_vec();
-    assert_ok!(pallet_tfgrid::Pallet::<T>::create_farming_policy(
+    assert_ok!(Tfgrid::<T>::create_farming_policy(
         RawOrigin::Root.into(),
         name,
         12,
@@ -190,7 +213,7 @@ fn create_farming_policy<T: Config>() {
 }
 
 pub fn create_twin<T: Config>(source: T::AccountId) {
-    assert_ok!(pallet_tfgrid::Pallet::<T>::user_accept_tc(
+    assert_ok!(Tfgrid::<T>::user_accept_tc(
         RawOrigin::Signed(source.clone()).into(),
         get_document_link_input(b"some_link"),
         get_document_hash_input(b"some_hash"),
@@ -200,7 +223,7 @@ pub fn create_twin<T: Config>(source: T::AccountId) {
     let pk =
         get_public_key_input(b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901");
 
-    assert_ok!(pallet_tfgrid::Pallet::<T>::create_twin(
+    assert_ok!(Tfgrid::<T>::create_twin(
         RawOrigin::Signed(source).into(),
         relay,
         pk
@@ -268,7 +291,7 @@ pub fn create_contract<T: Config>(source: T::AccountId) {
     ));
 }
 
-pub fn push_contract_resources<T: Config>(source: T::AccountId) {
+pub fn push_contract_used_resources_report<T: Config>(source: T::AccountId) {
     let contract_resources = vec![types::ContractResources {
         contract_id: 1,
         used: Resources {
@@ -282,6 +305,23 @@ pub fn push_contract_resources<T: Config>(source: T::AccountId) {
     assert_ok!(SmartContractModule::<T>::report_contract_resources(
         RawOrigin::Signed(source).into(),
         contract_resources,
+    ));
+}
+
+pub fn push_contract_nru_consumption_report<T: Config>(source: T::AccountId) {
+    let nru_consumption = types::NruConsumption {
+        contract_id: 1,
+        timestamp: TIMESTAMP_INIT_MILLISECS,
+        window: BillingFrequency::<T>::get() * 6,
+        nru: 10 * GIGABYTE,
+    };
+
+    let mut reports = Vec::new();
+    reports.push(nru_consumption.clone());
+
+    assert_ok!(SmartContractModule::<T>::add_nru_reports(
+        RawOrigin::Signed(source).into(),
+        reports,
     ));
 }
 
