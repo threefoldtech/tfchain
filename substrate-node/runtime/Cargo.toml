@@ -99,21 +99,24 @@ frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate"
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 pallet-utility = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36"}
 
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false, optional = true }
 frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false, optional = true }
 try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false, optional = true }
-frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false, optional = true }
 hex-literal = { version = "0.3.1", optional = true }
+
+# Used for runtime benchmarking
+frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false, optional = true }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false, optional = true }
+#pallet-session-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false, optional = true }
 
 tfchain-support = { path = "../support", default-features = false }
 
 [features]
 default = ['std']
 runtime-benchmarks = [
-    'hex-literal',
-	"frame-benchmarking/runtime-benchmarks",
+    'hex-literal',  
+    'frame-benchmarking/runtime-benchmarks',
+    'frame-system-benchmarking/runtime-benchmarks',
     'frame-support/runtime-benchmarks',
-    'frame-system-benchmarking',
     'frame-system/runtime-benchmarks',
     'pallet-timestamp/runtime-benchmarks',
     'sp-runtime/runtime-benchmarks',

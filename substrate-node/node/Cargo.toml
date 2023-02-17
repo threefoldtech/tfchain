@@ -38,6 +38,7 @@ pallet-transaction-payment = {git = "https://github.com/paritytech/substrate", b
 sc-basic-authorship = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
 sc-cli = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 sc-client-api = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
+sc-client-db = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
 sc-executor = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
 sc-service = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
 sc-consensus = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
@@ -72,5 +73,8 @@ tfchain-runtime = { path = '../runtime' }
 
 [features]
 default = []
-runtime-benchmarks = ["tfchain-runtime/runtime-benchmarks"]
+runtime-benchmarks = [
+    "tfchain-runtime/runtime-benchmarks",
+    "sc-client-db/runtime-benchmarks",
+]
 try-runtime = [ "tfchain-runtime/try-runtime", "try-runtime-cli/try-runtime"]
