@@ -110,10 +110,10 @@ pub fn development_config() -> Result<ChainSpec, String> {
 			vec![
 				// bridge validator dev key 1
 				get_account_id_from_seed_string::<sr25519::Public>("quarter between satisfy three sphere six soda boss cute decade old trend"),
-				// // bridge validator dev key 2
-				get_account_id_from_seed_string::<sr25519::Public>("employ split promote annual couple elder remain cricket company fitness senior fiscal"),
-				// // bridge validator dev key 3
-				get_account_id_from_seed_string::<sr25519::Public>("remind bird banner word spread volume card keep want faith insect mind"),
+				// // // bridge validator dev key 2
+				// get_account_id_from_seed_string::<sr25519::Public>("employ split promote annual couple elder remain cricket company fitness senior fiscal"),
+				// // // bridge validator dev key 3
+				// get_account_id_from_seed_string::<sr25519::Public>("remind bird banner word spread volume card keep want faith insect mind"),
 			],
 			// Bridge fee account
 			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
@@ -203,10 +203,10 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 			vec![
 				// bridge validator dev key 1
 				get_account_id_from_seed_string::<sr25519::Public>("quarter between satisfy three sphere six soda boss cute decade old trend"),
-				// bridge validator dev key 2
-				get_account_id_from_seed_string::<sr25519::Public>("employ split promote annual couple elder remain cricket company fitness senior fiscal"),
-				// bridge validator dev key 3
-				get_account_id_from_seed_string::<sr25519::Public>("remind bird banner word spread volume card keep want faith insect mind"),
+				// // bridge validator dev key 2
+				// get_account_id_from_seed_string::<sr25519::Public>("employ split promote annual couple elder remain cricket company fitness senior fiscal"),
+				// // bridge validator dev key 3
+				// get_account_id_from_seed_string::<sr25519::Public>("remind bird banner word spread volume card keep want faith insect mind"),
 			],
 			// Bridge fee account
 			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
