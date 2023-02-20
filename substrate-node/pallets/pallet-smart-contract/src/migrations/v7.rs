@@ -20,8 +20,8 @@ impl<T: Config> OnRuntimeUpgrade for FixTwinLockedBalances<T> {
     }
 
     fn on_runtime_upgrade() -> Weight {
-        if PalletVersion::<T>::get() == types::StorageVersion::V6 {
-            migrate_to_version_7::<T>()
+        if PalletVersion::<T>::get() != types::StorageVersion::V6 {
+            migrate_to_version_8::<T>()
         } else {
             info!(" >>> Unused Smart Contract pallet V7 migration");
             Weight::zero()
@@ -42,7 +42,7 @@ impl<T: Config> OnRuntimeUpgrade for FixTwinLockedBalances<T> {
     }
 }
 
-pub fn migrate_to_version_7<T: Config>() -> frame_support::weights::Weight {
+pub fn migrate_to_version_8<T: Config>() -> frame_support::weights::Weight {
     debug!(
         " >>> Starting contract pallet migration, pallet version: {:?}",
         PalletVersion::<T>::get()
@@ -51,13 +51,12 @@ pub fn migrate_to_version_7<T: Config>() -> frame_support::weights::Weight {
     let mut read_writes = 0;
 
     let mut twin_contract_locked_balances: BTreeMap<u32, BalanceOf<T>> = BTreeMap::new();
-
+    // Fetch all locked balances based on the contract locks in storage and accumulate them by twin id
     for (ctr_id, l) in ContractLock::<T>::iter() {
         let ctr = Contracts::<T>::get(ctr_id);
         read_writes += 1;
         match ctr {
             Some(contract) => {
-                // l.amount_locked
                 twin_contract_locked_balances
                     .entry(contract.twin_id)
                     .and_modify(|v| *v += l.amount_locked)
@@ -67,51 +66,47 @@ pub fn migrate_to_version_7<T: Config>() -> frame_support::weights::Weight {
         }
     }
 
-    for (t, total_contract_locked_balance) in twin_contract_locked_balances {
-        let twin = pallet_tfgrid::Twins::<T>::get(t);
+    for (twin_id, t) in pallet_tfgrid::Twins::<T>::iter() {
         read_writes += 1;
-        match twin {
-            Some(twin) => {
-                let total_lock_balances = get_locked_balance::<T>(&twin.account_id);
 
-                if total_lock_balances != total_contract_locked_balance {
-                    debug!(
-                        "total locked balance on twin {} account: {:?}",
-                        t, total_lock_balances
-                    );
-                    debug!(
-                        "should have locked only: {:?}",
-                        total_contract_locked_balance
-                    );
-
-                    // get the total balance of the twin - minimum existence requirement
-                    let total_balance = <T as Config>::Currency::total_balance(&twin.account_id)
-                        - <T as Config>::Currency::minimum_balance();
-
-                    // lock only an amount up to the total balance
-                    // this will make sure the locked balance will not exceed the total balance on the twin's account
-                    let amount_that_we_can_lock = total_balance.min(total_contract_locked_balance);
-                    debug!("we can lock up to: {:?}", amount_that_we_can_lock);
-
-                    // Unlock all balance & relock real locked amount
-                    <T as Config>::Currency::remove_lock(GRID_LOCK_ID, &twin.account_id);
-                    <T as Config>::Currency::set_lock(
-                        GRID_LOCK_ID,
-                        &twin.account_id,
-                        amount_that_we_can_lock,
-                        WithdrawReasons::all(),
-                    );
-                    read_writes += 2;
-                }
+        // If the twin needs to have some locked balance on his account because of running contracts
+        // Check how much we can actually locked based on his current total balance
+        // this will make sure the locked balance will not exceed the total balance on the twin's account
+        let contract_locked_b = twin_contract_locked_balances.get(&twin_id);
+        let should_lock = match contract_locked_b {
+            Some(b) => {
+                // get the total balance of the twin - minimum existence requirement
+                Some(
+                    <T as Config>::Currency::total_balance(&t.account_id)
+                        - <T as Config>::Currency::minimum_balance().min(*b),
+                )
             }
-            None => {
-                debug!("twin {} not found", t);
-            }
+            None => None,
+        };
+
+        debug!(
+            "contract locked balance on twin {} account: {:?}",
+            t.id, contract_locked_b
+        );
+        // Unlock all balance for the twin
+        <T as Config>::Currency::remove_lock(GRID_LOCK_ID, &t.account_id);
+        read_writes += 1;
+
+        if let Some(should_lock) = should_lock {
+            debug!("we should lock: {:?}", should_lock);
+            // Only do a set lock if we actually have to lock
+            <T as Config>::Currency::set_lock(
+                GRID_LOCK_ID,
+                &t.account_id,
+                should_lock,
+                WithdrawReasons::all(),
+            );
+            read_writes += 1;
         }
     }
 
     // Update pallet storage version
-    PalletVersion::<T>::set(types::StorageVersion::V7);
+    PalletVersion::<T>::set(types::StorageVersion::V8);
     debug!(" <<< Storage version upgraded");
 
     // Return the weight consumed by the migration.
