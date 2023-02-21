@@ -13,9 +13,9 @@ impl<T: Config> OnRuntimeUpgrade for FixTwinLockedBalances<T> {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
         debug!("current pallet version: {:?}", PalletVersion::<T>::get());
-        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V8);
+        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V6);
 
-        debug!("👥  Smart Contract pallet to V7 passes PRE migrate checks ✅",);
+        debug!("👥  Smart Contract pallet to V8 passes PRE migrate checks ✅",);
         Ok(vec![])
     }
 
@@ -68,10 +68,9 @@ pub fn migrate_to_version_8<T: Config>() -> frame_support::weights::Weight {
                     ContractLock::<T>::remove(ctr_id);
                     writes += 2;
                 } else {
-                    twin_contract_locked_balances
+                    *twin_contract_locked_balances
                         .entry(contract.twin_id)
-                        .and_modify(|v| *v += l.amount_locked)
-                        .or_insert(BalanceOf::<T>::saturated_from(0 as u128));
+                        .or_default() += l.amount_locked;
                 }
             }
             None => {
@@ -79,7 +78,7 @@ pub fn migrate_to_version_8<T: Config>() -> frame_support::weights::Weight {
                     "no contract found for contract lock {}, cleaning up lock..",
                     ctr_id
                 );
-                writes + 1;
+                writes += 1;
                 ContractLock::<T>::remove(ctr_id);
             }
         }
@@ -91,19 +90,15 @@ pub fn migrate_to_version_8<T: Config>() -> frame_support::weights::Weight {
         // If the twin needs to have some locked balance on his account because of running contracts
         // Check how much we can actually lock based on his current total balance
         // this will make sure the locked balance will not exceed the total balance on the twin's account
-        let should_lock = match twin_contract_locked_balances.get(&twin_id) {
-            Some(b) => {
-                // get the total balance of the twin - minimum existence requirement
-                debug!("contract locked balance on twin {} account: {:?}", t.id, b);
-                reads += 1;
-                Some(
-                    (<T as Config>::Currency::total_balance(&t.account_id)
-                        - <T as Config>::Currency::minimum_balance())
-                    .min(*b),
-                )
-            }
-            None => None,
-        };
+        let should_lock = twin_contract_locked_balances.get(&twin_id).map(|b| {
+            debug!(
+                "contract locked balance on twin {} account: {:?}",
+                twin_id, b
+            );
+            (<T as Config>::Currency::total_balance(&t.account_id)
+                - <T as Config>::Currency::minimum_balance())
+            .min(*b)
+        });
 
         // Unlock all balance for the twin
         <T as Config>::Currency::remove_lock(GRID_LOCK_ID, &t.account_id);
@@ -142,8 +137,5 @@ pub fn get_locked_balance<T: Config>(account_id: &T::AccountId) -> BalanceOf<T> 
     let free_balance = <T as Config>::Currency::free_balance(account_id);
 
     let locked_balance = free_balance.checked_sub(&usable_balance);
-    match locked_balance {
-        Some(balance) => balance,
-        None => BalanceOf::<T>::saturated_from(0 as u128),
-    }
+    locked_balance.unwrap_or_default()
 }
