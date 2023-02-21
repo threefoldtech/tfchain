@@ -759,8 +759,18 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    (),
+    Migrations,
 >;
+
+// All migrations executed on runtime upgrade as a nested tuple of types implementing
+// `OnRuntimeUpgrade`.
+type Migrations = (
+    pallet_smart_contract::migrations::v6::ContractMigrationV5<Runtime>,
+    pallet_tfgrid::migrations::v10::FixFarmNodeIndexMap<Runtime>,
+    pallet_tfgrid::migrations::v11::FixFarmingPolicy<Runtime>,
+    pallet_tfgrid::migrations::v12::InputValidation<Runtime>,
+    pallet_tfgrid::migrations::v13::FixPublicIP<Runtime>,
+);
 
 // follows Substrate's non destructive way of eliminating  otherwise required
 // repetion: https://github.com/paritytech/substrate/pull/10592
