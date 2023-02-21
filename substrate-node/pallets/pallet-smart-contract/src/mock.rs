@@ -14,8 +14,8 @@ use frame_system::EnsureRoot;
 use pallet_tfgrid::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
+    node::Location,
     node::{CityName, CountryName},
-    node::{Location, SerialNumber},
     terms_cond::TermsAndConditions,
     CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, Gw4Input, Ip4Input,
     LatitudeInput, LongitudeInput, PkInput, RelayInput,
@@ -167,14 +167,13 @@ impl pallet_balances::Config for TestRuntime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<TestRuntime>;
 }
 
-pub(crate) type Serial = pallet_tfgrid::pallet::SerialNumberOf<TestRuntime>;
 pub(crate) type Loc = pallet_tfgrid::pallet::LocationOf<TestRuntime>;
 pub(crate) type Interface = pallet_tfgrid::pallet::InterfaceOf<TestRuntime>;
 
 pub(crate) type TfgridNode = pallet_tfgrid::pallet::TfgridNode<TestRuntime>;
 
 pub struct NodeChanged;
-impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
+impl ChangeNode<Loc, Interface> for NodeChanged {
     fn node_changed(_old_node: Option<&TfgridNode>, _new_node: &TfgridNode) {}
     fn node_deleted(node: &TfgridNode) {
         SmartContractModule::node_deleted(node);
@@ -206,7 +205,6 @@ pub(crate) type TestInterfaceIp = InterfaceIp<TestRuntime>;
 pub(crate) type TestCountryName = CountryName<TestRuntime>;
 pub(crate) type TestCityName = CityName<TestRuntime>;
 pub(crate) type TestLocation = Location<TestRuntime>;
-pub(crate) type TestSerialNumber = SerialNumber<TestRuntime>;
 
 impl pallet_tfgrid::Config for TestRuntime {
     type RuntimeEvent = RuntimeEvent;
@@ -226,7 +224,6 @@ impl pallet_tfgrid::Config for TestRuntime {
     type CountryName = TestCountryName;
     type CityName = TestCityName;
     type Location = TestLocation;
-    type SerialNumber = TestSerialNumber;
 }
 
 impl pallet_tft_price::Config for TestRuntime {

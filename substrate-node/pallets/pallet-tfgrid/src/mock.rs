@@ -3,7 +3,7 @@ use crate::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
     mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild,
-    node::{CityName, CountryName, Location, SerialNumber},
+    node::{CityName, CountryName, Location},
     terms_cond::TermsAndConditions,
     weights, CityNameInput, Config, CountryNameInput, DocumentHashInput, DocumentLinkInput,
     DomainInput, FarmNameInput, Gw4Input, Gw6Input, InterfaceIpInput, InterfaceMacInput,
@@ -79,14 +79,13 @@ impl frame_system::Config for TestRuntime {
     type MaxConsumers = ConstU32<16>;
 }
 
-pub(crate) type Serial = crate::SerialNumberOf<TestRuntime>;
 pub(crate) type Loc = crate::LocationOf<TestRuntime>;
 pub(crate) type Interface = crate::InterfaceOf<TestRuntime>;
 
 pub(crate) type TfgridNode = crate::TfgridNode<TestRuntime>;
 
 pub struct NodeChanged;
-impl tfchain_support::traits::ChangeNode<Loc, Interface, Serial> for NodeChanged {
+impl tfchain_support::traits::ChangeNode<Loc, Interface> for NodeChanged {
     fn node_changed(_old_node: Option<&TfgridNode>, _new_node: &TfgridNode) {}
     fn node_deleted(_node: &TfgridNode) {}
 }
@@ -114,7 +113,6 @@ pub(crate) type TestInterfaceIp = InterfaceIp<TestRuntime>;
 pub(crate) type TestCountryName = CountryName<TestRuntime>;
 pub(crate) type TestCityName = CityName<TestRuntime>;
 pub(crate) type TestLocation = Location<TestRuntime>;
-pub(crate) type TestSerialNumber = SerialNumber<TestRuntime>;
 
 impl Config for TestRuntime {
     type RuntimeEvent = RuntimeEvent;
@@ -134,7 +132,6 @@ impl Config for TestRuntime {
     type CountryName = TestCountryName;
     type CityName = TestCityName;
     type Location = TestLocation;
-    type SerialNumber = TestSerialNumber;
 }
 
 parameter_types! {

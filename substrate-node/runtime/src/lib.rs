@@ -314,14 +314,13 @@ impl pallet_sudo::Config for Runtime {
     type RuntimeCall = RuntimeCall;
 }
 
-pub type Serial = pallet_tfgrid::pallet::SerialNumberOf<Runtime>;
 pub type Loc = pallet_tfgrid::pallet::LocationOf<Runtime>;
 pub type Interface = pallet_tfgrid::pallet::InterfaceOf<Runtime>;
 
 pub type TfgridNode = pallet_tfgrid::pallet::TfgridNode<Runtime>;
 
 pub struct NodeChanged;
-impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
+impl ChangeNode<Loc, Interface> for NodeChanged {
     fn node_changed(old_node: Option<&TfgridNode>, new_node: &TfgridNode) {
         Dao::node_changed(old_node, new_node)
     }
@@ -364,7 +363,6 @@ impl pallet_tfgrid::Config for Runtime {
     type CountryName = pallet_tfgrid::node::CountryName<Runtime>;
     type CityName = pallet_tfgrid::node::CityName<Runtime>;
     type Location = pallet_tfgrid::node::Location<Runtime>;
-    type SerialNumber = pallet_tfgrid::node::SerialNumber<Runtime>;
 }
 
 parameter_types! {

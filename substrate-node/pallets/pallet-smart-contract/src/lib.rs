@@ -17,7 +17,7 @@ use frame_system::{
 pub use pallet::*;
 use pallet_authorship;
 use pallet_tfgrid;
-use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf, TfgridNode};
+use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, TfgridNode};
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_timestamp as timestamp;
 use sp_core::crypto::KeyTypeId;
@@ -228,7 +228,7 @@ pub mod pallet {
         type DistributionFrequency: Get<u16>;
         type GracePeriod: Get<u64>;
         type WeightInfo: WeightInfo;
-        type NodeChanged: ChangeNode<LocationOf<Self>, InterfaceOf<Self>, SerialNumberOf<Self>>;
+        type NodeChanged: ChangeNode<LocationOf<Self>, InterfaceOf<Self>>;
         type PublicIpModifier: PublicIpModifier;
         type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
         type Call: From<Call<Self>>;
@@ -2262,7 +2262,7 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for Pallet<T> {
+impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>> for Pallet<T> {
     fn node_changed(_node: Option<&TfgridNode<T>>, _new_node: &TfgridNode<T>) {}
 
     fn node_deleted(node: &TfgridNode<T>) {

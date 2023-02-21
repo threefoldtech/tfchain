@@ -147,9 +147,8 @@ pub mod pallet {
     pub type LocationOf<T> = <T as Config>::Location;
 
     // Input type for serial number
-    pub type SerialNumberInput = BoundedVec<u8, ConstU32<{ node::MAX_SERIAL_NUMBER_LENGTH }>>;
-    // Concrete type for location
-    pub type SerialNumberOf<T> = <T as Config>::SerialNumber;
+    pub type SerialNumberInput =
+        BoundedVec<u8, ConstU32<{ tfchain_support::types::MAX_SERIAL_NUMBER_LENGTH }>>;
 
     // Input type for resources
     pub type ResourcesInput = Resources;
@@ -161,7 +160,7 @@ pub mod pallet {
         types::TermsAndConditionsInput<AccountIdOf<T>, DocumentLinkInput, DocumentHashInput>;
 
     // Concrete type for node
-    pub type TfgridNode<T> = Node<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>>;
+    pub type TfgridNode<T> = Node<LocationOf<T>, InterfaceOf<T>>;
 
     // Concrete type for entity
     pub type TfgridEntity<T> = types::Entity<AccountIdOf<T>, CityNameOf<T>, CountryNameOf<T>>;
@@ -283,11 +282,7 @@ pub mod pallet {
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
 
-        type NodeChanged: ChangeNode<
-            super::LocationOf<Self>,
-            super::InterfaceOf<Self>,
-            super::SerialNumberOf<Self>,
-        >;
+        type NodeChanged: ChangeNode<super::LocationOf<Self>, super::InterfaceOf<Self>>;
 
         type PublicIpModifier: PublicIpModifier;
 
@@ -368,16 +363,6 @@ pub mod pallet {
             + Clone
             + TypeInfo
             + TryFrom<LocationInput, Error = Error<Self>>
-            + MaxEncodedLen;
-
-        /// The type of a serial number.
-        type SerialNumber: FullCodec
-            + Debug
-            + Default
-            + PartialEq
-            + Clone
-            + TypeInfo
-            + TryFrom<SerialNumberInput, Error = Error<Self>>
             + MaxEncodedLen;
 
         #[pallet::constant]
@@ -1007,12 +992,6 @@ pub mod pallet {
             let node_location = Self::get_location(location)?;
             let node_interfaces = Self::get_interfaces(&interfaces)?;
 
-            let node_serial_number = if let Some(serial_input) = serial_number {
-                Some(Self::get_serial_number(serial_input)?)
-            } else {
-                None
-            };
-
             let created = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
             let mut new_node = Node {
@@ -1029,7 +1008,7 @@ pub mod pallet {
                 certification: NodeCertification::default(),
                 secure_boot,
                 virtualized,
-                serial_number: node_serial_number,
+                serial_number,
                 connection_price: ConnectionPrice::<T>::get(),
             };
 
@@ -1100,12 +1079,6 @@ pub mod pallet {
             let node_location = Self::get_location(location)?;
             let node_interfaces = Self::get_interfaces(&interfaces)?;
 
-            let node_serial_number = if let Some(serial_input) = serial_number {
-                Some(Self::get_serial_number(serial_input)?)
-            } else {
-                None
-            };
-
             // If the resources on a certified node changed, reset the certification level to DIY
             if Resources::has_changed(&stored_node.resources, &node_resources, 1)
                 && stored_node.certification == NodeCertification::Certified
@@ -1123,7 +1096,7 @@ pub mod pallet {
             stored_node.interfaces = node_interfaces;
             stored_node.secure_boot = secure_boot;
             stored_node.virtualized = virtualized;
-            stored_node.serial_number = node_serial_number;
+            stored_node.serial_number = serial_number;
 
             // override node in storage
             Nodes::<T>::insert(stored_node.id, &stored_node);
@@ -2337,13 +2310,6 @@ impl<T: Config> Pallet<T> {
     ) -> Result<LocationOf<T>, DispatchErrorWithPostInfo> {
         let parsed_location = <T as Config>::Location::try_from(location)?;
         Ok(parsed_location)
-    }
-
-    fn get_serial_number(
-        serial_number: pallet::SerialNumberInput,
-    ) -> Result<SerialNumberOf<T>, DispatchErrorWithPostInfo> {
-        let parsed_serial_number = <T as Config>::SerialNumber::try_from(serial_number)?;
-        Ok(parsed_serial_number)
     }
 
     fn _change_power_state(

@@ -1,4 +1,4 @@
-use crate::{CityNameInput, Config, CountryNameInput, Error, LocationInput, SerialNumberInput};
+use crate::{CityNameInput, Config, CountryNameInput, Error, LocationInput};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
@@ -292,70 +292,6 @@ pub fn validate_longitude_input(input: &[u8]) -> bool {
             }
             Err(_) => false,
         }
-}
-
-pub const MAX_SERIAL_NUMBER_LENGTH: u32 = 128;
-pub const DEFAULT_SERIAL_NUMBER: &[u8] = b"Not Specified";
-
-/// A serial number in ASCI Characters.
-#[derive(Encode, Decode, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-#[scale_info(skip_type_params(T))]
-#[codec(mel_bound())]
-pub struct SerialNumber<T: Config>(
-    pub BoundedVec<u8, ConstU32<MAX_SERIAL_NUMBER_LENGTH>>,
-    PhantomData<(T, ConstU32<MAX_SERIAL_NUMBER_LENGTH>)>,
-);
-
-impl<T: Config> TryFrom<SerialNumberInput> for SerialNumber<T> {
-    type Error = Error<T>;
-
-    /// Fallible initialization from a provided byte vector if it is below the
-    /// minimum or exceeds the maximum allowed length or contains invalid ASCII
-    /// characters.
-    fn try_from(value: SerialNumberInput) -> Result<Self, Self::Error> {
-        ensure!(
-            value.len() <= MAX_SERIAL_NUMBER_LENGTH.saturated_into(),
-            Self::Error::SerialNumberTooLong
-        );
-        ensure!(
-            validate_serial_number(&value),
-            Self::Error::InvalidSerialNumber
-        );
-
-        Ok(Self(value, PhantomData))
-    }
-}
-
-impl<T: Config> Default for SerialNumber<T> {
-    fn default() -> Self {
-        let serial: BoundedVec<u8, ConstU32<MAX_SERIAL_NUMBER_LENGTH>> = DEFAULT_SERIAL_NUMBER
-            .to_vec()
-            .try_into()
-            .unwrap_or_default();
-
-        Self(serial, PhantomData)
-    }
-}
-
-// FIXME: did not find a way to automatically implement this.
-impl<T: Config> PartialEq for SerialNumber<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
-
-// FIXME: did not find a way to automatically implement this.
-impl<T: Config> Clone for SerialNumber<T> {
-    fn clone(&self) -> Self {
-        Self(self.0.clone(), self.1)
-    }
-}
-
-pub fn validate_serial_number(input: &[u8]) -> bool {
-    input == DEFAULT_SERIAL_NUMBER
-        || input.iter().all(|c| {
-            c.is_ascii_alphanumeric() || c.is_ascii_whitespace() || matches!(c, b'-' | b'_' | b'.')
-        })
 }
 
 #[test]

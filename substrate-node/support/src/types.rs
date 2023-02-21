@@ -12,6 +12,7 @@ pub const MAX_GW4_LENGTH: u32 = 15;
 pub const MAX_IP6_LENGTH: u32 = 43;
 pub const MAX_GW6_LENGTH: u32 = 39;
 pub const MAX_DOMAIN_NAME_LENGTH: u32 = 128;
+pub const MAX_SERIAL_NUMBER_LENGTH: u32 = 128;
 
 #[derive(
     PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
@@ -78,7 +79,7 @@ pub struct FarmingPolicyLimit {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct Node<Location, If, SerialNumber> {
+pub struct Node<Location, If> {
     pub version: u32,
     pub id: u32,
     pub farm_id: u32,
@@ -93,7 +94,7 @@ pub struct Node<Location, If, SerialNumber> {
     pub certification: NodeCertification,
     pub secure_boot: bool,
     pub virtualized: bool,
-    pub serial_number: Option<SerialNumber>,
+    pub serial_number: Option<BoundedVec<u8, ConstU32<MAX_SERIAL_NUMBER_LENGTH>>>,
     pub connection_price: u32,
 }
 

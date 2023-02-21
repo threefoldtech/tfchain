@@ -1421,7 +1421,7 @@ fn create_node_with_same_pubkey_fails() {
                 bounded_vec![],
                 true,
                 true,
-                None,
+                Some(b"serial number 123 / ( +".to_vec().try_into().unwrap()),
             ),
             Error::<TestRuntime>::NodeWithTwinIdExists
         );

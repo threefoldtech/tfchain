@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "128"]
 
-use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf, TfgridNode};
+use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, TfgridNode};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
@@ -69,7 +69,7 @@ pub mod pallet {
         type MinVetos: Get<u32>;
 
         type Tfgrid: Tfgrid<Self::AccountId, FarmName<Self>>;
-        type NodeChanged: ChangeNode<LocationOf<Self>, InterfaceOf<Self>, SerialNumberOf<Self>>;
+        type NodeChanged: ChangeNode<LocationOf<Self>, InterfaceOf<Self>>;
 
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
@@ -510,7 +510,7 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for Pallet<T> {
+impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>> for Pallet<T> {
     fn node_changed(old_node: Option<&TfgridNode<T>>, new_node: &TfgridNode<T>) {
         let new_node_weight = new_node.resources.get_node_weight();
         match old_node {

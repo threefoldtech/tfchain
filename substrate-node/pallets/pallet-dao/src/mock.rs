@@ -7,7 +7,7 @@ use pallet_tfgrid::node::{CityName, CountryName};
 use pallet_tfgrid::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
-    node::{Location, SerialNumber},
+    node::Location,
     terms_cond::TermsAndConditions,
     CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, Gw4Input, Ip4Input,
     LatitudeInput, LongitudeInput, PkInput, RelayInput,
@@ -78,14 +78,13 @@ parameter_types! {
     pub const MinVetos: u32 = 2;
 }
 
-pub(crate) type Serial = pallet_tfgrid::pallet::SerialNumberOf<Test>;
 pub(crate) type Loc = pallet_tfgrid::pallet::LocationOf<Test>;
 pub(crate) type Interface = pallet_tfgrid::pallet::InterfaceOf<Test>;
 
 pub(crate) type TfgridNode = pallet_tfgrid::pallet::TfgridNode<Test>;
 
 pub struct NodeChanged;
-impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
+impl ChangeNode<Loc, Interface> for NodeChanged {
     fn node_changed(old_node: Option<&TfgridNode>, new_node: &TfgridNode) {
         DaoModule::node_changed(old_node, new_node)
     }
@@ -129,7 +128,6 @@ pub(crate) type TestInterfaceIp = InterfaceIp<Test>;
 pub(crate) type TestCountryName = CountryName<Test>;
 pub(crate) type TestCityName = CityName<Test>;
 pub(crate) type TestLocation = Location<Test>;
-pub(crate) type TestSerialNumber = SerialNumber<Test>;
 
 impl pallet_tfgrid::Config for Test {
     type RuntimeEvent = RuntimeEvent;
@@ -149,7 +147,6 @@ impl pallet_tfgrid::Config for Test {
     type CountryName = TestCountryName;
     type CityName = TestCityName;
     type Location = TestLocation;
-    type SerialNumber = TestSerialNumber;
 }
 
 impl pallet_timestamp::Config for Test {
