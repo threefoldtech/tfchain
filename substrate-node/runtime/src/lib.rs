@@ -394,7 +394,7 @@ impl pallet_smart_contract::Config for Runtime {
     type BillingReferencePeriod = BillingReferencePeriod;
     type DistributionFrequency = DistributionFrequency;
     type GracePeriod = GracePeriod;
-    type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = pallet_smart_contract::weights::SmartContractWeight<Runtime>;
     type NodeChanged = NodeChanged;
     type PublicIpModifier = PublicIpModifierType;
     type AuthorityId = pallet_smart_contract::crypto::AuthId;

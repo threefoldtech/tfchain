@@ -30,9 +30,15 @@
 use frame_support::{traits::Get, weights::Weight};
 use sp_std::marker::PhantomData;
 
+pub trait WeightInfo {
+	fn create_node_contract() -> Weight;
+	fn add_nru_reports() -> Weight;
+	fn bill_contract_for_block() -> Weight;
+}
+
 /// Weight functions for `pallet_smart_contract`.
-pub struct WeightInfo<T>(PhantomData<T>);
-impl<T: frame_system::Config> pallet_smart_contract::WeightInfo for WeightInfo<T> {
+pub struct SmartContractWeight<T>(PhantomData<T>);
+impl<T: frame_system::Config> WeightInfo for SmartContractWeight<T> {
 	// Storage: TfgridModule TwinIdByAccountID (r:1 w:0)
 	// Storage: TfgridModule Nodes (r:1 w:0)
 	// Storage: TfgridModule NodePower (r:1 w:0)
