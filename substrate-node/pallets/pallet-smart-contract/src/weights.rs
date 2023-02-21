@@ -37,8 +37,8 @@ pub trait WeightInfo {
 }
 
 /// Weight functions for `pallet_smart_contract`.
-pub struct SmartContractWeight<T>(PhantomData<T>);
-impl<T: frame_system::Config> WeightInfo for SmartContractWeight<T> {
+pub struct SubstrateWeight<T>(PhantomData<T>);
+impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: TfgridModule TwinIdByAccountID (r:1 w:0)
 	// Storage: TfgridModule Nodes (r:1 w:0)
 	// Storage: TfgridModule NodePower (r:1 w:0)
