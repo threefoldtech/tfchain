@@ -78,6 +78,8 @@ pub struct FarmingPolicyLimit {
     pub node_certification: bool,
 }
 
+pub type SerialNumber = BoundedVec<u8, ConstU32<{ MAX_SERIAL_NUMBER_LENGTH }>>;
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct Node<Location, If> {
     pub version: u32,
@@ -94,7 +96,7 @@ pub struct Node<Location, If> {
     pub certification: NodeCertification,
     pub secure_boot: bool,
     pub virtualized: bool,
-    pub serial_number: Option<BoundedVec<u8, ConstU32<MAX_SERIAL_NUMBER_LENGTH>>>,
+    pub serial_number: Option<SerialNumber>,
     pub connection_price: u32,
 }
 

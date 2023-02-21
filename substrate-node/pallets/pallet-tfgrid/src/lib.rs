@@ -15,6 +15,7 @@ use frame_system::{self as system, ensure_signed};
 use hex::FromHex;
 use pallet_timestamp as timestamp;
 use sp_runtime::SaturatedConversion;
+use tfchain_support::types::SerialNumber;
 use tfchain_support::{
     resources::Resources,
     types::{Interface, NodePower as NodePowerType, Power, PowerState, PublicIP},
@@ -145,10 +146,6 @@ pub mod pallet {
     pub type CityNameOf<T> = <T as Config>::CityName;
     pub type CountryNameOf<T> = <T as Config>::CountryName;
     pub type LocationOf<T> = <T as Config>::Location;
-
-    // Input type for serial number
-    pub type SerialNumberInput =
-        BoundedVec<u8, ConstU32<{ tfchain_support::types::MAX_SERIAL_NUMBER_LENGTH }>>;
 
     // Input type for resources
     pub type ResourcesInput = Resources;
@@ -968,7 +965,7 @@ pub mod pallet {
             interfaces: InterfaceInput<T>,
             secure_boot: bool,
             virtualized: bool,
-            serial_number: Option<SerialNumberInput>,
+            serial_number: Option<Vec<u8>>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -984,6 +981,11 @@ pub mod pallet {
                 !NodeIdByTwinID::<T>::contains_key(twin_id),
                 Error::<T>::NodeWithTwinIdExists
             );
+
+            let s = match serial_number {
+                Some(serial) => Some(Self::get_serial_number(serial)?),
+                None => None,
+            };
 
             let mut id = NodeID::<T>::get();
             id = id + 1;
@@ -1008,7 +1010,7 @@ pub mod pallet {
                 certification: NodeCertification::default(),
                 secure_boot,
                 virtualized,
-                serial_number,
+                serial_number: s,
                 connection_price: ConnectionPrice::<T>::get(),
             };
 
@@ -1042,7 +1044,7 @@ pub mod pallet {
             interfaces: InterfaceInput<T>,
             secure_boot: bool,
             virtualized: bool,
-            serial_number: Option<SerialNumberInput>,
+            serial_number: Option<Vec<u8>>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1060,6 +1062,11 @@ pub mod pallet {
             );
 
             ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
+
+            let s = match serial_number {
+                Some(serial) => Some(Self::get_serial_number(serial)?),
+                None => None,
+            };
 
             let old_node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
 
@@ -1096,7 +1103,7 @@ pub mod pallet {
             stored_node.interfaces = node_interfaces;
             stored_node.secure_boot = secure_boot;
             stored_node.virtualized = virtualized;
-            stored_node.serial_number = serial_number;
+            stored_node.serial_number = s;
 
             // override node in storage
             Nodes::<T>::insert(stored_node.id, &stored_node);
@@ -2407,6 +2414,10 @@ impl<T: Config> Pallet<T> {
         }
 
         true
+    }
+
+    fn get_serial_number(serial: Vec<u8>) -> Result<SerialNumber, Error<T>> {
+        Ok(SerialNumber::try_from(serial).map_err(|_| Error::<T>::InvalidSerialNumber)?)
     }
 }
 
