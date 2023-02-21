@@ -48,13 +48,14 @@ pub fn migrate_to_version_8<T: Config>() -> frame_support::weights::Weight {
         PalletVersion::<T>::get()
     );
 
-    let mut read_writes = 0;
+    let mut reads = 0;
+    let mut writes = 0;
 
     let mut twin_contract_locked_balances: BTreeMap<u32, BalanceOf<T>> = BTreeMap::new();
     // Fetch all locked balances based on the contract locks in storage and accumulate them by twin id
     for (ctr_id, l) in ContractLock::<T>::iter() {
         let ctr = Contracts::<T>::get(ctr_id);
-        read_writes += 1;
+        reads += 1;
         match ctr {
             Some(contract) => {
                 twin_contract_locked_balances
@@ -67,30 +68,27 @@ pub fn migrate_to_version_8<T: Config>() -> frame_support::weights::Weight {
     }
 
     for (twin_id, t) in pallet_tfgrid::Twins::<T>::iter() {
-        read_writes += 1;
+        reads += 1;
 
         // If the twin needs to have some locked balance on his account because of running contracts
         // Check how much we can actually locked based on his current total balance
         // this will make sure the locked balance will not exceed the total balance on the twin's account
-        let contract_locked_b = twin_contract_locked_balances.get(&twin_id);
-        let should_lock = match contract_locked_b {
+        let should_lock = match twin_contract_locked_balances.get(&twin_id) {
             Some(b) => {
                 // get the total balance of the twin - minimum existence requirement
+                debug!("contract locked balance on twin {} account: {:?}", t.id, b);
                 Some(
-                    <T as Config>::Currency::total_balance(&t.account_id)
-                        - <T as Config>::Currency::minimum_balance().min(*b),
+                    (<T as Config>::Currency::total_balance(&t.account_id)
+                        - <T as Config>::Currency::minimum_balance())
+                    .min(*b),
                 )
             }
             None => None,
         };
 
-        debug!(
-            "contract locked balance on twin {} account: {:?}",
-            t.id, contract_locked_b
-        );
         // Unlock all balance for the twin
         <T as Config>::Currency::remove_lock(GRID_LOCK_ID, &t.account_id);
-        read_writes += 1;
+        writes += 1;
 
         if let Some(should_lock) = should_lock {
             debug!("we should lock: {:?}", should_lock);
@@ -101,7 +99,7 @@ pub fn migrate_to_version_8<T: Config>() -> frame_support::weights::Weight {
                 should_lock,
                 WithdrawReasons::all(),
             );
-            read_writes += 1;
+            writes += 1;
         }
     }
 
@@ -110,7 +108,7 @@ pub fn migrate_to_version_8<T: Config>() -> frame_support::weights::Weight {
     debug!(" <<< Storage version upgraded");
 
     // Return the weight consumed by the migration.
-    T::DbWeight::get().reads(read_writes + 1)
+    T::DbWeight::get().reads(reads) + T::DbWeight::get().writes(writes + 1)
 }
 
 fn get_usable_balance<T: Config>(account_id: &T::AccountId) -> BalanceOf<T> {
