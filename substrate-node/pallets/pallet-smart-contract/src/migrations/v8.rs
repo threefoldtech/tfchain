@@ -66,6 +66,7 @@ pub fn migrate_to_version_8<T: Config>() -> frame_support::weights::Weight {
                     );
                     Contracts::<T>::remove(ctr_id);
                     ContractLock::<T>::remove(ctr_id);
+                    writes += 2;
                 } else {
                     twin_contract_locked_balances
                         .entry(contract.twin_id)
@@ -78,6 +79,7 @@ pub fn migrate_to_version_8<T: Config>() -> frame_support::weights::Weight {
                     "no contract found for contract lock {}, cleaning up lock..",
                     ctr_id
                 );
+                writes + 1;
                 ContractLock::<T>::remove(ctr_id);
             }
         }
