@@ -95,7 +95,7 @@ pub fn migrate_to_version_8<T: Config>() -> frame_support::weights::Weight {
             Some(b) => {
                 // get the total balance of the twin - minimum existence requirement
                 debug!("contract locked balance on twin {} account: {:?}", t.id, b);
-                read += 1;
+                reads += 1;
                 Some(
                     (<T as Config>::Currency::total_balance(&t.account_id)
                         - <T as Config>::Currency::minimum_balance())
