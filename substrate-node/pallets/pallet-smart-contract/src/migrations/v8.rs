@@ -13,17 +13,17 @@ impl<T: Config> OnRuntimeUpgrade for FixTwinLockedBalances<T> {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
         debug!("current pallet version: {:?}", PalletVersion::<T>::get());
-        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V6);
+        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V8);
 
         debug!("👥  Smart Contract pallet to V7 passes PRE migrate checks ✅",);
         Ok(vec![])
     }
 
     fn on_runtime_upgrade() -> Weight {
-        if PalletVersion::<T>::get() != types::StorageVersion::V6 {
+        if PalletVersion::<T>::get() >= types::StorageVersion::V6 {
             migrate_to_version_8::<T>()
         } else {
-            info!(" >>> Unused Smart Contract pallet V7 migration");
+            info!(" >>> Unused Smart Contract pallet V8 migration");
             Weight::zero()
         }
     }
@@ -31,7 +31,7 @@ impl<T: Config> OnRuntimeUpgrade for FixTwinLockedBalances<T> {
     #[cfg(feature = "try-runtime")]
     fn post_upgrade(_: Vec<u8>) -> Result<(), &'static str> {
         debug!("current pallet version: {:?}", PalletVersion::<T>::get());
-        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V7);
+        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V8);
 
         debug!(
             "👥  Smart Contract pallet to {:?} passes POST migrate checks ✅",
@@ -58,12 +58,28 @@ pub fn migrate_to_version_8<T: Config>() -> frame_support::weights::Weight {
         reads += 1;
         match ctr {
             Some(contract) => {
-                twin_contract_locked_balances
-                    .entry(contract.twin_id)
-                    .and_modify(|v| *v += l.amount_locked)
-                    .or_insert(BalanceOf::<T>::saturated_from(0 as u128));
+                reads += 1;
+                if !pallet_tfgrid::Twins::<T>::contains_key(contract.twin_id) {
+                    debug!(
+                        "twins: {} does not exist, removing contract and lock",
+                        contract.twin_id
+                    );
+                    Contracts::<T>::remove(ctr_id);
+                    ContractLock::<T>::remove(ctr_id);
+                } else {
+                    twin_contract_locked_balances
+                        .entry(contract.twin_id)
+                        .and_modify(|v| *v += l.amount_locked)
+                        .or_insert(BalanceOf::<T>::saturated_from(0 as u128));
+                }
             }
-            None => (),
+            None => {
+                debug!(
+                    "no contract found for contract lock {}, cleaning up lock..",
+                    ctr_id
+                );
+                ContractLock::<T>::remove(ctr_id);
+            }
         }
     }
 
@@ -77,6 +93,7 @@ pub fn migrate_to_version_8<T: Config>() -> frame_support::weights::Weight {
             Some(b) => {
                 // get the total balance of the twin - minimum existence requirement
                 debug!("contract locked balance on twin {} account: {:?}", t.id, b);
+                read += 1;
                 Some(
                     (<T as Config>::Currency::total_balance(&t.account_id)
                         - <T as Config>::Currency::minimum_balance())
