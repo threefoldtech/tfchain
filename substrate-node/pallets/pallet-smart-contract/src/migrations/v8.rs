@@ -89,7 +89,7 @@ pub fn migrate_to_version_8<T: Config>() -> frame_support::weights::Weight {
         reads += 1;
 
         // If the twin needs to have some locked balance on his account because of running contracts
-        // Check how much we can actually locked based on his current total balance
+        // Check how much we can actually lock based on his current total balance
         // this will make sure the locked balance will not exceed the total balance on the twin's account
         let should_lock = match twin_contract_locked_balances.get(&twin_id) {
             Some(b) => {
