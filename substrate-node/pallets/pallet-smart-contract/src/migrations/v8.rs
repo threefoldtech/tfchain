@@ -121,6 +121,7 @@ pub fn migrate_to_version_8<T: Config>() -> frame_support::weights::Weight {
     PalletVersion::<T>::set(types::StorageVersion::V8);
     debug!(" <<< Storage version upgraded");
 
+    info!("👥  Smart Contract pallet to V8 succeeded");
     // Return the weight consumed by the migration.
     T::DbWeight::get().reads(reads) + T::DbWeight::get().writes(writes + 1)
 }
