@@ -1,7 +1,7 @@
 {
   "name": "TF Chain Devnet",
   "id": "tfchain_devnet",
-  "chainType": "Local",
+  "chainType": "Live",
   "bootNodes": [
     "/ip4/185.206.122.7/tcp/30333/p2p/12D3KooWLcMLBg9itjQL1EXsAqkJFPhqESHqJKY7CBKmhhhL8fdp",
     "/ip4/185.206.122.126/tcp/30333/p2p/12D3KooWAnibsVN4yBcKNKnnRm8pxmHkEf3DUT65dpb3P252RpZK",
