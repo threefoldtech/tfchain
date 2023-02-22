@@ -50,8 +50,8 @@ class TfChainClient:
 
         # This was a sudo call that failed
         for event in events:
-            if event["event_id"] == "Sudid" and "Err" in event["attributes"]:
-                raise Exception(event["attributes"])
+            if event["event_id"] == "Sudid" and "Err" in event["attributes"]["sudo_result"]:
+                raise Exception(event["attributes"]["sudo_result"])
 
         for expected_event in expected_events:
             check = False
@@ -89,11 +89,34 @@ class TfChainClient:
         self._check_events([event.value["event"]
                            for event in response.triggered_events], expected_events)
 
+    def get_account_name_from_twin_id(self, twin_id: int = 1, port: int = DEFAULT_PORT):
+        if twin_id == self.get_twin_id(port=port, who="Alice"):
+            return "Alice"
+        elif twin_id == self.get_twin_id(port=port, who="Bob"):
+            return "Bob"
+        elif twin_id == self.get_twin_id(port=port, who="Charlie"):
+            return "Charlie"
+        elif twin_id == self.get_twin_id(port=port, who="Dave"):
+            return "Dave"
+        elif twin_id == self.get_twin_id(port=port, who="Eve"):
+            return "Eve"
+        elif twin_id == self.get_twin_id(port=port, who="Ferdie"):
+            return "Ferdie"
+        return None
+
     def setup_predefined_account(self, who: str, port: int = DEFAULT_PORT):
         logging.info("Setting up predefined account %s (%s)", who,
                      PREDEFINED_KEYS[who].ss58_address)
         self.user_accept_tc(port=port, who=who)
         self.create_twin(port=port, who=who)
+
+    def get_twin_id(self, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+
+        q = substrate.query("TfgridModule", "TwinIdByAccountID", [
+            PREDEFINED_KEYS[who].ss58_address])
+
+        return q.value
 
     def user_accept_tc(self, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
@@ -264,11 +287,11 @@ class TfChainClient:
                 "mru": mru * GIGABYTE
             },
             "location": {
+                "city": city,
+                "country": country,
                 "longitude": f"{longitude}",
                 "latitude": f"{latitude}"
             },
-            "country": country,
-            "city": city,
             "interfaces": interfaces,
             "secure_boot": secure_boot,
             "virtualized": virtualized,
@@ -299,11 +322,11 @@ class TfChainClient:
                 "mru": mru * GIGABYTE
             },
             "location": {
+                "country": country,
+                "city": city,
                 "longitude": f"{longitude}",
                 "latitude": f"{latitude}"
             },
-            "country": country,
-            "city": city,
             "interfaces": [],
             "secure_boot": secure_boot,
             "virtualized": virtualized,
@@ -370,7 +393,6 @@ class TfChainClient:
     def create_node_contract(self, node_id: int = 1, deployment_data: bytes = randbytes(32),
                              deployment_hash: bytes = randbytes(32), public_ips: int = 0,
                              solution_provider_id: int | None = None, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
-        logging.info("Ok")
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         params = {

@@ -191,12 +191,12 @@ Test Create Update Delete Node
     Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
     ${node} =    Get Node    ${1}
     Should Not Be Equal    ${node}    ${None}
-    Should Be Equal    ${node}[city]    Ghent
+    Should Be Equal    ${node}[location][city]    Ghent
 
     Update Node    node_id=${1}    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Celles
     ${node} =    Get Node    ${1}
     Should Not Be Equal    ${node}    ${None}
-    Should Be Equal    ${node}[city]    Celles
+    Should Be Equal    ${node}[location][city]    Celles
 
     Delete Node    ${1}
     ${node} =    Get Node    ${1}
