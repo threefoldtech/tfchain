@@ -117,16 +117,13 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, u32, Vec<u8>, ValueQuery>;
 
     pub type DomainInput = BoundedVec<u8, ConstU32<{ MAX_DOMAIN_NAME_LENGTH }>>;
-    // Input type for interfaces
-    pub type InterfaceNameInput = BoundedVec<u8, ConstU32<{ interface::MAX_INTF_NAME_LENGTH }>>;
-    pub type InterfaceMacInput = BoundedVec<u8, ConstU32<{ interface::INTERFACE_MAC_LENGTH }>>;
-    pub type InterfaceIpInput = BoundedVec<u8, ConstU32<{ interface::MAX_INTERFACE_IP_LENGTH }>>;
-    pub type InterfaceIpsInput<T> =
-        BoundedVec<InterfaceIpInput, <T as Config>::MaxInterfacesLength>;
-    pub type InterfaceInput<T> = BoundedVec<
-        Interface<InterfaceNameInput, InterfaceMacInput, InterfaceIpsInput<T>>,
-        <T as Config>::MaxInterfaceIpsLength,
-    >;
+
+    pub type InterfaceIpInput = Vec<u8>;
+    pub type InterfaceMacInput = Vec<u8>;
+    pub type InterfaceNameInput = Vec<u8>;
+    pub type InterfaceInput =
+        Vec<Interface<InterfaceNameInput, InterfaceMacInput, Vec<InterfaceIpInput>>>;
+
     // Concrete type for interfaces
     pub type InterfaceNameOf<T> = <T as Config>::InterfaceName;
     pub type InterfaceMacOf<T> = <T as Config>::InterfaceMac;
@@ -317,7 +314,7 @@ pub mod pallet {
             + Eq
             + Clone
             + TypeInfo
-            + TryFrom<InterfaceNameInput, Error = Error<Self>>
+            + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of an interface mac address.
@@ -327,7 +324,7 @@ pub mod pallet {
             + Eq
             + Clone
             + TypeInfo
-            + TryFrom<InterfaceMacInput, Error = Error<Self>>
+            + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of an interface IP.
@@ -337,7 +334,7 @@ pub mod pallet {
             + Eq
             + Clone
             + TypeInfo
-            + TryFrom<InterfaceIpInput, Error = Error<Self>>
+            + TryFrom<Vec<u8>, Error = Error<Self>>
             + MaxEncodedLen;
 
         /// The type of a city name.
@@ -980,7 +977,7 @@ pub mod pallet {
             farm_id: u32,
             resources: ResourcesInput,
             location: LocationInput,
-            interfaces: InterfaceInput<T>,
+            interfaces: InterfaceInput,
             secure_boot: bool,
             virtualized: bool,
             serial_number: Option<SerialNumberInput>,
@@ -1005,7 +1002,7 @@ pub mod pallet {
 
             let node_resources = Self::get_resources(resources)?;
             let node_location = Self::get_location(location)?;
-            let node_interfaces = Self::get_interfaces(&interfaces)?;
+            let node_interfaces = Self::get_interfaces(interfaces)?;
 
             let node_serial_number = if let Some(serial_input) = serial_number {
                 Some(Self::get_serial_number(serial_input)?)
@@ -1060,7 +1057,7 @@ pub mod pallet {
             farm_id: u32,
             resources: ResourcesInput,
             location: LocationInput,
-            interfaces: InterfaceInput<T>,
+            interfaces: InterfaceInput,
             secure_boot: bool,
             virtualized: bool,
             serial_number: Option<SerialNumberInput>,
@@ -1098,7 +1095,7 @@ pub mod pallet {
 
             let node_resources = Self::get_resources(resources)?;
             let node_location = Self::get_location(location)?;
-            let node_interfaces = Self::get_interfaces(&interfaces)?;
+            let node_interfaces = Self::get_interfaces(interfaces)?;
 
             let node_serial_number = if let Some(serial_input) = serial_number {
                 Some(Self::get_serial_number(serial_input)?)
@@ -2263,38 +2260,17 @@ impl<T: Config> Pallet<T> {
         Ok(resources)
     }
 
-    fn get_interface_name(
-        if_name: InterfaceNameInput,
-    ) -> Result<InterfaceNameOf<T>, DispatchErrorWithPostInfo> {
-        let if_name_parsed = <T as Config>::InterfaceName::try_from(if_name)?;
-        Ok(if_name_parsed)
-    }
-
-    fn get_interface_mac(
-        if_mac: InterfaceMacInput,
-    ) -> Result<InterfaceMacOf<T>, DispatchErrorWithPostInfo> {
-        let if_mac_parsed = <T as Config>::InterfaceMac::try_from(if_mac)?;
-        Ok(if_mac_parsed)
-    }
-
-    fn get_interface_ip(
-        if_ip: InterfaceIpInput,
-    ) -> Result<InterfaceIpOf<T>, DispatchErrorWithPostInfo> {
-        let if_ip_parsed = <T as Config>::InterfaceIP::try_from(if_ip)?;
-        Ok(if_ip_parsed)
-    }
-
     fn get_interfaces(
-        interfaces: &InterfaceInput<T>,
+        interfaces: InterfaceInput,
     ) -> Result<Vec<InterfaceOf<T>>, DispatchErrorWithPostInfo> {
         let mut parsed_interfaces = Vec::new();
         if interfaces.len() == 0 {
             return Ok(parsed_interfaces);
         }
 
-        for intf in interfaces.iter() {
-            let intf_name = Self::get_interface_name(intf.name.clone())?;
-            let intf_mac = Self::get_interface_mac(intf.mac.clone())?;
+        for intf in interfaces.into_iter() {
+            let intf_name = <T as Config>::InterfaceName::try_from(intf.name)?;
+            let intf_mac = <T as Config>::InterfaceMac::try_from(intf.mac)?;
 
             let mut parsed_interfaces_ips: BoundedVec<
                 InterfaceIpOf<T>,
@@ -2303,8 +2279,8 @@ impl<T: Config> Pallet<T> {
                 .try_into()
                 .map_err(|_| Error::<T>::InvalidInterfaceIP)?;
 
-            for ip in intf.ips.iter() {
-                let intf_ip = Self::get_interface_ip(ip.clone())?;
+            for ip in intf.ips.into_iter() {
+                let intf_ip = <T as Config>::InterfaceIP::try_from(ip)?;
                 parsed_interfaces_ips
                     .try_push(intf_ip)
                     .map_err(|_| Error::<T>::InvalidInterfaceIP)?;

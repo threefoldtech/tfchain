@@ -38,7 +38,11 @@ impl<T: Config> TryFrom<InterfaceNameInput> for InterfaceName<T> {
             validate_interface_name(&value),
             Self::Error::InvalidInterfaceName
         );
-        Ok(Self(value, PhantomData))
+
+        let name: BoundedVec<u8, ConstU32<MAX_INTF_NAME_LENGTH>> =
+            value.try_into().unwrap_or_default();
+
+        Ok(Self(name, PhantomData))
     }
 }
 
@@ -90,7 +94,11 @@ impl<T: Config> TryFrom<InterfaceMacInput> for InterfaceMac<T> {
             Self::Error::InterfaceMacTooLong
         );
         ensure!(Mac::parse(&value).is_ok(), Self::Error::InvalidMacAddress);
-        Ok(Self(value, PhantomData))
+
+        let mac: BoundedVec<u8, ConstU32<INTERFACE_MAC_LENGTH>> =
+            value.try_into().unwrap_or_default();
+
+        Ok(Self(mac, PhantomData))
     }
 }
 
@@ -140,7 +148,10 @@ impl<T: Config> TryFrom<InterfaceIpInput> for InterfaceIp<T> {
             IPv4::parse(&value).is_ok() || IPv6::parse(&value).is_ok(),
             Self::Error::InvalidInterfaceIP
         );
-        Ok(Self(value, PhantomData))
+
+        let ip: BoundedVec<u8, ConstU32<MAX_INTERFACE_IP_LENGTH>> =
+            value.try_into().unwrap_or_default();
+        Ok(Self(ip, PhantomData))
     }
 }
 

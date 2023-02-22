@@ -1,7 +1,7 @@
 use super::Event as TfgridEvent;
 use crate::{
     mock::RuntimeEvent as MockEvent, mock::*, types::LocationInput, Error, InterfaceInput,
-    InterfaceIpsInput, PublicIpListInput, ResourcesInput,
+    PublicIpListInput, ResourcesInput,
 };
 use frame_support::{assert_noop, assert_ok, bounded_vec};
 use frame_system::{EventRecord, Phase, RawOrigin};
@@ -825,18 +825,18 @@ fn create_node_with_interfaces_works() {
             longitude: get_longitude_input(b"32.323112123"),
         };
 
-        let mut interface_ips: InterfaceIpsInput<TestRuntime> = bounded_vec![];
-        let intf_ip = get_interface_ip_input(b"10.2.3.3");
-        interface_ips.try_push(intf_ip).unwrap();
+        let mut interface_ips = vec![];
+        let intf_ip = b"10.2.3.3".to_vec();
+        interface_ips.push(intf_ip);
 
         let interface = Interface {
-            name: get_interface_name_input(b"zos"),
-            mac: get_interface_mac_input(b"00:00:5e:00:53:af"),
+            name: b"zos".to_vec(),
+            mac: b"00:00:5e:00:53:af".to_vec(),
             ips: interface_ips,
         };
 
-        let mut interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
-        interfaces.try_push(interface).unwrap();
+        let mut interfaces: InterfaceInput = vec![];
+        interfaces.push(interface);
 
         assert_ok!(TfgridModule::create_node(
             RuntimeOrigin::signed(alice()),
@@ -2283,14 +2283,12 @@ fn create_node() {
         longitude: get_longitude_input(b"32.323112123"),
     };
 
-    let interfaces: InterfaceInput<TestRuntime> = bounded_vec![];
-
     assert_ok!(TfgridModule::create_node(
         RuntimeOrigin::signed(alice()),
         1,
         resources,
         location,
-        interfaces,
+        vec![],
         true,
         true,
         Some(b"Default String".to_vec().try_into().unwrap()),

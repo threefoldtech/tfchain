@@ -6,8 +6,8 @@ use crate::{
     node::{CityName, CountryName, Location, SerialNumber},
     terms_cond::TermsAndConditions,
     weights, CityNameInput, Config, CountryNameInput, DocumentHashInput, DocumentLinkInput,
-    DomainInput, FarmNameInput, Gw4Input, Gw6Input, InterfaceIpInput, InterfaceMacInput,
-    InterfaceNameInput, Ip4Input, Ip6Input, LatitudeInput, LongitudeInput, PkInput, RelayInput,
+    DomainInput, FarmNameInput, Gw4Input, Gw6Input, Ip4Input, Ip6Input, LatitudeInput,
+    LongitudeInput, PkInput, RelayInput,
 };
 use env_logger;
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
@@ -277,18 +277,6 @@ pub(crate) fn get_pub_config_gw6_input(gw6_input: &[u8]) -> Gw6Input {
 
 pub(crate) fn get_pub_config_domain_input(domain_input: &[u8]) -> DomainInput {
     BoundedVec::try_from(domain_input.to_vec()).expect("Invalid domain input.")
-}
-
-pub(crate) fn get_interface_name_input(if_name_input: &[u8]) -> InterfaceNameInput {
-    BoundedVec::try_from(if_name_input.to_vec()).expect("Invalid interface name input")
-}
-
-pub(crate) fn get_interface_mac_input(if_mac_input: &[u8]) -> InterfaceMacInput {
-    BoundedVec::try_from(if_mac_input.to_vec()).expect("Invalid interface mac input")
-}
-
-pub(crate) fn get_interface_ip_input(if_ip_input: &[u8]) -> InterfaceIpInput {
-    BoundedVec::try_from(if_ip_input.to_vec()).expect("Invalid interface ip input")
 }
 
 pub(crate) fn get_city_name_input(city_input: &[u8]) -> CityNameInput {
