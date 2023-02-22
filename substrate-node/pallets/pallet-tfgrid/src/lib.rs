@@ -542,8 +542,6 @@ pub mod pallet {
         InvalidCityName,
         InvalidCountryCityPair,
 
-        SerialNumberTooShort,
-        SerialNumberTooLong,
         InvalidSerialNumber,
 
         DocumentLinkInputTooShort,
@@ -982,7 +980,7 @@ pub mod pallet {
                 Error::<T>::NodeWithTwinIdExists
             );
 
-            let s = match serial_number {
+            let serial_number = match serial_number {
                 Some(serial) => Some(Self::get_serial_number(serial)?),
                 None => None,
             };
@@ -1010,7 +1008,7 @@ pub mod pallet {
                 certification: NodeCertification::default(),
                 secure_boot,
                 virtualized,
-                serial_number: s,
+                serial_number,
                 connection_price: ConnectionPrice::<T>::get(),
             };
 
@@ -1063,7 +1061,7 @@ pub mod pallet {
 
             ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
 
-            let s = match serial_number {
+            let serial_number = match serial_number {
                 Some(serial) => Some(Self::get_serial_number(serial)?),
                 None => None,
             };
@@ -1103,7 +1101,7 @@ pub mod pallet {
             stored_node.interfaces = node_interfaces;
             stored_node.secure_boot = secure_boot;
             stored_node.virtualized = virtualized;
-            stored_node.serial_number = s;
+            stored_node.serial_number = serial_number;
 
             // override node in storage
             Nodes::<T>::insert(stored_node.id, &stored_node);
