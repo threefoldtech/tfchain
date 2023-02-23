@@ -11,6 +11,7 @@ jobs:
       image: threefolddev/tfchain:2
       env:
         DEBIAN_FRONTEND: noninteractive
+        PATH: $PATH:/root/.cargo/bin
     steps:
       - uses: actions/checkout@v3
 
@@ -31,15 +32,15 @@ jobs:
       - name: Build
         run: |
           cd substrate-node
-          /root/.cargo/bin/rustup target add wasm32-unknown-unknown --toolchain nightly-2022-05-11
-          /root/.cargo/bin/cargo +nightly-2022-05-11 build --release
+          rustup target add wasm32-unknown-unknown --toolchain nightly-2022-05-11
+          cargo +nightly-2022-05-11 build --release
 
       - name: Unit tests
         run: |
           cd substrate-node
-          /root/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
+          cargo +nightly-2022-05-11 test --no-fail-fast
           cd pallets
-          /root/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
+          cargo +nightly-2022-05-11 test --no-fail-fast
 
       - name: Integration tests
         run: |
