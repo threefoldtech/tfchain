@@ -6,11 +6,15 @@ on:
   pull_request:
 jobs:
   build-and-test:
-    runs-on: [self-hosted, poc]
+    runs-on: [self-hosted, tfchainrunner01]
     container:
       image: threefolddev/tfchain:2
       env:
         DEBIAN_FRONTEND: noninteractive
+        PATH: /root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+        RUSTUP_HOME: /root/.rustup
+        CARGO_HOME: /root/.cargo
+
     steps:
       - uses: actions/checkout@v3
 
@@ -20,10 +24,10 @@ jobs:
         continue-on-error: true
         with:
           path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
+            /home/.cargo/bin/
+            /home/.cargo/registry/index/
+            /home/.cargo/registry/cache/
+            /home/.cargo/git/db/
             substrate-node/target/
           key: ${{ runner.os }}-tfchain-build-cache-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-tfchain-build-cache
@@ -31,15 +35,15 @@ jobs:
       - name: Build
         run: |
           cd substrate-node
-          $HOME/.cargo/bin/rustup target add wasm32-unknown-unknown --toolchain nightly-2022-05-11
-          $HOME/.cargo/bin/cargo +nightly-2022-05-11 build --release
+          rustup target add wasm32-unknown-unknown --toolchain nightly-2022-05-11
+          cargo +nightly-2022-05-11 build --release
 
       - name: Unit tests
         run: |
           cd substrate-node
-          $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
+          cargo +nightly-2022-05-11 test --no-fail-fast
           cd pallets
-          $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
+          cargo +nightly-2022-05-11 test --no-fail-fast
 
       - name: Integration tests
         run: |
