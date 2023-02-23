@@ -11,7 +11,8 @@ jobs:
       image: threefolddev/tfchain:2
       env:
         DEBIAN_FRONTEND: noninteractive
-        PATH: $PATH:/root/.cargo/bin
+        PATH: /root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
     steps:
       - uses: actions/checkout@v3
 
