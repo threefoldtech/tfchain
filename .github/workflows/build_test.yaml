@@ -12,6 +12,8 @@ jobs:
       env:
         DEBIAN_FRONTEND: noninteractive
         PATH: /root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+        RUSTUP_HOME: /root
+        CARGO_HOME: /root
 
     steps:
       - uses: actions/checkout@v3
