@@ -6,7 +6,7 @@ on:
   pull_request:
 jobs:
   build-and-test:
-    runs-on: [self-hosted, tfchainrunner01]
+    runs-on: [self-hosted, tmpactionrunner]
     container:
       image: threefolddev/tfchain:2
       env:
