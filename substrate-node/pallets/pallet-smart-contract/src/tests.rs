@@ -453,7 +453,7 @@ fn test_create_name_contract_works() {
 
         assert_ok!(SmartContractModule::create_name_contract(
             RuntimeOrigin::signed(bob()),
-            "foobar".as_bytes().to_vec()
+            b"foobar".to_vec()
         ));
     });
 }
@@ -2291,8 +2291,8 @@ fn test_create_solution_provider_works() {
 
         assert_ok!(SmartContractModule::create_solution_provider(
             RuntimeOrigin::signed(alice()),
-            "some_description".as_bytes().to_vec(),
-            "some_link".as_bytes().to_vec(),
+            b"some_description".to_vec(),
+            b"some_link".to_vec(),
             providers
         ));
 
@@ -3516,10 +3516,8 @@ fn generate_deployment_hash() -> HexHash {
 }
 
 fn get_deployment_data() -> crate::DeploymentDataInput<TestRuntime> {
-    BoundedVec::<u8, crate::MaxDeploymentDataLength<TestRuntime>>::try_from(
-        "some_data".as_bytes().to_vec(),
-    )
-    .unwrap()
+    BoundedVec::<u8, crate::MaxDeploymentDataLength<TestRuntime>>::try_from(b"some_data".to_vec())
+        .unwrap()
 }
 
 fn create_service_consumer_contract() {

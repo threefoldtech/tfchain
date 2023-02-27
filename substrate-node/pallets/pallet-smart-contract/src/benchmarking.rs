@@ -11,10 +11,10 @@ use frame_system::{EventRecord, Pallet as System, RawOrigin};
 use pallet_balances::Pallet as Balances;
 use pallet_tfgrid::{
     types::{self as tfgrid_types, LocationInput},
-    CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, LatitudeInput,
-    LongitudeInput, Pallet as Tfgrid, PkInput, RelayInput, ResourcesInput,
+    CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, Gw4Input, Ip4Input,
+    LatitudeInput, LongitudeInput, Pallet as Tfgrid, PkInput, RelayInput, ResourcesInput,
 };
-use pallet_timestamp::Pallet as Timestamp;
+// use pallet_timestamp::Pallet as Timestamp;
 use sp_runtime::traits::{Bounded, One, StaticLookup};
 use sp_std::{
     convert::{TryFrom, TryInto},
@@ -38,34 +38,124 @@ benchmarks! {
 
     create_node_contract {
         let farmer: T::AccountId = account("Alice", 0, 0);
-        prepare_farm_with_node::<T>(farmer);
+        _prepare_farm_with_node::<T>(farmer);
+        let node_id = 1;
 
         let caller: T::AccountId = whitelisted_caller();
-        create_twin::<T>(caller.clone());
+        _create_twin::<T>(caller.clone());
     }: _(RawOrigin::Signed(
         caller.clone()),
-        1,
-        b"858f8fb2184b15ecb8c0be8b95398c81".to_vec().try_into().unwrap(),
-        b"some_data".to_vec().try_into().unwrap(),
+        node_id,
+        get_deployment_hash_input(b"858f8fb2184b15ecb8c0be8b95398c81"),
+        get_deployment_data_input::<T>(b"some_data"),
         1,
         None
     )
     verify {
-        assert!(SmartContractModule::<T>::contracts(1).is_some());
-        let contract = SmartContractModule::<T>::contracts(1).unwrap();
+        let contract_id = 1;
+        assert!(SmartContractModule::<T>::contracts(contract_id).is_some());
+        let contract = SmartContractModule::<T>::contracts(contract_id).unwrap();
         assert_eq!(
-            contract.contract_id, 1
+            contract.contract_id, contract_id
         );
         assert_last_event::<T>(Event::ContractCreated(contract).into());
     }
 
-    add_nru_reports {
+    update_node_contract {
         let farmer: T::AccountId = account("Alice", 0, 0);
-        prepare_farm_with_node::<T>(farmer.clone());
+        _prepare_farm_with_node::<T>(farmer.clone());
 
         let caller: T::AccountId = whitelisted_caller();
-        create_twin::<T>(caller.clone());
-        create_contract::<T>(caller.clone());
+        _create_twin::<T>(caller.clone());
+        _create_node_contract::<T>(caller.clone());
+        let contract_id = 1;
+        let new_deployment_hash = get_deployment_hash_input(b"858f8fb2184b15ecb8c0be8b95398c82");
+
+    }: _(RawOrigin::Signed(
+        caller.clone()),
+        contract_id,
+        new_deployment_hash,
+        get_deployment_data_input::<T>(b"some_data")
+    )
+    verify {
+        assert!(SmartContractModule::<T>::contracts(contract_id).is_some());
+        let contract = SmartContractModule::<T>::contracts(contract_id).unwrap();
+        assert_eq!(
+            contract.contract_id, contract_id
+        );
+        assert_last_event::<T>(Event::ContractUpdated(contract).into());
+        let node_id = 1;
+        assert_eq!(SmartContractModule::<T>::node_contract_by_hash(node_id, new_deployment_hash), contract_id);
+        let old_deployment_hash = get_deployment_hash_input(b"858f8fb2184b15ecb8c0be8b95398c81");
+        assert_eq!(SmartContractModule::<T>::node_contract_by_hash(node_id, old_deployment_hash), 0);
+    }
+
+    cancel_contract {
+        let farmer: T::AccountId = account("Alice", 0, 0);
+        _prepare_farm_with_node::<T>(farmer.clone());
+
+        let caller: T::AccountId = whitelisted_caller();
+        _create_twin::<T>(caller.clone());
+        _create_node_contract::<T>(caller.clone());
+        let contract_id = 1;
+
+    }: _(RawOrigin::Signed(
+        caller.clone()),
+        contract_id
+    )
+    verify {
+        assert!(SmartContractModule::<T>::contracts(contract_id).is_none());
+        let node_id = 1;
+        let twin_id = 2;
+        assert_last_event::<T>(Event::NodeContractCanceled {
+            contract_id,
+            node_id,
+            twin_id,
+         }.into());
+    }
+
+    create_name_contract {
+        let caller: T::AccountId = whitelisted_caller();
+        _create_twin::<T>(caller.clone());
+    }: _(RawOrigin::Signed(
+        caller.clone()),
+        b"foobar".to_vec()
+    )
+    verify {
+        let contract_id = 1;
+        assert!(SmartContractModule::<T>::contracts(contract_id).is_some());
+        let contract = SmartContractModule::<T>::contracts(contract_id).unwrap();
+        assert_eq!(
+            contract.contract_id, contract_id
+        );
+        assert_last_event::<T>(Event::ContractCreated(contract).into());
+    }
+
+    cancel_name_contract {
+        _create_pricing_policy::<T>();
+        let caller: T::AccountId = whitelisted_caller();
+        _create_twin::<T>(caller.clone());
+        _create_name_contract::<T>(caller.clone());
+        let contract_id = 1;
+
+    }: cancel_contract(RawOrigin::Signed(
+        caller.clone()),
+        contract_id
+    )
+    verify {
+        assert!(SmartContractModule::<T>::contracts(contract_id).is_none());
+        assert_last_event::<T>(Event::NameContractCanceled {
+            contract_id,
+         }.into());
+    }
+
+    add_nru_reports {
+        let farmer: T::AccountId = account("Alice", 0, 0);
+        _prepare_farm_with_node::<T>(farmer.clone());
+
+        let user: T::AccountId = account("Bob", 0, 1);
+        _create_twin::<T>(user.clone());
+        _create_node_contract::<T>(user.clone());
         let contract_id = 1;
 
         let report = types::NruConsumption {
@@ -79,7 +169,7 @@ benchmarks! {
 
     }: _(RawOrigin::Signed(farmer.clone()), reports)
     verify {
-        assert!(SmartContractModule::<T>::contracts(1).is_some());
+        assert!(SmartContractModule::<T>::contracts(contract_id).is_some());
         let contract = SmartContractModule::<T>::contracts(contract_id).unwrap();
         assert_eq!(
             contract.contract_id, contract_id
@@ -87,20 +177,139 @@ benchmarks! {
         assert_last_event::<T>(Event::NruConsumptionReportReceived(report).into());
     }
 
-    bill_contract_for_block {
+    report_contract_resources {
         let farmer: T::AccountId = account("Alice", 0, 0);
-        prepare_farm_with_node::<T>(farmer.clone());
+        _prepare_farm_with_node::<T>(farmer.clone());
 
-        let caller: T::AccountId = whitelisted_caller();
-        let caller_lookup = T::Lookup::unlookup(caller.clone());
-        let balance_init_amount = <T as pallet_balances::Config>::Balance::saturated_from(100000000 as u128);
-        Balances::<T>::set_balance(RawOrigin::Root.into(), caller_lookup, balance_init_amount, balance_init_amount).unwrap();
-        create_twin::<T>(caller.clone());
-        create_contract::<T>(caller.clone());
+        let user: T::AccountId = account("Bob", 0, 1);
+        _create_twin::<T>(user.clone());
+        _create_node_contract::<T>(user.clone());
         let contract_id = 1;
 
-        push_contract_used_resources_report::<T>(farmer.clone());
-        push_contract_nru_consumption_report::<T>(farmer.clone());
+        let contract_resource = types::ContractResources {
+            contract_id,
+            used: Resources {
+                sru: 150 * GIGABYTE,
+                cru: 16,
+                mru: 8 * GIGABYTE,
+                hru: 0,
+            }
+        };
+        let contract_resources = vec![contract_resource.clone()];
+
+    }: _(RawOrigin::Signed(farmer.clone()), contract_resources)
+    verify {
+        assert_eq!(
+            SmartContractModule::<T>::node_contract_resources(contract_id),
+            contract_resource
+        );
+        assert_last_event::<T>(Event::UpdatedUsedResources(contract_resource).into());
+    }
+
+    create_rent_contract {
+        let farmer: T::AccountId = account("Alice", 0, 0);
+        _prepare_farm_with_node::<T>(farmer.clone());
+        let node_id = 1;
+
+        let caller: T::AccountId = whitelisted_caller();
+        _create_twin::<T>(caller.clone());
+
+    }: _(RawOrigin::Signed(
+        caller.clone()),
+        node_id,
+        None
+    )
+    verify {
+        let contract_id = 1;
+        assert!(SmartContractModule::<T>::contracts(contract_id).is_some());
+        let contract = SmartContractModule::<T>::contracts(contract_id).unwrap();
+        assert_eq!(
+            contract.contract_id, contract_id
+        );
+        assert_last_event::<T>(Event::ContractCreated(contract).into());
+    }
+
+    cancel_rent_contract {
+        let farmer: T::AccountId = account("Alice", 0, 0);
+        _prepare_farm_with_node::<T>(farmer.clone());
+
+        let caller: T::AccountId = whitelisted_caller();
+        _create_twin::<T>(caller.clone());
+        _create_rent_contract::<T>(caller.clone());
+        let contract_id = 1;
+
+    }: cancel_contract(RawOrigin::Signed(
+        caller.clone()),
+        contract_id
+    )
+    verify {
+        assert!(SmartContractModule::<T>::contracts(contract_id).is_none());
+        assert_last_event::<T>(Event::RentContractCanceled {
+            contract_id,
+         }.into());
+    }
+
+    create_solution_provider {
+        let provider1 = super::types::Provider {
+            take: 10,
+            who: account("Alice", 0, 0),
+        };
+        let provider2 = super::types::Provider {
+            take: 10,
+            who: account("Bob", 0, 1),
+        };
+        let providers = vec![provider1, provider2];
+
+        let caller: T::AccountId = whitelisted_caller();
+        _create_twin::<T>(caller.clone());
+
+    }: _(RawOrigin::Signed(
+        caller.clone()),
+        b"some_description".to_vec(),
+        b"some_link".to_vec(),
+        providers.clone()
+    )
+    verify {
+        let solution_provider_id = 1;
+        assert!(SmartContractModule::<T>::solution_providers(solution_provider_id).is_some());
+        let solution_provider = SmartContractModule::<T>::solution_providers(solution_provider_id).unwrap();
+        assert_eq!(
+            solution_provider.providers, providers
+        );
+        assert_last_event::<T>(Event::SolutionProviderCreated(solution_provider).into());
+    }
+
+    approve_solution_provider {
+        let provider: T::AccountId = account("Alice", 0, 0);
+        _create_twin::<T>(provider.clone());
+        _create_solution_provider::<T>(provider.clone());
+        let solution_provider_id = 1;
+        let approve = true;
+
+    }: _(RawOrigin::Root,
+        solution_provider_id,
+        approve
+    )
+    verify {
+        assert!(SmartContractModule::<T>::solution_providers(solution_provider_id).is_some());
+        let solution_provider = SmartContractModule::<T>::solution_providers(solution_provider_id).unwrap();
+        assert_last_event::<T>(Event::SolutionProviderApproved(solution_provider_id, approve).into());
+    }
+
+    bill_contract_for_block {
+        let farmer: T::AccountId = account("Alice", 0, 0);
+        _prepare_farm_with_node::<T>(farmer.clone());
+
+        let user: T::AccountId = account("Bob", 0, 1);
+        let user_lookup = T::Lookup::unlookup(user.clone());
+        let balance_init_amount = <T as pallet_balances::Config>::Balance::saturated_from(100000000 as u128);
+        Balances::<T>::set_balance(RawOrigin::Root.into(), user_lookup, balance_init_amount, balance_init_amount).unwrap();
+        _create_twin::<T>(user.clone());
+        _create_node_contract::<T>(user.clone());
+        let contract_id = 1;
+
+        _push_contract_used_resources_report::<T>(farmer.clone());
+        _push_contract_nru_consumption_report::<T>(farmer.clone());
 
     }: _(RawOrigin::Signed(farmer.clone()), contract_id)
     verify {
@@ -119,6 +328,15 @@ benchmarks! {
         // assert_last_event::<T>(Event::ContractBilled(contract_bill).into());
         // assert_eq!((Balances::<T>::free_balance(&caller) - Balances::<T>::usable_balance(&caller)).saturated_into::<u128>(), amount_billed);
     }
+
+    // pub fn service_contract_create(
+    // pub fn service_contract_set_metadata(
+    // pub fn service_contract_set_fees(
+    // pub fn service_contract_approve(
+    // pub fn service_contract_reject(
+    // pub fn service_contract_cancel(
+    // pub fn service_contract_bill(
+    // pub fn change_billing_frequency(
 
     // Calling the `impl_benchmark_test_suite` macro inside the `benchmarks`
     // block will generate one #[test] function per benchmark
@@ -142,15 +360,15 @@ pub fn run_to_block<T: Config>(n: T::BlockNumber) {
     }
 }
 
-pub fn prepare_farm_with_node<T: Config>(source: T::AccountId) {
-    create_pricing_policy::<T>();
-    create_farming_policy::<T>();
-    create_twin::<T>(source.clone());
-    create_farm::<T>(source.clone());
-    create_node::<T>(source.clone());
+pub fn _prepare_farm_with_node<T: Config>(source: T::AccountId) {
+    _create_pricing_policy::<T>();
+    _create_farming_policy::<T>();
+    _create_twin::<T>(source.clone());
+    _create_farm::<T>(source.clone());
+    _create_node::<T>(source.clone());
 }
 
-fn create_pricing_policy<T: Config>() {
+fn _create_pricing_policy<T: Config>() {
     let su_policy = tfgrid_types::Policy {
         value: 194400,
         unit: tfgrid_types::Unit::Gigabytes,
@@ -194,7 +412,7 @@ fn create_pricing_policy<T: Config>() {
     ));
 }
 
-fn create_farming_policy<T: Config>() {
+fn _create_farming_policy<T: Config>() {
     let name = b"fp".to_vec();
     assert_ok!(Tfgrid::<T>::create_farming_policy(
         RawOrigin::Root.into(),
@@ -212,7 +430,7 @@ fn create_farming_policy<T: Config>() {
     ));
 }
 
-pub fn create_twin<T: Config>(source: T::AccountId) {
+fn _create_twin<T: Config>(source: T::AccountId) {
     assert_ok!(Tfgrid::<T>::user_accept_tc(
         RawOrigin::Signed(source.clone()).into(),
         get_document_link_input(b"some_link"),
@@ -230,16 +448,16 @@ pub fn create_twin<T: Config>(source: T::AccountId) {
     ));
 }
 
-pub fn create_farm<T: Config>(source: T::AccountId) {
+fn _create_farm<T: Config>(source: T::AccountId) {
     let farm_name = b"testfarm";
     let mut pub_ips = Vec::new();
     pub_ips.push(IP4 {
-        ip: b"185.206.122.33/24".to_vec().try_into().unwrap(),
-        gw: b"185.206.122.1".to_vec().try_into().unwrap(),
+        ip: get_public_ip_ip_input(b"185.206.122.33/24"),
+        gw: get_public_ip_gw_input(b"185.206.122.1"),
     });
     pub_ips.push(IP4 {
-        ip: b"185.206.122.34/24".to_vec().try_into().unwrap(),
-        gw: b"185.206.122.1".to_vec().try_into().unwrap(),
+        ip: get_public_ip_ip_input(b"185.206.122.34/24"),
+        gw: get_public_ip_gw_input(b"185.206.122.1"),
     });
 
     assert_ok!(pallet_tfgrid::Pallet::<T>::create_farm(
@@ -249,7 +467,7 @@ pub fn create_farm<T: Config>(source: T::AccountId) {
     ));
 }
 
-pub fn create_node<T: Config>(source: T::AccountId) {
+fn _create_node<T: Config>(source: T::AccountId) {
     let resources = ResourcesInput {
         hru: 1024 * GIGABYTE,
         sru: 512 * GIGABYTE,
@@ -277,21 +495,18 @@ pub fn create_node<T: Config>(source: T::AccountId) {
     ));
 }
 
-pub fn create_contract<T: Config>(source: T::AccountId) {
+fn _create_node_contract<T: Config>(source: T::AccountId) {
     assert_ok!(SmartContractModule::<T>::create_node_contract(
         RawOrigin::Signed(source).into(),
         1,
-        b"858f8fb2184b15ecb8c0be8b95398c81"
-            .to_vec()
-            .try_into()
-            .unwrap(),
-        "some_data123".as_bytes().to_vec().try_into().unwrap(),
+        get_deployment_hash_input(b"858f8fb2184b15ecb8c0be8b95398c81"),
+        get_deployment_data_input::<T>(b"some_data123"),
         0,
         None,
     ));
 }
 
-pub fn push_contract_used_resources_report<T: Config>(source: T::AccountId) {
+fn _push_contract_used_resources_report<T: Config>(source: T::AccountId) {
     let contract_resources = vec![types::ContractResources {
         contract_id: 1,
         used: Resources {
@@ -308,7 +523,7 @@ pub fn push_contract_used_resources_report<T: Config>(source: T::AccountId) {
     ));
 }
 
-pub fn push_contract_nru_consumption_report<T: Config>(source: T::AccountId) {
+fn _push_contract_nru_consumption_report<T: Config>(source: T::AccountId) {
     let nru_consumption = types::NruConsumption {
         contract_id: 1,
         timestamp: TIMESTAMP_INIT_MILLISECS,
@@ -322,6 +537,40 @@ pub fn push_contract_nru_consumption_report<T: Config>(source: T::AccountId) {
     assert_ok!(SmartContractModule::<T>::add_nru_reports(
         RawOrigin::Signed(source).into(),
         reports,
+    ));
+}
+
+fn _create_name_contract<T: Config>(source: T::AccountId) {
+    assert_ok!(SmartContractModule::<T>::create_name_contract(
+        RawOrigin::Signed(source).into(),
+        b"foobar".to_vec()
+    ));
+}
+
+fn _create_rent_contract<T: Config>(source: T::AccountId) {
+    assert_ok!(SmartContractModule::<T>::create_rent_contract(
+        RawOrigin::Signed(source).into(),
+        1,
+        None
+    ));
+}
+
+fn _create_solution_provider<T: Config>(source: T::AccountId) {
+    let provider1 = super::types::Provider {
+        take: 10,
+        who: account("Alice", 0, 0),
+    };
+    let provider2 = super::types::Provider {
+        take: 10,
+        who: account("Bob", 0, 1),
+    };
+    let providers = vec![provider1, provider2];
+
+    assert_ok!(SmartContractModule::<T>::create_solution_provider(
+        RawOrigin::Signed(source).into(),
+        b"some_description".to_vec(),
+        b"some_link".to_vec(),
+        providers
     ));
 }
 
@@ -355,4 +604,25 @@ pub(crate) fn get_relay_input(relay_input: &[u8]) -> RelayInput {
 
 pub(crate) fn get_public_key_input(pk_input: &[u8]) -> PkInput {
     Some(BoundedVec::try_from(pk_input.to_vec()).expect("Invalid document public key input."))
+}
+
+pub(crate) fn get_public_ip_ip_input(public_ip_ip_input: &[u8]) -> Ip4Input {
+    BoundedVec::try_from(public_ip_ip_input.to_vec()).expect("Invalid public ip (ip) input.")
+}
+
+pub(crate) fn get_public_ip_gw_input(public_ip_gw_input: &[u8]) -> Gw4Input {
+    BoundedVec::try_from(public_ip_gw_input.to_vec()).expect("Invalid public ip (gw) input.")
+}
+
+pub(crate) fn get_deployment_hash_input(deployment_hash_input: &[u8]) -> HexHash {
+    deployment_hash_input
+        .to_vec()
+        .try_into()
+        .expect("Invalid deployment hash input.")
+}
+
+pub(crate) fn get_deployment_data_input<T: pallet::Config>(
+    deployment_data_input: &[u8],
+) -> DeploymentDataInput<T> {
+    BoundedVec::try_from(deployment_data_input.to_vec()).expect("Invalid deployment data input.")
 }
