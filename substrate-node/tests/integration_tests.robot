@@ -6,12 +6,6 @@ Library            TfChainClient.py
 Library            OperatingSystem
 
 
-*** Variables ***
-${GIGABYTE}        ${1073741824}
-&{RESOURCES_N1}    hru=${${1024}*${GIGABYTE}}    sru=${${1024}*${GIGABYTE}}    cru=${8}    mru=${${16}*${GIGABYTE}}
-&{RESOURCES_N2}    hru=${${512}*${GIGABYTE}}    sru=${${512}*${GIGABYTE}}    cru=${4}    mru=${${8}*${GIGABYTE}}
-&{RESOURCES_N3}    hru=${${2048}*${GIGABYTE}}    sru=${${2048}*${GIGABYTE}}    cru=${16}    mru=${${32}*${GIGABYTE}}
-
 *** Keywords ***
 Public Ips Should Contain Ip
     [Arguments]    ${list}    ${ip}
@@ -39,43 +33,11 @@ Setup Network And Create Farm
 Setup Network And Create Node
     [Documentation]    Helper function to quickly create a network with 2 nodes and creating a farm and a node using Alice's key
     Setup Network And Create Farm
-    Create Node    farm_id=${1}    resources=&{RESOURCES_N1}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
-
-Setup Network And Create Three nodes
-    [Documentation]    Helper function that sets up a network, creates a farm and creates three nodes
-    Setup Network And Create Farm
-    Setup Predefined Account    who=Charlie
-
-    Create Node    farm_id=${1}    resources=&{RESOURCES_N1}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent    who=Alice
-    Create Node    farm_id=${1}    resources=&{RESOURCES_N2}    longitude=72.15414    latitude=48.6587    country=Belgium    city=Ghent    who=Bob
-    Create Node    farm_id=${1}    resources=&{RESOURCES_N3}    longitude=54.54545    latitude=13.6987    country=Belgium    city=Ghent    who=Charlie
+    Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
 
 Create Interface
     [Arguments]    ${name}    ${mac}    ${ips}
     ${dict} =     Create Dictionary    name    ${name}    mac    ${mac}    ips    ${ips}
-    [Return]    ${dict}
-
-Resources
-    [Arguments]    ${hru}=${0}    ${sru}=${0}    ${cru}=${0}    ${mru}=${0}
-    ${dict} =     Create Dictionary    hru    ${hru}    sru    ${sru}    cru    ${cru}    mru    ${mru}
-    [Return]    ${dict}
-    
-Capacity Reservation Policy Any
-    [Arguments]    ${resources}    ${features}=${None}
-    ${args} =     Create Dictionary    resources    ${resources}    features    ${features}
-    ${dict} =    Create Dictionary    Any    ${args}
-    [Return]    ${dict}
-
-Capacity Reservation Policy Node
-    [Arguments]    ${node_id}
-    ${args} =    Create Dictionary    node_id    ${node_id}
-    ${dict} =    Create Dictionary    Node    ${args}
-    [Return]    ${dict}
-
-Capacity Reservation Policy Exclusive
-    [Arguments]    ${group_id}    ${resources}    ${features}=${None}
-    ${args} =    Create Dictionary    group_id       ${group_id}    resources    ${resources}     features    ${features}
-    ${dict} =    Create Dictionary    Exclusive    ${args}
     [Return]    ${dict}
 
 Ensure Account Balance Increased
@@ -226,12 +188,12 @@ Test Create Update Delete Node
     Setup Multi Node Network    log_name=test_create_update_delet_node    amt=${3}
 
     Setup Network And Create Farm
-    Create Node    farm_id=${1}    resources=&{RESOURCES_N1}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
+    Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
     ${node} =    Get Node    ${1}
     Should Not Be Equal    ${node}    ${None}
     Should Be Equal    ${node}[location][city]    Ghent
 
-    Update Node    node_id=${1}    farm_id=${1}    resources=&{RESOURCES_N1}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Celles
+    Update Node    node_id=${1}    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Celles
     ${node} =    Get Node    ${1}
     Should Not Be Equal    ${node}    ${None}
     Should Be Equal    ${node}[location][city]    Celles
@@ -255,7 +217,7 @@ Test Reporting Uptime
     ...    Report Uptime    ${500}
 
     Create Farm    name=alice_farm
-    Create Node    farm_id=${1}    resources=&{RESOURCES_N1}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
+    Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
     
     Report Uptime    ${500}
 
@@ -313,11 +275,7 @@ Test Add Public Config On Node: Failure InvalidDomain
 
     Tear Down Multi Node Network
 
-#Test Create Update Cancel Capacity Reservation Contract: Success
-    
-    
-
-Test Create Update Cancel Deployment: Success
+Test Create Update Cancel Node Contract: Success
     [Documentation]    Testing api calls (create, update, cancel) for managing a node contract
     Setup Multi Node Network    log_name=test_create_node_contract
 
@@ -331,14 +289,10 @@ Test Create Update Cancel Deployment: Success
     ${interface_ips} =     Create List    10.2.3.3
     ${interface_1} =     Create Interface    name=zos    mac=00:00:5e:00:53:af    ips=${interface_ips}
     ${interfaces} =    Create List    ${interface_1}
-    Create Node    farm_id=${1}    resources=&{RESOURCES_N1}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent    interfaces=${interfaces}
+    Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}   longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent    interfaces=${interfaces}
     
     # Bob is the one creating the contract and thus being billed
-    ${resources_cr} =    Resources    hru=${512}    sru=${256}    cru=${4}    mru=${8} 
-    ${policy} =     Capacity Reservation Policy Any    ${resources_cr}
-    Create Capacity Reservation Contract    farm_id=${1}    policy=${policy}    who=Bob    port=9946
-    ${resources_dc} =    Resources    hru=${256}    sru=${256}    cru=${2}    mru=${4} 
-    Create Deployment    capacity_reservation_id=${1}    resources=${resources_dc}    public_ips=${1}    who=Bob    port=9946
+    Create Node Contract    node_id=${1}    public_ips=${1}    who=Bob    port=9946
 
     ${farm} =     Get Farm    ${1}
     Should Not Be Equal    ${farm}    ${None}    msg=Farm with id 1 doesn't exist
@@ -346,28 +300,35 @@ Test Create Update Cancel Deployment: Success
     Length Should Be    ${farm}[public_ips]    1    msg=There should only be one public ip in public_ips
     Should Be Equal    ${farm}[public_ips][0][ip]    185.206.122.33/24    msg=The public ip address should be 185.206.122.33/24
     Should Be Equal    ${farm}[public_ips][0][gateway]    185.206.122.1    msg=The gateway should be 185.206.122.1
-    Should Be Equal    ${farm}[public_ips][0][contract_id]    ${1}    msg=The public ip was claimed in deployment with id 1 while the farm contains a different contract id for it
+    Should Be Equal    ${farm}[public_ips][0][contract_id]    ${1}    msg=The public ip was claimed in contract with id 1 while the farm contains a different contract id for it
 
-    ${updated_resources} =    Resources    hru=${512}    sru=${128}    cru=${1}    mru=${6}
-    Update Deployment    deployment_id=${1}    resources=${updated_resources}    who=Bob    port=9946
+    Update Node Contract    contract_id=${1}    who=Bob    port=9946
 
-    Cancel Deployment    deployment_id=${1}    who=Bob    port=9946
+    Cancel Node Contract    contract_id=${1}    who=Bob    port=9946
 
     Tear Down Multi Node Network
 
-Test Create Deployment: Failure Not Enough Public Ips
+Test Create Node Contract: Failure Not Enough Public Ips
     [Documentation]    Testing creating a node contract and requesting too much pub ips
     Setup Multi Node Network    log_name=test_create_node_contract_failure_notenoughpubips
 
     # the function below creates a farm containing 0 public ips and a node with 0 configured interfaces
     Setup Network And Create Node
-
-    ${policy} =    Capacity Reservation Policy Node    ${1}
-    Create Capacity Reservation Contract    farm_id=${1}    policy=${policy}
     # let's request 2 public ips which should result in an error
-    ${resources} =    Resources
     Run Keyword And Expect Error    *'FarmHasNotEnoughPublicIPs'*
-    ...    Create Deployment    capacity_reservation_id=${1}    public_ips=${2}    resources=${resources}
+    ...    Create Node Contract    node_id=${1}    public_ips=${2}
+
+    Tear Down Multi Node Network
+
+Test Create Rent Contract: Success
+    [Documentation]    Testing api calls (create, cancel) for managing a rent contract
+    Setup Multi Node Network    log_name=test_create_rent_contract
+
+    Setup Network And Create Node
+    
+    Create Rent Contract    node_id=${1}
+
+    Cancel Rent Contract    contract_id=${1}
 
     Tear Down Multi Node Network
 
@@ -460,31 +421,20 @@ Test Billing
 
     # Setup
     Setup Predefined Account    who=Alice
-    Setup Predefined Account    who=Bob
-
-    ${ip_1} =     Create Dictionary    ip    185.206.122.33/24    gw    185.206.122.1
-    ${public_ips} =    Create List    ${ip_1}
-    Create Farm    name=alice_farm    public_ips=${public_ips}
-    Create Node    farm_id=${1}    resources=&{RESOURCES_N1}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
+    Setup Predefined Account    who=Bob  
+    Create Farm    name=alice_farm
+    Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
 
     ${balance_alice} =    Balance Data    who=Alice
     ${balance_bob} =    Balance Data    who=Bob    port=${9946}
-
-    # Bob will be using a node with a specific amount of resources. Let's look for such a node using the policy Any (any node that meets the requirements)
-    ${resources_cr} =    Resources    hru=${512}    sru=${256}    cru=${4}    mru=${8}
-    ${policy} =     Capacity Reservation Policy Any    ${resources_cr}
-    Create Capacity Reservation Contract    farm_id=${1}    policy=${policy}    port=${9946}    who=Bob
-    # Let's create two deployments (simulating two vms on the node) both taking half of the resources of the capacity reservation contract
-    ${resources_dc} =    Resources    hru=${256}    sru=${128}    cru=${2}    mru=${4}
-    Create Deployment    capacity_reservation_id=${1}    resources=${resources_dc}   port=${9946}    who=Bob
-    Create Deployment    capacity_reservation_id=${1}    resources=${resources_dc}    public_ips=1    port=${9946}    who=Bob
-    Add Nru Reports    deployment_id=${1}    nru=${3}
+    # Bob will be using the node: let's create a node contract in his name
+    Create Node Contract    node_id=${1}    port=${9946}    who=Bob
+    Report Contract Resources    contract_id=${1}    hru=${20}    sru=${20}    cru=${2}    mru=${4}
+    Add Nru Reports    contract_id=${1}    nru=${3}
 
     # Let it run 6 blocks so that the user will be billed 1 time
     Wait X Blocks    ${6}
-    Cancel Deployment    deployment_id=${2}    who=Bob
-    Cancel Deployment    deployment_id=${1}    who=Bob
-    Cancel Capacity Reservation Contract    contract_id=${1}    who=Bob
+    Cancel Node Contract    contract_id=${1}    who=Bob
 
     # Balance should have decreased
     ${balance_alice_after} =    Balance Data    who=Alice
@@ -501,7 +451,7 @@ Test Solution Provider
     Setup Predefined Account    who=Alice
     Setup Predefined Account    who=Bob
     Create Farm    name=alice_farm
-    Create Node    farm_id=${1}    resources=${RESOURCES_N1}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
+    Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
     
     # lets add two providers: charlie gets 30% and Dave 10%
     ${providers} =    Create Dictionary    Charlie    ${30}    Dave    ${10}
@@ -520,17 +470,14 @@ Test Solution Provider
 
     ${balance_charlie_before} =     Balance Data    who=Charlie
     ${balance_dave_before} =    Balance Data    who=Dave
-    # Bob will be using the node
-    ${policy} =    Capacity Reservation Policy Node    ${1}
-    Create Capacity Reservation Contract    farm_id=${1}    policy=${policy}    solution_provider_id=${1}    port=9946    who=Bob
-    ${resources} =    Resources    hru=${20}    sru=${20}    cru=${2}    mru=${4}
-    Create Deployment    resources=${resources}    port=9946    who=Bob
-    Add Nru Reports    deployment_id=${1}    nru=${3}
+    # Bob will be using the node: let's create a node contract in his name
+    Create Node Contract    node_id=${1}    port=9946    who=Bob    solution_provider_id=${1}
+    Report Contract Resources    contract_id=${1}    hru=${20}    sru=${20}    cru=${2}    mru=${4}
+    Add Nru Reports    contract_id=${1}    nru=${3}
     # Wait 6 blocks: after 5 blocks Bob should be billed
     Wait X Blocks    ${6}
     # Cancel the contract so that the bill is distributed and so that the providers get their part
-    Cancel Deployment    deployment_id=${1}    who=Bob
-    Cancel Capacity Reservation Contract    contract_id=${1}    who=Bob
+    Cancel Node Contract    contract_id=${1}    who=Bob
 
     # Verification: both providers should have received their part
     ${balance_charlie_after} =     Balance Data    who=Charlie
@@ -539,28 +486,3 @@ Test Solution Provider
     Ensure Account Balance Increased    ${balance_dave_before}    ${balance_dave_after}
 
     Tear Down Multi Node Network
-
-Test Grouping Contracts
-    [Documentation]    Testing creating a group for contracts and finding a node using the exclusive policy
-    Setup Multi Node Network    log_name=test_grouping_contracts
-    
-    Setup Network And Create Three nodes
-
-    Create Group
-
-    ${resources} =     Resources    hru=${256}    sru=${128}    cru=${2}    mru=${4}
-    ${policy} =     Capacity Reservation Policy Exclusive    ${1}    ${resources}
-    # create three capacity reservation contracts, all with the same policy, same group, thus all should go to a different node
-    Create Capacity Reservation Contract    farm_id=${1}    policy=${policy}
-    Create Capacity Reservation Contract    farm_id=${1}    policy=${policy}
-    Create Capacity Reservation Contract    farm_id=${1}    policy=${policy}
-
-    ${node_c1} =    Get Node Id From Capacity Reservation Contract    contract_id=${1}
-    Should Be Equal    ${node_c1}    ${1}    msg=Contract 1 should be deployed on node 1!
-    ${node_c2} =    Get Node Id From Capacity Reservation Contract    contract_id=${2}
-    Should Be Equal    ${node_c2}    ${2}    msg=Contract 2 should be deployed on node 2!
-    ${node_c3} =    Get Node Id From Capacity Reservation Contract    contract_id=${3}
-    Should Be Equal    ${node_c3}    ${3}    msg=Contract 3 should be deployed on node 3!
-
-
-

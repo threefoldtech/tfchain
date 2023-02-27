@@ -317,10 +317,6 @@ impl<T: Config> TryFrom<SerialNumberInput> for SerialNumber<T> {
             value.len() <= MAX_SERIAL_NUMBER_LENGTH.saturated_into(),
             Self::Error::SerialNumberTooLong
         );
-        ensure!(
-            validate_serial_number(&value),
-            Self::Error::InvalidSerialNumber
-        );
 
         Ok(Self(value, PhantomData))
     }
