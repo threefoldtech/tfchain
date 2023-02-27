@@ -317,10 +317,6 @@ impl<T: Config> TryFrom<SerialNumberInput> for SerialNumber<T> {
             value.len() <= MAX_SERIAL_NUMBER_LENGTH.saturated_into(),
             Self::Error::SerialNumberTooLong
         );
-        ensure!(
-            validate_serial_number(&value),
-            Self::Error::InvalidSerialNumber
-        );
 
         Ok(Self(value, PhantomData))
     }
@@ -349,13 +345,6 @@ impl<T: Config> Clone for SerialNumber<T> {
     fn clone(&self) -> Self {
         Self(self.0.clone(), self.1)
     }
-}
-
-pub fn validate_serial_number(input: &[u8]) -> bool {
-    input == DEFAULT_SERIAL_NUMBER
-        || input.iter().all(|c| {
-            c.is_ascii_alphanumeric() || c.is_ascii_whitespace() || matches!(c, b'-' | b'_' | b'.')
-        })
 }
 
 #[test]
