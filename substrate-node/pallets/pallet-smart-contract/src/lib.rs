@@ -533,7 +533,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(11)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::service_contract_create())]
         pub fn service_contract_create(
             origin: OriginFor<T>,
             service_account: T::AccountId,
@@ -544,7 +544,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(12)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::service_contract_set_metadata())]
         pub fn service_contract_set_metadata(
             origin: OriginFor<T>,
             service_contract_id: u64,
@@ -555,7 +555,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(13)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::service_contract_set_fees())]
         pub fn service_contract_set_fees(
             origin: OriginFor<T>,
             service_contract_id: u64,
@@ -572,7 +572,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(14)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::service_contract_approve())]
         pub fn service_contract_approve(
             origin: OriginFor<T>,
             service_contract_id: u64,
@@ -582,7 +582,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(15)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::service_contract_reject())]
         pub fn service_contract_reject(
             origin: OriginFor<T>,
             service_contract_id: u64,
@@ -592,7 +592,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(16)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::service_contract_cancel())]
         pub fn service_contract_cancel(
             origin: OriginFor<T>,
             service_contract_id: u64,
@@ -610,7 +610,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(17)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::service_contract_bill())]
         pub fn service_contract_bill(
             origin: OriginFor<T>,
             service_contract_id: u64,
@@ -622,7 +622,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(18)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::change_billing_frequency())]
         pub fn change_billing_frequency(
             origin: OriginFor<T>,
             frequency: u64,

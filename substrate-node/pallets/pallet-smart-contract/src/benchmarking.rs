@@ -33,9 +33,10 @@ benchmarks! {
     where_clause {
         where
         <T as pallet_timestamp::Config>::Moment: TryFrom<u64>,
-        <<T as pallet_timestamp::Config>::Moment as  TryFrom<u64>>::Error: Debug,
+        <<T as pallet_timestamp::Config>::Moment as TryFrom<u64>>::Error: Debug,
     }
 
+    // create_node_contract()
     create_node_contract {
         let farmer: T::AccountId = account("Alice", 0, 0);
         _prepare_farm_with_node::<T>(farmer);
@@ -61,6 +62,7 @@ benchmarks! {
         assert_last_event::<T>(Event::ContractCreated(contract).into());
     }
 
+    // update_node_contract()
     update_node_contract {
         let farmer: T::AccountId = account("Alice", 0, 0);
         _prepare_farm_with_node::<T>(farmer.clone());
@@ -90,6 +92,7 @@ benchmarks! {
         assert_eq!(SmartContractModule::<T>::node_contract_by_hash(node_id, old_deployment_hash), 0);
     }
 
+    // cancel_contract()
     cancel_contract {
         let farmer: T::AccountId = account("Alice", 0, 0);
         _prepare_farm_with_node::<T>(farmer.clone());
@@ -114,6 +117,7 @@ benchmarks! {
          }.into());
     }
 
+    // create_name_contract()
     create_name_contract {
         let caller: T::AccountId = whitelisted_caller();
         _create_twin::<T>(caller.clone());
@@ -149,6 +153,7 @@ benchmarks! {
          }.into());
     }
 
+    // add_nru_reports()
     add_nru_reports {
         let farmer: T::AccountId = account("Alice", 0, 0);
         _prepare_farm_with_node::<T>(farmer.clone());
@@ -177,6 +182,7 @@ benchmarks! {
         assert_last_event::<T>(Event::NruConsumptionReportReceived(report).into());
     }
 
+    // report_contract_resources()
     report_contract_resources {
         let farmer: T::AccountId = account("Alice", 0, 0);
         _prepare_farm_with_node::<T>(farmer.clone());
@@ -206,6 +212,7 @@ benchmarks! {
         assert_last_event::<T>(Event::UpdatedUsedResources(contract_resource).into());
     }
 
+    // create_rent_contract()
     create_rent_contract {
         let farmer: T::AccountId = account("Alice", 0, 0);
         _prepare_farm_with_node::<T>(farmer.clone());
@@ -249,6 +256,7 @@ benchmarks! {
          }.into());
     }
 
+    // create_solution_provider()
     create_solution_provider {
         let provider1 = super::types::Provider {
             take: 10,
@@ -279,6 +287,7 @@ benchmarks! {
         assert_last_event::<T>(Event::SolutionProviderCreated(solution_provider).into());
     }
 
+    // approve_solution_provider()
     approve_solution_provider {
         let provider: T::AccountId = account("Alice", 0, 0);
         _create_twin::<T>(provider.clone());
@@ -296,6 +305,7 @@ benchmarks! {
         assert_last_event::<T>(Event::SolutionProviderApproved(solution_provider_id, approve).into());
     }
 
+    // bill_contract_for_block()
     bill_contract_for_block {
         let farmer: T::AccountId = account("Alice", 0, 0);
         _prepare_farm_with_node::<T>(farmer.clone());
@@ -329,14 +339,175 @@ benchmarks! {
         // assert_eq!((Balances::<T>::free_balance(&caller) - Balances::<T>::usable_balance(&caller)).saturated_into::<u128>(), amount_billed);
     }
 
-    // pub fn service_contract_create(
-    // pub fn service_contract_set_metadata(
-    // pub fn service_contract_set_fees(
-    // pub fn service_contract_approve(
-    // pub fn service_contract_reject(
-    // pub fn service_contract_cancel(
-    // pub fn service_contract_bill(
-    // pub fn change_billing_frequency(
+    // service_contract_create()
+    service_contract_create {
+        let service: T::AccountId = account("Alice", 0, 0);
+        _create_twin::<T>(service.clone());
+        let consumer: T::AccountId = account("Bob", 0, 1);
+        _create_twin::<T>(consumer.clone());
+
+    }: _(RawOrigin::Signed(
+        service.clone()),
+        service.clone(),
+        consumer
+    )
+    verify {
+        let contract_id = 1;
+        assert!(SmartContractModule::<T>::service_contracts(contract_id).is_some());
+        let contract = SmartContractModule::<T>::service_contracts(contract_id).unwrap();
+        assert_last_event::<T>(Event::ServiceContractCreated(contract).into());
+    }
+
+    // service_contract_set_metadata()
+    service_contract_set_metadata {
+        let service: T::AccountId = account("Alice", 0, 0);
+        let consumer: T::AccountId = account("Bob", 0, 1);
+        _create_service_contract::<T>(service.clone(), consumer.clone());
+        let contract_id = 1;
+
+    }: _(RawOrigin::Signed(
+        service.clone()),
+        contract_id,
+        b"some_metadata".to_vec()
+    )
+    verify {
+        assert!(SmartContractModule::<T>::service_contracts(contract_id).is_some());
+        let contract = SmartContractModule::<T>::service_contracts(contract_id).unwrap();
+        assert_last_event::<T>(Event::ServiceContractMetadataSet(contract).into());
+    }
+
+    // service_contract_set_fees()
+    service_contract_set_fees {
+        let service: T::AccountId = account("Alice", 0, 0);
+        let consumer: T::AccountId = account("Bob", 0, 1);
+        _create_service_contract::<T>(service.clone(), consumer.clone());
+        let contract_id = 1;
+        let base_fee = 1000;
+        let variable_fee = 1000;
+
+    }: _(RawOrigin::Signed(
+        service.clone()),
+        contract_id,
+        base_fee,
+        variable_fee
+    )
+    verify {
+        assert!(SmartContractModule::<T>::service_contracts(contract_id).is_some());
+        let contract = SmartContractModule::<T>::service_contracts(contract_id).unwrap();
+        assert_last_event::<T>(Event::ServiceContractFeesSet(contract).into());
+    }
+
+    // service_contract_approve()
+    service_contract_approve {
+        let service: T::AccountId = account("Alice", 0, 0);
+        let consumer: T::AccountId = account("Bob", 0, 1);
+        _prepare_service_contract::<T>(service.clone(), consumer);
+        let contract_id = 1;
+
+    }: _(RawOrigin::Signed(
+        service),
+        contract_id
+    )
+    verify {
+        assert!(SmartContractModule::<T>::service_contracts(contract_id).is_some());
+        let contract = SmartContractModule::<T>::service_contracts(contract_id).unwrap();
+        assert_last_event::<T>(Event::ServiceContractApproved(contract).into());
+    }
+
+    // service_contract_reject()
+    service_contract_reject {
+        let service: T::AccountId = account("Alice", 0, 0);
+        let consumer: T::AccountId = account("Bob", 0, 1);
+        _prepare_service_contract::<T>(service.clone(), consumer);
+        let contract_id = 1;
+
+    }: _(RawOrigin::Signed(
+        service),
+        contract_id
+    )
+    verify {
+        assert!(SmartContractModule::<T>::service_contracts(contract_id).is_none());
+        assert_last_event::<T>(Event::ServiceContractCanceled {
+            service_contract_id: contract_id,
+            cause: types::Cause::CanceledByUser,
+        }.into());
+    }
+
+    // service_contract_cancel()
+    service_contract_cancel {
+        let service: T::AccountId = account("Alice", 0, 0);
+        let consumer: T::AccountId = account("Bob", 0, 1);
+        _prepare_and_approve_service_contract::<T>(service.clone(), consumer);
+        let contract_id = 1;
+
+    }: _(RawOrigin::Signed(
+        service),
+        contract_id
+    )
+    verify {
+        assert!(SmartContractModule::<T>::service_contracts(contract_id).is_none());
+        assert_last_event::<T>(Event::ServiceContractCanceled {
+            service_contract_id: contract_id,
+            cause: types::Cause::CanceledByUser,
+        }.into());
+    }
+
+    // service_contract_bill()
+    service_contract_bill {
+        // let stamp: u64 = TIMESTAMP_INIT_MILLISECS;
+        // Timestamp::<T>::set_timestamp(stamp.try_into().unwrap());
+        // run_to_block::<T>(T::BlockNumber::from(1u32));
+
+        let service: T::AccountId = account("Alice", 0, 0);
+        let consumer: T::AccountId = account("Bob", 0, 1);
+        let consumer_lookup = T::Lookup::unlookup(consumer.clone());
+        let balance_init_amount = <T as pallet_balances::Config>::Balance::saturated_from(100000000 as u128);
+        Balances::<T>::set_balance(RawOrigin::Root.into(), consumer_lookup, balance_init_amount, balance_init_amount).unwrap();
+        _prepare_and_approve_service_contract::<T>(service.clone(), consumer);
+        let contract_id = 1;
+        let variable_amount = 0;
+
+        // let elapsed_seconds = 200 * 6; // 20 min (200 blocks) later
+        // let stamp: u64 = TIMESTAMP_INIT_MILLISECS + elapsed_seconds * 1000;
+        // Timestamp::<T>::set_timestamp(stamp.try_into().unwrap());
+        // run_to_block::<T>(T::BlockNumber::from(201u32));
+
+    }: _(RawOrigin::Signed(
+        service),
+        contract_id,
+        variable_amount,
+        b"bill_metadata".to_vec()
+    )
+    verify {
+        // assert_eq!(slot_duration, current_slot);
+        assert!(SmartContractModule::<T>::service_contracts(contract_id).is_some());
+        let contract = SmartContractModule::<T>::service_contracts(contract_id).unwrap();
+        let bill = types::ServiceContractBill {
+            variable_amount,
+            window: 0,
+            metadata: BoundedVec::try_from(b"bill_metadata".to_vec()).unwrap(),
+        };
+        let amount = contract
+            .calculate_bill_cost_tft::<T>(bill.clone())
+            .unwrap();
+        assert_last_event::<T>(Event::ServiceContractBilled {
+            service_contract: contract,
+            bill,
+            amount,
+        }.into());
+    }
+
+    // change_billing_frequency()
+    change_billing_frequency {
+        let new_frequency = 900;
+
+    }: _(RawOrigin::Root,
+        new_frequency
+    )
+    verify {
+        assert_eq!(SmartContractModule::<T>::billing_frequency(), new_frequency);
+        assert_last_event::<T>(Event::BillingFrequencyChanged(new_frequency).into());
+    }
 
     // Calling the `impl_benchmark_test_suite` macro inside the `benchmarks`
     // block will generate one #[test] function per benchmark
@@ -571,6 +742,53 @@ fn _create_solution_provider<T: Config>(source: T::AccountId) {
         b"some_description".to_vec(),
         b"some_link".to_vec(),
         providers
+    ));
+}
+
+fn _create_service_contract<T: Config>(service: T::AccountId, consumer: T::AccountId) {
+    _create_twin::<T>(service.clone());
+    _create_twin::<T>(consumer.clone());
+
+    assert_ok!(SmartContractModule::<T>::service_contract_create(
+        RawOrigin::Signed(service.clone()).into(),
+        service,
+        consumer,
+    ));
+}
+
+fn _prepare_service_contract<T: Config>(service: T::AccountId, consumer: T::AccountId) {
+    _create_service_contract::<T>(service.clone(), consumer);
+    let contract_id = 1;
+    let base_fee = 1000;
+    let variable_fee = 1000;
+
+    assert_ok!(SmartContractModule::<T>::service_contract_set_metadata(
+        RawOrigin::Signed(service.clone()).into(),
+        contract_id,
+        b"some_metadata".to_vec(),
+    ));
+
+    assert_ok!(SmartContractModule::<T>::service_contract_set_fees(
+        RawOrigin::Signed(service).into(),
+        contract_id,
+        base_fee,
+        variable_fee,
+    ));
+}
+
+fn _prepare_and_approve_service_contract<T: Config>(service: T::AccountId, consumer: T::AccountId) {
+    _prepare_service_contract::<T>(service.clone(), consumer.clone());
+    let contract_id = 1;
+
+    // Service approves
+    assert_ok!(SmartContractModule::<T>::service_contract_approve(
+        RawOrigin::Signed(service).into(),
+        contract_id,
+    ));
+    // Consumer approves
+    assert_ok!(SmartContractModule::<T>::service_contract_approve(
+        RawOrigin::Signed(consumer).into(),
+        contract_id,
     ));
 }
 
