@@ -1,10 +1,13 @@
 use crate::pallet_smart_contract::{BalanceOf, Config, GRID_LOCK_ID};
-use crate::pallet_tfgrid::{types::Twin, AccountIdOf};
+use crate::pallet_tfgrid::{AccountIdOf};
 use crate::sp_api_hidden_includes_construct_runtime::hidden_include::traits::{
     Currency, LockableCurrency,
 };
 use crate::*;
 use frame_support::{
+    Blake2_128Concat,
+    pallet_prelude::OptionQuery,
+    storage_alias,
     traits::OnRuntimeUpgrade,
     traits::{Get, WithdrawReasons},
     weights::Weight,
@@ -16,6 +19,16 @@ use sp_std::{collections::btree_map::BTreeMap, marker::PhantomData};
 use codec::Decode;
 #[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
+
+// Storage alias from Twin v12
+#[storage_alias]
+pub type Twins<T: Config> = StorageMap<
+    pallet_tfgrid::Pallet<T>,
+    Blake2_128Concat,
+    pallet_tfgrid::TwinIndex,
+    pallet_tfgrid::migrations::types::v14::Twin<Vec<u8>, AccountIdOf<T>>,
+    OptionQuery,
+>;
 
 pub struct Migrate<T: Config>(PhantomData<T>);
 
@@ -42,13 +55,13 @@ impl<T: Config> OnRuntimeUpgrade for Migrate<T> {
     }
 
     fn on_runtime_upgrade() -> Weight {
-        let mut twin_ids: BTreeMap<u32, AccountIdOf<T>> = BTreeMap::new();
+        let mut twins: BTreeMap<u32, pallet_tfgrid::types::Twin<AccountIdOf<T>>> = BTreeMap::new();
         let mut total_reads = 0;
         let mut total_writes = 0;
         if pallet_tfgrid::PalletVersion::<T>::get()
             == pallet_tfgrid::types::StorageVersion::V14Struct
         {
-            let (reads, writes) = migrate_tfgrid::<T>(&mut twin_ids);
+            let (reads, writes) = migrate_tfgrid::<T>(&mut twins);
             total_reads += reads;
             total_writes += writes;
         } else {
@@ -57,11 +70,18 @@ impl<T: Config> OnRuntimeUpgrade for Migrate<T> {
         if pallet_smart_contract::PalletVersion::<T>::get()
             >= pallet_smart_contract::types::StorageVersion::V6
         {
-            let (reads, writes) = migrate_smart_contract::<T>(&twin_ids);
+            let (reads, writes) = migrate_smart_contract::<T>(&twins);
             total_reads += reads;
             total_writes += writes;
         } else {
             info!(" >>> Unused Smart Contract pallet V8 migration");
+        }
+
+        if twins.len() > 0 {
+            let (reads, writes) = write_twins::<T>(&twins);
+            total_reads += reads;
+            total_writes += writes;
+
         }
         T::DbWeight::get().reads_writes(total_reads, total_writes)
     }
@@ -95,37 +115,40 @@ impl<T: Config> OnRuntimeUpgrade for Migrate<T> {
     }
 }
 
-pub fn migrate_tfgrid<T: Config>(twins: &mut BTreeMap<u32, AccountIdOf<T>>) -> (u64, u64) {
-    info!(" >>> Migrating twin storage...");
-
-    let mut reads_writes = 0;
-    pallet_tfgrid::Twins::<T>::translate::<pallet_tfgrid::migrations::types::v14::Twin<Vec<u8>, AccountIdOf<T>>, _>(
-        |k, twin| {
-            debug!("migrated twin: {:?}", k);
-
-            let new_twin = Twin::<AccountIdOf<T>> {
-                id: twin.id,
-                account_id: twin.account_id,
-                relay: None,
-                entities: twin.entities,
-                pk: None,
-            };
-            twins.insert(twin.id, new_twin.account_id.clone());
-            reads_writes += 1;
-            reads_writes += 1;
-            Some(new_twin)
-        },
-    );
-
+pub fn write_twins<T: Config>(twins: &BTreeMap<u32, pallet_tfgrid::types::Twin<AccountIdOf<T>>>) -> (u64, u64) {
+    info!(" >>> Writing twins to storage...");
+    for (twin_id, twin) in twins {
+        pallet_tfgrid::Twins::<T>::insert(&twin_id, &twin);
+    }
     // Update pallet storage version
     pallet_tfgrid::PalletVersion::<T>::set(pallet_tfgrid::types::StorageVersion::V15Struct);
-    info!(" <<< Twin migration success, storage version upgraded");
-
-    // Return the weight consumed by the migration.
-    return (reads_writes, reads_writes + 1);
+    info!(" <<< Twin migration success, storage version upgraded ({:?} twins)", pallet_tfgrid::Twins::<T>::iter().count());
+    return (0, twins.len() as u64 + 1);
 }
 
-pub fn migrate_smart_contract<T: Config>(twins: &BTreeMap<u32, AccountIdOf<T>>) -> (u64, u64) {
+pub fn migrate_tfgrid<T: Config>(twins: &mut BTreeMap<u32, pallet_tfgrid::types::Twin<AccountIdOf<T>>>) -> (u64, u64) {
+    info!(" >>> Migrating twin storage...");
+
+    let mut reads = 0;
+    for (_twin_id, twin) in Twins::<T>::iter() {
+        debug!("migrating twin: {:?}", twin);
+
+        let new_twin = pallet_tfgrid::types::Twin::<AccountIdOf<T>> {
+            id: twin.id,
+            account_id: twin.account_id,
+            relay: None,
+            entities: twin.entities,
+            pk: None,
+        };
+        twins.insert(twin.id, new_twin);
+        reads += 1;
+    };
+
+    // Return the weight consumed by the migration.
+    return (reads, 0);
+}
+
+pub fn migrate_smart_contract<T: Config>(twins: &BTreeMap<u32, pallet_tfgrid::types::Twin<AccountIdOf<T>>>) -> (u64, u64) {
     debug!(
         " >>> Starting contract pallet migration, pallet version: {:?}",
         pallet_smart_contract::PalletVersion::<T>::get()
@@ -165,7 +188,7 @@ pub fn migrate_smart_contract<T: Config>(twins: &BTreeMap<u32, AccountIdOf<T>>) 
         }
     }
 
-    for (twin_id, account_id) in twins {
+    for (twin_id, twin) in twins {
         // If the twin needs to have some locked balance on his account because of running contracts
         // Check how much we can actually lock based on his current total balance
         // this will make sure the locked balance will not exceed the total balance on the twin's account
@@ -174,13 +197,13 @@ pub fn migrate_smart_contract<T: Config>(twins: &BTreeMap<u32, AccountIdOf<T>>) 
                 "contract locked balance on twin {} account: {:?}",
                 twin_id, b
             );
-            (<T as Config>::Currency::total_balance(&account_id)
+            (<T as Config>::Currency::total_balance(&twin.account_id)
                 - <T as Config>::Currency::minimum_balance())
             .min(*b)
         });
 
         // Unlock all balance for the twin
-        <T as Config>::Currency::remove_lock(GRID_LOCK_ID, &account_id);
+        <T as Config>::Currency::remove_lock(GRID_LOCK_ID, &twin.account_id);
         writes += 1;
 
         if let Some(should_lock) = should_lock {
@@ -188,7 +211,7 @@ pub fn migrate_smart_contract<T: Config>(twins: &BTreeMap<u32, AccountIdOf<T>>) 
             // Only do a set lock if we actually have to lock
             <T as Config>::Currency::set_lock(
                 GRID_LOCK_ID,
-                &account_id,
+                &twin.account_id,
                 should_lock,
                 WithdrawReasons::all(),
             );
