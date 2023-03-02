@@ -80,6 +80,8 @@ pub use pallet_validator;
 
 pub use pallet_dao;
 
+pub mod migrations;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -765,8 +767,9 @@ pub type Executive = frame_executive::Executive<
 // `OnRuntimeUpgrade`.
 type Migrations = (
     pallet_tfgrid::migrations::v14::FixFarmingPoliciesMap<Runtime>,
-    pallet_tfgrid::migrations::v15::MigrateTwinsV15<Runtime>,
-    pallet_smart_contract::migrations::v8::FixTwinLockedBalances<Runtime>,
+    migrations::tfgrid_v15_smart_contract_v8::Migrate<Runtime>,
+    //pallet_tfgrid::migrations::v15::MigrateTwinsV15<Runtime>,
+    //pallet_smart_contract::migrations::v8::FixTwinLockedBalances<Runtime>,
 );
 
 // follows Substrate's non destructive way of eliminating  otherwise required
