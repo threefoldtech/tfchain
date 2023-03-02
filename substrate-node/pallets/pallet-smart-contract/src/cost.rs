@@ -247,9 +247,10 @@ pub fn calculate_discount<T: Config>(
     }
 
     // calculate amount due on a monthly basis
-    // fist get the normalized amount for one hour so we can infer the amount due monthly (30 days ish)
+    // first get the normalized amount per hour
     let amount_due_hourly = U64F64::from_num(amount_due) * U64F64::from_num(seconds_elapsed)
         / U64F64::from_num(SECS_PER_HOUR);
+    // then we can infer the amount due monthly (30 days ish)
     let amount_due_monthly = (amount_due_hourly * 24 * 30).round().to_num::<u64>();
 
     // see how many months a user can pay for this deployment given his balance
