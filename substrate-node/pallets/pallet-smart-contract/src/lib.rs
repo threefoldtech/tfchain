@@ -3,7 +3,6 @@
 use frame_support::{
     dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo, Pays},
     ensure,
-    log::info,
     pallet_prelude::DispatchResult,
     traits::{
         Currency, EnsureOrigin, ExistenceRequirement, ExistenceRequirement::KeepAlive, Get,
@@ -460,17 +459,6 @@ pub mod pallet {
             Self::_cancel_contract(account_id, contract_id, types::Cause::CanceledByUser)
         }
 
-        // DEPRECATED
-        #[pallet::call_index(3)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
-        pub fn add_reports(
-            _origin: OriginFor<T>,
-            _reports: Vec<types::Consumption>,
-        ) -> DispatchResultWithPostInfo {
-            // return error
-            Err(DispatchErrorWithPostInfo::from(Error::<T>::MethodIsDeprecated).into())
-        }
-
         #[pallet::call_index(4)]
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
         pub fn create_name_contract(
@@ -693,6 +681,10 @@ impl<T: Config> Pallet<T> {
             .ok_or(Error::<T>::TwinNotExists)?;
 
         let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+
+        let node_power = pallet_tfgrid::NodePower::<T>::get(node_id);
+        ensure!(!node_power.is_down(), Error::<T>::NodeNotAvailableToDeploy);
+
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
         if farm.dedicated_farm && !ActiveRentContractForNode::<T>::contains_key(node_id) {
@@ -777,6 +769,9 @@ impl<T: Config> Pallet<T> {
             pallet_tfgrid::Farms::<T>::contains_key(node.farm_id),
             Error::<T>::FarmNotExists
         );
+
+        let node_power = pallet_tfgrid::NodePower::<T>::get(node_id);
+        ensure!(!node_power.is_down(), Error::<T>::NodeNotAvailableToDeploy);
 
         let active_node_contracts = ActiveNodeContracts::<T>::get(node_id);
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
@@ -1061,7 +1056,7 @@ impl<T: Config> Pallet<T> {
 
         // seconds elapsed is the report.window
         let seconds_elapsed = report.window;
-        log::info!("seconds elapsed: {:?}", seconds_elapsed);
+        log::debug!("seconds elapsed: {:?}", seconds_elapsed);
 
         // calculate NRU used and the cost
         let used_nru = U64F64::from_num(report.nru) / pricing_policy.nu.factor_base_1000();
@@ -1069,11 +1064,11 @@ impl<T: Config> Pallet<T> {
             * (U64F64::from_num(pricing_policy.nu.value)
                 / U64F64::from_num(T::BillingReferencePeriod::get()))
             * U64F64::from_num(seconds_elapsed);
-        log::info!("nu cost: {:?}", nu_cost);
+        log::debug!("nu cost: {:?}", nu_cost);
 
         // save total
         let total = nu_cost.ceil().to_num::<u64>();
-        log::info!("total cost: {:?}", total);
+        log::debug!("total cost: {:?}", total);
 
         // update contract billing info
         contract_billing_info.amount_unbilled += total;
@@ -1470,7 +1465,8 @@ impl<T: Config> Pallet<T> {
                     Self::deposit_event(Event::RentContractCanceled { contract_id });
                 }
             };
-            info!("removing contract");
+
+            log::debug!("removing contract");
             ContractBillingInformationByID::<T>::remove(contract_id);
             Contracts::<T>::remove(contract_id);
             ContractLock::<T>::remove(contract_id);
@@ -1489,7 +1485,7 @@ impl<T: Config> Pallet<T> {
 
         // Send 10% to the foundation
         let foundation_share = Perbill::from_percent(10) * amount;
-        log::info!(
+        log::debug!(
             "Transfering: {:?} from contract twin {:?} to foundation account {:?}",
             &foundation_share,
             &twin.account_id,
@@ -1505,7 +1501,7 @@ impl<T: Config> Pallet<T> {
         // TODO: send 5% to the staking pool account
         let staking_pool_share = Perbill::from_percent(5) * amount;
         let staking_pool_account = T::StakingPoolAccount::get();
-        log::info!(
+        log::debug!(
             "Transfering: {:?} from contract twin {:?} to staking pool account {:?}",
             &staking_pool_share,
             &twin.account_id,
@@ -1534,7 +1530,7 @@ impl<T: Config> Pallet<T> {
                     .iter()
                     .map(|provider| {
                         let share = Perbill::from_percent(provider.take as u32) * amount;
-                        log::info!(
+                        log::debug!(
                             "Transfering: {:?} from contract twin {:?} to provider account {:?}",
                             &share,
                             &twin.account_id,
@@ -1562,7 +1558,7 @@ impl<T: Config> Pallet<T> {
             let share = Perbill::from_percent(sales_share.into()) * amount;
             // Transfer the remaining share to the sales account
             // By default it is 50%, if a contract has solution providers it can be less
-            log::info!(
+            log::debug!(
                 "Transfering: {:?} from contract twin {:?} to sales account {:?}",
                 &share,
                 &twin.account_id,
@@ -1594,7 +1590,7 @@ impl<T: Config> Pallet<T> {
             ExistenceRequirement::KeepAlive,
         )?;
 
-        log::info!(
+        log::debug!(
             "Burning: {:?} from contract twin {:?}",
             amount_to_burn,
             &twin.account_id
@@ -1623,7 +1619,7 @@ impl<T: Config> Pallet<T> {
         if !contracts.contains(&contract_id) {
             contracts.push(contract_id);
             ContractsToBillAt::<T>::insert(index, &contracts);
-            log::info!(
+            log::debug!(
                 "Insert contracts: {:?}, to be billed at index {:?}",
                 contracts,
                 index
@@ -1699,7 +1695,7 @@ impl<T: Config> Pallet<T> {
         let mut farm =
             pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
-        log::info!(
+        log::debug!(
             "Number of farm ips {:?}, number of ips to reserve: {:?}",
             farm.public_ips.len(),
             node_contract.public_ips as usize
@@ -2152,7 +2148,7 @@ impl<T: Config> Pallet<T> {
             cause,
         });
 
-        log::info!(
+        log::debug!(
             "successfully removed service contract with id {:?}",
             service_contract_id,
         );
@@ -2276,7 +2272,7 @@ impl<T: Config> Pallet<T> {
             ExistenceRequirement::KeepAlive,
         )?;
 
-        log::info!(
+        log::debug!(
             "bill successfully payed by consumer for service contract with id {:?}",
             service_contract_id,
         );
