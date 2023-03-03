@@ -60,8 +60,9 @@ impl<T: Config> OnRuntimeUpgrade for Migrate<T> {
         if pallet_tfgrid::PalletVersion::<T>::get()
             == pallet_tfgrid::types::StorageVersion::V14Struct
         {
-            let mut twins: BTreeMap<u32, pallet_tfgrid::types::Twin<AccountIdOf<T>>> = BTreeMap::new();
-            
+            let mut twins: BTreeMap<u32, pallet_tfgrid::types::Twin<AccountIdOf<T>>> =
+                BTreeMap::new();
+
             let (reads, writes) = migrate_tfgrid::<T>(&mut twins);
             total_reads += reads;
             total_writes += writes;
