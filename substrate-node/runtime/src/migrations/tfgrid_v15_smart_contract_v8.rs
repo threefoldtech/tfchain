@@ -1,16 +1,16 @@
 use crate::pallet_smart_contract::{BalanceOf, Config, GRID_LOCK_ID};
-use crate::pallet_tfgrid::{AccountIdOf};
+use crate::pallet_tfgrid::AccountIdOf;
 use crate::sp_api_hidden_includes_construct_runtime::hidden_include::traits::{
     Currency, LockableCurrency,
 };
 use crate::*;
 use frame_support::{
-    Blake2_128Concat,
     pallet_prelude::OptionQuery,
     storage_alias,
     traits::OnRuntimeUpgrade,
     traits::{Get, WithdrawReasons},
     weights::Weight,
+    Blake2_128Concat,
 };
 use log::{debug, info};
 use sp_std::{collections::btree_map::BTreeMap, marker::PhantomData};
@@ -55,34 +55,36 @@ impl<T: Config> OnRuntimeUpgrade for Migrate<T> {
     }
 
     fn on_runtime_upgrade() -> Weight {
-        let mut twins: BTreeMap<u32, pallet_tfgrid::types::Twin<AccountIdOf<T>>> = BTreeMap::new();
         let mut total_reads = 0;
         let mut total_writes = 0;
         if pallet_tfgrid::PalletVersion::<T>::get()
             == pallet_tfgrid::types::StorageVersion::V14Struct
         {
+            let mut twins: BTreeMap<u32, pallet_tfgrid::types::Twin<AccountIdOf<T>>> = BTreeMap::new();
+            
             let (reads, writes) = migrate_tfgrid::<T>(&mut twins);
             total_reads += reads;
             total_writes += writes;
+
+            if pallet_smart_contract::PalletVersion::<T>::get()
+                >= pallet_smart_contract::types::StorageVersion::V6
+            {
+                let (reads, writes) = migrate_smart_contract::<T>(&twins);
+                total_reads += reads;
+                total_writes += writes;
+            } else {
+                info!(" >>> Unused Smart Contract pallet V8 migration");
+            }
+
+            if twins.len() > 0 {
+                let (reads, writes) = write_twins::<T>(&twins);
+                total_reads += reads;
+                total_writes += writes;
+            }
         } else {
             info!(" >>> Unused TFGrid pallet V15 migration");
         }
-        if pallet_smart_contract::PalletVersion::<T>::get()
-            >= pallet_smart_contract::types::StorageVersion::V6
-        {
-            let (reads, writes) = migrate_smart_contract::<T>(&twins);
-            total_reads += reads;
-            total_writes += writes;
-        } else {
-            info!(" >>> Unused Smart Contract pallet V8 migration");
-        }
 
-        if twins.len() > 0 {
-            let (reads, writes) = write_twins::<T>(&twins);
-            total_reads += reads;
-            total_writes += writes;
-
-        }
         T::DbWeight::get().reads_writes(total_reads, total_writes)
     }
 
@@ -115,18 +117,22 @@ impl<T: Config> OnRuntimeUpgrade for Migrate<T> {
     }
 }
 
-pub fn write_twins<T: Config>(twins: &BTreeMap<u32, pallet_tfgrid::types::Twin<AccountIdOf<T>>>) -> (u64, u64) {
+pub fn write_twins<T: Config>(
+    twins: &BTreeMap<u32, pallet_tfgrid::types::Twin<AccountIdOf<T>>>,
+) -> (u64, u64) {
     info!(" >>> Writing twins to storage...");
     for (twin_id, twin) in twins {
         pallet_tfgrid::Twins::<T>::insert(&twin_id, &twin);
     }
     // Update pallet storage version
     pallet_tfgrid::PalletVersion::<T>::set(pallet_tfgrid::types::StorageVersion::V15Struct);
-    info!(" <<< Twin migration success, storage version upgraded ({:?} twins)", pallet_tfgrid::Twins::<T>::iter().count());
+    info!(" <<< Twin migration success, storage version upgraded");
     return (0, twins.len() as u64 + 1);
 }
 
-pub fn migrate_tfgrid<T: Config>(twins: &mut BTreeMap<u32, pallet_tfgrid::types::Twin<AccountIdOf<T>>>) -> (u64, u64) {
+pub fn migrate_tfgrid<T: Config>(
+    twins: &mut BTreeMap<u32, pallet_tfgrid::types::Twin<AccountIdOf<T>>>,
+) -> (u64, u64) {
     info!(" >>> Migrating twin storage...");
 
     let mut reads = 0;
@@ -142,13 +148,15 @@ pub fn migrate_tfgrid<T: Config>(twins: &mut BTreeMap<u32, pallet_tfgrid::types:
         };
         twins.insert(twin.id, new_twin);
         reads += 1;
-    };
+    }
 
     // Return the weight consumed by the migration.
     return (reads, 0);
 }
 
-pub fn migrate_smart_contract<T: Config>(twins: &BTreeMap<u32, pallet_tfgrid::types::Twin<AccountIdOf<T>>>) -> (u64, u64) {
+pub fn migrate_smart_contract<T: Config>(
+    twins: &BTreeMap<u32, pallet_tfgrid::types::Twin<AccountIdOf<T>>>,
+) -> (u64, u64) {
     debug!(
         " >>> Starting contract pallet migration, pallet version: {:?}",
         pallet_smart_contract::PalletVersion::<T>::get()
