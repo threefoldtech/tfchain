@@ -423,6 +423,7 @@ impl pallet_burning::Config for Runtime {
 
 impl pallet_kvstore::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = pallet_kvstore::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_tft_price::Config for Runtime {
@@ -781,6 +782,7 @@ mod benches {
     define_benchmarks!(
         [pallet_smart_contract, SmartContractModule]
         [pallet_tft_price, TFTPriceModule]
+        [pallet_kvstore, TFKVStore]
         // Substrate
         [frame_benchmarking::baseline, Baseline::<Runtime>]
         [frame_system, SystemBench::<Runtime>]
