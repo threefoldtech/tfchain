@@ -3,7 +3,7 @@
 use super::*;
 use crate::Pallet as TFTPriceModule;
 use frame_benchmarking::benchmarks;
-use frame_system::RawOrigin;
+use frame_system::{EventRecord, Pallet as System, RawOrigin};
 use pallet_session::Pallet as Session;
 
 benchmarks! {
@@ -25,6 +25,7 @@ benchmarks! {
     verify {
         assert_eq!(TFTPriceModule::<T>::tft_price(), price);
         assert_eq!(TFTPriceModule::<T>::average_tft_price(), price);
+        assert_last_event::<T>(Event::AveragePriceStored(price).into());
     }
 
     // set_min_tft_price()
@@ -46,4 +47,11 @@ benchmarks! {
     // Calling the `impl_benchmark_test_suite` macro inside the `benchmarks`
     // block will generate one #[test] function per benchmark
     impl_benchmark_test_suite! (TFTPriceModule, crate::mock::ExternalityBuilder::build(), crate::mock::TestRuntime)
+}
+
+fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
+    let events = System::<T>::events();
+    let system_event: <T as frame_system::Config>::RuntimeEvent = generic_event.into();
+    let EventRecord { event, .. } = &events[events.len() - 1];
+    assert_eq!(event, &system_event);
 }
