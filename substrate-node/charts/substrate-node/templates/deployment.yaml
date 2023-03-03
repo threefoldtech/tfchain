@@ -77,14 +77,13 @@ spec:
             "--pruning", "archive",
             {{ else }}
             "--ws-external",
-            "--pruning", "archive",
             {{ end }}
             "--ws-max-connections", "$(WS_MAX_CONNECTIONS)",
-            {{ if .Values.disable_offchain_worker }}
-            "--offchain-worker", "Never",
-            {{ end }}
             {{ if .Values.telemetry_url }}
             "--telemetry-url", {{ .Values.telemetry_url | quote }},
+            {{ end }}
+            {{ if .Values.archive }}
+            "--pruning", "archive",
             {{ end }}
           ]
           resources:
