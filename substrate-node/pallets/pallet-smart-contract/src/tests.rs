@@ -3123,101 +3123,46 @@ fn test_percent() {
     assert_eq!(new_cost, 248);
 }
 
-#[test]
-fn test_calculate_discount_works() {
-    let amount_due = 1000;
-    let seconds_elapsed = SECS_PER_HOUR; // amount due is relative to 1h
-    let balance = amount_due * 24 * 30; // just enough balance for 1 month at the rate of 1000 per hour
+macro_rules! test_calculate_discount {
+    ($($name:ident: $value:expr,)*) => {
+    $(
+        #[test]
+        fn $name() {
+            let (number_of_months, expected_discount_level) = $value;
 
-    // No discount level
-    let result = cost::calculate_discount::<TestRuntime>(
-        amount_due,
-        seconds_elapsed,
-        balance,
-        NodeCertification::Diy,
-    );
-    let expected_discount_level = types::DiscountLevel::None;
-    assert_eq!(
-        result,
-        (
-            (U64F64::from_num(amount_due) * expected_discount_level.price_multiplier())
-                .ceil()
-                .to_num::<u64>(),
-            expected_discount_level
-        )
-    );
+            let amount_due = 1000;
+            let seconds_elapsed = SECS_PER_HOUR; // amount due is relative to 1h
+            // Give just enough balance for targeted number of months at the rate of 1000 per hour
+            let balance = (amount_due * 24 * 30) * number_of_months;
 
-    // Default discount level
-    let result = cost::calculate_discount::<TestRuntime>(
-        amount_due,
-        seconds_elapsed,
-        balance * 3, // just enough balance for 3 month
-        NodeCertification::Diy,
-    );
-    let expected_discount_level = types::DiscountLevel::Default;
-    assert_eq!(
-        result,
-        (
-            (U64F64::from_num(amount_due) * expected_discount_level.price_multiplier())
-                .ceil()
-                .to_num::<u64>(),
-            expected_discount_level
-        )
-    );
+            let result = cost::calculate_discount::<TestRuntime>(
+                amount_due,
+                seconds_elapsed,
+                balance,
+                NodeCertification::Diy,
+            );
 
-    // Bronze discount level
-    let result = cost::calculate_discount::<TestRuntime>(
-        amount_due,
-        seconds_elapsed,
-        balance * 6, // just enough balance for 6 month
-        NodeCertification::Diy,
-    );
-    let expected_discount_level = types::DiscountLevel::Bronze;
-    assert_eq!(
-        result,
-        (
-            (U64F64::from_num(amount_due) * expected_discount_level.price_multiplier())
-                .ceil()
-                .to_num::<u64>(),
-            expected_discount_level
-        )
-    );
+            assert_eq!(
+                result,
+                (
+                    (U64F64::from_num(amount_due) * expected_discount_level.price_multiplier())
+                        .ceil()
+                        .to_num::<u64>(),
+                    expected_discount_level
+                )
+            );
+        }
+    )*
+    }
+}
 
-    // Silver discount level
-    let result = cost::calculate_discount::<TestRuntime>(
-        amount_due,
-        seconds_elapsed,
-        balance * 12, // just enough balance for 12 month
-        NodeCertification::Diy,
-    );
-    let expected_discount_level = types::DiscountLevel::Silver;
-    assert_eq!(
-        result,
-        (
-            (U64F64::from_num(amount_due) * expected_discount_level.price_multiplier())
-                .ceil()
-                .to_num::<u64>(),
-            expected_discount_level
-        )
-    );
-
-    // Gold discount level
-    let result = cost::calculate_discount::<TestRuntime>(
-        amount_due,
-        seconds_elapsed,
-        balance * 36, // just enough balance for 36 month
-        NodeCertification::Diy,
-    );
-    let expected_discount_level = types::DiscountLevel::Gold;
-    assert_eq!(
-        result,
-        (
-            (U64F64::from_num(amount_due) * expected_discount_level.price_multiplier())
-                .ceil()
-                .to_num::<u64>(),
-            expected_discount_level
-        )
-    );
+// Confirm expected discount level given a number of month of balance autonomy
+test_calculate_discount! {
+    test_calculate_discount_none_works: (1, types::DiscountLevel::None),
+    test_calculate_discount_default_works: (3, types::DiscountLevel::Default),
+    test_calculate_discount_bronze_works: (6, types::DiscountLevel::Bronze),
+    test_calculate_discount_silver_works: (12, types::DiscountLevel::Silver),
+    test_calculate_gold_discount_gold_works: (36, types::DiscountLevel::Gold),
 }
 
 // ***** HELPER FUNCTIONS ***** //
