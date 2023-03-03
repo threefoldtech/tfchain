@@ -12,8 +12,7 @@ use pallet_tfgrid::{
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
     node::{Location, SerialNumber},
     terms_cond::TermsAndConditions,
-    twin::TwinIp,
-    DocumentHashInput, DocumentLinkInput, TwinIpInput,
+    DocumentHashInput, DocumentLinkInput,
 };
 use pallet_tfgrid::{
     CityNameInput, CountryNameInput, Gw4Input, Ip4Input, LatitudeInput, LongitudeInput,
@@ -145,7 +144,6 @@ parameter_types! {
 
 pub(crate) type TestTermsAndConditions = TermsAndConditions<Test>;
 
-pub(crate) type TestTwinIp = TwinIp<Test>;
 pub(crate) type TestFarmName = FarmName<Test>;
 
 pub(crate) type TestInterfaceName = InterfaceName<Test>;
@@ -164,7 +162,6 @@ impl pallet_tfgrid::Config for Test {
     type NodeChanged = NodeChanged;
     type PublicIpModifier = PublicIpModifierType;
     type TermsAndConditions = TestTermsAndConditions;
-    type TwinIp = TestTwinIp;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
@@ -213,10 +210,6 @@ pub(crate) fn get_document_link_input(document_link_input: &[u8]) -> DocumentLin
 
 pub(crate) fn get_document_hash_input(document_hash_input: &[u8]) -> DocumentHashInput {
     BoundedVec::try_from(document_hash_input.to_vec()).expect("Invalid document hash input.")
-}
-
-pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {
-    BoundedVec::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
 }
 
 pub(crate) fn get_public_ip_ip_input(ip_input: &[u8]) -> Ip4Input {

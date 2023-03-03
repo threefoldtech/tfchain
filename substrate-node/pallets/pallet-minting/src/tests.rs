@@ -597,10 +597,10 @@ pub fn prepare_twin(account_id: u64) {
         get_document_hash_input(b"some_hash"),
     ));
 
-    let ip = get_twin_ip_input(b"::1");
     assert_ok!(TfgridModule::create_twin(
         RuntimeOrigin::signed(account_id),
-        ip
+        None,
+        None
     ));
 }
 
