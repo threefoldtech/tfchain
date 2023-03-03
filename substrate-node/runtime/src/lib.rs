@@ -779,6 +779,7 @@ extern crate frame_benchmarking;
 mod benches {
     define_benchmarks!(
         [pallet_smart_contract, SmartContractModule]
+        [pallet_tft_price, TFTPriceModule]
         // Substrate
         [frame_benchmarking::baseline, Baseline::<Runtime>]
         [frame_system, SystemBench::<Runtime>]

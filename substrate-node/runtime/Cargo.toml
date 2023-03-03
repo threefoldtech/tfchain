@@ -122,6 +122,7 @@ runtime-benchmarks = [
     'pallet-balances/runtime-benchmarks',
     'pallet-collective/runtime-benchmarks',
     'pallet-smart-contract/runtime-benchmarks',
+    'pallet-tft-price/runtime-benchmarks',
 ]
 try-runtime = [
     "frame-executive/try-runtime",
