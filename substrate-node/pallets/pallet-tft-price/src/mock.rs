@@ -118,11 +118,13 @@ parameter_types! {
     pub const UnsignedPriority: u64 = 100;
 }
 
+use weights;
 impl Config for TestRuntime {
     type AuthorityId = pallet_tft_price::AuthId;
     type Call = RuntimeCall;
     type RuntimeEvent = RuntimeEvent;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
+    type WeightInfo = weights::SubstrateWeight<TestRuntime>;
 }
 
 parameter_types! {

@@ -430,6 +430,7 @@ impl pallet_tft_price::Config for Runtime {
     type Call = RuntimeCall;
     type RuntimeEvent = RuntimeEvent;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
+    type WeightInfo = pallet_tft_price::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_validator::Config for Runtime {
