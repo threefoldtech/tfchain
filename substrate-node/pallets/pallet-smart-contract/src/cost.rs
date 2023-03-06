@@ -8,7 +8,9 @@ use frame_support::{dispatch::DispatchErrorWithPostInfo, traits::Get};
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use sp_runtime::{Percent, SaturatedConversion};
 use substrate_fixed::types::U64F64;
-use tfchain_support::{resources::Resources, types::NodeCertification};
+use tfchain_support::{
+    constants::time::SECS_PER_HOUR, resources::Resources, types::NodeCertification,
+};
 
 impl<T: Config> Contract<T> {
     pub fn get_billing_info(&self) -> ContractBillingInformation {
@@ -40,8 +42,12 @@ impl<T: Config> Contract<T> {
         let total_cost_tft_64 = calculate_cost_in_tft_from_musd::<T>(total_cost)?;
 
         // Calculate the amount due and discount received based on the total_cost amount due
-        let (amount_due, discount_received) =
-            calculate_discount::<T>(total_cost_tft_64, balance, certification_type);
+        let (amount_due, discount_received) = calculate_discount::<T>(
+            total_cost_tft_64,
+            seconds_elapsed,
+            balance,
+            certification_type,
+        );
 
         return Ok((amount_due, discount_received));
     }
@@ -229,6 +235,7 @@ pub(crate) fn calculate_cu(cru: U64F64, mru: U64F64) -> U64F64 {
 // (default, bronze, silver, gold or none)
 pub fn calculate_discount<T: Config>(
     amount_due: u64,
+    seconds_elapsed: u64,
     balance: BalanceOf<T>,
     certification_type: NodeCertification,
 ) -> (BalanceOf<T>, types::DiscountLevel) {
@@ -239,13 +246,15 @@ pub fn calculate_discount<T: Config>(
         );
     }
 
-    let balance_as_u128: u128 = balance.saturated_into::<u128>();
-
     // calculate amount due on a monthly basis
-    // we bill every one hour so we can infer the amount due monthly (30 days ish)
-    let amount_due_monthly = amount_due * 24 * 30;
+    // first get the normalized amount per hour
+    let amount_due_hourly = U64F64::from_num(amount_due) * U64F64::from_num(seconds_elapsed)
+        / U64F64::from_num(SECS_PER_HOUR);
+    // then we can infer the amount due monthly (30 days ish)
+    let amount_due_monthly = (amount_due_hourly * 24 * 30).round().to_num::<u64>();
 
     // see how many months a user can pay for this deployment given his balance
+    let balance_as_u128: u128 = balance.saturated_into::<u128>();
     let discount_level = U64F64::from_num(balance_as_u128) / U64F64::from_num(amount_due_monthly);
 
     // predefined discount levels
