@@ -211,12 +211,13 @@ pub fn migrate_smart_contract<T: Config>(
             .min(*b)
         });
 
-        // Unlock all balance for the twin
-        <T as Config>::Currency::remove_lock(GRID_LOCK_ID, &twin.account_id);
-        writes += 1;
 
         if let Some(should_lock) = should_lock {
             debug!("we should lock: {:?}", should_lock);
+            // Unlock all balance for the twin
+            <T as Config>::Currency::remove_lock(GRID_LOCK_ID, &twin.account_id);
+            writes += 1;
+
             // Only do a set lock if we actually have to lock
             <T as Config>::Currency::set_lock(
                 GRID_LOCK_ID,
