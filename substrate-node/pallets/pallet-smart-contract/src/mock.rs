@@ -342,6 +342,7 @@ impl substrate_validator_set::Config for TestRuntime {
     type AddRemoveOrigin = EnsureRoot<Self::AccountId>;
     type RuntimeEvent = RuntimeEvent;
     type MinAuthorities = MinAuthorities;
+    type WeightInfo = substrate_validator_set::weights::SubstrateWeight<TestRuntime>;
 }
 
 impl pallet_session::Config for TestRuntime {

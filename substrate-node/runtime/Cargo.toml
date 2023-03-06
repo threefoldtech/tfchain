@@ -124,6 +124,7 @@ runtime-benchmarks = [
     'pallet-smart-contract/runtime-benchmarks',
     'pallet-tft-price/runtime-benchmarks',
     'pallet-kvstore/runtime-benchmarks',
+    'validatorset/runtime-benchmarks',
 ]
 try-runtime = [
     "frame-executive/try-runtime",

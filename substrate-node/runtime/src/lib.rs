@@ -448,6 +448,7 @@ impl validatorset::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type AddRemoveOrigin = EnsureRootOrCouncilApproval;
     type MinAuthorities = MinAuthorities;
+    type WeightInfo = validatorset::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -783,6 +784,7 @@ mod benches {
         [pallet_smart_contract, SmartContractModule]
         [pallet_tft_price, TFTPriceModule]
         [pallet_kvstore, TFKVStore]
+        [validatorset, ValidatorSet]
         // Substrate
         [frame_benchmarking::baseline, Baseline::<Runtime>]
         [frame_system, SystemBench::<Runtime>]

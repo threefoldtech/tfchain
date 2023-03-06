@@ -76,6 +76,7 @@ impl substrate_validator_set::Config for TestRuntime {
     type RuntimeEvent = RuntimeEvent;
     type AddRemoveOrigin = EnsureRoot<Self::AccountId>;
     type MinAuthorities = MinAuthorities;
+    type WeightInfo = substrate_validator_set::weights::SubstrateWeight<TestRuntime>;
 }
 
 thread_local! {
