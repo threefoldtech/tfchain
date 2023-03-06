@@ -69,6 +69,8 @@ impl<T: Config> OnRuntimeUpgrade for Migrate<T> {
 
             if pallet_smart_contract::PalletVersion::<T>::get()
                 >= pallet_smart_contract::types::StorageVersion::V6
+                && pallet_smart_contract::PalletVersion::<T>::get()
+                    < pallet_smart_contract::types::StorageVersion::V8
             {
                 let (reads, writes) = migrate_smart_contract::<T>(&twins);
                 total_reads += reads;
@@ -210,7 +212,6 @@ pub fn migrate_smart_contract<T: Config>(
                 - <T as Config>::Currency::minimum_balance())
             .min(*b)
         });
-
 
         if let Some(should_lock) = should_lock {
             debug!("we should lock: {:?}", should_lock);
