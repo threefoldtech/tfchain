@@ -31,10 +31,12 @@ construct_runtime!(
     }
 );
 
+use weights;
 impl pallet_validator::Config for TestRuntime {
     type RuntimeEvent = RuntimeEvent;
     type CouncilOrigin = EnsureRoot<Self::AccountId>;
     type Currency = ();
+    type WeightInfo = weights::SubstrateWeight<TestRuntime>;
 }
 
 parameter_types! {

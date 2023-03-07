@@ -438,6 +438,7 @@ impl pallet_validator::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type CouncilOrigin = EnsureRootOrCouncilApproval;
     type Currency = Balances;
+    type WeightInfo = pallet_validator::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -785,6 +786,7 @@ mod benches {
         [pallet_tft_price, TFTPriceModule]
         [pallet_kvstore, TFKVStore]
         [validatorset, ValidatorSet]
+        [pallet_validator, Validator]
         // Substrate
         [frame_benchmarking::baseline, Baseline::<Runtime>]
         [frame_system, SystemBench::<Runtime>]

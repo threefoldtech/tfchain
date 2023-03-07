@@ -22,8 +22,14 @@ mod tests;
 #[cfg(test)]
 mod mock;
 
+#[cfg(feature = "runtime-benchmarks")]
+pub mod benchmarking;
+
+pub mod weights;
+
 #[frame_support::pallet]
 pub mod pallet {
+    use super::weights::WeightInfo;
     use super::*;
     use frame_system::pallet_prelude::*;
     pub type BalanceOf<T> =
@@ -39,6 +45,7 @@ pub mod pallet {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type Currency: Currency<Self::AccountId>;
         type CouncilOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+        type WeightInfo: crate::weights::WeightInfo;
     }
 
     #[pallet::pallet]
@@ -116,7 +123,7 @@ pub mod pallet {
         /// Info: some public info about the validator (website link, blog link, ..)
         /// A user can only have 1 validator request at a time
         #[pallet::call_index(0)]
-        #[pallet::weight(100_000_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::create_validator_request())]
         pub fn create_validator_request(
             origin: OriginFor<T>,
             validator_node_account: T::AccountId,
@@ -155,7 +162,7 @@ pub mod pallet {
         /// A user can only call this if his request to be a validator is approved by the council
         /// Should be called when his node is synced and ready to start validating
         #[pallet::call_index(1)]
-        #[pallet::weight(100_000_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::activate_validator_node())]
         pub fn activate_validator_node(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
@@ -191,7 +198,7 @@ pub mod pallet {
         /// he can call this method with the new node validator account
         /// this new account will be added as a new consensus validator if he is validating already
         #[pallet::call_index(2)]
-        #[pallet::weight(100_000_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::change_validator_node_account())]
         pub fn change_validator_node_account(
             origin: OriginFor<T>,
             new_node_validator_account: T::AccountId,
@@ -232,7 +239,7 @@ pub mod pallet {
         /// Bond an account to a validator account
         /// Just proves that the stash account is indeed under control of the validator account
         #[pallet::call_index(3)]
-        #[pallet::weight(100_000_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::bond())]
         pub fn bond(
             origin: OriginFor<T>,
             validator: <T::Lookup as StaticLookup>::Source,
@@ -256,7 +263,7 @@ pub mod pallet {
         /// Approves a validator to be added as a council member and
         /// to participate in consensus
         #[pallet::call_index(4)]
-        #[pallet::weight(100_000_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::approve_validator())]
         pub fn approve_validator(
             origin: OriginFor<T>,
             validator_account: <T::Lookup as StaticLookup>::Source,
@@ -291,7 +298,7 @@ pub mod pallet {
         /// 3. Consensus
         /// Can only be called by the user or the council
         #[pallet::call_index(5)]
-        #[pallet::weight(100_000_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::remove_validator())]
         pub fn remove_validator(
             origin: OriginFor<T>,
             validator_account: <T::Lookup as StaticLookup>::Source,
