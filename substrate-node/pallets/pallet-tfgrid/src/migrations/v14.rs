@@ -62,7 +62,6 @@ pub fn fix_farming_policies_map_migration_<T: Config>() -> frame_support::weight
     info!(" >>> Migrating farming policies storage...");
 
     let mut read_writes = 0;
-
     FarmingPoliciesMap::<T>::translate::<FarmingPolicy<T::BlockNumber>, _>(|k, fp| {
         debug!("Farming policy #{:?}: start migrating", k);
         debug!("  id was: {:?}", fp.id);
