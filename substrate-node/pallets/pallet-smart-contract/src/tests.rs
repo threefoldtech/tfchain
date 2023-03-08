@@ -1829,7 +1829,11 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         // check_report_cost(1, 3, amount_due_as_u128, 12, discount_received);
 
         let our_events = System::events();
-        assert_eq!(our_events.len(), 10);
+        assert_eq!(our_events.len(), 21);
+
+        for e in our_events.clone() {
+            log::info!("event: {:?}", e);
+        }
 
         assert_eq!(
             our_events[5],
@@ -1855,7 +1859,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         );
 
         assert_eq!(
-            our_events[8],
+            our_events[19],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::NodeContractCanceled {
@@ -1865,7 +1869,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
             }))
         );
         assert_eq!(
-            our_events[9],
+            our_events[20],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::RentContractCanceled {
@@ -3216,9 +3220,10 @@ fn validate_distribution_rewards(
     } else {
         // 50% is sent to the sales account
         let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
-        assert_eq!(
+        assert_eq_error_rate!(
             sales_account_balance,
-            Perbill::from_percent(50) * total_amount_billed
+            Perbill::from_percent(50) * total_amount_billed,
+            1
         );
     }
 

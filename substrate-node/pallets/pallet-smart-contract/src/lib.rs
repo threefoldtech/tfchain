@@ -1132,17 +1132,11 @@ impl<T: Config> Pallet<T> {
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
         let usable_balance = Self::get_usable_balance(&twin.account_id);
 
-        let mut seconds_elapsed = BillingFrequency::<T>::get() * 6;
-        // Calculate amount of seconds elapsed based on the contract lock struct
-
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-        // this will set the seconds elapsed to the default billing cycle duration in seconds
-        // if there is no contract lock object yet. A contract lock object will be created later in this function
-        // https://github.com/threefoldtech/tfchain/issues/261
+
+        // Calculate amount of seconds elapsed based on the contract lock struct
         let contract_lock = ContractLock::<T>::get(contract.contract_id);
-        if contract_lock.lock_updated != 0 {
-            seconds_elapsed = now.checked_sub(contract_lock.lock_updated).unwrap_or(0);
-        }
+        let seconds_elapsed = now.checked_sub(contract_lock.lock_updated).unwrap_or(0);
 
         let (amount_due, discount_received) =
             contract.calculate_contract_cost_tft(usable_balance, seconds_elapsed)?;
@@ -1158,14 +1152,14 @@ impl<T: Config> Pallet<T> {
         // Handle grace
         let contract = Self::handle_grace(&mut contract, usable_balance, amount_due)?;
 
+        // Handle contract lock operations
+        Self::handle_lock(contract, amount_due)?;
+
         // If still in grace period, no need to continue doing locking and other stuff
         if matches!(contract.state, types::ContractState::GracePeriod(_)) {
             log::debug!("contract {} is still in grace", contract.contract_id);
             return Ok(().into());
         }
-
-        // Handle contract lock operations
-        Self::handle_lock(contract, amount_due)?;
 
         // Always emit a contract billed event
         let contract_bill = types::ContractBill {
