@@ -1150,7 +1150,11 @@ impl<T: Config> Pallet<T> {
         };
 
         // Handle grace
-        let contract = Self::handle_grace(&mut contract, usable_balance, amount_due)?;
+        let contract = Self::handle_grace(
+            &mut contract,
+            usable_balance,
+            contract_lock.amount_locked + amount_due,
+        )?;
 
         // Handle contract lock operations
         Self::handle_lock(contract, amount_due)?;
