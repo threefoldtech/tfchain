@@ -419,6 +419,7 @@ impl pallet_burning::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type Burn = ();
+    type WeightInfo = pallet_burning::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_kvstore::Config for Runtime {
@@ -787,6 +788,7 @@ mod benches {
         [pallet_kvstore, TFKVStore]
         [validatorset, ValidatorSet]
         [pallet_validator, Validator]
+        [pallet_burning, BurningModule]
         // Substrate
         [frame_benchmarking::baseline, Baseline::<Runtime>]
         [frame_system, SystemBench::<Runtime>]

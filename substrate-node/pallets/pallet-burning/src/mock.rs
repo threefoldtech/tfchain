@@ -83,10 +83,12 @@ impl pallet_balances::Config for TestRuntime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<TestRuntime>;
 }
 
+use weights;
 impl Config for TestRuntime {
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type Burn = ();
+    type WeightInfo = weights::SubstrateWeight<TestRuntime>;
 }
 
 type AccountPublic = <MultiSignature as Verify>::Signer;
