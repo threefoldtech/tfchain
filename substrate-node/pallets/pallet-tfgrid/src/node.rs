@@ -36,7 +36,6 @@ impl<T: Config> TryFrom<CityNameInput> for CityName<T> {
             value.len() <= MAX_CITY_NAME_LENGTH.saturated_into(),
             Self::Error::CityNameTooLong
         );
-        ensure!(validate_city_name(&value), Self::Error::InvalidCityName);
 
         Ok(Self(value, PhantomData))
     }
@@ -63,18 +62,6 @@ impl<T: Config> Clone for CityName<T> {
     fn clone(&self) -> Self {
         Self(self.0.clone(), self.1)
     }
-}
-
-pub fn validate_city_name(input: &[u8]) -> bool {
-    input == DEFAULT_CITY_NAME
-        || match core::str::from_utf8(input) {
-            Ok(val) => val
-                .chars()
-                .all(|c| c.is_alphabetic() || matches!(c, '-' | '.' | ' ')),
-            Err(_) => false,
-        }
-    // we convert to &str and then to chars to handle
-    // special alphabetic characters thanks to is_alphabetic()
 }
 
 // 2: Allow country code like BE, FR, BR, ...
@@ -107,10 +94,6 @@ impl<T: Config> TryFrom<CountryNameInput> for CountryName<T> {
             value.len() <= MAX_COUNTRY_NAME_LENGTH.saturated_into(),
             Self::Error::CountryNameTooLong
         );
-        ensure!(
-            validate_country_name(&value),
-            Self::Error::InvalidCountryName
-        );
 
         Ok(Self(value, PhantomData))
     }
@@ -137,18 +120,6 @@ impl<T: Config> Clone for CountryName<T> {
     fn clone(&self) -> Self {
         Self(self.0.clone(), self.1)
     }
-}
-
-pub fn validate_country_name(input: &[u8]) -> bool {
-    input == DEFAULT_COUNTRY_NAME
-        || match core::str::from_utf8(input) {
-            Ok(val) => val
-                .chars()
-                .all(|c| c.is_alphabetic() || matches!(c, '-' | '.' | ' ')),
-            Err(_) => false,
-        }
-    // we convert to &str and then to chars to handle
-    // special alphabetic characters thanks to is_alphabetic()
 }
 
 pub const MIN_LATITUDE_LENGTH: u32 = 1;
@@ -345,29 +316,6 @@ impl<T: Config> Clone for SerialNumber<T> {
     fn clone(&self) -> Self {
         Self(self.0.clone(), self.1)
     }
-}
-
-#[test]
-fn test_validate_city_name_works() {
-    assert_eq!(validate_city_name(b"Rio de Janeiro"), true);
-    assert_eq!(validate_city_name(b"Ghent"), true);
-    assert_eq!(validate_city_name(b"Cairo"), true);
-    assert_eq!(
-        validate_city_name(&vec![76, 105, 195, 168, 103, 101]), // b"Liège"
-        true
-    );
-
-    assert_eq!(validate_city_name(b"Los_Angeles"), false);
-}
-
-#[test]
-fn test_validate_country_name_works() {
-    assert_eq!(validate_country_name(b"Brazil"), true);
-    assert_eq!(validate_country_name(b"Belgium"), true);
-    assert_eq!(validate_country_name(b"Egypt"), true);
-    assert_eq!(validate_country_name(b"U.S.A"), true);
-
-    assert_eq!(validate_country_name(b"Costa_Rica"), false);
 }
 
 #[test]
