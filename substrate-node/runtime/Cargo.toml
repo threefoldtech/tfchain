@@ -127,6 +127,7 @@ runtime-benchmarks = [
     'validatorset/runtime-benchmarks',
     'pallet-validator/runtime-benchmarks',
     'pallet-burning/runtime-benchmarks',
+    'pallet-dao/runtime-benchmarks',
 ]
 try-runtime = [
     "frame-executive/try-runtime",

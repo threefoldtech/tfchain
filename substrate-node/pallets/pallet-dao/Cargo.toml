@@ -23,7 +23,6 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 ] }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 
-frame-benchmarking =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
@@ -32,6 +31,9 @@ pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
+
+# Benchmarking
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false, optional = true }
 
 tfchain-support = { path = "../../support", default-features = false }
 pallet-tfgrid = { path = "../pallet-tfgrid", default-features = false }
@@ -55,9 +57,12 @@ std = [
 	"pallet-timestamp/std",
 	"pallet-tfgrid/std",
 	"tfchain-support/std",
-	'scale-info/std',
-	'serde/std',
-	'log/std'
+	"scale-info/std",
+	"serde/std",
+	"log/std",
+]
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
 ]
 try-runtime = [
     "frame-support/try-runtime",

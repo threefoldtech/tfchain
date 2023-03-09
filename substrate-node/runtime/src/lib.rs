@@ -789,6 +789,7 @@ mod benches {
         [validatorset, ValidatorSet]
         [pallet_validator, Validator]
         [pallet_burning, BurningModule]
+        [pallet_dao, Dao]
         // Substrate
         [frame_benchmarking::baseline, Baseline::<Runtime>]
         [frame_system, SystemBench::<Runtime>]
