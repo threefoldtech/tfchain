@@ -954,7 +954,7 @@ impl<T: Config> Pallet<T> {
         Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
         Self::bill_contract(contract.contract_id)?;
         // Remove all associated storage
-        Self::remove_contract(contract.contract_id);
+        // Self::remove_contract(contract.contract_id);
 
         Ok(().into())
     }
@@ -1159,17 +1159,17 @@ impl<T: Config> Pallet<T> {
             contract_lock.lock_updated = now;
             contract_lock.cycles += 1;
             contract_lock.amount_locked = total_lock_amount;
-            ContractLock::<T>::insert(contract.contract_id, &contract_lock);
         }
 
         // If still in grace period, no need to continue doing locking and other stuff
         if matches!(contract.state, types::ContractState::GracePeriod(_)) {
             log::debug!("contract {} is still in grace", contract.contract_id);
+            ContractLock::<T>::insert(contract.contract_id, &contract_lock);
             return Ok(().into());
         }
 
         // Handle contract lock operations
-        Self::handle_lock(contract, contract_lock, amount_due)?;
+        Self::handle_lock(contract, &mut contract_lock, amount_due)?;
 
         // Always emit a contract billed event
         let contract_bill = types::ContractBill {
@@ -1189,7 +1189,11 @@ impl<T: Config> Pallet<T> {
         // If the contract is in delete state, remove all associated storage
         if matches!(contract.state, types::ContractState::Deleted(_)) {
             Self::remove_contract(contract.contract_id);
+            return Ok(().into());
         }
+
+        // Finally update the lock
+        ContractLock::<T>::insert(contract.contract_id, &contract_lock);
 
         log::info!("successfully billed contract with id {:?}", contract_id,);
 
@@ -1301,7 +1305,7 @@ impl<T: Config> Pallet<T> {
 
     fn handle_lock(
         contract: &mut types::Contract<T>,
-        mut contract_lock: types::ContractLock<BalanceOf<T>>,
+        contract_lock: &mut types::ContractLock<BalanceOf<T>>,
         amount_due: BalanceOf<T>,
     ) -> DispatchResultWithPostInfo {
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
@@ -1374,7 +1378,6 @@ impl<T: Config> Pallet<T> {
             contract_lock.lock_updated = now;
             contract_lock.amount_locked = BalanceOf::<T>::saturated_from(0 as u128);
             contract_lock.cycles = 0;
-            ContractLock::<T>::insert(contract.contract_id, &contract_lock);
         }
 
         Ok(().into())
