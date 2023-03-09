@@ -1135,7 +1135,7 @@ impl<T: Config> Pallet<T> {
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
         // Calculate amount of seconds elapsed based on the contract lock struct
-        let contract_lock = ContractLock::<T>::get(contract.contract_id);
+        let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
         let seconds_elapsed = now.checked_sub(contract_lock.lock_updated).unwrap_or(0);
 
         let (amount_due, discount_received) =
@@ -1149,21 +1149,27 @@ impl<T: Config> Pallet<T> {
             return Ok(().into());
         };
 
+        let total_lock_amount = contract_lock.amount_locked + amount_due;
         // Handle grace
-        let contract = Self::handle_grace(
-            &mut contract,
-            usable_balance,
-            contract_lock.amount_locked + amount_due,
-        )?;
+        let contract = Self::handle_grace(&mut contract, usable_balance, total_lock_amount)?;
 
-        // Handle contract lock operations
-        Self::handle_lock(contract, amount_due)?;
+        // Only update contract lock in state (Created, GracePeriod)
+        if !matches!(contract.state, types::ContractState::Deleted(_)) {
+            // increment cycles billed and update the internal lock struct
+            contract_lock.lock_updated = now;
+            contract_lock.cycles += 1;
+            contract_lock.amount_locked = total_lock_amount;
+            ContractLock::<T>::insert(contract.contract_id, &contract_lock);
+        }
 
         // If still in grace period, no need to continue doing locking and other stuff
         if matches!(contract.state, types::ContractState::GracePeriod(_)) {
             log::debug!("contract {} is still in grace", contract.contract_id);
             return Ok(().into());
         }
+
+        // Handle contract lock operations
+        Self::handle_lock(contract, contract_lock, amount_due)?;
 
         // Always emit a contract billed event
         let contract_bill = types::ContractBill {
@@ -1295,19 +1301,10 @@ impl<T: Config> Pallet<T> {
 
     fn handle_lock(
         contract: &mut types::Contract<T>,
+        mut contract_lock: types::ContractLock<BalanceOf<T>>,
         amount_due: BalanceOf<T>,
     ) -> DispatchResultWithPostInfo {
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-
-        let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
-        // Only update contract lock in state (Created, GracePeriod)
-        if !matches!(contract.state, types::ContractState::Deleted(_)) {
-            // increment cycles billed and update the internal lock struct
-            contract_lock.lock_updated = now;
-            contract_lock.cycles += 1;
-            contract_lock.amount_locked = contract_lock.amount_locked + amount_due;
-            ContractLock::<T>::insert(contract.contract_id, &contract_lock);
-        }
 
         // Only lock an amount from the user's balance if the contract is in create state
         // The lock is specified on the user's account, since a user can have multiple contracts
