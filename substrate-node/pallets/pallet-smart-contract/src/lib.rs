@@ -953,8 +953,6 @@ impl<T: Config> Pallet<T> {
 
         Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
         Self::bill_contract(contract.contract_id)?;
-        // Remove all associated storage
-        // Self::remove_contract(contract.contract_id);
 
         Ok(().into())
     }
