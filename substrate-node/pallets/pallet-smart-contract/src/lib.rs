@@ -953,8 +953,6 @@ impl<T: Config> Pallet<T> {
 
         Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
         Self::bill_contract(contract.contract_id)?;
-        // Remove all associated storage
-        Self::remove_contract(contract.contract_id);
 
         Ok(().into())
     }
@@ -1132,17 +1130,11 @@ impl<T: Config> Pallet<T> {
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
         let usable_balance = Self::get_usable_balance(&twin.account_id);
 
-        let mut seconds_elapsed = BillingFrequency::<T>::get() * 6;
-        // Calculate amount of seconds elapsed based on the contract lock struct
-
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-        // this will set the seconds elapsed to the default billing cycle duration in seconds
-        // if there is no contract lock object yet. A contract lock object will be created later in this function
-        // https://github.com/threefoldtech/tfchain/issues/261
-        let contract_lock = ContractLock::<T>::get(contract.contract_id);
-        if contract_lock.lock_updated != 0 {
-            seconds_elapsed = now.checked_sub(contract_lock.lock_updated).unwrap_or(0);
-        }
+
+        // Calculate amount of seconds elapsed based on the contract lock struct
+        let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
+        let seconds_elapsed = now.checked_sub(contract_lock.lock_updated).unwrap_or(0);
 
         let (amount_due, discount_received) =
             contract.calculate_contract_cost_tft(usable_balance, seconds_elapsed)?;
@@ -1155,17 +1147,27 @@ impl<T: Config> Pallet<T> {
             return Ok(().into());
         };
 
+        let total_lock_amount = contract_lock.amount_locked + amount_due;
         // Handle grace
-        let contract = Self::handle_grace(&mut contract, usable_balance, amount_due)?;
+        let contract = Self::handle_grace(&mut contract, usable_balance, total_lock_amount)?;
+
+        // Only update contract lock in state (Created, GracePeriod)
+        if !matches!(contract.state, types::ContractState::Deleted(_)) {
+            // increment cycles billed and update the internal lock struct
+            contract_lock.lock_updated = now;
+            contract_lock.cycles += 1;
+            contract_lock.amount_locked = total_lock_amount;
+        }
 
         // If still in grace period, no need to continue doing locking and other stuff
         if matches!(contract.state, types::ContractState::GracePeriod(_)) {
             log::debug!("contract {} is still in grace", contract.contract_id);
+            ContractLock::<T>::insert(contract.contract_id, &contract_lock);
             return Ok(().into());
         }
 
         // Handle contract lock operations
-        Self::handle_lock(contract, amount_due)?;
+        Self::handle_lock(contract, &mut contract_lock, amount_due)?;
 
         // Always emit a contract billed event
         let contract_bill = types::ContractBill {
@@ -1185,7 +1187,11 @@ impl<T: Config> Pallet<T> {
         // If the contract is in delete state, remove all associated storage
         if matches!(contract.state, types::ContractState::Deleted(_)) {
             Self::remove_contract(contract.contract_id);
+            return Ok(().into());
         }
+
+        // Finally update the lock
+        ContractLock::<T>::insert(contract.contract_id, &contract_lock);
 
         log::info!("successfully billed contract with id {:?}", contract_id,);
 
@@ -1297,19 +1303,10 @@ impl<T: Config> Pallet<T> {
 
     fn handle_lock(
         contract: &mut types::Contract<T>,
+        contract_lock: &mut types::ContractLock<BalanceOf<T>>,
         amount_due: BalanceOf<T>,
     ) -> DispatchResultWithPostInfo {
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-
-        let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
-        // Only update contract lock in state (Created, GracePeriod)
-        if !matches!(contract.state, types::ContractState::Deleted(_)) {
-            // increment cycles billed and update the internal lock struct
-            contract_lock.lock_updated = now;
-            contract_lock.cycles += 1;
-            contract_lock.amount_locked = contract_lock.amount_locked + amount_due;
-            ContractLock::<T>::insert(contract.contract_id, &contract_lock);
-        }
 
         // Only lock an amount from the user's balance if the contract is in create state
         // The lock is specified on the user's account, since a user can have multiple contracts
@@ -1379,7 +1376,6 @@ impl<T: Config> Pallet<T> {
             contract_lock.lock_updated = now;
             contract_lock.amount_locked = BalanceOf::<T>::saturated_from(0 as u128);
             contract_lock.cycles = 0;
-            ContractLock::<T>::insert(contract.contract_id, &contract_lock);
         }
 
         Ok(().into())
