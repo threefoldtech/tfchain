@@ -545,19 +545,14 @@ fn _create_twin<T: Config>(source: T::AccountId) {
         get_document_hash_input(b"some_hash"),
     ));
 
-    let relay = get_relay_input(b"somerelay.io");
-    let pk =
-        get_public_key_input(b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901");
-
     assert_ok!(Tfgrid::<T>::create_twin(
         RawOrigin::Signed(source).into(),
-        relay,
-        pk
+        get_relay_input(b"somerelay.io"),
+        get_public_key_input(b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901"),
     ));
 }
 
 fn _create_farm<T: Config>(source: T::AccountId) {
-    let farm_name = b"testfarm";
     let mut pub_ips = Vec::new();
     pub_ips.push(IP4 {
         ip: get_public_ip_ip_input(b"185.206.122.33/24"),
@@ -570,7 +565,7 @@ fn _create_farm<T: Config>(source: T::AccountId) {
 
     assert_ok!(pallet_tfgrid::Pallet::<T>::create_farm(
         RawOrigin::Signed(source).into(),
-        farm_name.to_vec().try_into().unwrap(),
+        b"testfarm".to_vec().try_into().unwrap(),
         pub_ips.clone().try_into().unwrap(),
     ));
 }

@@ -83,7 +83,7 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         let caller_lookup = T::Lookup::unlookup(caller.clone());
 
-        let council_members = CouncilMembership::<T, pallet_membership::Instance1>::members();
+        let council_members = CouncilMembership::<T, _>::members();
         assert!(council_members.len() > 0);
         let council_member = council_members.into_iter().next().unwrap();
     }: _(RawOrigin::Signed(council_member.clone()), caller_lookup)
@@ -93,7 +93,7 @@ benchmarks! {
             ValidatorModule::<T>::validator_requests(caller.clone()),
             Some(validator_approved.clone()),
         );
-        assert!(CouncilMembership::<T, pallet_membership::Instance1>::members().contains(&caller));
+        assert!(CouncilMembership::<T, _>::members().contains(&caller));
         assert_last_event::<T>(Event::ValidatorRequestApproved(validator_approved).into());
     }
 
@@ -103,13 +103,13 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         let caller_lookup = T::Lookup::unlookup(caller.clone());
 
-        let council_members = CouncilMembership::<T, pallet_membership::Instance1>::members();
+        let council_members = CouncilMembership::<T, _>::members();
         assert!(council_members.len() > 0);
         let council_member = council_members.into_iter().next().unwrap();
     }: _(RawOrigin::Signed(council_member.clone()), caller_lookup.clone())
     verify {
         assert!(ValidatorModule::<T>::validator_requests(caller.clone()).is_none());
-        assert!(!CouncilMembership::<T, pallet_membership::Instance1>::members().contains(&caller));
+        assert!(!CouncilMembership::<T, _>::members().contains(&caller));
     }
 
     // Calling the `impl_benchmark_test_suite` macro inside the `benchmarks`
@@ -154,7 +154,7 @@ fn _create_validator_and_approve<T: Config>() {
     let caller: T::AccountId = whitelisted_caller();
     let caller_lookup = T::Lookup::unlookup(caller.clone());
 
-    let council_members = CouncilMembership::<T, pallet_membership::Instance1>::members();
+    let council_members = CouncilMembership::<T, _>::members();
     assert!(council_members.len() > 0);
     let council_member = council_members.into_iter().next().unwrap();
 
