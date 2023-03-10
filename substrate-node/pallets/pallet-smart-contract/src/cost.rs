@@ -258,7 +258,7 @@ pub fn calculate_discount<T: Config>(
     let discount_level = U64F64::from_num(balance_as_u128) / U64F64::from_num(amount_due_monthly);
 
     // predefined discount levels
-    // https://library.threefold.me/info/manual/#/manual__proof_of_utilization_manual?id=discount-on-staked-tokens
+    // https://library.threefold.me/info/manual/#/threefold__pricing?id=discount-levels
     let discount_received = match discount_level {
         d if d >= 1.5 && d < 3 => types::DiscountLevel::Default,
         d if d >= 3 && d < 6 => types::DiscountLevel::Bronze,
