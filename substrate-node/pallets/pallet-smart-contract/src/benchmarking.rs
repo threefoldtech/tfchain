@@ -12,7 +12,7 @@ use pallet_balances::Pallet as Balances;
 use pallet_tfgrid::{
     types::{self as tfgrid_types, LocationInput},
     CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, Gw4Input, Ip4Input,
-    LatitudeInput, LongitudeInput, Pallet as Tfgrid, PkInput, RelayInput, ResourcesInput,
+    LatitudeInput, LongitudeInput, Pallet as TfgridModule, PkInput, RelayInput, ResourcesInput,
 };
 // use pallet_timestamp::Pallet as Timestamp;
 use sp_runtime::traits::{Bounded, One, StaticLookup};
@@ -27,7 +27,7 @@ use tfchain_support::{
 };
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
-const TIMESTAMP_INIT_MILLISECS: u64 = 1628082000 * 1000;
+const TIMESTAMP_INIT_SECS: u64 = 1628082000;
 
 benchmarks! {
     where_clause {
@@ -154,7 +154,7 @@ benchmarks! {
 
         let report = types::NruConsumption {
             contract_id: contract_id,
-            timestamp: TIMESTAMP_INIT_MILLISECS,
+            timestamp: TIMESTAMP_INIT_SECS,
             window: 1000,
             nru: 10 * GIGABYTE,
         };
@@ -400,8 +400,8 @@ benchmarks! {
 
     // service_contract_bill()
     service_contract_bill {
-        // let stamp: u64 = TIMESTAMP_INIT_MILLISECS;
-        // Timestamp::<T>::set_timestamp(stamp.try_into().unwrap());
+        // let stamp: u64 = TIMESTAMP_INIT_SECS;
+        // Timestamp::<T>::set_timestamp((stamp * 1000).try_into().unwrap());
         // run_to_block::<T>(T::BlockNumber::from(1u32));
 
         let service: T::AccountId = account("Alice", 0, 0);
@@ -414,8 +414,8 @@ benchmarks! {
         let variable_amount = 0;
 
         // let elapsed_seconds = 200 * 6; // 20 min (200 blocks) later
-        // let stamp: u64 = TIMESTAMP_INIT_MILLISECS + elapsed_seconds * 1000;
-        // Timestamp::<T>::set_timestamp(stamp.try_into().unwrap());
+        // let stamp: u64 = TIMESTAMP_INIT_SECS + elapsed_seconds;
+        // Timestamp::<T>::set_timestamp((stamp * 1000).try_into().unwrap());
         // run_to_block::<T>(T::BlockNumber::from(201u32));
     }: _(RawOrigin::Signed(service), contract_id, variable_amount, b"bill_metadata".to_vec())
     verify {
@@ -505,7 +505,7 @@ fn _create_pricing_policy<T: Config>() {
     let x1 = account("Ferdie", 0, 2);
     let x2 = account("Eve", 0, 3);
 
-    assert_ok!(Tfgrid::<T>::create_pricing_policy(
+    assert_ok!(TfgridModule::<T>::create_pricing_policy(
         RawOrigin::Root.into(),
         b"policy_1".to_vec(),
         su_policy,
@@ -521,10 +521,9 @@ fn _create_pricing_policy<T: Config>() {
 }
 
 fn _create_farming_policy<T: Config>() {
-    let name = b"fp".to_vec();
-    assert_ok!(Tfgrid::<T>::create_farming_policy(
+    assert_ok!(TfgridModule::<T>::create_farming_policy(
         RawOrigin::Root.into(),
-        name,
+        b"fp".to_vec(),
         12,
         15,
         10,
@@ -539,13 +538,13 @@ fn _create_farming_policy<T: Config>() {
 }
 
 fn _create_twin<T: Config>(source: T::AccountId) {
-    assert_ok!(Tfgrid::<T>::user_accept_tc(
+    assert_ok!(TfgridModule::<T>::user_accept_tc(
         RawOrigin::Signed(source.clone()).into(),
         get_document_link_input(b"some_link"),
         get_document_hash_input(b"some_hash"),
     ));
 
-    assert_ok!(Tfgrid::<T>::create_twin(
+    assert_ok!(TfgridModule::<T>::create_twin(
         RawOrigin::Signed(source).into(),
         get_relay_input(b"somerelay.io"),
         get_public_key_input(b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901"),
@@ -563,10 +562,10 @@ fn _create_farm<T: Config>(source: T::AccountId) {
         gw: get_public_ip_gw_input(b"185.206.122.1"),
     });
 
-    assert_ok!(pallet_tfgrid::Pallet::<T>::create_farm(
+    assert_ok!(TfgridModule::<T>::create_farm(
         RawOrigin::Signed(source).into(),
         b"testfarm".to_vec().try_into().unwrap(),
-        pub_ips.clone().try_into().unwrap(),
+        pub_ips.try_into().unwrap(),
     ));
 }
 
@@ -586,7 +585,7 @@ fn _create_node<T: Config>(source: T::AccountId) {
         longitude: get_longitude_input(b"32.323112123"),
     };
 
-    assert_ok!(pallet_tfgrid::Pallet::<T>::create_node(
+    assert_ok!(TfgridModule::<T>::create_node(
         RawOrigin::Signed(source.clone()).into(),
         1,
         resources,
@@ -629,7 +628,7 @@ fn _push_contract_used_resources_report<T: Config>(source: T::AccountId) {
 fn _push_contract_nru_consumption_report<T: Config>(source: T::AccountId) {
     let nru_consumption = types::NruConsumption {
         contract_id: 1,
-        timestamp: TIMESTAMP_INIT_MILLISECS,
+        timestamp: TIMESTAMP_INIT_SECS,
         window: BillingFrequency::<T>::get() * 6,
         nru: 10 * GIGABYTE,
     };

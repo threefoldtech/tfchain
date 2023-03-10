@@ -8,7 +8,7 @@ use frame_system::{Call as SystemCall, EventRecord, Pallet as System, RawOrigin}
 use pallet_membership::Pallet as CouncilMembership;
 use pallet_tfgrid::{
     types::LocationInput, CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput,
-    Gw4Input, Ip4Input, LatitudeInput, LongitudeInput, Pallet as Tfgrid, PkInput, RelayInput,
+    Gw4Input, Ip4Input, LatitudeInput, LongitudeInput, Pallet as TfgridModule, PkInput, RelayInput,
     ResourcesInput,
 };
 use sp_runtime::traits::StaticLookup;
@@ -154,7 +154,7 @@ fn _create_farm<T: Config>(source: T::AccountId) {
         gw: get_public_ip_gw_input(b"185.206.122.1"),
     });
 
-    assert_ok!(pallet_tfgrid::Pallet::<T>::create_farm(
+    assert_ok!(TfgridModule::<T>::create_farm(
         RawOrigin::Signed(source).into(),
         b"testfarm".to_vec().try_into().unwrap(),
         pub_ips.clone().try_into().unwrap(),
@@ -177,7 +177,7 @@ fn _create_node<T: Config>(source: T::AccountId) {
         longitude: get_longitude_input(b"32.323112123"),
     };
 
-    assert_ok!(pallet_tfgrid::Pallet::<T>::create_node(
+    assert_ok!(TfgridModule::<T>::create_node(
         RawOrigin::Signed(source.clone()).into(),
         1,
         resources,
