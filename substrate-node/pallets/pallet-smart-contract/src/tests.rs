@@ -3113,6 +3113,64 @@ fn test_change_billing_frequency_fails_if_frequency_lower() {
 }
 
 #[test]
+fn test_attach_solution_provider_id() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(alice()),
+            1,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
+        ));
+
+        let ctr = SmartContractModule::contracts(1).unwrap();
+        assert_eq!(ctr.solution_provider_id, None);
+
+        prepare_solution_provider_alice();
+
+        assert_ok!(SmartContractModule::attach_solution_provider_id(
+            RuntimeOrigin::signed(alice()),
+            1,
+            1
+        ));
+
+        let ctr = SmartContractModule::contracts(1).unwrap();
+        assert_eq!(ctr.solution_provider_id, Some(1));
+    })
+}
+
+#[test]
+fn test_attach_solution_provider_id_wrong_origin_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(alice()),
+            1,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
+        ));
+
+        let ctr = SmartContractModule::contracts(1).unwrap();
+        assert_eq!(ctr.solution_provider_id, None);
+
+        prepare_solution_provider_alice();
+
+        assert_noop!(
+            SmartContractModule::attach_solution_provider_id(RuntimeOrigin::signed(bob()), 1, 1),
+            Error::<TestRuntime>::UnauthorizedToChangeSolutionProviderId
+        );
+    })
+}
+
+#[test]
 fn test_percent() {
     let cost: u64 = 1000;
     let new_cost = Percent::from_percent(25) * cost;
@@ -3595,6 +3653,21 @@ fn prepare_service_consumer_contract() {
         1,
         BASE_FEE,
         VARIABLE_FEE,
+    ));
+}
+
+fn prepare_solution_provider_alice() {
+    let provider = super::types::Provider {
+        take: 10,
+        who: alice(),
+    };
+    let providers = vec![provider];
+
+    assert_ok!(SmartContractModule::create_solution_provider(
+        RuntimeOrigin::signed(alice()),
+        "some_description".as_bytes().to_vec(),
+        "some_link".as_bytes().to_vec(),
+        providers
     ));
 }
 
