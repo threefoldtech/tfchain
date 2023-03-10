@@ -2144,6 +2144,53 @@ fn test_set_invalid_zos_version_fails() {
     })
 }
 
+#[test]
+fn test_bound_twin_account_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        let twin_id = 1;
+        assert_ok!(TfgridModule::bond_twin_account(
+            RuntimeOrigin::signed(bob()),
+            twin_id,
+        ));
+
+        assert_eq!(TfgridModule::twin_bonded_account(twin_id), Some(bob()));
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::TfgridModule(
+                TfgridEvent::<TestRuntime>::TwinAccountBounded(twin_id, bob())
+            ))),
+            true
+        );
+    })
+}
+
+#[test]
+fn test_bound_twin_account_not_exists_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        let twin_id = 1;
+        assert_noop!(
+            TfgridModule::bond_twin_account(RuntimeOrigin::signed(bob()), twin_id),
+            Error::<TestRuntime>::TwinNotExists,
+        );
+        assert!(TfgridModule::twin_bonded_account(twin_id).is_none());
+    })
+}
+
+#[test]
+fn test_bound_twin_account_itself_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        let twin_id = 1;
+        assert_noop!(
+            TfgridModule::bond_twin_account(RuntimeOrigin::signed(alice()), twin_id),
+            Error::<TestRuntime>::TwinCannotBoundToItself,
+        );
+        assert!(TfgridModule::twin_bonded_account(twin_id).is_none());
+    })
+}
+
 fn create_entity() {
     let name = b"foobar".to_vec();
     let country = get_country_name_input(b"Belgium");
