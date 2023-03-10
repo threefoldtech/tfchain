@@ -587,14 +587,14 @@ fn test_farm_add_stellar_payout_address() {
         create_twin();
         create_farm();
 
-        let addr = "some_address".as_bytes().to_vec();
+        let addr = b"some_address".to_vec();
         assert_ok!(TfgridModule::add_stellar_payout_v2address(
             RuntimeOrigin::signed(alice()),
             1,
             addr
         ));
 
-        let addr2 = "some_other_address".as_bytes().to_vec();
+        let addr2 = b"some_other_address".to_vec();
         assert_ok!(TfgridModule::add_stellar_payout_v2address(
             RuntimeOrigin::signed(alice()),
             1,
@@ -1431,7 +1431,7 @@ fn create_node_with_same_pubkey_fails() {
 #[test]
 fn create_farming_policy_works() {
     ExternalityBuilder::build().execute_with(|| {
-        let name = "f1".as_bytes().to_vec();
+        let name = b"f1".to_vec();
         assert_ok!(TfgridModule::create_farming_policy(
             RawOrigin::Root.into(),
             name,
@@ -1452,7 +1452,7 @@ fn create_farming_policy_works() {
 #[test]
 fn edit_farming_policy_works() {
     ExternalityBuilder::build().execute_with(|| {
-        let name = "f1".as_bytes().to_vec();
+        let name = b"f1".to_vec();
         assert_ok!(TfgridModule::create_farming_policy(
             RawOrigin::Root.into(),
             name,
@@ -1468,7 +1468,7 @@ fn edit_farming_policy_works() {
             FarmCertification::Gold,
         ));
 
-        let name = "f1_updated".as_bytes().to_vec();
+        let name = b"f1_updated".to_vec();
         assert_ok!(TfgridModule::update_farming_policy(
             RawOrigin::Root.into(),
             1,
@@ -1857,7 +1857,7 @@ fn node_switches_farming_policy_when_marked_as_certified_and_gold_farm_works() {
 #[test]
 fn sort_policies() {
     ExternalityBuilder::build().execute_with(|| {
-        let name = "f1".as_bytes().to_vec();
+        let name = b"f1".to_vec();
         let f1 = super::types::FarmingPolicy {
             version: 1,
             id: 1,
@@ -1875,7 +1875,7 @@ fn sort_policies() {
             farm_certification: FarmCertification::Gold,
         };
 
-        let name = "f2".as_bytes().to_vec();
+        let name = b"f2".to_vec();
         let f2 = super::types::FarmingPolicy {
             version: 1,
             id: 2,
@@ -1893,7 +1893,7 @@ fn sort_policies() {
             farm_certification: FarmCertification::NotCertified,
         };
 
-        let name = "f3".as_bytes().to_vec();
+        let name = b"f3".to_vec();
         let f3 = super::types::FarmingPolicy {
             version: 1,
             id: 3,
@@ -1911,7 +1911,7 @@ fn sort_policies() {
             farm_certification: FarmCertification::Gold,
         };
 
-        let name = "f4".as_bytes().to_vec();
+        let name = b"f4".to_vec();
         let f4 = super::types::FarmingPolicy {
             version: 1,
             id: 4,
@@ -1942,7 +1942,7 @@ fn sort_policies() {
             println!("policy: {:?}", p);
         }
 
-        // let name = "c1_test".as_bytes().to_vec();
+        // let name = b"c1_test".to_vec();
         // assert_ok!(TfgridModule::create_farming_policy(
         //     RawOrigin::Root.into(),
         //     name,
@@ -1989,7 +1989,7 @@ fn test_create_and_update_policy() {
             value: 20000,
             unit: super::types::Unit::Gigabytes,
         };
-        let name = String::from("policy_1").as_bytes().to_vec();
+        let name = b"policy_1".to_vec();
         TfgridModule::create_pricing_policy(
             RawOrigin::Root.into(),
             name.clone(),
@@ -2038,7 +2038,7 @@ fn test_create_and_update_policy() {
         assert_eq!(policy.nu, updated_nu_policy);
 
         // test updating policy name
-        let new_name = String::from("policy_1_updated").as_bytes().to_vec();
+        let new_name = b"policy_1_updated".to_vec();
         let updated_su_policy = super::types::Policy {
             value: 500,
             unit: super::types::Unit::Gigabytes,
@@ -2068,7 +2068,7 @@ fn test_create_and_update_policy() {
         assert_eq!(policy.su, updated_su_policy);
 
         // Test updating the name that conflicts with existing policy
-        let policy2_name = String::from("policy_2").as_bytes().to_vec();
+        let policy2_name = b"policy_2".to_vec();
         TfgridModule::create_pricing_policy(
             RawOrigin::Root.into(),
             policy2_name.clone(),
@@ -2108,7 +2108,7 @@ fn test_create_and_update_policy() {
 #[test]
 fn test_set_zos_version() {
     ExternalityBuilder::build().execute_with(|| {
-        let zos_version = "1.0.0".as_bytes().to_vec();
+        let zos_version = b"1.0.0".to_vec();
         assert_ok!(TfgridModule::set_zos_version(
             RawOrigin::Root.into(),
             zos_version.clone(),
@@ -2130,7 +2130,7 @@ fn test_set_zos_version() {
 #[test]
 fn test_set_invalid_zos_version_fails() {
     ExternalityBuilder::build().execute_with(|| {
-        let zos_version = "1.0.0".as_bytes().to_vec();
+        let zos_version = b"1.0.0".to_vec();
         assert_ok!(TfgridModule::set_zos_version(
             RawOrigin::Root.into(),
             zos_version.clone(),
@@ -2326,7 +2326,7 @@ fn create_extra_node() {
 }
 
 fn create_farming_policies() {
-    let name = "f1".as_bytes().to_vec();
+    let name = b"f1".to_vec();
     assert_ok!(TfgridModule::create_farming_policy(
         RawOrigin::Root.into(),
         name,
@@ -2342,7 +2342,7 @@ fn create_farming_policies() {
         FarmCertification::Gold,
     ));
 
-    let name = "f2".as_bytes().to_vec();
+    let name = b"f2".to_vec();
     assert_ok!(TfgridModule::create_farming_policy(
         RawOrigin::Root.into(),
         name,
@@ -2358,7 +2358,7 @@ fn create_farming_policies() {
         FarmCertification::NotCertified,
     ));
 
-    let name = "f3".as_bytes().to_vec();
+    let name = b"f3".to_vec();
     assert_ok!(TfgridModule::create_farming_policy(
         RawOrigin::Root.into(),
         name,
@@ -2374,7 +2374,7 @@ fn create_farming_policies() {
         FarmCertification::Gold,
     ));
 
-    let name = "f4".as_bytes().to_vec();
+    let name = b"f4".to_vec();
     assert_ok!(TfgridModule::create_farming_policy(
         RawOrigin::Root.into(),
         name,
@@ -2392,7 +2392,7 @@ fn create_farming_policies() {
 }
 
 fn create_custom_farming_policies() {
-    let name = "f5".as_bytes().to_vec();
+    let name = b"f5".to_vec();
     assert_ok!(TfgridModule::create_farming_policy(
         RawOrigin::Root.into(),
         name,
@@ -2408,7 +2408,7 @@ fn create_custom_farming_policies() {
         FarmCertification::NotCertified,
     ));
 
-    let name = "f6".as_bytes().to_vec();
+    let name = b"f6".to_vec();
     assert_ok!(TfgridModule::create_farming_policy(
         RawOrigin::Root.into(),
         name,
