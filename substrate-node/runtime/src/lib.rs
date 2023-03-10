@@ -790,6 +790,7 @@ mod benches {
         [pallet_validator, Validator]
         [pallet_burning, BurningModule]
         [pallet_dao, Dao]
+        [pallet_tfgrid, TfgridModule]
         // Substrate
         [frame_benchmarking::baseline, Baseline::<Runtime>]
         [frame_system, SystemBench::<Runtime>]

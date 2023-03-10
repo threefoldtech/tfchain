@@ -50,6 +50,7 @@ pub mod pallet {
     use super::types;
     use super::weights::WeightInfo;
     use super::*;
+    use codec::FullCodec;
     use frame_support::{pallet_prelude::*, Blake2_128Concat};
     use frame_support::{traits::ConstU32, BoundedVec};
     use frame_system::pallet_prelude::*;
@@ -64,8 +65,6 @@ pub mod pallet {
             MAX_IP4_LENGTH, MAX_IP6_LENGTH,
         },
     };
-
-    use codec::FullCodec;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]

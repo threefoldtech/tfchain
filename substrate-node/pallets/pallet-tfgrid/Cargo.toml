@@ -56,7 +56,7 @@ std = [
 	'sp-runtime/std',
 	'sp-std/std',
 	'sp-storage/std',
-    'pallet-timestamp/std',
+	'pallet-timestamp/std',
 	'sp-core/std',
 	'sp-io/std',
 	'frame-benchmarking/std',

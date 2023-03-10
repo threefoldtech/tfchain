@@ -130,13 +130,13 @@ pub fn _prepare_farm_with_node<T: Config>(source: T::AccountId) {
 }
 
 fn _create_twin<T: Config>(source: T::AccountId) {
-    assert_ok!(Tfgrid::<T>::user_accept_tc(
+    assert_ok!(TfgridModule::<T>::user_accept_tc(
         RawOrigin::Signed(source.clone()).into(),
         get_document_link_input(b"some_link"),
         get_document_hash_input(b"some_hash"),
     ));
 
-    assert_ok!(Tfgrid::<T>::create_twin(
+    assert_ok!(TfgridModule::<T>::create_twin(
         RawOrigin::Signed(source).into(),
         get_relay_input(b"somerelay.io"),
         get_public_key_input(b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901"),

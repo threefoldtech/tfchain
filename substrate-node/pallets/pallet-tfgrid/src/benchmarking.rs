@@ -2,15 +2,19 @@
 
 use super::*;
 use crate::Pallet as TfgridModule;
-use frame_benchmarking::{account, benchmarks, whitelisted_caller};
+use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::{assert_ok, BoundedVec};
 use frame_system::{EventRecord, Pallet as System, RawOrigin};
-// use pallet_tfgrid::{
-//     types::LocationInput, CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput,
-//     Gw4Input, Ip4Input, LatitudeInput, LongitudeInput, PkInput, RelayInput, ResourcesInput,
-// };
+// use hex;
 use pallet_timestamp::Pallet as Timestamp;
-use sp_core::{ed25519, sr25519, Pair, Public, H256};
+use scale_info::prelude::format;
+use sp_core::{ed25519, Pair, Public};
+// use sp_core::*;
+// use sp_core::crypto::Public;
+// use sp_core::ed25519;
+use sp_core::sr25519;
+// use sp_core::Pair;
+// use sp_core::Public;
 use sp_runtime::{
     traits::{Bounded, IdentifyAccount, Verify},
     AccountId32, MultiSignature,
@@ -23,8 +27,7 @@ use sp_std::{
 use tfchain_support::types::{FarmCertification, NodeCertification, PublicConfig, IP4, IP6};
 
 type AccountPublic = <MultiSignature as Verify>::Signer;
-pub type AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::AccountId;
-// pub trait AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::AccountId;
+type AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::AccountId;
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 const TIMESTAMP_INIT_SECS: u64 = 1628082000;
@@ -35,9 +38,6 @@ benchmarks! {
         <T as pallet_timestamp::Config>::Moment: TryFrom<u64>,
         <<T as pallet_timestamp::Config>::Moment as TryFrom<u64>>::Error: Debug,
         <T as frame_system::Config>::AccountId: From<AccountId32>,
-        // T: Config<<T as frame_system::Config>::AccountId = AccountId32>,
-        // T: pallet_session::Config<ValidatorId = <T as frame_system::Config>::AccountId>,
-        // <T as frame_system::Config>::AccountId: AccountId,
     }
 
     // set_storage_version()
@@ -286,7 +286,7 @@ benchmarks! {
     // create_entity()
     create_entity {
         let caller: T::AccountId = whitelisted_caller();
-        let target: T::AccountId = _test_ed25519::<T>().try_into().unwrap();
+        let target: T::AccountId = _test_ed25519().try_into().unwrap();
         let name = b"entity_name".to_vec();
         let country = get_country_name_input(b"Belgium");
         let city = get_city_name_input(b"Ghent");
@@ -486,7 +486,7 @@ fn _create_entity<T: Config>(source: T::AccountId)
 where
     <T as frame_system::Config>::AccountId: From<AccountId32>,
 {
-    let target: T::AccountId = _test_ed25519::<T>().try_into().unwrap();
+    let target: T::AccountId = _test_ed25519().try_into().unwrap();
     let name = b"entity_name".to_vec();
     let country = get_country_name_input(b"Belgium");
     let city = get_city_name_input(b"Ghent");
@@ -502,13 +502,13 @@ where
     ));
 }
 
-pub fn _test_ed25519<T: Config>() -> AccountId {
-    _get_account_id_from_seed_string::<T, ed25519::Public>(
+pub fn _test_ed25519() -> AccountId {
+    _get_account_id_from_seed_string::<ed25519::Public>(
         "industry dismiss casual gym gap music pave gasp sick owner dumb cost",
     )
 }
 
-fn _get_account_id_from_seed_string<T: Config, TPublic: Public>(seed: &str) -> AccountId
+fn _get_account_id_from_seed_string<TPublic: Public>(seed: &str) -> AccountId
 where
     AccountPublic: From<<TPublic::Pair as Pair>::Public>,
 {
@@ -525,6 +525,22 @@ pub fn _sign_create_entity(name: Vec<u8>, country: Vec<u8>, city: Vec<u8>) -> Ve
     let seed =
         hex::decode("59336423ee7af732b2d4a76e440651e33e5ba51540e5633535b9030492c2a6f6").unwrap();
     let pair = ed25519::Pair::from_seed_slice(&seed).unwrap();
+
+    let mut message = vec![];
+    message.extend_from_slice(&name);
+    message.extend_from_slice(&country);
+    message.extend_from_slice(&city);
+
+    let signature = pair.sign(&message);
+
+    // hex encode signature
+    hex::encode(signature.0.to_vec()).into()
+}
+
+pub fn _sign_create_entity_sr(name: Vec<u8>, country: Vec<u8>, city: Vec<u8>) -> Vec<u8> {
+    let seed =
+        hex::decode("59336423ee7af732b2d4a76e440651e33e5ba51540e5633535b9030492c2a6f6").unwrap();
+    let pair = sr25519::Pair::from_seed_slice(&seed).unwrap();
 
     let mut message = vec![];
     message.extend_from_slice(&name);
