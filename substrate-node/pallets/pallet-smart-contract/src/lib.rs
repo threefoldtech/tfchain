@@ -1129,6 +1129,8 @@ impl<T: Config> Pallet<T> {
         let twin =
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
         let usable_balance = Self::get_usable_balance(&twin.account_id);
+        let stash_balance = Self::get_stash_balance(twin.id);
+        let total_balance = usable_balance + stash_balance;
 
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
@@ -1137,7 +1139,7 @@ impl<T: Config> Pallet<T> {
         let seconds_elapsed = now.checked_sub(contract_lock.lock_updated).unwrap_or(0);
 
         let (amount_due, discount_received) =
-            contract.calculate_contract_cost_tft(usable_balance, seconds_elapsed)?;
+            contract.calculate_contract_cost_tft(total_balance, seconds_elapsed)?;
 
         // If there is nothing to be paid and the contract is not in state delete, return
         // Can be that the users cancels the contract in the same block that it's getting billed
@@ -1782,6 +1784,14 @@ impl<T: Config> Pallet<T> {
         let locked_balance = free_balance.checked_sub(&usable_balance);
         match locked_balance {
             Some(balance) => balance,
+            None => BalanceOf::<T>::saturated_from(0 as u128),
+        }
+    }
+
+    fn get_stash_balance(twin_id: u32) -> BalanceOf<T> {
+        let account_id = pallet_tfgrid::TwinBoundedAccountID::<T>::get(twin_id);
+        match account_id {
+            Some(account) => Self::get_usable_balance(&account),
             None => BalanceOf::<T>::saturated_from(0 as u128),
         }
     }
