@@ -3171,6 +3171,44 @@ fn test_attach_solution_provider_id_wrong_origin_fails() {
 }
 
 #[test]
+fn test_attach_solution_provider_id_not_approved_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(alice()),
+            1,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
+        ));
+
+        let ctr = SmartContractModule::contracts(1).unwrap();
+        assert_eq!(ctr.solution_provider_id, None);
+
+        let provider = super::types::Provider {
+            take: 10,
+            who: dave(),
+        };
+        let providers = vec![provider];
+
+        assert_ok!(SmartContractModule::create_solution_provider(
+            RuntimeOrigin::signed(alice()),
+            "some_description".as_bytes().to_vec(),
+            "some_link".as_bytes().to_vec(),
+            providers
+        ));
+
+        assert_noop!(
+            SmartContractModule::attach_solution_provider_id(RuntimeOrigin::signed(bob()), 1, 1),
+            Error::<TestRuntime>::SolutionProviderNotApproved
+        );
+    })
+}
+
+#[test]
 fn test_percent() {
     let cost: u64 = 1000;
     let new_cost = Percent::from_percent(25) * cost;
