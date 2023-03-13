@@ -2274,9 +2274,11 @@ impl<T: Config> Pallet<T> {
         contract_id: u64,
         solution_provider_id: u64,
     ) -> DispatchResultWithPostInfo {
+        let solution_provider = SolutionProviders::<T>::get(solution_provider_id)
+            .ok_or(Error::<T>::NoSuchSolutionProvider)?;
         ensure!(
-            SolutionProviders::<T>::contains_key(solution_provider_id),
-            Error::<T>::NoSuchSolutionProvider
+            solution_provider.approved,
+            Error::<T>::SolutionProviderNotApproved
         );
 
         let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;

@@ -874,7 +874,7 @@ fn test_node_contract_billing_details_with_solution_provider() {
     ext.execute_with(|| {
         prepare_farm_and_node();
 
-        prepare_solution_provider();
+        prepare_solution_provider(dave());
 
         run_to_block(1, Some(&mut pool_state));
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
@@ -2335,7 +2335,7 @@ fn test_create_node_contract_with_solution_provider_works() {
         run_to_block(1, None);
         prepare_farm_and_node();
 
-        prepare_solution_provider();
+        prepare_solution_provider(alice());
 
         assert_ok!(SmartContractModule::create_node_contract(
             RuntimeOrigin::signed(alice()),
@@ -3130,7 +3130,7 @@ fn test_attach_solution_provider_id() {
         let ctr = SmartContractModule::contracts(1).unwrap();
         assert_eq!(ctr.solution_provider_id, None);
 
-        prepare_solution_provider_alice();
+        prepare_solution_provider(alice());
 
         assert_ok!(SmartContractModule::attach_solution_provider_id(
             RuntimeOrigin::signed(alice()),
@@ -3161,7 +3161,7 @@ fn test_attach_solution_provider_id_wrong_origin_fails() {
         let ctr = SmartContractModule::contracts(1).unwrap();
         assert_eq!(ctr.solution_provider_id, None);
 
-        prepare_solution_provider_alice();
+        prepare_solution_provider(alice());
 
         assert_noop!(
             SmartContractModule::attach_solution_provider_id(RuntimeOrigin::signed(bob()), 1, 1),
@@ -3586,7 +3586,7 @@ fn create_farming_policies() {
     ));
 }
 
-fn prepare_solution_provider() {
+fn prepare_solution_provider(origin: AccountId) {
     let provider = super::types::Provider {
         take: 10,
         who: dave(),
@@ -3594,7 +3594,7 @@ fn prepare_solution_provider() {
     let providers = vec![provider];
 
     assert_ok!(SmartContractModule::create_solution_provider(
-        RuntimeOrigin::signed(dave()),
+        RuntimeOrigin::signed(origin),
         "some_description".as_bytes().to_vec(),
         "some_link".as_bytes().to_vec(),
         providers
@@ -3653,21 +3653,6 @@ fn prepare_service_consumer_contract() {
         1,
         BASE_FEE,
         VARIABLE_FEE,
-    ));
-}
-
-fn prepare_solution_provider_alice() {
-    let provider = super::types::Provider {
-        take: 10,
-        who: alice(),
-    };
-    let providers = vec![provider];
-
-    assert_ok!(SmartContractModule::create_solution_provider(
-        RuntimeOrigin::signed(alice()),
-        "some_description".as_bytes().to_vec(),
-        "some_link".as_bytes().to_vec(),
-        providers
     ));
 }
 
