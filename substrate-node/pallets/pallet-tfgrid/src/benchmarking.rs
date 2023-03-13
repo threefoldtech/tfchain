@@ -5,14 +5,12 @@ use crate::Pallet as TfgridModule;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::{assert_ok, BoundedVec};
 use frame_system::{EventRecord, Pallet as System, RawOrigin};
-use hex;
+// use hex;
 use pallet_timestamp::Pallet as Timestamp;
-use scale_info::prelude::format;
-use sp_core::{ed25519, Pair, Public};
-use sp_runtime::{
-    traits::{Bounded, IdentifyAccount, Verify},
-    AccountId32, MultiSignature,
-};
+// use scale_info::prelude::format;
+// use sp_core::{ed25519, Pair, Public};
+use sp_runtime::{traits::Bounded, AccountId32};
+// use sp_runtime::{IdentifyAccount, MultiSignature, Verify};
 use sp_std::{
     convert::{TryFrom, TryInto},
     fmt::Debug,
@@ -22,8 +20,8 @@ use tfchain_support::types::{
     FarmCertification, FarmingPolicyLimit, NodeCertification, PublicConfig, IP4, IP6,
 };
 
-type AccountPublic = <MultiSignature as Verify>::Signer;
-type AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::AccountId;
+// type AccountPublic = <MultiSignature as Verify>::Signer;
+// type AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::AccountId;
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
 const TIMESTAMP_INIT_SECS: u64 = 1628082000;
@@ -868,75 +866,75 @@ fn _create_node<T: Config>(source: T::AccountId) {
     ));
 }
 
-fn _create_entity<T: Config>(source: T::AccountId)
-where
-    <T as frame_system::Config>::AccountId: From<AccountId32>,
-{
-    let target: T::AccountId = _test_ed25519().try_into().unwrap();
-    let name = b"entity_name".to_vec();
-    let country = get_country_name_input(b"Belgium");
-    let city = get_city_name_input(b"Ghent");
-    let signature = _sign_create_entity(name.clone(), country.to_vec(), city.to_vec());
+// fn _create_entity<T: Config>(source: T::AccountId)
+// where
+//     <T as frame_system::Config>::AccountId: From<AccountId32>,
+// {
+//     let target: T::AccountId = _test_ed25519().try_into().unwrap();
+//     let name = b"entity_name".to_vec();
+//     let country = get_country_name_input(b"Belgium");
+//     let city = get_city_name_input(b"Ghent");
+//     let signature = _sign_create_entity(name.clone(), country.to_vec(), city.to_vec());
 
-    assert_ok!(TfgridModule::<T>::create_entity(
-        RawOrigin::Signed(source).into(),
-        target,
-        name,
-        country,
-        city,
-        signature,
-    ));
-}
+//     assert_ok!(TfgridModule::<T>::create_entity(
+//         RawOrigin::Signed(source).into(),
+//         target,
+//         name,
+//         country,
+//         city,
+//         signature,
+//     ));
+// }
 
-pub fn _test_ed25519() -> AccountId {
-    _get_account_id_from_seed_string::<ed25519::Public>(
-        "industry dismiss casual gym gap music pave gasp sick owner dumb cost",
-    )
-}
+// pub fn _test_ed25519() -> AccountId {
+//     _get_account_id_from_seed_string::<ed25519::Public>(
+//         "industry dismiss casual gym gap music pave gasp sick owner dumb cost",
+//     )
+// }
 
-fn _get_account_id_from_seed_string<TPublic: Public>(seed: &str) -> AccountId
-where
-    AccountPublic: From<<TPublic::Pair as Pair>::Public>,
-{
-    AccountPublic::from(_get_from_seed_string::<TPublic>(seed)).into_account()
-}
+// fn _get_account_id_from_seed_string<TPublic: Public>(seed: &str) -> AccountId
+// where
+//     AccountPublic: From<<TPublic::Pair as Pair>::Public>,
+// {
+//     AccountPublic::from(_get_from_seed_string::<TPublic>(seed)).into_account()
+// }
 
-fn _get_from_seed_string<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-    TPublic::Pair::from_string(&format!("{}", seed), None)
-        .expect("static values are valid; qed")
-        .public()
-}
+// fn _get_from_seed_string<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
+//     TPublic::Pair::from_string(&format!("{}", seed), None)
+//         .expect("static values are valid; qed")
+//         .public()
+// }
 
-pub fn _sign_create_entity(name: Vec<u8>, country: Vec<u8>, city: Vec<u8>) -> Vec<u8> {
-    let seed =
-        hex::decode("59336423ee7af732b2d4a76e440651e33e5ba51540e5633535b9030492c2a6f6").unwrap();
-    let pair = ed25519::Pair::from_seed_slice(&seed).unwrap();
+// pub fn _sign_create_entity(name: Vec<u8>, country: Vec<u8>, city: Vec<u8>) -> Vec<u8> {
+//     let seed =
+//         hex::decode("59336423ee7af732b2d4a76e440651e33e5ba51540e5633535b9030492c2a6f6").unwrap();
+//     let pair = ed25519::Pair::from_seed_slice(&seed).unwrap();
 
-    let mut message = vec![];
-    message.extend_from_slice(&name);
-    message.extend_from_slice(&country);
-    message.extend_from_slice(&city);
+//     let mut message = vec![];
+//     message.extend_from_slice(&name);
+//     message.extend_from_slice(&country);
+//     message.extend_from_slice(&city);
 
-    let signature = pair.sign(&message);
+//     let signature = pair.sign(&message);
 
-    // hex encode signature
-    hex::encode(signature.0.to_vec()).into()
-}
+//     // hex encode signature
+//     hex::encode(signature.0.to_vec()).into()
+// }
 
-pub fn _sign_add_entity_to_twin(entity_id: u32, twin_id: u32) -> Vec<u8> {
-    let seed =
-        hex::decode("59336423ee7af732b2d4a76e440651e33e5ba51540e5633535b9030492c2a6f6").unwrap();
-    let pair = ed25519::Pair::from_seed_slice(&seed).unwrap();
+// pub fn _sign_add_entity_to_twin(entity_id: u32, twin_id: u32) -> Vec<u8> {
+//     let seed =
+//         hex::decode("59336423ee7af732b2d4a76e440651e33e5ba51540e5633535b9030492c2a6f6").unwrap();
+//     let pair = ed25519::Pair::from_seed_slice(&seed).unwrap();
 
-    let mut message = vec![];
-    message.extend_from_slice(&entity_id.to_be_bytes());
-    message.extend_from_slice(&twin_id.to_be_bytes());
+//     let mut message = vec![];
+//     message.extend_from_slice(&entity_id.to_be_bytes());
+//     message.extend_from_slice(&twin_id.to_be_bytes());
 
-    let signature = pair.sign(&message);
+//     let signature = pair.sign(&message);
 
-    // hex encode signature
-    hex::encode(signature.0.to_vec()).into()
-}
+//     // hex encode signature
+//     hex::encode(signature.0.to_vec()).into()
+// }
 
 pub(crate) fn get_city_name_input(city_input: &[u8]) -> CityNameInput {
     BoundedVec::try_from(city_input.to_vec()).expect("Invalid city name input.")
