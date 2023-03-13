@@ -6,7 +6,6 @@ use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::{assert_ok, BoundedVec};
 use frame_system::{EventRecord, Pallet as System, RawOrigin};
 // use hex;
-use pallet_timestamp::Pallet as Timestamp;
 // use scale_info::prelude::format;
 // use sp_core::{ed25519, Pair, Public};
 use sp_runtime::{traits::Bounded, AccountId32};
@@ -24,7 +23,6 @@ use tfchain_support::types::{
 // type AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::AccountId;
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
-const TIMESTAMP_INIT_SECS: u64 = 1628082000;
 
 benchmarks! {
     where_clause {
@@ -227,14 +225,11 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         _prepare_farm_with_node::<T>(caller.clone());
         let node_id = 1;
-
-        let now: u64 = TIMESTAMP_INIT_SECS;
-        Timestamp::<T>::set_timestamp((now * 1000).try_into().unwrap());
-
+        let timestamp = 0;
         let uptime = 500;
     }: _(RawOrigin::Signed(caller), uptime)
     verify {
-        assert_last_event::<T>(Event::NodeUptimeReported(node_id, now, uptime).into());
+        assert_last_event::<T>(Event::NodeUptimeReported(node_id, timestamp, uptime).into());
     }
 
     // add_node_public_config()
@@ -445,7 +440,7 @@ benchmarks! {
         let discount_for_dedication_nodes = 50;
     }: _(
         RawOrigin::Root,
-        name,
+        name.clone(),
         su_policy,
         cu_policy,
         nu_policy,
@@ -457,7 +452,7 @@ benchmarks! {
         discount_for_dedication_nodes
     )
     verify {
-        let pricing_policy_id = 1;
+        let pricing_policy_id = TfgridModule::<T>::pricing_policies_by_name_id(name);
         assert!(TfgridModule::<T>::pricing_policies(pricing_policy_id).is_some());
         let pricing_policy = TfgridModule::<T>::pricing_policies(pricing_policy_id).unwrap();
         assert_last_event::<T>(Event::PricingPolicyStored(pricing_policy).into());
@@ -518,7 +513,7 @@ benchmarks! {
         farm_certification
     )
     verify {
-        let farming_policy_id = 1;
+        let farming_policy_id = TfgridModule::<T>::farming_policy_id();
         let farming_policy = TfgridModule::<T>::farming_policies_map(farming_policy_id);
         assert_last_event::<T>(Event::FarmingPolicyStored(farming_policy).into());
     }
