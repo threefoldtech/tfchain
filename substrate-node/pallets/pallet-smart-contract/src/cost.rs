@@ -258,12 +258,12 @@ pub fn calculate_discount<T: Config>(
     let discount_level = U64F64::from_num(balance_as_u128) / U64F64::from_num(amount_due_monthly);
 
     // predefined discount levels
-    // https://wiki.threefold.io/#/threefold__grid_pricing
-    let discount_received = match discount_level.floor().to_num::<u64>() {
-        d if d >= 3 && d < 6 => types::DiscountLevel::Default,
-        d if d >= 6 && d < 12 => types::DiscountLevel::Bronze,
-        d if d >= 12 && d < 36 => types::DiscountLevel::Silver,
-        d if d >= 36 => types::DiscountLevel::Gold,
+    // https://library.threefold.me/info/manual/#/threefold__pricing?id=discount-levels
+    let discount_received = match discount_level {
+        d if d >= 1.5 && d < 3 => types::DiscountLevel::Default,
+        d if d >= 3 && d < 6 => types::DiscountLevel::Bronze,
+        d if d >= 6 && d < 18 => types::DiscountLevel::Silver,
+        d if d >= 18 => types::DiscountLevel::Gold,
         _ => types::DiscountLevel::None,
     };
 
