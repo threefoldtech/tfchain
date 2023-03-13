@@ -2071,7 +2071,7 @@ pub mod pallet {
                 Error::<T>::TwinCannotBoundToItself
             );
 
-            TwinBoundedAccountID::<T>::insert(twin_id, address.clone());
+            TwinBoundedAccountID::<T>::insert(twin_id, &address);
             Self::deposit_event(Event::TwinAccountBounded(twin_id, address));
 
             Ok(().into())
