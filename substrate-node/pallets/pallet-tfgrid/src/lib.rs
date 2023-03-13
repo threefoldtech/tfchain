@@ -205,6 +205,11 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, T::AccountId, u32, OptionQuery>;
 
     #[pallet::storage]
+    #[pallet::getter(fn twin_bonded_account)]
+    pub type TwinBoundedAccountID<T: Config> =
+        StorageMap<_, Blake2_128Concat, u32, T::AccountId, OptionQuery>;
+
+    #[pallet::storage]
     #[pallet::getter(fn pricing_policies)]
     pub type PricingPolicies<T: Config> =
         StorageMap<_, Blake2_128Concat, u32, types::PricingPolicy<T::AccountId>, OptionQuery>;
@@ -412,10 +417,10 @@ pub mod pallet {
 
         TwinStored(types::Twin<T::AccountId>),
         TwinUpdated(types::Twin<T::AccountId>),
-
         TwinEntityStored(u32, u32, Vec<u8>),
         TwinEntityRemoved(u32, u32),
         TwinDeleted(u32),
+        TwinAccountBounded(u32, T::AccountId),
 
         PricingPolicyStored(types::PricingPolicy<T::AccountId>),
         // CertificationCodeStored(types::CertificationCodes),
@@ -482,6 +487,7 @@ pub mod pallet {
         TwinWithPubkeyExists,
         CannotCreateTwin,
         UnauthorizedToUpdateTwin,
+        TwinCannotBoundToItself,
 
         PricingPolicyExists,
         PricingPolicyNotExists,
@@ -2052,6 +2058,23 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_change_power_target(account_id, node_id, power_target)
+        }
+
+        #[pallet::call_index(37)]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        pub fn bond_twin_account(origin: OriginFor<T>, twin_id: u32) -> DispatchResultWithPostInfo {
+            let address = ensure_signed(origin)?;
+
+            let twin = Twins::<T>::get(twin_id).ok_or(Error::<T>::TwinNotExists)?;
+            ensure!(
+                twin.account_id != address,
+                Error::<T>::TwinCannotBoundToItself
+            );
+
+            TwinBoundedAccountID::<T>::insert(twin_id, &address);
+            Self::deposit_event(Event::TwinAccountBounded(twin_id, address));
+
+            Ok(().into())
         }
     }
 }
