@@ -1,4 +1,4 @@
-# 6. Lower discount level threshold
+# 8. Lower discount level threshold
 
 Date: 2023-03-10
 
