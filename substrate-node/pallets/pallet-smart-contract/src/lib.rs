@@ -389,6 +389,7 @@ pub mod pallet {
         CanOnlyIncreaseFrequency,
         IsNotAnAuthority,
         WrongAuthority,
+        UnauthorizedToChangeSolutionProviderId,
     }
 
     #[pallet::genesis_config]
@@ -629,6 +630,17 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             <T as Config>::RestrictedOrigin::ensure_origin(origin)?;
             Self::_change_billing_frequency(frequency)
+        }
+
+        #[pallet::call_index(19)]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        pub fn attach_solution_provider_id(
+            origin: OriginFor<T>,
+            contract_id: u64,
+            solution_provider_id: u64,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+            Self::_attach_solution_provider_id(account_id, contract_id, solution_provider_id)
         }
     }
 
@@ -2253,6 +2265,44 @@ impl<T: Config> Pallet<T> {
         BillingFrequency::<T>::put(frequency);
 
         Self::deposit_event(Event::BillingFrequencyChanged(frequency));
+
+        Ok(().into())
+    }
+
+    pub fn _attach_solution_provider_id(
+        account_id: T::AccountId,
+        contract_id: u64,
+        solution_provider_id: u64,
+    ) -> DispatchResultWithPostInfo {
+        let solution_provider = SolutionProviders::<T>::get(solution_provider_id)
+            .ok_or(Error::<T>::NoSuchSolutionProvider)?;
+        ensure!(
+            solution_provider.approved,
+            Error::<T>::SolutionProviderNotApproved
+        );
+
+        let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
+            .ok_or(Error::<T>::TwinNotExists)?;
+
+        ensure!(
+            contract.twin_id == twin_id,
+            Error::<T>::UnauthorizedToChangeSolutionProviderId
+        );
+
+        match contract.solution_provider_id {
+            Some(_) => {
+                return Err(DispatchErrorWithPostInfo::from(
+                    Error::<T>::UnauthorizedToChangeSolutionProviderId,
+                ))
+            }
+            None => {
+                contract.solution_provider_id = Some(solution_provider_id);
+                Contracts::<T>::insert(contract_id, &contract);
+                Self::deposit_event(Event::ContractUpdated(contract));
+            }
+        };
 
         Ok(().into())
     }

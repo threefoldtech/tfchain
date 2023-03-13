@@ -874,7 +874,7 @@ fn test_node_contract_billing_details_with_solution_provider() {
     ext.execute_with(|| {
         prepare_farm_and_node();
 
-        prepare_solution_provider();
+        prepare_solution_provider(dave());
 
         run_to_block(1, Some(&mut pool_state));
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
@@ -2335,7 +2335,7 @@ fn test_create_node_contract_with_solution_provider_works() {
         run_to_block(1, None);
         prepare_farm_and_node();
 
-        prepare_solution_provider();
+        prepare_solution_provider(alice());
 
         assert_ok!(SmartContractModule::create_node_contract(
             RuntimeOrigin::signed(alice()),
@@ -3113,6 +3113,102 @@ fn test_change_billing_frequency_fails_if_frequency_lower() {
 }
 
 #[test]
+fn test_attach_solution_provider_id() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(alice()),
+            1,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
+        ));
+
+        let ctr = SmartContractModule::contracts(1).unwrap();
+        assert_eq!(ctr.solution_provider_id, None);
+
+        prepare_solution_provider(alice());
+
+        assert_ok!(SmartContractModule::attach_solution_provider_id(
+            RuntimeOrigin::signed(alice()),
+            1,
+            1
+        ));
+
+        let ctr = SmartContractModule::contracts(1).unwrap();
+        assert_eq!(ctr.solution_provider_id, Some(1));
+    })
+}
+
+#[test]
+fn test_attach_solution_provider_id_wrong_origin_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(alice()),
+            1,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
+        ));
+
+        let ctr = SmartContractModule::contracts(1).unwrap();
+        assert_eq!(ctr.solution_provider_id, None);
+
+        prepare_solution_provider(alice());
+
+        assert_noop!(
+            SmartContractModule::attach_solution_provider_id(RuntimeOrigin::signed(bob()), 1, 1),
+            Error::<TestRuntime>::UnauthorizedToChangeSolutionProviderId
+        );
+    })
+}
+
+#[test]
+fn test_attach_solution_provider_id_not_approved_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(alice()),
+            1,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
+        ));
+
+        let ctr = SmartContractModule::contracts(1).unwrap();
+        assert_eq!(ctr.solution_provider_id, None);
+
+        let provider = super::types::Provider {
+            take: 10,
+            who: dave(),
+        };
+        let providers = vec![provider];
+
+        assert_ok!(SmartContractModule::create_solution_provider(
+            RuntimeOrigin::signed(alice()),
+            "some_description".as_bytes().to_vec(),
+            "some_link".as_bytes().to_vec(),
+            providers
+        ));
+
+        assert_noop!(
+            SmartContractModule::attach_solution_provider_id(RuntimeOrigin::signed(bob()), 1, 1),
+            Error::<TestRuntime>::SolutionProviderNotApproved
+        );
+    })
+}
+
+#[test]
 fn test_percent() {
     let cost: u64 = 1000;
     let new_cost = Percent::from_percent(25) * cost;
@@ -3528,7 +3624,7 @@ fn create_farming_policies() {
     ));
 }
 
-fn prepare_solution_provider() {
+fn prepare_solution_provider(origin: AccountId) {
     let provider = super::types::Provider {
         take: 10,
         who: dave(),
@@ -3536,7 +3632,7 @@ fn prepare_solution_provider() {
     let providers = vec![provider];
 
     assert_ok!(SmartContractModule::create_solution_provider(
-        RuntimeOrigin::signed(dave()),
+        RuntimeOrigin::signed(origin),
         "some_description".as_bytes().to_vec(),
         "some_link".as_bytes().to_vec(),
         providers
