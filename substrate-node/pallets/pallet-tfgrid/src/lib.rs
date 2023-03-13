@@ -1,9 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-
-/// Edit this file to define custom logic or remove it if it is not needed.
-/// Learn more about FRAME and the core library of Substrate FRAME pallets:
-/// https://substrate.dev/docs/en/knowledgebase/runtime/frame
-use sp_std::prelude::*;
+// `benchmarks!` does a lot of recursion and requires us to increase the limit to 256.
+#![recursion_limit = "256"]
 
 use codec::Encode;
 use frame_support::dispatch::DispatchErrorWithPostInfo;
@@ -12,9 +9,9 @@ use frame_support::{
     BoundedVec,
 };
 use frame_system::{self as system, ensure_signed};
-use hex::FromHex;
 use pallet_timestamp as timestamp;
 use sp_runtime::SaturatedConversion;
+use sp_std::prelude::*;
 use tfchain_support::{
     resources::Resources,
     types::{Interface, NodePower as NodePowerType, Power, PowerState, PublicIP},
@@ -54,6 +51,7 @@ pub mod pallet {
     use frame_support::{pallet_prelude::*, Blake2_128Concat};
     use frame_support::{traits::ConstU32, BoundedVec};
     use frame_system::pallet_prelude::*;
+    use hex::FromHex;
     use pallet_timestamp as timestamp;
     use sp_std::{convert::TryInto, fmt::Debug, vec::Vec};
     use tfchain_support::{

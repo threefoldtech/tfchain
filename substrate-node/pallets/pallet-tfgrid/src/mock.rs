@@ -12,6 +12,7 @@ use crate::{
 use env_logger;
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
 use frame_system::EnsureRoot;
+use hex;
 use sp_core::{ed25519, sr25519, Pair, Public, H256};
 use sp_io::TestExternalities;
 use sp_runtime::{
@@ -20,12 +21,9 @@ use sp_runtime::{
     MultiSignature,
 };
 use sp_std::prelude::*;
-
-use hex;
 use tfchain_support::types::PublicIP;
 
 pub type Signature = MultiSignature;
-
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 pub type Moment = u64;
 

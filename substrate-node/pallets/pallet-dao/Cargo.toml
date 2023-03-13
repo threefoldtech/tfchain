@@ -39,7 +39,7 @@ tfchain-support = { path = "../../support", default-features = false }
 pallet-tfgrid = { path = "../pallet-tfgrid", default-features = false }
 
 [dev-dependencies]
-sp-core =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 env_logger = "*"
 
 [features]

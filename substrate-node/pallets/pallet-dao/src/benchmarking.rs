@@ -26,7 +26,7 @@ benchmarks! {
         let proposal: T::Proposal = SystemCall::<T>::remark { remark: b"remark".to_vec() }.into();
         let description = b"some_description".to_vec();
         let link = b"some_link".to_vec();
-    }: _ (
+    }: _(
         RawOrigin::Signed(caller.clone()),
         threshold,
         Box::new(proposal.clone()),
@@ -56,7 +56,7 @@ benchmarks! {
         let proposal_hash = _create_proposal::<T>(caller.clone());
 
         let approve = true;
-    }: _ (RawOrigin::Signed(farmer.clone()), farm_id, proposal_hash, approve)
+    }: _(RawOrigin::Signed(farmer.clone()), farm_id, proposal_hash, approve)
     verify {
         assert!(DaoModule::<T>::proposal_list(proposal_hash).is_some());
         assert!(DaoModule::<T>::proposal_of(proposal_hash).is_some());
@@ -81,7 +81,7 @@ benchmarks! {
 
         let caller: T::AccountId = whitelisted_caller();
         let proposal_hash = _create_proposal::<T>(caller.clone());
-    }: _ (RawOrigin::Signed(caller.clone()), proposal_hash)
+    }: _(RawOrigin::Signed(caller.clone()), proposal_hash)
     verify {
         assert!(DaoModule::<T>::proposal_list(proposal_hash).is_some());
         assert!(DaoModule::<T>::proposal_of(proposal_hash).is_some());
@@ -103,7 +103,7 @@ benchmarks! {
 
         let approve = false;
         DaoModule::<T>::vote(RawOrigin::Signed(farmer.clone()).into(), farm_id, proposal_hash, approve).unwrap();
-    }: _ (RawOrigin::Signed(caller.clone()), proposal_hash, proposal_index)
+    }: _(RawOrigin::Signed(caller.clone()), proposal_hash, proposal_index)
     verify {
         assert!(DaoModule::<T>::proposal_list(proposal_hash).is_none());
         assert!(DaoModule::<T>::proposal_of(proposal_hash).is_none());
