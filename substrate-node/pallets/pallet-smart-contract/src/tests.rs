@@ -118,6 +118,39 @@ fn test_create_node_contract_with_public_ips_works() {
 }
 
 #[test]
+fn test_create_node_contract_with_no_public_ips_billing_insertion_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+
+        let node_id = 1;
+        let public_ips = 0;
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            public_ips,
+            None
+        ));
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(1);
+        assert_eq!(contract_to_bill.len(), 0);
+
+        let contract_id = 1;
+        push_contract_no_resources_used(contract_id);
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(1);
+        assert_eq!(contract_to_bill.len(), 0);
+
+        push_contract_resources_used(contract_id);
+
+        let contract_to_bill = SmartContractModule::contract_to_bill_at_block(1);
+        assert_eq!(contract_to_bill, [contract_id]);
+    });
+}
+
+#[test]
 fn test_create_node_contract_with_undefined_node_fails() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
@@ -3358,6 +3391,24 @@ fn push_contract_resources_used(contract_id: u64) {
             hru: 0,
             mru: 2 * GIGABYTE,
             sru: 60 * GIGABYTE,
+        },
+    });
+
+    assert_ok!(SmartContractModule::report_contract_resources(
+        RuntimeOrigin::signed(alice()),
+        resources
+    ));
+}
+
+fn push_contract_no_resources_used(contract_id: u64) {
+    let mut resources = Vec::new();
+    resources.push(types::ContractResources {
+        contract_id,
+        used: Resources {
+            cru: 0,
+            hru: 0,
+            mru: 0,
+            sru: 0,
         },
     });
 
