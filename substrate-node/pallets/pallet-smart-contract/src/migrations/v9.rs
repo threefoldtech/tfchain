@@ -63,66 +63,82 @@ pub fn migrate_to_version_9<T: Config>() -> frame_support::weights::Weight {
         );
 
         let mut slot_count = 0;
-        let mut contract_count = 0;
-        let mut keep_count = 0;
-        let mut remove_count = 0;
-        let mut should_remove_count = 0;
+        let billing_loop_size = BillingFrequency::<T>::get();
+        let mut contract_count = vec![0; billing_loop_size as usize];
+        let mut keep_count = vec![0; billing_loop_size as usize];
+        let mut nobill_count = vec![0; billing_loop_size as usize];
+        let mut rogue_count = vec![0; billing_loop_size as usize];
 
         // Collect ContractsToBillAt storage in memory
         let contracts_to_bill_at = ContractsToBillAt::<T>::iter().collect::<Vec<_>>();
 
-        for (block_number, contract_ids) in contracts_to_bill_at {
+        for (index, contract_ids) in contracts_to_bill_at {
             let mut new_contract_ids = Vec::new();
             for contract_id in contract_ids {
-                contract_count += 1;
+                contract_count[index as usize] += 1;
                 if let Some(contract) = Contracts::<T>::get(contract_id) {
                     match contract.contract_type {
                         types::ContractData::NodeContract(node_contract) => {
                             let contract_resource = NodeContractResources::<T>::get(contract_id);
                             if node_contract.public_ips > 0 || !contract_resource.used.is_empty() {
                                 new_contract_ids.push(contract.contract_id);
-                                keep_count += 1;
+                                keep_count[index as usize] += 1;
+                            } else {
+                                debug!(
+                                    "node contract with id {} is removed from billing loop [no pub ips + no resources]",
+                                    contract_id
+                                );
+                                nobill_count[index as usize] += 1;
                             }
-                            remove_count += 1;
-                            debug!(
-                                "node contract with id {} is removed from billing loop",
-                                contract_id
-                            );
                         }
                         _ => {
                             new_contract_ids.push(contract.contract_id);
-                            keep_count += 1;
+                            keep_count[index as usize] += 1;
                         }
                     };
                 } else {
                     debug!(
-                        "no contract with id {} found, should not happen...",
+                        "contract with id {} is removed from billing loop [rogue contract]",
                         contract_id
                     );
-                    should_remove_count += 1;
+                    rogue_count[index as usize] += 1;
                 }
             }
 
             // Update ContractsToBillAt storage in memory
             slot_count += 1;
-            ContractsToBillAt::<T>::insert(block_number, new_contract_ids);
+            ContractsToBillAt::<T>::insert(index, new_contract_ids);
         }
 
-        info!(" <<< ContractsToBillAt storage updated!");
+        for i in 0..billing_loop_size {
+            debug!(
+                " # Billing loop slot {}: [t: {}, k: {}, r: {}, sr {}]",
+                i,
+                contract_count[i as usize],
+                keep_count[i as usize],
+                nobill_count[i as usize],
+                rogue_count[i as usize],
+            );
+            assert_eq!(
+                contract_count[i as usize],
+                keep_count[i as usize] + nobill_count[i as usize] + rogue_count[i as usize]
+            );
+        }
+
+        info!(" <<< ContractsToBillAt storage updated! ✅");
         info!(
-            " <<< There are {} contracts in billing loop ✅",
-            contract_count
-        );
-        info!(" <<< Kept {} contracts in billing loop ✅", keep_count);
-        info!(
-            " <<< Removed {} contracts from billing loop ✅",
-            remove_count
+            " <<< There are {} contracts in billing loop",
+            contract_count.iter().sum::<u64>()
         );
         info!(
-            " <<< Should remove {} contracts from billing loop ✅",
-            should_remove_count
+            " <<< Kept {} contracts in billing loop",
+            keep_count.iter().sum::<u64>()
         );
-        info!(" <<< Migrated {} billing loop slots ✅", slot_count);
+        info!(
+            " <<< Removed {} contracts from billing loop",
+            nobill_count.iter().sum::<u64>() + rogue_count.iter().sum::<u64>()
+        );
+        info!(" <<< Migrated {} billing loop slots", slot_count);
 
         // Update pallet storage version
         PalletVersion::<T>::set(types::StorageVersion::V9);
