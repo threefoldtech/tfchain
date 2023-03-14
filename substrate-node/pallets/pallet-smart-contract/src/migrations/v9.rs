@@ -113,7 +113,7 @@ pub fn migrate_to_version_9<T: Config>() -> frame_support::weights::Weight {
             " <<< There are {} contracts in billing loop ✅",
             contract_count
         );
-        info!(" <<< Kept {} contracts from billing loop ✅", keep_count);
+        info!(" <<< Kept {} contracts in billing loop ✅", keep_count);
         info!(
             " <<< Removed {} contracts from billing loop ✅",
             remove_count

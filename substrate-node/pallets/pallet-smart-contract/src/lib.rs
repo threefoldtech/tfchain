@@ -648,9 +648,7 @@ pub mod pallet {
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn offchain_worker(block_number: T::BlockNumber) {
             // Let offchain worker check if there are contracts on the map at current index
-            // Index being current block number % (mod) Billing Frequency
-            let current_index: u64 =
-                block_number.saturated_into::<u64>() % BillingFrequency::<T>::get();
+            let current_index = Self::get_current_billing_loop_index();
 
             let contracts = ContractsToBillAt::<T>::get(current_index);
             if contracts.is_empty() {
@@ -1136,11 +1134,11 @@ impl<T: Config> Pallet<T> {
     // Bills a contract (NodeContract or NameContract)
     // Calculates how much TFT is due by the user and distributes the rewards
     fn bill_contract(contract_id: u64) -> DispatchResultWithPostInfo {
-        // Clean up contract from blling loop if it not exists anymore
+        // Clean up contract from billing loop if it not exists anymore
         if !Contracts::<T>::contains_key(contract_id) {
             log::debug!("cleaning up deleted contract from storage");
 
-            let index = Self::get_contract_index();
+            let index = Self::get_current_billing_loop_index();
 
             // Remove contract from billing list
             let mut contracts = ContractsToBillAt::<T>::get(index);
@@ -1603,8 +1601,10 @@ impl<T: Config> Pallet<T> {
             return;
         }
 
-        // Save the contract to be billed in (now -1 %(mod) BILLING_FREQUENCY_IN_BLOCKS)
-        let index = Self::get_contract_index().checked_sub(1).unwrap_or(0);
+        // Save the contract to be billed in previous billing loop slot
+        // to avoid being billed at same block by the offchain worker
+        // First billing for this contract will happen after 1 billing cycle
+        let index = Self::get_previous_billing_loop_index();
         let mut contracts = ContractsToBillAt::<T>::get(index);
 
         if !contracts.contains(&contract_id) {
@@ -1890,9 +1890,18 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn get_contract_index() -> u64 {
-        let now = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
-        now % BillingFrequency::<T>::get()
+    // Billing slot index is block number % (mod) Billing Frequency
+    pub fn get_current_billing_loop_index() -> u64 {
+        let current_block = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
+        current_block % BillingFrequency::<T>::get()
+    }
+
+    pub fn get_previous_billing_loop_index() -> u64 {
+        let previous_block = <frame_system::Pallet<T>>::block_number()
+            .saturated_into::<u64>()
+            .checked_sub(1)
+            .unwrap_or(0);
+        previous_block % BillingFrequency::<T>::get()
     }
 
     pub fn _service_contract_create(
