@@ -112,7 +112,7 @@ pub fn migrate_to_version_9<T: Config>() -> frame_support::weights::Weight {
 
         for i in 0..billing_loop_size {
             debug!(
-                " # Billing loop slot {}: [t: {}, k: {}, r: {}, sr {}]",
+                " # Billing loop slot {}: [total: {}, keep: {}, nobill: {}, rogue {}]",
                 i,
                 contract_count[i as usize],
                 keep_count[i as usize],

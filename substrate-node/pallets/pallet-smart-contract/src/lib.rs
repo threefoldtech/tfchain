@@ -876,10 +876,10 @@ impl<T: Config> Pallet<T> {
                 // Insert created node contract in billing loop only
                 // if there is at least one public ip attached to node
                 if node_contract.public_ips > 0 {
-                    Self::insert_contract_to_bill(id);
+                    Self::insert_contract_in_billing_loop(id);
                 }
             }
-            _ => Self::insert_contract_to_bill(id),
+            _ => Self::insert_contract_in_billing_loop(id),
         };
 
         // insert into contracts map
@@ -1009,7 +1009,7 @@ impl<T: Config> Pallet<T> {
                 // Insert node contract in billing loop only if there
                 // are non empty resources pushed for the contract
                 if !contract_resource.used.is_empty() {
-                    Self::insert_contract_to_bill(contract.contract_id);
+                    Self::insert_contract_in_billing_loop(contract.contract_id);
                 }
 
                 // deposit event
@@ -1131,20 +1131,13 @@ impl<T: Config> Pallet<T> {
         return Err(<Error<T>>::OffchainSignedTxNoLocalAccountAvailable);
     }
 
-    // Bills a contract (NodeContract or NameContract)
+    // Bills a contract (NodeContract, NameContract or RentContract)
     // Calculates how much TFT is due by the user and distributes the rewards
     fn bill_contract(contract_id: u64) -> DispatchResultWithPostInfo {
         // Clean up contract from billing loop if it not exists anymore
-        if !Contracts::<T>::contains_key(contract_id) {
+        if Contracts::<T>::get(contract_id).is_none() {
             log::debug!("cleaning up deleted contract from storage");
-
-            let index = Self::get_current_billing_loop_index();
-
-            // Remove contract from billing list
-            let mut contracts = ContractsToBillAt::<T>::get(index);
-            contracts.retain(|&c| c != contract_id);
-            ContractsToBillAt::<T>::insert(index, contracts);
-
+            Self::remove_contract_from_billing_loop(contract_id);
             return Ok(().into());
         }
 
@@ -1596,7 +1589,7 @@ impl<T: Config> Pallet<T> {
 
     // Inserts a contract in a list where the index is the current block % billing frequency
     // This way, we don't need to reinsert the contract everytime it gets billed
-    pub fn insert_contract_to_bill(contract_id: u64) {
+    pub fn insert_contract_in_billing_loop(contract_id: u64) {
         if contract_id == 0 {
             return;
         }
@@ -1605,17 +1598,34 @@ impl<T: Config> Pallet<T> {
         // to avoid being billed at same block by the offchain worker
         // First billing for this contract will happen after 1 billing cycle
         let index = Self::get_previous_billing_loop_index();
-        let mut contracts = ContractsToBillAt::<T>::get(index);
+        let mut contract_ids = ContractsToBillAt::<T>::get(index);
 
-        if !contracts.contains(&contract_id) {
-            contracts.push(contract_id);
-            ContractsToBillAt::<T>::insert(index, &contracts);
+        if !contract_ids.contains(&contract_id) {
+            contract_ids.push(contract_id);
+            ContractsToBillAt::<T>::insert(index, &contract_ids);
             log::debug!(
                 "Insert contracts: {:?}, to be billed at index {:?}",
-                contracts,
+                contract_ids,
                 index
             );
         }
+    }
+
+    pub fn remove_contract_from_billing_loop(contract_id: u64) {
+        if contract_id == 0 {
+            return;
+        }
+
+        // Remove contract from billing slot list at index
+        let index = Self::get_current_billing_loop_index();
+        let mut contract_ids = ContractsToBillAt::<T>::get(index);
+        contract_ids.retain(|&c| c != contract_id);
+        ContractsToBillAt::<T>::insert(index, &contract_ids);
+        log::debug!(
+            "Insert contracts: {:?}, to be billed at index {:?}",
+            contract_ids,
+            index
+        );
     }
 
     // Helper function that updates the contract state and manages storage accordingly
