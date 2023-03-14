@@ -100,6 +100,10 @@ impl Resources {
             || wiggle(resources_before.hru, resources_after.hru)
             || wiggle(resources_before.mru, resources_after.mru);
     }
+
+    pub fn is_empty(&self) -> bool {
+        return self.hru == 0 && self.sru == 0 && self.cru == 0 && self.mru == 0;
+    }
 }
 
 #[cfg(test)]
