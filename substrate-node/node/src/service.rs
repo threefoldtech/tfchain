@@ -116,6 +116,22 @@ pub fn new_partial(
 
     let slot_duration = sc_consensus_aura::slot_duration(&*client)?;
 
+    let compatibility_mode = match config.chain_spec.id() {
+        "tfchain_devnet" => {
+            sc_consensus_aura::CompatibilityMode::UseInitializeBlock { until: 1195403 }
+        }
+        "tfchain_qa_net" => {
+            sc_consensus_aura::CompatibilityMode::UseInitializeBlock { until: 608253 }
+        }
+        "tfchain_testnet" => {
+            sc_consensus_aura::CompatibilityMode::UseInitializeBlock { until: 4740026 }
+        }
+        "tfchain_mainnet" => {
+            sc_consensus_aura::CompatibilityMode::UseInitializeBlock { until: 4231659 }
+        }
+        _ => sc_consensus_aura::CompatibilityMode::None,
+    };
+
     let import_queue =
         sc_consensus_aura::import_queue::<AuraPair, _, _, _, _, _>(ImportQueueParams {
             block_import: grandpa_block_import.clone(),
@@ -136,9 +152,7 @@ pub fn new_partial(
             registry: config.prometheus_registry(),
             check_for_equivocation: Default::default(),
             telemetry: telemetry.as_ref().map(|x| x.handle()),
-            compatibility_mode: sc_consensus_aura::CompatibilityMode::UseInitializeBlock {
-                until: 1195403,
-            },
+            compatibility_mode,
         })?;
 
     Ok(sc_service::PartialComponents {
