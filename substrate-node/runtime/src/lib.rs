@@ -768,6 +768,7 @@ pub type Executive = frame_executive::Executive<
 type Migrations = (
     pallet_tfgrid::migrations::v14::FixFarmingPoliciesMap<Runtime>,
     migrations::tfgrid_v15_smart_contract_v8::Migrate<Runtime>,
+    pallet_smart_contract::migrations::v9::CleanBillingLoop<Runtime>,
 );
 
 // follows Substrate's non destructive way of eliminating  otherwise required

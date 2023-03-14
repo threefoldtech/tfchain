@@ -31,7 +31,7 @@ impl<T: Config> OnRuntimeUpgrade for CleanBillingLoop<T> {
     }
 
     #[cfg(feature = "try-runtime")]
-    fn post_upgrade(pre_contracts_count: Vec<u8>) -> Result<(), &'static str> {
+    fn post_upgrade(pre_contracts_to_bill_count: Vec<u8>) -> Result<(), &'static str> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
         assert!(PalletVersion::<T>::get() >= types::StorageVersion::V9);
 
@@ -56,13 +56,17 @@ impl<T: Config> OnRuntimeUpgrade for CleanBillingLoop<T> {
 }
 
 pub fn migrate_to_version_9<T: Config>() -> frame_support::weights::Weight {
-    if PalletVersion::<T>::get() == types::StorageVersion::V5 {
+    if PalletVersion::<T>::get() == types::StorageVersion::V8 {
         info!(
             " >>> Starting contract pallet migration, pallet version: {:?}",
             PalletVersion::<T>::get()
         );
 
-        let mut migrated_count = 0;
+        let mut slot_count = 0;
+        let mut contract_count = 0;
+        let mut keep_count = 0;
+        let mut remove_count = 0;
+        let mut should_remove_count = 0;
 
         // Collect ContractsToBillAt storage in memory
         let contracts_to_bill_at = ContractsToBillAt::<T>::iter().collect::<Vec<_>>();
@@ -70,44 +74,62 @@ pub fn migrate_to_version_9<T: Config>() -> frame_support::weights::Weight {
         for (block_number, contract_ids) in contracts_to_bill_at {
             let mut new_contract_ids = Vec::new();
             for contract_id in contract_ids {
+                contract_count += 1;
                 if let Some(contract) = Contracts::<T>::get(contract_id) {
                     match contract.contract_type {
                         types::ContractData::NodeContract(node_contract) => {
                             let contract_resource = NodeContractResources::<T>::get(contract_id);
                             if node_contract.public_ips > 0 || !contract_resource.used.is_empty() {
                                 new_contract_ids.push(contract.contract_id);
+                                keep_count += 1;
                             }
+                            remove_count += 1;
                             debug!(
                                 "node contract with id {} is removed from billing loop",
                                 contract_id
                             );
                         }
-                        _ => new_contract_ids.push(contract.contract_id),
+                        _ => {
+                            new_contract_ids.push(contract.contract_id);
+                            keep_count += 1;
+                        }
                     };
                 } else {
                     debug!(
                         "no contract with id {} found, should not happen...",
                         contract_id
                     );
+                    should_remove_count += 1;
                 }
             }
 
             // Update ContractsToBillAt storage in memory
-            migrated_count += 1;
+            slot_count += 1;
             ContractsToBillAt::<T>::insert(block_number, new_contract_ids);
         }
 
+        info!(" <<< ContractsToBillAt storage updated!");
         info!(
-            " <<< ContractsToBillAt storage updated! Migrated {} billing loop slots ✅",
-            migrated_count
+            " <<< There are {} contracts in billing loop ✅",
+            contract_count
         );
+        info!(" <<< Kept {} contracts from billing loop ✅", keep_count);
+        info!(
+            " <<< Removed {} contracts from billing loop ✅",
+            remove_count
+        );
+        info!(
+            " <<< Should remove {} contracts from billing loop ✅",
+            should_remove_count
+        );
+        info!(" <<< Migrated {} billing loop slots ✅", slot_count);
 
         // Update pallet storage version
         PalletVersion::<T>::set(types::StorageVersion::V9);
         info!(" <<< Storage version upgraded");
 
         // Return the weight consumed by the migration.
-        T::DbWeight::get().reads_writes(migrated_count, migrated_count + 1)
+        T::DbWeight::get().reads_writes(slot_count, slot_count + 1)
     } else {
         info!(" >>> Unused Smart Contract pallet V9 migration");
         Weight::zero()
