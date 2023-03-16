@@ -354,6 +354,7 @@ pub mod pallet {
         NodeNotAuthorizedToComputeReport,
         PricingPolicyNotExists,
         ContractIsNotUnique,
+        ContractWrongBillingLoopIndex,
         NameExists,
         NameNotValid,
         InvalidContractType,
@@ -1137,7 +1138,7 @@ impl<T: Config> Pallet<T> {
         // Clean up contract from billing loop if it not exists anymore
         if Contracts::<T>::get(contract_id).is_none() {
             log::debug!("cleaning up deleted contract from storage");
-            Self::remove_contract_from_billing_loop(contract_id);
+            Self::remove_contract_from_billing_loop(contract_id)?;
             return Ok(().into());
         }
 
@@ -1594,9 +1595,9 @@ impl<T: Config> Pallet<T> {
             return;
         }
 
-        // Save the contract to be billed in previous billing loop slot
+        // Save the contract to be billed at previous billing loop index
         // to avoid being billed at same block by the offchain worker
-        // First billing for this contract will happen after 1 billing cycle
+        // First billing for the contract will happen after 1 billing cycle
         let index = Self::get_previous_billing_loop_index();
         let mut contract_ids = ContractsToBillAt::<T>::get(index);
 
@@ -1604,28 +1605,37 @@ impl<T: Config> Pallet<T> {
             contract_ids.push(contract_id);
             ContractsToBillAt::<T>::insert(index, &contract_ids);
             log::debug!(
-                "Insert contracts: {:?}, to be billed at index {:?}",
+                "Updated contracts after insertion: {:?}, to be billed at index {:?}",
                 contract_ids,
                 index
             );
         }
     }
 
-    pub fn remove_contract_from_billing_loop(contract_id: u64) {
-        if contract_id == 0 {
-            return;
-        }
-
-        // Remove contract from billing slot list at index
+    // Removes contract from billing loop at current index
+    pub fn remove_contract_from_billing_loop(
+        contract_id: u64,
+    ) -> Result<(), DispatchErrorWithPostInfo> {
         let index = Self::get_current_billing_loop_index();
         let mut contract_ids = ContractsToBillAt::<T>::get(index);
+
+        // Remove contracts from billing loop should only occures after a call
+        // to bill_contract() done by the offchain worker for a specific block
+        // So contract id must be at current billing loop index
+        ensure!(
+            contract_ids.contains(&contract_id),
+            Error::<T>::ContractWrongBillingLoopIndex
+        );
+
         contract_ids.retain(|&c| c != contract_id);
         ContractsToBillAt::<T>::insert(index, &contract_ids);
         log::debug!(
-            "Insert contracts: {:?}, to be billed at index {:?}",
+            "Updated contracts after removal: {:?}, to be billed at index {:?}",
             contract_ids,
             index
         );
+
+        return Ok(());
     }
 
     // Helper function that updates the contract state and manages storage accordingly
@@ -1900,7 +1910,7 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    // Billing slot index is block number % (mod) Billing Frequency
+    // Billing index is block number % (mod) Billing Frequency
     pub fn get_current_billing_loop_index() -> u64 {
         let current_block = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
         current_block % BillingFrequency::<T>::get()
@@ -2365,7 +2375,6 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
                     &types::ContractState::Deleted(types::Cause::CanceledByUser),
                 );
                 let _ = Self::bill_contract(node_contract_id);
-                Self::remove_contract(node_contract_id);
             }
         }
 
@@ -2378,7 +2387,6 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
                     &types::ContractState::Deleted(types::Cause::CanceledByUser),
                 );
                 let _ = Self::bill_contract(contract.contract_id);
-                Self::remove_contract(contract.contract_id);
             }
         }
     }

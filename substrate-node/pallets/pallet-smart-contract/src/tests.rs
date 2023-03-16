@@ -475,6 +475,146 @@ fn test_cancel_node_contract_wrong_twins_fails() {
     });
 }
 
+#[test]
+fn test_cancel_node_contract_and_remove_from_billing_loop_works() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+
+        let start_block = System::block_number();
+
+        let node_id = 1;
+        let pub_ips = 1; // Trigger insertion in billing loop
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            pub_ips,
+            None
+        ));
+        let contract_id = 1;
+
+        // Ensure contract_id is stored at right billing loop index
+        let index = SmartContractModule::get_previous_billing_loop_index();
+        assert_eq!(
+            SmartContractModule::contract_to_bill_at_block(index),
+            vec![contract_id]
+        );
+
+        // Canceling contract will remove it from contract storage
+        // The removal from billing loop is done later, at the end of
+        // the billing cycle when contract should have been billed
+        assert_ok!(SmartContractModule::cancel_contract(
+            RuntimeOrigin::signed(alice()),
+            contract_id
+        ));
+
+        let block_before_billing = start_block - 2 + BillingFrequency::get();
+        let billing_block = start_block - 1 + BillingFrequency::get();
+
+        // Ensure contract_id is still at index before being
+        // removed from billing loop after cycle completion
+        run_to_block(block_before_billing, None);
+        assert_eq!(
+            SmartContractModule::contract_to_bill_at_block(index),
+            vec![contract_id]
+        );
+
+        // Ensure contract has been removed from index after
+        // cycle and a call to bill_contract() by offchain worker
+        pool_state.write().should_call_bill_contract(
+            contract_id,
+            Ok(Pays::Yes.into()),
+            billing_block,
+        );
+        run_to_block(billing_block, Some(&mut pool_state));
+        assert_eq!(
+            SmartContractModule::contract_to_bill_at_block(index),
+            Vec::<u64>::new()
+        );
+    });
+}
+
+#[test]
+fn test_cancel_node_contract_and_try_remove_from_billing_loop_wrong_index_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+
+        let start_block = System::block_number();
+
+        let node_id = 1;
+        let pub_ips = 1; // Trigger insertion in billing loop
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            pub_ips,
+            None
+        ));
+        let contract_id = 1;
+
+        // Ensure contract_id is stored at right billing loop index
+        let index = SmartContractModule::get_previous_billing_loop_index();
+        assert_eq!(
+            SmartContractModule::contract_to_bill_at_block(index),
+            vec![contract_id]
+        );
+
+        assert_ok!(SmartContractModule::cancel_contract(
+            RuntimeOrigin::signed(alice()),
+            contract_id
+        ));
+
+        // Canceling contract will remove it from contract storage
+        // The removal from billing loop is done later, at the end of
+        // the billing cycle when contract should have been billed
+        // Trying to trigger removal at wrong block will send an error
+        for i in 0..(BillingFrequency::get() - 1) {
+            assert_noop!(
+                SmartContractModule::bill_contract_for_block(
+                    RuntimeOrigin::signed(alice()),
+                    contract_id
+                ),
+                Error::<TestRuntime>::ContractWrongBillingLoopIndex
+            );
+            run_to_block(start_block + i, None);
+        }
+
+        assert_eq!(
+            SmartContractModule::contract_to_bill_at_block(index),
+            vec![contract_id]
+        );
+
+        // Here contract is created at block #2 so removal should
+        // occur at block #11
+        assert_ok!(SmartContractModule::bill_contract_for_block(
+            RuntimeOrigin::signed(alice()),
+            contract_id
+        ));
+
+        assert_eq!(
+            SmartContractModule::contract_to_bill_at_block(index),
+            Vec::<u64>::new()
+        );
+
+        // From now it should always send an error
+        for i in (BillingFrequency::get() - 1)..30 {
+            run_to_block(start_block + i, None);
+            assert_noop!(
+                SmartContractModule::bill_contract_for_block(
+                    RuntimeOrigin::signed(alice()),
+                    contract_id
+                ),
+                Error::<TestRuntime>::ContractWrongBillingLoopIndex
+            );
+        }
+    });
+}
+
 //  NAME CONTRACT TESTS //
 // -------------------- //
 
@@ -1824,7 +1964,8 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
-        run_to_block(1, Some(&mut pool_state));
+        let start_block = 1;
+        run_to_block(start_block, Some(&mut pool_state));
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         let node_id = 1;
@@ -1836,7 +1977,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
 
         assert_ok!(SmartContractModule::create_node_contract(
             RuntimeOrigin::signed(charlie()),
-            1,
+            node_id,
             generate_deployment_hash(),
             get_deployment_data(),
             0,
@@ -1844,17 +1985,24 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         ));
         push_contract_resources_used(2);
 
-        // run 12 cycles, contracts should cancel after 11 due to lack of funds
-        for i in 0..11 {
-            pool_state
-                .write()
-                .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11 + i * 10);
-            pool_state
-                .write()
-                .should_call_bill_contract(2, Ok(Pays::Yes.into()), 11 + i * 10);
+        // run 12 cycles, contracts should cancel at 11th due to lack of funds
+        for i in 1..=11 {
+            pool_state.write().should_call_bill_contract(
+                1,
+                Ok(Pays::Yes.into()),
+                start_block + i * BillingFrequency::get(),
+            );
+            pool_state.write().should_call_bill_contract(
+                2,
+                Ok(Pays::Yes.into()),
+                start_block + i * BillingFrequency::get(),
+            );
         }
-        for i in 0..11 {
-            run_to_block(12 + 10 * i, Some(&mut pool_state));
+        for i in 1..=11 {
+            run_to_block(
+                start_block + 1 + i * BillingFrequency::get(),
+                Some(&mut pool_state),
+            );
         }
 
         // let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 11);
