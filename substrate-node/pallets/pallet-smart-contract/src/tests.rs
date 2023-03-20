@@ -3552,12 +3552,7 @@ fn push_contract_no_resources_used(contract_id: u64) {
     let mut resources = Vec::new();
     resources.push(types::ContractResources {
         contract_id,
-        used: Resources {
-            cru: 0,
-            hru: 0,
-            mru: 0,
-            sru: 0,
-        },
+        used: Resources::empty(),
     });
 
     assert_ok!(SmartContractModule::report_contract_resources(

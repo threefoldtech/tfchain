@@ -855,11 +855,22 @@ impl<T: Config> Pallet<T> {
         let mut id = ContractID::<T>::get();
         id = id + 1;
 
-        if let types::ContractData::NodeContract(ref mut nc) = contract_type {
-            Self::_reserve_ip(id, nc)?;
-        };
-
         Self::validate_solution_provider(solution_provider_id)?;
+
+        // Start billing frequency loop
+        // Will always be block now + frequency
+        match contract_type {
+            types::ContractData::NodeContract(ref mut node_contract) => {
+                Self::_reserve_ip(id, node_contract)?;
+
+                // Insert created node contract in billing loop now only
+                // if there is at least one public ip attached to node
+                if node_contract.public_ips > 0 {
+                    Self::insert_contract_in_billing_loop(id);
+                }
+            }
+            _ => Self::insert_contract_in_billing_loop(id),
+        };
 
         let contract = types::Contract {
             version: CONTRACT_VERSION,
@@ -868,19 +879,6 @@ impl<T: Config> Pallet<T> {
             state: types::ContractState::Created,
             contract_type,
             solution_provider_id,
-        };
-
-        // Start billing frequency loop
-        // Will always be block now + frequency
-        match contract.contract_type.clone() {
-            types::ContractData::NodeContract(node_contract) => {
-                // Insert created node contract in billing loop only
-                // if there is at least one public ip attached to node
-                if node_contract.public_ips > 0 {
-                    Self::insert_contract_in_billing_loop(id);
-                }
-            }
-            _ => Self::insert_contract_in_billing_loop(id),
         };
 
         // insert into contracts map
@@ -1135,7 +1133,7 @@ impl<T: Config> Pallet<T> {
     // Bills a contract (NodeContract, NameContract or RentContract)
     // Calculates how much TFT is due by the user and distributes the rewards
     fn bill_contract(contract_id: u64) -> DispatchResultWithPostInfo {
-        // Clean up contract from billing loop if it not exists anymore
+        // Clean up contract from billing loop if it doesn't exist anymore
         if Contracts::<T>::get(contract_id).is_none() {
             log::debug!("cleaning up deleted contract from storage");
             Self::remove_contract_from_billing_loop(contract_id)?;
@@ -1619,7 +1617,7 @@ impl<T: Config> Pallet<T> {
         let index = Self::get_current_billing_loop_index();
         let mut contract_ids = ContractsToBillAt::<T>::get(index);
 
-        // Remove contracts from billing loop should only occures after a call
+        // Remove contracts from billing loop should only occur after a call
         // to bill_contract() done by the offchain worker for a specific block
         // So contract id must be at current billing loop index
         ensure!(
@@ -1635,7 +1633,7 @@ impl<T: Config> Pallet<T> {
             index
         );
 
-        return Ok(());
+        Ok(())
     }
 
     // Helper function that updates the contract state and manages storage accordingly

@@ -18,7 +18,7 @@ impl<T: Config> OnRuntimeUpgrade for CleanBillingLoop<T> {
 
         let contracts_to_bill_count: u64 = ContractsToBillAt::<T>::iter().count() as u64;
         info!(
-            "🔎 CleanBillingLoop pre migration: Number of existing billing loop slots {:?}",
+            "🔎 CleanBillingLoop pre migration: Number of existing billing loop indexes {:?}",
             contracts_to_bill_count
         );
 
@@ -35,7 +35,7 @@ impl<T: Config> OnRuntimeUpgrade for CleanBillingLoop<T> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
         assert!(PalletVersion::<T>::get() >= types::StorageVersion::V9);
 
-        // Check number of billing loop slots against pre-check result
+        // Check number of billing loop indexes against pre-check result
         let pre_contracts_to_bill_count: u64 = Decode::decode(
             &mut pre_contracts_to_bill_count.as_slice(),
         )
@@ -43,7 +43,7 @@ impl<T: Config> OnRuntimeUpgrade for CleanBillingLoop<T> {
         assert_eq!(
             ContractsToBillAt::<T>::iter().count() as u64,
             pre_contracts_to_bill_count,
-            "Number of billing loop slots migrated does not match"
+            "Number of billing loop indexes migrated does not match"
         );
 
         info!(
@@ -62,12 +62,13 @@ pub fn migrate_to_version_9<T: Config>() -> frame_support::weights::Weight {
             PalletVersion::<T>::get()
         );
 
-        let mut slot_count = 0;
+        let mut index_count = 0;
         let billing_loop_size = BillingFrequency::<T>::get();
         let mut contract_count = vec![0; billing_loop_size as usize];
+        let mut rogue_count = vec![0; billing_loop_size as usize];
+        let mut node_contract_count = vec![0; billing_loop_size as usize];
         let mut keep_count = vec![0; billing_loop_size as usize];
         let mut nobill_count = vec![0; billing_loop_size as usize];
-        let mut rogue_count = vec![0; billing_loop_size as usize];
 
         // Collect ContractsToBillAt storage in memory
         let contracts_to_bill_at = ContractsToBillAt::<T>::iter().collect::<Vec<_>>();
@@ -90,6 +91,7 @@ pub fn migrate_to_version_9<T: Config>() -> frame_support::weights::Weight {
                                 );
                                 nobill_count[index as usize] += 1;
                             }
+                            node_contract_count[index as usize] += 1;
                         }
                         _ => {
                             new_contract_ids.push(contract.contract_id);
@@ -106,13 +108,13 @@ pub fn migrate_to_version_9<T: Config>() -> frame_support::weights::Weight {
             }
 
             // Update ContractsToBillAt storage in memory
-            slot_count += 1;
+            index_count += 1;
             ContractsToBillAt::<T>::insert(index, new_contract_ids);
         }
 
         for i in 0..billing_loop_size {
             debug!(
-                " # Billing loop slot {}: [total: {}, keep: {}, nobill: {}, rogue {}]",
+                " # Billing loop index {}: [total: {}, keep: {}, nobill: {}, rogue {}]",
                 i,
                 contract_count[i as usize],
                 keep_count[i as usize],
@@ -125,27 +127,45 @@ pub fn migrate_to_version_9<T: Config>() -> frame_support::weights::Weight {
             );
         }
 
+        let billing_contracts = contract_count.iter().sum::<u64>();
+        let billing_rogue_contracts = rogue_count.iter().sum::<u64>();
+        let billing_node_contracts = node_contract_count.iter().sum::<u64>();
+        let billing_keep_contracts = keep_count.iter().sum::<u64>();
+        let billing_nobill_contracts = nobill_count.iter().sum::<u64>();
+
         info!(" <<< ContractsToBillAt storage updated! ✅");
         info!(
-            " <<< There are {} contracts in billing loop",
-            contract_count.iter().sum::<u64>()
+            " <<< There are {} contract ids in billing loop",
+            billing_contracts
+        );
+        info!(" <<< Including {} rogue contracts", billing_rogue_contracts);
+        info!(
+            " <<< Among the remaining {} valid contracts, {} are node contracts",
+            billing_contracts - billing_rogue_contracts,
+            billing_node_contracts
+        );
+        info!(
+            " <<< From them {} should not be billed",
+            billing_nobill_contracts
         );
         info!(
             " <<< Kept {} contracts in billing loop",
-            keep_count.iter().sum::<u64>()
+            billing_keep_contracts
         );
         info!(
             " <<< Removed {} contracts from billing loop",
-            nobill_count.iter().sum::<u64>() + rogue_count.iter().sum::<u64>()
+            billing_nobill_contracts + billing_rogue_contracts
         );
-        info!(" <<< Migrated {} billing loop slots", slot_count);
+        info!(" <<< Migrated {} billing loop indexes", index_count);
 
         // Update pallet storage version
         PalletVersion::<T>::set(types::StorageVersion::V9);
         info!(" <<< Storage version upgraded");
 
         // Return the weight consumed by the migration.
-        T::DbWeight::get().reads_writes(slot_count, slot_count + 1)
+        let reads = index_count + billing_contracts + billing_node_contracts;
+        let writes = index_count + 1;
+        T::DbWeight::get().reads_writes(reads, writes)
     } else {
         info!(" >>> Unused Smart Contract pallet V9 migration");
         Weight::zero()

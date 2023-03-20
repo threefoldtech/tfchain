@@ -17,6 +17,15 @@ pub const ONE_THOUSAND: u128 = 1_000;
 pub const GIGABYTE: u128 = 1024 * 1024 * 1024;
 
 impl Resources {
+    pub fn empty() -> Resources {
+        Resources {
+            hru: 0,
+            sru: 0,
+            cru: 0,
+            mru: 0,
+        }
+    }
+
     pub fn add(mut self, other: &Resources) -> Resources {
         self.cru += other.cru;
         self.sru += other.sru;
