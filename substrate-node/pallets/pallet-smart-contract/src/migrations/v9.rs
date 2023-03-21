@@ -46,6 +46,27 @@ impl<T: Config> OnRuntimeUpgrade for CleanBillingLoop<T> {
             "Number of billing loop indexes migrated does not match"
         );
 
+        for (_index, contract_ids) in ContractsToBillAt::<T>::iter() {
+            for contract_id in contract_ids {
+                let contract = Contracts::<T>::get(contract_id);
+                assert!(
+                    contract.is_some(),
+                    "rogue contract with id {} still remains in billing loop",
+                    contract_id
+                );
+                if let Some(c) = contract {
+                    if let types::ContractData::NodeContract(node_contract) = c.contract_type {
+                        let contract_resource = NodeContractResources::<T>::get(contract_id);
+                        assert!(
+                            node_contract.public_ips > 0 || !contract_resource.used.is_empty(),
+                            "node contract with id {} with no pub ips + no resources still remains in billing loop",
+                            contract_id
+                        );
+                    }
+                }
+            }
+        }
+
         info!(
             "👥  Smart Contract pallet to {:?} passes POST migrate checks ✅",
             PalletVersion::<T>::get()
