@@ -17,6 +17,15 @@ pub const ONE_THOUSAND: u128 = 1_000;
 pub const GIGABYTE: u128 = 1024 * 1024 * 1024;
 
 impl Resources {
+    pub fn empty() -> Resources {
+        Resources {
+            hru: 0,
+            sru: 0,
+            cru: 0,
+            mru: 0,
+        }
+    }
+
     pub fn add(mut self, other: &Resources) -> Resources {
         self.cru += other.cru;
         self.sru += other.sru;
@@ -99,6 +108,10 @@ impl Resources {
             || wiggle(resources_before.sru, resources_after.sru)
             || wiggle(resources_before.hru, resources_after.hru)
             || wiggle(resources_before.mru, resources_after.mru);
+    }
+
+    pub fn is_empty(&self) -> bool {
+        return self.hru == 0 && self.sru == 0 && self.cru == 0 && self.mru == 0;
     }
 }
 

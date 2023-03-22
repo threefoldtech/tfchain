@@ -354,6 +354,7 @@ pub mod pallet {
         NodeNotAuthorizedToComputeReport,
         PricingPolicyNotExists,
         ContractIsNotUnique,
+        ContractWrongBillingLoopIndex,
         NameExists,
         NameNotValid,
         InvalidContractType,
@@ -648,9 +649,7 @@ pub mod pallet {
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn offchain_worker(block_number: T::BlockNumber) {
             // Let offchain worker check if there are contracts on the map at current index
-            // Index being current block number % (mod) Billing Frequency
-            let current_index: u64 =
-                block_number.saturated_into::<u64>() % BillingFrequency::<T>::get();
+            let current_index = Self::get_current_billing_loop_index();
 
             let contracts = ContractsToBillAt::<T>::get(current_index);
             if contracts.is_empty() {
@@ -856,11 +855,22 @@ impl<T: Config> Pallet<T> {
         let mut id = ContractID::<T>::get();
         id = id + 1;
 
-        if let types::ContractData::NodeContract(ref mut nc) = contract_type {
-            Self::_reserve_ip(id, nc)?;
-        };
-
         Self::validate_solution_provider(solution_provider_id)?;
+
+        // Start billing frequency loop
+        // Will always be block now + frequency
+        match contract_type {
+            types::ContractData::NodeContract(ref mut node_contract) => {
+                Self::_reserve_ip(id, node_contract)?;
+
+                // Insert created node contract in billing loop now only
+                // if there is at least one public ip attached to node
+                if node_contract.public_ips > 0 {
+                    Self::insert_contract_in_billing_loop(id);
+                }
+            }
+            _ => Self::insert_contract_in_billing_loop(id),
+        };
 
         let contract = types::Contract {
             version: CONTRACT_VERSION,
@@ -870,10 +880,6 @@ impl<T: Config> Pallet<T> {
             contract_type,
             solution_provider_id,
         };
-
-        // Start billing frequency loop
-        // Will always be block now + frequency
-        Self::insert_contract_to_bill(id);
 
         // insert into contracts map
         Contracts::<T>::insert(id, &contract);
@@ -996,10 +1002,15 @@ impl<T: Config> Pallet<T> {
                 );
 
                 // Do insert
-                NodeContractResources::<T>::insert(
-                    contract_resource.contract_id,
-                    &contract_resource,
-                );
+                NodeContractResources::<T>::insert(contract.contract_id, &contract_resource);
+
+                // Start billing frequency loop
+                // Insert node contract in billing loop only if there
+                // are non empty resources pushed for the contract
+                if !contract_resource.used.is_empty() {
+                    Self::insert_contract_in_billing_loop(contract.contract_id);
+                }
+
                 // deposit event
                 Self::deposit_event(Event::UpdatedUsedResources(contract_resource));
             }
@@ -1119,20 +1130,13 @@ impl<T: Config> Pallet<T> {
         return Err(<Error<T>>::OffchainSignedTxNoLocalAccountAvailable);
     }
 
-    // Bills a contract (NodeContract or NameContract)
+    // Bills a contract (NodeContract, NameContract or RentContract)
     // Calculates how much TFT is due by the user and distributes the rewards
     fn bill_contract(contract_id: u64) -> DispatchResultWithPostInfo {
-        // Clean up contract from blling loop if it not exists anymore
-        if !Contracts::<T>::contains_key(contract_id) {
+        // Clean up contract from billing loop if it doesn't exist anymore
+        if Contracts::<T>::get(contract_id).is_none() {
             log::debug!("cleaning up deleted contract from storage");
-
-            let index = Self::get_contract_index();
-
-            // Remove contract from billing list
-            let mut contracts = ContractsToBillAt::<T>::get(index);
-            contracts.retain(|&c| c != contract_id);
-            ContractsToBillAt::<T>::insert(index, contracts);
-
+            Self::remove_contract_from_billing_loop(contract_id)?;
             return Ok(().into());
         }
 
@@ -1584,24 +1588,52 @@ impl<T: Config> Pallet<T> {
 
     // Inserts a contract in a list where the index is the current block % billing frequency
     // This way, we don't need to reinsert the contract everytime it gets billed
-    pub fn insert_contract_to_bill(contract_id: u64) {
+    pub fn insert_contract_in_billing_loop(contract_id: u64) {
         if contract_id == 0 {
             return;
         }
 
-        // Save the contract to be billed in (now -1 %(mod) BILLING_FREQUENCY_IN_BLOCKS)
-        let index = Self::get_contract_index().checked_sub(1).unwrap_or(0);
-        let mut contracts = ContractsToBillAt::<T>::get(index);
+        // Save the contract to be billed at previous billing loop index
+        // to avoid being billed at same block by the offchain worker
+        // First billing for the contract will happen after 1 billing cycle
+        let index = Self::get_previous_billing_loop_index();
+        let mut contract_ids = ContractsToBillAt::<T>::get(index);
 
-        if !contracts.contains(&contract_id) {
-            contracts.push(contract_id);
-            ContractsToBillAt::<T>::insert(index, &contracts);
+        if !contract_ids.contains(&contract_id) {
+            contract_ids.push(contract_id);
+            ContractsToBillAt::<T>::insert(index, &contract_ids);
             log::debug!(
-                "Insert contracts: {:?}, to be billed at index {:?}",
-                contracts,
+                "Updated contracts after insertion: {:?}, to be billed at index {:?}",
+                contract_ids,
                 index
             );
         }
+    }
+
+    // Removes contract from billing loop at current index
+    pub fn remove_contract_from_billing_loop(
+        contract_id: u64,
+    ) -> Result<(), DispatchErrorWithPostInfo> {
+        let index = Self::get_current_billing_loop_index();
+        let mut contract_ids = ContractsToBillAt::<T>::get(index);
+
+        // Remove contracts from billing loop should only occur after a call
+        // to bill_contract() done by the offchain worker for a specific block
+        // So contract id must be at current billing loop index
+        ensure!(
+            contract_ids.contains(&contract_id),
+            Error::<T>::ContractWrongBillingLoopIndex
+        );
+
+        contract_ids.retain(|&c| c != contract_id);
+        ContractsToBillAt::<T>::insert(index, &contract_ids);
+        log::debug!(
+            "Updated contracts after removal: {:?}, to be billed at index {:?}",
+            contract_ids,
+            index
+        );
+
+        Ok(())
     }
 
     // Helper function that updates the contract state and manages storage accordingly
@@ -1876,9 +1908,18 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn get_contract_index() -> u64 {
-        let now = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
-        now % BillingFrequency::<T>::get()
+    // Billing index is block number % (mod) Billing Frequency
+    pub fn get_current_billing_loop_index() -> u64 {
+        let current_block = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
+        current_block % BillingFrequency::<T>::get()
+    }
+
+    pub fn get_previous_billing_loop_index() -> u64 {
+        let previous_block = <frame_system::Pallet<T>>::block_number()
+            .saturated_into::<u64>()
+            .checked_sub(1)
+            .unwrap_or(0);
+        previous_block % BillingFrequency::<T>::get()
     }
 
     pub fn _service_contract_create(
@@ -2332,7 +2373,6 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
                     &types::ContractState::Deleted(types::Cause::CanceledByUser),
                 );
                 let _ = Self::bill_contract(node_contract_id);
-                Self::remove_contract(node_contract_id);
             }
         }
 
@@ -2345,7 +2385,6 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
                     &types::ContractState::Deleted(types::Cause::CanceledByUser),
                 );
                 let _ = Self::bill_contract(contract.contract_id);
-                Self::remove_contract(contract.contract_id);
             }
         }
     }
