@@ -528,10 +528,11 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::bill_contract_for_block())]
         pub fn bill_contract_for_block(
             origin: OriginFor<T>,
+            index: u64,
             contract_id: u64,
         ) -> DispatchResultWithPostInfo {
             let _account_id = ensure_signed(origin)?;
-            Self::bill_contract(contract_id)
+            Self::bill_contract(index, contract_id)
         }
 
         #[pallet::call_index(11)]
@@ -970,7 +971,8 @@ impl<T: Config> Pallet<T> {
         }
 
         Self::_update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
-        Self::bill_contract(contract.contract_id)?;
+        let index = Self::get_current_billing_loop_index();
+        Self::bill_contract(index, contract.contract_id)?;
 
         Ok(().into())
     }
@@ -1108,8 +1110,10 @@ impl<T: Config> Pallet<T> {
             );
             return Err(<Error<T>>::OffchainSignedTxCannotSign);
         }
-        let result =
-            signer.send_signed_transaction(|_acct| Call::bill_contract_for_block { contract_id });
+        let index = Self::get_current_billing_loop_index();
+
+        let result = signer
+            .send_signed_transaction(|_acct| Call::bill_contract_for_block { index, contract_id });
 
         if let Some((acc, res)) = result {
             // if res is an error this means sending the transaction failed
@@ -1132,11 +1136,11 @@ impl<T: Config> Pallet<T> {
 
     // Bills a contract (NodeContract, NameContract or RentContract)
     // Calculates how much TFT is due by the user and distributes the rewards
-    fn bill_contract(contract_id: u64) -> DispatchResultWithPostInfo {
+    fn bill_contract(index: u64, contract_id: u64) -> DispatchResultWithPostInfo {
         // Clean up contract from billing loop if it doesn't exist anymore
         if Contracts::<T>::get(contract_id).is_none() {
             log::debug!("cleaning up deleted contract from storage");
-            Self::remove_contract_from_billing_loop(contract_id)?;
+            Self::remove_contract_from_billing_loop(index, contract_id)?;
             return Ok(().into());
         }
 
@@ -1610,16 +1614,17 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    // Removes contract from billing loop at current index
+    // Removes contract from billing loop at previous index
+    // The reason for this is that the offchain worker tries to bill this contract in the context of the previous block
     pub fn remove_contract_from_billing_loop(
+        index: u64,
         contract_id: u64,
     ) -> Result<(), DispatchErrorWithPostInfo> {
-        let index = Self::get_current_billing_loop_index();
+        // let index = Self::get_current_billing_loop_index()
+        //     .checked_sub(1)
+        //     .unwrap_or(0);
         let mut contract_ids = ContractsToBillAt::<T>::get(index);
 
-        // Remove contracts from billing loop should only occur after a call
-        // to bill_contract() done by the offchain worker for a specific block
-        // So contract id must be at current billing loop index
         ensure!(
             contract_ids.contains(&contract_id),
             Error::<T>::ContractWrongBillingLoopIndex
@@ -2372,7 +2377,8 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
                     &mut contract,
                     &types::ContractState::Deleted(types::Cause::CanceledByUser),
                 );
-                let _ = Self::bill_contract(node_contract_id);
+                let index = Self::get_current_billing_loop_index();
+                let _ = Self::bill_contract(index, node_contract_id);
             }
         }
 
@@ -2384,7 +2390,8 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
                     &mut contract,
                     &types::ContractState::Deleted(types::Cause::CanceledByUser),
                 );
-                let _ = Self::bill_contract(contract.contract_id);
+                let index = Self::get_current_billing_loop_index();
+                let _ = Self::bill_contract(index, contract.contract_id);
             }
         }
     }

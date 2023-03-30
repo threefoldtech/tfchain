@@ -525,6 +525,7 @@ fn test_cancel_node_contract_and_remove_from_billing_loop_works() {
         // Ensure contract has been removed from index after
         // cycle and a call to bill_contract() by offchain worker
         pool_state.write().should_call_bill_contract(
+            billing_block % BillingFrequency::get(),
             contract_id,
             Ok(Pays::Yes.into()),
             billing_block,
@@ -577,6 +578,7 @@ fn test_cancel_node_contract_and_try_remove_from_billing_loop_wrong_index_fails(
             assert_noop!(
                 SmartContractModule::bill_contract_for_block(
                     RuntimeOrigin::signed(alice()),
+                    i + 2,
                     contract_id
                 ),
                 Error::<TestRuntime>::ContractWrongBillingLoopIndex
@@ -593,6 +595,7 @@ fn test_cancel_node_contract_and_try_remove_from_billing_loop_wrong_index_fails(
         // occur at block #11
         assert_ok!(SmartContractModule::bill_contract_for_block(
             RuntimeOrigin::signed(alice()),
+            index,
             contract_id
         ));
 
@@ -607,6 +610,7 @@ fn test_cancel_node_contract_and_try_remove_from_billing_loop_wrong_index_fails(
             assert_noop!(
                 SmartContractModule::bill_contract_for_block(
                     RuntimeOrigin::signed(alice()),
+                    i,
                     contract_id
                 ),
                 Error::<TestRuntime>::ContractWrongBillingLoopIndex
@@ -987,10 +991,14 @@ fn test_node_contract_billing_details() {
         let initial_total_issuance = Balances::total_issuance();
         // advance 25 cycles
         for i in 0..25 {
-            pool_state
-                .write()
-                .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11 + i * 10);
-            run_to_block(11 + i * 10, Some(&mut pool_state));
+            let block_number = 11 + i * 10;
+            pool_state.write().should_call_bill_contract(
+                block_number % BillingFrequency::get(),
+                1,
+                Ok(Pays::Yes.into()),
+                block_number,
+            );
+            run_to_block(block_number, Some(&mut pool_state));
         }
 
         let free_balance = Balances::free_balance(&twin.account_id);
@@ -1074,10 +1082,14 @@ fn test_node_contract_billing_details_with_solution_provider() {
 
         // advance 25 cycles
         for i in 0..25 {
-            pool_state
-                .write()
-                .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11 + i * 10);
-            run_to_block(11 + i * 10, Some(&mut pool_state));
+            let block_number = 11 + i * 10;
+            pool_state.write().should_call_bill_contract(
+                block_number % BillingFrequency::get(),
+                1,
+                Ok(Pays::Yes.into()),
+                block_number,
+            );
+            run_to_block(block_number, Some(&mut pool_state));
         }
 
         let free_balance = Balances::free_balance(&twin.account_id);
@@ -1116,12 +1128,18 @@ fn test_multiple_contracts_billing_loop_works() {
         assert_eq!(contracts_to_bill_at_block.len(), 2);
 
         // 2 contracts => 2 billings
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11);
-        pool_state
-            .write()
-            .should_call_bill_contract(2, Ok(Pays::Yes.into()), 11);
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            11,
+        );
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            2,
+            Ok(Pays::Yes.into()),
+            11,
+        );
         run_to_block(11, Some(&mut pool_state));
 
         // Test that the expected events were emitted
@@ -1157,9 +1175,12 @@ fn test_node_contract_billing_cycles() {
         push_contract_resources_used(1);
 
         let (amount_due_1, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11);
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            11,
+        );
         run_to_block(11, Some(&mut pool_state));
         check_report_cost(1, amount_due_1, 11, discount_received);
 
@@ -1174,16 +1195,22 @@ fn test_node_contract_billing_cycles() {
         );
 
         let (amount_due_2, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 21);
+        pool_state.write().should_call_bill_contract(
+            21 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            21,
+        );
         run_to_block(21, Some(&mut pool_state));
         check_report_cost(1, amount_due_2, 21, discount_received);
 
         let (amount_due_3, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 31);
+        pool_state.write().should_call_bill_contract(
+            31 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            31,
+        );
         run_to_block(31, Some(&mut pool_state));
         check_report_cost(1, amount_due_3, 31, discount_received);
 
@@ -1225,12 +1252,18 @@ fn test_node_multiple_contract_billing_cycles() {
         ));
         let twin_id = 2;
 
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11);
-        pool_state
-            .write()
-            .should_call_bill_contract(2, Ok(Pays::Yes.into()), 11);
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            11,
+        );
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            2,
+            Ok(Pays::Yes.into()),
+            11,
+        );
         push_contract_resources_used(1);
         push_contract_resources_used(2);
 
@@ -1274,9 +1307,13 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
         let twin_id = 2;
 
         for i in 0..5 {
-            pool_state
-                .write()
-                .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11 + i * 10);
+            let block_number = 11 + i * 10;
+            pool_state.write().should_call_bill_contract(
+                block_number % BillingFrequency::get(),
+                1,
+                Ok(Pays::Yes.into()),
+                block_number,
+            );
         }
         push_contract_resources_used(1);
 
@@ -1367,10 +1404,12 @@ fn test_node_contract_only_public_ip_billing_cycles() {
         let twin_id = 2;
 
         for i in 0..5 {
+            let block_number = 11 + i * 10;
             pool_state.write().should_call_bill_contract(
+                block_number % BillingFrequency::get(),
                 contract_id,
                 Ok(Pays::Yes.into()),
-                11 + i * 10,
+                block_number,
             );
         }
 
@@ -1419,10 +1458,12 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
 
         // 2 cycles for billing
         for i in 0..2 {
+            let block_number = 11 + i * 10;
             pool_state.write().should_call_bill_contract(
+                block_number % BillingFrequency::get(),
                 contract_id,
                 Ok(Pays::Yes.into()),
-                11 + i * 10,
+                block_number,
             );
         }
         push_contract_resources_used(1);
@@ -1481,16 +1522,22 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
         push_contract_resources_used(1);
 
         let (amount_due_1, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
-        pool_state
-            .write()
-            .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 11);
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            contract_id,
+            Ok(Pays::Yes.into()),
+            11,
+        );
         run_to_block(11, Some(&mut pool_state));
         check_report_cost(1, amount_due_1, 11, discount_received);
 
         let (amount_due_2, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
-        pool_state
-            .write()
-            .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 21);
+        pool_state.write().should_call_bill_contract(
+            21 % BillingFrequency::get(),
+            contract_id,
+            Ok(Pays::Yes.into()),
+            21,
+        );
         run_to_block(21, Some(&mut pool_state));
         check_report_cost(1, amount_due_2, 21, discount_received);
 
@@ -1516,9 +1563,12 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
             1
         ));
 
-        pool_state
-            .write()
-            .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 31);
+        pool_state.write().should_call_bill_contract(
+            31 % BillingFrequency::get(),
+            contract_id,
+            Ok(Pays::Yes.into()),
+            31,
+        );
         run_to_block(31, Some(&mut pool_state));
 
         // After canceling contract, and not being able to pay for the remainder of the cycle
@@ -1553,16 +1603,22 @@ fn test_node_contract_out_of_funds_should_move_state_to_graceperiod_works() {
         push_contract_resources_used(1);
 
         // cycle 1
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11);
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            11,
+        );
         run_to_block(11, Some(&mut pool_state));
 
         // cycle 2
         // user does not have enough funds to pay for 2 cycles
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 21);
+        pool_state.write().should_call_bill_contract(
+            21 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            21,
+        );
         run_to_block(21, Some(&mut pool_state));
 
         let c1 = SmartContractModule::contracts(1).unwrap();
@@ -1601,9 +1657,13 @@ fn test_restore_node_contract_in_grace_works() {
         ));
 
         for i in 0..6 {
-            pool_state
-                .write()
-                .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11 + i * 10);
+            let block_number = 11 + i * 10;
+            pool_state.write().should_call_bill_contract(
+                block_number % BillingFrequency::get(),
+                1,
+                Ok(Pays::Yes.into()),
+                block_number,
+            );
         }
         push_contract_resources_used(1);
 
@@ -1665,16 +1725,22 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
         push_contract_resources_used(1);
 
         // cycle 1
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11);
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            11,
+        );
         run_to_block(11, Some(&mut pool_state));
 
         // cycle 2
         // user does not have enough funds to pay for 2 cycles
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 21);
+        pool_state.write().should_call_bill_contract(
+            21 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            21,
+        );
         run_to_block(21, Some(&mut pool_state));
 
         let c1 = SmartContractModule::contracts(1).unwrap();
@@ -1695,9 +1761,13 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
 
         // grace period stops after 100 blocknumbers, so after 121
         for i in 1..11 {
-            pool_state
-                .write()
-                .should_call_bill_contract(1, Ok(Pays::Yes.into()), 21 + i * 10);
+            let block_number = 21 + i * 10;
+            pool_state.write().should_call_bill_contract(
+                block_number % BillingFrequency::get(),
+                1,
+                Ok(Pays::Yes.into()),
+                block_number,
+            );
         }
 
         for i in 1..11 {
@@ -1738,9 +1808,12 @@ fn test_name_contract_billing() {
 
         // let mature 11 blocks
         // because we bill every 10 blocks
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11);
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            11,
+        );
         run_to_block(11, Some(&mut pool_state));
 
         // the contractbill event should look like:
@@ -1785,9 +1858,12 @@ fn test_rent_contract_billing() {
             types::ContractData::RentContract(rent_contract)
         );
 
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11);
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            11,
+        );
         run_to_block(11, Some(&mut pool_state));
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 10);
@@ -1818,9 +1894,12 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
             types::ContractData::RentContract(rent_contract)
         );
 
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11);
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            11,
+        );
         run_to_block(11, Some(&mut pool_state));
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 10);
@@ -1851,9 +1930,12 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
         // cancel_contract. The contract id will still be in ContractsToBillAt
         // but the contract itself will no longer exist
         // But the
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 21);
+        pool_state.write().should_call_bill_contract(
+            21 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            21,
+        );
         run_to_block(22, Some(&mut pool_state));
 
         // Last amount due is the same as the first one
@@ -1938,12 +2020,18 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
             None
         ));
         push_contract_resources_used(2);
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11);
-        pool_state
-            .write()
-            .should_call_bill_contract(2, Ok(Pays::Yes.into()), 11);
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            11,
+        );
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            2,
+            Ok(Pays::Yes.into()),
+            11,
+        );
         run_to_block(11, Some(&mut pool_state));
 
         let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 10);
@@ -1986,16 +2074,19 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         push_contract_resources_used(2);
 
         // run 12 cycles, contracts should cancel at 11th due to lack of funds
-        for i in 1..=11 {
+        for i in 0..11 {
+            let block_number = 11 + i * 10;
             pool_state.write().should_call_bill_contract(
+                block_number % BillingFrequency::get(),
                 1,
                 Ok(Pays::Yes.into()),
-                start_block + i * BillingFrequency::get(),
+                block_number,
             );
             pool_state.write().should_call_bill_contract(
+                block_number % BillingFrequency::get(),
                 2,
                 Ok(Pays::Yes.into()),
-                start_block + i * BillingFrequency::get(),
+                block_number,
             );
         }
         for i in 1..=11 {
@@ -2085,12 +2176,18 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
         ));
 
         // 2 contracts => we expect 2 calls to bill_contract
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11);
-        pool_state
-            .write()
-            .should_call_bill_contract(2, Ok(Pays::Yes.into()), 11);
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            11,
+        );
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            2,
+            Ok(Pays::Yes.into()),
+            11,
+        );
         run_to_block(11, Some(&mut pool_state));
 
         // check contract 1 costs (Rent Contract)
@@ -2130,9 +2227,12 @@ fn test_rent_contract_out_of_funds_should_move_state_to_graceperiod_works() {
 
         // cycle 1
         // user does not have enough funds to pay for 1 cycle
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11);
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            11,
+        );
         run_to_block(11, Some(&mut pool_state));
 
         let c1 = SmartContractModule::contracts(1).unwrap();
@@ -2169,9 +2269,12 @@ fn test_restore_rent_contract_in_grace_works() {
         ));
 
         // cycle 1
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11);
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            11,
+        );
         run_to_block(11, Some(&mut pool_state));
 
         let c1 = SmartContractModule::contracts(1).unwrap();
@@ -2190,27 +2293,39 @@ fn test_restore_rent_contract_in_grace_works() {
             }))
         );
 
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 21);
+        pool_state.write().should_call_bill_contract(
+            21 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            21,
+        );
         run_to_block(21, Some(&mut pool_state));
 
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 31);
+        pool_state.write().should_call_bill_contract(
+            31 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            31,
+        );
         run_to_block(31, Some(&mut pool_state));
 
         // Transfer some balance to the owner of the contract to trigger the grace period to stop
         Balances::transfer(RuntimeOrigin::signed(bob()), charlie(), 100000000).unwrap();
 
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 41);
+        pool_state.write().should_call_bill_contract(
+            31 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            41,
+        );
         run_to_block(41, Some(&mut pool_state));
 
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 51);
+        pool_state.write().should_call_bill_contract(
+            51 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            51,
+        );
         run_to_block(51, Some(&mut pool_state));
 
         let c1 = SmartContractModule::contracts(1).unwrap();
@@ -2243,12 +2358,18 @@ fn test_restore_rent_contract_and_node_contracts_in_grace_works() {
         push_contract_resources_used(2);
 
         // cycle 1
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11);
-        pool_state
-            .write()
-            .should_call_bill_contract(2, Ok(Pays::Yes.into()), 11);
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            11,
+        );
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            2,
+            Ok(Pays::Yes.into()),
+            11,
+        );
         run_to_block(11, Some(&mut pool_state));
 
         let c1 = SmartContractModule::contracts(1).unwrap();
@@ -2278,39 +2399,63 @@ fn test_restore_rent_contract_and_node_contracts_in_grace_works() {
             }))
         );
 
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 21);
-        pool_state
-            .write()
-            .should_call_bill_contract(2, Ok(Pays::Yes.into()), 21);
+        pool_state.write().should_call_bill_contract(
+            21 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            21,
+        );
+        pool_state.write().should_call_bill_contract(
+            21 % BillingFrequency::get(),
+            2,
+            Ok(Pays::Yes.into()),
+            21,
+        );
         run_to_block(22, Some(&mut pool_state));
 
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 31);
-        pool_state
-            .write()
-            .should_call_bill_contract(2, Ok(Pays::Yes.into()), 31);
+        pool_state.write().should_call_bill_contract(
+            31 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            31,
+        );
+        pool_state.write().should_call_bill_contract(
+            31 % BillingFrequency::get(),
+            2,
+            Ok(Pays::Yes.into()),
+            31,
+        );
         run_to_block(32, Some(&mut pool_state));
 
         // Transfer some balance to the owner of the contract to trigger the grace period to stop
         Balances::transfer(RuntimeOrigin::signed(bob()), charlie(), 100000000).unwrap();
 
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 41);
-        pool_state
-            .write()
-            .should_call_bill_contract(2, Ok(Pays::Yes.into()), 41);
+        pool_state.write().should_call_bill_contract(
+            41 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            41,
+        );
+        pool_state.write().should_call_bill_contract(
+            41 % BillingFrequency::get(),
+            2,
+            Ok(Pays::Yes.into()),
+            41,
+        );
         run_to_block(42, Some(&mut pool_state));
 
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 51);
-        pool_state
-            .write()
-            .should_call_bill_contract(2, Ok(Pays::Yes.into()), 51);
+        pool_state.write().should_call_bill_contract(
+            51 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            51,
+        );
+        pool_state.write().should_call_bill_contract(
+            51 % BillingFrequency::get(),
+            2,
+            Ok(Pays::Yes.into()),
+            51,
+        );
         run_to_block(52, Some(&mut pool_state));
 
         let c1 = SmartContractModule::contracts(1).unwrap();
@@ -2357,9 +2502,12 @@ fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works
         ));
 
         // cycle 1
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11);
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            11,
+        );
         run_to_block(11, Some(&mut pool_state));
 
         let c1 = SmartContractModule::contracts(1).unwrap();
@@ -2381,9 +2529,13 @@ fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works
         // run 12 cycles, after 10 cycles grace period has finished so no more
         // billing!
         for i in 0..11 {
-            pool_state
-                .write()
-                .should_call_bill_contract(1, Ok(Pays::Yes.into()), 21 + i * 10);
+            let block_number = 21 + i * 10;
+            pool_state.write().should_call_bill_contract(
+                block_number % BillingFrequency::get(),
+                1,
+                Ok(Pays::Yes.into()),
+                block_number,
+            );
         }
         for i in 0..12 {
             run_to_block(21 + i * 10, Some(&mut pool_state));
@@ -2420,12 +2572,18 @@ fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
         push_contract_resources_used(2);
 
         // 2 contracts => 2 calls to bill_contract
-        pool_state
-            .write()
-            .should_call_bill_contract(1, Ok(Pays::Yes.into()), 11);
-        pool_state
-            .write()
-            .should_call_bill_contract(2, Ok(Pays::Yes.into()), 11);
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            1,
+            Ok(Pays::Yes.into()),
+            11,
+        );
+        pool_state.write().should_call_bill_contract(
+            11 % BillingFrequency::get(),
+            2,
+            Ok(Pays::Yes.into()),
+            11,
+        );
         run_to_block(11, Some(&mut pool_state));
 
         run_to_block(16, Some(&mut pool_state));
