@@ -1620,9 +1620,6 @@ impl<T: Config> Pallet<T> {
         index: u64,
         contract_id: u64,
     ) -> Result<(), DispatchErrorWithPostInfo> {
-        // let index = Self::get_current_billing_loop_index()
-        //     .checked_sub(1)
-        //     .unwrap_or(0);
         let mut contract_ids = ContractsToBillAt::<T>::get(index);
 
         ensure!(
