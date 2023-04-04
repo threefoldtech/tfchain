@@ -12,7 +12,7 @@ var (
 )
 
 func (s *Substrate) IsValidator(identity Identity) (exists bool, err error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return false, err
 	}

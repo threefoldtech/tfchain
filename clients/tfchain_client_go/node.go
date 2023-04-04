@@ -368,7 +368,7 @@ type NodeExtra struct {
 
 // GetNodeByTwinID gets a node by twin id
 func (s *Substrate) GetNodeByTwinID(twin uint32) (uint32, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return 0, err
 	}
@@ -395,7 +395,7 @@ func (s *Substrate) GetNodeByTwinID(twin uint32) (uint32, error) {
 
 // GetNode with id
 func (s *Substrate) GetNode(id uint32) (*Node, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return nil, err
 	}
@@ -419,7 +419,7 @@ type ScannedNode struct {
 }
 
 func (s *Substrate) ScanNodes(ctx context.Context, from, to uint32) (<-chan ScannedNode, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return nil, err
 	}
@@ -466,7 +466,7 @@ func (s *Substrate) ScanNodes(ctx context.Context, from, to uint32) (<-chan Scan
 
 // GetNodes gets nodes' IDs using farm id
 func (s *Substrate) GetNodes(farmID uint32) ([]uint32, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return []uint32{}, err
 	}
@@ -520,7 +520,7 @@ func (s *Substrate) getNode(cl Conn, key types.StorageKey) (*Node, error) {
 // CreateNode creates a node, this ignores public_config since
 // this is only setable by the farmer
 func (s *Substrate) CreateNode(identity Identity, node Node) (uint32, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return 0, err
 	}
@@ -554,7 +554,7 @@ func (s *Substrate) CreateNode(identity Identity, node Node) (uint32, error) {
 // UpdateNode updates a node, this ignores public_config and only keep the value
 // set by the farmer
 func (s *Substrate) UpdateNode(identity Identity, node Node) (uint32, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return 0, err
 	}
@@ -593,7 +593,7 @@ func (s *Substrate) UpdateNode(identity Identity, node Node) (uint32, error) {
 
 // UpdateNodeUptime updates the node uptime to given value
 func (s *Substrate) UpdateNodeUptime(identity Identity, uptime uint64) (hash types.Hash, err error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return hash, err
 	}
@@ -614,7 +614,7 @@ func (s *Substrate) UpdateNodeUptime(identity Identity, uptime uint64) (hash typ
 
 // GetNode with id
 func (s *Substrate) GetLastNodeID() (uint32, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return 0, err
 	}
@@ -643,7 +643,7 @@ func (s *Substrate) GetLastNodeID() (uint32, error) {
 
 // SetNodeCertificate sets the node certificate type
 func (s *Substrate) SetNodeCertificate(sudo Identity, id uint32, cert NodeCertification) error {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return err
 	}
@@ -669,7 +669,7 @@ func (s *Substrate) SetNodeCertificate(sudo Identity, id uint32, cert NodeCertif
 
 // UpdateNodeUptime updates the node uptime to given value
 func (s *Substrate) SetNodePowerState(identity Identity, up bool) (hash types.Hash, err error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return hash, err
 	}
@@ -694,7 +694,7 @@ func (s *Substrate) SetNodePowerState(identity Identity, up bool) (hash types.Ha
 }
 
 func (s *Substrate) GetPowerTarget(nodeID uint32) (power NodePower, err error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return power, err
 	}

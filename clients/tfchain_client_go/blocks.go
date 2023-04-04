@@ -6,7 +6,7 @@ import (
 )
 
 func (s *Substrate) GetCurrentHeight() (uint32, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return 0, err
 	}
@@ -31,7 +31,7 @@ func (s *Substrate) GetCurrentHeight() (uint32, error) {
 }
 
 func (s *Substrate) FetchEventsForBlockRange(start uint32, end uint32) (types.StorageKey, []types.StorageChangeSet, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -60,7 +60,7 @@ func (s *Substrate) FetchEventsForBlockRange(start uint32, end uint32) (types.St
 }
 
 func (s *Substrate) GetEventsForBlock(start uint32) (*EventRecords, error) {
-	cl, _, err := s.getClient()
+	cl, _, err := s.GetClient()
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (s *Substrate) GetEventsForBlock(start uint32) (*EventRecords, error) {
 }
 
 func (s *Substrate) GetBlock(block types.Hash) (*types.SignedBlock, error) {
-	cl, _, err := s.getClient()
+	cl, _, err := s.GetClient()
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func (s *Substrate) GetBlock(block types.Hash) (*types.SignedBlock, error) {
 }
 
 func (s *Substrate) GetBlockByNumber(blockNumber types.U32) (*types.SignedBlock, error) {
-	cl, _, err := s.getClient()
+	cl, _, err := s.GetClient()
 	if err != nil {
 		return nil, err
 	}

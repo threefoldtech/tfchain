@@ -72,7 +72,7 @@ func (r ServiceContractState) Encode(encoder scale.Encoder) (err error) {
 
 // ServiceContractCreate creates a service contract
 func (s *Substrate) ServiceContractCreate(identity Identity, service AccountID, consumer AccountID) (uint64, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return 0, err
 	}
@@ -100,7 +100,7 @@ func (s *Substrate) ServiceContractCreate(identity Identity, service AccountID, 
 
 // ServiceContractSetMetadata sets metadata for a service contract
 func (s *Substrate) ServiceContractSetMetadata(identity Identity, contract uint64, metadata string) error {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return err
 	}
@@ -123,7 +123,7 @@ func (s *Substrate) ServiceContractSetMetadata(identity Identity, contract uint6
 
 // ServiceContractSetFees sets fees for a service contract
 func (s *Substrate) ServiceContractSetFees(identity Identity, contract uint64, base_fee uint64, variable_fee uint64) error {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return err
 	}
@@ -146,7 +146,7 @@ func (s *Substrate) ServiceContractSetFees(identity Identity, contract uint64, b
 
 // ServiceContractApprove approves a service contract
 func (s *Substrate) ServiceContractApprove(identity Identity, contract uint64) error {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return err
 	}
@@ -169,7 +169,7 @@ func (s *Substrate) ServiceContractApprove(identity Identity, contract uint64) e
 
 // ServiceContractReject rejects a service contract
 func (s *Substrate) ServiceContractReject(identity Identity, contract uint64) error {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return err
 	}
@@ -192,7 +192,7 @@ func (s *Substrate) ServiceContractReject(identity Identity, contract uint64) er
 
 // ServiceContractCancel cancels a service contract
 func (s *Substrate) ServiceContractCancel(identity Identity, contract uint64) error {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return err
 	}
@@ -215,7 +215,7 @@ func (s *Substrate) ServiceContractCancel(identity Identity, contract uint64) er
 
 // ServiceContractBill bills a service contract
 func (s *Substrate) ServiceContractBill(identity Identity, contract uint64, variable_amount uint64, metadata string) error {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return err
 	}
@@ -238,7 +238,7 @@ func (s *Substrate) ServiceContractBill(identity Identity, contract uint64, vari
 
 // GetServiceContract gets a service contract given the service contract id
 func (s *Substrate) GetServiceContract(id uint64) (*ServiceContract, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +272,7 @@ func (s *Substrate) GetServiceContract(id uint64) (*ServiceContract, error) {
 
 // GetServiceContractID gets the current value of storage ServiceContractID
 func (s *Substrate) GetServiceContractID() (uint64, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return 0, err
 	}

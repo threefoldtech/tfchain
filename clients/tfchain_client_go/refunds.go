@@ -15,7 +15,7 @@ type RefundTransaction struct {
 }
 
 func (s *Substrate) CreateRefundTransactionOrAddSig(identity Identity, tx_hash string, target string, amount int64, signature string, stellarAddress string, sequence_number uint64) error {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return err
 	}
@@ -37,7 +37,7 @@ func (s *Substrate) CreateRefundTransactionOrAddSig(identity Identity, tx_hash s
 }
 
 func (s *Substrate) SetRefundTransactionExecuted(identity Identity, txHash string) error {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func (s *Substrate) SetRefundTransactionExecuted(identity Identity, txHash strin
 }
 
 func (s *Substrate) IsRefundedAlready(txHash string) (exists bool, err error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return false, err
 	}
@@ -87,7 +87,7 @@ func (s *Substrate) IsRefundedAlready(txHash string) (exists bool, err error) {
 }
 
 func (s *Substrate) GetRefundTransaction(txHash string) (*RefundTransaction, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return nil, err
 	}

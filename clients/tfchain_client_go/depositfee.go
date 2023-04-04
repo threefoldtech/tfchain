@@ -10,7 +10,7 @@ import (
 var ErrDepositFeeNotFound = fmt.Errorf("deposit fee not found")
 
 func (s *Substrate) GetDepositFee() (int64, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return 0, err
 	}

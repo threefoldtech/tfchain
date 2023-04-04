@@ -14,7 +14,7 @@ type TermsAndConditions struct {
 
 // AcceptTermsAndConditions accepts terms and conditions
 func (s *Substrate) AcceptTermsAndConditions(identity Identity, documentLink string, documentHash string) error {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return err
 	}
@@ -37,7 +37,7 @@ func (s *Substrate) AcceptTermsAndConditions(identity Identity, documentLink str
 
 // SignedTermsAndConditions return list of signed terms and conditions for this account
 func (s *Substrate) SignedTermsAndConditions(account AccountID) ([]TermsAndConditions, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return nil, err
 	}

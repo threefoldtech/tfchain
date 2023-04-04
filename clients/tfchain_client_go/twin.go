@@ -70,7 +70,7 @@ func (r *OptionRelay) Decode(decoder scale.Decoder) error {
 
 // GetTwinByPubKey gets a twin with public key
 func (s *Substrate) GetTwinByPubKey(pk []byte) (uint32, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return 0, err
 	}
@@ -94,7 +94,7 @@ func (s *Substrate) GetTwinByPubKey(pk []byte) (uint32, error) {
 
 // GetTwin gets a twin
 func (s *Substrate) GetTwin(id uint32) (*Twin, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func (s *Substrate) GetTwin(id uint32) (*Twin, error) {
 
 // CreateTwin creates a twin
 func (s *Substrate) CreateTwin(identity Identity, relay string, pk []byte) (uint32, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return 0, err
 	}
@@ -156,7 +156,7 @@ func (s *Substrate) CreateTwin(identity Identity, relay string, pk []byte) (uint
 
 // UpdateTwin updates a twin
 func (s *Substrate) UpdateTwin(identity Identity, relay string, pk []byte) (uint32, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return 0, err
 	}

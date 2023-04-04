@@ -7,7 +7,7 @@ import (
 
 // GetZosVersion gets the latest version for each network
 func (s *Substrate) GetZosVersion() (string, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return "", err
 	}

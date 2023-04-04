@@ -20,7 +20,7 @@ type MintTransaction struct {
 }
 
 func (s *Substrate) IsMintedAlready(mintTxID string) (exists bool, err error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return false, err
 	}
@@ -50,7 +50,7 @@ func (s *Substrate) IsMintedAlready(mintTxID string) (exists bool, err error) {
 }
 
 func (s *Substrate) ProposeOrVoteMintTransaction(identity Identity, txID string, target AccountID, amount *big.Int) error {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return err
 	}

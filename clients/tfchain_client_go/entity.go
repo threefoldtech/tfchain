@@ -17,7 +17,7 @@ type Entity struct {
 
 // GetEntity gets a entity with ID
 func (s *Substrate) GetEntity(id uint32) (*Entity, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return nil, err
 	}

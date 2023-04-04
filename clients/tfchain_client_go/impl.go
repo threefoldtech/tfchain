@@ -174,12 +174,8 @@ func (s *Substrate) Close() {
 	s.close(s)
 }
 
-func (s *Substrate) getClient() (Conn, Meta, error) {
-	return s.cl, s.meta, nil
-}
-
 func (s *Substrate) GetClient() (Conn, Meta, error) {
-	return s.getClient()
+	return s.cl, s.meta, nil
 }
 
 func (s *Substrate) getVersion(b types.StorageDataRaw) (uint32, error) {
@@ -192,7 +188,7 @@ func (s *Substrate) getVersion(b types.StorageDataRaw) (uint32, error) {
 }
 
 func (s *Substrate) Time() (t time.Time, err error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return t, err
 	}

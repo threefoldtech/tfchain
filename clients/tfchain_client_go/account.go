@@ -5,6 +5,7 @@ import (
 	"crypto/ed25519"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 	"time"
 
@@ -21,6 +22,15 @@ import (
 
 const (
 	network = 42
+
+	// TFT in uTFT
+	TFT = 10_000_000 // uTFT
+	// ReactivateThreshold is threshold to reactivate the account if funds went below that
+	ReactivateThreshold = TFT * 0.001 // uTFT
+)
+
+var (
+	reactivateAt = big.NewInt(ReactivateThreshold)
 )
 
 // AccountID type
@@ -144,16 +154,22 @@ func (s *Substrate) activateAccount(identity Identity, activationURL string) err
 }
 
 // EnsureAccount makes sure account is available on blockchain
-// if not, it uses activation service to create one
+// if not, it uses activation service to create one.
+// EnsureAccount is safe to call on already activated accounts and it's mostly
+// a NO-OP operation unless the account funds are very low, it will then make
+// sure to reactivate the account (fund it) if the free tokes are <= ReactivateThreefold uTFT
 func (s *Substrate) EnsureAccount(identity Identity, activationURL, termsAndConditionsLink, terminsAndConditionsHash string) (info AccountInfo, err error) {
-	cl, meta, err := s.getClient()
+	log.Debug().Str("account", identity.Address()).Msg("ensuring account")
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return info, err
 	}
 	info, err = s.getAccount(cl, meta, identity)
-	if errors.Is(err, ErrAccountNotFound) {
+	// if account does not exist OR account has tokes less that reactivateAt
+	// then we activate the account.
+	if errors.Is(err, ErrAccountNotFound) || info.Data.Free.Cmp(reactivateAt) <= 0 {
 		// account activation
-		log.Debug().Msg("account not found ... activating")
+		log.Info().Uint64("funds", info.Data.Free.Uint64()).Str("account", identity.Address()).Msg("activating account")
 		if err = s.activateAccount(identity, activationURL); err != nil {
 			return
 		}
@@ -171,7 +187,6 @@ func (s *Substrate) EnsureAccount(identity Identity, activationURL, termsAndCond
 		}, exp)
 	}
 
-	log.Info().Str("address", identity.Address()).Msg("account")
 	account, err := FromAddress(identity.Address())
 	if err != nil {
 		return info, errors.Wrap(err, "failed to get account id for identity")
@@ -318,7 +333,7 @@ func (s *Substrate) getAccount(cl Conn, meta Meta, identity Identity) (info Acco
 
 // GetAccount gets account info with secure key
 func (s *Substrate) GetAccount(identity Identity) (info AccountInfo, err error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return info, err
 	}
@@ -328,7 +343,7 @@ func (s *Substrate) GetAccount(identity Identity) (info AccountInfo, err error) 
 
 // GetAccountPublicInfo gets the info for a given account ID
 func (s *Substrate) GetAccountPublicInfo(account AccountID) (info AccountInfo, err error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return
 	}
@@ -351,7 +366,7 @@ func (s *Substrate) GetAccountPublicInfo(account AccountID) (info AccountInfo, e
 
 // GetBalance gets the balance for a given account ID
 func (s *Substrate) GetBalance(account AccountID) (balance Balance, err error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return
 	}

@@ -23,7 +23,7 @@ type BurnTransaction struct {
 }
 
 func (s *Substrate) ProposeBurnTransactionOrAddSig(identity Identity, txID uint64, target string, amount *big.Int, signature string, stellarAddress string, sequence_number uint64) error {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func (s *Substrate) ProposeBurnTransactionOrAddSig(identity Identity, txID uint6
 }
 
 func (s *Substrate) SetBurnTransactionExecuted(identity Identity, txID uint64) error {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (s *Substrate) SetBurnTransactionExecuted(identity Identity, txID uint64) e
 }
 
 func (s *Substrate) GetBurnTransaction(burnTransactionID types.U64) (*BurnTransaction, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (s *Substrate) GetBurnTransaction(burnTransactionID types.U64) (*BurnTransa
 }
 
 func (s *Substrate) IsBurnedAlready(burnTransactionID types.U64) (exists bool, err error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return false, err
 	}

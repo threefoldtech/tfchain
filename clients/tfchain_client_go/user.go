@@ -17,7 +17,7 @@ type User struct {
 
 // GetUser with id
 func (s *Substrate) GetUser(id uint32) (*User, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return nil, err
 	}

@@ -206,7 +206,7 @@ type Contract struct {
 
 // CreateNodeContract creates a contract for deployment
 func (s *Substrate) CreateNodeContract(identity Identity, node uint32, body string, hash string, publicIPs uint32, solutionProviderID *uint64) (uint64, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return 0, err
 	}
@@ -235,7 +235,7 @@ func (s *Substrate) CreateNodeContract(identity Identity, node uint32, body stri
 
 // CreateNameContract creates a contract for deployment
 func (s *Substrate) CreateNameContract(identity Identity, name string) (uint64, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return 0, err
 	}
@@ -258,7 +258,7 @@ func (s *Substrate) CreateNameContract(identity Identity, name string) (uint64, 
 
 // CreateRentContract creates a rent contract on a node
 func (s *Substrate) CreateRentContract(identity Identity, node uint32, solutionProviderID *uint64) (uint64, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return 0, err
 	}
@@ -286,7 +286,7 @@ func (s *Substrate) CreateRentContract(identity Identity, node uint32, solutionP
 
 // UpdateNodeContract updates existing contract
 func (s *Substrate) UpdateNodeContract(identity Identity, contract uint64, body string, hash string) (uint64, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return 0, err
 	}
@@ -310,7 +310,7 @@ func (s *Substrate) UpdateNodeContract(identity Identity, contract uint64, body 
 
 // CancelContract creates a contract for deployment
 func (s *Substrate) CancelContract(identity Identity, contract uint64) error {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return err
 	}
@@ -332,7 +332,7 @@ func (s *Substrate) CancelContract(identity Identity, contract uint64) error {
 // SetContractConsumption can only be called by the node that owns the contract to set the used
 // resources associated with the node.
 func (s *Substrate) SetContractConsumption(identity Identity, resources ...ContractResources) error {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return err
 	}
@@ -355,7 +355,7 @@ func (s *Substrate) SetContractConsumption(identity Identity, resources ...Contr
 
 // GetContract we should not have calls to create contract, instead only get
 func (s *Substrate) GetContract(id uint64) (*Contract, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return nil, err
 	}
@@ -375,7 +375,7 @@ func (s *Substrate) GetContract(id uint64) (*Contract, error) {
 
 // GetContractWithHash gets a contract given the node id and hash
 func (s *Substrate) GetContractWithHash(node uint32, hash HexHash) (uint64, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return 0, err
 	}
@@ -407,7 +407,7 @@ func (s *Substrate) GetContractWithHash(node uint32, hash HexHash) (uint64, erro
 
 // GetContractIDByNameRegistration gets a contract given the its name
 func (s *Substrate) GetContractIDByNameRegistration(name string) (uint64, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return 0, err
 	}
@@ -435,7 +435,7 @@ func (s *Substrate) GetContractIDByNameRegistration(name string) (uint64, error)
 
 // GetNodeContracts gets all contracts on a node (pk) in given state
 func (s *Substrate) GetNodeContracts(node uint32) ([]types.U64, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return nil, err
 	}
@@ -460,7 +460,7 @@ func (s *Substrate) GetNodeContracts(node uint32) ([]types.U64, error) {
 
 // GetNodeContracts gets all contracts on a node (pk) in given state
 func (s *Substrate) GetNodeRentContract(node uint32) (uint64, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return 0, err
 	}
@@ -533,7 +533,7 @@ func (s *NruConsumption) IsEmpty() bool {
 
 // Report send a capacity report to substrate
 func (s *Substrate) Report(identity Identity, consumptions []NruConsumption) (types.Hash, error) {
-	cl, meta, err := s.getClient()
+	cl, meta, err := s.GetClient()
 	if err != nil {
 		return types.Hash{}, err
 	}
