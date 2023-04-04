@@ -1,0 +1,39 @@
+{
+  "name": "substrate-funding-service",
+  "version": "0.0.1",
+  "description": "Substrate funding service",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon ./bin/www | pino-pretty",
+    "start-prod": "node ./bin/www",
+    "debug": "node --nolazy --inspect-brk=9229 ./bin/www",
+    "test": "standard"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/threefoldtech/substrate-activation-service.git"
+  },
+  "author": "Dylan Verstraete",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/threefoldtech/substrate-activation-service/issues"
+  },
+  "homepage": "https://github.com/threefoldtech/substrate-activation-service#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "express-pino-logger": "^6.0.0",
+    "http-errors": "^1.8.0",
+    "jsonschema": "^1.4.0",
+    "lodash": "^4.17.21",
+    "pino": "^6.11.3",
+    "tfgrid-api-client": "1.13.0"
+  },
+  "devDependencies": {
+    "husky": "^6.0.0",
+    "nodemon": "^2.0.7",
+    "pino-pretty": "^5.0.2",
+    "standard": "^16.0.3"
+  }
+}
