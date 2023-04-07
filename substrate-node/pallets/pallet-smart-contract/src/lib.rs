@@ -81,6 +81,7 @@ pub mod crypto {
 pub mod cost;
 pub mod migrations;
 pub mod name_contract;
+pub mod storage_state;
 pub mod types;
 pub mod weights;
 
