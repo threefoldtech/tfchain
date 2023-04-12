@@ -61,26 +61,21 @@ Test Start And Stop Network
 
     Tear Down Multi Node Network
 
-Test Create Update Delete Twin
-    [Documentation]    Testing api calls (create, update, delete) for managing twins
-    Setup Multi Node Network    log_name=test_create_update_delete_twin
+Test Create Update Twin
+    [Documentation]    Testing api calls (create, update) for managing twins
+    Setup Multi Node Network    log_name=test_create_update_twin
 
     User Accept Tc
 
-    Create Twin    ip=::1
+    Create Twin    relay=somerelay.io  pk=0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901
     ${twin} =    Get Twin    ${1}
     Should Not Be Equal    ${twin}    ${None}
-    Should Be Equal    ${twin}[ip]    ::1
+    Should Be Equal    ${twin}[relay]    somerelay.io
 
-    Update Twin    ip=0000:0000:0000:0000:0000:0000:0000:0001
+    Update Twin    relay=somerelay.io  pk=0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901
     ${twin} =    Get Twin    ${1}
     Should Not Be Equal    ${twin}    ${None}
-    Should Be Equal    ${twin}[ip]    0000:0000:0000:0000:0000:0000:0000:0001
-
-    Delete Twin    ${1}
-
-    ${twin} =    Get Twin    ${1}
-    Should Be Equal    ${twin}    ${None}
+    Should Be Equal    ${twin}[relay]    somerelay.io
 
     Tear Down Multi Node Network
 

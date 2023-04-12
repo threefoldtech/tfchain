@@ -50,6 +50,31 @@ fn test_create_node_contract_works() {
 }
 
 #[test]
+fn test_create_node_contract_on_offline_node_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+
+        assert_ok!(TfgridModule::change_power_state(
+            RuntimeOrigin::signed(alice()),
+            tfchain_support::types::Power::Down
+        ));
+
+        assert_noop!(
+            SmartContractModule::create_node_contract(
+                RuntimeOrigin::signed(alice()),
+                1,
+                generate_deployment_hash(),
+                get_deployment_data(),
+                0,
+                None
+            ),
+            Error::<TestRuntime>::NodeNotAvailableToDeploy
+        );
+    });
+}
+
+#[test]
 fn test_create_node_contract_with_public_ips_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
@@ -563,6 +588,25 @@ fn test_create_rent_contract_works() {
         assert_eq!(
             contract.contract_type,
             types::ContractData::RentContract(rent_contract)
+        );
+    });
+}
+
+#[test]
+fn test_create_rent_contract_on_offline_node_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_dedicated_farm_and_node();
+
+        assert_ok!(TfgridModule::change_power_state(
+            RuntimeOrigin::signed(alice()),
+            tfchain_support::types::Power::Down
+        ));
+
+        let node_id = 1;
+        assert_noop!(
+            SmartContractModule::create_rent_contract(RuntimeOrigin::signed(bob()), node_id, None),
+            Error::<TestRuntime>::NodeNotAvailableToDeploy
         );
     });
 }
@@ -1233,47 +1277,6 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
 
         let billing_info = SmartContractModule::contract_billing_information_by_id(1);
         assert_eq!(billing_info.amount_unbilled, 0);
-    });
-}
-
-#[test]
-fn test_node_contract_billing_fails() {
-    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
-    ext.execute_with(|| {
-        run_to_block(1, Some(&mut pool_state));
-        // Creates a farm and node and sets the price of tft to 0 which raises an error later
-        prepare_farm_and_node();
-
-        assert_ok!(SmartContractModule::create_node_contract(
-            RuntimeOrigin::signed(bob()),
-            1,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            1,
-            None
-        ));
-
-        let contracts_to_bill_at_block = SmartContractModule::contract_to_bill_at_block(1);
-        assert_eq!(contracts_to_bill_at_block.len(), 1);
-
-        let contract_id = contracts_to_bill_at_block[0];
-
-        // delete twin to make the billing fail
-        assert_ok!(TfgridModule::delete_twin(
-            RuntimeOrigin::signed(bob()),
-            SmartContractModule::contracts(contract_id).unwrap().twin_id,
-        ));
-
-        // the offchain worker should save the failed ids in local storage and try again
-        // in subsequent blocks (which will also fail)
-        for i in 1..3 {
-            pool_state.write().should_call_bill_contract(
-                1,
-                Err(Error::<TestRuntime>::TwinNotExists.into()),
-                1 + i * 10,
-            );
-            run_to_block(11 * i, Some(&mut pool_state));
-        }
     });
 }
 
@@ -3120,6 +3123,48 @@ fn test_percent() {
     assert_eq!(new_cost, 248);
 }
 
+macro_rules! test_calculate_discount {
+    ($($name:ident: $value:expr,)*) => {
+    $(
+        #[test]
+        fn $name() {
+            let (number_of_months, expected_discount_level) = $value;
+
+            let amount_due = 1000;
+            let seconds_elapsed = SECS_PER_HOUR; // amount due is relative to 1h
+            // Give just enough balance for targeted number of months at the rate of 1000 per hour
+            let balance = (amount_due * 24 * 30) * number_of_months;
+
+            let result = cost::calculate_discount::<TestRuntime>(
+                amount_due,
+                seconds_elapsed,
+                balance,
+                NodeCertification::Diy,
+            );
+
+            assert_eq!(
+                result,
+                (
+                    (U64F64::from_num(amount_due) * expected_discount_level.price_multiplier())
+                        .ceil()
+                        .to_num::<u64>(),
+                    expected_discount_level
+                )
+            );
+        }
+    )*
+    }
+}
+
+// Confirm expected discount level given a number of month of balance autonomy
+test_calculate_discount! {
+    test_calculate_discount_none_works: (1, types::DiscountLevel::None),
+    test_calculate_discount_default_works: (3, types::DiscountLevel::Default),
+    test_calculate_discount_bronze_works: (6, types::DiscountLevel::Bronze),
+    test_calculate_discount_silver_works: (12, types::DiscountLevel::Silver),
+    test_calculate_gold_discount_gold_works: (36, types::DiscountLevel::Gold),
+}
+
 // ***** HELPER FUNCTIONS ***** //
 // ---------------------------- //
 // ---------------------------- //
@@ -3402,8 +3447,14 @@ pub fn create_twin(origin: AccountId) {
         get_document_hash_input(b"some_hash"),
     ));
 
-    let ip = get_twin_ip_input(b"::1");
-    assert_ok!(TfgridModule::create_twin(RuntimeOrigin::signed(origin), ip));
+    let relay = get_relay_input(b"somerelay.io");
+    let pk =
+        get_public_key_input(b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901");
+    assert_ok!(TfgridModule::create_twin(
+        RuntimeOrigin::signed(origin),
+        relay,
+        pk
+    ));
 }
 
 fn create_farming_policies() {

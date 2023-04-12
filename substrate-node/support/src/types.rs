@@ -227,3 +227,40 @@ impl Default for NodeCertification {
         NodeCertification::Diy
     }
 }
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo, Default)]
+pub struct NodePower<B> {
+    pub state: PowerState<B>,
+    pub target: Power,
+}
+
+impl<B> NodePower<B> {
+    pub fn is_down(&self) -> bool {
+        matches!(self.state, PowerState::Down(_)) || matches!(self.target, Power::Down)
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
+pub enum PowerState<B> {
+    Up,
+    // Down holding the block when it has shut down
+    Down(B),
+}
+
+impl<B> Default for PowerState<B> {
+    fn default() -> Self {
+        PowerState::Up
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
+pub enum Power {
+    Up,
+    Down,
+}
+
+impl Default for Power {
+    fn default() -> Self {
+        Power::Up
+    }
+}

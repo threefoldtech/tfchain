@@ -5,11 +5,11 @@ use crate::{
     mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild,
     node::{CityName, CountryName, Location, SerialNumber},
     terms_cond::TermsAndConditions,
-    twin::TwinIp,
     weights, CityNameInput, Config, CountryNameInput, DocumentHashInput, DocumentLinkInput,
     DomainInput, FarmNameInput, Gw4Input, Gw6Input, InterfaceIpInput, InterfaceMacInput,
-    InterfaceNameInput, Ip4Input, Ip6Input, LatitudeInput, LongitudeInput, TwinIpInput,
+    InterfaceNameInput, Ip4Input, Ip6Input, LatitudeInput, LongitudeInput, PkInput, RelayInput,
 };
+use env_logger;
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
 use frame_system::EnsureRoot;
 use sp_core::{ed25519, sr25519, Pair, Public, H256};
@@ -105,7 +105,6 @@ parameter_types! {
 
 pub(crate) type TestTermsAndConditions = TermsAndConditions<TestRuntime>;
 
-pub(crate) type TestTwinIp = TwinIp<TestRuntime>;
 pub(crate) type TestFarmName = FarmName<TestRuntime>;
 
 pub(crate) type TestInterfaceName = InterfaceName<TestRuntime>;
@@ -124,7 +123,6 @@ impl Config for TestRuntime {
     type NodeChanged = NodeChanged;
     type PublicIpModifier = PublicIpModifier;
     type TermsAndConditions = TestTermsAndConditions;
-    type TwinIp = TestTwinIp;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
@@ -200,6 +198,8 @@ pub struct ExternalityBuilder;
 
 impl ExternalityBuilder {
     pub fn build() -> TestExternalities {
+        let _ = env_logger::try_init();
+
         let storage = frame_system::GenesisConfig::default()
             .build_storage::<TestRuntime>()
             .unwrap();
@@ -211,6 +211,8 @@ impl ExternalityBuilder {
 type AccountPublic = <MultiSignature as Verify>::Signer;
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
+    let _ = env_logger::try_init();
+
     let mut t = frame_system::GenesisConfig::default()
         .build_storage::<TestRuntime>()
         .unwrap();
@@ -229,16 +231,20 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     t.into()
 }
 
+pub(crate) fn get_relay_input(relay_input: &[u8]) -> RelayInput {
+    Some(BoundedVec::try_from(relay_input.to_vec()).expect("Invalid relay input."))
+}
+
+pub(crate) fn get_public_key_input(pk_input: &[u8]) -> PkInput {
+    Some(BoundedVec::try_from(pk_input.to_vec()).expect("Invalid document hash input."))
+}
+
 pub(crate) fn get_document_link_input(document_link_input: &[u8]) -> DocumentLinkInput {
     BoundedVec::try_from(document_link_input.to_vec()).expect("Invalid document link input.")
 }
 
 pub(crate) fn get_document_hash_input(document_hash_input: &[u8]) -> DocumentHashInput {
     BoundedVec::try_from(document_hash_input.to_vec()).expect("Invalid document hash input.")
-}
-
-pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {
-    BoundedVec::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
 }
 
 pub(crate) fn get_farm_name_input(farm_name_input: &[u8]) -> FarmNameInput<TestRuntime> {

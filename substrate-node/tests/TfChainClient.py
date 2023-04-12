@@ -128,11 +128,11 @@ class TfChainClient:
                                       })
         self._sign_extrinsic_submit_check_response(substrate, call, who)
 
-    def create_twin(self, ip: str = "::1", port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+    def create_twin(self, relay: str = "somerelay.io", pk: str = "0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901", port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         call = substrate.compose_call(
-            "TfgridModule", "create_twin", {"ip": ip})
+            "TfgridModule", "create_twin", {"relay": relay, "pk": pk})
         expected_events = [{
             "module_id": "TfgridModule",
             "event_id": "TwinStored"
@@ -140,26 +140,14 @@ class TfChainClient:
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
 
-    def update_twin(self, ip: str = "::1", port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+    def update_twin(self, relay: str = "somerelay.io", pk: str = "0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901", port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         call = substrate.compose_call("TfgridModule", "update_twin", {
-            "ip": ip})
+            "relay": relay, "pk": pk})
         expected_events = [{
             "module_id": "TfgridModule",
             "event_id": "TwinUpdated"
-        }]
-        self._sign_extrinsic_submit_check_response(
-            substrate, call, who, expected_events=expected_events)
-
-    def delete_twin(self, twin_id: int = 1, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
-        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
-
-        call = substrate.compose_call("TfgridModule", "delete_twin", {
-            "twin_id": twin_id})
-        expected_events = [{
-            "module_id": "TfgridModule",
-            "event_id": "TwinDeleted"
         }]
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
@@ -208,16 +196,16 @@ class TfChainClient:
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         call = substrate.compose_call("TfgridModule", "create_farm",
-                                      {
-                                          "name": f"{name}",
-                                          "public_ips": public_ips
-                                      })
+                                    {
+                                        "name": f"{name}",
+                                        "public_ips": public_ips
+                                    })
         expected_events = [{
             "module_id": "TfgridModule",
             "event_id": "FarmStored"
         }]
         self._sign_extrinsic_submit_check_response(
-            substrate, call, who, expected_events=expected_events)
+                substrate, call, who, expected_events=expected_events)
 
     def update_farm(self, id: int = 1, name: str = "", pricing_policy_id: int = 1, port: int = DEFAULT_PORT,
                     who: str = DEFAULT_SIGNER):

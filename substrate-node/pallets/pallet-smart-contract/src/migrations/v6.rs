@@ -1,6 +1,6 @@
 use crate::*;
 use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
-use log::debug;
+use log::{debug, info};
 use sp_std::marker::PhantomData;
 
 #[cfg(feature = "try-runtime")]

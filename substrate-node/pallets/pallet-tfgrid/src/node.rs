@@ -318,13 +318,6 @@ impl<T: Config> Clone for SerialNumber<T> {
     }
 }
 
-pub fn validate_serial_number(input: &[u8]) -> bool {
-    input == DEFAULT_SERIAL_NUMBER
-        || input.iter().all(|c| {
-            c.is_ascii_alphanumeric() || c.is_ascii_whitespace() || matches!(c, b'-' | b'_' | b'.')
-        })
-}
-
 #[test]
 fn test_validate_latitude_input_works() {
     assert_eq!(validate_latitude_input(b"90.0"), true);

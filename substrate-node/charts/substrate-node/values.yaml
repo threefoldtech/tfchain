@@ -3,7 +3,7 @@
 # Declare variables to be passed into your templates.
 
 image:
-  repository: tfchainnode
+  repository: ghcr.io/threefoldtech/tfchain
   pullPolicy: IfNotPresent
   tag: ''
 
@@ -40,15 +40,27 @@ service:
   port: 80
 
 name: 'tfchainnode01'
+
 port: 30333
+
 ws_port: 9944
+
 rpc_port: 9933
+
 is_validator: true
+
 chainspec: '/etc/chainspecs/dev/chainSpecRaw.json'
+
 ws_max_connections: 1048576
+
 #rpc_methods: "Unsafe"
+
 rpc_methods: 'safe'
-disable_offchain_worker: true
+
+# Archive will keep all history, otherwise only the last 256 blocks will be kept
+archive: true
+
+# Telemetry dashboard url
 # telemetry_url: ""
 
 keys: []

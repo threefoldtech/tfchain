@@ -1,5 +1,6 @@
 use codec::{Decode, Encode};
 use core::cmp::Ordering;
+use frame_support::{pallet_prelude::ConstU32, BoundedVec};
 use scale_info::TypeInfo;
 use sp_std::vec::Vec;
 use tfchain_support::types::{FarmCertification, NodeCertification};
@@ -20,11 +21,13 @@ pub enum StorageVersion {
     V11Struct,
     V12Struct,
     V13Struct,
+    V14Struct,
+    V15Struct,
 }
 
 impl Default for StorageVersion {
     fn default() -> StorageVersion {
-        StorageVersion::V13Struct
+        StorageVersion::V14Struct
     }
 }
 
@@ -38,17 +41,21 @@ pub struct Entity<AccountId, City, Country> {
     pub city: City,
 }
 
+pub const MAX_PK_LENGTH: u32 = 128; // limited to 128 bytes
+pub const MAX_RELAY_LENGTH: u32 = 1024; // limited to 1024 bytes (half of max url size)
+
 //digital twin
 #[derive(Clone, Encode, Decode, Debug, Eq, PartialEq, Default, TypeInfo)]
-pub struct Twin<TwinIp, AccountId> {
-    pub version: u32,
+pub struct Twin<AccountId> {
     pub id: u32,
-    //substrate account id = public key (32 bytes)
-    //also used by PAN network
+    // substrate account id = public key (32 bytes)
     pub account_id: AccountId,
-    pub ip: TwinIp,
-    //link to person's or companies who own this twin
+    // relay address (proxy)
+    pub relay: Option<BoundedVec<u8, ConstU32<MAX_RELAY_LENGTH>>>,
+    // link to person's or companies who own this twin
     pub entities: Vec<EntityProof>,
+    // public key of the encryption key used in rmb
+    pub pk: Option<BoundedVec<u8, ConstU32<MAX_PK_LENGTH>>>,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]

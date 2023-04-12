@@ -80,6 +80,8 @@ pub use pallet_validator;
 
 pub use pallet_dao;
 
+pub mod migrations;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -145,7 +147,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 126,
+    spec_version: 131,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -353,7 +355,6 @@ impl pallet_tfgrid::Config for Runtime {
     type NodeChanged = NodeChanged;
     type PublicIpModifier = SmartContractModule;
     type TermsAndConditions = pallet_tfgrid::terms_cond::TermsAndConditions<Runtime>;
-    type TwinIp = pallet_tfgrid::twin::TwinIp<Runtime>;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
     type FarmName = pallet_tfgrid::farm::FarmName<Runtime>;
@@ -765,11 +766,8 @@ pub type Executive = frame_executive::Executive<
 // All migrations executed on runtime upgrade as a nested tuple of types implementing
 // `OnRuntimeUpgrade`.
 type Migrations = (
-    pallet_smart_contract::migrations::v6::ContractMigrationV5<Runtime>,
-    pallet_tfgrid::migrations::v10::FixFarmNodeIndexMap<Runtime>,
-    pallet_tfgrid::migrations::v11::FixFarmingPolicy<Runtime>,
-    pallet_tfgrid::migrations::v12::InputValidation<Runtime>,
-    pallet_tfgrid::migrations::v13::FixPublicIP<Runtime>,
+    pallet_tfgrid::migrations::v14::FixFarmingPoliciesMap<Runtime>,
+    migrations::tfgrid_v15_smart_contract_v8::Migrate<Runtime>,
 );
 
 // follows Substrate's non destructive way of eliminating  otherwise required
@@ -781,7 +779,6 @@ extern crate frame_benchmarking;
 #[cfg(feature = "runtime-benchmarks")]
 mod benches {
     define_benchmarks!(
-        // KILT
         [pallet_smart_contract, SmartContractModule]
         // Substrate
         [frame_benchmarking::baseline, Baseline::<Runtime>]
