@@ -1,18 +1,12 @@
 name: Build runtime
 
 on: 
-  push:
-    branches:
-      - development
-    tags:
-      - '[0-9]+.[0-9]+.[0-9]+*'
-  pull_request:
+  release:
+    types: [published]
 
 jobs:
   srtool:
     runs-on: [self-hosted, tfchainrunner01]
-    #container:
-    #  image: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
@@ -41,17 +35,16 @@ jobs:
           cat tfchain-srtool-digest.json
           echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
 
-
-      # - name: Upload tfchain srtool json
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: tfchain-srtool-digest-json
-      #     path: tfchain-srtool-digest.json
-
-      # - name: Upload runtime
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: tfchain-runtime
-      #     path: |
-      #       substrate-node/${{ steps.srtool_build.outputs.wasm_compressed }}
+      - name: Upload tfchain srtool json
+        uses: actions/upload-artifact@v3
+        with:
+          name: tfchain-srtool-digest-json
+          path: tfchain-srtool-digest.json
+  
+      - name: Upload runtime
+        uses: actions/upload-artifact@v3
+        with:
+          name: tfchain-runtime
+          path: |
+            substrate-node/${{ steps.srtool_build.outputs.wasm_compressed }}
   
