@@ -11,10 +11,6 @@ on:
 jobs:
   srtool:
     runs-on: [self-hosted, tfchainrunner01]
-    container:
-      image: docker:latest
-      env:
-        DEBIAN_FRONTEND: noninteractive
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
