@@ -6,7 +6,7 @@ on:
   pull_request:
 jobs:
   build-and-test:
-    runs-on: [self-hosted, poc]
+    runs-on: [self-hosted, tfchainrunner01]
     container:
       image: threefolddev/tfchain:2
       env:
@@ -38,18 +38,18 @@ jobs:
           rustup target add wasm32-unknown-unknown --toolchain nightly-2022-05-11
           cargo +nightly-2022-05-11 build --release
 
-      # - name: Unit tests
-      #   run: |
-      #     cd substrate-node
-      #     cargo +nightly-2022-05-11 test --no-fail-fast
-      #     cd pallets
-      #     cargo +nightly-2022-05-11 test --no-fail-fast
+      - name: Unit tests
+        run: |
+          cd substrate-node
+          cargo +nightly-2022-05-11 test --no-fail-fast
+          cd pallets
+          cargo +nightly-2022-05-11 test --no-fail-fast
 
-      # - name: Integration tests
-      #   run: |
-      #     python3.10 -m pip install robotframework==5.0.1 cryptography==3.4.8 substrate-interface==1.4.0
-      #     cd substrate-node/tests
-      #     robot -d _output_tests/ .
+      - name: Integration tests
+        run: |
+          python3.10 -m pip install robotframework==5.0.1 cryptography==3.4.8 substrate-interface==1.4.0
+          cd substrate-node/tests
+          robot -d _output_tests/ .
 
       - uses: actions/upload-artifact@v3
         if: always()
