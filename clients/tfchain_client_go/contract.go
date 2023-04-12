@@ -316,7 +316,6 @@ func (s *Substrate) CancelContract(identity Identity, contract uint64) error {
 	}
 
 	c, err := types.NewCall(meta, "SmartContractModule.cancel_contract", contract)
-
 	if err != nil {
 		return errors.Wrap(err, "failed to cancel call")
 	}
@@ -324,6 +323,35 @@ func (s *Substrate) CancelContract(identity Identity, contract uint64) error {
 	_, err = s.Call(cl, meta, identity, c)
 	if err != nil {
 		return errors.Wrap(err, "failed to cancel contract")
+	}
+
+	return nil
+}
+
+// BatchCancelContract cancels a batch of contracts
+func (s *Substrate) BatchCancelContract(identity Identity, contracts []uint64) error {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return err
+	}
+
+	calls := make([]types.Call, 0)
+	for _, id := range contracts {
+		c, err := types.NewCall(meta, "SmartContractModule.cancel_contract", id)
+		if err != nil {
+			return err
+		}
+		calls = append(calls, c)
+	}
+
+	batchCall, err := types.NewCall(meta, "Utility.batch_all", calls)
+	if err != nil {
+		return errors.Wrap(err, "failed to create batch call")
+	}
+
+	_, err = s.Call(cl, meta, identity, batchCall)
+	if err != nil {
+		return errors.Wrap(err, "failed to cancel contracts")
 	}
 
 	return nil
