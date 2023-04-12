@@ -2,7 +2,6 @@ package substrate
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -124,8 +123,6 @@ func TestCancelBatch(t *testing.T) {
 	require.NoError(t, err)
 	_, err = cl.GetContract(contractID_2)
 	require.NoError(t, err)
-
-	time.Sleep(time.Second * 10)
 
 	err = cl.BatchCancelContract(identity, []uint64{contractID_1, contractID_2})
 	require.NoError(t, err)
