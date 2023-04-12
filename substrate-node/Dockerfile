@@ -24,8 +24,9 @@ RUN ldd /usr/local/bin/tfchain && \
 
 # Install CA certificates not present in base image
 RUN apt-get update
-RUN apt-get install -y curl
 RUN apt-get install -y ca-certificates
+# curl is a handy tool when you need to make an rpc call inside the container 
+RUN apt-get install -y curl
 
 # Shrinking
 RUN rm -rf /usr/lib/python* && \

@@ -9,7 +9,7 @@ use sp_std::marker::PhantomData;
 // 1: Y
 pub const MIN_CITY_NAME_LENGTH: u32 = 1;
 // 85: Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch
-pub const MAX_CITY_NAME_LENGTH: u32 = 58;
+pub const MAX_CITY_NAME_LENGTH: u32 = 100;
 pub const DEFAULT_CITY_NAME: &[u8] = b"Unknown";
 
 /// A city name in ASCI Characters.
@@ -67,7 +67,7 @@ impl<T: Config> Clone for CityName<T> {
 // 2: Allow country code like BE, FR, BR, ...
 pub const MIN_COUNTRY_NAME_LENGTH: u32 = 2;
 // 56: The United Kingdom of Great Britain and Northern Ireland
-pub const MAX_COUNTRY_NAME_LENGTH: u32 = 56;
+pub const MAX_COUNTRY_NAME_LENGTH: u32 = 100;
 pub const DEFAULT_COUNTRY_NAME: &[u8] = b"Unknown";
 
 /// A city name in ASCI Characters.

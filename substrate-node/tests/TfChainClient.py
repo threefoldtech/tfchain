@@ -13,7 +13,6 @@ TIMEOUT_WAIT_FOR_BLOCK = 6
 
 DEFAULT_SIGNER = "Alice"
 DEFAULT_PORT = 9945
-DEFAULT_SERIAL_NUMBER = "DefaultSerialNumber"
 
 FARM_CERTIFICATION_NOTCERTIFIED = "NotCertified"
 FARM_CERTIFICATION_GOLD = "Gold"
@@ -53,7 +52,7 @@ class TfChainClient:
         for event in events:
             if event["event_id"] == "Sudid" and "Err" in event["attributes"]["sudo_result"]:
                 raise Exception(event["attributes"]["sudo_result"])
-            
+
         for expected_event in expected_events:
             check = False
             for event in events:
@@ -90,11 +89,34 @@ class TfChainClient:
         self._check_events([event.value["event"]
                            for event in response.triggered_events], expected_events)
 
+    def get_account_name_from_twin_id(self, twin_id: int = 1, port: int = DEFAULT_PORT):
+        if twin_id == self.get_twin_id(port=port, who="Alice"):
+            return "Alice"
+        elif twin_id == self.get_twin_id(port=port, who="Bob"):
+            return "Bob"
+        elif twin_id == self.get_twin_id(port=port, who="Charlie"):
+            return "Charlie"
+        elif twin_id == self.get_twin_id(port=port, who="Dave"):
+            return "Dave"
+        elif twin_id == self.get_twin_id(port=port, who="Eve"):
+            return "Eve"
+        elif twin_id == self.get_twin_id(port=port, who="Ferdie"):
+            return "Ferdie"
+        return None
+
     def setup_predefined_account(self, who: str, port: int = DEFAULT_PORT):
         logging.info("Setting up predefined account %s (%s)", who,
                      PREDEFINED_KEYS[who].ss58_address)
         self.user_accept_tc(port=port, who=who)
         self.create_twin(port=port, who=who)
+
+    def get_twin_id(self, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+        substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
+
+        q = substrate.query("TfgridModule", "TwinIdByAccountID", [
+            PREDEFINED_KEYS[who].ss58_address])
+
+        return q.value
 
     def user_accept_tc(self, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
@@ -240,8 +262,8 @@ class TfChainClient:
 
     def create_node(self, farm_id: int = 1, hru: int = 0, sru: int = 0, cru: int = 0, mru: int = 0,
                     longitude: str = "", latitude: str = "", country: str = "", city: str = "", interfaces: list = [],
-                    secure_boot: bool = False, virtualized: bool = False, serial_number: str = DEFAULT_SERIAL_NUMBER,
-                    port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+                    secure_boot: bool = False, virtualized: bool = False, serial_number: str = "", port: int = DEFAULT_PORT,
+                    who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         params = {
@@ -274,8 +296,8 @@ class TfChainClient:
 
     def update_node(self, node_id: int = 1, farm_id: int = 1, hru: int = 0, sru: int = 0, cru: int = 0, mru: int = 0,
                     longitude: str = "", latitude: str = "", country: str = "", city: str = "",
-                    secure_boot: bool = False, virtualized: bool = False, serial_number: str = DEFAULT_SERIAL_NUMBER,
-                    port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+                    secure_boot: bool = False, virtualized: bool = False, serial_number: str = "", port: int = DEFAULT_PORT,
+                    who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         params = {
@@ -288,8 +310,8 @@ class TfChainClient:
                 "mru": mru * GIGABYTE
             },
             "location": {
-                "city": city,
                 "country": country,
+                "city": city,
                 "longitude": f"{longitude}",
                 "latitude": f"{latitude}"
             },
