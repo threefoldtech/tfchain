@@ -98,3 +98,32 @@ func TestGetRentContract(t *testing.T) {
 	err = cl.CancelContract(identity, contractID)
 	require.NoError(t, err)
 }
+
+func TestCancelBatch(t *testing.T) {
+	var nodeID uint32
+
+	cl := startLocalConnection(t)
+	defer cl.Close()
+
+	identity, err := NewIdentityFromSr25519Phrase(BobMnemonics)
+	require.NoError(t, err)
+
+	farmID, twinID := assertCreateFarm(t, cl)
+
+	nodeID = assertCreateNode(t, cl, farmID, twinID, identity)
+
+	require.NoError(t, err)
+
+	contractID_1, err := cl.CreateNodeContract(identity, nodeID, "", "adf503a0e016b0a74804c07494f87252", 0, nil)
+	require.NoError(t, err)
+	_, err = cl.GetContract(contractID_1)
+	require.NoError(t, err)
+
+	contractID_2, err := cl.CreateNodeContract(identity, nodeID, "", "adf503a0e016b0a74804c07494f87251", 0, nil)
+	require.NoError(t, err)
+	_, err = cl.GetContract(contractID_2)
+	require.NoError(t, err)
+
+	err = cl.BatchCancelContract(identity, []uint64{contractID_1, contractID_2})
+	require.NoError(t, err)
+}
