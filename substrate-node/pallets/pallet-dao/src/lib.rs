@@ -7,11 +7,12 @@ use sp_std::prelude::*;
 
 use frame_support::{
     dispatch::{
-        DispatchError, DispatchResult, DispatchResultWithPostInfo, Dispatchable, PostDispatchInfo,
+        DispatchError, DispatchResult, DispatchResultWithPostInfo, Dispatchable, GetDispatchInfo,
+        PostDispatchInfo,
     },
     ensure,
     traits::{EnsureOrigin, Get},
-    weights::{GetDispatchInfo, Weight},
+    weights::Weight,
 };
 use tfchain_support::{
     constants,
@@ -52,12 +53,12 @@ pub mod pallet {
         + pallet_tfgrid::Config
     {
         /// Because this pallet emits events, it depends on the runtime's definition of an event
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-        type CouncilOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+        type CouncilOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// The outer call dispatch type.
         type Proposal: Parameter
-            + Dispatchable<Origin = Self::Origin, PostInfo = PostDispatchInfo>
+            + Dispatchable<RuntimeOrigin = Self::RuntimeOrigin, PostInfo = PostDispatchInfo>
             + From<frame_system::Call<Self>>
             + GetDispatchInfo;
 
@@ -186,6 +187,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
         #[pallet::weight((<T as pallet::Config>::WeightInfo::propose(), DispatchClass::Operational))]
         pub fn propose(
             origin: OriginFor<T>,
@@ -252,6 +254,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(1)]
         #[pallet::weight((<T as pallet::Config>::WeightInfo::vote(), DispatchClass::Operational))]
         pub fn vote(
             origin: OriginFor<T>,
@@ -332,6 +335,7 @@ pub mod pallet {
             }
         }
 
+        #[pallet::call_index(2)]
         #[pallet::weight((<T as pallet::Config>::WeightInfo::vote(), DispatchClass::Operational))]
         pub fn veto(origin: OriginFor<T>, proposal_hash: T::Hash) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
@@ -366,6 +370,7 @@ pub mod pallet {
             return Ok(Pays::No.into());
         }
 
+        #[pallet::call_index(3)]
         #[pallet::weight((<T as pallet::Config>::WeightInfo::close(), DispatchClass::Operational))]
         pub fn close(
             origin: OriginFor<T>,
@@ -507,10 +512,10 @@ impl<T: Config> Pallet<T> {
 
 impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for Pallet<T> {
     fn node_changed(old_node: Option<&TfgridNode<T>>, new_node: &TfgridNode<T>) {
-        let new_node_weight = new_node.resources.total_resources.get_node_weight();
+        let new_node_weight = new_node.resources.get_node_weight();
         match old_node {
             Some(node) => {
-                let old_node_weight = node.resources.total_resources.get_node_weight();
+                let old_node_weight = node.resources.get_node_weight();
 
                 if node.farm_id != new_node.farm_id {
                     let mut old_farm_weight = FarmWeight::<T>::get(node.farm_id);
@@ -538,7 +543,7 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
     }
 
     fn node_deleted(node: &TfgridNode<T>) {
-        let node_weight = node.resources.total_resources.get_node_weight();
+        let node_weight = node.resources.get_node_weight();
         let mut farm_weight = FarmWeight::<T>::get(node.farm_id);
         farm_weight = farm_weight.checked_sub(node_weight).unwrap_or(0);
         FarmWeight::<T>::insert(node.farm_id, farm_weight);

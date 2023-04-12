@@ -74,16 +74,16 @@ spec:
             {{ if .Values.is_validator }}
             "--node-key-file","/keys/node",
             "--validator",
+            "--pruning", "archive",
             {{ else }}
             "--ws-external",
-            "--pruning", "archive",
             {{ end }}
             "--ws-max-connections", "$(WS_MAX_CONNECTIONS)",
-            {{ if .Values.disable_offchain_worker }}
-            "--offchain-worker", "Never",
-            {{ end }}
             {{ if .Values.telemetry_url }}
             "--telemetry-url", {{ .Values.telemetry_url | quote }},
+            {{ end }}
+            {{ if .Values.archive }}
+            "--pruning", "archive",
             {{ end }}
           ]
           resources:
@@ -129,44 +129,6 @@ spec:
             "--key-type", "gran",
             "--suri","/keys/grandpa",
             "--scheme=ed25519"
-          ]
-          volumeMounts:
-            - name: keystore
-              mountPath: /keystore
-            - name: keys
-              mountPath: /keys
-              readOnly: true
-        - name: insert-tft-key
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          args: [
-            "key",
-            "insert",
-            "--keystore-path=/keystore",
-            "--key-type", "tft!",
-            "--suri","/keys/tft",
-            "--scheme=sr25519"
-          ]
-          volumeMounts:
-            - name: keystore
-              mountPath: /keystore
-            - name: keys
-              mountPath: /keys
-              readOnly: true
-        - name: insert-smct-key
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          args: [
-            "key",
-            "insert",
-            "--keystore-path=/keystore",
-            "--key-type", "smct",
-            "--suri","/keys/smct",
-            "--scheme=sr25519"
           ]
           volumeMounts:
             - name: keystore

@@ -9,10 +9,9 @@ use pallet_tfgrid::{
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
     node::{Location, SerialNumber},
     terms_cond::TermsAndConditions,
-    twin::TwinIp,
-    DocumentHashInput, DocumentLinkInput, TwinIpInput,
+    CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, Gw4Input, Ip4Input,
+    LatitudeInput, LongitudeInput, PkInput, RelayInput,
 };
-use pallet_tfgrid::{CityNameInput, CountryNameInput, LatitudeInput, LongitudeInput};
 use pallet_timestamp;
 use sp_core::H256;
 use sp_runtime::{
@@ -44,25 +43,22 @@ construct_runtime!(
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
-    pub BlockWeights: frame_system::limits::BlockWeights =
-        frame_system::limits::BlockWeights::simple_max(1024);
-    pub const ExistentialDeposit: u64 = 1;
 }
 
 impl frame_system::Config for Test {
     type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     type Index = u64;
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = u64;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
@@ -105,9 +101,9 @@ impl PublicIpModifier for PublicIpModifierType {
 
 use super::weights;
 impl pallet_dao::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type CouncilOrigin = EnsureRoot<Self::AccountId>;
-    type Proposal = Call;
+    type Proposal = RuntimeCall;
     type MotionDuration = DaoMotionDuration;
     type MinVetos = MinVetos;
     type Tfgrid = TfgridModule;
@@ -124,7 +120,6 @@ parameter_types! {
 
 pub(crate) type TestTermsAndConditions = TermsAndConditions<Test>;
 
-pub(crate) type TestTwinIp = TwinIp<Test>;
 pub(crate) type TestFarmName = FarmName<Test>;
 
 pub(crate) type TestInterfaceName = InterfaceName<Test>;
@@ -137,13 +132,12 @@ pub(crate) type TestLocation = Location<Test>;
 pub(crate) type TestSerialNumber = SerialNumber<Test>;
 
 impl pallet_tfgrid::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Test>;
     type NodeChanged = NodeChanged;
     type PublicIpModifier = PublicIpModifierType;
     type TermsAndConditions = TestTermsAndConditions;
-    type TwinIp = TestTwinIp;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
@@ -173,9 +167,9 @@ parameter_types! {
 
 pub type CouncilCollective = pallet_collective::Instance1;
 impl pallet_collective::Config<CouncilCollective> for Test {
-    type Origin = Origin;
-    type Proposal = Call;
-    type Event = Event;
+    type RuntimeOrigin = RuntimeOrigin;
+    type Proposal = RuntimeCall;
+    type RuntimeEvent = RuntimeEvent;
     type MotionDuration = CouncilMotionDuration;
     type MaxProposals = CouncilMaxProposals;
     type MaxMembers = CouncilMaxMembers;
@@ -184,7 +178,7 @@ impl pallet_collective::Config<CouncilCollective> for Test {
 }
 
 impl pallet_membership::Config<pallet_membership::Instance1> for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type AddOrigin = EnsureRoot<Self::AccountId>;
     type RemoveOrigin = EnsureRoot<Self::AccountId>;
     type SwapOrigin = EnsureRoot<Self::AccountId>;
@@ -204,8 +198,20 @@ pub(crate) fn get_document_hash_input(document_hash_input: &[u8]) -> DocumentHas
     BoundedVec::try_from(document_hash_input.to_vec()).expect("Invalid document hash input.")
 }
 
-pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {
-    BoundedVec::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
+pub(crate) fn get_relay_input(relay_input: &[u8]) -> RelayInput {
+    Some(BoundedVec::try_from(relay_input.to_vec()).expect("Invalid relay input."))
+}
+
+pub(crate) fn get_public_key_input(pk_input: &[u8]) -> PkInput {
+    Some(BoundedVec::try_from(pk_input.to_vec()).expect("Invalid document hash input."))
+}
+
+pub(crate) fn get_public_ip_ip_input(ip_input: &[u8]) -> Ip4Input {
+    BoundedVec::try_from(ip_input.to_vec()).expect("Invalid public ip (ip) input.")
+}
+
+pub(crate) fn get_public_ip_gw_input(gw_input: &[u8]) -> Gw4Input {
+    BoundedVec::try_from(gw_input.to_vec()).expect("Invalid public ip (gw) input.")
 }
 
 pub(crate) fn get_city_name_input(city_input: &[u8]) -> CityNameInput {
@@ -234,7 +240,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     genesis.assimilate_storage(&mut t).unwrap();
 
     let genesis = pallet_membership::GenesisConfig::<Test, pallet_membership::Instance1> {
-        members: vec![1, 2, 3],
+        members: vec![1, 2, 3].try_into().unwrap(),
         phantom: Default::default(),
     };
     genesis.assimilate_storage(&mut t).unwrap();

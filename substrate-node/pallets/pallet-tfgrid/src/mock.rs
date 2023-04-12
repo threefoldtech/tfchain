@@ -5,20 +5,19 @@ use crate::{
     mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild,
     node::{CityName, CountryName, Location, SerialNumber},
     terms_cond::TermsAndConditions,
-    twin::TwinIp,
     weights, CityNameInput, Config, CountryNameInput, DocumentHashInput, DocumentLinkInput,
     DomainInput, FarmNameInput, Gw4Input, Gw6Input, InterfaceIpInput, InterfaceMacInput,
-    InterfaceNameInput, Ip4Input, Ip6Input, LatitudeInput, LongitudeInput, TwinIpInput,
+    InterfaceNameInput, Ip4Input, Ip6Input, LatitudeInput, LongitudeInput, PkInput, RelayInput,
 };
+use env_logger;
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
 use frame_system::EnsureRoot;
 use sp_core::{ed25519, sr25519, Pair, Public, H256};
 use sp_io::TestExternalities;
-use sp_runtime::traits::{IdentifyAccount, Verify};
-use sp_runtime::MultiSignature;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup},
+    traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+    MultiSignature,
 };
 use sp_std::prelude::*;
 
@@ -50,8 +49,6 @@ construct_runtime!(
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
-    pub BlockWeights: frame_system::limits::BlockWeights =
-        frame_system::limits::BlockWeights::simple_max(1024);
     pub const ExistentialDeposit: u64 = 1;
 }
 
@@ -59,16 +56,16 @@ impl frame_system::Config for TestRuntime {
     type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     type Index = u64;
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
@@ -108,7 +105,6 @@ parameter_types! {
 
 pub(crate) type TestTermsAndConditions = TermsAndConditions<TestRuntime>;
 
-pub(crate) type TestTwinIp = TwinIp<TestRuntime>;
 pub(crate) type TestFarmName = FarmName<TestRuntime>;
 
 pub(crate) type TestInterfaceName = InterfaceName<TestRuntime>;
@@ -121,13 +117,12 @@ pub(crate) type TestLocation = Location<TestRuntime>;
 pub(crate) type TestSerialNumber = SerialNumber<TestRuntime>;
 
 impl Config for TestRuntime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
     type PublicIpModifier = PublicIpModifier;
     type TermsAndConditions = TestTermsAndConditions;
-    type TwinIp = TestTwinIp;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
@@ -154,7 +149,7 @@ impl pallet_balances::Config for TestRuntime {
     /// The type for recording an account's balance.
     type Balance = u64;
     /// The ubiquitous event type.
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
@@ -176,9 +171,9 @@ parameter_types! {
 
 pub type CouncilCollective = pallet_collective::Instance1;
 impl pallet_collective::Config<CouncilCollective> for TestRuntime {
-    type Origin = Origin;
-    type Proposal = Call;
-    type Event = Event;
+    type RuntimeOrigin = RuntimeOrigin;
+    type Proposal = RuntimeCall;
+    type RuntimeEvent = RuntimeEvent;
     type MotionDuration = CouncilMotionDuration;
     type MaxProposals = CouncilMaxProposals;
     type MaxMembers = CouncilMaxMembers;
@@ -187,7 +182,7 @@ impl pallet_collective::Config<CouncilCollective> for TestRuntime {
 }
 
 impl pallet_membership::Config<pallet_membership::Instance1> for TestRuntime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type AddOrigin = EnsureRoot<Self::AccountId>;
     type RemoveOrigin = EnsureRoot<Self::AccountId>;
     type SwapOrigin = EnsureRoot<Self::AccountId>;
@@ -203,6 +198,8 @@ pub struct ExternalityBuilder;
 
 impl ExternalityBuilder {
     pub fn build() -> TestExternalities {
+        let _ = env_logger::try_init();
+
         let storage = frame_system::GenesisConfig::default()
             .build_storage::<TestRuntime>()
             .unwrap();
@@ -214,6 +211,8 @@ impl ExternalityBuilder {
 type AccountPublic = <MultiSignature as Verify>::Signer;
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
+    let _ = env_logger::try_init();
+
     let mut t = frame_system::GenesisConfig::default()
         .build_storage::<TestRuntime>()
         .unwrap();
@@ -224,12 +223,20 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     genesis.assimilate_storage(&mut t).unwrap();
 
     let genesis = pallet_membership::GenesisConfig::<TestRuntime, pallet_membership::Instance1> {
-        members: vec![alice()],
+        members: vec![alice()].try_into().unwrap(),
         phantom: Default::default(),
     };
     genesis.assimilate_storage(&mut t).unwrap();
 
     t.into()
+}
+
+pub(crate) fn get_relay_input(relay_input: &[u8]) -> RelayInput {
+    Some(BoundedVec::try_from(relay_input.to_vec()).expect("Invalid relay input."))
+}
+
+pub(crate) fn get_public_key_input(pk_input: &[u8]) -> PkInput {
+    Some(BoundedVec::try_from(pk_input.to_vec()).expect("Invalid document hash input."))
 }
 
 pub(crate) fn get_document_link_input(document_link_input: &[u8]) -> DocumentLinkInput {
@@ -238,10 +245,6 @@ pub(crate) fn get_document_link_input(document_link_input: &[u8]) -> DocumentLin
 
 pub(crate) fn get_document_hash_input(document_hash_input: &[u8]) -> DocumentHashInput {
     BoundedVec::try_from(document_hash_input.to_vec()).expect("Invalid document hash input.")
-}
-
-pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {
-    BoundedVec::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
 }
 
 pub(crate) fn get_farm_name_input(farm_name_input: &[u8]) -> FarmNameInput<TestRuntime> {

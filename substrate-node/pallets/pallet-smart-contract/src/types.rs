@@ -1,14 +1,11 @@
 use crate::pallet::{MaxDeploymentDataLength, MaxNodeContractPublicIPs};
 use crate::Config;
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::{BoundedVec, RuntimeDebugNoBound};
+use frame_support::{pallet_prelude::ConstU32, BoundedVec, RuntimeDebugNoBound};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
 use substrate_fixed::types::U64F64;
-use tfchain_support::{
-    resources::Resources,
-    types::{ConsumableResources, PublicIP},
-};
+use tfchain_support::{resources::Resources, types::PublicIP};
 
 pub type BlockNumber = u64;
 
@@ -22,28 +19,17 @@ pub enum StorageVersion {
     V5,
     V6,
     V7,
+    V8,
+    V9,
 }
 
 impl Default for StorageVersion {
     fn default() -> StorageVersion {
-        StorageVersion::V7
+        StorageVersion::V9
     }
 }
 
-#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo)]
-pub struct Group {
-    pub id: u32,
-    pub twin_id: u32,
-    pub capacity_reservation_contract_ids: Vec<u64>,
-}
-
-#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo)]
-pub struct NodeGroupConfig {
-    pub node_id: u32,
-    pub group_id: u32,
-}
-
-#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo)]
+#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct Contract<T: Config> {
@@ -62,21 +48,11 @@ impl<T: Config> Contract<T> {
 
     pub fn get_node_id(&self) -> u32 {
         match self.contract_type.clone() {
-            ContractData::CapacityReservationContract(c) => c.node_id,
+            ContractData::RentContract(c) => c.node_id,
+            ContractData::NodeContract(c) => c.node_id,
             ContractData::NameContract(_) => 0,
         }
     }
-}
-
-#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo)]
-#[scale_info(skip_type_params(T))]
-#[codec(mel_bound())]
-pub struct CapacityReservationContract {
-    pub node_id: u32,
-    pub resources: ConsumableResources,
-    pub group_id: Option<u32>,
-    pub public_ips: u32,
-    pub deployments: Vec<u64>,
 }
 
 // HexHash is hex encoded hash
@@ -85,17 +61,14 @@ pub type HexHash = [u8; 32];
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
-pub struct Deployment<T: Config> {
-    pub id: u64,
-    pub twin_id: u32,
-    pub capacity_reservation_id: u64,
+pub struct NodeContract<T: Config> {
+    pub node_id: u32,
     // Hash of the deployment, set by the user
     // Max 32 bytes
     pub deployment_hash: HexHash,
     pub deployment_data: BoundedVec<u8, MaxDeploymentDataLength<T>>,
     pub public_ips: u32,
     pub public_ips_list: BoundedVec<PublicIP, MaxNodeContractPublicIPs<T>>,
-    pub resources: Resources,
 }
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
@@ -122,19 +95,20 @@ pub struct RentContract {
     pub node_id: u32,
 }
 
-#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo)]
+#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub enum ContractData<T: Config> {
+    NodeContract(NodeContract<T>),
     NameContract(NameContract<T>),
-    CapacityReservationContract(CapacityReservationContract),
+    RentContract(RentContract),
 }
 
-// impl<T: Config> Default for ContractData<T> {
-//     fn default() -> ContractData<T> {
-//         ContractData::CapacityReservationContract(CapacityReservationContract::default())
-//     }
-// }
+impl<T: Config> Default for ContractData<T> {
+    fn default() -> ContractData<T> {
+        ContractData::RentContract(RentContract::default())
+    }
+}
 
 #[derive(
     PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
@@ -224,7 +198,6 @@ pub struct ContractBill {
     pub amount_billed: u128,
 }
 
-// DEPRECATED
 #[derive(
     PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
 )]
@@ -255,4 +228,39 @@ pub struct SolutionProvider<AccountId> {
 pub struct Provider<AccountId> {
     pub who: AccountId,
     pub take: u8,
+}
+
+pub const MAX_METADATA_LENGTH: u32 = 64; // limited to 64 bytes (2 public keys)
+pub const MAX_BILL_METADATA_LENGTH: u32 = 50; // limited to 50 bytes for now
+
+#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(T))]
+#[codec(mel_bound())]
+pub struct ServiceContract {
+    pub service_contract_id: u64,
+    pub service_twin_id: u32,
+    pub consumer_twin_id: u32,
+    pub base_fee: u64,
+    pub variable_fee: u64,
+    pub metadata: BoundedVec<u8, ConstU32<MAX_METADATA_LENGTH>>,
+    pub accepted_by_service: bool,
+    pub accepted_by_consumer: bool,
+    pub last_bill: u64,
+    pub state: ServiceContractState,
+}
+
+#[derive(
+    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
+)]
+pub struct ServiceContractBill {
+    pub variable_amount: u64, // variable amount which is billed
+    pub window: u64,          // amount of time (in seconds) covered since last bill
+    pub metadata: BoundedVec<u8, ConstU32<MAX_BILL_METADATA_LENGTH>>,
+}
+
+#[derive(Clone, Eq, PartialEq, RuntimeDebugNoBound, Encode, Decode, TypeInfo, MaxEncodedLen)]
+pub enum ServiceContractState {
+    Created,
+    AgreementReady,
+    ApprovedByBoth,
 }

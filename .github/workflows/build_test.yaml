@@ -4,14 +4,17 @@ on:
     branches:
       - development
   pull_request:
-
 jobs:
   build-and-test:
-    runs-on: [self-hosted, poc]
+    runs-on: [self-hosted, tfchainrunner01]
     container:
-      image: threefolddev/tfchain:1
+      image: threefolddev/tfchain:2
       env:
         DEBIAN_FRONTEND: noninteractive
+        PATH: /root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+        RUSTUP_HOME: /root/.rustup
+        CARGO_HOME: /root/.cargo
+
     steps:
       - uses: actions/checkout@v3
 
@@ -21,10 +24,10 @@ jobs:
         continue-on-error: true
         with:
           path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
+            /root/.cargo/bin/
+            /root/.cargo/registry/index/
+            /root/.cargo/registry/cache/
+            /root/.cargo/git/db/
             substrate-node/target/
           key: ${{ runner.os }}-tfchain-build-cache-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-tfchain-build-cache
@@ -32,60 +35,24 @@ jobs:
       - name: Build
         run: |
           cd substrate-node
-          $HOME/.cargo/bin/rustup target add wasm32-unknown-unknown --toolchain nightly-2022-05-11
-          $HOME/.cargo/bin/cargo +nightly-2022-05-11 build --release
+          rustup target add wasm32-unknown-unknown --toolchain nightly-2022-05-11
+          cargo +nightly-2022-05-11 build --release
 
-      # - name: Unit tests
-      #   run: |
-      #     cd substrate-node
-      #     $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
-      #     cd pallets
-      #     $HOME/.cargo/bin/cargo +nightly-2022-05-11 test --no-fail-fast
+      - name: Unit tests
+        run: |
+          cd substrate-node
+          cargo +nightly-2022-05-11 test --no-fail-fast
+          cd pallets
+          cargo +nightly-2022-05-11 test --no-fail-fast
 
-      # - name: Integration tests
-      #   run: |
-      #     python3.10 -m pip install robotframework==5.0.1 cryptography==3.4.8 substrate-interface==1.4.0
-      #     cd substrate-node/tests
-      #     robot -d _output_tests/ .
+      - name: Integration tests
+        run: |
+          python3.10 -m pip install robotframework==5.0.1 cryptography==3.4.8 substrate-interface==1.4.0
+          cd substrate-node/tests
+          robot -d _output_tests/ .
 
       - uses: actions/upload-artifact@v3
         if: always()
         with:
           name: integration test output
           path: substrate-node/tests/_output_tests/
-
-  srtool:
-    needs: build-and-test
-    runs-on: [self-hosted, poc]
-    steps:
-      # - name: Cache target dir
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: '${{ github.workspace }}/substrate-node/runtime/target'
-      #     key: srtool-target-tfchain-${{ github.sha }}
-      #     restore-keys: |
-      #       srtool-target-tfchain-
-      #       srtool-target-
-      - name: Srtool build
-        id: srtool_build
-        uses: chevdor/srtool-actions@v0.6.0
-        with:
-          workdir: '${{ github.workspace }}/substrate-node'
-          package: tfchain-runtime
-          runtime_dir: runtime
-      - name: Summary
-        run: |
-          echo '${{ steps.srtool_build.outputs.json }}' | jq . > tfchain-srtool-digest.json
-          cat tfchain-srtool-digest.json
-          echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
-      - name: Upload tfchain srtool json
-        uses: actions/upload-artifact@v3
-        with:
-          name: tfchain-srtool-digest-json
-          path: tfchain-srtool-digest.json
-      - name: Upload runtime
-        uses: actions/upload-artifact@v3
-        with:
-          name: tfchain-runtime
-          path: |
-            substrate-node/${{ steps.srtool_build.outputs.wasm_compressed }}

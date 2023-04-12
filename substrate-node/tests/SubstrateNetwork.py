@@ -46,20 +46,13 @@ def wait_till_node_ready(log_file: str, timeout_in_seconds=TIMEOUT_STARTUP_IN_SE
                 if RE_NODE_STARTED.search(line):
                     return
 
-
-def setup_offchain_workers(port: int, worker_tft: str = "Alice", worker_smct: str = "Bob"):
+def setup_offchain_workers(port: int, worker_account: str = "Alice"):
     logging.info("Setting up offchain workers")
-    substrate = SubstrateInterface(
-        url=f"ws://127.0.0.1:{port}", ss58_format=42, type_registry_preset='polkadot')
-
+    substrate = SubstrateInterface(url=f"ws://127.0.0.1:{port}", ss58_format=42, type_registry_preset='polkadot')
+    
     insert_key_params = [
-        "tft!", f"//{worker_tft}", PREDEFINED_KEYS[worker_tft].public_key.hex()]
+            "tft!", f"//{worker_account}", PREDEFINED_KEYS[worker_account].public_key.hex()]
     substrate.rpc_request("author_insertKey", insert_key_params)
-
-    insert_key_params = [
-        "smct", f"//{worker_smct}", PREDEFINED_KEYS[worker_smct].public_key.hex()]
-    substrate.rpc_request("author_insertKey", insert_key_params)
-
 
 def execute_command(cmd: list, log_file: str | None = None):
     if log_file is None:
@@ -116,7 +109,7 @@ class SubstrateNetwork:
         if len(self._nodes) > 0:
             self.tear_down_multi_node_network()
 
-    def setup_multi_node_network(self, log_name: str = "", amt: int = 2, ws_port: int = 9945):
+    def setup_multi_node_network(self, log_name: str = "", amt: int = 2):
         assert amt >= 2, "more then 2 nodes required for a multi node network"
         assert amt <= len(PREDEFINED_KEYS), "maximum amount of nodes reached"
 
@@ -125,12 +118,13 @@ class SubstrateNetwork:
         rmtree(output_dir_network, ignore_errors=True)
 
         port = 30333
+        ws_port = 9945
         rpc_port = 9933
         log_file_alice = join(output_dir_network, "node_alice.log")
         self._nodes["alice"] = run_node(log_file_alice, "/tmp/alice", "alice", port, ws_port,
                                         rpc_port, node_key="0000000000000000000000000000000000000000000000000000000000000001")
         wait_till_node_ready(log_file_alice)
-        setup_offchain_workers(ws_port, "Alice", "Bob")
+        setup_offchain_workers(ws_port, "Alice")
 
         log_file = ""
         for x in range(1, amt):
@@ -142,7 +136,7 @@ class SubstrateNetwork:
             self._nodes[name] = run_node(log_file, f"/tmp/{name}", name, port, ws_port, rpc_port, node_key=None,
                                          bootnodes="/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp")
             wait_till_node_ready(log_file)
-            setup_offchain_workers(ws_port, "Bob", "Alice")
+            setup_offchain_workers(ws_port, "Bob")
 
         logging.info("Network is up and running.")
 
@@ -165,18 +159,13 @@ def main():
 
     parser.add_argument("--amount", required=False, type=int, default=2,
                         help=f"The amount of nodes to start. Should be minimum 2 and maximum {len(PREDEFINED_KEYS)}")
-
-    parser.add_argument("--port", required=False, type=int, default=9945,
-                        help=f"The first port of the nodes. Other nodes will increment this value and use it as their port.")
-
     args = parser.parse_args()
 
     logging.basicConfig(
         format="%(asctime)s %(levelname)s %(message)s", level=logging.DEBUG)
 
     network = SubstrateNetwork()
-    network.setup_multi_node_network(
-        log_name="_out", amt=args.amount, ws_port=args.port)
+    network.setup_multi_node_network(args.amount)
 
     def handler(signum, frame):
         network.tear_down_multi_node_network()

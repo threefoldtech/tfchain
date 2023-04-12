@@ -77,112 +77,14 @@ pub struct FarmingPolicyLimit {
     pub node_certification: bool,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
-pub enum CapacityReservationPolicy {
-    Any {
-        resources: Resources,
-        features: Option<Vec<NodeFeatures>>,
-    },
-    Exclusive {
-        group_id: u32,
-        resources: Resources,
-        features: Option<Vec<NodeFeatures>>,
-    },
-    Node {
-        node_id: u32,
-    },
-}
-impl Default for CapacityReservationPolicy {
-    fn default() -> CapacityReservationPolicy {
-        CapacityReservationPolicy::Any {
-            resources: Resources::empty(),
-            features: None,
-        }
-    }
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
-pub enum NodeFeatures {
-    PublicNode,
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
-pub enum PowerTarget {
-    Up,
-    Down,
-}
-
-impl Default for PowerTarget {
-    fn default() -> PowerTarget {
-        PowerTarget::Down
-    }
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
-pub enum PowerState {
-    Up,
-    Down(u32),
-}
-
-impl Default for PowerState {
-    fn default() -> PowerState {
-        PowerState::Up
-    }
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct Power {
-    pub target: PowerTarget,
-    pub state: PowerState,
-    pub last_uptime: u64,
-}
-
-#[derive(
-    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
-)]
-pub struct ConsumableResources {
-    pub total_resources: Resources,
-    pub used_resources: Resources,
-}
-
-impl ConsumableResources {
-    pub fn can_consume_resources(&self, resources: &Resources) -> bool {
-        (self.total_resources.hru - self.used_resources.hru) >= resources.hru
-            && (self.total_resources.sru - self.used_resources.sru) >= resources.sru
-            && (self.total_resources.cru - self.used_resources.cru) >= resources.cru
-            && (self.total_resources.mru - self.used_resources.mru) >= resources.mru
-    }
-
-    pub fn consume(&mut self, resources: &Resources) {
-        self.used_resources.add(&resources);
-    }
-
-    pub fn free(&mut self, resources: &Resources) {
-        self.used_resources.substract(&resources);
-    }
-
-    pub fn calculate_increase_in_resources(&self, resources: &Resources) -> Resources {
-        let mut increase = resources.clone();
-        increase.substract(&self.total_resources);
-        increase
-    }
-
-    pub fn calculate_reduction_in_resources(&self, resources: &Resources) -> Resources {
-        let mut reduction = self.total_resources.clone();
-        reduction.substract(&resources);
-        reduction
-    }
-}
-
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct Node<Location, If, SerialNumber> {
     pub version: u32,
     pub id: u32,
     pub farm_id: u32,
     pub twin_id: u32,
-    pub resources: ConsumableResources,
+    pub resources: Resources,
     pub location: Location,
-    pub power: Power,
     // optional public config
     pub public_config: Option<PublicConfig>,
     pub created: u64,
@@ -193,15 +95,6 @@ pub struct Node<Location, If, SerialNumber> {
     pub virtualized: bool,
     pub serial_number: Option<SerialNumber>,
     pub connection_price: u32,
-}
-
-impl<Location, If, SerialNumber> Node<Location, If, SerialNumber> {
-    pub fn can_be_shutdown(&self) -> bool {
-        self.resources.used_resources.is_empty()
-    }
-    pub fn is_target_up(&self) -> bool {
-        matches!(self.power.target, PowerTarget::Up)
-    }
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
@@ -332,5 +225,42 @@ impl PartialOrd for NodeCertification {
 impl Default for NodeCertification {
     fn default() -> NodeCertification {
         NodeCertification::Diy
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo, Default)]
+pub struct NodePower<B> {
+    pub state: PowerState<B>,
+    pub target: Power,
+}
+
+impl<B> NodePower<B> {
+    pub fn is_down(&self) -> bool {
+        matches!(self.state, PowerState::Down(_)) || matches!(self.target, Power::Down)
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
+pub enum PowerState<B> {
+    Up,
+    // Down holding the block when it has shut down
+    Down(B),
+}
+
+impl<B> Default for PowerState<B> {
+    fn default() -> Self {
+        PowerState::Up
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo)]
+pub enum Power {
+    Up,
+    Down,
+}
+
+impl Default for Power {
+    fn default() -> Self {
+        Power::Up
     }
 }

@@ -4,7 +4,7 @@ use sp_runtime::Percent;
 
 /// A resources capacity that countains HRU, SRU, CRU and MRU in integer values.
 #[derive(
-    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen, Copy
+    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
 )]
 pub struct Resources {
     pub hru: u64,
@@ -17,11 +17,21 @@ pub const ONE_THOUSAND: u128 = 1_000;
 pub const GIGABYTE: u128 = 1024 * 1024 * 1024;
 
 impl Resources {
-    pub fn add(&mut self, other: &Resources) {
+    pub fn empty() -> Resources {
+        Resources {
+            hru: 0,
+            sru: 0,
+            cru: 0,
+            mru: 0,
+        }
+    }
+
+    pub fn add(mut self, other: &Resources) -> Resources {
         self.cru += other.cru;
         self.sru += other.sru;
         self.hru += other.hru;
         self.mru += other.mru;
+        self
     }
 
     pub fn validate_hru(&self) -> bool {
@@ -79,60 +89,6 @@ impl Resources {
         let su = self.get_su();
         cu * 2 + su
     }
-    pub fn empty() -> Resources {
-        Resources {
-            hru: 0,
-            sru: 0,
-            cru: 0,
-            mru: 0,
-        }
-    }
-
-    pub fn sum(a: &Resources, b: &Resources) -> Resources {
-        let mut sum = a.clone();
-        sum.add(b);
-        sum
-    }
-
-    pub fn subtraction(a: &Resources, b: &Resources) -> Resources {
-        let mut subtraction = a.clone();
-        subtraction.substract(b);
-        subtraction
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.cru == 0 && self.sru == 0 && self.hru == 0 && self.mru == 0
-    }
-
-    pub fn can_substract(self, other: &Resources) -> bool {
-        self.cru >= other.cru
-            && self.sru >= other.sru
-            && self.hru >= other.hru
-            && self.mru >= other.mru
-    }
-
-    pub fn substract(&mut self, other: &Resources) {
-        self.cru = if self.cru < other.cru {
-            0
-        } else {
-            self.cru - other.cru
-        };
-        self.sru = if self.sru < other.sru {
-            0
-        } else {
-            self.sru - other.sru
-        };
-        self.hru = if self.hru < other.hru {
-            0
-        } else {
-            self.hru - other.hru
-        };
-        self.mru = if self.mru < other.mru {
-            0
-        } else {
-            self.mru - other.mru
-        };
-    }
 
     pub fn has_changed(
         resources_before: &Resources,
@@ -152,6 +108,10 @@ impl Resources {
             || wiggle(resources_before.sru, resources_after.sru)
             || wiggle(resources_before.hru, resources_after.hru)
             || wiggle(resources_before.mru, resources_after.mru);
+    }
+
+    pub fn is_empty(&self) -> bool {
+        return self.hru == 0 && self.sru == 0 && self.cru == 0 && self.mru == 0;
     }
 }
 

@@ -1,98 +1,44 @@
-# TFchain
+# TFchain &middot; ![Build & Tests](https://github.com/threefoldtech/tfchain/actions/workflows/build_test.yaml/badge.svg)
 
-## Installation
+<p align="center">
+  <img height="50%" width="50%" src="./substrate-node/.maintain/header.png">
+</p>
 
-#### Prerequisites:
+Threefold blockchain serves as a registry for Nodes, Farms, Digital Twins and Deployment contracts.
+It is the backbone of [ZOS](https://github.com/threefoldtech/zos) and other components.
 
-Ensure you have the following installed first:
+## Docs
 
-- librocksdb-dev
-- libclang-dev
-- clang lldb lld
-- build-essential
+see [docs](./docs/readme.md) for more information on how to work with this component.
 
-You will also need rust and nightly installed.
+## Modules list
 
-To install Rust:
+- [Tfgrid Module](./substrate-node/pallets/pallet-tfgrid/readme.md): registry for Nodes / Farms / Twins
+- [Smart Contract Module](./substrate-node/pallets/pallet-smart-contract/readme.md): node and rent contracts
+- [Dao Module](<(./substrate-node/pallets/pallet-dao/readme.md)>): voting on proposals that impact the system for farmers. See [dao](./docs/misc/minimal_DAO.md) for more info.
+- [Kvstore Module](./substrate-node/pallets/pallet-kvstore/readme.md): key value store for deployment information
+- [Validator Set Module](./substrate-node/pallets/substrate-validator-set/readme.md): module for adding / removing authorities
+- [TFT Price Module](./substrate-node/pallets/pallet-tft-price/readme.md): TFT price oracle. See [price](./docs/misc/price.md) for more info.
+- other less mentionable modules..
 
-```
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
+## Deployed instances
 
-To install nightly:
+- Development network:
 
-```
-rustup install nightly-2022-05-11
-```
+  - Polkadot UI: [https://polkadot.js.org/apps/?rpc=wss%3A%2F%2F/tfchain.dev.grid.tf#/explorer](https://polkadot.js.org/apps/?rpc=wss%3A%2F%2F/tfchain.dev.grid.tf#/explorer)
+  - Websocket url: wss://tfchain.dev.grid.tf
 
-### Node
+- Qa testing network:
 
-Navigate to substrate node:
-
-```
-cd substrate-node
-```
-
-Add Wasm toolchain:
-
-```
-rustup target add wasm32-unknown-unknown --toolchain nightly-2022-05-11
-```
-
-Now you can build:
-
-```
-cargo +nightly-2022-05-11 build --release
-```
-
-You can also override the default toolchain
-
-```
-rustup override set nightly-2022-05-11
-```
-
-Now you can build as following:
-
-```
-cargo build
-```
-
-This will build the node binary in release mode, once built you can execute it by doing following:
-
-```
-./target/release/tfchain --ws-external --dev
-```
-
-> You need the `ws-external` flag in order to connect from a zos node to substrate in a local setup.
-
-## Polkadot js
-
-Polkadot js is a webbased substrate client you can use to connect to tfchain as well.
-
-- Development network
-
-  [https://polkadot.js.org/apps/?rpc=wss%3A%2F%2F/tfchain.dev.grid.tf#/explorer](https://polkadot.js.org/apps/?rpc=wss%3A%2F%2F/tfchain.dev.grid.tf#/explorer)
+  - Polkadot UI: [https://polkadot.js.org/apps/?rpc=wss%3A%2F%2F/tfchain.qa.grid.tf#/explorer](https://polkadot.js.org/apps/?rpc=wss%3A%2F%2F/tfchain.qa.grid.tf#/explorer)
+  - Websocket url: wss://tfchain.qa.grid.tf
 
 - Test network
 
-  [https://polkadot.js.org/apps/?rpc=wss%3A%2F%2F/tfchain.test.grid.tf#/explorer](https://polkadot.js.org/apps/?rpc=wss%3A%2F%2F/tfchain.test.grid.tf#/explorer)
+  - Polkadot UI: [https://polkadot.js.org/apps/?rpc=wss%3A%2F%2F/tfchain.test.grid.tf#/explorer](https://polkadot.js.org/apps/?rpc=wss%3A%2F%2F/tfchain.test.grid.tf#/explorer)
+  - Websocket url: wss://tfchain.test.grid.tf
 
 - Production network
 
-  [https://polkadot.js.org/apps/?rpc=wss%3A%2F%2F/tfchain.grid.tf#/explorer](https://polkadot.js.org/apps/?rpc=wss%3A%2F%2F/tfchain.grid.tf#/explorer)
-
-### Upgrading runtime
-
-See [process](./substrate-node/upgrade_process.md)
-
-### Client
-
-You can use the client to interact with the chain, [read more](./cli-tool/readme.md)
-
-### Data Cleanup:
-
-To wipe data run:
-
-```
-./target/release/tfchain purge-chain --dev
-```
+  - Polkadot UI: [https://polkadot.js.org/apps/?rpc=wss%3A%2F%2F/tfchain.grid.tf#/explorer](https://polkadot.js.org/apps/?rpc=wss%3A%2F%2F/tfchain.grid.tf#/explorer)
+  - Websocket url: wss://tfchain.grid.tf
