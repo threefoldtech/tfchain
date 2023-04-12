@@ -53,7 +53,8 @@ jobs:
 
       - name: Go Client tests
         run: |
-          cd clients/tfchain_client_go/ && go test -v ./...
+          cd substrate-node/ && ./target/release/tfchain --dev --ws-external
+          cd ../clients/tfchain_client_go/ && go test -v ./...
 
       - uses: actions/upload-artifact@v3
         if: always()
