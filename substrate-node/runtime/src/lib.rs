@@ -766,7 +766,7 @@ pub type Executive = frame_executive::Executive<
 // All migrations executed on runtime upgrade as a nested tuple of types implementing
 // `OnRuntimeUpgrade`.
 type Migrations = (
-    pallet_smart_contract::migrations::v9::CleanBillingLoop<Runtime>,
+    // pallet_smart_contract::migrations::v9::CleanBillingLoop<Runtime>,
     pallet_smart_contract::storage_state::v9::CheckStorageStateV9<Runtime>,
 );
 
