@@ -11,9 +11,17 @@ on:
 jobs:
   srtool:
     runs-on: [self-hosted, tfchainrunner01]
+    container:
+      image: threefolddev/tfchain:2
+      env:
+        DEBIAN_FRONTEND: noninteractive
+        PATH: /root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+        RUSTUP_HOME: /root/.rustup
+        CARGO_HOME: /root/.cargo
+
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+
       - name: Cache target dir
         uses: actions/cache@v3
         with:
@@ -22,6 +30,7 @@ jobs:
           restore-keys: |
             srtool-target-tfchain-
             srtool-target-
+
       - name: Srtool build
         id: srtool_build
         uses: chevdor/srtool-actions@v0.6.0
@@ -29,16 +38,19 @@ jobs:
           workdir: '${{ github.workspace }}/substrate-node'
           package: tfchain-runtime
           runtime_dir: runtime
+
       - name: Summary
         run: |
           echo '${{ steps.srtool_build.outputs.json }}' | jq . > tfchain-srtool-digest.json
           cat tfchain-srtool-digest.json
           echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
+
       - name: Upload tfchain srtool json
         uses: actions/upload-artifact@v3
         with:
           name: tfchain-srtool-digest-json
           path: tfchain-srtool-digest.json
+
       - name: Upload runtime
         uses: actions/upload-artifact@v3
         with:
