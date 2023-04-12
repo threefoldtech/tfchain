@@ -51,6 +51,10 @@ jobs:
           cd substrate-node/tests
           robot -d _output_tests/ .
 
+      - name: Go Client tests
+        run: |
+          cd clients/tfchain_client_go/ && go test -v ./...
+
       - uses: actions/upload-artifact@v3
         if: always()
         with:
