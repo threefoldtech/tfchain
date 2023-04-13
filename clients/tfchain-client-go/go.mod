@@ -1,4 +1,4 @@
-module github.com/threefoldtech/tfchain/clients/tfchain_client_go
+module github.com/threefoldtech/tfchain/clients/tfchain-client-go
 
 go 1.17
 
