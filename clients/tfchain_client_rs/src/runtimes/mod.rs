@@ -1,3 +1,3 @@
 #![allow(clippy::all)]
 
-pub mod devnet;
+pub mod current;

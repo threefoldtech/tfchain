@@ -1,5 +1,5 @@
 #[subxt::subxt(
-    runtime_metadata_path = "artifacts/devnet.scale",
+    runtime_metadata_path = "artifacts/current.scale",
     substitute_type(
         type = "frame_support::storage::bounded_vec::BoundedVec",
         with = "::sp_std::vec::Vec"

@@ -1,5 +1,5 @@
-use crate::runtimes::devnet;
-pub use devnet::{BlockNumber, Contract, Farm, Node, SystemAccountInfo, Twin, H256 as Hash};
+use crate::runtimes::current;
+pub use current::{BlockNumber, Contract, Farm, Node, SystemAccountInfo, Twin, H256 as Hash};
 use std::str::FromStr;
 use subxt::utils::AccountId32;
 use subxt::{
@@ -121,7 +121,7 @@ impl Client {
         relay: Option<String>,
         pk: Option<String>,
     ) -> Result<u32, Error> {
-        devnet::create_twin(self, kp, relay, pk).await
+        current::create_twin(self, kp, relay, pk).await
     }
 
     // Updates a twin and checks for success, blockhash is returned on success
@@ -131,7 +131,7 @@ impl Client {
         relay: Option<String>,
         pk: Option<&[u8]>,
     ) -> Result<Hash, Error> {
-        devnet::update_twin(self, kp, relay, pk).await
+        current::update_twin(self, kp, relay, pk).await
     }
 
     // Signs terms and condition and checks for success, blockhash is returned on success
@@ -141,40 +141,40 @@ impl Client {
         document_link: String,
         document_hash: String,
     ) -> Result<Hash, Error> {
-        devnet::sign_terms_and_conditions(self, kp, document_link, document_hash).await
+        current::sign_terms_and_conditions(self, kp, document_link, document_hash).await
     }
 
     pub async fn get_twin_by_id(&self, id: u32) -> Result<Option<Twin>, Error> {
-        devnet::get_twin_by_id(self, id).await
+        current::get_twin_by_id(self, id).await
     }
 
     pub async fn get_twin_id_by_account(&self, account: AccountId32) -> Result<Option<u32>, Error> {
-        devnet::get_twin_id_by_account(self, account).await
+        current::get_twin_id_by_account(self, account).await
     }
 
     pub async fn get_farm_by_id(&self, id: u32) -> Result<Option<Farm>, Error> {
-        devnet::get_farm_by_id(self, id).await
+        current::get_farm_by_id(self, id).await
     }
 
     pub async fn get_node_by_id(&self, id: u32) -> Result<Option<Node>, Error> {
-        devnet::get_node_by_id(self, id).await
+        current::get_node_by_id(self, id).await
     }
 
     pub async fn get_balance(
         &self,
         account: &AccountId32,
     ) -> Result<Option<SystemAccountInfo>, Error> {
-        devnet::get_balance(self, account).await
+        current::get_balance(self, account).await
     }
 
     pub async fn get_block_hash(
         &self,
         block_number: Option<BlockNumber>,
     ) -> Result<Option<Hash>, Error> {
-        devnet::get_block_hash(self, block_number).await
+        current::get_block_hash(self, block_number).await
     }
 
     pub async fn get_contract_by_id(&self, id: u64) -> Result<Option<Contract>, Error> {
-        devnet::get_contract_by_id(self, id).await
+        current::get_contract_by_id(self, id).await
     }
 }
