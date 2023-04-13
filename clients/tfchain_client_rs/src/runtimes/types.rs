@@ -41,7 +41,7 @@ use super::testnet::{
 };
 
 pub type Hash = <PolkadotConfig as Config>::Hash;
-pub type BlockNumber = subxt::rpc::BlockNumber;
+pub type BlockNumber = subxt::rpc::types::BlockNumber;
 
 #[macro_export]
 macro_rules! parse_vec_u8 {

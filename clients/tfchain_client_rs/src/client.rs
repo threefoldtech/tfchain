@@ -1,10 +1,8 @@
-use crate::runtimes::{devnet, local, mainnet, testnet, types};
+use crate::runtimes::{mainnet, types};
 use std::str::FromStr;
+use subxt::utils::AccountId32;
 use subxt::{
-    ext::{
-        sp_core::{crypto::SecretStringError, ed25519, sr25519, Pair},
-        sp_runtime::AccountId32,
-    },
+    ext::sp_core::{crypto::SecretStringError, ed25519, sr25519, Pair},
     tx::{PairSigner, Signer},
     Error, OnlineClient, PolkadotConfig,
 };
@@ -78,10 +76,38 @@ impl KeyPair {
         Ok(pair)
     }
 
-    pub fn signer(&self) -> Box<dyn Signer<PolkadotConfig> + Send + Sync> {
+    pub fn signer(&self) -> KeySigner {
         match self {
-            Self::Ed25519(pair) => Box::new(PairSigner::new(pair.clone())),
-            Self::Sr25519(pair) => Box::new(PairSigner::new(pair.clone())),
+            Self::Ed25519(pair) => KeySigner::Ed25519(PairSigner::new(pair.clone())),
+            Self::Sr25519(pair) => KeySigner::Sr25519(PairSigner::new(pair.clone())),
+        }
+    }
+}
+
+pub enum KeySigner {
+    Sr25519(PairSigner<PolkadotConfig, sr25519::Pair>),
+    Ed25519(PairSigner<PolkadotConfig, ed25519::Pair>),
+}
+
+impl Signer<PolkadotConfig> for KeySigner {
+    fn account_id(&self) -> &<PolkadotConfig as subxt::Config>::AccountId {
+        match self {
+            Self::Sr25519(signer) => signer.account_id(),
+            Self::Ed25519(signer) => signer.account_id(),
+        }
+    }
+
+    fn address(&self) -> <PolkadotConfig as subxt::Config>::Address {
+        match self {
+            Self::Sr25519(signer) => signer.address(),
+            Self::Ed25519(signer) => signer.address(),
+        }
+    }
+
+    fn sign(&self, signer_payload: &[u8]) -> <PolkadotConfig as subxt::Config>::Signature {
+        match self {
+            Self::Sr25519(signer) => signer.sign(signer_payload),
+            Self::Ed25519(signer) => signer.sign(signer_payload),
         }
     }
 }
@@ -158,44 +184,27 @@ impl Client {
         )
     }
 
-    pub async fn get_twin_by_id(
-        &self,
-        id: u32,
-        at_block: Option<Hash>,
-    ) -> Result<Option<Twin>, Error> {
-        call!(self, get_twin_by_id, id, at_block)
+    pub async fn get_twin_by_id(&self, id: u32) -> Result<Option<Twin>, Error> {
+        call!(self, get_twin_by_id, id)
     }
 
-    pub async fn get_twin_id_by_account(
-        &self,
-        account: AccountId32,
-        at_block: Option<types::Hash>,
-    ) -> Result<Option<u32>, Error> {
-        call!(self, get_twin_id_by_account, account, at_block)
+    pub async fn get_twin_id_by_account(&self, account: AccountId32) -> Result<Option<u32>, Error> {
+        call!(self, get_twin_id_by_account, account)
     }
 
-    pub async fn get_farm_by_id(
-        &self,
-        id: u32,
-        at_block: Option<Hash>,
-    ) -> Result<Option<TfgridFarm>, Error> {
-        call!(self, get_farm_by_id, id, at_block)
+    pub async fn get_farm_by_id(&self, id: u32) -> Result<Option<TfgridFarm>, Error> {
+        call!(self, get_farm_by_id, id)
     }
 
-    pub async fn get_node_by_id(
-        &self,
-        id: u32,
-        at_block: Option<Hash>,
-    ) -> Result<Option<TfgridNode>, Error> {
-        call!(self, get_node_by_id, id, at_block)
+    pub async fn get_node_by_id(&self, id: u32) -> Result<Option<TfgridNode>, Error> {
+        call!(self, get_node_by_id, id)
     }
 
     pub async fn get_balance(
         &self,
         account: &AccountId32,
-        at_block: Option<Hash>,
     ) -> Result<Option<SystemAccountInfo>, Error> {
-        call!(self, get_balance, account, at_block)
+        call!(self, get_balance, account)
     }
 
     pub async fn get_block_hash(
@@ -205,11 +214,7 @@ impl Client {
         call!(self, get_block_hash, block_number)
     }
 
-    pub async fn get_contract_by_id(
-        &self,
-        id: u64,
-        at_block: Option<Hash>,
-    ) -> Result<Option<Contract>, Error> {
-        call!(self, get_contract_by_id, id, at_block)
+    pub async fn get_contract_by_id(&self, id: u64) -> Result<Option<Contract>, Error> {
+        call!(self, get_contract_by_id, id)
     }
 }
