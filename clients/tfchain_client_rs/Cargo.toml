@@ -9,13 +9,9 @@ edition = "2021"
 path = "src/lib.rs"
 name = "tfchain_client"
 
-[[bin]]
-path = "src/main.rs"
-name = "tfchain_cli"
-
 [dependencies]
-subxt = "0.25.0"
-subxt-codegen = "0.25.0"
+subxt = "0.28.0"
+subxt-codegen = "0.28.0"
 syn = "1.0.99"
 tokio = { version = "1.8", features = ["rt-multi-thread", "macros", "time"] }
 futures-util = "0.3.23"
