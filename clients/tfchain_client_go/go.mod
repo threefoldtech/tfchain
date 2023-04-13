@@ -1,4 +1,4 @@
-module github.com/threefoldtech/tfchain/clients/tfchain-client-go
+module github.com/threefoldtech/substrate-client
 
 go 1.17
 
