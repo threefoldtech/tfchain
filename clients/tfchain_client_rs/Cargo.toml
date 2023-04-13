@@ -9,10 +9,6 @@ edition = "2021"
 path = "src/lib.rs"
 name = "tfchain_client"
 
-[[bin]]
-path = "src/main.rs"
-name = "tfchain_cli"
-
 [dependencies]
 subxt = "0.28.0"
 subxt-codegen = "0.28.0"

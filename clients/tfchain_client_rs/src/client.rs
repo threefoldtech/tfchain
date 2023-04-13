@@ -1,4 +1,5 @@
-use crate::runtimes::{mainnet, types};
+use crate::runtimes::devnet;
+pub use devnet::{BlockNumber, Contract, Farm, Node, SystemAccountInfo, Twin, H256 as Hash};
 use std::str::FromStr;
 use subxt::utils::AccountId32;
 use subxt::{
@@ -6,29 +7,6 @@ use subxt::{
     tx::{PairSigner, Signer},
     Error, OnlineClient, PolkadotConfig,
 };
-pub use types::{BlockNumber, Contract, Hash, SystemAccountInfo, TfgridFarm, TfgridNode, Twin};
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Runtime {
-    Local,
-    Devnet,
-    Testnet,
-    Mainnet,
-}
-
-impl FromStr for Runtime {
-    type Err = &'static str;
-
-    fn from_str(v: &str) -> Result<Self, Self::Err> {
-        match v {
-            "local" => Ok(Self::Local),
-            "devnet" => Ok(Self::Devnet),
-            "mainnet" => Ok(Self::Mainnet),
-            "testnet" => Ok(Self::Testnet),
-            _ => Err("unknown runtime"),
-        }
-    }
-}
 
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub enum KeyType {
@@ -126,26 +104,14 @@ impl From<ed25519::Pair> for KeyPair {
 
 #[derive(Clone)]
 pub struct Client {
-    pub runtime: Runtime,
     pub api: OnlineClient<PolkadotConfig>,
 }
 
-macro_rules! call {
-    ($self:ident, $name:ident, $($arg:expr),+) => (
-        match $self.runtime {
-            Runtime::Local => local::$name($self, $($arg),+).await,
-            Runtime::Devnet => devnet::$name($self, $($arg),+).await,
-            Runtime::Testnet => testnet::$name($self, $($arg),+).await,
-            Runtime::Mainnet => mainnet::$name($self, $($arg),+).await,
-        }
-    )
-}
-
 impl Client {
-    pub async fn new<U: AsRef<str>>(url: U, runtime: Runtime) -> Result<Client, Error> {
+    pub async fn new<U: AsRef<str>>(url: U) -> Result<Client, Error> {
         let api = OnlineClient::<PolkadotConfig>::from_url(url).await?;
 
-        Ok(Client { api, runtime })
+        Ok(Client { api })
     }
 
     // Creates a twin and checks for success, twin ID is returned on success
@@ -155,7 +121,7 @@ impl Client {
         relay: Option<String>,
         pk: Option<String>,
     ) -> Result<u32, Error> {
-        call!(self, create_twin, kp, relay, pk)
+        devnet::create_twin(self, kp, relay, pk).await
     }
 
     // Updates a twin and checks for success, blockhash is returned on success
@@ -165,7 +131,7 @@ impl Client {
         relay: Option<String>,
         pk: Option<&[u8]>,
     ) -> Result<Hash, Error> {
-        call!(self, update_twin, kp, relay, pk)
+        devnet::update_twin(self, kp, relay, pk).await
     }
 
     // Signs terms and condition and checks for success, blockhash is returned on success
@@ -175,46 +141,40 @@ impl Client {
         document_link: String,
         document_hash: String,
     ) -> Result<Hash, Error> {
-        call!(
-            self,
-            sign_terms_and_conditions,
-            kp,
-            document_link,
-            document_hash
-        )
+        devnet::sign_terms_and_conditions(self, kp, document_link, document_hash).await
     }
 
     pub async fn get_twin_by_id(&self, id: u32) -> Result<Option<Twin>, Error> {
-        call!(self, get_twin_by_id, id)
+        devnet::get_twin_by_id(self, id).await
     }
 
     pub async fn get_twin_id_by_account(&self, account: AccountId32) -> Result<Option<u32>, Error> {
-        call!(self, get_twin_id_by_account, account)
+        devnet::get_twin_id_by_account(self, account).await
     }
 
-    pub async fn get_farm_by_id(&self, id: u32) -> Result<Option<TfgridFarm>, Error> {
-        call!(self, get_farm_by_id, id)
+    pub async fn get_farm_by_id(&self, id: u32) -> Result<Option<Farm>, Error> {
+        devnet::get_farm_by_id(self, id).await
     }
 
-    pub async fn get_node_by_id(&self, id: u32) -> Result<Option<TfgridNode>, Error> {
-        call!(self, get_node_by_id, id)
+    pub async fn get_node_by_id(&self, id: u32) -> Result<Option<Node>, Error> {
+        devnet::get_node_by_id(self, id).await
     }
 
     pub async fn get_balance(
         &self,
         account: &AccountId32,
     ) -> Result<Option<SystemAccountInfo>, Error> {
-        call!(self, get_balance, account)
+        devnet::get_balance(self, account).await
     }
 
     pub async fn get_block_hash(
         &self,
         block_number: Option<BlockNumber>,
     ) -> Result<Option<Hash>, Error> {
-        call!(self, get_block_hash, block_number)
+        devnet::get_block_hash(self, block_number).await
     }
 
     pub async fn get_contract_by_id(&self, id: u64) -> Result<Option<Contract>, Error> {
-        call!(self, get_contract_by_id, id)
+        devnet::get_contract_by_id(self, id).await
     }
 }
