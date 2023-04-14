@@ -15,11 +15,11 @@ var (
 )
 
 type BurnTransaction struct {
-	Block          types.U32
-	Amount         types.U64
-	Target         string
-	Signatures     []StellarSignature
-	SequenceNumber types.U64
+	Block          types.U32          `json:"block"`
+	Amount         types.U64          `json:"amount"`
+	Target         string             `json:"target"`
+	Signatures     []StellarSignature `json:"signatures"`
+	SequenceNumber types.U64          `json:"sequence_number"`
 }
 
 func (s *Substrate) ProposeBurnTransactionOrAddSig(identity Identity, txID uint64, target string, amount *big.Int, signature string, stellarAddress string, sequence_number uint64) error {

@@ -8,11 +8,11 @@ import (
 // Entity type
 type Entity struct {
 	Versioned
-	ID      types.U32
-	Name    string
-	Account AccountID
-	Country string
-	City    string
+	ID      types.U32 `json:"id"`
+	Name    string    `json:"name"`
+	Account AccountID `json:"account_id"`
+	Country string    `json:"country"`
+	City    string    `json:"city"`
 }
 
 // GetEntity gets a entity with ID

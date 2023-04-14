@@ -6,12 +6,12 @@ import (
 )
 
 type RefundTransaction struct {
-	Block          types.U32
-	Amount         types.U64
-	Target         string
-	TxHash         string
-	Signatures     []StellarSignature
-	SequenceNumber types.U64
+	Block          types.U32          `json:"block"`
+	Amount         types.U64          `json:"amount"`
+	Target         string             `json:"target"`
+	TxHash         string             `json:"tx_hash"`
+	Signatures     []StellarSignature `json:"signatures"`
+	SequenceNumber types.U64          `json:"sequence_number"`
 }
 
 func (s *Substrate) CreateRefundTransactionOrAddSig(identity Identity, tx_hash string, target string, amount int64, signature string, stellarAddress string, sequence_number uint64) error {

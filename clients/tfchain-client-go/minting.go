@@ -13,10 +13,10 @@ var (
 )
 
 type MintTransaction struct {
-	Amount types.U64
-	Target types.AccountID
-	Block  types.U32
-	Votes  types.U32
+	Amount types.U64       `json:"amount"`
+	Target types.AccountID `json:"target"`
+	Block  types.U32       `json:"block"`
+	Votes  types.U32       `json:"votes"`
 }
 
 func (s *Substrate) IsMintedAlready(mintTxID string) (exists bool, err error) {

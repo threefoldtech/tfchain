@@ -9,8 +9,8 @@ import (
 )
 
 type DeletedState struct {
-	IsCanceledByUser bool
-	IsOutOfFunds     bool
+	IsCanceledByUser bool `json:"is_canceled_by_user"`
+	IsOutOfFunds     bool `json:"is_out_of_funds"`
 }
 
 // Decode implementation for the enum type
@@ -44,11 +44,11 @@ func (r DeletedState) Encode(encoder scale.Encoder) (err error) {
 
 // ContractState enum
 type ContractState struct {
-	IsCreated                bool
-	IsDeleted                bool
-	AsDeleted                DeletedState
-	IsGracePeriod            bool
-	AsGracePeriodBlockNumber types.U64
+	IsCreated                bool         `json:"is_created"`
+	IsDeleted                bool         `json:"is_deleted"`
+	AsDeleted                DeletedState `json:"as_deleted"`
+	IsGracePeriod            bool         `json:"is_grace_period"`
+	AsGracePeriodBlockNumber types.U64    `json:"as_grace_period_block_number"`
 }
 
 // Decode implementation for the enum type
@@ -110,28 +110,28 @@ func NewHexHash(hash string) (hexHash HexHash) {
 }
 
 type NodeContract struct {
-	Node           types.U32
-	DeploymentHash HexHash
-	DeploymentData string
-	PublicIPsCount types.U32
-	PublicIPs      []PublicIP
+	Node           types.U32  `json:"node_id"`
+	DeploymentHash HexHash    `json:"deployment_hash"`
+	DeploymentData string     `json:"deployment_data"`
+	PublicIPsCount types.U32  `json:"public_ips_count"`
+	PublicIPs      []PublicIP `json:"public_ips"`
 }
 
 type NameContract struct {
-	Name string
+	Name string `json:"name"`
 }
 
 type RentContract struct {
-	Node types.U32
+	Node types.U32 `json:"node_id"`
 }
 
 type ContractType struct {
-	IsNodeContract bool
-	NodeContract   NodeContract
-	IsNameContract bool
-	NameContract   NameContract
-	IsRentContract bool
-	RentContract   RentContract
+	IsNodeContract bool         `json:"is_node_contract"`
+	NodeContract   NodeContract `json:"node_contract"`
+	IsNameContract bool         `json:"is_name_contract"`
+	NameContract   NameContract `json:"name_contract"`
+	IsRentContract bool         `json:"is_rent_contract"`
+	RentContract   RentContract `json:"rent_contract"`
 }
 
 // Decode implementation for the enum type
@@ -197,11 +197,11 @@ func (r ContractType) Encode(encoder scale.Encoder) (err error) {
 // Contract structure
 type Contract struct {
 	Versioned
-	State              ContractState
-	ContractID         types.U64
-	TwinID             types.U32
-	ContractType       ContractType
-	SolutionProviderID types.OptionU64
+	State              ContractState   `json:"state"`
+	ContractID         types.U64       `json:"contract_id"`
+	TwinID             types.U32       `json:"twin_id"`
+	ContractType       ContractType    `json:"contract_type"`
+	SolutionProviderID types.OptionU64 `json:"solution_provider_id"`
 }
 
 // CreateNodeContract creates a contract for deployment
@@ -537,16 +537,16 @@ func (s *Substrate) getContract(cl Conn, key types.StorageKey) (*Contract, error
 
 // Consumption structure
 type NruConsumption struct {
-	ContractID types.U64
-	Timestamp  types.U64
-	Window     types.U64
-	NRU        types.U64
+	ContractID types.U64 `json:"contract_id"`
+	Timestamp  types.U64 `json:"timestamp"`
+	Window     types.U64 `json:"window"`
+	NRU        types.U64 `json:"nru"`
 }
 
 // Consumption structure
 type Consumption struct {
-	ContractID types.U64
-	Timestamp  types.U64
+	ContractID types.U64 `json:"contract_id"`
+	Timestamp  types.U64 `json:"timestamp"`
 	CRU        types.U64 `json:"cru"`
 	SRU        types.U64 `json:"sru"`
 	HRU        types.U64 `json:"hru"`
@@ -580,6 +580,6 @@ func (s *Substrate) Report(identity Identity, consumptions []NruConsumption) (ty
 }
 
 type ContractResources struct {
-	ContractID types.U64
-	Used       Resources
+	ContractID types.U64 `json:"contract_id"`
+	Used       Resources `json:"resources"`
 }

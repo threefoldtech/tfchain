@@ -13,35 +13,35 @@ import (
 
 // Resources type
 type Resources struct {
-	HRU types.U64
-	SRU types.U64
-	CRU types.U64
-	MRU types.U64
+	HRU types.U64 `json:"hru"`
+	SRU types.U64 `json:"sru"`
+	CRU types.U64 `json:"cru"`
+	MRU types.U64 `json:"mru"`
 }
 
 // Location type
 type Location struct {
-	City      string
-	Country   string
-	Latitude  string
-	Longitude string
+	City      string `json:"city"`
+	Country   string `json:"country"`
+	Latitude  string `json:"latitude"`
+	Longitude string `json:"longitude"`
 }
 
 // Role type
 type Role struct {
-	IsNode    bool
-	IsGateway bool
+	IsNode    bool `json:"is_node"`
+	IsGateway bool `json:"is_gateway"`
 }
 
 type NodePower struct {
-	State  PowerState
-	Target Power
+	State  PowerState `json:"state"`
+	Target Power      `json:"target"`
 }
 
 type PowerState struct {
-	IsUp              bool
-	IsDown            bool
-	AsDownBlockNumber BlockNumber
+	IsUp              bool        `json:"is_up"`
+	IsDown            bool        `json:"is_down"`
+	AsDownBlockNumber BlockNumber `json:"as_down_block_number"`
 }
 
 // Decode implementation for the enum type
@@ -80,8 +80,8 @@ func (r PowerState) Encode(encoder scale.Encoder) (err error) {
 }
 
 type Power struct {
-	IsUp   bool
-	IsDown bool
+	IsUp   bool `json:"is_up"`
+	IsDown bool `json:"is_down"`
 }
 
 // Decode implementation for the enum type
@@ -146,13 +146,13 @@ func (r Role) Encode(encoder scale.Encoder) (err error) {
 }
 
 type IP struct {
-	IP string
-	GW string
+	IP string `json:"ip"`
+	GW string `json:"gw"`
 }
 
 type OptionIP struct {
-	HasValue bool
-	AsValue  IP
+	HasValue bool `json:"has_value"`
+	AsValue  IP   `json:"as_value"`
 }
 
 // Encode implementation
@@ -192,8 +192,8 @@ func (m *OptionIP) Decode(decoder scale.Decoder) (err error) {
 }
 
 type OptionDomain struct {
-	HasValue bool
-	AsValue  string
+	HasValue bool   `json:"has_value"`
+	AsValue  string `json:"as_value"`
 }
 
 // Encode implementation
@@ -234,15 +234,15 @@ func (m *OptionDomain) Decode(decoder scale.Decoder) (err error) {
 
 // PublicConfig type
 type PublicConfig struct {
-	IP4    IP
-	IP6    OptionIP
-	Domain OptionDomain
+	IP4    IP           `json:"ip4"`
+	IP6    OptionIP     `json:"ip6"`
+	Domain OptionDomain `json:"domain"`
 }
 
 // OptionPublicConfig type
 type OptionPublicConfig struct {
-	HasValue bool
-	AsValue  PublicConfig
+	HasValue bool         `json:"has_value"`
+	AsValue  PublicConfig `json:"as_value"`
 }
 
 // Encode implementation
@@ -282,15 +282,15 @@ func (m *OptionPublicConfig) Decode(decoder scale.Decoder) (err error) {
 }
 
 type Interface struct {
-	Name string
-	Mac  string
-	IPs  []string
+	Name string   `json:"name"`
+	Mac  string   `json:"mac"`
+	IPs  []string `json:"ips"`
 }
 
 // OptionBoardSerial type
 type OptionBoardSerial struct {
-	HasValue bool
-	AsValue  string
+	HasValue bool   `json:"has_value"`
+	AsValue  string `json:"as_value"`
 }
 
 // Encode implementation
@@ -332,20 +332,20 @@ func (m *OptionBoardSerial) Decode(decoder scale.Decoder) (err error) {
 // Node type
 type Node struct {
 	Versioned
-	ID              types.U32
-	FarmID          types.U32
-	TwinID          types.U32
-	Resources       Resources
-	Location        Location
-	PublicConfig    OptionPublicConfig
-	Created         types.U64
-	FarmingPolicy   types.U32
-	Interfaces      []Interface
-	Certification   NodeCertification
-	SecureBoot      bool
-	Virtualized     bool
-	BoardSerial     OptionBoardSerial
-	ConnectionPrice types.U32
+	ID              types.U32          `json:"id"`
+	FarmID          types.U32          `json:"farm_id"`
+	TwinID          types.U32          `json:"twin_id"`
+	Resources       Resources          `json:"resources"`
+	Location        Location           `json:"location"`
+	PublicConfig    OptionPublicConfig `json:"public_config"`
+	Created         types.U64          `json:"created"`
+	FarmingPolicy   types.U32          `json:"farming_policy"`
+	Interfaces      []Interface        `json:"interfaces"`
+	Certification   NodeCertification  `json:"certification"`
+	SecureBoot      bool               `json:"secure_boot"`
+	Virtualized     bool               `json:"virtualized"`
+	BoardSerial     OptionBoardSerial  `json:"board_serial"`
+	ConnectionPrice types.U32          `json:"connection_price"`
 }
 
 // Eq compare changes on node settable fields
@@ -361,9 +361,9 @@ func (n *Node) Eq(o *Node) bool {
 }
 
 type NodeExtra struct {
-	Secure       bool
-	Virtualized  bool
-	SerialNumber OptionBoardSerial
+	Secure       bool              `json:"secure"`
+	Virtualized  bool              `json:"virtualized"`
+	SerialNumber OptionBoardSerial `json:"serial_number"`
 }
 
 // GetNodeByTwinID gets a node by twin id
@@ -413,9 +413,9 @@ func (s *Substrate) GetNode(id uint32) (*Node, error) {
 }
 
 type ScannedNode struct {
-	ID   uint32
-	Node Node
-	Err  error
+	ID   uint32 `json:"id"`
+	Node Node   `json:"node"`
+	Err  error  `json:"err"`
 }
 
 func (s *Substrate) ScanNodes(ctx context.Context, from, to uint32) (<-chan ScannedNode, error) {

@@ -8,11 +8,11 @@ import (
 // User from substrate
 type User struct {
 	Versioned
-	ID        types.U32
-	Name      string
-	CountryID types.U32
-	CityID    types.U32
-	Address   AccountID
+	ID        types.U32 `json:"id"`
+	Name      string    `json:"name"`
+	CountryID types.U32 `json:"country_id"`
+	CityID    types.U32 `json:"city_id"`
+	Address   AccountID `json:"address"`
 }
 
 // GetUser with id
