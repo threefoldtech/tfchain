@@ -1,7 +1,7 @@
 use crate::pallet_tfgrid;
 use crate::*;
 use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
-use log::{debug, info};
+use log::info;
 use sp_std::marker::PhantomData;
 use scale_info::prelude::string::String;
 
@@ -25,13 +25,14 @@ impl<T: Config> OnRuntimeUpgrade for CheckStorageStateV9<T> {
                 " >>> Starting Smart Contract pallet {:?} storage check",
                 PalletVersion::<T>::get()
             );
-            check_pallet_smart_contract::<T>() +
-            clean_pallet_smart_contract::<T>() +
-            check_pallet_smart_contract::<T>()
+            check_pallet_smart_contract::<T>();
+            clean_pallet_smart_contract::<T>();
+            check_pallet_smart_contract::<T>();
         } else {
             info!(" >>> Unused Smart Contract pallet V9 storage check");
-            Weight::zero()
         }
+
+        Weight::zero()
     }
 }
 
@@ -49,15 +50,15 @@ pub fn check_pallet_smart_contract<T: Config>() -> frame_support::weights::Weigh
     // + check_node_contract_resources::<T>()
 
     check_contracts_to_bill_at::<T>();
-    // check_contracts::<T>();
-    // check_active_node_contracts::<T>();
-    // check_active_rent_contract_for_node::<T>();
-    // check_contract_id_by_node_id_and_hash::<T>();
-    // check_contract_id_by_name_registration::<T>();
-    // check_contract_lock::<T>();
-    // check_solution_providers::<T>();
-    // check_contract_billing_information_by_id::<T>();
-    // check_node_contract_resources::<T>();
+    check_contracts::<T>();
+    check_active_node_contracts::<T>();
+    check_active_rent_contract_for_node::<T>();
+    check_contract_id_by_node_id_and_hash::<T>();
+    check_contract_id_by_name_registration::<T>();
+    check_contract_lock::<T>();
+    check_solution_providers::<T>();
+    check_contract_billing_information_by_id::<T>();
+    check_node_contract_resources::<T>();
 
     Weight::zero()
 }
@@ -75,15 +76,15 @@ pub fn clean_pallet_smart_contract<T: Config>() -> frame_support::weights::Weigh
     // + clean_node_contract_resources::<T>()
 
     clean_contracts_to_bill_at::<T>();
-    // clean_contracts::<T>();
-    // clean_active_node_contracts::<T>();
-    // clean_active_rent_contract_for_node::<T>();
-    // clean_contract_id_by_node_id_and_hash::<T>();
-    // clean_contract_id_by_name_registration::<T>();
-    // clean_contract_lock::<T>();
-    // clean_solution_providers::<T>();
-    // clean_contract_billing_information_by_id::<T>();
-    // clean_node_contract_resources::<T>();
+    clean_contracts::<T>();
+    clean_active_node_contracts::<T>();
+    clean_active_rent_contract_for_node::<T>();
+    clean_contract_id_by_node_id_and_hash::<T>();
+    clean_contract_id_by_name_registration::<T>();
+    clean_contract_lock::<T>();
+    clean_solution_providers::<T>();
+    clean_contract_billing_information_by_id::<T>();
+    clean_node_contract_resources::<T>();
 
     Weight::zero()
 }
@@ -97,31 +98,9 @@ pub fn check_contracts_to_bill_at<T: Config>() -> frame_support::weights::Weight
 
     let mut contract_id_count = vec![0; (ContractID::<T>::get() + 1) as usize];
 
-    for (index, contract_ids) in ContractsToBillAt::<T>::iter() {
-        debug!("index: {}, contracts: {:?}", index, contract_ids);
-
+    for (_index, contract_ids) in ContractsToBillAt::<T>::iter() {
         for contract_id in contract_ids {
             contract_id_count[contract_id as usize] += 1;
-            
-            // match Contracts::<T>::get(contract_id) {
-            //     Some(c) => {
-            //         if let types::ContractData::NodeContract(node_contract) = c.contract_type {
-            //             let contract_resource = NodeContractResources::<T>::get(contract_id);
-            //             if node_contract.public_ips == 0 && contract_resource.used.is_empty() {
-            //                 info!(
-            //                     " ⚠️  ContractsToBillAt[index: {}]: node contract (id: {}) with no pub ips + no resources",
-            //                     index, contract_id
-            //                 );
-            //             }
-            //         }
-            //     }
-            //     _ => {
-            //         info!(
-            //             " ⚠️  ContractsToBillAt[index: {}]: rogue contract (id: {})",
-            //             index, contract_id
-            //         );
-            //     }
-            // }
         }
     }
 
@@ -138,7 +117,7 @@ pub fn check_contracts_to_bill_at<T: Config>() -> frame_support::weights::Weight
                         }
                     }
                     info!(
-                        " ⚠️  Contract (id: {}) should be in billing loop",
+                        " ⚠️    Contract (id: {}) should be in billing loop",
                         contract_id
                     );
                 }
@@ -147,7 +126,7 @@ pub fn check_contracts_to_bill_at<T: Config>() -> frame_support::weights::Weight
                         let contract_resource = NodeContractResources::<T>::get(contract_id as u64);
                         if node_contract.public_ips == 0 && contract_resource.used.is_empty() {
                             info!(
-                                " ⚠️  Node Contract (id: {}) with no ips / no resources should not be in billing loop",
+                                " ⚠️    Node Contract (id: {}) with no ips / no resources should not be in billing loop",
                                 contract_id
                             );
                         }
@@ -155,14 +134,14 @@ pub fn check_contracts_to_bill_at<T: Config>() -> frame_support::weights::Weight
                 }
                 _ => {
                     info!(
-                        " ⚠️  Contract (id: {}) duplicated {} times in billing loop",
+                        " ⚠️    Contract (id: {}) duplicated {} times in billing loop",
                         contract_id, count
                     );
                 }
             }
         } else if count > &0 {
             info!(
-                " ⚠️  Contract (id: {}) not exists and should not be in billing loop",
+                " ⚠️    Contract (id: {}) not exists and should not be in billing loop",
                 contract_id
             );
         }
@@ -187,13 +166,13 @@ pub fn check_contracts<T: Config>() -> frame_support::weights::Weight {
     for (contract_id, contract) in Contracts::<T>::iter() {
         if contract_id != contract.contract_id {
             info!(
-                " ⚠️  Contracts[id: {}]: wrong id ({})",
+                " ⚠️    Contracts[id: {}]: wrong id ({})",
                 contract_id, contract.contract_id
             );
         }
         if !contract_id_range.contains(&contract_id) {
             info!(
-                " ⚠️  Contracts[id: {}]: id not in range {:?}",
+                " ⚠️    Contracts[id: {}]: id not in range {:?}",
                 contract_id, contract_id_range
             );
         }
@@ -213,7 +192,7 @@ pub fn check_contracts<T: Config>() -> frame_support::weights::Weight {
         // ContractLock
         if !ContractLock::<T>::contains_key(contract_id) {
             info!(
-                " ⚠️  Contract (id: {}): no contract lock found",
+                " ⚠️    Contract (id: {}): no contract lock found",
                 contract_id
             );
         }
@@ -222,7 +201,7 @@ pub fn check_contracts<T: Config>() -> frame_support::weights::Weight {
         if let Some(sp_id) = contract.solution_provider_id {
             if SolutionProviders::<T>::get(sp_id).is_none() {
                 info!(
-                    " ⚠️  Contract (id: {}): solution provider (id: {}) not exists",
+                    " ⚠️    Contract (id: {}): solution provider (id: {}) not exists",
                     contract_id, sp_id
                 );
             }
@@ -244,7 +223,7 @@ fn check_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_has
         let active_node_contracts = ActiveNodeContracts::<T>::get(node_id);
         if !active_node_contracts.contains(&contract_id) {
             info!(
-                " ⚠️  Node Contract (id: {}) on node {}: contract not in active list ({:?})",
+                " ⚠️    Node Contract (id: {}) on node {}: contract not in active list ({:?})",
                 contract_id, node_id, active_node_contracts
             );
         }
@@ -253,12 +232,12 @@ fn check_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_has
         let ctr_id = ContractIDByNodeIDAndHash::<T>::get(node_id, &deployment_hash);
         if ctr_id == 0 {
             info!(
-                " ⚠️  Node Contract (id: {}) on node {}: key not exists in node/deployment map",
+                " ⚠️    Node Contract (id: {}) on node {}: key not exists in node/deployment map",
                 contract_id, node_id
             );
         } else if ctr_id != contract_id {
             info!(
-                " ⚠️  Node Contract (id: {}) on node {}: wrong contract (id: {}) in node/deployment map",
+                " ⚠️    Node Contract (id: {}) on node {}: wrong contract (id: {}) in node/deployment map",
                 contract_id, node_id, ctr_id
             );
         }
@@ -266,16 +245,18 @@ fn check_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_has
         // ContractBillingInformationByID
         if !ContractBillingInformationByID::<T>::contains_key(contract_id) {
             info!(
-                " ⚠️  Node Contract (id: {}) on node {}: no related billing information found",
+                " ⚠️    Node Contract (id: {}) on node {}: no related billing information found",
                 contract_id, node_id
             );
         }
 
         // NodeContractResources
-        // Nothing to check from here
+        // Nothing to check from here 
+        // A node contract needs a call to report_contract_resources() to
+        // have associated ressources in NodeContractResources storage map
     } else {
         info!(
-            " ⚠️  Node Contract (id: {}) on node {}: node not exists",
+            " ⚠️    Node Contract (id: {}) on node {}: node not exists",
             contract_id, node_id
         );
     }
@@ -286,13 +267,13 @@ fn check_name_contract<T: Config>(contract_id: u64, name: &T::NameContractName) 
     let ctr_id = ContractIDByNameRegistration::<T>::get(name);
     if ctr_id == 0 {
         info!(
-            " ⚠️  Name Contract (id: {}): key (name: {:?}) not exists",
+            " ⚠️    Name Contract (id: {}): key (name: {:?}) not exists",
             contract_id, name
         );
     }
     else if ctr_id != contract_id  {
         info!(
-            " ⚠️  Name Contract (id: {}): wrong contract (id: {}) in name registration map",
+            " ⚠️    Name Contract (id: {}): wrong contract (id: {}) in name registration map",
             contract_id, ctr_id
         );
     }
@@ -305,7 +286,7 @@ fn check_rent_contract<T: Config>(node_id: u32, contract: &types::Contract<T>) {
         let active_rent_contract = ActiveRentContractForNode::<T>::get(node_id);
         if active_rent_contract != Some(contract.contract_id) {
             info!(
-                " ⚠️  Rent Contract (id: {}) on node {}: contract not activated ({:?})",
+                " ⚠️    Rent Contract (id: {}) on node {}: contract not activated ({:?})",
                 contract.contract_id, node_id, active_rent_contract
             );
         }
@@ -315,7 +296,7 @@ fn check_rent_contract<T: Config>(node_id: u32, contract: &types::Contract<T>) {
             if let Some(node_contract) = Contracts::<T>::get(ctr_id) {
                 if contract.twin_id != node_contract.twin_id {
                     info!(
-                        " ⚠️  Rent Contract (id: {}) on node {}: not matching twin on node contract (id: {})",
+                        " ⚠️    Rent Contract (id: {}) on node {}: not matching twin on node contract (id: {})",
                         contract.contract_id, node_id, ctr_id
                     );
                 }
@@ -323,7 +304,7 @@ fn check_rent_contract<T: Config>(node_id: u32, contract: &types::Contract<T>) {
         }
     } else {
         info!(
-            " ⚠️  Rent Contract (id: {}) on node {}: node not exists",
+            " ⚠️    Rent Contract (id: {}) on node {}: node not exists",
             contract.contract_id, node_id
         );
     }
@@ -340,26 +321,25 @@ pub fn check_active_node_contracts<T: Config>() -> frame_support::weights::Weigh
         let node = pallet_tfgrid::Nodes::<T>::get(node_id);
         if node.is_none() {
             info!(
-                " ⚠️  ActiveNodeContracts[node: {}]: node not exists",
+                " ⚠️    ActiveNodeContracts[node: {}]: node not exists",
                 node_id
             );
         }
 
         for ctr_id in contract_ids {
-            let contract = Contracts::<T>::get(ctr_id);
-            if let Some(c) = contract {
+            if let Some(c) = Contracts::<T>::get(ctr_id) {
                 match c.contract_type {
                     types::ContractData::NodeContract(_) => (),
                     _ => {
                         info!(
-                        " ⚠️  ActiveNodeContracts[node: {}, contract: {}]: type is not node contract",
+                        " ⚠️    ActiveNodeContracts[node: {}, contract: {}]: type is not node contract",
                         node_id, ctr_id
                     );
                     }
                 }
             } else {
                 info!(
-                    " ⚠️  ActiveNodeContracts[node: {}]: contract {} not exists",
+                    " ⚠️    ActiveNodeContracts[node: {}]: contract {} not exists",
                     node_id, ctr_id
                 );
             }
@@ -385,25 +365,24 @@ pub fn check_active_rent_contract_for_node<T: Config>() -> frame_support::weight
         let node = pallet_tfgrid::Nodes::<T>::get(node_id);
         if node.is_none() {
             info!(
-                " ⚠️  ActiveRentContractForNode[node: {}]: node not exists",
+                " ⚠️    ActiveRentContractForNode[node: {}]: node not exists",
                 node_id
             );
         }
 
-        let contract = Contracts::<T>::get(contract_id);
-        if let Some(c) = contract {
+        if let Some(c) = Contracts::<T>::get(contract_id) {
             match c.contract_type {
                 types::ContractData::RentContract(_) => (),
                 _ => {
                     info!(
-                        " ⚠️  ActiveRentContractForNode[node: {}]: contract {} is not a rent contract",
+                        " ⚠️    ActiveRentContractForNode[node: {}]: contract {} is not a rent contract",
                         node_id, contract_id
                     );
                 }
             }
         } else {
             info!(
-                " ⚠️  ActiveRentContractForNode[node: {}]: contract {} not exists",
+                " ⚠️    ActiveRentContractForNode[node: {}]: contract {} not exists",
                 node_id, contract_id
             );
         }
@@ -428,32 +407,31 @@ pub fn check_contract_id_by_node_id_and_hash<T: Config>() -> frame_support::weig
         let node = pallet_tfgrid::Nodes::<T>::get(node_id);
         if node.is_none() {
             info!(
-                " ⚠️  ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: node not exists",
+                " ⚠️    ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: node not exists",
                 node_id, String::from_utf8_lossy(&hash)
             );
         }
 
-        let contract = Contracts::<T>::get(contract_id);
-        if let Some(c) = contract {
+        if let Some(c) = Contracts::<T>::get(contract_id) {
             match c.contract_type {
                 types::ContractData::NodeContract(node_contract) => {
                     if node_contract.deployment_hash != hash {
                         info!(
-                            " ⚠️  ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: deployment hash ({:?}) on contract {} is not matching",
+                            " ⚠️    ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: deployment hash ({:?}) on contract {} is not matching",
                             node_id, String::from_utf8_lossy(&hash), String::from_utf8_lossy(&node_contract.deployment_hash), contract_id, 
                         );
                     }
                 }
                 _ => {
                     info!(
-                        " ⚠️  ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: contract {} is not a node contract",
+                        " ⚠️    ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: contract {} is not a node contract",
                         node_id, String::from_utf8_lossy(&hash), contract_id
                     );
                 }
             }
         } else {
             info!(
-                " ⚠️  ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: contract {} not exists",
+                " ⚠️    ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: contract {} not exists",
                 node_id, String::from_utf8_lossy(&hash), contract_id
             );
         }
@@ -475,28 +453,27 @@ pub fn check_contract_id_by_name_registration<T: Config>() -> frame_support::wei
     );
 
     for (name, contract_id) in ContractIDByNameRegistration::<T>::iter() {
-        let contract = Contracts::<T>::get(contract_id);
-        if let Some(c) = contract {
+        if let Some(c) = Contracts::<T>::get(contract_id) {
             match c.contract_type {
                 types::ContractData::NameContract(name_contract) => {
                     if name_contract.name != name {
                         info!(
-                            " ⚠️  ContractIDByNameRegistration[name: {:?}]: name ({:?}) on contract {} is not matching",
-                            name, name_contract.name, contract_id, 
+                            " ⚠️    ContractIDByNameRegistration[name: {:?}]: name ({:?}) on contract {} is not matching",
+                            String::from_utf8_lossy(&name.into()), String::from_utf8_lossy(&name_contract.name.into()), contract_id, 
                         );
                     }
                 }
                 _ => {
                     info!(
-                        " ⚠️  ContractIDByNameRegistration[name: {:?}]: contract {} is not a name contract",
-                        name, contract_id
+                        " ⚠️    ContractIDByNameRegistration[name: {:?}]: contract {} is not a name contract",
+                        String::from_utf8_lossy(&name.into()), contract_id
                     );
                 }
             }
         } else {
             info!(
-                " ⚠️  ContractIDByNameRegistration[name: {:?}]: contract {} not exists",
-                name, contract_id
+                " ⚠️    ContractIDByNameRegistration[name: {:?}]: contract {} not exists",
+                String::from_utf8_lossy(&name.into()), contract_id
             );
         }
     }
@@ -517,10 +494,9 @@ pub fn check_contract_lock<T: Config>() -> frame_support::weights::Weight {
     );
 
     for (contract_id, _contract_lock) in ContractLock::<T>::iter() {
-        let contract = Contracts::<T>::get(contract_id);
-        if contract.is_none() {        
+        if Contracts::<T>::get(contract_id).is_none() {        
             info!(
-                " ⚠️  ContractLock[contract: {}]: contract not exists",
+                " ⚠️    ContractLock[contract: {}]: contract not exists",
                 contract_id
             );
         }
@@ -545,7 +521,7 @@ pub fn check_solution_providers<T: Config>() -> frame_support::weights::Weight {
     for (solution_provider_id, _solution_provider) in SolutionProviders::<T>::iter() {
         if !solution_provider_id_range.contains(&solution_provider_id) {
             info!(
-                " ⚠️  SolutionProviders[id: {}]: id not in range {:?}",
+                " ⚠️    SolutionProviders[id: {}]: id not in range {:?}",
                 solution_provider_id, solution_provider_id_range
             );
         }
@@ -567,20 +543,19 @@ pub fn check_contract_billing_information_by_id<T: Config>() -> frame_support::w
     );
 
     for (contract_id, _contract_billing_information) in ContractBillingInformationByID::<T>::iter() {
-        let contract = Contracts::<T>::get(contract_id);
-        if let Some(c) = contract {
+        if let Some(c) = Contracts::<T>::get(contract_id) {
             match c.contract_type {
                 types::ContractData::NodeContract(_) => (),
                 _ => {
                     info!(
-                        " ⚠️  ContractBillingInformationByID[contract: {}]: contract is not a node contract",
+                        " ⚠️    ContractBillingInformationByID[contract: {}]: contract is not a node contract",
                         contract_id
                     );
                 }
             }
         } else {
             info!(
-                " ⚠️  ContractBillingInformationByID[contract: {}]: contract not exists",
+                " ⚠️    ContractBillingInformationByID[contract: {}]: contract not exists",
                 contract_id
             );
         }
@@ -604,25 +579,24 @@ pub fn check_node_contract_resources<T: Config>() -> frame_support::weights::Wei
     for (contract_id, contract_resource) in NodeContractResources::<T>::iter() { 
         if contract_resource.contract_id != contract_id {
             info!(
-                " ⚠️  NodeContractResources[contract: {}]: wrong contract id on resource ({})",
+                " ⚠️    NodeContractResources[contract: {}]: wrong contract id on resource ({})",
                contract_id, contract_resource.contract_id
             );
         }
 
-        let contract = Contracts::<T>::get(contract_id);
-        if let Some(c) = contract {
+        if let Some(c) = Contracts::<T>::get(contract_id) {
             match c.contract_type {
                 types::ContractData::NodeContract(_) => (),
                 _ => {
                     info!(
-                        " ⚠️  NodeContractResources[contract: {}]: contract is not a node contract",
+                        " ⚠️    NodeContractResources[contract: {}]: contract is not a node contract",
                         contract_id
                     );
                 }
             }
         } else {
             info!(
-                " ⚠️  NodeContractResources[contract: {}]: contract not exists",
+                " ⚠️    NodeContractResources[contract: {}]: contract not exists",
                 contract_id
             );
         }
@@ -694,51 +668,17 @@ pub fn clean_contracts<T: Config>() -> frame_support::weights::Weight {
         PalletVersion::<T>::get()
     );
 
-    // let contract_id_range = 1..=ContractID::<T>::get();
-    // for (contract_id, contract) in Contracts::<T>::iter() {
-    //     if contract_id != contract.contract_id {
-    //         info!(
-    //             " ⚠️  Contracts[id: {}]: wrong id ({})",
-    //             contract_id, contract.contract_id
-    //         );
-    //     }
-    //     if !contract_id_range.contains(&contract_id) {
-    //         info!(
-    //             " ⚠️  Contracts[id: {}]: id not in range {:?}",
-    //             contract_id, contract_id_range
-    //         );
-    //     }
-
-    //     match contract.contract_type {
-    //         types::ContractData::NodeContract(node_contract) => clean_node_contract::<T>(
-    //             node_contract.node_id,
-    //             contract_id,
-    //             node_contract.deployment_hash,
-    //         ),
-    //         types::ContractData::NameContract(name_contract) => { clean_name_contract::<T>(contract_id, &name_contract.name) }
-    //         types::ContractData::RentContract(ref rent_contract) => {
-    //             clean_rent_contract::<T>(rent_contract.node_id, &contract)
-    //         }
-    //     }
-
-    //     // ContractLock
-    //     if !ContractLock::<T>::contains_key(contract_id) {
-    //         info!(
-    //             " ⚠️  Contract (id: {}): no contract lock found",
-    //             contract_id
-    //         );
-    //     }
-
-    //     // SolutionProviders
-    //     if let Some(sp_id) = contract.solution_provider_id {
-    //         if SolutionProviders::<T>::get(sp_id).is_none() {
-    //             info!(
-    //                 " ⚠️  Contract (id: {}): solution provider (id: {}) not exists",
-    //                 contract_id, sp_id
-    //             );
-    //         }
-    //     }
-    // }
+    for (contract_id, contract) in Contracts::<T>::iter() {
+        match contract.contract_type {
+            types::ContractData::NodeContract(node_contract) => clean_node_contract::<T>(
+                node_contract.node_id,
+                contract_id,
+                node_contract.deployment_hash,
+            ),
+            types::ContractData::NameContract(_) => clean_name_contract::<T>(),
+            types::ContractData::RentContract(_) => clean_rent_contract::<T>(),
+        }
+    }
 
     info!(
         "✨  Smart Contract pallet {:?} cleaning Contracts storage map END",
@@ -748,97 +688,27 @@ pub fn clean_contracts<T: Config>() -> frame_support::weights::Weight {
     Weight::zero()
 }
 
-// fn clean_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_hash: HexHash) {
-//     let node = pallet_tfgrid::Nodes::<T>::get(node_id);
-//     if let Some(_) = node {
-//         // ActiveNodeContracts
-//         let active_node_contracts = ActiveNodeContracts::<T>::get(node_id);
-//         if !active_node_contracts.contains(&contract_id) {
-//             info!(
-//                 " ⚠️  Node Contract (id: {}) on node {}: contract not in active list ({:?})",
-//                 contract_id, node_id, active_node_contracts
-//             );
-//         }
+fn clean_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_hash: HexHash) {
+    // ActiveNodeContracts
+    let mut active_node_contracts = ActiveNodeContracts::<T>::get(node_id);
+    if !active_node_contracts.contains(&contract_id) {
+        active_node_contracts.push(contract_id);
+        ActiveNodeContracts::<T>::insert(node_id, active_node_contracts);
+    }
 
-//         // ContractIDByNodeIDAndHash
-//         let ctr_id = ContractIDByNodeIDAndHash::<T>::get(node_id, &deployment_hash);
-//         if ctr_id == 0 {
-//             info!(
-//                 " ⚠️  Node Contract (id: {}) on node {}: key not exists in node/deployment map",
-//                 contract_id, node_id
-//             );
-//         } else if ctr_id != contract_id {
-//             info!(
-//                 " ⚠️  Node Contract (id: {}) on node {}: wrong contract (id: {}) in node/deployment map",
-//                 contract_id, node_id, ctr_id
-//             );
-//         }
+    // ContractIDByNodeIDAndHash
+    if !ContractIDByNodeIDAndHash::<T>::contains_key(node_id, deployment_hash) {
+        ContractIDByNodeIDAndHash::<T>::insert(node_id, deployment_hash, contract_id);
+    }
+}
 
-//         // ContractBillingInformationByID
-//         if !ContractBillingInformationByID::<T>::contains_key(contract_id) {
-//             info!(
-//                 " ⚠️  Node Contract (id: {}) on node {}: no related billing information found",
-//                 contract_id, node_id
-//             );
-//         }
+fn clean_name_contract<T: Config>() {
+    // Nothing to do here
+}
 
-//         // NodeContractResources
-//         // Nothing to check from here
-//     } else {
-//         info!(
-//             " ⚠️  Node Contract (id: {}) on node {}: node not exists",
-//             contract_id, node_id
-//         );
-//     }
-// }
-
-// fn clean_name_contract<T: Config>(contract_id: u64, name: &T::NameContractName) {
-//     // ContractIDByNameRegistration
-//     let ctr_id = ContractIDByNameRegistration::<T>::get(name);
-//     if ctr_id == 0 {
-//         info!(
-//             " ⚠️  Name Contract (id: {}): key (name: {:?}) not exists",
-//             contract_id, name
-//         );
-//     }
-//     else if ctr_id != contract_id  {
-//         info!(
-//             " ⚠️  Name Contract (id: {}): wrong contract (id: {}) in name registration map",
-//             contract_id, ctr_id
-//         );
-//     }
-// }
-
-// fn clean_rent_contract<T: Config>(node_id: u32, contract: &types::Contract<T>) {
-//     let node = pallet_tfgrid::Nodes::<T>::get(node_id);
-//     if let Some(_) = node {
-//         // ActiveRentContractForNode
-//         let active_rent_contract = ActiveRentContractForNode::<T>::get(node_id);
-//         if active_rent_contract != Some(contract.contract_id) {
-//             info!(
-//                 " ⚠️  Rent Contract (id: {}) on node {}: contract not activated ({:?})",
-//                 contract.contract_id, node_id, active_rent_contract
-//             );
-//         }
-//         // ActiveNodeContracts
-//         let active_node_contracts = ActiveNodeContracts::<T>::get(node_id);
-//         for ctr_id in active_node_contracts {
-//             if let Some(node_contract) = Contracts::<T>::get(ctr_id) {
-//                 if contract.twin_id != node_contract.twin_id {
-//                     info!(
-//                         " ⚠️  Rent Contract (id: {}) on node {}: not matching twin on node contract (id: {})",
-//                         contract.contract_id, node_id, ctr_id
-//                     );
-//                 }
-//             }
-//         }
-//     } else {
-//         info!(
-//             " ⚠️  Rent Contract (id: {}) on node {}: node not exists",
-//             contract.contract_id, node_id
-//         );
-//     }
-// }
+fn clean_rent_contract<T: Config>() {
+    // Nothing to do here
+}
 
 // ActiveNodeContracts
 pub fn clean_active_node_contracts<T: Config>() -> frame_support::weights::Weight {
@@ -847,35 +717,16 @@ pub fn clean_active_node_contracts<T: Config>() -> frame_support::weights::Weigh
         PalletVersion::<T>::get()
     );
 
-    // for (node_id, contract_ids) in ActiveNodeContracts::<T>::iter() {
-    //     let node = pallet_tfgrid::Nodes::<T>::get(node_id);
-    //     if node.is_none() {
-    //         info!(
-    //             " ⚠️  ActiveNodeContracts[node: {}]: node not exists",
-    //             node_id
-    //         );
-    //     }
-
-    //     for ctr_id in contract_ids {
-    //         let contract = Contracts::<T>::get(ctr_id);
-    //         if let Some(c) = contract {
-    //             match c.contract_type {
-    //                 types::ContractData::NodeContract(_) => (),
-    //                 _ => {
-    //                     info!(
-    //                     " ⚠️  ActiveNodeContracts[node: {}, contract: {}]: type is not node contract",
-    //                     node_id, ctr_id
-    //                 );
-    //                 }
-    //             }
-    //         } else {
-    //             info!(
-    //                 " ⚠️  ActiveNodeContracts[node: {}]: contract {} not exists",
-    //                 node_id, ctr_id
-    //             );
-    //         }
-    //     }
-    // }
+    // Collect ActiveNodeContracts storage in memory
+    let active_node_contracts = ActiveNodeContracts::<T>::iter().collect::<Vec<_>>();
+    for (node_id, mut contract_ids) in active_node_contracts {
+        if pallet_tfgrid::Nodes::<T>::get(node_id).is_none() {
+            ActiveNodeContracts::<T>::remove(node_id);
+        } else {
+            contract_ids.retain(|contract_id| Contracts::<T>::get(contract_id).is_some());
+            ActiveNodeContracts::<T>::insert(node_id, contract_ids);
+        }
+    }
 
     info!(
         "✨  Smart Contract pallet {:?} cleaning ActiveNodeContracts storage map END",
@@ -892,33 +743,14 @@ pub fn clean_active_rent_contract_for_node<T: Config>() -> frame_support::weight
         PalletVersion::<T>::get()
     );
 
-    // for (node_id, contract_id) in ActiveRentContractForNode::<T>::iter() {
-    //     let node = pallet_tfgrid::Nodes::<T>::get(node_id);
-    //     if node.is_none() {
-    //         info!(
-    //             " ⚠️  ActiveRentContractForNode[node: {}]: node not exists",
-    //             node_id
-    //         );
-    //     }
+    let to_remove: Vec<_> = ActiveRentContractForNode::<T>::iter()
+        .filter(|(_, contract_id)| Contracts::<T>::get(contract_id).is_none())
+        .map(|(node_id, _)| node_id)
+        .collect();
 
-    //     let contract = Contracts::<T>::get(contract_id);
-    //     if let Some(c) = contract {
-    //         match c.contract_type {
-    //             types::ContractData::RentContract(_) => (),
-    //             _ => {
-    //                 info!(
-    //                     " ⚠️  ActiveRentContractForNode[node: {}]: contract {} is not a rent contract",
-    //                     node_id, contract_id
-    //                 );
-    //             }
-    //         }
-    //     } else {
-    //         info!(
-    //             " ⚠️  ActiveRentContractForNode[node: {}]: contract {} not exists",
-    //             node_id, contract_id
-    //         );
-    //     }
-    // }
+    for node_id in to_remove {
+        ActiveRentContractForNode::<T>::remove(node_id);
+    }
 
     info!(
         "✨  Smart Contract pallet {:?} cleaning ActiveRentContractForNode storage map END",
@@ -935,11 +767,23 @@ pub fn clean_contract_id_by_node_id_and_hash<T: Config>() -> frame_support::weig
         PalletVersion::<T>::get()
     );
 
+    let to_remove: Vec<_> = ContractIDByNodeIDAndHash::<T>::iter()
+        .filter(|(_, _, contract_id)| Contracts::<T>::get(contract_id).is_none())
+        .map(|(node_id, hash, _)| (node_id, hash))
+        .collect();
+
+    info!("   contract ids to remove: {:?}", to_remove);
+
+    for (node_id, hash) in to_remove {
+        info!("   contract id to remove: [node: {}, hash: {:?}]", node_id, String::from_utf8_lossy(&hash));
+        ContractIDByNodeIDAndHash::<T>::remove(node_id, hash);
+    }
+
     // for (node_id, hash, contract_id) in ContractIDByNodeIDAndHash::<T>::iter() {
     //     let node = pallet_tfgrid::Nodes::<T>::get(node_id);
     //     if node.is_none() {
     //         info!(
-    //             " ⚠️  ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: node not exists",
+    //             " ⚠️    ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: node not exists",
     //             node_id, String::from_utf8_lossy(&hash)
     //         );
     //     }
@@ -950,21 +794,21 @@ pub fn clean_contract_id_by_node_id_and_hash<T: Config>() -> frame_support::weig
     //             types::ContractData::NodeContract(node_contract) => {
     //                 if node_contract.deployment_hash != hash {
     //                     info!(
-    //                         " ⚠️  ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: deployment hash ({:?}) on contract {} is not matching",
+    //                         " ⚠️    ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: deployment hash ({:?}) on contract {} is not matching",
     //                         node_id, String::from_utf8_lossy(&hash), String::from_utf8_lossy(&node_contract.deployment_hash), contract_id, 
     //                     );
     //                 }
     //             }
     //             _ => {
     //                 info!(
-    //                     " ⚠️  ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: contract {} is not a node contract",
+    //                     " ⚠️    ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: contract {} is not a node contract",
     //                     node_id, String::from_utf8_lossy(&hash), contract_id
     //                 );
     //             }
     //         }
     //     } else {
     //         info!(
-    //             " ⚠️  ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: contract {} not exists",
+    //             " ⚠️    ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: contract {} not exists",
     //             node_id, String::from_utf8_lossy(&hash), contract_id
     //         );
     //     }
@@ -985,32 +829,14 @@ pub fn clean_contract_id_by_name_registration<T: Config>() -> frame_support::wei
         PalletVersion::<T>::get()
     );
 
-    // for (name, contract_id) in ContractIDByNameRegistration::<T>::iter() {
-    //     let contract = Contracts::<T>::get(contract_id);
-    //     if let Some(c) = contract {
-    //         match c.contract_type {
-    //             types::ContractData::NameContract(name_contract) => {
-    //                 if name_contract.name != name {
-    //                     info!(
-    //                         " ⚠️  ContractIDByNameRegistration[name: {:?}]: name ({:?}) on contract {} is not matching",
-    //                         name, name_contract.name, contract_id, 
-    //                     );
-    //                 }
-    //             }
-    //             _ => {
-    //                 info!(
-    //                     " ⚠️  ContractIDByNameRegistration[name: {:?}]: contract {} is not a name contract",
-    //                     name, contract_id
-    //                 );
-    //             }
-    //         }
-    //     } else {
-    //         info!(
-    //             " ⚠️  ContractIDByNameRegistration[name: {:?}]: contract {} not exists",
-    //             name, contract_id
-    //         );
-    //     }
-    // }
+    let to_remove: Vec<_> = ContractIDByNameRegistration::<T>::iter()
+        .filter(|(_, contract_id)| Contracts::<T>::get(contract_id).is_none())
+        .map(|(name, _)| name)
+        .collect();
+
+    for contract_id in to_remove {
+        ContractIDByNameRegistration::<T>::remove(contract_id);
+    }
 
     info!(
         "✨  Smart Contract pallet {:?} cleaning ContractIDByNameRegistration storage map END",
@@ -1027,15 +853,7 @@ pub fn clean_contract_lock<T: Config>() -> frame_support::weights::Weight {
         PalletVersion::<T>::get()
     );
 
-    // for (contract_id, _contract_lock) in ContractLock::<T>::iter() {
-    //     let contract = Contracts::<T>::get(contract_id);
-    //     if contract.is_none() {        
-    //         info!(
-    //             " ⚠️  ContractLock[contract: {}]: contract not exists",
-    //             contract_id
-    //         );
-    //     }
-    // }
+    // Nothing to do here
 
     info!(
         "✨  Smart Contract pallet {:?} cleaning ContractLock storage map END",
@@ -1052,15 +870,7 @@ pub fn clean_solution_providers<T: Config>() -> frame_support::weights::Weight {
         PalletVersion::<T>::get()
     );
 
-    // let solution_provider_id_range = 1..=SolutionProviderID::<T>::get();
-    // for (solution_provider_id, _solution_provider) in SolutionProviders::<T>::iter() {
-    //     if !solution_provider_id_range.contains(&solution_provider_id) {
-    //         info!(
-    //             " ⚠️  SolutionProviders[id: {}]: id not in range {:?}",
-    //             solution_provider_id, solution_provider_id_range
-    //         );
-    //     }
-    // }
+    // Nothing to do here
 
     info!(
         "✨  Smart Contract pallet {:?} cleaning SolutionProviders storage map END",
@@ -1077,25 +887,23 @@ pub fn clean_contract_billing_information_by_id<T: Config>() -> frame_support::w
         PalletVersion::<T>::get()
     );
 
-    // for (contract_id, _contract_billing_information) in ContractBillingInformationByID::<T>::iter() {
-    //     let contract = Contracts::<T>::get(contract_id);
-    //     if let Some(c) = contract {
-    //         match c.contract_type {
-    //             types::ContractData::NodeContract(_) => (),
-    //             _ => {
-    //                 info!(
-    //                     " ⚠️  ContractBillingInformationByID[contract: {}]: contract is not a node contract",
-    //                     contract_id
-    //                 );
-    //             }
-    //         }
-    //     } else {
-    //         info!(
-    //             " ⚠️  ContractBillingInformationByID[contract: {}]: contract not exists",
-    //             contract_id
-    //         );
-    //     }
-    // }
+    let to_remove: Vec<u64> = ContractBillingInformationByID::<T>::iter()
+        .filter(|(contract_id, _)| {
+            if let Some(c) = Contracts::<T>::get(contract_id) {
+                match c.contract_type {
+                    types::ContractData::NodeContract(_) => false,
+                    _ => true,
+                }
+            } else {
+                true
+            }
+        })
+        .map(|(id, _)| id)
+        .collect();
+
+    for contract_id in to_remove {
+        ContractBillingInformationByID::<T>::remove(contract_id); 
+    }
 
     info!(
         "✨  Smart Contract pallet {:?} cleaning ContractBillingInformationByID storage map END",
@@ -1112,32 +920,14 @@ pub fn clean_node_contract_resources<T: Config>() -> frame_support::weights::Wei
         PalletVersion::<T>::get()
     );
 
-    // for (contract_id, contract_resource) in NodeContractResources::<T>::iter() { 
-    //     if contract_resource.contract_id != contract_id {
-    //         info!(
-    //             " ⚠️  NodeContractResources[contract: {}]: wrong contract id on resource ({})",
-    //            contract_id, contract_resource.contract_id
-    //         );
-    //     }
+    let to_remove: Vec<u64> = NodeContractResources::<T>::iter()
+        .filter(|(contract_id, _)| Contracts::<T>::get(contract_id).is_none())
+        .map(|(id, _)| id)
+        .collect();
 
-    //     let contract = Contracts::<T>::get(contract_id);
-    //     if let Some(c) = contract {
-    //         match c.contract_type {
-    //             types::ContractData::NodeContract(_) => (),
-    //             _ => {
-    //                 info!(
-    //                     " ⚠️  NodeContractResources[contract: {}]: contract is not a node contract",
-    //                     contract_id
-    //                 );
-    //             }
-    //         }
-    //     } else {
-    //         info!(
-    //             " ⚠️  NodeContractResources[contract: {}]: contract not exists",
-    //             contract_id
-    //         );
-    //     }
-    // }
+    for contract_id in to_remove {
+        NodeContractResources::<T>::remove(contract_id);
+    }
 
     info!(
         "✨  Smart Contract pallet {:?} cleaning NodeContractResources storage map END",

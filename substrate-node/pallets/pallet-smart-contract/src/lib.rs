@@ -251,6 +251,7 @@ pub mod pallet {
             + Clone
             + TypeInfo
             + TryFrom<Vec<u8>, Error = Error<Self>>
+            + Into<Vec<u8>>
             + MaxEncodedLen;
 
         type RestrictedOrigin: EnsureOrigin<Self::RuntimeOrigin>;
