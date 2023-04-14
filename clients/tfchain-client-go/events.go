@@ -100,6 +100,13 @@ type TwinEntityRemoved struct {
 	Topics []types.Hash
 }
 
+type TwinAccountBounded struct {
+	Phase   types.Phase
+	Twin    types.U32 `json:"twin_id"`
+	Account AccountID `json:"account_id"`
+	Topics  []types.Hash
+}
+
 // numeric enum for unit
 type Unit byte
 
@@ -359,11 +366,12 @@ type EventRecords struct {
 	TfgridModule_EntityDeleted []EntityDeleted //nolint:stylecheck,golint
 
 	// twin events
-	TfgridModule_TwinStored        []TwinStored        //nolint:stylecheck,golint
-	TfgridModule_TwinUpdated       []TwinStored        //nolint:stylecheck,golint
-	TfgridModule_TwinDeleted       []TwinDeleted       //nolint:stylecheck,golint
-	TfgridModule_TwinEntityStored  []TwinEntityStored  //nolint:stylecheck,golint
-	TfgridModule_TwinEntityRemoved []TwinEntityRemoved //nolint:stylecheck,golint
+	TfgridModule_TwinStored         []TwinStored         //nolint:stylecheck,golint
+	TfgridModule_TwinUpdated        []TwinStored         //nolint:stylecheck,golint
+	TfgridModule_TwinDeleted        []TwinDeleted        //nolint:stylecheck,golint
+	TfgridModule_TwinEntityStored   []TwinEntityStored   //nolint:stylecheck,golint
+	TfgridModule_TwinEntityRemoved  []TwinEntityRemoved  //nolint:stylecheck,golint
+	TfgridModule_TwinAccountBounded []TwinAccountBounded //nolint:stylecheck,golint
 
 	// policy events
 	TfgridModule_PricingPolicyStored []PricingPolicyStored //nolint:stylecheck,golint
