@@ -38,17 +38,6 @@ impl<T: Config> OnRuntimeUpgrade for CheckStorageStateV9<T> {
 
 pub fn check_pallet_smart_contract<T: Config>() -> frame_support::weights::Weight {
 
-    // check_contracts_to_bill_at::<T>()
-    // + check_contracts::<T>()
-    // + check_active_node_contracts::<T>()
-    // + check_active_rent_contract_for_node::<T>()
-    // + check_contract_id_by_node_id_and_hash::<T>()
-    // + check_contract_id_by_name_registration::<T>()
-    // + check_contract_lock::<T>()
-    // + check_solution_providers::<T>()
-    // + check_contract_billing_information_by_id::<T>()
-    // + check_node_contract_resources::<T>()
-
     check_contracts_to_bill_at::<T>();
     check_contracts::<T>();
     check_active_node_contracts::<T>();
@@ -64,17 +53,6 @@ pub fn check_pallet_smart_contract<T: Config>() -> frame_support::weights::Weigh
 }
 
 pub fn clean_pallet_smart_contract<T: Config>() -> frame_support::weights::Weight {
-    // clean_contracts_to_bill_at::<T>()
-    // + clean_contracts::<T>()
-    // + clean_active_node_contracts::<T>()
-    // + clean_active_rent_contract_for_node::<T>()
-    // + clean_contract_id_by_node_id_and_hash::<T>()
-    // + clean_contract_id_by_name_registration::<T>()
-    // + clean_contract_lock::<T>()
-    // + clean_solution_providers::<T>()
-    // + clean_contract_billing_information_by_id::<T>()
-    // + clean_node_contract_resources::<T>()
-
     clean_contracts_to_bill_at::<T>();
     clean_contracts::<T>();
     clean_active_node_contracts::<T>();
@@ -251,7 +229,7 @@ fn check_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_has
         }
 
         // NodeContractResources
-        // Nothing to check from here 
+        // Nothing to check here 
         // A node contract needs a call to report_contract_resources() to
         // have associated ressources in NodeContractResources storage map
     } else {
@@ -688,7 +666,7 @@ pub fn clean_contracts<T: Config>() -> frame_support::weights::Weight {
     Weight::zero()
 }
 
-fn clean_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_hash: HexHash) {
+fn clean_node_contract<T: Config>(node_id: u32, contract_id: u64, _deployment_hash: HexHash) {
     // ActiveNodeContracts
     let mut active_node_contracts = ActiveNodeContracts::<T>::get(node_id);
     if !active_node_contracts.contains(&contract_id) {
@@ -697,9 +675,11 @@ fn clean_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_has
     }
 
     // ContractIDByNodeIDAndHash
-    if !ContractIDByNodeIDAndHash::<T>::contains_key(node_id, deployment_hash) {
-        ContractIDByNodeIDAndHash::<T>::insert(node_id, deployment_hash, contract_id);
-    }
+    // Nothing to do here
+    // Storage re-built from zero in clean_contract_id_by_node_id_and_hash()
+    // if !ContractIDByNodeIDAndHash::<T>::contains_key(node_id, deployment_hash) {
+    //     ContractIDByNodeIDAndHash::<T>::insert(node_id, deployment_hash, contract_id);
+    // }
 }
 
 fn clean_name_contract<T: Config>() {
@@ -767,51 +747,36 @@ pub fn clean_contract_id_by_node_id_and_hash<T: Config>() -> frame_support::weig
         PalletVersion::<T>::get()
     );
 
-    let to_remove: Vec<_> = ContractIDByNodeIDAndHash::<T>::iter()
-        .filter(|(_, _, contract_id)| Contracts::<T>::get(contract_id).is_none())
-        .map(|(node_id, hash, _)| (node_id, hash))
-        .collect();
+    // !!! This map storage is re-built from zero !!!
 
-    info!("   contract ids to remove: {:?}", to_remove);
+    // 1. Remove all items under ContractIDByNodeIDAndHash
+    let _ = frame_support::migration::clear_storage_prefix(
+        b"SmartContractModule",
+        b"ContractIDByNodeIDAndHash",
+        b"",
+        None,
+        None,
+    );
 
-    for (node_id, hash) in to_remove {
-        info!("   contract id to remove: [node: {}, hash: {:?}]", node_id, String::from_utf8_lossy(&hash));
-        ContractIDByNodeIDAndHash::<T>::remove(node_id, hash);
+    // 2. Insert items based on existing node contracts
+    for (contract_id, contract) in Contracts::<T>::iter() {
+        match contract.contract_type {
+            types::ContractData::NodeContract(node_contract) => {
+                ContractIDByNodeIDAndHash::<T>::insert(
+                    node_contract.node_id,
+                    node_contract.deployment_hash,
+                    contract_id,
+                );
+            }
+            _ => (),
+        }
     }
 
     // for (node_id, hash, contract_id) in ContractIDByNodeIDAndHash::<T>::iter() {
-    //     let node = pallet_tfgrid::Nodes::<T>::get(node_id);
-    //     if node.is_none() {
-    //         info!(
-    //             " ⚠️    ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: node not exists",
-    //             node_id, String::from_utf8_lossy(&hash)
-    //         );
-    //     }
-
-    //     let contract = Contracts::<T>::get(contract_id);
-    //     if let Some(c) = contract {
-    //         match c.contract_type {
-    //             types::ContractData::NodeContract(node_contract) => {
-    //                 if node_contract.deployment_hash != hash {
-    //                     info!(
-    //                         " ⚠️    ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: deployment hash ({:?}) on contract {} is not matching",
-    //                         node_id, String::from_utf8_lossy(&hash), String::from_utf8_lossy(&node_contract.deployment_hash), contract_id, 
-    //                     );
-    //                 }
-    //             }
-    //             _ => {
-    //                 info!(
-    //                     " ⚠️    ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: contract {} is not a node contract",
-    //                     node_id, String::from_utf8_lossy(&hash), contract_id
-    //                 );
-    //             }
-    //         }
-    //     } else {
-    //         info!(
-    //             " ⚠️    ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: contract {} not exists",
-    //             node_id, String::from_utf8_lossy(&hash), contract_id
-    //         );
-    //     }
+    //     info!(
+    //         "     ContractIDByNodeIDAndHash [{}, {:?}] [{}]",
+    //         node_id, String::from_utf8_lossy(&hash), contract_id
+    //     );
     // }
 
     info!(
