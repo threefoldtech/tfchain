@@ -56,4 +56,3 @@ jobs:
         with:
           name: integration test output
           path: substrate-node/tests/_output_tests/
-
