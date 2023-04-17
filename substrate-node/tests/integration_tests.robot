@@ -61,7 +61,7 @@ Test Start And Stop Network
 
     Tear Down Multi Node Network
 
-Client Go intergration tests
+Test Client Go intergration tests
     [Documentation] Run go client integration tests
     Setup Multi Node Network    log_name=test_create_update_twin
 
