@@ -37,7 +37,6 @@ impl<T: Config> OnRuntimeUpgrade for CheckStorageStateV9<T> {
 }
 
 pub fn check_pallet_smart_contract<T: Config>() -> frame_support::weights::Weight {
-
     check_contracts_to_bill_at::<T>();
     check_contracts::<T>();
     check_active_node_contracts::<T>();
@@ -236,6 +235,13 @@ fn check_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_has
         info!(
             " ⚠️    Node Contract (id: {}) on node {}: node not exists",
             contract_id, node_id
+        );
+    }
+
+    if deployment_hash == HexHash::default() {
+        info!(
+            " ⚠️    Node Contract (id: {}) on node {}: deployment hash is default ({:?})",
+            contract_id, node_id, String::from_utf8_lossy(&deployment_hash)
         );
     }
 }
@@ -666,7 +672,11 @@ pub fn clean_contracts<T: Config>() -> frame_support::weights::Weight {
     Weight::zero()
 }
 
-fn clean_node_contract<T: Config>(node_id: u32, contract_id: u64, _deployment_hash: HexHash) {
+fn clean_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_hash: HexHash) {
+    if deployment_hash == HexHash::default() {
+        Contracts::<T>::remove(contract_id);
+    }
+
     // ActiveNodeContracts
     let mut active_node_contracts = ActiveNodeContracts::<T>::get(node_id);
     if !active_node_contracts.contains(&contract_id) {
@@ -818,7 +828,14 @@ pub fn clean_contract_lock<T: Config>() -> frame_support::weights::Weight {
         PalletVersion::<T>::get()
     );
 
-    // Nothing to do here
+    let to_remove: Vec<u64> = ContractLock::<T>::iter()
+        .filter(|(contract_id, _)| Contracts::<T>::get(contract_id).is_none())
+        .map(|(id, _)| id)
+        .collect();
+
+    for contract_id in to_remove {
+        ContractLock::<T>::remove(contract_id);
+    }
 
     info!(
         "✨  Smart Contract pallet {:?} cleaning ContractLock storage map END",
