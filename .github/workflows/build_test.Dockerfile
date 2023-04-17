@@ -14,8 +14,13 @@ RUN apt update && \
         software-properties-common \
         tar \
         zstd \
+        wget \
         protobuf-compiler && \
-        golang && \
+    wget https://go.dev/dl/go1.20.2.linux-amd64.tar.gz && \
+    tar -xvf go1.20.2.linux-amd64.tar.gz && \
+    mv go /usr/local && \
+    echo "GOPATH=/usr/local/go" >> ~/.bashrc && \
+    echo "PATH=\$PATH:\$GOPATH/bin" >> ~/.bashrc && \
     add-apt-repository ppa:deadsnakes/ppa && \
     apt install -y python3.10 && \
     curl https://bootstrap.pypa.io/get-pip.py > get-pip.py && \
