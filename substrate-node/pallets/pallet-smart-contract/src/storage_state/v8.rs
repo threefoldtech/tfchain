@@ -26,8 +26,11 @@ impl<T: Config> OnRuntimeUpgrade for CheckStorageStateV8<T> {
                 " >>> Starting Smart Contract pallet {:?} storage check",
                 PalletVersion::<T>::get()
             );
+            info!("💥💥💥💥💥💥💥💥💥💥 CHECKING [1/3] 💥💥💥💥💥💥💥💥💥💥");
             check_pallet_smart_contract::<T>();
+            info!("💥💥💥💥💥💥💥💥💥💥 CLEANING [2/3] 💥💥💥💥💥💥💥💥💥💥");
             clean_pallet_smart_contract::<T>();
+            info!("💥💥💥💥💥💥💥💥💥💥 CHECKING [3/3] 💥💥💥💥💥💥💥💥💥💥");
             check_pallet_smart_contract::<T>();
         } else {
             info!(" >>> Unused Smart Contract pallet V8 storage check");
@@ -38,8 +41,8 @@ impl<T: Config> OnRuntimeUpgrade for CheckStorageStateV8<T> {
 }
 
 pub fn check_pallet_smart_contract<T: Config>() -> frame_support::weights::Weight {
-    check_contracts_to_bill_at::<T>();
     check_contracts::<T>();
+    check_contracts_to_bill_at::<T>();
     check_active_node_contracts::<T>();
     check_active_rent_contract_for_node::<T>();
     check_contract_id_by_node_id_and_hash::<T>();
@@ -53,8 +56,8 @@ pub fn check_pallet_smart_contract<T: Config>() -> frame_support::weights::Weigh
 }
 
 pub fn clean_pallet_smart_contract<T: Config>() -> frame_support::weights::Weight {
-    clean_contracts_to_bill_at::<T>();
     clean_contracts::<T>();
+    clean_contracts_to_bill_at::<T>();
     clean_active_node_contracts::<T>();
     clean_active_rent_contract_for_node::<T>();
     clean_contract_id_by_node_id_and_hash::<T>();
