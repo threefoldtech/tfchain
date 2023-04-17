@@ -62,7 +62,7 @@ Test Start And Stop Network
     Tear Down Multi Node Network
 
 Test Client Go intergration tests
-    [Documentation] Run go client integration tests
+    [Documentation]     Run go client integration tests
     Setup Multi Node Network    log_name=test_create_update_twin
 
     Run Process cd ../../clients/tfchain_client_go/ && go test -v ./...
