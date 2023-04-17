@@ -15,6 +15,7 @@ RUN apt update && \
         tar \
         zstd \
         protobuf-compiler && \
+        golang && \
     add-apt-repository ppa:deadsnakes/ppa && \
     apt install -y python3.10 && \
     curl https://bootstrap.pypa.io/get-pip.py > get-pip.py && \
