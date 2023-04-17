@@ -10,8 +10,8 @@ import (
 
 // NodeCertification is a substrate enum
 type NodeCertification struct {
-	IsDiy       bool
-	IsCertified bool
+	IsDiy       bool `json:"is_diy"`
+	IsCertified bool `json:"is_certified"`
 }
 
 // Decode implementation for the enum type
@@ -46,8 +46,8 @@ func (p NodeCertification) Encode(encoder scale.Encoder) (err error) {
 
 // NodeCertification is a substrate enum
 type FarmCertification struct {
-	IsNotCertified bool
-	IsGold         bool
+	IsNotCertified bool `json:"is_not_certified"`
+	IsGold         bool `json:"is_gold"`
 }
 
 // Decode implementation for the enum type
@@ -83,29 +83,29 @@ func (p FarmCertification) Encode(encoder scale.Encoder) (err error) {
 // Farm type
 type Farm struct {
 	Versioned
-	ID                   types.U32
-	Name                 string
-	TwinID               types.U32
-	PricingPolicyID      types.U32
-	CertificationType    FarmCertification
-	PublicIPs            []PublicIP
-	DedicatedFarm        bool
-	FarmingPoliciesLimit OptionFarmingPolicyLimit
+	ID                   types.U32                `json:"id"`
+	Name                 string                   `json:"name"`
+	TwinID               types.U32                `json:"twin_id"`
+	PricingPolicyID      types.U32                `json:"pricing_policy_id"`
+	CertificationType    FarmCertification        `json:"certification_type"`
+	PublicIPs            []PublicIP               `json:"public_ips"`
+	DedicatedFarm        bool                     `json:"dedicated_farm"`
+	FarmingPoliciesLimit OptionFarmingPolicyLimit `json:"farming_policies_limit"`
 }
 
 type FarmingPolicyLimit struct {
-	FarmingPolicyID   types.U32
-	Cu                types.OptionU64
-	Su                types.OptionU64
-	End               types.OptionU64
-	NodeCount         types.OptionU32
-	NodeCertification bool
+	FarmingPolicyID   types.U32       `json:"farming_policy_id"`
+	Cu                types.OptionU64 `json:"cu"`
+	Su                types.OptionU64 `json:"su"`
+	End               types.OptionU64 `json:"end"`
+	NodeCount         types.OptionU32 `json:"node_count"`
+	NodeCertification bool            `json:"node_certification"`
 }
 
 // OptionFarmingPolicyLimit type
 type OptionFarmingPolicyLimit struct {
-	HasValue bool
-	AsValue  FarmingPolicyLimit
+	HasValue bool               `json:"has_value"`
+	AsValue  FarmingPolicyLimit `json:"as_value"`
 }
 
 // Encode implementation
@@ -146,15 +146,15 @@ func (m *OptionFarmingPolicyLimit) Decode(decoder scale.Decoder) (err error) {
 
 // PublicIP structure
 type PublicIP struct {
-	IP         string
-	Gateway    string
-	ContractID types.U64
+	IP         string    `json:"ip"`
+	Gateway    string    `json:"gateway"`
+	ContractID types.U64 `json:"contract_id"`
 }
 
 // PublicIPInput structure
 type PublicIPInput struct {
-	IP      string
-	Gateway string
+	IP      string `json:"ip"`
+	Gateway string `json:"gateway"`
 }
 
 // GetFarm gets a farm with ID

@@ -7,18 +7,18 @@ import (
 )
 
 type Validator struct {
-	ValidatorNodeAccount AccountID
-	StashAccount         AccountID
-	Description          string
-	TfConnectId          string
-	Info                 string
-	State                ValidatorRequestState
+	ValidatorNodeAccount AccountID             `json:"validator_node_account"`
+	StashAccount         AccountID             `json:"stash_account"`
+	Description          string                `json:"description"`
+	TfConnectId          string                `json:"tf_connect_id"`
+	Info                 string                `json:"info"`
+	State                ValidatorRequestState `json:"state"`
 }
 
 type ValidatorRequestState struct {
-	IsCreated    bool
-	IsApproved   bool
-	IsValidating bool
+	IsCreated    bool `json:"is_created"`
+	IsApproved   bool `json:"is_approved"`
+	IsValidating bool `json:"is_validating"`
 }
 
 // Decode implementation for the enum type

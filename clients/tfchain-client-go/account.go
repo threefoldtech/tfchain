@@ -38,23 +38,18 @@ type AccountID types.AccountID
 
 // Balance
 type Balance struct {
-	Free       types.U128
-	Reserved   types.U128
-	MiscFrozen types.U128
-	FreeFrozen types.U128
+	Free       types.U128 `json:"free"`
+	Reserved   types.U128 `json:"reserverd"`
+	MiscFrozen types.U128 `json:"misc_frozen"`
+	FreeFrozen types.U128 `json:"free_frozen"`
 }
 
 type AccountInfo struct {
-	Nonce       types.U32
-	Consumers   types.U32
-	Providers   types.U32
-	Sufficients types.U32
-	Data        struct {
-		Free       types.U128
-		Reserved   types.U128
-		MiscFrozen types.U128
-		FreeFrozen types.U128
-	}
+	Nonce       types.U32 `json:"nonce"`
+	Consumers   types.U32 `json:"consumers"`
+	Providers   types.U32 `json:"providers"`
+	Sufficients types.U32 `json:"sufficients"`
+	Data        Balance   `json:"data"`
 }
 
 // PublicKey gets public key from account id

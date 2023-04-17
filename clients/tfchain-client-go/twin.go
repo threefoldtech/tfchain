@@ -10,23 +10,23 @@ import (
 
 // EntityProof struct
 type EntityProof struct {
-	EntityID  types.U32
-	Signature string
+	EntityID  types.U32 `json:"entity_id"`
+	Signature string    `json:"signature"`
 }
 
 // Twin struct
 type Twin struct {
-	ID       types.U32
-	Account  AccountID
-	Relay    OptionRelay
-	Entities []EntityProof
-	Pk       types.OptionBytes
+	ID       types.U32         `json:"id"`
+	Account  AccountID         `json:"acocunt_id"`
+	Relay    OptionRelay       `json:"relay"`
+	Entities []EntityProof     `json:"entities"`
+	Pk       types.OptionBytes `json:"pk"`
 }
 
 // OptionRelay type
 type OptionRelay struct {
-	HasValue bool
-	AsValue  string
+	HasValue bool   `json:"has_value"`
+	AsValue  string `json:"as_value"`
 }
 
 // Encode implementation

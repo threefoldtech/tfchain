@@ -10,30 +10,30 @@ import (
 
 // ServiceContract struct
 type ServiceContract struct {
-	ServiceContractID  types.U64
-	ServiceTwinID      types.U32
-	ConsumerTwinID     types.U32
-	BaseFee            types.U64
-	VariableFee        types.U64
-	Metadata           string
-	AcceptedByService  bool
-	AcceptedByConsumer bool
-	LastBill           types.U64
-	State              ServiceContractState
+	ServiceContractID  types.U64            `json:"service_contract_id"`
+	ServiceTwinID      types.U32            `json:"service_twin_id"`
+	ConsumerTwinID     types.U32            `json:"consumer_twin_id"`
+	BaseFee            types.U64            `json:"base_fee"`
+	VariableFee        types.U64            `json:"variable_fee"`
+	Metadata           string               `json:"metadata"`
+	AcceptedByService  bool                 `json:"accepted_by_service"`
+	AcceptedByConsumer bool                 `json:"accepted_by_consumer"`
+	LastBill           types.U64            `json:"last_bill"`
+	State              ServiceContractState `json:"state"`
 }
 
 // ServiceContractBill struct
 type ServiceContractBill struct {
-	VariableAmount types.U64
-	Window         types.U64
-	Metadata       string
+	VariableAmount types.U64 `json:"variable_amount"`
+	Window         types.U64 `json:"window"`
+	Metadata       string    `json:"metadata"`
 }
 
 // ServiceContractState enum
 type ServiceContractState struct {
-	IsCreated        bool
-	IsAgreementReady bool
-	IsApprovedByBoth bool
+	IsCreated        bool `json:"is_created"`
+	IsAgreementReady bool `json:"is_agreement_ready"`
+	IsApprovedByBoth bool `json:"is_approved_by_both"`
 }
 
 // Decode implementation for the ServiceContractState enum type

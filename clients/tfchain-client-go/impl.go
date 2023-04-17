@@ -31,7 +31,7 @@ var (
 
 // Versioned base for all types
 type Versioned struct {
-	Version uint32
+	Version uint32 `json:"version"`
 }
 
 type Conn = *gsrpc.SubstrateAPI

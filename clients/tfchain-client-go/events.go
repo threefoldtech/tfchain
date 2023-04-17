@@ -8,96 +8,103 @@ import (
 
 type NodePublicConfig struct {
 	Phase  types.Phase
-	Node   types.U32
-	Config OptionPublicConfig
+	Node   types.U32          `json:"node_id"`
+	Config OptionPublicConfig `json:"config"`
 	Topics []types.Hash
 }
 
 type FarmStored struct {
 	Phase  types.Phase
-	Farm   Farm
+	Farm   Farm `json:"farm"`
 	Topics []types.Hash
 }
 
 type FarmDeleted struct {
 	Phase  types.Phase
-	Farm   types.U32
+	Farm   types.U32 `json:"farm_id"`
 	Topics []types.Hash
 }
 
 type NodeStored struct {
 	Phase  types.Phase
-	Node   Node
+	Node   Node `json:"node"`
 	Topics []types.Hash
 }
 
 type NodeDeleted struct {
 	Phase  types.Phase
-	Node   types.U32
+	Node   types.U32 `json:"node_id"`
 	Topics []types.Hash
 }
 
 type NodeUptimeReported struct {
 	Phase     types.Phase
-	Node      types.U32
-	Timestamp types.U64
-	Uptime    types.U64
+	Node      types.U32 `json:"node_id"`
+	Timestamp types.U64 `json:"timestamp"`
+	Uptime    types.U64 `json:"uptime"`
 	Topics    []types.Hash
 }
 
 type PowerTargetChanged struct {
 	Phase       types.Phase
-	Farm        types.U32
-	Node        types.U32
-	PowerTarget Power
+	Farm        types.U32 `json:"farm_id"`
+	Node        types.U32 `json:"node_id"`
+	PowerTarget Power     `json:"power_target"`
 	Topics      []types.Hash
 }
 
 type PowerStateChanged struct {
 	Phase      types.Phase
-	Farm       types.U32
-	Node       types.U32
-	PowerState PowerState
+	Farm       types.U32  `json:"farm_id"`
+	Node       types.U32  `json:"node_id"`
+	PowerState PowerState `json:"power_state"`
 	Topics     []types.Hash
 }
 
 type EntityStored struct {
 	Phase  types.Phase
-	Entity Entity
+	Entity Entity `json:"entity"`
 	Topics []types.Hash
 }
 
 type EntityDeleted struct {
 	Phase  types.Phase
-	Entity types.U32
+	Entity types.U32 `json:"entity_id"`
 	Topics []types.Hash
 }
 
 type TwinStored struct {
 	Phase  types.Phase
-	Twin   Twin
+	Twin   Twin `json:"twin"`
 	Topics []types.Hash
 }
 
 type TwinDeleted struct {
 	Phase  types.Phase
-	Twin   types.U32
+	Twin   types.U32 `json:"twin_id"`
 	Topics []types.Hash
 }
 
 type TwinEntityStored struct {
 	Phase     types.Phase
-	Twin      types.U32
-	Entity    types.U32
-	Signature []byte
+	Twin      types.U32 `json:"twin_id"`
+	Entity    types.U32 `json:"entity_id"`
+	Signature []byte    `json:"signature"`
 	Topics    []types.Hash
 }
 
 type TwinEntityRemoved struct {
 	Phase  types.Phase
-	Twin   types.U32
-	Entity types.U32
+	Twin   types.U32 `json:"twin_id"`
+	Entity types.U32 `json:"identity_id"`
 	Topics []types.Hash
+}
+
+type TwinAccountBounded struct {
+	Phase   types.Phase
+	Twin    types.U32 `json:"twin_id"`
+	Account AccountID `json:"account_id"`
+	Topics  []types.Hash
 }
 
 // numeric enum for unit
@@ -109,124 +116,124 @@ type Policy struct {
 }
 type PricingPolicy struct {
 	Versioned
-	ID                     types.U32
-	Name                   string
-	SU                     Policy
-	CU                     Policy
-	NU                     Policy
-	IPU                    Policy
-	UniqueName             Policy
-	DomainName             Policy
-	FoundationAccount      AccountID
-	CertifiedSalesAccount  AccountID
-	DedicatedNodesDiscount types.U8
+	ID                     types.U32 `json:"id"`
+	Name                   string    `json:"name"`
+	SU                     Policy    `json:"su"`
+	CU                     Policy    `json:"cu"`
+	NU                     Policy    `json:"nu"`
+	IPU                    Policy    `json:"ipu"`
+	UniqueName             Policy    `json:"unique_name"`
+	DomainName             Policy    `json:"domain_name"`
+	FoundationAccount      AccountID `json:"foundation_name"`
+	CertifiedSalesAccount  AccountID `json:"certified_sales_account"`
+	DedicatedNodesDiscount types.U8  `json:"dedication_nodes_discount"`
 }
 
 type PricingPolicyStored struct {
 	Phase  types.Phase
-	Policy PricingPolicy
+	Policy PricingPolicy `json:"pricing_policy"`
 	Topics []types.Hash
 }
 
 type FarmingPolicy struct {
 	Versioned
-	ID                types.U32
-	Name              string
-	CU                types.U32
-	SU                types.U32
-	NU                types.U32
-	IPv4              types.U32
-	MinimalUptime     types.U16
-	PolicyCreated     types.U32
-	PolicyEnd         types.U32
-	Immutable         bool
-	Default           bool
-	NodeCertification NodeCertification
-	FarmCertification FarmCertification
+	ID                types.U32         `json:"id"`
+	Name              string            `json:"name"`
+	CU                types.U32         `json:"cu"`
+	SU                types.U32         `json:"su"`
+	NU                types.U32         `json:"nu"`
+	IPv4              types.U32         `json:"ipv4"`
+	MinimalUptime     types.U16         `json:"minimal_uptime"`
+	PolicyCreated     types.U32         `json:"policy_created"`
+	PolicyEnd         types.U32         `json:"policy_end"`
+	Immutable         bool              `json:"immutable"`
+	Default           bool              `json:"default"`
+	NodeCertification NodeCertification `json:"node_certification"`
+	FarmCertification FarmCertification `json:"farm_certification"`
 }
 
 type FarmingPolicyStored struct {
 	Phase  types.Phase
-	Policy FarmingPolicy
+	Policy FarmingPolicy `json:"farming_policy"`
 	Topics []types.Hash
 }
 
 type CertificationCodes struct {
 	Versioned
-	ID                    types.U32
-	Name                  string
-	Description           string
-	CertificationCodeType byte
+	ID                    types.U32 `json:"id"`
+	Name                  string    `json:"name"`
+	Description           string    `json:"description"`
+	CertificationCodeType byte      `json:"certification_code_type"`
 }
 
 type CertificationCodeStored struct {
 	Phase  types.Phase
-	Codes  CertificationCodes
+	Codes  CertificationCodes `json:"contract_id"`
 	Topics []types.Hash
 }
 
 type FarmPayoutV2AddressRegistered struct {
 	Phase   types.Phase
-	Farm    types.U32
-	Address string
+	Farm    types.U32 `json:"farm_id"`
+	Address string    `json:"address"`
 	Topics  []types.Hash
 }
 
 type FarmMarkedAsDedicated struct {
 	Phase  types.Phase
-	Farm   types.U32
+	Farm   types.U32 `json:"farm_id"`
 	Topics []types.Hash
 }
 
 type ConnectionPriceSet struct {
 	Phase  types.Phase
-	Price  types.U32
+	Price  types.U32 `json:"price"`
 	Topics []types.Hash
 }
 
 type NodeCertificationSet struct {
 	Phase         types.Phase
-	NodeId        types.U32
-	Certification NodeCertification
+	NodeId        types.U32         `json:"node_id"`
+	Certification NodeCertification `json:"certification"`
 	Topics        []types.Hash
 }
 
 type NodeCertifierAdded struct {
 	Phase   types.Phase
-	Address AccountID
+	Address AccountID `json:"address"`
 	Topics  []types.Hash
 }
 
 type NodeCertifierRemoved struct {
 	Phase   types.Phase
-	Address AccountID
+	Address AccountID `json:"address"`
 	Topics  []types.Hash
 }
 
 type NodeMarkAsDedicated struct {
 	Phase     types.Phase
-	NodeID    types.U32
-	Dedicated bool
+	NodeID    types.U32 `json:"node_id"`
+	Dedicated bool      `json:"dedicated"`
 	Topics    []types.Hash
 }
 
 type FarmingPolicyUpdated struct {
 	Phase         types.Phase
-	FarmingPolicy FarmingPolicy
+	FarmingPolicy FarmingPolicy `json:"farming_policy"`
 	Topics        []types.Hash
 }
 
 type FarmingPolicySet struct {
 	Phase         types.Phase
-	Farm          types.U32
-	FarmingPolicy OptionFarmingPolicyLimit
+	Farm          types.U32                `json:"farm_id"`
+	FarmingPolicy OptionFarmingPolicyLimit `json:"farming_policy"`
 	Topics        []types.Hash
 }
 
 type FarmCertificationSet struct {
 	Phase         types.Phase
-	Farm          types.U32
-	Certification FarmCertification
+	Farm          types.U32         `json:"farm_id"`
+	Certification FarmCertification `json:"farm_certification"`
 	Topics        []types.Hash
 }
 
@@ -234,66 +241,66 @@ type PriceStored struct {
 	Phase types.Phase
 	// in rust this is a U16F16 which is a custom type of 4 bytes width to
 	// represent a float point with a
-	Price  types.U32
+	Price  types.U32 `json:"price"`
 	Topics []types.Hash
 }
 
 type AveragePriceIsAboveMaxPrice struct {
 	Phase   types.Phase
-	Average types.U32
-	Max     types.U32
+	Average types.U32 `json:"average"`
+	Max     types.U32 `json:"max"`
 	Topics  []types.Hash
 }
 
 type AveragePriceIsAboveMinPrice struct {
 	Phase   types.Phase
-	Average types.U32
-	Min     types.U32
+	Average types.U32 `json:"average"`
+	Min     types.U32 `json:"min"`
 	Topics  []types.Hash
 }
 
 type OffchainWorkerExecuted struct {
 	Phase   types.Phase
-	Account AccountID
+	Account AccountID `json:"account_id"`
 	Topics  []types.Hash
 }
 
 type EntryEvent struct {
 	Phase   types.Phase
-	Account AccountID
-	Key     []byte
-	Value   []byte
+	Account AccountID `json:"account_id"`
+	Key     []byte    `json:"key"`
+	Value   []byte    `json:"value"`
 	Topics  []types.Hash
 }
 
 type ValidatorAdded struct {
 	Phase   types.Phase
-	Account AccountID
+	Account AccountID `json:"account_id"`
 	Topics  []types.Hash
 }
 
 type ValidatorRemoved struct {
 	Phase   types.Phase
-	Account AccountID
+	Account AccountID `json:"account_id"`
 	Topics  []types.Hash
 }
 
 type Bonded struct {
 	Phase   types.Phase
-	Account AccountID
+	Account AccountID `json:"account_id"`
 	Topics  []types.Hash
 }
 
 type ValidatorCreated struct {
 	Phase     types.Phase
-	Account   AccountID
-	Validator Validator
+	Account   AccountID `json:"account_id"`
+	Validator Validator `json:"validator"`
 	Topics    []types.Hash
 }
 
 type ValidatorApproved struct {
 	Phase     types.Phase
-	Validator Validator
+	Validator Validator `json:"validator"`
 	Topics    []types.Hash
 }
 
@@ -306,7 +313,7 @@ type MemberEvent struct {
 
 type ZosVersionUpdated struct {
 	Phase   types.Phase
-	Version string
+	Version string `json:"version"`
 	Topics  []types.Hash
 }
 
@@ -359,11 +366,12 @@ type EventRecords struct {
 	TfgridModule_EntityDeleted []EntityDeleted //nolint:stylecheck,golint
 
 	// twin events
-	TfgridModule_TwinStored        []TwinStored        //nolint:stylecheck,golint
-	TfgridModule_TwinUpdated       []TwinStored        //nolint:stylecheck,golint
-	TfgridModule_TwinDeleted       []TwinDeleted       //nolint:stylecheck,golint
-	TfgridModule_TwinEntityStored  []TwinEntityStored  //nolint:stylecheck,golint
-	TfgridModule_TwinEntityRemoved []TwinEntityRemoved //nolint:stylecheck,golint
+	TfgridModule_TwinStored         []TwinStored         //nolint:stylecheck,golint
+	TfgridModule_TwinUpdated        []TwinStored         //nolint:stylecheck,golint
+	TfgridModule_TwinDeleted        []TwinDeleted        //nolint:stylecheck,golint
+	TfgridModule_TwinEntityStored   []TwinEntityStored   //nolint:stylecheck,golint
+	TfgridModule_TwinEntityRemoved  []TwinEntityRemoved  //nolint:stylecheck,golint
+	TfgridModule_TwinAccountBounded []TwinAccountBounded //nolint:stylecheck,golint
 
 	// policy events
 	TfgridModule_PricingPolicyStored []PricingPolicyStored //nolint:stylecheck,golint

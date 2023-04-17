@@ -6,10 +6,10 @@ import (
 )
 
 type TermsAndConditions struct {
-	Account      AccountID
-	Timestamp    types.U64
-	DocumentLink string
-	DocumentHash string
+	Account      AccountID `json:"account_id"`
+	Timestamp    types.U64 `json:"timestamp"`
+	DocumentLink string    `json:"document_link"`
+	DocumentHash string    `json:"document_hash"`
 }
 
 // AcceptTermsAndConditions accepts terms and conditions
