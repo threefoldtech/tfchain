@@ -6,6 +6,8 @@ Library            TfChainClient.py
 Library            OperatingSystem
 Library            Process
 
+*** Variables ***
+${OUTPUT_GO_TESTS}  test_client_go_integration_tests_go_output.log
 
 *** Keywords ***
 Public Ips Should Contain Ip
@@ -62,14 +64,17 @@ Test Start And Stop Network
 
     Tear Down Multi Node Network
 
-Test Client Go intergration tests
+Test Client Go integration tests
     [Documentation]     Run go client integration tests
-    Setup Multi Node Network    log_name=test_client_go_integration_tests
+    Setup Multi Node Network    log_name=test_client_go_integration_tests  amt=${1}
 
-    Set Environment Variable    name=CI    value=1
-    ${result} =	Run Process     go      test -v ./...    cwd=../../clients/tfchain_client_go    shell=yes
-    Log To Console      ${result.stdout}
-    Should Contain      ${result.stdout}     Connecting to wss
+    Set Environment Variable    name=CI    value=true
+    
+    ${result} =	Run Process     go      test   .  -v   cwd=../../clients/tfchain_client_go    shell=yes  env:CI=true  stdout=${OUTPUT_GO_TESTS}  stderr=${OUTPUT_GO_TESTS}
+
+    Should Be Equal As Integers   ${result.rc}	0  msg=${result.stdout}
+    #Log To Console      ${result.stderr}
+    #Log To Console      ${result.stdout}
 
     Tear Down Multi Node Network
 
