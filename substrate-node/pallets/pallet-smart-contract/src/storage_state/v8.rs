@@ -16,11 +16,12 @@ use scale_info::prelude::string::String;
 // ✅ ContractBillingInformationByID
 // ✅ NodeContractResources
 
-pub struct CheckStorageStateV9<T: Config>(PhantomData<T>);
+pub struct CheckStorageStateV8<T: Config>(PhantomData<T>);
 
-impl<T: Config> OnRuntimeUpgrade for CheckStorageStateV9<T> {
+impl<T: Config> OnRuntimeUpgrade for CheckStorageStateV8<T> {
     fn on_runtime_upgrade() -> Weight {
-        if PalletVersion::<T>::get() == types::StorageVersion::V9 {
+        if PalletVersion::<T>::get() == types::StorageVersion::V8 ||
+         PalletVersion::<T>::get() == types::StorageVersion::V9 {
             info!(
                 " >>> Starting Smart Contract pallet {:?} storage check",
                 PalletVersion::<T>::get()
@@ -29,7 +30,7 @@ impl<T: Config> OnRuntimeUpgrade for CheckStorageStateV9<T> {
             clean_pallet_smart_contract::<T>();
             check_pallet_smart_contract::<T>();
         } else {
-            info!(" >>> Unused Smart Contract pallet V9 storage check");
+            info!(" >>> Unused Smart Contract pallet V8 storage check");
         }
 
         Weight::zero()
