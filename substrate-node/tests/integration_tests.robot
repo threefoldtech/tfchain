@@ -17,7 +17,7 @@ Public Ips Should Contain Ip
     END
     
     Fail    msg=The list of public ips ${list} does not contain ip ${ip}
-
+    
 Public Ips Should Not Contain Ip
     [Arguments]    ${list }    ${ip}
     ${status} =    Run Keyword And Return Status    Public Ips Should Contain Ip    ${list}    ${ip}
@@ -58,6 +58,14 @@ Ensure Account Balance Decreased
 Test Start And Stop Network
     [Documentation]     Starts and immediately stops the network (4 nodes) once correctly started
     Setup Multi Node Network    log_name=test_start_stop_network    amt=${4}
+
+    Tear Down Multi Node Network
+
+Client Go intergration tests
+    [Documentation] Run go client integration tests
+    Setup Multi Node Network    log_name=test_create_update_twin
+
+    Start Process cd ../../clients/tfchain_client_go/ && go test -v ./...
 
     Tear Down Multi Node Network
 
