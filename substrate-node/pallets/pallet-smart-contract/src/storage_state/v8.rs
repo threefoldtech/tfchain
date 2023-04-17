@@ -663,6 +663,14 @@ pub fn clean_contracts<T: Config>() -> frame_support::weights::Weight {
             types::ContractData::NameContract(_) => clean_name_contract::<T>(),
             types::ContractData::RentContract(_) => clean_rent_contract::<T>(),
         }
+
+        // ContractLock
+        if !ContractLock::<T>::contains_key(contract_id) {
+            let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+            let mut contract_lock = types::ContractLock::default();
+            contract_lock.lock_updated = now;
+            ContractLock::<T>::insert(contract_id, contract_lock);
+        }
     }
 
     info!(
