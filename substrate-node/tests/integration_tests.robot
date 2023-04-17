@@ -4,6 +4,7 @@ Library            Collections
 Library            SubstrateNetwork.py
 Library            TfChainClient.py
 Library            OperatingSystem
+Library            Process
 
 
 *** Keywords ***
@@ -63,9 +64,12 @@ Test Start And Stop Network
 
 Test Client Go intergration tests
     [Documentation]     Run go client integration tests
-    Setup Multi Node Network    log_name=test_create_update_twin
+    Setup Multi Node Network    log_name=test_client_go_integration_tests
 
-    Run Process     cd ../../clients/tfchain_client_go/ && go test -v ./...
+    Set Environment Variable    name=CI    value=1
+    ${result} =	Run Process     go      test -v ./...    cwd=../../clients/tfchain_client_go    shell=yes
+    Log To Console      ${result.stdout}
+    Should Contain      ${result.stdout}     Connecting to wss
 
     Tear Down Multi Node Network
 
