@@ -881,7 +881,9 @@ pub fn clean_contract_billing_information_by_id<T: Config>() -> frame_support::w
         PalletVersion::<T>::get()
     );
 
-    let to_remove: Vec<u64> = ContractBillingInformationByID::<T>::iter()
+    let contract_billing_information_by_id = ContractBillingInformationByID::<T>::iter().collect::<Vec<_>>();
+
+    let to_remove: Vec<u64> = contract_billing_information_by_id.clone().into_iter()
         .filter(|(contract_id, _)| {
             if let Some(c) = Contracts::<T>::get(contract_id) {
                 match c.contract_type {
@@ -895,7 +897,7 @@ pub fn clean_contract_billing_information_by_id<T: Config>() -> frame_support::w
         .map(|(id, _)| id)
         .collect();
 
-    for contract_id in to_remove {
+    for contract_id in to_remove.clone() {
         ContractBillingInformationByID::<T>::remove(contract_id); 
     }
 
@@ -904,7 +906,10 @@ pub fn clean_contract_billing_information_by_id<T: Config>() -> frame_support::w
         PalletVersion::<T>::get()
     );
 
-    Weight::zero()
+    let reads = 2 * contract_billing_information_by_id.len() + 2;
+    let writes = to_remove.len();
+
+    T::DbWeight::get().reads_writes(reads as u64, writes as u64)
 }
 
 // NodeContractResources
@@ -914,12 +919,14 @@ pub fn clean_node_contract_resources<T: Config>() -> frame_support::weights::Wei
         PalletVersion::<T>::get()
     );
 
-    let to_remove: Vec<u64> = NodeContractResources::<T>::iter()
+    let node_contract_resources = NodeContractResources::<T>::iter().collect::<Vec<_>>();
+
+    let to_remove: Vec<u64> = node_contract_resources.clone().into_iter()
         .filter(|(contract_id, _)| Contracts::<T>::get(contract_id).is_none())
         .map(|(id, _)| id)
         .collect();
 
-    for contract_id in to_remove {
+    for contract_id in to_remove.clone() {
         NodeContractResources::<T>::remove(contract_id);
     }
 
@@ -928,5 +935,8 @@ pub fn clean_node_contract_resources<T: Config>() -> frame_support::weights::Wei
         PalletVersion::<T>::get()
     );
 
-    Weight::zero()
+    let reads = 2 * node_contract_resources.len() + 2;
+    let writes = to_remove.len();
+
+    T::DbWeight::get().reads_writes(reads as u64, writes as u64)
 }
