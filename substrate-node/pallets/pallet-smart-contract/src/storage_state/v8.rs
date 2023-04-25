@@ -1,7 +1,7 @@
 use crate::pallet_tfgrid;
 use crate::*;
 use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
-use log::info;
+use log::{info, debug};
 use sp_std::marker::PhantomData;
 use scale_info::prelude::string::String;
 
@@ -19,6 +19,16 @@ use scale_info::prelude::string::String;
 pub struct CheckStorageStateV8<T: Config>(PhantomData<T>);
 
 impl<T: Config> OnRuntimeUpgrade for CheckStorageStateV8<T> {
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+        info!("current pallet version: {:?}", PalletVersion::<T>::get());
+        assert!(PalletVersion::<T>::get() == types::StorageVersion::V8 || PalletVersion::<T>::get() == types::StorageVersion::V9);
+
+        check_pallet_smart_contract::<T>();
+
+        Ok(vec![])
+    }
+
     fn on_runtime_upgrade() -> Weight {
         if PalletVersion::<T>::get() == types::StorageVersion::V8 ||
          PalletVersion::<T>::get() == types::StorageVersion::V9 {
@@ -26,18 +36,31 @@ impl<T: Config> OnRuntimeUpgrade for CheckStorageStateV8<T> {
                 " >>> Starting Smart Contract pallet {:?} storage check",
                 PalletVersion::<T>::get()
             );
-            check_pallet_smart_contract::<T>() +
-            clean_pallet_smart_contract::<T>() +
-            check_pallet_smart_contract::<T>()
+            let weight = clean_pallet_smart_contract::<T>();
+            PalletVersion::<T>::put(types::StorageVersion::V9);
+            return weight;
         } else {
             info!(" >>> Unused Smart Contract pallet V8 storage check");
             Weight::zero()
         }    
     }
+
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade(_: Vec<u8>) -> Result<(), &'static str> {
+        assert!(PalletVersion::<T>::get() == types::StorageVersion::V9);
+        info!(
+            "👥  Smart Contract pallet to {:?} passes POST migrate checks ✅",
+            PalletVersion::<T>::get()
+        );
+
+        check_pallet_smart_contract::<T>();
+
+        Ok(())
+    }
 }
 
 pub fn check_pallet_smart_contract<T: Config>() -> frame_support::weights::Weight {
-    info!("💥💥💥💥💥💥💥💥💥💥 CHECKING PALLET SMART CONTRACT STORAGE 💥💥💥💥💥💥💥💥💥💥");
+    debug!("💥💥💥💥💥💥💥💥💥💥 CHECKING PALLET SMART CONTRACT STORAGE 💥💥💥💥💥💥💥💥💥💥");
     check_contracts::<T>() +
     check_contracts_to_bill_at::<T>() +
     check_active_node_contracts::<T>() +
@@ -51,7 +74,7 @@ pub fn check_pallet_smart_contract<T: Config>() -> frame_support::weights::Weigh
 }
 
 pub fn clean_pallet_smart_contract<T: Config>() -> frame_support::weights::Weight {
-    info!("💥💥💥💥💥💥💥💥💥💥 CLEANING PALLET SMART CONTRACT STORAGE 💥💥💥💥💥💥💥💥💥💥");
+    debug!("💥💥💥💥💥💥💥💥💥💥 CLEANING PALLET SMART CONTRACT STORAGE 💥💥💥💥💥💥💥💥💥💥");
     clean_contracts::<T>() +
     clean_contracts_to_bill_at::<T>() +
     clean_active_node_contracts::<T>() +
@@ -66,7 +89,7 @@ pub fn clean_pallet_smart_contract<T: Config>() -> frame_support::weights::Weigh
 
 // Contracts
 pub fn check_contracts<T: Config>() -> frame_support::weights::Weight {
-    info!(
+    debug!(
         "🔎  Smart Contract pallet {:?} checking Contracts storage map START",
         PalletVersion::<T>::get()
     );
@@ -80,13 +103,13 @@ pub fn check_contracts<T: Config>() -> frame_support::weights::Weight {
         r += 1;
 
         if contract_id != contract.contract_id {
-            info!(
+            debug!(
                 " ⚠️    Contracts[id: {}]: wrong id ({})",
                 contract_id, contract.contract_id
             );
         }
         if !contract_id_range.contains(&contract_id) {
-            info!(
+            debug!(
                 " ⚠️    Contracts[id: {}]: id not in range {:?}",
                 contract_id, contract_id_range
             );
@@ -109,7 +132,7 @@ pub fn check_contracts<T: Config>() -> frame_support::weights::Weight {
 
         // ContractLock
         if !ContractLock::<T>::contains_key(contract_id) {
-            info!(
+            debug!(
                 " ⚠️    Contract (id: {}): no contract lock found",
                 contract_id
             );
@@ -119,7 +142,7 @@ pub fn check_contracts<T: Config>() -> frame_support::weights::Weight {
         // SolutionProviders
         if let Some(sp_id) = contract.solution_provider_id {
             if SolutionProviders::<T>::get(sp_id).is_none() {
-                info!(
+                debug!(
                     " ⚠️    Contract (id: {}): solution provider (id: {}) not exists",
                     contract_id, sp_id
                 );
@@ -128,7 +151,7 @@ pub fn check_contracts<T: Config>() -> frame_support::weights::Weight {
         }
     }
 
-    info!(
+    debug!(
         "🏁  Smart Contract pallet {:?} checking Contracts storage map END",
         PalletVersion::<T>::get()
     );
@@ -142,7 +165,7 @@ fn check_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_has
         let active_node_contracts = ActiveNodeContracts::<T>::get(node_id);
         *r += 1;
         if !active_node_contracts.contains(&contract_id) {
-            info!(
+            debug!(
                 " ⚠️    Node Contract (id: {}) on node {}: contract not in active list ({:?})",
                 contract_id, node_id, active_node_contracts
             );
@@ -152,12 +175,12 @@ fn check_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_has
         let ctr_id = ContractIDByNodeIDAndHash::<T>::get(node_id, &deployment_hash);
         *r += 1;
         if ctr_id == 0 {
-            info!(
+            debug!(
                 " ⚠️    Node Contract (id: {}) on node {}: key not exists in node/deployment map",
                 contract_id, node_id
             );
         } else if ctr_id != contract_id {
-            info!(
+            debug!(
                 " ⚠️    Node Contract (id: {}) on node {}: wrong contract (id: {}) in node/deployment map",
                 contract_id, node_id, ctr_id
             );
@@ -165,7 +188,7 @@ fn check_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_has
 
         // ContractBillingInformationByID
         if !ContractBillingInformationByID::<T>::contains_key(contract_id) {
-            info!(
+            debug!(
                 " ⚠️    Node Contract (id: {}) on node {}: no related billing information found",
                 contract_id, node_id
             );
@@ -177,7 +200,7 @@ fn check_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_has
         // A node contract needs a call to report_contract_resources() to
         // have associated ressources in NodeContractResources storage map
     } else {
-        info!(
+        debug!(
             " ⚠️    Node Contract (id: {}) on node {}: node not exists",
             contract_id, node_id
         );
@@ -185,7 +208,7 @@ fn check_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_has
     *r += 1;
 
     if deployment_hash == HexHash::default() {
-        info!(
+        debug!(
             " ⚠️    Node Contract (id: {}) on node {}: deployment hash is default ({:?})",
             contract_id, node_id, String::from_utf8_lossy(&deployment_hash)
         );
@@ -197,13 +220,13 @@ fn check_name_contract<T: Config>(contract_id: u64, name: &T::NameContractName, 
     let ctr_id = ContractIDByNameRegistration::<T>::get(name);
     *r += 1;
     if ctr_id == 0 {
-        info!(
+        debug!(
             " ⚠️    Name Contract (id: {}): key (name: {:?}) not exists",
             contract_id, name
         );
     }
     else if ctr_id != contract_id  {
-        info!(
+        debug!(
             " ⚠️    Name Contract (id: {}): wrong contract (id: {}) in name registration map",
             contract_id, ctr_id
         );
@@ -216,7 +239,7 @@ fn check_rent_contract<T: Config>(node_id: u32, contract: &types::Contract<T>, r
         let active_rent_contract = ActiveRentContractForNode::<T>::get(node_id);
         *r += 1;
         if active_rent_contract != Some(contract.contract_id) {
-            info!(
+            debug!(
                 " ⚠️    Rent Contract (id: {}) on node {}: contract not activated ({:?})",
                 contract.contract_id, node_id, active_rent_contract
             );
@@ -227,7 +250,7 @@ fn check_rent_contract<T: Config>(node_id: u32, contract: &types::Contract<T>, r
         for ctr_id in active_node_contracts {
             if let Some(node_contract) = Contracts::<T>::get(ctr_id) {
                 if contract.twin_id != node_contract.twin_id {
-                    info!(
+                    debug!(
                         " ⚠️    Rent Contract (id: {}) on node {}: not matching twin on node contract (id: {})",
                         contract.contract_id, node_id, ctr_id
                     );
@@ -236,7 +259,7 @@ fn check_rent_contract<T: Config>(node_id: u32, contract: &types::Contract<T>, r
             *r += 1;
         }
     } else {
-        info!(
+        debug!(
             " ⚠️    Rent Contract (id: {}) on node {}: node not exists",
             contract.contract_id, node_id
         );
@@ -246,7 +269,7 @@ fn check_rent_contract<T: Config>(node_id: u32, contract: &types::Contract<T>, r
 
 // ContractsToBillAt
 pub fn check_contracts_to_bill_at<T: Config>() -> frame_support::weights::Weight {
-    info!(
+    debug!(
         "🔎  Smart Contract pallet {:?} checking ContractsToBillAt storage map START",
         PalletVersion::<T>::get()
     );
@@ -277,7 +300,7 @@ pub fn check_contracts_to_bill_at<T: Config>() -> frame_support::weights::Weight
                             continue;
                         }
                     }
-                    info!(
+                    debug!(
                         " ⚠️    Contract (id: {}) should be in billing loop",
                         contract_id
                     );
@@ -287,7 +310,7 @@ pub fn check_contracts_to_bill_at<T: Config>() -> frame_support::weights::Weight
                         let contract_resource = NodeContractResources::<T>::get(contract_id as u64);
                         r += 1;
                         if node_contract.public_ips == 0 && contract_resource.used.is_empty() {
-                            info!(
+                            debug!(
                                 " ⚠️    Node Contract (id: {}) with no ips / no resources should not be in billing loop",
                                 contract_id
                             );
@@ -295,14 +318,14 @@ pub fn check_contracts_to_bill_at<T: Config>() -> frame_support::weights::Weight
                     }
                 }
                 _ => {
-                    info!(
+                    debug!(
                         " ⚠️    Contract (id: {}) duplicated {} times in billing loop",
                         contract_id, count
                     );
                 }
             }
         } else if count > &0 {
-            info!(
+            debug!(
                 " ⚠️    Contract (id: {}) not exists and should not be in billing loop",
                 contract_id
             );
@@ -310,7 +333,7 @@ pub fn check_contracts_to_bill_at<T: Config>() -> frame_support::weights::Weight
         r += 1;
     }
 
-    info!(
+    debug!(
         "🏁  Smart Contract pallet {:?} checking ContractsToBillAt storage map END",
         PalletVersion::<T>::get()
     );
@@ -320,7 +343,7 @@ pub fn check_contracts_to_bill_at<T: Config>() -> frame_support::weights::Weight
 
 // ActiveNodeContracts
 pub fn check_active_node_contracts<T: Config>() -> frame_support::weights::Weight {
-    info!(
+    debug!(
         "🔎  Smart Contract pallet {:?} checking ActiveNodeContracts storage map START",
         PalletVersion::<T>::get()
     );
@@ -331,7 +354,7 @@ pub fn check_active_node_contracts<T: Config>() -> frame_support::weights::Weigh
         r += 1;
 
         if pallet_tfgrid::Nodes::<T>::get(node_id).is_none() {
-            info!(
+            debug!(
                 " ⚠️    ActiveNodeContracts[node: {}]: node not exists",
                 node_id
             );
@@ -343,14 +366,14 @@ pub fn check_active_node_contracts<T: Config>() -> frame_support::weights::Weigh
                 match c.contract_type {
                     types::ContractData::NodeContract(_) => (),
                     _ => {
-                        info!(
+                        debug!(
                         " ⚠️    ActiveNodeContracts[node: {}, contract: {}]: type is not node contract",
                         node_id, ctr_id
                     );
                     }
                 }
             } else {
-                info!(
+                debug!(
                     " ⚠️    ActiveNodeContracts[node: {}]: contract {} not exists",
                     node_id, ctr_id
                 );
@@ -359,7 +382,7 @@ pub fn check_active_node_contracts<T: Config>() -> frame_support::weights::Weigh
         }
     }
 
-    info!(
+    debug!(
         "🏁  Smart Contract pallet {:?} checking ActiveNodeContracts storage map END",
         PalletVersion::<T>::get()
     );
@@ -369,7 +392,7 @@ pub fn check_active_node_contracts<T: Config>() -> frame_support::weights::Weigh
 
 // ActiveRentContractForNode
 pub fn check_active_rent_contract_for_node<T: Config>() -> frame_support::weights::Weight {
-    info!(
+    debug!(
         "🔎  Smart Contract pallet {:?} checking ActiveRentContractForNode storage map START",
         PalletVersion::<T>::get()
     );
@@ -380,7 +403,7 @@ pub fn check_active_rent_contract_for_node<T: Config>() -> frame_support::weight
         r += 1;
         
         if pallet_tfgrid::Nodes::<T>::get(node_id).is_none() {
-            info!(
+            debug!(
                 " ⚠️    ActiveRentContractForNode[node: {}]: node not exists",
                 node_id
             );
@@ -391,14 +414,14 @@ pub fn check_active_rent_contract_for_node<T: Config>() -> frame_support::weight
             match c.contract_type {
                 types::ContractData::RentContract(_) => (),
                 _ => {
-                    info!(
+                    debug!(
                         " ⚠️    ActiveRentContractForNode[node: {}]: contract {} is not a rent contract",
                         node_id, contract_id
                     );
                 }
             }
         } else {
-            info!(
+            debug!(
                 " ⚠️    ActiveRentContractForNode[node: {}]: contract {} not exists",
                 node_id, contract_id
             );
@@ -406,7 +429,7 @@ pub fn check_active_rent_contract_for_node<T: Config>() -> frame_support::weight
         r += 1;
     }
 
-    info!(
+    debug!(
         "🏁  Smart Contract pallet {:?} checking ActiveRentContractForNode storage map END",
         PalletVersion::<T>::get()
     );
@@ -416,7 +439,7 @@ pub fn check_active_rent_contract_for_node<T: Config>() -> frame_support::weight
 
 // ContractIDByNodeIDAndHash
 pub fn check_contract_id_by_node_id_and_hash<T: Config>() -> frame_support::weights::Weight {
-    info!(
+    debug!(
         "🔎  Smart Contract pallet {:?} checking ContractIDByNodeIDAndHash storage map START",
         PalletVersion::<T>::get()
     );
@@ -427,7 +450,7 @@ pub fn check_contract_id_by_node_id_and_hash<T: Config>() -> frame_support::weig
         r += 1;
 
         if pallet_tfgrid::Nodes::<T>::get(node_id).is_none() {
-            info!(
+            debug!(
                 " ⚠️    ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: node not exists",
                 node_id, String::from_utf8_lossy(&hash)
             );
@@ -438,21 +461,21 @@ pub fn check_contract_id_by_node_id_and_hash<T: Config>() -> frame_support::weig
             match c.contract_type {
                 types::ContractData::NodeContract(node_contract) => {
                     if node_contract.deployment_hash != hash {
-                        info!(
+                        debug!(
                             " ⚠️    ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: deployment hash ({:?}) on contract {} is not matching",
                             node_id, String::from_utf8_lossy(&hash), String::from_utf8_lossy(&node_contract.deployment_hash), contract_id, 
                         );
                     }
                 }
                 _ => {
-                    info!(
+                    debug!(
                         " ⚠️    ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: contract {} is not a node contract",
                         node_id, String::from_utf8_lossy(&hash), contract_id
                     );
                 }
             }
         } else {
-            info!(
+            debug!(
                 " ⚠️    ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: contract {} not exists",
                 node_id, String::from_utf8_lossy(&hash), contract_id
             );
@@ -460,7 +483,7 @@ pub fn check_contract_id_by_node_id_and_hash<T: Config>() -> frame_support::weig
         r += 1;
     }
 
-    info!(
+    debug!(
         "🏁  Smart Contract pallet {:?} checking ContractIDByNodeIDAndHash storage map END",
         PalletVersion::<T>::get()
     );
@@ -470,7 +493,7 @@ pub fn check_contract_id_by_node_id_and_hash<T: Config>() -> frame_support::weig
 
 // ContractIDByNameRegistration
 pub fn check_contract_id_by_name_registration<T: Config>() -> frame_support::weights::Weight {
-    info!(
+    debug!(
         "🔎  Smart Contract pallet {:?} checking ContractIDByNameRegistration storage map START",
         PalletVersion::<T>::get()
     );
@@ -484,21 +507,21 @@ pub fn check_contract_id_by_name_registration<T: Config>() -> frame_support::wei
             match c.contract_type {
                 types::ContractData::NameContract(name_contract) => {
                     if name_contract.name != name {
-                        info!(
+                        debug!(
                             " ⚠️    ContractIDByNameRegistration[name: {:?}]: name ({:?}) on contract {} is not matching",
                             String::from_utf8_lossy(&name.into()), String::from_utf8_lossy(&name_contract.name.into()), contract_id, 
                         );
                     }
                 }
                 _ => {
-                    info!(
+                    debug!(
                         " ⚠️    ContractIDByNameRegistration[name: {:?}]: contract {} is not a name contract",
                         String::from_utf8_lossy(&name.into()), contract_id
                     );
                 }
             }
         } else {
-            info!(
+            debug!(
                 " ⚠️    ContractIDByNameRegistration[name: {:?}]: contract {} not exists",
                 String::from_utf8_lossy(&name.into()), contract_id
             );
@@ -506,7 +529,7 @@ pub fn check_contract_id_by_name_registration<T: Config>() -> frame_support::wei
         r += 1;
     }
 
-    info!(
+    debug!(
         "🏁  Smart Contract pallet {:?} checking ContractIDByNameRegistration storage map END",
         PalletVersion::<T>::get()
     );
@@ -516,7 +539,7 @@ pub fn check_contract_id_by_name_registration<T: Config>() -> frame_support::wei
 
 // ContractLock
 pub fn check_contract_lock<T: Config>() -> frame_support::weights::Weight {
-    info!(
+    debug!(
         "🔎  Smart Contract pallet {:?} checking ContractLock storage map START",
         PalletVersion::<T>::get()
     );
@@ -527,7 +550,7 @@ pub fn check_contract_lock<T: Config>() -> frame_support::weights::Weight {
         r += 1;
 
         if Contracts::<T>::get(contract_id).is_none() {        
-            info!(
+            debug!(
                 " ⚠️    ContractLock[contract: {}]: contract not exists",
                 contract_id
             );
@@ -535,7 +558,7 @@ pub fn check_contract_lock<T: Config>() -> frame_support::weights::Weight {
         r += 1;
     }
 
-    info!(
+    debug!(
         "🏁  Smart Contract pallet {:?} checking ContractLock storage map END",
         PalletVersion::<T>::get()
     );
@@ -545,7 +568,7 @@ pub fn check_contract_lock<T: Config>() -> frame_support::weights::Weight {
 
 // SolutionProviders
 pub fn check_solution_providers<T: Config>() -> frame_support::weights::Weight {
-    info!(
+    debug!(
         "🔎  Smart Contract pallet {:?} checking SolutionProviders storage map START",
         PalletVersion::<T>::get()
     );
@@ -559,14 +582,14 @@ pub fn check_solution_providers<T: Config>() -> frame_support::weights::Weight {
         r += 1;
 
         if !solution_provider_id_range.contains(&solution_provider_id) {
-            info!(
+            debug!(
                 " ⚠️    SolutionProviders[id: {}]: id not in range {:?}",
                 solution_provider_id, solution_provider_id_range
             );
         }
     }
 
-    info!(
+    debug!(
         "🏁  Smart Contract pallet {:?} checking SolutionProviders storage map END",
         PalletVersion::<T>::get()
     );
@@ -576,7 +599,7 @@ pub fn check_solution_providers<T: Config>() -> frame_support::weights::Weight {
 
 // ContractBillingInformationByID
 pub fn check_contract_billing_information_by_id<T: Config>() -> frame_support::weights::Weight {
-    info!(
+    debug!(
         "🔎  Smart Contract pallet {:?} checking ContractBillingInformationByID storage map START",
         PalletVersion::<T>::get()
     );
@@ -590,14 +613,14 @@ pub fn check_contract_billing_information_by_id<T: Config>() -> frame_support::w
             match c.contract_type {
                 types::ContractData::NodeContract(_) => (),
                 _ => {
-                    info!(
+                    debug!(
                         " ⚠️    ContractBillingInformationByID[contract: {}]: contract is not a node contract",
                         contract_id
                     );
                 }
             }
         } else {
-            info!(
+            debug!(
                 " ⚠️    ContractBillingInformationByID[contract: {}]: contract not exists",
                 contract_id
             );
@@ -605,7 +628,7 @@ pub fn check_contract_billing_information_by_id<T: Config>() -> frame_support::w
         r += 1;
     }
 
-    info!(
+    debug!(
         "🏁  Smart Contract pallet {:?} checking ContractBillingInformationByID storage map END",
         PalletVersion::<T>::get()
     );
@@ -615,7 +638,7 @@ pub fn check_contract_billing_information_by_id<T: Config>() -> frame_support::w
 
 // NodeContractResources
 pub fn check_node_contract_resources<T: Config>() -> frame_support::weights::Weight {
-    info!(
+    debug!(
         "🔎  Smart Contract pallet {:?} checking NodeContractResources storage map START",
         PalletVersion::<T>::get()
     );
@@ -626,7 +649,7 @@ pub fn check_node_contract_resources<T: Config>() -> frame_support::weights::Wei
         r += 1;
 
         if contract_resource.contract_id != contract_id {
-            info!(
+            debug!(
                 " ⚠️    NodeContractResources[contract: {}]: wrong contract id on resource ({})",
                contract_id, contract_resource.contract_id
             );
@@ -636,14 +659,14 @@ pub fn check_node_contract_resources<T: Config>() -> frame_support::weights::Wei
             match c.contract_type {
                 types::ContractData::NodeContract(_) => (),
                 _ => {
-                    info!(
+                    debug!(
                         " ⚠️    NodeContractResources[contract: {}]: contract is not a node contract",
                         contract_id
                     );
                 }
             }
         } else {
-            info!(
+            debug!(
                 " ⚠️    NodeContractResources[contract: {}]: contract not exists",
                 contract_id
             );
@@ -651,7 +674,7 @@ pub fn check_node_contract_resources<T: Config>() -> frame_support::weights::Wei
         r += 1;
     }
 
-    info!(
+    debug!(
         "🏁  Smart Contract pallet {:?} checking NodeContractResources storage map END",
         PalletVersion::<T>::get()
     );
@@ -661,7 +684,7 @@ pub fn check_node_contract_resources<T: Config>() -> frame_support::weights::Wei
 
 // Contracts
 pub fn clean_contracts<T: Config>() -> frame_support::weights::Weight {
-    info!(
+    debug!(
         "🧼  Smart Contract pallet {:?} cleaning Contracts storage map START",
         PalletVersion::<T>::get()
     );
@@ -697,7 +720,7 @@ pub fn clean_contracts<T: Config>() -> frame_support::weights::Weight {
         r += 1;
     }
 
-    info!(
+    debug!(
         "✨  Smart Contract pallet {:?} cleaning Contracts storage map END",
         PalletVersion::<T>::get()
     );
@@ -740,7 +763,7 @@ fn clean_rent_contract<T: Config>() {
 
 // ContractsToBillAt
 pub fn clean_contracts_to_bill_at<T: Config>() -> frame_support::weights::Weight {
-    info!(
+    debug!(
         "🧼  Smart Contract pallet {:?} cleaning ContractsToBillAt storage map START",
         PalletVersion::<T>::get()
     );
@@ -788,7 +811,7 @@ pub fn clean_contracts_to_bill_at<T: Config>() -> frame_support::weights::Weight
         w += 1;
     }
 
-    info!(
+    debug!(
         "✨  Smart Contract pallet {:?} cleaning ContractsToBillAt storage map END",
         PalletVersion::<T>::get()
     );
@@ -798,7 +821,7 @@ pub fn clean_contracts_to_bill_at<T: Config>() -> frame_support::weights::Weight
 
 // ActiveNodeContracts
 pub fn clean_active_node_contracts<T: Config>() -> frame_support::weights::Weight {
-    info!(
+    debug!(
         "🧼  Smart Contract pallet {:?} cleaning ActiveNodeContracts storage map START",
         PalletVersion::<T>::get()
     );
@@ -822,7 +845,7 @@ pub fn clean_active_node_contracts<T: Config>() -> frame_support::weights::Weigh
         r += 1;
     }
 
-    info!(
+    debug!(
         "✨  Smart Contract pallet {:?} cleaning ActiveNodeContracts storage map END",
         PalletVersion::<T>::get()
     );
@@ -832,7 +855,7 @@ pub fn clean_active_node_contracts<T: Config>() -> frame_support::weights::Weigh
 
 // ActiveRentContractForNode
 pub fn clean_active_rent_contract_for_node<T: Config>() -> frame_support::weights::Weight {
-    info!(
+    debug!(
         "🧼  Smart Contract pallet {:?} cleaning ActiveRentContractForNode storage map START",
         PalletVersion::<T>::get()
     );
@@ -848,7 +871,7 @@ pub fn clean_active_rent_contract_for_node<T: Config>() -> frame_support::weight
         ActiveRentContractForNode::<T>::remove(node_id);
     }
 
-    info!(
+    debug!(
         "✨  Smart Contract pallet {:?} cleaning ActiveRentContractForNode storage map END",
         PalletVersion::<T>::get()
     );
@@ -861,7 +884,7 @@ pub fn clean_active_rent_contract_for_node<T: Config>() -> frame_support::weight
 
 // ContractIDByNodeIDAndHash
 pub fn clean_contract_id_by_node_id_and_hash<T: Config>() -> frame_support::weights::Weight {
-    info!(
+    debug!(
         "🧼  Smart Contract pallet {:?} cleaning ContractIDByNodeIDAndHash storage map START",
         PalletVersion::<T>::get()
     );
@@ -896,7 +919,7 @@ pub fn clean_contract_id_by_node_id_and_hash<T: Config>() -> frame_support::weig
         r += 1;
     }
 
-    info!(
+    debug!(
         "✨  Smart Contract pallet {:?} cleaning ContractIDByNodeIDAndHash storage map END",
         PalletVersion::<T>::get()
     );
@@ -906,7 +929,7 @@ pub fn clean_contract_id_by_node_id_and_hash<T: Config>() -> frame_support::weig
 
 // ContractIDByNameRegistration
 pub fn clean_contract_id_by_name_registration<T: Config>() -> frame_support::weights::Weight {
-    info!(
+    debug!(
         "🧼  Smart Contract pallet {:?} cleaning ContractIDByNameRegistration storage map START",
         PalletVersion::<T>::get()
     );
@@ -922,7 +945,7 @@ pub fn clean_contract_id_by_name_registration<T: Config>() -> frame_support::wei
         ContractIDByNameRegistration::<T>::remove(contract_id);
     }
 
-    info!(
+    debug!(
         "✨  Smart Contract pallet {:?} cleaning ContractIDByNameRegistration storage map END",
         PalletVersion::<T>::get()
     );
@@ -935,7 +958,7 @@ pub fn clean_contract_id_by_name_registration<T: Config>() -> frame_support::wei
 
 // ContractLock
 pub fn clean_contract_lock<T: Config>() -> frame_support::weights::Weight {
-    info!(
+    debug!(
         "🧼  Smart Contract pallet {:?} cleaning ContractLock storage map START",
         PalletVersion::<T>::get()
     );
@@ -951,7 +974,7 @@ pub fn clean_contract_lock<T: Config>() -> frame_support::weights::Weight {
         ContractLock::<T>::remove(contract_id);
     }
 
-    info!(
+    debug!(
         "✨  Smart Contract pallet {:?} cleaning ContractLock storage map END",
         PalletVersion::<T>::get()
     );
@@ -964,14 +987,14 @@ pub fn clean_contract_lock<T: Config>() -> frame_support::weights::Weight {
 
 // SolutionProviders
 pub fn clean_solution_providers<T: Config>() -> frame_support::weights::Weight {
-    info!(
+    debug!(
         "🧼  Smart Contract pallet {:?} cleaning SolutionProviders storage map START",
         PalletVersion::<T>::get()
     );
 
     // Nothing to do here
 
-    info!(
+    debug!(
         "✨  Smart Contract pallet {:?} cleaning SolutionProviders storage map END",
         PalletVersion::<T>::get()
     );
@@ -981,7 +1004,7 @@ pub fn clean_solution_providers<T: Config>() -> frame_support::weights::Weight {
 
 // ContractBillingInformationByID
 pub fn clean_contract_billing_information_by_id<T: Config>() -> frame_support::weights::Weight {
-    info!(
+    debug!(
         "🧼  Smart Contract pallet {:?} cleaning ContractBillingInformationByID storage map START",
         PalletVersion::<T>::get()
     );
@@ -1006,7 +1029,7 @@ pub fn clean_contract_billing_information_by_id<T: Config>() -> frame_support::w
         ContractBillingInformationByID::<T>::remove(contract_id); 
     }
 
-    info!(
+    debug!(
         "✨  Smart Contract pallet {:?} cleaning ContractBillingInformationByID storage map END",
         PalletVersion::<T>::get()
     );
@@ -1019,7 +1042,7 @@ pub fn clean_contract_billing_information_by_id<T: Config>() -> frame_support::w
 
 // NodeContractResources
 pub fn clean_node_contract_resources<T: Config>() -> frame_support::weights::Weight {
-    info!(
+    debug!(
         "🧼  Smart Contract pallet {:?} cleaning NodeContractResources storage map START",
         PalletVersion::<T>::get()
     );
@@ -1035,7 +1058,7 @@ pub fn clean_node_contract_resources<T: Config>() -> frame_support::weights::Wei
         NodeContractResources::<T>::remove(contract_id);
     }
 
-    info!(
+    debug!(
         "✨  Smart Contract pallet {:?} cleaning NodeContractResources storage map END",
         PalletVersion::<T>::get()
     );
