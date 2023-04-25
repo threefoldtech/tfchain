@@ -164,7 +164,11 @@ func (s *Substrate) EnsureAccount(identity Identity, activationURL, termsAndCond
 	// then we activate the account.
 	if errors.Is(err, ErrAccountNotFound) || info.Data.Free.Cmp(reactivateAt) <= 0 {
 		// account activation
-		log.Info().Uint64("funds", info.Data.Free.Uint64()).Str("account", identity.Address()).Msg("activating account")
+		var free uint64
+		if info.Data.Free.Int != nil {
+			free = info.Data.Free.Uint64()
+		}
+		log.Info().Uint64("funds", free).Str("account", identity.Address()).Msg("activating account")
 		if err = s.activateAccount(identity, activationURL); err != nil {
 			return
 		}
