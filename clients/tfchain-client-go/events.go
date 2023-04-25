@@ -107,6 +107,13 @@ type TwinAccountBounded struct {
 	Topics  []types.Hash
 }
 
+type TwinAccountBonded struct {
+	Phase   types.Phase
+	Twin    types.U32
+	Account AccountID
+	Topics  []types.Hash
+}
+
 // numeric enum for unit
 type Unit byte
 

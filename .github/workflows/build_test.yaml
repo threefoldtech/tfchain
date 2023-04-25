@@ -61,3 +61,9 @@ jobs:
         with:
           name: integration test output
           path: substrate-node/tests/_output_tests/
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: go client integration test output
+          path: clients/tfchain_client_go/test_client_go_integration_tests_go_output.log
+

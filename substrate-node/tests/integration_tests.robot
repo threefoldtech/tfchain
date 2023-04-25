@@ -68,9 +68,9 @@ Test Client Go integration tests
     [Documentation]     Run go client integration tests
     Setup Multi Node Network    log_name=test_client_go_integration_tests  amt=${1}
 
-    Set Environment Variable    name=CI    value=true
+    Set Environment Variable    name=CI    value=0
     
-    ${result} =	Run Process     go      test   .  -v   cwd=../../clients/tfchain_client_go    shell=yes  env:CI=true  stdout=${OUTPUT_GO_TESTS}  stderr=${OUTPUT_GO_TESTS}
+    ${result} =	Run Process     go      test   .  -v   cwd=../../clients/tfchain_client_go    shell=yes  env:CI=0  stdout=${OUTPUT_GO_TESTS}  stderr=${OUTPUT_GO_TESTS}
 
     Should Be Equal As Integers   ${result.rc}	0  msg=${result.stdout}
     #Log To Console      ${result.stderr}
