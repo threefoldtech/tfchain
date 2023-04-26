@@ -2,6 +2,7 @@ use crate::pallet_tfgrid;
 use crate::*;
 use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
 use log::{info, debug};
+use sp_runtime::Saturating;
 use sp_std::marker::PhantomData;
 use scale_info::prelude::string::String;
 
@@ -260,7 +261,7 @@ pub fn check_contracts_to_bill_at<T: Config>() {
 
     for (_index, contract_ids) in ContractsToBillAt::<T>::iter() {
         for contract_id in contract_ids {
-            contract_id_count[contract_id as usize] += 1;
+            contract_id_count[contract_id as usize].saturating_inc();
         }
     }
 
@@ -602,11 +603,11 @@ pub fn clean_contracts<T: Config>() -> frame_support::weights::Weight {
         PalletVersion::<T>::get()
     );
 
-    let mut r: u64 = 0;
-    let mut w: u64 = 0;
+    let mut r = 0u64;
+    let mut w = 0u64;
 
     let contracts = Contracts::<T>::iter().collect::<Vec<_>>();
-    r += contracts.len() as u64;
+    r.saturating_accrue(contracts.len() as u64);
 
     for (contract_id, contract) in contracts.into_iter() {
         match contract.contract_type {
@@ -624,13 +625,13 @@ pub fn clean_contracts<T: Config>() -> frame_support::weights::Weight {
         // ContractLock
         if !ContractLock::<T>::contains_key(contract_id) {
             let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-            r += 1;
+            r.saturating_inc();
             let mut contract_lock = types::ContractLock::default();
             contract_lock.lock_updated = now;
             ContractLock::<T>::insert(contract_id, contract_lock);
-            w += 1;
+            w.saturating_inc();
         }
-        r += 1;
+        r.saturating_inc();
     }
 
     debug!(
@@ -638,22 +639,22 @@ pub fn clean_contracts<T: Config>() -> frame_support::weights::Weight {
         PalletVersion::<T>::get()
     );
 
-    T::DbWeight::get().reads_writes(r + 2, w)
+    T::DbWeight::get().reads_writes(r.saturating_add(2), w)
 }
 
 fn clean_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_hash: HexHash, r: &mut u64, w: &mut u64) {
     if deployment_hash == HexHash::default() {
         Contracts::<T>::remove(contract_id);
-        *w += 1;
+        (*w).saturating_inc();
     }
 
     // ActiveNodeContracts
     let mut active_node_contracts = ActiveNodeContracts::<T>::get(node_id);
-    *r += 1;
+    (*r).saturating_inc();
     if !active_node_contracts.contains(&contract_id) {
         active_node_contracts.push(contract_id);
         ActiveNodeContracts::<T>::insert(node_id, active_node_contracts);
-        *w += 1;
+        (*w).saturating_inc();
     }
 
     // ContractIDByNodeIDAndHash
@@ -661,9 +662,9 @@ fn clean_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_has
     // Storage re-built from zero in clean_contract_id_by_node_id_and_hash()
     // if !ContractIDByNodeIDAndHash::<T>::contains_key(node_id, deployment_hash) {
     //     ContractIDByNodeIDAndHash::<T>::insert(node_id, deployment_hash, contract_id);
-    //     *w += 1;
+    //     *w.saturating_inc();
     // }
-    // *r += 1;
+    // *r.saturating_inc();
 }
 
 fn clean_name_contract<T: Config>() {
@@ -681,17 +682,17 @@ pub fn clean_contracts_to_bill_at<T: Config>() -> frame_support::weights::Weight
         PalletVersion::<T>::get()
     );
 
-    let mut r: u64 = 0;
-    let mut w: u64 = 0;
+    let mut r = 0u64;
+    let mut w = 0u64;
 
     let contracts_to_bill_at = ContractsToBillAt::<T>::iter().collect::<Vec<_>>();
-    r += contracts_to_bill_at.len() as u64;
+    r.saturating_accrue(contracts_to_bill_at.len() as u64);
     let mut contract_id_count = vec![0; (ContractID::<T>::get() + 1) as usize];
-    r += 1;
+    r.saturating_inc();
 
     for (_index, contract_ids) in contracts_to_bill_at.clone() {
         for contract_id in contract_ids {
-            contract_id_count[contract_id as usize] += 1;
+            contract_id_count[contract_id as usize].saturating_inc();
         }
     }
 
@@ -702,26 +703,26 @@ pub fn clean_contracts_to_bill_at<T: Config>() -> frame_support::weights::Weight
                 match contract.contract_type {
                     types::ContractData::NodeContract(node_contract) => {
                         let contract_resource = NodeContractResources::<T>::get(contract_id);
-                        r += 1;
+                        r.saturating_inc();
                         if node_contract.public_ips > 0 || !contract_resource.used.is_empty() {
                             if contract_id_count[contract_id as usize] == 1 {
                                 new_contract_ids.push(contract.contract_id);
                             }
-                            contract_id_count[contract_id as usize] -= 1;
+                            contract_id_count[contract_id as usize].saturating_dec();
                         }
                     }
                     _ => {
                         if contract_id_count[contract_id as usize] == 1 {
                             new_contract_ids.push(contract.contract_id);
                         }
-                        contract_id_count[contract_id as usize] -= 1;
+                        contract_id_count[contract_id as usize].saturating_dec();
                     }
                 };
             }
-            r += 1;
+            r.saturating_inc();
         }
         ContractsToBillAt::<T>::insert(index, new_contract_ids);
-        w += 1;
+        w.saturating_inc();
     }
 
     debug!(
@@ -729,7 +730,7 @@ pub fn clean_contracts_to_bill_at<T: Config>() -> frame_support::weights::Weight
         PalletVersion::<T>::get()
     );
 
-    T::DbWeight::get().reads_writes(r + 2, w)
+    T::DbWeight::get().reads_writes(r.saturating_add(2), w)
 }
 
 // ActiveNodeContracts
@@ -739,23 +740,25 @@ pub fn clean_active_node_contracts<T: Config>() -> frame_support::weights::Weigh
         PalletVersion::<T>::get()
     );
 
-    let mut r: u64 = 0;
-    let mut w: u64 = 0;
+    let mut r = 0u64;
+    let mut w = 0u64;
 
     let active_node_contracts = ActiveNodeContracts::<T>::iter().collect::<Vec<_>>();
-    r += active_node_contracts.len() as u64;
+    r.saturating_accrue(active_node_contracts.len() as u64);
 
     for (node_id, mut contract_ids) in active_node_contracts {
         if pallet_tfgrid::Nodes::<T>::get(node_id).is_none() {
             ActiveNodeContracts::<T>::remove(node_id);
-            w += 1;
+            w.saturating_inc();
         } else {
-            contract_ids.retain(|contract_id| Contracts::<T>::get(contract_id).is_some());
-            r += contract_ids.len() as u64;
+            contract_ids.retain(|contract_id| { 
+                r.saturating_inc();
+                Contracts::<T>::get(contract_id).is_some() 
+            });
             ActiveNodeContracts::<T>::insert(node_id, contract_ids);
-            w += 1;
+            w.saturating_inc();
         }
-        r += 1;
+        r.saturating_inc();
     }
 
     debug!(
@@ -763,7 +766,7 @@ pub fn clean_active_node_contracts<T: Config>() -> frame_support::weights::Weigh
         PalletVersion::<T>::get()
     );
 
-    T::DbWeight::get().reads_writes(r + 2, w)
+    T::DbWeight::get().reads_writes(r.saturating_add(2), w)
 }
 
 // ActiveRentContractForNode
@@ -773,15 +776,20 @@ pub fn clean_active_rent_contract_for_node<T: Config>() -> frame_support::weight
         PalletVersion::<T>::get()
     );
 
-    let active_rent_contract_for_node = ActiveRentContractForNode::<T>::iter().collect::<Vec<_>>();
+    let mut r = 0u64;
+    let mut w = 0u64;
 
-    let to_remove: Vec<_> = active_rent_contract_for_node.clone().into_iter()
-        .filter(|(_, contract_id)| Contracts::<T>::get(contract_id).is_none())
+    let to_remove: Vec<_> = ActiveRentContractForNode::<T>::iter()
+        .filter(|(_, contract_id)| {
+            r.saturating_accrue(2);
+            Contracts::<T>::get(contract_id).is_none()
+        })
         .map(|(node_id, _)| node_id)
         .collect();
 
-    for node_id in to_remove.clone() {
+    for node_id in to_remove {
         ActiveRentContractForNode::<T>::remove(node_id);
+        w.saturating_inc();
     }
 
     debug!(
@@ -789,10 +797,7 @@ pub fn clean_active_rent_contract_for_node<T: Config>() -> frame_support::weight
         PalletVersion::<T>::get()
     );
 
-    let r = 2 * active_rent_contract_for_node.len() as u64 + 2;
-    let w = to_remove.len() as u64;
-
-    T::DbWeight::get().reads_writes(r, w)
+    T::DbWeight::get().reads_writes(r.saturating_add(2), w)
 }
 
 // ContractIDByNodeIDAndHash
@@ -813,11 +818,12 @@ pub fn clean_contract_id_by_node_id_and_hash<T: Config>() -> frame_support::weig
         None,
     );
 
-    let mut r: u64 = 0;
-    let mut w: u64 = 0;
+    let mut r = 0u64;
+    let mut w = 0u64;
 
     // 2. Insert items based on existing node contracts
     for (contract_id, contract) in Contracts::<T>::iter() {
+        r.saturating_inc();
         match contract.contract_type {
             types::ContractData::NodeContract(node_contract) => {
                 ContractIDByNodeIDAndHash::<T>::insert(
@@ -825,11 +831,10 @@ pub fn clean_contract_id_by_node_id_and_hash<T: Config>() -> frame_support::weig
                     node_contract.deployment_hash,
                     contract_id,
                 );
-                w += 1;
+                w.saturating_inc();
             }
             _ => (),
         }
-        r += 1;
     }
 
     debug!(
@@ -837,7 +842,7 @@ pub fn clean_contract_id_by_node_id_and_hash<T: Config>() -> frame_support::weig
         PalletVersion::<T>::get()
     );
 
-    T::DbWeight::get().reads_writes(r + 2, w)
+    T::DbWeight::get().reads_writes(r.saturating_add(2), w)
 }
 
 // ContractIDByNameRegistration
@@ -847,15 +852,20 @@ pub fn clean_contract_id_by_name_registration<T: Config>() -> frame_support::wei
         PalletVersion::<T>::get()
     );
 
-    let contract_id_by_name_registration = ContractIDByNameRegistration::<T>::iter().collect::<Vec<_>>();
+    let mut r = 0u64;
+    let mut w = 0u64;
 
-    let to_remove: Vec<_> = contract_id_by_name_registration.clone().into_iter()
-        .filter(|(_, contract_id)| Contracts::<T>::get(contract_id).is_none())
+    let to_remove: Vec<_> = ContractIDByNameRegistration::<T>::iter()
+        .filter(|(_, contract_id)| {
+            r.saturating_accrue(2);
+            Contracts::<T>::get(contract_id).is_none()
+        })
         .map(|(name, _)| name)
         .collect();
 
-    for contract_id in to_remove.clone() {
+    for contract_id in to_remove {
         ContractIDByNameRegistration::<T>::remove(contract_id);
+        w.saturating_inc();
     }
 
     debug!(
@@ -863,10 +873,7 @@ pub fn clean_contract_id_by_name_registration<T: Config>() -> frame_support::wei
         PalletVersion::<T>::get()
     );
 
-    let r = 2 * contract_id_by_name_registration.len() as u64 + 2;
-    let w = to_remove.len() as u64;
-
-    T::DbWeight::get().reads_writes(r, w)
+    T::DbWeight::get().reads_writes(r.saturating_add(2), w)
 }
 
 // ContractLock
@@ -876,15 +883,20 @@ pub fn clean_contract_lock<T: Config>() -> frame_support::weights::Weight {
         PalletVersion::<T>::get()
     );
 
-    let contract_lock = ContractLock::<T>::iter().collect::<Vec<_>>();
+    let mut r = 0u64;
+    let mut w = 0u64;
 
-    let to_remove: Vec<u64> = contract_lock.clone().into_iter()
-        .filter(|(contract_id, _)| Contracts::<T>::get(contract_id).is_none())
+    let to_remove: Vec<u64> = ContractLock::<T>::iter()
+        .filter(|(contract_id, _)| {
+            r.saturating_accrue(2);
+            Contracts::<T>::get(contract_id).is_none()
+        })
         .map(|(id, _)| id)
         .collect();
 
-    for contract_id in to_remove.clone() {
+    for contract_id in to_remove {
         ContractLock::<T>::remove(contract_id);
+        w.saturating_inc();
     }
 
     debug!(
@@ -892,27 +904,12 @@ pub fn clean_contract_lock<T: Config>() -> frame_support::weights::Weight {
         PalletVersion::<T>::get()
     );
 
-    let r = 2 * contract_lock.len() as u64 + 2;
-    let w = to_remove.len() as u64;
-
-    T::DbWeight::get().reads_writes(r, w)
+    T::DbWeight::get().reads_writes(r.saturating_add(2), w)
 }
 
 // SolutionProviders
 pub fn clean_solution_providers<T: Config>() -> frame_support::weights::Weight {
-    debug!(
-        "🧼  Smart Contract pallet {:?} cleaning SolutionProviders storage map START",
-        PalletVersion::<T>::get()
-    );
-
-    // Nothing to do here
-
-    debug!(
-        "✨  Smart Contract pallet {:?} cleaning SolutionProviders storage map END",
-        PalletVersion::<T>::get()
-    );
-
-    T::DbWeight::get().reads_writes(2, 0)
+    Weight::zero()
 }
 
 // ContractBillingInformationByID
@@ -922,10 +919,12 @@ pub fn clean_contract_billing_information_by_id<T: Config>() -> frame_support::w
         PalletVersion::<T>::get()
     );
 
-    let contract_billing_information_by_id = ContractBillingInformationByID::<T>::iter().collect::<Vec<_>>();
+    let mut r = 0u64;
+    let mut w = 0u64;
 
-    let to_remove: Vec<u64> = contract_billing_information_by_id.clone().into_iter()
+    let to_remove: Vec<u64> = ContractBillingInformationByID::<T>::iter()
         .filter(|(contract_id, _)| {
+            r.saturating_accrue(2);
             if let Some(c) = Contracts::<T>::get(contract_id) {
                 match c.contract_type {
                     types::ContractData::NodeContract(_) => false,
@@ -938,8 +937,9 @@ pub fn clean_contract_billing_information_by_id<T: Config>() -> frame_support::w
         .map(|(id, _)| id)
         .collect();
 
-    for contract_id in to_remove.clone() {
-        ContractBillingInformationByID::<T>::remove(contract_id); 
+    for contract_id in to_remove {
+        ContractBillingInformationByID::<T>::remove(contract_id);
+        w.saturating_inc();
     }
 
     debug!(
@@ -947,10 +947,7 @@ pub fn clean_contract_billing_information_by_id<T: Config>() -> frame_support::w
         PalletVersion::<T>::get()
     );
 
-    let r = 2 * contract_billing_information_by_id.len() as u64 + 2;
-    let w = to_remove.len() as u64;
-
-    T::DbWeight::get().reads_writes(r, w)
+    T::DbWeight::get().reads_writes(r.saturating_add(2), w)
 }
 
 // NodeContractResources
@@ -960,15 +957,20 @@ pub fn clean_node_contract_resources<T: Config>() -> frame_support::weights::Wei
         PalletVersion::<T>::get()
     );
 
-    let node_contract_resources = NodeContractResources::<T>::iter().collect::<Vec<_>>();
+    let mut r = 0u64;
+    let mut w = 0u64;
 
-    let to_remove: Vec<u64> = node_contract_resources.clone().into_iter()
-        .filter(|(contract_id, _)| Contracts::<T>::get(contract_id).is_none())
+    let to_remove: Vec<u64> = NodeContractResources::<T>::iter()
+        .filter(|(contract_id, _)| {
+            r.saturating_accrue(2);
+            Contracts::<T>::get(contract_id).is_none()
+        })
         .map(|(id, _)| id)
         .collect();
 
-    for contract_id in to_remove.clone() {
+    for contract_id in to_remove {
         NodeContractResources::<T>::remove(contract_id);
+        w.saturating_inc();
     }
 
     debug!(
@@ -976,8 +978,5 @@ pub fn clean_node_contract_resources<T: Config>() -> frame_support::weights::Wei
         PalletVersion::<T>::get()
     );
 
-    let r = 2 * node_contract_resources.len() as u64 + 2;
-    let w = to_remove.len() as u64;
-
-    T::DbWeight::get().reads_writes(r, w)
+    T::DbWeight::get().reads_writes(r.saturating_add(2), w)
 }
