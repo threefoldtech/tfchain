@@ -503,12 +503,12 @@ Test Client Go integration tests
     [Documentation]     Run go client integration tests
     Setup Multi Node Network    log_name=test_client_go_integration_tests  amt=${1}
 
-    Set Environment Variable    name=CI    value=0
-    
-    ${result} =	Run Process     go      test   .  -v   cwd=../../clients/tfchain-client-go    shell=yes  env:CI=0  stdout=${OUTPUT_GO_TESTS}  stderr=${OUTPUT_GO_TESTS}
+    ${log_go_tests}    Set Variable    ../../substrate-node/tests/_output_tests/test_client_go_integration_tests/${OUTPUT_GO_TESTS}
+
+    Run Process    go  clean  -testcache
+
+    ${result} =	Run Process     go      test   .  -v   cwd=../../clients/tfchain-client-go    shell=yes  env:CI=0  stdout=${log_go_tests}  stderr=${log_go_tests}
 
     Should Be Equal As Integers   ${result.rc}	0  msg=${result.stdout}
-    #Log To Console      ${result.stderr}
-    #Log To Console      ${result.stdout}
 
     Tear Down Multi Node Network

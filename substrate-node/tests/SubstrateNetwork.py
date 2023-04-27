@@ -16,6 +16,7 @@ SUBSTRATE_NODE_DIR = dirname(os.getcwd())
 TFCHAIN_EXE = join(SUBSTRATE_NODE_DIR, "target", "release", "tfchain")
 
 RE_NODE_STARTED = re.compile("Running JSON-RPC WS server")
+RE_FIRST_BLOCK = re.compile("Prepared block for proposing at 1")
 
 TIMEOUT_STARTUP_IN_SECONDS = 600
 TIMEOUT_TERMINATE_IN_SECONDS = 1
@@ -32,19 +33,26 @@ PREDEFINED_KEYS = {
     "Ferdie": Keypair.create_from_uri("//Ferdie")
 }
 
-
-def wait_till_node_ready(log_file: str, timeout_in_seconds=TIMEOUT_STARTUP_IN_SECONDS):
+def wait_till_file_contains(log_file: str, regex, timeout_in_seconds):
     start = datetime.now()
     while True:
         elapsed = datetime.now() - start
 
-        if elapsed.total_seconds() >= TIMEOUT_STARTUP_IN_SECONDS:
+        if elapsed.total_seconds() >= timeout_in_seconds:
             raise Exception(f"Timeout on starting the node! See {log_file}")
 
         with open(log_file, "r") as fd:
             for line in reversed(fd.readlines()):
-                if RE_NODE_STARTED.search(line):
+                if regex.search(line):
                     return
+
+
+def wait_till_node_ready(log_file: str, timeout_in_seconds=TIMEOUT_STARTUP_IN_SECONDS):
+    wait_till_file_contains(log_file, RE_NODE_STARTED, timeout_in_seconds)
+            
+def wait_till_first_block(log_file: str, timeout_in_seconds=TIMEOUT_STARTUP_IN_SECONDS):
+    wait_till_file_contains(log_file, RE_FIRST_BLOCK, timeout_in_seconds)
+
 
 def setup_offchain_workers(port: int, worker_account: str = "Alice"):
     logging.info("Setting up offchain workers")
@@ -154,12 +162,15 @@ class SubstrateNetwork:
             self._nodes["alice"] = run_single_node(log_file_alice, "/tmp/alice", port, ws_port, rpc_port)
             wait_till_node_ready(log_file_alice)
             setup_offchain_workers(ws_port, "Alice")
+            wait_till_first_block(log_file_alice)
         else:
             log_file_alice = join(output_dir_network, "node_alice.log")
             self._nodes["alice"] = run_node(log_file_alice, "/tmp/alice", "alice", port, ws_port,
                                         rpc_port, node_key="0000000000000000000000000000000000000000000000000000000000000001")
             wait_till_node_ready(log_file_alice)
             setup_offchain_workers(ws_port, "Alice")
+            wait_till_first_block(log_file_alice)
+
 
             log_file = ""
             for x in range(1, amt):
@@ -172,6 +183,8 @@ class SubstrateNetwork:
                                             bootnodes="/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp")
                 wait_till_node_ready(log_file)
                 setup_offchain_workers(ws_port, "Bob")
+                wait_till_first_block(log_file)
+
 
         logging.info("Network is up and running.")
 
