@@ -61,6 +61,7 @@ var smartContractModuleErrors = []string{
 	"NodeNotAuthorizedToComputeReport",
 	"PricingPolicyNotExists",
 	"ContractIsNotUnique",
+	"ContractWrongBillingLoopIndex",
 	"NameExists",
 	"NameNotValid",
 	"InvalidContractType",
@@ -96,6 +97,7 @@ var smartContractModuleErrors = []string{
 	"CanOnlyIncreaseFrequency",
 	"IsNotAnAuthority",
 	"WrongAuthority",
+	"UnauthorizedToChangeSolutionProviderId",
 }
 
 // https://github.com/threefoldtech/tfchain/blob/development/substrate-node/pallets/pallet-smart-contract/src/lib.rs#L321
@@ -131,6 +133,7 @@ var tfgridModuleErrors = []string{
 	"TwinWithPubkeyExists",
 	"CannotCreateTwin",
 	"UnauthorizedToUpdateTwin",
+	"TwinCannotBoundToItself",
 	"PricingPolicyExists",
 	"PricingPolicyNotExists",
 	"PricingPolicyWithDifferentIdExists",
