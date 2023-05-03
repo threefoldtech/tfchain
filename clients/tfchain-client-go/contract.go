@@ -235,15 +235,15 @@ func (s *Substrate) CreateNodeContract(identity Identity, node uint32, body stri
 
 // BatchCreateContractData struct for batch create contract
 type BatchCreateContractData struct {
-	Node               uint32
-	Body               string
-	Hash               string
-	PublicIPs          uint32
-	SolutionProviderID *uint64
+	Node               uint32  `json:"node"`
+	Body               string  `json:"body"`
+	Hash               string  `json:"hash"`
+	PublicIPs          uint32  `json:"public_ips"`
+	SolutionProviderID *uint64 `json:"solution_provider_id"`
 
 	// for name contracts. if set the contract is assumed to be a name contract
 	// and other fields are ignored
-	Name string
+	Name string `json:"name"`
 
 	hexHash HexHash
 }
