@@ -89,6 +89,26 @@ pub fn clean_pallet_smart_contract<T: Config>() -> frame_support::weights::Weigh
     clean_node_contract_resources::<T>()
 }
 
+pub fn clean_pallet<T: Config>(current_stage: MigrationStage
+) -> (frame_support::weights::Weight, Option<MigrationStage>) {
+    debug!("💥💥💥💥💥💥💥💥💥💥 CLEANING PALLET SMART CONTRACT STORAGE [{}/10] 💥💥💥💥💥💥💥💥💥💥", current_stage);
+    match current_stage {
+        1 => (clean_contracts::<T>(), Some(current_stage + 1)),
+        2 => (clean_contracts_to_bill_at::<T>(), Some(current_stage + 1)),
+        3 => (clean_active_node_contracts::<T>(), Some(current_stage + 1)),
+        4 => (clean_active_rent_contract_for_node::<T>(), Some(current_stage + 1)),
+        5 => (clean_contract_id_by_node_id_and_hash::<T>(), Some(current_stage + 1)),
+        6 => (clean_contract_id_by_name_registration::<T>(), Some(current_stage + 1)),
+        7 => (clean_contract_lock::<T>(), Some(current_stage + 1)),
+        8 => (clean_solution_providers::<T>(), Some(current_stage + 1)),
+        9 => (clean_contract_billing_information_by_id::<T>(), Some(current_stage + 1)),
+        // Last cleaning operation, set stage to none to stop migration
+        10 => (clean_node_contract_resources::<T>(), None),
+        // Should never happen
+        _ => (Weight::zero(), None),
+    }
+}
+
 // Contracts
 pub fn check_contracts<T: Config>() {
     debug!(

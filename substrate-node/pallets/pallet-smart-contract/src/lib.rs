@@ -125,6 +125,8 @@ pub mod pallet {
     pub type DeploymentHash = H256;
     pub type NameContractNameOf<T> = <T as Config>::NameContractName;
 
+    pub type MigrationStage = u8;
+
     #[pallet::storage]
     #[pallet::getter(fn contracts)]
     pub type Contracts<T: Config> = StorageMap<_, Blake2_128Concat, u64, Contract<T>, OptionQuery>;
@@ -207,6 +209,11 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn service_contract_id)]
     pub type ServiceContractID<T> = StorageValue<_, u64, ValueQuery>;
+
+    /// The current migration's stage, if any.
+    #[pallet::storage]
+    #[pallet::getter(fn current_migration_stage)]
+    pub(super) type CurrentMigrationStage<T: Config> = StorageValue<_, MigrationStage, OptionQuery>;
 
     #[pallet::config]
     pub trait Config:
@@ -658,6 +665,29 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        #[cfg(feature = "try-runtime")]
+        fn try_state(_n: BlockNumberFor<T>) -> Result<(), &'static str> {
+            Self::do_try_state()
+        }
+
+        fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
+            let mut weight_used = Weight::zero();
+            if let Some(migration_stage) = CurrentMigrationStage::<T>::get() {
+                let (w, new_migration_stage) =
+                    storage_state::v8::clean_pallet::<T>(migration_stage);
+                CurrentMigrationStage::<T>::set(new_migration_stage);
+                weight_used.saturating_accrue(w);
+            }
+            weight_used
+        }
+
+        fn on_runtime_upgrade() -> Weight {
+            // Start a migration (this happens before on_initialize so it'll happen later in this
+            // block, which should be good enough)...
+            CurrentMigrationStage::<T>::put(1);
+            T::DbWeight::get().writes(1)
+        }
+
         fn offchain_worker(block_number: T::BlockNumber) {
             // Let offchain worker check if there are contracts on the map at current index
             let current_index = Self::get_current_billing_loop_index();
@@ -690,6 +720,10 @@ use pallet::NameContractNameOf;
 use sp_std::convert::{TryFrom, TryInto};
 // Internal functions of the pallet
 impl<T: Config> Pallet<T> {
+    pub fn do_try_state() -> Result<(), &'static str> {
+        Ok(())
+    }
+
     pub fn _create_node_contract(
         account_id: T::AccountId,
         node_id: u32,

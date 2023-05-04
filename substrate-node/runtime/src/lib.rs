@@ -765,7 +765,7 @@ pub type Executive = frame_executive::Executive<
 
 // All migrations executed on runtime upgrade as a nested tuple of types implementing
 // `OnRuntimeUpgrade`.
-type Migrations = (pallet_smart_contract::storage_state::v8::CheckStorageStateV8<Runtime>,);
+type Migrations = ();
 
 // follows Substrate's non destructive way of eliminating  otherwise required
 // repetion: https://github.com/paritytech/substrate/pull/10592
