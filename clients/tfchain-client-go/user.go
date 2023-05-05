@@ -22,7 +22,7 @@ func (s *Substrate) GetUser(id uint32) (*User, error) {
 		return nil, err
 	}
 
-	bytes, err := types.Encode(id)
+	bytes, err := Encode(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "substrate: encoding error building query arguments")
 	}
@@ -49,7 +49,7 @@ func (s *Substrate) GetUser(id uint32) (*User, error) {
 
 	switch version {
 	case 1:
-		if err := types.Decode(*raw, &user); err != nil {
+		if err := Decode(*raw, &user); err != nil {
 			return nil, errors.Wrap(err, "failed to load object")
 		}
 	default:

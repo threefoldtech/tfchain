@@ -99,7 +99,7 @@ func (s *Substrate) GetTwin(id uint32) (*Twin, error) {
 		return nil, err
 	}
 
-	bytes, err := types.Encode(id)
+	bytes, err := Encode(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "substrate: encoding error building query arguments")
 	}
@@ -118,7 +118,7 @@ func (s *Substrate) GetTwin(id uint32) (*Twin, error) {
 	}
 
 	var twin Twin
-	if err := types.Decode(*raw, &twin); err != nil {
+	if err := Decode(*raw, &twin); err != nil {
 		return nil, errors.Wrap(err, "failed to load object")
 	}
 

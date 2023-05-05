@@ -70,7 +70,7 @@ func (s *Substrate) GetBurnTransaction(burnTransactionID types.U64) (*BurnTransa
 		return nil, err
 	}
 
-	bytes, err := types.Encode(burnTransactionID)
+	bytes, err := Encode(burnTransactionID)
 	if err != nil {
 		return nil, errors.Wrap(err, "substrate: encoding error building query arguments")
 	}
@@ -100,7 +100,7 @@ func (s *Substrate) IsBurnedAlready(burnTransactionID types.U64) (exists bool, e
 		return false, err
 	}
 
-	bytes, err := types.Encode(burnTransactionID)
+	bytes, err := Encode(burnTransactionID)
 	if err != nil {
 		return false, errors.Wrap(err, "substrate: encoding error building query arguments")
 	}

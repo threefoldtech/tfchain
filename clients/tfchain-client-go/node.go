@@ -372,7 +372,7 @@ func (s *Substrate) GetNodeByTwinID(twin uint32) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
-	bytes, err := types.Encode(twin)
+	bytes, err := Encode(twin)
 	if err != nil {
 		return 0, err
 	}
@@ -400,7 +400,7 @@ func (s *Substrate) GetNode(id uint32) (*Node, error) {
 		return nil, err
 	}
 
-	bytes, err := types.Encode(id)
+	bytes, err := Encode(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "substrate: encoding error building query arguments")
 	}
@@ -426,7 +426,7 @@ func (s *Substrate) ScanNodes(ctx context.Context, from, to uint32) (<-chan Scan
 	ch := make(chan ScannedNode)
 
 	getNode := func(id uint32) (*Node, error) {
-		bytes, err := types.Encode(id)
+		bytes, err := Encode(id)
 		if err != nil {
 			return nil, errors.Wrap(err, "substrate: encoding error building query arguments")
 		}
@@ -471,7 +471,7 @@ func (s *Substrate) GetNodes(farmID uint32) ([]uint32, error) {
 		return []uint32{}, err
 	}
 
-	bytes, err := types.Encode(farmID)
+	bytes, err := Encode(farmID)
 	if err != nil {
 		return nil, errors.Wrap(err, "substrate: encoding error building query arguments")
 	}
@@ -492,7 +492,7 @@ func (s *Substrate) GetNodes(farmID uint32) ([]uint32, error) {
 
 	var nodes []uint32
 
-	if err := types.Decode(*raw, &nodes); err != nil {
+	if err := Decode(*raw, &nodes); err != nil {
 		return []uint32{}, errors.Wrap(err, "failed to load object")
 	}
 
@@ -510,7 +510,7 @@ func (s *Substrate) getNode(cl Conn, key types.StorageKey) (*Node, error) {
 	}
 
 	var node Node
-	if err := types.Decode(*raw, &node); err != nil {
+	if err := Decode(*raw, &node); err != nil {
 		return nil, errors.Wrap(err, "failed to load object")
 	}
 
@@ -634,7 +634,7 @@ func (s *Substrate) GetLastNodeID() (uint32, error) {
 	}
 
 	var v types.U32
-	if err := types.Decode(*raw, &v); err != nil {
+	if err := Decode(*raw, &v); err != nil {
 		return 0, err
 	}
 
@@ -699,7 +699,7 @@ func (s *Substrate) GetPowerTarget(nodeID uint32) (power NodePower, err error) {
 		return power, err
 	}
 
-	bytes, err := types.Encode(nodeID)
+	bytes, err := Encode(nodeID)
 	if err != nil {
 		return power, errors.Wrap(err, "substrate: encoding error building query arguments")
 	}
@@ -722,7 +722,7 @@ func (s *Substrate) GetPowerTarget(nodeID uint32) (power NodePower, err error) {
 		}, nil
 	}
 
-	if err := types.Decode(*raw, &power); err != nil {
+	if err := Decode(*raw, &power); err != nil {
 		return power, errors.Wrap(err, "failed to load object")
 	}
 

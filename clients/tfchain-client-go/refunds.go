@@ -62,7 +62,7 @@ func (s *Substrate) IsRefundedAlready(txHash string) (exists bool, err error) {
 		return false, err
 	}
 
-	bytes, err := types.Encode(txHash)
+	bytes, err := Encode(txHash)
 	if err != nil {
 		return false, errors.Wrap(err, "substrate: encoding error building query arguments")
 	}
@@ -92,7 +92,7 @@ func (s *Substrate) GetRefundTransaction(txHash string) (*RefundTransaction, err
 		return nil, err
 	}
 
-	bytes, err := types.Encode(txHash)
+	bytes, err := Encode(txHash)
 	if err != nil {
 		return nil, errors.Wrap(err, "substrate: encoding error building query arguments")
 	}

@@ -243,7 +243,7 @@ func (s *Substrate) GetServiceContract(id uint64) (*ServiceContract, error) {
 		return nil, err
 	}
 
-	bytes, err := types.Encode(id)
+	bytes, err := Encode(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "substrate: encoding error building query arguments")
 	}
@@ -263,7 +263,7 @@ func (s *Substrate) GetServiceContract(id uint64) (*ServiceContract, error) {
 	}
 
 	var contract ServiceContract
-	if err := types.Decode(*raw, &contract); err != nil {
+	if err := Decode(*raw, &contract); err != nil {
 		return nil, errors.Wrap(err, "failed to load object")
 	}
 

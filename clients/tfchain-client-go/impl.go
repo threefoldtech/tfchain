@@ -180,7 +180,7 @@ func (s *Substrate) GetClient() (Conn, Meta, error) {
 
 func (s *Substrate) getVersion(b types.StorageDataRaw) (uint32, error) {
 	var ver Versioned
-	if err := types.Decode(b, &ver); err != nil {
+	if err := Decode(b, &ver); err != nil {
 		return 0, errors.Wrapf(ErrInvalidVersion, "failed to load version (reason: %s)", err)
 	}
 
@@ -208,7 +208,7 @@ func getTime(cl Conn, meta Meta) (t time.Time, err error) {
 	}
 
 	var stamp types.Moment
-	if err := types.Decode(*raw, &stamp); err != nil {
+	if err := Decode(*raw, &stamp); err != nil {
 		return t, errors.Wrap(err, "failed to get node time")
 	}
 

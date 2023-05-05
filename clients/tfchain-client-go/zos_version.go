@@ -28,7 +28,7 @@ func (s *Substrate) GetZosVersion() (string, error) {
 
 	var zosVersion string
 
-	if err := types.Decode(*raw, &zosVersion); err != nil {
+	if err := Decode(*raw, &zosVersion); err != nil {
 		return "", errors.Wrap(err, "failed to load object")
 	}
 

@@ -164,7 +164,7 @@ func (s *Substrate) GetFarm(id uint32) (*Farm, error) {
 		return nil, err
 	}
 
-	bytes, err := types.Encode(id)
+	bytes, err := Encode(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "substrate: encoding error building query arguments")
 	}
@@ -197,7 +197,7 @@ func (s *Substrate) GetFarm(id uint32) (*Farm, error) {
 	case 2:
 		fallthrough
 	case 1:
-		if err := types.Decode(*raw, &farm); err != nil {
+		if err := Decode(*raw, &farm); err != nil {
 			return nil, errors.Wrap(err, "failed to load object")
 		}
 	default:
@@ -214,7 +214,7 @@ func (s *Substrate) GetFarmByName(name string) (uint32, error) {
 		return 0, err
 	}
 
-	bytes, err := types.Encode(name)
+	bytes, err := Encode(name)
 	if err != nil {
 		return 0, errors.Wrap(err, "substrate: encoding error building query arguments")
 	}
@@ -233,7 +233,7 @@ func (s *Substrate) GetFarmByName(name string) (uint32, error) {
 	}
 
 	var id uint32
-	if err := types.Decode(*raw, &id); err != nil {
+	if err := Decode(*raw, &id); err != nil {
 		return 0, errors.Wrap(err, "failed to decode farm id")
 	}
 
