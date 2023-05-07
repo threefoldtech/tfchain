@@ -244,8 +244,6 @@ type BatchCreateContractData struct {
 	// for name contracts. if set the contract is assumed to be a name contract
 	// and other fields are ignored
 	Name string `json:"name"`
-
-	hexHash HexHash
 }
 
 // BatchAllCreateContract creates a batch of contracts for deployments atomically.
@@ -268,6 +266,7 @@ func (s *Substrate) batchCreateContract(identity Identity, contractData []BatchC
 	}
 
 	calls := make([]types.Call, 0)
+	hexHashes := make([]HexHash, len(contractData))
 	for i, contract := range contractData {
 		if contract.Name != "" {
 			c, err := types.NewCall(meta, "SmartContractModule.create_name_contract",
@@ -294,7 +293,7 @@ func (s *Substrate) batchCreateContract(identity Identity, contractData []BatchC
 		}
 
 		calls = append(calls, c)
-		contractData[i].hexHash = h
+		hexHashes[i] = h
 	}
 	batchCall, err := types.NewCall(meta, batchType, calls)
 	if err != nil {
@@ -324,7 +323,7 @@ func (s *Substrate) batchCreateContract(identity Identity, contractData []BatchC
 		if contract.Name != "" {
 			contractID, err = s.GetContractIDByNameRegistration(contract.Name)
 		} else {
-			contractID, err = s.GetContractWithHash(contract.Node, contract.hexHash)
+			contractID, err = s.GetContractWithHash(contract.Node, hexHashes[i])
 		}
 
 		if err != nil {
