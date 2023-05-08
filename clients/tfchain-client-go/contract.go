@@ -233,6 +233,112 @@ func (s *Substrate) CreateNodeContract(identity Identity, node uint32, body stri
 	return s.GetContractWithHash(node, h)
 }
 
+// BatchCreateContractData struct for batch create contract
+type BatchCreateContractData struct {
+	Node               uint32  `json:"node"`
+	Body               string  `json:"body"`
+	Hash               string  `json:"hash"`
+	PublicIPs          uint32  `json:"public_ips"`
+	SolutionProviderID *uint64 `json:"solution_provider_id"`
+
+	// for name contracts. if set the contract is assumed to be a name contract
+	// and other fields are ignored
+	Name string `json:"name"`
+}
+
+// BatchAllCreateContract creates a batch of contracts for deployments atomically.
+// transaction will rollback on error
+func (s *Substrate) BatchAllCreateContract(identity Identity, contractData []BatchCreateContractData) ([]uint64, error) {
+	contracts, _, err := s.batchCreateContract(identity, contractData, "Utility.batch_all")
+	return contracts, err
+}
+
+// BatchCreateContract creates a batch of contracts for deployments non-atomically.
+// on error returns the created contracts, the first failing contract index and the error message.
+func (s *Substrate) BatchCreateContract(identity Identity, contractData []BatchCreateContractData) ([]uint64, *int, error) {
+	return s.batchCreateContract(identity, contractData, "Utility.batch")
+}
+
+func (s *Substrate) batchCreateContract(identity Identity, contractData []BatchCreateContractData, batchType string) ([]uint64, *int, error) {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	calls := make([]types.Call, 0)
+	hexHashes := make([]HexHash, len(contractData))
+	for i, contract := range contractData {
+		if contract.Name != "" {
+			c, err := types.NewCall(meta, "SmartContractModule.create_name_contract",
+				contract.Name,
+			)
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "failed to create call")
+			}
+			calls = append(calls, c)
+			continue
+		}
+
+		var providerID types.OptionU64
+		if contract.SolutionProviderID != nil {
+			providerID = types.NewOptionU64(types.U64(*contract.SolutionProviderID))
+		}
+
+		h := NewHexHash(contract.Hash)
+		c, err := types.NewCall(meta, "SmartContractModule.create_node_contract",
+			contract.Node, h, contract.Body, contract.PublicIPs, providerID,
+		)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to create call")
+		}
+
+		calls = append(calls, c)
+		hexHashes[i] = h
+	}
+	batchCall, err := types.NewCall(meta, batchType, calls)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to create batch call")
+	}
+
+	resp, err := s.Call(cl, meta, identity, batchCall)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to create contracts")
+	}
+
+	var failingContract *int
+	if batchType == "Utility.batch" && resp.Events != nil && resp.Events.Utility_BatchInterrupted != nil {
+		i := int(resp.Events.Utility_BatchInterrupted[0].Index)
+		failingContract = &i
+	}
+
+	contracts := make([]uint64, 0)
+	for i, contract := range contractData {
+		if failingContract != nil && *failingContract == i {
+			break
+		}
+
+		var contractID uint64
+		var err error
+
+		if contract.Name != "" {
+			contractID, err = s.GetContractIDByNameRegistration(contract.Name)
+		} else {
+			contractID, err = s.GetContractWithHash(contract.Node, hexHashes[i])
+		}
+
+		if err != nil {
+			failingContract = &i
+			return nil, failingContract, err
+		}
+		contracts = append(contracts, contractID)
+	}
+
+	if failingContract != nil {
+		err = errors.New("failed to create contracts")
+	}
+	return contracts, failingContract, err
+}
+
 // CreateNameContract creates a contract for deployment
 func (s *Substrate) CreateNameContract(identity Identity, name string) (uint64, error) {
 	cl, meta, err := s.GetClient()
