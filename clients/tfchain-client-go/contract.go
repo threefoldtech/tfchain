@@ -494,7 +494,7 @@ func (s *Substrate) GetContract(id uint64) (*Contract, error) {
 		return nil, err
 	}
 
-	bytes, err := types.Encode(id)
+	bytes, err := Encode(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "substrate: encoding error building query arguments")
 	}
@@ -514,11 +514,11 @@ func (s *Substrate) GetContractWithHash(node uint32, hash HexHash) (uint64, erro
 		return 0, err
 	}
 
-	nodeBytes, err := types.Encode(node)
+	nodeBytes, err := Encode(node)
 	if err != nil {
 		return 0, err
 	}
-	hashBytes, err := types.Encode(hash)
+	hashBytes, err := Encode(hash)
 	if err != nil {
 		return 0, err
 	}
@@ -546,7 +546,7 @@ func (s *Substrate) GetContractIDByNameRegistration(name string) (uint64, error)
 		return 0, err
 	}
 
-	nameBytes, err := types.Encode(name)
+	nameBytes, err := Encode(name)
 	if err != nil {
 		return 0, err
 	}
@@ -574,7 +574,7 @@ func (s *Substrate) GetNodeContracts(node uint32) ([]types.U64, error) {
 		return nil, err
 	}
 
-	nodeBytes, err := types.Encode(node)
+	nodeBytes, err := Encode(node)
 	if err != nil {
 		return nil, err
 	}
@@ -599,7 +599,7 @@ func (s *Substrate) GetNodeRentContract(node uint32) (uint64, error) {
 		return 0, err
 	}
 
-	nodeBytes, err := types.Encode(node)
+	nodeBytes, err := Encode(node)
 	if err != nil {
 		return 0, err
 	}
@@ -619,7 +619,7 @@ func (s *Substrate) GetNodeRentContract(node uint32) (uint64, error) {
 	}
 
 	var contract uint64
-	err = types.Decode(*raw, &contract)
+	err = Decode(*raw, &contract)
 	return contract, err
 }
 
@@ -634,7 +634,7 @@ func (s *Substrate) getContract(cl Conn, key types.StorageKey) (*Contract, error
 	}
 
 	var contract Contract
-	if err := types.Decode(*raw, &contract); err != nil {
+	if err := Decode(*raw, &contract); err != nil {
 		return nil, errors.Wrap(err, "failed to load object")
 	}
 

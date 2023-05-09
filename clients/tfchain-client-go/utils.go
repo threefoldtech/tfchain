@@ -1,6 +1,7 @@
 package substrate
 
 import (
+	"encoding/binary"
 	"fmt"
 	"time"
 
@@ -276,7 +277,7 @@ func (s *Substrate) sign(e *types.Extrinsic, signer Identity, o types.SignatureO
 		return fmt.Errorf("unsupported extrinsic version: %v (isSigned: %v, type: %v)", e.Version, e.IsSigned(), e.Type())
 	}
 
-	mb, err := types.Encode(e.Method)
+	mb, err := Encode(e.Method)
 	if err != nil {
 		return err
 	}
@@ -299,9 +300,13 @@ func (s *Substrate) sign(e *types.Extrinsic, signer Identity, o types.SignatureO
 		TransactionVersion: o.TransactionVersion,
 	}
 
-	signerPubKey := types.NewMultiAddressFromAccountID(signer.PublicKey())
+	signerPubKey, err := types.NewMultiAddressFromAccountID(signer.PublicKey())
 
-	b, err := types.Encode(payload)
+	if err != nil {
+		return err
+	}
+
+	b, err := Encode(payload)
 	if err != nil {
 		return err
 	}
@@ -485,12 +490,21 @@ func (s *Substrate) checkForError(callResponse *CallResponse) error {
 	if len(callResponse.Events.System_ExtrinsicFailed) > 0 {
 		for _, e := range callResponse.Events.System_ExtrinsicFailed {
 			who := callResponse.Block.Block.Extrinsics[e.Phase.AsApplyExtrinsic].Signature.Signer.AsID
-			if types.NewAccountID(callResponse.Identity.PublicKey()) == who {
+			accId, err := types.NewAccountID(callResponse.Identity.PublicKey())
+			if err != nil {
+				return err
+			}
+			b := make([]byte, 4)
+			for i, v := range e.DispatchError.ModuleError.Error {
+				b[i] = byte(v)
+			}
+			errIndex := binary.LittleEndian.Uint32(b[:])
+			if *accId == who {
 				if int(e.DispatchError.ModuleError.Index) < len(moduleErrors) {
-					if int(e.DispatchError.ModuleError.Error) >= len(moduleErrors[e.DispatchError.ModuleError.Index]) || moduleErrors[e.DispatchError.ModuleError.Index] == nil {
+					if int(errIndex) >= len(moduleErrors[e.DispatchError.ModuleError.Index]) || moduleErrors[e.DispatchError.ModuleError.Index] == nil {
 						return fmt.Errorf("module error (%d) with unknown code %d occured, please update the module error list", e.DispatchError.ModuleError.Index, e.DispatchError.ModuleError.Error)
 					}
-					return fmt.Errorf(moduleErrors[e.DispatchError.ModuleError.Index][e.DispatchError.ModuleError.Error])
+					return fmt.Errorf(moduleErrors[e.DispatchError.ModuleError.Index][errIndex])
 				} else {
 					return fmt.Errorf("unknown module error (%d) with code %d occured, please create the module error list", e.DispatchError.ModuleError.Index, e.DispatchError.ModuleError.Error)
 				}

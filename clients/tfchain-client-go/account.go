@@ -222,7 +222,7 @@ type edIdentity struct {
 }
 
 func NewIdentityFromEd25519Key(sk ed25519.PrivateKey) (Identity, error) {
-	str := types.HexEncodeToString(sk.Seed())
+	str := HexEncodeToString(sk.Seed())
 	krp, err := keyringPairFromSecret(str, network, subkeyEd25519.Scheme{})
 	if err != nil {
 		return nil, err

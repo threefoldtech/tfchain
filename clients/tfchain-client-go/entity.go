@@ -22,7 +22,7 @@ func (s *Substrate) GetEntity(id uint32) (*Entity, error) {
 		return nil, err
 	}
 
-	bytes, err := types.Encode(id)
+	bytes, err := Encode(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "substrate: encoding error building query arguments")
 	}
@@ -49,7 +49,7 @@ func (s *Substrate) GetEntity(id uint32) (*Entity, error) {
 
 	switch version {
 	case 1:
-		if err := types.Decode(*raw, &entity); err != nil {
+		if err := Decode(*raw, &entity); err != nil {
 			return nil, errors.Wrap(err, "failed to load object")
 		}
 	default:
