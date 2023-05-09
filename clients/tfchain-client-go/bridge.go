@@ -2,6 +2,7 @@ package substrate
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/pkg/errors"
@@ -41,4 +42,26 @@ func (s *Substrate) IsValidator(identity Identity) (exists bool, err error) {
 	}
 
 	return
+}
+
+func (s *Substrate) SwapToStellar(identity Identity, targetStellarAddress string, amount big.Int) error {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return err
+	}
+
+	c, err := types.NewCall(meta, "TFTBridgeModule.swap_to_stellar",
+		targetStellarAddress, types.NewU128(amount),
+	)
+
+	if err != nil {
+		return errors.Wrap(err, "failed to create call")
+	}
+
+	_, err = s.Call(cl, meta, identity, c)
+	if err != nil {
+		return errors.Wrap(err, "failed to swap to stellar")
+	}
+
+	return nil
 }
