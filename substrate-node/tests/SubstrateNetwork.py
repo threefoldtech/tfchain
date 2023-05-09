@@ -16,7 +16,7 @@ SUBSTRATE_NODE_DIR = dirname(os.getcwd())
 TFCHAIN_EXE = join(SUBSTRATE_NODE_DIR, "target", "release", "tfchain")
 
 RE_NODE_STARTED = re.compile("Running JSON-RPC WS server")
-RE_FIRST_BLOCK = re.compile("Prepared block for proposing at 1")
+RE_FIRST_BLOCK = re.compile("Prepared block for proposing at")
 
 TIMEOUT_STARTUP_IN_SECONDS = 600
 TIMEOUT_TERMINATE_IN_SECONDS = 1
@@ -169,7 +169,6 @@ class SubstrateNetwork:
                                         rpc_port, node_key="0000000000000000000000000000000000000000000000000000000000000001")
             wait_till_node_ready(log_file_alice)
             setup_offchain_workers(ws_port, "Alice")
-            wait_till_first_block(log_file_alice)
 
 
             log_file = ""
@@ -183,7 +182,8 @@ class SubstrateNetwork:
                                             bootnodes="/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp")
                 wait_till_node_ready(log_file)
                 setup_offchain_workers(ws_port, "Bob")
-                wait_till_first_block(log_file)
+            
+            wait_till_first_block(log_file_alice)
 
 
         logging.info("Network is up and running.")
