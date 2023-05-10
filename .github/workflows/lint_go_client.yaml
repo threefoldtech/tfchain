@@ -8,7 +8,7 @@ on:
 
 defaults:
   run:
-    working-directory: tfchain-client-go
+    working-directory: clients/tfchain-client-go
 
 jobs:
   lint:
@@ -31,13 +31,13 @@ jobs:
         uses: golangci/golangci-lint-action@v3
         with:
           args: --timeout 3m --verbose
-          working-directory: tfchain-client-go
+          working-directory: clients/tfchain-client-go
 
       - name: staticcheck
         uses: dominikh/staticcheck-action@v1.3.0
         with:
           version: "2022.1.3"
-          working-directory: tfchain-client-go
+          working-directory: clients/tfchain-client-go
         env:
           GO111MODULE: on
 
