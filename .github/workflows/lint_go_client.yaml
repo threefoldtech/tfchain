@@ -2,8 +2,8 @@ name: Lint Go client
 
 on:
   push:
-    #paths:
-    #  - clients/tfchain-client-go/**
+    paths:
+      - clients/tfchain-client-go/**
   workflow_dispatch:
 
 defaults:
