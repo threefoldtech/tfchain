@@ -674,18 +674,11 @@ pub mod pallet {
             let mut weight_used = Weight::zero();
             if let Some(migration_stage) = CurrentMigrationStage::<T>::get() {
                 let (w, new_migration_stage) =
-                    storage_state::v8::clean_pallet::<T>(migration_stage);
+                    storage_state::v9::clean_pallet::<T>(migration_stage);
                 CurrentMigrationStage::<T>::set(new_migration_stage);
                 weight_used.saturating_accrue(w);
             }
             weight_used
-        }
-
-        fn on_runtime_upgrade() -> Weight {
-            // Start a migration (this happens before on_initialize so it'll happen later in this
-            // block, which should be good enough)...
-            CurrentMigrationStage::<T>::put(1);
-            T::DbWeight::get().writes(1)
         }
 
         fn offchain_worker(block_number: T::BlockNumber) {

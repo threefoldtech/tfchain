@@ -17,9 +17,9 @@ use scale_info::prelude::string::String;
 // ✅ ContractBillingInformationByID
 // ✅ NodeContractResources
 
-pub struct CheckStorageStateV8<T: Config>(PhantomData<T>);
+pub struct CleanStorageState<T: Config>(PhantomData<T>);
 
-impl<T: Config> OnRuntimeUpgrade for CheckStorageStateV8<T> {
+impl<T: Config> OnRuntimeUpgrade for CleanStorageState<T> {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
@@ -37,13 +37,14 @@ impl<T: Config> OnRuntimeUpgrade for CheckStorageStateV8<T> {
                 " >>> Starting Smart Contract pallet {:?} storage cleaning",
                 PalletVersion::<T>::get()
             );
-            let weight = clean_pallet_smart_contract::<T>();
-            PalletVersion::<T>::put(types::StorageVersion::V9);
-            return weight;
+            // Start a migration (this happens before on_initialize so it'll happen later in this
+            // block, which should be good enough)...
+            CurrentMigrationStage::<T>::put(0);
+            T::DbWeight::get().writes(1)
         } else {
             info!(" >>> Unused Smart Contract pallet V8 storage cleaning");
             Weight::zero()
-        }    
+        }  
     }
 
     #[cfg(feature = "try-runtime")]
@@ -75,24 +76,25 @@ pub fn check_pallet_smart_contract<T: Config>() {
     check_node_contract_resources::<T>();
 }
 
-pub fn clean_pallet_smart_contract<T: Config>() -> frame_support::weights::Weight {
-    debug!("💥💥💥💥💥💥💥💥💥💥 CLEANING PALLET SMART CONTRACT STORAGE 💥💥💥💥💥💥💥💥💥💥");
-    clean_contracts::<T>() +
-    clean_contracts_to_bill_at::<T>() +
-    clean_active_node_contracts::<T>() +
-    clean_active_rent_contract_for_node::<T>() +
-    clean_contract_id_by_node_id_and_hash::<T>() +
-    clean_contract_id_by_name_registration::<T>() +
-    clean_contract_lock::<T>() +
-    clean_solution_providers::<T>() +
-    clean_contract_billing_information_by_id::<T>() +
-    clean_node_contract_resources::<T>()
-}
+// pub fn clean_pallet_smart_contract<T: Config>() -> frame_support::weights::Weight {
+//     debug!("💥💥💥💥💥💥💥💥💥💥 CLEANING PALLET SMART CONTRACT STORAGE 💥💥💥💥💥💥💥💥💥💥");
+//     clean_contracts::<T>() +
+//     clean_contracts_to_bill_at::<T>() +
+//     clean_active_node_contracts::<T>() +
+//     clean_active_rent_contract_for_node::<T>() +
+//     clean_contract_id_by_node_id_and_hash::<T>() +
+//     clean_contract_id_by_name_registration::<T>() +
+//     clean_contract_lock::<T>() +
+//     clean_solution_providers::<T>() +
+//     clean_contract_billing_information_by_id::<T>() +
+//     clean_node_contract_resources::<T>()
+// }
 
 pub fn clean_pallet<T: Config>(current_stage: MigrationStage
 ) -> (frame_support::weights::Weight, Option<MigrationStage>) {
     debug!("💥💥💥💥💥💥💥💥💥💥 CLEANING PALLET SMART CONTRACT STORAGE [{}/10] 💥💥💥💥💥💥💥💥💥💥", current_stage);
     match current_stage {
+        0 => (Weight::zero(), Some(current_stage + 1)),
         1 => (clean_contracts::<T>(), Some(current_stage + 1)),
         2 => (clean_contracts_to_bill_at::<T>(), Some(current_stage + 1)),
         3 => (clean_active_node_contracts::<T>(), Some(current_stage + 1)),
@@ -103,7 +105,11 @@ pub fn clean_pallet<T: Config>(current_stage: MigrationStage
         8 => (clean_solution_providers::<T>(), Some(current_stage + 1)),
         9 => (clean_contract_billing_information_by_id::<T>(), Some(current_stage + 1)),
         // Last cleaning operation, set stage to none to stop migration
-        10 => (clean_node_contract_resources::<T>(), None),
+        10 => {
+            let weight = clean_node_contract_resources::<T>();
+            PalletVersion::<T>::put(types::StorageVersion::V9);
+            (weight.add(1), None)
+        }
         // Should never happen
         _ => (Weight::zero(), None),
     }
