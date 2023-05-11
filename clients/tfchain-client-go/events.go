@@ -493,7 +493,7 @@ type EventRecords struct {
 	Dao_ClosedByCouncil   []ClosedByCouncil   //nolint:stylecheck,golint
 	Dao_CouncilMemberVeto []CouncilMemberVeto //nolint:stylecheck,golint
 
-	// Scheduler Pallet (temporary go-substrate-rpc-client is fixed)
+	// Scheduler Pallet (temporary until go-substrate-rpc-client is fixed: https://github.com/centrifuge/go-substrate-rpc-client/issues/344)
 	Scheduler_CallUnavailable        []EventSchedulerCallUnavailable       `test-gen-blockchain:"polkadot"`
 	Scheduler_PeriodicFailed         []EventSchedulerPeriodicFailed        `test-gen-blockchain:"polkadot"`
 	Scheduler_PermanentlyOverweight  []EventSchedulerPermanentlyOverweight `test-gen-blockchain:"polkadot"`

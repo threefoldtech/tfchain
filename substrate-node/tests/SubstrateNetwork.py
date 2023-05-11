@@ -145,8 +145,7 @@ class SubstrateNetwork:
         if len(self._nodes) > 0:
             self.tear_down_multi_node_network()
 
-    def setup_multi_node_network(self, log_name: str = "", amt: int = 2):
-        #assert amt >= 2, "more then 2 nodes required for a multi node network"
+    def setup_multi_node_network(self, log_name: str = "", amt: int = 1):
         assert amt <= len(PREDEFINED_KEYS), "maximum amount of nodes reached"
 
         output_dir_network = join(OUTPUT_TESTS, log_name)
