@@ -8,10 +8,10 @@ jobs:
   build-and-test:
     runs-on: [self-hosted, tfchainrunner01]
     container:
-      image: threefolddev/tfchain:2
+      image: threefolddev/tfchain:3
       env:
         DEBIAN_FRONTEND: noninteractive
-        PATH: /root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+        PATH: /root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin
         RUSTUP_HOME: /root/.rustup
         CARGO_HOME: /root/.cargo
 
@@ -56,3 +56,4 @@ jobs:
         with:
           name: integration test output
           path: substrate-node/tests/_output_tests/
+

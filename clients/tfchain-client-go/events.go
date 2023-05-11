@@ -317,6 +317,44 @@ type ZosVersionUpdated struct {
 	Topics  []types.Hash
 }
 
+type EventSchedulerCallUnavailable struct {
+	Phase  types.Phase
+	Task   types.TaskAddress
+	ID     types.OptionBytes
+	Topics []types.Hash
+}
+
+type EventSchedulerPeriodicFailed struct {
+	Phase  types.Phase
+	Task   types.TaskAddress
+	ID     types.OptionBytes
+	Topics []types.Hash
+}
+
+type EventSchedulerPermanentlyOverweight struct {
+	Phase  types.Phase
+	Task   types.TaskAddress
+	ID     types.OptionBytes
+	Topics []types.Hash
+}
+
+type EventBatchCompletedWithErrors struct {
+	Phase  types.Phase
+	Topics []types.Hash
+}
+
+type EventItemFailed struct {
+	Phase  types.Phase
+	Error  types.DispatchError
+	Topics []types.Hash
+}
+
+type EventDispatchedAs struct {
+	Phase  types.Phase
+	Result types.DispatchResult
+	Topics []types.Hash
+}
+
 // EventRecords is a struct that extends the default events with our events
 type EventRecords struct {
 	types.EventRecords
@@ -454,4 +492,12 @@ type EventRecords struct {
 	Dao_Closed            []Closed            //nolint:stylecheck,golint
 	Dao_ClosedByCouncil   []ClosedByCouncil   //nolint:stylecheck,golint
 	Dao_CouncilMemberVeto []CouncilMemberVeto //nolint:stylecheck,golint
+
+	// Scheduler Pallet (temporary until go-substrate-rpc-client is fixed: https://github.com/centrifuge/go-substrate-rpc-client/issues/344)
+	Scheduler_CallUnavailable        []EventSchedulerCallUnavailable       `test-gen-blockchain:"polkadot"`
+	Scheduler_PeriodicFailed         []EventSchedulerPeriodicFailed        `test-gen-blockchain:"polkadot"`
+	Scheduler_PermanentlyOverweight  []EventSchedulerPermanentlyOverweight `test-gen-blockchain:"polkadot"`
+	Utility_BatchCompletedWithErrors []EventBatchCompletedWithErrors       `test-gen-blockchain:"centrifuge-parachain"`
+	Utility_ItemFailed               []EventItemFailed                     `test-gen-blockchain:"centrifuge-parachain"`
+	Utility_DispatchedAs             []EventDispatchedAs                   `test-gen-blockchain:"centrifuge-parachain"`
 }

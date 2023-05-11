@@ -1,0 +1,47 @@
+name: Lint Go client
+
+on:
+  push:
+    paths:
+      - clients/tfchain-client-go/**
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: clients/tfchain-client-go
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.20"
+        id: go
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3.5.0
+        with:
+          submodules: "true"
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          args: --timeout 3m --verbose
+          working-directory: clients/tfchain-client-go
+
+      - name: staticcheck
+        uses: dominikh/staticcheck-action@v1.3.0
+        with:
+          version: "2022.1.3"
+          working-directory: clients/tfchain-client-go
+        env:
+          GO111MODULE: on
+
+      - name: gofmt
+        uses: Jerome1337/gofmt-action@v1.0.5
+        with:
+          gofmt-flags: "-l -d"
