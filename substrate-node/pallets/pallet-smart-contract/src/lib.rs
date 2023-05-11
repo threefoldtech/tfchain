@@ -666,15 +666,11 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         #[cfg(feature = "try-runtime")]
-        fn try_state(_n: BlockNumberFor<T>) -> Result<(), &'static str> {
-            Self::do_try_state()
-        }
-
         fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
             let mut weight_used = Weight::zero();
             if let Some(migration_stage) = CurrentMigrationStage::<T>::get() {
                 let (w, new_migration_stage) =
-                    storage_state::v9::clean_pallet::<T>(migration_stage);
+                    storage_state::v9::clean_pallet_smart_contract::<T>(migration_stage);
                 CurrentMigrationStage::<T>::set(new_migration_stage);
                 weight_used.saturating_accrue(w);
             }
@@ -713,10 +709,6 @@ use pallet::NameContractNameOf;
 use sp_std::convert::{TryFrom, TryInto};
 // Internal functions of the pallet
 impl<T: Config> Pallet<T> {
-    pub fn do_try_state() -> Result<(), &'static str> {
-        Ok(())
-    }
-
     pub fn _create_node_contract(
         account_id: T::AccountId,
         node_id: u32,
