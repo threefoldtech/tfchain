@@ -1200,11 +1200,16 @@ impl<T: Config> Pallet<T> {
         };
         Self::deposit_event(Event::ContractBilled(contract_bill));
 
-        // set the amount unbilled back to 0
-        let mut contract_billing_info =
-            ContractBillingInformationByID::<T>::get(contract.contract_id);
-        contract_billing_info.amount_unbilled = 0;
-        ContractBillingInformationByID::<T>::insert(contract.contract_id, &contract_billing_info);
+        // If contract is node contract, set the amount unbilled back to 0
+        if matches!(contract.contract_type, types::ContractData::NodeContract(_)) {
+            let mut contract_billing_info =
+                ContractBillingInformationByID::<T>::get(contract.contract_id);
+            contract_billing_info.amount_unbilled = 0;
+            ContractBillingInformationByID::<T>::insert(
+                contract.contract_id,
+                &contract_billing_info,
+            );
+        }
 
         // If the contract is in delete state, remove all associated storage
         if matches!(contract.state, types::ContractState::Deleted(_)) {
