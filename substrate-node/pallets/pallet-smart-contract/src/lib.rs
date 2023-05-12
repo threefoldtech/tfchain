@@ -1201,7 +1201,7 @@ impl<T: Config> Pallet<T> {
         Self::deposit_event(Event::ContractBilled(contract_bill));
 
         // If contract is node contract, set the amount unbilled back to 0
-        if let types::ContractData::NodeContract(_) = contract.contract_type {
+        if matches!(contract.contract_type, types::ContractData::NodeContract(_)) {
             let mut contract_billing_info =
                 ContractBillingInformationByID::<T>::get(contract.contract_id);
             contract_billing_info.amount_unbilled = 0;
