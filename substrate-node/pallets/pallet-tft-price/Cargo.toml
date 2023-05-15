@@ -35,6 +35,9 @@ sp-io =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 pallet-authorship =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 pallet-session =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 
+# Benchmarking
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false, optional = true }
+
 [dev-dependencies]
 tfchain-support = { path = "../../support", default-features = false }
 substrate-validator-set = { path = '../substrate-validator-set' }
@@ -45,6 +48,7 @@ std = [
 	'codec/std',
 	'frame-support/std',
 	'frame-system/std',
+	'frame-benchmarking/std',
 	'lite-json/std',
 	'sp-io/std',
 	'sp-runtime/std',
@@ -56,6 +60,9 @@ std = [
 	'scale-info/std',
 	'pallet-authorship/std',
 	'pallet-session/std'
+]
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
 ]
 try-runtime = [
     "frame-support/try-runtime",

@@ -31,22 +31,26 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+#[cfg(feature = "runtime-benchmarks")]
+pub mod benchmarking;
+
+pub mod weights;
+
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-
-    use frame_support::pallet_prelude::*;
-    use frame_system::pallet_prelude::*;
-
-    use frame_support::{dispatch::DispatchResultWithPostInfo, ensure, traits::EnsureOrigin};
+    use super::weights::WeightInfo;
+    use crate::KEY_TYPE;
+    use frame_support::{
+        dispatch::DispatchResultWithPostInfo, ensure, pallet_prelude::*, traits::EnsureOrigin,
+    };
     use frame_system::{
         ensure_signed,
         offchain::{AppCrypto, CreateSignedTransaction},
+        pallet_prelude::*,
     };
-
-    use crate::KEY_TYPE;
     use sp_core::sr25519::Signature as Sr25519Signature;
     use sp_runtime::{
         app_crypto::{app_crypto, sr25519},
@@ -90,6 +94,7 @@ pub mod pallet {
         /// Origin for restricted extrinsics
         /// Can be the root or another origin configured in the runtime
         type RestrictedOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+        type WeightInfo: crate::weights::WeightInfo;
     }
 
     #[pallet::event]
@@ -150,7 +155,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::call_index(0)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::set_prices())]
         pub fn set_prices(
             origin: OriginFor<T>,
             price: u32,
@@ -167,7 +172,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(2)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::set_min_tft_price())]
         pub fn set_min_tft_price(origin: OriginFor<T>, price: u32) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
             ensure!(
@@ -179,7 +184,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(3)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::set_max_tft_price())]
         pub fn set_max_tft_price(origin: OriginFor<T>, price: u32) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
             ensure!(
