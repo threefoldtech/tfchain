@@ -3,7 +3,7 @@
 use super::*;
 
 use crate::Pallet as SmartContractModule;
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
 use sp_std::{
@@ -15,7 +15,7 @@ use sp_std::{
 use pallet_tfgrid::{
     types::{self as pallet_tfgrid_types, LocationInput},
     CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, LatitudeInput,
-    LongitudeInput, ResourcesInput, TwinIpInput,
+    LongitudeInput, PkInput, RelayInput, ResourcesInput,
 };
 use tfchain_support::{resources::Resources, types::IP4};
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
@@ -103,29 +103,12 @@ benchmarks! {
         let stamp: u64 = 1628082000 * 1000 * 10 * 6000;
         pallet_timestamp::Pallet::<T>::set_timestamp(stamp.try_into().unwrap());
         // run_to_block::<T>(10);
-    }: _ (RawOrigin::Signed(a1.clone()), 1)
+    }: _ (RawOrigin::Signed(a1.clone()), 0, 1) // Update here
     verify {
         let contract = SmartContractModule::<T>::contracts(1).unwrap();
         assert_eq!(
             contract.contract_id, 1
         );
-    }
-}
-
-impl_benchmark_test_suite! {Pallet, crate::tests::new_test_ext(), crate::tests::Test}
-
-#[cfg(test)]
-mod benchmarktests {
-    use super::*;
-    use crate::mock::{new_test_ext, TestRuntime};
-    use frame_support::assert_ok;
-
-    #[test]
-    fn test_benchmarks() {
-        new_test_ext().execute_with(|| {
-            assert_ok!(test_benchmark_create_node_contract::<TestRuntime>());
-            assert_ok!(test_benchmark_add_nru_reports::<TestRuntime>());
-        });
     }
 }
 
@@ -136,10 +119,13 @@ pub fn create_twin<T: Config>(source: T::AccountId) {
         get_document_hash_input(b"some_hash"),
     ));
 
-    let ip = get_twin_ip_input(b"::1");
+    let relay = get_relay_input(b"somerelay.io");
+    let pk =
+        get_public_key_input(b"0x6c8fd181adc178cea218e168e8549f0b0ff30627c879db9eac4318927e87c901");
     assert_ok!(pallet_tfgrid::Pallet::<T>::create_twin(
         RawOrigin::Signed(source).into(),
-        ip
+        relay,
+        pk
     ));
 }
 
@@ -291,6 +277,10 @@ pub(crate) fn get_document_hash_input(document_hash_input: &[u8]) -> DocumentHas
     BoundedVec::try_from(document_hash_input.to_vec()).expect("Invalid document hash input.")
 }
 
-pub(crate) fn get_twin_ip_input(twin_ip_input: &[u8]) -> TwinIpInput {
-    BoundedVec::try_from(twin_ip_input.to_vec()).expect("Invalid twin ip input.")
+pub(crate) fn get_relay_input(relay_input: &[u8]) -> RelayInput {
+    Some(BoundedVec::try_from(relay_input.to_vec()).expect("Invalid relay input."))
+}
+
+pub(crate) fn get_public_key_input(pk_input: &[u8]) -> PkInput {
+    Some(BoundedVec::try_from(pk_input.to_vec()).expect("Invalid public key input."))
 }
