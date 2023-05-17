@@ -16,6 +16,11 @@ mod tests;
 #[cfg(test)]
 mod mock;
 
+#[cfg(feature = "runtime-benchmarks")]
+pub mod benchmarking;
+
+pub mod weights;
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct Burn<AccountId, BalanceOf, BlockNumber> {
     pub target: AccountId,
@@ -29,6 +34,7 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
+    use super::weights::WeightInfo;
     use frame_support::{
         pallet_prelude::*,
         traits::{Currency, OnUnbalanced, ReservableCurrency},
@@ -57,6 +63,7 @@ pub mod pallet {
         type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
         /// Handler for the unbalanced decrement when slashing (burning collateral)
         type Burn: OnUnbalanced<NegativeImbalanceOf<Self>>;
+        type WeightInfo: crate::weights::WeightInfo;
     }
 
     #[pallet::event]
@@ -78,7 +85,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::call_index(0)]
-        #[pallet::weight(100_000_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::burn_tft())]
         pub fn burn_tft(
             origin: OriginFor<T>,
             amount: BalanceOf<T>,
