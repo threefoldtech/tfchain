@@ -421,10 +421,12 @@ impl pallet_burning::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type Burn = ();
+    type WeightInfo = pallet_burning::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_kvstore::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = pallet_kvstore::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_tft_price::Config for Runtime {
@@ -439,6 +441,7 @@ impl pallet_validator::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type CouncilOrigin = EnsureRootOrCouncilApproval;
     type Currency = Balances;
+    type WeightInfo = pallet_validator::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -449,6 +452,7 @@ impl validatorset::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type AddRemoveOrigin = EnsureRootOrCouncilApproval;
     type MinAuthorities = MinAuthorities;
+    type WeightInfo = validatorset::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -779,6 +783,11 @@ mod benches {
     define_benchmarks!(
         [pallet_smart_contract, SmartContractModule]
         [pallet_tft_price, TFTPriceModule]
+        [pallet_burning, BurningModule]
+        [pallet_dao, Dao]
+        [pallet_kvstore, TFKVStore]
+        [validatorset, ValidatorSet]
+        [pallet_validator, Validator]
         // Substrate
         [frame_benchmarking::baseline, Baseline::<Runtime>]
         [frame_system, SystemBench::<Runtime>]

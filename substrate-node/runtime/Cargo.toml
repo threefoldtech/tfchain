@@ -122,6 +122,11 @@ runtime-benchmarks = [
     'pallet-collective/runtime-benchmarks',
     'pallet-smart-contract/runtime-benchmarks',
     'pallet-tft-price/runtime-benchmarks',
+    'pallet-burning/runtime-benchmarks',
+    'pallet-dao/runtime-benchmarks',
+    'pallet-kvstore/runtime-benchmarks',
+    'validatorset/runtime-benchmarks',
+    'pallet-validator/runtime-benchmarks',
 ]
 try-runtime = [
     "frame-executive/try-runtime",
