@@ -22,7 +22,8 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::call_index(0)]
-        #[pallet::weight(100_000_000)]
+        // Give same weight as set_code() wrapped extrinsic from frame_system
+        #[pallet::weight((T::BlockWeights::get().max_block, DispatchClass::Operational))]
         pub fn set_code(origin: OriginFor<T>, code: Vec<u8>) -> DispatchResultWithPostInfo {
             T::SetCodeOrigin::ensure_origin(origin)?;
             frame_system::Pallet::<T>::set_code(frame_system::RawOrigin::Root.into(), code)?;
