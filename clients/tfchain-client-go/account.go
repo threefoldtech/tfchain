@@ -184,6 +184,9 @@ func (s *Substrate) EnsureAccount(identity Identity, activationURL, termsAndCond
 			info, err = s.getAccount(cl, meta, identity)
 			return err
 		}, exp)
+		if err != nil {
+			return info, fmt.Errorf("account activation failed: %w", err)
+		}
 	}
 
 	account, err := FromAddress(identity.Address())
