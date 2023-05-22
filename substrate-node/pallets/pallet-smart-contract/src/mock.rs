@@ -376,7 +376,7 @@ pub(crate) fn get_relay_input(relay_input: &[u8]) -> RelayInput {
 }
 
 pub(crate) fn get_public_key_input(pk_input: &[u8]) -> PkInput {
-    Some(BoundedVec::try_from(pk_input.to_vec()).expect("Invalid document hash input."))
+    Some(BoundedVec::try_from(pk_input.to_vec()).expect("Invalid document public key input."))
 }
 
 pub(crate) fn get_public_ip_ip_input(public_ip_ip_input: &[u8]) -> Ip4Input {
