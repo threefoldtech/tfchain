@@ -432,6 +432,7 @@ impl pallet_tft_price::Config for Runtime {
     type Call = RuntimeCall;
     type RuntimeEvent = RuntimeEvent;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
+    type WeightInfo = pallet_tft_price::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_validator::Config for Runtime {
@@ -777,6 +778,7 @@ extern crate frame_benchmarking;
 mod benches {
     define_benchmarks!(
         [pallet_smart_contract, SmartContractModule]
+        [pallet_tft_price, TFTPriceModule]
         // Substrate
         [frame_benchmarking::baseline, Baseline::<Runtime>]
         [frame_system, SystemBench::<Runtime>]

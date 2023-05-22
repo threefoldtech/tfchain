@@ -234,6 +234,7 @@ impl pallet_tft_price::Config for TestRuntime {
     type AuthorityId = pallet_tft_price::AuthId;
     type Call = RuntimeCall;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
+    type WeightInfo = pallet_tft_price::weights::SubstrateWeight<TestRuntime>;
 }
 
 impl pallet_timestamp::Config for TestRuntime {
