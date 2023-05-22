@@ -36,7 +36,7 @@ benchmarks! {
 
     // Calling the `impl_benchmark_test_suite` macro inside the `benchmarks`
     // block will generate one #[test] function per benchmark
-    impl_benchmark_test_suite! (TFKVStoreModule, crate::tests::ExternalityBuilder::build(), crate::tests::TestRuntime)
+    impl_benchmark_test_suite!(TFKVStoreModule, crate::tests::ExternalityBuilder::build(), crate::tests::TestRuntime)
 }
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
