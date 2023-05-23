@@ -296,7 +296,7 @@ pub fn check_contracts_to_bill_at<T: Config>() {
                     );
                 }
             }
-        } else if count > &0 {
+        } else if *count > 0 {
             debug!(
                 " ⚠️    Contract (id: {}) not exists and should not be in billing loop",
                 contract_id
@@ -614,8 +614,7 @@ pub fn clean_contracts<T: Config>() -> frame_support::weights::Weight {
                 &mut r,
                 &mut w,
             ),
-            types::ContractData::NameContract(_) => clean_name_contract::<T>(),
-            types::ContractData::RentContract(_) => clean_rent_contract::<T>(),
+            _ => (), // Nothing to do for name and rent contracts
         }
 
         // ContractLock
@@ -656,19 +655,6 @@ fn clean_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_has
     // ContractIDByNodeIDAndHash
     // Nothing to do here
     // Storage re-built from zero in clean_contract_id_by_node_id_and_hash()
-    // if !ContractIDByNodeIDAndHash::<T>::contains_key(node_id, deployment_hash) {
-    //     ContractIDByNodeIDAndHash::<T>::insert(node_id, deployment_hash, contract_id);
-    //     *w.saturating_inc();
-    // }
-    // *r.saturating_inc();
-}
-
-fn clean_name_contract<T: Config>() {
-    // Nothing to do here
-}
-
-fn clean_rent_contract<T: Config>() {
-    // Nothing to do here
 }
 
 // ContractsToBillAt
@@ -683,14 +669,8 @@ pub fn clean_contracts_to_bill_at<T: Config>() -> frame_support::weights::Weight
 
     let contracts_to_bill_at = ContractsToBillAt::<T>::iter().collect::<Vec<_>>();
     r.saturating_accrue(contracts_to_bill_at.len() as u64);
-    let mut contract_id_count = vec![0; (ContractID::<T>::get() + 1) as usize];
+    let mut contract_id_stored = vec![false; (ContractID::<T>::get() + 1) as usize];
     r.saturating_inc();
-
-    for (_index, contract_ids) in contracts_to_bill_at.clone() {
-        for contract_id in contract_ids {
-            contract_id_count[contract_id as usize].saturating_inc();
-        }
-    }
 
     for (index, contract_ids) in contracts_to_bill_at {
         let mut new_contract_ids = Vec::new();
@@ -701,17 +681,17 @@ pub fn clean_contracts_to_bill_at<T: Config>() -> frame_support::weights::Weight
                         let contract_resource = NodeContractResources::<T>::get(contract_id);
                         r.saturating_inc();
                         if node_contract.public_ips > 0 || !contract_resource.used.is_empty() {
-                            if contract_id_count[contract_id as usize] == 1 {
-                                new_contract_ids.push(contract.contract_id);
+                            if !contract_id_stored[contract_id as usize] {
+                                new_contract_ids.push(contract_id);
+                                contract_id_stored[contract_id as usize] = true;
                             }
-                            contract_id_count[contract_id as usize].saturating_dec();
                         }
                     }
                     _ => {
-                        if contract_id_count[contract_id as usize] == 1 {
-                            new_contract_ids.push(contract.contract_id);
+                        if !contract_id_stored[contract_id as usize] {
+                            new_contract_ids.push(contract_id);
+                            contract_id_stored[contract_id as usize] = true;
                         }
-                        contract_id_count[contract_id as usize].saturating_dec();
                     }
                 };
             }
