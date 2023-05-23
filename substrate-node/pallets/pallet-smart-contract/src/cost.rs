@@ -57,6 +57,10 @@ impl<T: Config> Contract<T> {
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
         seconds_elapsed: u64,
     ) -> Result<u64, DispatchErrorWithPostInfo> {
+        if seconds_elapsed == 0 {
+            return Ok(0 as u64);
+        }
+
         let total_cost = match &self.contract_type {
             // Calculate total cost for a node contract
             types::ContractData::NodeContract(node_contract) => {
