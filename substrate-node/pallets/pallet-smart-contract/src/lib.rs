@@ -864,22 +864,16 @@ impl<T: Config> Pallet<T> {
         let mut id = ContractID::<T>::get();
         id = id + 1;
 
+        if let types::ContractData::NodeContract(ref mut nc) = contract_type {
+            Self::_reserve_ip(id, nc)?;
+        };
+
         Self::validate_solution_provider(solution_provider_id)?;
 
         // Start billing frequency loop
         // Will always be block now + frequency
-        match contract_type {
-            types::ContractData::NodeContract(ref mut node_contract) => {
-                Self::_reserve_ip(id, node_contract)?;
-
-                // Insert created node contract in billing loop now only
-                // if there is at least one public ip attached to node
-                if node_contract.public_ips > 0 {
-                    Self::insert_contract_in_billing_loop(id);
-                }
-            }
-            _ => Self::insert_contract_in_billing_loop(id),
-        };
+        // Contract is inserted in billing loop ONLY once at contract creation
+        Self::insert_contract_in_billing_loop(id);
 
         let contract = types::Contract {
             version: CONTRACT_VERSION,
@@ -1012,13 +1006,6 @@ impl<T: Config> Pallet<T> {
 
                 // Do insert
                 NodeContractResources::<T>::insert(contract.contract_id, &contract_resource);
-
-                // Start billing frequency loop
-                // Insert node contract in billing loop only if there
-                // are non empty resources pushed for the contract
-                if !contract_resource.used.is_empty() {
-                    Self::insert_contract_in_billing_loop(contract.contract_id);
-                }
 
                 // deposit event
                 Self::deposit_event(Event::UpdatedUsedResources(contract_resource));
