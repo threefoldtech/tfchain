@@ -660,8 +660,8 @@ pub mod pallet {
             // Let offchain worker check if there are contracts on the map at current index
             let current_index = Self::get_current_billing_loop_index();
 
-            let contracts = ContractsToBillAt::<T>::get(current_index);
-            if contracts.is_empty() {
+            let contract_ids = ContractsToBillAt::<T>::get(current_index);
+            if contract_ids.is_empty() {
                 log::info!(
                     "No contracts to bill at block {:?}, index: {:?}",
                     block_number,
@@ -672,11 +672,28 @@ pub mod pallet {
 
             log::info!(
                 "{:?} contracts to bill at block {:?}",
-                contracts,
+                contract_ids,
                 block_number
             );
 
-            for contract_id in contracts {
+            for contract_id in contract_ids {
+                if let Some(c) = Contracts::<T>::get(contract_id) {
+                    if let types::ContractData::NodeContract(node_contract) = c.contract_type {
+                        let bill_ip = node_contract.public_ips > 0;
+                        let bill_cu_su = NodeContractResources::<T>::contains_key(contract_id)
+                            && !NodeContractResources::<T>::get(contract_id).used.is_empty();
+                        let bill_nu =
+                            ContractBillingInformationByID::<T>::contains_key(contract_id)
+                                && ContractBillingInformationByID::<T>::get(contract_id)
+                                    .amount_unbilled
+                                    > 0;
+
+                        // Don't bill if no IP/CU/SU/NU to bill
+                        if !bill_ip && !bill_cu_su && !bill_nu {
+                            continue;
+                        }
+                    }
+                }
                 let _res = Self::bill_contract_using_signed_transaction(contract_id);
             }
         }
