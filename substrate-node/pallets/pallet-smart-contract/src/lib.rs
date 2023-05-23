@@ -665,7 +665,6 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        #[cfg(feature = "try-runtime")]
         fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
             let mut weight_used = Weight::zero();
             if let Some(migration_stage) = CurrentMigrationStage::<T>::get() {
