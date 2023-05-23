@@ -81,7 +81,6 @@ pub mod crypto {
 pub mod cost;
 pub mod migrations;
 pub mod name_contract;
-pub mod storage_state;
 pub mod types;
 pub mod weights;
 
@@ -669,7 +668,7 @@ pub mod pallet {
             let mut weight_used = Weight::zero();
             if let Some(migration_stage) = CurrentMigrationStage::<T>::get() {
                 let (w, new_migration_stage) =
-                    storage_state::v9::clean_pallet_smart_contract::<T>(migration_stage);
+                    migrations::v9::clean_pallet_smart_contract::<T>(migration_stage);
                 CurrentMigrationStage::<T>::set(new_migration_stage);
                 weight_used.saturating_accrue(w);
             }
