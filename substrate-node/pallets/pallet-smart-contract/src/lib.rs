@@ -534,8 +534,10 @@ pub mod pallet {
             let _account_id = ensure_signed(origin)?;
 
             // Clean up contract from billing loop if it doesn't exist anymore
+            // This is the only place it should be done to guaranty we
+            // remove contract id from billing loop at right index
             if Contracts::<T>::get(contract_id).is_none() {
-                log::debug!("cleaning up deleted contract from storage");
+                log::debug!("cleaning up deleted contract from billing loop");
                 Self::remove_contract_from_billing_loop(index, contract_id)?;
                 return Ok(().into());
             }
