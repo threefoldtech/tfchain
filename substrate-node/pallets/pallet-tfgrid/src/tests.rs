@@ -2191,6 +2191,84 @@ fn test_bound_twin_account_itself_fails() {
     })
 }
 
+#[test]
+fn test_farming_policies_ordering_and_assignment() {
+    ExternalityBuilder::build().execute_with(|| {
+        let name = "f1".as_bytes().to_vec();
+        assert_ok!(TfgridModule::create_farming_policy(
+            RawOrigin::Root.into(),
+            name,
+            12,
+            15,
+            10,
+            8,
+            9999,
+            System::block_number() + 100,
+            true,
+            true,
+            NodeCertification::Diy,
+            FarmCertification::NotCertified,
+        ));
+
+        let name: Vec<u8> = "f1certi".as_bytes().to_vec();
+        assert_ok!(TfgridModule::create_farming_policy(
+            RawOrigin::Root.into(),
+            name,
+            12,
+            15,
+            10,
+            8,
+            9999,
+            System::block_number() + 100,
+            false,
+            false,
+            NodeCertification::Certified,
+            FarmCertification::NotCertified,
+        ));
+
+        let name: Vec<u8> = "f2".as_bytes().to_vec();
+        assert_ok!(TfgridModule::create_farming_policy(
+            RawOrigin::Root.into(),
+            name,
+            12,
+            15,
+            10,
+            8,
+            9999,
+            System::block_number() + 100,
+            false,
+            false,
+            NodeCertification::Diy,
+            FarmCertification::NotCertified,
+        ));
+
+        let name: Vec<u8> = "f3".as_bytes().to_vec();
+        assert_ok!(TfgridModule::create_farming_policy(
+            RawOrigin::Root.into(),
+            name,
+            12,
+            15,
+            10,
+            8,
+            9999,
+            System::block_number() + 100,
+            false,
+            false,
+            NodeCertification::Diy,
+            FarmCertification::NotCertified,
+        ));
+    
+        
+        create_twin_bob();
+        create_farm_bob();
+        create_extra_node();
+
+        let n = TfgridModule::nodes(1).unwrap();
+        assert_eq!(n.farming_policy_id, 4);
+    })
+}
+
+
 fn create_entity() {
     let name = b"foobar".to_vec();
     let country = get_country_name_input(b"Belgium");
