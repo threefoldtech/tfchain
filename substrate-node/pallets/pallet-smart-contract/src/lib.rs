@@ -542,8 +542,10 @@ pub mod pallet {
             let _account_id = ensure_signed(origin)?;
 
             // Clean up contract from billing loop if it doesn't exist anymore
+            // This is the only place it should be done to guarantee we
+            // remove contract id from billing loop at right index
             if Contracts::<T>::get(contract_id).is_none() {
-                log::debug!("cleaning up deleted contract from storage");
+                log::debug!("cleaning up deleted contract from billing loop");
                 Self::remove_contract_from_billing_loop(index, contract_id)?;
                 return Ok(().into());
             }
@@ -679,8 +681,8 @@ pub mod pallet {
             // Let offchain worker check if there are contracts on the map at current index
             let current_index = Self::get_current_billing_loop_index();
 
-            let contracts = ContractsToBillAt::<T>::get(current_index);
-            if contracts.is_empty() {
+            let contract_ids = ContractsToBillAt::<T>::get(current_index);
+            if contract_ids.is_empty() {
                 log::info!(
                     "No contracts to bill at block {:?}, index: {:?}",
                     block_number,
@@ -691,11 +693,33 @@ pub mod pallet {
 
             log::info!(
                 "{:?} contracts to bill at block {:?}",
-                contracts,
+                contract_ids,
                 block_number
             );
 
-            for contract_id in contracts {
+            for contract_id in contract_ids {
+                if let Some(c) = Contracts::<T>::get(contract_id) {
+                    if let types::ContractData::NodeContract(node_contract) = c.contract_type {
+                        // Is there IP consumption to bill?
+                        let bill_ip = node_contract.public_ips > 0;
+
+                        // Is there CU/SU consumption to bill?
+                        // No need for preliminary call to contains_key() because default resource value is empty
+                        let bill_cu_su =
+                            !NodeContractResources::<T>::get(contract_id).used.is_empty();
+
+                        // Is there NU consumption to bill?
+                        // No need for preliminary call to contains_key() because default amount_unbilled is 0
+                        let bill_nu = ContractBillingInformationByID::<T>::get(contract_id)
+                            .amount_unbilled
+                            > 0;
+
+                        // Don't bill if no IP/CU/SU/NU to be billed
+                        if !bill_ip && !bill_cu_su && !bill_nu {
+                            continue;
+                        }
+                    }
+                }
                 let _res = Self::bill_contract_using_signed_transaction(contract_id);
             }
         }
@@ -883,22 +907,16 @@ impl<T: Config> Pallet<T> {
         let mut id = ContractID::<T>::get();
         id = id + 1;
 
+        if let types::ContractData::NodeContract(ref mut nc) = contract_type {
+            Self::_reserve_ip(id, nc)?;
+        };
+
         Self::validate_solution_provider(solution_provider_id)?;
 
         // Start billing frequency loop
         // Will always be block now + frequency
-        match contract_type {
-            types::ContractData::NodeContract(ref mut node_contract) => {
-                Self::_reserve_ip(id, node_contract)?;
-
-                // Insert created node contract in billing loop now only
-                // if there is at least one public ip attached to node
-                if node_contract.public_ips > 0 {
-                    Self::insert_contract_in_billing_loop(id);
-                }
-            }
-            _ => Self::insert_contract_in_billing_loop(id),
-        };
+        // Contract is inserted in billing loop ONLY once at contract creation
+        Self::insert_contract_in_billing_loop(id);
 
         let contract = types::Contract {
             version: CONTRACT_VERSION,
@@ -1031,13 +1049,6 @@ impl<T: Config> Pallet<T> {
 
                 // Do insert
                 NodeContractResources::<T>::insert(contract.contract_id, &contract_resource);
-
-                // Start billing frequency loop
-                // Insert node contract in billing loop only if there
-                // are non empty resources pushed for the contract
-                if !contract_resource.used.is_empty() {
-                    Self::insert_contract_in_billing_loop(contract.contract_id);
-                }
 
                 // deposit event
                 Self::deposit_event(Event::UpdatedUsedResources(contract_resource));
@@ -1219,11 +1230,16 @@ impl<T: Config> Pallet<T> {
         };
         Self::deposit_event(Event::ContractBilled(contract_bill));
 
-        // set the amount unbilled back to 0
-        let mut contract_billing_info =
-            ContractBillingInformationByID::<T>::get(contract.contract_id);
-        contract_billing_info.amount_unbilled = 0;
-        ContractBillingInformationByID::<T>::insert(contract.contract_id, &contract_billing_info);
+        // If contract is node contract, set the amount unbilled back to 0
+        if matches!(contract.contract_type, types::ContractData::NodeContract(_)) {
+            let mut contract_billing_info =
+                ContractBillingInformationByID::<T>::get(contract.contract_id);
+            contract_billing_info.amount_unbilled = 0;
+            ContractBillingInformationByID::<T>::insert(
+                contract.contract_id,
+                &contract_billing_info,
+            );
+        }
 
         // If the contract is in delete state, remove all associated storage
         if matches!(contract.state, types::ContractState::Deleted(_)) {

@@ -16,6 +16,7 @@ SUBSTRATE_NODE_DIR = dirname(os.getcwd())
 TFCHAIN_EXE = join(SUBSTRATE_NODE_DIR, "target", "release", "tfchain")
 
 RE_NODE_STARTED = re.compile("Running JSON-RPC WS server")
+RE_FIRST_BLOCK = re.compile("Prepared block for proposing at")
 
 TIMEOUT_STARTUP_IN_SECONDS = 600
 TIMEOUT_TERMINATE_IN_SECONDS = 1
@@ -32,19 +33,26 @@ PREDEFINED_KEYS = {
     "Ferdie": Keypair.create_from_uri("//Ferdie")
 }
 
-
-def wait_till_node_ready(log_file: str, timeout_in_seconds=TIMEOUT_STARTUP_IN_SECONDS):
+def wait_till_file_contains(log_file: str, regex, timeout_in_seconds):
     start = datetime.now()
     while True:
         elapsed = datetime.now() - start
 
-        if elapsed.total_seconds() >= TIMEOUT_STARTUP_IN_SECONDS:
+        if elapsed.total_seconds() >= timeout_in_seconds:
             raise Exception(f"Timeout on starting the node! See {log_file}")
 
         with open(log_file, "r") as fd:
             for line in reversed(fd.readlines()):
-                if RE_NODE_STARTED.search(line):
+                if regex.search(line):
                     return
+
+
+def wait_till_node_ready(log_file: str, timeout_in_seconds=TIMEOUT_STARTUP_IN_SECONDS):
+    wait_till_file_contains(log_file, RE_NODE_STARTED, timeout_in_seconds)
+            
+def wait_till_first_block(log_file: str, timeout_in_seconds=TIMEOUT_STARTUP_IN_SECONDS):
+    wait_till_file_contains(log_file, RE_FIRST_BLOCK, timeout_in_seconds)
+
 
 def setup_offchain_workers(port: int, worker_account: str = "Alice"):
     logging.info("Setting up offchain workers")
@@ -100,6 +108,34 @@ def run_node(log_file: str, base_path: str, predefined_account: str, port: int, 
 
     return execute_command(cmd, log_file)
 
+def run_single_node(log_file: str, base_path: str, port: int, ws_port: int, rpc_port: int, node_key: str | None = None, bootnodes: str | None = None):
+    logging.info("Starting node with logfile %s", log_file)
+
+    if not isfile(TFCHAIN_EXE):
+        raise Exception(
+            f"Executable {TFCHAIN_EXE} doesn't exist! Did you build the code?")
+        
+    cmd = [TFCHAIN_EXE,
+           "--dev",
+           "--ws-external",
+           "--base-path", f"{base_path}",
+           "--port", f"{port}",
+           "--ws-port", f"{ws_port}",
+           "--rpc-port", f"{rpc_port}",
+           "--validator", 
+           "--rpc-methods", "Unsafe",
+           "--rpc-cors", "all"
+           ]
+
+    if node_key is not None:
+        cmd.extend(["--node-key", f"{node_key}"])
+
+    if bootnodes is not None:
+        cmd.extend(["--bootnodes", f"{bootnodes}"])
+
+    rmtree(base_path, ignore_errors=True)
+
+    return execute_command(cmd, log_file)
 
 class SubstrateNetwork:
     def __init__(self):
@@ -109,8 +145,7 @@ class SubstrateNetwork:
         if len(self._nodes) > 0:
             self.tear_down_multi_node_network()
 
-    def setup_multi_node_network(self, log_name: str = "", amt: int = 2):
-        assert amt >= 2, "more then 2 nodes required for a multi node network"
+    def setup_multi_node_network(self, log_name: str = "", amt: int = 1):
         assert amt <= len(PREDEFINED_KEYS), "maximum amount of nodes reached"
 
         output_dir_network = join(OUTPUT_TESTS, log_name)
@@ -118,25 +153,37 @@ class SubstrateNetwork:
         rmtree(output_dir_network, ignore_errors=True)
 
         port = 30333
-        ws_port = 9945
+        ws_port = 9944
         rpc_port = 9933
-        log_file_alice = join(output_dir_network, "node_alice.log")
-        self._nodes["alice"] = run_node(log_file_alice, "/tmp/alice", "alice", port, ws_port,
+        
+        if amt == 1:
+            log_file_alice = join(output_dir_network, "node_alice.log")
+            self._nodes["alice"] = run_single_node(log_file_alice, "/tmp/alice", port, ws_port, rpc_port)
+            wait_till_node_ready(log_file_alice)
+            setup_offchain_workers(ws_port, "Alice")
+            wait_till_first_block(log_file_alice)
+        else:
+            log_file_alice = join(output_dir_network, "node_alice.log")
+            self._nodes["alice"] = run_node(log_file_alice, "/tmp/alice", "alice", port, ws_port,
                                         rpc_port, node_key="0000000000000000000000000000000000000000000000000000000000000001")
-        wait_till_node_ready(log_file_alice)
-        setup_offchain_workers(ws_port, "Alice")
+            wait_till_node_ready(log_file_alice)
+            setup_offchain_workers(ws_port, "Alice")
 
-        log_file = ""
-        for x in range(1, amt):
-            port += 1
-            ws_port += 1
-            rpc_port += 1
-            name = list(PREDEFINED_KEYS.keys())[x].lower()
-            log_file = join(output_dir_network, f"node_{name}.log")
-            self._nodes[name] = run_node(log_file, f"/tmp/{name}", name, port, ws_port, rpc_port, node_key=None,
-                                         bootnodes="/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp")
-            wait_till_node_ready(log_file)
-            setup_offchain_workers(ws_port, "Bob")
+
+            log_file = ""
+            for x in range(1, amt):
+                port += 1
+                ws_port += 1
+                rpc_port += 1
+                name = list(PREDEFINED_KEYS.keys())[x].lower()
+                log_file = join(output_dir_network, f"node_{name}.log")
+                self._nodes[name] = run_node(log_file, f"/tmp/{name}", name, port, ws_port, rpc_port, node_key=None,
+                                            bootnodes="/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp")
+                wait_till_node_ready(log_file)
+                setup_offchain_workers(ws_port, "Bob")
+            
+            wait_till_first_block(log_file_alice)
+
 
         logging.info("Network is up and running.")
 
