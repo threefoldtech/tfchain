@@ -534,7 +534,7 @@ pub mod pallet {
             let _account_id = ensure_signed(origin)?;
 
             // Clean up contract from billing loop if it doesn't exist anymore
-            // This is the only place it should be done to guaranty we
+            // This is the only place it should be done to guarantee we
             // remove contract id from billing loop at right index
             if Contracts::<T>::get(contract_id).is_none() {
                 log::debug!("cleaning up deleted contract from billing loop");
@@ -681,16 +681,21 @@ pub mod pallet {
             for contract_id in contract_ids {
                 if let Some(c) = Contracts::<T>::get(contract_id) {
                     if let types::ContractData::NodeContract(node_contract) = c.contract_type {
+                        // Is there IP consumption to bill?
                         let bill_ip = node_contract.public_ips > 0;
-                        let bill_cu_su = NodeContractResources::<T>::contains_key(contract_id)
-                            && !NodeContractResources::<T>::get(contract_id).used.is_empty();
-                        let bill_nu =
-                            ContractBillingInformationByID::<T>::contains_key(contract_id)
-                                && ContractBillingInformationByID::<T>::get(contract_id)
-                                    .amount_unbilled
-                                    > 0;
 
-                        // Don't bill if no IP/CU/SU/NU to bill
+                        // Is there CU/SU consumption to bill?
+                        // No need for preliminary call to contains_key() because default resource value is empty
+                        let bill_cu_su =
+                            !NodeContractResources::<T>::get(contract_id).used.is_empty();
+
+                        // Is there NU consumption to bill?
+                        // No need for preliminary call to contains_key() because default amount_unbilled is 0
+                        let bill_nu = ContractBillingInformationByID::<T>::get(contract_id)
+                            .amount_unbilled
+                            > 0;
+
+                        // Don't bill if no IP/CU/SU/NU to be billed
                         if !bill_ip && !bill_cu_su && !bill_nu {
                             continue;
                         }
