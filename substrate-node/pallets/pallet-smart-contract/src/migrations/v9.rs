@@ -251,33 +251,17 @@ pub fn check_contracts_to_bill_at<T: Config>() {
     }
 
     // A contract id should be in billing loop only if contract still exists
-    // In this case it should exactly be stored once unless it has no pub ips and no resources
+    // In this case it should exactly be stored once
     for (contract_id, count) in contract_id_count.iter().enumerate() {
-        if let Some(c) = Contracts::<T>::get(contract_id as u64)  {
+        if Contracts::<T>::get(contract_id as u64).is_some() {
             match count {
                 0 => {
-                    if let types::ContractData::NodeContract(node_contract) = c.contract_type {
-                        let contract_resource = NodeContractResources::<T>::get(contract_id as u64);
-                        if node_contract.public_ips == 0 && contract_resource.used.is_empty() {
-                            continue;
-                        }
-                    }
                     debug!(
                         " ⚠️    Contract (id: {}) should be in billing loop",
                         contract_id
                     );
                 }
-                1 => {
-                    if let types::ContractData::NodeContract(node_contract) = c.contract_type {
-                        let contract_resource = NodeContractResources::<T>::get(contract_id as u64);
-                        if node_contract.public_ips == 0 && contract_resource.used.is_empty() {
-                            debug!(
-                                " ⚠️    Node Contract (id: {}) with no ips / no resources should not be in billing loop",
-                                contract_id
-                            );
-                        }
-                    }
-                }
+                1 => (),
                 _ => {
                     debug!(
                         " ⚠️    Contract (id: {}) duplicated {} times in billing loop",
@@ -664,27 +648,10 @@ pub fn clean_contracts_to_bill_at<T: Config>() -> frame_support::weights::Weight
     for (index, contract_ids) in contracts_to_bill_at {
         let mut new_contract_ids = Vec::new();
         for contract_id in contract_ids {
-            if let Some(contract) = Contracts::<T>::get(contract_id) {
-                match contract.contract_type {
-                    types::ContractData::NodeContract(node_contract) => {
-                        let contract_resource = NodeContractResources::<T>::get(contract_id);
-                        r.saturating_inc();
-                        if node_contract.public_ips > 0 || !contract_resource.used.is_empty() {
-                            if !contract_id_stored[contract_id as usize] {
-                                new_contract_ids.push(contract_id);
-                                contract_id_stored[contract_id as usize] = true;
-                            }
-                        }
-                    }
-                    _ => {
-                        if !contract_id_stored[contract_id as usize] {
-                            new_contract_ids.push(contract_id);
-                            contract_id_stored[contract_id as usize] = true;
-                        }
-                    }
-                };
+            if !contract_id_stored[contract_id as usize] {
+                new_contract_ids.push(contract_id);
+                contract_id_stored[contract_id as usize] = true;
             }
-            r.saturating_inc();
         }
         ContractsToBillAt::<T>::insert(index, new_contract_ids);
         w.saturating_inc();
