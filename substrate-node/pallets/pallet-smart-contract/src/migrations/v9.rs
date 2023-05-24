@@ -648,9 +648,11 @@ pub fn clean_contracts_to_bill_at<T: Config>() -> frame_support::weights::Weight
     for (index, contract_ids) in contracts_to_bill_at {
         let mut new_contract_ids = Vec::new();
         for contract_id in contract_ids {
-            if !contract_id_stored[contract_id as usize] {
-                new_contract_ids.push(contract_id);
-                contract_id_stored[contract_id as usize] = true;
+            if Contracts::<T>::get(contract_id).is_some() {
+                if !contract_id_stored[contract_id as usize] {
+                    new_contract_ids.push(contract_id);
+                    contract_id_stored[contract_id as usize] = true;
+                }
             }
         }
         ContractsToBillAt::<T>::insert(index, new_contract_ids);
