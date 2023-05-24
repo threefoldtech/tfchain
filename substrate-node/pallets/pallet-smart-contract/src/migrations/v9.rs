@@ -6,17 +6,6 @@ use sp_runtime::Saturating;
 use sp_std::marker::PhantomData;
 use scale_info::prelude::string::String;
 
-// ✅ ContractsToBillAt
-// ✅ Contracts
-// ✅ ActiveNodeContracts
-// ✅ ActiveRentContractForNode
-// ✅ ContractIDByNodeIDAndHash
-// ✅ ContractIDByNameRegistration
-// ✅ ContractLock
-// ✅ SolutionProviders
-// ✅ ContractBillingInformationByID
-// ✅ NodeContractResources
-
 pub struct CleanStorageState<T: Config>(PhantomData<T>);
 
 impl<T: Config> OnRuntimeUpgrade for CleanStorageState<T> {
@@ -148,7 +137,7 @@ pub fn check_contracts<T: Config>() {
 }
 
 fn check_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_hash: HexHash) {
-    if let Some(_) = pallet_tfgrid::Nodes::<T>::get(node_id) {
+    if pallet_tfgrid::Nodes::<T>::get(node_id).is_some() {
         // ActiveNodeContracts
         let active_node_contracts = ActiveNodeContracts::<T>::get(node_id);
         if !active_node_contracts.contains(&contract_id) {
@@ -217,7 +206,7 @@ fn check_name_contract<T: Config>(contract_id: u64, name: &T::NameContractName) 
 }
 
 fn check_rent_contract<T: Config>(node_id: u32, contract: &types::Contract<T>) {
-    if let Some(_) = pallet_tfgrid::Nodes::<T>::get(node_id) {
+    if pallet_tfgrid::Nodes::<T>::get(node_id).is_some() {
         // ActiveRentContractForNode
         let active_rent_contract = ActiveRentContractForNode::<T>::get(node_id);
         if active_rent_contract != Some(contract.contract_id) {
