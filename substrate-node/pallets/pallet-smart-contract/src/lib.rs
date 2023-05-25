@@ -1213,7 +1213,7 @@ impl<T: Config> Pallet<T> {
 
         // If still in grace period, no need to continue doing locking and other stuff
         if matches!(contract.state, types::ContractState::GracePeriod(_)) {
-            log::debug!("contract {} is still in grace", contract.contract_id);
+            log::info!("contract {} is still in grace", contract.contract_id);
             ContractLock::<T>::insert(contract.contract_id, &contract_lock);
             return Ok(().into());
         }
@@ -1405,6 +1405,11 @@ impl<T: Config> Pallet<T> {
             // balance we can only transfer out the remaining balance
             // https://github.com/threefoldtech/tfchain/issues/479
             let twin_balance = Self::get_usable_balance(&twin.account_id);
+            log::info!(
+                "twin balance {:?} contract lock amount {:?}",
+                twin_balance,
+                contract_lock.amount_locked
+            );
 
             // Fetch the default pricing policy
             let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1)
@@ -1491,6 +1496,12 @@ impl<T: Config> Pallet<T> {
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
         amount: BalanceOf<T>,
     ) -> DispatchResultWithPostInfo {
+        log::info!(
+            "Distributing cultivation rewards for contract {:?} with amount {:?}",
+            contract.contract_id,
+            amount,
+        );
+
         // If the amount is zero, return
         if amount == BalanceOf::<T>::saturated_from(0 as u128) {
             return Ok(().into());
