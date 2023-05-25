@@ -1860,10 +1860,14 @@ impl<T: Config> Pallet<T> {
         }
     }
 
+    // Get the usable balance of an account
+    // This is the balance minus the minimum balance
     fn get_usable_balance(account_id: &T::AccountId) -> BalanceOf<T> {
         let balance = pallet_balances::pallet::Pallet::<T>::usable_balance(account_id);
         let b = balance.saturated_into::<u128>();
         BalanceOf::<T>::saturated_from(b)
+            .checked_sub(&<T as Config>::Currency::minimum_balance())
+            .unwrap_or(BalanceOf::<T>::saturated_from(0 as u128))
     }
 
     fn get_locked_balance(account_id: &T::AccountId) -> BalanceOf<T> {
