@@ -124,6 +124,8 @@ pub mod pallet {
     pub type DeploymentHash = H256;
     pub type NameContractNameOf<T> = <T as Config>::NameContractName;
 
+    pub type MigrationStage = u8;
+
     #[pallet::storage]
     #[pallet::getter(fn contracts)]
     pub type Contracts<T: Config> = StorageMap<_, Blake2_128Concat, u64, Contract<T>, OptionQuery>;
@@ -207,6 +209,11 @@ pub mod pallet {
     #[pallet::getter(fn service_contract_id)]
     pub type ServiceContractID<T> = StorageValue<_, u64, ValueQuery>;
 
+    /// The current migration's stage, if any.
+    #[pallet::storage]
+    #[pallet::getter(fn current_migration_stage)]
+    pub(super) type CurrentMigrationStage<T: Config> = StorageValue<_, MigrationStage, OptionQuery>;
+
     #[pallet::config]
     pub trait Config:
         CreateSignedTransaction<Call<Self>>
@@ -250,6 +257,7 @@ pub mod pallet {
             + Clone
             + TypeInfo
             + TryFrom<Vec<u8>, Error = Error<Self>>
+            + Into<Vec<u8>>
             + MaxEncodedLen;
 
         type RestrictedOrigin: EnsureOrigin<Self::RuntimeOrigin>;
@@ -658,6 +666,17 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
+            let mut weight_used = Weight::zero();
+            if let Some(migration_stage) = CurrentMigrationStage::<T>::get() {
+                let (w, new_migration_stage) =
+                    migrations::v9::clean_pallet_smart_contract::<T>(migration_stage);
+                CurrentMigrationStage::<T>::set(new_migration_stage);
+                weight_used.saturating_accrue(w);
+            }
+            weight_used
+        }
+
         fn offchain_worker(block_number: T::BlockNumber) {
             // Let offchain worker check if there are contracts on the map at current index
             let current_index = Self::get_current_billing_loop_index();

@@ -46,6 +46,12 @@ fn is_valid_name_contract_name(input: &[u8]) -> bool {
         .all(|c| matches!(c, b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_'))
 }
 
+impl<T: Config> From<NameContractName<T>> for Vec<u8> {
+    fn from(value: NameContractName<T>) -> Self {
+        value.0.to_vec()
+    }
+}
+
 // FIXME: did not find a way to automatically implement this.
 impl<T: Config> PartialEq for NameContractName<T> {
     fn eq(&self, other: &Self) -> bool {
