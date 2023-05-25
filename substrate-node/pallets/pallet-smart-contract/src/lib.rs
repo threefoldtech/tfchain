@@ -1230,6 +1230,12 @@ impl<T: Config> Pallet<T> {
         };
         Self::deposit_event(Event::ContractBilled(contract_bill));
 
+        // If the contract is in delete state, remove all associated storage
+        if matches!(contract.state, types::ContractState::Deleted(_)) {
+            Self::remove_contract(contract.contract_id);
+            return Ok(().into());
+        }
+
         // If contract is node contract, set the amount unbilled back to 0
         if matches!(contract.contract_type, types::ContractData::NodeContract(_)) {
             let mut contract_billing_info =
@@ -1239,12 +1245,6 @@ impl<T: Config> Pallet<T> {
                 contract.contract_id,
                 &contract_billing_info,
             );
-        }
-
-        // If the contract is in delete state, remove all associated storage
-        if matches!(contract.state, types::ContractState::Deleted(_)) {
-            Self::remove_contract(contract.contract_id);
-            return Ok(().into());
         }
 
         // Finally update the lock
@@ -1386,14 +1386,6 @@ impl<T: Config> Pallet<T> {
         // When the cultivation rewards are ready to be distributed or it's in delete state
         // Unlock all reserved balance and distribute
         if contract_lock.cycles >= T::DistributionFrequency::get() || canceled_and_not_zero {
-            // Deprecated locking system
-            // If there is a lock with ID being the contract ID, remove it
-            // Code can be removed in a later phase
-            <T as Config>::Currency::remove_lock(
-                contract.contract_id.to_be_bytes(),
-                &twin.account_id,
-            );
-
             // First remove the lock, calculate how much locked balance needs to be unlocked and re-lock the remaining locked balance
             let locked_balance = Self::get_locked_balance(&twin.account_id);
             let new_locked_balance = match locked_balance.checked_sub(&contract_lock.amount_locked)
@@ -1499,6 +1491,11 @@ impl<T: Config> Pallet<T> {
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
         amount: BalanceOf<T>,
     ) -> DispatchResultWithPostInfo {
+        // If the amount is zero, return
+        if amount == BalanceOf::<T>::saturated_from(0 as u128) {
+            return Ok(().into());
+        }
+
         // fetch source twin
         let twin =
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
