@@ -1276,7 +1276,7 @@ impl<T: Config> Pallet<T> {
                     // If the contract is a rent contract, also move state on associated node contracts
                     Self::handle_grace_rent_contract(contract, types::ContractState::Created)?;
                 } else {
-                    let diff = current_block - grace_start;
+                    let diff = current_block.checked_sub(grace_start).unwrap_or(0);
                     // If the contract grace period ran out, we can decomission the contract
                     if diff >= T::GracePeriod::get() {
                         Self::_update_contract_state(
