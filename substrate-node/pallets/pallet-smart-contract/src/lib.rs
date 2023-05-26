@@ -913,8 +913,6 @@ impl<T: Config> Pallet<T> {
 
         Self::validate_solution_provider(solution_provider_id)?;
 
-        // Start billing frequency loop
-        // Will always be block now + frequency
         // Contract is inserted in billing loop ONLY once at contract creation
         Self::insert_contract_in_billing_loop(id);
 
@@ -1625,17 +1623,10 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    // Inserts a contract in a list where the index is the current block % billing frequency
+    // Inserts a contract in a list where the index is the contract id % billing frequency
     // This way, we don't need to reinsert the contract everytime it gets billed
     pub fn insert_contract_in_billing_loop(contract_id: u64) {
-        if contract_id == 0 {
-            return;
-        }
-
-        // Save the contract to be billed at previous billing loop index
-        // to avoid being billed at same block by the offchain worker
-        // First billing for the contract will happen after 1 billing cycle
-        let index = Self::get_previous_billing_loop_index();
+        let index = Self::get_contract_billing_loop_index(contract_id);
         let mut contract_ids = ContractsToBillAt::<T>::get(index);
 
         if !contract_ids.contains(&contract_id) {
@@ -1945,18 +1936,17 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
+    // Billing index is contract id % (mod) Billing Frequency
+    // So index belongs to [0; billing_frequency - 1] range
+    pub fn get_contract_billing_loop_index(contract_id: u64) -> u64 {
+        contract_id % BillingFrequency::<T>::get()
+    }
+
     // Billing index is block number % (mod) Billing Frequency
+    // So index belongs to [0; billing_frequency - 1] range
     pub fn get_current_billing_loop_index() -> u64 {
         let current_block = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
         current_block % BillingFrequency::<T>::get()
-    }
-
-    pub fn get_previous_billing_loop_index() -> u64 {
-        let previous_block = <frame_system::Pallet<T>>::block_number()
-            .saturated_into::<u64>()
-            .checked_sub(1)
-            .unwrap_or(0);
-        previous_block % BillingFrequency::<T>::get()
     }
 
     pub fn _service_contract_create(
