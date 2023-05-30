@@ -1,6 +1,6 @@
 name: Build runtime
 
-on: 
+on:
   release:
     types: [published]
 
@@ -24,7 +24,7 @@ jobs:
         id: srtool_build
         uses: chevdor/srtool-actions@v0.6.0
         with:
-          image: paritytech/srtool
+          image: paritytech/srtool:1.66.1
           workdir: '${{ github.workspace }}/substrate-node'
           package: tfchain-runtime
           runtime_dir: runtime
@@ -40,11 +40,10 @@ jobs:
         with:
           name: tfchain-srtool-digest-json
           path: tfchain-srtool-digest.json
-  
+
       - name: Upload runtime
         uses: actions/upload-artifact@v3
         with:
           name: tfchain-runtime
           path: |
             substrate-node/${{ steps.srtool_build.outputs.wasm_compressed }}
-  
