@@ -346,6 +346,7 @@ parameter_types! {
     pub const MaxInterfaceIpsLength: u32 = 10;
     pub const MaxInterfacesLength: u32 = 10;
     pub const MaxFarmPublicIps: u32 = 512;
+    pub const TimestampHintDrift: u64 = 60;
 }
 
 impl pallet_tfgrid::Config for Runtime {
@@ -367,6 +368,7 @@ impl pallet_tfgrid::Config for Runtime {
     type CityName = pallet_tfgrid::node::CityName<Runtime>;
     type Location = pallet_tfgrid::node::Location<Runtime>;
     type SerialNumber = pallet_tfgrid::node::SerialNumber<Runtime>;
+    type TimestampHintDrift = TimestampHintDrift;
 }
 
 parameter_types! {

@@ -396,6 +396,9 @@ pub mod pallet {
 
         #[pallet::constant]
         type MaxInterfaceIpsLength: Get<u32>;
+
+        #[pallet::constant]
+        type TimestampHintDrift: Get<u64>;
     }
 
     #[pallet::event]
@@ -580,6 +583,7 @@ pub mod pallet {
         InvalidPublicConfig,
         UnauthorizedToChangePowerTarget,
         InvalidRelayAddress,
+        InvalidTimestampHint,
     }
 
     #[pallet::genesis_config]
@@ -1181,7 +1185,7 @@ pub mod pallet {
 
         #[pallet::call_index(11)]
         #[pallet::weight(<T as Config>::WeightInfo::report_uptime())]
-        pub fn report_uptime(origin: OriginFor<T>, uptime: u64) -> DispatchResultWithPostInfo {
+        pub fn report_uptime(origin: OriginFor<T>, uptime: u64, timestamp_hint: u64) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
             let twin_id =
@@ -1195,7 +1199,14 @@ pub mod pallet {
 
             ensure!(Nodes::<T>::contains_key(node_id), Error::<T>::NodeNotExists);
 
+            
             let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+            // check if timestamp hint is within the acceptable range of the current timestamp (now) and the drift value
+            ensure!(
+                timestamp_hint >= now.checked_sub(<T as Config>::TimestampHintDrift::get()).unwrap_or(0) 
+                && timestamp_hint <= now + <T as Config>::TimestampHintDrift::get(),
+                Error::<T>::InvalidTimestampHint
+            );
 
             Self::deposit_event(Event::NodeUptimeReported(node_id, now, uptime));
 
