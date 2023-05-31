@@ -175,13 +175,17 @@ impl<B: Ord> PartialOrd for FarmingPolicy<B> {
 
 impl<B: Ord> Ord for FarmingPolicy<B> {
     fn cmp(&self, other: &Self) -> Ordering {
-        match self.farm_certification.cmp(&other.farm_certification) {
-            Ordering::Equal => match self.node_certification.cmp(&other.node_certification) {
-                Ordering::Equal => self.id.cmp(&other.id),
-                ord => ord,
-            }
-            ord => ord,
-        }
+        (
+            other.default,
+            &self.farm_certification,
+            &self.node_certification,
+            &self.id,
+        ).cmp(&(
+            self.default,
+            &other.farm_certification,
+            &other.node_certification,
+            &other.id,
+        ))
     }
 }
 
