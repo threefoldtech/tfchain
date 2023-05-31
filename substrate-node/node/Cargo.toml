@@ -1,79 +1,82 @@
 [package]
-authors = ['Substrate DevHub <https://github.com/substrate-developer-hub>']
-build = 'build.rs'
-description = 'A fresh FRAME-based Substrate node, ready for hacking.'
-edition = '2018'
-homepage = 'https://substrate.dev'
-license = 'Unlicense'
-name = 'tfchain'
-repository = 'https://github.com/substrate-developer-hub/substrate-node-template/'
-version = '2.4.0'
-
-[[bin]]
-name = 'tfchain'
+authors.workspace = true
+documentation.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license-file.workspace = true
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
+name = "tfchain"
+description = "Client for tfchain node"
+build = "build.rs"
 
 [package.metadata.docs.rs]
-targets = ['x86_64-unknown-linux-gnu']
+targets = ["x86_64-unknown-linux-gnu"]
+
+[[bin]]
+name = "tfchain"
 
 [build-dependencies]
-substrate-build-script-utils = { package = "substrate-build-script-utils", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-vergen = "3.1.0"
+substrate-build-script-utils.workspace = true
 
 [dependencies]
-futures = "0.3"
-hex-literal = "0.2.1"
-jsonrpc-core = "18.0.0"
-log = "0.4"
-jsonrpsee = { version = "0.16.2", features = ["server"] }
-clap = { version = "4.0.9", features = ["derive"] }
-serde = { version = "1.0.119", features = ["derive"] }
-serde_json = "1.0.64"
+clap.workspace = true
+futures = { workspace = true, features = ["thread-pool"]}
+serde_json.workspace = true
 
-frame-benchmarking = {git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.36"}
-frame-system = {git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.36"}
-frame-benchmarking-cli = {git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.36"}
-pallet-transaction-payment-rpc = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-pallet-transaction-payment = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sc-basic-authorship = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sc-cli = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-sc-client-api = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sc-client-db = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sc-executor = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sc-service = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sc-consensus = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sc-consensus-aura = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sc-finality-grandpa = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sc-finality-grandpa-rpc = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sc-keystore = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sp-keyring = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sc-network = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sc-rpc = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sc-rpc-api = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sc-telemetry = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sc-transaction-pool = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sc-transaction-pool-api = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sp-api = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sp-block-builder = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sp-blockchain = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sp-consensus = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sp-consensus-aura = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sp-core = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sp-finality-grandpa = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sp-inherents = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sp-runtime = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sp-io = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sp-timestamp = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-sp-transaction-pool = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-frame-rpc-system = {package = "substrate-frame-rpc-system", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36"}
-frame-try-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.36", optional = true }
-try-runtime-cli = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.36", optional = true }
+sc-cli.workspace = true
+sp-core.workspace = true
+sc-executor.workspace = true
+sc-service.workspace = true
+sc-telemetry.workspace = true
+sc-keystore.workspace = true
+sc-transaction-pool.workspace = true
+sc-transaction-pool-api.workspace = true
+sc-consensus-aura.workspace = true
+sp-consensus-aura.workspace = true
+sp-consensus.workspace = true
+sc-consensus.workspace = true
+sc-consensus-grandpa.workspace = true
+sc-client-api.workspace = true
+sp-runtime.workspace = true
+sp-io.workspace = true
+sp-timestamp.workspace = true
+sp-inherents.workspace = true
+sp-keyring.workspace = true
+frame-system.workspace = true
+pallet-transaction-payment.workspace = true
+pallet-staking.workspace = true
 
-tfchain-runtime = { path = '../runtime' }
+# These dependencies are used for the node template's RPCs
+jsonrpsee = {workspace = true, features = ["server"]}
+sc-rpc.workspace = true
+sp-api.workspace = true
+sc-rpc-api.workspace = true
+sp-blockchain.workspace = true
+sp-block-builder.workspace = true
+sc-basic-authorship.workspace = true
+substrate-frame-rpc-system.workspace = true
+pallet-transaction-payment-rpc.workspace = true
+
+# These dependencies are used for runtime benchmarking
+frame-benchmarking.workspace = true
+frame-benchmarking-cli.workspace = true
+
+# Local Dependencies
+tfchain-runtime.workspace = true
+
+# CLI-specific dependencies
+try-runtime-cli = {workspace = true, optional = true}
 
 [features]
 default = []
+# Dependencies that are only required if runtime benchmarking should be build.
 runtime-benchmarks = [
-    "tfchain-runtime/runtime-benchmarks",
-    "sc-client-db/runtime-benchmarks",
+	"tfchain-runtime/runtime-benchmarks",
+	"frame-benchmarking/runtime-benchmarks",
+	"frame-benchmarking-cli/runtime-benchmarks",
 ]
-try-runtime = [ "tfchain-runtime/try-runtime", "try-runtime-cli/try-runtime"]
+# Enable features that allow the runtime to be tried and debugged. Name might be subject to change
+# in the near future.
+try-runtime = ["tfchain-runtime/try-runtime", "try-runtime-cli/try-runtime"]

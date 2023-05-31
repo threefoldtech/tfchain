@@ -1,59 +1,52 @@
 [package]
-authors = ['Threefoldtech <https://github.com/threefoldtech>']
-description = 'Substrate TF Grid DB pallet'
-edition = '2018'
-homepage = 'https://threefold.io'
-license = 'Apache'
-name = 'pallet-smart-contract'
-repository = 'https://github.com/threefoldtech/tfchain_pallets'
-version = '3.0.0'
+authors.workspace = true
+documentation.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license-file.workspace = true
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
+name = "pallet-smart-contract"
+description = "Contracts on tfchain"
 
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
-[dependencies.pallet-tfgrid]
-default-features = false
-path = "../pallet-tfgrid"
-
-[dependencies.pallet-tft-price]
-default-features = false
-path = "../pallet-tft-price"
-
-[dependencies.log]
-default-features = false
-version = '0.4.14'
-
 [dependencies]
-# Substrate packages
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
-	"derive",
-] }
-scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
-
-substrate-fixed = { git = 'https://github.com/encointer/substrate-fixed.git', rev = "b33d186888c60f38adafcfc0ec3a21aab263aef1" }
-pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-frame-support =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-frame-system =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-sp-runtime =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-sp-std =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-pallet-timestamp =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-tfchain-support = { path = "../../support", default-features = false }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false, optional = true }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-pallet-authorship = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-pallet-session = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-
+log.workspace = true
+codec = {package = "parity-scale-codec", workspace = true, features = ["derive"]}
+scale-info = { workspace = true, features = ["derive"] }
 parking_lot = '0.12.1'
 
+# Support
+tfchain-support.workspace = true
+
+# Custom pallets
+pallet-tft-price.workspace = true
+pallet-tfgrid.workspace = true
+
+# Substrate stuff
+substrate-fixed = { git = 'https://github.com/encointer/substrate-fixed.git', rev = "b33d186888c60f38adafcfc0ec3a21aab263aef1" }
+pallet-balances.workspace = true
+frame-support.workspace = true
+frame-system.workspace = true
+sp-runtime.workspace = true
+sp-std.workspace = true
+pallet-timestamp.workspace = true
+sp-io.workspace = true
+frame-try-runtime.workspace = true
+sp-core.workspace = true
+pallet-authorship.workspace = true
+pallet-session.workspace = true
+
 # Benchmarking
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false, optional = true }
+frame-benchmarking = { workspace = true, optional = true }
 
 [dev-dependencies]
 parking_lot = '0.12.1'
-sp-keystore =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
+sp-keystore.workspace = true
 env_logger = "*"
-substrate-validator-set = { path = "../substrate-validator-set" }
 
 [features]
 default = ['std']
@@ -73,7 +66,10 @@ std = [
 	'frame-benchmarking/std',
 	'sp-io/std',
 	'frame-try-runtime/std',
-	'sp-core/std'
+	'sp-core/std',
+	'pallet-authorship/std',
+	'pallet-session/std',
+	'substrate-fixed/std'
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
