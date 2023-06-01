@@ -174,7 +174,9 @@ impl pallet_collective::Config<CouncilCollective> for Test {
     type MaxProposals = CouncilMaxProposals;
     type MaxMembers = CouncilMaxMembers;
     type DefaultVote = pallet_collective::PrimeDefaultVote;
+    type SetMembersOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = ();
+    type MaxProposalWeight = ();
 }
 
 impl pallet_membership::Config<pallet_membership::Instance1> for Test {

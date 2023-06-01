@@ -35,6 +35,7 @@ pub mod pallet {
     };
     use frame_system::{ensure_signed, pallet_prelude::*};
     use sp_std::convert::TryInto;
+    use sp_std::vec;
 
     use crate::{Burn, Vec};
 
@@ -46,7 +47,6 @@ pub mod pallet {
     >>::NegativeImbalance;
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 

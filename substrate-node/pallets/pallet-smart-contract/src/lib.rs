@@ -110,7 +110,6 @@ pub mod pallet {
     pub const GRID_LOCK_ID: LockIdentifier = *b"gridlock";
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
@@ -727,8 +726,8 @@ pub mod pallet {
 }
 
 use crate::types::HexHash;
-use pallet::NameContractNameOf;
 use sp_std::convert::{TryFrom, TryInto};
+
 // Internal functions of the pallet
 impl<T: Config> Pallet<T> {
     pub fn _create_node_contract(

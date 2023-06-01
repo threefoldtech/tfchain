@@ -15,10 +15,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 # Substrate packages
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
-	"derive",
-] }
-scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+codec = {package = "parity-scale-codec", workspace = true, features = ["derive"]}
+scale-info = { workspace = true, features = ["derive"] }
 
 pallet-balances.workspace = true
 frame-support.workspace = true

@@ -36,6 +36,7 @@ pallet-authorship.workspace = true
 pallet-session.workspace = true
 sp-std.workspace = true
 sp-keystore = { workspace = true, optional = true }
+substrate-validator-set.workspace = true
 
 [features]
 default = ['std']

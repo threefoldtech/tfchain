@@ -30,7 +30,7 @@ use sp_core::{
     },
     sr25519, Pair, Public, H256,
 };
-use sp_keystore::{testing::KeyStore, KeystoreExt, SyncCryptoStore};
+use sp_keystore::{testing::MemoryKeystore, Keystore, KeystoreExt};
 use sp_runtime::{
     impl_opaque_keys,
     offchain::TransactionPool,
@@ -109,7 +109,7 @@ construct_runtime!(
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         SmartContractModule: pallet_smart_contract::{Pallet, Call, Storage, Event<T>},
         TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Event<T>},
-        Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
+        Authorship: pallet_authorship::{Pallet, Storage},
         ValidatorSet: substrate_validator_set::{Pallet, Call, Storage, Event<T>, Config<T>},
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
     }
@@ -165,6 +165,10 @@ impl pallet_balances::Config for TestRuntime {
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = pallet_balances::weights::SubstrateWeight<TestRuntime>;
+    type FreezeIdentifier = ();
+    type MaxFreezes = ();
+    type HoldIdentifier = ();
+    type MaxHolds = ();
 }
 
 pub(crate) type Serial = pallet_tfgrid::pallet::SerialNumberOf<TestRuntime>;
@@ -285,8 +289,6 @@ parameter_types! {
 
 impl pallet_authorship::Config for TestRuntime {
     type FindAuthor = ();
-    type UncleGenerations = UncleGenerations;
-    type FilterUncle = ();
     type EventHandler = ();
 }
 
@@ -647,7 +649,7 @@ pub fn new_test_ext_with_pool_state(
     let mut ext = new_test_ext();
     let (offchain, offchain_state) = testing::TestOffchainExt::new();
     let (pool, pool_state) = MockedTransactionPoolExt::new();
-    let keystore = KeyStore::new();
+    let keystore = MemoryKeystore::new();
     keystore
         .sr25519_generate_new(KEY_TYPE, Some(&format!("//Alice")))
         .unwrap();

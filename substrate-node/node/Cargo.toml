@@ -46,7 +46,6 @@ sp-inherents.workspace = true
 sp-keyring.workspace = true
 frame-system.workspace = true
 pallet-transaction-payment.workspace = true
-pallet-staking.workspace = true
 
 # These dependencies are used for the node template's RPCs
 jsonrpsee = {workspace = true, features = ["server"]}

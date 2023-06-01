@@ -1,0 +1,49 @@
+[package]
+authors.workspace = true
+documentation.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license-file.workspace = true
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
+name = "pallet-tft-bridge"
+description = "Stellar TFT bridge pallet"
+
+[package.metadata.docs.rs]
+targets = ['x86_64-unknown-linux-gnu']
+
+[dependencies]
+# Substrate packages
+codec = {package = "parity-scale-codec", workspace = true, features = ["derive"]}
+scale-info = { workspace = true, features = ["derive"] }
+
+frame-support.workspace = true
+frame-system.workspace = true
+sp-std.workspace = true
+sp-storage.workspace = true
+sp-runtime.workspace = true
+frame-benchmarking.workspace = true
+pallet-balances.workspace = true
+substrate-stellar-sdk = {git = "https://github.com/pendulum-chain/substrate-stellar-sdk", default-features = false }
+
+[dev-dependencies]
+sp-core.workspace = true
+sp-io.workspace = true
+
+[features]
+default = ["std"]
+std = [
+	"codec/std",
+	"scale-info/std",
+	"frame-support/std",
+	"frame-system/std",
+	"sp-std/std",
+	"sp-storage/std",
+	"sp-runtime/std",
+	"frame-benchmarking/std",
+	"pallet-balances/std",
+]
+
+runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
+try-runtime = ["frame-support/try-runtime"]

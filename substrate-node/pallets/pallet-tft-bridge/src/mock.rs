@@ -1,9 +1,9 @@
 #![cfg(test)]
 
 use super::*;
-use crate as pallet_burning;
+use crate as pallet_tft_bridge;
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
-use pallet_balances;
+use frame_system::EnsureRoot;
 use sp_core::{sr25519, Pair, Public, H256};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::MultiSignature;
@@ -11,7 +11,8 @@ use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
-use sp_std::convert::{TryFrom, TryInto};
+
+use pallet_balances;
 
 pub type Signature = MultiSignature;
 
@@ -27,13 +28,16 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        TFTBridgeModule: pallet_tft_bridge::{Pallet, Storage, Call, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        BurningModule: pallet_burning::{Pallet, Call, Event<T>},
     }
 );
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
+    pub BlockWeights: frame_system::limits::BlockWeights =
+        frame_system::limits::BlockWeights::simple_max(frame_support::weights::Weight::from_ref_time(1024));
+    pub const ExistentialDeposit: u64 = 1;
 }
 
 impl frame_system::Config for TestRuntime {
@@ -66,7 +70,6 @@ impl frame_system::Config for TestRuntime {
 parameter_types! {
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
-    pub const ExistentialDeposit: u64 = 1;
 }
 
 impl pallet_balances::Config for TestRuntime {
@@ -87,10 +90,16 @@ impl pallet_balances::Config for TestRuntime {
     type MaxHolds = ();
 }
 
+parameter_types! {
+    pub const RetryInterval: u32 = 20;
+}
+
 impl Config for TestRuntime {
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type Burn = ();
+    type RestrictedOrigin = EnsureRoot<Self::AccountId>;
+    type RetryInterval = RetryInterval;
 }
 
 type AccountPublic = <MultiSignature as Verify>::Signer;
@@ -116,6 +125,14 @@ pub fn alice() -> AccountId {
 
 pub fn bob() -> AccountId {
     get_account_id_from_seed::<sr25519::Public>("Bob")
+}
+
+pub fn ferdie() -> AccountId {
+    get_account_id_from_seed::<sr25519::Public>("Ferdie")
+}
+
+pub fn eve() -> AccountId {
+    get_account_id_from_seed::<sr25519::Public>("Eve")
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {

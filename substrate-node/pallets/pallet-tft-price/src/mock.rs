@@ -13,7 +13,7 @@ use sp_core::{
     sr25519, H256,
 };
 use sp_io::TestExternalities;
-use sp_keystore::{testing::KeyStore, KeystoreExt, SyncCryptoStore};
+use sp_keystore::{testing::MemoryKeystore, Keystore, KeystoreExt};
 use sp_runtime::{
     impl_opaque_keys,
     testing::{Header, UintAuthorityId},
@@ -77,7 +77,7 @@ construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Config<T>, Event<T>},
-        Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
+        Authorship: pallet_authorship::{Pallet, Storage},
         ValidatorSet: substrate_validator_set::{Pallet, Call, Storage, Event<T>, Config<T>},
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
     }
@@ -133,8 +133,6 @@ parameter_types! {
 
 impl pallet_authorship::Config for TestRuntime {
     type FindAuthor = ();
-    type UncleGenerations = UncleGenerations;
-    type FilterUncle = ();
     type EventHandler = ();
 }
 
@@ -269,7 +267,7 @@ impl ExternalityBuilder {
 
         let (offchain, _) = testing::TestOffchainExt::new();
         let (pool, _) = testing::TestTransactionPoolExt::new();
-        let keystore = KeyStore::new();
+        let keystore = MemoryKeystore::new();
         keystore
             .sr25519_generate_new(KEY_TYPE, Some(&format!("{}/hunter1", PHRASE)))
             .unwrap();

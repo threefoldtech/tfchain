@@ -3,8 +3,9 @@ use crate::{
     mock::RuntimeEvent as MockEvent, mock::*, types::LocationInput, Error, InterfaceInput,
     InterfaceIpsInput, PublicIpListInput, ResourcesInput,
 };
-use frame_support::{assert_noop, assert_ok, bounded_vec};
+use frame_support::{assert_noop, assert_ok};
 use frame_system::{EventRecord, Phase, RawOrigin};
+use sp_core::bounded_vec;
 use sp_core::H256;
 use tfchain_support::types::{
     FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, Power, PowerState,

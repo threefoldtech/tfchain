@@ -22,7 +22,7 @@ scale-info = { workspace = true, features = ["derive"] }
 valip.workspace = true
 
 # Support
-tfchain-support = { path = "../../support", default-features = false }
+tfchain-support.workspace = true
 
 # Substrate stuff
 frame-benchmarking = { workspace = true, optional = true }
