@@ -1,6 +1,6 @@
 use crate::*;
 use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
-use log::{debug, info};
+use log::{info};
 use sp_runtime::Saturating;
 use sp_std::marker::PhantomData;
 
