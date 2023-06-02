@@ -1199,7 +1199,7 @@ impl<T: Config> Pallet<T> {
 
         // If still in grace period, no need to continue doing locking and other stuff
         if matches!(contract.state, types::ContractState::GracePeriod(_)) {
-            log::debug!("contract {} is still in grace", contract.contract_id);
+            log::info!("contract {} is still in grace", contract.contract_id);
             ContractLock::<T>::insert(contract.contract_id, &contract_lock);
             return Ok(().into());
         }
@@ -1216,6 +1216,12 @@ impl<T: Config> Pallet<T> {
         };
         Self::deposit_event(Event::ContractBilled(contract_bill));
 
+        // If the contract is in delete state, remove all associated storage
+        if matches!(contract.state, types::ContractState::Deleted(_)) {
+            Self::remove_contract(contract.contract_id);
+            return Ok(().into());
+        }
+
         // If contract is node contract, set the amount unbilled back to 0
         if matches!(contract.contract_type, types::ContractData::NodeContract(_)) {
             let mut contract_billing_info =
@@ -1225,12 +1231,6 @@ impl<T: Config> Pallet<T> {
                 contract.contract_id,
                 &contract_billing_info,
             );
-        }
-
-        // If the contract is in delete state, remove all associated storage
-        if matches!(contract.state, types::ContractState::Deleted(_)) {
-            Self::remove_contract(contract.contract_id)?;
-            return Ok(().into());
         }
 
         // Finally update the lock
@@ -1262,7 +1262,7 @@ impl<T: Config> Pallet<T> {
                     // If the contract is a rent contract, also move state on associated node contracts
                     Self::handle_grace_rent_contract(contract, types::ContractState::Created)?;
                 } else {
-                    let diff = current_block - grace_start;
+                    let diff = current_block.checked_sub(grace_start).unwrap_or(0);
                     // If the contract grace period ran out, we can decomission the contract
                     if diff >= T::GracePeriod::get() {
                         Self::_update_contract_state(
@@ -1372,14 +1372,6 @@ impl<T: Config> Pallet<T> {
         // When the cultivation rewards are ready to be distributed or it's in delete state
         // Unlock all reserved balance and distribute
         if contract_lock.cycles >= T::DistributionFrequency::get() || canceled_and_not_zero {
-            // Deprecated locking system
-            // If there is a lock with ID being the contract ID, remove it
-            // Code can be removed in a later phase
-            <T as Config>::Currency::remove_lock(
-                contract.contract_id.to_be_bytes(),
-                &twin.account_id,
-            );
-
             // First remove the lock, calculate how much locked balance needs to be unlocked and re-lock the remaining locked balance
             let locked_balance = Self::get_locked_balance(&twin.account_id);
             let new_locked_balance = match locked_balance.checked_sub(&contract_lock.amount_locked)
@@ -1399,6 +1391,11 @@ impl<T: Config> Pallet<T> {
             // balance we can only transfer out the remaining balance
             // https://github.com/threefoldtech/tfchain/issues/479
             let twin_balance = Self::get_usable_balance(&twin.account_id);
+            log::info!(
+                "twin balance {:?} contract lock amount {:?}",
+                twin_balance,
+                contract_lock.amount_locked
+            );
 
             // Fetch the default pricing policy
             let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1)
@@ -1486,6 +1483,17 @@ impl<T: Config> Pallet<T> {
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
         amount: BalanceOf<T>,
     ) -> DispatchResultWithPostInfo {
+        log::info!(
+            "Distributing cultivation rewards for contract {:?} with amount {:?}",
+            contract.contract_id,
+            amount,
+        );
+
+        // If the amount is zero, return
+        if amount == BalanceOf::<T>::saturated_from(0 as u128) {
+            return Ok(().into());
+        }
+
         // fetch source twin
         let twin =
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
@@ -1831,10 +1839,14 @@ impl<T: Config> Pallet<T> {
         }
     }
 
+    // Get the usable balance of an account
+    // This is the balance minus the minimum balance
     fn get_usable_balance(account_id: &T::AccountId) -> BalanceOf<T> {
         let balance = pallet_balances::pallet::Pallet::<T>::usable_balance(account_id);
         let b = balance.saturated_into::<u128>();
         BalanceOf::<T>::saturated_from(b)
+            .checked_sub(&<T as Config>::Currency::minimum_balance())
+            .unwrap_or(BalanceOf::<T>::saturated_from(0 as u128))
     }
 
     fn get_locked_balance(account_id: &T::AccountId) -> BalanceOf<T> {
