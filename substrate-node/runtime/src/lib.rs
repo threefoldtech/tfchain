@@ -249,14 +249,14 @@ impl pallet_aura::Config for Runtime {
 }
 
 impl pallet_grandpa::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
+    type RuntimeEvent = RuntimeEvent;
 
-	type WeightInfo = ();
-	type MaxAuthorities = MaxAuthorities;
-	type MaxSetIdSessionEntries = MaxSetIdSessionEntries;
+    type WeightInfo = ();
+    type MaxAuthorities = MaxAuthorities;
+    type MaxSetIdSessionEntries = MaxSetIdSessionEntries;
 
-	type KeyOwnerProof = sp_core::Void;
-	type EquivocationReportSystem = ();
+    type KeyOwnerProof = sp_core::Void;
+    type EquivocationReportSystem = ();
 }
 
 parameter_types! {
@@ -290,9 +290,9 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
     type FreezeIdentifier = ();
-	type MaxFreezes = ();
-	type HoldIdentifier = ();
-	type MaxHolds = ();
+    type MaxFreezes = ();
+    type HoldIdentifier = ();
+    type MaxHolds = ();
 }
 
 parameter_types! {
@@ -418,10 +418,12 @@ impl pallet_burning::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type Burn = ();
+    type WeightInfo = pallet_burning::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_kvstore::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = pallet_kvstore::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_tft_price::Config for Runtime {
@@ -436,6 +438,7 @@ impl pallet_validator::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type CouncilOrigin = EnsureRootOrCouncilApproval;
     type Currency = Balances;
+    type WeightInfo = pallet_validator::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -446,6 +449,7 @@ impl substrate_validator_set::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type AddRemoveOrigin = EnsureRootOrCouncilApproval;
     type MinAuthorities = MinAuthorities;
+    type WeightInfo = substrate_validator_set::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -771,6 +775,12 @@ mod benches {
     define_benchmarks!(
         [pallet_smart_contract, SmartContractModule]
         [pallet_tft_price, TFTPriceModule]
+        [pallet_burning, BurningModule]
+        [pallet_dao, Dao]
+        [pallet_kvstore, TFKVStore]
+        [validatorset, ValidatorSet]
+        [pallet_validator, Validator]
+        // [pallet_tfgrid, TfgridModule]
         // Substrate
         [frame_benchmarking::baseline, Baseline::<Runtime>]
         [frame_system, SystemBench::<Runtime>]
@@ -802,12 +812,12 @@ impl_runtime_apis! {
         }
 
         fn metadata_at_version(version: u32) -> Option<OpaqueMetadata> {
-			Runtime::metadata_at_version(version)
-		}
+            Runtime::metadata_at_version(version)
+        }
 
-		fn metadata_versions() -> sp_std::vec::Vec<u32> {
-			Runtime::metadata_versions()
-		}
+        fn metadata_versions() -> sp_std::vec::Vec<u32> {
+            Runtime::metadata_versions()
+        }
     }
 
     impl sp_block_builder::BlockBuilder<Block> for Runtime {
@@ -921,11 +931,11 @@ impl_runtime_apis! {
             TransactionPayment::query_fee_details(uxt, len)
         }
         fn query_weight_to_fee(weight: Weight) -> Balance {
-			TransactionPayment::weight_to_fee(weight)
-		}
-		fn query_length_to_fee(length: u32) -> Balance {
-			TransactionPayment::length_to_fee(length)
-		}
+            TransactionPayment::weight_to_fee(weight)
+        }
+        fn query_length_to_fee(length: u32) -> Balance {
+            TransactionPayment::length_to_fee(length)
+        }
     }
 
     #[cfg(feature = "runtime-benchmarks")]

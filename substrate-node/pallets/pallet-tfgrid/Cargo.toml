@@ -25,7 +25,7 @@ valip.workspace = true
 tfchain-support.workspace = true
 
 # Substrate stuff
-frame-benchmarking = { workspace = true, optional = true }
+frame-benchmarking.workspace = true
 pallet-balances.workspace = true
 frame-support.workspace = true
 frame-system.workspace = true
@@ -67,7 +67,7 @@ std = [
 	'serde_json/std'
 ]
 runtime-benchmarks = [
-	"frame-benchmarking",
+	"frame-benchmarking/runtime-benchmarks",
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 ]

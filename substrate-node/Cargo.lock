@@ -4647,6 +4647,7 @@ dependencies = [
 name = "pallet-burning"
 version = "0.1.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-balances",
@@ -4727,6 +4728,7 @@ dependencies = [
 name = "pallet-kvstore"
 version = "0.1.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec 3.5.0",
@@ -4937,6 +4939,7 @@ dependencies = [
 name = "pallet-tft-price"
 version = "0.1.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "lite-json",
@@ -5040,6 +5043,7 @@ dependencies = [
 name = "pallet-validator"
 version = "0.1.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-collective",
@@ -8530,6 +8534,7 @@ dependencies = [
 name = "substrate-validator-set"
 version = "0.1.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -8726,6 +8731,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "hex-literal",
  "log",
  "pallet-aura",
  "pallet-authorship",

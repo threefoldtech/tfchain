@@ -51,9 +51,12 @@ std = [
 	"pallet-timestamp/std",
 	"pallet-tfgrid/std",
 	"tfchain-support/std",
-	'scale-info/std',
-	'serde/std',
-	'log/std'
+	"scale-info/std",
+	"serde/std",
+	"log/std",
+]
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
 ]
 try-runtime = [
     "frame-support/try-runtime",

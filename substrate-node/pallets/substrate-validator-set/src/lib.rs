@@ -13,9 +13,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod mock;
-mod tests;
-
 use frame_support::{
     ensure,
     pallet_prelude::*,
@@ -28,10 +25,19 @@ use sp_staking::offence::{Offence, OffenceError, ReportOffence};
 use sp_std::convert::TryInto;
 use sp_std::{collections::btree_set::BTreeSet, prelude::*};
 
+mod mock;
+mod tests;
+
+#[cfg(feature = "runtime-benchmarks")]
+pub mod benchmarking;
+
+pub mod weights;
+
 pub const LOG_TARGET: &'static str = "runtime::validator-set";
 
 #[frame_support::pallet]
 pub mod pallet {
+    use super::weights::WeightInfo;
     use super::*;
     use frame_system::pallet_prelude::*;
 
@@ -48,6 +54,8 @@ pub mod pallet {
         /// Minimum number of validators to leave in the validator set during
         /// auto removal.
         type MinAuthorities: Get<u32>;
+
+        type WeightInfo: crate::weights::WeightInfo;
     }
 
     #[pallet::pallet]
@@ -123,7 +131,7 @@ pub mod pallet {
         /// The origin can be configured using the `AddRemoveOrigin` type in the
         /// host runtime. Can also be set to sudo/root.
         #[pallet::call_index(0)]
-        #[pallet::weight(0)]
+        #[pallet::weight(<T as Config>::WeightInfo::add_validator())]
         pub fn add_validator(origin: OriginFor<T>, validator_id: T::AccountId) -> DispatchResult {
             T::AddRemoveOrigin::ensure_origin(origin)?;
 
@@ -138,7 +146,7 @@ pub mod pallet {
         /// The origin can be configured using the `AddRemoveOrigin` type in the
         /// host runtime. Can also be set to sudo/root.
         #[pallet::call_index(1)]
-        #[pallet::weight(0)]
+        #[pallet::weight(<T as Config>::WeightInfo::remove_validator())]
         pub fn remove_validator(
             origin: OriginFor<T>,
             validator_id: T::AccountId,
@@ -155,7 +163,7 @@ pub mod pallet {
         ///
         /// For this call, the dispatch origin must be the validator itself.
         #[pallet::call_index(2)]
-        #[pallet::weight(0)]
+        #[pallet::weight(<T as Config>::WeightInfo::add_validator_again())]
         pub fn add_validator_again(
             origin: OriginFor<T>,
             validator_id: T::AccountId,

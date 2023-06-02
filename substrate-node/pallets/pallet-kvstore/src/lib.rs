@@ -1,13 +1,19 @@
 //! A pallet for Threefold key-value store
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub use pallet::*;
+
 #[cfg(test)]
 mod tests;
 
-pub use pallet::*;
+#[cfg(feature = "runtime-benchmarks")]
+pub mod benchmarking;
+
+pub mod weights;
 
 #[frame_support::pallet]
 pub mod pallet {
+    use super::weights::WeightInfo;
     use frame_support::{ensure, pallet_prelude::*, traits::IsType};
     use frame_system::{ensure_signed, pallet_prelude::*};
     use sp_std::convert::TryInto;
@@ -20,6 +26,7 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+        type WeightInfo: crate::weights::WeightInfo;
     }
 
     #[pallet::event]
@@ -57,7 +64,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Set the value stored at a particular key
         #[pallet::call_index(0)]
-        #[pallet::weight(100_000_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::set())]
         pub fn set(
             origin: OriginFor<T>,
             key: Vec<u8>,
@@ -75,7 +82,7 @@ pub mod pallet {
         /// Read the value stored at a particular key, while removing it from the map.
         /// Also emit the read value in an event
         #[pallet::call_index(1)]
-        #[pallet::weight(100_000_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::delete())]
         pub fn delete(origin: OriginFor<T>, key: Vec<u8>) -> DispatchResultWithPostInfo {
             // A user can only take (delete) their own entry
             let user = ensure_signed(origin)?;

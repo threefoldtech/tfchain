@@ -23,6 +23,7 @@ frame-support.workspace = true
 frame-system.workspace = true
 pallet-session.workspace = true
 sp-io.workspace = true
+frame-benchmarking.workspace = true
 
 [dev-dependencies]
 sp-core.workspace = true
@@ -34,6 +35,7 @@ std = [
     'sp-std/std',
     'sp-runtime/std',
     'frame-support/std',
+	'frame-benchmarking/std',
     'sp-staking/std',
     'serde',
     'frame-system/std',
@@ -41,6 +43,9 @@ std = [
     'sp-io/std',
     'scale-info/std',
     'log/std'
+]
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
 ]
 try-runtime = [
     "frame-support/try-runtime",

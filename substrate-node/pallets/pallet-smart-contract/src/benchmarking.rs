@@ -50,7 +50,8 @@ benchmarks! {
 
     add_nru_reports {
         let stamp: u64 = 1628082000 * 1000;
-        pallet_timestamp::Pallet::<T>::set_timestamp(stamp.try_into().unwrap());
+        let now = pallet_timestamp::Pallet::<T>::get().saturated_into::<u64>() + 1000;
+        pallet_timestamp::Pallet::<T>::set_timestamp(now.try_into().unwrap());
 
         let a1: T::AccountId = account("Alice", 0, 0);
         prepare_farm_and_node::<T>(a1.clone());

@@ -4,8 +4,8 @@
 
 use super::*;
 use crate::mock::*;
-use crate::mock::{authorities, new_test_ext, Session, Test, ValidatorSet};
-use frame_support::{assert_noop, assert_ok, pallet_prelude::*};
+use crate::mock::{authorities, new_test_ext, Session, TestRuntime, ValidatorSet};
+use frame_support::{assert_noop, assert_ok};
 use frame_system::RawOrigin;
 use sp_runtime::testing::UintAuthorityId;
 
@@ -64,7 +64,7 @@ fn duplicate_check() {
         assert_eq!(ValidatorSet::validators(), vec![1u64, 2u64, 3u64, 4u64]);
         assert_noop!(
             ValidatorSet::add_validator(RawOrigin::Root.into(), 4),
-            Error::<Test>::Duplicate
+            Error::<TestRuntime>::Duplicate
         );
     });
 }
