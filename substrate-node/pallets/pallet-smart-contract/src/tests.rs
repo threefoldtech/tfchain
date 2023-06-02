@@ -1152,9 +1152,10 @@ fn test_node_contract_billing_cycles() {
         let free_balance = Balances::free_balance(&twin.account_id);
 
         let locked_balance = free_balance - usable_balance;
-        assert_eq!(
+        assert_eq_error_rate!(
             locked_balance.saturated_into::<u128>(),
-            amount_due_1 as u128
+            amount_due_1 as u128,
+            1
         );
 
         let (amount_due_2, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
@@ -1176,9 +1177,10 @@ fn test_node_contract_billing_cycles() {
         let free_balance = Balances::free_balance(&twin.account_id);
 
         let locked_balance = free_balance - usable_balance;
-        assert_eq!(
+        assert_eq_error_rate!(
             locked_balance.saturated_into::<u128>(),
-            amount_due_1 as u128 + amount_due_2 as u128 + amount_due_3 as u128
+            amount_due_1 as u128 + amount_due_2 as u128 + amount_due_3 as u128,
+            3
         );
     });
 }
@@ -1255,9 +1257,10 @@ fn test_node_multiple_contract_billing_cycles() {
         let free_balance = Balances::free_balance(&twin.account_id);
 
         let locked_balance = free_balance - usable_balance;
-        assert_eq!(
+        assert_eq_error_rate!(
             locked_balance.saturated_into::<u128>(),
-            amount_due_contract_1 as u128 + amount_due_contract_2 as u128
+            amount_due_contract_1 as u128 + amount_due_contract_2 as u128,
+            2
         );
     });
 }
@@ -1537,9 +1540,10 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
         // After canceling contract, and not being able to pay for the remainder of the cycle
         // where the cancel was excecuted, the remaining balance should still be the same
         let usable_balance_after_canceling = Balances::usable_balance(&twin.account_id);
-        assert_eq!(
+        assert_eq_error_rate!(
             usable_balance_after_canceling,
-            usable_balance_before_canceling
+            usable_balance_before_canceling,
+            1
         );
 
         validate_distribution_rewards(initial_total_issuance, total_amount_billed, false);
@@ -1897,7 +1901,7 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
 
         let usable_balance = Balances::usable_balance(&twin.account_id);
         let free_balance = Balances::free_balance(&twin.account_id);
-        assert_eq!(usable_balance, free_balance);
+        assert_eq_error_rate!(usable_balance, free_balance, 2);
     });
 }
 

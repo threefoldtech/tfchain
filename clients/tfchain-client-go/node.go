@@ -604,12 +604,12 @@ func (s *Substrate) UpdateNodeUptime(identity Identity, uptime uint64) (hash typ
 		return hash, errors.Wrap(err, "failed to create call")
 	}
 
-	callResponse, err := s.Call(cl, meta, identity, c)
+	hash, err = s.CallOnce(cl, meta, identity, c)
 	if err != nil {
 		return hash, errors.Wrap(err, "failed to update node uptime")
 	}
 
-	return callResponse.Hash, nil
+	return hash, nil
 }
 
 // GetNode with id
