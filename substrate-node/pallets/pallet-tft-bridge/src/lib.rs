@@ -5,7 +5,6 @@
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
 use sp_std::prelude::*;
 
-use codec::{Decode, Encode};
 use frame_support::dispatch::DispatchErrorWithPostInfo;
 use frame_support::{
     ensure, log,
@@ -15,6 +14,7 @@ use frame_support::{
     },
 };
 use frame_system::{self as system, ensure_signed};
+use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::SaturatedConversion;
 use substrate_stellar_sdk as stellar;

@@ -2,11 +2,11 @@
 
 use super::*;
 use crate::{self as pallet_tft_price};
-use codec::alloc::sync::Arc;
 use frame_support::traits::GenesisBuild;
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::mocking;
 use frame_system::EnsureRoot;
+use parity_scale_codec::alloc::sync::Arc;
 use sp_core::{
     crypto::key_types::DUMMY,
     offchain::{testing, OffchainDbExt, TransactionPoolExt},

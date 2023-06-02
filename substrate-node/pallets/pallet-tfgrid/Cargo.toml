@@ -17,7 +17,7 @@ targets = ['x86_64-unknown-linux-gnu']
 log.workspace = true
 hex.workspace = true
 serde_json = { workspace = true, features = ["alloc"] }
-codec = {package = "parity-scale-codec", workspace = true, features = ["derive"]}
+parity-scale-codec = {workspace = true, features = ["derive"]}
 scale-info = { workspace = true, features = ["derive"] }
 valip.workspace = true
 
@@ -46,7 +46,7 @@ env_logger = "*"
 [features]
 default = ['std']
 std = [
-	'codec/std',
+	'parity-scale-codec/std',
 	'pallet-balances/std',
 	'frame-support/std',
 	'frame-system/std',

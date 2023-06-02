@@ -89,11 +89,11 @@ pub mod pallet {
     use super::types::*;
     use super::weights::WeightInfo;
     use super::*;
-    use codec::FullCodec;
     use frame_support::pallet_prelude::*;
     use frame_support::traits::Hooks;
     use frame_support::traits::{Currency, Get, LockIdentifier, LockableCurrency, OnUnbalanced};
     use frame_system::pallet_prelude::*;
+    use parity_scale_codec::FullCodec;
     use sp_core::H256;
     use sp_std::{
         convert::{TryFrom, TryInto},

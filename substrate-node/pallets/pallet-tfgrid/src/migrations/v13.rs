@@ -10,7 +10,7 @@ use tfchain_support::{
 };
 
 #[cfg(feature = "try-runtime")]
-use codec::Decode;
+use parity_scale_codec::Decode;
 #[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
 

@@ -18,7 +18,7 @@ substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", bran
 
 [dependencies]
 smallvec.workspace = true
-codec = {package = "parity-scale-codec", workspace = true, features = ["derive"]}
+parity-scale-codec = {workspace = true, features = ["derive"]}
 log.workspace = true
 scale-info = {workspace = true, features = ["derive"]}
 
@@ -83,7 +83,7 @@ std = [
 	"frame-try-runtime?/std",
 	"frame-system-benchmarking?/std",
 	"frame-benchmarking?/std",
-	"codec/std",
+	"parity-scale-codec/std",
 	"scale-info/std",
 	"frame-executive/std",
 	"frame-support/std",

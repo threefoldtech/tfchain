@@ -1,7 +1,7 @@
 use super::resources::Resources;
-use codec::{Decode, Encode, MaxEncodedLen};
 use core::cmp::{Ord, Ordering, PartialOrd};
 use frame_support::{storage::bounded_vec::BoundedVec, traits::ConstU32};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 
 use scale_info::TypeInfo;
 use sp_std::prelude::*;

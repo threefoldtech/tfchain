@@ -15,7 +15,7 @@ targets = ['x86_64-unknown-linux-gnu']
 
 [dependencies]
 # Substrate packages
-codec = {package = "parity-scale-codec", workspace = true, features = ["derive"]}
+parity-scale-codec = {workspace = true, features = ["derive"]}
 scale-info = { workspace = true, features = ["derive"] }
 
 frame-support.workspace = true
@@ -29,7 +29,7 @@ std = [
 	'frame-support/std',
 	'frame-system/std',
 	'sp-std/std',
-	'codec/std',
+	'parity-scale-codec/std',
 	'sp-io/std',
 	'scale-info/std'
 ]

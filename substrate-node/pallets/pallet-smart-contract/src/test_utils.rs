@@ -1,7 +1,7 @@
 use crate::mock::{PoolState, SmartContractModule, System, Timestamp};
 
-use codec::alloc::sync::Arc;
 use frame_support::traits::Hooks;
+use parity_scale_codec::alloc::sync::Arc;
 use parking_lot::RwLock;
 
 pub fn run_to_block(n: u64, pool_state: Option<&mut Arc<RwLock<PoolState>>>) {

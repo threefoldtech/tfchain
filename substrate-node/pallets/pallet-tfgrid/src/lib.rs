@@ -5,17 +5,17 @@
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
 use sp_std::prelude::*;
 
-use codec::Encode;
 use frame_support::dispatch::DispatchErrorWithPostInfo;
 use frame_support::{
     dispatch::Pays, ensure, pallet_prelude::DispatchResultWithPostInfo,
     storage::bounded_vec::BoundedVec, traits::EnsureOrigin,
 };
-use sp_std::vec;
 use frame_system::{self as system, ensure_signed};
 use hex::FromHex;
 use pallet_timestamp as timestamp;
+use parity_scale_codec::Encode;
 use sp_runtime::SaturatedConversion;
+use sp_std::vec;
 use tfchain_support::{
     resources::Resources,
     types::{Interface, NodePower as NodePowerType, Power, PowerState, PublicIP},
@@ -63,7 +63,7 @@ pub mod pallet {
         },
     };
 
-    use codec::FullCodec;
+    use parity_scale_codec::FullCodec;
 
     #[pallet::pallet]
     #[pallet::without_storage_info]

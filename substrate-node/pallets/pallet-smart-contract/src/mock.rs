@@ -2,7 +2,6 @@
 use super::*;
 use crate::name_contract::NameContractName;
 use crate::{self as pallet_smart_contract};
-use codec::{alloc::sync::Arc, Decode};
 use frame_support::{
     construct_runtime,
     dispatch::PostDispatchInfo,
@@ -20,6 +19,7 @@ use pallet_tfgrid::{
     CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, Gw4Input, Ip4Input,
     LatitudeInput, LongitudeInput, PkInput, RelayInput,
 };
+use parity_scale_codec::{alloc::sync::Arc, Decode};
 use parking_lot::RwLock;
 use sp_core::{
     crypto::key_types::DUMMY,

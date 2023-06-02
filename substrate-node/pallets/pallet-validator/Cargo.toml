@@ -14,7 +14,7 @@ description = "validator registration pallet"
 targets = ['x86_64-unknown-linux-gnu']
 
 [dependencies]
-codec = {package = "parity-scale-codec", workspace = true, features = ["derive"]}
+parity-scale-codec = {workspace = true, features = ["derive"]}
 scale-info = { workspace = true, features = ["derive"] }
 
 sp-std.workspace = true
@@ -37,7 +37,7 @@ sp-core.workspace = true
 [features]
 default = ['std']
 std = [
-    'codec/std',
+    'parity-scale-codec/std',
     'sp-std/std',
     'sp-runtime/std',
     'frame-support/std',
