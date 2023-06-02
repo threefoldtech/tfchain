@@ -1,10 +1,17 @@
 [package]
-authors = ['Threefoldtech <https://github.com/threefoldtech>']
-description = "Shared traits and structs used across the TFChain pallets"
-edition = "2018"
+authors.workspace = true
+description = "Shared traits and structs for tfchain runtimes"
+documentation.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license-file.workspace = true
 name = "tfchain-support"
-repository = 'https://github.com/threefoldtech/tfchain'
-version = "1.0.0"
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 parity-scale-codec = {workspace = true, features = ["derive"]}
@@ -14,9 +21,6 @@ frame-system.workspace = true
 sp-runtime.workspace = true
 sp-std.workspace = true
 valip = "0.4.0"
-
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]
 
 [features]
 default = ["std"]
