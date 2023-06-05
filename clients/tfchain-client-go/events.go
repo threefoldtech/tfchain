@@ -355,6 +355,25 @@ type EventDispatchedAs struct {
 	Topics []types.Hash
 }
 
+type BalancesMinted struct {
+	Phase  types.Phase
+	Who    AccountID  `json:"who"`
+	Amount types.U128 `json:"amount"`
+	Topics []types.Hash
+}
+
+type EventWithWho struct {
+	Phase  types.Phase
+	Who    AccountID `json:"who"`
+	Topics []types.Hash
+}
+
+type EventWithBalance struct {
+	Phase  types.Phase
+	Amount types.U128 `json:"amount"`
+	Topics []types.Hash
+}
+
 // EventRecords is a struct that extends the default events with our events
 type EventRecords struct {
 	types.EventRecords
@@ -500,4 +519,18 @@ type EventRecords struct {
 	Utility_BatchCompletedWithErrors []EventBatchCompletedWithErrors       `test-gen-blockchain:"centrifuge-parachain"`
 	Utility_ItemFailed               []EventItemFailed                     `test-gen-blockchain:"centrifuge-parachain"`
 	Utility_DispatchedAs             []EventDispatchedAs                   `test-gen-blockchain:"centrifuge-parachain"`
+
+	// overrides
+	Balances_Minted     []BalancesMinted   //nolint:stylecheck,golint
+	Balances_BalanceSet []BalancesMinted   //nolint:stylecheck,golint
+	Balances_Burned     []BalancesMinted   //nolint:stylecheck,golint
+	Balances_Suspended  []BalancesMinted   //nolint:stylecheck,golint
+	Balances_Restored   []BalancesMinted   //nolint:stylecheck,golint
+	Balances_Upgraded   []EventWithWho     //nolint:stylecheck,golint
+	Balances_Issued     []EventWithBalance //nolint:stylecheck,golint
+	Balances_Rescinded  []EventWithBalance //nolint:stylecheck,golint
+	Balances_Locked     []BalancesMinted   //nolint:stylecheck,golint
+	Balances_Unlocked   []BalancesMinted   //nolint:stylecheck,golint
+	Balances_Frozen     []BalancesMinted   //nolint:stylecheck,golint
+	Balances_Thawed     []BalancesMinted   //nolint:stylecheck,golint
 }

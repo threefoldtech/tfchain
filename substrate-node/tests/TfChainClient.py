@@ -3,6 +3,7 @@ import json
 import logging
 from random import randbytes
 import time
+import traceback
 
 from SubstrateNetwork import PREDEFINED_KEYS
 from substrateinterface import SubstrateInterface, Keypair
@@ -176,7 +177,7 @@ class TfChainClient:
         call = substrate.compose_call("TfgridModule", "create_farm",
                                     {
                                         "name": f"{name}",
-                                        "public_ips": public_ips
+                                        "public_ips": [public_ips]
                                     })
         expected_events = [{
             "module_id": "TfgridModule",
@@ -244,6 +245,10 @@ class TfChainClient:
                     port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
+        # dont ask me why
+        for interface in interfaces:
+            interface.ips = [interface.ips]
+
         params = {
             "farm_id": farm_id,
             "resources": {
@@ -258,7 +263,7 @@ class TfChainClient:
                 "longitude": f"{longitude}",
                 "latitude": f"{latitude}"
             },
-            "interfaces": interfaces,
+            "interfaces": [interfaces],
             "secure_boot": secure_boot,
             "virtualized": virtualized,
             "serial_number": serial_number
@@ -293,7 +298,7 @@ class TfChainClient:
                 "longitude": f"{longitude}",
                 "latitude": f"{latitude}"
             },
-            "interfaces": [],
+            "interfaces": [[]],
             "secure_boot": secure_boot,
             "virtualized": virtualized,
             "serial_number": serial_number
