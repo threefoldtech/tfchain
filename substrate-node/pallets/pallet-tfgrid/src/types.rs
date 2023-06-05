@@ -173,19 +173,21 @@ impl<B: Ord> PartialOrd for FarmingPolicy<B> {
     }
 }
 
+// using sort() will place non default policies first, then rank from less certified to more certified
 impl<B: Ord> Ord for FarmingPolicy<B> {
     fn cmp(&self, other: &Self) -> Ordering {
         (
-            other.default,
+            self.default,
             &self.farm_certification,
             &self.node_certification,
             &self.id,
-        ).cmp(&(
-            self.default,
-            &other.farm_certification,
-            &other.node_certification,
-            &other.id,
-        ))
+        )
+            .cmp(&(
+                other.default,
+                &other.farm_certification,
+                &other.node_certification,
+                &other.id,
+            ))
     }
 }
 
