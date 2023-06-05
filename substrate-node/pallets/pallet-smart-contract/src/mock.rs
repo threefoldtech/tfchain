@@ -519,13 +519,12 @@ pub struct PoolState {
 impl PoolState {
     pub fn should_call_bill_contract(
         &mut self,
-        index: u64,
         contract_id: u64,
         expected_result: ExtrinsicResult,
         block_number: u64,
     ) {
         self.expected_calls.push((
-            crate::Call::bill_contract_for_block { index, contract_id },
+            crate::Call::bill_contract_for_block { contract_id },
             expected_result,
             block_number,
         ));
@@ -540,10 +539,9 @@ impl PoolState {
         for call_to_execute in self.calls_to_execute.iter() {
             let result = match call_to_execute.0 {
                 // matches bill_contract_for_block
-                crate::Call::bill_contract_for_block { index, contract_id } => {
+                crate::Call::bill_contract_for_block { contract_id } => {
                     SmartContractModule::bill_contract_for_block(
                         RuntimeOrigin::signed(bob()),
-                        index,
                         contract_id,
                     )
                 }
