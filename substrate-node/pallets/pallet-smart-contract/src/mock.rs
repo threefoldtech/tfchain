@@ -19,7 +19,7 @@ use pallet_tfgrid::{
     CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, Gw4Input, Ip4Input,
     LatitudeInput, LongitudeInput, PkInput, RelayInput,
 };
-use parity_scale_codec::{alloc::sync::Arc, Decode};
+use parity_scale_codec::{alloc::sync::Arc, Decode, Encode};
 use parking_lot::RwLock;
 use sp_core::{
     crypto::key_types::DUMMY,
@@ -47,7 +47,6 @@ use tfchain_support::{
     constants::time::{MINUTES, SECS_PER_HOUR},
     traits::ChangeNode,
 };
-use parity_scale_codec::{Decode, Encode};
 
 impl_opaque_keys! {
     pub struct MockSessionKeys {
