@@ -47,6 +47,7 @@ use tfchain_support::{
     constants::time::{MINUTES, SECS_PER_HOUR},
     traits::ChangeNode,
 };
+use parity_scale_codec::{Decode, Encode};
 
 impl_opaque_keys! {
     pub struct MockSessionKeys {
@@ -63,7 +64,7 @@ impl From<UintAuthorityId> for MockSessionKeys {
 pub const KEY_ID_A: KeyTypeId = KeyTypeId([4; 4]);
 pub const KEY_ID_B: KeyTypeId = KeyTypeId([9; 4]);
 
-#[derive(Debug, Clone, codec::Encode, codec::Decode, PartialEq, Eq)]
+#[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
 pub struct PreUpgradeMockSessionKeys {
     pub a: [u8; 32],
     pub b: [u8; 64],
