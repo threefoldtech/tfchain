@@ -124,6 +124,8 @@ pub mod pallet {
     pub type DeploymentHash = H256;
     pub type NameContractNameOf<T> = <T as Config>::NameContractName;
 
+    pub type MigrationStage = u8;
+
     #[pallet::storage]
     #[pallet::getter(fn contracts)]
     pub type Contracts<T: Config> = StorageMap<_, Blake2_128Concat, u64, Contract<T>, OptionQuery>;
@@ -207,6 +209,11 @@ pub mod pallet {
     #[pallet::getter(fn service_contract_id)]
     pub type ServiceContractID<T> = StorageValue<_, u64, ValueQuery>;
 
+    /// The current migration's stage, if any.
+    #[pallet::storage]
+    #[pallet::getter(fn current_migration_stage)]
+    pub(super) type CurrentMigrationStage<T: Config> = StorageValue<_, MigrationStage, OptionQuery>;
+
     #[pallet::config]
     pub trait Config:
         CreateSignedTransaction<Call<Self>>
@@ -250,6 +257,7 @@ pub mod pallet {
             + Clone
             + TypeInfo
             + TryFrom<Vec<u8>, Error = Error<Self>>
+            + Into<Vec<u8>>
             + MaxEncodedLen;
 
         type RestrictedOrigin: EnsureOrigin<Self::RuntimeOrigin>;
@@ -528,18 +536,9 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::bill_contract_for_block())]
         pub fn bill_contract_for_block(
             origin: OriginFor<T>,
-            index: u64,
             contract_id: u64,
         ) -> DispatchResultWithPostInfo {
             let _account_id = ensure_signed(origin)?;
-
-            // Clean up contract from billing loop if it doesn't exist anymore
-            if Contracts::<T>::get(contract_id).is_none() {
-                log::debug!("cleaning up deleted contract from storage");
-                Self::remove_contract_from_billing_loop(index, contract_id)?;
-                return Ok(().into());
-            }
-
             Self::bill_contract(contract_id)
         }
 
@@ -656,12 +655,23 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
+            let mut weight_used = Weight::zero();
+            if let Some(migration_stage) = CurrentMigrationStage::<T>::get() {
+                let (w, new_migration_stage) =
+                    migrations::v9::clean_pallet_smart_contract::<T>(migration_stage);
+                CurrentMigrationStage::<T>::set(new_migration_stage);
+                weight_used.saturating_accrue(w);
+            }
+            weight_used
+        }
+
         fn offchain_worker(block_number: T::BlockNumber) {
             // Let offchain worker check if there are contracts on the map at current index
             let current_index = Self::get_current_billing_loop_index();
 
-            let contracts = ContractsToBillAt::<T>::get(current_index);
-            if contracts.is_empty() {
+            let contract_ids = ContractsToBillAt::<T>::get(current_index);
+            if contract_ids.is_empty() {
                 log::info!(
                     "No contracts to bill at block {:?}, index: {:?}",
                     block_number,
@@ -672,11 +682,33 @@ pub mod pallet {
 
             log::info!(
                 "{:?} contracts to bill at block {:?}",
-                contracts,
+                contract_ids,
                 block_number
             );
 
-            for contract_id in contracts {
+            for contract_id in contract_ids {
+                if let Some(c) = Contracts::<T>::get(contract_id) {
+                    if let types::ContractData::NodeContract(node_contract) = c.contract_type {
+                        // Is there IP consumption to bill?
+                        let bill_ip = node_contract.public_ips > 0;
+
+                        // Is there CU/SU consumption to bill?
+                        // No need for preliminary call to contains_key() because default resource value is empty
+                        let bill_cu_su =
+                            !NodeContractResources::<T>::get(contract_id).used.is_empty();
+
+                        // Is there NU consumption to bill?
+                        // No need for preliminary call to contains_key() because default amount_unbilled is 0
+                        let bill_nu = ContractBillingInformationByID::<T>::get(contract_id)
+                            .amount_unbilled
+                            > 0;
+
+                        // Don't bill if no IP/CU/SU/NU to be billed
+                        if !bill_ip && !bill_cu_su && !bill_nu {
+                            continue;
+                        }
+                    }
+                }
                 let _res = Self::bill_contract_using_signed_transaction(contract_id);
             }
         }
@@ -864,22 +896,14 @@ impl<T: Config> Pallet<T> {
         let mut id = ContractID::<T>::get();
         id = id + 1;
 
+        if let types::ContractData::NodeContract(ref mut nc) = contract_type {
+            Self::_reserve_ip(id, nc)?;
+        };
+
         Self::validate_solution_provider(solution_provider_id)?;
 
-        // Start billing frequency loop
-        // Will always be block now + frequency
-        match contract_type {
-            types::ContractData::NodeContract(ref mut node_contract) => {
-                Self::_reserve_ip(id, node_contract)?;
-
-                // Insert created node contract in billing loop now only
-                // if there is at least one public ip attached to node
-                if node_contract.public_ips > 0 {
-                    Self::insert_contract_in_billing_loop(id);
-                }
-            }
-            _ => Self::insert_contract_in_billing_loop(id),
-        };
+        // Contract is inserted in billing loop ONLY once at contract creation
+        Self::insert_contract_in_billing_loop(id);
 
         let contract = types::Contract {
             version: CONTRACT_VERSION,
@@ -1013,13 +1037,6 @@ impl<T: Config> Pallet<T> {
                 // Do insert
                 NodeContractResources::<T>::insert(contract.contract_id, &contract_resource);
 
-                // Start billing frequency loop
-                // Insert node contract in billing loop only if there
-                // are non empty resources pushed for the contract
-                if !contract_resource.used.is_empty() {
-                    Self::insert_contract_in_billing_loop(contract.contract_id);
-                }
-
                 // deposit event
                 Self::deposit_event(Event::UpdatedUsedResources(contract_resource));
             }
@@ -1117,10 +1134,9 @@ impl<T: Config> Pallet<T> {
             );
             return Err(<Error<T>>::OffchainSignedTxCannotSign);
         }
-        let index = Self::get_current_billing_loop_index();
 
-        let result = signer
-            .send_signed_transaction(|_acct| Call::bill_contract_for_block { index, contract_id });
+        let result =
+            signer.send_signed_transaction(|_acct| Call::bill_contract_for_block { contract_id });
 
         if let Some((acc, res)) = result {
             // if res is an error this means sending the transaction failed
@@ -1183,7 +1199,7 @@ impl<T: Config> Pallet<T> {
 
         // If still in grace period, no need to continue doing locking and other stuff
         if matches!(contract.state, types::ContractState::GracePeriod(_)) {
-            log::debug!("contract {} is still in grace", contract.contract_id);
+            log::info!("contract {} is still in grace", contract.contract_id);
             ContractLock::<T>::insert(contract.contract_id, &contract_lock);
             return Ok(().into());
         }
@@ -1200,6 +1216,12 @@ impl<T: Config> Pallet<T> {
         };
         Self::deposit_event(Event::ContractBilled(contract_bill));
 
+        // If the contract is in delete state, remove all associated storage
+        if matches!(contract.state, types::ContractState::Deleted(_)) {
+            Self::remove_contract(contract.contract_id);
+            return Ok(().into());
+        }
+
         // If contract is node contract, set the amount unbilled back to 0
         if matches!(contract.contract_type, types::ContractData::NodeContract(_)) {
             let mut contract_billing_info =
@@ -1209,12 +1231,6 @@ impl<T: Config> Pallet<T> {
                 contract.contract_id,
                 &contract_billing_info,
             );
-        }
-
-        // If the contract is in delete state, remove all associated storage
-        if matches!(contract.state, types::ContractState::Deleted(_)) {
-            Self::remove_contract(contract.contract_id);
-            return Ok(().into());
         }
 
         // Finally update the lock
@@ -1246,7 +1262,7 @@ impl<T: Config> Pallet<T> {
                     // If the contract is a rent contract, also move state on associated node contracts
                     Self::handle_grace_rent_contract(contract, types::ContractState::Created)?;
                 } else {
-                    let diff = current_block - grace_start;
+                    let diff = current_block.checked_sub(grace_start).unwrap_or(0);
                     // If the contract grace period ran out, we can decomission the contract
                     if diff >= T::GracePeriod::get() {
                         Self::_update_contract_state(
@@ -1356,14 +1372,6 @@ impl<T: Config> Pallet<T> {
         // When the cultivation rewards are ready to be distributed or it's in delete state
         // Unlock all reserved balance and distribute
         if contract_lock.cycles >= T::DistributionFrequency::get() || canceled_and_not_zero {
-            // Deprecated locking system
-            // If there is a lock with ID being the contract ID, remove it
-            // Code can be removed in a later phase
-            <T as Config>::Currency::remove_lock(
-                contract.contract_id.to_be_bytes(),
-                &twin.account_id,
-            );
-
             // First remove the lock, calculate how much locked balance needs to be unlocked and re-lock the remaining locked balance
             let locked_balance = Self::get_locked_balance(&twin.account_id);
             let new_locked_balance = match locked_balance.checked_sub(&contract_lock.amount_locked)
@@ -1383,6 +1391,11 @@ impl<T: Config> Pallet<T> {
             // balance we can only transfer out the remaining balance
             // https://github.com/threefoldtech/tfchain/issues/479
             let twin_balance = Self::get_usable_balance(&twin.account_id);
+            log::info!(
+                "twin balance {:?} contract lock amount {:?}",
+                twin_balance,
+                contract_lock.amount_locked
+            );
 
             // Fetch the default pricing policy
             let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1)
@@ -1408,59 +1421,60 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn remove_contract(contract_id: u64) {
-        let contract = Contracts::<T>::get(contract_id);
-        if contract.is_none() {
-            return;
-        }
+    pub fn remove_contract(contract_id: u64) -> DispatchResultWithPostInfo {
+        let contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
 
-        if let Some(contract) = contract {
-            match contract.contract_type.clone() {
-                types::ContractData::NodeContract(mut node_contract) => {
-                    Self::remove_active_node_contract(node_contract.node_id, contract_id);
-                    if node_contract.public_ips > 0 {
-                        match Self::_free_ip(contract_id, &mut node_contract) {
-                            Ok(_) => (),
-                            Err(e) => {
-                                log::info!("error while freeing ips: {:?}", e);
-                            }
+        match contract.contract_type.clone() {
+            types::ContractData::NodeContract(mut node_contract) => {
+                if node_contract.public_ips > 0 {
+                    match Self::_free_ip(contract_id, &mut node_contract) {
+                        Ok(_) => (),
+                        Err(e) => {
+                            log::info!("error while freeing ips: {:?}", e);
                         }
                     }
-
-                    // remove the contract by hash from storage
-                    ContractIDByNodeIDAndHash::<T>::remove(
-                        node_contract.node_id,
-                        &node_contract.deployment_hash,
-                    );
-                    NodeContractResources::<T>::remove(contract_id);
-
-                    Self::deposit_event(Event::NodeContractCanceled {
-                        contract_id,
-                        node_id: node_contract.node_id,
-                        twin_id: contract.twin_id,
-                    });
                 }
-                types::ContractData::NameContract(name_contract) => {
-                    ContractIDByNameRegistration::<T>::remove(name_contract.name);
-                    Self::deposit_event(Event::NameContractCanceled { contract_id });
-                }
-                types::ContractData::RentContract(rent_contract) => {
-                    ActiveRentContractForNode::<T>::remove(rent_contract.node_id);
-                    // Remove all associated active node contracts
-                    let active_node_contracts =
-                        ActiveNodeContracts::<T>::get(rent_contract.node_id);
-                    for node_contract in active_node_contracts {
-                        Self::remove_contract(node_contract);
-                    }
-                    Self::deposit_event(Event::RentContractCanceled { contract_id });
-                }
-            };
 
-            log::debug!("removing contract");
-            ContractBillingInformationByID::<T>::remove(contract_id);
-            Contracts::<T>::remove(contract_id);
-            ContractLock::<T>::remove(contract_id);
-        }
+                // remove associated storage items
+                Self::remove_active_node_contract(node_contract.node_id, contract_id);
+                ContractIDByNodeIDAndHash::<T>::remove(
+                    node_contract.node_id,
+                    &node_contract.deployment_hash,
+                );
+                NodeContractResources::<T>::remove(contract_id);
+                ContractBillingInformationByID::<T>::remove(contract_id);
+
+                Self::deposit_event(Event::NodeContractCanceled {
+                    contract_id,
+                    node_id: node_contract.node_id,
+                    twin_id: contract.twin_id,
+                });
+            }
+            types::ContractData::NameContract(name_contract) => {
+                ContractIDByNameRegistration::<T>::remove(name_contract.name);
+                Self::deposit_event(Event::NameContractCanceled { contract_id });
+            }
+            types::ContractData::RentContract(rent_contract) => {
+                ActiveRentContractForNode::<T>::remove(rent_contract.node_id);
+                // Remove all associated active node contracts
+                let active_node_contracts = ActiveNodeContracts::<T>::get(rent_contract.node_id);
+                for node_contract in active_node_contracts {
+                    Self::remove_contract(node_contract)?;
+                }
+                Self::deposit_event(Event::RentContractCanceled { contract_id });
+            }
+        };
+
+        log::debug!("removing contract");
+        Contracts::<T>::remove(contract_id);
+        ContractLock::<T>::remove(contract_id);
+
+        // Clean up contract from billing loop
+        // This is the only place it should be done
+        log::debug!("cleaning up deleted contract from billing loop");
+        Self::remove_contract_from_billing_loop(contract_id)?;
+
+        Ok(().into())
     }
 
     // Following: https://library.threefold.me/info/threefold#/tfgrid/farming/threefold__proof_of_utilization
@@ -1469,6 +1483,17 @@ impl<T: Config> Pallet<T> {
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
         amount: BalanceOf<T>,
     ) -> DispatchResultWithPostInfo {
+        log::info!(
+            "Distributing cultivation rewards for contract {:?} with amount {:?}",
+            contract.contract_id,
+            amount,
+        );
+
+        // If the amount is zero, return
+        if amount == BalanceOf::<T>::saturated_from(0 as u128) {
+            return Ok(().into());
+        }
+
         // fetch source twin
         let twin =
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
@@ -1595,17 +1620,10 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    // Inserts a contract in a list where the index is the current block % billing frequency
+    // Inserts a contract in a billing loop where the index is the contract id % billing frequency
     // This way, we don't need to reinsert the contract everytime it gets billed
     pub fn insert_contract_in_billing_loop(contract_id: u64) {
-        if contract_id == 0 {
-            return;
-        }
-
-        // Save the contract to be billed at previous billing loop index
-        // to avoid being billed at same block by the offchain worker
-        // First billing for the contract will happen after 1 billing cycle
-        let index = Self::get_previous_billing_loop_index();
+        let index = Self::get_contract_billing_loop_index(contract_id);
         let mut contract_ids = ContractsToBillAt::<T>::get(index);
 
         if !contract_ids.contains(&contract_id) {
@@ -1619,12 +1637,11 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    // Removes contract from billing loop at previous index
-    // The reason for this is that the offchain worker tries to bill this contract in the context of the previous block
+    // Removes contract from billing loop where the index is the contract id % billing frequency
     pub fn remove_contract_from_billing_loop(
-        index: u64,
         contract_id: u64,
     ) -> Result<(), DispatchErrorWithPostInfo> {
+        let index = Self::get_contract_billing_loop_index(contract_id);
         let mut contract_ids = ContractsToBillAt::<T>::get(index);
 
         ensure!(
@@ -1822,10 +1839,14 @@ impl<T: Config> Pallet<T> {
         }
     }
 
+    // Get the usable balance of an account
+    // This is the balance minus the minimum balance
     fn get_usable_balance(account_id: &T::AccountId) -> BalanceOf<T> {
         let balance = pallet_balances::pallet::Pallet::<T>::usable_balance(account_id);
         let b = balance.saturated_into::<u128>();
         BalanceOf::<T>::saturated_from(b)
+            .checked_sub(&<T as Config>::Currency::minimum_balance())
+            .unwrap_or(BalanceOf::<T>::saturated_from(0 as u128))
     }
 
     fn get_locked_balance(account_id: &T::AccountId) -> BalanceOf<T> {
@@ -1915,18 +1936,17 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
+    // Billing index is contract id % (mod) Billing Frequency
+    // So index belongs to [0; billing_frequency - 1] range
+    pub fn get_contract_billing_loop_index(contract_id: u64) -> u64 {
+        contract_id % BillingFrequency::<T>::get()
+    }
+
     // Billing index is block number % (mod) Billing Frequency
+    // So index belongs to [0; billing_frequency - 1] range
     pub fn get_current_billing_loop_index() -> u64 {
         let current_block = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
         current_block % BillingFrequency::<T>::get()
-    }
-
-    pub fn get_previous_billing_loop_index() -> u64 {
-        let previous_block = <frame_system::Pallet<T>>::block_number()
-            .saturated_into::<u64>()
-            .checked_sub(1)
-            .unwrap_or(0);
-        previous_block % BillingFrequency::<T>::get()
     }
 
     pub fn _service_contract_create(
