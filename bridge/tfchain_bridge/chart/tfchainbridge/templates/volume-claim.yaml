@@ -1,0 +1,15 @@
+{{- if not .Values.volume.existingpersistentVolumeClaim -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    backupType: {{ .Values.threefoldVdc.backup | quote }}
+  name: tfchainbridge-volume-claim-{{ .Release.Name }}
+spec:
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.volume.size }}
+{{- end }}
