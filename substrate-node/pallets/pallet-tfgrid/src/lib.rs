@@ -19,6 +19,7 @@ use tfchain_support::{
     resources::Resources,
     types::{Interface, NodePower as NodePowerType, Power, PowerState, PublicIP},
 };
+use sp_core::Get;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
@@ -1185,32 +1186,11 @@ pub mod pallet {
 
         #[pallet::call_index(11)]
         #[pallet::weight(<T as Config>::WeightInfo::report_uptime())]
-        pub fn report_uptime(origin: OriginFor<T>, uptime: u64, timestamp_hint: u64) -> DispatchResultWithPostInfo {
+        pub fn report_uptime(origin: OriginFor<T>, uptime: u64) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
-            let twin_id =
-                TwinIdByAccountID::<T>::get(account_id).ok_or(Error::<T>::TwinNotExists)?;
-
-            ensure!(
-                NodeIdByTwinID::<T>::contains_key(twin_id),
-                Error::<T>::NodeNotExists
-            );
-            let node_id = NodeIdByTwinID::<T>::get(twin_id);
-
-            ensure!(Nodes::<T>::contains_key(node_id), Error::<T>::NodeNotExists);
-
-            
-            let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-            // check if timestamp hint is within the acceptable range of the current timestamp (now) and the drift value
-            ensure!(
-                timestamp_hint >= now.checked_sub(<T as Config>::TimestampHintDrift::get()).unwrap_or(0) 
-                && timestamp_hint <= now + <T as Config>::TimestampHintDrift::get(),
-                Error::<T>::InvalidTimestampHint
-            );
-
-            Self::deposit_event(Event::NodeUptimeReported(node_id, now, uptime));
-
-            Ok(Pays::No.into())
+            let timestamp_hint = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+            Self::_report_uptime(&account_id, uptime, timestamp_hint)            
         }
 
         #[pallet::call_index(12)]
@@ -2087,11 +2067,45 @@ pub mod pallet {
 
             Ok(().into())
         }
+
+        #[pallet::call_index(38)]
+        #[pallet::weight(<T as Config>::WeightInfo::report_uptime())]
+        pub fn report_uptime_v2(origin: OriginFor<T>, uptime: u64, timestamp_hint: u64) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+
+            Self::_report_uptime(&account_id, uptime, timestamp_hint)            
+        }
     }
 }
 
 // Internal functions of the pallet
 impl<T: Config> Pallet<T> {
+    pub fn _report_uptime(account_id: &T::AccountId, uptime: u64, timestamp_hint: u64) -> DispatchResultWithPostInfo {
+        let twin_id =
+        TwinIdByAccountID::<T>::get(account_id).ok_or(Error::<T>::TwinNotExists)?;
+
+        ensure!(
+            NodeIdByTwinID::<T>::contains_key(twin_id),
+            Error::<T>::NodeNotExists
+        );
+        let node_id = NodeIdByTwinID::<T>::get(twin_id);
+
+        ensure!(Nodes::<T>::contains_key(node_id), Error::<T>::NodeNotExists);
+
+        
+        let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+        // check if timestamp hint is within the acceptable range of the current timestamp (now) and the drift value
+        ensure!(
+            timestamp_hint >= now.checked_sub(<T as Config>::TimestampHintDrift::get()).unwrap_or(0) 
+            && timestamp_hint <= now + <T as Config>::TimestampHintDrift::get(),
+            Error::<T>::InvalidTimestampHint
+        );
+
+        Self::deposit_event(Event::NodeUptimeReported(node_id, now, uptime));
+
+        Ok(Pays::No.into())
+    }
+
     pub fn verify_signature(signature: [u8; 64], target: &T::AccountId, payload: &Vec<u8>) -> bool {
         Self::verify_ed_signature(signature, target, payload)
             || Self::verify_sr_signature(signature, target, payload)
