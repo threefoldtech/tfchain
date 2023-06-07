@@ -2192,6 +2192,98 @@ fn test_bound_twin_account_itself_fails() {
     })
 }
 
+#[test]
+fn test_farming_policies_ordering_and_assignment() {
+    ExternalityBuilder::build().execute_with(|| {
+        let name = b"default_not_certified".to_vec();
+        assert_ok!(TfgridModule::create_farming_policy(
+            RawOrigin::Root.into(),
+            name,
+            12,
+            15,
+            10,
+            8,
+            9999,
+            System::block_number() + 100,
+            true,
+            true,
+            NodeCertification::Diy,
+            FarmCertification::NotCertified,
+        ));
+
+        let name: Vec<u8> = b"fp_1".to_vec();
+        assert_ok!(TfgridModule::create_farming_policy(
+            RawOrigin::Root.into(),
+            name,
+            12,
+            15,
+            10,
+            8,
+            9999,
+            System::block_number() + 100,
+            false,
+            false,
+            NodeCertification::Certified,
+            FarmCertification::NotCertified,
+        ));
+
+        let name: Vec<u8> = b"default_certified".to_vec();
+        assert_ok!(TfgridModule::create_farming_policy(
+            RawOrigin::Root.into(),
+            name,
+            12,
+            15,
+            10,
+            8,
+            9999,
+            System::block_number() + 100,
+            true,
+            true,
+            NodeCertification::Certified,
+            FarmCertification::Gold,
+        ));
+
+        let name: Vec<u8> = b"fp_2".to_vec();
+        assert_ok!(TfgridModule::create_farming_policy(
+            RawOrigin::Root.into(),
+            name,
+            12,
+            15,
+            10,
+            8,
+            9999,
+            System::block_number() + 100,
+            false,
+            false,
+            NodeCertification::Diy,
+            FarmCertification::NotCertified,
+        ));
+
+        let policy_1 = TfgridModule::farming_policies_map(1);
+        let policy_2 = TfgridModule::farming_policies_map(2);
+        let policy_3 = TfgridModule::farming_policies_map(3);
+        let policy_4 = TfgridModule::farming_policies_map(4);
+
+        let mut policies = vec![&policy_1, &policy_2, &policy_3, &policy_4];
+        policies.sort();
+
+        assert_eq!(
+            policies.into_iter().map(|p| p.id).collect::<Vec<_>>(),
+            vec![4, 2, 1, 3]
+        );
+
+        create_twin_bob();
+        create_farm_bob();
+        create_extra_node();
+        let node_id = 1;
+
+        // farming policy 1 should be picked
+        // as last "not too certified" default policy
+        let node = TfgridModule::nodes(node_id).unwrap();
+        assert_eq!(node.farming_policy_id, 1);
+    })
+}
+
 fn create_entity() {
     let name = b"foobar".to_vec();
     let country = get_country_name_input(b"Belgium");
