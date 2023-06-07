@@ -10,6 +10,8 @@ pub mod time {
     pub const MILLISECS_PER_BLOCK: u64 = 6000;
     pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
     pub const SECS_PER_HOUR: u64 = 3600;
+    pub const SECS_PER_DAY: u64 = SECS_PER_HOUR * 24;
+    pub const SECS_PER_MONTH: u64 = SECS_PER_DAY * 30;
     pub const EPOCH_DURATION_IN_BLOCKS: super::BlockNumber = 1 * HOURS;
 
     // These time units are defined in number of blocks.

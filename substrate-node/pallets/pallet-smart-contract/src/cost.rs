@@ -10,7 +10,9 @@ use pallet_tfgrid::types as pallet_tfgrid_types;
 use sp_runtime::{Percent, SaturatedConversion};
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
-    constants::time::SECS_PER_HOUR, resources::Resources, types::NodeCertification,
+    constants::time::{SECS_PER_HOUR, SECS_PER_MONTH},
+    resources::Resources,
+    types::NodeCertification,
 };
 
 impl<T: Config> Contract<T> {
@@ -50,7 +52,7 @@ impl<T: Config> Contract<T> {
             certification_type,
         );
 
-        return Ok((amount_due, discount_received));
+        Ok((amount_due, discount_received))
     }
 
     pub fn calculate_contract_cost(
@@ -99,20 +101,7 @@ impl<T: Config> Contract<T> {
                     &pricing_policy,
                     true,
                 );
-                let regular_cost =
-                    Percent::from_percent(pricing_policy.discount_for_dedication_nodes)
-                        * contract_cost;
-                let extra_fee_cost = match DedicatedNodesExtraFee::<T>::get(rent_contract.node_id) {
-                    Some(fee_per_month) => {
-                        //
-                        let extra_cost = (U64F64::from_num(fee_per_month * seconds_elapsed)
-                            / U64F64::from_num(30 * 24 * 60 * 60)) // seconds in 1 month
-                        .to_num::<u64>();
-                        extra_cost
-                    }
-                    _ => 0,
-                };
-                regular_cost + extra_fee_cost // TO CHECK: apply discount to extra fee?
+                Percent::from_percent(pricing_policy.discount_for_dedication_nodes) * contract_cost
             }
             // Calculate total cost for a name contract
             types::ContractData::NameContract(_) => {
@@ -125,6 +114,21 @@ impl<T: Config> Contract<T> {
         };
 
         Ok(total_cost)
+    }
+
+    // Calculates the cost of extra fee for a dedicated node in TFT.
+    pub fn calculate_extra_fee_cost_tft(
+        &self,
+        node_id: u32,
+        seconds_elapsed: u64,
+    ) -> Result<BalanceOf<T>, DispatchErrorWithPostInfo> {
+        let cost = calculate_extra_fee_cost::<T>(node_id, seconds_elapsed);
+        if cost == 0 {
+            return Ok(BalanceOf::<T>::saturated_from(0 as u128));
+        }
+        let cost_tft = calculate_cost_in_tft_from_musd::<T>(cost)?;
+
+        Ok(BalanceOf::<T>::saturated_from(cost_tft))
     }
 }
 
@@ -204,6 +208,17 @@ pub fn calculate_resources_cost<T: Config>(
 
     return total_cost.ceil().to_num::<u64>();
 }
+
+// Calculates the cost of extra fee for a dedicated node .
+pub fn calculate_extra_fee_cost<T: Config>(node_id: u32, seconds_elapsed: u64) -> u64 {
+    match DedicatedNodesExtraFee::<T>::get(node_id) {
+        Some(fee_per_month) => (U64F64::from_num(fee_per_month * seconds_elapsed)
+            / U64F64::from_num(SECS_PER_MONTH))
+        .to_num::<u64>(),
+        None => 0,
+    }
+}
+
 // cu1 = MAX(cru/2, mru/4)
 // cu2 = MAX(cru, mru/8)
 // cu3 = MAX(cru/4, mru/2)

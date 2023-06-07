@@ -1195,8 +1195,16 @@ impl<T: Config> Pallet<T> {
         let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
         let seconds_elapsed = now.checked_sub(contract_lock.lock_updated).unwrap_or(0);
 
-        let (amount_due, discount_received) =
+        // Calculate total amount due
+        let (regular_amount_due, discount_received) =
             contract.calculate_contract_cost_tft(total_balance, seconds_elapsed)?;
+        let extra_amount_due = match &contract.contract_type {
+            types::ContractData::RentContract(rc) => {
+                contract.calculate_extra_fee_cost_tft(rc.node_id, seconds_elapsed)?
+            }
+            _ => BalanceOf::<T>::saturated_from(0 as u128),
+        };
+        let amount_due = regular_amount_due + extra_amount_due;
 
         // If there is nothing to be paid and the contract is not in state delete, return
         // Can be that the users cancels the contract in the same block that it's getting billed
@@ -1206,16 +1214,21 @@ impl<T: Config> Pallet<T> {
             return Ok(().into());
         };
 
-        let total_lock_amount = contract_lock.amount_locked + amount_due;
+        // Calculate total amount locked
+        let regular_lock_amount = contract_lock.amount_locked + regular_amount_due;
+        let extra_lock_amount = contract_lock.extra_amount_locked + extra_amount_due;
+        let lock_amount = regular_lock_amount + extra_lock_amount;
+
         // Handle grace
-        let contract = Self::handle_grace(&mut contract, usable_balance, total_lock_amount)?;
+        let contract = Self::handle_grace(&mut contract, usable_balance, lock_amount)?;
 
         // Only update contract lock in state (Created, GracePeriod)
         if !matches!(contract.state, types::ContractState::Deleted(_)) {
             // increment cycles billed and update the internal lock struct
             contract_lock.lock_updated = now;
             contract_lock.cycles += 1;
-            contract_lock.amount_locked = total_lock_amount;
+            contract_lock.amount_locked = regular_lock_amount;
+            contract_lock.extra_amount_locked = extra_lock_amount;
         }
 
         // If still in grace period, no need to continue doing locking and other stuff
@@ -1388,18 +1401,18 @@ impl<T: Config> Pallet<T> {
             );
         }
 
-        let canceled_and_not_zero =
-            contract.is_state_delete() && contract_lock.amount_locked.saturated_into::<u64>() > 0;
+        let canceled_and_not_zero = contract.is_state_delete()
+            && contract_lock.total_amount_locked().saturated_into::<u64>() > 0;
         // When the cultivation rewards are ready to be distributed or it's in delete state
         // Unlock all reserved balance and distribute
         if contract_lock.cycles >= T::DistributionFrequency::get() || canceled_and_not_zero {
             // First remove the lock, calculate how much locked balance needs to be unlocked and re-lock the remaining locked balance
             let locked_balance = Self::get_locked_balance(&twin.account_id);
-            let new_locked_balance = match locked_balance.checked_sub(&contract_lock.amount_locked)
-            {
-                Some(b) => b,
-                None => BalanceOf::<T>::saturated_from(0 as u128),
-            };
+            let new_locked_balance =
+                match locked_balance.checked_sub(&contract_lock.total_amount_locked()) {
+                    Some(b) => b,
+                    None => BalanceOf::<T>::saturated_from(0 as u128),
+                };
             <T as Config>::Currency::remove_lock(GRID_LOCK_ID, &twin.account_id);
             <T as Config>::Currency::set_lock(
                 GRID_LOCK_ID,
@@ -1411,7 +1424,34 @@ impl<T: Config> Pallet<T> {
             // Fetch twin balance, if the amount locked in the contract lock exceeds the current unlocked
             // balance we can only transfer out the remaining balance
             // https://github.com/threefoldtech/tfchain/issues/479
-            let twin_balance = Self::get_usable_balance(&twin.account_id);
+            let mut twin_balance = Self::get_usable_balance(&twin.account_id);
+
+            // First, distribute extra cultivation rewards if any
+            if contract_lock.has_extra_amount_locked() {
+                log::info!(
+                    "twin balance {:?} contract lock extra amount {:?}",
+                    twin_balance,
+                    contract_lock.extra_amount_locked
+                );
+
+                match Self::_distribute_extra_cultivation_rewards(
+                    &contract,
+                    twin_balance.min(contract_lock.extra_amount_locked),
+                ) {
+                    Ok(_) => {}
+                    Err(err) => {
+                        log::error!(
+                            "error while distributing extra cultivation rewards {:?}",
+                            err
+                        );
+                        return Err(err);
+                    }
+                };
+
+                // Update twin balance after distribution
+                twin_balance = Self::get_usable_balance(&twin.account_id);
+            }
+
             log::info!(
                 "twin balance {:?} contract lock amount {:?}",
                 twin_balance,
@@ -1421,7 +1461,8 @@ impl<T: Config> Pallet<T> {
             // Fetch the default pricing policy
             let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1)
                 .ok_or(Error::<T>::PricingPolicyNotExists)?;
-            // Distribute cultivation rewards
+
+            // Then, distribute cultivation rewards
             match Self::_distribute_cultivation_rewards(
                 &contract,
                 &pricing_policy,
@@ -1433,9 +1474,11 @@ impl<T: Config> Pallet<T> {
                     return Err(err);
                 }
             };
-            // Reset values
+
+            // Reset contract lock values
             contract_lock.lock_updated = now;
             contract_lock.amount_locked = BalanceOf::<T>::saturated_from(0 as u128);
+            contract_lock.extra_amount_locked = BalanceOf::<T>::saturated_from(0 as u128);
             contract_lock.cycles = 0;
         }
 
@@ -1494,6 +1537,58 @@ impl<T: Config> Pallet<T> {
         // This is the only place it should be done
         log::debug!("cleaning up deleted contract from billing loop");
         Self::remove_contract_from_billing_loop(contract_id)?;
+
+        Ok(().into())
+    }
+
+    fn _distribute_extra_cultivation_rewards(
+        contract: &types::Contract<T>,
+        amount: BalanceOf<T>,
+    ) -> DispatchResultWithPostInfo {
+        log::info!(
+            "Distributing extra cultivation rewards for contract {:?} with amount {:?}",
+            contract.contract_id,
+            amount,
+        );
+
+        // If the amount is zero, return
+        if amount == BalanceOf::<T>::saturated_from(0 as u128) {
+            return Ok(().into());
+        }
+
+        // Fetch source twin = dedicated node user
+        let src_twin =
+            pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
+
+        // Fetch destination twin = farmer
+        let dst_twin = match &contract.contract_type {
+            types::ContractData::RentContract(rc) => {
+                let node =
+                    pallet_tfgrid::Nodes::<T>::get(rc.node_id).ok_or(Error::<T>::NodeNotExists)?;
+                let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id)
+                    .ok_or(Error::<T>::FarmNotExists)?;
+                pallet_tfgrid::Twins::<T>::get(farm.twin_id).ok_or(Error::<T>::TwinNotExists)?
+            }
+            _ => {
+                return Err(DispatchErrorWithPostInfo::from(
+                    Error::<T>::InvalidProviderConfiguration,
+                ));
+            }
+        };
+
+        // Send 100% to the node's owner (farmer)
+        log::debug!(
+            "Transfering: {:?} from contract twin {:?} to farmer account {:?}",
+            &amount,
+            &src_twin.account_id,
+            &dst_twin.account_id,
+        );
+        <T as Config>::Currency::transfer(
+            &src_twin.account_id,
+            &dst_twin.account_id,
+            amount,
+            ExistenceRequirement::KeepAlive,
+        )?;
 
         Ok(().into())
     }

@@ -1,8 +1,10 @@
 use crate::pallet::{MaxDeploymentDataLength, MaxNodeContractPublicIPs};
 use crate::Config;
+use core::{convert::TryInto, ops::Add};
 use frame_support::{pallet_prelude::ConstU32, BoundedVec, RuntimeDebugNoBound};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
+use sp_runtime::SaturatedConversion;
 use sp_std::prelude::*;
 use substrate_fixed::types::U64F64;
 use tfchain_support::{resources::Resources, types::PublicIP};
@@ -212,8 +214,23 @@ pub struct ContractResources {
 )]
 pub struct ContractLock<BalanceOf> {
     pub amount_locked: BalanceOf,
+    pub extra_amount_locked: BalanceOf,
     pub lock_updated: u64,
     pub cycles: u16,
+}
+
+impl<BalanceOf: Add<Output = BalanceOf> + Copy + TryInto<u64>> ContractLock<BalanceOf> {
+    pub fn total_amount_locked(&self) -> BalanceOf {
+        self.amount_locked + self.extra_amount_locked
+    }
+
+    pub fn has_some_amount_locked(&self) -> bool {
+        self.total_amount_locked().saturated_into::<u64>() > 0
+    }
+
+    pub fn has_extra_amount_locked(&self) -> bool {
+        self.extra_amount_locked.saturated_into::<u64>() > 0
+    }
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
