@@ -25,7 +25,7 @@
 //! types and just returns the boxed trait object.
 use core::marker::PhantomData;
 use frame_support::storage::{IterableStorageMap, StorageValue};
-use codec::{Codec, EncodeLike};
+use parity_scale_codec::{Codec, EncodeLike};
 use sp_std::prelude::*;
 
 /// Trait object presenting the ringbuffer interface.

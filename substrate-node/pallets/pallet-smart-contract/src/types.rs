@@ -1,7 +1,7 @@
 use crate::pallet::{MaxDeploymentDataLength, MaxNodeContractPublicIPs};
 use crate::Config;
-use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{pallet_prelude::ConstU32, BoundedVec, RuntimeDebugNoBound};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
 use substrate_fixed::types::U64F64;
@@ -21,11 +21,12 @@ pub enum StorageVersion {
     V7,
     V8,
     V9,
+    V10,
 }
 
 impl Default for StorageVersion {
     fn default() -> StorageVersion {
-        StorageVersion::V9
+        StorageVersion::V10
     }
 }
 

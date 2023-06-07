@@ -12,7 +12,7 @@ use tfchain_support::types::{FarmCertification, NodeCertification, IP4};
 #[test]
 fn farmers_vote_no_farm_fails() {
     new_test_ext().execute_with(|| {
-        let proposal = make_proposal("some_remark".as_bytes().to_vec());
+        let proposal = make_proposal(b"some_remark".to_vec());
         let _proposal_weight = proposal.get_dispatch_info().weight;
         let hash = BlakeTwo256::hash_of(&proposal);
 
@@ -20,14 +20,14 @@ fn farmers_vote_no_farm_fails() {
             RuntimeOrigin::signed(1),
             3,
             Box::new(proposal.clone()),
-            "some_description".as_bytes().to_vec(),
-            "some_link".as_bytes().to_vec(),
+            b"some_description".to_vec(),
+            b"some_link".to_vec(),
             None
         ));
 
         assert_noop!(
             DaoModule::vote(RuntimeOrigin::signed(10), 1, hash.clone(), true),
-            Error::<Test>::NotAuthorizedToVote
+            Error::<TestRuntime>::NotAuthorizedToVote
         );
     });
 }
@@ -38,7 +38,7 @@ fn farmers_vote_proposal_works() {
         System::set_block_number(1);
         create_farming_policies();
 
-        let proposal = make_proposal("some_remark".as_bytes().to_vec());
+        let proposal = make_proposal(b"some_remark".to_vec());
         let _proposal_weight = proposal.get_dispatch_info().weight;
         let hash = BlakeTwo256::hash_of(&proposal);
 
@@ -46,12 +46,12 @@ fn farmers_vote_proposal_works() {
             RuntimeOrigin::signed(1),
             3,
             Box::new(proposal.clone()),
-            "some_description".as_bytes().to_vec(),
-            "some_link".as_bytes().to_vec(),
+            b"some_description".to_vec(),
+            b"some_link".to_vec(),
             None
         ));
 
-        prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
+        prepare_twin_farm_and_node(10, b"farm1".to_vec(), 1);
         assert_ok!(DaoModule::vote(
             RuntimeOrigin::signed(10),
             1,
@@ -59,7 +59,7 @@ fn farmers_vote_proposal_works() {
             true
         ));
 
-        prepare_twin_farm_and_node(11, "farm2".as_bytes().to_vec(), 2);
+        prepare_twin_farm_and_node(11, b"farm2".to_vec(), 2);
         assert_ok!(DaoModule::vote(
             RuntimeOrigin::signed(11),
             2,
@@ -75,7 +75,7 @@ fn farmers_vote_proposal_if_no_nodes_fails() {
         System::set_block_number(1);
         create_farming_policies();
 
-        let proposal = make_proposal("some_remark".as_bytes().to_vec());
+        let proposal = make_proposal(b"some_remark".to_vec());
         let _proposal_weight = proposal.get_dispatch_info().weight;
         let hash = BlakeTwo256::hash_of(&proposal);
 
@@ -83,16 +83,16 @@ fn farmers_vote_proposal_if_no_nodes_fails() {
             RuntimeOrigin::signed(1),
             1,
             Box::new(proposal.clone()),
-            "some_description".as_bytes().to_vec(),
-            "some_link".as_bytes().to_vec(),
+            b"some_description".to_vec(),
+            b"some_link".to_vec(),
             None
         ));
 
         prepare_twin(10);
-        prepare_farm(10, "farm1".as_bytes().to_vec());
+        prepare_farm(10, b"farm1".to_vec());
         assert_noop!(
             DaoModule::vote(RuntimeOrigin::signed(10), 1, hash.clone(), true),
-            Error::<Test>::FarmHasNoNodes
+            Error::<TestRuntime>::FarmHasNoNodes
         );
 
         let votes = DaoModule::voting(hash).unwrap();
@@ -106,7 +106,7 @@ fn farmer_weight_is_set_properly_when_node_is_added_works() {
         System::set_block_number(1);
         create_farming_policies();
 
-        prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
+        prepare_twin_farm_and_node(10, b"farm1".to_vec(), 1);
 
         let weight = DaoModule::farm_weight(1);
         assert_ne!(weight, 0);
@@ -119,7 +119,7 @@ fn farmer_weight_is_set_properly_when_node_is_added_and_removed_works() {
         System::set_block_number(1);
         create_farming_policies();
 
-        prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
+        prepare_twin_farm_and_node(10, b"farm1".to_vec(), 1);
 
         let weight = DaoModule::farm_weight(1);
         assert_ne!(weight, 0);
@@ -137,7 +137,7 @@ fn close_works() {
         System::set_block_number(1);
         create_farming_policies();
 
-        let proposal = make_proposal("some_remark".as_bytes().to_vec());
+        let proposal = make_proposal(b"some_remark".to_vec());
         let hash = BlakeTwo256::hash_of(&proposal);
 
         let threshold = 2;
@@ -145,13 +145,13 @@ fn close_works() {
             RuntimeOrigin::signed(1),
             threshold,
             Box::new(proposal.clone()),
-            "some_description".as_bytes().to_vec(),
-            "some_link".as_bytes().to_vec(),
+            b"some_description".to_vec(),
+            b"some_link".to_vec(),
             None
         ));
 
         // Farmer 1 votes yes
-        prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
+        prepare_twin_farm_and_node(10, b"farm1".to_vec(), 1);
         assert_ok!(DaoModule::vote(
             RuntimeOrigin::signed(10),
             1,
@@ -162,15 +162,15 @@ fn close_works() {
         System::set_block_number(4);
         assert_noop!(
             DaoModule::close(RuntimeOrigin::signed(4), hash.clone(), 0,),
-            Error::<Test>::NotCouncilMember
+            Error::<TestRuntime>::NotCouncilMember
         );
         assert_noop!(
             DaoModule::close(RuntimeOrigin::signed(2), hash.clone(), 0,),
-            Error::<Test>::OngoingVoteAndTresholdStillNotMet
+            Error::<TestRuntime>::OngoingVoteAndTresholdStillNotMet
         );
 
         // Farmer 2 votes yes
-        prepare_twin_farm_and_node(11, "farm2".as_bytes().to_vec(), 2);
+        prepare_twin_farm_and_node(11, b"farm2".to_vec(), 2);
         assert_ok!(DaoModule::vote(
             RuntimeOrigin::signed(11),
             2,
@@ -245,15 +245,15 @@ fn close_after_proposal_duration_works() {
     new_test_ext().execute_with(|| {
         System::set_block_number(1);
 
-        let proposal = make_proposal("some_remark".as_bytes().to_vec());
+        let proposal = make_proposal(b"some_remark".to_vec());
         let hash = BlakeTwo256::hash_of(&proposal);
 
         assert_ok!(DaoModule::propose(
             RuntimeOrigin::signed(1),
             2,
             Box::new(proposal.clone()),
-            "some_description".as_bytes().to_vec(),
-            "some_link".as_bytes().to_vec(),
+            b"some_description".to_vec(),
+            b"some_link".to_vec(),
             None
         ));
 
@@ -265,15 +265,15 @@ fn close_after_proposal_duration_works() {
 #[test]
 fn close_if_not_council_member_fails() {
     new_test_ext().execute_with(|| {
-        let proposal = make_proposal("some_remark".as_bytes().to_vec());
+        let proposal = make_proposal(b"some_remark".to_vec());
         let hash = BlakeTwo256::hash_of(&proposal);
 
         assert_ok!(DaoModule::propose(
             RuntimeOrigin::signed(1),
             2,
             Box::new(proposal.clone()),
-            "some_description".as_bytes().to_vec(),
-            "some_link".as_bytes().to_vec(),
+            b"some_description".to_vec(),
+            b"some_link".to_vec(),
             None
         ));
 
@@ -281,7 +281,7 @@ fn close_if_not_council_member_fails() {
 
         assert_noop!(
             DaoModule::close(not_council_member, hash.clone(), 0,),
-            Error::<Test>::NotCouncilMember
+            Error::<TestRuntime>::NotCouncilMember
         );
     });
 }
@@ -302,13 +302,13 @@ fn motion_approval_works() {
             RuntimeOrigin::signed(1),
             2,
             Box::new(proposal.clone()),
-            "some_description".as_bytes().to_vec(),
-            "some_link".as_bytes().to_vec(),
+            b"some_description".to_vec(),
+            b"some_link".to_vec(),
             None
         ));
 
         // Farmer 1 votes yes
-        prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
+        prepare_twin_farm_and_node(10, b"farm1".to_vec(), 1);
         assert_ok!(DaoModule::vote(
             RuntimeOrigin::signed(10),
             1,
@@ -317,7 +317,7 @@ fn motion_approval_works() {
         ));
 
         // Farmer 2 votes yes
-        prepare_twin_farm_and_node(11, "farm2".as_bytes().to_vec(), 2);
+        prepare_twin_farm_and_node(11, b"farm2".to_vec(), 2);
         assert_ok!(DaoModule::vote(
             RuntimeOrigin::signed(11),
             2,
@@ -417,8 +417,8 @@ fn motion_veto_works() {
             RuntimeOrigin::signed(1),
             2,
             Box::new(proposal.clone()),
-            "some_description".as_bytes().to_vec(),
-            "some_link".as_bytes().to_vec(),
+            b"some_description".to_vec(),
+            b"some_link".to_vec(),
             None
         ));
 
@@ -523,13 +523,13 @@ fn weighted_voting_works() {
             RuntimeOrigin::signed(1),
             2,
             Box::new(proposal.clone()),
-            "some_description".as_bytes().to_vec(),
-            "some_link".as_bytes().to_vec(),
+            b"some_description".to_vec(),
+            b"some_link".to_vec(),
             None
         ));
 
         // Farmer 1 votes yes
-        prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
+        prepare_twin_farm_and_node(10, b"farm1".to_vec(), 1);
         assert_ok!(DaoModule::vote(
             RuntimeOrigin::signed(10),
             1,
@@ -538,7 +538,7 @@ fn weighted_voting_works() {
         ));
 
         // Farmer 2 votes no
-        prepare_twin_farm_and_big_node(11, "farm2".as_bytes().to_vec(), 2);
+        prepare_twin_farm_and_big_node(11, b"farm2".to_vec(), 2);
         assert_ok!(DaoModule::vote(
             RuntimeOrigin::signed(11),
             2,
@@ -629,13 +629,13 @@ fn voting_tfgridmodule_call_works() {
             RuntimeOrigin::signed(1),
             2,
             Box::new(proposal.clone()),
-            "some_description".as_bytes().to_vec(),
-            "some_link".as_bytes().to_vec(),
+            b"some_description".to_vec(),
+            b"some_link".to_vec(),
             None
         ));
 
         // Farmer 1 votes yes
-        prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
+        prepare_twin_farm_and_node(10, b"farm1".to_vec(), 1);
         assert_ok!(DaoModule::vote(
             RuntimeOrigin::signed(10),
             1,
@@ -644,7 +644,7 @@ fn voting_tfgridmodule_call_works() {
         ));
 
         // Farmer 2 votes no
-        prepare_twin_farm_and_node(11, "farm2".as_bytes().to_vec(), 2);
+        prepare_twin_farm_and_node(11, b"farm2".to_vec(), 2);
         assert_ok!(DaoModule::vote(
             RuntimeOrigin::signed(11),
             2,
@@ -739,20 +739,20 @@ fn customize_proposal_duration_works() {
         System::set_block_number(1);
         create_farming_policies();
 
-        let proposal = make_proposal("some_remark".as_bytes().to_vec());
+        let proposal = make_proposal(b"some_remark".to_vec());
         let hash = BlakeTwo256::hash_of(&proposal);
 
         assert_ok!(DaoModule::propose(
             RuntimeOrigin::signed(1),
             2,
             Box::new(proposal.clone()),
-            "some_description".as_bytes().to_vec(),
-            "some_link".as_bytes().to_vec(),
+            b"some_description".to_vec(),
+            b"some_link".to_vec(),
             Some(10)
         ));
 
         // Farmer 1 votes yes
-        prepare_twin_farm_and_node(10, "farm1".as_bytes().to_vec(), 1);
+        prepare_twin_farm_and_node(10, b"farm1".to_vec(), 1);
         assert_ok!(DaoModule::vote(
             RuntimeOrigin::signed(10),
             1,
@@ -763,7 +763,7 @@ fn customize_proposal_duration_works() {
         System::set_block_number(9);
         assert_noop!(
             DaoModule::close(RuntimeOrigin::signed(2), hash.clone(), 0,),
-            Error::<Test>::OngoingVoteAndTresholdStillNotMet
+            Error::<TestRuntime>::OngoingVoteAndTresholdStillNotMet
         );
 
         System::set_block_number(11);
@@ -776,17 +776,17 @@ fn customize_proposal_duration_out_of_bounds_fails() {
     new_test_ext().execute_with(|| {
         System::set_block_number(1);
         create_farming_policies();
-        let proposal = make_proposal("some_remark".as_bytes().to_vec());
+        let proposal = make_proposal(b"some_remark".to_vec());
         // assert_noop!(
         //     DaoModule::propose(
         //         RuntimeOrigin::signed(1),
         //         2,
         //         Box::new(proposal.clone()),
-        //         "some_description".as_bytes().to_vec(),
-        //         "some_link".as_bytes().to_vec(),
+        //         b"some_description".to_vec(),
+        //         b"some_link".to_vec(),
         //         Some(1000000000)
         //     ),
-        //     Error::<Test>::InvalidProposalDuration
+        //     Error::<TestRuntime>::InvalidProposalDuration
         // );
 
         assert_noop!(
@@ -794,11 +794,11 @@ fn customize_proposal_duration_out_of_bounds_fails() {
                 RuntimeOrigin::signed(1),
                 2,
                 Box::new(proposal.clone()),
-                "some_description".as_bytes().to_vec(),
-                "some_link".as_bytes().to_vec(),
+                b"some_description".to_vec(),
+                b"some_link".to_vec(),
                 Some(1000000000)
             ),
-            Error::<Test>::InvalidProposalDuration
+            Error::<TestRuntime>::InvalidProposalDuration
         );
     });
 }
@@ -902,7 +902,7 @@ fn prepare_big_node(account_id: u64, farm_id: u32) {
 }
 
 pub fn prepare_farm(account_id: u64, farm_name: Vec<u8>) {
-    let mut pub_ips: PublicIpListInput<Test> = bounded_vec![];
+    let mut pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
 
     let ip = get_public_ip_ip_input(b"185.206.122.33/24");
     let gw = get_public_ip_gw_input(b"185.206.122.1");
@@ -917,7 +917,7 @@ pub fn prepare_farm(account_id: u64, farm_name: Vec<u8>) {
 }
 
 fn create_farming_policies() {
-    let name = "farm_1".as_bytes().to_vec();
+    let name = b"farm_1".to_vec();
     assert_ok!(TfgridModule::create_farming_policy(
         RawOrigin::Root.into(),
         name,
@@ -933,7 +933,7 @@ fn create_farming_policies() {
         FarmCertification::Gold,
     ));
 
-    let name = "farm2".as_bytes().to_vec();
+    let name = b"farm2".to_vec();
     assert_ok!(TfgridModule::create_farming_policy(
         RawOrigin::Root.into(),
         name,
@@ -949,7 +949,7 @@ fn create_farming_policies() {
         FarmCertification::NotCertified,
     ));
 
-    let name = "farm3".as_bytes().to_vec();
+    let name = b"farm3".to_vec();
     assert_ok!(TfgridModule::create_farming_policy(
         RawOrigin::Root.into(),
         name,
@@ -965,7 +965,7 @@ fn create_farming_policies() {
         FarmCertification::Gold,
     ));
 
-    let name = "farm1".as_bytes().to_vec();
+    let name = b"farm1".to_vec();
     assert_ok!(TfgridModule::create_farming_policy(
         RawOrigin::Root.into(),
         name,

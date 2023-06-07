@@ -89,11 +89,11 @@ pub mod pallet {
     use super::types::*;
     use super::weights::WeightInfo;
     use super::*;
-    use codec::FullCodec;
     use frame_support::pallet_prelude::*;
     use frame_support::traits::Hooks;
     use frame_support::traits::{Currency, Get, LockIdentifier, LockableCurrency, OnUnbalanced};
     use frame_system::pallet_prelude::*;
+    use parity_scale_codec::FullCodec;
     use sp_core::H256;
     use sp_std::{
         convert::{TryFrom, TryInto},
@@ -110,7 +110,6 @@ pub mod pallet {
     pub const GRID_LOCK_ID: LockIdentifier = *b"gridlock";
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
@@ -536,20 +535,9 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::bill_contract_for_block())]
         pub fn bill_contract_for_block(
             origin: OriginFor<T>,
-            index: u64,
             contract_id: u64,
         ) -> DispatchResultWithPostInfo {
             let _account_id = ensure_signed(origin)?;
-
-            // Clean up contract from billing loop if it doesn't exist anymore
-            // This is the only place it should be done to guarantee we
-            // remove contract id from billing loop at right index
-            if Contracts::<T>::get(contract_id).is_none() {
-                log::debug!("cleaning up deleted contract from billing loop");
-                Self::remove_contract_from_billing_loop(index, contract_id)?;
-                return Ok(().into());
-            }
-
             Self::bill_contract(contract_id)
         }
 
@@ -727,8 +715,8 @@ pub mod pallet {
 }
 
 use crate::types::HexHash;
-use pallet::NameContractNameOf;
 use sp_std::convert::{TryFrom, TryInto};
+
 // Internal functions of the pallet
 impl<T: Config> Pallet<T> {
     pub fn _create_node_contract(
@@ -913,8 +901,6 @@ impl<T: Config> Pallet<T> {
 
         Self::validate_solution_provider(solution_provider_id)?;
 
-        // Start billing frequency loop
-        // Will always be block now + frequency
         // Contract is inserted in billing loop ONLY once at contract creation
         Self::insert_contract_in_billing_loop(id);
 
@@ -1147,10 +1133,9 @@ impl<T: Config> Pallet<T> {
             );
             return Err(<Error<T>>::OffchainSignedTxCannotSign);
         }
-        let index = Self::get_current_billing_loop_index();
 
-        let result = signer
-            .send_signed_transaction(|_acct| Call::bill_contract_for_block { index, contract_id });
+        let result =
+            signer.send_signed_transaction(|_acct| Call::bill_contract_for_block { contract_id });
 
         if let Some((acc, res)) = result {
             // if res is an error this means sending the transaction failed
@@ -1232,7 +1217,7 @@ impl<T: Config> Pallet<T> {
 
         // If the contract is in delete state, remove all associated storage
         if matches!(contract.state, types::ContractState::Deleted(_)) {
-            Self::remove_contract(contract.contract_id);
+            Self::remove_contract(contract.contract_id)?;
             return Ok(().into());
         }
 
@@ -1435,59 +1420,60 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn remove_contract(contract_id: u64) {
-        let contract = Contracts::<T>::get(contract_id);
-        if contract.is_none() {
-            return;
-        }
+    pub fn remove_contract(contract_id: u64) -> DispatchResultWithPostInfo {
+        let contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
 
-        if let Some(contract) = contract {
-            match contract.contract_type.clone() {
-                types::ContractData::NodeContract(mut node_contract) => {
-                    Self::remove_active_node_contract(node_contract.node_id, contract_id);
-                    if node_contract.public_ips > 0 {
-                        match Self::_free_ip(contract_id, &mut node_contract) {
-                            Ok(_) => (),
-                            Err(e) => {
-                                log::info!("error while freeing ips: {:?}", e);
-                            }
+        match contract.contract_type.clone() {
+            types::ContractData::NodeContract(mut node_contract) => {
+                if node_contract.public_ips > 0 {
+                    match Self::_free_ip(contract_id, &mut node_contract) {
+                        Ok(_) => (),
+                        Err(e) => {
+                            log::info!("error while freeing ips: {:?}", e);
                         }
                     }
-
-                    // remove the contract by hash from storage
-                    ContractIDByNodeIDAndHash::<T>::remove(
-                        node_contract.node_id,
-                        &node_contract.deployment_hash,
-                    );
-                    NodeContractResources::<T>::remove(contract_id);
-
-                    Self::deposit_event(Event::NodeContractCanceled {
-                        contract_id,
-                        node_id: node_contract.node_id,
-                        twin_id: contract.twin_id,
-                    });
                 }
-                types::ContractData::NameContract(name_contract) => {
-                    ContractIDByNameRegistration::<T>::remove(name_contract.name);
-                    Self::deposit_event(Event::NameContractCanceled { contract_id });
-                }
-                types::ContractData::RentContract(rent_contract) => {
-                    ActiveRentContractForNode::<T>::remove(rent_contract.node_id);
-                    // Remove all associated active node contracts
-                    let active_node_contracts =
-                        ActiveNodeContracts::<T>::get(rent_contract.node_id);
-                    for node_contract in active_node_contracts {
-                        Self::remove_contract(node_contract);
-                    }
-                    Self::deposit_event(Event::RentContractCanceled { contract_id });
-                }
-            };
 
-            log::debug!("removing contract");
-            ContractBillingInformationByID::<T>::remove(contract_id);
-            Contracts::<T>::remove(contract_id);
-            ContractLock::<T>::remove(contract_id);
-        }
+                // remove associated storage items
+                Self::remove_active_node_contract(node_contract.node_id, contract_id);
+                ContractIDByNodeIDAndHash::<T>::remove(
+                    node_contract.node_id,
+                    &node_contract.deployment_hash,
+                );
+                NodeContractResources::<T>::remove(contract_id);
+                ContractBillingInformationByID::<T>::remove(contract_id);
+
+                Self::deposit_event(Event::NodeContractCanceled {
+                    contract_id,
+                    node_id: node_contract.node_id,
+                    twin_id: contract.twin_id,
+                });
+            }
+            types::ContractData::NameContract(name_contract) => {
+                ContractIDByNameRegistration::<T>::remove(name_contract.name);
+                Self::deposit_event(Event::NameContractCanceled { contract_id });
+            }
+            types::ContractData::RentContract(rent_contract) => {
+                ActiveRentContractForNode::<T>::remove(rent_contract.node_id);
+                // Remove all associated active node contracts
+                let active_node_contracts = ActiveNodeContracts::<T>::get(rent_contract.node_id);
+                for node_contract in active_node_contracts {
+                    Self::remove_contract(node_contract)?;
+                }
+                Self::deposit_event(Event::RentContractCanceled { contract_id });
+            }
+        };
+
+        log::debug!("removing contract");
+        Contracts::<T>::remove(contract_id);
+        ContractLock::<T>::remove(contract_id);
+
+        // Clean up contract from billing loop
+        // This is the only place it should be done
+        log::debug!("cleaning up deleted contract from billing loop");
+        Self::remove_contract_from_billing_loop(contract_id)?;
+
+        Ok(().into())
     }
 
     // Following: https://library.threefold.me/info/threefold#/tfgrid/farming/threefold__proof_of_utilization
@@ -1633,17 +1619,10 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    // Inserts a contract in a list where the index is the current block % billing frequency
+    // Inserts a contract in a billing loop where the index is the contract id % billing frequency
     // This way, we don't need to reinsert the contract everytime it gets billed
     pub fn insert_contract_in_billing_loop(contract_id: u64) {
-        if contract_id == 0 {
-            return;
-        }
-
-        // Save the contract to be billed at previous billing loop index
-        // to avoid being billed at same block by the offchain worker
-        // First billing for the contract will happen after 1 billing cycle
-        let index = Self::get_previous_billing_loop_index();
+        let index = Self::get_contract_billing_loop_index(contract_id);
         let mut contract_ids = ContractsToBillAt::<T>::get(index);
 
         if !contract_ids.contains(&contract_id) {
@@ -1657,12 +1636,11 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    // Removes contract from billing loop at previous index
-    // The reason for this is that the offchain worker tries to bill this contract in the context of the previous block
+    // Removes contract from billing loop where the index is the contract id % billing frequency
     pub fn remove_contract_from_billing_loop(
-        index: u64,
         contract_id: u64,
     ) -> Result<(), DispatchErrorWithPostInfo> {
+        let index = Self::get_contract_billing_loop_index(contract_id);
         let mut contract_ids = ContractsToBillAt::<T>::get(index);
 
         ensure!(
@@ -1957,18 +1935,17 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
+    // Billing index is contract id % (mod) Billing Frequency
+    // So index belongs to [0; billing_frequency - 1] range
+    pub fn get_contract_billing_loop_index(contract_id: u64) -> u64 {
+        contract_id % BillingFrequency::<T>::get()
+    }
+
     // Billing index is block number % (mod) Billing Frequency
+    // So index belongs to [0; billing_frequency - 1] range
     pub fn get_current_billing_loop_index() -> u64 {
         let current_block = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
         current_block % BillingFrequency::<T>::get()
-    }
-
-    pub fn get_previous_billing_loop_index() -> u64 {
-        let previous_block = <frame_system::Pallet<T>>::block_number()
-            .saturated_into::<u64>()
-            .checked_sub(1)
-            .unwrap_or(0);
-        previous_block % BillingFrequency::<T>::get()
     }
 
     pub fn _service_contract_create(

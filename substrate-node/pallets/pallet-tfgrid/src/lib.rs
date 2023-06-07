@@ -5,16 +5,17 @@
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
 use sp_std::prelude::*;
 
-use codec::Encode;
 use frame_support::dispatch::DispatchErrorWithPostInfo;
 use frame_support::{
-    dispatch::Pays, ensure, pallet_prelude::DispatchResultWithPostInfo, traits::EnsureOrigin,
-    BoundedVec,
+    dispatch::Pays, ensure, pallet_prelude::DispatchResultWithPostInfo,
+    storage::bounded_vec::BoundedVec, traits::EnsureOrigin,
 };
 use frame_system::{self as system, ensure_signed};
 use hex::FromHex;
 use pallet_timestamp as timestamp;
+use parity_scale_codec::Encode;
 use sp_runtime::SaturatedConversion;
+use sp_std::vec;
 use tfchain_support::{
     resources::Resources,
     types::{Interface, NodePower as NodePowerType, Power, PowerState, PublicIP},
@@ -49,7 +50,7 @@ pub mod pallet {
     use super::weights::WeightInfo;
     use super::*;
     use frame_support::{pallet_prelude::*, Blake2_128Concat};
-    use frame_support::{traits::ConstU32, BoundedVec};
+    use frame_support::{storage::bounded_vec::BoundedVec, traits::ConstU32};
     use frame_system::pallet_prelude::*;
     use pallet_timestamp as timestamp;
     use sp_std::{convert::TryInto, fmt::Debug, vec::Vec};
@@ -63,10 +64,9 @@ pub mod pallet {
         },
     };
 
-    use codec::FullCodec;
+    use parity_scale_codec::FullCodec;
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
@@ -2211,12 +2211,15 @@ impl<T: Config> Pallet<T> {
         };
 
         // Set the farming policy as the last stored farming
-        // policy which certifications are not more qualified
-        // than the current node and farm certifications
+        // policy which certifications best fit the current
+        // node and farm certifications, considering that in all
+        // cases a default policy would be preferable
         let mut policies: Vec<types::FarmingPolicy<T::BlockNumber>> =
             FarmingPoliciesMap::<T>::iter().map(|p| p.1).collect();
 
         policies.sort();
+        // by reversing sorted policies we place default policies first
+        // and then rank them from more certified to less certified
         policies.reverse();
 
         let possible_policy = policies
@@ -2238,13 +2241,15 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    // Set to se the default farming policy as the last stored default farming policy
+    // Set the default farming policy as the last best certified stored default farming policy
     fn get_default_farming_policy(
     ) -> Result<types::FarmingPolicy<T::BlockNumber>, DispatchErrorWithPostInfo> {
         let mut policies: Vec<types::FarmingPolicy<T::BlockNumber>> =
             FarmingPoliciesMap::<T>::iter().map(|p| p.1).collect();
 
         policies.sort();
+        // by reversing sorted policies we place default policies first
+        // and then rank them from more certified to less certified
         policies.reverse();
 
         let possible_policy = policies

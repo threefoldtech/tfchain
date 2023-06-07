@@ -2,18 +2,18 @@
 
 use super::*;
 use crate::{self as pallet_tft_price};
-use codec::alloc::sync::Arc;
 use frame_support::traits::GenesisBuild;
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::mocking;
 use frame_system::EnsureRoot;
+use parity_scale_codec::alloc::sync::Arc;
 use sp_core::{
     crypto::key_types::DUMMY,
     offchain::{testing, OffchainDbExt, TransactionPoolExt},
     sr25519, H256,
 };
 use sp_io::TestExternalities;
-use sp_keystore::{testing::KeyStore, KeystoreExt, SyncCryptoStore};
+use sp_keystore::{testing::MemoryKeystore, Keystore, KeystoreExt};
 use sp_runtime::{
     impl_opaque_keys,
     testing::{Header, UintAuthorityId},
@@ -25,6 +25,7 @@ use sp_runtime::{
 use sp_std::marker::PhantomData;
 use std::cell::RefCell;
 use tfchain_support::constants::time::MINUTES;
+use parity_scale_codec::{Decode, Encode};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime>;
 type Block = mocking::MockBlock<TestRuntime>;
@@ -46,7 +47,7 @@ impl From<UintAuthorityId> for MockSessionKeys {
 pub const KEY_ID_A: KeyTypeId = KeyTypeId([4; 4]);
 pub const KEY_ID_B: KeyTypeId = KeyTypeId([9; 4]);
 
-#[derive(Debug, Clone, codec::Encode, codec::Decode, PartialEq, Eq)]
+#[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
 pub struct PreUpgradeMockSessionKeys {
     pub a: [u8; 32],
     pub b: [u8; 64],
@@ -77,7 +78,7 @@ construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Config<T>, Event<T>},
-        Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
+        Authorship: pallet_authorship::{Pallet, Storage},
         ValidatorSet: substrate_validator_set::{Pallet, Call, Storage, Event<T>, Config<T>},
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
     }
@@ -133,8 +134,6 @@ parameter_types! {
 
 impl pallet_authorship::Config for TestRuntime {
     type FindAuthor = ();
-    type UncleGenerations = UncleGenerations;
-    type FilterUncle = ();
     type EventHandler = ();
 }
 
@@ -190,6 +189,7 @@ impl substrate_validator_set::Config for TestRuntime {
     type AddRemoveOrigin = EnsureRoot<Self::AccountId>;
     type RuntimeEvent = RuntimeEvent;
     type MinAuthorities = MinAuthorities;
+    type WeightInfo = substrate_validator_set::weights::SubstrateWeight<TestRuntime>;
 }
 
 impl pallet_session::Config for TestRuntime {
@@ -269,7 +269,7 @@ impl ExternalityBuilder {
 
         let (offchain, _) = testing::TestOffchainExt::new();
         let (pool, _) = testing::TestTransactionPoolExt::new();
-        let keystore = KeyStore::new();
+        let keystore = MemoryKeystore::new();
         keystore
             .sr25519_generate_new(KEY_TYPE, Some(&format!("{}/hunter1", PHRASE)))
             .unwrap();

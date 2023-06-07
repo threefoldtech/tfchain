@@ -1,4 +1,5 @@
 use super::Event as KvStoreEvent;
+use super::*;
 use crate::{self as pallet_kvstore, Config};
 use frame_support::{assert_ok, construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::{EventRecord, Phase};
@@ -55,11 +56,13 @@ impl frame_system::Config for TestRuntime {
     type MaxConsumers = ConstU32<16>;
 }
 
+use weights;
 impl Config for TestRuntime {
     type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = weights::SubstrateWeight<TestRuntime>;
 }
 
-struct ExternalityBuilder;
+pub struct ExternalityBuilder;
 
 impl ExternalityBuilder {
     pub fn build() -> TestExternalities {
@@ -75,13 +78,13 @@ impl ExternalityBuilder {
 #[test]
 fn test_set_and_get() {
     ExternalityBuilder::build().execute_with(|| {
-        let key = "name";
-        let value = "nametest";
+        let key = b"name".to_vec();
+        let value = b"nametest".to_vec();
         // make sure Entry does not exists
         assert_ok!(TFKVStoreModule::set(
             RuntimeOrigin::signed(1),
-            key.as_bytes().to_vec(),
-            value.as_bytes().to_vec()
+            key.clone(),
+            value.clone()
         ));
 
         let our_events = System::events();
@@ -91,26 +94,26 @@ fn test_set_and_get() {
                 TestRuntime,
             >::EntrySet(
                 1,
-                key.as_bytes().to_vec(),
-                value.as_bytes().to_vec(),
+                key.clone(),
+                value.clone(),
             )))),
             true
         );
 
-        let entry_value = TFKVStoreModule::key_value_store(1, key.as_bytes().to_vec());
-        assert_eq!(entry_value, value.as_bytes().to_vec());
+        let entry_value = TFKVStoreModule::key_value_store(1, key);
+        assert_eq!(entry_value, value);
     })
 }
 
 #[test]
 fn test_delete() {
     ExternalityBuilder::build().execute_with(|| {
-        let key = "Address";
-        let value = "Cairo";
+        let key = b"Address".to_vec();
+        let value = b"Cairo".to_vec();
         assert_ok!(TFKVStoreModule::set(
             RuntimeOrigin::signed(1),
-            key.as_bytes().to_vec(),
-            value.as_bytes().to_vec()
+            key.clone(),
+            value.clone()
         ));
 
         let our_events = System::events();
@@ -120,15 +123,15 @@ fn test_delete() {
                 TestRuntime,
             >::EntrySet(
                 1,
-                key.as_bytes().to_vec(),
-                value.as_bytes().to_vec(),
+                key.clone(),
+                value.clone(),
             )))),
             true
         );
 
         assert_ok!(TFKVStoreModule::delete(
             RuntimeOrigin::signed(1),
-            key.as_bytes().to_vec()
+            key.clone()
         ));
 
         let our_events = System::events();
@@ -138,15 +141,15 @@ fn test_delete() {
                 TestRuntime,
             >::EntryTaken(
                 1,
-                key.as_bytes().to_vec(),
-                value.as_bytes().to_vec(),
+                key.clone(),
+                value.clone(),
             )))),
             true
         );
 
         // check if value get deleted
-        let entry_value = TFKVStoreModule::key_value_store(1, key.as_bytes().to_vec());
-        let expected_value = "".as_bytes().to_vec();
+        let entry_value = TFKVStoreModule::key_value_store(1, key);
+        let expected_value = b"".to_vec();
         assert_eq!(entry_value, expected_value);
     })
 }

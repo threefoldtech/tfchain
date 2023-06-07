@@ -1,0 +1,78 @@
+# Default values for tfchainbridge.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: tftchainstellarbridge
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  {}
+  # fsGroup: 2000
+
+securityContext:
+  {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+stellar_secret: ""
+
+# ws_url: ws://192.168.49.1:9944
+ws_url:
+
+tfchain_mnemonic: ""
+bridge_wallet_address: ""
+
+#network: production
+# network: "testnet"
+network:
+
+# Not needed for devnet
+# For testnet / mainnet use mainnet horizon url
+stellar_horizon_url: ""
+
+# If set to true, bridge wallet address will be rescanned
+# and mints will happen again if they are not already executed
+rescan: false
+
+# If set to true, bridge will show debug output
+debug: false
+
+volume:
+  size: 500Mi
+  existingpersistentVolumeClaim: ""
+  persistentVolume:
+    create: true
+    hostPath: "/storage"
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+threefoldVdc:
+  backup: ""
