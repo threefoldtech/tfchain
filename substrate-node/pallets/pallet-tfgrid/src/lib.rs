@@ -5,16 +5,17 @@
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
 use sp_std::prelude::*;
 
-use codec::Encode;
 use frame_support::dispatch::DispatchErrorWithPostInfo;
 use frame_support::{
-    dispatch::Pays, ensure, pallet_prelude::DispatchResultWithPostInfo, traits::EnsureOrigin,
-    BoundedVec,
+    dispatch::Pays, ensure, pallet_prelude::DispatchResultWithPostInfo,
+    storage::bounded_vec::BoundedVec, traits::EnsureOrigin,
 };
 use frame_system::{self as system, ensure_signed};
 use hex::FromHex;
 use pallet_timestamp as timestamp;
+use parity_scale_codec::Encode;
 use sp_runtime::SaturatedConversion;
+use sp_std::vec;
 use tfchain_support::{
     resources::Resources,
     types::{Interface, NodePower as NodePowerType, Power, PowerState, PublicIP},
@@ -48,7 +49,7 @@ pub mod pallet {
     use super::weights::WeightInfo;
     use super::*;
     use frame_support::{pallet_prelude::*, Blake2_128Concat};
-    use frame_support::{traits::ConstU32, BoundedVec};
+    use frame_support::{storage::bounded_vec::BoundedVec, traits::ConstU32};
     use frame_system::pallet_prelude::*;
     use pallet_timestamp as timestamp;
     use sp_std::{convert::TryInto, fmt::Debug, vec::Vec};
@@ -62,10 +63,9 @@ pub mod pallet {
         },
     };
 
-    use codec::FullCodec;
+    use parity_scale_codec::FullCodec;
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 

@@ -1,8 +1,8 @@
 use crate::{CityNameInput, Config, CountryNameInput, Error, LocationInput, SerialNumberInput};
-use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
 };
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_std::marker::PhantomData;
 

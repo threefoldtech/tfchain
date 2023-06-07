@@ -1113,7 +1113,7 @@ fn test_multiple_contracts_billing_loop_works() {
         // 2: Contract created (name contract)
         // 3: Contract Billed (node contract)
         // 4: Contract Billed (name contract)
-        assert_eq!(our_events.len(), 6);
+        assert_eq!(our_events.len(), 8);
     })
 }
 
@@ -1811,7 +1811,7 @@ fn test_name_contract_billing() {
         let our_events = System::events();
         info!("events: {:?}", our_events.clone());
         assert_eq!(
-            our_events[3],
+            our_events[4],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::ContractBilled(
@@ -2027,11 +2027,15 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
         check_report_cost(rent_contract_id, amount_due_as_u128, 11, discount_received);
 
         let our_events = System::events();
-        // Event 1: Rent contract created
-        // Event 2: Node Contract created
-        // Event 4: Rent contract billed
+        // Event 1: Price Stored
+        // Event 2: Avg price stored
+        // Event 3: Rent contract created
+        // Event 4: Node Contract created
+        // Event 5: Updated resources contract
+        // Event 6: Balances locked
+        // Event 7: Contract Billed
         // => no Node Contract billed event
-        assert_eq!(our_events.len(), 6);
+        assert_eq!(our_events.len(), 7);
     });
 }
 
@@ -2198,13 +2202,7 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
         check_report_cost(node_contract_id, amount_due_as_u128, 12, discount_received);
 
         let our_events = System::events();
-        // Event 1: Price Stored
-        // Event 2: Avg price stored
-        // Event 2: Rent contract created
-        // Event 3: Node Contract created
-        // Event 4: Rent contract billed
-        // Event 5: Node Contract billed
-        assert_eq!(our_events.len(), 6);
+        assert_eq!(our_events.len(), 8);
     });
 }
 

@@ -1,6 +1,6 @@
-use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::traits::Get;
 use frame_support::{ensure, sp_runtime::SaturatedConversion, BoundedVec, RuntimeDebug};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_std::{marker::PhantomData, vec::Vec};
 
