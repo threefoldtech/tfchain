@@ -1140,7 +1140,8 @@ fn test_node_contract_billing_cycles() {
 
         push_contract_resources_used(contract_id);
 
-        let (amount_due_1, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        let (amount_due_1, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, twin_id, 10);
         pool_state
             .write()
             .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 11);
@@ -1158,14 +1159,16 @@ fn test_node_contract_billing_cycles() {
             1
         );
 
-        let (amount_due_2, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        let (amount_due_2, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, twin_id, 10);
         pool_state
             .write()
             .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 21);
         run_to_block(21, Some(&mut pool_state));
         check_report_cost(1, amount_due_2, 21, discount_received);
 
-        let (amount_due_3, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        let (amount_due_3, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, twin_id, 10);
         pool_state
             .write()
             .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 31);
@@ -1226,7 +1229,7 @@ fn test_node_multiple_contract_billing_cycles() {
             11,
         );
 
-        let (amount_due_contract_1, discount_received) =
+        let (amount_due_contract_1, _farmer_share, discount_received) =
             calculate_tft_cost(first_node_contract_id, twin_id, 10);
         run_to_block(11, Some(&mut pool_state));
         check_report_cost(
@@ -1242,7 +1245,7 @@ fn test_node_multiple_contract_billing_cycles() {
             12,
         );
 
-        let (amount_due_contract_2, discount_received) =
+        let (amount_due_contract_2, _farmer_share, discount_received) =
             calculate_tft_cost(second_node_contract_id, twin_id, 10);
         run_to_block(12, Some(&mut pool_state));
         check_report_cost(
@@ -1296,27 +1299,33 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
         }
         push_contract_resources_used(contract_id);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        let (amount_due_as_u128, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(11, Some(&mut pool_state));
         check_report_cost(1, amount_due_as_u128, 11, discount_received);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        let (amount_due_as_u128, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(21, Some(&mut pool_state));
         check_report_cost(1, amount_due_as_u128, 21, discount_received);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        let (amount_due_as_u128, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(31, Some(&mut pool_state));
         check_report_cost(1, amount_due_as_u128, 31, discount_received);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        let (amount_due_as_u128, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(41, Some(&mut pool_state));
         check_report_cost(1, amount_due_as_u128, 41, discount_received);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        let (amount_due_as_u128, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(51, Some(&mut pool_state));
         check_report_cost(1, amount_due_as_u128, 51, discount_received);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 4);
+        let (amount_due_as_u128, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, twin_id, 4);
         run_to_block(55, None);
 
         // Delete node
@@ -1393,24 +1402,29 @@ fn test_node_contract_only_public_ip_billing_cycles() {
             );
         }
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        let (amount_due_as_u128, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, twin_id, 10);
         assert_ne!(amount_due_as_u128, 0);
         run_to_block(11, Some(&mut pool_state));
         check_report_cost(1, amount_due_as_u128, 11, discount_received);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        let (amount_due_as_u128, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(21, Some(&mut pool_state));
         check_report_cost(1, amount_due_as_u128, 21, discount_received);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        let (amount_due_as_u128, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(31, Some(&mut pool_state));
         check_report_cost(1, amount_due_as_u128, 31, discount_received);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        let (amount_due_as_u128, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(41, Some(&mut pool_state));
         check_report_cost(1, amount_due_as_u128, 41, discount_received);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        let (amount_due_as_u128, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(51, Some(&mut pool_state));
         check_report_cost(1, amount_due_as_u128, 51, discount_received);
     });
@@ -1448,16 +1462,19 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
         }
         push_contract_resources_used(contract_id);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        let (amount_due_as_u128, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(11, Some(&mut pool_state));
         check_report_cost(1, amount_due_as_u128, 11, discount_received);
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        let (amount_due_as_u128, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, twin_id, 10);
         run_to_block(21, Some(&mut pool_state));
         check_report_cost(1, amount_due_as_u128, 21, discount_received);
 
         run_to_block(28, Some(&mut pool_state));
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 7);
+        let (amount_due_as_u128, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, twin_id, 7);
         assert_ok!(SmartContractModule::cancel_contract(
             RuntimeOrigin::signed(bob()),
             1
@@ -1501,14 +1518,16 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
         let twin_id = 2;
         push_contract_resources_used(contract_id);
 
-        let (amount_due_1, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        let (amount_due_1, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, twin_id, 10);
         pool_state
             .write()
             .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 11);
         run_to_block(11, Some(&mut pool_state));
         check_report_cost(1, amount_due_1, 11, discount_received);
 
-        let (amount_due_2, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
+        let (amount_due_2, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, twin_id, 10);
         pool_state
             .write()
             .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 21);
@@ -1831,7 +1850,7 @@ fn test_rent_contract_billing() {
             .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 11);
         run_to_block(11, Some(&mut pool_state));
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 10);
+        let (amount_due_as_u128, _farmer_share, discount_received) = calculate_tft_cost(1, 2, 10);
         assert_ne!(amount_due_as_u128, 0);
         check_report_cost(1, amount_due_as_u128, 11, discount_received);
     });
@@ -1866,7 +1885,8 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
             .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 11);
         run_to_block(11, Some(&mut pool_state));
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, 2, 10);
+        let (amount_due_as_u128, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, 2, 10);
         assert_ne!(amount_due_as_u128, 0);
         check_report_cost(
             contract_id,
@@ -1884,7 +1904,8 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
         // cancel contract
         // it will bill before removing the contract and it should bill all
         // reserved balance
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, 2, 2);
+        let (amount_due_as_u128, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, 2, 2);
         assert_ok!(SmartContractModule::cancel_contract(
             RuntimeOrigin::signed(bob()),
             contract_id
@@ -1938,7 +1959,8 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
 
         run_to_block(8, Some(&mut pool_state));
         // Calculate the cost for 7 blocks of runtime (created a block 1, canceled at block 8)
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, 2, 7);
+        let (amount_due_as_u128, _farmer_share, discount_received) =
+            calculate_tft_cost(contract_id, 2, 7);
         // cancel rent contract at block 8
         assert_ok!(SmartContractModule::cancel_contract(
             RuntimeOrigin::signed(bob()),
@@ -1999,7 +2021,8 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
             .should_call_bill_contract(node_contract_id, Ok(Pays::Yes.into()), 12);
         run_to_block(12, Some(&mut pool_state));
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(rent_contract_id, 2, 10);
+        let (amount_due_as_u128, _farmer_share, discount_received) =
+            calculate_tft_cost(rent_contract_id, 2, 10);
         assert_ne!(amount_due_as_u128, 0);
         check_report_cost(rent_contract_id, amount_due_as_u128, 11, discount_received);
 
@@ -2068,7 +2091,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         );
         run_to_block(end_grace_block_number, Some(&mut pool_state));
 
-        // let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 11);
+        // let (amount_due_as_u128, , _farmer_share, discount_received) = calculate_tft_cost(1, 2, 11);
         // assert_ne!(amount_due_as_u128, 0);
         // check_report_cost(1, 3, amount_due_as_u128, 12, discount_received);
 
@@ -2158,7 +2181,8 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
         run_to_block(11, Some(&mut pool_state));
 
         // check contract 1 costs (Rent Contract)
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(rent_contract_id, 2, 10);
+        let (amount_due_as_u128, _farmer_share, discount_received) =
+            calculate_tft_cost(rent_contract_id, 2, 10);
         assert_ne!(amount_due_as_u128, 0);
         check_report_cost(rent_contract_id, amount_due_as_u128, 11, discount_received);
 
@@ -2168,7 +2192,8 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
         run_to_block(12, Some(&mut pool_state));
 
         // check contract 2 costs (Node Contract)
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(node_contract_id, 2, 10);
+        let (amount_due_as_u128, _farmer_share, discount_received) =
+            calculate_tft_cost(node_contract_id, 2, 10);
         assert_ne!(amount_due_as_u128, 0);
         check_report_cost(node_contract_id, amount_due_as_u128, 12, discount_received);
 
@@ -3755,14 +3780,18 @@ fn check_report_cost(
     );
 }
 
-fn calculate_tft_cost(contract_id: u64, twin_id: u32, blocks: u64) -> (u64, types::DiscountLevel) {
+fn calculate_tft_cost(
+    contract_id: u64,
+    twin_id: u32,
+    blocks: u64,
+) -> (u64, u8, types::DiscountLevel) {
     let twin = TfgridModule::twins(twin_id).unwrap();
     let b = Balances::free_balance(&twin.account_id);
     let contract = SmartContractModule::contracts(contract_id).unwrap();
-    let (amount_due, discount_received) =
+    let (amount_due, farmer_share, discount_received) =
         contract.calculate_contract_cost_tft(b, blocks * 6).unwrap();
 
-    (amount_due, discount_received)
+    (amount_due, farmer_share, discount_received)
 }
 
 pub fn prepare_twins() {

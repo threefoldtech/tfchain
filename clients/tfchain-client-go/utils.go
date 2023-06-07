@@ -72,7 +72,7 @@ var smartContractModuleErrors = []string{
 	"MethodIsDeprecated",
 	"NodeHasActiveContracts",
 	"NodeHasRentContract",
-	"NodeIsNotDedicated",
+	"FarmIsNotDedicated",
 	"NodeNotAvailableToDeploy",
 	"CannotUpdateContractInGraceState",
 	"NumOverflow",

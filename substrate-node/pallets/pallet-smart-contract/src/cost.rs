@@ -4,6 +4,7 @@ use crate::pallet::Error;
 use crate::types;
 use crate::types::{Contract, ContractBillingInformation, ServiceContract, ServiceContractBill};
 use crate::Config;
+use crate::DedicatedNodesExtraFee;
 use frame_support::{dispatch::DispatchErrorWithPostInfo, traits::Get};
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use sp_runtime::{Percent, SaturatedConversion};
@@ -21,7 +22,7 @@ impl<T: Config> Contract<T> {
         &self,
         balance: BalanceOf<T>,
         seconds_elapsed: u64,
-    ) -> Result<(BalanceOf<T>, types::DiscountLevel), DispatchErrorWithPostInfo> {
+    ) -> Result<(BalanceOf<T>, u8, types::DiscountLevel), DispatchErrorWithPostInfo> {
         // Fetch the default pricing policy and certification type
         let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1).unwrap();
         let certification_type = NodeCertification::Diy;
@@ -30,11 +31,13 @@ impl<T: Config> Contract<T> {
         // - NodeContract
         // - RentContract
         // - NameContract
-        let total_cost = self.calculate_contract_cost(&pricing_policy, seconds_elapsed)?;
+        let (total_cost, farmer_share) =
+            self.calculate_contract_cost(&pricing_policy, seconds_elapsed)?;
         // If cost is 0, reinsert to be billed at next interval
         if total_cost == 0 {
             return Ok((
                 BalanceOf::<T>::saturated_from(0 as u128),
+                0,
                 types::DiscountLevel::None,
             ));
         }
@@ -49,26 +52,26 @@ impl<T: Config> Contract<T> {
             certification_type,
         );
 
-        return Ok((amount_due, discount_received));
+        return Ok((amount_due, farmer_share, discount_received));
     }
 
     pub fn calculate_contract_cost(
         &self,
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
         seconds_elapsed: u64,
-    ) -> Result<u64, DispatchErrorWithPostInfo> {
+    ) -> Result<(u64, u8), DispatchErrorWithPostInfo> {
+        let mut farmer_share = 0u8;
         let total_cost = match &self.contract_type {
             // Calculate total cost for a node contract
             types::ContractData::NodeContract(node_contract) => {
                 // Get the contract billing info to view the amount unbilled for NRU (network resource units)
                 let contract_billing_info = self.get_billing_info();
-                // Get the node
-                if !pallet_tfgrid::Nodes::<T>::contains_key(node_contract.node_id) {
+                // Make sure the node exists
+                if pallet_tfgrid::Nodes::<T>::get(node_contract.node_id).is_none() {
                     return Err(DispatchErrorWithPostInfo::from(Error::<T>::NodeNotExists));
                 }
 
                 // We know the contract is using resources, now calculate the cost for each used resource
-
                 let node_contract_resources =
                     pallet::Pallet::<T>::node_contract_resources(self.contract_id);
 
@@ -89,10 +92,8 @@ impl<T: Config> Contract<T> {
                 contract_cost + contract_billing_info.amount_unbilled
             }
             types::ContractData::RentContract(rent_contract) => {
-                if !pallet_tfgrid::Nodes::<T>::contains_key(rent_contract.node_id) {
-                    return Err(DispatchErrorWithPostInfo::from(Error::<T>::NodeNotExists));
-                }
-                let node = pallet_tfgrid::Nodes::<T>::get(rent_contract.node_id).unwrap();
+                let node = pallet_tfgrid::Nodes::<T>::get(rent_contract.node_id)
+                    .ok_or(Error::<T>::NodeNotExists)?;
 
                 let contract_cost = calculate_resources_cost::<T>(
                     node.resources,
@@ -101,7 +102,24 @@ impl<T: Config> Contract<T> {
                     &pricing_policy,
                     true,
                 );
-                Percent::from_percent(pricing_policy.discount_for_dedication_nodes) * contract_cost
+                let regular_cost =
+                    Percent::from_percent(pricing_policy.discount_for_dedication_nodes)
+                        * contract_cost;
+                let extra_fee_cost = match DedicatedNodesExtraFee::<T>::get(rent_contract.node_id) {
+                    Some(fee_per_month) => {
+                        //
+                        let extra_cost = (U64F64::from_num(fee_per_month * seconds_elapsed)
+                            / U64F64::from_num(30 * 24 * 60 * 60)) // seconds in 1 month
+                        .to_num::<u64>();
+                        let cost_with_extra = regular_cost + extra_cost;
+                        farmer_share = (U64F64::from_num(extra_cost) * 100
+                            / U64F64::from_num(cost_with_extra))
+                        .to_num::<u8>();
+                        extra_cost
+                    }
+                    _ => 0,
+                };
+                regular_cost + extra_fee_cost // TO CHECK: apply discount to extra fee?
             }
             // Calculate total cost for a name contract
             types::ContractData::NameContract(_) => {
@@ -113,7 +131,7 @@ impl<T: Config> Contract<T> {
             }
         };
 
-        Ok(total_cost)
+        Ok((total_cost, farmer_share))
     }
 }
 
