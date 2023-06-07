@@ -77,7 +77,7 @@ jobs:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
           draft: false
-          prerelease: true
+          prerelease: ${{ contains(github.ref, 'rc') }}
           body: |
             Changes in this Release:
             ${{ steps.changelog.outputs.changelog }}
@@ -90,4 +90,4 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }} 
           asset_path: ./tfchain-runtime.wasm
           asset_name: tfchain-runtime.wasm
-          asset_content_type: application/octet-stream
+          asset_content_type: application/wasm
