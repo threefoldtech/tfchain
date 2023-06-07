@@ -582,12 +582,13 @@ class TfChainClient:
     def report_uptime(self, uptime: int, timestamp_hint: int = 0, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
-        # if timestamp_hint is not provided, use current timestamp
-        if timestamp_hint == 0:
-            timestamp_hint = int(time.time())
-
         call = substrate.compose_call(
-            "TfgridModule", "report_uptime", {"uptime": uptime, "timestamp_hint": timestamp_hint})
+            "TfgridModule", "report_uptime", {"uptime": uptime })
+        # if timestamp_hint is provided, use v2 call
+        if timestamp_hint != 0:
+            call = substrate.compose_call(
+            "TfgridModule", "report_uptime_v2", {"uptime": uptime, "timestamp_hint": timestamp_hint})
+
         expected_events = [{
             "module_id": "TfgridModule",
             "event_id": "NodeUptimeReported"
