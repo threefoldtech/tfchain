@@ -25,7 +25,6 @@ valip.workspace = true
 tfchain-support.workspace = true
 
 # Substrate stuff
-frame-benchmarking.workspace = true
 pallet-balances.workspace = true
 frame-support.workspace = true
 frame-system.workspace = true
@@ -36,6 +35,9 @@ pallet-timestamp.workspace = true
 sp-core.workspace = true
 sp-io.workspace = true
 frame-try-runtime.workspace = true
+
+# Benchmarking
+frame-benchmarking = { workspace = true, optional = true }
 
 [dev-dependencies]
 hex-literal.workspace = true

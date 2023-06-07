@@ -1217,7 +1217,7 @@ impl<T: Config> Pallet<T> {
 
         // If the contract is in delete state, remove all associated storage
         if matches!(contract.state, types::ContractState::Deleted(_)) {
-            Self::remove_contract(contract.contract_id);
+            Self::remove_contract(contract.contract_id)?;
             return Ok(().into());
         }
 

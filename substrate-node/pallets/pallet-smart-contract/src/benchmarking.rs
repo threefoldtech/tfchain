@@ -79,7 +79,9 @@ benchmarks! {
 
     bill_contract_for_block {
         let stamp: u64 = 1628082000 * 1000;
-        pallet_timestamp::Pallet::<T>::set_timestamp(stamp.try_into().unwrap());
+        let now = pallet_timestamp::Pallet::<T>::get().saturated_into::<u64>() + 1000;
+        pallet_timestamp::Pallet::<T>::set_timestamp(now.try_into().unwrap());
+
         let a1: T::AccountId = account("Alice", 0, 0);
         prepare_farm_and_node::<T>(a1.clone());
 
@@ -100,11 +102,7 @@ benchmarks! {
         });
 
         push_contract_resources::<T>(a1.clone());
-
-        let stamp: u64 = 1628082000 * 1000 * 10 * 6000;
-        pallet_timestamp::Pallet::<T>::set_timestamp(stamp.try_into().unwrap());
-        // run_to_block::<T>(10);
-    }: _ (RawOrigin::Signed(a1.clone()), 0, 1) // Update here
+    }: _ (RawOrigin::Signed(a1.clone()), 1) // Update here
     verify {
         let contract = SmartContractModule::<T>::contracts(1).unwrap();
         assert_eq!(
