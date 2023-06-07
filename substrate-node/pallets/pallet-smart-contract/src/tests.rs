@@ -3559,6 +3559,191 @@ fn test_attach_solution_provider_id_not_approved_fails() {
 }
 
 #[test]
+fn test_set_dedicated_node_extra_fee_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+        let node_id = 1;
+
+        let zero_fee = 0;
+        assert_ok!(SmartContractModule::set_dedicated_node_extra_fee(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+            zero_fee
+        ));
+
+        assert_eq!(
+            SmartContractModule::dedicated_nodes_extra_fee(node_id),
+            None
+        );
+
+        let extra_fee = 100000;
+        assert_ok!(SmartContractModule::set_dedicated_node_extra_fee(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+            extra_fee
+        ));
+
+        assert_eq!(
+            SmartContractModule::dedicated_nodes_extra_fee(node_id),
+            Some(extra_fee)
+        );
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::NodeExtraFeeSet { node_id, extra_fee }
+            ))),
+            true
+        );
+    })
+}
+
+#[test]
+fn test_set_dedicated_node_extra_fee_undefined_node_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        let node_id = 1;
+
+        let extra_fee = 100000;
+        assert_noop!(
+            SmartContractModule::set_dedicated_node_extra_fee(
+                RuntimeOrigin::signed(alice()),
+                node_id + 1,
+                extra_fee
+            ),
+            Error::<TestRuntime>::NodeNotExists
+        );
+    })
+}
+
+#[test]
+fn test_set_dedicated_node_extra_fee_unauthorized_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        let node_id = 1;
+
+        let extra_fee = 100000;
+        assert_noop!(
+            SmartContractModule::set_dedicated_node_extra_fee(
+                RuntimeOrigin::signed(bob()),
+                node_id,
+                extra_fee
+            ),
+            Error::<TestRuntime>::UnauthorizedToSetExtraFee
+        );
+    })
+}
+
+#[test]
+fn test_set_dedicated_node_extra_fee_with_active_node_contract_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        let node_id = 1;
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
+        ));
+
+        let extra_fee = 100000;
+        assert_noop!(
+            SmartContractModule::set_dedicated_node_extra_fee(
+                RuntimeOrigin::signed(alice()),
+                node_id,
+                extra_fee
+            ),
+            Error::<TestRuntime>::NodeHasActiveContracts
+        );
+    })
+}
+
+#[test]
+fn test_set_dedicated_node_extra_fee_with_active_rent_contract_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        let node_id = 1;
+
+        assert_ok!(SmartContractModule::create_rent_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            None
+        ));
+
+        let extra_fee = 100000;
+        assert_noop!(
+            SmartContractModule::set_dedicated_node_extra_fee(
+                RuntimeOrigin::signed(alice()),
+                node_id,
+                extra_fee
+            ),
+            Error::<TestRuntime>::NodeHasActiveContracts
+        );
+    })
+}
+
+#[test]
+fn test_set_dedicated_node_extra_fee_and_create_node_contract_fails() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        let node_id = 1;
+
+        let extra_fee = 100000;
+        assert_ok!(SmartContractModule::set_dedicated_node_extra_fee(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+            extra_fee
+        ));
+
+        assert_noop!(
+            SmartContractModule::create_node_contract(
+                RuntimeOrigin::signed(bob()),
+                node_id,
+                generate_deployment_hash(),
+                get_deployment_data(),
+                0,
+                None
+            ),
+            Error::<TestRuntime>::NodeNotAvailableToDeploy
+        );
+    })
+}
+
+#[test]
+fn test_set_dedicated_node_extra_fee_and_create_rent_contract_works() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        let node_id = 1;
+
+        let extra_fee = 100000;
+        assert_ok!(SmartContractModule::set_dedicated_node_extra_fee(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+            extra_fee
+        ));
+
+        assert_ok!(SmartContractModule::create_rent_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            None
+        ));
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
+        ));
+    })
+}
+
+#[test]
 fn test_percent() {
     let cost: u64 = 1000;
     let new_cost = Percent::from_percent(25) * cost;

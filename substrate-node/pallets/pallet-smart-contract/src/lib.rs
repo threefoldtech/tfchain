@@ -2521,10 +2521,6 @@ impl<T: Config> Pallet<T> {
             Error::<T>::UnauthorizedToSetExtraFee
         );
 
-        // Make sure farm is dedicated so it blocks running a node contract
-        // on a node unless there is an initial rent contract on it
-        ensure!(farm.dedicated_farm, Error::<T>::FarmIsNotDedicated);
-
         // Make sure there is no active node or rent contract on this node
         ensure!(
             ActiveRentContractForNode::<T>::get(node_id).is_none()
@@ -2532,8 +2528,8 @@ impl<T: Config> Pallet<T> {
             Error::<T>::NodeHasActiveContracts
         );
 
-        // Set fee in units USD (converted from mUSD)
-        DedicatedNodesExtraFee::<T>::insert(node_id, extra_fee * 10000);
+        // Set fee in mUSD
+        DedicatedNodesExtraFee::<T>::insert(node_id, extra_fee);
         Self::deposit_event(Event::NodeExtraFeeSet { node_id, extra_fee });
 
         Ok(().into())
