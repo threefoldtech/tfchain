@@ -1,10 +1,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Decode, Encode};
 use frame_support::{
     ensure,
     traits::{Currency, OnUnbalanced},
 };
+use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::DispatchResult;
 use sp_std::prelude::*;
@@ -41,6 +41,7 @@ pub mod pallet {
     };
     use frame_system::{ensure_signed, pallet_prelude::*};
     use sp_std::convert::TryInto;
+    use sp_std::vec;
 
     use crate::{Burn, Vec};
 
@@ -52,7 +53,6 @@ pub mod pallet {
     >>::NegativeImbalance;
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 

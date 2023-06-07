@@ -2,7 +2,6 @@
 use super::*;
 use crate::name_contract::NameContractName;
 use crate::{self as pallet_smart_contract};
-use codec::{alloc::sync::Arc, Decode};
 use frame_support::{
     construct_runtime,
     dispatch::PostDispatchInfo,
@@ -20,6 +19,7 @@ use pallet_tfgrid::{
     CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, Gw4Input, Ip4Input,
     LatitudeInput, LongitudeInput, PkInput, RelayInput,
 };
+use parity_scale_codec::{alloc::sync::Arc, Decode, Encode};
 use parking_lot::RwLock;
 use sp_core::{
     crypto::key_types::DUMMY,
@@ -30,7 +30,7 @@ use sp_core::{
     },
     sr25519, Pair, Public, H256,
 };
-use sp_keystore::{testing::KeyStore, KeystoreExt, SyncCryptoStore};
+use sp_keystore::{testing::MemoryKeystore, Keystore, KeystoreExt};
 use sp_runtime::{
     impl_opaque_keys,
     offchain::TransactionPool,
@@ -63,7 +63,7 @@ impl From<UintAuthorityId> for MockSessionKeys {
 pub const KEY_ID_A: KeyTypeId = KeyTypeId([4; 4]);
 pub const KEY_ID_B: KeyTypeId = KeyTypeId([9; 4]);
 
-#[derive(Debug, Clone, codec::Encode, codec::Decode, PartialEq, Eq)]
+#[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
 pub struct PreUpgradeMockSessionKeys {
     pub a: [u8; 32],
     pub b: [u8; 64],
@@ -109,7 +109,7 @@ construct_runtime!(
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         SmartContractModule: pallet_smart_contract::{Pallet, Call, Storage, Event<T>},
         TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Event<T>},
-        Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
+        Authorship: pallet_authorship::{Pallet, Storage},
         ValidatorSet: substrate_validator_set::{Pallet, Call, Storage, Event<T>, Config<T>},
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
     }
@@ -165,6 +165,10 @@ impl pallet_balances::Config for TestRuntime {
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = pallet_balances::weights::SubstrateWeight<TestRuntime>;
+    type FreezeIdentifier = ();
+    type MaxFreezes = ();
+    type HoldIdentifier = ();
+    type MaxHolds = ();
 }
 
 pub(crate) type Serial = pallet_tfgrid::pallet::SerialNumberOf<TestRuntime>;
@@ -285,8 +289,6 @@ parameter_types! {
 
 impl pallet_authorship::Config for TestRuntime {
     type FindAuthor = ();
-    type UncleGenerations = UncleGenerations;
-    type FilterUncle = ();
     type EventHandler = ();
 }
 
@@ -646,7 +648,7 @@ pub fn new_test_ext_with_pool_state(
     let mut ext = new_test_ext();
     let (offchain, offchain_state) = testing::TestOffchainExt::new();
     let (pool, pool_state) = MockedTransactionPoolExt::new();
-    let keystore = KeyStore::new();
+    let keystore = MemoryKeystore::new();
     keystore
         .sr25519_generate_new(KEY_TYPE, Some(&format!("//Alice")))
         .unwrap();

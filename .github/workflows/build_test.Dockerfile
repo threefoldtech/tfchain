@@ -27,7 +27,8 @@ RUN apt update && \
     python3.10 get-pip.py && \
     rm -rf get-pip.py && \
     curl https://sh.rustup.rs -sSf | sh -s -- -y && \
-    $HOME/.cargo/bin/rustup install nightly-2022-05-11 && \
+    $HOME/.cargo/bin/rustup target add wasm32-unknown-unknown && \
+    # $HOME/.cargo/bin/rustup install nightly-2023-06-04 && \
     # cleanup image 
     rm -rf /var/lib/apt/lists/* && \
     apt -y clean && \

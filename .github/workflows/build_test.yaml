@@ -8,7 +8,7 @@ jobs:
   build-and-test:
     runs-on: [self-hosted, tfchainrunner01]
     container:
-      image: threefolddev/tfchain:3
+      image: threefolddev/tfchain:4
       env:
         DEBIAN_FRONTEND: noninteractive
         PATH: /root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin
@@ -35,15 +35,12 @@ jobs:
       - name: Build
         run: |
           cd substrate-node
-          rustup target add wasm32-unknown-unknown --toolchain nightly-2022-05-11
-          cargo +nightly-2022-05-11 build --release
+          cargo build --release
 
       - name: Unit tests
         run: |
           cd substrate-node
-          cargo +nightly-2022-05-11 test --no-fail-fast
-          cd pallets
-          cargo +nightly-2022-05-11 test --no-fail-fast
+          cargo test --no-fail-fast --features runtime-benchmarks
 
       - name: Integration tests
         run: |

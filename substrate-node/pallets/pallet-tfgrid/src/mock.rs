@@ -154,6 +154,10 @@ impl pallet_balances::Config for TestRuntime {
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = pallet_balances::weights::SubstrateWeight<TestRuntime>;
+    type FreezeIdentifier = ();
+    type MaxFreezes = ();
+    type HoldIdentifier = ();
+    type MaxHolds = ();
 }
 
 impl pallet_timestamp::Config for TestRuntime {
@@ -178,7 +182,9 @@ impl pallet_collective::Config<CouncilCollective> for TestRuntime {
     type MaxProposals = CouncilMaxProposals;
     type MaxMembers = CouncilMaxMembers;
     type DefaultVote = pallet_collective::PrimeDefaultVote;
+    type SetMembersOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = ();
+    type MaxProposalWeight = ();
 }
 
 impl pallet_membership::Config<pallet_membership::Instance1> for TestRuntime {

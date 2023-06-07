@@ -45,13 +45,13 @@ Create Interface
 
 Ensure Account Balance Increased
     [Arguments]    ${balance_before}    ${balance_after}
-    IF    ${balance_before}[free] >= ${balance_after}[free]-${balance_after}[fee_frozen]
+    IF    ${balance_before}[free] >= ${balance_after}[free]-${balance_after}[frozen]
         Fail    msg=It looks like the billing did not take place.
     END
 
 Ensure Account Balance Decreased
     [Arguments]    ${balance_before}    ${balance_after}
-    IF    ${balance_before}[free] <= ${balance_after}[free]-${balance_after}[fee_frozen]
+    IF    ${balance_before}[free] <= ${balance_after}[free]-${balance_after}[frozen]
         Fail    msg=It looks like the billing did not take place.
     END
 
@@ -408,7 +408,7 @@ Test Attach Policy To Farm
 
     # farming policy expires after 5 blocks
     Wait X Blocks    x=${5}
-    Run Keyword And Expect Error    {'Err': {'Module': {'index': 11, 'error': '0x53000000'}}}
+    Run Keyword And Expect Error    {'Err': {'Module': {'index': 10, 'error': '0x53000000'}}}
     ...    Attach_policy_to_farm    farm_id=${1}    farming_policy_id=${3}    cu=${20}    su=${2}    end=${1654058949}    node_certification=${False}    node_count=${10}    who=Sudo
 
     Tear Down Multi Node Network
