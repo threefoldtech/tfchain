@@ -40,9 +40,7 @@ jobs:
       - name: Unit tests
         run: |
           cd substrate-node
-          cargo test --no-fail-fast
-          cd pallets
-          cargo test --no-fail-fast
+          cargo test --no-fail-fast --features runtime-benchmarks
 
       - name: Integration tests
         run: |
