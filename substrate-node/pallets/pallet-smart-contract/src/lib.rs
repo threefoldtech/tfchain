@@ -764,9 +764,11 @@ impl<T: Config> Pallet<T> {
             is_node_owner = rent_contract.twin_id == twin_id;
         }
 
-        let fee = DedicatedNodesExtraFee::<T>::get(node_id).unwrap_or(0);
+        // A node is dedicated if it has a dedicated node extra fee or if the farm is dedicated
+        let node_is_dedicated = DedicatedNodesExtraFee::<T>::get(node_id).is_some() || farm.dedicated_farm;
+
         // If the user is not the owner of the node and the node is not a dedicated node then we don't allow the creation of it.
-        if !is_node_owner && farm.dedicated_farm || !is_node_owner && fee > 0 {
+        if !is_node_owner && node_is_dedicated {
             return Err(Error::<T>::NodeNotAvailableToDeploy.into());
         }
 
