@@ -765,9 +765,10 @@ impl<T: Config> Pallet<T> {
         }
 
         // A node is dedicated if it has a dedicated node extra fee or if the farm is dedicated
-        let node_is_dedicated = DedicatedNodesExtraFee::<T>::get(node_id).is_some() || farm.dedicated_farm;
+        let node_is_dedicated =
+            DedicatedNodesExtraFee::<T>::get(node_id).is_some() || farm.dedicated_farm;
 
-        // If the user is not the owner of the node and the node is not a dedicated node then we don't allow the creation of it.
+        // If the user is not the owner of the node and the node is a dedicated node then we don't allow the creation of it.
         if !is_node_owner && node_is_dedicated {
             return Err(Error::<T>::NodeNotAvailableToDeploy.into());
         }
@@ -1194,7 +1195,7 @@ impl<T: Config> Pallet<T> {
         let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
         let seconds_elapsed = now.checked_sub(contract_lock.lock_updated).unwrap_or(0);
 
-        let (amount_due, farmer_share, discount_received) =
+        let (amount_due, discount_received) =
             contract.calculate_contract_cost_tft(total_balance, seconds_elapsed)?;
 
         // If there is nothing to be paid and the contract is not in state delete, return
@@ -1225,7 +1226,7 @@ impl<T: Config> Pallet<T> {
         }
 
         // Handle contract lock operations
-        Self::handle_lock(contract, &mut contract_lock, amount_due, farmer_share)?;
+        Self::handle_lock(contract, &mut contract_lock, amount_due)?;
 
         // Always emit a contract billed event
         let contract_bill = types::ContractBill {
@@ -1368,7 +1369,6 @@ impl<T: Config> Pallet<T> {
         contract: &mut types::Contract<T>,
         contract_lock: &mut types::ContractLock<BalanceOf<T>>,
         amount_due: BalanceOf<T>,
-        farmer_share: u8,
     ) -> DispatchResultWithPostInfo {
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
@@ -1426,7 +1426,6 @@ impl<T: Config> Pallet<T> {
                 &contract,
                 &pricing_policy,
                 twin_balance.min(contract_lock.amount_locked),
-                farmer_share,
             ) {
                 Ok(_) => {}
                 Err(err) => {
@@ -1504,7 +1503,6 @@ impl<T: Config> Pallet<T> {
         contract: &types::Contract<T>,
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
         amount: BalanceOf<T>,
-        _farmer_share: u8,
     ) -> DispatchResultWithPostInfo {
         log::info!(
             "Distributing cultivation rewards for contract {:?} with amount {:?}",
@@ -1520,9 +1518,6 @@ impl<T: Config> Pallet<T> {
         // fetch source twin
         let twin =
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
-
-        // TODO: extract farmer share from amount and transfer it to farmer
-        // from here distribute the remaining amount following the regular distribution schema
 
         // Send 10% to the foundation
         let foundation_share = Perbill::from_percent(10) * amount;
