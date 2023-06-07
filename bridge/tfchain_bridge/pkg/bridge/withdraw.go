@@ -8,7 +8,7 @@ import (
 
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/rs/zerolog/log"
-	"github.com/threefoldtech/substrate-client"
+	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
 	"github.com/threefoldtech/tfchain_bridge/pkg"
 	subpkg "github.com/threefoldtech/tfchain_bridge/pkg/substrate"
 )
