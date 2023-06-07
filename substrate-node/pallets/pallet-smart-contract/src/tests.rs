@@ -861,7 +861,7 @@ fn test_create_node_contract_when_someone_else_has_rent_contract_fails() {
                 1,
                 None
             ),
-            Error::<TestRuntime>::NodeHasRentContract
+            Error::<TestRuntime>::NodeNotAvailableToDeploy
         );
     })
 }

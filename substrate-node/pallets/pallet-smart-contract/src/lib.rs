@@ -757,19 +757,17 @@ impl<T: Config> Pallet<T> {
 
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
-        // If the user is trying to deploy on a node that has an active rent contract
-        // only allow the user who created the rent contract to actually deploy a node contract on it
+        let mut is_node_owner = false;
         if let Some(contract_id) = ActiveRentContractForNode::<T>::get(node_id) {
             let rent_contract =
                 Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
-            if rent_contract.twin_id != twin_id {
-                return Err(Error::<T>::NodeHasRentContract.into());
-            }
-        } else {
-            // If there is no active rent contract on node and farm is dedicated
-            if farm.dedicated_farm {
-                return Err(Error::<T>::NodeNotAvailableToDeploy.into());
-            }
+            is_node_owner = rent_contract.twin_id == twin_id;
+        }
+
+        let fee = DedicatedNodesExtraFee::<T>::get(node_id).unwrap_or(0);
+        // If the user is not the owner of the node and the node is not a dedicated node then we don't allow the creation of it.
+        if !is_node_owner && farm.dedicated_farm || !is_node_owner && fee > 0 {
+            return Err(Error::<T>::NodeNotAvailableToDeploy.into());
         }
 
         // If the contract with hash and node id exists and it's in any other state then
