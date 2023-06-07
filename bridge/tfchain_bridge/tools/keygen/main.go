@@ -9,7 +9,6 @@ import (
 
 	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 
-	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/stellar/go/keypair"
 	"github.com/vedhavyas/go-subkey"
 	subkeyEd25519 "github.com/vedhavyas/go-subkey/ed25519"
@@ -25,7 +24,7 @@ func main() {
 		panic(err)
 	}
 
-	str := types.HexEncodeToString(pkey.Seed())
+	str := hex.EncodeToString(pkey.Seed())
 	krp, err := keyringPairFromSecret(str, network)
 	if err != nil {
 		panic(err)

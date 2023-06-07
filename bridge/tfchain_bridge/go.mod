@@ -3,7 +3,7 @@ module github.com/threefoldtech/tfchain_bridge
 go 1.17
 
 require (
-	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.5
+	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.12
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/pflag v1.0.5
 )
@@ -19,10 +19,7 @@ require (
 	github.com/vedhavyas/go-subkey v1.0.3
 )
 
-require (
-	github.com/cenkalti/backoff/v4 v4.1.3
-	github.com/threefoldtech/substrate-client v0.1.3
-)
+require github.com/cenkalti/backoff/v4 v4.1.3
 
 require (
 	github.com/ChainSafe/go-schnorrkel v1.0.0 // indirect
@@ -48,10 +45,11 @@ require (
 	github.com/segmentio/go-loggly v0.5.1-0.20171222203950-eb91657e62b2 // indirect
 	github.com/stellar/go-xdr v0.0.0-20201028102745-f80a23dac78a // indirect
 	github.com/stretchr/testify v1.7.0 // indirect
+	github.com/threefoldtech/tfchain/clients/tfchain-client-go v0.0.0-20230607082553-5605bca61c79 // indirect
 	golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871 // indirect
 	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
 
-replace github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.5 => github.com/threefoldtech/go-substrate-rpc-client/v4 v4.0.6-0.20230102154731-7c633b7d3c71
+replace github.com/threefoldtech/tfchain/clients/tfchain-client-go => ../../clients/tfchain-client-go
