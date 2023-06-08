@@ -24,6 +24,7 @@ pub enum StorageVersion {
     V8,
     V9,
     V10,
+    V11,
 }
 
 impl Default for StorageVersion {
