@@ -22,7 +22,7 @@ use pallet_tfgrid::types as pallet_tfgrid_types;
 use pallet_timestamp as timestamp;
 use sp_core::crypto::KeyTypeId;
 use sp_runtime::{
-    traits::{CheckedSub, Convert, SaturatedConversion},
+    traits::{CheckedAdd, CheckedSub, Convert, SaturatedConversion, Zero},
     Perbill,
 };
 use sp_std::prelude::*;
@@ -298,7 +298,12 @@ pub mod pallet {
         ContractDeployed(u64, T::AccountId),
         /// Deprecated event
         ConsumptionReportReceived(types::Consumption),
-        ContractBilled(types::ContractBill),
+        ContractBilled {
+            contract_id: u64,
+            timestamp: u64,
+            discount_level: DiscountLevel,
+            amount_billed: BalanceOf<T>,
+        },
         /// A certain amount of tokens got burned by a contract
         TokensBurned {
             contract_id: u64,
@@ -1187,7 +1192,9 @@ impl<T: Config> Pallet<T> {
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
         let usable_balance = Self::get_usable_balance(&twin.account_id);
         let stash_balance = Self::get_stash_balance(twin.id);
-        let total_balance = usable_balance + stash_balance;
+        let total_balance = usable_balance
+            .checked_add(&stash_balance)
+            .unwrap_or(BalanceOf::<T>::zero());
 
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
@@ -1202,22 +1209,32 @@ impl<T: Config> Pallet<T> {
             types::ContractData::RentContract(rc) => {
                 contract.calculate_extra_fee_cost_tft(rc.node_id, seconds_elapsed)?
             }
-            _ => BalanceOf::<T>::saturated_from(0 as u128),
+            _ => BalanceOf::<T>::zero(),
         };
-        let amount_due = regular_amount_due + extra_amount_due;
+        let amount_due = regular_amount_due
+            .checked_add(&extra_amount_due)
+            .unwrap_or(BalanceOf::<T>::zero());
 
         // If there is nothing to be paid and the contract is not in state delete, return
         // Can be that the users cancels the contract in the same block that it's getting billed
         // where elapsed seconds would be 0, but we still have to distribute rewards
-        if amount_due == BalanceOf::<T>::saturated_from(0 as u128) && !contract.is_state_delete() {
+        if amount_due == BalanceOf::<T>::zero() && !contract.is_state_delete() {
             log::debug!("amount to be billed is 0, nothing to do");
             return Ok(().into());
         };
 
         // Calculate total amount locked
-        let regular_lock_amount = contract_lock.amount_locked + regular_amount_due;
-        let extra_lock_amount = contract_lock.extra_amount_locked + extra_amount_due;
-        let lock_amount = regular_lock_amount + extra_lock_amount;
+        let regular_lock_amount = contract_lock
+            .amount_locked
+            .checked_add(&regular_amount_due)
+            .unwrap_or(BalanceOf::<T>::zero());
+        let extra_lock_amount = contract_lock
+            .extra_amount_locked
+            .checked_add(&extra_amount_due)
+            .unwrap_or(BalanceOf::<T>::zero());
+        let lock_amount = regular_lock_amount
+            .checked_add(&extra_lock_amount)
+            .unwrap_or(BalanceOf::<T>::zero());
 
         // Handle grace
         let contract = Self::handle_grace(&mut contract, usable_balance, lock_amount)?;
@@ -1241,19 +1258,16 @@ impl<T: Config> Pallet<T> {
         // Handle contract lock operations
         Self::handle_lock(contract, &mut contract_lock, amount_due)?;
 
-        // Always emit a contract billed event
-        let contract_bill = types::ContractBill {
+        Self::deposit_event(Event::ContractBilled {
             contract_id: contract.contract_id,
             timestamp: <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000,
             discount_level: discount_received.clone(),
-            amount_billed: amount_due.saturated_into::<u128>(),
-        };
-        Self::deposit_event(Event::ContractBilled(contract_bill));
+            amount_billed: amount_due,
+        });
 
         // If the contract is in delete state, remove all associated storage
         if matches!(contract.state, types::ContractState::Deleted(_)) {
-            Self::remove_contract(contract.contract_id)?;
-            return Ok(().into());
+            return Self::remove_contract(contract.contract_id);
         }
 
         // If contract is node contract, set the amount unbilled back to 0
@@ -1392,7 +1406,9 @@ impl<T: Config> Pallet<T> {
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
         if matches!(contract.state, types::ContractState::Created) {
             let mut locked_balance = Self::get_locked_balance(&twin.account_id);
-            locked_balance += amount_due;
+            locked_balance = locked_balance
+                .checked_add(&amount_due)
+                .unwrap_or(BalanceOf::<T>::zero());
             <T as Config>::Currency::extend_lock(
                 GRID_LOCK_ID,
                 &twin.account_id,
@@ -1411,20 +1427,27 @@ impl<T: Config> Pallet<T> {
             let new_locked_balance =
                 match locked_balance.checked_sub(&contract_lock.total_amount_locked()) {
                     Some(b) => b,
-                    None => BalanceOf::<T>::saturated_from(0 as u128),
+                    None => BalanceOf::<T>::zero(),
                 };
             <T as Config>::Currency::remove_lock(GRID_LOCK_ID, &twin.account_id);
-            <T as Config>::Currency::set_lock(
-                GRID_LOCK_ID,
-                &twin.account_id,
-                new_locked_balance,
-                WithdrawReasons::all(),
-            );
 
             // Fetch twin balance, if the amount locked in the contract lock exceeds the current unlocked
             // balance we can only transfer out the remaining balance
             // https://github.com/threefoldtech/tfchain/issues/479
             let mut twin_balance = Self::get_usable_balance(&twin.account_id);
+
+            if new_locked_balance > <T as Config>::Currency::minimum_balance() {
+                // TODO: check if this is needed
+                <T as Config>::Currency::set_lock(
+                    GRID_LOCK_ID,
+                    &twin.account_id,
+                    new_locked_balance,
+                    WithdrawReasons::all(),
+                );
+                twin_balance = Self::get_usable_balance(&twin.account_id);
+            } else {
+                twin_balance = twin_balance - <T as Config>::Currency::minimum_balance();
+            };
 
             // First, distribute extra cultivation rewards if any
             if contract_lock.has_extra_amount_locked() {
@@ -1477,8 +1500,8 @@ impl<T: Config> Pallet<T> {
 
             // Reset contract lock values
             contract_lock.lock_updated = now;
-            contract_lock.amount_locked = BalanceOf::<T>::saturated_from(0 as u128);
-            contract_lock.extra_amount_locked = BalanceOf::<T>::saturated_from(0 as u128);
+            contract_lock.amount_locked = BalanceOf::<T>::zero();
+            contract_lock.extra_amount_locked = BalanceOf::<T>::zero();
             contract_lock.cycles = 0;
         }
 
@@ -1552,7 +1575,7 @@ impl<T: Config> Pallet<T> {
         );
 
         // If the amount is zero, return
-        if amount == BalanceOf::<T>::saturated_from(0 as u128) {
+        if amount == BalanceOf::<T>::zero() {
             return Ok(().into());
         }
 
@@ -1606,7 +1629,7 @@ impl<T: Config> Pallet<T> {
         );
 
         // If the amount is zero, return
-        if amount == BalanceOf::<T>::saturated_from(0 as u128) {
+        if amount == BalanceOf::<T>::zero() {
             return Ok(().into());
         }
 
@@ -1704,15 +1727,15 @@ impl<T: Config> Pallet<T> {
         }
 
         // Burn 35%, to not have any imbalance in the system, subtract all previously send amounts with the initial
-        let mut amount_to_burn =
+        let amount_to_burn =
             (Perbill::from_percent(50) * amount) - foundation_share - staking_pool_share;
 
-        let existential_deposit_requirement = <T as Config>::Currency::minimum_balance();
-        let free_balance = <T as Config>::Currency::free_balance(&twin.account_id);
-        if amount_to_burn > free_balance - existential_deposit_requirement {
-            amount_to_burn = <T as Config>::Currency::free_balance(&twin.account_id)
-                - existential_deposit_requirement;
-        }
+        // let existential_deposit_requirement = <T as Config>::Currency::minimum_balance();
+        // let free_balance = <T as Config>::Currency::free_balance(&twin.account_id);
+        // if amount_to_burn > free_balance - existential_deposit_requirement {
+        //     amount_to_burn = <T as Config>::Currency::free_balance(&twin.account_id)
+        //         - existential_deposit_requirement;
+        // }
 
         let to_burn = T::Currency::withdraw(
             &twin.account_id,
@@ -1961,8 +1984,6 @@ impl<T: Config> Pallet<T> {
         let balance = pallet_balances::pallet::Pallet::<T>::usable_balance(account_id);
         let b = balance.saturated_into::<u128>();
         BalanceOf::<T>::saturated_from(b)
-            .checked_sub(&<T as Config>::Currency::minimum_balance())
-            .unwrap_or(BalanceOf::<T>::saturated_from(0 as u128))
     }
 
     fn get_locked_balance(account_id: &T::AccountId) -> BalanceOf<T> {
@@ -1972,7 +1993,7 @@ impl<T: Config> Pallet<T> {
         let locked_balance = free_balance.checked_sub(&usable_balance);
         match locked_balance {
             Some(balance) => balance,
-            None => BalanceOf::<T>::saturated_from(0 as u128),
+            None => BalanceOf::<T>::zero(),
         }
     }
 
@@ -1980,7 +2001,7 @@ impl<T: Config> Pallet<T> {
         let account_id = pallet_tfgrid::TwinBoundedAccountID::<T>::get(twin_id);
         match account_id {
             Some(account) => Self::get_usable_balance(&account),
-            None => BalanceOf::<T>::saturated_from(0 as u128),
+            None => BalanceOf::<T>::zero(),
         }
     }
 

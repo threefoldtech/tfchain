@@ -147,10 +147,12 @@ impl frame_system::Config for TestRuntime {
     type MaxConsumers = ConstU32<16>;
 }
 
+pub const EXISTENTIAL_DEPOSIT: u64 = 500;
+
 parameter_types! {
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
-    pub const ExistentialDeposit: u64 = 1;
+    pub const ExistentialDepositBalance: u64 = EXISTENTIAL_DEPOSIT;
 }
 
 impl pallet_balances::Config for TestRuntime {
@@ -162,7 +164,7 @@ impl pallet_balances::Config for TestRuntime {
     /// The ubiquitous event type.
     type RuntimeEvent = RuntimeEvent;
     type DustRemoval = ();
-    type ExistentialDeposit = ExistentialDeposit;
+    type ExistentialDeposit = ExistentialDepositBalance;
     type AccountStore = System;
     type WeightInfo = pallet_balances::weights::SubstrateWeight<TestRuntime>;
     type FreezeIdentifier = ();
@@ -487,6 +489,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
             (alice(), 1000000000000),
             (bob(), 2500000000),
             (charlie(), 150000),
+            (dave(), 1000000000000),
         ],
     };
     genesis.assimilate_storage(&mut storage).unwrap();

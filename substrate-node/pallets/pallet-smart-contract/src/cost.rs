@@ -6,6 +6,7 @@ use crate::types::{Contract, ContractBillingInformation, ServiceContract, Servic
 use crate::Config;
 use crate::DedicatedNodesExtraFee;
 use frame_support::{dispatch::DispatchErrorWithPostInfo, traits::Get};
+use log;
 use pallet_tfgrid::types as pallet_tfgrid_types;
 use sp_runtime::{Percent, SaturatedConversion};
 use substrate_fixed::types::U64F64;
@@ -317,22 +318,19 @@ pub fn calculate_cost_in_tft_from_musd<T: Config>(
 ) -> Result<u64, DispatchErrorWithPostInfo> {
     let avg_tft_price = pallet_tft_price::AverageTftPrice::<T>::get();
 
-    // Guaranty tft price will never be lower than min tft price
+    // Guarantee tft price will never be lower than min tft price
     let min_tft_price = pallet_tft_price::MinTftPrice::<T>::get();
     let mut tft_price = avg_tft_price.max(min_tft_price);
 
-    // Guaranty tft price will never be higher than max tft price
+    // Guarantee tft price will never be higher than max tft price
     let max_tft_price = pallet_tft_price::MaxTftPrice::<T>::get();
     tft_price = tft_price.min(max_tft_price);
 
-    // TFT Price is in musd
-    let tft_price_musd = U64F64::from_num(tft_price);
-
-    // Cost is expressed in units USD, divide by 10000 to get the price in musd
-    let total_cost_musd = U64F64::from_num(total_cost) / 10000;
+    // TFT Price is in musd so lets convert to units usd
+    let tft_price_units_usd = U64F64::from_num(tft_price) * 10000;
 
     // Now we have the price in musd and cost in musd, make the conversion to the amount of TFT's and multiply by the chain precision (7 decimals)
-    let total_cost_tft = (total_cost_musd / tft_price_musd) * U64F64::from_num(1e7 as u64);
-    let total_cost_tft_64: u64 = U64F64::to_num(total_cost_tft);
-    Ok(total_cost_tft_64)
+    let total_cost_tft = U64F64::from_num(total_cost) / tft_price_units_usd;
+
+    Ok((total_cost_tft * U64F64::from_num(10u64.pow(7))).to_num::<u64>())
 }

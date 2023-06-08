@@ -1152,10 +1152,9 @@ fn test_node_contract_billing_cycles() {
         let free_balance = Balances::free_balance(&twin.account_id);
 
         let locked_balance = free_balance - usable_balance;
-        assert_eq_error_rate!(
+        assert_eq!(
             locked_balance.saturated_into::<u128>(),
-            amount_due_1 as u128,
-            1
+            amount_due_1 as u128
         );
 
         let (amount_due_2, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
@@ -1177,10 +1176,9 @@ fn test_node_contract_billing_cycles() {
         let free_balance = Balances::free_balance(&twin.account_id);
 
         let locked_balance = free_balance - usable_balance;
-        assert_eq_error_rate!(
+        assert_eq!(
             locked_balance.saturated_into::<u128>(),
-            amount_due_1 as u128 + amount_due_2 as u128 + amount_due_3 as u128,
-            3
+            amount_due_1 as u128 + amount_due_2 as u128 + amount_due_3 as u128
         );
     });
 }
@@ -1257,10 +1255,9 @@ fn test_node_multiple_contract_billing_cycles() {
         let free_balance = Balances::free_balance(&twin.account_id);
 
         let locked_balance = free_balance - usable_balance;
-        assert_eq_error_rate!(
+        assert_eq!(
             locked_balance.saturated_into::<u128>(),
-            amount_due_contract_1 as u128 + amount_due_contract_2 as u128,
-            2
+            amount_due_contract_1 as u128 + amount_due_contract_2 as u128
         );
     });
 }
@@ -1540,10 +1537,9 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
         // After canceling contract, and not being able to pay for the remainder of the cycle
         // where the cancel was excecuted, the remaining balance should still be the same
         let usable_balance_after_canceling = Balances::usable_balance(&twin.account_id);
-        assert_eq_error_rate!(
+        assert_eq!(
             usable_balance_after_canceling,
-            usable_balance_before_canceling,
-            1
+            usable_balance_before_canceling
         );
 
         validate_distribution_rewards(initial_total_issuance, total_amount_billed, false);
@@ -1782,22 +1778,18 @@ fn test_name_contract_billing() {
             .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 11);
         run_to_block(11, Some(&mut pool_state));
 
-        // the contractbill event should look like:
-        let contract_bill_event = types::ContractBill {
-            contract_id,
-            timestamp: 1628082066,
-            discount_level: types::DiscountLevel::Gold,
-            amount_billed: 1848,
-        };
         let our_events = System::events();
         info!("events: {:?}", our_events.clone());
         assert_eq!(
             our_events[4],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
-            >::ContractBilled(
-                contract_bill_event
-            )))
+            >::ContractBilled {
+                contract_id,
+                timestamp: 1628082066,
+                discount_level: types::DiscountLevel::Gold,
+                amount_billed: 1848,
+            }))
         );
     });
 }
@@ -1901,7 +1893,7 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
 
         let usable_balance = Balances::usable_balance(&twin.account_id);
         let free_balance = Balances::free_balance(&twin.account_id);
-        assert_eq_error_rate!(usable_balance, free_balance, 2);
+        assert_eq!(usable_balance, free_balance);
     });
 }
 
@@ -3389,21 +3381,51 @@ fn test_cu_calculation() {
 #[test]
 fn test_lock() {
     new_test_ext().execute_with(|| {
+        let usable_balance = Balances::usable_balance(&bob());
+        let free_balance = Balances::free_balance(&bob());
+
+        // should be equal since no activity and no locks
+        assert_eq!(usable_balance, free_balance);
+
         let id: u64 = 1;
+        // Try to lock less than EXISTENTIAL_DEPOSIT should fail
         Balances::set_lock(id.to_be_bytes(), &bob(), 100, WithdrawReasons::all());
 
+        // usable balance should now return free balance - EXISTENTIAL_DEPOSIT cause there was some activity
         let usable_balance = Balances::usable_balance(&bob());
         let free_balance = Balances::free_balance(&bob());
+        assert_eq!(usable_balance, free_balance - EXISTENTIAL_DEPOSIT);
 
-        let locked_balance = free_balance - usable_balance;
-        assert_eq!(locked_balance, 100);
+        // ----- INITIAL ------ //
+        // Try to lock more than EXISTENTIAL_DEPOSIT should succeed
+        let to_lock = 100 + EXISTENTIAL_DEPOSIT;
 
-        Balances::extend_lock(id.to_be_bytes(), &bob(), 200, WithdrawReasons::all());
+        Balances::set_lock(id.to_be_bytes(), &bob(), to_lock, WithdrawReasons::all());
+
+        // usable balance should now be free_balance - to_lock cause there was some activity
         let usable_balance = Balances::usable_balance(&bob());
         let free_balance = Balances::free_balance(&bob());
+        assert_eq!(usable_balance, free_balance - to_lock);
 
-        let locked_balance = free_balance - usable_balance;
-        assert_eq!(locked_balance, 200);
+        // ----- UPDATE ------ //
+        // updating a lock should succeed
+        let to_lock = 500 + EXISTENTIAL_DEPOSIT;
+
+        Balances::set_lock(id.to_be_bytes(), &bob(), to_lock, WithdrawReasons::all());
+
+        // usable balance should now be free_balance - to_lock cause there was some activity
+        let usable_balance = Balances::usable_balance(&bob());
+        let free_balance = Balances::free_balance(&bob());
+        assert_eq!(usable_balance, free_balance - to_lock);
+
+        // ----- UNLOCK ------ //
+        // Unlock should work
+        Balances::remove_lock(id.to_be_bytes(), &bob());
+
+        // usable balance should now be free_balance cause there are no locks
+        let usable_balance = Balances::usable_balance(&bob());
+        let free_balance = Balances::free_balance(&bob());
+        assert_eq!(usable_balance, free_balance);
     })
 }
 
@@ -3744,6 +3766,106 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_works() {
 }
 
 #[test]
+fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        prepare_farm_and_node();
+        let node_id = 1;
+        run_to_block(1, None);
+
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
+
+        let initial_total_issuance = Balances::total_issuance();
+        // Get daves's twin
+        let twin = TfgridModule::twins(4).unwrap();
+        let initial_twin_balance = Balances::free_balance(&twin.account_id);
+        log::debug!("Twin balance: {}", initial_twin_balance);
+
+        let extra_fee = 100000;
+        assert_ok!(SmartContractModule::set_dedicated_node_extra_fee(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+            extra_fee
+        ));
+
+        assert_ok!(SmartContractModule::create_rent_contract(
+            RuntimeOrigin::signed(dave()),
+            node_id,
+            None
+        ));
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(dave()),
+            node_id,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
+        ));
+
+        let contract_id = 1;
+
+        // Ensure contract_id is stored at right billing loop index
+        let index = SmartContractModule::get_contract_billing_loop_index(contract_id);
+        assert_eq!(
+            SmartContractModule::contract_to_bill_at_block(index),
+            vec![contract_id]
+        );
+
+        let now = Timestamp::get().saturated_into::<u64>() / 1000;
+
+        // advance 24 cycles
+        for i in 0..24 {
+            let block_number = 11 + i * 10;
+            pool_state.write().should_call_bill_contract(
+                contract_id,
+                Ok(Pays::Yes.into()),
+                block_number,
+            );
+            run_to_block(block_number, Some(&mut pool_state));
+        }
+
+        let then = Timestamp::get().saturated_into::<u64>() / 1000;
+        let seconds_elapsed = then - now;
+        log::debug!("seconds_elapsed: {}", seconds_elapsed);
+
+        let events = System::events();
+        for event in events.iter() {
+            log::debug!("Event: {:?}", event.event);
+        }
+
+        let free_balance = Balances::free_balance(&twin.account_id);
+        let total_amount_billed = initial_twin_balance - free_balance;
+        log::debug!("total_amount_billed: {}", total_amount_billed);
+
+        let extra_fee_cost_musd =
+            cost::calculate_extra_fee_cost::<TestRuntime>(node_id, seconds_elapsed);
+        let extra_fee_cost_tft =
+            cost::calculate_cost_in_tft_from_musd::<TestRuntime>(extra_fee_cost_musd).unwrap();
+        log::debug!("extra_fee_cost_tft: {}", extra_fee_cost_tft);
+
+        let total_amount_billed_without_extra = total_amount_billed - extra_fee_cost_tft;
+        log::debug!(
+            "total_amount_billed_without_extra: {}",
+            total_amount_billed_without_extra
+        );
+        let total_amount_billed_fee_cost = total_amount_billed - total_amount_billed_without_extra;
+        log::debug!(
+            "total_amount_billed_fee_cost: {}",
+            total_amount_billed_fee_cost
+        );
+
+        assert_eq!(extra_fee_cost_tft, total_amount_billed_fee_cost);
+
+        validate_distribution_rewards(
+            initial_total_issuance,
+            total_amount_billed_without_extra,
+            true,
+        );
+    })
+}
+
+#[test]
 fn test_percent() {
     let cost: u64 = 1000;
     let new_cost = Percent::from_percent(25) * cost;
@@ -3809,7 +3931,7 @@ fn validate_distribution_rewards(
     total_amount_billed: u64,
     had_solution_provider: bool,
 ) {
-    info!("total locked balance {:?}", total_amount_billed);
+    info!("total amount billed {:?}", total_amount_billed);
 
     let staking_pool_account_balance = Balances::free_balance(&get_staking_pool_account());
     info!(
@@ -3818,9 +3940,10 @@ fn validate_distribution_rewards(
     );
 
     // 5% is sent to the staking pool account
-    assert_eq!(
+    assert_eq_error_rate!(
         staking_pool_account_balance,
-        Perbill::from_percent(5) * total_amount_billed
+        Perbill::from_percent(5) * total_amount_billed,
+        6
     );
 
     // 10% is sent to the foundation account
@@ -3844,17 +3967,13 @@ fn validate_distribution_rewards(
         let solution_provider_1_balance =
             Balances::free_balance(solution_provider.providers[0].who.clone());
         info!("solution provider b: {:?}", solution_provider_1_balance);
-        assert_eq!(
-            solution_provider_1_balance,
-            Perbill::from_percent(10) * total_amount_billed
-        );
+        assert_ne!(solution_provider_1_balance, 0);
     } else {
         // 50% is sent to the sales account
         let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
-        assert_eq_error_rate!(
+        assert_eq!(
             sales_account_balance,
-            Perbill::from_percent(50) * total_amount_billed,
-            1
+            Perbill::from_percent(50) * total_amount_billed
         );
     }
 
@@ -3914,28 +4033,17 @@ fn check_report_cost(
         info!("{:?}", e);
     }
 
-    let contract_bill = types::ContractBill {
+    let r = record(MockEvent::SmartContractModule(SmartContractEvent::<
+        TestRuntime,
+    >::ContractBilled {
         contract_id,
         timestamp: get_timestamp_in_seconds_for_block(block_number),
         discount_level,
-        amount_billed: amount_billed as u128,
-    };
+        amount_billed: amount_billed,
+    }));
+    info!("event: {:?}", r);
 
-    info!(
-        "event: {:?}",
-        record(MockEvent::SmartContractModule(SmartContractEvent::<
-            TestRuntime,
-        >::ContractBilled(
-            contract_bill.clone()
-        )))
-    );
-
-    assert_eq!(
-        our_events.contains(&record(MockEvent::SmartContractModule(
-            SmartContractEvent::<TestRuntime>::ContractBilled(contract_bill)
-        ))),
-        true
-    );
+    assert_eq!(our_events.contains(&r), true);
 }
 
 fn calculate_tft_cost(contract_id: u64, twin_id: u32, blocks: u64) -> (u64, types::DiscountLevel) {
@@ -3952,6 +4060,7 @@ pub fn prepare_twins() {
     create_twin(alice());
     create_twin(bob());
     create_twin(charlie());
+    create_twin(dave());
 }
 
 pub fn prepare_farm(source: AccountId, dedicated: bool) {

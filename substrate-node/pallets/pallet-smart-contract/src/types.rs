@@ -195,16 +195,6 @@ pub struct NruConsumption {
 #[derive(
     PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
 )]
-pub struct ContractBill {
-    pub contract_id: u64,
-    pub timestamp: u64,
-    pub discount_level: DiscountLevel,
-    pub amount_billed: u128,
-}
-
-#[derive(
-    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
-)]
 pub struct ContractResources {
     pub contract_id: u64,
     pub used: Resources,
