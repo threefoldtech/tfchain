@@ -121,13 +121,13 @@ async function setNodePower (self, nodeID, power, callback) {
 
 async function setDedicatedNodePrice(self, nodeID, price, callback) {
   const nonce = await self.api.rpc.system.accountNextIndex(self.address)
-  return self.api.tx.tfgridModule
+  return self.api.tx.smartContractModule
     .setDedicatedNodeExtraFee(nodeID, price)
     .signAndSend(self.key, { nonce }, callback)
 }
 
 async function getDedicatedNodePrice(self, nodeID) {
-  const price = await self.api.query.tfgridModule.dedicatedNodesExtraFee(nodeID)
+  const price = await self.api.query.smartContractModule.dedicatedNodesExtraFee(nodeID)
   return price.toNumber()
 }
 
