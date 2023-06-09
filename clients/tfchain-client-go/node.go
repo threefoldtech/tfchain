@@ -612,6 +612,27 @@ func (s *Substrate) UpdateNodeUptime(identity Identity, uptime uint64) (hash typ
 	return hash, nil
 }
 
+// UpdateNodeUptime updates the node uptime to given value
+func (s *Substrate) UpdateNodeUptimeV2(identity Identity, uptime, timestampHint uint64) (hash types.Hash, err error) {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return hash, err
+	}
+
+	c, err := types.NewCall(meta, "TfgridModule.report_uptime_v2", uptime, timestampHint)
+
+	if err != nil {
+		return hash, errors.Wrap(err, "failed to create call")
+	}
+
+	hash, err = s.CallOnce(cl, meta, identity, c)
+	if err != nil {
+		return hash, errors.Wrap(err, "failed to update node uptime")
+	}
+
+	return hash, nil
+}
+
 // GetNode with id
 func (s *Substrate) GetLastNodeID() (uint32, error) {
 	cl, meta, err := s.GetClient()
@@ -667,7 +688,7 @@ func (s *Substrate) SetNodeCertificate(sudo Identity, id uint32, cert NodeCertif
 	return nil
 }
 
-// UpdateNodeUptime updates the node uptime to given value
+// SetNodePowerState updates the node uptime to given value
 func (s *Substrate) SetNodePowerState(identity Identity, up bool) (hash types.Hash, err error) {
 	cl, meta, err := s.GetClient()
 	if err != nil {
