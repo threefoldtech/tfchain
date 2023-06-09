@@ -667,7 +667,7 @@ func (s *Substrate) SetNodeCertificate(sudo Identity, id uint32, cert NodeCertif
 	return nil
 }
 
-// UpdateNodeUptime updates the node uptime to given value
+// SetNodePowerState updates the node uptime to given value
 func (s *Substrate) SetNodePowerState(identity Identity, up bool) (hash types.Hash, err error) {
 	cl, meta, err := s.GetClient()
 	if err != nil {
@@ -693,6 +693,7 @@ func (s *Substrate) SetNodePowerState(identity Identity, up bool) (hash types.Ha
 	return callResponse.Hash, nil
 }
 
+// GetPowerTarget returns the power target for a node
 func (s *Substrate) GetPowerTarget(nodeID uint32) (power NodePower, err error) {
 	cl, meta, err := s.GetClient()
 	if err != nil {
@@ -727,4 +728,58 @@ func (s *Substrate) GetPowerTarget(nodeID uint32) (power NodePower, err error) {
 	}
 
 	return power, nil
+}
+
+// SetDedicatedNodePrice sets an extra price on a node expressed in mUSD
+// This price will be distributed back to the farmer if the node is rented
+// Setting this price also makes the node only available to rent as dedicated
+func (s *Substrate) SetDedicatedNodePrice(identity Identity, nodeId uint32, price uint64) (hash types.Hash, err error) {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return hash, err
+	}
+
+	c, err := types.NewCall(meta, "SmartContractModule.set_dedicated_node_extra_fee", nodeId, price)
+
+	if err != nil {
+		return hash, errors.Wrap(err, "failed to create call")
+	}
+
+	callResponse, err := s.Call(cl, meta, identity, c)
+	if err != nil {
+		return hash, errors.Wrap(err, "failed to update node extra price")
+	}
+
+	return callResponse.Hash, nil
+}
+
+// GetDedicatedeNodePrice returns the price of a dedicated node
+func (s *Substrate) GetDedicatedNodePrice(nodeID uint32) (uint64, error) {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return 0, err
+	}
+
+	bytes, err := Encode(nodeID)
+	if err != nil {
+		return 0, errors.Wrap(err, "substrate: encoding error building query arguments")
+	}
+
+	key, err := types.CreateStorageKey(meta, "SmartContractModule", "DedicatedNodesExtraFee", bytes)
+	if err != nil {
+		return 0, errors.Wrap(err, "failed to create substrate query key")
+	}
+
+	var price types.U64
+
+	ok, err := cl.RPC.State.GetStorageLatest(key, &price)
+	if err != nil {
+		return 0, err
+	}
+
+	if !ok {
+		return 0, nil
+	}
+
+	return uint64(price), nil
 }
