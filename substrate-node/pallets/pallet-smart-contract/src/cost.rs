@@ -8,7 +8,7 @@ use crate::DedicatedNodesExtraFee;
 use frame_support::{dispatch::DispatchErrorWithPostInfo, traits::Get};
 use log;
 use pallet_tfgrid::types as pallet_tfgrid_types;
-use sp_runtime::{Percent, SaturatedConversion};
+use sp_runtime::{Percent, SaturatedConversion, traits::Zero};
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
     constants::time::{SECS_PER_HOUR, SECS_PER_MONTH},
@@ -38,7 +38,7 @@ impl<T: Config> Contract<T> {
         // If cost is 0, reinsert to be billed at next interval
         if total_cost == 0 {
             return Ok((
-                BalanceOf::<T>::saturated_from(0 as u128),
+                BalanceOf::<T>::zero(),
                 types::DiscountLevel::None,
             ));
         }
@@ -125,10 +125,10 @@ impl<T: Config> Contract<T> {
     ) -> Result<BalanceOf<T>, DispatchErrorWithPostInfo> {
         let cost = calculate_extra_fee_cost::<T>(node_id, seconds_elapsed);
         if cost == 0 {
-            return Ok(BalanceOf::<T>::saturated_from(0 as u128));
+            return Ok(BalanceOf::<T>::zero());
         }
         let cost_tft = calculate_cost_in_tft_from_musd::<T>(cost)?;
-
+    
         Ok(BalanceOf::<T>::saturated_from(cost_tft))
     }
 }
@@ -142,7 +142,7 @@ impl ServiceContract {
         let total_cost = self.calculate_bill_cost::<T>(service_bill);
 
         if total_cost == 0 {
-            return Ok(BalanceOf::<T>::saturated_from(0 as u128));
+            return Ok(BalanceOf::<T>::zero());
         }
 
         // Calculate the cost in TFT for service contract
@@ -210,7 +210,8 @@ pub fn calculate_resources_cost<T: Config>(
     return total_cost.ceil().to_num::<u64>();
 }
 
-// Calculates the cost of extra fee for a dedicated node .
+// Calculates the cost of extra fee for a dedicated node.
+// TODO: check why this gives different results when giving it a low input (multiple billing cycles) and a high input (total seconds elapsed)
 pub fn calculate_extra_fee_cost<T: Config>(node_id: u32, seconds_elapsed: u64) -> u64 {
     match DedicatedNodesExtraFee::<T>::get(node_id) {
         Some(fee_musd_per_month) => {
@@ -272,7 +273,7 @@ pub fn calculate_discount<T: Config>(
 ) -> (BalanceOf<T>, types::DiscountLevel) {
     if amount_due == 0 {
         return (
-            BalanceOf::<T>::saturated_from(0 as u128),
+            BalanceOf::<T>::zero(),
             types::DiscountLevel::None,
         );
     }

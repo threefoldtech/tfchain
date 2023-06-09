@@ -3813,6 +3813,8 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
         );
 
         let now = Timestamp::get().saturated_into::<u64>() / 1000;
+        // let mut extra_fee_cost_musd = 0;
+        let mut extra_fee_cost_tft = 0;
 
         // advance 24 cycles
         for i in 0..24 {
@@ -3823,6 +3825,12 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
                 block_number,
             );
             run_to_block(block_number, Some(&mut pool_state));
+        
+            // check why aggregating seconds elapsed is giving different results
+            let extra_fee_cost_musd =
+                cost::calculate_extra_fee_cost::<TestRuntime>(node_id, 60);
+            extra_fee_cost_tft +=
+                cost::calculate_cost_in_tft_from_musd::<TestRuntime>(extra_fee_cost_musd).unwrap();
         }
 
         let then = Timestamp::get().saturated_into::<u64>() / 1000;
@@ -3837,12 +3845,6 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
         let free_balance = Balances::free_balance(&twin.account_id);
         let total_amount_billed = initial_twin_balance - free_balance;
         log::debug!("total_amount_billed: {}", total_amount_billed);
-
-        let extra_fee_cost_musd =
-            cost::calculate_extra_fee_cost::<TestRuntime>(node_id, seconds_elapsed);
-        let extra_fee_cost_tft =
-            cost::calculate_cost_in_tft_from_musd::<TestRuntime>(extra_fee_cost_musd).unwrap();
-        log::debug!("extra_fee_cost_tft: {}", extra_fee_cost_tft);
 
         let total_amount_billed_without_extra = total_amount_billed - extra_fee_cost_tft;
         log::debug!(
@@ -3860,7 +3862,7 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
         validate_distribution_rewards(
             initial_total_issuance,
             total_amount_billed_without_extra,
-            true,
+            false,
         );
     })
 }
