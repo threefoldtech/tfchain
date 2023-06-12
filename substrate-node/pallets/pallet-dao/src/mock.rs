@@ -116,6 +116,7 @@ parameter_types! {
     pub const MaxInterfaceIpsLength: u32 = 5;
     pub const MaxInterfacesLength: u32 = 10;
     pub const MaxFarmPublicIps: u32 = 512;
+    pub const TimestampHintDrift: u64 = 60;
 }
 
 pub(crate) type TestTermsAndConditions = TermsAndConditions<TestRuntime>;
@@ -150,6 +151,7 @@ impl pallet_tfgrid::Config for TestRuntime {
     type CityName = TestCityName;
     type Location = TestLocation;
     type SerialNumber = TestSerialNumber;
+    type TimestampHintDrift = TimestampHintDrift;
 }
 
 impl pallet_timestamp::Config for TestRuntime {

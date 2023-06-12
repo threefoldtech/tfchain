@@ -579,11 +579,16 @@ class TfChainClient:
         self._sign_extrinsic_submit_check_response(
             substrate, call, who, expected_events=expected_events)
 
-    def report_uptime(self, uptime: int, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
+    def report_uptime(self, uptime: int, timestamp_hint: int = 0, port: int = DEFAULT_PORT, who: str = DEFAULT_SIGNER):
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         call = substrate.compose_call(
-            "TfgridModule", "report_uptime", {"uptime": uptime})
+            "TfgridModule", "report_uptime", {"uptime": uptime })
+        # if timestamp_hint is provided, use v2 call
+        if timestamp_hint != 0:
+            call = substrate.compose_call(
+            "TfgridModule", "report_uptime_v2", {"uptime": uptime, "timestamp_hint": timestamp_hint})
+
         expected_events = [{
             "module_id": "TfgridModule",
             "event_id": "NodeUptimeReported"
