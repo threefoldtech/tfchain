@@ -25,6 +25,9 @@ see [docs](./docs/readme.md) for more information on how to work with this compo
 
 See [bridge](./bridge/README.md) for more information on the bridge between Tfchain TFT and Stellar TFT.
 
+## Scripts
+
+See [scripts](./scripts/README.md) for more information on how to use the scripts.
 ## Deployed instances
 
 - Development network:
