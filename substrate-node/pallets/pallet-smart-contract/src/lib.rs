@@ -1135,7 +1135,7 @@ impl<T: Config> Pallet<T> {
         log::debug!("nu cost: {:?}", nu_cost);
 
         // save total
-        let total = nu_cost.ceil().to_num::<u64>();
+        let total = nu_cost.round().to_num::<u64>();
         log::debug!("total cost: {:?}", total);
 
         // update contract billing info

@@ -1733,11 +1733,6 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
             run_to_block(21 + i * 10, Some(&mut pool_state));
         }
 
-        // pool_state
-        //     .write()
-        //     .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 131);
-        // run_to_block(131, Some(&mut pool_state));
-
         // The user's total free balance should be distributed
         let free_balance = Balances::free_balance(&twin.account_id);
         let total_amount_billed = initial_twin_balance - free_balance;
@@ -1778,12 +1773,22 @@ fn test_name_contract_billing() {
             .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 11);
         run_to_block(11, Some(&mut pool_state));
 
+        // get the contract cost for 1 billing cycle
+        let contract = SmartContractModule::contracts(contract_id).unwrap();
+        let twin_id = 2;
+        let twin = TfgridModule::twins(twin_id).unwrap();
+        let balance = Balances::free_balance(&twin.account_id);
+        let second_elapsed = BillingFrequency::get() * SECS_PER_BLOCK;
+        let (contract_cost, _) = contract
+            .calculate_contract_cost_tft(balance, second_elapsed)
+            .unwrap();
+
         // the contractbill event should look like:
         let contract_bill_event = types::ContractBill {
             contract_id,
             timestamp: 1628082066,
             discount_level: types::DiscountLevel::Gold,
-            amount_billed: 1848,
+            amount_billed: contract_cost as u128,
         };
 
         let our_events = System::events();
@@ -3905,7 +3910,7 @@ macro_rules! test_calculate_discount {
             let result = cost::calculate_discount::<TestRuntime>(
                 amount_due,
                 seconds_elapsed,
-                balance.to_num::<u64>(),
+                balance.round().to_num::<u64>(),
                 NodeCertification::Diy,
             );
 
@@ -3913,7 +3918,7 @@ macro_rules! test_calculate_discount {
                 result,
                 (
                     (U64F64::from_num(amount_due) * expected_discount_level.price_multiplier())
-                        .ceil()
+                        .round()
                         .to_num::<u64>(),
                     expected_discount_level
                 )

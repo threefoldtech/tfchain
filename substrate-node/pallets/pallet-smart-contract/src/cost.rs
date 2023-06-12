@@ -108,7 +108,7 @@ impl<T: Config> Contract<T> {
                 let total_cost_u64f64 = (U64F64::from_num(pricing_policy.unique_name.value)
                     / U64F64::from_num(T::BillingReferencePeriod::get()))
                     * U64F64::from_num(seconds_elapsed);
-                total_cost_u64f64.to_num::<u64>()
+                total_cost_u64f64.round().to_num::<u64>()
             }
         };
 
@@ -208,7 +208,7 @@ pub fn calculate_resources_cost<T: Config>(
         total_cost += total_ip_cost;
     }
 
-    return total_cost.ceil().to_num::<u64>();
+    return total_cost.round().to_num::<u64>();
 }
 
 // Calculates the cost of extra fee for a dedicated node in units usd.
@@ -220,6 +220,7 @@ pub fn calculate_extra_fee_cost_units_usd<T: Config>(node_id: u32, seconds_elaps
             let fee_units_usd_per_month = fee_musd_per_month * 10000;
             (U64F64::from_num(fee_units_usd_per_month * seconds_elapsed)
                 / U64F64::from_num(SECS_PER_MONTH))
+            .round()
             .to_num::<u64>()
         }
         None => 0,
@@ -307,7 +308,7 @@ pub fn calculate_discount<T: Config>(
 
     // convert to balance object
     let amount_due: BalanceOf<T> =
-        BalanceOf::<T>::saturated_from(amount_due.ceil().to_num::<u64>());
+        BalanceOf::<T>::saturated_from(amount_due.round().to_num::<u64>());
 
     (amount_due, discount_received)
 }
@@ -332,5 +333,7 @@ pub fn calculate_cost_in_tft_from_units_usd<T: Config>(
     let cost_tft = U64F64::from_num(cost_units_usd) / U64F64::from_num(tft_price_units_usd);
 
     // Multiply by the chain precision (7 decimals)
-    Ok((cost_tft * U64F64::from_num(10u64.pow(7))).to_num::<u64>())
+    Ok((cost_tft * U64F64::from_num(10u64.pow(7)))
+        .round()
+        .to_num::<u64>())
 }
