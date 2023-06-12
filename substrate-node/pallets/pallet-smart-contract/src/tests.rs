@@ -18,7 +18,7 @@ use sp_core::H256;
 use sp_runtime::{assert_eq_error_rate, traits::SaturatedConversion, Perbill, Percent};
 use sp_std::convert::{TryFrom, TryInto};
 use substrate_fixed::types::U64F64;
-use tfchain_support::constants::time::SECS_PER_HOUR;
+use tfchain_support::constants::time::{SECS_PER_BLOCK, SECS_PER_HOUR};
 use tfchain_support::{
     resources::Resources,
     types::{FarmCertification, NodeCertification, PublicIP, IP4},
@@ -1792,9 +1792,9 @@ fn test_name_contract_billing() {
             our_events[4],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
-                >::ContractBilled(
-                    contract_bill_event
-                )))
+            >::ContractBilled(
+                contract_bill_event
+            )))
         );
     });
 }
@@ -2068,10 +2068,6 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
             end_grace_block_number,
         );
         run_to_block(end_grace_block_number, Some(&mut pool_state));
-
-        // let (amount_due_as_u128, , discount_received) = calculate_tft_cost(1, 2, 11);
-        // assert_ne!(amount_due_as_u128, 0);
-        // check_report_cost(1, 3, amount_due_as_u128, 12, discount_received);
 
         let our_events = System::events();
         assert_eq!(our_events.len(), 21);
@@ -3776,7 +3772,9 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         let node_id = 1;
-        run_to_block(1, None);
+
+        let start_block = 1;
+        run_to_block(start_block, None);
 
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
@@ -3808,39 +3806,49 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
             None
         ));
 
-        let contract_id = 1;
+        let rent_contract_id = 1;
+        let rent_contract = SmartContractModule::contracts(rent_contract_id).unwrap();
 
         // Ensure contract_id is stored at right billing loop index
-        let index = SmartContractModule::get_contract_billing_loop_index(contract_id);
+        let index = SmartContractModule::get_contract_billing_loop_index(rent_contract_id);
         assert_eq!(
             SmartContractModule::contract_to_bill_at_block(index),
-            vec![contract_id]
+            vec![rent_contract_id]
         );
 
         let now = Timestamp::get().saturated_into::<u64>() / 1000;
-        // let mut extra_fee_cost_musd = 0;
+        let mut rent_contract_cost_tft = 0u64;
         let mut extra_fee_cost_tft = 0;
 
-        // advance 24 cycles
-        for i in 0..24 {
-            let block_number = 11 + i * 10;
+        // advance 24 cycles to reach reward distribution block
+        for i in 1..=DistributionFrequency::get() as u64 {
+            let block_number = start_block + i * BillingFrequency::get();
             pool_state.write().should_call_bill_contract(
-                contract_id,
+                rent_contract_id,
                 Ok(Pays::Yes.into()),
                 block_number,
             );
             run_to_block(block_number, Some(&mut pool_state));
-        
+
             // check why aggregating seconds elapsed is giving different results
-            let extra_fee_cost_musd =
-                cost::calculate_extra_fee_cost::<TestRuntime>(node_id, 60);
-            extra_fee_cost_tft +=
-                cost::calculate_cost_in_tft_from_musd::<TestRuntime>(extra_fee_cost_musd).unwrap();
+            let elapsed_time_in_secs = BillingFrequency::get() * SECS_PER_BLOCK;
+
+            // aggregate rent contract cost
+            let free_balance = Balances::free_balance(&twin.account_id);
+            let (contract_cost_tft, _) = rent_contract
+                .calculate_contract_cost_tft(free_balance, elapsed_time_in_secs)
+                .unwrap();
+            rent_contract_cost_tft += contract_cost_tft;
+
+            // aggregate extra fee cost
+            extra_fee_cost_tft += rent_contract
+                .calculate_extra_fee_cost_tft(node_id, elapsed_time_in_secs)
+                .unwrap();
         }
 
         let then = Timestamp::get().saturated_into::<u64>() / 1000;
         let seconds_elapsed = then - now;
-        log::debug!("seconds_elapsed: {}", seconds_elapsed);
+        log::debug!("seconds elapsed: {}", seconds_elapsed);
 
         let events = System::events();
         for event in events.iter() {
@@ -3848,27 +3856,22 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
         }
 
         let free_balance = Balances::free_balance(&twin.account_id);
-        let total_amount_billed = initial_twin_balance - free_balance;
-        log::debug!("total_amount_billed: {}", total_amount_billed);
-
-        let total_amount_billed_without_extra = total_amount_billed - extra_fee_cost_tft;
+        let total_amount_billed_tft = initial_twin_balance - free_balance;
+        log::debug!("total amount billed: {}", total_amount_billed_tft);
         log::debug!(
-            "total_amount_billed_without_extra: {}",
-            total_amount_billed_without_extra
+            "total amount billed for rent contract: {}",
+            rent_contract_cost_tft
         );
-        let total_amount_billed_fee_cost = total_amount_billed - total_amount_billed_without_extra;
-        log::debug!(
-            "total_amount_billed_fee_cost: {}",
-            total_amount_billed_fee_cost
+        log::debug!("total amount billed for extra fee: {}", extra_fee_cost_tft);
+
+        // Ensure total amount billed after 24 cycles is equal
+        // to aggregated rent contract cost + aggregated extra_fee_cost
+        assert_eq!(
+            total_amount_billed_tft,
+            rent_contract_cost_tft + extra_fee_cost_tft
         );
 
-        assert_eq!(extra_fee_cost_tft, total_amount_billed_fee_cost);
-
-        validate_distribution_rewards(
-            initial_total_issuance,
-            total_amount_billed_without_extra,
-            false,
-        );
+        validate_distribution_rewards(initial_total_issuance, rent_contract_cost_tft, false);
     })
 }
 
@@ -4063,7 +4066,6 @@ fn check_report_cost(
         true
     );
 }
-
 
 fn calculate_tft_cost(contract_id: u64, twin_id: u32, blocks: u64) -> (u64, types::DiscountLevel) {
     let twin = TfgridModule::twins(twin_id).unwrap();

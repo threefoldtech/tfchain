@@ -8,7 +8,7 @@ use crate::DedicatedNodesExtraFee;
 use frame_support::{dispatch::DispatchErrorWithPostInfo, traits::Get};
 use log;
 use pallet_tfgrid::types as pallet_tfgrid_types;
-use sp_runtime::{Percent, SaturatedConversion, traits::Zero};
+use sp_runtime::{traits::Zero, Percent, SaturatedConversion};
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
     constants::time::{SECS_PER_HOUR, SECS_PER_MONTH},
@@ -34,16 +34,14 @@ impl<T: Config> Contract<T> {
         // - NodeContract
         // - RentContract
         // - NameContract
-        let total_cost = self.calculate_contract_cost(&pricing_policy, seconds_elapsed)?;
+        let total_cost =
+            self.calculate_contract_cost_units_usd(&pricing_policy, seconds_elapsed)?;
         // If cost is 0, reinsert to be billed at next interval
         if total_cost == 0 {
-            return Ok((
-                BalanceOf::<T>::zero(),
-                types::DiscountLevel::None,
-            ));
+            return Ok((BalanceOf::<T>::zero(), types::DiscountLevel::None));
         }
 
-        let total_cost_tft_64 = calculate_cost_in_tft_from_musd::<T>(total_cost)?;
+        let total_cost_tft_64 = calculate_cost_in_tft_from_units_usd::<T>(total_cost)?;
 
         // Calculate the amount due and discount received based on the total_cost amount due
         let (amount_due, discount_received) = calculate_discount::<T>(
@@ -56,7 +54,7 @@ impl<T: Config> Contract<T> {
         Ok((amount_due, discount_received))
     }
 
-    pub fn calculate_contract_cost(
+    pub fn calculate_contract_cost_units_usd(
         &self,
         pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
         seconds_elapsed: u64,
@@ -123,12 +121,12 @@ impl<T: Config> Contract<T> {
         node_id: u32,
         seconds_elapsed: u64,
     ) -> Result<BalanceOf<T>, DispatchErrorWithPostInfo> {
-        let cost = calculate_extra_fee_cost::<T>(node_id, seconds_elapsed);
+        let cost = calculate_extra_fee_cost_units_usd::<T>(node_id, seconds_elapsed);
         if cost == 0 {
             return Ok(BalanceOf::<T>::zero());
         }
-        let cost_tft = calculate_cost_in_tft_from_musd::<T>(cost)?;
-    
+        let cost_tft = calculate_cost_in_tft_from_units_usd::<T>(cost)?;
+
         Ok(BalanceOf::<T>::saturated_from(cost_tft))
     }
 }
@@ -138,15 +136,15 @@ impl ServiceContract {
         &self,
         service_bill: ServiceContractBill,
     ) -> Result<BalanceOf<T>, DispatchErrorWithPostInfo> {
-        // Calculate the cost in mUSD for service contract bill
-        let total_cost = self.calculate_bill_cost::<T>(service_bill);
+        // Calculate the cost in units usd for service contract bill
+        let total_cost = self.calculate_bill_cost_units_usd::<T>(service_bill);
 
         if total_cost == 0 {
             return Ok(BalanceOf::<T>::zero());
         }
 
         // Calculate the cost in TFT for service contract
-        let total_cost_tft_64 = calculate_cost_in_tft_from_musd::<T>(total_cost)?;
+        let total_cost_tft_64 = calculate_cost_in_tft_from_units_usd::<T>(total_cost)?;
 
         // convert to balance object
         let amount_due: BalanceOf<T> = BalanceOf::<T>::saturated_from(total_cost_tft_64);
@@ -154,7 +152,10 @@ impl ServiceContract {
         return Ok(amount_due);
     }
 
-    pub fn calculate_bill_cost<T: Config>(&self, service_bill: ServiceContractBill) -> u64 {
+    pub fn calculate_bill_cost_units_usd<T: Config>(
+        &self,
+        service_bill: ServiceContractBill,
+    ) -> u64 {
         // bill user for service usage for elpased usage (window) in seconds
         let contract_cost = U64F64::from_num(self.base_fee) * U64F64::from_num(service_bill.window)
             / U64F64::from_num(T::BillingReferencePeriod::get())
@@ -210,9 +211,9 @@ pub fn calculate_resources_cost<T: Config>(
     return total_cost.ceil().to_num::<u64>();
 }
 
-// Calculates the cost of extra fee for a dedicated node.
+// Calculates the cost of extra fee for a dedicated node in units usd.
 // TODO: check why this gives different results when giving it a low input (multiple billing cycles) and a high input (total seconds elapsed)
-pub fn calculate_extra_fee_cost<T: Config>(node_id: u32, seconds_elapsed: u64) -> u64 {
+pub fn calculate_extra_fee_cost_units_usd<T: Config>(node_id: u32, seconds_elapsed: u64) -> u64 {
     match DedicatedNodesExtraFee::<T>::get(node_id) {
         Some(fee_musd_per_month) => {
             // Convert fee from mUSD to units USD
@@ -272,10 +273,7 @@ pub fn calculate_discount<T: Config>(
     certification_type: NodeCertification,
 ) -> (BalanceOf<T>, types::DiscountLevel) {
     if amount_due == 0 {
-        return (
-            BalanceOf::<T>::zero(),
-            types::DiscountLevel::None,
-        );
+        return (BalanceOf::<T>::zero(), types::DiscountLevel::None);
     }
 
     // calculate amount due on a monthly basis
@@ -314,8 +312,8 @@ pub fn calculate_discount<T: Config>(
     (amount_due, discount_received)
 }
 
-pub fn calculate_cost_in_tft_from_musd<T: Config>(
-    total_cost: u64,
+pub fn calculate_cost_in_tft_from_units_usd<T: Config>(
+    cost_units_usd: u64,
 ) -> Result<u64, DispatchErrorWithPostInfo> {
     let avg_tft_price = pallet_tft_price::AverageTftPrice::<T>::get();
 
@@ -328,10 +326,11 @@ pub fn calculate_cost_in_tft_from_musd<T: Config>(
     tft_price = tft_price.min(max_tft_price);
 
     // TFT Price is in musd so lets convert to units usd
-    let tft_price_units_usd = U64F64::from_num(tft_price) * 10000;
+    let tft_price_units_usd = tft_price * 10000;
 
-    // Now we have the price in musd and cost in musd, make the conversion to the amount of TFT's and multiply by the chain precision (7 decimals)
-    let total_cost_tft = U64F64::from_num(total_cost) / tft_price_units_usd;
+    // Calculate cost in TFT
+    let cost_tft = U64F64::from_num(cost_units_usd) / U64F64::from_num(tft_price_units_usd);
 
-    Ok((total_cost_tft * U64F64::from_num(10u64.pow(7))).to_num::<u64>())
+    // Multiply by the chain precision (7 decimals)
+    Ok((cost_tft * U64F64::from_num(10u64.pow(7))).to_num::<u64>())
 }

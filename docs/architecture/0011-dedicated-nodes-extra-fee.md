@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-For supporting GPU on the grid (https://github.com/threefoldtech/home/issues/1392) we are adding a the option for a farmer to set an extra fee for his nodes that have a GPU or other special feautures enabled. This fee will be added to the price of the capacity price. The full fee will be paid to the farmer.
+For supporting GPU on the grid (https://github.com/threefoldtech/home/issues/1392) we are adding an option for a farmer to set an extra fee for his nodes that have a GPU or other special feautures enabled. This fee will be added to the price of the capacity price. The full fee will be paid to the farmer.
 
 By setting a price on a node, this node becomes dedicated and can only be rented by creating a `RentContract` on that node. This means that when a farmer sets an extra price on a node, this node cannot be shared anymore.
 

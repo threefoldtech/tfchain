@@ -757,19 +757,21 @@ impl<T: Config> Pallet<T> {
 
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
-        let mut is_node_owner = false;
+        let mut owns_rent_contract = false;
         if let Some(contract_id) = ActiveRentContractForNode::<T>::get(node_id) {
             let rent_contract =
                 Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
-            is_node_owner = rent_contract.twin_id == twin_id;
+            owns_rent_contract = rent_contract.twin_id == twin_id;
         }
 
-        // A node is dedicated if it has a dedicated node extra fee or if the farm is dedicated
+        // A node is dedicated (can only be used under a rent contract)
+        // if it has a dedicated node extra fee or if the farm is dedicated
         let node_is_dedicated =
             DedicatedNodesExtraFee::<T>::get(node_id).is_some() || farm.dedicated_farm;
 
-        // If the user is not the owner of the node and the node is a dedicated node then we don't allow the creation of it.
-        if !is_node_owner && node_is_dedicated {
+        // If the user is not the owner of a supposed rent contract on the node and the node
+        // is set to be used as dedicated then we don't allow the creation of a node contract.
+        if !owns_rent_contract && node_is_dedicated {
             return Err(Error::<T>::NodeNotAvailableToDeploy.into());
         }
 
@@ -1414,8 +1416,8 @@ impl<T: Config> Pallet<T> {
             );
         }
 
-        let canceled_and_not_zero = contract.is_state_delete()
-            && contract_lock.total_amount_locked().saturated_into::<u64>() > 0;
+        let canceled_and_not_zero =
+            contract.is_state_delete() && contract_lock.has_some_amount_locked();
         // When the cultivation rewards are ready to be distributed or it's in delete state
         // Unlock all reserved balance and distribute
         if contract_lock.cycles >= T::DistributionFrequency::get() || canceled_and_not_zero {
@@ -1443,7 +1445,9 @@ impl<T: Config> Pallet<T> {
                 );
                 twin_balance = Self::get_usable_balance(&twin.account_id);
             } else {
-                twin_balance = twin_balance - <T as Config>::Currency::minimum_balance();
+                twin_balance = twin_balance
+                    .checked_sub(&<T as Config>::Currency::minimum_balance())
+                    .unwrap_or(BalanceOf::<T>::zero());
             };
 
             // First, distribute extra cultivation rewards if any
@@ -1591,7 +1595,7 @@ impl<T: Config> Pallet<T> {
             }
             _ => {
                 return Err(DispatchErrorWithPostInfo::from(
-                    Error::<T>::InvalidProviderConfiguration,
+                    Error::<T>::InvalidContractType,
                 ));
             }
         };
@@ -1726,13 +1730,6 @@ impl<T: Config> Pallet<T> {
         // Burn 35%, to not have any imbalance in the system, subtract all previously send amounts with the initial
         let amount_to_burn =
             (Perbill::from_percent(50) * amount) - foundation_share - staking_pool_share;
-
-        // let existential_deposit_requirement = <T as Config>::Currency::minimum_balance();
-        // let free_balance = <T as Config>::Currency::free_balance(&twin.account_id);
-        // if amount_to_burn > free_balance - existential_deposit_requirement {
-        //     amount_to_burn = <T as Config>::Currency::free_balance(&twin.account_id)
-        //         - existential_deposit_requirement;
-        // }
 
         let to_burn = T::Currency::withdraw(
             &twin.account_id,

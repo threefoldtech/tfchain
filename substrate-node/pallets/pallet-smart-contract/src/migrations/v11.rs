@@ -2,12 +2,11 @@ use crate::*;
 use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
 use log::{debug, info};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use sp_std::marker::PhantomData;
 use scale_info::TypeInfo;
+use sp_std::marker::PhantomData;
 
 #[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
-
 
 #[derive(
     PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
@@ -69,7 +68,7 @@ pub fn migrate_to_version_11<T: Config>() -> frame_support::weights::Weight {
         Some(types::ContractLock {
             amount_locked: fp.amount_locked,
             // Default to 0
-            extra_amount_locked: BalanceOf::<T>::saturated_from(0 as u128),
+            extra_amount_locked: BalanceOf::<T>::zero(),
             lock_updated: fp.lock_updated,
             cycles: fp.cycles,
         })
