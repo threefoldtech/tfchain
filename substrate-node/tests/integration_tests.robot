@@ -217,6 +217,9 @@ Test Reporting Uptime
     Create Farm    name=alice_farm
     Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
     
+    Run Keyword And Expect Error    *'InvalidTimestampHint'*
+    ...    Report Uptime    ${500}    timestamp_hint=${1685538805}
+
     Report Uptime    ${500}
 
     Tear Down Multi Node Network

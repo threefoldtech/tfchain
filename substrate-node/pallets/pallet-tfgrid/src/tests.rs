@@ -1005,13 +1005,51 @@ fn node_report_uptime_works() {
         create_farm();
         create_node();
 
-        Timestamp::set_timestamp(1628082000);
+        Timestamp::set_timestamp(1628082000000);
         assert_ok!(TfgridModule::report_uptime(
             RuntimeOrigin::signed(alice()),
-            500
+            500,
         ));
     });
 }
+
+#[test]
+fn node_report_uptime_v2_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        Timestamp::set_timestamp(1628082000000);
+        assert_ok!(TfgridModule::report_uptime_v2(
+            RuntimeOrigin::signed(alice()),
+            500,
+            1628082000
+        ));
+    });
+}
+
+#[test]
+fn node_report_uptime_v2_fails_with_invalid_timestamp_hint() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        Timestamp::set_timestamp(1628082000000);
+
+        // push with invalid timestamp hint + 100 seconds
+        // acceptable range is 60 seconds
+        assert_noop!(TfgridModule::report_uptime_v2(
+            RuntimeOrigin::signed(alice()),
+            500,
+            1628082100
+        ), Error::<TestRuntime>::InvalidTimestampHint);
+    });
+}
+
 
 #[test]
 fn change_power_state_works() {

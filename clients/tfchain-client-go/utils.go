@@ -216,6 +216,7 @@ var tfgridModuleErrors = []string{
 	"InvalidPublicConfig",
 	"UnauthorizedToChangePowerTarget",
 	"InvalidRelayAddress",
+	"InvalidTimestampHint",
 }
 
 var tftBridgeModuleErrors = []string{
