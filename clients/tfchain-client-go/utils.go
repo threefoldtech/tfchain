@@ -499,9 +499,7 @@ func (s *Substrate) checkForError(callResponse *CallResponse) error {
 			for i, v := range e.DispatchError.ModuleError.Error {
 				b[i] = byte(v)
 			}
-			fmt.Printf("%+v", e.DispatchError)
 			errIndex := binary.LittleEndian.Uint32(b[:])
-			fmt.Printf("errIndex: %d\n", errIndex)
 			if *accId == who {
 				if int(e.DispatchError.ModuleError.Index) < len(moduleErrors) {
 					if int(errIndex) >= len(moduleErrors[e.DispatchError.ModuleError.Index]) || moduleErrors[e.DispatchError.ModuleError.Index] == nil {
