@@ -2,8 +2,18 @@
 const { ApiPromise, WsProvider } = require('@polkadot/api')
 
 async function main() {
-  const provider = new WsProvider('wss://tfchain.dev.grid.tf')
-  // Create our API with a default connection to the local node
+  const net = process.argv[2];
+
+  let network = ''
+  if (net === 'dev' || net === 'qa' || net === 'test') {
+    network = net + '.'
+  } else if (net === 'main') {
+    network = ''
+  } else {
+    throw new Error('Invalid network');
+  }
+
+  const provider = new WsProvider('wss://tfchain.' + network + 'grid.tf')
   const api = await ApiPromise.create({ provider })
 
   // Subscribe to system events via storage
@@ -18,8 +28,6 @@ async function main() {
 
       // Show what we are busy with
       console.log(`\t${event.section}:${event.method}:: (phase=${phase.toString()})`)
-      console.log(event)
-      console.log(`\t\t${event.meta.documentation}`)
 
       // Loop through each of the parameters, displaying the type and data
       event.data.forEach((data, index) => {

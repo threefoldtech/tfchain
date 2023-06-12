@@ -12,8 +12,10 @@ yarn
 
 ## Get events
 
+- Network: dev / test / main
+
 ```bash
-node events.js
+node events.js <network>
 ```
 
 ## Attach solution provider ID to contracts
