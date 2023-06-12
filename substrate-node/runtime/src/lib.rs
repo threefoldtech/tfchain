@@ -766,6 +766,7 @@ pub type Executive = frame_executive::Executive<
 // `OnRuntimeUpgrade`.
 type Migrations = (
     pallet_smart_contract::migrations::v10::ReworkBillingLoopInsertion<Runtime>,
+    pallet_smart_contract::migrations::v11::ExtendContractLock<Runtime>,
 );
 
 // follows Substrate's non destructive way of eliminating  otherwise required

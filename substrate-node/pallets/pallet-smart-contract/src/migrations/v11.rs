@@ -1,22 +1,23 @@
 use crate::*;
-use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
+use frame_support::{
+    pallet_prelude::ValueQuery, storage_alias, traits::OnRuntimeUpgrade, weights::Weight,
+    Blake2_128Concat,
+};
 use log::{debug, info};
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use scale_info::TypeInfo;
 use sp_std::marker::PhantomData;
 
 #[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
 
-#[derive(
-    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
-)]
-pub struct ContractLockV10<BalanceOf> {
-    pub amount_locked: BalanceOf,
-    pub lock_updated: u64,
-    pub cycles: u16,
-}
-
+// Storage alias from ContractLock v11
+#[storage_alias]
+pub type ContractLock<T: Config> = StorageMap<
+    Pallet<T>,
+    Blake2_128Concat,
+    u64,
+    super::types::v11::ContractLock<BalanceOf<T>>,
+    ValueQuery,
+>;
 pub struct ExtendContractLock<T: Config>(PhantomData<T>);
 impl<T: Config> OnRuntimeUpgrade for ExtendContractLock<T> {
     #[cfg(feature = "try-runtime")]
@@ -42,6 +43,8 @@ impl<T: Config> OnRuntimeUpgrade for ExtendContractLock<T> {
         debug!("current pallet version: {:?}", PalletVersion::<T>::get());
         assert!(PalletVersion::<T>::get() >= types::StorageVersion::V11);
 
+        check_contract_lock_v11::<T>();
+
         debug!(
             "👥  Smart Contract pallet to {:?} passes POST migrate checks ✅",
             PalletVersion::<T>::get()
@@ -61,11 +64,11 @@ pub fn migrate_to_version_11<T: Config>() -> frame_support::weights::Weight {
     let mut w = 0;
 
     // migrate contract locks
-    ContractLock::<T>::translate::<ContractLockV10<BalanceOf<T>>, _>(|k, fp| {
+    ContractLock::<T>::translate::<super::types::v10::ContractLock<BalanceOf<T>>, _>(|k, fp| {
         r += 1;
         w += 1;
         debug!("Migrating contract lock {:?}", k);
-        Some(types::ContractLock {
+        Some(super::types::v11::ContractLock::<BalanceOf<T>> {
             amount_locked: fp.amount_locked,
             // Default to 0
             extra_amount_locked: BalanceOf::<T>::zero(),
@@ -79,4 +82,40 @@ pub fn migrate_to_version_11<T: Config>() -> frame_support::weights::Weight {
     w += 1;
 
     T::DbWeight::get().reads_writes(r, w)
+}
+
+pub fn check_contract_lock_v11<T: Config>() {
+    debug!(
+        "🔎  Smart Contract pallet {:?} checking ContractLock storage map START",
+        PalletVersion::<T>::get()
+    );
+
+    // Check each contract has an associated contract lock
+    for (contract_id, _) in Contracts::<T>::iter() {
+        // ContractLock
+        if !ContractLock::<T>::contains_key(contract_id) {
+            debug!(
+                " ⚠️    Contract (id: {}): no contract lock found",
+                contract_id
+            );
+        }
+    }
+
+    // Check each contract lock has a valid contract
+    for (contract_id, contract_lock) in ContractLock::<T>::iter() {
+        if Contracts::<T>::get(contract_id).is_none() {
+            debug!(
+                " ⚠️    ContractLock[contract: {}]: contract not exists",
+                contract_id
+            );
+        } else {
+            // Ensure new field is set to zero
+            assert_eq!(contract_lock.extra_amount_locked, BalanceOf::<T>::zero());
+        }
+    }
+
+    debug!(
+        "🏁  Smart Contract pallet {:?} checking ContractLock storage map END",
+        PalletVersion::<T>::get()
+    );
 }
