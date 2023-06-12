@@ -7,6 +7,14 @@ import (
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 )
 
+// ContractBill structure
+type ContractBill struct {
+	ContractID    types.U64     `json:"contract_id"`
+	Timestamp     types.U64     `json:"timestamp"`
+	DiscountLevel DiscountLevel `json:"discount_level"`
+	AmountBilled  types.U128    `json:"amount_billed"`
+}
+
 // DiscountLevel enum
 type DiscountLevel struct {
 	IsNone    bool `json:"is_none"`
@@ -137,12 +145,9 @@ type NruConsumptionReportReceived struct {
 
 // ContractBilled
 type ContractBilled struct {
-	Phase         types.Phase
-	ContractID    types.U64     `json:"contract_id"`
-	Timestamp     types.U64     `json:"timestamp"`
-	DiscountLevel DiscountLevel `json:"discount_level"`
-	AmountBilled  types.U128    `json:"amount_billed"`
-	Topics        []types.Hash
+	Phase        types.Phase
+	ContractBill ContractBill `json:"contract_bill"`
+	Topics       []types.Hash
 }
 
 // IPsReserved

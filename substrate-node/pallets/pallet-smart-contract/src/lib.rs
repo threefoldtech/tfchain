@@ -298,12 +298,7 @@ pub mod pallet {
         ContractDeployed(u64, T::AccountId),
         /// Deprecated event
         ConsumptionReportReceived(types::Consumption),
-        ContractBilled {
-            contract_id: u64,
-            timestamp: u64,
-            discount_level: DiscountLevel,
-            amount_billed: BalanceOf<T>,
-        },
+        ContractBilled(types::ContractBill),
         /// A certain amount of tokens got burned by a contract
         TokensBurned {
             contract_id: u64,
@@ -1258,12 +1253,14 @@ impl<T: Config> Pallet<T> {
         // Handle contract lock operations
         Self::handle_lock(contract, &mut contract_lock, amount_due)?;
 
-        Self::deposit_event(Event::ContractBilled {
+        // Always emit a contract billed event
+        let contract_bill = types::ContractBill {
             contract_id: contract.contract_id,
             timestamp: <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000,
             discount_level: discount_received.clone(),
-            amount_billed: amount_due,
-        });
+            amount_billed: amount_due.saturated_into::<u128>(),
+        };
+        Self::deposit_event(Event::ContractBilled(contract_bill));
 
         // If the contract is in delete state, remove all associated storage
         if matches!(contract.state, types::ContractState::Deleted(_)) {

@@ -1778,18 +1778,23 @@ fn test_name_contract_billing() {
             .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 11);
         run_to_block(11, Some(&mut pool_state));
 
+        // the contractbill event should look like:
+        let contract_bill_event = types::ContractBill {
+            contract_id,
+            timestamp: 1628082066,
+            discount_level: types::DiscountLevel::Gold,
+            amount_billed: 1848,
+        };
+
         let our_events = System::events();
         info!("events: {:?}", our_events.clone());
         assert_eq!(
             our_events[4],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
-            >::ContractBilled {
-                contract_id,
-                timestamp: 1628082066,
-                discount_level: types::DiscountLevel::Gold,
-                amount_billed: 1848,
-            }))
+                >::ContractBilled(
+                    contract_bill_event
+                )))
         );
     });
 }
@@ -4035,18 +4040,30 @@ fn check_report_cost(
         info!("{:?}", e);
     }
 
-    let r = record(MockEvent::SmartContractModule(SmartContractEvent::<
-        TestRuntime,
-    >::ContractBilled {
+    let contract_bill = types::ContractBill {
         contract_id,
         timestamp: get_timestamp_in_seconds_for_block(block_number),
         discount_level,
-        amount_billed: amount_billed,
-    }));
-    info!("event: {:?}", r);
+        amount_billed: amount_billed as u128,
+    };
 
-    assert_eq!(our_events.contains(&r), true);
+    info!(
+        "event: {:?}",
+        record(MockEvent::SmartContractModule(SmartContractEvent::<
+            TestRuntime,
+        >::ContractBilled(
+            contract_bill.clone()
+        )))
+    );
+
+    assert_eq!(
+        our_events.contains(&record(MockEvent::SmartContractModule(
+            SmartContractEvent::<TestRuntime>::ContractBilled(contract_bill)
+        ))),
+        true
+    );
 }
+
 
 fn calculate_tft_cost(contract_id: u64, twin_id: u32, blocks: u64) -> (u64, types::DiscountLevel) {
     let twin = TfgridModule::twins(twin_id).unwrap();
