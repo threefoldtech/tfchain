@@ -16,6 +16,7 @@ use sp_runtime::{
 };
 use sp_std::convert::{TryFrom, TryInto};
 use std::cell::RefCell;
+use parity_scale_codec::{Decode, Encode};
 
 impl_opaque_keys! {
     pub struct MockSessionKeys {
@@ -32,7 +33,7 @@ impl From<UintAuthorityId> for MockSessionKeys {
 pub const KEY_ID_A: KeyTypeId = KeyTypeId([4; 4]);
 pub const KEY_ID_B: KeyTypeId = KeyTypeId([9; 4]);
 
-#[derive(Debug, Clone, codec::Encode, codec::Decode, PartialEq, Eq)]
+#[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
 pub struct PreUpgradeMockSessionKeys {
     pub a: [u8; 32],
     pub b: [u8; 64],
@@ -54,11 +55,11 @@ impl OpaqueKeys for PreUpgradeMockSessionKeys {
     }
 }
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
-type Block = frame_system::mocking::MockBlock<Test>;
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime>;
+type Block = frame_system::mocking::MockBlock<TestRuntime>;
 
 frame_support::construct_runtime!(
-    pub enum Test where
+    pub enum TestRuntime where
         Block = Block,
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
@@ -125,7 +126,7 @@ pub fn authorities() -> Vec<UintAuthorityId> {
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
     let mut t = frame_system::GenesisConfig::default()
-        .build_storage::<Test>()
+        .build_storage::<TestRuntime>()
         .unwrap();
     let keys: Vec<_> = NEXT_VALIDATORS.with(|l| {
         l.borrow()
@@ -136,17 +137,17 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     });
     BasicExternalities::execute_with_storage(&mut t, || {
         for (ref k, ..) in &keys {
-            frame_system::Pallet::<Test>::inc_providers(k);
+            frame_system::Pallet::<TestRuntime>::inc_providers(k);
         }
-        frame_system::Pallet::<Test>::inc_providers(&4);
-        frame_system::Pallet::<Test>::inc_providers(&69);
+        frame_system::Pallet::<TestRuntime>::inc_providers(&4);
+        frame_system::Pallet::<TestRuntime>::inc_providers(&69);
     });
-    validator_set::GenesisConfig::<Test> {
+    validator_set::GenesisConfig::<TestRuntime> {
         initial_validators: keys.iter().map(|x| x.0).collect::<Vec<_>>(),
     }
     .assimilate_storage(&mut t)
     .unwrap();
-    pallet_session::GenesisConfig::<Test> { keys: keys.clone() }
+    pallet_session::GenesisConfig::<TestRuntime> { keys: keys.clone() }
         .assimilate_storage(&mut t)
         .unwrap();
     sp_io::TestExternalities::new(t)
@@ -157,7 +158,7 @@ parameter_types! {
     pub const BlockHashCount: u64 = 250;
 }
 
-impl frame_system::Config for Test {
+impl frame_system::Config for TestRuntime {
     type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
@@ -188,13 +189,15 @@ parameter_types! {
     pub const MinAuthorities: u32 = 2;
 }
 
-impl validator_set::Config for Test {
+use validator_set::weights;
+impl validator_set::Config for TestRuntime {
     type AddRemoveOrigin = EnsureRoot<Self::AccountId>;
     type RuntimeEvent = RuntimeEvent;
     type MinAuthorities = MinAuthorities;
+    type WeightInfo = weights::SubstrateWeight<TestRuntime>;
 }
 
-impl pallet_session::Config for Test {
+impl pallet_session::Config for TestRuntime {
     type ValidatorId = <Self as frame_system::Config>::AccountId;
     type ValidatorIdOf = validator_set::ValidatorOf<Self>;
     type ShouldEndSession = TestShouldEndSession;

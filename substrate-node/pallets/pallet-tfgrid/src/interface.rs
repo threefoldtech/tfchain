@@ -1,8 +1,8 @@
 use crate::{Config, Error, InterfaceIpInput, InterfaceMacInput, InterfaceNameInput};
-use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
 };
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_std::marker::PhantomData;
 use valip::{ip4::Ip as IPv4, ip6::Ip as IPv6, mac::Mac};

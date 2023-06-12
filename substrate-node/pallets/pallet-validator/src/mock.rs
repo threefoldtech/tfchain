@@ -31,10 +31,12 @@ construct_runtime!(
     }
 );
 
+use weights;
 impl pallet_validator::Config for TestRuntime {
     type RuntimeEvent = RuntimeEvent;
     type CouncilOrigin = EnsureRoot<Self::AccountId>;
     type Currency = ();
+    type WeightInfo = weights::SubstrateWeight<TestRuntime>;
 }
 
 parameter_types! {
@@ -76,6 +78,7 @@ impl substrate_validator_set::Config for TestRuntime {
     type RuntimeEvent = RuntimeEvent;
     type AddRemoveOrigin = EnsureRoot<Self::AccountId>;
     type MinAuthorities = MinAuthorities;
+    type WeightInfo = substrate_validator_set::weights::SubstrateWeight<TestRuntime>;
 }
 
 thread_local! {
@@ -160,7 +163,9 @@ impl pallet_collective::Config<CouncilCollective> for TestRuntime {
     type MaxProposals = CouncilMaxProposals;
     type MaxMembers = CouncilMaxMembers;
     type DefaultVote = pallet_collective::PrimeDefaultVote;
+    type SetMembersOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = ();
+    type MaxProposalWeight = ();
 }
 
 impl pallet_membership::Config<pallet_membership::Instance1> for TestRuntime {

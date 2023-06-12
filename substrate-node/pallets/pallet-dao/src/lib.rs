@@ -29,6 +29,7 @@ mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+
 pub mod weights;
 
 mod proposal;
@@ -76,7 +77,6 @@ pub mod pallet {
     }
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
@@ -188,7 +188,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::call_index(0)]
-        #[pallet::weight((<T as pallet::Config>::WeightInfo::propose(), DispatchClass::Operational))]
+        #[pallet::weight((<T as Config>::WeightInfo::propose(), DispatchClass::Operational))]
         pub fn propose(
             origin: OriginFor<T>,
             #[pallet::compact] threshold: u32,
@@ -255,7 +255,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(1)]
-        #[pallet::weight((<T as pallet::Config>::WeightInfo::vote(), DispatchClass::Operational))]
+        #[pallet::weight((<T as Config>::WeightInfo::vote(), DispatchClass::Operational))]
         pub fn vote(
             origin: OriginFor<T>,
             farm_id: u32,
@@ -336,7 +336,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(2)]
-        #[pallet::weight((<T as pallet::Config>::WeightInfo::vote(), DispatchClass::Operational))]
+        #[pallet::weight((<T as Config>::WeightInfo::veto(), DispatchClass::Operational))]
         pub fn veto(origin: OriginFor<T>, proposal_hash: T::Hash) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
@@ -371,7 +371,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(3)]
-        #[pallet::weight((<T as pallet::Config>::WeightInfo::close(), DispatchClass::Operational))]
+        #[pallet::weight((<T as Config>::WeightInfo::close(), DispatchClass::Operational))]
         pub fn close(
             origin: OriginFor<T>,
             proposal_hash: T::Hash,

@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tfchainbridge.fullname" . }}
+  labels:
+    {{- include "tfchainbridge.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "tfchainbridge.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "tfchainbridge.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "tfchainbridge.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+          - name: STELLAR_SECRET
+            value: {{ .Values.stellar_secret }}
+          - name: WS_URL
+            value: {{ .Values.ws_url }}
+          - name: TFCHAIN_MNEMONIC
+            value: {{ .Values.tfchain_mnemonic }}
+          - name: BRIDGE_WALLET_ADDRESS
+            value: {{ .Values.bridge_wallet_address }}
+          - name: STELLAR_NETWORK
+            value: {{ .Values.network }}
+          - name: STELLAR_HORIZON
+            value: {{ .Values.stellar_horizon_url }}
+          args: [
+            "--secret", "$(STELLAR_SECRET)",
+            "--tfchainurl", "$(WS_URL)",
+            "--tfchainseed", "$(TFCHAIN_MNEMONIC)",
+            "--bridgewallet", "$(BRIDGE_WALLET_ADDRESS)",
+            "--network", "$(STELLAR_NETWORK)",
+            "--persistency", "/storage/node.json",
+            "--horizon", "$(STELLAR_HORIZON)",
+            {{ if .Values.rescan }}
+            "--rescan=true",
+            {{ end}}
+            {{ if .Values.debug }}
+            "--debug"
+            {{ end }}
+          ]
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: persistent-storage
+              mountPath: /storage
+      volumes:
+        - name: persistent-storage
+          persistentVolumeClaim:
+            claimName: {{if .Values.volume.existingpersistentVolumeClaim }} {{.Values.volume.existingpersistentVolumeClaim}} {{ else }} tfchainbridge-volume-claim-{{ .Release.Name }} {{ end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

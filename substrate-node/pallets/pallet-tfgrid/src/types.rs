@@ -1,6 +1,6 @@
-use codec::{Decode, Encode};
 use core::cmp::Ordering;
 use frame_support::{pallet_prelude::ConstU32, BoundedVec};
+use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_std::vec::Vec;
 use tfchain_support::types::{FarmCertification, NodeCertification};
@@ -173,12 +173,21 @@ impl<B: Ord> PartialOrd for FarmingPolicy<B> {
     }
 }
 
+// using sort() will place non default policies first, then rank from less certified to more certified
 impl<B: Ord> Ord for FarmingPolicy<B> {
     fn cmp(&self, other: &Self) -> Ordering {
-        match self.farm_certification.cmp(&other.farm_certification) {
-            Ordering::Equal => self.node_certification.cmp(&other.node_certification),
-            ord => ord,
-        }
+        (
+            self.default,
+            &self.farm_certification,
+            &self.node_certification,
+            &self.id,
+        )
+            .cmp(&(
+                other.default,
+                &other.farm_certification,
+                &other.node_certification,
+                &other.id,
+            ))
     }
 }
 
