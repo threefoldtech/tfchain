@@ -1,0 +1,93 @@
+name: Create release
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  srtool:
+    runs-on: [self-hosted, tfchainrunner01]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Cache target dir
+        uses: actions/cache@v3
+        with:
+          path: '${{ github.workspace }}/substrate-node/runtime/target'
+          key: srtool-target-tfchain-${{ github.sha }}
+          restore-keys: |
+            srtool-target-tfchain-
+            srtool-target-
+
+      - name: Srtool build
+        id: srtool_build
+        uses: chevdor/srtool-actions@v0.6.0
+        with:
+          tag: 1.66.1
+          workdir: '${{ github.workspace }}/substrate-node'
+          package: tfchain-runtime
+          runtime_dir: runtime
+
+      - name: Summary
+        run: |
+          echo '${{ steps.srtool_build.outputs.json }}' | jq . > tfchain-srtool-digest.json
+          cat tfchain-srtool-digest.json
+          echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
+
+      - name: Upload tfchain srtool json
+        uses: actions/upload-artifact@v3
+        with:
+          name: tfchain-srtool-digest-json
+          path: tfchain-srtool-digest.json
+
+      - name: Upload runtime
+        uses: actions/upload-artifact@v3
+        with:
+          name: tfchain-runtime
+          path: |
+            substrate-node/${{ steps.srtool_build.outputs.wasm_compressed }}
+
+  release:
+    needs: srtool
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: tfchain-runtime
+
+      - name: Generate changelog
+        id: changelog
+        uses: github-changelog-generator/github-changelog-generator@latest
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          future-release: ${{ github.ref }}
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: ${{ contains(github.ref, 'rc') }}
+          body: |
+            Changes in this Release:
+            ${{ steps.changelog.outputs.changelog }}
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} 
+          asset_path: ./tfchain-runtime.wasm
+          asset_name: tfchain-runtime.wasm
+          asset_content_type: application/wasm
