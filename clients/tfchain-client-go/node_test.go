@@ -44,6 +44,29 @@ func TestGetNodes(t *testing.T) {
 	require.Greater(t, len(nodes), 0)
 }
 
+func TestSetDedicatedNodePrice(t *testing.T) {
+	var nodeID uint32
+
+	cl := startLocalConnection(t)
+	defer cl.Close()
+
+	identity, err := NewIdentityFromSr25519Phrase(BobMnemonics)
+	require.NoError(t, err)
+
+	farmID, twinID := assertCreateFarm(t, cl)
+
+	nodeID = assertCreateNode(t, cl, farmID, twinID, identity)
+
+	price := 100000000
+	_, err = cl.SetDedicatedNodePrice(identity, nodeID, uint64(price))
+	require.NoError(t, err)
+
+	priceSet, err := cl.GetDedicatedNodePrice(nodeID)
+	require.NoError(t, err)
+
+	require.Equal(t, uint64(price), priceSet)
+}
+
 func TestUptimeReport(t *testing.T) {
 	cl := startLocalConnection(t)
 	defer cl.Close()
@@ -72,4 +95,32 @@ func TestUptimeReportV2(t *testing.T) {
 
 	_, err = cl.UpdateNodeUptimeV2(identity, 100, uint64(time.Now().Unix()))
 	require.NoError(t, err)
+}
+
+func TestNodeUpdateGpuStatus(t *testing.T) {
+	cl := startLocalConnection(t)
+	defer cl.Close()
+
+	identity, err := NewIdentityFromSr25519Phrase(BobMnemonics)
+	require.NoError(t, err)
+
+	farmID, twinID := assertCreateFarm(t, cl)
+
+	nodeID := assertCreateNode(t, cl, farmID, twinID, identity)
+
+	// toggle true
+	_, err = cl.SetNodeGpuStatus(identity, true)
+	require.NoError(t, err)
+
+	status, err := cl.GetNodeGpuStatus(identity, nodeID)
+	require.NoError(t, err)
+	require.Equal(t, true, status)
+
+	// toggle false
+	_, err = cl.SetNodeGpuStatus(identity, false)
+	require.NoError(t, err)
+
+	status, err = cl.GetNodeGpuStatus(identity, nodeID)
+	require.NoError(t, err)
+	require.Equal(t, false, status)
 }

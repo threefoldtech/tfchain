@@ -1042,14 +1042,12 @@ fn node_report_uptime_v2_fails_with_invalid_timestamp_hint() {
 
         // push with invalid timestamp hint + 100 seconds
         // acceptable range is 60 seconds
-        assert_noop!(TfgridModule::report_uptime_v2(
-            RuntimeOrigin::signed(alice()),
-            500,
-            1628082100
-        ), Error::<TestRuntime>::InvalidTimestampHint);
+        assert_noop!(
+            TfgridModule::report_uptime_v2(RuntimeOrigin::signed(alice()), 500, 1628082100),
+            Error::<TestRuntime>::InvalidTimestampHint
+        );
     });
 }
-
 
 #[test]
 fn change_power_state_works() {
@@ -2320,6 +2318,50 @@ fn test_farming_policies_ordering_and_assignment() {
         let node = TfgridModule::nodes(node_id).unwrap();
         assert_eq!(node.farming_policy_id, 1);
     })
+}
+
+#[test]
+fn test_set_node_gpu_status_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        create_node();
+
+        assert_ok!(TfgridModule::set_node_gpu_status(
+            RuntimeOrigin::signed(alice()),
+            true,
+        ));
+
+        let status = TfgridModule::node_gpu_status(1);
+        assert_eq!(status, true);
+
+        assert_ok!(TfgridModule::set_node_gpu_status(
+            RuntimeOrigin::signed(alice()),
+            false,
+        ));
+
+        let status = TfgridModule::node_gpu_status(1);
+        assert_eq!(status, false);
+    });
+}
+
+#[test]
+fn test_set_node_gpu_status_node_not_exists_or_wrong_source_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+
+        assert_noop!(
+            TfgridModule::set_node_gpu_status(RuntimeOrigin::signed(alice()), true,),
+            Error::<TestRuntime>::NodeNotExists
+        );
+
+        create_node();
+        assert_noop!(
+            TfgridModule::set_node_gpu_status(RuntimeOrigin::signed(bob()), true,),
+            Error::<TestRuntime>::TwinNotExists
+        );
+    });
 }
 
 fn create_entity() {

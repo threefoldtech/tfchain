@@ -235,3 +235,10 @@ type BillingFrequencyChanged struct {
 	Frequency types.U64 `json:"frequency"`
 	Topics    []types.Hash
 }
+
+type NodeExtraFeeSet struct {
+	Phase    types.Phase
+	NodeID   types.U32 `json:"node_id"`
+	ExtraFee types.U64 `json:"extra_fee"`
+	Topics   []types.Hash
+}
