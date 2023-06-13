@@ -14,13 +14,13 @@ use frame_system::{self as system, ensure_signed};
 use hex::FromHex;
 use pallet_timestamp as timestamp;
 use parity_scale_codec::Encode;
+use sp_core::Get;
 use sp_runtime::SaturatedConversion;
 use sp_std::vec;
 use tfchain_support::{
     resources::Resources,
     types::{Interface, NodePower as NodePowerType, Power, PowerState, PublicIP},
 };
-use sp_core::Get;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
@@ -279,6 +279,10 @@ pub mod pallet {
     pub type NodePower<T: Config> =
         StorageMap<_, Blake2_128Concat, u32, NodePowerType<T::BlockNumber>, ValueQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn node_gpu_status)]
+    pub type NodeGpuStatus<T: Config> = StorageMap<_, Blake2_128Concat, u32, bool, ValueQuery>;
+
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_timestamp::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -451,6 +455,10 @@ pub mod pallet {
             farm_id: u32,
             node_id: u32,
             power_state: PowerState<T::BlockNumber>,
+        },
+        NodeGpuStatusChanged {
+            node_id: u32,
+            gpu_status: bool,
         },
     }
 
@@ -1190,7 +1198,7 @@ pub mod pallet {
             let account_id = ensure_signed(origin)?;
 
             let timestamp_hint = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-            Self::_report_uptime(&account_id, uptime, timestamp_hint)            
+            Self::_report_uptime(&account_id, uptime, timestamp_hint)
         }
 
         #[pallet::call_index(12)]
@@ -2070,19 +2078,37 @@ pub mod pallet {
 
         #[pallet::call_index(38)]
         #[pallet::weight(<T as Config>::WeightInfo::report_uptime())]
-        pub fn report_uptime_v2(origin: OriginFor<T>, uptime: u64, timestamp_hint: u64) -> DispatchResultWithPostInfo {
+        pub fn report_uptime_v2(
+            origin: OriginFor<T>,
+            uptime: u64,
+            timestamp_hint: u64,
+        ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
-            Self::_report_uptime(&account_id, uptime, timestamp_hint)            
+            Self::_report_uptime(&account_id, uptime, timestamp_hint)
+        }
+
+        #[pallet::call_index(39)]
+        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(3).ref_time())]
+        pub fn set_node_gpu_status(
+            origin: OriginFor<T>,
+            gpu_status: bool,
+        ) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+
+            Self::_set_node_gpu_status(&account_id, gpu_status)
         }
     }
 }
 
 // Internal functions of the pallet
 impl<T: Config> Pallet<T> {
-    pub fn _report_uptime(account_id: &T::AccountId, uptime: u64, timestamp_hint: u64) -> DispatchResultWithPostInfo {
-        let twin_id =
-        TwinIdByAccountID::<T>::get(account_id).ok_or(Error::<T>::TwinNotExists)?;
+    pub fn _report_uptime(
+        account_id: &T::AccountId,
+        uptime: u64,
+        timestamp_hint: u64,
+    ) -> DispatchResultWithPostInfo {
+        let twin_id = TwinIdByAccountID::<T>::get(account_id).ok_or(Error::<T>::TwinNotExists)?;
 
         ensure!(
             NodeIdByTwinID::<T>::contains_key(twin_id),
@@ -2092,16 +2118,42 @@ impl<T: Config> Pallet<T> {
 
         ensure!(Nodes::<T>::contains_key(node_id), Error::<T>::NodeNotExists);
 
-        
         let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
         // check if timestamp hint is within the acceptable range of the current timestamp (now) and the drift value
         ensure!(
-            timestamp_hint >= now.checked_sub(<T as Config>::TimestampHintDrift::get()).unwrap_or(0) 
-            && timestamp_hint <= now + <T as Config>::TimestampHintDrift::get(),
+            timestamp_hint
+                >= now
+                    .checked_sub(<T as Config>::TimestampHintDrift::get())
+                    .unwrap_or(0)
+                && timestamp_hint <= now + <T as Config>::TimestampHintDrift::get(),
             Error::<T>::InvalidTimestampHint
         );
 
         Self::deposit_event(Event::NodeUptimeReported(node_id, now, uptime));
+
+        Ok(Pays::No.into())
+    }
+
+    pub fn _set_node_gpu_status(
+        account_id: &T::AccountId,
+        gpu_status: bool,
+    ) -> DispatchResultWithPostInfo {
+        let twin_id = TwinIdByAccountID::<T>::get(account_id).ok_or(Error::<T>::TwinNotExists)?;
+
+        ensure!(
+            NodeIdByTwinID::<T>::contains_key(twin_id),
+            Error::<T>::NodeNotExists
+        );
+        let node_id = NodeIdByTwinID::<T>::get(twin_id);
+
+        ensure!(Nodes::<T>::contains_key(node_id), Error::<T>::NodeNotExists);
+
+        NodeGpuStatus::<T>::insert(node_id, gpu_status);
+
+        Self::deposit_event(Event::NodeGpuStatusChanged {
+            node_id,
+            gpu_status,
+        });
 
         Ok(Pays::No.into())
     }

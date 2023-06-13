@@ -61,6 +61,13 @@ type PowerStateChanged struct {
 	Topics     []types.Hash
 }
 
+type NodeGpuStatusChanged struct {
+	Phase     types.Phase
+	Node      types.U32  `json:"node_id"`
+	GpuStatus types.Bool `json:"gpu_status"`
+	Topics    []types.Hash
+}
+
 type EntityStored struct {
 	Phase  types.Phase
 	Entity Entity `json:"entity"`
@@ -410,13 +417,14 @@ type EventRecords struct {
 	TfgridModule_FarmDeleted []FarmDeleted //nolint:stylecheck,golint
 
 	// node events
-	TfgridModule_NodeStored             []NodeStored         //nolint:stylecheck,golint
-	TfgridModule_NodeUpdated            []NodeStored         //nolint:stylecheck,golint
-	TfgridModule_NodeDeleted            []NodeDeleted        //nolint:stylecheck,golint
-	TfgridModule_NodeUptimeReported     []NodeUptimeReported //nolint:stylecheck,golint
-	TfgridModule_NodePublicConfigStored []NodePublicConfig   //nolint:stylecheck,golint
-	TfgridModule_PowerTargetChanged     []PowerTargetChanged //nolint:stylecheck,golint
-	TfgridModule_PowerStateChanged      []PowerStateChanged  //nolint:stylecheck,golint
+	TfgridModule_NodeStored             []NodeStored           //nolint:stylecheck,golint
+	TfgridModule_NodeUpdated            []NodeStored           //nolint:stylecheck,golint
+	TfgridModule_NodeDeleted            []NodeDeleted          //nolint:stylecheck,golint
+	TfgridModule_NodeUptimeReported     []NodeUptimeReported   //nolint:stylecheck,golint
+	TfgridModule_NodePublicConfigStored []NodePublicConfig     //nolint:stylecheck,golint
+	TfgridModule_PowerTargetChanged     []PowerTargetChanged   //nolint:stylecheck,golint
+	TfgridModule_PowerStateChanged      []PowerStateChanged    //nolint:stylecheck,golint
+	TfgridModule_NodeGpuStatusChanged   []NodeGpuStatusChanged //nolint:stylecheck,golint
 
 	// entity events
 	TfgridModule_EntityStored  []EntityStored  //nolint:stylecheck,golint

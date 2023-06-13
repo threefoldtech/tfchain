@@ -804,3 +804,51 @@ func (s *Substrate) GetDedicatedNodePrice(nodeID uint32) (uint64, error) {
 
 	return uint64(price), nil
 }
+
+func (s *Substrate) SetNodeGpuStatus(identity Identity, state bool) (hash types.Hash, err error) {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return hash, err
+	}
+
+	c, err := types.NewCall(meta, "TfgridModule.set_node_gpu_status", state)
+
+	if err != nil {
+		return hash, errors.Wrap(err, "failed to create call")
+	}
+
+	callResponse, err := s.Call(cl, meta, identity, c)
+	if err != nil {
+		return hash, errors.Wrap(err, "failed to update node gpu status")
+	}
+
+	return callResponse.Hash, nil
+}
+
+func (s *Substrate) GetNodeGpuStatus(identity Identity, nodeId uint32) (status bool, err error) {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return status, err
+	}
+
+	bytes, err := Encode(nodeId)
+	if err != nil {
+		return status, errors.Wrap(err, "substrate: encoding error building query arguments")
+	}
+
+	key, err := types.CreateStorageKey(meta, "TfgridModule", "NodeGpuStatus", bytes)
+	if err != nil {
+		return status, errors.Wrap(err, "failed to create substrate query key")
+	}
+
+	raw, err := cl.RPC.State.GetStorageRawLatest(key)
+	if err != nil {
+		return status, errors.Wrap(err, "failed to lookup gpu status")
+	}
+
+	if err := Decode(*raw, &status); err != nil {
+		return status, errors.Wrap(err, "failed to load object")
+	}
+
+	return status, nil
+}
