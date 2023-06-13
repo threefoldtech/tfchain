@@ -14,7 +14,7 @@ use pallet_tfgrid::{
     CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, Gw4Input, Ip4Input,
     LatitudeInput, LongitudeInput, Pallet as TfgridModule, PkInput, RelayInput, ResourcesInput,
 };
-// use pallet_timestamp::Pallet as Timestamp;
+use pallet_timestamp::Pallet as Timestamp;
 use sp_runtime::traits::{Bounded, One, StaticLookup};
 use sp_std::{
     convert::{TryFrom, TryInto},
@@ -27,13 +27,13 @@ use tfchain_support::{
 };
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;
-const TIMESTAMP_INIT_SECS: u64 = 1628082000;
 
 benchmarks! {
     where_clause {
         where
         <T as pallet_timestamp::Config>::Moment: TryFrom<u64>,
         <<T as pallet_timestamp::Config>::Moment as TryFrom<u64>>::Error: Debug,
+        T: pallet_balances::Config<Balance = BalanceOf<T>>,
     }
 
     // create_node_contract()
@@ -154,7 +154,7 @@ benchmarks! {
 
         let report = types::NruConsumption {
             contract_id: contract_id,
-            timestamp: TIMESTAMP_INIT_SECS,
+            timestamp: Timestamp::<T>::get().saturated_into::<u64>() / 1000,
             window: 1000,
             nru: 10 * GIGABYTE,
         };
@@ -293,29 +293,28 @@ benchmarks! {
         _create_node_contract::<T>(user.clone());
         let contract_id = 1;
 
-        // let elapsed_seconds = 200 * 6; // 20 min (200 blocks) later
-        // let stamp: u64 = Timestamp::<T>::get().saturated_into::<u64>() + elapsed_seconds * 1000;
-        // Timestamp::<T>::set_timestamp((stamp).try_into().unwrap());
+        let now = Timestamp::<T>::get().saturated_into::<u64>() / 1000;
+        let elapsed_seconds = 5; // need to be < 6 secs to bill at same block!
+        let then: u64 = now + elapsed_seconds;
+        Timestamp::<T>::set_timestamp((then * 1000).try_into().unwrap());
 
         _push_contract_used_resources_report::<T>(farmer.clone());
-        _push_contract_nru_consumption_report::<T>(farmer.clone());
+        _push_contract_nru_consumption_report::<T>(farmer.clone(), then, elapsed_seconds);
+
+        let contract = SmartContractModule::<T>::contracts(contract_id).unwrap();
+        // Get contract cost before billing to take into account nu
+        let (cost, _) = contract.calculate_contract_cost_tft(balance_init_amount, elapsed_seconds).unwrap();
     }: _(RawOrigin::Signed(farmer.clone()), contract_id)
     verify {
-        assert!(SmartContractModule::<T>::contracts(contract_id).is_some());
-        let contract = SmartContractModule::<T>::contracts(contract_id).unwrap();
-        // let cost = 46501499;
-        // let lock = SmartContractModule::<T>::contract_number_of_cylces_billed(contract_id);
-        // assert_eq!(lock.amount_locked.saturated_into::<u64>(), cost);
-        // assert_eq!(
-        //     contract.contract_id, contract_id
-        // );
-        // let contract_bill = types::ContractBill {
-        //     contract_id,
-        //     timestamp: <Timestamp<T>>::get().saturated_into::<u64>() / 1000,
-        //     discount_level: types::DiscountLevel::None,
-        //     amount_billed: cost as u128,
-        // };
-        // assert_last_event::<T>(Event::ContractBilled(contract_bill).into());
+        let lock = SmartContractModule::<T>::contract_number_of_cylces_billed(contract_id);
+        assert_eq!(lock.amount_locked, cost);
+        let contract_bill = types::ContractBill {
+            contract_id,
+            timestamp: <Timestamp<T>>::get().saturated_into::<u64>() / 1000,
+            discount_level: types::DiscountLevel::Gold,
+            amount_billed: cost.saturated_into::<u128>(),
+        };
+        assert_last_event::<T>(Event::ContractBilled(contract_bill).into());
     }
 
     // service_contract_create()
@@ -644,11 +643,15 @@ fn _push_contract_used_resources_report<T: Config>(source: T::AccountId) {
     ));
 }
 
-fn _push_contract_nru_consumption_report<T: Config>(source: T::AccountId) {
+fn _push_contract_nru_consumption_report<T: Config>(
+    source: T::AccountId,
+    stamp_in_seconds: u64,
+    elapsed_seconds: u64,
+) {
     let nru_consumption = types::NruConsumption {
         contract_id: 1,
-        timestamp: TIMESTAMP_INIT_SECS,
-        window: BillingFrequency::<T>::get() * 6,
+        timestamp: stamp_in_seconds,
+        window: elapsed_seconds,
         nru: 10 * GIGABYTE,
     };
 
