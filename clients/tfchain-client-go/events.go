@@ -409,6 +409,7 @@ type EventRecords struct {
 	SmartContractModule_ServiceContractCanceled      []ServiceContractCanceled      //nolint:stylecheck,golint
 	SmartContractModule_ServiceContractBilled        []ServiceContractBilled        //nolint:stylecheck,golint
 	SmartContractModule_BillingFrequencyChanged      []BillingFrequencyChanged      //nolint:stylecheck,golint
+	SmartContractModule_NodeExtraFeeSet              []NodeExtraFeeSet              //nolint:stylecheck,golint
 
 	// farm events
 	TfgridModule_FarmStored  []FarmStored  //nolint:stylecheck,golint

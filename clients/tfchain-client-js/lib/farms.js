@@ -119,6 +119,18 @@ async function setNodePower (self, nodeID, power, callback) {
     .signAndSend(self.key, { nonce }, callback)
 }
 
+async function setDedicatedNodePrice(self, nodeID, price, callback) {
+  const nonce = await self.api.rpc.system.accountNextIndex(self.address)
+  return self.api.tx.smartContractModule
+    .setDedicatedNodeExtraFee(nodeID, price)
+    .signAndSend(self.key, { nonce }, callback)
+}
+
+async function getDedicatedNodePrice(self, nodeID) {
+  const price = await self.api.query.smartContractModule.dedicatedNodesExtraFee(nodeID)
+  return price.toNumber()
+}
+
 async function validateFarm (self, name) {
   if (name === '') {
     throw Error('farm should have a name')
@@ -132,5 +144,7 @@ module.exports = {
   listFarms,
   addFarmIP,
   deleteFarmIP,
-  setNodePower
+  setNodePower,
+  setDedicatedNodePrice,
+  getDedicatedNodePrice
 }
