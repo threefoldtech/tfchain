@@ -89,11 +89,11 @@ pub mod pallet {
     use super::types::*;
     use super::weights::WeightInfo;
     use super::*;
-    use codec::FullCodec;
     use frame_support::pallet_prelude::*;
     use frame_support::traits::Hooks;
     use frame_support::traits::{Currency, Get, LockIdentifier, LockableCurrency, OnUnbalanced};
     use frame_system::pallet_prelude::*;
+    use parity_scale_codec::FullCodec;
     use sp_core::H256;
     use sp_std::{
         convert::{TryFrom, TryInto},
@@ -110,7 +110,6 @@ pub mod pallet {
     pub const GRID_LOCK_ID: LockIdentifier = *b"gridlock";
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
@@ -716,8 +715,8 @@ pub mod pallet {
 }
 
 use crate::types::HexHash;
-use pallet::NameContractNameOf;
 use sp_std::convert::{TryFrom, TryInto};
+
 // Internal functions of the pallet
 impl<T: Config> Pallet<T> {
     pub fn _create_node_contract(
@@ -1218,7 +1217,7 @@ impl<T: Config> Pallet<T> {
 
         // If the contract is in delete state, remove all associated storage
         if matches!(contract.state, types::ContractState::Deleted(_)) {
-            Self::remove_contract(contract.contract_id);
+            Self::remove_contract(contract.contract_id)?;
             return Ok(().into());
         }
 

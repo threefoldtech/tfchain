@@ -5,20 +5,22 @@
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
 use sp_std::prelude::*;
 
-use codec::Encode;
 use frame_support::dispatch::DispatchErrorWithPostInfo;
 use frame_support::{
-    dispatch::Pays, ensure, pallet_prelude::DispatchResultWithPostInfo, traits::EnsureOrigin,
-    BoundedVec,
+    dispatch::Pays, ensure, pallet_prelude::DispatchResultWithPostInfo,
+    storage::bounded_vec::BoundedVec, traits::EnsureOrigin,
 };
 use frame_system::{self as system, ensure_signed};
 use hex::FromHex;
 use pallet_timestamp as timestamp;
+use parity_scale_codec::Encode;
 use sp_runtime::SaturatedConversion;
+use sp_std::vec;
 use tfchain_support::{
     resources::Resources,
     types::{Interface, NodePower as NodePowerType, Power, PowerState, PublicIP},
 };
+use sp_core::Get;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
@@ -48,7 +50,7 @@ pub mod pallet {
     use super::weights::WeightInfo;
     use super::*;
     use frame_support::{pallet_prelude::*, Blake2_128Concat};
-    use frame_support::{traits::ConstU32, BoundedVec};
+    use frame_support::{storage::bounded_vec::BoundedVec, traits::ConstU32};
     use frame_system::pallet_prelude::*;
     use pallet_timestamp as timestamp;
     use sp_std::{convert::TryInto, fmt::Debug, vec::Vec};
@@ -62,10 +64,9 @@ pub mod pallet {
         },
     };
 
-    use codec::FullCodec;
+    use parity_scale_codec::FullCodec;
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
@@ -396,6 +397,9 @@ pub mod pallet {
 
         #[pallet::constant]
         type MaxInterfaceIpsLength: Get<u32>;
+
+        #[pallet::constant]
+        type TimestampHintDrift: Get<u64>;
     }
 
     #[pallet::event]
@@ -580,6 +584,7 @@ pub mod pallet {
         InvalidPublicConfig,
         UnauthorizedToChangePowerTarget,
         InvalidRelayAddress,
+        InvalidTimestampHint,
     }
 
     #[pallet::genesis_config]
@@ -1184,22 +1189,8 @@ pub mod pallet {
         pub fn report_uptime(origin: OriginFor<T>, uptime: u64) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
-            let twin_id =
-                TwinIdByAccountID::<T>::get(account_id).ok_or(Error::<T>::TwinNotExists)?;
-
-            ensure!(
-                NodeIdByTwinID::<T>::contains_key(twin_id),
-                Error::<T>::NodeNotExists
-            );
-            let node_id = NodeIdByTwinID::<T>::get(twin_id);
-
-            ensure!(Nodes::<T>::contains_key(node_id), Error::<T>::NodeNotExists);
-
-            let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-
-            Self::deposit_event(Event::NodeUptimeReported(node_id, now, uptime));
-
-            Ok(Pays::No.into())
+            let timestamp_hint = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+            Self::_report_uptime(&account_id, uptime, timestamp_hint)            
         }
 
         #[pallet::call_index(12)]
@@ -2076,11 +2067,45 @@ pub mod pallet {
 
             Ok(().into())
         }
+
+        #[pallet::call_index(38)]
+        #[pallet::weight(<T as Config>::WeightInfo::report_uptime())]
+        pub fn report_uptime_v2(origin: OriginFor<T>, uptime: u64, timestamp_hint: u64) -> DispatchResultWithPostInfo {
+            let account_id = ensure_signed(origin)?;
+
+            Self::_report_uptime(&account_id, uptime, timestamp_hint)            
+        }
     }
 }
 
 // Internal functions of the pallet
 impl<T: Config> Pallet<T> {
+    pub fn _report_uptime(account_id: &T::AccountId, uptime: u64, timestamp_hint: u64) -> DispatchResultWithPostInfo {
+        let twin_id =
+        TwinIdByAccountID::<T>::get(account_id).ok_or(Error::<T>::TwinNotExists)?;
+
+        ensure!(
+            NodeIdByTwinID::<T>::contains_key(twin_id),
+            Error::<T>::NodeNotExists
+        );
+        let node_id = NodeIdByTwinID::<T>::get(twin_id);
+
+        ensure!(Nodes::<T>::contains_key(node_id), Error::<T>::NodeNotExists);
+
+        
+        let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+        // check if timestamp hint is within the acceptable range of the current timestamp (now) and the drift value
+        ensure!(
+            timestamp_hint >= now.checked_sub(<T as Config>::TimestampHintDrift::get()).unwrap_or(0) 
+            && timestamp_hint <= now + <T as Config>::TimestampHintDrift::get(),
+            Error::<T>::InvalidTimestampHint
+        );
+
+        Self::deposit_event(Event::NodeUptimeReported(node_id, now, uptime));
+
+        Ok(Pays::No.into())
+    }
+
     pub fn verify_signature(signature: [u8; 64], target: &T::AccountId, payload: &Vec<u8>) -> bool {
         Self::verify_ed_signature(signature, target, payload)
             || Self::verify_sr_signature(signature, target, payload)
@@ -2186,12 +2211,15 @@ impl<T: Config> Pallet<T> {
         };
 
         // Set the farming policy as the last stored farming
-        // policy which certifications are not more qualified
-        // than the current node and farm certifications
+        // policy which certifications best fit the current
+        // node and farm certifications, considering that in all
+        // cases a default policy would be preferable
         let mut policies: Vec<types::FarmingPolicy<T::BlockNumber>> =
             FarmingPoliciesMap::<T>::iter().map(|p| p.1).collect();
 
         policies.sort();
+        // by reversing sorted policies we place default policies first
+        // and then rank them from more certified to less certified
         policies.reverse();
 
         let possible_policy = policies
@@ -2213,13 +2241,15 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    // Set to se the default farming policy as the last stored default farming policy
+    // Set the default farming policy as the last best certified stored default farming policy
     fn get_default_farming_policy(
     ) -> Result<types::FarmingPolicy<T::BlockNumber>, DispatchErrorWithPostInfo> {
         let mut policies: Vec<types::FarmingPolicy<T::BlockNumber>> =
             FarmingPoliciesMap::<T>::iter().map(|p| p.1).collect();
 
         policies.sort();
+        // by reversing sorted policies we place default policies first
+        // and then rank them from more certified to less certified
         policies.reverse();
 
         let possible_policy = policies

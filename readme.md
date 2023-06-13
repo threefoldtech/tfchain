@@ -21,6 +21,13 @@ see [docs](./docs/readme.md) for more information on how to work with this compo
 - [TFT Price Module](./substrate-node/pallets/pallet-tft-price/readme.md): TFT price oracle. See [price](./docs/misc/price.md) for more info.
 - other less mentionable modules..
 
+## Bridge
+
+See [bridge](./bridge/README.md) for more information on the bridge between Tfchain TFT and Stellar TFT.
+
+## Scripts
+
+See [scripts](./scripts/README.md) for more information on how to use the scripts.
 ## Deployed instances
 
 - Development network:

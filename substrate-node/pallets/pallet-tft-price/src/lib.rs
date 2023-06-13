@@ -120,7 +120,6 @@ pub mod pallet {
     }
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
@@ -397,8 +396,8 @@ impl<T: Config> Pallet<T> {
     fn queue_transient() -> Box<dyn RingBufferTrait<u32>> {
         Box::new(RingBufferTransient::<
             u32,
-            <Self as Store>::BufferRange,
-            <Self as Store>::TftPriceHistory,
+            BufferRange<T>,
+            TftPriceHistory<T>,
         >::new())
     }
 

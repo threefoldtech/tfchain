@@ -101,6 +101,7 @@ parameter_types! {
     pub const MaxInterfaceIpsLength: u32 = 5;
     pub const MaxInterfacesLength: u32 = 10;
     pub const MaxFarmPublicIps: u32 = 512;
+    pub const TimestampHintDrift: u64 = 60;
 }
 
 pub(crate) type TestTermsAndConditions = TermsAndConditions<TestRuntime>;
@@ -135,6 +136,7 @@ impl Config for TestRuntime {
     type CityName = TestCityName;
     type Location = TestLocation;
     type SerialNumber = TestSerialNumber;
+    type TimestampHintDrift = TimestampHintDrift;
 }
 
 parameter_types! {
@@ -154,6 +156,10 @@ impl pallet_balances::Config for TestRuntime {
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = pallet_balances::weights::SubstrateWeight<TestRuntime>;
+    type FreezeIdentifier = ();
+    type MaxFreezes = ();
+    type HoldIdentifier = ();
+    type MaxHolds = ();
 }
 
 impl pallet_timestamp::Config for TestRuntime {
@@ -178,7 +184,9 @@ impl pallet_collective::Config<CouncilCollective> for TestRuntime {
     type MaxProposals = CouncilMaxProposals;
     type MaxMembers = CouncilMaxMembers;
     type DefaultVote = pallet_collective::PrimeDefaultVote;
+    type SetMembersOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = ();
+    type MaxProposalWeight = ();
 }
 
 impl pallet_membership::Config<pallet_membership::Instance1> for TestRuntime {

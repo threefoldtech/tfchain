@@ -67,7 +67,7 @@ pub fn clean_pallet_smart_contract<T: Config>(current_stage: MigrationStage
             let weight = clean_node_contract_resources::<T>();
             PalletVersion::<T>::put(types::StorageVersion::V9);
             info!("🔔 Ending Smart Contract pallet storage cleaning");
-            (weight.add(1), None)
+            (weight.saturating_add(T::DbWeight::get().writes(1)), None)
         }
         // Should never happen
         _ => (Weight::zero(), None),

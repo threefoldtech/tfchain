@@ -1,38 +1,43 @@
 [package]
+authors.workspace = true
+documentation.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license-file.workspace = true
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
 name = "pallet-validator"
-version = "1.0.0"
-edition = "2018"
+description = "validator registration pallet"
+
+[package.metadata.docs.rs]
+targets = ['x86_64-unknown-linux-gnu']
 
 [dependencies]
-# Substrate dependencies
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
-	"derive",
-] }
-scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+parity-scale-codec = {workspace = true, features = ["derive"]}
+scale-info = { workspace = true, features = ["derive"] }
 
-sp-std =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-sp-runtime =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-frame-support =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-frame-system =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-pallet-membership =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-pallet-session =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-sp-io =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
+sp-std.workspace = true
+sp-runtime.workspace = true
+frame-support.workspace = true
+frame-system.workspace = true
+pallet-membership.workspace = true
+pallet-collective = { workspace = true, default-features = false }
+pallet-session.workspace = true
+sp-io.workspace = true
+
+substrate-validator-set = { workspace = true, default-features = false }
 
 # Benchmarking
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false, optional = true }
+frame-benchmarking = { workspace = true, optional = true }
 
 [dev-dependencies]
-sp-core =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-
-[dependencies.substrate-validator-set]
-default-features = false
-path = "../substrate-validator-set"
+sp-core.workspace = true
 
 [features]
 default = ['std']
 std = [
-    'codec/std',
+    'parity-scale-codec/std',
     'sp-std/std',
     'sp-runtime/std',
     'frame-support/std',

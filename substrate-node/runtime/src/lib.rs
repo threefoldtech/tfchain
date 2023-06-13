@@ -239,6 +239,7 @@ impl frame_system::Config for Runtime {
 
 parameter_types! {
     pub const MaxAuthorities: u32  = 100;
+    pub const MaxSetIdSessionEntries: u64 = 0;
 }
 
 impl pallet_aura::Config for Runtime {
@@ -250,20 +251,12 @@ impl pallet_aura::Config for Runtime {
 impl pallet_grandpa::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
 
-    type KeyOwnerProofSystem = ();
-
-    type KeyOwnerProof =
-        <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
-
-    type KeyOwnerIdentification = <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(
-        KeyTypeId,
-        GrandpaId,
-    )>>::IdentificationTuple;
-
-    type HandleEquivocation = ();
-
     type WeightInfo = ();
     type MaxAuthorities = MaxAuthorities;
+    type MaxSetIdSessionEntries = MaxSetIdSessionEntries;
+
+    type KeyOwnerProof = sp_core::Void;
+    type EquivocationReportSystem = ();
 }
 
 parameter_types! {
@@ -296,6 +289,10 @@ impl pallet_balances::Config for Runtime {
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
+    type FreezeIdentifier = ();
+    type MaxFreezes = ();
+    type HoldIdentifier = ();
+    type MaxHolds = ();
 }
 
 parameter_types! {
@@ -346,6 +343,7 @@ parameter_types! {
     pub const MaxInterfaceIpsLength: u32 = 10;
     pub const MaxInterfacesLength: u32 = 10;
     pub const MaxFarmPublicIps: u32 = 512;
+    pub const TimestampHintDrift: u64 = 60;
 }
 
 impl pallet_tfgrid::Config for Runtime {
@@ -367,6 +365,7 @@ impl pallet_tfgrid::Config for Runtime {
     type CityName = pallet_tfgrid::node::CityName<Runtime>;
     type Location = pallet_tfgrid::node::Location<Runtime>;
     type SerialNumber = pallet_tfgrid::node::SerialNumber<Runtime>;
+    type TimestampHintDrift = TimestampHintDrift;
 }
 
 parameter_types! {
@@ -448,11 +447,11 @@ parameter_types! {
     pub MinAuthorities: u32 = 1;
 }
 
-impl validatorset::Config for Runtime {
+impl substrate_validator_set::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type AddRemoveOrigin = EnsureRootOrCouncilApproval;
     type MinAuthorities = MinAuthorities;
-    type WeightInfo = validatorset::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = substrate_validator_set::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -499,7 +498,7 @@ parameter_types! {
 
 impl pallet_session::Config for Runtime {
     type ValidatorId = <Self as frame_system::Config>::AccountId;
-    type ValidatorIdOf = validatorset::ValidatorOf<Self>;
+    type ValidatorIdOf = substrate_validator_set::ValidatorOf<Self>;
     type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
     type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
     type SessionManager = ValidatorSet;
@@ -611,6 +610,7 @@ parameter_types! {
     pub const CouncilMotionDuration: BlockNumber = 2 * HOURS;
     pub const CouncilMaxProposals: u32 = 100;
     pub const CouncilMaxMembers: u32 = 100;
+    pub MaxProposalWeight: Weight = Perbill::from_percent(50) * BlockWeights::get().max_block;
 }
 
 type CouncilCollective = pallet_collective::Instance1;
@@ -621,8 +621,10 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
     type MotionDuration = CouncilMotionDuration;
     type MaxProposals = CouncilMaxProposals;
     type MaxMembers = CouncilMaxMembers;
+    type SetMembersOrigin = EnsureRoot<AccountId>;
     type DefaultVote = pallet_collective::PrimeDefaultVote;
     type WeightInfo = ();
+    type MaxProposalWeight = MaxProposalWeight;
 }
 
 impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
@@ -678,18 +680,10 @@ impl FindAuthor<AccountId> for AuraAccountAdapter {
     }
 }
 
-parameter_types! {
-    pub const UncleGenerations: u32 = 0;
-}
-
 impl pallet_authorship::Config for Runtime {
     type FindAuthor = AuraAccountAdapter;
-    type UncleGenerations = UncleGenerations;
-    type FilterUncle = ();
     type EventHandler = ();
 }
-
-impl pallet_randomness_collective_flip::Config for Runtime {}
 
 impl pallet_utility::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
@@ -706,16 +700,15 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        ValidatorSet: validatorset::{Pallet, Call, Storage, Event<T>, Config<T>},
+        ValidatorSet: substrate_validator_set::{Pallet, Call, Storage, Event<T>, Config<T>},
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
         Aura: pallet_aura::{Pallet, Config<T>},
         Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event},
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
-        Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
+        Authorship: pallet_authorship::{Pallet, Storage},
         TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>, Config<T>},
         SmartContractModule: pallet_smart_contract::{Pallet, Call, Config, Storage, Event<T>},
         TFTBridgeModule: pallet_tft_bridge::{Pallet, Call, Config<T>, Storage, Event<T>},
@@ -729,6 +722,7 @@ construct_runtime!(
         Validator: pallet_validator::{Pallet, Call, Storage, Event<T>},
         Dao: pallet_dao::{Pallet, Call, Storage, Event<T>},
         Utility: pallet_utility::{Pallet, Call, Event},
+        Historical: pallet_session::historical::{Pallet},
     }
 );
 
@@ -770,7 +764,9 @@ pub type Executive = frame_executive::Executive<
 
 // All migrations executed on runtime upgrade as a nested tuple of types implementing
 // `OnRuntimeUpgrade`.
-type Migrations = (pallet_smart_contract::migrations::v10::ReworkBillingLoopInsertion<Runtime>,);
+type Migrations = (
+    pallet_smart_contract::migrations::v10::ReworkBillingLoopInsertion<Runtime>,
+);
 
 // follows Substrate's non destructive way of eliminating  otherwise required
 // repetion: https://github.com/paritytech/substrate/pull/10592
@@ -788,6 +784,7 @@ mod benches {
         [pallet_kvstore, TFKVStore]
         [validatorset, ValidatorSet]
         [pallet_validator, Validator]
+        // [pallet_tfgrid, TfgridModule]
         // Substrate
         [frame_benchmarking::baseline, Baseline::<Runtime>]
         [frame_system, SystemBench::<Runtime>]
@@ -816,6 +813,14 @@ impl_runtime_apis! {
     impl sp_api::Metadata<Block> for Runtime {
         fn metadata() -> OpaqueMetadata {
             OpaqueMetadata::new(Runtime::metadata().into())
+        }
+
+        fn metadata_at_version(version: u32) -> Option<OpaqueMetadata> {
+            Runtime::metadata_at_version(version)
+        }
+
+        fn metadata_versions() -> sp_std::vec::Vec<u32> {
+            Runtime::metadata_versions()
         }
     }
 
@@ -929,6 +934,12 @@ impl_runtime_apis! {
         ) -> pallet_transaction_payment::FeeDetails<Balance> {
             TransactionPayment::query_fee_details(uxt, len)
         }
+        fn query_weight_to_fee(weight: Weight) -> Balance {
+            TransactionPayment::weight_to_fee(weight)
+        }
+        fn query_length_to_fee(length: u32) -> Balance {
+            TransactionPayment::length_to_fee(length)
+        }
     }
 
     #[cfg(feature = "runtime-benchmarks")]
@@ -991,13 +1002,13 @@ impl_runtime_apis! {
 
     #[cfg(feature = "try-runtime")]
     impl frame_try_runtime::TryRuntime<Block> for Runtime {
-        fn on_runtime_upgrade(_checks: bool) -> (Weight, Weight) {
+        fn on_runtime_upgrade(checks: frame_try_runtime::UpgradeCheckSelect) -> (Weight, Weight) {
             // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
             // have a backtrace here. If any of the pre/post migration checks fail, we shall stop
             // right here and right now.
 
             // For some reason the checks are not working, so we disable them for now and always run with checks.
-            let weight = Executive::try_runtime_upgrade(true).unwrap();
+            let weight = Executive::try_runtime_upgrade(checks).unwrap();
             (weight, BlockWeights::get().max_block)
         }
 
@@ -1009,7 +1020,7 @@ impl_runtime_apis! {
         ) -> Weight {
             // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
             // have a backtrace here.
-            Executive::try_execute_block(block, state_root_check, signature_check, select).expect("execute-block failed")
+            Executive::try_execute_block(block, state_root_check, signature_check, select).unwrap()
         }
     }
 }

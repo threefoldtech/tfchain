@@ -20,11 +20,12 @@
 // --output
 // pallets/pallet-smart-contract/src/weights.rs
 // --template
-// ./.maintain/frame-weight-template.hbs
+// .maintain/frame-weight-template.hbs
 
 #![cfg_attr(rustfmt, rustfmt_skip)]
 #![allow(unused_parens)]
 #![allow(unused_imports)]
+#![allow(missing_docs)]
 
 use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use sp_std::marker::PhantomData;
