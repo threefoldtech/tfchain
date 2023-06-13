@@ -212,7 +212,6 @@ pub fn calculate_resources_cost<T: Config>(
 }
 
 // Calculates the cost of extra fee for a dedicated node in units usd.
-// TODO: check why this gives different results when giving it a low input (multiple billing cycles) and a high input (total seconds elapsed)
 pub fn calculate_extra_fee_cost_units_usd<T: Config>(node_id: u32, seconds_elapsed: u64) -> u64 {
     match DedicatedNodesExtraFee::<T>::get(node_id) {
         Some(fee_musd_per_month) => {
