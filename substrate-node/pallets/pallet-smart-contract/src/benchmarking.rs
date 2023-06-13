@@ -292,7 +292,7 @@ benchmarks! {
         let user: T::AccountId = account("Bob", 0, 1);
         let user_lookup = T::Lookup::unlookup(user.clone());
         let balance_init_amount = <T as pallet_balances::Config>::Balance::saturated_from(100000000 as u128);
-        Balances::<T>::set_balance(RawOrigin::Root.into(), user_lookup, balance_init_amount, balance_init_amount).unwrap();
+        Balances::<T>::force_set_balance(RawOrigin::Root.into(), user_lookup, balance_init_amount).unwrap();
         _create_twin::<T>(user.clone());
         _create_node_contract::<T>(user.clone());
         let contract_id = 1;
@@ -304,9 +304,7 @@ benchmarks! {
 
         _push_contract_used_resources_report::<T>(farmer.clone());
         _push_contract_nru_consumption_report::<T>(farmer.clone());
-
-        let index = 0u64; // dummy index
-    }: _(RawOrigin::Signed(farmer.clone()), index, contract_id)
+    }: _(RawOrigin::Signed(farmer.clone()), contract_id)
     verify {
         assert!(SmartContractModule::<T>::contracts(contract_id).is_some());
         let contract = SmartContractModule::<T>::contracts(contract_id).unwrap();
@@ -415,7 +413,7 @@ benchmarks! {
         let consumer: T::AccountId = account("Bob", 0, 1);
         let consumer_lookup = T::Lookup::unlookup(consumer.clone());
         let balance_init_amount = <T as pallet_balances::Config>::Balance::saturated_from(100000000 as u128);
-        Balances::<T>::set_balance(RawOrigin::Root.into(), consumer_lookup, balance_init_amount, balance_init_amount).unwrap();
+        Balances::<T>::force_set_balance(RawOrigin::Root.into(), consumer_lookup, balance_init_amount).unwrap();
         _prepare_and_approve_service_contract::<T>(service.clone(), consumer);
         let contract_id = 1;
         let variable_amount = 0;

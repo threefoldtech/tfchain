@@ -14,9 +14,9 @@ echo "generating pallet-kvstore"
 cmd="../target/release/tfchain benchmark pallet --chain=dev --pallet=pallet_kvstore --extrinsic="*" --steps=50 --repeat=20 --execution=wasm --heap-pages=409 --output ../pallets/pallet-kvstore/src/weights.rs --template ./frame-weight-template.hbs"
 $cmd
 
-# echo "generating pallet-smart-contract"
-# cmd="../target/release/tfchain benchmark pallet --chain=dev --pallet=pallet_smart_contract --extrinsic="*" --steps=50 --repeat=20 --execution=wasm --heap-pages=409 --output ../pallets/pallet-smart-contract/src/weights.rs --template ./frame-weight-template.hbs"
-# $cmd
+echo "generating pallet-smart-contract"
+cmd="../target/release/tfchain benchmark pallet --chain=dev --pallet=pallet_smart_contract --extrinsic="*" --steps=50 --repeat=20 --execution=wasm --heap-pages=409 --output ../pallets/pallet-smart-contract/src/weights.rs --template ./frame-weight-template.hbs"
+$cmd
 
 # echo "generating pallet-tfgrid weights"
 # cmd="../target/release/tfchain benchmark pallet --chain=dev --pallet=pallet_tfgrid --extrinsic="*" --steps=50 --repeat=20 --execution=wasm --heap-pages=409 --output ../pallets/pallet-tfgrid/src/weights.rs --template ./frame-weight-template.hbs"
