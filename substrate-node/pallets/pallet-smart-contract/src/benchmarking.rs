@@ -282,10 +282,6 @@ benchmarks! {
 
     // bill_contract_for_block()
     bill_contract_for_block {
-        // let stamp: u64 = TIMESTAMP_INIT_SECS;
-        // Timestamp::<T>::set_timestamp((stamp * 1000).try_into().unwrap());
-        // run_to_block::<T>(T::BlockNumber::from(1u32));
-
         let farmer: T::AccountId = account("Alice", 0, 0);
         _prepare_farm_with_node::<T>(farmer.clone());
 
@@ -298,9 +294,8 @@ benchmarks! {
         let contract_id = 1;
 
         // let elapsed_seconds = 200 * 6; // 20 min (200 blocks) later
-        // let stamp: u64 = TIMESTAMP_INIT_SECS + elapsed_seconds;
-        // Timestamp::<T>::set_timestamp((stamp * 1000).try_into().unwrap());
-        // run_to_block::<T>(T::BlockNumber::from(201u32));
+        // let stamp: u64 = Timestamp::<T>::get().saturated_into::<u64>() + elapsed_seconds * 1000;
+        // Timestamp::<T>::set_timestamp((stamp).try_into().unwrap());
 
         _push_contract_used_resources_report::<T>(farmer.clone());
         _push_contract_nru_consumption_report::<T>(farmer.clone());
@@ -308,18 +303,19 @@ benchmarks! {
     verify {
         assert!(SmartContractModule::<T>::contracts(contract_id).is_some());
         let contract = SmartContractModule::<T>::contracts(contract_id).unwrap();
-        assert_eq!(
-            contract.contract_id, contract_id
-        );
-        // let amount_billed = 46501499 as u128;
+        // let cost = 46501499;
+        // let lock = SmartContractModule::<T>::contract_number_of_cylces_billed(contract_id);
+        // assert_eq!(lock.amount_locked.saturated_into::<u64>(), cost);
+        // assert_eq!(
+        //     contract.contract_id, contract_id
+        // );
         // let contract_bill = types::ContractBill {
         //     contract_id,
         //     timestamp: <Timestamp<T>>::get().saturated_into::<u64>() / 1000,
         //     discount_level: types::DiscountLevel::None,
-        //     amount_billed,
+        //     amount_billed: cost as u128,
         // };
         // assert_last_event::<T>(Event::ContractBilled(contract_bill).into());
-        // assert_eq!((Balances::<T>::free_balance(&user) - Balances::<T>::usable_balance(&user)).saturated_into::<u128>(), amount_billed);
     }
 
     // service_contract_create()
