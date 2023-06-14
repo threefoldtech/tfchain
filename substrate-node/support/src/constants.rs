@@ -7,9 +7,12 @@ pub mod time {
     /// up by `pallet_aura` to implement `fn slot_duration()`.
     ///
     /// Change this to adjust the block time.
-    pub const MILLISECS_PER_BLOCK: u64 = 6000;
+    pub const SECS_PER_BLOCK: u64 = 6;
+    pub const MILLISECS_PER_BLOCK: u64 = SECS_PER_BLOCK * 1000;
     pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
     pub const SECS_PER_HOUR: u64 = 3600;
+    pub const SECS_PER_DAY: u64 = SECS_PER_HOUR * 24;
+    pub const SECS_PER_MONTH: u64 = SECS_PER_DAY * 30;
     pub const EPOCH_DURATION_IN_BLOCKS: super::BlockNumber = 1 * HOURS;
 
     // These time units are defined in number of blocks.

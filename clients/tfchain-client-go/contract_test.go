@@ -269,6 +269,9 @@ func TestCreateBatch(t *testing.T) {
 		// third contract should not be created
 		_, err = cl.GetContractIDByNameRegistration(contracts[2].Name)
 		require.Error(t, err)
+
+		err = cl.BatchCancelContract(identity, c)
+		require.NoError(t, err)
 	})
 
 }

@@ -14,7 +14,7 @@ const {
 } = require('./twin')
 const {
   createFarm, getFarm, deleteFarm,
-  listFarms, addFarmIP, deleteFarmIP, setNodePower
+  listFarms, addFarmIP, deleteFarmIP, setNodePower, setDedicatedNodePrice
 } = require('./farms')
 const {
   createNode, updateNode, getNode,
@@ -351,6 +351,18 @@ class Client {
 
   async getServiceContract(serviceContractId) {
     return getServiceContract(this, serviceContractId)
+  }
+
+  // setDedicatedNodePrice sets an extra price on a node expressed in mUSD
+  // This price will be distributed back to the farmer if the node is rented
+  // Setting this price also makes the node only available to rent as dedicated
+  async setDedicatedNodePrice(nodeId, price, callback) {
+    return setDedicatedNodePrice(this, nodeId, price, callback)
+  }
+
+  // getDedicatedNodePrice returns the extra price on a node expressed in mUSD
+  async getDedicatedNodePrice(nodeId) {
+    return getDedicatedNodePrice(this, nodeId)
   }
 }
 async function getPolkaAPI(url) {

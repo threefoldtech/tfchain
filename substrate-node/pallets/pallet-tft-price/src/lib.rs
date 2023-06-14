@@ -394,11 +394,7 @@ impl<T: Config> Pallet<T> {
     }
 
     fn queue_transient() -> Box<dyn RingBufferTrait<u32>> {
-        Box::new(RingBufferTransient::<
-            u32,
-            BufferRange<T>,
-            TftPriceHistory<T>,
-        >::new())
+        Box::new(RingBufferTransient::<u32, BufferRange<T>, TftPriceHistory<T>>::new())
     }
 
     fn calc_avg() -> u32 {

@@ -160,7 +160,7 @@ benchmarks! {
         };
         let mut reports = Vec::new();
         reports.push(report.clone());
-    }: _(RawOrigin::Signed(farmer.clone()), reports)
+    }: _(RawOrigin::Signed(farmer), reports)
     verify {
         assert!(SmartContractModule::<T>::contracts(contract_id).is_some());
         let contract = SmartContractModule::<T>::contracts(contract_id).unwrap();
@@ -190,7 +190,7 @@ benchmarks! {
             }
         };
         let contract_resources = vec![contract_resource.clone()];
-    }: _(RawOrigin::Signed(farmer.clone()), contract_resources)
+    }: _(RawOrigin::Signed(farmer), contract_resources)
     verify {
         assert_eq!(
             SmartContractModule::<T>::node_contract_resources(contract_id),
@@ -304,7 +304,7 @@ benchmarks! {
         let contract = SmartContractModule::<T>::contracts(contract_id).unwrap();
         // Get contract cost before billing to take into account nu
         let (cost, _) = contract.calculate_contract_cost_tft(balance_init_amount, elapsed_seconds).unwrap();
-    }: _(RawOrigin::Signed(farmer.clone()), contract_id)
+    }: _(RawOrigin::Signed(farmer), contract_id)
     verify {
         let lock = SmartContractModule::<T>::contract_number_of_cylces_billed(contract_id);
         assert_eq!(lock.amount_locked, cost);
@@ -462,6 +462,21 @@ benchmarks! {
         assert!(SmartContractModule::<T>::contracts(contract_id).is_some());
         let contract = SmartContractModule::<T>::contracts(contract_id).unwrap();
         assert_eq!(contract.solution_provider_id, Some(solution_provider_id));
+    }
+
+    // set_dedicated_node_extra_fee
+    set_dedicated_node_extra_fee {
+        let farmer: T::AccountId = whitelisted_caller();
+        _prepare_farm_with_node::<T>(farmer.clone());
+        let node_id = 1;
+        let extra_fee = 10000;
+
+    }: _(RawOrigin::Signed(farmer), node_id, extra_fee)
+    verify {
+        assert_eq!(
+            SmartContractModule::<T>::dedicated_nodes_extra_fee(node_id),
+            Some(extra_fee)
+        );
     }
 
     // Calling the `impl_benchmark_test_suite` macro inside the `benchmarks`

@@ -21,7 +21,6 @@ var (
 // https://github.com/threefoldtech/tfchain/blob/development/substrate-node/runtime/src/lib.rs#L701
 var moduleErrors = [][]string{
 	nil,                       // System
-	nil,                       // RandomnessCollectiveFlip
 	nil,                       // Timestamp
 	nil,                       // Balances
 	nil,                       // ValidatorSet
@@ -44,6 +43,7 @@ var moduleErrors = [][]string{
 	nil,                       // Validator
 	nil,                       // Dao
 	nil,                       // Utility
+	nil,                       // Historical
 }
 
 // https://github.com/threefoldtech/tfchain_pallets/blob/bc9c5d322463aaf735212e428da4ea32b117dc24/pallet-smart-contract/src/lib.rs#L58
@@ -72,7 +72,7 @@ var smartContractModuleErrors = []string{
 	"MethodIsDeprecated",
 	"NodeHasActiveContracts",
 	"NodeHasRentContract",
-	"NodeIsNotDedicated",
+	"FarmIsNotDedicated",
 	"NodeNotAvailableToDeploy",
 	"CannotUpdateContractInGraceState",
 	"NumOverflow",
@@ -99,6 +99,7 @@ var smartContractModuleErrors = []string{
 	"IsNotAnAuthority",
 	"WrongAuthority",
 	"UnauthorizedToChangeSolutionProviderId",
+	"UnauthorizedToSetExtraFee",
 }
 
 // https://github.com/threefoldtech/tfchain/blob/development/substrate-node/pallets/pallet-smart-contract/src/lib.rs#L321
