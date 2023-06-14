@@ -661,7 +661,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(20)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::set_dedicated_node_extra_fee())]
         pub fn set_dedicated_node_extra_fee(
             origin: OriginFor<T>,
             node_id: u32,
