@@ -785,7 +785,7 @@ mod benches {
         [pallet_kvstore, TFKVStore]
         [validatorset, ValidatorSet]
         [pallet_validator, Validator]
-        // [pallet_tfgrid, TfgridModule]
+        [pallet_tfgrid, TfgridModule]
         // Substrate
         [frame_benchmarking::baseline, Baseline::<Runtime>]
         [frame_system, SystemBench::<Runtime>]
