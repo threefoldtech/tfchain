@@ -215,7 +215,7 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn dedicated_nodes_extra_fee)]
-    pub type DedicatedNodesExtraFee<T> = StorageMap<_, Blake2_128Concat, u32, u64, OptionQuery>;
+    pub type DedicatedNodesExtraFee<T> = StorageMap<_, Blake2_128Concat, u32, u64, ValueQuery>;
 
     #[pallet::config]
     pub trait Config:
@@ -767,7 +767,7 @@ impl<T: Config> Pallet<T> {
         // A node is dedicated (can only be used under a rent contract)
         // if it has a dedicated node extra fee or if the farm is dedicated
         let node_is_dedicated =
-            DedicatedNodesExtraFee::<T>::get(node_id).is_some() || farm.dedicated_farm;
+            DedicatedNodesExtraFee::<T>::get(node_id) > 0 || farm.dedicated_farm;
 
         // If the user is not the owner of a supposed rent contract on the node and the node
         // is set to be used as dedicated then we don't allow the creation of a node contract.
@@ -2521,11 +2521,6 @@ impl<T: Config> Pallet<T> {
         node_id: u32,
         extra_fee: u64,
     ) -> DispatchResultWithPostInfo {
-        // Nothing to do if fee value is 0
-        if extra_fee == 0 {
-            return Ok(().into());
-        }
-
         // Make sure only the farmer that owns this node can set the extra fee
         let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
             .ok_or(Error::<T>::TwinNotExists)?;

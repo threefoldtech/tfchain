@@ -3593,18 +3593,6 @@ fn test_set_dedicated_node_extra_fee_works() {
         prepare_farm_and_node();
         let node_id = 1;
 
-        let zero_fee = 0;
-        assert_ok!(SmartContractModule::set_dedicated_node_extra_fee(
-            RuntimeOrigin::signed(alice()),
-            node_id,
-            zero_fee
-        ));
-
-        assert_eq!(
-            SmartContractModule::dedicated_nodes_extra_fee(node_id),
-            None
-        );
-
         let extra_fee = 100000;
         assert_ok!(SmartContractModule::set_dedicated_node_extra_fee(
             RuntimeOrigin::signed(alice()),
@@ -3614,7 +3602,7 @@ fn test_set_dedicated_node_extra_fee_works() {
 
         assert_eq!(
             SmartContractModule::dedicated_nodes_extra_fee(node_id),
-            Some(extra_fee)
+            extra_fee,
         );
 
         let our_events = System::events();
@@ -3738,6 +3726,49 @@ fn test_set_dedicated_node_extra_fee_and_create_node_contract_fails() {
             ),
             Error::<TestRuntime>::NodeNotAvailableToDeploy
         );
+    })
+}
+
+#[test]
+fn test_set_dedicated_node_extra_fee_and_set_it_back_to_zero_works() {
+    new_test_ext().execute_with(|| {
+        prepare_farm_and_node();
+        let node_id = 1;
+
+        let extra_fee = 100000;
+        assert_ok!(SmartContractModule::set_dedicated_node_extra_fee(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+            extra_fee
+        ));
+
+        assert_noop!(
+            SmartContractModule::create_node_contract(
+                RuntimeOrigin::signed(bob()),
+                node_id,
+                generate_deployment_hash(),
+                get_deployment_data(),
+                0,
+                None
+            ),
+            Error::<TestRuntime>::NodeNotAvailableToDeploy
+        );
+
+        let zero_fee = 0;
+        assert_ok!(SmartContractModule::set_dedicated_node_extra_fee(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+            zero_fee
+        ));
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
+        ));
     })
 }
 
