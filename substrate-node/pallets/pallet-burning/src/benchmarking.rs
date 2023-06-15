@@ -16,6 +16,8 @@ benchmarks! {
         let message = b"some_message".to_vec();
     }: _(RawOrigin::Signed(target.clone()), amount.clone(), message.clone())
     verify {
+        let burns = BurningModule::<T>::burns().unwrap_or(vec![]);
+        assert_eq!(burns.len(), 1);
         let block = T::BlockNumber::from(1 as u32);
         assert_eq!(T::Currency::free_balance(&target).saturated_into::<u128>(), 0 as u128);
         assert_last_event::<T>(Event::BurnTransactionCreated(target, amount, block, message).into());
