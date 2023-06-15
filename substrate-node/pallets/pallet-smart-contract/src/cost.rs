@@ -214,15 +214,15 @@ pub fn calculate_resources_cost<T: Config>(
 // Calculates the cost of extra fee for a dedicated node in units usd.
 pub fn calculate_extra_fee_cost_units_usd<T: Config>(node_id: u32, seconds_elapsed: u64) -> u64 {
     match DedicatedNodesExtraFee::<T>::get(node_id) {
-        Some(fee_musd_per_month) => {
+        fee_musd if fee_musd > 0 => {
             // Convert fee from mUSD to units USD
-            let fee_units_usd_per_month = fee_musd_per_month * 10000;
-            (U64F64::from_num(fee_units_usd_per_month * seconds_elapsed)
-                / U64F64::from_num(SECS_PER_MONTH))
-            .round()
-            .to_num::<u64>()
+            let fee_units_usd = fee_musd * 10000;
+            // Fee is per month so convert to seconds to get cost
+            (U64F64::from_num(fee_units_usd * seconds_elapsed) / U64F64::from_num(SECS_PER_MONTH))
+                .round()
+                .to_num::<u64>()
         }
-        None => 0,
+        _ => 0,
     }
 }
 
