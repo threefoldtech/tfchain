@@ -62,7 +62,7 @@ jobs:
 
       - name: Generate changelog
         id: changelog
-        uses: github-changelog-generator/github-changelog-generator@latest
+        uses: heinrichreimer/github-changelog-generator-action@v2.3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           future-release: ${{ github.ref }}
