@@ -8,7 +8,7 @@ use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::DispatchResult;
 use sp_std::prelude::*;
-use sp_std::vec::Vec;
+use sp_std::vec;
 
 #[cfg(test)]
 mod tests;
@@ -41,9 +41,8 @@ pub mod pallet {
     };
     use frame_system::{ensure_signed, pallet_prelude::*};
     use sp_std::convert::TryInto;
-    use sp_std::vec;
-
-    use crate::{Burn, Vec};
+    use sp_std::vec::Vec;
+    use crate::Burn;
 
     // balance type using reservable currency type
     pub type BalanceOf<T> =
