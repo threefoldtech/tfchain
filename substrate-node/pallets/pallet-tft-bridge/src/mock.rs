@@ -36,7 +36,7 @@ construct_runtime!(
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
     pub BlockWeights: frame_system::limits::BlockWeights =
-        frame_system::limits::BlockWeights::simple_max(frame_support::weights::Weight::from_ref_time(1024));
+        frame_system::limits::BlockWeights::simple_max(frame_support::weights::Weight::from_parts(1024, 0)); // TOCHECK
     pub const ExistentialDeposit: u64 = 1;
 }
 
@@ -94,12 +94,14 @@ parameter_types! {
     pub const RetryInterval: u32 = 20;
 }
 
+use weights;
 impl Config for TestRuntime {
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type Burn = ();
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type RetryInterval = RetryInterval;
+    type WeightInfo = weights::SubstrateWeight<TestRuntime>;
 }
 
 type AccountPublic = <MultiSignature as Verify>::Signer;
