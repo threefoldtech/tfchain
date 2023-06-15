@@ -156,10 +156,14 @@ impl ServiceContract {
         &self,
         service_bill: ServiceContractBill,
     ) -> u64 {
+        // Convert fees from mUSD to units USD
+        let base_fee_units_usd = self.base_fee * 10000;
+        let variable_amount_units_usd = service_bill.variable_amount * 10000;
         // bill user for service usage for elpased usage (window) in seconds
-        let contract_cost = U64F64::from_num(self.base_fee) * U64F64::from_num(service_bill.window)
+        let contract_cost = U64F64::from_num(base_fee_units_usd)
+            * U64F64::from_num(service_bill.window)
             / U64F64::from_num(T::BillingReferencePeriod::get())
-            + U64F64::from_num(service_bill.variable_amount);
+            + U64F64::from_num(variable_amount_units_usd);
         contract_cost.round().to_num::<u64>()
     }
 }
