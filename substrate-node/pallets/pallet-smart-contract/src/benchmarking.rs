@@ -249,8 +249,7 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         _create_twin::<T>(caller.clone());
     }: _(
-        RawOrigin::Signed(
-        caller.clone()),
+        RawOrigin::Signed(caller.clone()),
         b"some_description".to_vec(),
         b"some_link".to_vec(),
         providers.clone()

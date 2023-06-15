@@ -28,6 +28,11 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+#[cfg(feature = "runtime-benchmarks")]
+pub mod benchmarking;
+
+pub mod weights;
+
 // MintTransaction contains all the information about
 // Stellar -> TF Chain minting transaction.
 // if the votes field is larger then (number of validators / 2) + 1 , the transaction will be minted
@@ -71,6 +76,7 @@ pub struct StellarSignature {
 // through `construct_runtime`.
 #[frame_support::pallet]
 pub mod pallet {
+    use super::weights::WeightInfo;
     use super::*;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
@@ -161,6 +167,8 @@ pub mod pallet {
 
         // Retry interval for expired transactions
         type RetryInterval: Get<u32>;
+
+        type WeightInfo: crate::weights::WeightInfo;
     }
 
     #[pallet::event]
@@ -297,7 +305,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::call_index(0)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::add_bridge_validator())]
         pub fn add_bridge_validator(
             origin: OriginFor<T>,
             target: T::AccountId,
@@ -307,7 +315,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(1)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::remove_bridge_validator())]
         pub fn remove_bridge_validator(
             origin: OriginFor<T>,
             target: T::AccountId,
@@ -317,7 +325,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(2)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::set_fee_account())]
         pub fn set_fee_account(
             origin: OriginFor<T>,
             target: T::AccountId,
@@ -328,7 +336,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(3)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::set_withdraw_fee())]
         pub fn set_withdraw_fee(origin: OriginFor<T>, amount: u64) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
             WithdrawFee::<T>::set(amount);
@@ -336,7 +344,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(4)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::set_deposit_fee())]
         pub fn set_deposit_fee(origin: OriginFor<T>, amount: u64) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
             DepositFee::<T>::set(amount);
@@ -344,7 +352,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(5)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::swap_to_stellar())]
         pub fn swap_to_stellar(
             origin: OriginFor<T>,
             target_stellar_address: Vec<u8>,
@@ -355,7 +363,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(6)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::propose_or_vote_mint_transaction())]
         pub fn propose_or_vote_mint_transaction(
             origin: OriginFor<T>,
             transaction: Vec<u8>,
@@ -367,7 +375,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(7)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::propose_burn_transaction_or_add_sig())]
         pub fn propose_burn_transaction_or_add_sig(
             origin: OriginFor<T>,
             transaction_id: u64,
@@ -390,7 +398,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(8)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::set_burn_transaction_executed())]
         pub fn set_burn_transaction_executed(
             origin: OriginFor<T>,
             transaction_id: u64,
@@ -400,7 +408,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(9)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::create_refund_transaction_or_add_sig())]
         pub fn create_refund_transaction_or_add_sig(
             origin: OriginFor<T>,
             tx_hash: Vec<u8>,
@@ -423,7 +431,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(10)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::set_refund_transaction_executed())]
         pub fn set_refund_transaction_executed(
             origin: OriginFor<T>,
             tx_hash: Vec<u8>,
@@ -483,6 +491,7 @@ impl<T: Config> Pallet<T> {
         let withdraw_fee = WithdrawFee::<T>::get();
         let withdraw_fee_b = BalanceOf::<T>::saturated_from(withdraw_fee);
         // Make sure the user wants to swap more than the burn fee
+        log::debug!("withdraw_fee {:?}", withdraw_fee_b);
         ensure!(
             amount > withdraw_fee_b,
             Error::<T>::AmountIsLessThanWithdrawFee

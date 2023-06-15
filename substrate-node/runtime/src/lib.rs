@@ -414,6 +414,7 @@ impl pallet_tft_bridge::Config for Runtime {
     type Burn = ();
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
     type RetryInterval = RetryInterval;
+    type WeightInfo = pallet_tft_bridge::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_burning::Config for Runtime {
@@ -779,13 +780,14 @@ extern crate frame_benchmarking;
 mod benches {
     define_benchmarks!(
         [pallet_smart_contract, SmartContractModule]
+        [pallet_tfgrid, TfgridModule]
         [pallet_tft_price, TFTPriceModule]
         [pallet_burning, BurningModule]
         [pallet_dao, Dao]
         [pallet_kvstore, TFKVStore]
         [validatorset, ValidatorSet]
         [pallet_validator, Validator]
-        [pallet_tfgrid, TfgridModule]
+        [pallet_tft_bridge, TFTBridgeModule]
         // Substrate
         [frame_benchmarking::baseline, Baseline::<Runtime>]
         [frame_system, SystemBench::<Runtime>]

@@ -142,6 +142,7 @@ runtime-benchmarks = [
     'pallet-kvstore/runtime-benchmarks',
     'substrate-validator-set/runtime-benchmarks',
     'pallet-validator/runtime-benchmarks',
+    'pallet-tft-bridge/runtime-benchmarks',
 ]
 try-runtime = [
 	"frame-try-runtime/try-runtime",
