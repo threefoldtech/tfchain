@@ -474,7 +474,7 @@ benchmarks! {
     verify {
         assert_eq!(
             SmartContractModule::<T>::dedicated_nodes_extra_fee(node_id),
-            Some(extra_fee)
+            extra_fee
         );
     }
 
