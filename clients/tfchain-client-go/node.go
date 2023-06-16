@@ -825,7 +825,7 @@ func (s *Substrate) SetNodeGpuStatus(identity Identity, state bool) (hash types.
 	return callResponse.Hash, nil
 }
 
-func (s *Substrate) GetNodeGpuStatus(identity Identity, nodeId uint32) (status bool, err error) {
+func (s *Substrate) GetNodeGpuStatus(nodeId uint32) (status bool, err error) {
 	cl, meta, err := s.GetClient()
 	if err != nil {
 		return status, err
