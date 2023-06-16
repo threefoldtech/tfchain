@@ -25,6 +25,10 @@ jobs:
             srtool-target-tfchain-
             srtool-target-
 
+      - name: Set Permissions
+        run: |
+          sudo chmod 0777 -R $USER:$USER &GITHUB_WORKSPACE/build/runtime/target
+
       - name: Srtool build
         id: srtool_build
         uses: chevdor/srtool-actions@v0.7.0
@@ -52,45 +56,45 @@ jobs:
           path: |
             substrate-node/${{ steps.srtool_build.outputs.wasm_compressed }}
 
-  release:
-    needs: srtool
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+  # release:
+  #   needs: srtool
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
 
-      - name: Download artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: tfchain-runtime
+  #     - name: Download artifacts
+  #       uses: actions/download-artifact@v2
+  #       with:
+  #         name: tfchain-runtime
 
-      - name: Generate changelog
-        id: changelog
-        uses: heinrichreimer/github-changelog-generator-action@v2.3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          future-release: ${{ github.ref }}
+  #     - name: Generate changelog
+  #       id: changelog
+  #       uses: heinrichreimer/github-changelog-generator-action@v2.3
+  #       with:
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         future-release: ${{ github.ref }}
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: ${{ contains(github.ref, 'rc') }}
-          body: |
-            Changes in this Release:
-            ${{ steps.changelog.outputs.changelog }}
+  #     - name: Create Release
+  #       id: create_release
+  #       uses: actions/create-release@v1
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #       with:
+  #         tag_name: ${{ github.ref }}
+  #         release_name: Release ${{ github.ref }}
+  #         draft: false
+  #         prerelease: ${{ contains(github.ref, 'rc') }}
+  #         body: |
+  #           Changes in this Release:
+  #           ${{ steps.changelog.outputs.changelog }}
 
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./tfchain-runtime.wasm
-          asset_name: tfchain-runtime.wasm
-          asset_content_type: application/wasm
+  #     - name: Upload Release Asset
+  #       uses: actions/upload-release-asset@v1
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #       with:
+  #         upload_url: ${{ steps.create_release.outputs.upload_url }}
+  #         asset_path: ./tfchain-runtime.wasm
+  #         asset_name: tfchain-runtime.wasm
+  #         asset_content_type: application/wasm
