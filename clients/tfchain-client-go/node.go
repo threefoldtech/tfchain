@@ -846,6 +846,10 @@ func (s *Substrate) GetNodeGpuStatus(nodeId uint32) (status bool, err error) {
 		return status, errors.Wrap(err, "failed to lookup gpu status")
 	}
 
+	if raw == nil || len(*raw) == 0 {
+		return false, nil
+	}
+
 	if err := Decode(*raw, &status); err != nil {
 		return status, errors.Wrap(err, "failed to load object")
 	}
