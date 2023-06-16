@@ -26,9 +26,9 @@ jobs:
       options: --user ${{ needs.pre_job.outputs.uid }}:${{ needs.pre_job.outputs.gid }}
       env:
         DEBIAN_FRONTEND: noninteractive
-        PATH: /home/tfchaindev/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin
-        RUSTUP_HOME: /home/tfchaindev/.rustup
-        CARGO_HOME: /home/tfchaindev/.cargo
+        PATH: /root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin
+        RUSTUP_HOME: /root/.rustup
+        CARGO_HOME: /root/.cargo
 
     steps:
       # - name: Chown user
@@ -43,10 +43,10 @@ jobs:
         continue-on-error: true
         with:
           path: |
-            /home/tfchaindev/.cargo/bin/
-            /home/tfchaindev/.cargo/registry/index/
-            /home/tfchaindev/.cargo/registry/cache/
-            /home/tfchaindev/.cargo/git/db/
+            /root/.cargo/bin/
+            /root/.cargo/registry/index/
+            /root/.cargo/registry/cache/
+            /root/.cargo/git/db/
             substrate-node/target/
           key: ${{ runner.os }}-tfchain-build-cache-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-tfchain-build-cache
