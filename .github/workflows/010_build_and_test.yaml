@@ -40,9 +40,6 @@ jobs:
       - name: Change permissions
         run: chmod -R g+w $GITHUB_WORKSPACE
 
-      - name: Change permissions before caching
-        run: chown -R $USER:$USER /root/.cargo
-
       - name: Cache build
         uses: actions/cache@v3
         timeout-minutes: 6
@@ -54,8 +51,8 @@ jobs:
             /root/.cargo/registry/cache/
             /root/.cargo/git/db/
             substrate-node/target/
-          key: ${{ runner.os }}-tfchain-build-cache-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-tfchain-build-cache
+          key: ${{ runner.os }}-tfchain-build-cache-v2-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-tfchain-build-cache-v2
 
       - name: Build
         run: |
