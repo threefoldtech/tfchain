@@ -10,10 +10,6 @@ jobs:
     runs-on: [self-hosted, tfchainrunner01]
 
     steps:
-      - name: Chown user
-        run: |
-          sudo chown -R $USER:$USER $GITHUB_WORKSPACE
-
       - uses: actions/checkout@v3
 
       - name: Cache target dir
@@ -24,10 +20,6 @@ jobs:
           restore-keys: |
             srtool-target-tfchain-
             srtool-target-
-
-      # - name: Set Permissions
-      #   run: |
-      #     sudo chmod 0777 -R $USER:$USER &GITHUB_WORKSPACE/build/runtime/target
 
       - name: Srtool build
         id: srtool_build

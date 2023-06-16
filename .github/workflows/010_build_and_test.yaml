@@ -43,10 +43,10 @@ jobs:
         continue-on-error: true
         with:
           path: |
-            /root/.cargo/bin/
-            /root/.cargo/registry/index/
-            /root/.cargo/registry/cache/
-            /root/.cargo/git/db/
+            /home/tfchaindev/.cargo/bin/
+            /home/tfchaindev/.cargo/registry/index/
+            /home/tfchaindev/.cargo/registry/cache/
+            /home/tfchaindev/.cargo/git/db/
             substrate-node/target/
           key: ${{ runner.os }}-tfchain-build-cache-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-tfchain-build-cache
