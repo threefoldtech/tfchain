@@ -10,9 +10,9 @@ jobs:
     runs-on: [self-hosted, tfchainrunner01]
 
     steps:
-      # - name: Chown user
-      #   run: |
-      #     sudo chown -R $USER:$USER $GITHUB_WORKSPACE
+      - name: Chown user
+        run: |
+          sudo chown -R $USER:$USER $GITHUB_WORKSPACE
 
       - uses: actions/checkout@v3
 
