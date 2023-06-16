@@ -6,30 +6,8 @@ on:
     #   - '*'
 
 jobs:
-  pre_job:
-    runs-on: [self-hosted, tfchainrunner01]
-    outputs:
-      uid: ${{ steps.get_uid.outputs.uid }}
-      gid: ${{ steps.get_gid.outputs.gid }}
-    steps:
-      - name: Get User ID
-        id: get_uid
-        run: echo "::set-output name=uid::$(id -u tfchaindev)"
-      - name: Get Group ID
-        id: get_gid
-        run: echo "::set-output name=gid::$(id -g tfchaindev)"
-
   srtool:
-    needs: pre_job
     runs-on: [self-hosted, tfchainrunner01]
-    container:
-      image: threefolddev/tfchain:4
-      options: --user ${{ needs.pre_job.outputs.uid }}:${{ needs.pre_job.outputs.gid }}
-      env:
-        DEBIAN_FRONTEND: noninteractive
-        PATH: /root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin
-        RUSTUP_HOME: /root/.rustup
-        CARGO_HOME: /root/.cargo
 
     steps:
       - uses: actions/checkout@v3

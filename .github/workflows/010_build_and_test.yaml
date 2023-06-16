@@ -40,6 +40,9 @@ jobs:
       - name: Change permissions
         run: chmod -R g+w $GITHUB_WORKSPACE
 
+      - name: Change permissions before caching
+        run: chown -R $USER:$USER /root/.cargo
+
       - name: Cache build
         uses: actions/cache@v3
         timeout-minutes: 6
