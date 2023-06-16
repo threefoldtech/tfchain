@@ -7,17 +7,10 @@ on:
 
 jobs:
   srtool:
-    runs-on: [self-hosted, tfchainrunner01]
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
-
-      - name: Chown user
-        run: |
-          chown -R $USER:$USER $GITHUB_WORKSPACE
-
-      - name: Change permissions
-        run: chmod -R g+w $GITHUB_WORKSPACE
 
       - name: Cache target dir
         uses: actions/cache@v3
