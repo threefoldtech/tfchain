@@ -222,7 +222,7 @@ https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fexplorer.devnet.grid.tf%2Fws#/extr
 
 ## Graphql
 
-We store every creation / update / deletion of above objects in a graphql database. An end user of any other application can query the objects from the substrate database without having to talk to the substrate nodes.
+We can fetch above objects state and track their creation / update / deletion using graphql. An end user of any other application can query the objects from tfchain without having to talk directly to the nodes.
 
 [example](./graphql.md)
 
