@@ -112,7 +112,7 @@ func TestNodeUpdateGpuStatus(t *testing.T) {
 	_, err = cl.SetNodeGpuStatus(identity, true)
 	require.NoError(t, err)
 
-	status, err := cl.GetNodeGpuStatus(identity, nodeID)
+	status, err := cl.GetNodeGpuStatus(nodeID)
 	require.NoError(t, err)
 	require.Equal(t, true, status)
 
@@ -120,7 +120,7 @@ func TestNodeUpdateGpuStatus(t *testing.T) {
 	_, err = cl.SetNodeGpuStatus(identity, false)
 	require.NoError(t, err)
 
-	status, err = cl.GetNodeGpuStatus(identity, nodeID)
+	status, err = cl.GetNodeGpuStatus(nodeID)
 	require.NoError(t, err)
 	require.Equal(t, false, status)
 }
