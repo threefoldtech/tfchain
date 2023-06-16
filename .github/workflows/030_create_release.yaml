@@ -2,14 +2,18 @@ name: Create release
 
 on:
   push:
-    tags:
-      - '*'
+    # tags:
+    #   - '*'
 
 jobs:
   srtool:
     runs-on: [self-hosted, tfchainrunner01]
 
     steps:
+      - name: Chown user
+        run: |
+          sudo chown -R $USER:$USER $GITHUB_WORKSPACE
+
       - uses: actions/checkout@v3
 
       - name: Cache target dir
@@ -86,7 +90,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} 
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./tfchain-runtime.wasm
           asset_name: tfchain-runtime.wasm
           asset_content_type: application/wasm

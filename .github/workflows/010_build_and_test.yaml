@@ -1,5 +1,5 @@
 name: Build and Test
-on: 
+on:
   push:
     branches:
       - development
@@ -16,6 +16,10 @@ jobs:
         CARGO_HOME: /root/.cargo
 
     steps:
+      - name: Chown user
+        run: |
+          sudo chown -R $USER:$USER $GITHUB_WORKSPACE
+
       - uses: actions/checkout@v3
 
       - name: Cache build
@@ -53,4 +57,3 @@ jobs:
         with:
           name: integration test output
           path: substrate-node/tests/_output_tests/
-
