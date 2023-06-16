@@ -1,4 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+// `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
+#![recursion_limit = "256"]
 
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
@@ -30,6 +32,9 @@ mod mock;
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(feature = "runtime-benchmarks")]
+pub mod benchmarking;
 
 pub mod weights;
 
@@ -764,7 +769,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::call_index(0)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::set_storage_version())]
         pub fn set_storage_version(
             origin: OriginFor<T>,
             version: types::StorageVersion,
@@ -777,7 +782,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(1)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::create_farm())]
         pub fn create_farm(
             origin: OriginFor<T>,
             name: FarmNameInput<T>,
@@ -825,7 +830,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(2)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(3).ref_time() + T::DbWeight::get().reads(2).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::update_farm())]
         pub fn update_farm(
             origin: OriginFor<T>,
             id: u32,
@@ -867,7 +872,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(3)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(2).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::add_stellar_payout_v2address())]
         pub fn add_stellar_payout_v2address(
             origin: OriginFor<T>,
             farm_id: u32,
@@ -895,7 +900,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(4)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::set_farm_certification())]
         pub fn set_farm_certification(
             origin: OriginFor<T>,
             farm_id: u32,
@@ -915,7 +920,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(5)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(2).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::add_farm_ip())]
         pub fn add_farm_ip(
             origin: OriginFor<T>,
             id: u32,
@@ -961,7 +966,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(6)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(2).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::remove_farm_ip())]
         pub fn remove_farm_ip(
             origin: OriginFor<T>,
             id: u32,
@@ -1155,7 +1160,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(10)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::set_node_certification())]
         pub fn set_node_certification(
             origin: OriginFor<T>,
             node_id: u32,
@@ -1202,7 +1207,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(12)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(3).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::add_node_public_config())]
         pub fn add_node_public_config(
             origin: OriginFor<T>,
             farm_id: u32,
@@ -1245,7 +1250,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(13)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(2).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::delete_node())]
         pub fn delete_node(origin: OriginFor<T>, id: u32) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1460,7 +1465,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(18)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(3).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::update_twin())]
         pub fn update_twin(
             origin: OriginFor<T>,
             relay: RelayInput,
@@ -1589,7 +1594,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(22)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(3).ref_time() + T::DbWeight::get().reads(2).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::create_pricing_policy())]
         pub fn create_pricing_policy(
             origin: OriginFor<T>,
             name: Vec<u8>,
@@ -1637,7 +1642,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(23)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(4).ref_time() + T::DbWeight::get().reads(2).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::update_pricing_policy())]
         pub fn update_pricing_policy(
             origin: OriginFor<T>,
             id: u32,
@@ -1692,7 +1697,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(24)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2).ref_time() + T::DbWeight::get().reads(3).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::create_farming_policy())]
         pub fn create_farming_policy(
             origin: OriginFor<T>,
             name: Vec<u8>,
@@ -1740,7 +1745,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(25)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(2).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::user_accept_tc())]
         pub fn user_accept_tc(
             origin: OriginFor<T>,
             document_link: DocumentLinkInput,
@@ -1767,7 +1772,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(26)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(2).ref_time() + T::DbWeight::get().reads(5).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::delete_node_farm())]
         pub fn delete_node_farm(origin: OriginFor<T>, node_id: u32) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
 
@@ -1807,7 +1812,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(27)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(3).ref_time() + T::DbWeight::get().reads(2).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::set_farm_dedicated())]
         pub fn set_farm_dedicated(
             origin: OriginFor<T>,
             farm_id: u32,
@@ -1825,7 +1830,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(28)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::force_reset_farm_ip())]
         pub fn force_reset_farm_ip(
             origin: OriginFor<T>,
             farm_id: u32,
@@ -1855,7 +1860,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(29)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::set_connection_price())]
         pub fn set_connection_price(
             origin: OriginFor<T>,
             price: u32,
@@ -1870,7 +1875,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(30)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::add_node_certifier())]
         pub fn add_node_certifier(
             origin: OriginFor<T>,
             who: T::AccountId,
@@ -1899,7 +1904,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(31)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::remove_node_certifier())]
         pub fn remove_node_certifier(
             origin: OriginFor<T>,
             who: T::AccountId,
@@ -1920,7 +1925,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(32)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::update_farming_policy())]
         pub fn update_farming_policy(
             origin: OriginFor<T>,
             id: u32,
@@ -1963,7 +1968,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(33)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::attach_policy_to_farm())]
         pub fn attach_policy_to_farm(
             origin: OriginFor<T>,
             farm_id: u32,
@@ -2019,7 +2024,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(34)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::set_zos_version())]
         pub fn set_zos_version(
             origin: OriginFor<T>,
             zos_version: Vec<u8>,
@@ -2039,7 +2044,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(35)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::change_power_state())]
         pub fn change_power_state(
             origin: OriginFor<T>,
             power_state: Power,
@@ -2049,7 +2054,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(36)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::change_power_target())]
         pub fn change_power_target(
             origin: OriginFor<T>,
             node_id: u32,
@@ -2060,7 +2065,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(37)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::bond_twin_account())]
         pub fn bond_twin_account(origin: OriginFor<T>, twin_id: u32) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
@@ -2077,7 +2082,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(38)]
-        #[pallet::weight(<T as Config>::WeightInfo::report_uptime())]
+        #[pallet::weight(<T as Config>::WeightInfo::report_uptime_v2())]
         pub fn report_uptime_v2(
             origin: OriginFor<T>,
             uptime: u64,
@@ -2089,7 +2094,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(39)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(3).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::set_node_gpu_status())]
         pub fn set_node_gpu_status(
             origin: OriginFor<T>,
             gpu_status: bool,

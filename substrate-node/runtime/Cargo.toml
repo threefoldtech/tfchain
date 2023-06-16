@@ -132,9 +132,9 @@ runtime-benchmarks = [
     'frame-system/runtime-benchmarks',
     'pallet-timestamp/runtime-benchmarks',
     'sp-runtime/runtime-benchmarks',
-    'pallet-tfgrid/runtime-benchmarks',
     'pallet-balances/runtime-benchmarks',
     'pallet-collective/runtime-benchmarks',
+    'pallet-tfgrid/runtime-benchmarks',
     'pallet-smart-contract/runtime-benchmarks',
     'pallet-tft-price/runtime-benchmarks',
     'pallet-burning/runtime-benchmarks',
@@ -142,6 +142,7 @@ runtime-benchmarks = [
     'pallet-kvstore/runtime-benchmarks',
     'substrate-validator-set/runtime-benchmarks',
     'pallet-validator/runtime-benchmarks',
+    'pallet-tft-bridge/runtime-benchmarks',
 ]
 try-runtime = [
 	"frame-try-runtime/try-runtime",

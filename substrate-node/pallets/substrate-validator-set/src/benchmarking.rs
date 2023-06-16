@@ -62,7 +62,7 @@ benchmarks! {
 
     // Calling the `impl_benchmark_test_suite` macro inside the `benchmarks`
     // block will generate one #[test] function per benchmark
-    impl_benchmark_test_suite! (ValidatorSet, crate::mock::new_test_ext(), crate::mock::TestRuntime)
+    impl_benchmark_test_suite!(ValidatorSet, crate::mock::new_test_ext(), crate::mock::TestRuntime)
 }
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {

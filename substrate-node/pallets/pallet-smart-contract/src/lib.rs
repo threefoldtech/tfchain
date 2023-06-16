@@ -237,7 +237,7 @@ pub mod pallet {
         type BillingReferencePeriod: Get<u64>;
         type DistributionFrequency: Get<u16>;
         type GracePeriod: Get<u64>;
-        type WeightInfo: WeightInfo;
+        type WeightInfo: weights::WeightInfo;
         type NodeChanged: ChangeNode<LocationOf<Self>, InterfaceOf<Self>, SerialNumberOf<Self>>;
         type PublicIpModifier: PublicIpModifier;
         type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
@@ -455,7 +455,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(1)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::update_node_contract())]
         pub fn update_node_contract(
             origin: OriginFor<T>,
             contract_id: u64,
@@ -467,7 +467,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(2)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::cancel_contract())]
         pub fn cancel_contract(
             origin: OriginFor<T>,
             contract_id: u64,
@@ -477,7 +477,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(4)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::create_name_contract())]
         pub fn create_name_contract(
             origin: OriginFor<T>,
             name: Vec<u8>,
@@ -497,7 +497,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(6)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::report_contract_resources())]
         pub fn report_contract_resources(
             origin: OriginFor<T>,
             contract_resources: Vec<types::ContractResources>,
@@ -507,7 +507,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(7)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::create_rent_contract())]
         pub fn create_rent_contract(
             origin: OriginFor<T>,
             node_id: u32,
@@ -518,7 +518,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(8)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::create_solution_provider())]
         pub fn create_solution_provider(
             origin: OriginFor<T>,
             description: Vec<u8>,
@@ -530,7 +530,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(9)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::approve_solution_provider())]
         pub fn approve_solution_provider(
             origin: OriginFor<T>,
             solution_provider_id: u64,
@@ -551,7 +551,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(11)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::service_contract_create())]
         pub fn service_contract_create(
             origin: OriginFor<T>,
             service_account: T::AccountId,
@@ -562,7 +562,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(12)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::service_contract_set_metadata())]
         pub fn service_contract_set_metadata(
             origin: OriginFor<T>,
             service_contract_id: u64,
@@ -573,7 +573,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(13)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::service_contract_set_fees())]
         pub fn service_contract_set_fees(
             origin: OriginFor<T>,
             service_contract_id: u64,
@@ -590,7 +590,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(14)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::service_contract_approve())]
         pub fn service_contract_approve(
             origin: OriginFor<T>,
             service_contract_id: u64,
@@ -600,7 +600,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(15)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::service_contract_reject())]
         pub fn service_contract_reject(
             origin: OriginFor<T>,
             service_contract_id: u64,
@@ -610,7 +610,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(16)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::service_contract_cancel())]
         pub fn service_contract_cancel(
             origin: OriginFor<T>,
             service_contract_id: u64,
@@ -628,7 +628,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(17)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::service_contract_bill())]
         pub fn service_contract_bill(
             origin: OriginFor<T>,
             service_contract_id: u64,
@@ -640,7 +640,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(18)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::change_billing_frequency())]
         pub fn change_billing_frequency(
             origin: OriginFor<T>,
             frequency: u64,
@@ -650,7 +650,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(19)]
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::attach_solution_provider_id())]
         pub fn attach_solution_provider_id(
             origin: OriginFor<T>,
             contract_id: u64,
@@ -661,7 +661,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(20)]
-        #[pallet::weight(100_000_000 + T::DbWeight::get().writes(1).ref_time() + T::DbWeight::get().reads(1).ref_time())]
+        #[pallet::weight(<T as Config>::WeightInfo::set_dedicated_node_extra_fee())]
         pub fn set_dedicated_node_extra_fee(
             origin: OriginFor<T>,
             node_id: u32,
