@@ -8,8 +8,8 @@ A contract will work simple client - server principle (i.e. the "buyer" and the 
 
 - consumer twin id
 - service twin id
-- base fee, this is the fixed amount which will be billed hourly
-- variable fee, this is the maximum amount which can be billed on top of the base fee (for variable consumption metrics, to be defined by the service)
+- base fee, this is the fixed amount (in mUSD) which will be billed hourly
+- variable fee, this is the maximum amount (in mUSD) which can be billed on top of the base fee (for variable consumption metrics, to be defined by the service)
 - metadata, a field which just holds some bytes. The service can use this any way it likes (including having stuff set by the user). We limit this field to some size now, suggested 64 bytes (2 public keys generally)
 
 Additionally, we also keep track of some metadata, which will be:
@@ -22,7 +22,7 @@ Additionally, we also keep track of some metadata, which will be:
 
 Once a contract is accepted by both the consumer and the service, the chain can start accepting "bill reports" from the service for the contract. Only the twin of the service can send these, as specified in the contract. The bill contains the following:
 
-- Variable amount which is billed. The chain checks that this is less than or equal to the variable amount as specified in the contract, if it is higher the bill is rejected for overcharging. Technically the service could send a report every second to drain the user. To protect against this, the max variable amount in the contract is interpreted as being "per hour", and the value set in the contract is divided by 3600, multiplied by window size, to find the actual maximum which can be billed by the contract.
+- Variable amount (in mUSD) which is billed. The chain checks that this is less than or equal to the variable amount as specified in the contract, if it is higher the bill is rejected for overcharging. Technically the service could send a report every second to drain the user. To protect against this, the max variable amount in the contract is interpreted as being "per hour", and the value set in the contract is divided by 3600, multiplied by window size, to find the actual maximum which can be billed by the contract.
 - Window, this is the amount of time (in seconds) covered since last contract. The chain verifies that `current time - window >= contract.last_bill`, such that no bills overlap to avoid overcharging. Combined with the previous limit to variable amount this prevents the service from overcharging the user.
 - Some optional metadata, this will again just be some bytes (the service decides how this can be interpreted). For now we'll limit this to 50 bytes or so.
 
@@ -38,7 +38,7 @@ Once a contract is accepted by both the consumer and the service, the chain can 
 
 ### Callable by service
 
-- `set_fees(base, variable)`: Sets the base fee and variable fee on the contract
+- `set_fees(base, variable)`: Sets the base fee and variable fee on the contract (both in mUSD)
 - `reject_by_service()`: Rejects the contract, deleting it.
 - `approve_by_service()`: Sets the `service_accepted` flag on the contract. After this, no more modifications to fees or metadata can be done
 
