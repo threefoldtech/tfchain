@@ -1,5 +1,5 @@
 name: Build and Test
-on: 
+on:
   push:
     branches:
       - development
@@ -17,6 +17,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+
+      - name: Chown user
+        run: |
+          chown -R $USER:$USER $GITHUB_WORKSPACE
 
       - name: Cache build
         uses: actions/cache@v3
@@ -43,6 +47,7 @@ jobs:
           cargo test --no-fail-fast --features runtime-benchmarks
 
       - name: Integration tests
+        if: "!contains(github.event.head_commit.message, '[skip integr]')"
         run: |
           python3.10 -m pip install robotframework==5.0.1 cryptography==3.4.8 substrate-interface==1.4.0
           cd substrate-node/tests
@@ -53,4 +58,3 @@ jobs:
         with:
           name: integration test output
           path: substrate-node/tests/_output_tests/
-
