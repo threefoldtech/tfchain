@@ -50,7 +50,6 @@ pub mod terms_cond;
 // through `construct_runtime`.
 #[frame_support::pallet]
 pub mod pallet {
-    use super::types;
     use super::weights::WeightInfo;
     use super::*;
     use frame_support::{pallet_prelude::*, Blake2_128Concat};
@@ -785,45 +784,8 @@ pub mod pallet {
             name: FarmNameInput<T>,
             public_ips: PublicIpListInput<T>,
         ) -> DispatchResultWithPostInfo {
-            let address = ensure_signed(origin)?;
-
-            let mut id = FarmID::<T>::get();
-            id = id + 1;
-
-            let twin_id = TwinIdByAccountID::<T>::get(&address).ok_or(Error::<T>::TwinNotExists)?;
-            let twin = Twins::<T>::get(twin_id).ok_or(Error::<T>::TwinNotExists)?;
-            ensure!(
-                twin.account_id == address,
-                Error::<T>::CannotCreateFarmWrongTwin
-            );
-
-            ensure!(
-                !FarmIdByName::<T>::contains_key(name.clone()),
-                Error::<T>::FarmExists
-            );
-            let farm_name = Self::get_farm_name(name.clone())?;
-
-            let public_ips_list = Self::get_public_ips(public_ips)?;
-
-            let new_farm = Farm {
-                version: TFGRID_FARM_VERSION,
-                id,
-                twin_id,
-                name: farm_name,
-                pricing_policy_id: 1,
-                certification: FarmCertification::NotCertified,
-                public_ips: public_ips_list,
-                dedicated_farm: false,
-                farming_policy_limits: None,
-            };
-
-            Farms::<T>::insert(id, &new_farm);
-            FarmIdByName::<T>::insert(name.to_vec(), id);
-            FarmID::<T>::put(id);
-
-            Self::deposit_event(Event::FarmStored(new_farm));
-
-            Ok(().into())
+            let account_id = ensure_signed(origin)?;
+            Self::_create_farm(account_id, name, public_ips)
         }
 
         #[pallet::call_index(2)]
@@ -833,39 +795,8 @@ pub mod pallet {
             id: u32,
             name: FarmNameInput<T>,
         ) -> DispatchResultWithPostInfo {
-            let address = ensure_signed(origin)?;
-
-            let new_farm_name = Self::get_farm_name(name.clone())?;
-
-            let twin_id = TwinIdByAccountID::<T>::get(&address).ok_or(Error::<T>::TwinNotExists)?;
-
-            let mut stored_farm = Farms::<T>::get(id).ok_or(Error::<T>::FarmNotExists)?;
-
-            ensure!(
-                stored_farm.twin_id == twin_id,
-                Error::<T>::CannotUpdateFarmWrongTwin
-            );
-
-            if FarmIdByName::<T>::contains_key(name.clone()) {
-                let farm_id_by_new_name = FarmIdByName::<T>::get(name.clone());
-                // if the user picks a new name but it is taken by another farmer, don't allow it
-                if farm_id_by_new_name != id {
-                    return Err(Error::<T>::InvalidFarmName.into());
-                }
-            }
-
-            let name: Vec<u8> = stored_farm.name.into();
-            // Remove stored farm by name and insert new one
-            FarmIdByName::<T>::remove(name.clone());
-
-            stored_farm.name = new_farm_name;
-
-            Farms::<T>::insert(id, &stored_farm);
-            FarmIdByName::<T>::insert(name, stored_farm.id);
-
-            Self::deposit_event(Event::FarmUpdated(stored_farm));
-
-            Ok(().into())
+            let account_id = ensure_signed(origin)?;
+            Self::_update_farm(account_id, id, name)
         }
 
         #[pallet::call_index(3)]
@@ -875,25 +806,8 @@ pub mod pallet {
             farm_id: u32,
             stellar_address: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
-            let address = ensure_signed(origin)?;
-
-            let twin_id = TwinIdByAccountID::<T>::get(&address).ok_or(Error::<T>::TwinNotExists)?;
-
-            let farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
-
-            ensure!(
-                farm.twin_id == twin_id,
-                Error::<T>::CannotUpdateFarmWrongTwin
-            );
-
-            FarmPayoutV2AddressByFarmID::<T>::insert(&farm_id, &stellar_address);
-
-            Self::deposit_event(Event::FarmPayoutV2AddressRegistered(
-                farm_id,
-                stellar_address,
-            ));
-
-            Ok(().into())
+            let account_id = ensure_signed(origin)?;
+            Self::_add_stellar_payout_v2address(account_id, farm_id, stellar_address)
         }
 
         #[pallet::call_index(4)]
@@ -904,94 +818,30 @@ pub mod pallet {
             certification: FarmCertification,
         ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
-
-            let mut stored_farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
-
-            stored_farm.certification = certification;
-
-            Farms::<T>::insert(farm_id, &stored_farm);
-
-            Self::deposit_event(Event::FarmCertificationSet(farm_id, certification));
-
-            Ok(().into())
+            Self::_set_farm_certification(farm_id, certification)
         }
 
         #[pallet::call_index(5)]
         #[pallet::weight(<T as Config>::WeightInfo::add_farm_ip())]
         pub fn add_farm_ip(
             origin: OriginFor<T>,
-            id: u32,
+            farm_id: u32,
             ip: Ip4Input,
             gw: Gw4Input,
         ) -> DispatchResultWithPostInfo {
-            let address = ensure_signed(origin)?;
-
-            let mut stored_farm = Farms::<T>::get(id).ok_or(Error::<T>::FarmNotExists)?;
-
-            let twin = Twins::<T>::get(stored_farm.twin_id).ok_or(Error::<T>::TwinNotExists)?;
-            ensure!(
-                twin.account_id == address,
-                Error::<T>::CannotUpdateFarmWrongTwin
-            );
-
-            // Check if it's a valid IP4
-            let ip4 = IP4 { ip, gw };
-            ip4.is_valid().map_err(|_| Error::<T>::InvalidPublicIP)?;
-
-            let new_ip = PublicIP {
-                ip: ip4.ip,
-                gateway: ip4.gw,
-                contract_id: 0,
-            };
-
-            match stored_farm
-                .public_ips
-                .iter()
-                .position(|public_ip| public_ip.ip == new_ip.ip)
-            {
-                Some(_) => return Err(Error::<T>::IpExists.into()),
-                None => {
-                    stored_farm
-                        .public_ips
-                        .try_push(new_ip)
-                        .map_err(|_| Error::<T>::InvalidPublicIP)?;
-                    Farms::<T>::insert(stored_farm.id, &stored_farm);
-                    Self::deposit_event(Event::FarmUpdated(stored_farm));
-                    return Ok(().into());
-                }
-            };
+            let account_id = ensure_signed(origin)?;
+            Self::_add_farm_ip(account_id, farm_id, ip, gw)
         }
 
         #[pallet::call_index(6)]
         #[pallet::weight(<T as Config>::WeightInfo::remove_farm_ip())]
         pub fn remove_farm_ip(
             origin: OriginFor<T>,
-            id: u32,
+            farm_id: u32,
             ip: Ip4Input,
         ) -> DispatchResultWithPostInfo {
-            let address = ensure_signed(origin)?;
-
-            let mut stored_farm = Farms::<T>::get(id).ok_or(Error::<T>::FarmNotExists)?;
-
-            let twin = Twins::<T>::get(stored_farm.twin_id).ok_or(Error::<T>::TwinNotExists)?;
-            ensure!(
-                twin.account_id == address,
-                Error::<T>::CannotUpdateFarmWrongTwin
-            );
-
-            match stored_farm
-                .public_ips
-                .iter()
-                .position(|pubip| pubip.ip == ip && pubip.contract_id == 0)
-            {
-                Some(index) => {
-                    stored_farm.public_ips.remove(index);
-                    Farms::<T>::insert(stored_farm.id, &stored_farm);
-                    Self::deposit_event(Event::FarmUpdated(stored_farm));
-                    Ok(().into())
-                }
-                None => Err(Error::<T>::IpNotExists.into()),
-            }
+            let account_id = ensure_signed(origin)?;
+            Self::_remove_farm_ip(account_id, farm_id, ip)
         }
 
         #[pallet::call_index(8)]
@@ -1007,70 +857,16 @@ pub mod pallet {
             serial_number: Option<SerialNumberInput>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-
-            ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
-            ensure!(
-                TwinIdByAccountID::<T>::contains_key(&account_id),
-                Error::<T>::TwinNotExists
-            );
-            let twin_id =
-                TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
-
-            ensure!(
-                !NodeIdByTwinID::<T>::contains_key(twin_id),
-                Error::<T>::NodeWithTwinIdExists
-            );
-
-            let mut id = NodeID::<T>::get();
-            id = id + 1;
-
-            let node_resources = Self::get_resources(resources)?;
-            let node_location = Self::get_location(location)?;
-            let node_interfaces = Self::get_interfaces(&interfaces)?;
-
-            let node_serial_number = if let Some(serial_input) = serial_number {
-                Some(Self::get_serial_number(serial_input)?)
-            } else {
-                None
-            };
-
-            let created = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-
-            let mut new_node = Node {
-                version: TFGRID_NODE_VERSION,
-                id,
+            Self::_create_node(
+                &account_id,
                 farm_id,
-                twin_id,
-                resources: node_resources,
-                location: node_location,
-                public_config: None,
-                created,
-                farming_policy_id: 0,
-                interfaces: node_interfaces,
-                certification: NodeCertification::default(),
+                resources,
+                location,
+                interfaces,
                 secure_boot,
                 virtualized,
-                serial_number: node_serial_number,
-                connection_price: ConnectionPrice::<T>::get(),
-            };
-
-            let farming_policy = Self::get_farming_policy(&new_node)?;
-            new_node.farming_policy_id = farming_policy.id;
-            new_node.certification = farming_policy.node_certification;
-
-            Nodes::<T>::insert(id, &new_node);
-            NodeID::<T>::put(id);
-            NodeIdByTwinID::<T>::insert(twin_id, new_node.id);
-
-            let mut nodes_by_farm = NodesByFarmID::<T>::get(farm_id);
-            nodes_by_farm.push(id);
-            NodesByFarmID::<T>::insert(farm_id, nodes_by_farm);
-
-            T::NodeChanged::node_changed(None, &new_node);
-
-            Self::deposit_event(Event::NodeStored(new_node));
-
-            Ok(().into())
+                serial_number,
+            )
         }
 
         #[pallet::call_index(9)]
@@ -1087,73 +883,17 @@ pub mod pallet {
             serial_number: Option<SerialNumberInput>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-
-            let mut stored_node = Nodes::<T>::get(&node_id).ok_or(Error::<T>::NodeNotExists)?;
-            ensure!(
-                TwinIdByAccountID::<T>::contains_key(&account_id),
-                Error::<T>::TwinNotExists
-            );
-
-            let twin_id =
-                TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
-            ensure!(
-                stored_node.twin_id == twin_id,
-                Error::<T>::NodeUpdateNotAuthorized
-            );
-
-            ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
-
-            let old_node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-
-            // If the farm ID changed on the node,
-            // remove the node from the old map from the farm and insert into the correct one
-            if old_node.farm_id != farm_id {
-                let mut old_nodes_by_farm = NodesByFarmID::<T>::get(old_node.farm_id);
-                old_nodes_by_farm.retain(|&id| id != node_id);
-                NodesByFarmID::<T>::insert(old_node.farm_id, old_nodes_by_farm);
-
-                let mut nodes_by_farm = NodesByFarmID::<T>::get(farm_id);
-                nodes_by_farm.push(node_id);
-                NodesByFarmID::<T>::insert(farm_id, nodes_by_farm);
-            };
-
-            let node_resources = Self::get_resources(resources)?;
-            let node_location = Self::get_location(location)?;
-            let node_interfaces = Self::get_interfaces(&interfaces)?;
-
-            let node_serial_number = if let Some(serial_input) = serial_number {
-                Some(Self::get_serial_number(serial_input)?)
-            } else {
-                None
-            };
-
-            // If the resources on a certified node changed, reset the certification level to DIY
-            if Resources::has_changed(&stored_node.resources, &node_resources, 1)
-                && stored_node.certification == NodeCertification::Certified
-            {
-                stored_node.certification = NodeCertification::Diy;
-                Self::deposit_event(Event::NodeCertificationSet(
-                    node_id,
-                    stored_node.certification,
-                ));
-            }
-
-            stored_node.farm_id = farm_id;
-            stored_node.resources = node_resources;
-            stored_node.location = node_location;
-            stored_node.interfaces = node_interfaces;
-            stored_node.secure_boot = secure_boot;
-            stored_node.virtualized = virtualized;
-            stored_node.serial_number = node_serial_number;
-
-            // override node in storage
-            Nodes::<T>::insert(stored_node.id, &stored_node);
-
-            T::NodeChanged::node_changed(Some(&old_node), &stored_node);
-
-            Self::deposit_event(Event::NodeUpdated(stored_node));
-
-            Ok(Pays::No.into())
+            Self::_update_node(
+                &account_id,
+                node_id,
+                farm_id,
+                resources,
+                location,
+                interfaces,
+                secure_boot,
+                virtualized,
+                serial_number,
+            )
         }
 
         #[pallet::call_index(10)]
@@ -1173,32 +913,13 @@ pub mod pallet {
                     return Err(Error::<T>::NotAllowedToCertifyNode.into());
                 }
             }
-
-            let mut stored_node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-
-            stored_node.certification = node_certification;
-
-            let current_node_policy = FarmingPoliciesMap::<T>::get(stored_node.farming_policy_id);
-            if current_node_policy.default {
-                // Refetch farming policy and save it on the node
-                let farming_policy = Self::get_farming_policy(&stored_node)?;
-                stored_node.farming_policy_id = farming_policy.id;
-            }
-
-            // override node in storage
-            Nodes::<T>::insert(stored_node.id, &stored_node);
-
-            Self::deposit_event(Event::NodeUpdated(stored_node));
-            Self::deposit_event(Event::NodeCertificationSet(node_id, node_certification));
-
-            Ok(().into())
+            Self::_set_node_certification(node_id, node_certification)
         }
 
         #[pallet::call_index(11)]
         #[pallet::weight(<T as Config>::WeightInfo::report_uptime())]
         pub fn report_uptime(origin: OriginFor<T>, uptime: u64) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-
             let timestamp_hint = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
             Self::_report_uptime(&account_id, uptime, timestamp_hint)
         }
@@ -1212,68 +933,14 @@ pub mod pallet {
             public_config: Option<PublicConfig>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-
-            // check if this twin can update the farm with id passed
-            let farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
-
-            ensure!(
-                Twins::<T>::contains_key(farm.twin_id),
-                Error::<T>::TwinNotExists
-            );
-            let farm_twin = Twins::<T>::get(farm.twin_id).ok_or(Error::<T>::TwinNotExists)?;
-            ensure!(
-                farm_twin.account_id == account_id,
-                Error::<T>::CannotUpdateFarmWrongTwin
-            );
-
-            // check if the node belong to the farm
-            let mut node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-            ensure!(node.farm_id == farm_id, Error::<T>::NodeUpdateNotAuthorized);
-
-            if let Some(config) = public_config {
-                config
-                    .is_valid()
-                    .map_err(|_| Error::<T>::InvalidPublicConfig)?;
-                // update the public config and save
-                node.public_config = Some(config);
-            } else {
-                node.public_config = None;
-            }
-
-            Nodes::<T>::insert(node_id, &node);
-            Self::deposit_event(Event::NodePublicConfigStored(node_id, node.public_config));
-
-            Ok(().into())
+            Self::_add_node_public_config(account_id, farm_id, node_id, public_config)
         }
 
         #[pallet::call_index(13)]
         #[pallet::weight(<T as Config>::WeightInfo::delete_node())]
-        pub fn delete_node(origin: OriginFor<T>, id: u32) -> DispatchResultWithPostInfo {
+        pub fn delete_node(origin: OriginFor<T>, node_id: u32) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-
-            let stored_node = Nodes::<T>::get(id).ok_or(Error::<T>::NodeNotExists)?;
-            let twin_id =
-                TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
-            ensure!(
-                stored_node.twin_id == twin_id,
-                Error::<T>::NodeUpdateNotAuthorized
-            );
-
-            let mut nodes_by_farm = NodesByFarmID::<T>::get(stored_node.farm_id);
-            let location = nodes_by_farm
-                .binary_search(&id)
-                .or(Err(Error::<T>::NodeNotExists))?;
-            nodes_by_farm.remove(location);
-            NodesByFarmID::<T>::insert(stored_node.farm_id, nodes_by_farm);
-
-            // Call node deleted
-            T::NodeChanged::node_deleted(&stored_node);
-
-            Nodes::<T>::remove(id);
-
-            Self::deposit_event(Event::NodeDeleted(id));
-
-            Ok(().into())
+            Self::_delete_node(&account_id, node_id)
         }
 
         #[pallet::call_index(14)]
@@ -1522,40 +1189,7 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::delete_node_farm())]
         pub fn delete_node_farm(origin: OriginFor<T>, node_id: u32) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-
-            // check if the farmer twin is authorized
-            let farm_twin_id =
-                TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
-            // check if the ndode belong to said farm
-            let node = Nodes::<T>::get(&node_id).ok_or(Error::<T>::NodeNotExists)?;
-            let farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
-
-            ensure!(
-                Twins::<T>::contains_key(&farm.twin_id),
-                Error::<T>::TwinNotExists
-            );
-            let farm_twin = Twins::<T>::get(farm.twin_id).ok_or(Error::<T>::TwinNotExists)?;
-            ensure!(
-                farm_twin_id == farm_twin.id,
-                Error::<T>::FarmerNotAuthorized
-            );
-
-            let mut nodes_by_farm = NodesByFarmID::<T>::get(node.farm_id);
-            let location = nodes_by_farm
-                .binary_search(&node_id)
-                .or(Err(Error::<T>::NodeNotExists))?;
-            nodes_by_farm.remove(location);
-            NodesByFarmID::<T>::insert(node.farm_id, nodes_by_farm);
-
-            // Call node deleted
-            T::NodeChanged::node_deleted(&node);
-
-            Nodes::<T>::remove(node_id);
-            NodeIdByTwinID::<T>::remove(node.twin_id);
-
-            Self::deposit_event(Event::NodeDeleted(node_id));
-
-            Ok(().into())
+            Self::_delete_node_farm(account_id, node_id)
         }
 
         #[pallet::call_index(27)]
@@ -1566,14 +1200,7 @@ pub mod pallet {
             dedicated: bool,
         ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
-
-            let mut farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
-            farm.dedicated_farm = dedicated;
-            Farms::<T>::insert(farm_id, &farm);
-
-            Self::deposit_event(Event::FarmUpdated(farm));
-
-            Ok(().into())
+            Self::_set_farm_dedicated(farm_id, dedicated)
         }
 
         #[pallet::call_index(28)]
@@ -1584,26 +1211,7 @@ pub mod pallet {
             ip: Ip4Input,
         ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
-
-            ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
-            let mut stored_farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
-
-            match stored_farm
-                .public_ips
-                .iter_mut()
-                .find(|pubip| pubip.ip == ip)
-            {
-                Some(ip) => {
-                    ip.contract_id = 0;
-                }
-                None => return Err(Error::<T>::IpNotExists.into()),
-            };
-
-            Farms::<T>::insert(stored_farm.id, &stored_farm);
-
-            Self::deposit_event(Event::FarmUpdated(stored_farm));
-
-            Ok(().into())
+            Self::_force_reset_farm_ip(farm_id, ip)
         }
 
         #[pallet::call_index(29)]
@@ -1613,11 +1221,8 @@ pub mod pallet {
             price: u32,
         ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
-
             ConnectionPrice::<T>::set(price);
-
             Self::deposit_event(Event::ConnectionPriceSet(price));
-
             Ok(().into())
         }
 
@@ -1625,50 +1230,20 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::add_node_certifier())]
         pub fn add_node_certifier(
             origin: OriginFor<T>,
-            who: T::AccountId,
+            certifier: T::AccountId,
         ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
-
-            match AllowedNodeCertifiers::<T>::get() {
-                Some(mut certifiers) => {
-                    let location = certifiers
-                        .binary_search(&who)
-                        .err()
-                        .ok_or(Error::<T>::AlreadyCertifier)?;
-                    certifiers.insert(location, who.clone());
-                    AllowedNodeCertifiers::<T>::put(certifiers);
-
-                    Self::deposit_event(Event::NodeCertifierAdded(who));
-                }
-                None => {
-                    let certifiers = vec![who.clone()];
-                    AllowedNodeCertifiers::<T>::put(certifiers);
-                    Self::deposit_event(Event::NodeCertifierAdded(who));
-                }
-            }
-
-            Ok(().into())
+            Self::_add_node_certifier(certifier)
         }
 
         #[pallet::call_index(31)]
         #[pallet::weight(<T as Config>::WeightInfo::remove_node_certifier())]
         pub fn remove_node_certifier(
             origin: OriginFor<T>,
-            who: T::AccountId,
+            certifier: T::AccountId,
         ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
-
-            if let Some(mut certifiers) = AllowedNodeCertifiers::<T>::get() {
-                let location = certifiers
-                    .binary_search(&who)
-                    .ok()
-                    .ok_or(Error::<T>::NotCertifier)?;
-                certifiers.remove(location);
-                AllowedNodeCertifiers::<T>::put(&certifiers);
-
-                Self::deposit_event(Event::NodeCertifierRemoved(who));
-            }
-            Ok(().into())
+            Self::_remove_node_certifier(certifier)
         }
 
         #[pallet::call_index(32)]
@@ -1722,52 +1297,7 @@ pub mod pallet {
             limits: Option<FarmingPolicyLimit>,
         ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
-
-            if let Some(policy_limits) = limits {
-                let farming_policy = FarmingPoliciesMap::<T>::get(policy_limits.farming_policy_id);
-                let now = system::Pallet::<T>::block_number();
-
-                // Policy end is expressed in number of blocks
-                if farming_policy.policy_end != T::BlockNumber::from(0 as u32)
-                    && now >= farming_policy.policy_created + farming_policy.policy_end
-                {
-                    return Err(DispatchErrorWithPostInfo::from(
-                        Error::<T>::FarmingPolicyExpired,
-                    ));
-                }
-
-                let mut farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
-                // Save the policy limits and farm certification on the Farm object
-                farm.farming_policy_limits = Some(policy_limits.clone());
-                farm.certification = farming_policy.farm_certification;
-                Farms::<T>::insert(farm_id, &farm);
-                Self::deposit_event(Event::FarmUpdated(farm));
-
-                // Give all the nodes in this farm the policy that is attached
-                for node_id in NodesByFarmID::<T>::get(farm_id) {
-                    match Nodes::<T>::get(node_id) {
-                        Some(mut node) => {
-                            let current_node_policy =
-                                FarmingPoliciesMap::<T>::get(node.farming_policy_id);
-                            // If the current policy attached to the node is default one, assign it the newly created policy
-                            // because we wouldn't wanna override any existing non-default policies
-                            if current_node_policy.default {
-                                let policy = Self::get_farming_policy(&node)?;
-                                // Save the new policy ID and certification on the Node object
-                                node.farming_policy_id = policy.id;
-                                node.certification = policy.node_certification;
-                                Nodes::<T>::insert(node_id, &node);
-                                Self::deposit_event(Event::NodeUpdated(node))
-                            }
-                        }
-                        None => continue,
-                    }
-                }
-
-                Self::deposit_event(Event::FarmingPolicySet(farm_id, Some(policy_limits)));
-            }
-
-            Ok(().into())
+            Self::_attach_policy_to_farm(farm_id, limits)
         }
 
         #[pallet::call_index(34)]
@@ -1796,7 +1326,7 @@ pub mod pallet {
             power_state: Power,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_change_power_state(account_id, power_state)
+            Self::_change_power_state(&account_id, power_state)
         }
 
         #[pallet::call_index(36)]
@@ -1807,7 +1337,7 @@ pub mod pallet {
             power_target: Power,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_change_power_target(account_id, node_id, power_target)
+            Self::_change_power_target(&account_id, node_id, power_target)
         }
 
         #[pallet::call_index(37)]
@@ -1825,7 +1355,6 @@ pub mod pallet {
             timestamp_hint: u64,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-
             Self::_report_uptime(&account_id, uptime, timestamp_hint)
         }
 
@@ -1836,7 +1365,6 @@ pub mod pallet {
             gpu_status: bool,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-
             Self::_set_node_gpu_status(&account_id, gpu_status)
         }
     }
@@ -1844,61 +1372,6 @@ pub mod pallet {
 
 // Internal functions of the pallet
 impl<T: Config> Pallet<T> {
-    pub fn _report_uptime(
-        account_id: &T::AccountId,
-        uptime: u64,
-        timestamp_hint: u64,
-    ) -> DispatchResultWithPostInfo {
-        let twin_id = TwinIdByAccountID::<T>::get(account_id).ok_or(Error::<T>::TwinNotExists)?;
-
-        ensure!(
-            NodeIdByTwinID::<T>::contains_key(twin_id),
-            Error::<T>::NodeNotExists
-        );
-        let node_id = NodeIdByTwinID::<T>::get(twin_id);
-
-        ensure!(Nodes::<T>::contains_key(node_id), Error::<T>::NodeNotExists);
-
-        let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-        // check if timestamp hint is within the acceptable range of the current timestamp (now) and the drift value
-        ensure!(
-            timestamp_hint
-                >= now
-                    .checked_sub(<T as Config>::TimestampHintDrift::get())
-                    .unwrap_or(0)
-                && timestamp_hint <= now + <T as Config>::TimestampHintDrift::get(),
-            Error::<T>::InvalidTimestampHint
-        );
-
-        Self::deposit_event(Event::NodeUptimeReported(node_id, now, uptime));
-
-        Ok(Pays::No.into())
-    }
-
-    pub fn _set_node_gpu_status(
-        account_id: &T::AccountId,
-        gpu_status: bool,
-    ) -> DispatchResultWithPostInfo {
-        let twin_id = TwinIdByAccountID::<T>::get(account_id).ok_or(Error::<T>::TwinNotExists)?;
-
-        ensure!(
-            NodeIdByTwinID::<T>::contains_key(twin_id),
-            Error::<T>::NodeNotExists
-        );
-        let node_id = NodeIdByTwinID::<T>::get(twin_id);
-
-        ensure!(Nodes::<T>::contains_key(node_id), Error::<T>::NodeNotExists);
-
-        NodeGpuStatus::<T>::insert(node_id, gpu_status);
-
-        Self::deposit_event(Event::NodeGpuStatusChanged {
-            node_id,
-            gpu_status,
-        });
-
-        Ok(Pays::No.into())
-    }
-
     pub fn verify_signature(signature: [u8; 64], target: &T::AccountId, payload: &Vec<u8>) -> bool {
         Self::verify_ed_signature(signature, target, payload)
             || Self::verify_sr_signature(signature, target, payload)
@@ -2190,75 +1663,6 @@ impl<T: Config> Pallet<T> {
     ) -> Result<SerialNumberOf<T>, DispatchErrorWithPostInfo> {
         let parsed_serial_number = <T as Config>::SerialNumber::try_from(serial_number)?;
         Ok(parsed_serial_number)
-    }
-
-    fn _change_power_state(
-        account_id: T::AccountId,
-        power_state: Power,
-    ) -> DispatchResultWithPostInfo {
-        let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
-        ensure!(
-            NodeIdByTwinID::<T>::contains_key(twin_id),
-            Error::<T>::NodeNotExists
-        );
-        let node_id = NodeIdByTwinID::<T>::get(twin_id);
-        let node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-
-        let power_state = match power_state {
-            Power::Up => PowerState::Up,
-            Power::Down => PowerState::Down(system::Pallet::<T>::block_number()),
-        };
-
-        let mut node_power = NodePower::<T>::get(node_id);
-
-        // if the power state is not correct => change it and emit event
-        if node_power.state != power_state {
-            node_power.state = power_state.clone();
-
-            NodePower::<T>::insert(node_id, node_power);
-            Self::deposit_event(Event::PowerStateChanged {
-                farm_id: node.farm_id,
-                node_id,
-                power_state,
-            });
-        }
-
-        Ok(Pays::No.into())
-    }
-
-    fn _change_power_target(
-        account_id: T::AccountId,
-        node_id: u32,
-        power_target: Power,
-    ) -> DispatchResultWithPostInfo {
-        let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
-        let node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-        let farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
-        ensure!(
-            twin_id == farm.twin_id,
-            Error::<T>::UnauthorizedToChangePowerTarget
-        );
-        // Make sure only the farmer that owns this node can change the power target
-        ensure!(
-            node.farm_id == farm.id,
-            Error::<T>::UnauthorizedToChangePowerTarget
-        );
-
-        Self::_change_power_target_on_node(node.id, node.farm_id, power_target);
-
-        Ok(().into())
-    }
-
-    fn _change_power_target_on_node(node_id: u32, farm_id: u32, power_target: Power) {
-        let mut node_power = NodePower::<T>::get(node_id);
-        node_power.target = power_target.clone();
-        NodePower::<T>::insert(node_id, &node_power);
-
-        Self::deposit_event(Event::PowerTargetChanged {
-            farm_id,
-            node_id,
-            power_target,
-        });
     }
 
     fn validate_relay_address(relay_input: Vec<u8>) -> bool {
