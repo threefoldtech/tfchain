@@ -1,4 +1,3 @@
-//use super::{*};
 use sp_std::prelude::{Vec};
 use frame_support::pallet_prelude::{DispatchResultWithPostInfo, ensure};
 use super::pallet::{Config, Pallet, TFKVStore, Event, Error};
