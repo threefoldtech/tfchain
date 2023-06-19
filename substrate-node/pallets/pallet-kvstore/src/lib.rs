@@ -1,6 +1,8 @@
 //! A pallet for Threefold key-value store
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub mod kvstore;
+
 pub use pallet::*;
 
 #[cfg(test)]
@@ -14,7 +16,7 @@ pub mod weights;
 #[frame_support::pallet]
 pub mod pallet {
     use super::weights::WeightInfo;
-    use frame_support::{ensure, pallet_prelude::*, traits::IsType};
+    use frame_support::{pallet_prelude::*, traits::IsType};
     use frame_system::{ensure_signed, pallet_prelude::*};
     use sp_std::convert::TryInto;
     use sp_std::prelude::*;
@@ -71,12 +73,8 @@ pub mod pallet {
             value: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             // A user can only set their own entry
-            ensure!(key.len() <= 512, Error::<T>::KeyIsTooLarge);
-            ensure!(value.len() <= 2048, Error::<T>::ValueIsTooLarge);
             let user = ensure_signed(origin)?;
-            <TFKVStore<T>>::insert(&user, &key, &value);
-            Self::deposit_event(Event::EntrySet(user, key, value));
-            Ok(().into())
+            Self::_set(user, key, value)
         }
 
         /// Read the value stored at a particular key, while removing it from the map.
@@ -86,14 +84,7 @@ pub mod pallet {
         pub fn delete(origin: OriginFor<T>, key: Vec<u8>) -> DispatchResultWithPostInfo {
             // A user can only take (delete) their own entry
             let user = ensure_signed(origin)?;
-
-            ensure!(
-                <TFKVStore<T>>::contains_key(&user, &key),
-                Error::<T>::NoValueStored
-            );
-            let value = <TFKVStore<T>>::take(&user, &key);
-            Self::deposit_event(Event::EntryTaken(user, key, value));
-            Ok(().into())
+            Self::_delete(user, key)
         }
     }
 }
