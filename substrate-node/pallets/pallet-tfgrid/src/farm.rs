@@ -61,14 +61,14 @@ impl<T: Config> Pallet<T> {
 
     pub fn _update_farm(
         account_id: T::AccountId,
-        id: u32,
+        farm_id: u32,
         name: FarmNameInput<T>,
     ) -> DispatchResultWithPostInfo {
         let new_farm_name = Self::get_farm_name(name.clone())?;
 
         let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
 
-        let mut farm = Farms::<T>::get(id).ok_or(Error::<T>::FarmNotExists)?;
+        let mut farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
         ensure!(
             farm.twin_id == twin_id,
@@ -78,7 +78,7 @@ impl<T: Config> Pallet<T> {
         if FarmIdByName::<T>::contains_key(name.clone()) {
             let farm_id_by_new_name = FarmIdByName::<T>::get(name.clone());
             // if the user picks a new name but it is taken by another farmer, don't allow it
-            if farm_id_by_new_name != id {
+            if farm_id_by_new_name != farm_id {
                 return Err(Error::<T>::InvalidFarmName.into());
             }
         }
@@ -89,7 +89,7 @@ impl<T: Config> Pallet<T> {
 
         farm.name = new_farm_name;
 
-        Farms::<T>::insert(id, &farm);
+        Farms::<T>::insert(farm_id, &farm);
         FarmIdByName::<T>::insert(name, farm.id);
 
         Self::deposit_event(Event::FarmUpdated(farm));

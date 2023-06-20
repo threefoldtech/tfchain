@@ -773,11 +773,11 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::update_farm())]
         pub fn update_farm(
             origin: OriginFor<T>,
-            id: u32,
+            farm_id: u32,
             name: FarmNameInput<T>,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            Self::_update_farm(account_id, id, name)
+            Self::_update_farm(account_id, farm_id, name)
         }
 
         #[pallet::call_index(3)]
