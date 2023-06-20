@@ -282,7 +282,7 @@ impl<T: Config> Pallet<T> {
             result: result.map(|_| ()).map_err(|e| e.error),
         });
         // default to the dispatch info weight for safety
-        let proposal_weight = get_result_weight(result).unwrap_or(dispatch_weight); // P1
+        let proposal_weight = Self::get_result_weight(result).unwrap_or(dispatch_weight); // P1
 
         Self::remove_proposal(proposal_hash);
         proposal_weight
@@ -313,15 +313,15 @@ impl<T: Config> Pallet<T> {
 
         Ok(().into())
     }
-}
 
-/// Return the weight of a dispatch call result as an `Option`.
-///
-/// Will return the weight regardless of what the state of the result is.
-fn get_result_weight(result: DispatchResultWithPostInfo) -> Option<Weight> {
-    match result {
-        Ok(post_info) => post_info.actual_weight,
-        Err(err) => err.post_info.actual_weight,
+    /// Return the weight of a dispatch call result as an `Option`.
+    ///
+    /// Will return the weight regardless of what the state of the result is.
+    fn get_result_weight(result: DispatchResultWithPostInfo) -> Option<Weight> {
+        match result {
+            Ok(post_info) => post_info.actual_weight,
+            Err(err) => err.post_info.actual_weight,
+        }
     }
 }
 

@@ -8,7 +8,8 @@ use frame_support::{
     dispatch::{
         DispatchResult, DispatchResultWithPostInfo, Dispatchable, GetDispatchInfo, PostDispatchInfo,
     },
-    traits::{EnsureOrigin, Get}};
+    traits::{EnsureOrigin, Get},
+};
 use tfchain_support::traits::{ChangeNode, Tfgrid};
 
 pub use pallet::*;
