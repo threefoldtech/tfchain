@@ -11,7 +11,10 @@ use pallet_tfgrid::{
     Gw4Input, Ip4Input, LatitudeInput, LongitudeInput, Pallet as TfgridModule, PkInput, RelayInput,
     ResourcesInput,
 };
-use sp_runtime::traits::StaticLookup;
+use sp_runtime::{
+    traits::{Hash, StaticLookup},
+    DispatchError,
+};
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::types::IP4;
 
