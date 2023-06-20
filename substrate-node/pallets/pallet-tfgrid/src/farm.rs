@@ -1,13 +1,17 @@
 use crate::*;
 use frame_support::{
-    ensure, sp_runtime::SaturatedConversion, traits::Get, BoundedVec, RuntimeDebug,
+    dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
+    ensure,
+    sp_runtime::SaturatedConversion,
+    traits::Get,
+    BoundedVec, RuntimeDebug,
 };
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_std::{marker::PhantomData, vec::Vec};
+use sp_std::{marker::PhantomData, vec, vec::Vec};
 use tfchain_support::{
     traits::ChangeNode,
-    types::{Farm, FarmCertification, FarmingPolicyLimit, IP4},
+    types::{Farm, FarmCertification, FarmingPolicyLimit, PublicIP, IP4},
 };
 
 impl<T: Config> Pallet<T> {
@@ -275,7 +279,7 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         if let Some(policy_limits) = limits {
             let farming_policy = FarmingPoliciesMap::<T>::get(policy_limits.farming_policy_id);
-            let now = system::Pallet::<T>::block_number();
+            let now = frame_system::Pallet::<T>::block_number();
 
             // Policy end is expressed in number of blocks
             if farming_policy.policy_end != T::BlockNumber::from(0 as u32)
@@ -318,6 +322,50 @@ impl<T: Config> Pallet<T> {
         }
 
         Ok(().into())
+    }
+
+    fn get_farm_name(name: FarmNameInput<T>) -> Result<FarmNameOf<T>, DispatchErrorWithPostInfo> {
+        let name_parsed = <T as Config>::FarmName::try_from(name)?;
+        Ok(name_parsed)
+    }
+
+    fn get_public_ips(
+        public_ips: PublicIpListInput<T>,
+    ) -> Result<PublicIpListOf, DispatchErrorWithPostInfo> {
+        let mut public_ips_list: PublicIpListOf =
+            vec![].try_into().map_err(|_| Error::<T>::InvalidPublicIP)?;
+
+        for ip in public_ips {
+            let pub_ip = PublicIP {
+                ip: ip.ip,
+                gateway: ip.gw,
+                contract_id: 0,
+            };
+
+            if public_ips_list.contains(&pub_ip) {
+                return Err(DispatchErrorWithPostInfo::from(Error::<T>::IpExists));
+            }
+
+            public_ips_list
+                .try_push(pub_ip)
+                .map_err(|_| Error::<T>::InvalidPublicIP)?;
+        }
+
+        Ok(public_ips_list)
+    }
+}
+
+impl<T: Config> tfchain_support::traits::Tfgrid<T::AccountId, T::FarmName> for Pallet<T> {
+    fn is_farm_owner(farm_id: u32, who: T::AccountId) -> bool {
+        let farm = Farms::<T>::get(farm_id);
+        if let Some(f) = farm {
+            match Twins::<T>::get(f.twin_id) {
+                Some(twin) => twin.account_id == who,
+                None => false,
+            }
+        } else {
+            false
+        }
     }
 }
 

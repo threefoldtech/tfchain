@@ -2,30 +2,15 @@
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
 
-/// Edit this file to define custom logic or remove it if it is not needed.
-/// Learn more about FRAME and the core library of Substrate FRAME pallets:
-/// https://substrate.dev/docs/en/knowledgebase/runtime/frame
-use sp_std::prelude::*;
-
-use frame_support::dispatch::DispatchErrorWithPostInfo;
-use frame_support::{
-    dispatch::Pays, ensure, pallet_prelude::DispatchResultWithPostInfo,
-    storage::bounded_vec::BoundedVec, traits::EnsureOrigin,
-};
-use frame_system::{self as system, ensure_signed};
-use hex::FromHex;
-use pallet_timestamp as timestamp;
-use parity_scale_codec::Encode;
-use sp_core::Get;
-use sp_runtime::SaturatedConversion;
-use sp_std::vec;
-use tfchain_support::{
-    resources::Resources,
-    types::{Interface, NodePower as NodePowerType, Power, PowerState, PublicIP},
-};
-
-// Re-export pallet items so that they can be accessed from the crate namespace.
-pub use pallet::*;
+pub mod farm;
+pub mod interface;
+pub mod migrations;
+pub mod node;
+pub mod pricing;
+pub mod terms_cond;
+pub mod twin;
+pub mod types;
+pub mod weights;
 
 #[cfg(test)]
 mod mock;
@@ -36,15 +21,8 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
 
-pub mod farm;
-pub mod interface;
-pub mod migrations;
-pub mod node;
-pub mod twin;
-pub mod types;
-pub mod weights;
-
-pub mod terms_cond;
+// Re-export pallet items so that they can be accessed from the crate namespace.
+pub use pallet::*;
 
 // Definition of the pallet logic, to be aggregated at runtime definition
 // through `construct_runtime`.
@@ -52,22 +30,20 @@ pub mod terms_cond;
 pub mod pallet {
     use super::weights::WeightInfo;
     use super::*;
-    use frame_support::{pallet_prelude::*, Blake2_128Concat};
-    use frame_support::{storage::bounded_vec::BoundedVec, traits::ConstU32};
-    use frame_system::pallet_prelude::*;
-    use pallet_timestamp as timestamp;
-    use sp_std::{convert::TryInto, fmt::Debug, vec::Vec};
+    use frame_support::{
+        dispatch::DispatchResultWithPostInfo, ensure, pallet_prelude::*,
+        storage::bounded_vec::BoundedVec, traits::ConstU32, traits::EnsureOrigin, Blake2_128Concat,
+    };
+    use frame_system::{ensure_signed, pallet_prelude::*};
+    use parity_scale_codec::FullCodec;
+    use sp_core::Get;
+    use sp_runtime::SaturatedConversion;
+    use sp_std::{convert::TryInto, fmt::Debug, vec, vec::Vec};
     use tfchain_support::{
         resources::Resources,
         traits::{ChangeNode, PublicIpModifier},
-        types::{
-            Farm, FarmCertification, FarmingPolicyLimit, Interface, Node, NodeCertification,
-            PublicConfig, PublicIP, IP4, MAX_DOMAIN_NAME_LENGTH, MAX_GW4_LENGTH, MAX_GW6_LENGTH,
-            MAX_IP4_LENGTH, MAX_IP6_LENGTH,
-        },
+        types::*,
     };
-
-    use parity_scale_codec::FullCodec;
 
     #[pallet::pallet]
     #[pallet::without_storage_info]
@@ -279,8 +255,13 @@ pub mod pallet {
     // to indicate that it has shut down or came back alive
     #[pallet::storage]
     #[pallet::getter(fn node_power_state)]
-    pub type NodePower<T: Config> =
-        StorageMap<_, Blake2_128Concat, u32, NodePowerType<T::BlockNumber>, ValueQuery>;
+    pub type NodePower<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        u32,
+        tfchain_support::types::NodePower<T::BlockNumber>,
+        ValueQuery,
+    >;
 
     #[pallet::storage]
     #[pallet::getter(fn node_gpu_status)]
@@ -920,7 +901,8 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::report_uptime())]
         pub fn report_uptime(origin: OriginFor<T>, uptime: u64) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            let timestamp_hint = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+            let timestamp_hint =
+                <pallet_timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
             Self::_report_uptime(&account_id, uptime, timestamp_hint)
         }
 
@@ -1039,18 +1021,7 @@ pub mod pallet {
             discount_for_dedication_nodes: u8,
         ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
-
-            ensure!(
-                !PricingPolicyIdByName::<T>::contains_key(&name),
-                Error::<T>::PricingPolicyExists
-            );
-
-            let mut id = PricingPolicyID::<T>::get();
-            id = id + 1;
-
-            let new_policy = types::PricingPolicy {
-                version: TFGRID_PRICING_POLICY_VERSION,
-                id,
+            Self::_create_pricing_policy(
                 name,
                 su,
                 cu,
@@ -1061,21 +1032,14 @@ pub mod pallet {
                 foundation_account,
                 certified_sales_account,
                 discount_for_dedication_nodes,
-            };
-
-            PricingPolicies::<T>::insert(&id, &new_policy);
-            PricingPolicyIdByName::<T>::insert(&new_policy.name, &id);
-            PricingPolicyID::<T>::put(id);
-
-            Self::deposit_event(Event::PricingPolicyStored(new_policy));
-            Ok(().into())
+            )
         }
 
         #[pallet::call_index(23)]
         #[pallet::weight(<T as Config>::WeightInfo::update_pricing_policy())]
         pub fn update_pricing_policy(
             origin: OriginFor<T>,
-            id: u32,
+            pricing_policy_id: u32,
             name: Vec<u8>,
             su: types::Policy,
             cu: types::Policy,
@@ -1088,42 +1052,19 @@ pub mod pallet {
             discount_for_dedication_nodes: u8,
         ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
-
-            // Ensure pricing policy with same id already exists
-            let mut pricing_policy =
-                PricingPolicies::<T>::get(id).ok_or(Error::<T>::PricingPolicyNotExists)?;
-
-            // if name exists ensure that it belongs to the same policy id
-            if PricingPolicyIdByName::<T>::contains_key(&name) {
-                let stored_id = PricingPolicyIdByName::<T>::get(&name);
-                ensure!(
-                    stored_id == id,
-                    Error::<T>::PricingPolicyWithDifferentIdExists
-                );
-            }
-
-            if name != pricing_policy.name {
-                PricingPolicyIdByName::<T>::remove(&pricing_policy.name);
-            }
-
-            pricing_policy.name = name;
-            pricing_policy.su = su;
-            pricing_policy.cu = cu;
-            pricing_policy.nu = nu;
-            pricing_policy.ipu = ipu;
-            pricing_policy.unique_name = unique_name;
-            pricing_policy.domain_name = domain_name;
-            pricing_policy.foundation_account = foundation_account;
-            pricing_policy.certified_sales_account = certified_sales_account;
-            pricing_policy.discount_for_dedication_nodes = discount_for_dedication_nodes;
-
-            PricingPolicies::<T>::insert(&id, &pricing_policy);
-            PricingPolicyIdByName::<T>::insert(&pricing_policy.name, &id);
-            PricingPolicyID::<T>::put(id);
-
-            Self::deposit_event(Event::PricingPolicyStored(pricing_policy));
-
-            Ok(().into())
+            Self::_update_pricing_policy(
+                pricing_policy_id,
+                name,
+                su,
+                cu,
+                nu,
+                ipu,
+                unique_name,
+                domain_name,
+                foundation_account,
+                certified_sales_account,
+                discount_for_dedication_nodes,
+            )
         }
 
         #[pallet::call_index(24)]
@@ -1143,35 +1084,19 @@ pub mod pallet {
             farm_certification: FarmCertification,
         ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
-
-            let mut id = FarmingPolicyID::<T>::get();
-            id = id + 1;
-
-            let now_block = system::Pallet::<T>::block_number();
-
-            let new_policy = types::FarmingPolicy {
-                version: TFGRID_FARMING_POLICY_VERSION,
-                id,
+            Self::_create_farming_policy(
                 name,
                 su,
                 cu,
                 nu,
                 ipv4,
                 minimal_uptime,
-                policy_created: now_block,
                 policy_end,
                 immutable,
                 default,
                 node_certification,
                 farm_certification,
-            };
-
-            FarmingPoliciesMap::<T>::insert(id, &new_policy);
-            FarmingPolicyID::<T>::put(id);
-
-            Self::deposit_event(Event::FarmingPolicyStored(new_policy));
-
-            Ok(().into())
+            )
         }
 
         #[pallet::call_index(25)]
@@ -1221,9 +1146,7 @@ pub mod pallet {
             price: u32,
         ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
-            ConnectionPrice::<T>::set(price);
-            Self::deposit_event(Event::ConnectionPriceSet(price));
-            Ok(().into())
+            Self::_set_connection_price(price)
         }
 
         #[pallet::call_index(30)]
@@ -1250,7 +1173,7 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::update_farming_policy())]
         pub fn update_farming_policy(
             origin: OriginFor<T>,
-            id: u32,
+            farming_policy_id: u32,
             name: Vec<u8>,
             su: u32,
             cu: u32,
@@ -1263,30 +1186,19 @@ pub mod pallet {
             farm_certification: FarmCertification,
         ) -> DispatchResultWithPostInfo {
             T::RestrictedOrigin::ensure_origin(origin)?;
-
-            ensure!(
-                FarmingPoliciesMap::<T>::contains_key(id),
-                Error::<T>::FarmingPolicyNotExists
-            );
-
-            let mut farming_policy = FarmingPoliciesMap::<T>::get(id);
-
-            farming_policy.name = name;
-            farming_policy.su = su;
-            farming_policy.cu = cu;
-            farming_policy.nu = nu;
-            farming_policy.ipv4 = ipv4;
-            farming_policy.minimal_uptime = minimal_uptime;
-            farming_policy.policy_end = policy_end;
-            farming_policy.default = default;
-            farming_policy.node_certification = node_certification;
-            farming_policy.farm_certification = farm_certification;
-
-            FarmingPoliciesMap::<T>::insert(id, &farming_policy);
-
-            Self::deposit_event(Event::FarmingPolicyUpdated(farming_policy));
-
-            Ok(().into())
+            Self::_update_farming_policy(
+                farming_policy_id,
+                name,
+                su,
+                cu,
+                nu,
+                ipv4,
+                minimal_uptime,
+                policy_end,
+                default,
+                node_certification,
+                farm_certification,
+            )
         }
 
         #[pallet::call_index(33)]
@@ -1366,355 +1278,6 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_set_node_gpu_status(&account_id, gpu_status)
-        }
-    }
-}
-
-// Internal functions of the pallet
-impl<T: Config> Pallet<T> {
-    pub fn verify_signature(signature: [u8; 64], target: &T::AccountId, payload: &Vec<u8>) -> bool {
-        Self::verify_ed_signature(signature, target, payload)
-            || Self::verify_sr_signature(signature, target, payload)
-    }
-
-    fn verify_ed_signature(signature: [u8; 64], target: &T::AccountId, payload: &Vec<u8>) -> bool {
-        let entity_pubkey_ed25519 = Self::convert_account_to_ed25519(target);
-        // Decode signature into a ed25519 signature
-        let ed25519_signature = sp_core::ed25519::Signature::from_raw(signature);
-
-        sp_io::crypto::ed25519_verify(&ed25519_signature, &payload, &entity_pubkey_ed25519)
-    }
-
-    fn verify_sr_signature(signature: [u8; 64], target: &T::AccountId, payload: &Vec<u8>) -> bool {
-        let entity_pubkey_sr25519 = Self::convert_account_to_sr25519(target);
-        // Decode signature into a sr25519 signature
-        let sr25519_signature = sp_core::sr25519::Signature::from_raw(signature);
-
-        sp_io::crypto::sr25519_verify(&sr25519_signature, &payload, &entity_pubkey_sr25519)
-    }
-
-    fn convert_account_to_ed25519(account: &T::AccountId) -> sp_core::ed25519::Public {
-        // Decode entity's public key
-        let account_vec = &account.encode();
-        let mut bytes = [0u8; 32];
-        bytes.copy_from_slice(&account_vec);
-        sp_core::ed25519::Public::from_raw(bytes)
-    }
-
-    fn convert_account_to_sr25519(account: &T::AccountId) -> sp_core::sr25519::Public {
-        // Decode entity's public key
-        let account_vec = &account.encode();
-        let mut bytes = [0u8; 32];
-        bytes.copy_from_slice(&account_vec);
-        sp_core::sr25519::Public::from_raw(bytes)
-    }
-
-    fn get_farming_policy(
-        node: &TfgridNode<T>,
-    ) -> Result<types::FarmingPolicy<T::BlockNumber>, DispatchErrorWithPostInfo> {
-        let mut farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
-
-        // If there is a farming policy defined on the
-        // farm policy limits, use that one
-        match farm.farming_policy_limits {
-            Some(mut limits) => {
-                ensure!(
-                    FarmingPoliciesMap::<T>::contains_key(limits.farming_policy_id),
-                    Error::<T>::FarmingPolicyNotExists
-                );
-                match limits.end {
-                    Some(end_timestamp) => {
-                        let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
-                        if now > end_timestamp {
-                            return Self::get_default_farming_policy();
-                        }
-                    }
-                    None => (),
-                };
-
-                match limits.cu {
-                    Some(cu_limit) => {
-                        let cu = node.resources.get_cu();
-                        if cu > cu_limit {
-                            return Self::get_default_farming_policy();
-                        }
-                        limits.cu = Some(cu_limit - cu);
-                    }
-                    None => (),
-                };
-
-                match limits.su {
-                    Some(su_limit) => {
-                        let su = node.resources.get_su();
-                        if su > su_limit {
-                            return Self::get_default_farming_policy();
-                        }
-                        limits.su = Some(su_limit - su);
-                    }
-                    None => (),
-                };
-
-                match limits.node_count {
-                    Some(node_count) => {
-                        if node_count == 0 {
-                            return Self::get_default_farming_policy();
-                        }
-                        limits.node_count = Some(node_count - 1);
-                    }
-                    None => (),
-                };
-
-                // Save limits when decrement is done
-                farm.farming_policy_limits = Some(limits.clone());
-                // Update farm in farms map
-                Farms::<T>::insert(node.farm_id, &farm);
-                Self::deposit_event(Event::FarmUpdated(farm));
-
-                let farming_policy = FarmingPoliciesMap::<T>::get(limits.farming_policy_id);
-                return Ok(farming_policy);
-            }
-            None => (),
-        };
-
-        // Set the farming policy as the last stored farming
-        // policy which certifications best fit the current
-        // node and farm certifications, considering that in all
-        // cases a default policy would be preferable
-        let mut policies: Vec<types::FarmingPolicy<T::BlockNumber>> =
-            FarmingPoliciesMap::<T>::iter().map(|p| p.1).collect();
-
-        policies.sort();
-        // by reversing sorted policies we place default policies first
-        // and then rank them from more certified to less certified
-        policies.reverse();
-
-        let possible_policy = policies
-            .into_iter()
-            .filter(|policy| {
-                policy.node_certification <= node.certification
-                    && policy.farm_certification <= farm.certification
-            })
-            .take(1)
-            .next();
-
-        match possible_policy {
-            Some(policy) => Ok(policy),
-            None => {
-                return Err(DispatchErrorWithPostInfo::from(
-                    Error::<T>::FarmingPolicyNotExists,
-                ))
-            }
-        }
-    }
-
-    // Set the default farming policy as the last best certified stored default farming policy
-    fn get_default_farming_policy(
-    ) -> Result<types::FarmingPolicy<T::BlockNumber>, DispatchErrorWithPostInfo> {
-        let mut policies: Vec<types::FarmingPolicy<T::BlockNumber>> =
-            FarmingPoliciesMap::<T>::iter().map(|p| p.1).collect();
-
-        policies.sort();
-        // by reversing sorted policies we place default policies first
-        // and then rank them from more certified to less certified
-        policies.reverse();
-
-        let possible_policy = policies
-            .into_iter()
-            .filter(|policy| policy.default)
-            .take(1)
-            .next();
-
-        match possible_policy {
-            Some(policy) => Ok(policy),
-            None => {
-                return Err(DispatchErrorWithPostInfo::from(
-                    Error::<T>::FarmingPolicyNotExists,
-                ))
-            }
-        }
-    }
-
-    fn get_terms_and_conditions(
-        terms_cond: TermsAndConditionsInput<T>,
-    ) -> Result<TermsAndConditionsOf<T>, DispatchErrorWithPostInfo> {
-        let parsed_terms_cond = <T as Config>::TermsAndConditions::try_from(terms_cond)?;
-        Ok(parsed_terms_cond)
-    }
-
-    fn get_farm_name(name: FarmNameInput<T>) -> Result<FarmNameOf<T>, DispatchErrorWithPostInfo> {
-        let name_parsed = <T as Config>::FarmName::try_from(name)?;
-        Ok(name_parsed)
-    }
-
-    fn get_public_ips(
-        public_ips: PublicIpListInput<T>,
-    ) -> Result<PublicIpListOf, DispatchErrorWithPostInfo> {
-        let mut public_ips_list: PublicIpListOf =
-            vec![].try_into().map_err(|_| Error::<T>::InvalidPublicIP)?;
-
-        for ip in public_ips {
-            let pub_ip = PublicIP {
-                ip: ip.ip,
-                gateway: ip.gw,
-                contract_id: 0,
-            };
-
-            if public_ips_list.contains(&pub_ip) {
-                return Err(DispatchErrorWithPostInfo::from(Error::<T>::IpExists));
-            }
-
-            public_ips_list
-                .try_push(pub_ip)
-                .map_err(|_| Error::<T>::InvalidPublicIP)?;
-        }
-
-        Ok(public_ips_list)
-    }
-
-    pub fn get_resources(
-        resources: pallet::ResourcesInput,
-    ) -> Result<Resources, DispatchErrorWithPostInfo> {
-        ensure!(resources.validate_hru(), Error::<T>::InvalidHRUInput);
-        ensure!(resources.validate_sru(), Error::<T>::InvalidSRUInput);
-        ensure!(resources.validate_cru(), Error::<T>::InvalidCRUInput);
-        ensure!(resources.validate_mru(), Error::<T>::InvalidMRUInput);
-
-        Ok(resources)
-    }
-
-    fn get_interface_name(
-        if_name: InterfaceNameInput,
-    ) -> Result<InterfaceNameOf<T>, DispatchErrorWithPostInfo> {
-        let if_name_parsed = <T as Config>::InterfaceName::try_from(if_name)?;
-        Ok(if_name_parsed)
-    }
-
-    fn get_interface_mac(
-        if_mac: InterfaceMacInput,
-    ) -> Result<InterfaceMacOf<T>, DispatchErrorWithPostInfo> {
-        let if_mac_parsed = <T as Config>::InterfaceMac::try_from(if_mac)?;
-        Ok(if_mac_parsed)
-    }
-
-    fn get_interface_ip(
-        if_ip: InterfaceIpInput,
-    ) -> Result<InterfaceIpOf<T>, DispatchErrorWithPostInfo> {
-        let if_ip_parsed = <T as Config>::InterfaceIP::try_from(if_ip)?;
-        Ok(if_ip_parsed)
-    }
-
-    fn get_interfaces(
-        interfaces: &InterfaceInput<T>,
-    ) -> Result<Vec<InterfaceOf<T>>, DispatchErrorWithPostInfo> {
-        let mut parsed_interfaces = Vec::new();
-        if interfaces.len() == 0 {
-            return Ok(parsed_interfaces);
-        }
-
-        for intf in interfaces.iter() {
-            let intf_name = Self::get_interface_name(intf.name.clone())?;
-            let intf_mac = Self::get_interface_mac(intf.mac.clone())?;
-
-            let mut parsed_interfaces_ips: BoundedVec<
-                InterfaceIpOf<T>,
-                <T as Config>::MaxInterfaceIpsLength,
-            > = vec![]
-                .try_into()
-                .map_err(|_| Error::<T>::InvalidInterfaceIP)?;
-
-            for ip in intf.ips.iter() {
-                let intf_ip = Self::get_interface_ip(ip.clone())?;
-                parsed_interfaces_ips
-                    .try_push(intf_ip)
-                    .map_err(|_| Error::<T>::InvalidInterfaceIP)?;
-            }
-
-            parsed_interfaces.push(Interface {
-                name: intf_name,
-                mac: intf_mac,
-                ips: parsed_interfaces_ips,
-            });
-        }
-
-        Ok(parsed_interfaces)
-    }
-
-    pub fn get_city_name(city: CityNameInput) -> Result<CityNameOf<T>, DispatchErrorWithPostInfo> {
-        let parsed_city = <T as Config>::CityName::try_from(city)?;
-        Ok(parsed_city)
-    }
-
-    pub fn get_country_name(
-        country: CountryNameInput,
-    ) -> Result<CountryNameOf<T>, DispatchErrorWithPostInfo> {
-        let parsed_country = <T as Config>::CountryName::try_from(country)?;
-        Ok(parsed_country)
-    }
-
-    pub fn get_location(
-        location: pallet::LocationInput,
-    ) -> Result<LocationOf<T>, DispatchErrorWithPostInfo> {
-        let parsed_location = <T as Config>::Location::try_from(location)?;
-        Ok(parsed_location)
-    }
-
-    fn get_serial_number(
-        serial_number: pallet::SerialNumberInput,
-    ) -> Result<SerialNumberOf<T>, DispatchErrorWithPostInfo> {
-        let parsed_serial_number = <T as Config>::SerialNumber::try_from(serial_number)?;
-        Ok(parsed_serial_number)
-    }
-
-    fn validate_relay_address(relay_input: Vec<u8>) -> bool {
-        if relay_input.len() == 0 {
-            return false;
-        }
-
-        if relay_input[relay_input.len() - 1] == b'.' {
-            return false;
-        }
-
-        let mut prev_idx = 0;
-
-        for (idx, c) in relay_input.iter().enumerate() {
-            match c {
-                b'.' => {
-                    if idx == 0 || idx - prev_idx == 1 {
-                        return false;
-                    } else {
-                        prev_idx = idx
-                    }
-                }
-                b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_' => (),
-                _ => return false,
-            }
-        }
-
-        true
-    }
-}
-
-impl<T: Config> tfchain_support::traits::Tfgrid<T::AccountId, T::FarmName> for Pallet<T> {
-    fn get_farm(farm_id: u32) -> Option<tfchain_support::types::Farm<T::FarmName>> {
-        Farms::<T>::get(farm_id)
-    }
-
-    fn is_farm_owner(farm_id: u32, who: T::AccountId) -> bool {
-        let farm = Farms::<T>::get(farm_id);
-        if let Some(f) = farm {
-            match Twins::<T>::get(f.twin_id) {
-                Some(twin) => twin.account_id == who,
-                None => false,
-            }
-        } else {
-            false
-        }
-    }
-
-    fn is_twin_owner(twin_id: u32, who: T::AccountId) -> bool {
-        match Twins::<T>::get(twin_id) {
-            Some(twin) => twin.account_id == who,
-            None => false,
         }
     }
 }

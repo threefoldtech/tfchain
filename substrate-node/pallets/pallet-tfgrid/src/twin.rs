@@ -1,4 +1,12 @@
 use crate::*;
+use frame_support::{
+    dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
+    ensure,
+};
+use hex::FromHex;
+use parity_scale_codec::Encode;
+use sp_runtime::SaturatedConversion;
+use sp_std::{vec, vec::Vec};
 
 impl<T: Config> Pallet<T> {
     pub fn _user_accept_tc(
@@ -6,7 +14,7 @@ impl<T: Config> Pallet<T> {
         document_link: DocumentLinkInput,
         document_hash: DocumentHashInput,
     ) -> DispatchResultWithPostInfo {
-        let timestamp = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+        let timestamp = <pallet_timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
         let input = TermsAndConditionsInput::<T> {
             account_id: account_id.clone(),
@@ -323,5 +331,89 @@ impl<T: Config> Pallet<T> {
         Self::deposit_event(Event::TwinAccountBounded(twin_id, account_id));
 
         Ok(().into())
+    }
+
+    fn get_terms_and_conditions(
+        terms_cond: TermsAndConditionsInput<T>,
+    ) -> Result<TermsAndConditionsOf<T>, DispatchErrorWithPostInfo> {
+        let parsed_terms_cond = <T as Config>::TermsAndConditions::try_from(terms_cond)?;
+        Ok(parsed_terms_cond)
+    }
+
+    fn verify_signature(signature: [u8; 64], target: &T::AccountId, payload: &Vec<u8>) -> bool {
+        Self::verify_ed_signature(signature, target, payload)
+            || Self::verify_sr_signature(signature, target, payload)
+    }
+
+    fn verify_ed_signature(signature: [u8; 64], target: &T::AccountId, payload: &Vec<u8>) -> bool {
+        let entity_pubkey_ed25519 = Self::convert_account_to_ed25519(target);
+        // Decode signature into a ed25519 signature
+        let ed25519_signature = sp_core::ed25519::Signature::from_raw(signature);
+
+        sp_io::crypto::ed25519_verify(&ed25519_signature, &payload, &entity_pubkey_ed25519)
+    }
+
+    fn verify_sr_signature(signature: [u8; 64], target: &T::AccountId, payload: &Vec<u8>) -> bool {
+        let entity_pubkey_sr25519 = Self::convert_account_to_sr25519(target);
+        // Decode signature into a sr25519 signature
+        let sr25519_signature = sp_core::sr25519::Signature::from_raw(signature);
+
+        sp_io::crypto::sr25519_verify(&sr25519_signature, &payload, &entity_pubkey_sr25519)
+    }
+
+    fn convert_account_to_ed25519(account: &T::AccountId) -> sp_core::ed25519::Public {
+        // Decode entity's public key
+        let account_vec = &account.encode();
+        let mut bytes = [0u8; 32];
+        bytes.copy_from_slice(&account_vec);
+        sp_core::ed25519::Public::from_raw(bytes)
+    }
+
+    fn convert_account_to_sr25519(account: &T::AccountId) -> sp_core::sr25519::Public {
+        // Decode entity's public key
+        let account_vec = &account.encode();
+        let mut bytes = [0u8; 32];
+        bytes.copy_from_slice(&account_vec);
+        sp_core::sr25519::Public::from_raw(bytes)
+    }
+
+    fn get_country_name(
+        country: CountryNameInput,
+    ) -> Result<CountryNameOf<T>, DispatchErrorWithPostInfo> {
+        let parsed_country = <T as Config>::CountryName::try_from(country)?;
+        Ok(parsed_country)
+    }
+
+    fn get_city_name(city: CityNameInput) -> Result<CityNameOf<T>, DispatchErrorWithPostInfo> {
+        let parsed_city = <T as Config>::CityName::try_from(city)?;
+        Ok(parsed_city)
+    }
+
+    fn validate_relay_address(relay_input: Vec<u8>) -> bool {
+        if relay_input.len() == 0 {
+            return false;
+        }
+
+        if relay_input[relay_input.len() - 1] == b'.' {
+            return false;
+        }
+
+        let mut prev_idx = 0;
+
+        for (idx, c) in relay_input.iter().enumerate() {
+            match c {
+                b'.' => {
+                    if idx == 0 || idx - prev_idx == 1 {
+                        return false;
+                    } else {
+                        prev_idx = idx
+                    }
+                }
+                b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_' => (),
+                _ => return false,
+            }
+        }
+
+        true
     }
 }

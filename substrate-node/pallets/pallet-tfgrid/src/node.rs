@@ -1,13 +1,20 @@
 use crate::*;
 use frame_support::{
-    ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
+    dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo, Pays},
+    ensure,
+    sp_runtime::SaturatedConversion,
+    traits::ConstU32,
+    BoundedVec, RuntimeDebug,
 };
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
+use sp_core::Get;
 use sp_std::marker::PhantomData;
+use sp_std::{vec, vec::Vec};
 use tfchain_support::{
+    resources::Resources,
     traits::ChangeNode,
-    types::{Node, NodeCertification, PublicConfig},
+    types::{Interface, Node, NodeCertification, Power, PowerState, PublicConfig},
 };
 
 impl<T: Config> Pallet<T> {
@@ -46,7 +53,7 @@ impl<T: Config> Pallet<T> {
             None
         };
 
-        let created = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+        let created = <pallet_timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
 
         let mut new_node = Node {
             version: TFGRID_NODE_VERSION,
@@ -196,7 +203,7 @@ impl<T: Config> Pallet<T> {
 
         ensure!(Nodes::<T>::contains_key(node_id), Error::<T>::NodeNotExists);
 
-        let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+        let now = <pallet_timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
         // check if timestamp hint is within the acceptable range of the current timestamp (now) and the drift value
         ensure!(
             timestamp_hint
@@ -323,7 +330,7 @@ impl<T: Config> Pallet<T> {
 
         let power_state = match power_state {
             Power::Up => PowerState::Up,
-            Power::Down => PowerState::Down(system::Pallet::<T>::block_number()),
+            Power::Down => PowerState::Down(frame_system::Pallet::<T>::block_number()),
         };
 
         let mut node_power = NodePower::<T>::get(node_id);
@@ -400,6 +407,88 @@ impl<T: Config> Pallet<T> {
         });
 
         Ok(Pays::No.into())
+    }
+
+    fn get_resources(
+        resources: pallet::ResourcesInput,
+    ) -> Result<Resources, DispatchErrorWithPostInfo> {
+        ensure!(resources.validate_hru(), Error::<T>::InvalidHRUInput);
+        ensure!(resources.validate_sru(), Error::<T>::InvalidSRUInput);
+        ensure!(resources.validate_cru(), Error::<T>::InvalidCRUInput);
+        ensure!(resources.validate_mru(), Error::<T>::InvalidMRUInput);
+
+        Ok(resources)
+    }
+
+    fn get_location(
+        location: pallet::LocationInput,
+    ) -> Result<LocationOf<T>, DispatchErrorWithPostInfo> {
+        let parsed_location = <T as Config>::Location::try_from(location)?;
+        Ok(parsed_location)
+    }
+
+    fn get_interfaces(
+        interfaces: &InterfaceInput<T>,
+    ) -> Result<Vec<InterfaceOf<T>>, DispatchErrorWithPostInfo> {
+        let mut parsed_interfaces = Vec::new();
+        if interfaces.len() == 0 {
+            return Ok(parsed_interfaces);
+        }
+
+        for intf in interfaces.iter() {
+            let intf_name = Self::get_interface_name(intf.name.clone())?;
+            let intf_mac = Self::get_interface_mac(intf.mac.clone())?;
+
+            let mut parsed_interfaces_ips: BoundedVec<
+                InterfaceIpOf<T>,
+                <T as Config>::MaxInterfaceIpsLength,
+            > = vec![]
+                .try_into()
+                .map_err(|_| Error::<T>::InvalidInterfaceIP)?;
+
+            for ip in intf.ips.iter() {
+                let intf_ip = Self::get_interface_ip(ip.clone())?;
+                parsed_interfaces_ips
+                    .try_push(intf_ip)
+                    .map_err(|_| Error::<T>::InvalidInterfaceIP)?;
+            }
+
+            parsed_interfaces.push(Interface {
+                name: intf_name,
+                mac: intf_mac,
+                ips: parsed_interfaces_ips,
+            });
+        }
+
+        Ok(parsed_interfaces)
+    }
+
+    fn get_interface_name(
+        if_name: InterfaceNameInput,
+    ) -> Result<InterfaceNameOf<T>, DispatchErrorWithPostInfo> {
+        let if_name_parsed = <T as Config>::InterfaceName::try_from(if_name)?;
+        Ok(if_name_parsed)
+    }
+
+    fn get_interface_mac(
+        if_mac: InterfaceMacInput,
+    ) -> Result<InterfaceMacOf<T>, DispatchErrorWithPostInfo> {
+        let if_mac_parsed = <T as Config>::InterfaceMac::try_from(if_mac)?;
+        Ok(if_mac_parsed)
+    }
+
+    fn get_interface_ip(
+        if_ip: InterfaceIpInput,
+    ) -> Result<InterfaceIpOf<T>, DispatchErrorWithPostInfo> {
+        let if_ip_parsed = <T as Config>::InterfaceIP::try_from(if_ip)?;
+        Ok(if_ip_parsed)
+    }
+
+    fn get_serial_number(
+        serial_number: pallet::SerialNumberInput,
+    ) -> Result<SerialNumberOf<T>, DispatchErrorWithPostInfo> {
+        let parsed_serial_number = <T as Config>::SerialNumber::try_from(serial_number)?;
+        Ok(parsed_serial_number)
     }
 }
 
