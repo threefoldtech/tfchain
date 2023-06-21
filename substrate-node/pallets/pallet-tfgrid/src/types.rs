@@ -23,11 +23,12 @@ pub enum StorageVersion {
     V13Struct,
     V14Struct,
     V15Struct,
+    V16Struct,
 }
 
 impl Default for StorageVersion {
     fn default() -> StorageVersion {
-        StorageVersion::V14Struct
+        StorageVersion::V16Struct
     }
 }
 

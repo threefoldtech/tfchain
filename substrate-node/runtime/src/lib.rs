@@ -147,7 +147,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 141,
+    spec_version: 142,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -765,10 +765,7 @@ pub type Executive = frame_executive::Executive<
 
 // All migrations executed on runtime upgrade as a nested tuple of types implementing
 // `OnRuntimeUpgrade`.
-type Migrations = (
-    pallet_smart_contract::migrations::v10::ReworkBillingLoopInsertion<Runtime>,
-    pallet_smart_contract::migrations::v11::ExtendContractLock<Runtime>,
-);
+type Migrations = (pallet_tfgrid::migrations::v16::KillNodeGpuStatus<Runtime>,);
 
 // follows Substrate's non destructive way of eliminating  otherwise required
 // repetion: https://github.com/paritytech/substrate/pull/10592
