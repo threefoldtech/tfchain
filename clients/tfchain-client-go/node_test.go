@@ -97,7 +97,7 @@ func TestUptimeReportV2(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestNodeUpdateGpuStatus(t *testing.T) {
+func TestNodeUpdateGpuNumber(t *testing.T) {
 	cl := startLocalConnection(t)
 	defer cl.Close()
 
@@ -108,19 +108,23 @@ func TestNodeUpdateGpuStatus(t *testing.T) {
 
 	nodeID := assertCreateNode(t, cl, farmID, twinID, identity)
 
-	// toggle true
-	_, err = cl.SetNodeGpuStatus(identity, true)
+	gpu_number, err := cl.GetNodeGpuNumber(nodeID)
+	require.NoError(t, err)
+	require.Equal(t, gpu_number, uint8(0))
+
+	// toggle 2
+	_, err = cl.SetNodeGpuNumber(identity, 2)
 	require.NoError(t, err)
 
-	status, err := cl.GetNodeGpuStatus(nodeID)
+	gpu_number, err = cl.GetNodeGpuNumber(nodeID)
 	require.NoError(t, err)
-	require.Equal(t, true, status)
+	require.Equal(t, gpu_number, uint8(2))
 
-	// toggle false
-	_, err = cl.SetNodeGpuStatus(identity, false)
+	// toggle 0
+	_, err = cl.SetNodeGpuNumber(identity, 0)
 	require.NoError(t, err)
 
-	status, err = cl.GetNodeGpuStatus(nodeID)
+	gpu_number, err = cl.GetNodeGpuNumber(nodeID)
 	require.NoError(t, err)
-	require.Equal(t, false, status)
+	require.Equal(t, gpu_number, uint8(0))
 }

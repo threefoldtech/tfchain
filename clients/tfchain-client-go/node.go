@@ -805,13 +805,14 @@ func (s *Substrate) GetDedicatedNodePrice(nodeID uint32) (uint64, error) {
 	return uint64(price), nil
 }
 
-func (s *Substrate) SetNodeGpuStatus(identity Identity, state bool) (hash types.Hash, err error) {
+// SetNodeGpuNumber sets the number of GPUs on a node
+func (s *Substrate) SetNodeGpuNumber(identity Identity, number uint8) (hash types.Hash, err error) {
 	cl, meta, err := s.GetClient()
 	if err != nil {
 		return hash, err
 	}
 
-	c, err := types.NewCall(meta, "TfgridModule.set_node_gpu_status", state)
+	c, err := types.NewCall(meta, "TfgridModule.set_node_gpu_number", number)
 
 	if err != nil {
 		return hash, errors.Wrap(err, "failed to create call")
@@ -819,40 +820,39 @@ func (s *Substrate) SetNodeGpuStatus(identity Identity, state bool) (hash types.
 
 	callResponse, err := s.Call(cl, meta, identity, c)
 	if err != nil {
-		return hash, errors.Wrap(err, "failed to update node gpu status")
+		return hash, errors.Wrap(err, "failed to update node gpu number")
 	}
 
 	return callResponse.Hash, nil
 }
 
-func (s *Substrate) GetNodeGpuStatus(nodeId uint32) (status bool, err error) {
+// GetNodeGpuNumber returns the number of GPUs on a node
+func (s *Substrate) GetNodeGpuNumber(nodeId uint32) (uint8, error) {
 	cl, meta, err := s.GetClient()
 	if err != nil {
-		return status, err
+		return 0, err
 	}
 
 	bytes, err := Encode(nodeId)
 	if err != nil {
-		return status, errors.Wrap(err, "substrate: encoding error building query arguments")
+		return 0, errors.Wrap(err, "substrate: encoding error building query arguments")
 	}
 
-	key, err := types.CreateStorageKey(meta, "TfgridModule", "NodeGpuStatus", bytes)
+	key, err := types.CreateStorageKey(meta, "TfgridModule", "NodeGpuNumber", bytes)
 	if err != nil {
-		return status, errors.Wrap(err, "failed to create substrate query key")
+		return 0, errors.Wrap(err, "failed to create substrate query key")
 	}
 
-	raw, err := cl.RPC.State.GetStorageRawLatest(key)
+	var gpu_number types.U8
+
+	ok, err := cl.RPC.State.GetStorageLatest(key, &gpu_number)
 	if err != nil {
-		return status, errors.Wrap(err, "failed to lookup gpu status")
+		return 0, err
 	}
 
-	if raw == nil || len(*raw) == 0 {
-		return false, nil
+	if !ok {
+		return 0, nil
 	}
 
-	if err := Decode(*raw, &status); err != nil {
-		return status, errors.Wrap(err, "failed to load object")
-	}
-
-	return status, nil
+	return uint8(gpu_number), nil
 }

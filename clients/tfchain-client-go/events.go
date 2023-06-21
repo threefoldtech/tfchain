@@ -61,10 +61,10 @@ type PowerStateChanged struct {
 	Topics     []types.Hash
 }
 
-type NodeGpuStatusChanged struct {
+type NodeGpuNumberChanged struct {
 	Phase     types.Phase
-	Node      types.U32  `json:"node_id"`
-	GpuStatus types.Bool `json:"gpu_status"`
+	Node      types.U32 `json:"node_id"`
+	GpuNumber types.U8  `json:"gpu_number"`
 	Topics    []types.Hash
 }
 
@@ -424,7 +424,7 @@ type EventRecords struct {
 	TfgridModule_NodePublicConfigStored []NodePublicConfig     //nolint:stylecheck,golint
 	TfgridModule_PowerTargetChanged     []PowerTargetChanged   //nolint:stylecheck,golint
 	TfgridModule_PowerStateChanged      []PowerStateChanged    //nolint:stylecheck,golint
-	TfgridModule_NodeGpuStatusChanged   []NodeGpuStatusChanged //nolint:stylecheck,golint
+	TfgridModule_NodeGpuNumberChanged   []NodeGpuNumberChanged //nolint:stylecheck,golint
 
 	// entity events
 	TfgridModule_EntityStored  []EntityStored  //nolint:stylecheck,golint
