@@ -2321,44 +2321,44 @@ fn test_farming_policies_ordering_and_assignment() {
 }
 
 #[test]
-fn test_set_node_gpu_status_works() {
+fn test_set_node_gpu_number_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
         create_farm();
         create_node();
+        let node_id = 1;
 
-        assert_ok!(TfgridModule::set_node_gpu_status(
+        assert_eq!(TfgridModule::node_gpu_number(node_id), 0);
+
+        assert_ok!(TfgridModule::set_node_gpu_number(
             RuntimeOrigin::signed(alice()),
-            true,
+            2,
         ));
+        assert_eq!(TfgridModule::node_gpu_number(node_id), 2);
 
-        let status = TfgridModule::node_gpu_status(1);
-        assert_eq!(status, true);
-
-        assert_ok!(TfgridModule::set_node_gpu_status(
+        assert_ok!(TfgridModule::set_node_gpu_number(
             RuntimeOrigin::signed(alice()),
-            false,
+            0,
         ));
-
-        let status = TfgridModule::node_gpu_status(1);
-        assert_eq!(status, false);
+        assert_eq!(TfgridModule::node_gpu_number(node_id), 0);
     });
 }
 
 #[test]
-fn test_set_node_gpu_status_node_not_exists_or_wrong_source_fails() {
+fn test_set_node_gpu_number_node_not_exists_or_wrong_source_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
         create_farm();
 
         assert_noop!(
-            TfgridModule::set_node_gpu_status(RuntimeOrigin::signed(alice()), true,),
+            TfgridModule::set_node_gpu_number(RuntimeOrigin::signed(alice()), 1),
             Error::<TestRuntime>::NodeNotExists
         );
 
         create_node();
+
         assert_noop!(
-            TfgridModule::set_node_gpu_status(RuntimeOrigin::signed(bob()), true,),
+            TfgridModule::set_node_gpu_number(RuntimeOrigin::signed(bob()), 1),
             Error::<TestRuntime>::TwinNotExists
         );
     });
