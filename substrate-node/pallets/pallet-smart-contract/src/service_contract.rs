@@ -202,18 +202,8 @@ impl<T: Config> Pallet<T> {
         account_id: T::AccountId,
         service_contract_id: u64,
     ) -> DispatchResultWithPostInfo {
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
-            .ok_or(Error::<T>::TwinNotExists)?;
-
         let service_contract = ServiceContracts::<T>::get(service_contract_id)
             .ok_or(Error::<T>::ServiceContractNotExists)?;
-
-        // Only service or consumer can reject agreement
-        ensure!(
-            twin_id == service_contract.service_twin_id
-                || twin_id == service_contract.consumer_twin_id,
-            Error::<T>::TwinNotAuthorized,
-        );
 
         // Allow to reject contract only if agreement is ready
         ensure!(
@@ -226,16 +216,23 @@ impl<T: Config> Pallet<T> {
 
         // If one party (service or consumer) rejects agreement
         // then contract is canceled and removed from service contract map
-        Self::_service_contract_cancel(twin_id, service_contract_id, types::Cause::CanceledByUser)?;
+        Self::_service_contract_cancel(
+            account_id,
+            service_contract_id,
+            types::Cause::CanceledByUser,
+        )?;
 
         Ok(().into())
     }
 
     pub fn _service_contract_cancel(
-        twin_id: u32,
+        account_id: T::AccountId,
         service_contract_id: u64,
         cause: types::Cause,
     ) -> DispatchResultWithPostInfo {
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
+            .ok_or(Error::<T>::TwinNotExists)?;
+
         let service_contract = ServiceContracts::<T>::get(service_contract_id)
             .ok_or(Error::<T>::ServiceContractNotExists)?;
 
@@ -364,7 +361,7 @@ impl<T: Config> Pallet<T> {
         // by service and removed from service contract map
         if usable_balance < amount {
             Self::_service_contract_cancel(
-                service_twin_id,
+                service_twin.account_id,
                 service_contract_id,
                 types::Cause::OutOfFunds,
             )?;
