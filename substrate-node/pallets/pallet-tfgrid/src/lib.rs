@@ -2093,7 +2093,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(40)]
-        #[pallet::weight(<T as Config>::WeightInfo::set_node_gpu_status())]
+        #[pallet::weight(<T as Config>::WeightInfo::set_node_gpu_number())]
         pub fn set_node_gpu_number(
             origin: OriginFor<T>,
             gpu_number: u8,

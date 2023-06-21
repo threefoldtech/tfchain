@@ -734,18 +734,18 @@ benchmarks! {
         assert_last_event::<T>(Event::NodeUptimeReported(node_id, now, uptime).into());
     }
 
-    // set_node_gpu_status
-    set_node_gpu_status {
+    // set_node_gpu_number
+    set_node_gpu_number {
         let caller: T::AccountId = whitelisted_caller();
         _prepare_farm_with_node::<T>(caller.clone());
         let node_id = 1;
-        let gpu_status = true;
-    }: _(RawOrigin::Signed(caller), gpu_status)
+        let gpu_number = 2;
+    }: _(RawOrigin::Signed(caller), gpu_number)
     verify {
-        assert_eq!(TfgridModule::<T>::node_gpu_status(node_id), gpu_status);
-        assert_last_event::<T>(Event::NodeGpuStatusChanged {
+        assert_eq!(TfgridModule::<T>::node_gpu_number(node_id), gpu_number);
+        assert_last_event::<T>(Event::NodeGpuNumberChanged {
             node_id,
-            gpu_status,
+            gpu_number,
         }.into());
     }
 
