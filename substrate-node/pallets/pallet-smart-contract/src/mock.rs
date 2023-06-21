@@ -4,6 +4,7 @@ use crate::name_contract::NameContractName;
 use crate::{self as pallet_smart_contract};
 use frame_support::{
     construct_runtime,
+    dispatch::DispatchErrorWithPostInfo,
     dispatch::PostDispatchInfo,
     parameter_types,
     traits::{ConstU32, GenesisBuild},
