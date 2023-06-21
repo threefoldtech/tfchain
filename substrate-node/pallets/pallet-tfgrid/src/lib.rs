@@ -285,8 +285,8 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, u32, NodePowerType<T::BlockNumber>, ValueQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn node_gpu_status)]
-    pub type NodeGpuStatus<T: Config> = StorageMap<_, Blake2_128Concat, u32, bool, ValueQuery>;
+    #[pallet::getter(fn node_gpu_number)]
+    pub type NodeGpuNumber<T: Config> = StorageMap<_, Blake2_128Concat, u32, u8, ValueQuery>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_timestamp::Config {
@@ -461,9 +461,9 @@ pub mod pallet {
             node_id: u32,
             power_state: PowerState<T::BlockNumber>,
         },
-        NodeGpuStatusChanged {
+        NodeGpuNumberChanged {
             node_id: u32,
-            gpu_status: bool,
+            gpu_number: u8,
         },
     }
 
@@ -2089,19 +2089,17 @@ pub mod pallet {
             timestamp_hint: u64,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-
             Self::_report_uptime(&account_id, uptime, timestamp_hint)
         }
 
-        #[pallet::call_index(39)]
+        #[pallet::call_index(40)]
         #[pallet::weight(<T as Config>::WeightInfo::set_node_gpu_status())]
-        pub fn set_node_gpu_status(
+        pub fn set_node_gpu_number(
             origin: OriginFor<T>,
-            gpu_status: bool,
+            gpu_number: u8,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-
-            Self::_set_node_gpu_status(&account_id, gpu_status)
+            Self::_set_node_gpu_number(&account_id, gpu_number)
         }
     }
 }
@@ -2139,9 +2137,9 @@ impl<T: Config> Pallet<T> {
         Ok(Pays::No.into())
     }
 
-    pub fn _set_node_gpu_status(
+    pub fn _set_node_gpu_number(
         account_id: &T::AccountId,
-        gpu_status: bool,
+        gpu_number: u8,
     ) -> DispatchResultWithPostInfo {
         let twin_id = TwinIdByAccountID::<T>::get(account_id).ok_or(Error::<T>::TwinNotExists)?;
 
@@ -2153,11 +2151,11 @@ impl<T: Config> Pallet<T> {
 
         ensure!(Nodes::<T>::contains_key(node_id), Error::<T>::NodeNotExists);
 
-        NodeGpuStatus::<T>::insert(node_id, gpu_status);
+        NodeGpuNumber::<T>::insert(node_id, gpu_number);
 
-        Self::deposit_event(Event::NodeGpuStatusChanged {
+        Self::deposit_event(Event::NodeGpuNumberChanged {
             node_id,
-            gpu_status,
+            gpu_number,
         });
 
         Ok(Pays::No.into())
