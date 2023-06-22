@@ -284,10 +284,6 @@ pub mod pallet {
     pub type NodePower<T: Config> =
         StorageMap<_, Blake2_128Concat, u32, NodePowerType<T::BlockNumber>, ValueQuery>;
 
-    #[pallet::storage]
-    #[pallet::getter(fn node_gpu_status)]
-    pub type NodeGpuStatus<T: Config> = StorageMap<_, Blake2_128Concat, u32, bool, ValueQuery>;
-
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_timestamp::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -460,10 +456,6 @@ pub mod pallet {
             farm_id: u32,
             node_id: u32,
             power_state: PowerState<T::BlockNumber>,
-        },
-        NodeGpuStatusChanged {
-            node_id: u32,
-            gpu_status: bool,
         },
     }
 
@@ -2093,16 +2085,9 @@ pub mod pallet {
             Self::_report_uptime(&account_id, uptime, timestamp_hint)
         }
 
-        #[pallet::call_index(39)]
-        #[pallet::weight(<T as Config>::WeightInfo::set_node_gpu_status())]
-        pub fn set_node_gpu_status(
-            origin: OriginFor<T>,
-            gpu_status: bool,
-        ) -> DispatchResultWithPostInfo {
-            let account_id = ensure_signed(origin)?;
-
-            Self::_set_node_gpu_status(&account_id, gpu_status)
-        }
+        // Deprecated! Use index 40 for next extrinsic
+        // #[pallet::call_index(39)]
+        // #[pallet::weight(<T as Config>::WeightInfo::set_node_gpu_status())]
     }
 }
 
@@ -2135,30 +2120,6 @@ impl<T: Config> Pallet<T> {
         );
 
         Self::deposit_event(Event::NodeUptimeReported(node_id, now, uptime));
-
-        Ok(Pays::No.into())
-    }
-
-    pub fn _set_node_gpu_status(
-        account_id: &T::AccountId,
-        gpu_status: bool,
-    ) -> DispatchResultWithPostInfo {
-        let twin_id = TwinIdByAccountID::<T>::get(account_id).ok_or(Error::<T>::TwinNotExists)?;
-
-        ensure!(
-            NodeIdByTwinID::<T>::contains_key(twin_id),
-            Error::<T>::NodeNotExists
-        );
-        let node_id = NodeIdByTwinID::<T>::get(twin_id);
-
-        ensure!(Nodes::<T>::contains_key(node_id), Error::<T>::NodeNotExists);
-
-        NodeGpuStatus::<T>::insert(node_id, gpu_status);
-
-        Self::deposit_event(Event::NodeGpuStatusChanged {
-            node_id,
-            gpu_status,
-        });
 
         Ok(Pays::No.into())
     }
