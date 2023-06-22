@@ -734,21 +734,6 @@ benchmarks! {
         assert_last_event::<T>(Event::NodeUptimeReported(node_id, now, uptime).into());
     }
 
-    // set_node_gpu_status
-    set_node_gpu_status {
-        let caller: T::AccountId = whitelisted_caller();
-        _prepare_farm_with_node::<T>(caller.clone());
-        let node_id = 1;
-        let gpu_status = true;
-    }: _(RawOrigin::Signed(caller), gpu_status)
-    verify {
-        assert_eq!(TfgridModule::<T>::node_gpu_status(node_id), gpu_status);
-        assert_last_event::<T>(Event::NodeGpuStatusChanged {
-            node_id,
-            gpu_status,
-        }.into());
-    }
-
     // Calling the `impl_benchmark_test_suite` macro inside the `benchmarks`
     // block will generate one #[test] function per benchmark
     impl_benchmark_test_suite!(TfgridModule, crate::mock::new_test_ext(), crate::mock::TestRuntime)
