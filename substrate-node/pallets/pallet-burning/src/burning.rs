@@ -30,18 +30,15 @@ impl<T: Config> Pallet<T> {
         };
 
         // Save historical burns
-        match Burns::<T>::get() {
-            Some(mut burns) => {
-                burns.push(burn);
-                Burns::<T>::put(burns);
+        let burns = match Burns::<T>::get() {
+            Some(mut stored_burns) => {
+                stored_burns.push(burn);
+                stored_burns
             }
-            None => {
-                let burns = vec![burn];
-                Burns::<T>::put(burns);
-            }
-        }
+            None => vec![burn],
+        };
+        Burns::<T>::put(burns);
 
-        // Desposit event
         Self::deposit_event(Event::BurnTransactionCreated(
             target, amount, block, message,
         ));

@@ -287,7 +287,8 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    // Set the default farming policy as the last best certified stored default farming policy
+    // Set the default farming policy as the last best certified
+    // farming policy amoung all the default farming policies
     fn get_default_farming_policy(
     ) -> Result<types::FarmingPolicy<T::BlockNumber>, DispatchErrorWithPostInfo> {
         let mut policies: Vec<types::FarmingPolicy<T::BlockNumber>> =

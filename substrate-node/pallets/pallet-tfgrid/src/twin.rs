@@ -171,15 +171,15 @@ impl<T: Config> Pallet<T> {
             Error::<T>::TwinWithPubkeyExists
         );
 
-        let mut twin_id = TwinID::<T>::get();
-        twin_id = twin_id + 1;
-
         if let Some(relay_addr) = relay.clone() {
             ensure!(
                 Self::validate_relay_address(relay_addr.into()),
                 Error::<T>::InvalidRelayAddress
             );
         }
+
+        let mut twin_id = TwinID::<T>::get();
+        twin_id = twin_id + 1;
 
         let twin = types::Twin::<T::AccountId> {
             id: twin_id,
@@ -191,8 +191,6 @@ impl<T: Config> Pallet<T> {
 
         Twins::<T>::insert(&twin_id, &twin);
         TwinID::<T>::put(twin_id);
-
-        // add the twin id to this users map of twin ids
         TwinIdByAccountID::<T>::insert(&account_id.clone(), twin_id);
 
         Self::deposit_event(Event::TwinStored(twin));
@@ -347,22 +345,17 @@ impl<T: Config> Pallet<T> {
 
     fn verify_ed_signature(signature: [u8; 64], target: &T::AccountId, payload: &Vec<u8>) -> bool {
         let entity_pubkey_ed25519 = Self::convert_account_to_ed25519(target);
-        // Decode signature into a ed25519 signature
         let ed25519_signature = sp_core::ed25519::Signature::from_raw(signature);
-
         sp_io::crypto::ed25519_verify(&ed25519_signature, &payload, &entity_pubkey_ed25519)
     }
 
     fn verify_sr_signature(signature: [u8; 64], target: &T::AccountId, payload: &Vec<u8>) -> bool {
         let entity_pubkey_sr25519 = Self::convert_account_to_sr25519(target);
-        // Decode signature into a sr25519 signature
         let sr25519_signature = sp_core::sr25519::Signature::from_raw(signature);
-
         sp_io::crypto::sr25519_verify(&sr25519_signature, &payload, &entity_pubkey_sr25519)
     }
 
     fn convert_account_to_ed25519(account: &T::AccountId) -> sp_core::ed25519::Public {
-        // Decode entity's public key
         let account_vec = &account.encode();
         let mut bytes = [0u8; 32];
         bytes.copy_from_slice(&account_vec);
@@ -370,7 +363,6 @@ impl<T: Config> Pallet<T> {
     }
 
     fn convert_account_to_sr25519(account: &T::AccountId) -> sp_core::sr25519::Public {
-        // Decode entity's public key
         let account_vec = &account.encode();
         let mut bytes = [0u8; 32];
         bytes.copy_from_slice(&account_vec);

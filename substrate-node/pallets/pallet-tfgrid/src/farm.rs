@@ -20,9 +20,6 @@ impl<T: Config> Pallet<T> {
         name: FarmNameInput<T>,
         public_ips: PublicIpListInput<T>,
     ) -> DispatchResultWithPostInfo {
-        let mut id = FarmID::<T>::get();
-        id = id + 1;
-
         let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
         let twin = Twins::<T>::get(twin_id).ok_or(Error::<T>::TwinNotExists)?;
         ensure!(
@@ -34,9 +31,12 @@ impl<T: Config> Pallet<T> {
             !FarmIdByName::<T>::contains_key(name.clone()),
             Error::<T>::FarmExists
         );
-        let farm_name = Self::get_farm_name(name.clone())?;
 
-        let public_ips_list = Self::get_public_ips(public_ips)?;
+        let mut id = FarmID::<T>::get();
+        id = id + 1;
+
+        let farm_name = Self::get_farm_name(name.clone())?;
+        let public_ips = Self::get_public_ips(public_ips)?;
 
         let new_farm = Farm {
             version: TFGRID_FARM_VERSION,
@@ -45,7 +45,7 @@ impl<T: Config> Pallet<T> {
             name: farm_name,
             pricing_policy_id: 1,
             certification: FarmCertification::NotCertified,
-            public_ips: public_ips_list,
+            public_ips,
             dedicated_farm: false,
             farming_policy_limits: None,
         };
@@ -206,22 +206,12 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn _delete_node_farm(account_id: T::AccountId, node_id: u32) -> DispatchResultWithPostInfo {
-        // check if the farmer twin is authorized
-        let farm_twin_id =
-            TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
-        // check if the ndode belong to said farm
+        let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
         let node = Nodes::<T>::get(&node_id).ok_or(Error::<T>::NodeNotExists)?;
         let farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
-        ensure!(
-            Twins::<T>::contains_key(&farm.twin_id),
-            Error::<T>::TwinNotExists
-        );
-        let farm_twin = Twins::<T>::get(farm.twin_id).ok_or(Error::<T>::TwinNotExists)?;
-        ensure!(
-            farm_twin_id == farm_twin.id,
-            Error::<T>::FarmerNotAuthorized
-        );
+        // Make sure the caller is the farmer
+        ensure!(twin_id == farm.twin_id, Error::<T>::FarmerNotAuthorized);
 
         let mut nodes_by_farm = NodesByFarmID::<T>::get(node.farm_id);
         let location = nodes_by_farm
@@ -252,23 +242,18 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn _force_reset_farm_ip(farm_id: u32, ip: Ip4Input) -> DispatchResultWithPostInfo {
-        ensure!(Farms::<T>::contains_key(farm_id), Error::<T>::FarmNotExists);
-        let mut stored_farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
+        let mut farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
-        match stored_farm
-            .public_ips
-            .iter_mut()
-            .find(|pubip| pubip.ip == ip)
-        {
+        match farm.public_ips.iter_mut().find(|pubip| pubip.ip == ip) {
             Some(ip) => {
                 ip.contract_id = 0;
             }
             None => return Err(Error::<T>::IpNotExists.into()),
         };
 
-        Farms::<T>::insert(stored_farm.id, &stored_farm);
+        Farms::<T>::insert(farm.id, &farm);
 
-        Self::deposit_event(Event::FarmUpdated(stored_farm));
+        Self::deposit_event(Event::FarmUpdated(farm));
 
         Ok(().into())
     }
