@@ -3,7 +3,7 @@
 use crate::pallet::Pallet as DaoModule;
 use crate::pallet::Pallet;
 use crate::pallet::{Call, Config, Event};
-use frame_benchmarking::{account, benchmarks, whitelisted_caller};
+use frame_benchmarking::{account, benchmarks, whitelisted_caller, vec, Vec, Box};
 use frame_support::{assert_ok, BoundedVec};
 use frame_system::{Call as SystemCall, EventRecord, Pallet as System, RawOrigin};
 use pallet_membership::Pallet as CouncilMembership;
