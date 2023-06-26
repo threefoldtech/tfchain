@@ -4,8 +4,7 @@ async function getBalance (self, address) {
   return {
     free: balance.free.toJSON(),
     reserved: balance.reserved.toJSON(),
-    miscFrozen: balance.miscFrozen.toJSON(),
-    feeFrozen: balance.feeFrozen.toJSON()
+    frozen: balance.frozen.toJSON(),
   }
 }
 

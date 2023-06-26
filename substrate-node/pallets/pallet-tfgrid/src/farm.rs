@@ -66,10 +66,12 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
         let mut farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
+
         ensure!(
             farm.twin_id == twin_id,
             Error::<T>::CannotUpdateFarmWrongTwin
         );
+
         let new_name = Self::get_farm_name(name.clone())?;
 
         match FarmIdByName::<T>::get(name.clone()) {
@@ -213,12 +215,12 @@ impl<T: Config> Pallet<T> {
         // Make sure the caller is the farmer
         ensure!(twin_id == farm.twin_id, Error::<T>::FarmerNotAuthorized);
 
+        // Remove node id from "nodes in farm" list
         let mut nodes_by_farm = NodesByFarmID::<T>::get(node.farm_id);
-        let location = nodes_by_farm
-            .binary_search(&node_id)
-            .or(Err(Error::<T>::NodeNotExists))?;
-        nodes_by_farm.remove(location);
-        NodesByFarmID::<T>::insert(node.farm_id, nodes_by_farm);
+        if let Ok(position) = nodes_by_farm.binary_search(&node_id) {
+            nodes_by_farm.remove(position);
+            NodesByFarmID::<T>::insert(node.farm_id, nodes_by_farm);
+        }
 
         // Call node deleted
         T::NodeChanged::node_deleted(&node);

@@ -28,7 +28,7 @@
     "jsonschema": "^1.4.0",
     "lodash": "^4.17.21",
     "pino": "^6.11.3",
-    "tfgrid-api-client": "1.13.0"
+    "tfgrid-api-client": "^1.29.1"
   },
   "devDependencies": {
     "husky": "^6.0.0",
