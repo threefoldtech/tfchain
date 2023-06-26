@@ -11,13 +11,16 @@ use frame_system::{EventRecord, Pallet as System, RawOrigin};
 use sp_runtime::{traits::Bounded, AccountId32};
 // use sp_runtime::{IdentifyAccount, MultiSignature, Verify};
 use pallet_timestamp::Pallet as Timestamp;
+use sp_runtime::SaturatedConversion;
+use sp_std::vec::Vec;
 use sp_std::{
     convert::{TryFrom, TryInto},
     fmt::Debug,
     vec,
 };
 use tfchain_support::types::{
-    FarmCertification, FarmingPolicyLimit, NodeCertification, PublicConfig, IP4, IP6,
+    FarmCertification, FarmingPolicyLimit, NodeCertification, Power, PowerState, PublicConfig, IP4,
+    IP6,
 };
 
 // type AccountPublic = <MultiSignature as Verify>::Signer;
