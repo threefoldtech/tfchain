@@ -1,7 +1,7 @@
 #![cfg(feature = "runtime-benchmarks")]
 
-use super::*;
 use crate::Pallet as ValidatorSet;
+use crate::{Call, Config, Event, Pallet};
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::assert_ok;
 use frame_system::{EventRecord, Pallet as System, RawOrigin};
