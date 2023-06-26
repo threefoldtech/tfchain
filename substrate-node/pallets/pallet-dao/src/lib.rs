@@ -1,19 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "128"]
 
-use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf};
-use sp_std::prelude::*;
-
-use frame_support::{
-    dispatch::{
-        DispatchResult, DispatchResultWithPostInfo, Dispatchable, GetDispatchInfo, PostDispatchInfo,
-    },
-    traits::{EnsureOrigin, Get},
-};
-use tfchain_support::traits::{ChangeNode, Tfgrid};
-
-pub use pallet::*;
-
 #[cfg(test)]
 mod mock;
 
@@ -27,14 +14,27 @@ pub mod weights;
 
 mod dao;
 mod proposal;
-pub use weights::WeightInfo;
 
+pub use pallet::*;
 /// Simple index type for proposal counting.
-pub type ProposalIndex = u32;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use super::*;
+    use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf};
+    use sp_std::prelude::*;
+
+    use crate::proposal;
+    use crate::proposal::ProposalIndex;
+    use crate::weights::WeightInfo;
+    use frame_support::{
+        dispatch::{
+            DispatchResult, DispatchResultWithPostInfo, Dispatchable, GetDispatchInfo,
+            PostDispatchInfo,
+        },
+        traits::{EnsureOrigin, Get},
+    };
+    use tfchain_support::traits::{ChangeNode, Tfgrid};
+
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
     use pallet_tfgrid::farm::FarmName;

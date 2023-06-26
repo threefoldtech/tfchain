@@ -1,10 +1,11 @@
-use crate::FarmWeight;
+use crate::pallet::FarmWeight;
 
-use super::{
+use crate::{
     pallet::{
         Config, Error, Event, Pallet, ProposalCount, ProposalList, ProposalOf, Proposals, Voting,
     },
-    proposal, ProposalIndex,
+    proposal,
+    proposal::ProposalIndex,
 };
 use frame_support::{
     dispatch::{DispatchError, DispatchResultWithPostInfo, GetDispatchInfo},

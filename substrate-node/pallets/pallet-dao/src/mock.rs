@@ -33,7 +33,7 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        DaoModule: pallet_dao::{Pallet, Call, Storage, Event<T>},
+        DaoModule: pallet_dao::pallet::{Pallet, Call, Storage, Event<T>},
         TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         Council: pallet_collective::<Instance1>::{Pallet, Call, Origin<T>, Event<T>, Config<T>},
@@ -99,8 +99,8 @@ impl PublicIpModifier for PublicIpModifierType {
     fn ip_removed(_ip: &PublicIP) {}
 }
 
-use super::weights;
-impl pallet_dao::Config for TestRuntime {
+use crate::weights;
+impl pallet_dao::pallet::Config for TestRuntime {
     type RuntimeEvent = RuntimeEvent;
     type CouncilOrigin = EnsureRoot<Self::AccountId>;
     type Proposal = RuntimeCall;
