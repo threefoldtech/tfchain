@@ -22,7 +22,6 @@ use tfchain_support::{
     traits::{ChangeNode, Tfgrid},
 };
 
-// use frame_support::pallet_prelude::*;
 impl<T: Config> Pallet<T> {
     pub fn _propose(
         who: T::AccountId,
@@ -116,7 +115,6 @@ impl<T: Config> Pallet<T> {
         let position_yes = voting.ayes.iter().position(|a| a.farm_id == farm_id);
         let position_no = voting.nays.iter().position(|a| a.farm_id == farm_id);
 
-        // Detects first vote of the member in the motion
         let is_account_voting_first_time = position_yes.is_none() && position_no.is_none();
 
         if approve {
@@ -175,7 +173,6 @@ impl<T: Config> Pallet<T> {
             Error::<T>::WrongIndex
         );
 
-        // push vote to vetos
         voting.vetos.push(who.clone());
 
         Self::deposit_event(Event::CouncilMemberVeto { proposal_hash, who });
