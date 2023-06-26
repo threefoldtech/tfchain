@@ -757,22 +757,26 @@ impl<T: Config> Pallet<T> {
 
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
-        let mut owns_rent_contract = false;
-        if let Some(contract_id) = ActiveRentContractForNode::<T>::get(node_id) {
-            let rent_contract =
-                Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
-            owns_rent_contract = rent_contract.twin_id == twin_id;
-        }
-
         // A node is dedicated (can only be used under a rent contract)
         // if it has a dedicated node extra fee or if the farm is dedicated
         let node_is_dedicated =
             DedicatedNodesExtraFee::<T>::get(node_id) > 0 || farm.dedicated_farm;
 
-        // If the user is not the owner of a supposed rent contract on the node and the node
-        // is set to be used as dedicated then we don't allow the creation of a node contract.
-        if !owns_rent_contract && node_is_dedicated {
-            return Err(Error::<T>::NodeNotAvailableToDeploy.into());
+        // In case there is a rent contract make sure only the contract owner can deploy
+        // If not, allow to deploy only if node is not dedicated
+        match ActiveRentContractForNode::<T>::get(node_id) {
+            Some(contract_id) => {
+                let rent_contract =
+                    Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+                if rent_contract.twin_id != twin_id {
+                    return Err(Error::<T>::NodeNotAvailableToDeploy.into());
+                }
+            }
+            None => {
+                if node_is_dedicated {
+                    return Err(Error::<T>::NodeNotAvailableToDeploy.into());
+                }
+            }
         }
 
         // If the contract with hash and node id exists and it's in any other state then
