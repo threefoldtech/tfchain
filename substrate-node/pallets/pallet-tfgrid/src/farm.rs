@@ -64,10 +64,7 @@ impl<T: Config> Pallet<T> {
         farm_id: u32,
         name: FarmNameInput<T>,
     ) -> DispatchResultWithPostInfo {
-        let new_farm_name = Self::get_farm_name(name.clone())?;
-
         let twin_id = TwinIdByAccountID::<T>::get(&account_id).ok_or(Error::<T>::TwinNotExists)?;
-
         let mut farm = Farms::<T>::get(farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
         ensure!(
@@ -75,22 +72,27 @@ impl<T: Config> Pallet<T> {
             Error::<T>::CannotUpdateFarmWrongTwin
         );
 
-        if FarmIdByName::<T>::contains_key(name.clone()) {
-            let farm_id_by_new_name = FarmIdByName::<T>::get(name.clone());
-            // if the user picks a new name but it is taken by another farmer, don't allow it
-            if farm_id_by_new_name != farm_id {
-                return Err(Error::<T>::InvalidFarmName.into());
-            }
+        let new_name = Self::get_farm_name(name.clone())?;
+
+        match FarmIdByName::<T>::get(name.clone()) {
+            // Continue updating
+            id if id == 0 => (),
+            // Leave function since new name and old name are same
+            id if id == farm_id => return Ok(().into()),
+            // Return error since farm name is already used by other farm
+            _ => return Err(Error::<T>::InvalidFarmName.into()),
         }
 
-        let name: Vec<u8> = farm.name.into();
-        // Remove stored farm by name and insert new one
-        FarmIdByName::<T>::remove(name.clone());
+        // Remove old entry from "id by name" storage
+        let old_name: Vec<u8> = farm.name.into();
+        FarmIdByName::<T>::remove(old_name);
 
-        farm.name = new_farm_name;
+        // Insert new entry into "id by name" storage
+        FarmIdByName::<T>::insert(name, farm_id);
 
+        // Update farm object in storage
+        farm.name = new_name;
         Farms::<T>::insert(farm_id, &farm);
-        FarmIdByName::<T>::insert(name, farm.id);
 
         Self::deposit_event(Event::FarmUpdated(farm));
 
