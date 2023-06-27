@@ -837,7 +837,37 @@ fn test_create_node_contract_when_having_a_rentcontract_works() {
 }
 
 #[test]
-fn test_create_node_contract_when_someone_else_has_rent_contract_fails() {
+fn test_create_node_contract_on_node_rented_by_other_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+        let node_id = 1;
+
+        // create rent contract with bob
+        assert_ok!(SmartContractModule::create_rent_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            None
+        ));
+
+        // try to create node contract with Alice
+        // Alice not the owner of the rent contract so she is unauthorized to deploy a node contract
+        assert_noop!(
+            SmartContractModule::create_node_contract(
+                RuntimeOrigin::signed(alice()),
+                node_id,
+                generate_deployment_hash(),
+                get_deployment_data(),
+                1,
+                None
+            ),
+            Error::<TestRuntime>::NodeNotAvailableToDeploy
+        );
+    })
+}
+
+#[test]
+fn test_create_node_contract_on_dedicated_node_rented_by_other_fails() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_dedicated_farm_and_node();

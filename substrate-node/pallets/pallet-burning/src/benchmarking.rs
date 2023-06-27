@@ -2,9 +2,11 @@
 
 use super::*;
 use crate::Pallet as BurningModule;
-use frame_benchmarking::{benchmarks, whitelisted_caller};
+use frame_benchmarking::{benchmarks, whitelisted_caller, Zero};
+use frame_support::traits::Currency;
 use frame_system::{EventRecord, Pallet as System, RawOrigin};
 use sp_runtime::{traits::StaticLookup, SaturatedConversion};
+use sp_std::vec;
 
 benchmarks! {
     // burn_tft()
@@ -19,7 +21,7 @@ benchmarks! {
         let burns = BurningModule::<T>::burns().unwrap_or(vec![]);
         assert_eq!(burns.len(), 1);
         let block = T::BlockNumber::from(1 as u32);
-        assert_eq!(T::Currency::free_balance(&target).saturated_into::<u128>(), 0 as u128);
+        assert_eq!(T::Currency::free_balance(&target), BalanceOf::<T>::zero());
         assert_last_event::<T>(Event::BurnTransactionCreated(target, amount, block, message).into());
     }
 
