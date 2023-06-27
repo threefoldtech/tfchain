@@ -2,9 +2,63 @@ use crate::*;
 use frame_support::{
     dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
     ensure,
+    traits::{Currency, ExistenceRequirement, LockableCurrency, OnUnbalanced, WithdrawReasons},
 };
+use frame_system::offchain::{SendSignedTransaction, SignMessage, Signer};
+use sp_core::Get;
+use sp_runtime::{
+    traits::{CheckedAdd, CheckedSub, Convert, Zero},
+    DispatchResult, Perbill, SaturatedConversion,
+};
+use sp_std::vec::Vec;
 
 impl<T: Config> Pallet<T> {
+    pub fn bill_conttracts_for_block(block_number: T::BlockNumber) {
+        // Let offchain worker check if there are contracts on
+        // billing loop at current index and try to bill them
+        let index = Self::get_billing_loop_index_from_block_number(block_number);
+
+        let contract_ids = ContractsToBillAt::<T>::get(index);
+        if contract_ids.is_empty() {
+            log::info!(
+                "No contracts to bill at block {:?}, index: {:?}",
+                block_number,
+                index
+            );
+            return;
+        }
+
+        log::info!(
+            "{:?} contracts to bill at block {:?}",
+            contract_ids,
+            block_number
+        );
+
+        for contract_id in contract_ids {
+            if let Some(c) = Contracts::<T>::get(contract_id) {
+                if let types::ContractData::NodeContract(node_contract) = c.contract_type {
+                    // Is there IP consumption to bill?
+                    let bill_ip = node_contract.public_ips > 0;
+
+                    // Is there CU/SU consumption to bill?
+                    // No need for preliminary call to contains_key() because default resource value is empty
+                    let bill_cu_su = !NodeContractResources::<T>::get(contract_id).used.is_empty();
+
+                    // Is there NU consumption to bill?
+                    // No need for preliminary call to contains_key() because default amount_unbilled is 0
+                    let bill_nu =
+                        ContractBillingInformationByID::<T>::get(contract_id).amount_unbilled > 0;
+
+                    // Don't bill if no IP/CU/SU/NU to be billed
+                    if !bill_ip && !bill_cu_su && !bill_nu {
+                        continue;
+                    }
+                }
+            }
+            let _res = Self::bill_contract_using_signed_transaction(contract_id);
+        }
+    }
+
     pub fn bill_contract_using_signed_transaction(contract_id: u64) -> Result<(), Error<T>> {
         let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::any_account();
 
@@ -54,7 +108,7 @@ impl<T: Config> Pallet<T> {
             .checked_add(&stash_balance)
             .unwrap_or(BalanceOf::<T>::zero());
 
-        let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+        let now = Self::get_current_timestamp_in_secs();
 
         // Calculate amount of seconds elapsed based on the contract lock struct
         let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
@@ -119,7 +173,7 @@ impl<T: Config> Pallet<T> {
         // Always emit a contract billed event
         let contract_bill = types::ContractBill {
             contract_id: contract.contract_id,
-            timestamp: <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000,
+            timestamp: Self::get_current_timestamp_in_secs(),
             discount_level: discount_received.clone(),
             amount_billed: amount_due.saturated_into::<u128>(),
         };
@@ -257,7 +311,7 @@ impl<T: Config> Pallet<T> {
         contract_lock: &mut types::ContractLock<BalanceOf<T>>,
         amount_due: BalanceOf<T>,
     ) -> DispatchResultWithPostInfo {
-        let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+        let now = Self::get_current_timestamp_in_secs();
 
         // Only lock an amount from the user's balance if the contract is in create state
         // The lock is specified on the user's account, since a user can have multiple contracts
@@ -425,7 +479,7 @@ impl<T: Config> Pallet<T> {
     // Following: https://library.threefold.me/info/threefold#/tfgrid/farming/threefold__proof_of_utilization
     fn distribute_cultivation_rewards(
         contract: &types::Contract<T>,
-        pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
+        pricing_policy: &pallet_tfgrid::types::PricingPolicy<T::AccountId>,
         amount: BalanceOf<T>,
     ) -> DispatchResultWithPostInfo {
         log::info!(
@@ -500,7 +554,7 @@ impl<T: Config> Pallet<T> {
                             &twin.account_id,
                             &provider.who,
                             share,
-                            KeepAlive,
+                            ExistenceRequirement::KeepAlive,
                         )
                     })
                     .filter(|result| result.is_err())
@@ -528,7 +582,7 @@ impl<T: Config> Pallet<T> {
                 &twin.account_id,
                 &pricing_policy.certified_sales_account,
                 share,
-                KeepAlive,
+                ExistenceRequirement::KeepAlive,
             )?;
         }
 
@@ -560,21 +614,20 @@ impl<T: Config> Pallet<T> {
 
     // Billing index is contract id % (mod) Billing Frequency
     // So index belongs to [0; billing_frequency - 1] range
-    pub fn get_contract_billing_loop_index(contract_id: u64) -> u64 {
+    pub fn get_billing_loop_index_from_contract_id(contract_id: u64) -> u64 {
         contract_id % BillingFrequency::<T>::get()
     }
 
     // Billing index is block number % (mod) Billing Frequency
     // So index belongs to [0; billing_frequency - 1] range
-    pub fn get_current_billing_loop_index() -> u64 {
-        let current_block = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
-        current_block % BillingFrequency::<T>::get()
+    pub fn get_billing_loop_index_from_block_number(block_number: T::BlockNumber) -> u64 {
+        block_number.saturated_into::<u64>() % BillingFrequency::<T>::get()
     }
 
     // Inserts a contract in a billing loop where the index is the contract id % billing frequency
     // This way, we don't need to reinsert the contract everytime it gets billed
     pub fn insert_contract_in_billing_loop(contract_id: u64) {
-        let index = Self::get_contract_billing_loop_index(contract_id);
+        let index = Self::get_billing_loop_index_from_contract_id(contract_id);
         let mut contract_ids = ContractsToBillAt::<T>::get(index);
 
         if !contract_ids.contains(&contract_id) {
@@ -592,7 +645,7 @@ impl<T: Config> Pallet<T> {
     pub fn remove_contract_from_billing_loop(
         contract_id: u64,
     ) -> Result<(), DispatchErrorWithPostInfo> {
-        let index = Self::get_contract_billing_loop_index(contract_id);
+        let index = Self::get_billing_loop_index_from_contract_id(contract_id);
         let mut contract_ids = ContractsToBillAt::<T>::get(index);
 
         ensure!(
@@ -649,5 +702,46 @@ impl<T: Config> Pallet<T> {
             Some(account) => Self::get_usable_balance(&account),
             None => BalanceOf::<T>::zero(),
         }
+    }
+
+    // Validates if the given signer is the next block author based on the validators in session
+    // This can be used if an extrinsic should be refunded by the author in the same block
+    // It also requires that the keytype inserted for the offchain workers is the validator key
+    fn is_next_block_author(
+        signer: &Signer<T, <T as Config>::AuthorityId>,
+    ) -> Result<(), Error<T>> {
+        let author = <pallet_authorship::Pallet<T>>::author();
+        let validators = <pallet_session::Pallet<T>>::validators();
+
+        // Sign some arbitrary data in order to get the AccountId, maybe there is another way to do this?
+        let signed_message = signer.sign_message(&[0]);
+        if let Some(signed_message_data) = signed_message {
+            if let Some(block_author) = author {
+                let validator =
+                    <T as pallet_session::Config>::ValidatorIdOf::convert(block_author.clone())
+                        .ok_or(Error::<T>::IsNotAnAuthority)?;
+
+                let validator_count = validators.len();
+                let author_index = (validators.iter().position(|a| a == &validator).unwrap_or(0)
+                    + 1)
+                    % validator_count;
+
+                let signer_validator_account =
+                    <T as pallet_session::Config>::ValidatorIdOf::convert(
+                        signed_message_data.0.id.clone(),
+                    )
+                    .ok_or(Error::<T>::IsNotAnAuthority)?;
+
+                if signer_validator_account != validators[author_index] {
+                    return Err(Error::<T>::WrongAuthority);
+                }
+            }
+        }
+
+        Ok(().into())
+    }
+
+    pub fn get_current_timestamp_in_secs() -> u64 {
+        <pallet_timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000
     }
 }

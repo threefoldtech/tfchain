@@ -1,39 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{
-    dispatch::{DispatchResultWithPostInfo, Pays},
-    ensure,
-    pallet_prelude::DispatchResult,
-    traits::{
-        Currency, EnsureOrigin, ExistenceRequirement, ExistenceRequirement::KeepAlive, Get,
-        LockableCurrency, OnUnbalanced, WithdrawReasons,
-    },
-    transactional, BoundedVec,
-};
-use frame_system::{
-    self as system, ensure_signed,
-    offchain::{AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer},
-};
 pub use pallet::*;
-use pallet_authorship;
-use pallet_tfgrid;
-use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf, TfgridNode};
-use pallet_tfgrid::types as pallet_tfgrid_types;
-use pallet_timestamp as timestamp;
-use sp_core::crypto::KeyTypeId;
-use sp_runtime::{
-    traits::{CheckedAdd, CheckedSub, Convert, SaturatedConversion, Zero},
-    Perbill,
-};
-use sp_std::prelude::*;
-use substrate_fixed::types::U64F64;
-use system::offchain::SignMessage;
-use tfchain_support::{
-    traits::{ChangeNode, PublicIpModifier},
-    types::PublicIP,
-};
-
-pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"aura");
 
 #[cfg(test)]
 mod mock;
@@ -48,14 +15,15 @@ mod test_utils;
 pub mod benchmarking;
 
 pub mod crypto {
-    use crate::KEY_TYPE;
-    use sp_core::sr25519::Signature as Sr25519Signature;
+    use sp_core::{crypto::KeyTypeId, sr25519::Signature as Sr25519Signature};
     use sp_runtime::{
         app_crypto::{app_crypto, sr25519},
         traits::Verify,
         MultiSignature, MultiSigner,
     };
     use sp_std::convert::TryFrom;
+
+    pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"aura");
 
     app_crypto!(sr25519, KEY_TYPE);
 
@@ -93,10 +61,16 @@ pub mod pallet {
     use super::types::*;
     use super::weights::WeightInfo;
     use super::*;
-    use frame_support::pallet_prelude::*;
-    use frame_support::traits::Hooks;
-    use frame_support::traits::{Currency, Get, LockIdentifier, LockableCurrency, OnUnbalanced};
-    use frame_system::pallet_prelude::*;
+    use frame_support::{
+        pallet_prelude::*,
+        traits::{Currency, Get, Hooks, LockIdentifier, LockableCurrency, OnUnbalanced},
+    };
+    use frame_system::{
+        self as system, ensure_signed,
+        offchain::{AppCrypto, CreateSignedTransaction},
+        pallet_prelude::*,
+    };
+    use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf};
     use parity_scale_codec::FullCodec;
     use sp_core::H256;
     use sp_std::{
@@ -112,6 +86,7 @@ pub mod pallet {
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::NegativeImbalance;
 
     pub const GRID_LOCK_ID: LockIdentifier = *b"gridlock";
+    use tfchain_support::types::PublicIP;
 
     #[pallet::pallet]
     #[pallet::without_storage_info]
@@ -686,190 +661,7 @@ pub mod pallet {
         }
 
         fn offchain_worker(block_number: T::BlockNumber) {
-            // Let offchain worker check if there are contracts on the map at current index
-            let current_index = Self::get_current_billing_loop_index();
-
-            let contract_ids = ContractsToBillAt::<T>::get(current_index);
-            if contract_ids.is_empty() {
-                log::info!(
-                    "No contracts to bill at block {:?}, index: {:?}",
-                    block_number,
-                    current_index
-                );
-                return;
-            }
-
-            log::info!(
-                "{:?} contracts to bill at block {:?}",
-                contract_ids,
-                block_number
-            );
-
-            for contract_id in contract_ids {
-                if let Some(c) = Contracts::<T>::get(contract_id) {
-                    if let types::ContractData::NodeContract(node_contract) = c.contract_type {
-                        // Is there IP consumption to bill?
-                        let bill_ip = node_contract.public_ips > 0;
-
-                        // Is there CU/SU consumption to bill?
-                        // No need for preliminary call to contains_key() because default resource value is empty
-                        let bill_cu_su =
-                            !NodeContractResources::<T>::get(contract_id).used.is_empty();
-
-                        // Is there NU consumption to bill?
-                        // No need for preliminary call to contains_key() because default amount_unbilled is 0
-                        let bill_nu = ContractBillingInformationByID::<T>::get(contract_id)
-                            .amount_unbilled
-                            > 0;
-
-                        // Don't bill if no IP/CU/SU/NU to be billed
-                        if !bill_ip && !bill_cu_su && !bill_nu {
-                            continue;
-                        }
-                    }
-                }
-                let _res = Self::bill_contract_using_signed_transaction(contract_id);
-            }
+            Self::bill_conttracts_for_block(block_number);
         }
-    }
-}
-
-use crate::types::HexHash;
-use sp_std::convert::{TryFrom, TryInto};
-
-// Internal functions of the pallet
-impl<T: Config> Pallet<T> {
-    // Calculates the total cost of a report.
-    // Takes in a report for NRU (network resource units)
-    // Updates the contract's billing information in storage
-    pub fn _calculate_report_cost(
-        report: &types::NruConsumption,
-        pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
-    ) {
-        let mut contract_billing_info =
-            ContractBillingInformationByID::<T>::get(report.contract_id);
-        if report.timestamp < contract_billing_info.last_updated {
-            return;
-        }
-
-        // seconds elapsed is the report.window
-        let seconds_elapsed = report.window;
-        log::debug!("seconds elapsed: {:?}", seconds_elapsed);
-
-        // calculate NRU used and the cost
-        let used_nru = U64F64::from_num(report.nru) / pricing_policy.nu.factor_base_1000();
-        let nu_cost = used_nru
-            * (U64F64::from_num(pricing_policy.nu.value)
-                / U64F64::from_num(T::BillingReferencePeriod::get()))
-            * U64F64::from_num(seconds_elapsed);
-        log::debug!("nu cost: {:?}", nu_cost);
-
-        // save total
-        let total = nu_cost.round().to_num::<u64>();
-        log::debug!("total cost: {:?}", total);
-
-        // update contract billing info
-        contract_billing_info.amount_unbilled += total;
-        contract_billing_info.last_updated = report.timestamp;
-        ContractBillingInformationByID::<T>::insert(report.contract_id, &contract_billing_info);
-    }
-
-    pub fn _set_dedicated_node_extra_fee(
-        account_id: T::AccountId,
-        node_id: u32,
-        extra_fee: u64,
-    ) -> DispatchResultWithPostInfo {
-        // Make sure only the farmer that owns this node can set the extra fee
-        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
-            .ok_or(Error::<T>::TwinNotExists)?;
-        let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
-        let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
-        ensure!(
-            twin_id == farm.twin_id,
-            Error::<T>::UnauthorizedToSetExtraFee
-        );
-
-        // Make sure there is no active node or rent contract on this node
-        ensure!(
-            ActiveRentContractForNode::<T>::get(node_id).is_none()
-                && ActiveNodeContracts::<T>::get(&node_id).is_empty(),
-            Error::<T>::NodeHasActiveContracts
-        );
-
-        // Set fee in mUSD
-        DedicatedNodesExtraFee::<T>::insert(node_id, extra_fee);
-        Self::deposit_event(Event::NodeExtraFeeSet { node_id, extra_fee });
-
-        Ok(().into())
-    }
-}
-
-impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for Pallet<T> {
-    fn node_changed(_node: Option<&TfgridNode<T>>, _new_node: &TfgridNode<T>) {}
-
-    fn node_deleted(node: &TfgridNode<T>) {
-        // Clean up all active contracts
-        let active_node_contracts = ActiveNodeContracts::<T>::get(node.id);
-        for node_contract_id in active_node_contracts {
-            if let Some(mut contract) = Contracts::<T>::get(node_contract_id) {
-                // Bill contract
-                let _ = Self::update_contract_state(
-                    &mut contract,
-                    &types::ContractState::Deleted(types::Cause::CanceledByUser),
-                );
-                let _ = Self::bill_contract(node_contract_id);
-            }
-        }
-
-        // First clean up rent contract if it exists
-        if let Some(rc_id) = ActiveRentContractForNode::<T>::get(node.id) {
-            if let Some(mut contract) = Contracts::<T>::get(rc_id) {
-                // Bill contract
-                let _ = Self::update_contract_state(
-                    &mut contract,
-                    &types::ContractState::Deleted(types::Cause::CanceledByUser),
-                );
-                let _ = Self::bill_contract(contract.contract_id);
-            }
-        }
-    }
-}
-
-impl<T: Config> Pallet<T> {
-    // Validates if the given signer is the next block author based on the validators in session
-    // This can be used if an extrinsic should be refunded by the author in the same block
-    // It also requires that the keytype inserted for the offchain workers is the validator key
-    fn is_next_block_author(
-        signer: &Signer<T, <T as Config>::AuthorityId>,
-    ) -> Result<(), Error<T>> {
-        let author = <pallet_authorship::Pallet<T>>::author();
-        let validators = <pallet_session::Pallet<T>>::validators();
-
-        // Sign some arbitrary data in order to get the AccountId, maybe there is another way to do this?
-        let signed_message = signer.sign_message(&[0]);
-        if let Some(signed_message_data) = signed_message {
-            if let Some(block_author) = author {
-                let validator =
-                    <T as pallet_session::Config>::ValidatorIdOf::convert(block_author.clone())
-                        .ok_or(Error::<T>::IsNotAnAuthority)?;
-
-                let validator_count = validators.len();
-                let author_index = (validators.iter().position(|a| a == &validator).unwrap_or(0)
-                    + 1)
-                    % validator_count;
-
-                let signer_validator_account =
-                    <T as pallet_session::Config>::ValidatorIdOf::convert(
-                        signed_message_data.0.id.clone(),
-                    )
-                    .ok_or(Error::<T>::IsNotAnAuthority)?;
-
-                if signer_validator_account != validators[author_index] {
-                    return Err(Error::<T>::WrongAuthority);
-                }
-            }
-        }
-
-        Ok(().into())
     }
 }

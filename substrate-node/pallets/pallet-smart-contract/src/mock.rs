@@ -1,7 +1,6 @@
 #![cfg(test)]
 use super::*;
-use crate::name_contract::NameContractName;
-use crate::{self as pallet_smart_contract};
+use crate::{self as pallet_smart_contract, crypto::KEY_TYPE, name_contract::NameContractName};
 use frame_support::{
     construct_runtime,
     dispatch::DispatchErrorWithPostInfo,
@@ -23,8 +22,7 @@ use pallet_tfgrid::{
 use parity_scale_codec::{alloc::sync::Arc, Decode, Encode};
 use parking_lot::RwLock;
 use sp_core::{
-    crypto::key_types::DUMMY,
-    crypto::Ss58Codec,
+    crypto::{key_types::DUMMY, KeyTypeId, Ss58Codec},
     offchain::{
         testing::{self},
         OffchainDbExt, OffchainWorkerExt, TransactionPoolExt,
@@ -41,12 +39,15 @@ use sp_runtime::{
     },
     AccountId32, MultiSignature,
 };
-use sp_std::convert::{TryFrom, TryInto};
-use sp_std::marker::PhantomData;
+use sp_std::{
+    convert::{TryFrom, TryInto},
+    marker::PhantomData,
+};
 use std::{cell::RefCell, panic, thread};
 use tfchain_support::{
     constants::time::{MINUTES, SECS_PER_HOUR},
-    traits::ChangeNode,
+    traits::{ChangeNode, PublicIpModifier},
+    types::PublicIP,
 };
 
 impl_opaque_keys! {

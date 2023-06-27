@@ -1,14 +1,20 @@
 use crate::*;
 use frame_support::{
-    dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
-    ensure,
+    dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo, Pays},
+    ensure, BoundedVec,
+};
+use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf, TfgridNode};
+use sp_std::{vec, vec::Vec};
+use tfchain_support::{
+    traits::{ChangeNode, PublicIpModifier},
+    types::PublicIP,
 };
 
 impl<T: Config> Pallet<T> {
     pub fn _create_node_contract(
         account_id: T::AccountId,
         node_id: u32,
-        deployment_hash: HexHash,
+        deployment_hash: types::HexHash,
         deployment_data: DeploymentDataInput<T>,
         public_ips: u32,
         solution_provider_id: Option<u64>,
@@ -70,7 +76,7 @@ impl<T: Config> Pallet<T> {
             solution_provider_id,
         )?;
 
-        let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+        let now = Self::get_current_timestamp_in_secs();
         let contract_billing_information = types::ContractBillingInformation {
             last_updated: now,
             amount_unbilled: 0,
@@ -209,7 +215,7 @@ impl<T: Config> Pallet<T> {
         // Update Contract ID
         ContractID::<T>::put(id);
 
-        let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+        let now = Self::get_current_timestamp_in_secs();
         let mut contract_lock = types::ContractLock::default();
         contract_lock.lock_updated = now;
         ContractLock::<T>::insert(id, contract_lock);
@@ -220,7 +226,7 @@ impl<T: Config> Pallet<T> {
     pub fn _update_node_contract(
         account_id: T::AccountId,
         contract_id: u64,
-        deployment_hash: HexHash,
+        deployment_hash: types::HexHash,
         deployment_data: DeploymentDataInput<T>,
     ) -> DispatchResultWithPostInfo {
         let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
@@ -603,11 +609,41 @@ impl<T: Config> Pallet<T> {
                 Error::<T>::NodeNotAuthorizedToComputeReport
             );
 
-            Self::_calculate_report_cost(&report, &pricing_policy);
+            report.calculate_report_cost_units_usd::<T>(&pricing_policy);
+
             Self::deposit_event(Event::NruConsumptionReportReceived(report.clone()));
         }
 
         Ok(Pays::No.into())
+    }
+
+    pub fn _set_dedicated_node_extra_fee(
+        account_id: T::AccountId,
+        node_id: u32,
+        extra_fee: u64,
+    ) -> DispatchResultWithPostInfo {
+        // Make sure only the farmer that owns this node can set the extra fee
+        let twin_id = pallet_tfgrid::TwinIdByAccountID::<T>::get(&account_id)
+            .ok_or(Error::<T>::TwinNotExists)?;
+        let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
+        let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
+        ensure!(
+            twin_id == farm.twin_id,
+            Error::<T>::UnauthorizedToSetExtraFee
+        );
+
+        // Make sure there is no active node or rent contract on this node
+        ensure!(
+            ActiveRentContractForNode::<T>::get(node_id).is_none()
+                && ActiveNodeContracts::<T>::get(&node_id).is_empty(),
+            Error::<T>::NodeHasActiveContracts
+        );
+
+        // Set fee in mUSD
+        DedicatedNodesExtraFee::<T>::insert(node_id, extra_fee);
+        Self::deposit_event(Event::NodeExtraFeeSet { node_id, extra_fee });
+
+        Ok(().into())
     }
 }
 
@@ -626,6 +662,37 @@ impl<T: Config> PublicIpModifier for Pallet<T> {
                     Contracts::<T>::insert(ip.contract_id, &contract);
                 }
                 _ => {}
+            }
+        }
+    }
+}
+
+impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for Pallet<T> {
+    fn node_changed(_node: Option<&TfgridNode<T>>, _new_node: &TfgridNode<T>) {}
+
+    fn node_deleted(node: &TfgridNode<T>) {
+        // Clean up all active contracts
+        let active_node_contracts = ActiveNodeContracts::<T>::get(node.id);
+        for node_contract_id in active_node_contracts {
+            if let Some(mut contract) = Contracts::<T>::get(node_contract_id) {
+                // Bill contract
+                let _ = Self::update_contract_state(
+                    &mut contract,
+                    &types::ContractState::Deleted(types::Cause::CanceledByUser),
+                );
+                let _ = Self::bill_contract(node_contract_id);
+            }
+        }
+
+        // First clean up rent contract if it exists
+        if let Some(rc_id) = ActiveRentContractForNode::<T>::get(node.id) {
+            if let Some(mut contract) = Contracts::<T>::get(rc_id) {
+                // Bill contract
+                let _ = Self::update_contract_state(
+                    &mut contract,
+                    &types::ContractState::Deleted(types::Cause::CanceledByUser),
+                );
+                let _ = Self::bill_contract(contract.contract_id);
             }
         }
     }

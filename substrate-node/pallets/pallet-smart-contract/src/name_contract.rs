@@ -1,9 +1,7 @@
-use sp_std::{marker::PhantomData, vec::Vec};
-
 use frame_support::{ensure, BoundedVec, RuntimeDebugNoBound};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_std::convert::TryFrom;
+use sp_std::{convert::TryFrom, marker::PhantomData, vec::Vec};
 
 use crate::{Config, Error};
 

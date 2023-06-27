@@ -3,6 +3,7 @@ use frame_support::{
     dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
     ensure,
 };
+use sp_std::vec::Vec;
 
 impl<T: Config> Pallet<T> {
     pub fn _create_solution_provider(

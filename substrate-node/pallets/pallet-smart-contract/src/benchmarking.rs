@@ -6,6 +6,7 @@ use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::{
     assert_ok,
     traits::{OnFinalize, OnInitialize},
+    BoundedVec,
 };
 use frame_system::{EventRecord, Pallet as System, RawOrigin};
 use pallet_balances::Pallet as Balances;
@@ -14,12 +15,15 @@ use pallet_tfgrid::{
     CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, Gw4Input, Ip4Input,
     LatitudeInput, LongitudeInput, Pallet as TfgridModule, PkInput, RelayInput, ResourcesInput,
 };
-use pallet_timestamp::Pallet as Timestamp;
-use sp_runtime::traits::{Bounded, One, StaticLookup};
+use sp_runtime::{
+    traits::{Bounded, One, StaticLookup},
+    SaturatedConversion,
+};
 use sp_std::{
     convert::{TryFrom, TryInto},
     fmt::Debug,
     vec,
+    vec::Vec,
 };
 use tfchain_support::{
     resources::Resources,
@@ -154,7 +158,7 @@ benchmarks! {
 
         let report = types::NruConsumption {
             contract_id: contract_id,
-            timestamp: Timestamp::<T>::get().saturated_into::<u64>() / 1000,
+            timestamp: SmartContractModule::<T>::get_current_timestamp_in_secs(),
             window: 1000,
             nru: 10 * GIGABYTE,
         };
@@ -292,10 +296,10 @@ benchmarks! {
         _create_node_contract::<T>(user.clone());
         let contract_id = 1;
 
-        let now = Timestamp::<T>::get().saturated_into::<u64>() / 1000;
+        let now = SmartContractModule::<T>::get_current_timestamp_in_secs();
         let elapsed_seconds = 5; // need to be < 6 secs to bill at same block!
         let then: u64 = now + elapsed_seconds;
-        Timestamp::<T>::set_timestamp((then * 1000).try_into().unwrap());
+        pallet_timestamp::Pallet::<T>::set_timestamp((then * 1000).try_into().unwrap());
 
         _push_contract_used_resources_report::<T>(farmer.clone());
         _push_contract_nru_consumption_report::<T>(farmer.clone(), then, elapsed_seconds);
@@ -309,7 +313,7 @@ benchmarks! {
         assert_eq!(lock.amount_locked, cost);
         let contract_bill = types::ContractBill {
             contract_id,
-            timestamp: <Timestamp<T>>::get().saturated_into::<u64>() / 1000,
+            timestamp: SmartContractModule::<T>::get_current_timestamp_in_secs(),
             discount_level: types::DiscountLevel::Gold,
             amount_billed: cost.saturated_into::<u128>(),
         };
@@ -810,7 +814,7 @@ pub(crate) fn get_public_ip_gw_input(public_ip_gw_input: &[u8]) -> Gw4Input {
     BoundedVec::try_from(public_ip_gw_input.to_vec()).expect("Invalid public ip (gw) input.")
 }
 
-pub(crate) fn get_deployment_hash_input(deployment_hash_input: &[u8]) -> HexHash {
+pub(crate) fn get_deployment_hash_input(deployment_hash_input: &[u8]) -> types::HexHash {
     deployment_hash_input
         .to_vec()
         .try_into()

@@ -1,13 +1,6 @@
-use crate::pallet;
-use crate::pallet::BalanceOf;
-use crate::pallet::Error;
-use crate::types;
-use crate::types::{Contract, ContractBillingInformation, ServiceContract, ServiceContractBill};
-use crate::Config;
-use crate::DedicatedNodesExtraFee;
+use crate::*;
 use frame_support::{dispatch::DispatchErrorWithPostInfo, traits::Get};
 use log;
-use pallet_tfgrid::types as pallet_tfgrid_types;
 use sp_runtime::{traits::Zero, Percent, SaturatedConversion};
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
@@ -16,8 +9,8 @@ use tfchain_support::{
     types::NodeCertification,
 };
 
-impl<T: Config> Contract<T> {
-    pub fn get_billing_info(&self) -> ContractBillingInformation {
+impl<T: Config> types::Contract<T> {
+    pub fn get_billing_info(&self) -> types::ContractBillingInformation {
         pallet::ContractBillingInformationByID::<T>::get(self.contract_id)
     }
 
@@ -36,6 +29,7 @@ impl<T: Config> Contract<T> {
         // - NameContract
         let total_cost =
             self.calculate_contract_cost_units_usd(&pricing_policy, seconds_elapsed)?;
+
         // If cost is 0, reinsert to be billed at next interval
         if total_cost == 0 {
             return Ok((BalanceOf::<T>::zero(), types::DiscountLevel::None));
@@ -44,7 +38,7 @@ impl<T: Config> Contract<T> {
         let total_cost_tft_64 = calculate_cost_in_tft_from_units_usd::<T>(total_cost)?;
 
         // Calculate the amount due and discount received based on the total_cost amount due
-        let (amount_due, discount_received) = calculate_discount::<T>(
+        let (amount_due, discount_received) = calculate_discount_tft::<T>(
             total_cost_tft_64,
             seconds_elapsed,
             balance,
@@ -56,7 +50,7 @@ impl<T: Config> Contract<T> {
 
     pub fn calculate_contract_cost_units_usd(
         &self,
-        pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
+        pricing_policy: &pallet_tfgrid::types::PricingPolicy<T::AccountId>,
         seconds_elapsed: u64,
     ) -> Result<u64, DispatchErrorWithPostInfo> {
         if seconds_elapsed == 0 {
@@ -84,7 +78,7 @@ impl<T: Config> Contract<T> {
                     bill_resources = false
                 }
 
-                let contract_cost = calculate_resources_cost::<T>(
+                let contract_cost = calculate_resources_cost_units_usd::<T>(
                     node_contract_resources.used,
                     node_contract.public_ips,
                     seconds_elapsed,
@@ -97,7 +91,7 @@ impl<T: Config> Contract<T> {
                 let node = pallet_tfgrid::Nodes::<T>::get(rent_contract.node_id)
                     .ok_or(Error::<T>::NodeNotExists)?;
 
-                let contract_cost = calculate_resources_cost::<T>(
+                let contract_cost = calculate_resources_cost_units_usd::<T>(
                     node.resources,
                     0,
                     seconds_elapsed,
@@ -135,10 +129,46 @@ impl<T: Config> Contract<T> {
     }
 }
 
-impl ServiceContract {
+impl types::NruConsumption {
+    // Calculates the total cost of a report.
+    // Takes in a report for NRU (network resource units)
+    // Updates the contract's billing information in storage
+    pub fn calculate_report_cost_units_usd<T: Config>(
+        &self,
+        pricing_policy: &pallet_tfgrid::types::PricingPolicy<T::AccountId>,
+    ) {
+        let mut contract_billing_info = ContractBillingInformationByID::<T>::get(self.contract_id);
+        if self.timestamp < contract_billing_info.last_updated {
+            return;
+        }
+
+        // seconds elapsed is the report.window
+        let seconds_elapsed = self.window;
+        log::debug!("seconds elapsed: {:?}", seconds_elapsed);
+
+        // calculate NRU used and the cost
+        let used_nru = U64F64::from_num(self.nru) / pricing_policy.nu.factor_base_1000();
+        let nu_cost = used_nru
+            * (U64F64::from_num(pricing_policy.nu.value)
+                / U64F64::from_num(T::BillingReferencePeriod::get()))
+            * U64F64::from_num(seconds_elapsed);
+        log::debug!("nu cost: {:?}", nu_cost);
+
+        // save total
+        let total = nu_cost.round().to_num::<u64>();
+        log::debug!("total cost: {:?}", total);
+
+        // update contract billing info
+        contract_billing_info.amount_unbilled += total;
+        contract_billing_info.last_updated = self.timestamp;
+        ContractBillingInformationByID::<T>::insert(self.contract_id, &contract_billing_info);
+    }
+}
+
+impl types::ServiceContract {
     pub fn calculate_bill_cost_tft<T: Config>(
         &self,
-        service_bill: ServiceContractBill,
+        service_bill: types::ServiceContractBill,
     ) -> Result<BalanceOf<T>, DispatchErrorWithPostInfo> {
         // Calculate the cost in units usd for service contract bill
         let total_cost = self.calculate_bill_cost_units_usd::<T>(service_bill);
@@ -158,7 +188,7 @@ impl ServiceContract {
 
     pub fn calculate_bill_cost_units_usd<T: Config>(
         &self,
-        service_bill: ServiceContractBill,
+        service_bill: types::ServiceContractBill,
     ) -> u64 {
         // Convert fees from mUSD to units USD
         let base_fee_units_usd = self.base_fee * 10000;
@@ -173,11 +203,11 @@ impl ServiceContract {
 }
 
 // Calculates the total cost of a node contract.
-pub fn calculate_resources_cost<T: Config>(
+pub fn calculate_resources_cost_units_usd<T: Config>(
     resources: Resources,
     ipu: u32,
     seconds_elapsed: u64,
-    pricing_policy: &pallet_tfgrid_types::PricingPolicy<T::AccountId>,
+    pricing_policy: &pallet_tfgrid::types::PricingPolicy<T::AccountId>,
     bill_resources: bool,
 ) -> u64 {
     let mut total_cost = U64F64::from_num(0);
@@ -274,7 +304,7 @@ pub(crate) fn calculate_cu(cru: U64F64, mru: U64F64) -> U64F64 {
 // Calculates the discount that will be applied to the billing of the contract
 // Returns an amount due as balance object and a static string indicating which kind of discount it received
 // (default, bronze, silver, gold or none)
-pub fn calculate_discount<T: Config>(
+pub fn calculate_discount_tft<T: Config>(
     amount_due: u64,
     seconds_elapsed: u64,
     balance: BalanceOf<T>,

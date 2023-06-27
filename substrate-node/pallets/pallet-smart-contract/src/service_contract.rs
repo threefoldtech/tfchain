@@ -2,7 +2,12 @@ use crate::*;
 use frame_support::{
     dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
     ensure,
+    traits::{Currency, ExistenceRequirement},
+    transactional, BoundedVec,
 };
+use sp_core::Get;
+use sp_std::{vec, vec::Vec};
+use substrate_fixed::types::U64F64;
 
 impl<T: Config> Pallet<T> {
     pub fn _service_contract_create(
@@ -185,7 +190,7 @@ impl<T: Config> Pallet<T> {
             service_contract.state = types::ServiceContractState::ApprovedByBoth;
 
             // Initialize billing time
-            let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+            let now = Self::get_current_timestamp_in_secs();
             service_contract.last_bill = now;
         }
 
@@ -291,7 +296,7 @@ impl<T: Config> Pallet<T> {
         );
 
         // Get elapsed time (in seconds) to bill for service
-        let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+        let now = Self::get_current_timestamp_in_secs();
         let elapsed_seconds_since_last_bill = now - service_contract.last_bill;
 
         // Billing time (window) is max 1h by design
