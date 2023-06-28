@@ -1,6 +1,6 @@
 #![cfg(test)]
 use super::*;
-use crate::{self as pallet_smart_contract, crypto::KEY_TYPE, name_contract::NameContractName};
+use crate::{self as pallet_smart_contract, crypto::KEY_TYPE, grid_contract::NameContractName};
 use frame_support::{
     construct_runtime,
     dispatch::DispatchErrorWithPostInfo,

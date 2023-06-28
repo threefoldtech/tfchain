@@ -45,6 +45,7 @@ impl<T: Config> Pallet<T> {
         if let Some(mut solution_provider) = SolutionProviders::<T>::get(solution_provider_id) {
             solution_provider.approved = approve;
             SolutionProviders::<T>::insert(solution_provider_id, &solution_provider);
+
             Self::deposit_event(Event::SolutionProviderApproved(
                 solution_provider_id,
                 approve,

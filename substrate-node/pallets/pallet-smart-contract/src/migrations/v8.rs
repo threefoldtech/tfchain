@@ -9,7 +9,7 @@ use sp_runtime::traits::{CheckedSub, SaturatedConversion};
 use sp_std::{collections::btree_map::BTreeMap, marker::PhantomData};
 
 #[cfg(feature = "try-runtime")]
-use sp_std::vec::Vec;
+use sp_std::{vec, vec::Vec};
 
 pub struct FixTwinLockedBalances<T: Config>(PhantomData<T>);
 

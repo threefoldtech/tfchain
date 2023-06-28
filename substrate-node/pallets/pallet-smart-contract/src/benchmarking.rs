@@ -262,9 +262,7 @@ benchmarks! {
         let solution_provider_id = 1;
         assert!(SmartContractModule::<T>::solution_providers(solution_provider_id).is_some());
         let solution_provider = SmartContractModule::<T>::solution_providers(solution_provider_id).unwrap();
-        assert_eq!(
-            solution_provider.providers, providers
-        );
+        assert_eq!(solution_provider.providers, providers);
         assert_last_event::<T>(Event::SolutionProviderCreated(solution_provider).into());
     }
 
@@ -280,6 +278,7 @@ benchmarks! {
     verify {
         assert!(SmartContractModule::<T>::solution_providers(solution_provider_id).is_some());
         let solution_provider = SmartContractModule::<T>::solution_providers(solution_provider_id).unwrap();
+        assert_eq!(solution_provider.approved, approve);
         assert_last_event::<T>(Event::SolutionProviderApproved(solution_provider_id, approve).into());
     }
 

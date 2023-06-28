@@ -1,6 +1,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub use pallet::*;
+pub mod billing;
+pub mod cost;
+pub mod grid_contract;
+pub mod migrations;
+pub mod service_contract;
+pub mod solution_provider;
+pub mod types;
+pub mod weights;
 
 #[cfg(test)]
 mod mock;
@@ -13,6 +20,9 @@ mod test_utils;
 
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
+
+// Re-export pallet items so that they can be accessed from the crate namespace.
+pub use pallet::*;
 
 pub mod crypto {
     use sp_core::{crypto::KeyTypeId, sr25519::Signature as Sr25519Signature};
@@ -45,16 +55,6 @@ pub mod crypto {
         type GenericPublic = sp_core::sr25519::Public;
     }
 }
-
-pub mod billing;
-pub mod cost;
-pub mod grid_contract;
-pub mod migrations;
-pub mod name_contract;
-pub mod service_contract;
-pub mod solution_provider;
-pub mod types;
-pub mod weights;
 
 #[frame_support::pallet]
 pub mod pallet {

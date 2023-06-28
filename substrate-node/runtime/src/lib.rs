@@ -401,7 +401,7 @@ impl pallet_smart_contract::Config for Runtime {
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
     type Call = RuntimeCall;
     type MaxNameContractNameLength = MaxNameContractNameLength;
-    type NameContractName = pallet_smart_contract::name_contract::NameContractName<Runtime>;
+    type NameContractName = pallet_smart_contract::grid_contract::NameContractName<Runtime>;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
     type MaxDeploymentDataLength = MaxDeploymentDataLength;
     type MaxNodeContractPublicIps = MaxFarmPublicIps;
