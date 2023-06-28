@@ -166,7 +166,6 @@ impl<T: Config> Pallet<T> {
         let valid_name =
             NameContractNameOf::<T>::try_from(name).map_err(DispatchErrorWithPostInfo::from)?;
 
-        // Validate name uniqueness
         ensure!(
             !ContractIDByNameRegistration::<T>::contains_key(&valid_name),
             Error::<T>::NameExists
