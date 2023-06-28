@@ -348,21 +348,20 @@ impl<T: Config> Pallet<T> {
             // Fetch twin balance, if the amount locked in the contract lock exceeds the current unlocked
             // balance we can only transfer out the remaining balance
             // https://github.com/threefoldtech/tfchain/issues/479
-            let mut twin_balance = Self::get_usable_balance(&twin.account_id);
-
-            if new_locked_balance > <T as Config>::Currency::minimum_balance() {
-                // TODO: check if this is needed
-                <T as Config>::Currency::set_lock(
-                    GRID_LOCK_ID,
-                    &twin.account_id,
-                    new_locked_balance,
-                    WithdrawReasons::all(),
-                );
-                twin_balance = Self::get_usable_balance(&twin.account_id);
-            } else {
-                twin_balance = twin_balance
-                    .checked_sub(&<T as Config>::Currency::minimum_balance())
-                    .unwrap_or(BalanceOf::<T>::zero());
+            let min_balance = <T as Config>::Currency::minimum_balance();
+            let mut twin_balance = match new_locked_balance {
+                bal if bal > min_balance => {
+                    <T as Config>::Currency::set_lock(
+                        GRID_LOCK_ID,
+                        &twin.account_id,
+                        new_locked_balance,
+                        WithdrawReasons::all(),
+                    );
+                    Self::get_usable_balance(&twin.account_id)
+                }
+                _ => Self::get_usable_balance(&twin.account_id)
+                    .checked_sub(&min_balance)
+                    .unwrap_or(BalanceOf::<T>::zero()),
             };
 
             // First, distribute extra cultivation rewards if any
