@@ -4,10 +4,12 @@ use frame_support::{
     Blake2_128Concat,
 };
 use log::{debug, info};
+use sp_core::Get;
+use sp_runtime::traits::Zero;
 use sp_std::marker::PhantomData;
 
 #[cfg(feature = "try-runtime")]
-use sp_std::vec::Vec;
+use sp_std::{vec, vec::Vec};
 
 // Storage alias from ContractLock v11
 #[storage_alias]

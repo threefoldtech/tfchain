@@ -1,11 +1,15 @@
 use crate::*;
-use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
+use frame_support::{
+    traits::{Currency, LockableCurrency, OnRuntimeUpgrade, WithdrawReasons},
+    weights::Weight,
+};
 use log::{debug, info};
-use sp_std::collections::btree_map::BTreeMap;
-use sp_std::marker::PhantomData;
+use sp_core::Get;
+use sp_runtime::traits::{CheckedSub, SaturatedConversion};
+use sp_std::{collections::btree_map::BTreeMap, marker::PhantomData};
 
 #[cfg(feature = "try-runtime")]
-use sp_std::vec::Vec;
+use sp_std::{vec, vec::Vec};
 
 pub struct FixTwinLockedBalances<T: Config>(PhantomData<T>);
 

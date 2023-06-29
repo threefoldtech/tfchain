@@ -1,5 +1,7 @@
-use crate::pallet::{MaxDeploymentDataLength, MaxNodeContractPublicIPs};
-use crate::Config;
+use crate::{
+    pallet::{MaxDeploymentDataLength, MaxNodeContractPublicIPs},
+    Config,
+};
 use core::{convert::TryInto, ops::Add};
 use frame_support::{pallet_prelude::ConstU32, BoundedVec, RuntimeDebugNoBound};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};

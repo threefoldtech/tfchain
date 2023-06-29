@@ -1,10 +1,10 @@
-use crate::pallet_tfgrid;
 use crate::*;
 use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
 use log::{info, debug};
 use sp_runtime::Saturating;
-use sp_std::marker::PhantomData;
 use scale_info::prelude::string::String;
+use sp_core::Get;
+use sp_std::{marker::PhantomData, vec, vec::Vec};
 
 pub struct CleanStorageState<T: Config>(PhantomData<T>);
 
@@ -136,7 +136,7 @@ pub fn check_contracts<T: Config>() {
     );
 }
 
-fn check_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_hash: HexHash) {
+fn check_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_hash: types::HexHash) {
     if pallet_tfgrid::Nodes::<T>::get(node_id).is_some() {
         // ActiveNodeContracts
         let active_node_contracts = ActiveNodeContracts::<T>::get(node_id);
@@ -180,7 +180,7 @@ fn check_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_has
         );
     }
 
-    if deployment_hash == HexHash::default() {
+    if deployment_hash == types::HexHash::default() {
         debug!(
             " ⚠️    Node Contract (id: {}) on node {}: deployment hash is default ({:?})",
             contract_id, node_id, String::from_utf8_lossy(&deployment_hash)
@@ -592,7 +592,7 @@ pub fn clean_contracts<T: Config>() -> frame_support::weights::Weight {
 
         // ContractLock
         if !ContractLock::<T>::contains_key(contract_id) {
-            let now = <timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000;
+            let now = Pallet::<T>::get_current_timestamp_in_secs();
             r.saturating_inc();
             let mut contract_lock = types::ContractLock::default();
             contract_lock.lock_updated = now;
@@ -610,8 +610,8 @@ pub fn clean_contracts<T: Config>() -> frame_support::weights::Weight {
     T::DbWeight::get().reads_writes(r.saturating_add(2), w)
 }
 
-fn clean_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_hash: HexHash, r: &mut u64, w: &mut u64) {
-    if deployment_hash == HexHash::default() {
+fn clean_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_hash: types::HexHash, r: &mut u64, w: &mut u64) {
+    if deployment_hash == types::HexHash::default() {
         Contracts::<T>::remove(contract_id);
         (*w).saturating_inc();
     }

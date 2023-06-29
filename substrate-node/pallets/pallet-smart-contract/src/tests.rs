@@ -1,7 +1,7 @@
-use super::{types, Event as SmartContractEvent};
-use crate::cost;
-use crate::types::HexHash;
-use crate::{mock::RuntimeEvent as MockEvent, mock::*, test_utils::*, Error};
+use crate::{
+    cost, mock::RuntimeEvent as MockEvent, mock::*, test_utils::*, types, Error,
+    Event as SmartContractEvent,
+};
 use frame_support::{
     assert_noop, assert_ok, bounded_vec,
     dispatch::Pays,
@@ -18,8 +18,8 @@ use sp_core::H256;
 use sp_runtime::{assert_eq_error_rate, traits::SaturatedConversion, Perbill, Percent};
 use sp_std::convert::{TryFrom, TryInto};
 use substrate_fixed::types::U64F64;
-use tfchain_support::constants::time::{SECS_PER_BLOCK, SECS_PER_HOUR};
 use tfchain_support::{
+    constants::time::{SECS_PER_BLOCK, SECS_PER_HOUR},
     resources::Resources,
     types::{FarmCertification, NodeCertification, PublicIP, IP4},
 };
@@ -50,7 +50,7 @@ fn test_create_node_contract_works() {
         let contract_id = 1;
 
         // Ensure contract_id is stored at right billing loop index
-        let index = SmartContractModule::get_contract_billing_loop_index(contract_id);
+        let index = SmartContractModule::get_billing_loop_index_from_contract_id(contract_id);
         assert_eq!(
             SmartContractModule::contract_to_bill_at_block(index),
             vec![contract_id]
@@ -494,7 +494,7 @@ fn test_cancel_node_contract_and_remove_from_billing_loop_works() {
         run_to_block(6, None);
 
         // Ensure contract_id is stored at right billing loop index
-        let index = SmartContractModule::get_contract_billing_loop_index(contract_id);
+        let index = SmartContractModule::get_billing_loop_index_from_contract_id(contract_id);
         assert_eq!(
             SmartContractModule::contract_to_bill_at_block(index),
             vec![contract_id]
@@ -533,7 +533,7 @@ fn test_remove_from_billing_loop_wrong_index_fails() {
         let contract_id = 1;
 
         // Ensure contract_id is stored at right billing loop index
-        let index = SmartContractModule::get_contract_billing_loop_index(contract_id);
+        let index = SmartContractModule::get_billing_loop_index_from_contract_id(contract_id);
         assert_eq!(
             SmartContractModule::contract_to_bill_at_block(index),
             vec![contract_id]
@@ -958,7 +958,7 @@ fn test_node_contract_billing_details() {
         push_nru_report_for_contract(contract_id, 10);
 
         // Ensure contract_id is stored at right billing loop index
-        let index = SmartContractModule::get_contract_billing_loop_index(contract_id);
+        let index = SmartContractModule::get_billing_loop_index_from_contract_id(contract_id);
         assert_eq!(
             SmartContractModule::contract_to_bill_at_block(index),
             vec![contract_id]
@@ -1055,7 +1055,7 @@ fn test_node_contract_billing_details_with_solution_provider() {
         push_nru_report_for_contract(contract_id, 10);
 
         // Ensure contract_id is stored at right billing loop index
-        let index = SmartContractModule::get_contract_billing_loop_index(contract_id);
+        let index = SmartContractModule::get_billing_loop_index_from_contract_id(contract_id);
         assert_eq!(
             SmartContractModule::contract_to_bill_at_block(index),
             vec![contract_id]
@@ -1113,14 +1113,14 @@ fn test_multiple_contracts_billing_loop_works() {
         let name_contract_id = 2;
 
         // Ensure node_contract_id is stored at right billing loop index
-        let index = SmartContractModule::get_contract_billing_loop_index(node_contract_id);
+        let index = SmartContractModule::get_billing_loop_index_from_contract_id(node_contract_id);
         assert_eq!(
             SmartContractModule::contract_to_bill_at_block(index),
             vec![node_contract_id]
         );
 
         // Ensure name_contract_id is stored at right billing loop index
-        let index = SmartContractModule::get_contract_billing_loop_index(name_contract_id);
+        let index = SmartContractModule::get_billing_loop_index_from_contract_id(name_contract_id);
         assert_eq!(
             SmartContractModule::contract_to_bill_at_block(index),
             vec![name_contract_id]
@@ -1790,7 +1790,7 @@ fn test_name_contract_billing() {
         let contract_id = 1;
 
         // Ensure contract_id is stored at right billing loop index
-        let index = SmartContractModule::get_contract_billing_loop_index(contract_id);
+        let index = SmartContractModule::get_billing_loop_index_from_contract_id(contract_id);
         assert_eq!(
             SmartContractModule::contract_to_bill_at_block(index),
             vec![contract_id]
@@ -2509,7 +2509,7 @@ fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works
         assert_eq!(c1, None);
 
         // Ensure contract_id is not in billing loop anymore
-        let index = SmartContractModule::get_contract_billing_loop_index(contract_id);
+        let index = SmartContractModule::get_billing_loop_index_from_contract_id(contract_id);
         assert_eq!(
             SmartContractModule::contract_to_bill_at_block(index),
             Vec::<u64>::new()
@@ -3876,13 +3876,13 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
         let rent_contract = SmartContractModule::contracts(rent_contract_id).unwrap();
 
         // Ensure contract_id is stored at right billing loop index
-        let index = SmartContractModule::get_contract_billing_loop_index(rent_contract_id);
+        let index = SmartContractModule::get_billing_loop_index_from_contract_id(rent_contract_id);
         assert_eq!(
             SmartContractModule::contract_to_bill_at_block(index),
             vec![rent_contract_id]
         );
 
-        let now = Timestamp::get().saturated_into::<u64>() / 1000;
+        let now = SmartContractModule::get_current_timestamp_in_secs();
         let mut rent_contract_cost_tft = 0u64;
         let mut extra_fee_cost_tft = 0;
 
@@ -3912,7 +3912,7 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
                 .unwrap();
         }
 
-        let then = Timestamp::get().saturated_into::<u64>() / 1000;
+        let then = SmartContractModule::get_current_timestamp_in_secs();
         let seconds_elapsed = then - now;
         log::debug!("seconds elapsed: {}", seconds_elapsed);
 
@@ -3968,7 +3968,7 @@ macro_rules! test_calculate_discount {
             // Give just enough balance for targeted number of months at the rate of 1000 per hour
             let balance = U64F64::from_num(amount_due * 24 * 30) * U64F64::from_num(number_of_months);
 
-            let result = cost::calculate_discount::<TestRuntime>(
+            let result = cost::calculate_discount_tft::<TestRuntime>(
                 amount_due,
                 seconds_elapsed,
                 balance.round().to_num::<u64>(),
@@ -4398,7 +4398,7 @@ fn record(event: RuntimeEvent) -> EventRecord<RuntimeEvent, H256> {
     }
 }
 
-fn generate_deployment_hash() -> HexHash {
+fn generate_deployment_hash() -> types::HexHash {
     let hash: [u8; 32] = H256::random().to_fixed_bytes();
     hash
 }

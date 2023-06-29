@@ -1,12 +1,11 @@
 use crate::*;
 use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
 use log::{debug, info};
-use sp_std::marker::PhantomData;
+use sp_core::Get;
+use sp_std::{marker::PhantomData, vec::Vec};
 
 #[cfg(feature = "try-runtime")]
 use parity_scale_codec::{Decode, Encode};
-#[cfg(feature = "try-runtime")]
-use sp_std::vec::Vec;
 
 pub struct ContractMigrationV5<T: Config>(PhantomData<T>);
 
