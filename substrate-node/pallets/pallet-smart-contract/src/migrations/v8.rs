@@ -5,7 +5,6 @@ use frame_support::{
 };
 use log::{debug, info};
 use sp_core::Get;
-use sp_runtime::traits::{CheckedSub, SaturatedConversion};
 use sp_std::{collections::btree_map::BTreeMap, marker::PhantomData};
 
 #[cfg(feature = "try-runtime")]
@@ -128,19 +127,4 @@ pub fn migrate_to_version_8<T: Config>() -> frame_support::weights::Weight {
     info!("👥  Smart Contract pallet to V8 succeeded");
     // Return the weight consumed by the migration.
     T::DbWeight::get().reads(reads) + T::DbWeight::get().writes(writes + 1)
-}
-
-fn get_usable_balance<T: Config>(account_id: &T::AccountId) -> BalanceOf<T> {
-    let balance = pallet_balances::pallet::Pallet::<T>::usable_balance(account_id);
-    let b = balance.saturated_into::<u128>();
-    BalanceOf::<T>::saturated_from(b)
-}
-
-pub fn get_locked_balance<T: Config>(account_id: &T::AccountId) -> BalanceOf<T> {
-    let usable_balance = get_usable_balance::<T>(account_id);
-
-    let free_balance = <T as Config>::Currency::free_balance(account_id);
-
-    let locked_balance = free_balance.checked_sub(&usable_balance);
-    locked_balance.unwrap_or_default()
 }
