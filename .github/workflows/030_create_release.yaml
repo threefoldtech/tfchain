@@ -75,9 +75,6 @@ jobs:
           issuesWoLabels: false
           issues: false
 
-      - name: List files
-        run: ls -la ${{ steps.download.outputs.download-path }}
-
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
@@ -89,4 +86,4 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref, 'rc') }}
           body_path: ${{ steps.changelog.outputs.changelog }}
-          files: ${{ steps.download.outputs.download-path }}/*
+          files: ${{ steps.download.outputs.download-path }}/tfchain_runtime.compact.compressed.wasm
