@@ -54,6 +54,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Work around for https://github.com/heinrichreimer/action-github-changelog-generator/issues/21
 
       - name: Download artifacts
         uses: actions/download-artifact@v2
@@ -65,7 +67,11 @@ jobs:
         uses: heinrichreimer/github-changelog-generator-action@v2.3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          future-release: ${{ github.ref }}
+          onlyLastTag: true
+          stripHeaders: true
+          stripGeneratorNotice: true
+          issuesWoLabels: false
+          issues: false
 
       - name: Create Release
         id: create_release
