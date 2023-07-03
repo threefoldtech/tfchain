@@ -1,4 +1,4 @@
-# TFchain &middot; ![Build & Tests](https://github.com/threefoldtech/tfchain/actions/workflows/build_test.yaml/badge.svg)
+# TFchain &middot; ![Build & Tests](https://github.com/threefoldtech/tfchain/actions/workflows/010_build_and_test.yaml/badge.svg)
 
 <p align="center">
   <img height="50%" width="50%" src="./substrate-node/.maintain/header.png">
