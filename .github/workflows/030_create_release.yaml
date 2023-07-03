@@ -58,6 +58,7 @@ jobs:
           fetch-depth: 0 # Work around for https://github.com/heinrichreimer/action-github-changelog-generator/issues/21
 
       - name: Download artifacts
+        id: download
         uses: actions/download-artifact@v2
         with:
           name: tfchain-runtime
@@ -80,8 +81,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          name: Release ${{ github.ref }}
           draft: false
           prerelease: ${{ contains(github.ref, 'rc') }}
           body_path: ${{ steps.changelog.outputs.changelog }}
-          files: tfchain-runtime
+          files: ${{ steps.download.outputs.download-path }}/tfchain-runtime
