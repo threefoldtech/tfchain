@@ -86,4 +86,4 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref, 'rc') }}
           body_path: ${{ steps.changelog.outputs.changelog }}
-          files: ${{ steps.download.outputs.download-path }}/tfchain_runtime.compact.compressed.wasm
+          files: tfchain-runtime/tfchain_runtime.compact.compressed.wasm
