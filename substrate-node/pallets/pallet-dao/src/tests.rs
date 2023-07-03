@@ -1,5 +1,5 @@
-use super::Event as DaoEvent;
-use crate::{mock::RuntimeEvent as MockEvent, mock::*, Error};
+use crate::pallet::Event as DaoEvent;
+use crate::{mock::RuntimeEvent as MockEvent, mock::*, pallet::Error};
 use frame_support::{assert_noop, assert_ok, bounded_vec, dispatch::GetDispatchInfo};
 use frame_system::{EventRecord, Phase, RawOrigin};
 use log::info;
