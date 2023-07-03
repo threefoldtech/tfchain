@@ -45,8 +45,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: tfchain-runtime
-          path: |
-            substrate-node/${{ steps.srtool_build.outputs.wasm_compressed }}
+          path: substrate-node/${{ steps.srtool_build.outputs.wasm_compressed }}
 
   release:
     needs: srtool
@@ -75,6 +74,9 @@ jobs:
           issuesWoLabels: false
           issues: false
 
+      - name: List Files
+        run: ls -la tfchain-runtime
+
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
@@ -84,6 +86,7 @@ jobs:
           tag_name: ${{ github.ref }}
           name: Release ${{ github.ref }}
           draft: false
+          fail_on_unmatched_files: true
           prerelease: ${{ contains(github.ref, 'rc') }}
           body_path: ${{ steps.changelog.outputs.changelog }}
-          files: tfchain-runtime/tfchain_runtime.compact.compressed.wasm
+          files: tfchain-runtime/*
