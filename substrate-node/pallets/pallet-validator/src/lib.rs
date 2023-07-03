@@ -5,16 +5,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support;
-use frame_support::traits::Currency;
-use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
-use sp_runtime::traits::StaticLookup;
-use sp_std::convert::TryInto;
-use sp_std::prelude::*;
-use substrate_validator_set;
-
-pub mod types;
 pub use pallet::*;
+
+mod validator;
+pub mod types;
 
 #[cfg(test)]
 mod tests;
@@ -31,7 +25,14 @@ pub mod weights;
 pub mod pallet {
     use super::weights::WeightInfo;
     use super::*;
+    use frame_support;
+    use frame_support::traits::Currency;
+    use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
+    use sp_runtime::traits::StaticLookup;
+    use sp_std::convert::TryInto;
+    use sp_std::prelude::*;
+    use substrate_validator_set;
     pub type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
@@ -132,28 +133,14 @@ pub mod pallet {
             info: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin.clone())?;
-
-            // Request should not be a duplicate
-            ensure!(
-                !<Validator<T>>::contains_key(&address),
-                Error::<T>::DuplicateValidator
-            );
-
-            let request = types::Validator {
-                validator_node_account: validator_node_account.clone(),
+            Self::_create_validator_request(
+                address,
+                validator_node_account,
                 stash_account,
                 description,
                 tf_connect_id,
                 info,
-                state: types::ValidatorRequestState::Created,
-            };
-
-            // Create a validator request object
-            <Validator<T>>::insert(&address, &request);
-
-            Self::deposit_event(Event::ValidatorRequestCreated(address, request.clone()));
-
-            Ok(().into())
+            )
         }
 
         /// Start participating in consensus
@@ -164,32 +151,7 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::activate_validator_node())]
         pub fn activate_validator_node(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
-
-            let mut validator = <Validator<T>>::get(&address)
-                .ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
-
-            ensure!(
-                validator.state != types::ValidatorRequestState::Validating,
-                Error::<T>::ValidatorValidatingAlready
-            );
-            ensure!(
-                validator.state == types::ValidatorRequestState::Approved,
-                Error::<T>::ValidatorNotApproved
-            );
-
-            // Update the validator request
-            validator.state = types::ValidatorRequestState::Validating;
-            <Validator<T>>::insert(address, &validator);
-
-            // Add the validator and rotate
-            substrate_validator_set::Pallet::<T>::add_validator(
-                frame_system::RawOrigin::Root.into(),
-                validator.validator_node_account.clone(),
-            )?;
-
-            Self::deposit_event(Event::ValidatorActivated(validator));
-
-            Ok(().into())
+            Self::_activate_validator_node(address)
         }
 
         /// Change validator node account
@@ -203,36 +165,7 @@ pub mod pallet {
             new_node_validator_account: T::AccountId,
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
-
-            let mut validator = <Validator<T>>::get(&address)
-                .ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
-
-            // if validator is validating, also remove old one from consensus and add new one.
-            if validator.state == types::ValidatorRequestState::Validating {
-                // Remove the old validator and rotate session
-                substrate_validator_set::Pallet::<T>::remove_validator(
-                    frame_system::RawOrigin::Root.into(),
-                    validator.validator_node_account.clone(),
-                )?;
-                Self::deposit_event(Event::NodeValidatorRemoved(
-                    validator.validator_node_account.clone(),
-                ));
-
-                // Add the new validator and rotate session
-                substrate_validator_set::Pallet::<T>::add_validator(
-                    frame_system::RawOrigin::Root.into(),
-                    new_node_validator_account.clone(),
-                )?;
-                Self::deposit_event(Event::NodeValidatorChanged(
-                    new_node_validator_account.clone(),
-                ));
-            }
-
-            // Set the new validator node account on the validator struct
-            validator.validator_node_account = new_node_validator_account;
-            <Validator<T>>::insert(address, &validator);
-
-            Ok(().into())
+            Self::_change_validator_node_account(address, new_node_validator_account)
         }
 
         /// Bond an account to a validator account
@@ -244,18 +177,7 @@ pub mod pallet {
             validator: <T::Lookup as StaticLookup>::Source,
         ) -> DispatchResultWithPostInfo {
             let stash = ensure_signed(origin.clone())?;
-
-            if <Bonded<T>>::contains_key(&stash) {
-                Err(Error::<T>::AlreadyBonded)?
-            }
-            let validator = T::Lookup::lookup(validator)?;
-            // TOCHECK: enough to identify validator?
-
-            <Bonded<T>>::insert(&stash, &validator);
-
-            Self::deposit_event(Event::Bonded(stash.clone()));
-
-            Ok(().into())
+            Self::_bond(stash, validator)
         }
 
         /// Approve validator (council)
@@ -268,26 +190,8 @@ pub mod pallet {
             validator_account: <T::Lookup as StaticLookup>::Source,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-
-            Self::is_council_member(&who)?;
-
-            let v = T::Lookup::lookup(validator_account.clone())?;
-            let mut validator = <Validator<T>>::get(&v)
-                .ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
-
-            // Set state to approved
-            validator.state = types::ValidatorRequestState::Approved;
-            <Validator<T>>::insert(v.clone(), &validator);
-
-            // Add the validator as a council member
-            pallet_membership::Pallet::<T, pallet_membership::Instance1>::add_member(
-                frame_system::RawOrigin::Root.into(),
-                validator_account,
-            )?;
-
-            Self::deposit_event(Event::ValidatorRequestApproved(validator));
-
-            Ok(().into())
+            Self::_approve_validator(who, validator_account)
+            
         }
 
         /// Remove validator
@@ -303,56 +207,8 @@ pub mod pallet {
             validator_account: <T::Lookup as StaticLookup>::Source,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin.clone())?;
-
-            let v = T::Lookup::lookup(validator_account.clone())?;
-
-            if !(v == who || Self::is_council_member(&who).is_ok()) {
-                Err(Error::<T>::BadOrigin)?
-            }
-
-            let _ = <Validator<T>>::get(&v)
-                .ok_or(DispatchError::from(Error::<T>::ValidatorNotFound))?;
-
-            // Remove the validator as a council member
-            pallet_membership::Pallet::<T, pallet_membership::Instance1>::remove_member(
-                frame_system::RawOrigin::Root.into(),
-                validator_account,
-            )?;
-
-            // Remove the entry from the storage map
-            <Validator<T>>::remove(v);
-
-            // let node_validators = substrate_validator_set::Validators::<T>::get();
-
-            // match node_validators {
-            // 	Some(validators) => {
-            // 		for (_, val) in validators.clone().into_iter().enumerate() {
-            // 			if val == v.validator_node_account {
-            // 				// Remove the old validator and rotate session
-            // 				substrate_validator_set::Pallet::<T>::remove_validator(
-            // 					frame_system::RawOrigin::Root.into(),
-            // 					v.validator_node_account.clone(),
-            // 				)?;
-
-            // 				Self::deposit_event(Event::ValidatorRemoved(v.clone()));
-            // 			}
-            // 		}
-            // 	},
-            // 	None => ()
-            // }
-
-            Ok(().into())
+            Self::_remove_validator(who, validator_account)
         }
     }
 }
 
-impl<T: Config> Pallet<T> {
-    fn is_council_member(who: &T::AccountId) -> DispatchResultWithPostInfo {
-        let council_members =
-            pallet_membership::Pallet::<T, pallet_membership::Instance1>::members();
-
-        ensure!(council_members.contains(&who), Error::<T>::NotCouncilMember,);
-
-        Ok(().into())
-    }
-}
