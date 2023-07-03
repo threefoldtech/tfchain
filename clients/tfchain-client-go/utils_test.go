@@ -95,6 +95,32 @@ func assertCreateTwin(t *testing.T, cl *Substrate, user AccountUser) uint32 {
 	return twnID
 }
 
+func assertCreateEntity(t *testing.T, cl *Substrate) uint32 {
+	identity, err := NewIdentityFromSr25519Phrase(BobMnemonics)
+	require.NoError(t, err)
+
+	id, err := cl.GetEntityIDByName("testName")
+	if err == nil {
+		return id
+	}
+
+	if errors.Is(err, ErrNotFound) {
+		concatArray := []byte("testName")
+		concatArray = append(concatArray, []byte("Egypt")...)
+		concatArray = append(concatArray, []byte("Cairo")...)
+		signed, err := identity.Sign(concatArray)
+		require.NoError(t, err)
+
+		err = cl.CreateEntity(identity, "testName", identity.PublicKey(), "Egypt", "Cairo", signed)
+		require.NoError(t, err)
+	}
+
+	id, err = cl.GetEntityIDByByPubKey(identity.PublicKey())
+	require.NoError(t, err)
+
+	return id
+}
+
 func assertCreateFarm(t *testing.T, cl *Substrate) (uint32, uint32) {
 
 	identity, err := NewIdentityFromSr25519Phrase(BobMnemonics)
