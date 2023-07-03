@@ -69,7 +69,7 @@ jobs:
 
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -77,16 +77,5 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: false
           prerelease: ${{ contains(github.ref, 'rc') }}
-          body: |
-            Changes in this Release:
-            ${{ steps.changelog.outputs.changelog }}
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./tfchain-runtime
-          asset_name: tfchain-runtime.wasm
-          asset_content_type: application/wasm
+          body_path: ${{ steps.changelog.outputs.changelog }}
+          files: tfchain-runtime
