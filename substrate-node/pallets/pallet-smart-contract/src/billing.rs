@@ -311,8 +311,6 @@ impl<T: Config> Pallet<T> {
         contract_lock: &mut types::ContractLock<BalanceOf<T>>,
         amount_due: BalanceOf<T>,
     ) -> DispatchResultWithPostInfo {
-        let existencial_deposit = <T as Config>::Currency::minimum_balance();
-
         // Only lock an amount from the user's balance if the contract is in create state
         // The lock is specified on the user's account, since a user can have multiple contracts
         // Just extend the lock with the amount due for this contract billing period (lock will be created if not exists)
@@ -323,11 +321,11 @@ impl<T: Config> Pallet<T> {
             locked_balance = locked_balance
                 .checked_add(&amount_due)
                 .unwrap_or(BalanceOf::<T>::zero());
-            // Make sure to re-lock at least EXISTENCIAL_DEPOSIT to mantain the account
+            // Make sure to re-lock at least EXISTENTIAL_DEPOSIT to mantain the account
             <T as Config>::Currency::extend_lock(
                 GRID_LOCK_ID,
                 &twin.account_id,
-                locked_balance.max(existencial_deposit),
+                locked_balance,
                 WithdrawReasons::all(),
             );
         }
@@ -339,23 +337,37 @@ impl<T: Config> Pallet<T> {
         if contract_lock.cycles >= T::DistributionFrequency::get() || canceled_and_not_zero {
             // Calculate how much locked balance needs to be unlocked and re-locked
             let locked_balance = Self::get_locked_balance(&twin.account_id);
-            let new_locked_balance = locked_balance
-                .checked_sub(&contract_lock.total_amount_locked())
-                .unwrap_or(BalanceOf::<T>::zero());
-
-            // Make sure to re-lock at least EXISTENCIAL_DEPOSIT to mantain the account
-            <T as Config>::Currency::set_lock(
-                GRID_LOCK_ID,
-                &twin.account_id,
-                new_locked_balance.max(existencial_deposit),
-                WithdrawReasons::all(),
-            );
+            let new_locked_balance =
+                match locked_balance.checked_sub(&contract_lock.total_amount_locked()) {
+                    Some(b) => b,
+                    None => BalanceOf::<T>::zero(),
+                };
+            <T as Config>::Currency::remove_lock(GRID_LOCK_ID, &twin.account_id);
 
             // IMPORTANT NOTE !!!
             // If the amount in the contract lock (amount to be payed) exceeds the current usable
             // user balance, we have no option but to distribute all its usable balance
             // The remaining due amount is ignored and will remain unpayed.
-            let mut usable_twin_balance = Self::get_usable_balance(&twin.account_id);
+            let existential_deposit = <T as Config>::Currency::minimum_balance();
+            let mut usable_twin_balance = match new_locked_balance {
+                locked if locked > existential_deposit => {
+                    // Re-lock balance only if it is greater than EXISTENTIAL_DEPOSIT
+                    <T as Config>::Currency::set_lock(
+                        GRID_LOCK_ID,
+                        &twin.account_id,
+                        locked,
+                        WithdrawReasons::all(),
+                    );
+                    Self::get_usable_balance(&twin.account_id)
+                }
+                _ => {
+                    // Since lock is removed the account is no more protected, so make sure
+                    // we keep EXISTENTIAL_DEPOSIT on it to avoid account to be wiped
+                    Self::get_usable_balance(&twin.account_id)
+                        .checked_sub(&existential_deposit)
+                        .unwrap_or(BalanceOf::<T>::zero())
+                }
+            };
 
             // First, distribute extra cultivation rewards if any
             if contract_lock.has_extra_amount_locked() {
@@ -365,9 +377,12 @@ impl<T: Config> Pallet<T> {
                     contract_lock.extra_amount_locked
                 );
 
+                let extra_amount_to_distribute =
+                    usable_twin_balance.min(contract_lock.extra_amount_locked);
+
                 match Self::distribute_extra_cultivation_rewards(
                     &contract,
-                    usable_twin_balance.min(contract_lock.extra_amount_locked),
+                    extra_amount_to_distribute,
                 ) {
                     Ok(_) => {}
                     Err(err) => {
@@ -380,7 +395,9 @@ impl<T: Config> Pallet<T> {
                 };
 
                 // Update usable twin balance after distribution
-                usable_twin_balance = Self::get_usable_balance(&twin.account_id);
+                usable_twin_balance = usable_twin_balance
+                    .checked_sub(&extra_amount_to_distribute)
+                    .unwrap_or(BalanceOf::<T>::zero());
             }
 
             log::info!(

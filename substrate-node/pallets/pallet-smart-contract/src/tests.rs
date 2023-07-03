@@ -1565,12 +1565,11 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
         ));
 
         // After canceling contract, and not being able to pay for the remainder of the cycle
-        // where the cancel was excecuted, the remaining usable balance should be equal to the
-        // balance before canceling, less the existencial deposit
+        // where the cancel was excecuted, the remaining balance should still be the same
         let usable_balance_after_canceling = Balances::usable_balance(&twin.account_id);
         assert_eq!(
             usable_balance_after_canceling,
-            usable_balance_before_canceling - EXISTENTIAL_DEPOSIT
+            usable_balance_before_canceling
         );
 
         validate_distribution_rewards(initial_total_issuance, total_amount_billed, false);
@@ -1934,7 +1933,7 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
 
         let usable_balance = Balances::usable_balance(&twin.account_id);
         let free_balance = Balances::free_balance(&twin.account_id);
-        assert_eq!(free_balance, usable_balance + EXISTENTIAL_DEPOSIT);
+        assert_eq!(free_balance, usable_balance);
     });
 }
 
@@ -2106,7 +2105,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         run_to_block(end_grace_block_number, Some(&mut pool_state));
 
         let our_events = System::events();
-        assert_eq!(our_events.len(), 22);
+        assert_eq!(our_events.len(), 21);
 
         for e in our_events.clone() {
             log::info!("event: {:?}", e);
@@ -2136,7 +2135,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         );
 
         assert_eq!(
-            our_events[20],
+            our_events[19],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::NodeContractCanceled {
@@ -2146,7 +2145,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
             }))
         );
         assert_eq!(
-            our_events[21],
+            our_events[20],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::RentContractCanceled {
@@ -3444,21 +3443,18 @@ fn test_lock() {
         let to_lock = 100;
         Balances::set_lock(id.to_be_bytes(), &bob(), to_lock, WithdrawReasons::all());
 
-        // lock is created but not active since amount is less than EXISTENTIAL_DEPOSIT
+        // lock is created
         assert_eq!(Balances::locks(&bob()).iter().count(), 1);
         let lock = &Balances::locks(&bob())[0];
         assert_eq!(lock.amount, to_lock);
 
         // usable balance should now return free balance - EXISTENTIAL_DEPOSIT
-        // cause there was some activity but lock is not active
+        // cause lock amount is lower than EXISTENTIAL_DEPOSIT
         let usable_balance = Balances::usable_balance(&bob());
         let free_balance = Balances::free_balance(&bob());
-        assert_eq!(free_balance, 2500000000);
         assert_eq!(usable_balance, free_balance - EXISTENTIAL_DEPOSIT);
 
-        // IMPORTANT NOTE !!!
-
-        // confirm account can not withdraw since new balance is lower than 100
+        // confirm account can not withdraw since new balance is lower than locked balance
         assert_noop!(
             Balances::ensure_can_withdraw(
                 &bob(),
@@ -3468,7 +3464,7 @@ fn test_lock() {
             ),
             pallet_balances::Error::<TestRuntime>::LiquidityRestrictions
         );
-        // confirm account can withdraw since new balance is greater than or equal to 100
+        // confirm account can withdraw since new balance is greater than or equal to locked balance
         assert_ok!(Balances::ensure_can_withdraw(
             &bob(),
             dummy_balance,
@@ -3481,15 +3477,15 @@ fn test_lock() {
         let to_lock = 100 + EXISTENTIAL_DEPOSIT;
         Balances::set_lock(id.to_be_bytes(), &bob(), to_lock, WithdrawReasons::all());
 
-        // lock is updated and active since amount is more than EXISTENTIAL_DEPOSIT
+        // lock is updated
         assert_eq!(Balances::locks(&bob()).iter().count(), 1);
         let lock = &Balances::locks(&bob())[0];
         assert_eq!(lock.amount, to_lock);
 
-        // usable balance should now be free_balance - to_lock cause there was some activity
+        // usable balance should now be free_balance - to_lock
+        // cause lock amount is greater than EXISTENTIAL_DEPOSIT
         let usable_balance = Balances::usable_balance(&bob());
         let free_balance = Balances::free_balance(&bob());
-        assert_eq!(free_balance, 2500000000);
         assert_eq!(usable_balance, free_balance - to_lock);
 
         // confirm account can not withdraw if new balance is lower than locked balance
@@ -3515,15 +3511,15 @@ fn test_lock() {
         let to_lock = 500 + EXISTENTIAL_DEPOSIT;
         Balances::set_lock(id.to_be_bytes(), &bob(), to_lock, WithdrawReasons::all());
 
-        // lock is updated and active since amount is more than EXISTENTIAL_DEPOSIT
+        // lock is updated
         assert_eq!(Balances::locks(&bob()).iter().count(), 1);
         let lock = &Balances::locks(&bob())[0];
         assert_eq!(lock.amount, to_lock);
 
-        // usable balance should now be free_balance - to_lock cause there was some activity
+        // usable balance should now be free_balance - to_lock
+        // cause lock amount is greater than EXISTENTIAL_DEPOSIT
         let usable_balance = Balances::usable_balance(&bob());
         let free_balance = Balances::free_balance(&bob());
-        assert_eq!(free_balance, 2500000000);
         assert_eq!(usable_balance, free_balance - to_lock);
 
         // confirm account can not withdraw if new balance is lower than locked balance
