@@ -78,7 +78,10 @@ pub mod pallet {
         fmt::Debug,
         vec::Vec,
     };
-    use tfchain_support::traits::{ChangeNode, PublicIpModifier};
+    use tfchain_support::{
+        traits::{ChangeNode, PublicIpModifier},
+        types::PublicIP,
+    };
 
     pub type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
@@ -86,7 +89,6 @@ pub mod pallet {
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::NegativeImbalance;
 
     pub const GRID_LOCK_ID: LockIdentifier = *b"gridlock";
-    use tfchain_support::types::PublicIP;
 
     #[pallet::pallet]
     #[pallet::without_storage_info]

@@ -360,7 +360,7 @@ impl<T: Config> Pallet<T> {
         let consumer_twin = pallet_tfgrid::Twins::<T>::get(service_contract.consumer_twin_id)
             .ok_or(Error::<T>::TwinNotExists)?;
 
-        let usable_balance = Self::get_safe_usable_balance(&consumer_twin.account_id);
+        let usable_balance = Self::get_usable_balance(&consumer_twin.account_id);
 
         // If consumer is out of funds then contract is canceled
         // by service and removed from service contract map

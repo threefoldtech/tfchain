@@ -102,7 +102,7 @@ impl<T: Config> Pallet<T> {
 
         let twin =
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
-        let usable_balance = Self::get_safe_usable_balance(&twin.account_id);
+        let usable_balance = Self::get_usable_balance(&twin.account_id);
         let stash_balance = Self::get_stash_balance(twin.id);
         let total_balance = usable_balance
             .checked_add(&stash_balance)
@@ -311,7 +311,7 @@ impl<T: Config> Pallet<T> {
         contract_lock: &mut types::ContractLock<BalanceOf<T>>,
         amount_due: BalanceOf<T>,
     ) -> DispatchResultWithPostInfo {
-        let now = Self::get_current_timestamp_in_secs();
+        let existencial_deposit = <T as Config>::Currency::minimum_balance();
 
         // Only lock an amount from the user's balance if the contract is in create state
         // The lock is specified on the user's account, since a user can have multiple contracts
@@ -323,41 +323,39 @@ impl<T: Config> Pallet<T> {
             locked_balance = locked_balance
                 .checked_add(&amount_due)
                 .unwrap_or(BalanceOf::<T>::zero());
+            // Make sure to re-lock at least EXISTENCIAL_DEPOSIT to mantain the account
             <T as Config>::Currency::extend_lock(
                 GRID_LOCK_ID,
                 &twin.account_id,
-                locked_balance,
+                locked_balance.max(existencial_deposit),
                 WithdrawReasons::all(),
             );
         }
 
         let canceled_and_not_zero =
             contract.is_state_delete() && contract_lock.has_some_amount_locked();
-        // When the cultivation rewards are ready to be distributed or it's in delete state
-        // Unlock all reserved balance and distribute
+        // When the cultivation rewards are ready to be distributed or it's in
+        // delete state, unlock all reserved balance and distribute
         if contract_lock.cycles >= T::DistributionFrequency::get() || canceled_and_not_zero {
-            // Calculate how much locked balance needs to be unlocked and re-lock
-            // the remaining locked balance if any, otherwise clear the locked balance
+            // Calculate how much locked balance needs to be unlocked and re-locked
             let locked_balance = Self::get_locked_balance(&twin.account_id);
-            match locked_balance.checked_sub(&contract_lock.total_amount_locked()) {
-                // Remaining balance => update locked balance
-                Some(b) if b > BalanceOf::<T>::zero() => <T as Config>::Currency::set_lock(
-                    GRID_LOCK_ID,
-                    &twin.account_id,
-                    b,
-                    WithdrawReasons::all(),
-                ),
-                // No remaining balance => clear locked balance
-                _ => <T as Config>::Currency::remove_lock(GRID_LOCK_ID, &twin.account_id),
-            };
+            let new_locked_balance = locked_balance
+                .checked_sub(&contract_lock.total_amount_locked())
+                .unwrap_or(BalanceOf::<T>::zero());
 
-            // Fetch safe usable twin balance to avoid account to be wiped
-            let mut usable_twin_balance = Self::get_safe_usable_balance(&twin.account_id);
+            // Make sure to re-lock at least EXISTENCIAL_DEPOSIT to mantain the account
+            <T as Config>::Currency::set_lock(
+                GRID_LOCK_ID,
+                &twin.account_id,
+                new_locked_balance.max(existencial_deposit),
+                WithdrawReasons::all(),
+            );
 
             // IMPORTANT NOTE !!!
             // If the amount in the contract lock (amount to be payed) exceeds the current usable
-            // twin balance, we have no option but to drain the twin account by transferring all its
-            // usable balance. Unfortunatly the remaining due amount is ignored and will remain unpayed.
+            // user balance, we have no option but to distribute all its usable balance
+            // The remaining due amount is ignored and will remain unpayed.
+            let mut usable_twin_balance = Self::get_usable_balance(&twin.account_id);
 
             // First, distribute extra cultivation rewards if any
             if contract_lock.has_extra_amount_locked() {
@@ -382,7 +380,7 @@ impl<T: Config> Pallet<T> {
                 };
 
                 // Update usable twin balance after distribution
-                usable_twin_balance = Self::get_safe_usable_balance(&twin.account_id);
+                usable_twin_balance = Self::get_usable_balance(&twin.account_id);
             }
 
             log::info!(
@@ -409,7 +407,7 @@ impl<T: Config> Pallet<T> {
             };
 
             // Reset contract lock values
-            contract_lock.lock_updated = now;
+            contract_lock.lock_updated = Self::get_current_timestamp_in_secs();
             contract_lock.amount_locked = BalanceOf::<T>::zero();
             contract_lock.extra_amount_locked = BalanceOf::<T>::zero();
             contract_lock.cycles = 0;
@@ -679,14 +677,6 @@ impl<T: Config> Pallet<T> {
         BalanceOf::<T>::saturated_from(b)
     }
 
-    // Get the safe usable balance of an account (preventing account from being wiped)
-    // safe usable balance = usable balance - ExistentialDeposit
-    pub fn get_safe_usable_balance(account_id: &T::AccountId) -> BalanceOf<T> {
-        Self::get_usable_balance(account_id)
-            .checked_sub(&<T as Config>::Currency::minimum_balance())
-            .unwrap_or(BalanceOf::<T>::zero())
-    }
-
     fn get_locked_balance(account_id: &T::AccountId) -> BalanceOf<T> {
         let usable_balance = Self::get_usable_balance(account_id);
         let free_balance = <T as Config>::Currency::free_balance(account_id);
@@ -701,7 +691,7 @@ impl<T: Config> Pallet<T> {
     fn get_stash_balance(twin_id: u32) -> BalanceOf<T> {
         let account_id = pallet_tfgrid::TwinBoundedAccountID::<T>::get(twin_id);
         match account_id {
-            Some(account) => Self::get_safe_usable_balance(&account),
+            Some(account) => Self::get_usable_balance(&account),
             None => BalanceOf::<T>::zero(),
         }
     }
