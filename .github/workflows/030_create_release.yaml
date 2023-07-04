@@ -76,6 +76,7 @@ jobs:
           issuesLabel: '### 📁 Other issues'
           prLabel: '### 📁 Other pull requests'
           addSections: '{"documentation":{"prefix":"### 📖 Documentation","labels":["documentation"]},"tests":{"prefix":"### ✅ Testing","labels":["tests"]}}'
+          onlyLastTag: true
           issues: false
           issuesWoLabels: false
           pullRequests: true
