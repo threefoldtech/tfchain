@@ -77,8 +77,6 @@ jobs:
       - name: List Files
         run: ls -la tfchain-runtime
 
-      - run: 'echo hello > foo.txt'
-
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
@@ -91,5 +89,3 @@ jobs:
           fail_on_unmatched_files: true
           prerelease: ${{ contains(github.ref, 'rc') }}
           body_path: ${{ steps.changelog.outputs.changelog }}
-          files: |
-            foo.txt
