@@ -3,7 +3,7 @@ use serde_json::Value;
 use sp_runtime::{traits::{Convert, SaturatedConversion}, offchain::http};
 use sp_std::{boxed::Box, vec::Vec};
 use substrate_fixed::types::U32F32;
-use sp_core::{crypto::KeyTypeId, offchain::Duration};
+use sp_core::{offchain::Duration};
 use ringbuffer::{RingBufferTrait, RingBufferTransient};
 use scale_info::prelude::format;
 
