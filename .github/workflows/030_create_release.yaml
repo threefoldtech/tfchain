@@ -93,4 +93,3 @@ jobs:
           body_path: ${{ steps.changelog.outputs.changelog }}
           files: |
             foo.txt
-            tfchain-runtime/tfchain_runtime.compact.compressed.wasm
