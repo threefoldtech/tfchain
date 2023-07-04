@@ -58,7 +58,7 @@ jobs:
 
       - name: Download artifacts
         id: download
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: tfchain-runtime
           path: tfchain-runtime
@@ -89,4 +89,4 @@ jobs:
           fail_on_unmatched_files: true
           prerelease: ${{ contains(github.ref, 'rc') }}
           body_path: ${{ steps.changelog.outputs.changelog }}
-          files: tfchain-runtime/*
+          files: tfchain-runtime/tfchain_runtime.compact.compressed.wasm
