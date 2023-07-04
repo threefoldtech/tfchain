@@ -89,3 +89,8 @@ jobs:
           fail_on_unmatched_files: true
           prerelease: ${{ contains(github.ref, 'rc') }}
           body_path: ${{ steps.changelog.outputs.changelog }}
+
+    - name: Upload Release Asset
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: gh release upload ${{ github.ref }} tfchain-runtime/tfchain-runtime.compact.wasm
