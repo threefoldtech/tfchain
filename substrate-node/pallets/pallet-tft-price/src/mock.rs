@@ -155,7 +155,7 @@ thread_local! {
 }
 
 use pallet_session::SessionHandler;
-use sp_runtime::RuntimeAppPublic;
+use sp_runtime::{RuntimeAppPublic, KeyTypeId};
 pub struct TestSessionHandler;
 impl SessionHandler<AccountId> for TestSessionHandler {
     const KEY_TYPE_IDS: &'static [sp_runtime::KeyTypeId] = &[UintAuthorityId::ID];
