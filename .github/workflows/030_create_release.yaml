@@ -68,14 +68,24 @@ jobs:
         uses: heinrichreimer/github-changelog-generator-action@v2.3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          headerLabel: "# 📑 Changelog"
+          breakingLabel: '### 💥 Breaking'
+          enhancementLabel: '### 🚀 Enhancements'
+          bugsLabel: '### 🐛 Bug fixes'
+          securityLabel: '### 🛡️ Security'
+          issuesLabel: '### 📁 Other issues'
+          prLabel: '### 📁 Other pull requests'
+          addSections: '{"documentation":{"prefix":"### 📖 Documentation","labels":["documentation"]},"tests":{"prefix":"### ✅ Testing","labels":["tests"]}}'
           onlyLastTag: true
-          stripHeaders: true
-          stripGeneratorNotice: true
-          issuesWoLabels: false
           issues: false
-
-      - name: List Files
-        run: ls -la tfchain-runtime
+          issuesWoLabels: false
+          pullRequests: true
+          prWoLabels: true
+          author: true
+          unreleased: true
+          compareLink: true
+          stripGeneratorNotice: true
+          verbose: true
 
       - name: Create Release
         id: create_release
@@ -84,9 +94,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          name: Release ${{ github.ref }}
+          name: Release ${{ github.ref_name }}
           draft: false
           fail_on_unmatched_files: true
           prerelease: ${{ contains(github.ref, 'rc') }}
-          body_path: ${{ steps.changelog.outputs.changelog }}
-          files: tfchain-runtime/tfchain_runtime.compact.compressed.wasm
+          body: ${{ steps.changelog.outputs.changelog }}
+          files: tfchain-runtime/*
