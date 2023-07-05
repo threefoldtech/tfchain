@@ -4876,20 +4876,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-sudo"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42#569aae5341ea0c1d10426fa1ec13a36c0b64393b"
-dependencies = [
- "frame-support",
- "frame-system",
- "parity-scale-codec 3.5.0",
- "scale-info",
- "sp-io",
- "sp-runtime",
- "sp-std 5.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
-]
-
-[[package]]
 name = "pallet-tfgrid"
 version = "2.5.0-rc4"
 dependencies = [
@@ -8747,7 +8733,6 @@ dependencies = [
  "pallet-session",
  "pallet-session-benchmarking",
  "pallet-smart-contract",
- "pallet-sudo",
  "pallet-tfgrid",
  "pallet-tft-bridge",
  "pallet-tft-price",
