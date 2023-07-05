@@ -32,7 +32,7 @@ impl<T: Config> OnRuntimeUpgrade for ExtendContractLock<T> {
     }
 
     fn on_runtime_upgrade() -> Weight {
-        if PalletVersion::<T>::get() >= types::StorageVersion::V10 {
+        if PalletVersion::<T>::get() == types::StorageVersion::V10 {
             migrate_to_version_11::<T>()
         } else {
             info!(" >>> Unused Smart Contract pallet V11 migration");

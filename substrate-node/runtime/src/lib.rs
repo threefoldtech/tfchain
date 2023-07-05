@@ -773,6 +773,7 @@ pub type Executive = frame_executive::Executive<
 type Migrations = (
     pallet_smart_contract::migrations::v10::ReworkBillingLoopInsertion<Runtime>,
     pallet_smart_contract::migrations::v11::ExtendContractLock<Runtime>,
+    migrations::remove_sudo::RemoveSudo<Runtime>,
 );
 
 // follows Substrate's non destructive way of eliminating  otherwise required

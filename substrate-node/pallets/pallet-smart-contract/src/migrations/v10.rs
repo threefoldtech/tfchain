@@ -18,7 +18,7 @@ impl<T: Config> OnRuntimeUpgrade for ReworkBillingLoopInsertion<T> {
     #[cfg(feature = "try-runtime")]
     fn post_upgrade(_: Vec<u8>) -> Result<(), &'static str> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
-        assert!(PalletVersion::<T>::get() == types::StorageVersion::V10);
+        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V10);
 
         super::v9::check_contracts_to_bill_at::<T>();
 
