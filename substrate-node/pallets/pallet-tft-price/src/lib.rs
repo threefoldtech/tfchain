@@ -23,7 +23,6 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     // use frame_support::dispatch::DispatchResultWithPostInfo;
-    use frame_system::offchain::{SignMessage};
     use log;
     use scale_info::prelude::format;
     use sp_core::crypto::KeyTypeId;
