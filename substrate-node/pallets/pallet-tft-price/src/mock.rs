@@ -79,7 +79,7 @@ construct_runtime!(
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Config<T>, Event<T>},
         Authorship: pallet_authorship::{Pallet, Storage},
-        ValidatorSet: substrate_validator_set::{Pallet, Call, Storage, Event<T>, Config<T>},
+        ValidatorSet: substrate_validator_set::{Event<T>},
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
     }
 );
