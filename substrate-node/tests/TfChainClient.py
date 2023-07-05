@@ -50,11 +50,6 @@ class TfChainClient:
     def _check_events(self, events: list = [], expected_events: list = []):
         logging.info("Events: %s", json.dumps(events))
 
-        # This was a sudo call that failed
-        for event in events:
-            if event["event_id"] == "Sudid" and "Err" in event["attributes"]["sudo_result"]:
-                raise Exception(event["attributes"]["sudo_result"])
-
         for expected_event in expected_events:
             check = False
             for event in events:
@@ -69,7 +64,7 @@ class TfChainClient:
 
     def _sign_extrinsic_submit_check_response(self, substrate, call, who: str, expected_events: list = []):
         _who = who.title()
-        if _who == "Sudo":
+        if _who == "Council":
             return self.execute_council_motion(substrate, call, expected_events)
         else:
             assert _who in PREDEFINED_KEYS.keys(
@@ -90,8 +85,7 @@ class TfChainClient:
 
     def execute_council_motion(self, substrate, call, expected_events: list = []):
         # Propose
-        proposal_hash, proposal_index = self.propose_council_motion(substrate, call)
-        print("got proposal hash", proposal_hash, "and index", proposal_index)
+        proposal_hash, proposal_index = self.propose_council_motion(substrate, "Alice", call)
 
         # Vote
         self.vote_proposal(substrate, "Alice", proposal_hash, proposal_index)
@@ -101,20 +95,19 @@ class TfChainClient:
         logging.info("closing proposal")
         self.close_proposal(substrate, "Alice", proposal_hash, proposal_index, expected_events)
 
-    def propose_council_motion(self, substrate, call):
+    def propose_council_motion(self, substrate, who, call):
         call = substrate.compose_call("Council", "propose", {
                 "threshold": 2,
                 "proposal": call,
                 "length_bound": 10000,
             })
 
-        logging.info("Sending signed transaction: %s", call)
+        logging.info("Sending propose motion transaction: %s", call)
         signed_call = substrate.create_signed_extrinsic(
-            call, PREDEFINED_KEYS["Alice"])
+            call, PREDEFINED_KEYS[who])
 
         response = substrate.submit_extrinsic(
             signed_call, wait_for_finalization=False, wait_for_inclusion=True)
-        logging.info("Reponse is %s", response)
         if response.error_message:
             raise Exception(response.error_message)
 
@@ -141,7 +134,6 @@ class TfChainClient:
 
         response = substrate.submit_extrinsic(
             signed_call, wait_for_finalization=False, wait_for_inclusion=True)
-        logging.info("Reponse is %s", response)
         if response.error_message:
             raise Exception(response.error_message)
 
@@ -149,6 +141,7 @@ class TfChainClient:
         call = substrate.compose_call("Council", "close", {
                 "proposal_hash": proposal_hash,
                 "index": proposal_index,
+                # Default values for weights and length bound
                 "proposal_weight_bound": {'ref_time': 25990000000, 'proof_size': 11990383647911208550},
                 "length_bound": 10000,
             })
@@ -159,7 +152,6 @@ class TfChainClient:
 
         response = substrate.submit_extrinsic(
             signed_call, wait_for_finalization=False, wait_for_inclusion=True)
-        logging.info("Reponse is %s", response)
         if response.error_message:
             raise Exception(response.error_message)
         

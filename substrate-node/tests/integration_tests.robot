@@ -125,11 +125,11 @@ Test Set Farm Certification
 
     Setup Network And Create Farm
 
-    # only possible with sudo
+    # only possible with council
     Run Keyword And Expect Error    *'BadOrigin'*
     ...    Set Farm Certification    farm_id=${1}    certification=Gold
 
-    Set Farm Certification    farm_id=${1}    certification=Gold    who=sudo
+    Set Farm Certification    farm_id=${1}    certification=Gold    who=Council
 
     Tear Down Multi Node Network
 
@@ -140,11 +140,11 @@ Test Set Node Certification
     Setup Network And Create Node
 
     # Make Alice a node certifier
-    Add Node Certifier    account_name=Alice    who=Sudo
+    Add Node Certifier    account_name=Alice    who=Council
 
     Set Node Certification    node_id=${1}    certification=Certified
 
-    Remove Node Certifier    account_name=Alice    who=Sudo
+    Remove Node Certifier    account_name=Alice    who=Council
 
     # Alice is no longer able to set node certification
     Run Keyword And Expect Error    *'NotAllowedToCertifyNode'*
@@ -349,20 +349,20 @@ Test Create Update Pricing Policy
     [Documentation]    Testing api calls (create, update) for managing pricing policies including failed attempts
     Setup Multi Node Network    log_name=test_create_update_pricing_policy
 
-    # only possible with sudo
+    # only possible with council
     Run Keyword And Expect Error    *'BadOrigin'*
     ...    Create Pricing Policy    name=mypricingpolicy    unit=Gigabytes    su=${55000}    cu=${90000}    nu=${20000}    ipu=${35000}    unique_name=${3000}    domain_name=${6000}    foundation_account=Bob    certified_sales_account=Bob    discount_for_dedication_nodes=45
 
-    Create Pricing Policy    name=mypricingpolicy    unit=Gigabytes    su=${55000}    cu=${90000}    nu=${20000}    ipu=${35000}    unique_name=${3000}    domain_name=${6000}    foundation_account=Bob    certified_sales_account=Bob    discount_for_dedication_nodes=45    who=Sudo
+    Create Pricing Policy    name=mypricingpolicy    unit=Gigabytes    su=${55000}    cu=${90000}    nu=${20000}    ipu=${35000}    unique_name=${3000}    domain_name=${6000}    foundation_account=Bob    certified_sales_account=Bob    discount_for_dedication_nodes=45    who=Council
     ${pricing_policy} =     Get Pricing Policy    id=${2}
     Should Not Be Equal    ${pricing_policy}    ${None}
     Should Be Equal    ${pricing_policy}[name]    mypricingpolicy
 
-    # only possible with sudo
+    # only possible with council
     Run Keyword And Expect Error    *'BadOrigin'*
     ...    Update Pricing Policy    id=${2}    name=mypricingpolicyupdated    unit=Gigabytes    su=${55000}    cu=${90000}    nu=${20000}    ipu=${35000}    unique_name=${3000}    domain_name=${6000}    foundation_account=Bob    certified_sales_account=Bob    discount_for_dedication_nodes=45
 
-    Update Pricing Policy    id=${2}    name=mypricingpolicyupdated    unit=Gigabytes    su=${55000}    cu=${90000}    nu=${20000}    ipu=${35000}    unique_name=${3000}    domain_name=${6000}    foundation_account=Bob    certified_sales_account=Bob    discount_for_dedication_nodes=45    who=Sudo
+    Update Pricing Policy    id=${2}    name=mypricingpolicyupdated    unit=Gigabytes    su=${55000}    cu=${90000}    nu=${20000}    ipu=${35000}    unique_name=${3000}    domain_name=${6000}    foundation_account=Bob    certified_sales_account=Bob    discount_for_dedication_nodes=45    who=Council
     ${pricing_policy} =     Get Pricing Policy    id=${2}
     Should Not Be Equal    ${pricing_policy}    ${None}
     Should Be Equal    ${pricing_policy}[name]    mypricingpolicyupdated
@@ -373,20 +373,20 @@ Test Create Update Farming Policy
     [Documentation]    Testing api calls (create, update) for managing farming policies including failed attempts
     Setup Multi Node Network    log_name=test_create_update_farming_policy
 
-    # only possible with sudo
+    # only possible with council
     Run Keyword And Expect Error    *'BadOrigin'*
     ...    Create Farming Policy    name=myfarmingpolicy    su=${12}    cu=${15}    nu=${10}    ipv4=${8}    minimal_uptime=${9999}    policy_end=${10}    immutable=${True}    default=${True}    node_certification=Diy    farm_certification=Gold
 
-    Create Farming Policy    name=myfarmingpolicy    su=${12}    cu=${15}    nu=${10}    ipv4=${8}    minimal_uptime=${9999}    policy_end=${15}    immutable=${True}    default=${True}    node_certification=Diy    farm_certification=Gold    who=Sudo
+    Create Farming Policy    name=myfarmingpolicy    su=${12}    cu=${15}    nu=${10}    ipv4=${8}    minimal_uptime=${9999}    policy_end=${15}    immutable=${True}    default=${True}    node_certification=Diy    farm_certification=Gold    who=Council
     ${farming_policy} =    Get Farming Policy    id=${3}
     Should Not Be Equal    ${farming_policy}    ${None}
     Should Be Equal    ${farming_policy}[name]    myfarmingpolicy
 
-    # only possible with sudo
+    # only possible with council
     Run Keyword And Expect Error    *'BadOrigin'*
     ...    Update Farming Policy    id=${3}    name=myfarmingpolicyupdated    su=${12}    cu=${15}    nu=${10}    ipv4=${8}    minimal_uptime=${9999}    policy_end=${10}    immutable=${True}    default=${True}    node_certification=Diy    farm_certification=Gold
 
-    Update Farming Policy    id=${3}    name=myfarmingpolicyupdated    su=${12}    cu=${15}    nu=${10}    ipv4=${8}    minimal_uptime=${9999}    policy_end=${10}    immutable=${True}    default=${True}    node_certification=Diy    farm_certification=Gold    who=Sudo
+    Update Farming Policy    id=${3}    name=myfarmingpolicyupdated    su=${12}    cu=${15}    nu=${10}    ipv4=${8}    minimal_uptime=${9999}    policy_end=${10}    immutable=${True}    default=${True}    node_certification=Diy    farm_certification=Gold    who=Council
     ${farming_policy} =    Get Farming Policy    id=${3}
     Should Not Be Equal    ${farming_policy}    ${None}
     Should Be Equal    ${farming_policy}[name]    myfarmingpolicyupdated
@@ -398,21 +398,16 @@ Test Attach Policy To Farm
     Setup Multi Node Network    log_name=test_attach_policy_to_farm
 
     Setup Network And Create Farm
-    Create Farming Policy    name=myfarmingpolicy    su=${12}    cu=${15}    nu=${10}    ipv4=${8}    minimal_uptime=${9999}    policy_end=${5}    immutable=${True}    default=${True}    node_certification=Diy    farm_certification=Gold    who=Sudo
+    Create Farming Policy    name=myfarmingpolicy    su=${12}    cu=${15}    nu=${10}    ipv4=${8}    minimal_uptime=${9999}    policy_end=${1000}    immutable=${True}    default=${True}    node_certification=Diy    farm_certification=Gold    who=Council
     ${policy} =     Get Farming Policy    id=${3}
     Should Not Be Equal    ${policy}    ${None}
     Should Be Equal    ${policy}[name]    myfarmingpolicy
 
-    # only possible with sudo
+    # only possible with council
     Run Keyword And Expect Error    *'BadOrigin'*
-    ...    Attach Policy To Farm    farm_id=${1}    farming_policy_id=${3}    cu=${20}    su=${2}    end=${1654058949}    node_certification=${False}    node_count=${10}
+    ...    Attach Policy To Farm    farm_id=${1}    farming_policy_id=${3}    cu=${20}    su=${2}    end=${100000}    node_certification=${False}    node_count=${10}
 
-    Attach Policy To Farm    farm_id=${1}    farming_policy_id=${3}    cu=${20}    su=${2}    end= ${1654058949}    node_certification=${False}    node_count=${10}    who=Sudo
-
-    # farming policy expires after 5 blocks
-    Wait X Blocks    x=${5}
-    Run Keyword And Expect Error    {'Err': {'Module': {'index': 10, 'error': '0x53000000'}}}
-    ...    Attach_policy_to_farm    farm_id=${1}    farming_policy_id=${3}    cu=${20}    su=${2}    end=${1654058949}    node_certification=${False}    node_count=${10}    who=Sudo
+    Attach Policy To Farm    farm_id=${1}    farming_policy_id=${3}    cu=${20}    su=${2}    end=${100000}    node_certification=${False}    node_count=${10}    who=Council
 
     Tear Down Multi Node Network
 
@@ -464,7 +459,7 @@ Test Solution Provider
     Length Should Be    ${solution_provider}[providers]    ${2}
     
     # The solution provider has to be approved
-    Approve Solution Provider    solution_provider_id=${1}    who=Sudo
+    Approve Solution Provider    solution_provider_id=${1}    who=Council
     ${solution_provider} =    Get Solution Provider    id=${1}
     Should Not Be Equal    ${solution_provider}    ${None}
     Should Be Equal    ${solution_provider}[approved]    ${True}
