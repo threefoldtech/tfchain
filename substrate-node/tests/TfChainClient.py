@@ -70,10 +70,7 @@ class TfChainClient:
     def _sign_extrinsic_submit_check_response(self, substrate, call, who: str, expected_events: list = []):
         _who = who.title()
         if _who == "Sudo":
-            call = substrate.compose_call("Sudo", "sudo", {
-                "call": call
-            })
-            _who = "Alice"
+            return self.execute_council_motion(substrate, call, expected_events)
         else:
             assert _who in PREDEFINED_KEYS.keys(
             ), f"{who} is not a predefined account, use one of {PREDEFINED_KEYS.keys()}"
@@ -90,6 +87,84 @@ class TfChainClient:
 
         self._check_events([event.value["event"]
                            for event in response.triggered_events], expected_events)
+
+    def execute_council_motion(self, substrate, call, expected_events: list = []):
+        # Propose
+        proposal_hash, proposal_index = self.propose_council_motion(substrate, call)
+        print("got proposal hash", proposal_hash, "and index", proposal_index)
+
+        # Vote
+        self.vote_proposal(substrate, "Alice", proposal_hash, proposal_index)
+        self.vote_proposal(substrate, "Bob", proposal_hash, proposal_index)
+        
+        # Close
+        logging.info("closing proposal")
+        self.close_proposal(substrate, "Alice", proposal_hash, proposal_index, expected_events)
+
+    def propose_council_motion(self, substrate, call):
+        call = substrate.compose_call("Council", "propose", {
+                "threshold": 2,
+                "proposal": call,
+                "length_bound": 10000,
+            })
+
+        logging.info("Sending signed transaction: %s", call)
+        signed_call = substrate.create_signed_extrinsic(
+            call, PREDEFINED_KEYS["Alice"])
+
+        response = substrate.submit_extrinsic(
+            signed_call, wait_for_finalization=False, wait_for_inclusion=True)
+        logging.info("Reponse is %s", response)
+        if response.error_message:
+            raise Exception(response.error_message)
+
+        proposal_hash = ""
+        proposal_index = 0
+
+        for event in response.triggered_events:
+            if event.value["event_id"] == "Proposed":
+                proposal_hash = event.value["event"]["attributes"]["proposal_hash"]
+                proposal_index = event.value["event"]["attributes"]["proposal_index"]
+
+        return proposal_hash, proposal_index
+
+    def vote_proposal(self, substrate, who, proposal_hash, proposal_index):
+        call = substrate.compose_call("Council", "vote", {
+                "proposal": proposal_hash,
+                "index": proposal_index,
+                "approve": True,
+            })
+        
+        logging.info("Sending vote proposal transaction: %s", call)
+        signed_call = substrate.create_signed_extrinsic(
+            call, PREDEFINED_KEYS[who])
+
+        response = substrate.submit_extrinsic(
+            signed_call, wait_for_finalization=False, wait_for_inclusion=True)
+        logging.info("Reponse is %s", response)
+        if response.error_message:
+            raise Exception(response.error_message)
+
+    def close_proposal(self, substrate, who, proposal_hash, proposal_index, expected_events: list = []):
+        call = substrate.compose_call("Council", "close", {
+                "proposal_hash": proposal_hash,
+                "index": proposal_index,
+                "proposal_weight_bound": {'ref_time': 25990000000, 'proof_size': 11990383647911208550},
+                "length_bound": 10000,
+            })
+        
+        logging.info("Sending close proposal transaction: %s", call)
+        signed_call = substrate.create_signed_extrinsic(
+            call, PREDEFINED_KEYS[who])
+
+        response = substrate.submit_extrinsic(
+            signed_call, wait_for_finalization=False, wait_for_inclusion=True)
+        logging.info("Reponse is %s", response)
+        if response.error_message:
+            raise Exception(response.error_message)
+        
+        self._check_events([event.value["event"]
+            for event in response.triggered_events], expected_events)
 
     def setup_predefined_account(self, who: str, port: int = DEFAULT_PORT):
         logging.info("Setting up predefined account %s (%s)", who,
