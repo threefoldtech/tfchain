@@ -22,11 +22,6 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-    // use frame_support::dispatch::DispatchResultWithPostInfo;
-    use log;
-    use scale_info::prelude::format;
-    use sp_core::crypto::KeyTypeId;
-
     use super::weights::WeightInfo;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo, ensure, pallet_prelude::*, traits::EnsureOrigin,
@@ -36,6 +31,9 @@ pub mod pallet {
         offchain::{AppCrypto, CreateSignedTransaction},
         pallet_prelude::*,
     };
+    use log;
+    use scale_info::prelude::format;
+    use sp_core::crypto::KeyTypeId;
     use sp_core::sr25519::Signature as Sr25519Signature;
     use sp_runtime::{
         app_crypto::{app_crypto, sr25519},
