@@ -1,16 +1,14 @@
-use frame_support::dispatch::DispatchErrorWithPostInfo;
-use frame_support::traits::{Currency, OnUnbalanced, ExistenceRequirement, WithdrawReasons};
-use frame_support::pallet_prelude::DispatchResultWithPostInfo;
-use frame_support::{log, ensure};
-
+use super::{types::*, *};
+use frame_support::{
+    dispatch::DispatchErrorWithPostInfo,
+    ensure, log,
+    pallet_prelude::DispatchResultWithPostInfo,
+    traits::{Currency, ExistenceRequirement, OnUnbalanced, WithdrawReasons},
+};
 use frame_system as system;
-
 use sp_runtime::SaturatedConversion;
-use substrate_stellar_sdk as stellar;
-
 use sp_std::prelude::*;
-
-use super::*;
+use substrate_stellar_sdk as stellar;
 
 impl<T: Config> Pallet<T> {
     pub fn mint_tft(

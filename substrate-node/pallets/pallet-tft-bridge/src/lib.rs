@@ -16,62 +16,24 @@ mod tests;
 pub mod benchmarking;
 
 mod tft_bridge;
+mod types;
 pub mod weights;
 
 // Definition of the pallet logic, to be aggregated at runtime definition
 // through `construct_runtime`.
 #[frame_support::pallet]
 pub mod pallet {
-    use sp_std::prelude::*;
-
-    use frame_support::traits::{Currency, EnsureOrigin, OnUnbalanced, ReservableCurrency};
-    use frame_system::{self as system, ensure_signed};
-    use parity_scale_codec::{Decode, Encode};
-    use scale_info::TypeInfo;
+    use super::{
+        types::{BurnTransaction, MintTransaction, RefundTransaction, StellarSignature},
+        weights::WeightInfo,
+    };
+    use frame_support::{
+        pallet_prelude::*,
+        traits::{Currency, EnsureOrigin, OnUnbalanced, ReservableCurrency},
+    };
+    use frame_system::{self as system, ensure_signed, pallet_prelude::*};
     use sp_runtime::SaturatedConversion;
-
-    use super::weights::WeightInfo;
-    use frame_support::pallet_prelude::*;
-    use frame_system::pallet_prelude::*;
-
-    // MintTransaction contains all the information about
-    // Stellar -> TF Chain minting transaction.
-    // if the votes field is larger then (number of validators / 2) + 1 , the transaction will be minted
-    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-    pub struct MintTransaction<AccountId, BlockNumber> {
-        pub amount: u64,
-        pub target: AccountId,
-        pub block: BlockNumber,
-        pub votes: u32,
-    }
-
-    // BurnTransaction contains all the information about
-    // TF Chain -> Stellar burn transaction
-    // Transaction is ready when (number of validators / 2) + 1 signatures are present
-    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-    pub struct BurnTransaction<BlockNumber> {
-        pub block: BlockNumber,
-        pub amount: u64,
-        pub target: Vec<u8>,
-        pub signatures: Vec<StellarSignature>,
-        pub sequence_number: u64,
-    }
-
-    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-    pub struct RefundTransaction<BlockNumber> {
-        pub block: BlockNumber,
-        pub amount: u64,
-        pub target: Vec<u8>,
-        pub tx_hash: Vec<u8>,
-        pub signatures: Vec<StellarSignature>,
-        pub sequence_number: u64,
-    }
-
-    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-    pub struct StellarSignature {
-        pub signature: Vec<u8>,
-        pub stellar_pub_key: Vec<u8>,
-    }
+    use sp_std::prelude::*;
 
     // balance type using reservable currency type
     pub type BalanceOf<T> =
