@@ -7,8 +7,8 @@
 
 pub use pallet::*;
 
-mod validator;
 pub mod types;
+mod validator;
 
 #[cfg(test)]
 mod tests;
@@ -23,16 +23,15 @@ pub mod weights;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use super::weights::WeightInfo;
-    use super::*;
-    use frame_support;
-    use frame_support::traits::Currency;
-    use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
+    use super::{weights::WeightInfo, *};
+    use frame_support::{
+        dispatch::DispatchResultWithPostInfo, pallet_prelude::*, traits::Currency,
+    };
     use frame_system::pallet_prelude::*;
     use sp_runtime::traits::StaticLookup;
-    use sp_std::convert::TryInto;
-    use sp_std::prelude::*;
+    use sp_std::{convert::TryInto, prelude::*};
     use substrate_validator_set;
+
     pub type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
@@ -191,7 +190,6 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             Self::_approve_validator(who, validator_account)
-            
         }
 
         /// Remove validator
@@ -211,4 +209,3 @@ pub mod pallet {
         }
     }
 }
-
