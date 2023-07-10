@@ -1,7 +1,6 @@
-use super::*;
 use crate as pallet_validator;
 use core::cell::RefCell;
-use frame_support::{bounded_vec, construct_runtime, parameter_types, traits::ConstU32};
+use frame_support::{bounded_vec, construct_runtime, parameter_types, traits::{ConstU32, GenesisBuild}};
 use frame_system::EnsureRoot;
 use pallet_session::{SessionHandler, ShouldEndSession};
 use sp_core::{crypto::key_types::DUMMY, H256};
@@ -31,7 +30,7 @@ construct_runtime!(
     }
 );
 
-use weights;
+use crate::weights;
 impl pallet_validator::Config for TestRuntime {
     type RuntimeEvent = RuntimeEvent;
     type CouncilOrigin = EnsureRoot<Self::AccountId>;

@@ -1,6 +1,7 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
+use sp_runtime::traits::StaticLookup;
 use crate::Pallet as ValidatorModule;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::assert_ok;
