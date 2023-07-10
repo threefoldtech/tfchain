@@ -1,6 +1,6 @@
 # Initialize runtime for Threefold Grid 3.0
 
-We need to initialize the runtime with a couple of objects to ensure the correct workflow. These policies can only be inserted with a `sudo` key, in order to ensure the objects cannot be changed by malicious users.
+We need to initialize the runtime with a couple of objects to ensure the correct workflow. These policies can only be inserted with a council motion, in order to ensure the objects cannot be changed by malicious users.
 
 Objects should be inserted through the Polkadot UI for now.
 
@@ -10,7 +10,7 @@ See this document: https://wiki.threefold.io/#/threefold__grid_pricing
 
 We should insert the values for the prices defined in the wiki in our runtime.
 
-Browse to `polkadot UI -> extrinsics -> sudo -> sudo(call) -> tfgridModule -> createPricingPolicy`
+Browse to `polkadot UI -> extrinsics -> council -> Propose motion -> tfgridModule -> createPricingPolicy`
 
 Given the values on the wiki the following object should be stored:
 
@@ -52,7 +52,7 @@ See this document: https://wiki.threefold.io/#/threefold__grid_pricing
 
 We should insert the values for the prices defined in the wiki in our runtime.
 
-Browse to `polkadot UI -> extrinsics -> sudo -> sudo(call) -> tfgridModule -> createFarmingPolicy`
+Browse to `polkadot UI -> extrinsics -> council -> Propose motion -> tfgridModule -> createFarmingPolicy`
 
 Given the values on the wiki the following *objects* should be stored:
 
