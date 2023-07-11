@@ -147,7 +147,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 142,
+    spec_version: 143,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -700,7 +700,7 @@ construct_runtime!(
         Timestamp: pallet_timestamp = 1,
         Utility: pallet_utility = 3,
         Scheduler: pallet_scheduler = 4,
-        
+
         // Consensus support
         ValidatorSet: substrate_validator_set = 10,
         Session: pallet_session = 11,
@@ -708,7 +708,7 @@ construct_runtime!(
         Grandpa: pallet_grandpa = 13,
         Historical: pallet_session::historical::{Pallet} = 14,
         Authorship: pallet_authorship = 15,
-        
+
         // Money
         Balances: pallet_balances = 20,
         TransactionPayment: pallet_transaction_payment = 21,
@@ -726,7 +726,7 @@ construct_runtime!(
         Council: pallet_collective::<Instance1> = 40,
         CouncilMembership: pallet_membership::<Instance1> = 41,
         Dao: pallet_dao = 43,
-        
+
         // otherwise it requires genesis config, will be deprecated in the future so we can remove later
         Validator: pallet_validator::{Pallet, Call, Storage, Event<T>} = 50,
     }
