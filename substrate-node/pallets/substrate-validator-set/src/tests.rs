@@ -2,12 +2,13 @@
 
 #![cfg(test)]
 
-use super::*;
 use crate::mock::*;
 use crate::mock::{authorities, new_test_ext, Session, TestRuntime, ValidatorSet};
+use crate::Error;
 use frame_support::{assert_noop, assert_ok};
 use frame_system::RawOrigin;
 use sp_runtime::testing::UintAuthorityId;
+use sp_runtime::DispatchError;
 
 #[test]
 fn simple_setup_should_work() {
