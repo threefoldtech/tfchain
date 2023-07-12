@@ -23,6 +23,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::weights::WeightInfo;
+    use crate::tft_price::KEY_TYPE;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo, ensure, pallet_prelude::*, traits::EnsureOrigin,
     };
@@ -33,7 +34,6 @@ pub mod pallet {
     };
     use log;
     use scale_info::prelude::format;
-    use sp_core::crypto::KeyTypeId;
     use sp_core::sr25519::Signature as Sr25519Signature;
     use sp_runtime::{
         app_crypto::{app_crypto, sr25519},
@@ -41,14 +41,6 @@ pub mod pallet {
         MultiSignature, MultiSigner,
     };
     use sp_std::convert::TryFrom;
-
-    pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"aura");
-    pub const SRC_CODE: &str = "USDC";
-    pub const SRC_ISSUER: &str = "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
-    pub const DST_TYPE: &str = "credit_alphanum4";
-    pub const DST_ISSUER: &str = "GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47";
-    pub const DST_CODE: &str = "TFT";
-    pub const DST_AMOUNT: u32 = 100;
 
     app_crypto!(sr25519, KEY_TYPE);
 

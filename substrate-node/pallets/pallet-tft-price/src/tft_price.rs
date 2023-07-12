@@ -1,17 +1,24 @@
-use frame_system::offchain::{Signer, SignMessage, SendSignedTransaction};
-use serde_json::Value;
-use sp_runtime::{traits::{Convert, SaturatedConversion}, offchain::http};
-use sp_std::{boxed::Box, vec::Vec};
-use substrate_fixed::types::U32F32;
-use sp_core::{offchain::Duration};
+use super::*;
+use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::Pays};
+use frame_system::offchain::{SendSignedTransaction, SignMessage, Signer};
 use ringbuffer::{RingBufferTrait, RingBufferTransient};
 use scale_info::prelude::format;
+use serde_json::Value;
+use sp_core::{crypto::KeyTypeId, offchain::Duration};
+use sp_runtime::{
+    offchain::http,
+    traits::{Convert, SaturatedConversion},
+};
+use sp_std::{boxed::Box, vec::Vec};
+use substrate_fixed::types::U32F32;
 
-use super::*;
-
-use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::Pays};
-
-use super::{Pallet, Config, Event, Error};
+pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"aura");
+pub const SRC_CODE: &str = "USDC";
+pub const SRC_ISSUER: &str = "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
+pub const DST_TYPE: &str = "credit_alphanum4";
+pub const DST_ISSUER: &str = "GBOVQKJYHXRR3DX6NOX2RRYFRCUMSADGDESTDNBDS6CDVLGVESRTAC47";
+pub const DST_CODE: &str = "TFT";
+pub const DST_AMOUNT: u32 = 100;
 
 impl<T: Config> Pallet<T> {
     pub(crate) fn calculate_and_set_price(

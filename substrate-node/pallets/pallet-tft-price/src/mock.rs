@@ -1,12 +1,13 @@
 #![cfg(test)]
 
 use super::*;
-use crate::{self as pallet_tft_price};
+use crate::{self as pallet_tft_price, tft_price::KEY_TYPE};
 use frame_support::traits::GenesisBuild;
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::mocking;
 use frame_system::EnsureRoot;
 use parity_scale_codec::alloc::sync::Arc;
+use parity_scale_codec::{Decode, Encode};
 use sp_core::{
     crypto::key_types::DUMMY,
     offchain::{testing, OffchainDbExt, TransactionPoolExt},
@@ -25,7 +26,6 @@ use sp_runtime::{
 use sp_std::marker::PhantomData;
 use std::cell::RefCell;
 use tfchain_support::constants::time::MINUTES;
-use parity_scale_codec::{Decode, Encode};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime>;
 type Block = mocking::MockBlock<TestRuntime>;
@@ -155,7 +155,7 @@ thread_local! {
 }
 
 use pallet_session::SessionHandler;
-use sp_runtime::{RuntimeAppPublic, KeyTypeId};
+use sp_runtime::{KeyTypeId, RuntimeAppPublic};
 pub struct TestSessionHandler;
 impl SessionHandler<AccountId> for TestSessionHandler {
     const KEY_TYPE_IDS: &'static [sp_runtime::KeyTypeId] = &[UintAuthorityId::ID];
