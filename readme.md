@@ -71,5 +71,4 @@ A changelog will be generated based on the Pull requests merged, so having PRs w
 
 ### Upgrade runtime
 
-To upgrade the runtime for a network based on a release, download the runtime attached to the release (tfchain_runtime.compact.compressed.wasm)
-and upload it to the network using a council proposal. The proposal should be a `set_code` proposal with the runtime as the code and majority of the council should vote in favor of the proposal.
+See [upgrade](./docs/production/upgrade_process.md) for more information on how to upgrade the runtime.
