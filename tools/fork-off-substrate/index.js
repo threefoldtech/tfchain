@@ -46,7 +46,7 @@ const progressBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_cla
 let prefixes = ['0x26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da9' /* System.Account */];
 const skippedModulesPrefix = ['System', 'Session', 'Babe', 'Grandpa', 'GrandpaFinality', 'FinalityTracker', 'Authorship'];
 
-async function fixParachinStates (api, forkedSpec) {
+async function fixParachinStates(api, forkedSpec) {
   const skippedKeys = [
     api.query.parasScheduler.sessionStartBlock.key()
   ];
@@ -146,10 +146,8 @@ async function main() {
   forkedSpec.genesis.raw.top['0x5f3e4907f716ac89b6347d15ececedcaf7dad0317324aecae8744b87fc95f2f3'] = '0x02';
 
   if (alice !== '') {
-    // Set sudo key to //Alice
-    forkedSpec.genesis.raw.top['0x5c0d1176a568c1f92944340dbfed9e9c530ebca703c85910e7164cb7d1c9e47b'] = '0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d';
     // Council
-    forkedSpec.genesis.raw.top['0xaebd463ed9925c488c112434d61debc0ba7fb8745735dc3be2a2c61a72c39e78'] = '0x0c1cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d'
+    forkedSpec.genesis.raw.top['0xaebd463ed9925c488c112434d61debc0ba7fb8745735dc3be2a2c61a72c39e78'] = '0x088eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d'
     // Pallet validator validators
     forkedSpec.genesis.raw.top['0x7d9fe37370ac390779f35763d98106e888dcde934c658227ee1dfafcd6e16903'] = '0x04d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d';
     // Session validators
