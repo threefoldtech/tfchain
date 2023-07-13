@@ -106,6 +106,7 @@ std = [
 	"sp-std/std",
 	"sp-transaction-pool/std",
 	"sp-version/std",
+	"substrate-validator-set/std",
 	"pallet-tft-price/std",
     "pallet-smart-contract/std",
 	"pallet-tft-bridge/std",
