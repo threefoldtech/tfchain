@@ -14,7 +14,11 @@ func TestPrice(t *testing.T) {
 	require.Greater(t, int(price), 0)
 	require.NoError(t, err)
 
-	pricingPolicy, err := cl.GetPricingPolicies(1)
+	price, err = cl.GetAverageTFTPrice()
+	require.Greater(t, int(price), 0)
+	require.NoError(t, err)
+
+	pricingPolicy, err := cl.GetPricingPolicy(1)
 	require.Equal(t, pricingPolicy.Name, "threefold_default_pricing_policy")
 	require.Equal(t, int(pricingPolicy.ID), 1)
 	require.NoError(t, err)

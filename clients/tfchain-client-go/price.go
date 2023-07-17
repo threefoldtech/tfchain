@@ -21,8 +21,8 @@ type PricingPolicy struct {
 	DedicatedNodesDiscount types.U8  `json:"dedication_nodes_discount"`
 }
 
-// GetPricingPolicies gets pricing policies from tfgrid module
-func (s *Substrate) GetPricingPolicies(id uint32) (pricingPolicy PricingPolicy, err error) {
+// GetPricingPolicies gets pricing policy from tfgrid module
+func (s *Substrate) GetPricingPolicy(id uint32) (pricingPolicy PricingPolicy, err error) {
 	cl, meta, err := s.GetClient()
 	if err != nil {
 		return
@@ -69,6 +69,30 @@ func (s *Substrate) GetTFTPrice() (price types.U32, err error) {
 
 	if !ok {
 		return price, errors.Wrap(ErrNotFound, "price not found")
+	}
+
+	return
+}
+
+// GetAverageTFTPrice gets the average TFT price
+func (s *Substrate) GetAverageTFTPrice() (price types.U32, err error) {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return
+	}
+
+	key, err := types.CreateStorageKey(meta, "TFTPriceModule", "AverageTftPrice")
+	if err != nil {
+		return price, errors.Wrap(err, "failed to create substrate query key")
+	}
+
+	ok, err := cl.RPC.State.GetStorageLatest(key, &price)
+	if err != nil {
+		return price, errors.Wrap(err, "failed to lookup entity")
+	}
+
+	if !ok {
+		return price, errors.Wrap(ErrNotFound, "average price not found")
 	}
 
 	return
