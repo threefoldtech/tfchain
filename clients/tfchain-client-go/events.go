@@ -121,20 +121,6 @@ type Policy struct {
 	Value types.U32
 	Unit  Unit
 }
-type PricingPolicy struct {
-	Versioned
-	ID                     types.U32 `json:"id"`
-	Name                   string    `json:"name"`
-	SU                     Policy    `json:"su"`
-	CU                     Policy    `json:"cu"`
-	NU                     Policy    `json:"nu"`
-	IPU                    Policy    `json:"ipu"`
-	UniqueName             Policy    `json:"unique_name"`
-	DomainName             Policy    `json:"domain_name"`
-	FoundationAccount      AccountID `json:"foundation_name"`
-	CertifiedSalesAccount  AccountID `json:"certified_sales_account"`
-	DedicatedNodesDiscount types.U8  `json:"dedication_nodes_discount"`
-}
 
 type PricingPolicyStored struct {
 	Phase  types.Phase
