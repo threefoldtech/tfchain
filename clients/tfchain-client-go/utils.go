@@ -20,29 +20,66 @@ var (
 // map from module index to error list
 // https://github.com/threefoldtech/tfchain/blob/development/substrate-node/runtime/src/lib.rs#L701
 var moduleErrors = [][]string{
-	nil,                       // System
-	nil,                       // Timestamp
-	nil,                       // Utility
-	nil,                       // Scheduler
-	nil,                       // ValidatorSet
-	nil,                       // Session
-	nil,                       // Aura
-	nil,                       // Grandpa
-	nil,                       // Historical
-	nil,                       // Authorship
-	nil,                       // Balances
-	nil,                       // TransactionPayment
-	tfgridModuleErrors,        // TfgridModule
-	smartContractModuleErrors, // SmartContractModule
-	tftBridgeModuleErrors,     // TFTBridgeModule
-	nil,                       // TftPriceModule
-	nil,                       // BurningModule
-	nil,                       // TFKVStore
-	nil,                       // RuntimeUpgrade
-	nil,                       // Council
-	nil,                       // CouncilMembership
-	nil,                       // Dao
-	nil,                       // Validator
+	systemErrors,              // 0 System
+	nil,                       // 1 Timestamp
+	nil,                       // 2 NOT USED
+	nil,                       // 3 Utility
+	nil,                       // 4 Scheduler
+	nil,                       // 5 NOT USED
+	nil,                       // 6 NOT USED
+	nil,                       // 7 NOT USED
+	nil,                       // 8 NOT USED
+	nil,                       // 9 NOT USED
+	nil,                       // 10 ValidatorSet
+	nil,                       // 11 Session
+	nil,                       // 12 Aura
+	nil,                       // 13 Grandpa
+	nil,                       // 14 Historical
+	nil,                       // 15 Authorship
+	nil,                       // 16 NOT USED
+	nil,                       // 17 NOT USED
+	nil,                       // 18 NOT USED
+	nil,                       // 19 NOT USED
+	nil,                       // 20 Balances
+	nil,                       // 21 TransactionPayment
+	nil,                       // 22 NOT USED
+	nil,                       // 23 NOT USED
+	nil,                       // 24 NOT USED
+	tfgridModuleErrors,        // 25 TfgridModule
+	smartContractModuleErrors, // 26 SmartContractModule
+	tftBridgeModuleErrors,     // 27 TFTBridgeModule
+	nil,                       // 28 TftPriceModule
+	nil,                       // 29 BurningModule
+	nil,                       // 30 TFKVStore
+	nil,                       // 31 RuntimeUpgrade
+	nil,                       // 32 NOT USED
+	nil,                       // 33 NOT USED
+	nil,                       // 34 NOT USED
+	nil,                       // 35 NOT USED
+	nil,                       // 36 NOT USED
+	nil,                       // 37 NOT USED
+	nil,                       // 38 NOT USED
+	nil,                       // 39 NOT USED
+	nil,                       // 40 Council
+	nil,                       // 41 CouncilMembership
+	nil,                       // 42 NOT USED
+	nil,                       // 43 Dao
+	nil,                       // 44 NOT USED
+	nil,                       // 45 NOT USED
+	nil,                       // 46 NOT USED
+	nil,                       // 47 NOT USED
+	nil,                       // 48 NOT USED
+	nil,                       // 49 NOT USED
+	nil,                       // 50 Validator
+}
+
+var systemErrors = []string{
+	"InvalidSpecName",
+	"SpecVersionNeedsToIncrease",
+	"FailedToExtractRuntimeVersion",
+	"NonDefaultComposite",
+	"NonZeroRefCount",
+	"CallFiltered",
 }
 
 // https://github.com/threefoldtech/tfchain_pallets/blob/bc9c5d322463aaf735212e428da4ea32b117dc24/pallet-smart-contract/src/lib.rs#L58
