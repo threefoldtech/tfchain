@@ -1,3 +1,8 @@
-# Threefold key-value store
-This is a key-value store which can be used by users as a database on the blockchain
-the user can simply set,get and remove values
+# Key-Value module
+
+This pallet provides a simple key-value store for the users. It simply stores a key-value pair in the storage. The key-value pair can be set by anyone and can be read by anyone. The key-value pair can be deleted by the owner of the key.
+
+## Interface
+
+- `set` - Set a key-value pair
+- `delete` - Delete a key-value pair
