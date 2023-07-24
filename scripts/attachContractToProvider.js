@@ -17,7 +17,7 @@ async function main() {
   const provider = new WsProvider('wss://tfchain.' + network + 'grid.tf')
   const api = await ApiPromise.create({ provider })
 
-  const keyring = new Keyring()
+  const keyring = new Keyring({ type: 'sr25519' })
   let key
   try {
     key = keyring.addFromMnemonic(mnemonic)
@@ -44,12 +44,14 @@ async function main() {
     throw Error(`Couldn't find a twin id for this account id: ${accountId}`)
   }
   
-  const filteredContracts = parsedContracts.filter(c => c.twinId === twinId)
-  console.log(parsedContracts[0])
+  const filteredContracts = parsedContracts.filter(c => c.twinId === twinId && c.solutionProviderId === null)
   if (filteredContracts.length === 0) {
     console.log(`No contracts found for twin id ${twinId}`)
     process.exit(0)
   }
+
+  console.log(`contracts found for twin id ${twinId}`)
+  console.log(filteredContracts)
 
   const attachCalls = filteredContracts.map(c => {
     return api.tx.smartContractModule.attachSolutionProviderId(c.contractId, providerId)
@@ -64,7 +66,7 @@ async function main() {
   console.log(`estimated fees: ${info}`);
 
   // Construct the batch and send the transactions
-  api.tx.utility
+  await api.tx.utility
     .batch(attachCalls)
     .signAndSend(key, ({ status }) => {
       if (status.isInBlock) {
