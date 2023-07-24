@@ -85,7 +85,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn proposal_list)]
     pub type Proposals<T: Config> =
-        StorageMap<_, Identity, T::Hash, proposal::DaoProposal<ProposalIndex>, OptionQuery>;
+        StorageMap<_, Identity, T::Hash, proposal::DaoProposal, OptionQuery>;
 
     // Actual proposal for a given hash, if it's current.
     #[pallet::storage]
@@ -100,7 +100,7 @@ pub mod pallet {
         _,
         Identity,
         T::Hash,
-        proposal::DaoVotes<ProposalIndex, T::BlockNumber, T::AccountId>,
+        proposal::DaoVotes<T::BlockNumber, T::AccountId>,
         OptionQuery,
     >;
 
