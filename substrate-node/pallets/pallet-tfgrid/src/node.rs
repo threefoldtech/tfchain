@@ -370,7 +370,7 @@ impl<T: Config> Pallet<T> {
 
         Self::_change_power_target_on_node(node.id, node.farm_id, power_target);
 
-        Ok(().into())
+        Ok(Pays::No.into())
     }
 
     fn _change_power_target_on_node(node_id: u32, farm_id: u32, power_target: Power) {
