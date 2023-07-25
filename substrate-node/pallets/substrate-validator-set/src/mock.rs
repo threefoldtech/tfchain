@@ -2,11 +2,11 @@
 
 #![cfg(test)]
 
-use super::*;
 use crate as validator_set;
 use frame_support::{parameter_types, traits::ConstU32, traits::GenesisBuild, BasicExternalities};
 use frame_system::EnsureRoot;
 use pallet_session::*;
+use parity_scale_codec::{Decode, Encode};
 use sp_core::{crypto::key_types::DUMMY, H256};
 use sp_runtime::{
     impl_opaque_keys,
@@ -16,7 +16,6 @@ use sp_runtime::{
 };
 use sp_std::convert::{TryFrom, TryInto};
 use std::cell::RefCell;
-use parity_scale_codec::{Decode, Encode};
 
 impl_opaque_keys! {
     pub struct MockSessionKeys {

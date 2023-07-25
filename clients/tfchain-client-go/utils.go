@@ -22,28 +22,27 @@ var (
 var moduleErrors = [][]string{
 	nil,                       // System
 	nil,                       // Timestamp
-	nil,                       // Balances
+	nil,                       // Utility
+	nil,                       // Scheduler
 	nil,                       // ValidatorSet
 	nil,                       // Session
 	nil,                       // Aura
 	nil,                       // Grandpa
-	nil,                       // TransactionPayment
-	nil,                       // Sudo
+	nil,                       // Historical
 	nil,                       // Authorship
+	nil,                       // Balances
+	nil,                       // TransactionPayment
 	tfgridModuleErrors,        // TfgridModule
 	smartContractModuleErrors, // SmartContractModule
 	tftBridgeModuleErrors,     // TFTBridgeModule
-	nil,                       // TFTPriceModule
-	nil,                       // Scheduler
+	nil,                       // TftPriceModule
 	nil,                       // BurningModule
 	nil,                       // TFKVStore
+	nil,                       // RuntimeUpgrade
 	nil,                       // Council
 	nil,                       // CouncilMembership
-	nil,                       // RuntimeUpgrade
-	nil,                       // Validator
 	nil,                       // Dao
-	nil,                       // Utility
-	nil,                       // Historical
+	nil,                       // Validator
 }
 
 // https://github.com/threefoldtech/tfchain_pallets/blob/bc9c5d322463aaf735212e428da4ea32b117dc24/pallet-smart-contract/src/lib.rs#L58

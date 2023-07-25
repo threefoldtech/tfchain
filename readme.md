@@ -1,4 +1,4 @@
-# TFchain &middot; ![Build & Tests](https://github.com/threefoldtech/tfchain/actions/workflows/build_test.yaml/badge.svg)
+# TFchain &middot; ![Build & Tests](https://github.com/threefoldtech/tfchain/actions/workflows/010_build_and_test.yaml/badge.svg)
 
 <p align="center">
   <img height="50%" width="50%" src="./substrate-node/.maintain/header.png">
@@ -49,3 +49,11 @@ See [scripts](./scripts/README.md) for more information on how to use the script
 
   - Polkadot UI: [https://polkadot.js.org/apps/?rpc=wss%3A%2F%2F/tfchain.grid.tf#/explorer](https://polkadot.js.org/apps/?rpc=wss%3A%2F%2F/tfchain.grid.tf#/explorer)
   - Websocket url: wss://tfchain.grid.tf
+
+## Commit messages
+
+In this repository [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) are used.
+
+## Releases
+
+See [releases](./docs/production/releases.md) for more information on how to create or validate a release.

@@ -45,8 +45,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: tfchain-runtime
-          path: |
-            substrate-node/${{ steps.srtool_build.outputs.wasm_compressed }}
+          path: substrate-node/${{ steps.srtool_build.outputs.wasm_compressed }}
 
   release:
     needs: srtool
@@ -54,39 +53,50 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Work around for https://github.com/heinrichreimer/action-github-changelog-generator/issues/21
 
       - name: Download artifacts
-        uses: actions/download-artifact@v2
+        id: download
+        uses: actions/download-artifact@v3
         with:
           name: tfchain-runtime
+          path: tfchain-runtime
 
       - name: Generate changelog
         id: changelog
         uses: heinrichreimer/github-changelog-generator-action@v2.3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          future-release: ${{ github.ref }}
+          headerLabel: "# 📑 Changelog"
+          breakingLabel: '### 💥 Breaking'
+          enhancementLabel: '### 🚀 Enhancements'
+          bugsLabel: '### 🐛 Bug fixes'
+          securityLabel: '### 🛡️ Security'
+          issuesLabel: '### 📁 Other issues'
+          prLabel: '### 📁 Other pull requests'
+          addSections: '{"documentation":{"prefix":"### 📖 Documentation","labels":["documentation"]},"tests":{"prefix":"### ✅ Testing","labels":["tests"]}}'
+          onlyLastTag: true
+          issues: false
+          issuesWoLabels: false
+          pullRequests: true
+          prWoLabels: true
+          author: true
+          unreleased: true
+          compareLink: true
+          stripGeneratorNotice: true
+          verbose: true
 
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          name: Release ${{ github.ref_name }}
           draft: false
+          fail_on_unmatched_files: true
           prerelease: ${{ contains(github.ref, 'rc') }}
-          body: |
-            Changes in this Release:
-            ${{ steps.changelog.outputs.changelog }}
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./tfchain-runtime
-          asset_name: tfchain-runtime.wasm
-          asset_content_type: application/wasm
+          body: ${{ steps.changelog.outputs.changelog }}
+          files: tfchain-runtime/*

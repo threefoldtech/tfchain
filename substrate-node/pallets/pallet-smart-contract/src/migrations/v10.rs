@@ -1,8 +1,9 @@
 use crate::*;
 use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
 use log::info;
+use sp_core::Get;
 use sp_runtime::Saturating;
-use sp_std::marker::PhantomData;
+use sp_std::{marker::PhantomData, vec};
 
 #[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
@@ -17,7 +18,7 @@ impl<T: Config> OnRuntimeUpgrade for ReworkBillingLoopInsertion<T> {
     #[cfg(feature = "try-runtime")]
     fn post_upgrade(_: Vec<u8>) -> Result<(), &'static str> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
-        assert!(PalletVersion::<T>::get() == types::StorageVersion::V10);
+        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V10);
 
         super::v9::check_contracts_to_bill_at::<T>();
 

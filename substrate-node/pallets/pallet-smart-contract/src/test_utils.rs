@@ -1,5 +1,4 @@
 use crate::mock::{PoolState, SmartContractModule, System, Timestamp};
-
 use frame_support::traits::Hooks;
 use parity_scale_codec::alloc::sync::Arc;
 use parking_lot::RwLock;

@@ -2,11 +2,10 @@ use crate::*;
 use frame_support::{dispatch::Weight, traits::Get, traits::OnRuntimeUpgrade};
 use log::{debug, info};
 use sp_std::{collections::btree_map::BTreeMap, marker::PhantomData};
+use sp_std::{vec, vec::Vec};
 
 #[cfg(feature = "try-runtime")]
-use parity_scale_codec::Decode;
-#[cfg(feature = "try-runtime")]
-use sp_std::vec::Vec;
+use parity_scale_codec::{Decode, Encode};
 
 pub struct FixFarmNodeIndexMap<T: Config>(PhantomData<T>);
 

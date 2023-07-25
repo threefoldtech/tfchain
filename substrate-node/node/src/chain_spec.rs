@@ -7,7 +7,7 @@ use std::convert::TryInto;
 use tfchain_runtime::opaque::SessionKeys;
 use tfchain_runtime::{
     AccountId, AuraConfig, BalancesConfig, CouncilConfig, CouncilMembershipConfig, GenesisConfig,
-    GrandpaConfig, SessionConfig, Signature, SmartContractModuleConfig, SudoConfig, SystemConfig,
+    GrandpaConfig, SessionConfig, Signature, SmartContractModuleConfig, SystemConfig,
     TFTBridgeModuleConfig, TFTPriceModuleConfig, TfgridModuleConfig, ValidatorSetConfig,
     WASM_BINARY,
 };
@@ -87,8 +87,6 @@ pub fn development_config() -> Result<ChainSpec, String> {
 			vec![
 				authority_keys_from_seed("Alice"),
 			],
-			// Sudo account
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
 			// Foundation account
 			get_account_id_from_seed::<sr25519::Public>("Eve"),
 			// Sales account
@@ -126,7 +124,6 @@ pub fn development_config() -> Result<ChainSpec, String> {
             vec![
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
                 get_account_id_from_seed::<sr25519::Public>("Bob"),
-                get_account_id_from_seed::<sr25519::Public>("Ferdie")
             ],
 		)
         },
@@ -172,8 +169,6 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 				authority_keys_from_seed("Alice"),
 				authority_keys_from_seed("Bob"),
 			],
-			// Sudo account
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
 			// Foundation account
 			get_account_id_from_seed::<sr25519::Public>("Eve"),
 			// Sales account
@@ -219,7 +214,6 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
             vec![
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
                 get_account_id_from_seed::<sr25519::Public>("Bob"),
-                get_account_id_from_seed::<sr25519::Public>("Ferdie")
             ],
 		)
         },
@@ -262,8 +256,6 @@ pub fn live_config() -> Result<ChainSpec, String> {
                 wasm_binary,
                 // Initial PoA authorities
                 vec![authority_keys_from_seed("Alice")],
-                // Sudo account
-                get_account_id_from_seed::<sr25519::Public>("Alice"),
                 // Foundation account
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
                 // Sales account
@@ -301,7 +293,6 @@ pub fn live_config() -> Result<ChainSpec, String> {
 fn testnet_genesis(
     wasm_binary: &[u8],
     initial_authorities: Vec<(AccountId, AuraId, GrandpaId)>,
-    root_key: AccountId,
     foundation_account: AccountId,
     sales_account: AccountId,
     endowed_accounts: Vec<AccountId>,
@@ -345,15 +336,12 @@ fn testnet_genesis(
                 })
                 .collect::<Vec<_>>(),
         },
+        transaction_payment: Default::default(),
         aura: AuraConfig {
             authorities: vec![],
         },
         grandpa: GrandpaConfig {
             authorities: vec![],
-        },
-        sudo: SudoConfig {
-            // Assign network admin rights.
-            key: Some(root_key),
         },
         tfgrid_module: TfgridModuleConfig {
             su_price_value: 50000,

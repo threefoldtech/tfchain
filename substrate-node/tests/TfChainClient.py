@@ -50,11 +50,6 @@ class TfChainClient:
     def _check_events(self, events: list = [], expected_events: list = []):
         logging.info("Events: %s", json.dumps(events))
 
-        # This was a sudo call that failed
-        for event in events:
-            if event["event_id"] == "Sudid" and "Err" in event["attributes"]["sudo_result"]:
-                raise Exception(event["attributes"]["sudo_result"])
-            
         for expected_event in expected_events:
             check = False
             for event in events:
@@ -69,11 +64,8 @@ class TfChainClient:
 
     def _sign_extrinsic_submit_check_response(self, substrate, call, who: str, expected_events: list = []):
         _who = who.title()
-        if _who == "Sudo":
-            call = substrate.compose_call("Sudo", "sudo", {
-                "call": call
-            })
-            _who = "Alice"
+        if _who == "Council":
+            return self.execute_council_motion(substrate, call, expected_events)
         else:
             assert _who in PREDEFINED_KEYS.keys(
             ), f"{who} is not a predefined account, use one of {PREDEFINED_KEYS.keys()}"
@@ -90,6 +82,81 @@ class TfChainClient:
 
         self._check_events([event.value["event"]
                            for event in response.triggered_events], expected_events)
+
+    def execute_council_motion(self, substrate, call, expected_events: list = []):
+        # Propose
+        proposal_hash, proposal_index = self.propose_council_motion(substrate, "Alice", call)
+
+        # Vote
+        self.vote_proposal(substrate, "Alice", proposal_hash, proposal_index)
+        self.vote_proposal(substrate, "Bob", proposal_hash, proposal_index)
+        
+        # Close
+        logging.info("closing proposal")
+        self.close_proposal(substrate, "Alice", proposal_hash, proposal_index, expected_events)
+
+    def propose_council_motion(self, substrate, who, call):
+        call = substrate.compose_call("Council", "propose", {
+                "threshold": 2,
+                "proposal": call,
+                "length_bound": 10000,
+            })
+
+        logging.info("Sending propose motion transaction: %s", call)
+        signed_call = substrate.create_signed_extrinsic(
+            call, PREDEFINED_KEYS[who])
+
+        response = substrate.submit_extrinsic(
+            signed_call, wait_for_finalization=False, wait_for_inclusion=True)
+        if response.error_message:
+            raise Exception(response.error_message)
+
+        proposal_hash = ""
+        proposal_index = 0
+
+        for event in response.triggered_events:
+            if event.value["event_id"] == "Proposed":
+                proposal_hash = event.value["event"]["attributes"]["proposal_hash"]
+                proposal_index = event.value["event"]["attributes"]["proposal_index"]
+
+        return proposal_hash, proposal_index
+
+    def vote_proposal(self, substrate, who, proposal_hash, proposal_index):
+        call = substrate.compose_call("Council", "vote", {
+                "proposal": proposal_hash,
+                "index": proposal_index,
+                "approve": True,
+            })
+        
+        logging.info("Sending vote proposal transaction: %s", call)
+        signed_call = substrate.create_signed_extrinsic(
+            call, PREDEFINED_KEYS[who])
+
+        response = substrate.submit_extrinsic(
+            signed_call, wait_for_finalization=False, wait_for_inclusion=True)
+        if response.error_message:
+            raise Exception(response.error_message)
+
+    def close_proposal(self, substrate, who, proposal_hash, proposal_index, expected_events: list = []):
+        call = substrate.compose_call("Council", "close", {
+                "proposal_hash": proposal_hash,
+                "index": proposal_index,
+                # Default values for weights and length bound
+                "proposal_weight_bound": {'ref_time': 25990000000, 'proof_size': 11990383647911208550},
+                "length_bound": 10000,
+            })
+        
+        logging.info("Sending close proposal transaction: %s", call)
+        signed_call = substrate.create_signed_extrinsic(
+            call, PREDEFINED_KEYS[who])
+
+        response = substrate.submit_extrinsic(
+            signed_call, wait_for_finalization=False, wait_for_inclusion=True)
+        if response.error_message:
+            raise Exception(response.error_message)
+        
+        self._check_events([event.value["event"]
+            for event in response.triggered_events], expected_events)
 
     def setup_predefined_account(self, who: str, port: int = DEFAULT_PORT):
         logging.info("Setting up predefined account %s (%s)", who,
@@ -175,16 +242,16 @@ class TfChainClient:
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         call = substrate.compose_call("TfgridModule", "create_farm",
-                                    {
-                                        "name": f"{name}",
-                                        "public_ips": [public_ips]
-                                    })
+                                      {
+                                          "name": f"{name}",
+                                          "public_ips": [public_ips]
+                                      })
         expected_events = [{
             "module_id": "TfgridModule",
             "event_id": "FarmStored"
         }]
         self._sign_extrinsic_submit_check_response(
-                substrate, call, who, expected_events=expected_events)
+            substrate, call, who, expected_events=expected_events)
 
     def update_farm(self, id: int = 1, name: str = "", pricing_policy_id: int = 1, port: int = DEFAULT_PORT,
                     who: str = DEFAULT_SIGNER):
@@ -192,7 +259,7 @@ class TfChainClient:
 
         call = substrate.compose_call("TfgridModule", "update_farm",
                                       {
-                                          "id": id,
+                                          "farm_id": id,
                                           "name": f"{name}",
                                           "pricing_policy_id": pricing_policy_id
                                       })
@@ -213,7 +280,7 @@ class TfChainClient:
 
         call = substrate.compose_call("TfgridModule", "add_farm_ip",
                                       {
-                                          "id": id,
+                                          "farm_id": id,
                                           "ip": ip,
                                           "gw": gateway
                                       })
@@ -229,7 +296,7 @@ class TfChainClient:
 
         call = substrate.compose_call("TfgridModule", "remove_farm_ip",
                                       {
-                                          "id": id,
+                                          "farm_id": id,
                                           "ip": ip
                                       })
         expected_events = [{
@@ -347,7 +414,7 @@ class TfChainClient:
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         call = substrate.compose_call("TfgridModule", "delete_node", {
-            "id": id})
+            "node_id": id})
         expected_events = [{
             "module_id": "TfgridModule",
             "event_id": "NodeDeleted"
@@ -559,7 +626,7 @@ class TfChainClient:
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         call = substrate.compose_call("TfgridModule", "add_node_certifier", {
-                                      "who": f"{PREDEFINED_KEYS[account_name].ss58_address}"})
+                                      "certifier": f"{PREDEFINED_KEYS[account_name].ss58_address}"})
         expected_events = [{
             "module_id": "TfgridModule",
             "event_id": "NodeCertifierAdded"
@@ -571,7 +638,7 @@ class TfChainClient:
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         call = substrate.compose_call("TfgridModule", "remove_node_certifier", {
-                                      "who": f"{PREDEFINED_KEYS[account_name].ss58_address}"})
+                                      "certifier": f"{PREDEFINED_KEYS[account_name].ss58_address}"})
         expected_events = [{
             "module_id": "TfgridModule",
             "event_id": "NodeCertifierRemoved"
@@ -583,11 +650,11 @@ class TfChainClient:
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         call = substrate.compose_call(
-            "TfgridModule", "report_uptime", {"uptime": uptime })
+            "TfgridModule", "report_uptime", {"uptime": uptime})
         # if timestamp_hint is provided, use v2 call
         if timestamp_hint != 0:
             call = substrate.compose_call(
-            "TfgridModule", "report_uptime_v2", {"uptime": uptime, "timestamp_hint": timestamp_hint})
+                "TfgridModule", "report_uptime_v2", {"uptime": uptime, "timestamp_hint": timestamp_hint})
 
         expected_events = [{
             "module_id": "TfgridModule",
@@ -630,7 +697,7 @@ class TfChainClient:
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         params = {
-            "id": id,
+            "pricing_policy_id": id,
             "name": f"{name}",
             "su": {"value": su, "unit": unit},
             "cu": {"value": cu, "unit": unit},
@@ -694,7 +761,7 @@ class TfChainClient:
         substrate = self._connect_to_server(f"ws://127.0.0.1:{port}")
 
         params = {
-            "id": id,
+            "farming_policy_id": id,
             "name": f"{name}",
             "su": su,
             "cu": cu,

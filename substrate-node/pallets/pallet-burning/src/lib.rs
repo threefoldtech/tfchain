@@ -1,14 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{
-    ensure,
-    traits::{Currency, OnUnbalanced},
-};
-use parity_scale_codec::{Decode, Encode};
-use scale_info::TypeInfo;
-use sp_runtime::DispatchResult;
-use sp_std::prelude::*;
-use sp_std::vec;
+pub mod burning;
+pub mod types;
+pub mod weights;
 
 #[cfg(test)]
 mod tests;
@@ -19,30 +13,19 @@ mod mock;
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
 
-pub mod weights;
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct Burn<AccountId, BalanceOf, BlockNumber> {
-    pub target: AccountId,
-    pub amount: BalanceOf,
-    pub block: BlockNumber,
-    pub message: Vec<u8>,
-}
-
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
     use super::weights::WeightInfo;
+    use crate::types::Burn;
     use frame_support::{
         pallet_prelude::*,
         traits::{Currency, OnUnbalanced, ReservableCurrency},
     };
     use frame_system::{ensure_signed, pallet_prelude::*};
-    use sp_std::convert::TryInto;
     use sp_std::vec::Vec;
-    use crate::Burn;
 
     // balance type using reservable currency type
     pub type BalanceOf<T> =
@@ -94,49 +77,5 @@ pub mod pallet {
             Self::_burn_tft(target, amount, message)?;
             Ok(().into())
         }
-    }
-}
-
-impl<T: Config> Pallet<T> {
-    pub fn _burn_tft(
-        target: T::AccountId,
-        amount: BalanceOf<T>,
-        message: Vec<u8>,
-    ) -> DispatchResult {
-        let free_balance: BalanceOf<T> = T::Currency::free_balance(&target);
-        // Make sure the user has enough balance to cover the withdraw
-        ensure!(free_balance >= amount, Error::<T>::NotEnoughBalanceToBurn);
-
-        // Slash the balance & burn
-        let imbalance = T::Currency::slash(&target, amount).0;
-        T::Burn::on_unbalanced(imbalance);
-
-        let block = <frame_system::Pallet<T>>::block_number();
-
-        let burn = Burn {
-            target: target.clone(),
-            amount,
-            block,
-            message: message.clone(),
-        };
-
-        // Save historical burns
-        match Burns::<T>::get() {
-            Some(mut burns) => {
-                burns.push(burn);
-                Burns::<T>::put(burns);
-            }
-            None => {
-                let burns = vec![burn];
-                Burns::<T>::put(burns);
-            }
-        }
-
-        // Desposit event
-        Self::deposit_event(Event::BurnTransactionCreated(
-            target, amount, block, message,
-        ));
-
-        Ok(())
     }
 }

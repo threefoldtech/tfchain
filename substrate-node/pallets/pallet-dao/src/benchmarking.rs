@@ -1,8 +1,9 @@
 #![cfg(feature = "runtime-benchmarks")]
 
-use super::*;
-use crate::Pallet as DaoModule;
-use frame_benchmarking::{account, benchmarks, whitelisted_caller};
+use crate::pallet::Pallet as DaoModule;
+use crate::pallet::Pallet;
+use crate::pallet::{Call, Config, Event};
+use frame_benchmarking::{account, benchmarks, whitelisted_caller, vec, Vec, Box};
 use frame_support::{assert_ok, BoundedVec};
 use frame_system::{Call as SystemCall, EventRecord, Pallet as System, RawOrigin};
 use pallet_membership::Pallet as CouncilMembership;
@@ -11,7 +12,10 @@ use pallet_tfgrid::{
     Gw4Input, Ip4Input, LatitudeInput, LongitudeInput, Pallet as TfgridModule, PkInput, RelayInput,
     ResourcesInput,
 };
-use sp_runtime::traits::StaticLookup;
+use sp_runtime::{
+    traits::{Hash, StaticLookup},
+    DispatchError,
+};
 use sp_std::convert::{TryFrom, TryInto};
 use tfchain_support::types::IP4;
 

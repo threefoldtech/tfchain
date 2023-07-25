@@ -147,7 +147,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 141,
+    spec_version: 144,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -308,11 +308,6 @@ impl pallet_transaction_payment::Config for Runtime {
     type FeeMultiplierUpdate = ();
 }
 
-impl pallet_sudo::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type RuntimeCall = RuntimeCall;
-}
-
 pub type Serial = pallet_tfgrid::pallet::SerialNumberOf<Runtime>;
 pub type Loc = pallet_tfgrid::pallet::LocationOf<Runtime>;
 pub type Interface = pallet_tfgrid::pallet::InterfaceOf<Runtime>;
@@ -401,7 +396,7 @@ impl pallet_smart_contract::Config for Runtime {
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
     type Call = RuntimeCall;
     type MaxNameContractNameLength = MaxNameContractNameLength;
-    type NameContractName = pallet_smart_contract::name_contract::NameContractName<Runtime>;
+    type NameContractName = pallet_smart_contract::grid_contract::NameContractName<Runtime>;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
     type MaxDeploymentDataLength = MaxDeploymentDataLength;
     type MaxNodeContractPublicIps = MaxFarmPublicIps;
@@ -700,30 +695,40 @@ construct_runtime!(
         NodeBlock = opaque::Block,
         UncheckedExtrinsic = UncheckedExtrinsic
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        ValidatorSet: substrate_validator_set::{Pallet, Call, Storage, Event<T>, Config<T>},
-        Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
-        Aura: pallet_aura::{Pallet, Config<T>},
-        Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event},
-        TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
-        Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
-        Authorship: pallet_authorship::{Pallet, Storage},
-        TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>, Config<T>},
-        SmartContractModule: pallet_smart_contract::{Pallet, Call, Config, Storage, Event<T>},
-        TFTBridgeModule: pallet_tft_bridge::{Pallet, Call, Config<T>, Storage, Event<T>},
-        TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Config<T>, Event<T>},
-        Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>},
-        BurningModule: pallet_burning::{Pallet, Call, Storage, Event<T>},
-        TFKVStore: pallet_kvstore::{Pallet, Call, Storage, Event<T>},
-        Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
-        CouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
-        RuntimeUpgrade: pallet_runtime_upgrade::{Pallet, Call},
-        Validator: pallet_validator::{Pallet, Call, Storage, Event<T>},
-        Dao: pallet_dao::{Pallet, Call, Storage, Event<T>},
-        Utility: pallet_utility::{Pallet, Call, Event},
-        Historical: pallet_session::historical::{Pallet},
+        // System support
+        System: frame_system = 0,
+        Timestamp: pallet_timestamp = 1,
+        Utility: pallet_utility = 3,
+        Scheduler: pallet_scheduler = 4,
+
+        // Consensus support
+        ValidatorSet: substrate_validator_set = 10,
+        Session: pallet_session = 11,
+        Aura: pallet_aura = 12,
+        Grandpa: pallet_grandpa = 13,
+        Historical: pallet_session::historical::{Pallet} = 14,
+        Authorship: pallet_authorship = 15,
+
+        // Money
+        Balances: pallet_balances = 20,
+        TransactionPayment: pallet_transaction_payment = 21,
+
+        // Custom
+        TfgridModule: pallet_tfgrid = 25,
+        SmartContractModule: pallet_smart_contract = 26,
+        TFTBridgeModule: pallet_tft_bridge  = 27,
+        TFTPriceModule: pallet_tft_price = 28,
+        BurningModule: pallet_burning = 29,
+        TFKVStore: pallet_kvstore = 30,
+        RuntimeUpgrade: pallet_runtime_upgrade  = 31,
+
+        // Governance
+        Council: pallet_collective::<Instance1> = 40,
+        CouncilMembership: pallet_membership::<Instance1> = 41,
+        Dao: pallet_dao = 43,
+
+        // otherwise it requires genesis config, will be deprecated in the future so we can remove later
+        Validator: pallet_validator::{Pallet, Call, Storage, Event<T>} = 50,
     }
 );
 
@@ -765,7 +770,12 @@ pub type Executive = frame_executive::Executive<
 
 // All migrations executed on runtime upgrade as a nested tuple of types implementing
 // `OnRuntimeUpgrade`.
-type Migrations = (pallet_tfgrid::migrations::v16::KillNodeGpuStatus<Runtime>,);
+type Migrations = (
+    pallet_tfgrid::migrations::v16::KillNodeGpuStatus<Runtime>,
+    pallet_smart_contract::migrations::v10::ReworkBillingLoopInsertion<Runtime>,
+    pallet_smart_contract::migrations::v11::ExtendContractLock<Runtime>,
+    migrations::remove_sudo::RemoveSudo<Runtime>,
+);
 
 // follows Substrate's non destructive way of eliminating  otherwise required
 // repetion: https://github.com/paritytech/substrate/pull/10592

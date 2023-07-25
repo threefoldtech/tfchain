@@ -662,32 +662,6 @@ func (s *Substrate) GetLastNodeID() (uint32, error) {
 	return uint32(v), nil
 }
 
-// SetNodeCertificate sets the node certificate type
-func (s *Substrate) SetNodeCertificate(sudo Identity, id uint32, cert NodeCertification) error {
-	cl, meta, err := s.GetClient()
-	if err != nil {
-		return err
-	}
-
-	c, err := types.NewCall(meta, "TfgridModule.set_node_certification",
-		id, cert,
-	)
-	if err != nil {
-		return errors.Wrap(err, "failed to create call")
-	}
-
-	su, err := types.NewCall(meta, "Sudo.sudo", c)
-	if err != nil {
-		return errors.Wrap(err, "failed to create sudo call")
-	}
-
-	if _, err := s.Call(cl, meta, sudo, su); err != nil {
-		return errors.Wrap(err, "failed to set node certificate")
-	}
-
-	return nil
-}
-
 // SetNodePowerState updates the node uptime to given value
 func (s *Substrate) SetNodePowerState(identity Identity, up bool) (hash types.Hash, err error) {
 	cl, meta, err := s.GetClient()

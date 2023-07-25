@@ -45,3 +45,7 @@ Every pallet should have all functionality tested, you can write unit tests and 
 
 - unit test: check https://docs.substrate.io/reference/how-to-guides/testing/
 - integration test: [see](../../substrate-node/tests/readme.md)
+
+## Upgrading dependencies
+
+see [upgrading](./upgrade_deps.md)

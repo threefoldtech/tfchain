@@ -338,49 +338,73 @@ fn test_update_farm_name_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
         create_farm();
+        let old_farm_name = b"test_farm".to_vec();
+        let farm_id = 1;
 
-        create_twin_bob();
+        let farm = TfgridModule::farms(farm_id).unwrap();
+        let farm_name: Vec<u8> = farm.name.into();
+        assert_eq!(farm_name, old_farm_name);
+        assert_eq!(TfgridModule::farms_by_name_id(&old_farm_name), farm_id);
 
-        let farm_name = get_farm_name_input(b"bob_farm");
-        assert_ok!(TfgridModule::create_farm(
-            RuntimeOrigin::signed(bob()),
-            farm_name,
-            bounded_vec![]
-        ));
-
-        let farm_name = get_farm_name_input(b"bob_updated_farm");
+        let new_farm_name = b"alice_farm".to_vec();
         assert_ok!(TfgridModule::update_farm(
-            RuntimeOrigin::signed(bob()),
-            2,
-            farm_name,
+            RuntimeOrigin::signed(alice()),
+            farm_id,
+            get_farm_name_input(&new_farm_name),
         ));
+
+        let farm = TfgridModule::farms(farm_id).unwrap();
+        let farm_name: Vec<u8> = farm.name.into();
+        assert_eq!(farm_name, new_farm_name);
+        assert_eq!(TfgridModule::farms_by_name_id(&old_farm_name), 0);
+        assert_eq!(TfgridModule::farms_by_name_id(&new_farm_name), farm_id);
     });
 }
 
 #[test]
-fn test_update_farm_existing_name_fails() {
+fn test_update_farm_name_unauthorized_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
-
-        let farm_name = get_farm_name_input(b"alice_farm");
-        assert_ok!(TfgridModule::create_farm(
-            RuntimeOrigin::signed(alice()),
-            farm_name,
-            bounded_vec![]
-        ));
+        create_farm();
+        let farm_id = 1;
 
         create_twin_bob();
 
-        let farm_name = get_farm_name_input(b"bob_farm");
+        let new_farm_name = b"bob_farm".to_vec();
+        assert_noop!(
+            TfgridModule::update_farm(
+                RuntimeOrigin::signed(bob()),
+                farm_id,
+                get_farm_name_input(&new_farm_name),
+            ),
+            Error::<TestRuntime>::CannotUpdateFarmWrongTwin
+        );
+    });
+}
+
+#[test]
+fn test_update_farm_name_existing_name_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        let alice_farm_id = 1;
+
+        create_twin_bob();
+
+        let bob_farm_name = b"bob_farm".to_vec();
         assert_ok!(TfgridModule::create_farm(
             RuntimeOrigin::signed(bob()),
-            farm_name,
+            get_farm_name_input(&bob_farm_name),
             bounded_vec![]
         ));
 
-        let farm_name = get_farm_name_input(b"alice_farm");
+        // Try to set bob farm name to alice farm
         assert_noop!(
-            TfgridModule::update_farm(RuntimeOrigin::signed(bob()), 2, farm_name),
+            TfgridModule::update_farm(
+                RuntimeOrigin::signed(alice()),
+                alice_farm_id,
+                get_farm_name_input(&bob_farm_name),
+            ),
             Error::<TestRuntime>::InvalidFarmName
         );
     });

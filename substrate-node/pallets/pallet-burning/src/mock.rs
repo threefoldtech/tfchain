@@ -5,11 +5,11 @@ use crate as pallet_burning;
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
 use pallet_balances;
 use sp_core::{sr25519, Pair, Public, H256};
-use sp_runtime::traits::{IdentifyAccount, Verify};
-use sp_runtime::MultiSignature;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
+    traits::{IdentifyAccount, Verify},
+    MultiSignature,
 };
 use sp_std::convert::{TryFrom, TryInto};
 
