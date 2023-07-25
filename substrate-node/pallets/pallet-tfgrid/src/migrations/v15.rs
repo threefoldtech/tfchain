@@ -190,7 +190,20 @@ pub fn check_nodes_by_farm_id<T: Config>() {
         PalletVersion::<T>::get()
     );
 
-    // TODO
+    for (farm_id, nodes) in NodesByFarmID::<T>::iter() {
+        if Farms::<T>::get(farm_id).is_none() {
+            debug!(" ⚠️    NodesByFarmID[farm: {}]: farm not exists", farm_id);
+        }
+
+        for node_id in nodes {
+            if Nodes::<T>::get(node_id).is_none() {
+                debug!(
+                    " ⚠️    NodesByFarmID[farm: {}]: node {} not exists",
+                    farm_id, node_id
+                );
+            }
+        }
+    }
 
     debug!(
         "🏁  TFGrid pallet {:?} checking NodesByFarmID storage map END",
@@ -205,7 +218,24 @@ pub fn check_farm_id_by_name<T: Config>() {
         PalletVersion::<T>::get()
     );
 
-    // TODO
+    for (farm_name, farm_id) in FarmIdByName::<T>::iter() {
+        if let Some(farm) = Farms::<T>::get(farm_id) {
+            if farm_name != farm.name.clone().into() {
+                debug!(
+                    " ⚠️    FarmIdByName[name: {}]: name ({:?}) on farm {} not matching",
+                    String::from_utf8_lossy(&farm_name),
+                    String::from_utf8_lossy(&farm.name.into()),
+                    farm_id,
+                );
+            }
+        } else {
+            debug!(
+                " ⚠️    FarmIdByName[name: {}]: farm {} not exists",
+                String::from_utf8_lossy(&farm_name),
+                farm_id
+            );
+        }
+    }
 
     debug!(
         "🏁  TFGrid pallet {:?} checking FarmIdByName storage map END",
@@ -220,7 +250,14 @@ pub fn check_farm_payout_v2_address_by_farm_id<T: Config>() {
         PalletVersion::<T>::get()
     );
 
-    // TODO
+    for (farm_id, _stellar_address) in FarmPayoutV2AddressByFarmID::<T>::iter() {
+        if Farms::<T>::get(farm_id).is_none() {
+            debug!(
+                " ⚠️    FarmPayoutV2AddressByFarmID[farm id: {}]: farm not exists",
+                farm_id
+            );
+        }
+    }
 
     debug!(
         "🏁  TFGrid pallet {:?} checking FarmPayoutV2AddressByFarmID storage map END",
@@ -248,7 +285,29 @@ pub fn check_nodes<T: Config>() {
             );
         }
 
-        // TODO
+        // Farms
+        if !Farms::<T>::contains_key(node.farm_id) {
+            debug!(
+                " ⚠️    Nodes[id: {}]: farm (farm_id: {}) not found",
+                node_id, node.farm_id
+            );
+        }
+
+        // Twins
+        if !Twins::<T>::contains_key(node.twin_id) {
+            debug!(
+                " ⚠️    Nodes[id: {}]: twin (twin_id: {}) not found",
+                node_id, node.twin_id
+            );
+        }
+
+        // FarmingPoliciesMap
+        if !FarmingPoliciesMap::<T>::contains_key(node.farming_policy_id) {
+            debug!(
+                " ⚠️    Node[id: {}]: farming policy (farming_policy_id: {}) not found",
+                node_id, node.farming_policy_id
+            );
+        }
     }
 
     debug!(
@@ -264,7 +323,21 @@ pub fn check_node_id_by_twin_id<T: Config>() {
         PalletVersion::<T>::get()
     );
 
-    // TODO
+    for (twin_id, node_id) in NodeIdByTwinID::<T>::iter() {
+        if Twins::<T>::get(twin_id).is_none() {
+            debug!(
+                " ⚠️    NodeIdByTwinID[twin_id: {}]: twin not exists",
+                twin_id
+            );
+        }
+
+        if Nodes::<T>::get(node_id).is_none() {
+            debug!(
+                " ⚠️    NodeIdByTwinID[twin_id: {}]: node {} not exists",
+                twin_id, node_id
+            );
+        }
+    }
 
     debug!(
         "🏁  TFGrid pallet {:?} checking NodeIdByTwinID storage map END",
@@ -296,7 +369,13 @@ pub fn check_twins<T: Config>() {
             );
         }
 
-        // TODO
+        // TwinIdByAccountID
+        if !TwinIdByAccountID::<T>::contains_key(&twin.account_id) {
+            debug!(
+                " ⚠️    Twins[id: {}]: account (account_id: {:?}) not found",
+                twin_id, twin.account_id
+            );
+        }
     }
 
     debug!(
@@ -312,7 +391,21 @@ pub fn check_twin_id_by_account_id<T: Config>() {
         PalletVersion::<T>::get()
     );
 
-    // TODO
+    for (account_id, twin_id) in TwinIdByAccountID::<T>::iter() {
+        if let Some(twin) = Twins::<T>::get(twin_id) {
+            if account_id != twin.account_id {
+                debug!(
+                    " ⚠️    TwinIdByAccountID[account_id: {:?}]: account ({:?}) on twin {} not matching",
+                    account_id, twin.account_id, twin_id,
+                );
+            }
+        } else {
+            debug!(
+                " ⚠️    TwinIdByAccountID[account_id: {:?}]: twin {} not exists",
+                account_id, twin_id
+            );
+        }
+    }
 
     debug!(
         "🏁  TFGrid pallet {:?} checking TwinIdByAccountID storage map END",
@@ -327,7 +420,14 @@ pub fn check_twin_bounded_account_id<T: Config>() {
         PalletVersion::<T>::get()
     );
 
-    // TODO
+    for (twin_id, _bounded_account_id) in TwinBoundedAccountID::<T>::iter() {
+        if Twins::<T>::get(twin_id).is_none() {
+            debug!(
+                " ⚠️    TwinBoundedAccountID[twin_id: {}]: twin not exists",
+                twin_id
+            );
+        }
+    }
 
     debug!(
         "🏁  TFGrid pallet {:?} checking TwinBoundedAccountID storage map END",
