@@ -766,8 +766,8 @@ pub type Executive = frame_executive::Executive<
 // All migrations executed on runtime upgrade as a nested tuple of types implementing
 // `OnRuntimeUpgrade`.
 type Migrations = (
-    pallet_smart_contract::migrations::v10::ReworkBillingLoopInsertion<Runtime>,
-    pallet_smart_contract::migrations::v11::ExtendContractLock<Runtime>,
+    pallet_smart_contract::migrations::v9::CheckStorageState<Runtime>,
+    pallet_tfgrid::migrations::v15::CheckStorageState<Runtime>,
 );
 
 // follows Substrate's non destructive way of eliminating  otherwise required
