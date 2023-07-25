@@ -8,4 +8,6 @@ A wrapper pallet for [frame-system](https://github.com/paritytech/substrate/tree
 
 ## Interface
 
+Dispatchable functions of this pallet.
+
 - `set_code` - Set the runtime code (Can only by signed by a configurable Origin in the Config)

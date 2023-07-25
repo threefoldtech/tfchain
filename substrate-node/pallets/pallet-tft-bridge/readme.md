@@ -18,7 +18,9 @@ The TFT Bridge module provides functions for:
 - Burn Transaction: A burn transaction that withdraws tokens on Stellar based on consensus reached by the validators that a certain swap to Stellar was made.
 - Refund Transaction: A refund transaction that refunds tokens on Stellar based on consensus reached by the validators that a certain deposit needs to be refunded.
 
-## Dispatchable Functions
+## Interface
+
+Dispatchable functions of this pallet.
 
 - `add_bridge_validator`: Add a bridge validator, can only be called by a configurable origin.
 - `remove_bridge_validator`: Remove a bridge validator, can only be called by a configurable origin.

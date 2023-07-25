@@ -55,7 +55,9 @@ For more information browse our [manual](https://manual.grid.tf/intro/intro_read
 - `farming_policy_minimal_uptime`: The minimal uptime a certified farmer needs to have to earn farming rewards
 - `connection_price`: The price of TFT when connecting a node
 
-## Dispatchable Functions
+## Interface
+
+Dispatchable functions of this pallet.
 
 - `set_storage_version`: Set the storage version, only callable by a configurable origin.
 - `create_farm`: Create a farm

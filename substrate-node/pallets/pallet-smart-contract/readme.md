@@ -13,7 +13,9 @@ The smart contract module provides functions for:
 - Creating / Approving solution providers
 - Creating / Updating / Canceling a Service Contract
 - Setting an extra price for a dedicated ZOS node
-- Billing all sorts of contracts based on a pricing policy defined in the [Tfgrid module](../pallet-tfgrid/readme.md) and a TFT price fetched in the [Tft Price Module](../pallet-tft-price/readme.md).
+- Billing all sorts of contracts based on a pricing policy defined in the [Tfgrid module](../pallet-tfgrid/readme.md) and a TFT price fetched in the [Tft Price Module](../pallet-tft-price/readme.md)..
+
+The billing is triggered by an offchain worker that runs after a block is created. This offchain worker relies on the `aura` key in the keystore to sign the transaction triggers the billing. This means that only valid block creators can sign this transaction. Given this configuration this pallet will only work in an Aura / Grandpa based chains.
 
 For a more in depth view of this module, see [spec](./spec.md).
 
@@ -27,7 +29,9 @@ For a more in depth view of this module, see [spec](./spec.md).
     - `ServiceContract`: An agreement between a user and an external service provider for the usage of a service.
 - Solution provider: a provider of a solution, see [solution provider](./solution_provider.md)
 
-## Dispatchable Functions
+## Interface
+
+Dispatchable functions of this pallet.
 
 - `create_node_contract` - Create a node contract
 - `update_node_contract` - Update a node contract

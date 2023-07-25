@@ -13,6 +13,7 @@ use sp_std::{boxed::Box, vec::Vec};
 use substrate_fixed::types::U32F32;
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"aura");
+
 pub const SRC_CODE: &str = "USDC";
 pub const SRC_ISSUER: &str = "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
 pub const DST_TYPE: &str = "credit_alphanum4";
@@ -113,7 +114,7 @@ impl<T: Config> Pallet<T> {
     pub(crate) fn offchain_signed_tx(block_number: T::BlockNumber) -> Result<(), Error<T>> {
         let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::any_account();
 
-        // Only allow the author of the next block to trigger the billing
+        // Only allow the author of the next block to trigger price fetching
         match Self::is_next_block_author(&signer) {
             Ok(_) => (),
             Err(_) => return Ok(()),

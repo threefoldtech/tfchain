@@ -4,5 +4,7 @@ This pallet provides a simple key-value store for the users. It simply stores a 
 
 ## Interface
 
+Dispatchable functions of this pallet.
+
 - `set` - Set a key-value pair
 - `delete` - Delete a key-value pair

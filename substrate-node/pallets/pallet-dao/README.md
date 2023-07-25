@@ -46,6 +46,8 @@ Based on the voting result the proposal can be either approved(executed) or diss
 
 ## Interface
 
+Dispatchable functions of this pallet.
+
 - `propose` - Create a proposal
 - `vote` - Vote for a proposal
 - `veto` - Veto a proposal
