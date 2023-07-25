@@ -1,4 +1,4 @@
-# 13. Untrack GPU status on a node 
+# 14. Untrack GPU status on a node 
 
 Date: 2023-06-22
 

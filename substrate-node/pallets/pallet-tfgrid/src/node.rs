@@ -385,30 +385,6 @@ impl<T: Config> Pallet<T> {
         });
     }
 
-    pub fn _set_node_gpu_status(
-        account_id: &T::AccountId,
-        gpu_status: bool,
-    ) -> DispatchResultWithPostInfo {
-        let twin_id = TwinIdByAccountID::<T>::get(account_id).ok_or(Error::<T>::TwinNotExists)?;
-
-        ensure!(
-            NodeIdByTwinID::<T>::contains_key(twin_id),
-            Error::<T>::NodeNotExists
-        );
-        let node_id = NodeIdByTwinID::<T>::get(twin_id);
-
-        ensure!(Nodes::<T>::contains_key(node_id), Error::<T>::NodeNotExists);
-
-        NodeGpuStatus::<T>::insert(node_id, gpu_status);
-
-        Self::deposit_event(Event::NodeGpuStatusChanged {
-            node_id,
-            gpu_status,
-        });
-
-        Ok(Pays::No.into())
-    }
-
     fn get_resources(
         resources: pallet::ResourcesInput,
     ) -> Result<Resources, DispatchErrorWithPostInfo> {

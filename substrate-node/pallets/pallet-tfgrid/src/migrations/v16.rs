@@ -4,6 +4,7 @@ use frame_support::{
     weights::Weight,
 };
 use log::info;
+use sp_core::Get;
 use sp_std::marker::PhantomData;
 
 pub struct KillNodeGpuStatus<T: Config>(PhantomData<T>);
