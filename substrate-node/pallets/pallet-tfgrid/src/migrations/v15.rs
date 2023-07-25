@@ -1,12 +1,13 @@
 use crate::*;
 use frame_support::{traits::Get, traits::OnRuntimeUpgrade, weights::Weight};
 use log::{debug, info};
-use sp_std::marker::PhantomData;
+use scale_info::prelude::string::String;
+use sp_std::{marker::PhantomData, vec::Vec};
 
 #[cfg(feature = "try-runtime")]
-use parity_scale_codec::Decode;
+use parity_scale_codec::{Decode, Encode};
 #[cfg(feature = "try-runtime")]
-use sp_std::vec::Vec;
+use sp_std::vec;
 
 pub struct MigrateTwinsV15<T: Config>(PhantomData<T>);
 
@@ -84,4 +85,361 @@ pub fn migrate_twins<T: Config>() -> frame_support::weights::Weight {
 
     // Return the weight consumed by the migration.
     T::DbWeight::get().reads_writes(read_writes, read_writes + 1)
+}
+
+pub struct CheckStorageState<T: Config>(PhantomData<T>);
+
+impl<T: Config> OnRuntimeUpgrade for CheckStorageState<T> {
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+        info!("current pallet version: {:?}", PalletVersion::<T>::get());
+        assert!(PalletVersion::<T>::get() == types::StorageVersion::V15Struct);
+
+        check_pallet_tfgrid::<T>();
+
+        Ok(vec![])
+    }
+}
+
+pub fn check_pallet_tfgrid<T: Config>() {
+    info!("💥💥💥💥💥 CHECKING PALLET TFGRID STORAGE 💥💥💥💥💥");
+    check_farms::<T>();
+    check_nodes_by_farm_id::<T>();
+    check_farm_id_by_name::<T>();
+    check_farm_payout_v2_address_by_farm_id::<T>();
+    check_nodes::<T>();
+    check_node_id_by_twin_id::<T>();
+    // check_entities::<T>();
+    // check_entity_id_by_account_id::<T>();
+    // check_entity_id_by_name::<T>();
+    check_twins::<T>();
+    check_twin_id_by_account_id::<T>();
+    check_twin_bounded_account_id::<T>();
+    check_pricing_policies::<T>();
+    check_pricing_policy_id_by_name::<T>();
+    check_farming_policies_map::<T>();
+    check_users_terms_and_conditions::<T>();
+}
+
+// Farms
+pub fn check_farms<T: Config>() {
+    debug!(
+        "🔎  TFGrid pallet {:?} checking Farms storage map START",
+        PalletVersion::<T>::get()
+    );
+
+    let farm_id_range = 1..=FarmID::<T>::get();
+
+    for (farm_id, farm) in Farms::<T>::iter() {
+        if farm_id != farm.id {
+            debug!(" ⚠️    Farms[id: {}]: wrong id ({})", farm_id, farm.id);
+        }
+        if !farm_id_range.contains(&farm_id) {
+            debug!(
+                " ⚠️    Farms[id: {}]: id not in range {:?}",
+                farm_id, farm_id_range
+            );
+        }
+
+        // FarmIdByName
+        if !FarmIdByName::<T>::contains_key(farm.name.clone().into()) {
+            debug!(
+                " ⚠️    Farm[id: {}]: farm (name: {}) not found",
+                farm_id,
+                String::from_utf8_lossy(&farm.name.into())
+            );
+        }
+
+        // Twins
+        if !Twins::<T>::contains_key(farm.twin_id) {
+            debug!(
+                " ⚠️    Farm[id: {}]: twin (twin_id: {}) not found",
+                farm_id, farm.twin_id
+            );
+        }
+
+        // PricingPolicies
+        if !PricingPolicies::<T>::contains_key(farm.pricing_policy_id) {
+            debug!(
+                " ⚠️    Farm[id: {}]: pricing policy (pricing_policy_id: {}) not found",
+                farm_id, farm.pricing_policy_id
+            );
+        }
+
+        // FarmingPoliciesMap
+        if let Some(limits) = farm.farming_policy_limits {
+            if !FarmingPoliciesMap::<T>::contains_key(limits.farming_policy_id) {
+                debug!(
+                    " ⚠️    Farm[id: {}]: farming policy (farming_policy_id: {}) not found",
+                    farm_id, limits.farming_policy_id
+                );
+            }
+        }
+    }
+
+    debug!(
+        "🏁  TFGrid pallet {:?} checking Farms storage map END",
+        PalletVersion::<T>::get()
+    );
+}
+
+// NodesByFarmID
+pub fn check_nodes_by_farm_id<T: Config>() {
+    debug!(
+        "🔎  TFGrid pallet {:?} checking NodesByFarmID storage map START",
+        PalletVersion::<T>::get()
+    );
+
+    // TODO
+
+    debug!(
+        "🏁  TFGrid pallet {:?} checking NodesByFarmID storage map END",
+        PalletVersion::<T>::get()
+    );
+}
+
+// FarmIdByName
+pub fn check_farm_id_by_name<T: Config>() {
+    debug!(
+        "🔎  TFGrid pallet {:?} checking FarmIdByName storage map START",
+        PalletVersion::<T>::get()
+    );
+
+    // TODO
+
+    debug!(
+        "🏁  TFGrid pallet {:?} checking FarmIdByName storage map END",
+        PalletVersion::<T>::get()
+    );
+}
+
+// FarmPayoutV2AddressByFarmID
+pub fn check_farm_payout_v2_address_by_farm_id<T: Config>() {
+    debug!(
+        "🔎  TFGrid pallet {:?} checking FarmPayoutV2AddressByFarmID storage map START",
+        PalletVersion::<T>::get()
+    );
+
+    // TODO
+
+    debug!(
+        "🏁  TFGrid pallet {:?} checking FarmPayoutV2AddressByFarmID storage map END",
+        PalletVersion::<T>::get()
+    );
+}
+
+// Nodes
+pub fn check_nodes<T: Config>() {
+    debug!(
+        "🔎  TFGrid pallet {:?} checking Nodes storage map START",
+        PalletVersion::<T>::get()
+    );
+
+    let node_id_range = 1..=NodeID::<T>::get();
+
+    for (node_id, node) in Nodes::<T>::iter() {
+        if node_id != node.id {
+            debug!(" ⚠️    Nodes[id: {}]: wrong id ({})", node_id, node.id);
+        }
+        if !node_id_range.contains(&node_id) {
+            debug!(
+                " ⚠️    Nodes[id: {}]: id not in range {:?}",
+                node_id, node_id_range
+            );
+        }
+
+        // TODO
+    }
+
+    debug!(
+        "🏁  TFGrid pallet {:?} checking Nodes storage map END",
+        PalletVersion::<T>::get()
+    );
+}
+
+// NodeIdByTwinID
+pub fn check_node_id_by_twin_id<T: Config>() {
+    debug!(
+        "🔎  TFGrid pallet {:?} checking NodeIdByTwinID storage map START",
+        PalletVersion::<T>::get()
+    );
+
+    // TODO
+
+    debug!(
+        "🏁  TFGrid pallet {:?} checking NodeIdByTwinID storage map END",
+        PalletVersion::<T>::get()
+    );
+}
+
+// Entities
+// pub type EntityIdByAccountID
+// pub type EntityIdByName
+
+// Twins
+pub fn check_twins<T: Config>() {
+    debug!(
+        "🔎  TFGrid pallet {:?} checking Twins storage map START",
+        PalletVersion::<T>::get()
+    );
+
+    let twin_id_range = 1..=TwinID::<T>::get();
+
+    for (twin_id, twin) in Twins::<T>::iter() {
+        if twin_id != twin.id {
+            debug!(" ⚠️    Twins[id: {}]: wrong id ({})", twin_id, twin.id);
+        }
+        if !twin_id_range.contains(&twin_id) {
+            debug!(
+                " ⚠️    Twins[id: {}]: id not in range {:?}",
+                twin_id, twin_id_range
+            );
+        }
+
+        // TODO
+    }
+
+    debug!(
+        "🏁  TFGrid pallet {:?} checking Twins storage map END",
+        PalletVersion::<T>::get()
+    );
+}
+
+// TwinIdByAccountID
+pub fn check_twin_id_by_account_id<T: Config>() {
+    debug!(
+        "🔎  TFGrid pallet {:?} checking TwinIdByAccountID storage map START",
+        PalletVersion::<T>::get()
+    );
+
+    // TODO
+
+    debug!(
+        "🏁  TFGrid pallet {:?} checking TwinIdByAccountID storage map END",
+        PalletVersion::<T>::get()
+    );
+}
+
+// TwinBoundedAccountID
+pub fn check_twin_bounded_account_id<T: Config>() {
+    debug!(
+        "🔎  TFGrid pallet {:?} checking TwinBoundedAccountID storage map START",
+        PalletVersion::<T>::get()
+    );
+
+    // TODO
+
+    debug!(
+        "🏁  TFGrid pallet {:?} checking TwinBoundedAccountID storage map END",
+        PalletVersion::<T>::get()
+    );
+}
+
+// PricingPolicies
+pub fn check_pricing_policies<T: Config>() {
+    debug!(
+        "🔎  TFGrid pallet {:?} checking PricingPolicies storage map START",
+        PalletVersion::<T>::get()
+    );
+
+    let pricing_policy_id_range = 1..=PricingPolicyID::<T>::get();
+
+    for (pricing_policy_id, pricing_policy) in PricingPolicies::<T>::iter() {
+        if pricing_policy_id != pricing_policy.id {
+            debug!(
+                " ⚠️    PricingPolicies[id: {}]: wrong id ({})",
+                pricing_policy_id, pricing_policy.id
+            );
+        }
+        if !pricing_policy_id_range.contains(&pricing_policy_id) {
+            debug!(
+                " ⚠️    PricingPolicies[id: {}]: id not in range {:?}",
+                pricing_policy_id, pricing_policy_id_range
+            );
+        }
+
+        // TODO
+    }
+
+    debug!(
+        "🏁  TFGrid pallet {:?} checking PricingPolicies storage map END",
+        PalletVersion::<T>::get()
+    );
+}
+
+// PricingPolicyIdByName
+pub fn check_pricing_policy_id_by_name<T: Config>() {
+    debug!(
+        "🔎  TFGrid pallet {:?} checking PricingPolicyIdByName storage map START",
+        PalletVersion::<T>::get()
+    );
+
+    // TODO
+
+    debug!(
+        "🏁  TFGrid pallet {:?} checking Farms PricingPolicyIdByName map END",
+        PalletVersion::<T>::get()
+    );
+}
+
+// FarmingPoliciesMap
+pub fn check_farming_policies_map<T: Config>() {
+    debug!(
+        "🔎  TFGrid pallet {:?} checking FarmingPoliciesMap storage map START",
+        PalletVersion::<T>::get()
+    );
+
+    let farming_policy_id_range = 1..=FarmingPolicyID::<T>::get();
+
+    for (farming_policy_id, farming_policy) in FarmingPoliciesMap::<T>::iter() {
+        if farming_policy_id != farming_policy.id {
+            debug!(
+                " ⚠️    FarmingPoliciesMap[id: {}]: wrong id ({})",
+                farming_policy_id, farming_policy.id
+            );
+        }
+        if !farming_policy_id_range.contains(&farming_policy_id) {
+            debug!(
+                " ⚠️    FarmingPoliciesMap[id: {}]: id not in range {:?}",
+                farming_policy_id, farming_policy_id_range
+            );
+        }
+
+        // TODO
+    }
+
+    debug!(
+        "🏁  TFGrid pallet {:?} checking FarmingPoliciesMap storage map END",
+        PalletVersion::<T>::get()
+    );
+}
+
+// UsersTermsAndConditions
+pub fn check_users_terms_and_conditions<T: Config>() {
+    debug!(
+        "🔎  TFGrid pallet {:?} checking UsersTermsAndConditions storage map START",
+        PalletVersion::<T>::get()
+    );
+
+    // TODO
+
+    debug!(
+        "🏁  TFGrid pallet {:?} checking UsersTermsAndConditions storage map END",
+        PalletVersion::<T>::get()
+    );
+}
+
+// NodePower
+pub fn check_node_power<T: Config>() {
+    debug!(
+        "🔎  TFGrid pallet {:?} checking NodePower storage map START",
+        PalletVersion::<T>::get()
+    );
+
+    // TODO
+
+    debug!(
+        "🏁  TFGrid pallet {:?} checking NodePower storage map END",
+        PalletVersion::<T>::get()
+    );
 }
