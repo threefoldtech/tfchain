@@ -376,6 +376,14 @@ pub fn check_twins<T: Config>() {
                 twin_id, twin.account_id
             );
         }
+
+        // UsersTermsAndConditions
+        if !UsersTermsAndConditions::<T>::contains_key(&twin.account_id) {
+            debug!(
+                " ⚠️    Twins[id: {}]: users terms and conditions (account_id: {:?}) not found",
+                twin_id, twin.account_id
+            );
+        }
     }
 
     debug!(
@@ -458,7 +466,14 @@ pub fn check_pricing_policies<T: Config>() {
             );
         }
 
-        // TODO
+        // PricingPolicyIdByName
+        if !PricingPolicyIdByName::<T>::contains_key(&pricing_policy.name) {
+            debug!(
+                " ⚠️    PricingPolicies[id: {}]: : pricing policy (name: {}) not found",
+                pricing_policy_id,
+                String::from_utf8_lossy(&pricing_policy.name),
+            );
+        }
     }
 
     debug!(
@@ -474,7 +489,24 @@ pub fn check_pricing_policy_id_by_name<T: Config>() {
         PalletVersion::<T>::get()
     );
 
-    // TODO
+    for (pricing_policy_name, pricing_policy_id) in PricingPolicyIdByName::<T>::iter() {
+        if let Some(pricing_policy) = PricingPolicies::<T>::get(pricing_policy_id) {
+            if pricing_policy_name != pricing_policy.name {
+                debug!(
+                    " ⚠️    PricingPolicyIdByName[name: {}]: name ({:?}) on pricing policy {} not matching",
+                    String::from_utf8_lossy(&pricing_policy_name),
+                    String::from_utf8_lossy(&pricing_policy.name),
+                    pricing_policy_id,
+                );
+            }
+        } else {
+            debug!(
+                " ⚠️    PricingPolicyIdByName[name: {}]: pricing policy {} not exists",
+                String::from_utf8_lossy(&pricing_policy_name),
+                pricing_policy_id
+            );
+        }
+    }
 
     debug!(
         "🏁  TFGrid pallet {:?} checking Farms PricingPolicyIdByName map END",
@@ -505,7 +537,7 @@ pub fn check_farming_policies_map<T: Config>() {
             );
         }
 
-        // TODO
+        // Nothing to add here
     }
 
     debug!(
@@ -521,7 +553,7 @@ pub fn check_users_terms_and_conditions<T: Config>() {
         PalletVersion::<T>::get()
     );
 
-    // TODO
+    // Nothing to do here
 
     debug!(
         "🏁  TFGrid pallet {:?} checking UsersTermsAndConditions storage map END",
@@ -536,7 +568,11 @@ pub fn check_node_power<T: Config>() {
         PalletVersion::<T>::get()
     );
 
-    // TODO
+    for (twin_id, _node_power) in NodePower::<T>::iter() {
+        if Twins::<T>::get(twin_id).is_none() {
+            debug!(" ⚠️    NodePower[twin_id: {}]: twin not exists", twin_id);
+        }
+    }
 
     debug!(
         "🏁  TFGrid pallet {:?} checking NodePower storage map END",
