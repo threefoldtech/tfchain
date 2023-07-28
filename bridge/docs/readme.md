@@ -5,7 +5,7 @@ The local instance will consist of a connection between a tfchain that runs in d
 
 ## Installing
 
-See [installing](./intall.md)
+See [installing](./install.md)
 
 ## Prerequisites:
 
@@ -19,3 +19,7 @@ Running a local [single-node](./single_node.md) setup
 ## Local mutlinode development
 
 Running a local [multinode](./multinode.md) setup
+
+## Production setup
+
+Refer to [production](./production.md) for more information on how to setup a production instance.

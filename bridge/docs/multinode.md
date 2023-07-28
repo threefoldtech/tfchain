@@ -146,7 +146,7 @@ Given this command did not give an error, your account you just generated now ha
 
 ## Step 4: Deposit TFT to the bridge
 
-If
+Make sure that
 
 - Tfchain is running
 - The bridge daemons are running
