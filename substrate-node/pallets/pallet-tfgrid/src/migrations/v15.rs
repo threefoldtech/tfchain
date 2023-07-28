@@ -2,6 +2,7 @@ use crate::*;
 use frame_support::{traits::Get, traits::OnRuntimeUpgrade, weights::Weight};
 use log::{debug, info};
 use scale_info::prelude::string::String;
+use sp_core::H256;
 use sp_std::{marker::PhantomData, vec::Vec};
 
 #[cfg(feature = "try-runtime")]
@@ -373,7 +374,7 @@ pub fn check_twins<T: Config>() {
         if !TwinIdByAccountID::<T>::contains_key(&twin.account_id) {
             debug!(
                 " ⚠️    Twins[id: {}]: account (account_id: {:?}) not found",
-                twin_id, twin.account_id
+                twin_id, &twin.account_id
             );
         }
 
@@ -381,7 +382,7 @@ pub fn check_twins<T: Config>() {
         if !UsersTermsAndConditions::<T>::contains_key(&twin.account_id) {
             debug!(
                 " ⚠️    Twins[id: {}]: users terms and conditions (account_id: {:?}) not found",
-                twin_id, twin.account_id
+                twin_id, &twin.account_id
             );
         }
     }
@@ -404,13 +405,13 @@ pub fn check_twin_id_by_account_id<T: Config>() {
             if account_id != twin.account_id {
                 debug!(
                     " ⚠️    TwinIdByAccountID[account_id: {:?}]: account ({:?}) on twin {} not matching",
-                    account_id, twin.account_id, twin_id,
+                    &account_id, &twin.account_id, twin_id,
                 );
             }
         } else {
             debug!(
                 " ⚠️    TwinIdByAccountID[account_id: {:?}]: twin {} not exists",
-                account_id, twin_id
+                &account_id, twin_id
             );
         }
     }
