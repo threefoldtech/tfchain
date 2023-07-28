@@ -55,14 +55,10 @@ Start a bridge daemon:
 
 To run a bridge daemon using docker:
 
-Build to docker image:
-
-```bash
-docker build -t tfchain-bridge .
-```
+To build the docker image see [docker](./docs/docker.md)
 
 
 ```bash
-docker run -d --name tfchain_bridge -v /path/to/node.json:/node.json tfchain-bridge --secret STELLAR_SECRET --tfchainurl ws://localhost:9944 --tfchainseed "MNEMONIC_WORDS" --bridgewallet "STELLAR_BRIDGE_MASTER_ADDRESS" --persistency ./node.json --network production
+docker run -d --name tftchainstellarbridge -v /path/to/node.json:/node.json tfchain-bridge --secret STELLAR_SECRET --tfchainurl ws://localhost:9944 --tfchainseed "MNEMONIC_WORDS" --bridgewallet "STELLAR_BRIDGE_MASTER_ADDRESS" --persistency ./node.json --network production
 ```
 
