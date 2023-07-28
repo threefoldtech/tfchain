@@ -16,7 +16,7 @@ The Smart Contract on Substrate will work as following:
 
 ### 1: The user wants to deploy a workload, he interacts with this smart contract pallet and calls: `create_contract` with the input being:
 
-The user must instruct the chain to create the contract. A contract will always belong to a twin and to a node. This relationship is important because only the user's twin can update the contract as well as only the target node can update as well.
+The user must instruct the chain to create the contract. A contract will always belong to a user's twin and to a node. This relationship is important because only the user's twin and the target can update the contract.
 
 json
 
