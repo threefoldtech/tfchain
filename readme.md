@@ -7,7 +7,7 @@ The ultimate solution for a more fair, sustainable, and accessible Internet for 
 
 
 ## Overview
-Tfchain is the official implementation of the ThreeFold blockchain, which is the technology behind the ThreeFold Grid.
+Tfchain is the official implementation of the ThreeFold blockchain, which is the ledger technology behind the ThreeFold Grid.
 
 TFchin serves as a digitally distributed, decentralized, public ledger that tracks the storage and computing resources of [ZOS](https://github.com/threefoldtech/zos) nodes running on The ThreeFold Grid, manages the smart contracts that enable users to rent and use these resources and provides the incentive layer which ensures that the nodes are rewarded for their contributions to the network.
 
@@ -56,10 +56,6 @@ The project consists of several components, each with a specific purpose and fun
   * [Cargo.toml](./substrate-node/Cargo.toml): contains crate dependencies for the Substrate node project. These dependencies are shared across all sub-crates and specify what external libraries are used by Tfchain. If you need to add dependencies for a specific runtime pallet use `Cargo.toml` file for that pallet instead.
 * [scripts](./scripts): contains JavaScript scripts for various purposes, such as subscribing to events.
 
-## Docs
-
-see [docs](./docs/readme.md) for more information on how to work with TFchain.
-
 ## Runtime Architecture
 The Tfchain Runtime is built using FRAME and consists of pallets from substrate and `pallet/`
 
@@ -86,7 +82,7 @@ The Tfchain Runtime is built using FRAME and consists of pallets from substrate 
 - [pallet-tfgrid](./substrate-node/pallets/pallet-tfgrid): Registry for Nodes / Farms / Twins
 - [pallet-tft-bridge](./substrate-node/pallets/pallet-tft-bridge): Support bridging requirement between Tfchain TFT and Stellar TFT
 - [pallet-tft-price](./substrate-node/pallets/pallet-tft-price): TFT price oracle. See [price](./docs/misc/price.md) for more info. 
-- [substrate-validator-set](./substrate-node/pallets/substrate-validator-set): For adding / removing authorities. modified version of substrate validator set pallet.
+- [substrate-validator-set](./substrate-node/pallets/substrate-validator-set): For adding / removing authorities. fork of substrate validator set pallet.
 - [pallet-validator](./substrate-node/pallets/pallet-validator): (Kinda Deprecated).
 - [pallet-burning](./substrate-node/pallets/pallet-burning): Allow anyone to burn his TFT (Kinda Deprecated).
 
@@ -126,3 +122,5 @@ In this repository [conventional commits](https://www.conventionalcommits.org/en
 ## Releases
 
 See [releases](./docs/production/releases.md) for more information on how to create or validate a release.
+
+## Development
