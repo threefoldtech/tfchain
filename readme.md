@@ -122,5 +122,3 @@ In this repository [conventional commits](https://www.conventionalcommits.org/en
 ## Releases
 
 See [releases](./docs/production/releases.md) for more information on how to create or validate a release.
-
-## Development
