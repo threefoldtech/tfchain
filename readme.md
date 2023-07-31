@@ -86,6 +86,10 @@ The TFchain Runtime is built using FRAME and consists of pallets from substrate 
 - [pallet-validator](./substrate-node/pallets/pallet-validator): (Kinda Deprecated).
 - [pallet-burning](./substrate-node/pallets/pallet-burning): Allow anyone to burn his TFT (Kinda Deprecated).
 
+## Docs
+
+see [docs](./docs/readme.md) for more information on how to work with TFchain.
+
 ## Bridge
 
 See [bridge](./bridge/README.md) for more information on the bridge between TFchain TFT and Stellar TFT.
