@@ -13,7 +13,7 @@ TFchain serves as a digitally distributed, decentralized, public ledger that tra
 
 The ThreeFold Grid is a decentralized network of nodes that provide cloud resources without intermediaries. The nodes are operated by independent farmers who are incentivized by the ThreeFold Token (TFT). TFT is a utility token that is used to exchange resources on the network and to build and run digital workloads, also is used for paying transaction fees, staking, governance, and smart contract execution.
 
-TFchain is based on [Substrate](https://substrate.io), a framework for building blockchains in Rust. it has several custom pallets that implement its features.
+TFchain is based on [Substrate](https://substrate.io), a framework for building blockchains in Rust. It has several custom pallets that implement its features.
 
 TFchain also supports cross-chain transfers with other blockchains, such as Bitcoin, Binance Smart Chain and Stellar.
 
