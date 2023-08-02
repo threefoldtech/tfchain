@@ -68,6 +68,9 @@ Wipe data and recompile.
 ```
 
 Note: You don't need to wipe data when you run a node with `--dev` flag and no explicit `--base-path`. this because `--tmp` option is implied which create a temporary directory to store the configuration on node start that will be deleted at the end of the process.
+## Fork-Off-Substrate Tool
+
+To experiment with different features and parameters of TFchain, See [here](./fork-off-substrate.md) how you can use `fork-off-substrate` tool to create a local fork of the TFchain network.
 
 ## How to develop a pallet
 
