@@ -2,7 +2,7 @@
 
 ## Development
 
-For information about the development process, see: [development](./development/development.md)
+For information about the development process, see: [development](./development)
 
 ## Production
 
