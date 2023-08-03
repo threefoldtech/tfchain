@@ -15,7 +15,7 @@ see [how to setup your development environment](./setup_development_environment.
 ## Get the TFchain Node Code
 
 ```sh
-git clone git@github.com:threefoldtech/tfchain.git
+git clone https://github.com/threefoldtech/tfchain.git
 ```
 
 ## Compile TFchain Binary

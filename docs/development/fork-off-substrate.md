@@ -31,7 +31,7 @@ Before you start, you need to have the following items:
     ```bash
     cp ../../substrate-node/target/debug/wbuild/tfchain-runtime/tfchain_runtime.compact.wasm ./data/runtime.wasm
     ```
-- Run a full node for your blockchain locally (Recommended) or have an external endpoint handy (for TFchain devnet you can use `https:///tfchain.dev.grid.tf`)
+- Run a full node for your blockchain locally (Recommended) or have an external endpoint handy (but should be running with `--rpc-methods Unsafe` flag)
     ```bash
     ../../substrate-node/target/debug/tfchain --chain ../../substrate-node/chainspecs/dev/chainSpecRaw.json --ws-external --rpc-methods Unsafe
     ```
@@ -44,7 +44,7 @@ Before you start, you need to have the following items:
 
     - If you are using an external/non-default endpoint, you need to provide it to the script via the HTTP_RPC_ENDPOINT environment variable
         ```bash
-        HTTP_RPC_ENDPOINT=https:///tfchain.dev.grid.tf npm start
+        HTTP_RPC_ENDPOINT=https://<EXTERNAL END POINT> npm start
         ```
 - You should have the genesis file for the forked chain inside the data folder. It will be called `fork.json`.
 - You can now run a new chain using this genesis file
