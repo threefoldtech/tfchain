@@ -2,10 +2,17 @@
 
 Releases are automated by [this workflow](.github/workflows/030_create_release.yaml). When a release should be created following things need to be done:
 
-- Increment spec version in the [runtime](./substrate-node/runtime/src/lib.rs) 
-- Increment version in [Cargo.toml](./substrate-node/Cargo.toml)
-- Increment version in [Chart.yaml](./substrate-node/charts/substrate-node/Chart.yaml)
-- Increment version in [Chart.yaml](./bridge/tfchain_bridge/chart/tfchainbridge/Chart.yaml)
+- substrate-node
+    - Increment spec version in the runtime [lib.rs](../../substrate-node/runtime/src/lib.rs) 
+    - Increment version in [Cargo.toml](../../substrate-node/Cargo.toml)
+    - Increment package `version` filed in [Chart.yaml](../../substrate-node/charts/substrate-node/Chart.yaml)
+- tfchainbridge
+    - Increment chart `appVersion` filed in [Chart.yaml](../../bridge/tfchain_bridge/chart/tfchainbridge/Chart.yaml)
+    - Increment chart ` version` filed in [Chart.yaml](../../bridge/tfchain_bridge/chart/tfchainbridge/Chart.yaml)
+- activation-service
+    - Increment chart `appVersion` filed in [Chart.yaml](../../activation-service/helm/tfchainactivationservice/Chart.yaml)
+    - Increment chart `version` filed in [Chart.yaml](../../activation-service/helm/tfchainactivationservice/Chart.yaml)
+    - Increment package `version` in [package.json](../../activation-service/package.json)
 - Commit the changes
 - Create a new tag with the version number prefixed with a `v` (e.g. `v1.0.0`, `v1.0.0-rc1` for release candidates) 
 - Push the tag to the repository
