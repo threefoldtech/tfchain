@@ -31,4 +31,4 @@ Can be interacted with on: https://dashboard.dev.grid.tf
 
 ## Development
 
-See [development](./docs/development.md) to learn more.
+See [development](./docs/readme.md) to learn more.

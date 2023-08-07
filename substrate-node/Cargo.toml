@@ -6,7 +6,7 @@ homepage = "https://threefold.io/"
 license-file = "LICENSE"
 readme = "README.md"
 repository = "https://github.com/threefoldtech/tfchain3"
-version = "2.5.0-rc4"
+version = "2.5.0-rc7"
 
 [workspace]
 members = [
@@ -79,7 +79,6 @@ pallet-membership = {git = "https://github.com/paritytech/substrate", default-fe
 pallet-scheduler = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42"}
 pallet-session = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42"}
 pallet-session-benchmarking = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42"}
-pallet-sudo = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42"}
 pallet-timestamp = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42"}
 pallet-transaction-payment = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42"}
 pallet-transaction-payment-rpc = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42"}

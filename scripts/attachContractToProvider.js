@@ -2,8 +2,8 @@ const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api')
 
 async function main() {
   const net = process.argv[2];
-  const providerId = process.args[3];
-  const mnemonic = process.args[4];
+  const providerId = process.argv[3];
+  const mnemonic = process.argv[4];
 
   let network = ''
   if (net === 'dev' || net === 'qa' || net === 'test') {
@@ -15,9 +15,9 @@ async function main() {
   }
 
   const provider = new WsProvider('wss://tfchain.' + network + 'grid.tf')
-  const api = await ApiPromise.create({ provider, types })
+  const api = await ApiPromise.create({ provider })
 
-  const keyring = new Keyring()
+  const keyring = new Keyring({ type: 'sr25519' })
   let key
   try {
     key = keyring.addFromMnemonic(mnemonic)
@@ -25,27 +25,36 @@ async function main() {
     throw new Error('Invalid mnemonic')
   }
   
-  console.log(`key with address ${key.address} loaded on ${net} network`)`)`
+  console.log(`key with address ${key.address} loaded on ${net} network`)
 
   const contracts = await api.query.smartContractModule.contracts.entries()
   const parsedContracts = contracts.map(c => c[1].toJSON())
 
-  const solutionProvider = await api.query.smartContractModule.solutionProivders(providerId)
+  
+  let solutionProvider = await api.query.smartContractModule.solutionProviders(providerId)
   solutionProvider = solutionProvider.toJSON()
-
+  
   if (!solutionProvider.approved) {
     throw new Error('Provider is not approved')
   }
-
+  
   const res = await api.query.tfgridModule.twinIdByAccountID(key.address)
   const twinId = res.toJSON()
   if (twinId === 0) {
     throw Error(`Couldn't find a twin id for this account id: ${accountId}`)
   }
+  
+  const filteredContracts = parsedContracts.filter(c => c.twinId === twinId && c.solutionProviderId === null)
+  if (filteredContracts.length === 0) {
+    console.log(`No contracts found for twin id ${twinId}`)
+    process.exit(0)
+  }
 
-  const filteredContracts = parsedContracts.filter(c => c.twinId === twinId)
+  console.log(`contracts found for twin id ${twinId}`)
+  console.log(filteredContracts)
+
   const attachCalls = filteredContracts.map(c => {
-    return api.tx.smartContractModule.attachSolutionProviderId(c.id, providerId)
+    return api.tx.smartContractModule.attachSolutionProviderId(c.contractId, providerId)
   })
 
   // Estimate the fees as RuntimeDispatchInfo, using the signer (either
@@ -57,7 +66,7 @@ async function main() {
   console.log(`estimated fees: ${info}`);
 
   // Construct the batch and send the transactions
-  api.tx.utility
+  await api.tx.utility
     .batch(attachCalls)
     .signAndSend(key, ({ status }) => {
       if (status.isInBlock) {

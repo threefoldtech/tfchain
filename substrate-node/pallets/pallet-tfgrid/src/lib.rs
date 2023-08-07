@@ -263,10 +263,6 @@ pub mod pallet {
         ValueQuery,
     >;
 
-    #[pallet::storage]
-    #[pallet::getter(fn node_gpu_status)]
-    pub type NodeGpuStatus<T: Config> = StorageMap<_, Blake2_128Concat, u32, bool, ValueQuery>;
-
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_timestamp::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -439,10 +435,6 @@ pub mod pallet {
             farm_id: u32,
             node_id: u32,
             power_state: PowerState<T::BlockNumber>,
-        },
-        NodeGpuStatusChanged {
-            node_id: u32,
-            gpu_status: bool,
         },
     }
 
@@ -1270,14 +1262,8 @@ pub mod pallet {
             Self::_report_uptime(&account_id, uptime, timestamp_hint)
         }
 
-        #[pallet::call_index(39)]
-        #[pallet::weight(<T as Config>::WeightInfo::set_node_gpu_status())]
-        pub fn set_node_gpu_status(
-            origin: OriginFor<T>,
-            gpu_status: bool,
-        ) -> DispatchResultWithPostInfo {
-            let account_id = ensure_signed(origin)?;
-            Self::_set_node_gpu_status(&account_id, gpu_status)
-        }
+        // Deprecated! Use index 40 for next extrinsic
+        // #[pallet::call_index(39)]
+        // #[pallet::weight(<T as Config>::WeightInfo::set_node_gpu_status())]
     }
 }

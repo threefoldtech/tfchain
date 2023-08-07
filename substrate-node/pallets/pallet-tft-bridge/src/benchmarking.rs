@@ -1,6 +1,6 @@
 #![cfg(feature = "runtime-benchmarks")]
 
-use super::*;
+use super::{*, types::*};
 use crate::Pallet as TFTBridgeModule;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::assert_ok;

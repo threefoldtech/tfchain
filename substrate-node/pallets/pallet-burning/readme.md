@@ -1,19 +1,9 @@
-# TFChain Pallet Burning
+# Burning Module
 
-Pallet for burning functionality.
+Pallet for burning tokens. Anyone can freely burn tokens, but the tokens are lost forever.
 
-## Building
+## Interface
 
-`cargo build`
+Dispatchable functions of this pallet.
 
-## Testing
-
-`cargo test`
-
-## Spec
-
-[spec](./spec.md)
-
-## Flow Diagram
-
-[flow](./flow.md)
+- `burn_tft` - Burn a given amount of TFT.

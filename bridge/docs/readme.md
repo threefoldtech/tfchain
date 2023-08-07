@@ -3,19 +3,18 @@
 In this document we will explain how the bridge works and how you can setup a local instance to develop against.
 The local instance will consist of a connection between a tfchain that runs in development mode and Stellar Testnet.
 
-## Installing
+See [architecture](./architecture.md) for more information on how the bridge works.
 
-See [installing](./intall.md)
+## Development setup
 
-## Prerequisites:
+Refer to [development](./development.md) for more information on how to setup a development instance.
 
-- Install and run [tfchain](https://github.com/threefoldtech/tfchain/blob/development/docs/development/development.md)
-- Install [stellar-utils-tool](https://github.com/threefoldfoundation/tft/tree/main/bsc/bridges/stellar/utils)
+## Production setup
 
-## Local single node development
+Refer to [production](./production.md) for more information on how to setup a production instance.
 
-Running a local [single-node](./single_node.md) setup
+## Bridging
 
-## Local mutlinode development
+When you have setup the bridge in either development or production mode you can start bridging.
 
-Running a local [multinode](./multinode.md) setup
+See [bridging](./bridging.md) for more information on how to bridge.
