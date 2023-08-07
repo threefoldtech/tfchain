@@ -31,7 +31,7 @@ Before you start, you need to have the following items:
     ```bash
     cp ../../substrate-node/target/debug/wbuild/tfchain-runtime/tfchain_runtime.compact.wasm ./data/runtime.wasm
     ```
-- Run a full node for your blockchain locally (Recommended) or have an external endpoint handy (but should be running with `--rpc-methods Unsafe` flag)
+- Run a full node for your blockchain locally (Recommended but should be fully synced) or have an external endpoint handy (but should be running with `--rpc-methods Unsafe` flag)
     ```bash
     ../../substrate-node/target/debug/tfchain --chain ../../substrate-node/chainspecs/dev/chainSpecRaw.json --ws-external --rpc-methods Unsafe
     ```
