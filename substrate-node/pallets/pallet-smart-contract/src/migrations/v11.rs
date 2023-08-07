@@ -45,7 +45,7 @@ impl<T: Config> OnRuntimeUpgrade for ExtendContractLock<T> {
         debug!("current pallet version: {:?}", PalletVersion::<T>::get());
         assert!(PalletVersion::<T>::get() >= types::StorageVersion::V11);
 
-        check_contract_lock_v11::<T>();
+        check_contract_lock::<T>();
 
         debug!(
             "👥  Smart Contract pallet to {:?} passes POST migrate checks ✅",
@@ -86,7 +86,35 @@ pub fn migrate_to_version_11<T: Config>() -> frame_support::weights::Weight {
     T::DbWeight::get().reads_writes(r, w)
 }
 
-pub fn check_contract_lock_v11<T: Config>() {
+pub struct CheckStorageState<T: Config>(PhantomData<T>);
+
+impl<T: Config> OnRuntimeUpgrade for CheckStorageState<T> {
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+        info!("current pallet version: {:?}", PalletVersion::<T>::get());
+        assert!(PalletVersion::<T>::get() == types::StorageVersion::V11);
+
+        check_pallet_smart_contract::<T>();
+
+        Ok(vec![])
+    }
+}
+
+pub fn check_pallet_smart_contract<T: Config>() {
+    info!("💥💥💥💥💥 CHECKING PALLET SMART CONTRACT STORAGE 💥💥💥💥💥");
+    migrations::v9::check_contracts::<T>();
+    migrations::v9::check_contracts_to_bill_at::<T>();
+    migrations::v9::check_active_node_contracts::<T>();
+    migrations::v9::check_active_rent_contract_for_node::<T>();
+    migrations::v9::check_contract_id_by_node_id_and_hash::<T>();
+    migrations::v9::check_contract_id_by_name_registration::<T>();
+    check_contract_lock::<T>();
+    migrations::v9::check_solution_providers::<T>();
+    migrations::v9::check_contract_billing_information_by_id::<T>();
+    migrations::v9::check_node_contract_resources::<T>();
+}
+
+fn check_contract_lock<T: Config>() {
     debug!(
         "🔎  Smart Contract pallet {:?} checking ContractLock storage map START",
         PalletVersion::<T>::get()

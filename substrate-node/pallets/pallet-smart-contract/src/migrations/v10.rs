@@ -81,3 +81,17 @@ pub fn rework_billing_loop_insertion<T: Config>() -> frame_support::weights::Wei
         Weight::zero()
     }
 }
+
+pub struct CheckStorageState<T: Config>(PhantomData<T>);
+
+impl<T: Config> OnRuntimeUpgrade for CheckStorageState<T> {
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+        info!("current pallet version: {:?}", PalletVersion::<T>::get());
+        assert!(PalletVersion::<T>::get() == types::StorageVersion::V10);
+
+        migrations::v9::check_pallet_smart_contract::<T>();
+
+        Ok(vec![])
+    }
+}
