@@ -18,34 +18,62 @@ var (
 )
 
 // map from module index to error list
-// https://github.com/threefoldtech/tfchain/blob/development/substrate-node/runtime/src/lib.rs#L701
+// https://github.com/threefoldtech/tfchain/blob/development/substrate-node/runtime/src/lib.rs#L697
 var moduleErrors = [][]string{
-	nil,                       // System
-	nil,                       // Timestamp
-	nil,                       // Utility
-	nil,                       // Scheduler
-	nil,                       // ValidatorSet
-	nil,                       // Session
-	nil,                       // Aura
-	nil,                       // Grandpa
-	nil,                       // Historical
-	nil,                       // Authorship
-	nil,                       // Balances
-	nil,                       // TransactionPayment
-	tfgridModuleErrors,        // TfgridModule
-	smartContractModuleErrors, // SmartContractModule
-	tftBridgeModuleErrors,     // TFTBridgeModule
-	nil,                       // TftPriceModule
-	nil,                       // BurningModule
-	nil,                       // TFKVStore
-	nil,                       // RuntimeUpgrade
-	nil,                       // Council
-	nil,                       // CouncilMembership
-	nil,                       // Dao
-	nil,                       // Validator
+	nil,                       // 0 -> System
+	nil,                       // 1 -> Timestamp
+	nil,                       // 2
+	nil,                       // 3 -> Utility
+	nil,                       // 4 -> Scheduler
+	nil,                       // 5
+	nil,                       // 6
+	nil,                       // 7
+	nil,                       // 8
+	nil,                       // 9
+	nil,                       // 10 -> ValidatorSet
+	nil,                       // 11  Session
+	nil,                       // 12 -> Aura
+	nil,                       // 13 -> Grandpa
+	nil,                       // 14 -> Historical
+	nil,                       // 15 -> Authorship
+	nil,                       // 16
+	nil,                       // 17
+	nil,                       // 18
+	nil,                       // 19
+	nil,                       // 20 -> Balances
+	nil,                       // 21 -> TransactionPayment
+	nil,                       // 22
+	nil,                       // 23
+	nil,                       // 24
+	tfgridModuleErrors,        // 25 -> TfgridModule
+	smartContractModuleErrors, // 26 -> SmartContractModule
+	tftBridgeModuleErrors,     // 27 -> TFTBridgeModule
+	nil,                       // 28 -> TftPriceModule
+	nil,                       // 29 -> BurningModule
+	nil,                       // 30 -> TFKVStore
+	nil,                       // 31 -> RuntimeUpgrade
+	nil,                       // 32
+	nil,                       // 33
+	nil,                       // 34
+	nil,                       // 35
+	nil,                       // 36
+	nil,                       // 37
+	nil,                       // 38
+	nil,                       // 39
+	nil,                       // 40 -> Council
+	nil,                       // 41 -> CouncilMembership
+	nil,                       // 42
+	nil,                       // 43 -> Dao
+	nil,                       // 44
+	nil,                       // 45
+	nil,                       // 46
+	nil,                       // 47
+	nil,                       // 48
+	nil,                       // 49
+	nil,                       // 50 -> Validator
 }
 
-// https://github.com/threefoldtech/tfchain_pallets/blob/bc9c5d322463aaf735212e428da4ea32b117dc24/pallet-smart-contract/src/lib.rs#L58
+// https://github.com/threefoldtech/tfchain/blob/development/substrate-node/pallets/pallet-smart-contract/src/lib.rs#L336
 var smartContractModuleErrors = []string{
 	"TwinNotExists",
 	"NodeNotExists",
@@ -101,7 +129,7 @@ var smartContractModuleErrors = []string{
 	"UnauthorizedToSetExtraFee",
 }
 
-// https://github.com/threefoldtech/tfchain/blob/development/substrate-node/pallets/pallet-smart-contract/src/lib.rs#L321
+// https://github.com/threefoldtech/tfchain/blob/development/substrate-node/pallets/pallet-tfgrid/src/lib.rs#L442
 var tfgridModuleErrors = []string{
 	"NoneValue",
 	"StorageOverflow",
@@ -219,6 +247,7 @@ var tfgridModuleErrors = []string{
 	"InvalidTimestampHint",
 }
 
+// https://github.com/threefoldtech/tfchain/blob/development/substrate-node/pallets/pallet-tft-bridge/src/lib.rs#L152
 var tftBridgeModuleErrors = []string{
 	"ValidatorExists",
 	"ValidatorNotExists",
