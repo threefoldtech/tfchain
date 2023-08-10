@@ -55,7 +55,7 @@ This will allow you to interact with your dev node and perform basic operations.
 
 An account is a pair of public and private keys that represents your identity and allows you to perform transactions on the tfchain network.
 
-see [how to an create account](./create_account.md).
+see [how to an create account](./create_devnet_account.md).
 
 ## Code Changes ?
 
