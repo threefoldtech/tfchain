@@ -62,10 +62,10 @@ The script can be tweaked and configured using various environment variables -
 | QUICK_MODE           | If set, it parallelizes the data download from the RPC endpoint                                                                                                                                         | `NULL`                   |
 ## Network list
 
-- Devnet: tfchain.dev.grid.tf
-- QAnet: tfchain.qa.grid.tf
-- Testnet: tfchain.test.grid.tf
-- Mainnet: tfchain.grid.tf
+- Devnet: 10.10.0.151
+- QAnet: 10.10.0.152
+- Testnet: 10.10.0.22
+- Mainnet: 10.10.0.19
 
 ## Read more
 
