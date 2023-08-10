@@ -23,6 +23,13 @@ Bridge account on testnet `GA2CWNBUHX7NZ3B5GR4I23FMU7VY5RPA77IUJTIXTTTGKYSKDSV6L
 
 Can be interacted with on: https://dashboard.test.grid.tf
 
+### QAnet
+
+Bridget account on qanet `GAQH7XXFBRWXT2SBK6AHPOLXDCLXVFAKFSOJIRMRNCDINWKHGI6UYVKM`
+
+Can be interacted with on: https://dashboard.qa.grid.tf
+
+
 ### Devnet
 
 Bridge account on devnet: `GDHJP6TF3UXYXTNEZ2P36J5FH7W4BJJQ4AYYAXC66I2Q2AH5B6O6BCFG`
