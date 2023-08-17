@@ -15,6 +15,10 @@ Releases are automated by [this workflow](.github/workflows/030_create_release.y
     - Increment package `version` in [package.json](../../activation-service/package.json)
 - Js TFchin Client
     - Increment package `version` in [package.json](../../clients/tfchain-client-js/package.json)
+- Scripts
+    - Increment package `version` in [package.json](../../scripts/package.json)
+- Tools/fork-off-substrate
+    - Increment package `version` in [package.json](../../tools/fork-off-substrate/package.json)
 
 - Commit the changes
 - Create a new tag with the version number prefixed with a `v` (e.g. `v1.0.0`, `v1.0.0-rc1` for release candidates) 
