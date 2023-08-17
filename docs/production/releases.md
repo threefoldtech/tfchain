@@ -13,7 +13,7 @@ Releases are automated by [this workflow](.github/workflows/030_create_release.y
     - Increment chart `appVersion` filed in [Chart.yaml](../../activation-service/helm/tfchainactivationservice/Chart.yaml)
     - Increment chart `version` filed in [Chart.yaml](../../activation-service/helm/tfchainactivationservice/Chart.yaml)
     - Increment package `version` in [package.json](../../activation-service/package.json)
-- Js TFchin Client
+- Js TFChain Client
     - Increment package `version` in [package.json](../../clients/tfchain-client-js/package.json)
 - Scripts
     - Increment package `version` in [package.json](../../scripts/package.json)
