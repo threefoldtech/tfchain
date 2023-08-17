@@ -2,7 +2,6 @@ use crate::*;
 use frame_support::{traits::Get, traits::OnRuntimeUpgrade, weights::Weight};
 use log::{debug, info};
 use scale_info::prelude::string::String;
-use sp_core::H256;
 use sp_std::{marker::PhantomData, vec::Vec};
 
 #[cfg(feature = "try-runtime")]

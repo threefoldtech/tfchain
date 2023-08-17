@@ -772,9 +772,10 @@ pub type Executive = frame_executive::Executive<
 // `OnRuntimeUpgrade`.
 type Migrations = (
     pallet_tfgrid::migrations::v16::KillNodeGpuStatus<Runtime>,
-    pallet_tfgrid::migrations::v15::CheckStorageState<Runtime>,
+    pallet_tfgrid::migrations::v16::CheckStorageState<Runtime>,
     pallet_smart_contract::migrations::v10::ReworkBillingLoopInsertion<Runtime>,
     pallet_smart_contract::migrations::v11::ExtendContractLock<Runtime>,
+    pallet_smart_contract::migrations::v11::CheckStorageState<Runtime>,
     migrations::remove_sudo::RemoveSudo<Runtime>,
 );
 

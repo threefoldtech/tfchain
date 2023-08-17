@@ -7,6 +7,9 @@ use log::info;
 use sp_core::Get;
 use sp_std::marker::PhantomData;
 
+#[cfg(feature = "try-runtime")]
+use sp_std::{vec, vec::Vec};
+
 pub struct KillNodeGpuStatus<T: Config>(PhantomData<T>);
 
 impl<T: Config> OnRuntimeUpgrade for KillNodeGpuStatus<T> {
@@ -42,4 +45,22 @@ impl<T: Config> OnRuntimeUpgrade for KillNodeGpuStatus<T> {
             Weight::zero()
         }
     }
+}
+
+pub struct CheckStorageState<T: Config>(PhantomData<T>);
+
+impl<T: Config> OnRuntimeUpgrade for CheckStorageState<T> {
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+        info!("current pallet version: {:?}", PalletVersion::<T>::get());
+        assert!(PalletVersion::<T>::get() == types::StorageVersion::V16Struct);
+
+        check_pallet_tfgrid::<T>();
+
+        Ok(vec![])
+    }
+}
+
+pub fn check_pallet_tfgrid<T: Config>() {
+    migrations::v15::check_pallet_tfgrid::<T>();
 }
