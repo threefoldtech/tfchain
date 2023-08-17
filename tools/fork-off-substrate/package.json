@@ -1,6 +1,6 @@
 {
   "name": "fork-off-substrate",
-  "version": "1.0.0",
+  "version": "2.5.0-rc7",
   "description": "This script allows bootstrapping a new substrate chain with the current state of a live chain",
   "main": "index.js",
   "scripts": {
