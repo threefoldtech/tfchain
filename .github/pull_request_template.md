@@ -22,7 +22,7 @@ Please delete options that are not relevant.
 - [ ] New feature (non-breaking change which adds functionality)
 - [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
 - [ ] New Release
-- [ ] documention
+- [ ] Documention
 
 ## Checklist:
 
@@ -32,5 +32,4 @@ Please delete options that are not relevant.
 - [ ] I have included the rquired migration (if applicable).
 - [ ] I followed the **[Release](https://github.com/threefoldtech/tfchain/blob/development/docs/production/releases.md)** document (if applicable).
 - [ ] I have added tests to cover my changes (if applicable).
-- [ ] All new and existing tests passed.
 - [ ] My commits follows this [conventionalcommits](https://www.conventionalcommits.org/en/v1.0.0/) guide.
