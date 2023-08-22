@@ -29,7 +29,7 @@ Please delete options that are not relevant.
 - [ ] My change requires a change to the documentation.
 - [ ] I have updated the documentation accordingly (if applicable).
 - [ ] My change requires storage migration.
-- [ ] I have included the rquired migration (if applicable).
+- [ ] I have included the required migration (if applicable).
 - [ ] I followed the **[Release](https://github.com/threefoldtech/tfchain/blob/development/docs/production/releases.md)** document (if applicable).
 - [ ] I have added tests to cover my changes (if applicable).
-- [ ] My commits follows this [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) guide.
+- [ ] My commits follow this [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) guide.
