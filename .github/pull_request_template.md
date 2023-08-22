@@ -32,4 +32,4 @@ Please delete options that are not relevant.
 - [ ] I have included the rquired migration (if applicable).
 - [ ] I followed the **[Release](https://github.com/threefoldtech/tfchain/blob/development/docs/production/releases.md)** document (if applicable).
 - [ ] I have added tests to cover my changes (if applicable).
-- [ ] My commits follows this [conventionalcommits](https://www.conventionalcommits.org/en/v1.0.0/) guide.
+- [ ] My commits follows this [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) guide.
