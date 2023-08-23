@@ -14,22 +14,16 @@ Use [Github semantic linking](https://docs.github.com/en/issues/tracking-your-wo
 
 - Closes # (issue number, if applicable)
 
-## Type of change
+## Checklist:
 
 Please delete options that are not relevant.
-
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] New Release
-- [ ] Documention
-
-## Checklist:
 
 - [ ] My change requires a change to the documentation.
 - [ ] I have updated the documentation accordingly (if applicable).
 - [ ] My change requires storage migration.
 - [ ] I have included the required migration (if applicable).
+- [ ] I have tested the required migration locally following fork off and try_runtime instructions (if applicable).
+- [ ] I have tested the required migration on live network following try_runtime instructions (if applicable).
 - [ ] I followed the **[Release](https://github.com/threefoldtech/tfchain/blob/development/docs/production/releases.md)** document (if applicable).
 - [ ] I have added tests to cover my changes (if applicable).
 - [ ] My commits follow this [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) guide.
