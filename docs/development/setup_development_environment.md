@@ -1,6 +1,6 @@
-# Setup Your Development Environment
+# Setup your development environment
 
-## Installing Required Packages and Rust
+## Installing required packages and Rust
 
 Before you can start developing a Substrate-based blockchain, you need to prepare your development environment with the required packages and Rust.
 For installation instructions, see the appropriate topic for your operating system.
@@ -19,7 +19,7 @@ That’s it! You have successfully installed vscode rust analyzer and you can st
 
 # Subkey:
 
-`subkey` is a key generation and management utility Used to generate public and private key pairs for users or validators, and do a lot more
+`subkey` is a key generation and management utility used to generate public and private key pairs for users or validators, and do a lot more
 
 For the installation and basic usage instructions of `subkey` standalone program, see [here](https://docs.substrate.io/reference/command-line-tools/subkey/).
 

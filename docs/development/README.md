@@ -51,24 +51,24 @@ This will allow you to interact with your dev node and perform basic operations.
 - Use the `Chain State` tab to query the state of the network. You can select a module and a storage item and see its value at any given block.
 - Use the `Extrinsics` tab to submit extrinsics to the network. You can select an account, a module, and a function and provide any required parameters.
 
-## create an account
+## Create an account
 
 An account is a pair of public and private keys that represents your identity and allows you to perform transactions on the tfchain network.
 
 see [how to an create account](./create_devnet_account.md).
 
-## Code Changes ?
+## Code changes ?
 
 Wipe data and recompile.
 
-### Data Cleanup:
+### Data cleanup:
 
 ```sh
 ./target/debug/tfchain purge-chain 
 ```
 
 Note: You don't need to wipe data when you run a node with `--dev` flag and no explicit `--base-path`. this because `--tmp` option is implied which create a temporary directory to store the configuration on node start that will be deleted at the end of the process.
-## Fork-Off-Substrate Tool
+## Fork-Off-Substrate tool
 
 To experiment with different features and parameters of TFchain, See [here](./fork-off-substrate.md) how you can use `fork-off-substrate` tool to create a local fork of the TFchain network.
 
@@ -85,13 +85,13 @@ To learn about pallet development, you can start by checking these resources:
 - Explore other existing pallets on the [Substrate GitHub repository](https://github.com/paritytech/substrate/tree/master/frame) and learn from their code. You can see how different pallets implement different features and patterns, such as storage, events, errors, hooks, traits, weights, origins, calls, etc.
 
 
-## Writing Tests For Pallets
+## Writing tests for pallets
 
 Every pallet should have all functionality tested, you can write unit tests and integration tests for a pallet:
 
 - unit test: check https://docs.substrate.io/reference/how-to-guides/testing/
 - integration test: [see](../../substrate-node/tests/readme.md)
 
-## Upgrading Substrate Version
+## Upgrading Substrate version
 
 see [how to upgrade substrate version](./upgrade_substrate.md).

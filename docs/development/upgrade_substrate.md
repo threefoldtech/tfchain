@@ -4,7 +4,7 @@ Since substrate is still in active development, we need to upgrade our dependenc
 
 It's easy to track which release of substrate is used in production (Polkadot) here: https://github.com/paritytech/polkadot/releases
 
-## Upgrade Preparation
+## Upgrade preparation
 
 Check what is changed in the latest polkadot release and see if any of the pallets we use are affected.
 
@@ -15,7 +15,7 @@ If anything major was changed and the migration was removed in the next version,
 - Add the migration yourself manually
 - Upgrade to the version with that migration and then upgrade to the latest version
 
-## Upgrade Instructions
+## Upgrade instructions
 
 If you want to upgrade substrate, you can do so by changing the version in the `substrate-node/Cargo.toml` file.
 

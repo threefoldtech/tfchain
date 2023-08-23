@@ -56,7 +56,7 @@ Should look something like this:
 - First select account `Alice` and secondly select your newly created account from the list.
 - Send any amount to your account.
 
-### Polkadot Browser extension flow:
+### Polkadot browser extension flow:
 
 This option allows you to create and store your account in a separate browser extension that can be accessed from any website. This is more secure and convenient than the in-browser storage option. To use this option, you need to:
 

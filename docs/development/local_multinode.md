@@ -93,7 +93,7 @@ Before moving on, have a look at how the following options are used to start the
 - --validator Specifies that this node participates in block production and finalization for the network.
 
 
-## What Next
+## What next
 
 You can now interact with the local multiple-node network using the hosted [Polkadot JS Apps portal](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/explorer) or the [Substrate front-end template](https://github.com/substrate-developer-hub/substrate-front-end-template).
 
