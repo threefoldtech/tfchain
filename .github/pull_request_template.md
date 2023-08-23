@@ -18,12 +18,8 @@ Use [Github semantic linking](https://docs.github.com/en/issues/tracking-your-wo
 
 Please delete options that are not relevant.
 
-- [ ] My change requires a change to the documentation.
-- [ ] I have updated the documentation accordingly (if applicable).
-- [ ] My change requires storage migration.
-- [ ] I have included the required migration (if applicable).
-- [ ] I have tested the required migration locally following fork off and try_runtime instructions (if applicable).
-- [ ] I have tested the required migration on live network following try_runtime instructions (if applicable).
-- [ ] I followed the **[Release](https://github.com/threefoldtech/tfchain/blob/development/docs/production/releases.md)** document (if applicable).
-- [ ] I have added tests to cover my changes (if applicable).
+- [ ] My change requires a change to the documentation and I have updated it accordingly
+- [ ] My change requires storage migration and I have included and tested it following fork off and try_runtime instructions.
+- [ ] I have added tests to cover my changes.
+- [ ] I followed the **[Release](https://github.com/threefoldtech/tfchain/blob/development/docs/production/releases.md)** document.
 - [ ] My commits follow this [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) guide.
