@@ -2,30 +2,30 @@
 
 You can find everything related to getting started with development on TFchain here.
 
-## Learn The Basics
+## Learn the basics
 
-check [substrate learn topics](https://docs.substrate.io/learn/) which cover the fundamental concepts and terminology to start building your blockchain using the Substrate framework.
+Check [substrate learn topics](https://docs.substrate.io/learn/) which cover the fundamental concepts and terminology to start building your blockchain using the Substrate framework.
 
 After you digest the information in these introductory sections, you'll be ready to start tinkering with TFchain development.
 
-## Setup Development Environment
+## Setup development environment
 
-see [how to setup your development environment](./setup_development_environment.md) document.
+See [how to setup your development environment](./setup_development_environment.md) document.
 
-## Get the TFchain Node Code
+## Get the TFchain node code
 
 ```sh
 git clone https://github.com/threefoldtech/tfchain.git
 ```
 
-## Compile TFchain Binary
+## Compile TFchain binary
 
 ```sh
 cd tfchain/substrate-node
 cargo build
 ```
 
-## Run A Dev Node
+## Run a dev node
 A dev node is a single-node network that runs on your local machine. It is useful for testing and debugging purposes. To run a dev node, you need to do the following:
 
 ```sh
@@ -36,11 +36,11 @@ cargo build
 ```
 This will run the node in default development mode. This flag sets `--chain=dev`, `--force-authoring`, `--rpc-cors=all`, `--alice`, and `--tmp` flags, unless explicitly overridden.
 
-## Run Multiple Local Nodes
+## Run multiple local nodes
 
 If you want to run tfchain in a multi node network (more than one node), see [local](./local_multinode.md)
 
-## Basic Operations
+## Basic operations
 
 You can use the Polkadot JS Apps ui to connect to your dev node. You can access the web interface at https://polkadot.js.org/apps/ and change the settings to use a local node with the address `ws://127.0.0.1:9944`.
 
@@ -55,7 +55,7 @@ This will allow you to interact with your dev node and perform basic operations.
 
 An account is a pair of public and private keys that represents your identity and allows you to perform transactions on the tfchain network.
 
-see [how to an create account](./create_devnet_account.md).
+See [how to an create account](./create_devnet_account.md).
 
 ## Code changes ?
 
@@ -67,7 +67,8 @@ Wipe data and recompile.
 ./target/debug/tfchain purge-chain 
 ```
 
-Note: You don't need to wipe data when you run a node with `--dev` flag and no explicit `--base-path`. this because `--tmp` option is implied which create a temporary directory to store the configuration on node start that will be deleted at the end of the process.
+Note: you don't need to wipe data when you run a node with `--dev` flag and no explicit `--base-path`. this because `--tmp` option is implied which create a temporary directory to store the configuration on node start that will be deleted at the end of the process.
+
 ## Fork-Off-Substrate tool
 
 To experiment with different features and parameters of TFchain, See [here](./fork-off-substrate.md) how you can use `fork-off-substrate` tool to create a local fork of the TFchain network.
@@ -89,9 +90,9 @@ To learn about pallet development, you can start by checking these resources:
 
 Every pallet should have all functionality tested, you can write unit tests and integration tests for a pallet:
 
-- unit test: check https://docs.substrate.io/reference/how-to-guides/testing/
-- integration test: [see](../../substrate-node/tests/readme.md)
+- Unit tests: check this [guide](https://docs.substrate.io/reference/how-to-guides/testing/)
+- Integration tests: see this [document](../../substrate-node/tests/readme.md)
 
 ## Upgrading Substrate version
 
-see [how to upgrade substrate version](./upgrade_substrate.md).
+See [how to upgrade substrate version](./upgrade_substrate.md).
