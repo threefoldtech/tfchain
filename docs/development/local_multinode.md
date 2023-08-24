@@ -1,20 +1,21 @@
 # Local tfchain network
 
-This document will explain how to run a local multi node tfchain network.
+This document will explain how to run a local multiple-node tfchain network.
 
-## Compile release build
+## Compile
 
 ```sh
 cd substrate-node
-cargo build --release
+cargo build
 ```
 
+you can 
 ## Start the network
 
 In a terminal window execute the following command:
 
 ```sh
-./target/release/tfchain \
+./target/debug/tfchain \
     --base-path /tmp/alice \
     --chain local \
     --alice \
@@ -30,7 +31,7 @@ This will start a first node.
 In a second terminal window executing the following command:
 
 ```sh
-./target/release/tfchain \
+./target/debug/tfchain \
     --base-path /tmp/bob \
     --chain local \
     --bob \
@@ -91,6 +92,9 @@ Before moving on, have a look at how the following options are used to start the
 - --telemetry-url Specifies where to send telemetry data. For this tutorial, you can send telemetry data to a server hosted by Parity that is available for anyone to use.
 - --validator Specifies that this node participates in block production and finalization for the network.
 
-## More information
 
-Can be found here: https://docs.substrate.io/tutorials/get-started/simulate-network/
+## What next
+
+You can now interact with the local multiple-node network using the hosted [Polkadot JS Apps portal](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/explorer) or the [Substrate front-end template](https://github.com/substrate-developer-hub/substrate-front-end-template).
+
+More information can be found here: https://docs.substrate.io/tutorials/get-started/simulate-network/

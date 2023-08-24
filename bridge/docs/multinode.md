@@ -4,7 +4,7 @@ In this document we will explain how you can setup a local multinode instance of
 
 ## Step 1: Run tfchain
 
-See [tfchain](https://github.com/threefoldtech/tfchain/blob/development/docs/development/development.md)
+See [tfchain](https://github.com/threefoldtech/tfchain/blob/development/docs/development)
 
 Create a twin on your local chain:
 

@@ -4,7 +4,7 @@ In this document we will explain how you can setup a local single node instance 
 
 ## Step 1: Create a Twin on tfchain
 
-Make sure [tfchain](https://github.com/threefoldtech/tfchain/blob/development/docs/development/development.md) is up and running.
+Make sure [tfchain](https://github.com/threefoldtech/tfchain/blob/development/docs/development) is up and running.
 
 Create a twin on your local chain:
 
