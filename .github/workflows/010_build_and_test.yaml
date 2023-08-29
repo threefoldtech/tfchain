@@ -16,7 +16,7 @@ jobs:
         CARGO_HOME: /root/.cargo
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v3.5
 
       - name: Chown user
         run: |
