@@ -1,4 +1,4 @@
-# Creating a Proposal for farmers to vote on
+# Creating a proposal for farmers to vote on
 
 Only a council member can create a proposal for farmers to vote on.
 
@@ -52,7 +52,7 @@ After the proposal ends or, before it, if number of votes reached Threshold, it 
 ## Approval
 
 Once closed the proposal is removed from list and the action, if any, is executed on chain in case of approval.
-Since each farmer vote is weighted by the corresponding farm capacity (2 * (sum of CU of all nodes) + (sum of SU of all nodes)), approval is obtained when `Yes` votes quantity is strictly greater than `No` votes quantity.
+Since each farmer vote is weighted by the corresponding farm capacity (`weight = 2 * (sum of CU of all nodes) + (sum of SU of all nodes)`), approval is obtained when `Yes` votes quantity is strictly greater than `No` votes quantity.
 
 ## Check proposal
 
