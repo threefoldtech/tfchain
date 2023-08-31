@@ -21,13 +21,13 @@ Open the Polkadot JS UI in your browser:
 
 The proposal must include the following arguments:
 
-- threshold: minimal number of farmer votes required to be able to close proposal before its end.
-- action: call/extrinsic to execute on chain. If there is no call to be executed (which is usually the case) then `system` -> `remark()` should be set.
-- description: a small description of what the proposal is about.
-- link: a link to a more elaborate explanation of the proposal.
-- duration: optional duration of the proposal after beeing created (default is 7 days, max value is 30 days), expressed in number of blocks (1 block = 6 sec).
+- `threshold`: minimal number of farmer votes required to be able to close proposal before its end.
+- `action`: call/extrinsic to execute on chain. If there is no call to be executed (which is usually the case) then `system` -> `remark()` should be set.
+- `description`: a small description of what the proposal is about.
+- `link`: a link to a more elaborate explanation of the proposal.
+- `duration`: optional duration of the proposal after beeing created (default is 7 days, max value is 30 days), expressed in number of blocks (1 block = 6 sec).
 
-![create](./img/create.png)
+![fill](./img/fill_proposal_farmers.png)
 
 ## Step 4: submit proposal
 
@@ -35,7 +35,7 @@ Make sure you have enought funds for transaction fee and submit the proposal.
 
 ! Remark: Once a proposal is created it cannot be altered or removed !
 
-![submit](./img/submit.png)
+![submit](./img/submit_proposal_farmers.png)
 
 ## Step 5: check proposal
 
@@ -55,9 +55,11 @@ Once proposal is created farmers can vote for it.
 
 The vote must include the following arguments:
 
-- farmId: the farm id of the farmer
-- proposalHash: the hash of the proposal
-- approve: `Yes` or `No` the farmer approves the proposal
+- `farmId`: the farm id of the farmer
+- `proposalHash`: the hash of the proposal
+- `approve`: `Yes` or `No` the farmer approves the proposal
+
+![vote](./img/vote_proposal_farmers.png)
 
 Further considerations:
 - Vote is per farm so in case farmer owns other farms he could repeat the process for all of them.
@@ -66,7 +68,16 @@ Further considerations:
 
 ## Step 7: council member veto 
 
-// TODO
+At any moment of the proposal duration council members can veto the proposal.
+
+- Go to `Developer` -> `Extrinsics`
+- Make sure the council member account is selected
+- Select `dao` -> `veto()` extrinsic
+- Fill `proposalHash` (can be found by listing active proposals, see step 5 above) and submit
+
+![veto](./img/veto_proposal_farmers.png)
+
+3 council vetos will result in disapproving the proposal.
 
 ## Step 8: closing proposal
 
@@ -75,20 +86,11 @@ After the proposal ends or, before it, if number of votes reached Threshold, it 
 - Go to `Developer` -> `Extrinsics`
 - Make sure the council member account is selected
 - Select `dao` -> `close()` extrinsic
-- Fill proposal hash and index (can be found by listing active proposals, see step 5 above) and submit
+- Fill `proposalHash` and `proposalIndex` (can be found by listing active proposals, see step 5 above) and submit
+
+![close](./img/close_proposal_farmers.png)
+
+## Step 9: approval
 
 Then the proposal is removed from list and the action, if any, is executed on chain in case of approval.
-Approval is obtain when 
-
-
-
-
-Closing a proposal after the proposal ended. This will approve / disapprove the proposal and execute the call on chain. 
-
-
-
-Provided:
-
-
-
-![close](./img/close.png)
+Since each farmer vote is weighted by the corresponding farm capacity (2 * (sum of CU of all nodes) + (sum of SU of all nodes)), approval is obtain when `Yes` votes quantity is strictly greater than `No` votes quantity.
