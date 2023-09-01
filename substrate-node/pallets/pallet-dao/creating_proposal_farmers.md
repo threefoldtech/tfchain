@@ -6,10 +6,10 @@ Only a council member can create a proposal for farmers to vote on.
 
 Open the Polkadot JS UI in your browser:
 
-- devnet:  https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.grid.tf%2Fws#/extrinsics
-- qanet:   https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.qa.grid.tf%2Fws#/extrinsics
-- testnet: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.test.grid.tf%2Fws#/extrinsics
-- mainnet: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.grid.tf%2Fws#/extrinsics
+- devnet:  https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.grid.tf%2Fws#/explorer
+- qanet:   https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.qa.grid.tf%2Fws#/explorer
+- testnet: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.test.grid.tf%2Fws#/explorer
+- mainnet: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.grid.tf%2Fws#/explorer
 
 ## Step 2: Open proposal
 
@@ -40,7 +40,7 @@ If succeeded you should be able to [track the proposal](#check-proposal).
 
 ## Step 5: Closing proposal
 
-After the proposal ends or, before it, if number of votes reached Threshold, it can be manually closed by a council member.
+After the proposal ends or, before it, if number of votes reached `threshold`, it can be manually closed by a council member.
 
 - Go to `Developer` -> `Extrinsics`
 - Make sure the council member account is selected
