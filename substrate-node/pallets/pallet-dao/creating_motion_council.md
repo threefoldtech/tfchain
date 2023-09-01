@@ -1,9 +1,9 @@
 # Creating a motion for council members to vote on
 
-Such council motion is ruled by [pallet Collective](https://paritytech.github.io/substrate/master/pallet_collective/index.html)
+Such council motion is ruled by [pallet Collective](https://paritytech.github.io/substrate/master/pallet_collective/index.html).
 Only a council member can propose a motion for council members to vote on.
 
-### Go to Polkadot UI
+## Step 1: Go to Polkadot UI
 
 Open the Polkadot JS UI in your browser:
 
@@ -12,63 +12,45 @@ Open the Polkadot JS UI in your browser:
 - testnet: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.test.grid.tf#/explorer
 - mainnet: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.grid.tf#/explorer
 
-## Option 1: Governance section
-
-### Step 1.1: Propose a council motion
+## Step 2: Propose a council motion
 
 - Make sure the council member account is registered on the Polkadot browser extension
 - Go to `Motions` ->  `Propose motion`
 - Make sure the council member account is selected
 
-### Step 2.1: Fill motion
+## Step 3: Fill motion
 
 The motion must include the following arguments:
 
-- `threshold`: number of votes that determine if the motion can be approved (`nb Yes votes >= threshold`) or disapproved (`nb No votes > nb of council members - threshold`). Make sure to set it greater or equal to `3/5` in proportion to total number of council members (see [approval](#approval)).
-- `proposal`: call/extrinsic to execute on chain. See complete list of extrinsics eligible to be executed by a council approval [here](). Also, all arguments of selected extrinsic must be filled.
+- `threshold`: number of votes that determine if the motion can be approved (`nb Yes votes >= threshold`) or disapproved (`nb No votes > nb of council members - threshold`). Make sure to set it greater or equal to `3/5` in proportion of total number of council members (see [approval](#approval) section).
+- `proposal`: call/extrinsic to execute on chain. See complete list of extrinsics eligible to be executed by a council approval above. Also, all arguments of selected extrinsic must be filled.
 
-![close](./img/fill_motion_council.png)
+![fill](./img/fill_motion_council.png)
 
-### Step 3.1: Propose motion
+## Step 4: Propose motion
 
 Make sure you have enought funds for transaction fee, click on `Propose` and submit the transaction.
 If succeeded you should be able to see the motion in `Propose` section with its corresponding index and details.
 
 ! Remark: Once a motion is created it cannot be altered or removed !
 
-![close](./img/propose_motion_council.png)
+![list](./img/list_motion_council.png)
 
-### Step 4.1: Close motion
+## Step 5: Vote for motion
+
+Once the motion started a council member can vote for it by clicking on `Vote`, selecting `Vote Nay` or `Vote Aye` and `Sign and Submit` the transaction.
+
+![vote](./img/vote_motion_council.png)
+
+## Step 6: Close motion
 
 After the motion ends (duration is 2 hours) or, before it, if a `threshold` approval or disapproval condition is reached, it can be manually closed by a council member by clicking on `Close`.
-
-![close](./img/close_motion_council.png)
-
-## Option 2: Developer section
-
-### Step 1.2: Open proposal
-
-- Go to `Developer` -> `Extrinsics`
-- Make sure the council member account is selected
-- Select `council` -> `propose()` extrinsic
-
-### Step 2.2: Fill proposal
-
-todo
-
-### Step 3.2: Submit proposal
-
-todo
-
-### Step 4.2: Closing proposal
-
-todo
 
 ## Approval
 
 Once the motion is closed it is removed from list and the `proposal` extrinsic is executed on chain in case of approval.
 
-! Remark: Once the extrinsic is executed there is no guaranty of success. Indeed, all extrinsics callable by council approval (see list [here]()) require a number of `Yes` votes which is greater or equal to `3/5` in proportion to total number of council members. A `BadOrigin` error message will be received if this condition is not reached !
+! Remark: When the extrinsic is executed there is no guaranty of success. Indeed, all extrinsics callable by a council approval (see list below) require a number of `Yes` votes which is greater or equal to `3/5` in proportion of total number of council members. A `BadOrigin` error message will be received if this condition is not reached !
 
 ## List of extrincics requiring a council approval
 
@@ -91,21 +73,21 @@ Once the motion is closed it is removed from list and the `proposal` extrinsic i
 
 ### smartContractModule
 
-- `approveSolutionProvider()` ()
-- `changeBillingFrequency()` ()
+- `approveSolutionProvider()` (approves a solution provider)
+- `changeBillingFrequency()` (changes the billing frequency)
 
 ### tftBridgeModule
 
-- `addBridgeValidator()` ()
-- `removeBridgeValidator()` ()
-- `setFeeAccount()` ()
-- `setWithdrawFee()` ()
-- `setDepositFee()` ()
+- `addBridgeValidator()`
+- `removeBridgeValidator()`
+- `setFeeAccount()`
+- `setWithdrawFee()`
+- `setDepositFee()`
 
 ### tftPriceModule
 
-- `setMinTftPrice()` ()
-- `setMaxTftPrice()` ()
+- `setMinTftPrice()` (sets lower bound for on chain TFT price)
+- `setMaxTftPrice()` (sets upper bound for on chain TFT price)
 
 ### validator
 
@@ -114,12 +96,12 @@ Once the motion is closed it is removed from list and the `proposal` extrinsic i
 
 ### councilMembership
 
-- `addMember()` ()
-- `removeMember()` ()
-- `swapMember()` ()
-- `resetMembers()` ()
-- `setPrime()` ()
-- `clearPrime()` ()
+- `addMember()` (adds a new council member)
+- `removeMember()` (removes a council member)
+- `swapMember()`
+- `resetMembers()`
+- `setPrime()`
+- `clearPrime()`
 
 ### runtimeUpgrade
 
