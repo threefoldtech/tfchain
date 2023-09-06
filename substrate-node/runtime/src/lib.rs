@@ -343,7 +343,7 @@ parameter_types! {
 
 impl pallet_tfgrid::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type RestrictedOrigin = EnsureRootOrCouncilApproval;
+    type RestrictedOrigin = EnsureCouncilApproval;
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Runtime>;
     type NodeChanged = NodeChanged;
     type PublicIpModifier = SmartContractModule;
@@ -397,7 +397,7 @@ impl pallet_smart_contract::Config for Runtime {
     type Call = RuntimeCall;
     type MaxNameContractNameLength = MaxNameContractNameLength;
     type NameContractName = pallet_smart_contract::grid_contract::NameContractName<Runtime>;
-    type RestrictedOrigin = EnsureRootOrCouncilApproval;
+    type RestrictedOrigin = EnsureCouncilApproval;
     type MaxDeploymentDataLength = MaxDeploymentDataLength;
     type MaxNodeContractPublicIps = MaxFarmPublicIps;
     type Burn = ();
@@ -407,7 +407,7 @@ impl pallet_tft_bridge::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type Burn = ();
-    type RestrictedOrigin = EnsureRootOrCouncilApproval;
+    type RestrictedOrigin = EnsureCouncilApproval;
     type RetryInterval = RetryInterval;
     type WeightInfo = pallet_tft_bridge::weights::SubstrateWeight<Runtime>;
 }
@@ -428,13 +428,13 @@ impl pallet_tft_price::Config for Runtime {
     type AuthorityId = pallet_tft_price::AuthId;
     type Call = RuntimeCall;
     type RuntimeEvent = RuntimeEvent;
-    type RestrictedOrigin = EnsureRootOrCouncilApproval;
+    type RestrictedOrigin = EnsureCouncilApproval;
     type WeightInfo = pallet_tft_price::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_validator::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type CouncilOrigin = EnsureRootOrCouncilApproval;
+    type CouncilOrigin = EnsureCouncilApproval;
     type Currency = Balances;
     type WeightInfo = pallet_validator::weights::SubstrateWeight<Runtime>;
 }
@@ -445,7 +445,7 @@ parameter_types! {
 
 impl substrate_validator_set::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type AddRemoveOrigin = EnsureRootOrCouncilApproval;
+    type AddRemoveOrigin = EnsureCouncilApproval;
     type MinAuthorities = MinAuthorities;
     type WeightInfo = substrate_validator_set::weights::SubstrateWeight<Runtime>;
 }
@@ -457,7 +457,7 @@ parameter_types! {
 
 impl pallet_dao::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type CouncilOrigin = EnsureRootOrCouncilApproval;
+    type CouncilOrigin = EnsureCouncilApproval;
     type Proposal = RuntimeCall;
     type MotionDuration = DaoMotionDuration;
     type Tfgrid = TfgridModule;
@@ -595,7 +595,7 @@ impl pallet_scheduler::Config for Runtime {
     type PalletsOrigin = OriginCaller;
     type RuntimeCall = RuntimeCall;
     type MaximumWeight = MaximumSchedulerWeight;
-    type ScheduleOrigin = frame_system::EnsureRoot<AccountId>;
+    type ScheduleOrigin = EnsureRoot<AccountId>;
     type MaxScheduledPerBlock = MaxScheduledPerBlock;
     type WeightInfo = ();
     type OriginPrivilegeCmp = OriginPrivilegeCmp;
@@ -625,11 +625,11 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 
 impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type AddOrigin = EnsureRootOrCouncilApproval;
-    type RemoveOrigin = EnsureRootOrCouncilApproval;
-    type SwapOrigin = EnsureRootOrCouncilApproval;
-    type ResetOrigin = EnsureRootOrCouncilApproval;
-    type PrimeOrigin = EnsureRootOrCouncilApproval;
+    type AddOrigin = EnsureCouncilApproval;
+    type RemoveOrigin = EnsureCouncilApproval;
+    type SwapOrigin = EnsureCouncilApproval;
+    type ResetOrigin = EnsureCouncilApproval;
+    type PrimeOrigin = EnsureCouncilApproval;
     type MembershipInitialized = Council;
     type MembershipChanged = MembershipChangedGroup;
     type MaxMembers = CouncilMaxMembers;
@@ -650,13 +650,11 @@ impl ChangeMembers<AccountId> for MembershipChangedGroup {
     }
 }
 
-type EnsureRootOrCouncilApproval = EitherOfDiverse<
-    EnsureRoot<AccountId>,
-    pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 5>,
->;
+type EnsureCouncilApproval =
+    pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 5>;
 
 impl pallet_runtime_upgrade::Config for Runtime {
-    type SetCodeOrigin = EnsureRootOrCouncilApproval;
+    type SetCodeOrigin = EnsureCouncilApproval;
 }
 
 pub struct AuraAccountAdapter;
