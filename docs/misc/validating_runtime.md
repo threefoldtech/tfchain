@@ -10,7 +10,7 @@ To validate such runtime you can use [subwasm](https://github.com/chevdor/subwas
 cargo install --locked --git https://github.com/chevdor/subwasm --tag v0.19.1
 ```
 
-Verify installation 
+Verify installation
 
 `subwasm -v`
 
@@ -91,4 +91,4 @@ Should output something like:
 📦 IPFS:                     https://www.ipfs.io/ipfs/QmPzNPVi5vG3UkAXuzQAv9WHjvoQ9jim9NYu2aMPtxRXJ7
 ```
 
-Now compare `Blake2-256 hash` with the one from the srtool output. 
+Now compare `Blake2-256 hash` with the one from the srtool output.
