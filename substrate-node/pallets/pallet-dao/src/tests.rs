@@ -508,6 +508,33 @@ fn motion_veto_works() {
 }
 
 #[test]
+fn motion_veto_duplicate_fails() {
+    new_test_ext().execute_with(|| {
+        let proposal = RuntimeCall::System(frame_system::Call::remark {
+            remark: b"some_proposal".to_vec(),
+        });
+        let hash = BlakeTwo256::hash_of(&proposal);
+
+        assert_ok!(DaoModule::propose(
+            RuntimeOrigin::signed(1),
+            2,
+            Box::new(proposal.clone()),
+            b"some_description".to_vec(),
+            b"some_link".to_vec(),
+            None
+        ));
+
+        assert_ok!(DaoModule::veto(RuntimeOrigin::signed(2), hash.clone()));
+
+        // try to veto again
+        assert_noop!(
+            DaoModule::veto(RuntimeOrigin::signed(2), hash.clone()),
+            Error::<TestRuntime>::DuplicateVeto
+        );
+    });
+}
+
+#[test]
 fn weighted_voting_works() {
     new_test_ext().execute_with(|| {
         System::set_block_number(1);

@@ -173,6 +173,8 @@ impl<T: Config> Pallet<T> {
             Error::<T>::WrongIndex
         );
 
+        ensure!(!voting.vetos.contains(&who), Error::<T>::DuplicateVeto);
+
         voting.vetos.push(who.clone());
 
         Self::deposit_event(Event::CouncilMemberVeto { proposal_hash, who });
