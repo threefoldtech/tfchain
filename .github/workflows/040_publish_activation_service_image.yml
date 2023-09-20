@@ -1,4 +1,4 @@
-name: Publish Docker image
+name: Publish activation service image
 
 on:
   workflow_dispatch:
