@@ -2,9 +2,8 @@ name: Publish bridge image
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - '*'
+  release:
+    types: [published]
 
 jobs:
   build-and-push:
