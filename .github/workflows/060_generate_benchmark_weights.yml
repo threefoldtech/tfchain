@@ -1,0 +1,73 @@
+name: Generate benchmark weights
+
+on:
+  workflow_dispatch:
+
+jobs:
+  benchmark-weights:
+    runs-on: [self-hosted, tfchainrunner01]
+    container:
+      image: threefolddev/tfchain:4
+      env:
+        DEBIAN_FRONTEND: noninteractive
+        PATH: /root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin
+        RUSTUP_HOME: /root/.rustup
+        CARGO_HOME: /root/.cargo
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Chown user
+        run: |
+          chown -R $USER:$USER $GITHUB_WORKSPACE
+
+      - name: Cache build
+        uses: actions/cache@v3
+        timeout-minutes: 6
+        continue-on-error: true
+        with:
+          path: |
+            /root/.cargo/bin/
+            /root/.cargo/registry/index/
+            /root/.cargo/registry/cache/
+            /root/.cargo/git/db/
+            substrate-node/target/
+          key: ${{ runner.os }}-tfchain-build-cache-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-tfchain-build-cache
+
+      - name: Build
+        run: |
+          cd substrate-node
+          cargo build --release --features runtime-benchmarks
+
+      - name: Remove old weight files
+        run: |
+          rm substrate-node/pallets/*/src/weights.rs
+          
+      - name: Run benchmarking script
+        run: |
+          cd substrate-node/.maintain
+          chmod +x ./benchmark.sh
+          ./benchmark.sh
+
+      - name: Rebuild
+        run: |
+          cd substrate-node
+          cargo build
+
+      - name: Copy new weight files
+        run: |
+          cd substrate-node
+          for f in ./pallets/*/src/weights.rs
+          do
+            dir=$(awk -F'pallets/|/src' '{print $2}' <<< $f)
+            dir=./_output_benchmarking/"$dir"
+            mkdir -p $dir
+            cp $f $dir
+          done
+
+      - name: Upload new weight files
+        uses: actions/upload-artifact@v3
+        with:
+          name: benchmark-weights
+          path: substrate-node/_output_benchmarking/
