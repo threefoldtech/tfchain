@@ -771,10 +771,11 @@ pub type Executive = frame_executive::Executive<
 // All migrations executed on runtime upgrade as a nested tuple of types implementing
 // `OnRuntimeUpgrade`.
 type Migrations = (
-    pallet_tfgrid::migrations::v16::KillNodeGpuStatus<Runtime>,
-    pallet_smart_contract::migrations::v10::ReworkBillingLoopInsertion<Runtime>,
-    pallet_smart_contract::migrations::v11::ExtendContractLock<Runtime>,
-    migrations::remove_sudo::RemoveSudo<Runtime>,
+    // pallet_tfgrid::migrations::v16::KillNodeGpuStatus<Runtime>,
+    // pallet_smart_contract::migrations::v10::ReworkBillingLoopInsertion<Runtime>,
+    // pallet_smart_contract::migrations::v11::ExtendContractLock<Runtime>,
+    // migrations::remove_sudo::RemoveSudo<Runtime>,
+    pallet_tfgrid::migrations::v17::FixFarmPublicIps<Runtime>,
 );
 
 // follows Substrate's non destructive way of eliminating  otherwise required
