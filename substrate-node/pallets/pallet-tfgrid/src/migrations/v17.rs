@@ -4,13 +4,11 @@ use log::{debug, info};
 use scale_info::prelude::string::String;
 use sp_core::ConstU32;
 use sp_runtime::{BoundedVec, Saturating};
-use sp_std::marker::PhantomData;
+use sp_std::{marker::PhantomData, vec::Vec};
 use tfchain_support::types::{PublicIP, IP4};
 
 #[cfg(feature = "try-runtime")]
 use parity_scale_codec::{Decode, Encode};
-#[cfg(feature = "try-runtime")]
-use sp_std::vec::Vec;
 
 pub struct FixFarmPublicIps<T: Config>(PhantomData<T>);
 
