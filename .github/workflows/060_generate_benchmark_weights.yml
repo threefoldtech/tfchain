@@ -38,7 +38,7 @@ jobs:
       - name: Build
         run: |
           cd substrate-node
-          cargo build --release --features runtime-benchmarks
+          cargo build --profile=production --features runtime-benchmarks
 
       - name: Remove old weight files
         run: |
