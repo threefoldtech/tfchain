@@ -322,10 +322,13 @@ impl<T: Config> Pallet<T> {
         let mut public_ips_list: PublicIpListOf =
             vec![].try_into().map_err(|_| Error::<T>::InvalidPublicIP)?;
 
-        for ip in public_ips {
+        for ip4 in public_ips {
+            // Check if it's a valid IP4
+            ip4.is_valid().map_err(|_| Error::<T>::InvalidPublicIP)?;
+
             let pub_ip = PublicIP {
-                ip: ip.ip,
-                gateway: ip.gw,
+                ip: ip4.ip,
+                gateway: ip4.gw,
                 contract_id: 0,
             };
 

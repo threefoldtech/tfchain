@@ -411,7 +411,7 @@ fn test_update_farm_name_existing_name_fails() {
 }
 
 #[test]
-fn test_create_farm_with_double_ip_fails() {
+fn test_create_farm_duplicate_ip_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
         create_twin();
@@ -434,6 +434,26 @@ fn test_create_farm_with_double_ip_fails() {
         assert_noop!(
             TfgridModule::create_farm(RuntimeOrigin::signed(alice()), farm_name, pub_ips),
             Error::<TestRuntime>::IpExists
+        );
+    });
+}
+
+#[test]
+fn test_create_farm_not_valid_ip_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+
+        let farm_name = get_farm_name_input(b"test_farm");
+
+        let mut pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
+        let ip = get_public_ip_ip_input(b"185.206.122.33/24");
+        let gw = get_public_ip_gw_input(b"185.206.122.33");
+        pub_ips.try_push(IP4 { ip, gw }).unwrap();
+
+        assert_noop!(
+            TfgridModule::create_farm(RuntimeOrigin::signed(alice()), farm_name, pub_ips),
+            Error::<TestRuntime>::InvalidPublicIP
         );
     });
 }
