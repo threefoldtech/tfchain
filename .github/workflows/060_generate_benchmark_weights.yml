@@ -43,12 +43,17 @@ jobs:
       - name: Remove old weight files
         run: |
           rm substrate-node/pallets/*/src/weights.rs
-          
-      - name: Run benchmarking script
+
+      - name: Run benchmarking
         run: |
-          cd substrate-node/.maintain
-          chmod +x ./benchmark.sh
-          ./benchmark.sh
+          cd substrate-node
+          for f in ./pallets/*/src/weights.rs
+          do
+            pal=$(awk -F'pallets/|/src' '{print $2}' <<< $f)
+            ./target/release/tfchain benchmark pallet --chain=dev --pallet="$pal" \
+            --extrinsic="*" --steps=50 --repeat=20 --execution=wasm --heap-pages=409 \
+            --output ./pallets/"$pal"/src/weights.rs --template ./.maintain/frame-weight-template.hbs
+          done
 
       - name: Rebuild
         run: |
