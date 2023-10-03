@@ -40,15 +40,12 @@ jobs:
           cd substrate-node
           cargo build --profile=bench --features runtime-benchmarks
 
-      - name: Remove old weight files
-        run: |
-          rm substrate-node/pallets/*/src/weights.rs
-
       - name: Run benchmarking
         run: |
           cd substrate-node
           for f in ./pallets/*/src/weights.rs
           do
+            rm $f
             pal=$(awk -F'pallets/|/src' '{print $2}' <<< $f)
             ./target/release/tfchain benchmark pallet --chain=dev --pallet="$pal" \
             --extrinsic="*" --steps=50 --repeat=20 --execution=wasm --heap-pages=409 \
