@@ -13,8 +13,8 @@ echo export PATH=\"\$PATH:\$GOPATH/bin\" >> ~/.bash_profile
 ### Get Source Code
 
 ```sh
-git clone https://github.com/threefoldtech/tfchain_tft_bridge.git
-cd tfchain_tft_bridge/tfchain_bridge
+git clone https://github.com/threefoldtech/tfchain.git
+cd bridge/tfchain_bridge
 ```
 
 ### Compile
