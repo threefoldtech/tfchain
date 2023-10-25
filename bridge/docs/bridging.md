@@ -116,12 +116,9 @@ A refund on TFChain is initiated when either of the following conditions is met:
 We didn't mentioned yet a few TFChain event related to the flows discussed above, these events are:
 - `tftBridgeModule.BurnTransactionExpired`
 - `tftBridgeModule.RefundTransactionExpired`
-- `tftBridgeModule.MintTransactionExpired`
 
 These expired events are typically the result of an outage of one or more bridge validators. We will explain why.
 
 TFChain has a retry mechanism built into its runtime that takes into account possible bridge validator outages. If a certain number of TFChain blocks pass without a `BurnTransaction` or `RefundTransaction` being noticed and signed by the majority of bridge validators, the stored transaction signatures are reset and a `BurnTransactionExpired` or `RefundTransactionExpired` event is emitted.
-
-The same happens when a `MintTransaction` stalls for a certain number of TFChain blocks without being noticed and voted by the majority of bridge validators, and an `MintTransactionExpired` event is emitted.
 
 These events will continue to occur until the unavailable bridge validators come back online and handle the expired events as it gets re-emitted.
