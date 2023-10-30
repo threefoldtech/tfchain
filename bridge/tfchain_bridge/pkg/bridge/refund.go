@@ -99,7 +99,7 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 		Str("event_type", "transfer_completed").
 		Dict("event", zerolog.Dict().
 			Str("outcome", "refunded")).
-		Msgf("the transfer has completed", refundReadyEvent.Hash)
+		Msg("the transfer has completed")
 
 	return nil
 }

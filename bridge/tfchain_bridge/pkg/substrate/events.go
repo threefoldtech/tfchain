@@ -131,8 +131,8 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 
 	for _, e := range events.TFTBridgeModule_RefundTransactionReady {
 		log.Info().
-			Str("event_type", "event_refund_tx_ready_received").
 			Str("span_id", string(e.RefundTransactionHash)).
+			Str("event_type", "event_refund_tx_ready_received").
 			Msg("found RefundTransactionReady event")
 		refundTransactionReadyEvents = append(refundTransactionReadyEvents, RefundTransactionReadyEvent{
 			Hash: string(e.RefundTransactionHash),
@@ -141,8 +141,8 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 
 	for _, e := range events.TFTBridgeModule_RefundTransactionExpired {
 		log.Info().
-			Str("event_type", "event_refund_tx_expired_received").
 			Str("span_id", string(e.RefundTransactionHash)).
+			Str("event_type", "event_refund_tx_expired_received").
 			Msgf("found RefundTransactionExpired event")
 		refundTransactionExpiredEvents = append(refundTransactionExpiredEvents, RefundTransactionExpiredEvent{
 			Hash:   string(e.RefundTransactionHash),
@@ -153,8 +153,8 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 
 	for _, e := range events.TFTBridgeModule_BurnTransactionCreated {
 		log.Info().
-			Str("event_type", "event_burn_tx_created_received").
 			Str("span_id", fmt.Sprint(e.BurnTransactionID)).
+			Str("event_type", "event_burn_tx_created_received").
 			Msg("found BurnTransactionCreated event")
 		withdrawCreatedEvents = append(withdrawCreatedEvents, WithdrawCreatedEvent{
 			ID:     uint64(e.BurnTransactionID),
@@ -166,8 +166,8 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 
 	for _, e := range events.TFTBridgeModule_BurnTransactionReady {
 		log.Info().
-			Str("event_type", "event_burn_tx_ready_received").
 			Str("span_id", fmt.Sprint(e.BurnTransactionID)).
+			Str("event_type", "event_burn_tx_ready_received").
 			Msg("found BurnTransactionReady event")
 		withdrawReadyEvents = append(withdrawReadyEvents, WithdrawReadyEvent{
 			ID: uint64(e.BurnTransactionID),
@@ -176,8 +176,8 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 
 	for _, e := range events.TFTBridgeModule_BurnTransactionExpired {
 		log.Info().
-			Str("event_type", "event_burn_tx_expired_received").
 			Str("span_id", fmt.Sprint(e.BurnTransactionID)).
+			Str("event_type", "event_burn_tx_expired_received").
 			Msg("found BurnTransactionExpired event")
 		withdrawExpiredEvents = append(withdrawExpiredEvents, WithdrawExpiredEvent{
 			ID:     uint64(e.BurnTransactionID),
@@ -203,7 +203,7 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 			Str("event_type", "transfer_completed").
 			Dict("event", zerolog.Dict().
 				Str("outcome", outcome)).
-			Msgf("transfer with id %s completed", span_id)
+			Msg("transfer has completed")
 	}
 
 	return Events{

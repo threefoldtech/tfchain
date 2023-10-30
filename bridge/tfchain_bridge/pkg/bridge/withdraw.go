@@ -159,7 +159,7 @@ func (bridge *Bridge) handleBadWithdraw(ctx context.Context, withdraw subpkg.Wit
 	}
 
 	logger.Info().
-		Str("type_event", "mint_proposed").
+		Str("event_type", "mint_proposed").
 		Dict("event", zerolog.Dict().
 			Int64("amount", int64(withdraw.Amount)).
 			Str("tx_id", fmt.Sprint(withdraw.ID)).
