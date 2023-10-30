@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stellar/go/amount"
 	"github.com/stellar/go/clients/horizonclient"
@@ -289,7 +290,10 @@ func (w *StellarWallet) submitTransaction(ctx context.Context, txn *txnbuild.Tra
 		}
 		return errors.Wrap(err, "error submitting transaction")
 	}
-	log.Info().Str("hash", txResult.Hash).Msg("transaction submitted to the stellar network")
+	log.Debug().
+		Str("event_type", "stellar_transaction_submitted").
+		Interface("event", txn).
+		Msgf("transaction submitted to the stellar network. tx hash is %s", txResult.ID)
 	return nil
 }
 
@@ -353,10 +357,19 @@ func (w *StellarWallet) StreamBridgeStellarTransactions(ctx context.Context, min
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			log.Info().Str("account", opRequest.ForAccount).Str("horizon", client.HorizonURL).Str("cursor", opRequest.Cursor).Msgf("fetching stellar transactions")
+			logger := log.Logger.With().Dict(
+				"event", zerolog.Dict().
+					Str("bridge_account", opRequest.ForAccount).
+					Str("horizon_url", client.HorizonURL).
+					Str("cursor", opRequest.Cursor),
+			).Logger()
+
 			response, err := client.Transactions(opRequest)
 			if err != nil {
-				log.Err(err).Msg("Error getting transactions for stellar account")
+				logger.Warn().
+					Err(err).
+					Str("event_type", "fetch_transactions_failed").
+					Msg("Error getting transactions for stellar account, retrying in 5 sec")
 				select {
 				case <-ctx.Done():
 					return ctx.Err()
@@ -364,6 +377,11 @@ func (w *StellarWallet) StreamBridgeStellarTransactions(ctx context.Context, min
 					continue
 				}
 			}
+
+			logger.Info().
+				Str("event_type", "transactions_fetched").
+				Int("count", len(response.Embedded.Records)).
+				Msg("stellar transactions fetched")
 
 			for _, tx := range response.Embedded.Records {
 				mintEvents, err := w.processTransaction(tx)
@@ -388,15 +406,15 @@ func (w *StellarWallet) StreamBridgeStellarTransactions(ctx context.Context, min
 }
 
 func (w *StellarWallet) processTransaction(tx hProtocol.Transaction) ([]MintEvent, error) {
+	logger := log.Logger.With().Str("span_id", tx.ID).Logger()
+
 	if !tx.Successful {
 		return nil, nil
 	}
-	log.Info().Str("hash", tx.Hash).Msg("received transaction on bridge stellar account")
 
 	effects, err := w.getTransactionEffects(tx.Hash)
 	if err != nil {
-		log.Error().Str("error while fetching transaction effects:", err.Error())
-		return nil, err
+		return nil, errors.Wrapf(err, "error while fetching transaction effects for tx. tx id is %s", tx.ID)
 	}
 
 	asset := w.getAssetCodeAndIssuer()
@@ -438,6 +456,10 @@ func (w *StellarWallet) processTransaction(tx hProtocol.Transaction) ([]MintEven
 			}
 
 			depositedAmount := big.NewInt(int64(parsedAmount))
+			logger.Info().
+				Str("event_type", "payment_received").
+				Interface("event", paymentOpation).
+				Msg("a payment received on bridge stellar account")
 			if _, ok := senders[paymentOpation.From]; !ok {
 				senders[paymentOpation.From] = depositedAmount
 			} else {

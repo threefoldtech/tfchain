@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/threefoldtech/tfchain_bridge/pkg"
 	"github.com/threefoldtech/tfchain_bridge/pkg/stellar"
@@ -24,20 +25,20 @@ type Bridge struct {
 	depositFee       int64
 }
 
-func NewBridge(ctx context.Context, cfg pkg.BridgeConfig) (*Bridge, error) {
+func NewBridge(ctx context.Context, cfg pkg.BridgeConfig) (*Bridge, string, error) {
 	subClient, err := subpkg.NewSubstrateClient(cfg.TfchainURL, cfg.TfchainSeed)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	blockPersistency, err := pkg.InitPersist(cfg.PersistencyFile)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	wallet, err := stellar.NewStellarWallet(ctx, &cfg.StellarConfig)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	if cfg.RescanBridgeAccount {
@@ -46,18 +47,18 @@ func NewBridge(ctx context.Context, cfg pkg.BridgeConfig) (*Bridge, error) {
 		// and mint accordingly
 		err = blockPersistency.SaveStellarCursor("0")
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		err = blockPersistency.SaveHeight(0)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 	}
 
 	// fetch the configured depositfee
 	depositFee, err := subClient.GetDepositFee()
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	bridge := &Bridge{
@@ -67,31 +68,45 @@ func NewBridge(ctx context.Context, cfg pkg.BridgeConfig) (*Bridge, error) {
 		config:           &cfg,
 		depositFee:       depositFee,
 	}
-
-	return bridge, nil
+	// stat deposit fee?
+	return bridge, wallet.GetKeypair().Address(), nil
 }
 
 func (bridge *Bridge) Start(ctx context.Context) error {
+	log.Info().
+		Str("event_type", "bridge_started").
+		Dict("event", zerolog.Dict().
+			Bool("rescan_flag", bridge.config.RescanBridgeAccount).
+			Int64("deposit_fee", bridge.depositFee)).
+		Msg("bridge instance started")
 	height, err := bridge.blockPersistency.GetHeight()
 	if err != nil {
 		return errors.Wrap(err, "failed to get block height from persistency")
 	}
 
-	log.Info().Msg("starting stellar subscription...")
+	log.Debug().
+		Msg("starting stellar subscription...")
 	stellarSub := make(chan stellar.MintEventSubscription)
 	go func() {
 		defer close(stellarSub)
 		if err = bridge.wallet.StreamBridgeStellarTransactions(ctx, stellarSub, height.StellarCursor); err != nil {
-			log.Fatal().Msgf("failed to monitor bridge account %s", err.Error())
+			log.Fatal().
+				Err(err).
+				Str("event_type", "bridge_unexpectedly_exited").
+				Msg("failed to monitor bridge account")
 		}
 	}()
 
-	log.Info().Msg("starting tfchain subscription...")
+	log.Debug().
+		Msg("starting tfchain subscription...")
 	tfchainSub := make(chan subpkg.EventSubscription)
 	go func() {
 		defer close(tfchainSub)
 		if err := bridge.subClient.SubscribeTfchainBridgeEvents(ctx, tfchainSub); err != nil {
-			log.Fatal().Msgf("failed to subscribe to tfchain %s", err.Error())
+			log.Fatal().
+				Err(err).
+				Str("event_type", "bridge_unexpectedly_exited").
+				Msg("failed to subscribe to tfchain")
 		}
 	}()
 
@@ -125,7 +140,6 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 					}
 					return errors.Wrap(err, "failed to handle withdraw ready")
 				}
-				log.Info().Uint64("ID", withdawReadyEvent.ID).Msg("withdraw processed")
 			}
 			for _, refundExpiredEvent := range data.Events.RefundExpiredEvents {
 				err := bridge.handleRefundExpired(ctx, refundExpiredEvent)
@@ -141,7 +155,6 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 					}
 					return errors.Wrap(err, "failed to handle refund ready")
 				}
-				log.Info().Str("hash", refundReadyEvent.Hash).Msg("refund processed")
 			}
 		case data := <-stellarSub:
 			if data.Err != nil {
@@ -154,9 +167,8 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 					if errors.Is(err, pkg.ErrTransactionAlreadyMinted) {
 						continue
 					}
-					return errors.Wrap(err, "failed to handle mint")
+					return errors.Wrap(err, "failed to handle mint") // mint could be initiated already but there is a problem saving the cursor
 				}
-				log.Info().Str("hash", mEvent.Tx.Hash).Msg("mint processed")
 			}
 		case <-ctx.Done():
 			return ctx.Err()

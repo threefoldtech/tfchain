@@ -12,6 +12,7 @@ import (
 	flag "github.com/spf13/pflag"
 	"github.com/threefoldtech/tfchain_bridge/pkg"
 	"github.com/threefoldtech/tfchain_bridge/pkg/bridge"
+	"github.com/threefoldtech/tfchain_bridge/pkg/logger"
 )
 
 func main() {
@@ -30,11 +31,12 @@ func main() {
 
 	flag.Parse()
 
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	log.Logger = zerolog.New(os.Stdout).With().Timestamp().Uint("version", logger.VERSION).Logger()
 	if debug {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 		log.Debug().Msg("debug mode enabled")
+	} else {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -43,23 +45,40 @@ func main() {
 	timeout, timeoutCancel := context.WithTimeout(ctx, time.Second*15)
 	defer timeoutCancel()
 
-	br, err := bridge.NewBridge(timeout, bridgeCfg)
+	br, address, err := bridge.NewBridge(timeout, bridgeCfg)
 	if err != nil {
-		panic(err)
+		log.Fatal().
+			Err(err).
+			Str("event_type", "bridge_aborted").
+			Dict("event", zerolog.Dict().
+									Str("tfchain_url", bridgeCfg.TfchainURL).
+									Str("stellar_horizon_url", bridgeCfg.StellarHorizonUrl).
+									Str("stellar_network", bridgeCfg.StellarNetwork).
+									Bool("Rescan_flag", bridgeCfg.RescanBridgeAccount)).
+			Msg("bridge instance can not be created") // no source yet
 	}
+	log_source := logger.New_log_source(address, bridgeCfg)
+
+	log.Logger = zerolog.New(os.Stdout).With().Interface("source", log_source).Logger()
 
 	sigs := make(chan os.Signal, 1)
 
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		log.Info().Msg("awaiting signal")
+		log.Debug().Msg("awaiting signal")
 		<-sigs
-		log.Info().Msg("shutting now")
+		log.Debug().Msg("shutting now")
 		cancel()
 	}()
 
 	if err = br.Start(ctx); err != nil && err != context.Canceled {
-		log.Fatal().Err(err).Msg("exited unexpectedly")
+		log.Fatal().
+			Err(err).
+			Str("event_type", "bridge_unexpectedly_exited").
+			Msg("bridge instance exited unexpectedly")
 	}
+	log.Info().
+		Str("event_type", "bridge_stopped").
+		Msg("bridge instance stopped")
 }

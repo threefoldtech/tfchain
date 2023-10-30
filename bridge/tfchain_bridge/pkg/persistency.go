@@ -3,6 +3,9 @@ package pkg
 import (
 	"encoding/json"
 	"os"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 type Blockheight struct {
@@ -37,7 +40,16 @@ func (b *ChainPersistency) SaveStellarCursor(cursor string) error {
 	}
 
 	blockheight.StellarCursor = cursor
-	return b.Save(blockheight)
+	err = b.Save(blockheight)
+	if err != nil {
+		return err
+	}
+	log.Debug().
+		Str("event_type", "stellar_cursor_saved").
+		Dict("event", zerolog.Dict().
+			Str("cursor", cursor)).
+		Msgf("stellar cursor saved. cursor now at %s", cursor)
+	return nil
 }
 
 func (b *ChainPersistency) GetHeight() (*Blockheight, error) {

@@ -2,11 +2,15 @@ package substrate
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/stellar/go/support/errors"
 	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
 )
 
@@ -59,14 +63,16 @@ type RefundTransactionExpiredEvent struct {
 }
 
 func (client *SubstrateClient) SubscribeTfchainBridgeEvents(ctx context.Context, eventChannel chan<- EventSubscription) error {
+	logger := log.Logger.With().Str("event_type", "FetchTfchainBridgeEvents").Logger()
+
 	cl, _, err := client.GetClient()
 	if err != nil {
-		log.Fatal().Msg("failed to get client")
+		return errors.Wrap(err, "failed to get client")
 	}
 
 	chainHeadsSub, err := cl.RPC.Chain.SubscribeFinalizedHeads()
 	if err != nil {
-		log.Fatal().Msg("failed to subscribe to finalized heads")
+		return errors.Wrap(err, "failed to subscribe to finalized heads")
 	}
 
 	for {
@@ -79,7 +85,6 @@ func (client *SubstrateClient) SubscribeTfchainBridgeEvents(ctx context.Context,
 			}
 			eventChannel <- data
 		case err := <-chainHeadsSub.Err():
-			log.Err(err).Msg("error with subscription")
 
 			bo := backoff.NewExponentialBackOff()
 			bo.MaxElapsedTime = time.Duration(time.Minute * 10) // 10 minutes
@@ -87,7 +92,7 @@ func (client *SubstrateClient) SubscribeTfchainBridgeEvents(ctx context.Context,
 				chainHeadsSub, err = cl.RPC.Chain.SubscribeFinalizedHeads()
 				return err
 			}, bo, func(err error, d time.Duration) {
-				log.Warn().Err(err).Msgf("connection to chain lost, reopening connection in %s", d.String())
+				logger.Warn().Err(err).Str("event_type", "fetch_finalizedHead_failed").Msgf("connection to chain lost, reopening connection in %s", d.String())
 			})
 
 		case <-ctx.Done():
@@ -98,16 +103,21 @@ func (client *SubstrateClient) SubscribeTfchainBridgeEvents(ctx context.Context,
 }
 
 func (client *SubstrateClient) processEventsForHeight(height uint32) (Events, error) {
-	log.Info().Uint32("ID", height).Msg("fetching events for blockheight")
+
 	if height == 0 {
 		return Events{}, nil
 	}
 
 	records, err := client.GetEventsForBlock(height)
 	if err != nil {
-		log.Err(err).Uint32("ID", height).Msg("failed to decode block for height")
-		return Events{}, err
+		return Events{}, errors.Wrapf(err, "error while decoding block for height %d", height)
+
 	}
+	log.Info().
+		Str("event_type", "block_events_fetched").
+		Dict("event", zerolog.Dict().
+			Uint32("height", height)).
+		Msg("tfchain events fetched")
 
 	return client.processEventRecords(records), nil
 }
@@ -120,14 +130,20 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 	var withdrawExpiredEvents []WithdrawExpiredEvent
 
 	for _, e := range events.TFTBridgeModule_RefundTransactionReady {
-		log.Info().Str("hash", string(e.RefundTransactionHash)).Msg("found refund transaction ready event")
+		log.Info().
+			Str("event_type", "event_refund_tx_ready_received").
+			Str("span_id", string(e.RefundTransactionHash)).
+			Msg("found refund transaction ready event")
 		refundTransactionReadyEvents = append(refundTransactionReadyEvents, RefundTransactionReadyEvent{
 			Hash: string(e.RefundTransactionHash),
 		})
 	}
 
 	for _, e := range events.TFTBridgeModule_RefundTransactionExpired {
-		log.Info().Str("hash", string(e.RefundTransactionHash)).Msgf("found expired refund transaction")
+		log.Info().
+			Str("event_type", "event_refund_tx_expired_received").
+			Str("span_id", string(e.RefundTransactionHash)).
+			Msgf("found expired refund transaction")
 		refundTransactionExpiredEvents = append(refundTransactionExpiredEvents, RefundTransactionExpiredEvent{
 			Hash:   string(e.RefundTransactionHash),
 			Target: string(e.Target),
@@ -136,7 +152,10 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 	}
 
 	for _, e := range events.TFTBridgeModule_BurnTransactionCreated {
-		log.Info().Uint64("ID", uint64(e.BurnTransactionID)).Msg("found burn transaction created event")
+		log.Info().
+			Str("event_type", "event_burn_tx_created_received").
+			Str("span_id", fmt.Sprint(e.BurnTransactionID)).
+			Msg("found burn transaction created event")
 		withdrawCreatedEvents = append(withdrawCreatedEvents, WithdrawCreatedEvent{
 			ID:     uint64(e.BurnTransactionID),
 			Source: e.Source,
@@ -146,19 +165,45 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 	}
 
 	for _, e := range events.TFTBridgeModule_BurnTransactionReady {
-		log.Info().Uint64("ID", uint64(e.BurnTransactionID)).Msg("found burn transaction ready event")
+		log.Info().
+			Str("event_type", "event_burn_tx_ready_received").
+			Str("span_id", fmt.Sprint(e.BurnTransactionID)).
+			Msg("found burn transaction ready event")
 		withdrawReadyEvents = append(withdrawReadyEvents, WithdrawReadyEvent{
 			ID: uint64(e.BurnTransactionID),
 		})
 	}
 
 	for _, e := range events.TFTBridgeModule_BurnTransactionExpired {
-		log.Info().Uint64("ID", uint64(e.BurnTransactionID)).Msg("found burn transaction expired event")
+		log.Info().
+			Str("event_type", "event_burn_tx_expired_received").
+			Str("span_id", fmt.Sprint(e.BurnTransactionID)).
+			Msg("found burn transaction expired event")
 		withdrawExpiredEvents = append(withdrawExpiredEvents, WithdrawExpiredEvent{
 			ID:     uint64(e.BurnTransactionID),
 			Target: string(e.Target),
 			Amount: uint64(e.Amount),
 		})
+	}
+
+	for range events.TFTBridgeModule_MintCompleted {
+		span_id := "TODO" // TODO: GET tx id from the event. required tfchain update
+		logger := log.Logger.With().Str("span_id", span_id).Logger()
+		outcome := ""
+		if strings.HasPrefix(span_id, "refund") {
+			outcome = "refunded"
+		} else {
+			outcome = "bridged"
+		}
+
+		logger.Info().
+			Str("event_type", "mint_completed").
+			Msg("found mint completed event")
+		logger.Info().
+			Str("event_type", "transfer_completed").
+			Dict("event", zerolog.Dict().
+				Str("outcome", outcome)).
+			Msgf("transfer with id %s completed", span_id)
 	}
 
 	return Events{

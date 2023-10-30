@@ -2,7 +2,10 @@ package bridge
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	hProtocol "github.com/stellar/go/protocols/horizon"
 	"github.com/threefoldtech/tfchain_bridge/pkg"
@@ -22,22 +25,24 @@ func (bridge *Bridge) refund(ctx context.Context, destination string, amount int
 
 	// save cursor
 	cursor := tx.PagingToken()
-	log.Info().Msgf("saving cursor now %s", cursor)
 	if err = bridge.blockPersistency.SaveStellarCursor(cursor); err != nil {
-		log.Error().Msgf("error while saving cursor:", err.Error())
-		return err
+		return errors.Wrap(err, "error while saving cursor")
 	}
 	return nil
 }
 
 func (bridge *Bridge) handleRefundExpired(ctx context.Context, refundExpiredEvent subpkg.RefundTransactionExpiredEvent) error {
+	logger := log.Logger.With().Str("span_id", refundExpiredEvent.Hash).Logger()
+
 	refunded, err := bridge.subClient.IsRefundedAlready(refundExpiredEvent.Hash)
 	if err != nil {
 		return err
 	}
 
 	if refunded {
-		log.Info().Str("tx_id", refundExpiredEvent.Hash).Msg("tx is refunded already, skipping...")
+		logger.Info().
+			Str("event_type", "refund_skipped").
+			Msg("tx is already refunded")
 		return nil
 	}
 
@@ -46,17 +51,30 @@ func (bridge *Bridge) handleRefundExpired(ctx context.Context, refundExpiredEven
 		return err
 	}
 
-	return bridge.subClient.RetryCreateRefundTransactionOrAddSig(ctx, refundExpiredEvent.Hash, refundExpiredEvent.Target, int64(refundExpiredEvent.Amount), signature, bridge.wallet.GetKeypair().Address(), sequenceNumber)
+	err = bridge.subClient.RetryCreateRefundTransactionOrAddSig(ctx, refundExpiredEvent.Hash, refundExpiredEvent.Target, int64(refundExpiredEvent.Amount), signature, bridge.wallet.GetKeypair().Address(), sequenceNumber)
+	if err != nil {
+		return err
+	}
+	reason := fmt.Sprint(ctx.Value("refund_reason"))
+	logger.Info().
+		Str("event_type", "refund_proposed").
+		Dict("event", zerolog.Dict().
+			Str("reason", reason)).
+		Msgf("refund initiated due to %s", reason)
+	return nil
 }
 
 func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent subpkg.RefundTransactionReadyEvent) error {
+	logger := log.Logger.With().Str("span_id", refundReadyEvent.Hash).Logger()
 	refunded, err := bridge.subClient.IsRefundedAlready(refundReadyEvent.Hash)
 	if err != nil {
 		return err
 	}
 
 	if refunded {
-		log.Info().Str("tx_id", refundReadyEvent.Hash).Msg("tx is refunded already, skipping...")
+		logger.Info().
+			Str("event_type", "refund_skipped").
+			Msg("tx is already refunded")
 		return pkg.ErrTransactionAlreadyRefunded
 	}
 
@@ -70,5 +88,18 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 		return err
 	}
 
-	return bridge.subClient.RetrySetRefundTransactionExecutedTx(ctx, refund.TxHash)
+	err = bridge.subClient.RetrySetRefundTransactionExecutedTx(ctx, refund.TxHash)
+	if err != nil {
+		return err
+	}
+	logger.Info().
+		Str("event_type", "refund_completed").
+		Msg("refund processed")
+	logger.Info().
+		Str("event_type", "transfer_completed").
+		Dict("event", zerolog.Dict().
+			Str("outcome", "refunded")).
+		Msgf("transfer with id %s completed", refundReadyEvent.Hash)
+
+	return nil
 }
