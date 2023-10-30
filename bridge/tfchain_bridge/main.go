@@ -34,7 +34,6 @@ func main() {
 	log.Logger = zerolog.New(os.Stdout).With().Timestamp().Uint("version", logger.VERSION).Logger()
 	if debug {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		log.Debug().Msg("debug mode enabled")
 	} else {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
@@ -59,7 +58,7 @@ func main() {
 	}
 	log_source := logger.New_log_source(address, bridgeCfg)
 
-	log.Logger = zerolog.New(os.Stdout).With().Interface("source", log_source).Logger()
+	log.Logger = log.Logger.With().Interface("source", log_source).Logger()
 
 	sigs := make(chan os.Signal, 1)
 
