@@ -78,14 +78,14 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 		Dict("event", zerolog.Dict().
 			Bool("rescan_flag", bridge.config.RescanBridgeAccount).
 			Int64("deposit_fee", bridge.depositFee)).
-		Msg("bridge instance started")
+		Msg("the bridge instance has started")
 	height, err := bridge.blockPersistency.GetHeight()
 	if err != nil {
 		return errors.Wrap(err, "failed to get block height from persistency")
 	}
 
 	log.Debug().
-		Msg("starting stellar subscription...")
+		Msg("The Stellar subscription is starting")
 	stellarSub := make(chan stellar.MintEventSubscription)
 	go func() {
 		defer close(stellarSub)
@@ -93,12 +93,12 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 			log.Fatal().
 				Err(err).
 				Str("event_type", "bridge_unexpectedly_exited").
-				Msg("failed to monitor bridge account")
+				Msg("failed to monitor bridge stellar account")
 		}
 	}()
 
 	log.Debug().
-		Msg("starting tfchain subscription...")
+		Msg("The TFChain subscription is starting")
 	tfchainSub := make(chan subpkg.EventSubscription)
 	go func() {
 		defer close(tfchainSub)
@@ -106,7 +106,7 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 			log.Fatal().
 				Err(err).
 				Str("event_type", "bridge_unexpectedly_exited").
-				Msg("failed to subscribe to tfchain")
+				Msg("failed to subscribe to TFChain")
 		}
 	}()
 

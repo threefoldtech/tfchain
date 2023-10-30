@@ -133,7 +133,7 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 		log.Info().
 			Str("event_type", "event_refund_tx_ready_received").
 			Str("span_id", string(e.RefundTransactionHash)).
-			Msg("found refund transaction ready event")
+			Msg("found RefundTransactionReady event")
 		refundTransactionReadyEvents = append(refundTransactionReadyEvents, RefundTransactionReadyEvent{
 			Hash: string(e.RefundTransactionHash),
 		})
@@ -143,7 +143,7 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 		log.Info().
 			Str("event_type", "event_refund_tx_expired_received").
 			Str("span_id", string(e.RefundTransactionHash)).
-			Msgf("found expired refund transaction")
+			Msgf("found RefundTransactionExpired event")
 		refundTransactionExpiredEvents = append(refundTransactionExpiredEvents, RefundTransactionExpiredEvent{
 			Hash:   string(e.RefundTransactionHash),
 			Target: string(e.Target),
@@ -155,7 +155,7 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 		log.Info().
 			Str("event_type", "event_burn_tx_created_received").
 			Str("span_id", fmt.Sprint(e.BurnTransactionID)).
-			Msg("found burn transaction created event")
+			Msg("found BurnTransactionCreated event")
 		withdrawCreatedEvents = append(withdrawCreatedEvents, WithdrawCreatedEvent{
 			ID:     uint64(e.BurnTransactionID),
 			Source: e.Source,
@@ -168,7 +168,7 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 		log.Info().
 			Str("event_type", "event_burn_tx_ready_received").
 			Str("span_id", fmt.Sprint(e.BurnTransactionID)).
-			Msg("found burn transaction ready event")
+			Msg("found BurnTransactionReady event")
 		withdrawReadyEvents = append(withdrawReadyEvents, WithdrawReadyEvent{
 			ID: uint64(e.BurnTransactionID),
 		})
@@ -178,7 +178,7 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 		log.Info().
 			Str("event_type", "event_burn_tx_expired_received").
 			Str("span_id", fmt.Sprint(e.BurnTransactionID)).
-			Msg("found burn transaction expired event")
+			Msg("found BurnTransactionExpired event")
 		withdrawExpiredEvents = append(withdrawExpiredEvents, WithdrawExpiredEvent{
 			ID:     uint64(e.BurnTransactionID),
 			Target: string(e.Target),
@@ -198,7 +198,7 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 
 		logger.Info().
 			Str("event_type", "mint_completed").
-			Msg("found mint completed event")
+			Msg("found MintCompleted event")
 		logger.Info().
 			Str("event_type", "transfer_completed").
 			Dict("event", zerolog.Dict().

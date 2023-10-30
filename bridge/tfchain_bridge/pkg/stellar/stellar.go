@@ -293,7 +293,7 @@ func (w *StellarWallet) submitTransaction(ctx context.Context, txn *txnbuild.Tra
 	log.Debug().
 		Str("event_type", "stellar_transaction_submitted").
 		Interface("event", txn).
-		Msgf("transaction submitted to the stellar network. tx hash is %s", txResult.ID)
+		Msgf("the transaction submitted to the Stellar network, and its unique identifier is %s", txResult.ID)
 	return nil
 }
 
@@ -369,7 +369,7 @@ func (w *StellarWallet) StreamBridgeStellarTransactions(ctx context.Context, min
 				logger.Warn().
 					Err(err).
 					Str("event_type", "fetch_transactions_failed").
-					Msg("Error getting transactions for stellar account, retrying in 5 sec")
+					Msg("encountered an error while retrieving transactions for bridge Stellar account, retrying in 5 sec")
 				select {
 				case <-ctx.Done():
 					return ctx.Err()
@@ -459,7 +459,7 @@ func (w *StellarWallet) processTransaction(tx hProtocol.Transaction) ([]MintEven
 			logger.Info().
 				Str("event_type", "payment_received").
 				Interface("event", paymentOpation).
-				Msg("a payment received on bridge stellar account")
+				Msg("a payment has received on bridge Stellar account")
 			if _, ok := senders[paymentOpation.From]; !ok {
 				senders[paymentOpation.From] = depositedAmount
 			} else {

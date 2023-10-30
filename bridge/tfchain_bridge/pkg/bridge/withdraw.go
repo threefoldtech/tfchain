@@ -25,7 +25,7 @@ func (bridge *Bridge) handleWithdrawCreated(ctx context.Context, withdraw subpkg
 	if burned {
 		logger.Info().
 			Str("event_type", "withdraw_skipped").
-			Msg("tx is already withdrawn")
+			Msg("the withdraw transaction has already been processed")
 		return pkg.ErrTransactionAlreadyBurned
 	}
 	// check if it can hold tft : TODO check trust line TFT limit if it can receive the amount
@@ -49,13 +49,13 @@ func (bridge *Bridge) handleWithdrawCreated(ctx context.Context, withdraw subpkg
 			Int64("amount", int64(withdraw.Amount)).
 			Str("tx_id", fmt.Sprint(withdraw.ID)).
 			Str("destination_address", withdraw.Target)).
-		Msgf("withdraw proposed. target stellar address: %s", withdraw.Target)
+		Msgf("a withdraw has proposed with the target stellar address of %s", withdraw.Target)
 
 	logger.Info().
 		Str("event_type", "transfer_initiated").
 		Dict("event", zerolog.Dict().
 			Str("type", "burn")).
-		Msgf("transfer with id %s initiated", fmt.Sprint(withdraw.ID))
+		Msg("a transfer has initiated")
 	return nil
 }
 
@@ -64,7 +64,7 @@ func (bridge *Bridge) handleWithdrawExpired(ctx context.Context, withdrawExpired
 	if err := bridge.wallet.CheckAccount(withdrawExpired.Target); err != nil {
 		log.Err(err).
 			Str("event_type", "refund_failed").
-			Msg("setting burn as executed since we have no way to recover...") // why the event not have the source address or we don't get it by query tfcahin and refund this?
+			Msg("setting withdraw as executed since we have no way to recover...") // why the event not have the source address or we don't get it by query tfcahin and refund this?
 		return bridge.subClient.RetrySetWithdrawExecuted(ctx, withdrawExpired.ID)
 	}
 
@@ -84,13 +84,13 @@ func (bridge *Bridge) handleWithdrawExpired(ctx context.Context, withdrawExpired
 			Int64("amount", int64(withdrawExpired.Amount)).
 			Str("tx_id", fmt.Sprint(withdrawExpired.ID)).
 			Str("destination_address", withdrawExpired.Target)).
-		Msgf("withdraw proposed. target stellar address: %s", withdrawExpired.Target)
+		Msgf("a withdraw has proposed with the target stellar address of %s", withdrawExpired.Target)
 
 	logger.Info().
 		Str("event_type", "transfer_initiated").
 		Dict("event", zerolog.Dict().
 			Str("type", "burn")).
-		Msgf("transfer with id %s initiated", fmt.Sprint(withdrawExpired.ID))
+		Msg("a transfer has initiated")
 	return nil
 }
 
@@ -105,7 +105,7 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 	if burned {
 		logger.Info().
 			Str("event_type", "withdraw_skipped").
-			Msg("tx is already withdrawn")
+			Msg("the withdraw has already been processed")
 		return pkg.ErrTransactionAlreadyBurned
 	}
 
@@ -125,12 +125,12 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 	}
 	logger.Info().
 		Str("event_type", "withdraw_completed").
-		Msg("withdraw completed")
+		Msg("the withdraw has proceed")
 	logger.Info().
 		Str("event_type", "transfer_completed").
 		Dict("event", zerolog.Dict().
 			Str("outcome", "bridged")).
-		Msgf("transfer with id %d completed", withdrawReady.ID)
+		Msg("the transfer has completed")
 
 	return bridge.subClient.RetrySetWithdrawExecuted(ctx, withdrawReady.ID)
 }
@@ -149,7 +149,7 @@ func (bridge *Bridge) handleBadWithdraw(ctx context.Context, withdraw subpkg.Wit
 	if minted {
 		logger.Info().
 			Str("event_type", "mint_skipped").
-			Msg("transaction is already minted")
+			Msg("the transaction has already been minted")
 		return pkg.ErrTransactionAlreadyMinted
 	}
 
@@ -164,6 +164,6 @@ func (bridge *Bridge) handleBadWithdraw(ctx context.Context, withdraw subpkg.Wit
 			Int64("amount", int64(withdraw.Amount)).
 			Str("tx_id", fmt.Sprint(withdraw.ID)).
 			Str("destination_address", withdraw.Source.ToHexString())).
-		Msgf("mint proposed. target substrate address: %s", withdraw.Source.ToHexString())
+			Msgf("a mint has proposed with the target substrate address of %s", withdraw.Source.ToHexString())
 	return bridge.subClient.RetrySetWithdrawExecuted(ctx, withdraw.ID)
 }

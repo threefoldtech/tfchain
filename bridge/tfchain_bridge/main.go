@@ -54,7 +54,7 @@ func main() {
 									Str("stellar_horizon_url", bridgeCfg.StellarHorizonUrl).
 									Str("stellar_network", bridgeCfg.StellarNetwork).
 									Bool("Rescan_flag", bridgeCfg.RescanBridgeAccount)).
-			Msg("bridge instance can not be created") // no source yet
+			Msg("the bridge instance cannot be started") // no source yet
 	}
 	log_source := logger.New_log_source(address, bridgeCfg)
 
@@ -75,9 +75,9 @@ func main() {
 		log.Fatal().
 			Err(err).
 			Str("event_type", "bridge_unexpectedly_exited").
-			Msg("bridge instance exited unexpectedly")
+			Msg("the bridge instance has exited unexpectedly")
 	}
 	log.Info().
 		Str("event_type", "bridge_stopped").
-		Msg("bridge instance stopped")
+		Msg("the bridge instance has stopped")
 }

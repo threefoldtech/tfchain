@@ -29,7 +29,7 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 	if minted {
 		logger.Info().
 			Str("event_type", "mint_skipped").
-			Msg("transaction is already minted")
+			Msg("the transaction has already been minted")
 		return pkg.ErrTransactionAlreadyMinted
 	}
 
@@ -40,7 +40,7 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 		Str("event_type", "transfer_initiated").
 		Dict("event", zerolog.Dict().
 			Str("type", "deposit")).
-		Msgf("transfer with id %s initiated", tx.ID)
+		Msg("a transfer has initiated")
 
 	// only one payment in transaction is allowed
 	if len(senders) > 1 {
@@ -59,12 +59,12 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 	}
 
 	if tx.Memo == "" {
-		refund_contex = context.WithValue(refund_contex, "refund_reason", "transaction has empty memo")
+		refund_contex = context.WithValue(refund_contex, "refund_reason", "the transaction does not contain any memo")
 		return bridge.refund(refund_contex, receiver, depositedAmount.Int64(), tx)
 	}
 
 	if tx.MemoType == "return" {
-		logger.Debug().Str("tx_id", tx.Hash).Msg("transaction has a return memo hash, skipping this transaction")
+		logger.Debug().Str("tx_id", tx.Hash).Msg("the transaction is being skipped because it contains a return memo")
 		// save cursor
 		cursor := tx.PagingToken()
 		err := bridge.blockPersistency.SaveStellarCursor(cursor)
@@ -76,15 +76,15 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 
 	// if the deposited amount is lower than the depositfee, trigger a refund
 	if depositedAmount.Cmp(big.NewInt(bridge.depositFee)) <= 0 {
-		refund_contex = context.WithValue(refund_contex, "refund_reason", "deposited amount is lower than the deposit fee")
+		refund_contex = context.WithValue(refund_contex, "refund_reason", "the deposited amount is insufficient to cover the deposit fee")
 		return bridge.refund(refund_contex, receiver, depositedAmount.Int64(), tx)
 	}
 
 	destinationSubstrateAddress, err := bridge.getSubstrateAddressFromMemo(tx.Memo)
 	if err != nil {
-		logger.Debug().Err(err).Msgf("error while decoding tx memo")
+		logger.Debug().Err(err).Msg("there was an issue decoding the memo for the transaction")
 		// memo is not formatted correctly, issue a refund
-		refund_contex = context.WithValue(refund_contex, "refund_reason", "memo is not formatted correctly")
+		refund_contex = context.WithValue(refund_contex, "refund_reason", "the transaction contains a memo text that is not properly formatted")
 		return bridge.refund(refund_contex, receiver, depositedAmount.Int64(), tx)
 	}
 
@@ -104,7 +104,7 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 			Int64("amount", depositedAmount.Int64()).
 			Str("tx_id", tx.Hash).
 			Str("destination_address", destinationSubstrateAddress)).
-		Msgf("mint proposed. target substrate address: %s", destinationSubstrateAddress)
+		Msgf("a mint has proposed with the target substrate address of %s", destinationSubstrateAddress)
 
 	// save cursor
 	cursor := tx.PagingToken()

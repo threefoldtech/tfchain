@@ -42,7 +42,7 @@ func (bridge *Bridge) handleRefundExpired(ctx context.Context, refundExpiredEven
 	if refunded {
 		logger.Info().
 			Str("event_type", "refund_skipped").
-			Msg("tx is already refunded")
+			Msgf("the transaction has already been refunded", refundExpiredEvent.Hash)
 		return nil
 	}
 
@@ -60,7 +60,7 @@ func (bridge *Bridge) handleRefundExpired(ctx context.Context, refundExpiredEven
 		Str("event_type", "refund_proposed").
 		Dict("event", zerolog.Dict().
 			Str("reason", reason)).
-		Msgf("refund initiated due to %s", reason)
+		Msgf("a refund has proposed due to %s", reason)
 	return nil
 }
 
@@ -74,7 +74,7 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 	if refunded {
 		logger.Info().
 			Str("event_type", "refund_skipped").
-			Msg("tx is already refunded")
+			Msg("the transaction has already been refunded")
 		return pkg.ErrTransactionAlreadyRefunded
 	}
 
@@ -94,12 +94,12 @@ func (bridge *Bridge) handleRefundReady(ctx context.Context, refundReadyEvent su
 	}
 	logger.Info().
 		Str("event_type", "refund_completed").
-		Msg("refund processed")
+		Msg("the transaction has refunded")
 	logger.Info().
 		Str("event_type", "transfer_completed").
 		Dict("event", zerolog.Dict().
 			Str("outcome", "refunded")).
-		Msgf("transfer with id %s completed", refundReadyEvent.Hash)
+		Msgf("the transfer has completed", refundReadyEvent.Hash)
 
 	return nil
 }
