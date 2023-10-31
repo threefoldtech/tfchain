@@ -83,10 +83,10 @@ In this section, we look into the details of what happens when the a Stellar dep
 
 #### Overview of the TFChain Refund events
 
-1.  `tftBridgeModule.RefundTransactionCreated`: A bridge validator has proposed a Refund-on-Stellar transaction upon witness a stellar deposit with invalid or missing cross-chain transfer information.
-2.  `tftBridgeModule.RefundTransactionsignatureAdded`: Other bridge validators witness same stellar deposit and voted for the refund proposal.
-3.  `tftBridgeModule.RefundTransactionReady`: Enough validators signatures was collected and stored so from now it is possible to submit the proposed stellar refund transaction.
-4.  `tftBridgeModule.RefundTransactionProcessed`: A bridge validator has called `set_refund_transaction_executed` extrinsic with a proof that the proposed stellar refund transaction was executed successfully on stellar network.
+1.  `tftBridgeModule.RefundTransactionCreated`: A bridge validator proposed a Refund-on-Stellar transaction after being the first to report a stellar deposit with invalid or missing cross-chain transfer information.
+2.  `tftBridgeModule.RefundTransactionsignatureAdded`: Other bridge validators reported same stellar deposit and provided signature for the refund proposal.
+3.  `tftBridgeModule.RefundTransactionReady`: Enough validators signatures were collected and stored so from now it is possible to submit the proposed stellar refund transaction.
+4.  `tftBridgeModule.RefundTransactionProcessed`: A bridge validator called `set_refund_transaction_executed()` extrinsic with a proof that the proposed stellar refund transaction was executed successfully on stellar network.
 
 ### TFCHAIN -> STELLAR (Burn-and-Withdraw flow)
 
@@ -104,10 +104,10 @@ Now, we look into the details of transferring TFT from a TFChain account to a St
 
 #### Overview of the TFChain Burning events
 
-1.  `tftBridgeModule.BurnTransactionCreated`: A swap from TFChain to stellar was initiated by a call to `swap_to_stellar` extrinsic.
-2.  `tftBridgeModule.BurnTransactionSignatureAdded`: Other bridge validators handled `BurnTransactionCreated` TFChain event and submit their signature for the proposed stellar transaction.
-3.  `tftBridgeModule.BurnTransactionReady`: Enough validators signatures was collected and stored so from now it is possible to submit the proposed stellar withdraw transaction.
-4.  `tftBridgeModule.BurnTransactionProcessed`: A bridge validator has called `set_burn_transaction_executed` extrinsic with a proof that the proposed stellar withdraw transaction was executed successfully on stellar network.
+1.  `tftBridgeModule.BurnTransactionCreated`: A swap from TFChain to stellar was initiated by a call to `swap_to_stellar()` extrinsic.
+2.  `tftBridgeModule.BurnTransactionSignatureAdded`: A bridge validator handled BurnTransactionCreated TFChain event and submitted its signature for the proposed stellar transaction.
+3.  `tftBridgeModule.BurnTransactionReady`: Enough validators signatures were collected and stored so from now it is possible to submit the proposed stellar withdraw transaction.
+4.  `tftBridgeModule.BurnTransactionProcessed`: A bridge validator was the first to call `set_burn_transaction_executed()` extrinsic and the proposed stellar withdraw transaction was executed successfully on stellar network.
 
 #### When a Refund-on-TFChain occurs?
 
