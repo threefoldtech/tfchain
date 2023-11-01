@@ -41,9 +41,9 @@ Example: ![swap\_to\_stellar](swap_to_stellar.png)
 
 In this section, we look into the details of transferring TFT from a Stellar Account to a TFChain Account.
 
-1.  A transaction is received on the bridge Stellar account (aka. vault) and monitored by bridge validators (deamons).
+1.  A transaction is received on the bridge Stellar account (aka. vault) and noticed by bridge validators (deamons).
 
-2.  Each time such transaction event is reported by a bridge validator it undergoes some validation. If it fails, a refund is issued (sent back to the stellar source account). Here we assume that the validation has passed, but we will examine the refund flow in the next section.
+2.  Each time such transaction event is received by a bridge validator it undergoes some validation. If it fails, a refund is issued (sent back to the stellar source account). Here we assume that the validation has passed, but we will examine the refund flow in the next section.
 
 3.  The first bridge validator reporting the transaction will propose a mint by calling `propose_or_vote_mint_transaction()` extrinsic on the TFTBridgeModule in TFChain. This extrinsic inserts a new `MintTransaction` in `MintTransactions` storage that includes the `amount`, `target`, `block`, `votes`, and emits a `MintTransactionProposed` event. The mint is considered processed by the bridge side at this point.
 
@@ -71,9 +71,9 @@ A refund on Stellar occurs when one of the following conditions is met:
 
 In this section, we look into the details of what happens when the a Stellar deposit can not be processed due to a validation problem.
 
-1.  A transaction is received on the bridge Stellar account (aka. vault) and monitored by bridge validators (deamons).
+1.  A transaction is received on the bridge Stellar account (aka. vault) and noticed by bridge validators (deamons).
 
-2.  Each time such transaction event is reported by a bridge validator it undergoes some validation. Here, we assume that the validation has failed because of one of the violations mentioned in the previous section so a refund flow is initiated.
+2.  Each time such transaction event is received by a bridge validator it undergoes some validation. Here, we assume that the validation has failed because of one of the violations mentioned in the previous section so a refund flow is initiated.
 
 3.  The first bridge validator reporting a violation will initiate the refund by calling TFTBridgeModule `create_refund_transaction_or_add_sig()` extrinsic to propose a `RefundTransaction`, to store the details in `RefundTransactions` storage map alongside with its signature and to emit `RefundTransactionsignatureAdded` and `RefundTransactionCreated` events.
 
@@ -122,8 +122,8 @@ A refund on TFChain is initiated when either of the following conditions is met:
 
 We didn't mentioned yet a few TFChain event related to the flows discussed above, these events are:
 
-*   `tftBridgeModule.BurnTransactionExpired`: from TFCHAIN -> STELLAR burn flow, when transaction (burn TFT on TFChain source account and transfer amount from Stellar vault account to Stellar destination account) is stuck in bridge.
-*   `tftBridgeModule.RefundTransactionExpired`: from STELLAR -> TFCHAIN refund flow, after TFT were locked into Stellar vault, finally not minted to TFChain, and transaction to get it back to Stellar source account is stuck in bridge.
+*   `tftBridgeModule.BurnTransactionExpired`: from TFCHAIN -> STELLAR burn flow, certain number of TFChain blocks passed without a `BurnTransaction` being noticed and signed by the majority of bridge validators.
+*   `tftBridgeModule.RefundTransactionExpired`: from STELLAR -> TFCHAIN refund flow, certain number of TFChain blocks passed without a `RefundTransaction` being noticed and signed by the majority of bridge validators.
 
 These expired events are typically the result of an outage of one or more bridge validators. We will explain why.
 
