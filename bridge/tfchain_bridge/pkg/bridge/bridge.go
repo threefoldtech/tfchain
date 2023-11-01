@@ -81,7 +81,7 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 		Msg("the bridge instance has started")
 	height, err := bridge.blockPersistency.GetHeight()
 	if err != nil {
-		return errors.Wrap(err, "failed to get block height from persistency")
+		return errors.Wrap(err, "an error occurred while reading block height from persistency")
 	}
 
 	log.Debug().
@@ -114,7 +114,7 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 		select {
 		case data := <-tfchainSub:
 			if data.Err != nil {
-				return errors.Wrap(err, "failed to process events")
+				return errors.Wrap(err, "failed to get tfchain events")
 			}
 			for _, withdrawCreatedEvent := range data.Events.WithdrawCreatedEvents {
 				err := bridge.handleWithdrawCreated(ctx, withdrawCreatedEvent)
@@ -123,13 +123,13 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 					if errors.Is(err, pkg.ErrTransactionAlreadyBurned) || errors.Is(err, pkg.ErrTransactionAlreadyMinted) {
 						continue
 					}
-					return errors.Wrap(err, "failed to handle withdraw created")
+					return errors.Wrap(err, "an error occurred while handling WithdrawCreatedEvents")
 				}
 			}
 			for _, withdrawExpiredEvent := range data.Events.WithdrawExpiredEvents {
 				err := bridge.handleWithdrawExpired(ctx, withdrawExpiredEvent)
 				if err != nil {
-					return errors.Wrap(err, "failed to handle withdraw expired")
+					return errors.Wrap(err, "an error occurred while handling WithdrawExpiredEvents")
 				}
 			}
 			for _, withdawReadyEvent := range data.Events.WithdrawReadyEvents {
@@ -138,13 +138,13 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 					if errors.Is(err, pkg.ErrTransactionAlreadyBurned) {
 						continue
 					}
-					return errors.Wrap(err, "failed to handle withdraw ready")
+					return errors.Wrap(err, "an error occurred while handling WithdrawReadyEvents")
 				}
 			}
 			for _, refundExpiredEvent := range data.Events.RefundExpiredEvents {
 				err := bridge.handleRefundExpired(ctx, refundExpiredEvent)
 				if err != nil {
-					return errors.Wrap(err, "failed to handle refund expired")
+					return errors.Wrap(err, "an error occurred while handling RefundExpiredEvents")
 				}
 			}
 			for _, refundReadyEvent := range data.Events.RefundReadyEvents {
@@ -153,12 +153,12 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 					if errors.Is(err, pkg.ErrTransactionAlreadyRefunded) {
 						continue
 					}
-					return errors.Wrap(err, "failed to handle refund ready")
+					return errors.Wrap(err, "an error occurred while handling RefundReadyEvents")
 				}
 			}
 		case data := <-stellarSub:
 			if data.Err != nil {
-				return errors.Wrap(err, "failed to get mint events")
+				return errors.Wrap(err, "failed to get stellar payments")
 			}
 
 			for _, mEvent := range data.Events {
@@ -167,7 +167,7 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 					if errors.Is(err, pkg.ErrTransactionAlreadyMinted) {
 						continue
 					}
-					return errors.Wrap(err, "failed to handle mint") // mint could be initiated already but there is a problem saving the cursor
+					return errors.Wrap(err, "an error occurred while processing the payment received") // mint could be initiated already but there is a problem saving the cursor
 				}
 			}
 		case <-ctx.Done():

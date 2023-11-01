@@ -93,6 +93,8 @@ func (w *StellarWallet) CreatePaymentAndReturnSignature(ctx context.Context, tar
 }
 
 func (w *StellarWallet) CreatePaymentWithSignaturesAndSubmit(ctx context.Context, target string, amount uint64, txHash string, signatures []substrate.StellarSignature, sequenceNumber int64) error {
+	ctx_with_span_id := context.WithValue(ctx, "span_id", txHash)
+
 	txnBuild, err := w.generatePaymentOperation(amount, target, sequenceNumber)
 	if err != nil {
 		return err
@@ -116,10 +118,11 @@ func (w *StellarWallet) CreatePaymentWithSignaturesAndSubmit(ctx context.Context
 		}
 	}
 
-	return w.submitTransaction(ctx, txn)
+	return w.submitTransaction(ctx_with_span_id, txn)
 }
 
 func (w *StellarWallet) CreateRefundPaymentWithSignaturesAndSubmit(ctx context.Context, target string, amount uint64, txHash string, signatures []substrate.StellarSignature, sequenceNumber int64) error {
+	ctx_with_span_id := context.WithValue(ctx, "span_id", txHash)
 	txnBuild, err := w.generatePaymentOperation(amount, target, sequenceNumber)
 	if err != nil {
 		return err
@@ -153,7 +156,7 @@ func (w *StellarWallet) CreateRefundPaymentWithSignaturesAndSubmit(ctx context.C
 		}
 	}
 
-	return w.submitTransaction(ctx, txn)
+	return w.submitTransaction(ctx_with_span_id, txn)
 }
 
 func (w *StellarWallet) CreateRefundAndReturnSignature(ctx context.Context, target string, amount uint64, message string) (string, uint64, error) {
@@ -216,7 +219,7 @@ func (w *StellarWallet) generatePaymentOperation(amount uint64, destination stri
 
 	sourceAccount, err := w.getAccountDetails(w.config.StellarBridgeAccount)
 	if err != nil {
-		return txnbuild.TransactionParams{}, errors.Wrap(err, "failed to get source account")
+		return txnbuild.TransactionParams{}, errors.Wrap(err, "an error occurred while getting source account details")
 	}
 
 	asset := w.getAssetCodeAndIssuer()
@@ -253,7 +256,7 @@ func (w *StellarWallet) generatePaymentOperation(amount uint64, destination stri
 func (w *StellarWallet) createTransaction(ctx context.Context, txn txnbuild.TransactionParams, sign bool) (*txnbuild.Transaction, error) {
 	tx, err := txnbuild.NewTransaction(txn)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to build transaction")
+		return nil, errors.Wrap(err, "an error occurred while building the transaction")
 	}
 
 	if sign {
@@ -262,7 +265,7 @@ func (w *StellarWallet) createTransaction(ctx context.Context, txn txnbuild.Tran
 			if hError, ok := err.(*horizonclient.Error); ok {
 				log.Error().Msgf("Error submitting tx %+v", hError.Problem.Extras)
 			}
-			return nil, errors.Wrap(err, "failed to sign transaction with keypair")
+			return nil, errors.Wrap(err, "an error occurred while signing the transaction with keypair")
 		}
 	}
 
@@ -272,7 +275,7 @@ func (w *StellarWallet) createTransaction(ctx context.Context, txn txnbuild.Tran
 func (w *StellarWallet) submitTransaction(ctx context.Context, txn *txnbuild.Transaction) error {
 	client, err := w.getHorizonClient()
 	if err != nil {
-		return errors.Wrap(err, "failed to get horizon client")
+		return errors.Wrap(err, "an error occurred while getting horizon client")
 	}
 
 	// Submit the transaction
@@ -288,11 +291,13 @@ func (w *StellarWallet) submitTransaction(ctx context.Context, txn *txnbuild.Tra
 		if errSequence != nil {
 			return errSequence
 		}
-		return errors.Wrap(err, "error submitting transaction")
+		return errors.Wrap(err, "an error occurred while submitting the transaction")
 	}
-	log.Debug().
+	log.Info().
+		Str("span_id", fmt.Sprint(ctx.Value("span_id"))).
 		Str("event_type", "stellar_transaction_submitted").
-		Interface("event", txn).
+		Dict("event", zerolog.Dict().
+			Str("bridge_transaction_id", txResult.ID)).
 		Msgf("the transaction submitted to the Stellar network, and its unique identifier is %s", txResult.ID)
 	return nil
 }
@@ -414,7 +419,7 @@ func (w *StellarWallet) processTransaction(tx hProtocol.Transaction) ([]MintEven
 
 	effects, err := w.getTransactionEffects(tx.Hash)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error while fetching transaction effects for tx. tx id is %s", tx.ID)
+		return nil, errors.Wrapf(err, "failed to fetch transaction effects for transaction with id is %s", tx.ID)
 	}
 
 	asset := w.getAssetCodeAndIssuer()

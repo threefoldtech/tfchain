@@ -63,16 +63,15 @@ type RefundTransactionExpiredEvent struct {
 }
 
 func (client *SubstrateClient) SubscribeTfchainBridgeEvents(ctx context.Context, eventChannel chan<- EventSubscription) error {
-	logger := log.Logger.With().Str("event_type", "FetchTfchainBridgeEvents").Logger()
-
+	
 	cl, _, err := client.GetClient()
 	if err != nil {
-		return errors.Wrap(err, "failed to get client")
+		return errors.Wrap(err, "an error occurred while getting substrate client")
 	}
 
 	chainHeadsSub, err := cl.RPC.Chain.SubscribeFinalizedHeads()
 	if err != nil {
-		return errors.Wrap(err, "failed to subscribe to finalized heads")
+		return errors.Wrap(err, "an error occurred while subscribing to finalized heads")
 	}
 
 	for {
@@ -92,7 +91,10 @@ func (client *SubstrateClient) SubscribeTfchainBridgeEvents(ctx context.Context,
 				chainHeadsSub, err = cl.RPC.Chain.SubscribeFinalizedHeads()
 				return err
 			}, bo, func(err error, d time.Duration) {
-				logger.Warn().Err(err).Str("event_type", "fetch_finalizedHead_failed").Msgf("connection to chain lost, reopening connection in %s", d.String())
+				log.Warn().
+					Err(err).
+					Str("event_type", "fetch_finalized_Heads_failed").
+					Msgf("connection to chain lost, reopening connection in %s", d.String())
 			})
 
 		case <-ctx.Done():
@@ -110,7 +112,7 @@ func (client *SubstrateClient) processEventsForHeight(height uint32) (Events, er
 
 	records, err := client.GetEventsForBlock(height)
 	if err != nil {
-		return Events{}, errors.Wrapf(err, "error while decoding block for height %d", height)
+		return Events{}, errors.Wrapf(err, "an error occurred while decoding events for height %d", height)
 
 	}
 	log.Info().

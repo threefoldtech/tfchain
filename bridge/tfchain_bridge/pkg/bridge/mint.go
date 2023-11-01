@@ -69,7 +69,7 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 		cursor := tx.PagingToken()
 		err := bridge.blockPersistency.SaveStellarCursor(cursor)
 		if err != nil {
-			return errors.Wrap(err, "error while saving cursor")
+			return errors.Wrap(err, "an error occurred while saving stellar cursor")
 		}
 		return nil
 	}
@@ -99,7 +99,7 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 	}
 
 	logger.Info().
-		Str("type_event", "mint_proposed").
+		Str("event_type", "mint_proposed").
 		Dict("event", zerolog.Dict().
 			Int64("amount", depositedAmount.Int64()).
 			Str("tx_id", tx.Hash).
@@ -109,7 +109,7 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 	// save cursor
 	cursor := tx.PagingToken()
 	if err = bridge.blockPersistency.SaveStellarCursor(cursor); err != nil {
-		return errors.Wrap(err, "error while saving cursor")
+		return errors.Wrap(err, "an error occurred while saving stellar cursor")
 	}
 
 	return nil

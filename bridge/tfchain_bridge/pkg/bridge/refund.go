@@ -26,7 +26,7 @@ func (bridge *Bridge) refund(ctx context.Context, destination string, amount int
 	// save cursor
 	cursor := tx.PagingToken()
 	if err = bridge.blockPersistency.SaveStellarCursor(cursor); err != nil {
-		return errors.Wrap(err, "error while saving cursor")
+		return errors.Wrap(err, "an error occurred while saving stellar cursor")
 	}
 	return nil
 }

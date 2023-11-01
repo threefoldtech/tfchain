@@ -44,7 +44,7 @@ func (bridge *Bridge) handleWithdrawCreated(ctx context.Context, withdraw subpkg
 		return nil
 	}
 	logger.Info().
-		Str("type_event", "withdraw_proposed").
+		Str("event_type", "withdraw_proposed").
 		Dict("event", zerolog.Dict().
 			Int64("amount", int64(withdraw.Amount)).
 			Str("tx_id", fmt.Sprint(withdraw.ID)).
@@ -79,7 +79,7 @@ func (bridge *Bridge) handleWithdrawExpired(ctx context.Context, withdrawExpired
 		return nil
 	}
 	logger.Info().
-		Str("type_event", "withdraw_proposed").
+		Str("event_type", "withdraw_proposed").
 		Dict("event", zerolog.Dict().
 			Int64("amount", int64(withdrawExpired.Amount)).
 			Str("tx_id", fmt.Sprint(withdrawExpired.ID)).
