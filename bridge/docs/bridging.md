@@ -120,8 +120,8 @@ A refund on TFChain is initiated when either of the following conditions is met:
 
 We didn't mentioned yet a few TFChain event related to the flows discussed above, these events are:
 
-*   `tftBridgeModule.BurnTransactionExpired`
-*   `tftBridgeModule.RefundTransactionExpired`
+*   `tftBridgeModule.BurnTransactionExpired`: from TFCHAIN -> STELLAR burn flow, when transaction (burn TFT on TFChain source account and transfer amount from Stellar vault account to Stellar destination account) is stuck in bridge.
+*   `tftBridgeModule.RefundTransactionExpired`: from STELLAR -> TFCHAIN refund flow, after TFT were locked into Stellar vault, finally not minted to TFChain, and transaction to get it back to Stellar source account is stuck in bridge.
 
 These expired events are typically the result of an outage of one or more bridge validators. We will explain why.
 
