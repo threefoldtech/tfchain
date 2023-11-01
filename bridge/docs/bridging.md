@@ -41,13 +41,13 @@ Example: ![swap\_to\_stellar](swap_to_stellar.png)
 
 In this section, we look into the details of transferring TFT from a Stellar Account to a TFChain Account.
 
-1.  A transaction is received on the bridge Stellar account and witnessed by a bridge validator..
+1.  A transaction is received on the bridge Stellar account (aka. vault) and monitored by bridge validators (deamons).
 
-2.  The transaction information undergoes validation. If it fails, a refund is issued (sent back to the stellar source account). Starting from this point, we assume that the validation has passed, but we will examine the refund flow in the next section.
+2.  Each time such transaction event is reported by a bridge validator it undergoes some validation. If it fails, a refund is issued (sent back to the stellar source account). Here we assume that the validation has passed, but we will examine the refund flow in the next section.
 
-3.  A mint is proposed by calling `propose_or_vote_mint_transaction()` extrinsic on the TFTBridgeModule in tfchain. This extrinsic inserts a new `MintTransaction` in `MintTransactions` storage that includes the `amount`, `target`, `block`, `votes`, and emits a `MintTransactionProposed` event. The mint is considered processed by the bridge side at this point.
+3.  The first bridge validator reporting the transaction will propose a mint by calling `propose_or_vote_mint_transaction()` extrinsic on the TFTBridgeModule in TFChain. This extrinsic inserts a new `MintTransaction` in `MintTransactions` storage that includes the `amount`, `target`, `block`, `votes`, and emits a `MintTransactionProposed` event. The mint is considered processed by the bridge side at this point.
 
-4.  Other bridge validators also votes for that proposal by calling same extrinsic. If the `MintTransaction` exists in `MintTransactions` storage already, the extrinsic increments the `votes` count for the specified `MintTransaction` and emit `MintTransactionVoted` event.
+4.  Other bridge validators that report the transaction later will only add their votes for that proposal by calling same TFChain extrinsic. Since the `MintTransaction` already exists in `MintTransactions` storage, the extrinsic will increment the `votes` count for the specified `MintTransaction` and emit `MintTransactionVoted` event.
 
 5.  From the TFChain side, if the majority (more than the half) of bridge validators agree on the transaction, tokens are minted to the target address. This check happens every time the `propose_or_vote_mint_transaction()` extrinsic is executed by validator call. Then, the transaction is removed from bridge pallet `MintTransactions` storage and added to `ExecutedMintTransactions`. Finally, a `MintCompleted` event is emitted.
 
@@ -71,15 +71,17 @@ A refund on Stellar occurs when one of the following conditions is met:
 
 In this section, we look into the details of what happens when the a Stellar deposit can not be processed due to a validation problem.
 
-1.  A transaction is received on the bridge Stellar account and witnessed by a bridge validator.
+1.  A transaction is received on the bridge Stellar account (aka. vault) and monitored by bridge validators (deamons).
 
-2.  The transaction information undergoes validation. here we assume it failed because of one of the violations mentioned in the previous section, so a refund flow is initiated by the bridge by calling TFTBridgeModule `create_refund_transaction_or_add_sig()` extrinsic to propose a `RefundTransaction` and store the details in `RefundTransactions` storage map alongside with bridge validator signature. `RefundTransactionsignatureAdded` and `RefundTransactionCreated` events.
+2.  Each time such transaction event is reported by a bridge validator it undergoes some validation. Here, we assume that the validation has failed because of one of the violations mentioned in the previous section so a refund flow is initiated.
 
-3.  Other bridge validators also provides their signature for that transaction proposal by calling same extrinsic.
+3.  The first bridge validator reporting a violation will initiate the refund by calling TFTBridgeModule `create_refund_transaction_or_add_sig()` extrinsic to propose a `RefundTransaction`, to store the details in `RefundTransactions` storage map alongside with its signature and to emit `RefundTransactionsignatureAdded` and `RefundTransactionCreated` events.
 
-4.  If the majority (more than the half) of bridge validators provided their signature for a refund transaction, a `RefundTransactionReady` event is emitted as well. This check happens every time the `create_refund_transaction_or_add_sig()` extrinsic is executed by validator call.
+4.  Other bridge validators that report the transaction later also provides their signature for that refund transaction proposal by calling same extrinsic.
 
-5.  The bridge will handle the event and query TFChain storage for the `RefundTransaction` details and the validators’ signatures. It will create a multi-signatures Stellar transaction with a [MEMO](https://developers.stellar.org/docs/encyclopedia/memos) of `RETURN` type containing the hash of the refunded transaction and submit it to Stellar network. If submitted successfully, it will call `set_refund_transaction_executed()` extrinsic (which removes the `RefundTransaction` from the `RefundTransactions` storage and adds it to `ExecutedRefundTransactions`) then emit `RefundTransactionProcessed` event.
+5.  If the majority (more than the half) of bridge validators provided their signature for a refund transaction, a `RefundTransactionReady` event is emitted as well. This check happens every time the `create_refund_transaction_or_add_sig()` extrinsic is executed by validator call.
+
+6.  The first bridge validator reporting the `RefundTransactionReady` event will handle it and query TFChain storage for the `RefundTransaction` details and the validators’ signatures. It will create a multi-signatures Stellar transaction with a [MEMO](https://developers.stellar.org/docs/encyclopedia/memos) of `RETURN` type containing the hash of the refunded transaction and submit it to Stellar network. If submitted successfully, it will call `set_refund_transaction_executed()` extrinsic (which removes the `RefundTransaction` from the `RefundTransactions` storage and adds it to `ExecutedRefundTransactions`) then emit `RefundTransactionProcessed` event.
 
 #### Overview of the TFChain Refund events
 
