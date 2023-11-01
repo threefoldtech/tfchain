@@ -42,7 +42,7 @@ func (bridge *Bridge) handleRefundExpired(ctx context.Context, refundExpiredEven
 	if refunded {
 		logger.Info().
 			Str("event_type", "refund_skipped").
-			Msgf("the transaction has already been refunded", refundExpiredEvent.Hash)
+			Msg("the transaction has already been refunded")
 		return nil
 	}
 

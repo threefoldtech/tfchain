@@ -17,7 +17,6 @@ import (
 // mint handler for stellar
 func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx hProtocol.Transaction) error {
 	logger := log.Logger.With().Str("span_id", tx.ID).Logger()
-	refund_contex := context.Background()
 
 	minted, err := bridge.subClient.IsMintedAlready(tx.Hash)
 	if err != nil {
@@ -44,10 +43,9 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 
 	// only one payment in transaction is allowed
 	if len(senders) > 1 {
-		refund_contex = context.WithValue(refund_contex, "refund_reason", "multiple senders found")
-
+		ctx = context.WithValue(ctx, "refund_reason", "multiple senders found")
 		for sender, depositAmount := range senders {
-			return bridge.refund(refund_contex, sender, depositAmount.Int64(), tx) // how this should be refund the multiple sender ?
+			return bridge.refund(ctx, sender, depositAmount.Int64(), tx) // how this should be refund the multiple sender ?
 		}
 	}
 
@@ -59,8 +57,8 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 	}
 
 	if tx.Memo == "" {
-		refund_contex = context.WithValue(refund_contex, "refund_reason", "the transaction does not contain any memo")
-		return bridge.refund(refund_contex, receiver, depositedAmount.Int64(), tx)
+		ctx = context.WithValue(ctx, "refund_reason", "the transaction does not contain any memo")
+		return bridge.refund(ctx, receiver, depositedAmount.Int64(), tx)
 	}
 
 	if tx.MemoType == "return" {
@@ -76,16 +74,16 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 
 	// if the deposited amount is lower than the depositfee, trigger a refund
 	if depositedAmount.Cmp(big.NewInt(bridge.depositFee)) <= 0 {
-		refund_contex = context.WithValue(refund_contex, "refund_reason", "the deposited amount is insufficient to cover the deposit fee")
-		return bridge.refund(refund_contex, receiver, depositedAmount.Int64(), tx)
+		ctx = context.WithValue(ctx, "refund_reason", "the deposited amount is insufficient to cover the deposit fee")
+		return bridge.refund(ctx, receiver, depositedAmount.Int64(), tx)
 	}
 
 	destinationSubstrateAddress, err := bridge.getSubstrateAddressFromMemo(tx.Memo)
 	if err != nil {
 		logger.Debug().Err(err).Msg("there was an issue decoding the memo for the transaction")
 		// memo is not formatted correctly, issue a refund
-		refund_contex = context.WithValue(refund_contex, "refund_reason", "the transaction contains a memo text that is not properly formatted")
-		return bridge.refund(refund_contex, receiver, depositedAmount.Int64(), tx)
+		ctx = context.WithValue(ctx, "refund_reason", "the transaction contains a memo text that is not properly formatted")
+		return bridge.refund(ctx, receiver, depositedAmount.Int64(), tx)
 	}
 
 	accountID, err := substrate.FromAddress(destinationSubstrateAddress)
