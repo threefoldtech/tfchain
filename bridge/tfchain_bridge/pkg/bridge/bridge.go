@@ -74,8 +74,10 @@ func NewBridge(ctx context.Context, cfg pkg.BridgeConfig) (*Bridge, string, erro
 
 func (bridge *Bridge) Start(ctx context.Context) error {
 	log.Info().
-		Str("event_type", "bridge_started").
-		Dict("event", zerolog.Dict().
+		Str("event_action", "bridge_started").
+		Str("event_kind", "event").
+		Str("category", "availability").
+		Dict("metadata", zerolog.Dict().
 			Bool("rescan_flag", bridge.config.RescanBridgeAccount).
 			Int64("deposit_fee", bridge.depositFee)).
 		Msg("the bridge instance has started")
@@ -92,8 +94,10 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 		if err = bridge.wallet.StreamBridgeStellarTransactions(ctx, stellarSub, height.StellarCursor); err != nil {
 			log.Fatal().
 				Err(err).
-				Str("event_type", "bridge_unexpectedly_exited").
-				Msg("failed to monitor bridge stellar account")
+				Str("event_action", "bridge_unexpectedly_exited").
+				Str("event_kind", "error").
+				Str("category", "availability").
+				Msg("the bridge instance has exited unexpectedly")
 		}
 	}()
 
@@ -105,8 +109,10 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 		if err := bridge.subClient.SubscribeTfchainBridgeEvents(ctx, tfchainSub); err != nil {
 			log.Fatal().
 				Err(err).
-				Str("event_type", "bridge_unexpectedly_exited").
-				Msg("failed to subscribe to TFChain")
+				Str("event_action", "bridge_unexpectedly_exited").
+				Str("event_kind", "error").
+				Str("category", "availability").
+				Msg("the bridge instance has exited unexpectedly")
 		}
 	}()
 

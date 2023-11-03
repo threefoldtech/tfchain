@@ -1,23 +1,30 @@
 package logger
 
 import (
-	"github.com/threefoldtech/tfchain_bridge/pkg"
+	"os"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 const VERSION = 1
 
-type Source struct {
+func Init_logger(isDebug bool) {
+	log.Logger = zerolog.New(os.Stdout).With().Timestamp().Uint("version", VERSION).Logger()
+	logLevel := zerolog.InfoLevel
+	if isDebug {
+		logLevel = zerolog.DebugLevel
+		log.Logger = log.Logger.With().Caller().Logger()
+	}
+
+	zerolog.SetGlobalLevel(logLevel)
+}
+
+type SourceCommonLogEntry struct {
 	Instance_public_key   string
 	Bridge_wallet_address string
 	Stellar_network       string
 	Tfchain_url           string
 }
 
-func New_log_source(address string, config pkg.BridgeConfig) Source {
-	return Source{
-		address,
-		config.StellarBridgeAccount,
-		config.StellarNetwork,
-		config.TfchainURL,
-	}
-}
+// TODO: event log interfaces

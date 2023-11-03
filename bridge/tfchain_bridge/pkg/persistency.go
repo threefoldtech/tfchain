@@ -45,8 +45,10 @@ func (b *ChainPersistency) SaveStellarCursor(cursor string) error {
 		return err
 	}
 	log.Debug().
-		Str("event_type", "stellar_cursor_saved").
-		Dict("event", zerolog.Dict().
+		Str("event_action", "stellar_cursor_saved").
+		Str("event_kind", "event").
+		Str("category", "persistency").
+		Dict("metadata", zerolog.Dict().
 			Str("cursor", cursor)).
 		Msg("the Stellar cursor has been saved")
 	return nil

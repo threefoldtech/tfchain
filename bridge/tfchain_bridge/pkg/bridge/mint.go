@@ -16,7 +16,7 @@ import (
 
 // mint handler for stellar
 func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx hProtocol.Transaction) error {
-	logger := log.Logger.With().Str("span_id", tx.ID).Logger()
+	logger := log.Logger.With().Str("trace_id", tx.ID).Logger()
 
 	minted, err := bridge.subClient.IsMintedAlready(tx.Hash)
 	if err != nil {
@@ -27,7 +27,9 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 
 	if minted {
 		logger.Info().
-			Str("event_type", "mint_skipped").
+			Str("event_action", "mint_skipped").
+			Str("event_kind", "event").
+			Str("category", "mint").
 			Msg("the transaction has already been minted")
 		return pkg.ErrTransactionAlreadyMinted
 	}
@@ -36,8 +38,10 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 		return nil
 	}
 	logger.Info().
-		Str("event_type", "transfer_initiated").
-		Dict("event", zerolog.Dict().
+		Str("event_action", "transfer_initiated").
+		Str("event_kind", "event").
+		Str("category", "transfer").
+		Dict("metadata", zerolog.Dict().
 			Str("type", "deposit")).
 		Msg("a transfer has initiated")
 
@@ -45,7 +49,7 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 	if len(senders) > 1 {
 		ctx = context.WithValue(ctx, "refund_reason", "multiple senders found")
 		for sender, depositAmount := range senders {
-			return bridge.refund(ctx, sender, depositAmount.Int64(), tx) // how this should be refund the multiple sender ?
+			return bridge.refund(ctx, sender, depositAmount.Int64(), tx) // so how this should refund the multiple senders ?
 		}
 	}
 
@@ -57,7 +61,7 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 	}
 
 	if tx.Memo == "" {
-		ctx = context.WithValue(ctx, "refund_reason", "the transaction does not contain any memo")
+		ctx = context.WithValue(ctx, "refund_reason", "no memo in transaction")
 		return bridge.refund(ctx, receiver, depositedAmount.Int64(), tx)
 	}
 
@@ -72,9 +76,9 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 		return nil
 	}
 
-	// if the deposited amount is lower than the depositfee, trigger a refund
+	// if the deposited amount is lower than the deposit fee, trigger a refund
 	if depositedAmount.Cmp(big.NewInt(bridge.depositFee)) <= 0 {
-		ctx = context.WithValue(ctx, "refund_reason", "the deposited amount is insufficient to cover the deposit fee")
+		ctx = context.WithValue(ctx, "refund_reason", "insufficient deposit amount to cover fee")
 		return bridge.refund(ctx, receiver, depositedAmount.Int64(), tx)
 	}
 
@@ -82,7 +86,7 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 	if err != nil {
 		logger.Debug().Err(err).Msg("there was an issue decoding the memo for the transaction")
 		// memo is not formatted correctly, issue a refund
-		ctx = context.WithValue(ctx, "refund_reason", "the transaction contains a memo text that is not properly formatted")
+		ctx = context.WithValue(ctx, "refund_reason", "memo is not properly formatted")
 		return bridge.refund(ctx, receiver, depositedAmount.Int64(), tx)
 	}
 
@@ -97,11 +101,13 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 	}
 
 	logger.Info().
-		Str("event_type", "mint_proposed").
-		Dict("event", zerolog.Dict().
+		Str("event_action", "mint_proposed").
+		Str("event_kind", "event").
+		Str("category", "mint").
+		Dict("metadata", zerolog.Dict().
 			Int64("amount", depositedAmount.Int64()).
 			Str("tx_id", tx.Hash).
-			Str("destination_address", destinationSubstrateAddress)).
+			Str("to", destinationSubstrateAddress)).
 		Msgf("a mint has proposed with the target substrate address of %s", destinationSubstrateAddress)
 
 	// save cursor

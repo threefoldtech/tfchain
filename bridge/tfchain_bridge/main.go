@@ -7,7 +7,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	flag "github.com/spf13/pflag"
 	"github.com/threefoldtech/tfchain_bridge/pkg"
@@ -31,12 +30,7 @@ func main() {
 
 	flag.Parse()
 
-	log.Logger = zerolog.New(os.Stdout).With().Timestamp().Uint("version", logger.VERSION).Logger()
-	if debug {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	} else {
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	}
+	logger.Init_logger(debug)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -48,17 +42,19 @@ func main() {
 	if err != nil {
 		log.Fatal().
 			Err(err).
-			Str("event_type", "bridge_aborted").
-			Dict("event", zerolog.Dict().
-									Str("tfchain_url", bridgeCfg.TfchainURL).
-									Str("stellar_horizon_url", bridgeCfg.StellarHorizonUrl).
-									Str("stellar_network", bridgeCfg.StellarNetwork).
-									Bool("Rescan_flag", bridgeCfg.RescanBridgeAccount)).
-			Msg("the bridge instance cannot be started") // no source yet
+			Str("event_action", "bridge_init_aborted").
+			Str("event_kind", "error").
+			Str("category", "availability").
+			Msg("the bridge instance cannot be started")
 	}
-	log_source := logger.New_log_source(address, bridgeCfg)
+	source_log_entry := logger.SourceCommonLogEntry{
+		Instance_public_key: address,
+		Bridge_wallet_address: bridgeCfg.StellarBridgeAccount,
+		Stellar_network: bridgeCfg.StellarNetwork,
+		Tfchain_url: bridgeCfg.TfchainURL,
+		}
 
-	log.Logger = log.Logger.With().Interface("source", log_source).Logger()
+	log.Logger = log.Logger.With().Interface("source", source_log_entry).Logger()
 
 	sigs := make(chan os.Signal, 1)
 
@@ -74,10 +70,14 @@ func main() {
 	if err = br.Start(ctx); err != nil && err != context.Canceled {
 		log.Fatal().
 			Err(err).
-			Str("event_type", "bridge_unexpectedly_exited").
+			Str("event_action", "bridge_unexpectedly_exited").
+			Str("event_kind", "error").
+			Str("category", "availability").
 			Msg("the bridge instance has exited unexpectedly")
 	}
 	log.Info().
-		Str("event_type", "bridge_stopped").
+		Str("event_action", "bridge_stopped").
+		Str("event_kind", "event").
+		Str("category", "availability").
 		Msg("the bridge instance has stopped")
 }

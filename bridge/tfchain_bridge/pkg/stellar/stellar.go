@@ -93,7 +93,7 @@ func (w *StellarWallet) CreatePaymentAndReturnSignature(ctx context.Context, tar
 }
 
 func (w *StellarWallet) CreatePaymentWithSignaturesAndSubmit(ctx context.Context, target string, amount uint64, txHash string, signatures []substrate.StellarSignature, sequenceNumber int64) error {
-	ctx_with_span_id := context.WithValue(ctx, "span_id", txHash)
+	ctx_with_trace_id := context.WithValue(ctx, "trace_id", txHash)
 
 	txnBuild, err := w.generatePaymentOperation(amount, target, sequenceNumber)
 	if err != nil {
@@ -118,11 +118,11 @@ func (w *StellarWallet) CreatePaymentWithSignaturesAndSubmit(ctx context.Context
 		}
 	}
 
-	return w.submitTransaction(ctx_with_span_id, txn)
+	return w.submitTransaction(ctx_with_trace_id, txn)
 }
 
 func (w *StellarWallet) CreateRefundPaymentWithSignaturesAndSubmit(ctx context.Context, target string, amount uint64, txHash string, signatures []substrate.StellarSignature, sequenceNumber int64) error {
-	ctx_with_span_id := context.WithValue(ctx, "span_id", txHash)
+	ctx_with_trace_id := context.WithValue(ctx, "trace_id", txHash)
 	txnBuild, err := w.generatePaymentOperation(amount, target, sequenceNumber)
 	if err != nil {
 		return err
@@ -156,7 +156,7 @@ func (w *StellarWallet) CreateRefundPaymentWithSignaturesAndSubmit(ctx context.C
 		}
 	}
 
-	return w.submitTransaction(ctx_with_span_id, txn)
+	return w.submitTransaction(ctx_with_trace_id, txn)
 }
 
 func (w *StellarWallet) CreateRefundAndReturnSignature(ctx context.Context, target string, amount uint64, message string) (string, uint64, error) {
@@ -294,10 +294,12 @@ func (w *StellarWallet) submitTransaction(ctx context.Context, txn *txnbuild.Tra
 		return errors.Wrap(err, "an error occurred while submitting the transaction")
 	}
 	log.Info().
-		Str("span_id", fmt.Sprint(ctx.Value("span_id"))).
-		Str("event_type", "stellar_transaction_submitted").
-		Dict("event", zerolog.Dict().
-			Str("bridge_transaction_id", txResult.ID)).
+		Str("trace_id", fmt.Sprint(ctx.Value("trace_id"))).
+		Str("event_action", "stellar_transaction_submitted").
+		Str("event_kind", "event").
+		Str("category", "vault").
+		Dict("metadata", zerolog.Dict().
+			Str("result_tx_id", txResult.ID)).
 		Msgf("the transaction submitted to the Stellar network, and its unique identifier is %s", txResult.ID)
 	return nil
 }
@@ -362,18 +364,15 @@ func (w *StellarWallet) StreamBridgeStellarTransactions(ctx context.Context, min
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			logger := log.Logger.With().Dict(
-				"event", zerolog.Dict().
-					Str("bridge_account", opRequest.ForAccount).
-					Str("horizon_url", client.HorizonURL).
-					Str("cursor", opRequest.Cursor),
-			).Logger()
-
 			response, err := client.Transactions(opRequest)
 			if err != nil {
-				logger.Warn().
+				log.Logger.Warn().
 					Err(err).
-					Str("event_type", "fetch_transactions_failed").
+					Str("event_action", "fetch_transactions_failed").
+					Str("event_kind", "alert").
+					Str("category", "stellar_monitor").
+					Dict("metadata", zerolog.Dict().
+						Str("cursor", opRequest.Cursor)).
 					Msg("encountered an error while retrieving transactions for bridge Stellar account, retrying in 5 sec")
 				select {
 				case <-ctx.Done():
@@ -383,9 +382,13 @@ func (w *StellarWallet) StreamBridgeStellarTransactions(ctx context.Context, min
 				}
 			}
 
-			logger.Info().
-				Str("event_type", "transactions_fetched").
-				Int("count", len(response.Embedded.Records)).
+			log.Logger.Info().
+				Str("event_action", "transactions_fetched").
+				Str("event_kind", "event").
+				Str("category", "stellar_monitor").
+				Dict("metadata", zerolog.Dict().
+						Str("cursor", opRequest.Cursor).
+						Int("count", len(response.Embedded.Records))).
 				Msg("stellar transactions fetched")
 
 			for _, tx := range response.Embedded.Records {
@@ -411,7 +414,7 @@ func (w *StellarWallet) StreamBridgeStellarTransactions(ctx context.Context, min
 }
 
 func (w *StellarWallet) processTransaction(tx hProtocol.Transaction) ([]MintEvent, error) {
-	logger := log.Logger.With().Str("span_id", tx.ID).Logger()
+	logger := log.Logger.With().Str("trace_id", tx.ID).Logger()
 
 	if !tx.Successful {
 		return nil, nil
@@ -450,27 +453,33 @@ func (w *StellarWallet) processTransaction(tx hProtocol.Transaction) ([]MintEven
 				return nil, nil
 			}
 
-			paymentOpation := op.(operations.Payment)
-			if paymentOpation.To != w.config.StellarBridgeAccount {
+			PaymentOperation := op.(operations.Payment)
+			if PaymentOperation.To != w.config.StellarBridgeAccount {
 				continue
 			}
 
-			parsedAmount, err := amount.ParseInt64(paymentOpation.Amount)
+			parsedAmount, err := amount.ParseInt64(PaymentOperation.Amount)
 			if err != nil {
 				continue
 			}
 
 			depositedAmount := big.NewInt(int64(parsedAmount))
 			logger.Info().
-				Str("event_type", "payment_received").
-				Interface("event", paymentOpation).
+				Str("event_action", "payment_received").
+				Str("event_kind", "event").
+				Str("category", "vault").
+				Dict("metadata", zerolog.Dict().
+					Str("from", PaymentOperation.From).
+					Str("amount", PaymentOperation.Amount)).
+					Str("tx_hash", PaymentOperation.TransactionHash).
+					Str("ledger_close_time", PaymentOperation.LedgerCloseTime.String()).
 				Msg("a payment has received on bridge Stellar account")
-			if _, ok := senders[paymentOpation.From]; !ok {
-				senders[paymentOpation.From] = depositedAmount
+			if _, ok := senders[PaymentOperation.From]; !ok {
+				senders[PaymentOperation.From] = depositedAmount
 			} else {
-				senderAmount := senders[paymentOpation.From]
+				senderAmount := senders[PaymentOperation.From]
 				senderAmount = senderAmount.Add(senderAmount, depositedAmount)
-				senders[paymentOpation.From] = senderAmount
+				senders[PaymentOperation.From] = senderAmount
 			}
 		}
 

@@ -15,7 +15,7 @@ import (
 )
 
 func (bridge *Bridge) handleWithdrawCreated(ctx context.Context, withdraw subpkg.WithdrawCreatedEvent) error {
-	logger := log.Logger.With().Str("span_id", fmt.Sprint(withdraw.ID)).Logger()
+	logger := log.Logger.With().Str("trace_id", fmt.Sprint(withdraw.ID)).Logger()
 
 	burned, err := bridge.subClient.IsBurnedAlready(types.U64(withdraw.ID))
 	if err != nil {
@@ -24,7 +24,9 @@ func (bridge *Bridge) handleWithdrawCreated(ctx context.Context, withdraw subpkg
 
 	if burned {
 		logger.Info().
-			Str("event_type", "withdraw_skipped").
+			Str("event_action", "withdraw_skipped").
+			Str("event_kind", "event").
+			Str("category", "withdraw").
 			Msg("the withdraw transaction has already been processed")
 		return pkg.ErrTransactionAlreadyBurned
 	}
@@ -44,27 +46,36 @@ func (bridge *Bridge) handleWithdrawCreated(ctx context.Context, withdraw subpkg
 		return nil
 	}
 	logger.Info().
-		Str("event_type", "withdraw_proposed").
-		Dict("event", zerolog.Dict().
-			Int64("amount", int64(withdraw.Amount)).
-			Str("tx_id", fmt.Sprint(withdraw.ID)).
-			Str("destination_address", withdraw.Target)).
-		Msgf("a withdraw has proposed with the target stellar address of %s", withdraw.Target)
-
-	logger.Info().
-		Str("event_type", "transfer_initiated").
-		Dict("event", zerolog.Dict().
+		Str("event_action", "transfer_initiated").
+		Str("event_kind", "event").
+		Str("category", "transfer").
+		Dict("metadata", zerolog.Dict().
 			Str("type", "burn")).
 		Msg("a transfer has initiated")
+
+	logger.Info().
+		Str("event_action", "withdraw_proposed").
+		Str("event_kind", "event").
+		Str("category", "withdraw").
+		Dict("metadata", zerolog.Dict().
+			Uint64("amount", withdraw.Amount).
+			Str("tx_id", fmt.Sprint(withdraw.ID)).
+			Str("to", withdraw.Target)).
+		Msgf("a withdraw has proposed with the target stellar address of %s", withdraw.Target)
 	return nil
 }
 
 func (bridge *Bridge) handleWithdrawExpired(ctx context.Context, withdrawExpired subpkg.WithdrawExpiredEvent) error {
-	logger := log.Logger.With().Str("span_id", fmt.Sprint(withdrawExpired.ID)).Logger()
+	logger := log.Logger.With().Str("trace_id", fmt.Sprint(withdrawExpired.ID)).Logger()
 	if err := bridge.wallet.CheckAccount(withdrawExpired.Target); err != nil {
-		log.Err(err).
-			Str("event_type", "refund_failed").
-			Msg("setting withdraw as executed since we have no way to recover...") // why the event not have the source address or we don't get it by query tfcahin and refund this?
+		log.Warn().
+			Str("event_action", "transfer_failed").
+			Str("event_kind", "alert").
+			Str("category", "transfer").
+			Dict("metadata", zerolog.Dict().
+				Str("reason", err.Error())).
+				Str("type", "burn").
+			Msg("a withdraw failed with no way to refund!") // why the event not have the source address or we don't get it by query tfcahin and refund this?
 		return bridge.subClient.RetrySetWithdrawExecuted(ctx, withdrawExpired.ID)
 	}
 
@@ -79,23 +90,27 @@ func (bridge *Bridge) handleWithdrawExpired(ctx context.Context, withdrawExpired
 		return nil
 	}
 	logger.Info().
-		Str("event_type", "withdraw_proposed").
-		Dict("event", zerolog.Dict().
-			Int64("amount", int64(withdrawExpired.Amount)).
+		Str("event_action", "transfer_initiated").
+		Str("event_kind", "event").
+		Str("category", "transfer").
+		Dict("metadata", zerolog.Dict().
+			Str("type", "burn")).
+		Msg("a transfer has initiated")
+
+	logger.Info().
+		Str("event_action", "withdraw_proposed").
+		Str("event_kind", "event").
+		Str("category", "withdraw").
+		Dict("metadata", zerolog.Dict().
+			Uint64("amount", withdrawExpired.Amount).
 			Str("tx_id", fmt.Sprint(withdrawExpired.ID)).
 			Str("destination_address", withdrawExpired.Target)).
 		Msgf("a withdraw has proposed with the target stellar address of %s", withdrawExpired.Target)
-
-	logger.Info().
-		Str("event_type", "transfer_initiated").
-		Dict("event", zerolog.Dict().
-			Str("type", "burn")).
-		Msg("a transfer has initiated")
 	return nil
 }
 
 func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady subpkg.WithdrawReadyEvent) error {
-	logger := log.Logger.With().Str("span_id", fmt.Sprint(withdrawReady.ID)).Logger()
+	logger := log.Logger.With().Str("trace_id", fmt.Sprint(withdrawReady.ID)).Logger()
 
 	burned, err := bridge.subClient.IsBurnedAlready(types.U64(withdrawReady.ID))
 	if err != nil {
@@ -104,8 +119,10 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 
 	if burned {
 		logger.Info().
-			Str("event_type", "withdraw_skipped").
-			Msg("the withdraw has already been processed")
+			Str("event_action", "withdraw_skipped").
+			Str("event_kind", "event").
+			Str("category", "withdraw").
+			Msg("the withdraw transaction has already been processed")
 		return pkg.ErrTransactionAlreadyBurned
 	}
 
@@ -124,11 +141,15 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 		return err
 	}
 	logger.Info().
-		Str("event_type", "withdraw_completed").
+		Str("event_action", "withdraw_completed").
+		Str("event_kind", "event").
+		Str("category", "withdraw").
 		Msg("the withdraw has proceed")
 	logger.Info().
-		Str("event_type", "transfer_completed").
-		Dict("event", zerolog.Dict().
+		Str("event_action", "transfer_completed").
+		Str("event_kind", "event").
+		Str("category", "transfer").
+		Dict("metadata", zerolog.Dict().
 			Str("outcome", "bridged")).
 		Msg("the transfer has completed")
 
@@ -136,7 +157,7 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 }
 
 func (bridge *Bridge) handleBadWithdraw(ctx context.Context, withdraw subpkg.WithdrawCreatedEvent) error {
-	logger := log.Logger.With().Str("span_id", fmt.Sprint(withdraw.ID)).Logger()
+	logger := log.Logger.With().Str("trace_id", fmt.Sprint(withdraw.ID)).Logger()
 	mintID := fmt.Sprintf("refund-%d", withdraw.ID)
 
 	minted, err := bridge.subClient.IsMintedAlready(mintID)
@@ -148,7 +169,9 @@ func (bridge *Bridge) handleBadWithdraw(ctx context.Context, withdraw subpkg.Wit
 
 	if minted {
 		logger.Info().
-			Str("event_type", "mint_skipped").
+			Str("event_action", "mint_skipped").
+			Str("event_kind", "event").
+			Str("category", "mint").
 			Msg("the transaction has already been minted")
 		return pkg.ErrTransactionAlreadyMinted
 	}
@@ -159,11 +182,13 @@ func (bridge *Bridge) handleBadWithdraw(ctx context.Context, withdraw subpkg.Wit
 	}
 
 	logger.Info().
-		Str("event_type", "mint_proposed").
-		Dict("event", zerolog.Dict().
+		Str("event_action", "mint_proposed").
+		Str("event_kind", "event").
+		Str("category", "mint").
+		Dict("metadata", zerolog.Dict().
 			Int64("amount", int64(withdraw.Amount)).
 			Str("tx_id", fmt.Sprint(withdraw.ID)).
-			Str("destination_address", withdraw.Source.ToHexString())).
-			Msgf("a mint has proposed with the target substrate address of %s", withdraw.Source.ToHexString())
+			Str("to", withdraw.Source.ToHexString())).
+		Msgf("a mint has proposed with the target substrate address of %s", withdraw.Source.ToHexString())
 	return bridge.subClient.RetrySetWithdrawExecuted(ctx, withdraw.ID)
 }

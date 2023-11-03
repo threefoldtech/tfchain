@@ -93,7 +93,9 @@ func (client *SubstrateClient) SubscribeTfchainBridgeEvents(ctx context.Context,
 			}, bo, func(err error, d time.Duration) {
 				log.Warn().
 					Err(err).
-					Str("event_type", "fetch_finalized_Heads_failed").
+					Str("event_action", "fetch_finalized_Heads_failed").
+					Str("event_kind", "alert").
+					Str("category", "tfchain_monitor").
 					Msgf("connection to chain lost, reopening connection in %s", d.String())
 			})
 
@@ -116,8 +118,10 @@ func (client *SubstrateClient) processEventsForHeight(height uint32) (Events, er
 
 	}
 	log.Info().
-		Str("event_type", "block_events_fetched").
-		Dict("event", zerolog.Dict().
+		Str("event_action", "block_events_fetched").
+		Str("event_kind", "event").
+		Str("category", "tfchain_monitor").
+		Dict("metadata", zerolog.Dict().
 			Uint32("height", height)).
 		Msg("tfchain events fetched")
 
@@ -133,8 +137,10 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 
 	for _, e := range events.TFTBridgeModule_RefundTransactionReady {
 		log.Info().
-			Str("span_id", string(e.RefundTransactionHash)).
-			Str("event_type", "event_refund_tx_ready_received").
+			Str("trace_id", string(e.RefundTransactionHash)).
+			Str("event_action", "event_refund_tx_ready_received").
+			Str("event_kind", "event").
+			Str("category", "refund").
 			Msg("found RefundTransactionReady event")
 		refundTransactionReadyEvents = append(refundTransactionReadyEvents, RefundTransactionReadyEvent{
 			Hash: string(e.RefundTransactionHash),
@@ -143,8 +149,10 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 
 	for _, e := range events.TFTBridgeModule_RefundTransactionExpired {
 		log.Info().
-			Str("span_id", string(e.RefundTransactionHash)).
-			Str("event_type", "event_refund_tx_expired_received").
+			Str("trace_id", string(e.RefundTransactionHash)).
+			Str("event_action", "event_refund_tx_expired_received").
+			Str("event_kind", "alert").
+			Str("category", "refund").
 			Msgf("found RefundTransactionExpired event")
 		refundTransactionExpiredEvents = append(refundTransactionExpiredEvents, RefundTransactionExpiredEvent{
 			Hash:   string(e.RefundTransactionHash),
@@ -155,8 +163,10 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 
 	for _, e := range events.TFTBridgeModule_BurnTransactionCreated {
 		log.Info().
-			Str("span_id", fmt.Sprint(e.BurnTransactionID)).
-			Str("event_type", "event_burn_tx_created_received").
+			Str("trace_id", fmt.Sprint(e.BurnTransactionID)).
+			Str("event_action", "event_burn_tx_created_received").
+			Str("event_kind", "event").
+			Str("category", "withdraw").
 			Msg("found BurnTransactionCreated event")
 		withdrawCreatedEvents = append(withdrawCreatedEvents, WithdrawCreatedEvent{
 			ID:     uint64(e.BurnTransactionID),
@@ -168,8 +178,10 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 
 	for _, e := range events.TFTBridgeModule_BurnTransactionReady {
 		log.Info().
-			Str("span_id", fmt.Sprint(e.BurnTransactionID)).
-			Str("event_type", "event_burn_tx_ready_received").
+			Str("trace_id", fmt.Sprint(e.BurnTransactionID)).
+			Str("event_action", "event_burn_tx_ready_received").
+			Str("event_kind", "event").
+			Str("category", "withdraw").
 			Msg("found BurnTransactionReady event")
 		withdrawReadyEvents = append(withdrawReadyEvents, WithdrawReadyEvent{
 			ID: uint64(e.BurnTransactionID),
@@ -178,8 +190,10 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 
 	for _, e := range events.TFTBridgeModule_BurnTransactionExpired {
 		log.Info().
-			Str("span_id", fmt.Sprint(e.BurnTransactionID)).
-			Str("event_type", "event_burn_tx_expired_received").
+			Str("trace_id", fmt.Sprint(e.BurnTransactionID)).
+			Str("event_action", "event_burn_tx_expired_received").
+			Str("event_kind", "alert").
+			Str("category", "withdraw").
 			Msg("found BurnTransactionExpired event")
 		withdrawExpiredEvents = append(withdrawExpiredEvents, WithdrawExpiredEvent{
 			ID:     uint64(e.BurnTransactionID),
@@ -189,21 +203,26 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 	}
 
 	for range events.TFTBridgeModule_MintCompleted {
-		span_id := "TODO" // TODO: GET tx id from the event. required tfchain update
-		logger := log.Logger.With().Str("span_id", span_id).Logger()
+		trace_id := "TODO" // TODO: GET tx id from the event. required tfchain runtime update
+		logger := log.Logger.With().Str("trace_id", trace_id).Logger()
 		outcome := ""
-		if strings.HasPrefix(span_id, "refund") {
+		if strings.HasPrefix(trace_id, "refund") {
 			outcome = "refunded"
 		} else {
 			outcome = "bridged"
 		}
 
 		logger.Info().
-			Str("event_type", "mint_completed").
+			Str("event_action", "mint_completed").
+			Str("event_kind", "event").
+			Str("category", "mint").
 			Msg("found MintCompleted event")
-		logger.Info().
-			Str("event_type", "transfer_completed").
-			Dict("event", zerolog.Dict().
+		
+			logger.Info().
+			Str("event_action", "transfer_completed").
+			Str("event_kind", "event").
+			Str("category", "transfer").
+			Dict("metadata", zerolog.Dict().
 				Str("outcome", outcome)).
 			Msg("transfer has completed")
 	}
