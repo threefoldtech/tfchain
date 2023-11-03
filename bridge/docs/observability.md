@@ -1,8 +1,8 @@
 # Bridge Observability
-The bridge is a distributed system, it can be challenging to understand how requests or transfers move through the system and where bottlenecks may occur.
+The bridge is event-driven distributed system, it can be challenging to understand how requests or transfers move through the system and where bottlenecks may occur.
 This is where techniques like distributed tracing, structured logs, and structured events comes in to allows developers and operators to monitor and understand the behavior of complex systems.
 
-By using these techniques together, developers and operators can gain a more complete understanding of how their applications are performing in production and quickly identify issues when they arise.
+By using these techniques, developers and operators can gain a more complete understanding of how their applications are performing in production and quickly identify issues when they arise.
 
 ## Structured events
 This section describes the structure and contents of the bridge logs.
