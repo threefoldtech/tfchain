@@ -18,3 +18,7 @@ Refer to [production](./production.md) for more information on how to setup a pr
 When you have setup the bridge in either development or production mode you can start bridging.
 
 See [bridging](./bridging.md) for more information on how to bridge.
+
+## Log schema
+Bridge validators use simple event log for the sake of improving observability and perform tracing on workflows and data.
+you can find more about the log schema and how it can improve the observability of the system in [the bride observability document](./observability.md).
