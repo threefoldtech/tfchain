@@ -116,7 +116,7 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 				Msg("the bridge instance has exited unexpectedly")
 		}
 	}()
-	afterMinute := time.After(5 * time.Second)
+	afterMinute := time.After(60 * time.Second)
 
 	for {
 		select {

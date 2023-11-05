@@ -30,6 +30,15 @@ func (bridge *Bridge) handleWithdrawCreated(ctx context.Context, withdraw subpkg
 			Msg("the withdraw transaction has already been processed")
 		return pkg.ErrTransactionAlreadyBurned
 	}
+
+	logger.Info().
+		Str("event_action", "transfer_initiated").
+		Str("event_kind", "event").
+		Str("category", "transfer").
+		Dict("metadata", zerolog.Dict().
+			Str("type", "burn")).
+		Msg("a transfer has initiated")
+
 	// check if it can hold tft : TODO check trust line TFT limit if it can receive the amount
 	if err := bridge.wallet.CheckAccount(withdraw.Target); err != nil {
 		return bridge.handleBadWithdraw(ctx, withdraw)
@@ -45,13 +54,6 @@ func (bridge *Bridge) handleWithdrawCreated(ctx context.Context, withdraw subpkg
 	if err != nil {
 		return nil
 	}
-	logger.Info().
-		Str("event_action", "transfer_initiated").
-		Str("event_kind", "event").
-		Str("category", "transfer").
-		Dict("metadata", zerolog.Dict().
-			Str("type", "burn")).
-		Msg("a transfer has initiated")
 
 	logger.Info().
 		Str("event_action", "withdraw_proposed").
@@ -68,7 +70,7 @@ func (bridge *Bridge) handleWithdrawCreated(ctx context.Context, withdraw subpkg
 func (bridge *Bridge) handleWithdrawExpired(ctx context.Context, withdrawExpired subpkg.WithdrawExpiredEvent) error {
 	logger := log.Logger.With().Str("trace_id", fmt.Sprint(withdrawExpired.ID)).Logger()
 	if err := bridge.wallet.CheckAccount(withdrawExpired.Target); err != nil {
-		log.Warn().
+		logger.Warn().
 			Str("event_action", "transfer_failed").
 			Str("event_kind", "alert").
 			Str("category", "transfer").
@@ -111,7 +113,7 @@ func (bridge *Bridge) handleWithdrawExpired(ctx context.Context, withdrawExpired
 
 func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady subpkg.WithdrawReadyEvent) error {
 	logger := log.Logger.With().Str("trace_id", fmt.Sprint(withdrawReady.ID)).Logger()
-
+	// ctx_with_trace_id := context.WithValue(ctx, "trace_id", fmt.Sprint(withdrawReady.ID))
 	burned, err := bridge.subClient.IsBurnedAlready(types.U64(withdrawReady.ID))
 	if err != nil {
 		return err
@@ -136,7 +138,7 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 	}
 
 	// todo add memo hash
-	err = bridge.wallet.CreatePaymentWithSignaturesAndSubmit(ctx, burnTx.Target, uint64(burnTx.Amount), "", burnTx.Signatures, int64(burnTx.SequenceNumber))
+	err = bridge.wallet.CreatePaymentWithSignaturesAndSubmit(ctx, burnTx.Target, uint64(burnTx.Amount), fmt.Sprint(withdrawReady.ID), burnTx.Signatures, int64(burnTx.SequenceNumber))
 	if err != nil {
 		return err
 	}

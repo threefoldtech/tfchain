@@ -202,9 +202,9 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 		})
 	}
 
-	for range events.TFTBridgeModule_MintCompleted {
-		trace_id := "TODO" // TODO: GET tx id from the event. required tfchain runtime update
-		logger := log.Logger.With().Str("trace_id", trace_id).Logger()
+	for _, e := range events.TFTBridgeModule_MintCompleted {
+		trace_id := e.TxHash
+		logger := log.Logger.With().Str("trace_id", strings.TrimLeft(trace_id, "refund-")).Logger()
 		outcome := ""
 		if strings.HasPrefix(trace_id, "refund") {
 			outcome = "refunded"
