@@ -2,6 +2,7 @@ package bridge
 
 import (
 	"context"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -115,6 +116,7 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 				Msg("the bridge instance has exited unexpectedly")
 		}
 	}()
+	afterMinute := time.After(5 * time.Second)
 
 	for {
 		select {
@@ -176,8 +178,23 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 					return errors.Wrap(err, "an error occurred while processing the payment received") // mint could be initiated already but there is a problem saving the cursor
 				}
 			}
+			time.Sleep(0)
+		case <-afterMinute:
+			balance, err:= bridge.wallet.StatBridgeAccount()
+			if err != nil {
+				log.Logger.Warn().Err(err).Msgf("Can't retrieve the wallet balance at the moment")
+			}
+			log.Logger.Info().
+				Str("event_action", "wallet_balance").
+				Str("event_kind", "metric").
+				Str("category", "vault").
+				Dict("metadata", zerolog.Dict().
+					Str("tft", balance)).
+				Msgf("TFT Balance is %s", balance)
+			afterMinute = time.After(60 * time.Second)
 		case <-ctx.Done():
 			return ctx.Err()
 		}
+		time.Sleep(1 * time.Second)
 	}
 }

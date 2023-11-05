@@ -31,11 +31,11 @@ These events to audit how the bridge system is operating.
 - `stellar_cursor_saved`: The bridge saved the account operation cursor.
 
 ##### Stellar monitor events
-- `transactions_fetched`: The bridge fetched transactions data from stellar network. should be received periodically and can be used as a mark message to detect availability issues.
+- `transactions_fetched`: The bridge fetched transactions data from stellar network. Should be received periodically and can be used as a mark message to detect availability issues. Also include stellar cursor position.
 - `fetch_transactions_failed`: The bridge failed to fetch transactions data from stellar network.
 
 ##### TFChain monitor events
-- `block_events_fetched`: The bridge fetched transactions data from TFChain network for a block. should be received every block and can be used as a mark message to detect availability issues.
+- `block_events_fetched`: The bridge fetched transactions data from TFChain network for a block. Should be received every block and can be used as a mark message to detect availability issues. Also include the TFChain height.
 - `fetch_finalized_Heads_failed`: The bridge failed to fetch transactions data from TFChain network.
 
 #### Business Events:
@@ -75,6 +75,13 @@ For example, if a customer is complaining that their deposit never bridged, you 
 - `payment_received` : This event represents successful payment to the bridge account (a deposit).
 - `stellar_transaction_submitted` : This event represents successful transaction from the bridge account (a refund or a withdraw).
 
+### Metrics:
+
+This events describes a numeric measurement taken at given point in time.
+Metric events are often collected on a predictable frequency.
+
+#### Bridge vault account related
+- `wallet_balance`: This event describes a tft balance locked on the bridge and collected once a minute.
 
 ### Log schema:
 
@@ -105,6 +112,8 @@ The value of this field can be used to inform how these kinds of events should b
 
 - error: This value indicates that an error occurred during the operation of the bridge.
 
+- metric: This events describes a numeric measurement taken at given point in time.
+
 #### source object
 the source field set contains all fields which are included in the source object, it is common .
 across all types of events except of `bridge_init_aborted` error event.
@@ -116,7 +125,9 @@ across all types of events except of `bridge_init_aborted` error event.
 | Stellar_network | string | yes | Stellar network name which you can use to filter logs by environment |
 | Tfchain_url | string | yes | The url of the substrate rpc node which you can use to filter logs by environment |
 
-#### bridge_init_aborted
+#### Event-specific fields:
+
+##### bridge_init_aborted
 
 - kind: error
 
@@ -139,7 +150,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### bridge_started
+##### bridge_started
 
 - kind: event
 
@@ -171,7 +182,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### bridge_unexpectedly_exited
+##### bridge_unexpectedly_exited
 
 - kind: error
 
@@ -194,7 +205,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### bridge_stopped
+##### bridge_stopped
 
 - kind: event
 
@@ -220,7 +231,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### stellar_cursor_saved
+##### stellar_cursor_saved
 
 - kind: event
 
@@ -246,7 +257,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### transactions_fetched
+##### transactions_fetched
 
 - kind: event
 
@@ -278,7 +289,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### fetch_transactions_failed
+##### fetch_transactions_failed
 
 - kind: alert
 
@@ -304,7 +315,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### block_events_fetched
+##### block_events_fetched
 
 - kind: event
 
@@ -330,7 +341,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### fetch_finalized_Heads_failed
+##### fetch_finalized_Heads_failed
 
 - kind: alert
 
@@ -353,7 +364,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### transfer_initiated
+##### transfer_initiated
 
 - kind: event
 
@@ -379,7 +390,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### transfer_completed
+##### transfer_completed
 
 - kind: event
 
@@ -405,7 +416,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### transfer_failed
+##### transfer_failed
 
 - kind: alert
 
@@ -437,7 +448,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### mint_skipped
+##### mint_skipped
 
 - kind: event
 
@@ -460,7 +471,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### mint_proposed
+##### mint_proposed
 
 - kind: event
 
@@ -498,7 +509,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### mint_completed
+##### mint_completed
 
 - kind: event
 
@@ -521,7 +532,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### event_refund_tx_ready_received
+##### event_refund_tx_ready_received
 
 - kind: event
 
@@ -544,7 +555,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### event_refund_tx_expired_received
+##### event_refund_tx_expired_received
 
 - kind: alert
 
@@ -567,7 +578,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### refund_skipped
+##### refund_skipped
 
 - kind: event
 
@@ -590,7 +601,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### refund_proposed
+##### refund_proposed
 
 - kind: event
 
@@ -616,7 +627,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### refund_completed
+##### refund_completed
 
 - kind: event
 
@@ -639,7 +650,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### event_burn_tx_created_received
+##### event_burn_tx_created_received
 
 - kind: event
 
@@ -662,7 +673,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### event_burn_tx_ready_received
+##### event_burn_tx_ready_received
 
 - kind: event
 
@@ -685,7 +696,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### event_burn_tx_expired_received
+##### event_burn_tx_expired_received
 
 - kind: alert
 
@@ -708,7 +719,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### withdraw_skipped
+##### withdraw_skipped
 
 - kind: event
 
@@ -731,7 +742,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### withdraw_proposed
+##### withdraw_proposed
 
 - kind: event
 
@@ -769,7 +780,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### withdraw_completed
+##### withdraw_completed
 
 - kind: event
 
@@ -792,7 +803,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### payment_received
+##### payment_received
 
 - kind: event
 
@@ -836,7 +847,7 @@ across all types of events except of `bridge_init_aborted` error event.
     </tbody>
 </table>
 
-#### stellar_transaction_submitted
+##### stellar_transaction_submitted
 
 - kind: event
 
@@ -858,6 +869,32 @@ across all types of events except of `bridge_init_aborted` error event.
             <td>string</td>
             <td>yes</td>
             <td>The stellar id of the bridge executed transaction. </td>
+        </tr>            
+    </tbody>
+</table>
+
+##### wallet_balance
+
+- kind: metric
+
+- category: vault
+
+<table>
+    <thead>
+        <tr><th colspan="4"><div>wallet_balance Event Properties</div></th></tr>
+        <tr>
+            <th>Property</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>tft</code></td>
+            <td>number</td>
+            <td>yes</td>
+            <td>The tft amount locked in the bridge vault account. collected once a minute</td>
         </tr>            
     </tbody>
 </table>

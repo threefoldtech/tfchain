@@ -565,3 +565,19 @@ func (w *StellarWallet) getAssetCodeAndIssuer() []string {
 		return strings.Split(TFTTest, ":")
 	}
 }
+
+func (w *StellarWallet) StatBridgeAccount() (string, error) {
+	acc, err := w.getAccountDetails(w.config.StellarBridgeAccount)
+	if err != nil {
+		return "", err
+	}
+
+	asset := w.getAssetCodeAndIssuer()
+
+	for _, balance := range acc.Balances {
+		if balance.Code == asset[0] || balance.Issuer == asset[1] {
+			return balance.Balance, nil
+		}
+	}
+	return "", nil
+}
