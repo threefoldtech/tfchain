@@ -126,8 +126,7 @@ The value of this represents the "big buckets" of event categories
 - vault
 
 #### source object
-the source field set contains all fields which are included in the source object, it is common .
-across all types of events except of `bridge_init_aborted` error event.
+the source field set contains all fields which are included in the source object, it is common across all types of events except of `bridge_init_aborted` error event.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
