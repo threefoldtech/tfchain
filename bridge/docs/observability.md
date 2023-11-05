@@ -905,3 +905,513 @@ the source field set contains all fields which are included in the source object
         </tr>            
     </tbody>
 </table>
+
+## Usage examples:
+
+One example, if a customer is complaining that their deposit never bridged, you could filter logs using `trace_id` field with the id of the customer deposit to get overview of all events related to this deposit id and see what went wrong.
+
+    - trace_id = `16d8b06b59aaa5514c645260263e5477bb8aad211502c56cb8849ed5b423d354`
+
+The result would be an array of well defined events, and for a well behave cross-transfer from stellar network to tfchain network it should include these events in the same order:
+
+*payment_received* --> *transfer_initiated* --> *mint_proposed* --> *mint_completed* --> *transfer_completed*
+
+the filtered result would be similar to the one below: 
+
+```
+[
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "16d8b06b59aaa5514c645260263e5477bb8aad211502c56cb8849ed5b423d354",
+    "event_action": "payment_received",
+    "event_kind": "event",
+    "category": "vault",
+    "metadata": {
+      "from": "GD4MUF7FTWOGNREGKMQWC3NOJGBNASEFNEOUJTLNW4FDONV5CEUTGKS4",
+      "amount": "5.0000000"
+    },
+    "tx_hash": "16d8b06b59aaa5514c645260263e5477bb8aad211502c56cb8849ed5b423d354",
+    "ledger_close_time": "2023-11-05 17:08:28 +0000 UTC",
+    "time": "2023-11-05T19:08:32+02:00",
+    "message": "a payment has received on bridge Stellar account"
+  },
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "16d8b06b59aaa5514c645260263e5477bb8aad211502c56cb8849ed5b423d354",
+    "event_action": "transfer_initiated",
+    "event_kind": "event",
+    "category": "transfer",
+    "metadata": {
+      "type": "deposit"
+    },
+    "time": "2023-11-05T19:08:33+02:00",
+    "message": "a transfer has initiated"
+  },
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "16d8b06b59aaa5514c645260263e5477bb8aad211502c56cb8849ed5b423d354",
+    "event_action": "mint_proposed",
+    "event_kind": "event",
+    "category": "mint",
+    "metadata": {
+      "amount": 50000000,
+      "tx_id": "16d8b06b59aaa5514c645260263e5477bb8aad211502c56cb8849ed5b423d354",
+      "to": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    },
+    "time": "2023-11-05T19:08:36+02:00",
+    "message": "a mint has proposed with the target substrate address of 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+  },
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "16d8b06b59aaa5514c645260263e5477bb8aad211502c56cb8849ed5b423d354",
+    "event_action": "mint_completed",
+    "event_kind": "event",
+    "category": "mint",
+    "time": "2023-11-05T19:08:49+02:00",
+    "message": "found MintCompleted event"
+  },
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "16d8b06b59aaa5514c645260263e5477bb8aad211502c56cb8849ed5b423d354",
+    "event_action": "transfer_completed",
+    "event_kind": "event",
+    "category": "transfer",
+    "metadata": {
+      "outcome": "bridged"
+    },
+    "time": "2023-11-05T19:08:49+02:00",
+    "message": "transfer has completed"
+  }
+]
+```
+
+Noticed The value for the transfer_completed event's `outcome` filed is *bridged* this mean the TFT was successfully transferred.
+
+
+For a cross-chain transfer from tfchain to stellar, the trace_id will be an integer.
+
+    - trace_id = `10`
+
+
+let's examine the event_actions for this transfer:
+
+*event_burn_tx_created_received* --> *transfer_initiated* --> *mint_proposed* --> *mint_completed* --> *transfer_completed*
+
+This time the transfer didn't end on the other network, instead it was refunded. using the trace_id you still can trace a transfer from start to end.
+
+the filtered result would be similar to the one below: 
+
+```
+[
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "10",
+    "event_action": "event_burn_tx_created_received",
+    "event_kind": "event",
+    "category": "withdraw",
+    "time": "2023-11-05T20:16:31+02:00",
+    "message": "found BurnTransactionCreated event"
+  },
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "10",
+    "event_action": "transfer_initiated",
+    "event_kind": "event",
+    "category": "transfer",
+    "metadata": {
+      "type": "burn"
+    },
+    "time": "2023-11-05T20:16:31+02:00",
+    "message": "a transfer has initiated"
+  },
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "10",
+    "event_action": "mint_proposed",
+    "event_kind": "event",
+    "category": "mint",
+    "metadata": {
+      "amount": 40000000,
+      "tx_id": "10",
+      "to": "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
+    },
+    "time": "2023-11-05T20:16:36+02:00",
+    "message": "a mint has proposed with the target substrate address of 0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
+  },
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "10",
+    "event_action": "mint_completed",
+    "event_kind": "event",
+    "category": "mint",
+    "time": "2023-11-05T20:16:50+02:00",
+    "message": "found MintCompleted event"
+  },
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "10",
+    "event_action": "transfer_completed",
+    "event_kind": "event",
+    "category": "transfer",
+    "metadata": {
+      "outcome": "refunded"
+    },
+    "time": "2023-11-05T20:16:50+02:00",
+    "message": "transfer has completed"
+  }
+]
+```
+
+Noticed The value for the transfer_completed event's `outcome` filed is *refunded* this mean the TFT was refunded to the source account.
+
+Another example for a cross-chain transfer from TFChain to Stellar, this time events shows that transfer went well.
+
+    - trace_id = `13`
+
+*event_burn_tx_created_received* --> *transfer_initiated* --> *withdraw_proposed* --> *event_burn_tx_ready_received* --> *stellar_transaction_submitted* --> *stellar_transaction_submitted* --> *transfer_completed*
+
+
+```
+[
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "13",
+    "event_action": "event_burn_tx_created_received",
+    "event_kind": "event",
+    "category": "withdraw",
+    "time": "2023-11-05T20:57:08+02:00",
+    "message": "found BurnTransactionCreated event"
+  },
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "13",
+    "event_action": "transfer_initiated",
+    "event_kind": "event",
+    "category": "transfer",
+    "metadata": {
+      "type": "burn"
+    },
+    "time": "2023-11-05T20:57:08+02:00",
+    "message": "a transfer has initiated"
+  },
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "13",
+    "event_action": "withdraw_proposed",
+    "event_kind": "event",
+    "category": "withdraw",
+    "metadata": {
+      "amount": 40000000,
+      "tx_id": "13",
+      "to": "GBK4SQ5HUMWKMSYVEAFPPO4W27YRPGHE4CGQOKEFQ3WGPTSNURZPISO3"
+    },
+    "time": "2023-11-05T20:57:12+02:00",
+    "message": "a withdraw has proposed with the target stellar address of GBK4SQ5HUMWKMSYVEAFPPO4W27YRPGHE4CGQOKEFQ3WGPTSNURZPISO3"
+  },
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "13",
+    "event_action": "event_burn_tx_ready_received",
+    "event_kind": "event",
+    "category": "withdraw",
+    "time": "2023-11-05T20:57:25+02:00",
+    "message": "found BurnTransactionReady event"
+  },
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "13",
+    "event_action": "stellar_transaction_submitted",
+    "event_kind": "event",
+    "category": "vault",
+    "metadata": {
+      "result_tx_id": "777f561a4b91928f4679ad182be2178a29d5f0a3ee28a0461708d183d0a00a7d"
+    },
+    "time": "2023-11-05T20:57:32+02:00",
+    "message": "the transaction submitted to the Stellar network, and its unique identifier is 777f561a4b91928f4679ad182be2178a29d5f0a3ee28a0461708d183d0a00a7d"
+  },
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "13",
+    "event_action": "withdraw_completed",
+    "event_kind": "event",
+    "category": "withdraw",
+    "time": "2023-11-05T20:57:32+02:00",
+    "message": "the withdraw has proceed"
+  },
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "13",
+    "event_action": "transfer_completed",
+    "event_kind": "event",
+    "category": "transfer",
+    "metadata": {
+      "outcome": "bridged"
+    },
+    "time": "2023-11-05T20:57:32+02:00",
+    "message": "the transfer has completed"
+  }
+]
+```
+
+Last example shows what events to expect when a transfer from stellar to TFChin can not be completed. again we will filter using the trace_id, which is the deposit tx id.
+
+    - trace_id = `7f0406ad7b8d4f0de6dade19eb3979ef93857a56c6daa4bf9f2b0bb22a21d84f`
+
+You can find the outcome of this transfer by looking at the `transfer_completed` event. The outcome is `refunded`.
+
+Another look to the `refund_proposed` event. the `reason` filed shows "memo is not properly formatted".
+
+
+```
+[
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "7f0406ad7b8d4f0de6dade19eb3979ef93857a56c6daa4bf9f2b0bb22a21d84f",
+    "event_action": "payment_received",
+    "event_kind": "event",
+    "category": "vault",
+    "metadata": {
+      "from": "GD4MUF7FTWOGNREGKMQWC3NOJGBNASEFNEOUJTLNW4FDONV5CEUTGKS4",
+      "amount": "5.0000000"
+    },
+    "tx_hash": "7f0406ad7b8d4f0de6dade19eb3979ef93857a56c6daa4bf9f2b0bb22a21d84f",
+    "ledger_close_time": "2023-11-05 19:05:48 +0000 UTC",
+    "time": "2023-11-05T21:05:57+02:00",
+    "message": "a payment has received on bridge Stellar account"
+  },
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "7f0406ad7b8d4f0de6dade19eb3979ef93857a56c6daa4bf9f2b0bb22a21d84f",
+    "event_action": "transfer_initiated",
+    "event_kind": "event",
+    "category": "transfer",
+    "metadata": {
+      "type": "deposit"
+    },
+    "time": "2023-11-05T21:05:57+02:00",
+    "message": "a transfer has initiated"
+  },
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "7f0406ad7b8d4f0de6dade19eb3979ef93857a56c6daa4bf9f2b0bb22a21d84f",
+    "event_action": "refund_proposed",
+    "event_kind": "event",
+    "category": "refund",
+    "metadata": {
+      "reason": "memo is not properly formatted"
+    },
+    "time": "2023-11-05T21:06:00+02:00",
+    "message": "a refund has proposed due to memo is not properly formatted"
+  },
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "7f0406ad7b8d4f0de6dade19eb3979ef93857a56c6daa4bf9f2b0bb22a21d84f",
+    "event_action": "event_refund_tx_ready_received",
+    "event_kind": "event",
+    "category": "refund",
+    "time": "2023-11-05T21:06:12+02:00",
+    "message": "found RefundTransactionReady event"
+  },
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "7f0406ad7b8d4f0de6dade19eb3979ef93857a56c6daa4bf9f2b0bb22a21d84f",
+    "event_action": "stellar_transaction_submitted",
+    "event_kind": "event",
+    "category": "vault",
+    "metadata": {
+      "result_tx_id": "161c06d9ebd518beee0147c5e9e8b67c851f1c443b30444aff415668e76b09de"
+    },
+    "time": "2023-11-05T21:06:16+02:00",
+    "message": "the transaction submitted to the Stellar network, and its unique identifier is 161c06d9ebd518beee0147c5e9e8b67c851f1c443b30444aff415668e76b09de"
+  },
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "7f0406ad7b8d4f0de6dade19eb3979ef93857a56c6daa4bf9f2b0bb22a21d84f",
+    "event_action": "refund_completed",
+    "event_kind": "event",
+    "category": "refund",
+    "time": "2023-11-05T21:06:18+02:00",
+    "message": "the transaction has refunded"
+  },
+  {
+    "level": "info",
+    "version": 1,
+    "source": {
+      "Instance_public_key": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Bridge_wallet_address": "GBD3PXJEQOCQ5VR2JSMFNXYBBQF5RDEZP5GMTXDYZWMNZQJHR6HFX3AJ",
+      "Stellar_network": "testnet",
+      "Tfchain_url": "ws://localhost:9944"
+    },
+    "trace_id": "7f0406ad7b8d4f0de6dade19eb3979ef93857a56c6daa4bf9f2b0bb22a21d84f",
+    "event_action": "transfer_completed",
+    "event_kind": "event",
+    "category": "transfer",
+    "metadata": {
+      "outcome": "refunded"
+    },
+    "time": "2023-11-05T21:06:18+02:00",
+    "message": "the transfer has completed"
+  }
+]
+```
