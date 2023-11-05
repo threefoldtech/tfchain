@@ -15,8 +15,6 @@ For interfaces designed for humans, they can simply display the "message" key an
 
 The logs entries serve as events (represents an immutable event that occurred in the past), and adopting past-tense verb naming schema.
 
-All events falls into 2 categories: operational and business
-
 ### Events:
 #### Operational Events:
 These events to audit how the bridge system is operating.
