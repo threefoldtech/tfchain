@@ -39,9 +39,9 @@ impl<T: Config> Pallet<T> {
         // Insert into executed transactions
         let now = <system::Pallet<T>>::block_number();
         tx.block = now;
-        ExecutedMintTransactions::<T>::insert(tx_id, &tx);
+        ExecutedMintTransactions::<T>::insert(tx_id.clone(), &tx);
 
-        Self::deposit_event(Event::MintCompleted(tx));
+        Self::deposit_event(Event::MintCompleted(tx, tx_id));
 
         Ok(().into())
     }
