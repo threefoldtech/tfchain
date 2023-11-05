@@ -92,7 +92,7 @@ The base field set contains all fields which are at the root of the events. Thes
 | version | number | yes |Log schema version |
 | source | object | yes | Information about the bridge instance |
 | event_action | string | yes | The action captured by the event |
-| event_kind | string | yes | Can gives high-level information about what type of information the event contains, without being specific to the contents of the event. One of `Event`, `Alert`, `Error` |
+| event_kind | string | yes | Can gives high-level information about what type of information the event contains, without being specific to the contents of the event. One of `Event`, `Alert`, `Error`, `metric` |
 | metadata | object | no | Only present for logs that contain meta data about the event |
 | message | string | yes | The log message |
 | time | time | yes | The timestamp of the log event |
@@ -101,7 +101,7 @@ The base field set contains all fields which are at the root of the events. Thes
 | trace_id | string | no | Only present on business events. a unique identifier that is assigned to a trace, which represents a complete cross-chain transfer flow. |
 
 #### Categorization Fields
-
+##### event_kind filed
 The value of this field can be used to inform how these kinds of events should be handled.
 
 - alert: This value indicates an event such as an alert or notable event.
@@ -111,6 +111,19 @@ The value of this field can be used to inform how these kinds of events should b
 - error: This value indicates that an error occurred during the operation of the bridge.
 
 - metric: This events describes a numeric measurement taken at given point in time.
+
+##### category filed
+The value of this represents the "big buckets" of event categories
+
+- availability
+- persistency
+- stellar_monitor
+- tfchain_monitor
+- transfer
+- mint
+- refund
+- withdraw
+- vault
 
 #### source object
 the source field set contains all fields which are included in the source object, it is common .
