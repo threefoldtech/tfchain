@@ -233,10 +233,7 @@ the source field set contains all fields which are included in the source object
     </thead>
     <tbody>
         <tr>
-            <td><code>adPlaylistUris</code></td>
-            <td>object of type</td>
-            <td>false</td>
-            <td>The mapping from the origin manifest for a variant to the ad manifest for the variant. For DASH, this contains a single entry, because all variants are represented in a single DASH manifest. </td>
+            <td colspan="4"><div>No metadata</div></td>
         </tr>            
     </tbody>
 </table>
