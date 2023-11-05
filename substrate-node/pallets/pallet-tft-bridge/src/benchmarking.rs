@@ -111,7 +111,7 @@ benchmarks! {
     verify {
         let block = System::<T>::block_number();
         let mint_tx = MintTransaction { amount, target, block, votes: 3 };
-        assert_last_event::<T>(Event::MintCompleted(mint_tx).into());
+        assert_last_event::<T>(Event::MintCompleted(mint_tx, tx_id).into());
     }
 
     // propose_burn_transaction_or_add_sig
