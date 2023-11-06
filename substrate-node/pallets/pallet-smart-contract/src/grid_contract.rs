@@ -287,7 +287,7 @@ impl<T: Config> Pallet<T> {
             return Self::_do_cancel_contract(&mut contract, types::Cause::CanceledByCollective);
         }
 
-        // Allow single council member cancel contract
+        // Allow single council member to cancel contract
         let account_id = ensure_signed(origin)?;
         if Self::is_council_member(account_id.clone()) {
             return Self::_do_cancel_contract(&mut contract, types::Cause::CanceledByCouncilMember);

@@ -6,7 +6,7 @@ use frame_support::{
     dispatch::DispatchErrorWithPostInfo,
     dispatch::PostDispatchInfo,
     parameter_types,
-    traits::{ConstU32, GenesisBuild},
+    traits::{ConstU32, EitherOfDiverse, GenesisBuild},
     BoundedVec,
 };
 use frame_system::EnsureRoot;
@@ -269,6 +269,11 @@ parameter_types! {
 
 pub(crate) type TestNameContractName = NameContractName<TestRuntime>;
 
+type EnsureRootOrCouncilApproval = EitherOfDiverse<
+    EnsureRoot<AccountId>,
+    pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 5>,
+>;
+
 use weights;
 impl pallet_smart_contract::Config for TestRuntime {
     type RuntimeEvent = RuntimeEvent;
@@ -283,7 +288,7 @@ impl pallet_smart_contract::Config for TestRuntime {
     type NodeChanged = NodeChanged;
     type MaxNameContractNameLength = MaxNameContractNameLength;
     type NameContractName = TestNameContractName;
-    type RestrictedOrigin = EnsureRoot<Self::AccountId>;
+    type RestrictedOrigin = EnsureRootOrCouncilApproval;
     type MaxDeploymentDataLength = MaxDeploymentDataLength;
     type MaxNodeContractPublicIps = MaxNodeContractPublicIPs;
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
@@ -534,17 +539,24 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     };
     genesis.assimilate_storage(&mut storage).unwrap();
 
+    let membership_genesis =
+        pallet_membership::GenesisConfig::<TestRuntime, pallet_membership::Instance1> {
+            members: vec![dave()].try_into().unwrap(),
+            phantom: Default::default(),
+        };
+    membership_genesis.assimilate_storage(&mut storage).unwrap();
+
     let session_genesis = pallet_session::GenesisConfig::<TestRuntime> {
         keys: vec![(alice(), alice(), MockSessionKeys::from(UintAuthorityId(1)))],
     };
     session_genesis.assimilate_storage(&mut storage).unwrap();
 
-    let genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
+    let price_genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
         min_tft_price: 10,
         max_tft_price: 1000,
         _data: PhantomData,
     };
-    genesis.assimilate_storage(&mut storage).unwrap();
+    price_genesis.assimilate_storage(&mut storage).unwrap();
 
     let t = sp_io::TestExternalities::from(storage);
 

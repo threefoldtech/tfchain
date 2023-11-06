@@ -326,20 +326,11 @@ fn test_update_node_contract_wrong_twins_fails() {
 }
 
 #[test]
-fn test_cancel_node_contract_works() {
+fn test_cancel_contract_by_node_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
-        prepare_farm_and_node();
+        prepare_farm_node_and_node_contract();
         let node_id = 1;
-
-        assert_ok!(SmartContractModule::create_node_contract(
-            RuntimeOrigin::signed(alice()),
-            node_id,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            0,
-            None
-        ));
         let contract_id = 1;
 
         assert_ok!(SmartContractModule::cancel_contract(
@@ -347,11 +338,62 @@ fn test_cancel_node_contract_works() {
             contract_id
         ));
 
-        let node_contract = SmartContractModule::contracts(1);
-        assert_eq!(node_contract, None);
+        assert_eq!(SmartContractModule::contracts(contract_id), None);
+        assert_eq!(SmartContractModule::active_node_contracts(node_id).len(), 0);
+    });
+}
 
-        let contracts = SmartContractModule::active_node_contracts(1);
-        assert_eq!(contracts.len(), 0);
+#[test]
+fn test_cancel_contract_by_root_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_node_and_node_contract();
+        let node_id = 1;
+        let contract_id = 1;
+
+        assert_ok!(SmartContractModule::cancel_contract(
+            RawOrigin::Root.into(),
+            contract_id
+        ));
+
+        assert_eq!(SmartContractModule::contracts(contract_id), None);
+        assert_eq!(SmartContractModule::active_node_contracts(node_id).len(), 0);
+    });
+}
+
+#[test]
+fn test_cancel_contract_by_council_approval_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_node_and_node_contract();
+        let node_id = 1;
+        let contract_id = 1;
+
+        assert_ok!(SmartContractModule::cancel_contract(
+            pallet_collective::RawOrigin::Members(3, 5).into(),
+            contract_id
+        ));
+
+        assert_eq!(SmartContractModule::contracts(contract_id), None);
+        assert_eq!(SmartContractModule::active_node_contracts(node_id).len(), 0);
+    });
+}
+
+#[test]
+fn test_cancel_contract_by_council_member_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_node_and_node_contract();
+        let node_id = 1;
+        let contract_id = 1;
+
+        assert_ok!(SmartContractModule::cancel_contract(
+            RuntimeOrigin::signed(dave()),
+            contract_id
+        ));
+
+        assert_eq!(SmartContractModule::contracts(contract_id), None);
+        assert_eq!(SmartContractModule::active_node_contracts(node_id).len(), 0);
     });
 }
 
@@ -4249,6 +4291,20 @@ pub fn prepare_farm_and_node() {
         None,
     )
     .unwrap();
+}
+
+pub fn prepare_farm_node_and_node_contract() {
+    prepare_farm_and_node();
+    let node_id = 1;
+
+    assert_ok!(SmartContractModule::create_node_contract(
+        RuntimeOrigin::signed(alice()),
+        node_id,
+        generate_deployment_hash(),
+        get_deployment_data(),
+        0,
+        None
+    ));
 }
 
 pub fn prepare_dedicated_farm_and_node() {
