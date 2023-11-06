@@ -101,7 +101,7 @@ The base field set contains all fields which are at the root of the events. Thes
 | trace_id | string | no | Only present on business events. a unique identifier that is assigned to a trace, which represents a complete cross-chain transfer flow. |
 
 #### Categorization Fields
-##### event_kind filed
+##### event_kind field
 The value of this field can be used to inform how these kinds of events should be handled.
 
 - alert: This value indicates an event such as an alert or notable event.
@@ -112,7 +112,7 @@ The value of this field can be used to inform how these kinds of events should b
 
 - metric: This events describes a numeric measurement taken at given point in time.
 
-##### category filed
+##### category field
 The value of this represents the "big buckets" of event categories
 
 - availability
@@ -908,6 +908,8 @@ the source field set contains all fields which are included in the source object
 
 ## Usage examples:
 
+### Example 1
+
 One example, if a customer is complaining that their deposit never bridged, you could filter logs using `trace_id` field with the id of the customer deposit to get overview of all events related to this deposit id and see what went wrong.
 
     - trace_id = `16d8b06b59aaa5514c645260263e5477bb8aad211502c56cb8849ed5b423d354`
@@ -1020,21 +1022,20 @@ the filtered result would be similar to the one below:
 ]
 ```
 
-Noticed The value for the transfer_completed event's `outcome` filed is *bridged* this mean the TFT was successfully transferred.
+The `transfer_completed` event’s `outcome` field value of `bridged` indicates that the TFT was successfully transferred. 
 
+### Example 2
 
-For a cross-chain transfer from tfchain to stellar, the trace_id will be an integer.
-
+For a cross-chain transfer from TFChain to Stellar, the trace_id will be an integer.
+    
     - trace_id = `10`
 
-
-let's examine the event_actions for this transfer:
+Let’s examine the event actions for this transfer:
 
 *event_burn_tx_created_received* --> *transfer_initiated* --> *mint_proposed* --> *mint_completed* --> *transfer_completed*
 
-This time the transfer didn't end on the other network, instead it was refunded. using the trace_id you still can trace a transfer from start to end.
+This time, the transfer was not completed on the other network and was instead refunded. However, using the `trace_id`, you can still trace the transfer from start to end. The filtered result would be similar to the one below:
 
-the filtered result would be similar to the one below: 
 
 ```
 [
@@ -1132,14 +1133,17 @@ the filtered result would be similar to the one below:
 ]
 ```
 
-Noticed The value for the transfer_completed event's `outcome` filed is *refunded* this mean the TFT was refunded to the source account.
+Notably, the `transfer_completed` event’s `outcome` field value of refunded indicates that the TFT was refunded to the source account.
 
-Another example for a cross-chain transfer from TFChain to Stellar, this time events shows that transfer went well.
+### Example 3
 
+Here is another example of a cross-chain transfer from TFChain to Stellar, where the events show that the transfer was successful.
+    
     - trace_id = `13`
 
-*event_burn_tx_created_received* --> *transfer_initiated* --> *withdraw_proposed* --> *event_burn_tx_ready_received* --> *stellar_transaction_submitted* --> *stellar_transaction_submitted* --> *transfer_completed*
+*event_burn_tx_created_received* --> *transfer_initiated* --> *withdraw_proposed* --> *event_burn_tx_ready_received* --> *stellar_transaction_submitted* --> *withdraw_completed* --> *transfer_completed*
 
+For a more simplified view, you can filter events by the transfer category to display only the start and end events of the transfer in question.
 
 ```
 [
@@ -1272,14 +1276,15 @@ Another example for a cross-chain transfer from TFChain to Stellar, this time ev
 ]
 ```
 
-Last example shows what events to expect when a transfer from stellar to TFChin can not be completed. again we will filter using the trace_id, which is the deposit tx id.
+### Example 4
+
+The final example illustrates the expected events when a transfer from Stellar to TFChin fails. We will filter the events using the `trace_id`, which is the deposit transaction ID.
 
     - trace_id = `7f0406ad7b8d4f0de6dade19eb3979ef93857a56c6daa4bf9f2b0bb22a21d84f`
 
-You can find the outcome of this transfer by looking at the `transfer_completed` event. The outcome is `refunded`.
+The `transfer_completed` event contains the `outcome` of the transfer, which is refunded.
 
-Another look to the `refund_proposed` event. the `reason` filed shows "memo is not properly formatted".
-
+Also Upon reviewing the `refund_proposed` event, we found that the `reason` field indicates that the memo was not properly formatted.
 
 ```
 [
