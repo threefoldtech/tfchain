@@ -114,6 +114,8 @@ construct_runtime!(
         Authorship: pallet_authorship::{Pallet, Storage},
         ValidatorSet: substrate_validator_set::{Pallet, Call, Storage, Event<T>, Config<T>},
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
+        Council: pallet_collective::<Instance1>::{Pallet, Call, Origin<T>, Event<T>, Config<T>},
+        Membership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -365,7 +367,39 @@ impl pallet_session::Config for TestRuntime {
     type WeightInfo = ();
 }
 
-type AccountPublic = <MultiSignature as Verify>::Signer;
+pub type BlockNumber = u32;
+parameter_types! {
+    pub const CouncilMotionDuration: BlockNumber = 4;
+    pub const CouncilMaxProposals: u32 = 100;
+    pub const CouncilMaxMembers: u32 = 100;
+}
+
+pub type CouncilCollective = pallet_collective::Instance1;
+impl pallet_collective::Config<CouncilCollective> for TestRuntime {
+    type RuntimeOrigin = RuntimeOrigin;
+    type Proposal = RuntimeCall;
+    type RuntimeEvent = RuntimeEvent;
+    type MotionDuration = CouncilMotionDuration;
+    type MaxProposals = CouncilMaxProposals;
+    type MaxMembers = CouncilMaxMembers;
+    type DefaultVote = pallet_collective::PrimeDefaultVote;
+    type SetMembersOrigin = EnsureRoot<Self::AccountId>;
+    type WeightInfo = ();
+    type MaxProposalWeight = ();
+}
+
+impl pallet_membership::Config<pallet_membership::Instance1> for TestRuntime {
+    type RuntimeEvent = RuntimeEvent;
+    type AddOrigin = EnsureRoot<Self::AccountId>;
+    type RemoveOrigin = EnsureRoot<Self::AccountId>;
+    type SwapOrigin = EnsureRoot<Self::AccountId>;
+    type ResetOrigin = EnsureRoot<Self::AccountId>;
+    type PrimeOrigin = EnsureRoot<Self::AccountId>;
+    type MembershipInitialized = Council;
+    type MembershipChanged = ();
+    type MaxMembers = CouncilMaxMembers;
+    type WeightInfo = pallet_membership::weights::SubstrateWeight<TestRuntime>;
+}
 
 pub(crate) fn get_name_contract_name(contract_name_input: &[u8]) -> TestNameContractName {
     NameContractName::try_from(contract_name_input.to_vec()).expect("Invalid farm input.")
@@ -444,6 +478,8 @@ where
         Some((call, (nonce, ())))
     }
 }
+
+type AccountPublic = <MultiSignature as Verify>::Signer;
 
 /// Helper function to generate an account ID from seed
 fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId

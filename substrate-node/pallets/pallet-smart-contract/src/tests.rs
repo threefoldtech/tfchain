@@ -469,7 +469,7 @@ fn test_cancel_node_contract_wrong_twins_fails() {
 
         assert_noop!(
             SmartContractModule::cancel_contract(RuntimeOrigin::signed(bob()), contract_id),
-            Error::<TestRuntime>::TwinNotAuthorizedToCancelContract
+            Error::<TestRuntime>::NotAuthorizedToCancelContract
         );
     });
 }

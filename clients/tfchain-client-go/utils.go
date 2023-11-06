@@ -84,7 +84,7 @@ var smartContractModuleErrors = []string{
 	"FailedToFreeIPs",
 	"ContractNotExists",
 	"TwinNotAuthorizedToUpdateContract",
-	"TwinNotAuthorizedToCancelContract",
+	"NotAuthorizedToCancelContract",
 	"NodeNotAuthorizedToDeployContract",
 	"NodeNotAuthorizedToComputeReport",
 	"PricingPolicyNotExists",

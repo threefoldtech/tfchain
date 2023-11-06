@@ -3,8 +3,10 @@ use frame_support::{
     dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo, Pays},
     ensure,
     pallet_prelude::TypeInfo,
+    traits::EnsureOrigin,
     BoundedVec, RuntimeDebugNoBound,
 };
+use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf, TfgridNode};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use sp_std::{marker::PhantomData, vec, vec::Vec};
@@ -277,19 +279,34 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn _cancel_contract(
-        account_id: T::AccountId,
-        contract_id: u64,
-        cause: types::Cause,
-    ) -> DispatchResultWithPostInfo {
+    pub fn _cancel_contract(origin: OriginFor<T>, contract_id: u64) -> DispatchResultWithPostInfo {
         let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+
+        // Allow collective approval (council or farmers) to cancel contract
+        if <T as Config>::RestrictedOrigin::ensure_origin(origin.clone()).is_ok() {
+            return Self::_do_cancel_contract(&mut contract, types::Cause::CanceledByCollective);
+        }
+
+        // Allow single council member cancel contract
+        let account_id = ensure_signed(origin)?;
+        if Self::is_council_member(account_id.clone()) {
+            return Self::_do_cancel_contract(&mut contract, types::Cause::CanceledByCouncilMember);
+        }
+
+        // Allow node the contract is on to cancel contract
         let twin =
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
-        ensure!(
-            twin.account_id == account_id,
-            Error::<T>::TwinNotAuthorizedToCancelContract
-        );
+        if twin.account_id == account_id {
+            return Self::_do_cancel_contract(&mut contract, types::Cause::CanceledByNode);
+        }
 
+        Err(Error::<T>::NotAuthorizedToCancelContract.into())
+    }
+
+    pub fn _do_cancel_contract(
+        contract: &mut types::Contract<T>,
+        cause: types::Cause,
+    ) -> DispatchResultWithPostInfo {
         // If it's a rent contract and it still has active workloads, don't allow cancellation.
         if matches!(
             &contract.contract_type,
@@ -303,7 +320,7 @@ impl<T: Config> Pallet<T> {
             );
         }
 
-        Self::update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
+        Self::update_contract_state(contract, &types::ContractState::Deleted(cause))?;
         Self::bill_contract(contract.contract_id)?;
 
         Ok(().into())
@@ -650,6 +667,13 @@ impl<T: Config> Pallet<T> {
         Self::deposit_event(Event::NodeExtraFeeSet { node_id, extra_fee });
 
         Ok(().into())
+    }
+
+    fn is_council_member(who: T::AccountId) -> bool {
+        let council_members =
+            pallet_membership::Pallet::<T, pallet_membership::Instance1>::members();
+
+        council_members.contains(&who)
     }
 }
 

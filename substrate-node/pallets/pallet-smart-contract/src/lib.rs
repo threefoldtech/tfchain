@@ -206,6 +206,7 @@ pub mod pallet {
         + pallet_tft_price::Config
         + pallet_authorship::Config
         + pallet_session::Config
+        + pallet_membership::Config<pallet_membership::Instance1>
     {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type Currency: LockableCurrency<Self::AccountId>;
@@ -343,7 +344,7 @@ pub mod pallet {
         FailedToFreeIPs,
         ContractNotExists,
         TwinNotAuthorizedToUpdateContract,
-        TwinNotAuthorizedToCancelContract,
+        NotAuthorizedToCancelContract,
         NodeNotAuthorizedToDeployContract,
         NodeNotAuthorizedToComputeReport,
         PricingPolicyNotExists,
@@ -451,8 +452,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             contract_id: u64,
         ) -> DispatchResultWithPostInfo {
-            let account_id = ensure_signed(origin)?;
-            Self::_cancel_contract(account_id, contract_id, types::Cause::CanceledByUser)
+            Self::_cancel_contract(origin, contract_id)
         }
 
         #[pallet::call_index(4)]

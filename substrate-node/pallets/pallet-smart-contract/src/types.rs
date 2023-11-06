@@ -134,7 +134,10 @@ pub enum ContractState {
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo, MaxEncodedLen)]
 pub enum Cause {
+    CanceledByNode,
     CanceledByUser,
+    CanceledByCouncilMember,
+    CanceledByCollective,
     OutOfFunds,
 }
 
