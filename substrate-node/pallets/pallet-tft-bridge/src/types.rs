@@ -17,9 +17,10 @@ pub struct MintTransaction<AccountId, BlockNumber> {
 // TF Chain -> Stellar burn transaction
 // Transaction is ready when (number of validators / 2) + 1 signatures are present
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
-pub struct BurnTransaction<BlockNumber> {
+pub struct BurnTransaction<AccountId, BlockNumber> {
     pub block: BlockNumber,
     pub amount: u64,
+    pub source: AccountId,
     pub target: Vec<u8>,
     pub signatures: Vec<StellarSignature>,
     pub sequence_number: u64,

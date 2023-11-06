@@ -28,7 +28,7 @@ pub mod pallet {
         weights::WeightInfo,
     };
     use frame_support::{
-        pallet_prelude::*,
+        pallet_prelude::{*, OptionQuery},
         traits::{Currency, EnsureOrigin, OnUnbalanced, ReservableCurrency},
     };
     use frame_system::{self as system, ensure_signed, pallet_prelude::*};
@@ -76,12 +76,12 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn burn_transactions)]
     pub type BurnTransactions<T: Config> =
-        StorageMap<_, Blake2_128Concat, u64, BurnTransaction<T::BlockNumber>, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, u64, BurnTransaction<T::AccountId, T::BlockNumber>, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn executed_burn_transactions)]
     pub type ExecutedBurnTransactions<T: Config> =
-        StorageMap<_, Blake2_128Concat, u64, BurnTransaction<T::BlockNumber>, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, u64, BurnTransaction<T::AccountId, T::BlockNumber>, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn refund_transactions)]
@@ -138,8 +138,8 @@ pub mod pallet {
         BurnTransactionProposed(u64, Vec<u8>, u64),
         BurnTransactionSignatureAdded(u64, StellarSignature),
         BurnTransactionReady(u64),
-        BurnTransactionProcessed(BurnTransaction<T::BlockNumber>),
-        BurnTransactionExpired(u64, Vec<u8>, u64),
+        BurnTransactionProcessed(BurnTransaction<T::AccountId, T::BlockNumber>),
+        BurnTransactionExpired(u64, T::AccountId, Vec<u8>, u64),
         // Refund events
         RefundTransactionCreated(Vec<u8>, Vec<u8>, u64),
         RefundTransactionsignatureAdded(Vec<u8>, StellarSignature),
@@ -229,7 +229,7 @@ pub mod pallet {
                     BurnTransactions::<T>::insert(&tx_id, &tx);
 
                     // Emit event
-                    Self::deposit_event(Event::BurnTransactionExpired(tx_id, tx.target, tx.amount));
+                    Self::deposit_event(Event::BurnTransactionExpired(tx_id, tx.source, tx.target, tx.amount));
                 }
             }
 
