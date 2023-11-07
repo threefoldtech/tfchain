@@ -205,17 +205,20 @@ impl<T: Config> Pallet<T> {
         let no_votes = voting.nays.len() as u32;
         let yes_votes = voting.ayes.len() as u32;
 
+        let threshold_is_met = (no_votes + yes_votes) >= voting.threshold;
+        let proposal_is_expired = frame_system::Pallet::<T>::block_number() >= voting.end;
+
         // Only allow actual closing of the proposal after the voting threshold is met or voting period has ended
         ensure!(
-            (no_votes + yes_votes) >= voting.threshold
-                || frame_system::Pallet::<T>::block_number() >= voting.end,
+            threshold_is_met || proposal_is_expired,
             Error::<T>::OngoingVoteAndTresholdStillNotMet
         );
 
         let total_aye_weight: u64 = voting.ayes.iter().map(|y| y.weight).sum();
         let total_naye_weight: u64 = voting.nays.iter().map(|y| y.weight).sum();
 
-        let approved = total_aye_weight > total_naye_weight;
+        // Only approve proposal if the voting threshold is met and simple majority (expressed in weight) is reached
+        let approved = threshold_is_met && (total_aye_weight > total_naye_weight);
 
         if approved {
             let proposal = Self::validate_and_get_proposal(&proposal_hash)?;
