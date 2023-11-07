@@ -290,6 +290,22 @@ impl<T: Config> Pallet<T> {
             Error::<T>::TwinNotAuthorizedToCancelContract
         );
 
+        Self::do_cancel_contract(&mut contract, cause)
+    }
+
+    pub fn _cancel_contract_collective(
+        contract_id: u64,
+        cause: types::Cause,
+    ) -> DispatchResultWithPostInfo {
+        let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+
+        Self::do_cancel_contract(&mut contract, cause)
+    }
+
+    fn do_cancel_contract(
+        contract: &mut types::Contract<T>,
+        cause: types::Cause,
+    ) -> DispatchResultWithPostInfo {
         // If it's a rent contract and it still has active workloads, don't allow cancellation.
         if matches!(
             &contract.contract_type,
@@ -303,7 +319,7 @@ impl<T: Config> Pallet<T> {
             );
         }
 
-        Self::update_contract_state(&mut contract, &types::ContractState::Deleted(cause))?;
+        Self::update_contract_state(contract, &types::ContractState::Deleted(cause))?;
         Self::bill_contract(contract.contract_id)?;
 
         Ok(().into())
