@@ -36,17 +36,7 @@ const VARIABLE_AMOUNT: u64 = 100;
 fn test_create_node_contract_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
-        prepare_farm_and_node();
-        let node_id = 1;
-
-        assert_ok!(SmartContractModule::create_node_contract(
-            RuntimeOrigin::signed(alice()),
-            node_id,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            0,
-            None
-        ));
+        prepare_farm_node_and_node_contract();
         let contract_id = 1;
 
         // Ensure contract_id is stored at right billing loop index
@@ -223,17 +213,8 @@ fn test_create_node_contract_which_was_canceled_before_works() {
 fn test_update_node_contract_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
-        prepare_farm_and_node();
+        prepare_farm_node_and_node_contract();
         let node_id = 1;
-
-        assert_ok!(SmartContractModule::create_node_contract(
-            RuntimeOrigin::signed(alice()),
-            node_id,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            0,
-            None
-        ));
         let contract_id = 1;
 
         let new_hash = generate_deployment_hash();
@@ -300,17 +281,7 @@ fn test_update_node_contract_not_exists_fails() {
 fn test_update_node_contract_wrong_twins_fails() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
-        prepare_farm_and_node();
-        let node_id = 1;
-
-        assert_ok!(SmartContractModule::create_node_contract(
-            RuntimeOrigin::signed(alice()),
-            node_id,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            0,
-            None
-        ));
+        prepare_farm_node_and_node_contract();
         let contract_id = 1;
 
         assert_noop!(
@@ -496,17 +467,7 @@ fn test_cancel_node_contract_not_exists_fails() {
 fn test_cancel_node_contract_wrong_twins_fails() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
-        prepare_farm_and_node();
-        let node_id = 1;
-
-        assert_ok!(SmartContractModule::create_node_contract(
-            RuntimeOrigin::signed(alice()),
-            node_id,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            0,
-            None
-        ));
+        prepare_farm_node_and_node_contract();
         let contract_id = 1;
 
         assert_noop!(
@@ -520,17 +481,7 @@ fn test_cancel_node_contract_wrong_twins_fails() {
 fn test_cancel_node_contract_and_remove_from_billing_loop_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
-        prepare_farm_and_node();
-        let node_id = 1;
-
-        assert_ok!(SmartContractModule::create_node_contract(
-            RuntimeOrigin::signed(alice()),
-            node_id,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            0,
-            None
-        ));
+        prepare_farm_node_and_node_contract();
         let contract_id = 1;
 
         run_to_block(6, None);
@@ -561,17 +512,7 @@ fn test_cancel_node_contract_and_remove_from_billing_loop_works() {
 fn test_remove_from_billing_loop_wrong_index_fails() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
-        prepare_farm_and_node();
-        let node_id = 1;
-
-        assert_ok!(SmartContractModule::create_node_contract(
-            RuntimeOrigin::signed(alice()),
-            node_id,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            0,
-            None
-        ));
+        prepare_farm_node_and_node_contract();
         let contract_id = 1;
 
         // Ensure contract_id is stored at right billing loop index
@@ -799,17 +740,8 @@ fn test_cancel_rent_contract_works() {
 fn test_create_rent_contract_on_node_in_use_fails() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
-        prepare_farm_and_node();
+        prepare_farm_node_and_node_contract();
         let node_id = 1;
-
-        assert_ok!(SmartContractModule::create_node_contract(
-            RuntimeOrigin::signed(alice()),
-            node_id,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            1,
-            None
-        ));
 
         assert_noop!(
             SmartContractModule::create_rent_contract(RuntimeOrigin::signed(bob()), node_id, None),
@@ -3549,17 +3481,7 @@ fn test_change_billing_frequency_fails_if_frequency_lower() {
 fn test_attach_solution_provider_id() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
-        prepare_farm_and_node();
-        let node_id = 1;
-
-        assert_ok!(SmartContractModule::create_node_contract(
-            RuntimeOrigin::signed(alice()),
-            node_id,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            0,
-            None
-        ));
+        prepare_farm_node_and_node_contract();
         let contract_id = 1;
 
         let ctr = SmartContractModule::contracts(contract_id).unwrap();
@@ -3583,17 +3505,7 @@ fn test_attach_solution_provider_id() {
 fn test_attach_solution_provider_id_wrong_origin_fails() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
-        prepare_farm_and_node();
-        let node_id = 1;
-
-        assert_ok!(SmartContractModule::create_node_contract(
-            RuntimeOrigin::signed(alice()),
-            node_id,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            0,
-            None
-        ));
+        prepare_farm_node_and_node_contract();
         let contract_id = 1;
 
         let ctr = SmartContractModule::contracts(contract_id).unwrap();
@@ -3617,17 +3529,7 @@ fn test_attach_solution_provider_id_wrong_origin_fails() {
 fn test_attach_solution_provider_id_not_approved_fails() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
-        prepare_farm_and_node();
-        let node_id = 1;
-
-        assert_ok!(SmartContractModule::create_node_contract(
-            RuntimeOrigin::signed(alice()),
-            node_id,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            0,
-            None
-        ));
+        prepare_farm_node_and_node_contract();
         let contract_id = 1;
 
         let ctr = SmartContractModule::contracts(1).unwrap();
@@ -3726,17 +3628,8 @@ fn test_set_dedicated_node_extra_fee_unauthorized_fails() {
 #[test]
 fn test_set_dedicated_node_extra_fee_with_active_node_contract_fails() {
     new_test_ext().execute_with(|| {
-        prepare_farm_and_node();
+        prepare_farm_node_and_node_contract();
         let node_id = 1;
-
-        assert_ok!(SmartContractModule::create_node_contract(
-            RuntimeOrigin::signed(bob()),
-            node_id,
-            generate_deployment_hash(),
-            get_deployment_data(),
-            0,
-            None
-        ));
 
         let extra_fee = 100000;
         assert_noop!(
