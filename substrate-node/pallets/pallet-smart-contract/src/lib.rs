@@ -343,7 +343,7 @@ pub mod pallet {
         FailedToFreeIPs,
         ContractNotExists,
         TwinNotAuthorizedToUpdateContract,
-        NotAuthorizedToCancelContract,
+        TwinNotAuthorizedToCancelContract,
         NodeNotAuthorizedToDeployContract,
         NodeNotAuthorizedToComputeReport,
         PricingPolicyNotExists,
@@ -451,7 +451,8 @@ pub mod pallet {
             origin: OriginFor<T>,
             contract_id: u64,
         ) -> DispatchResultWithPostInfo {
-            Self::_cancel_contract(origin, contract_id)
+            let account_id = ensure_signed(origin)?;
+            Self::_cancel_contract(account_id, contract_id, types::Cause::CanceledByUser)
         }
 
         #[pallet::call_index(4)]
@@ -643,6 +644,16 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
             Self::_set_dedicated_node_extra_fee(account_id, node_id, extra_fee)
+        }
+
+        #[pallet::call_index(21)]
+        #[pallet::weight(<T as Config>::WeightInfo::cancel_contract())] // TODO R1
+        pub fn cancel_contract_collective(
+            origin: OriginFor<T>,
+            contract_id: u64,
+        ) -> DispatchResultWithPostInfo {
+            <T as Config>::RestrictedOrigin::ensure_origin(origin)?;
+            Self::_cancel_contract_collective(contract_id, types::Cause::CanceledByCollective)
         }
     }
 

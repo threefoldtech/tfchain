@@ -315,14 +315,14 @@ fn test_cancel_contract_by_node_works() {
 }
 
 #[test]
-fn test_cancel_contract_by_root_works() {
+fn test_cancel_contract_collective_by_dao_approval_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_farm_node_and_node_contract();
         let node_id = 1;
         let contract_id = 1;
 
-        assert_ok!(SmartContractModule::cancel_contract(
+        assert_ok!(SmartContractModule::cancel_contract_collective(
             RawOrigin::Root.into(),
             contract_id
         ));
@@ -333,14 +333,14 @@ fn test_cancel_contract_by_root_works() {
 }
 
 #[test]
-fn test_cancel_contract_by_council_approval_works() {
+fn test_cancel_contract_collective_by_council_approval_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_farm_node_and_node_contract();
         let node_id = 1;
         let contract_id = 1;
 
-        assert_ok!(SmartContractModule::cancel_contract(
+        assert_ok!(SmartContractModule::cancel_contract_collective(
             pallet_collective::RawOrigin::Members(3, 5).into(),
             contract_id
         ));
@@ -454,7 +454,7 @@ fn test_cancel_node_contract_wrong_twins_fails() {
 
         assert_noop!(
             SmartContractModule::cancel_contract(RuntimeOrigin::signed(bob()), contract_id),
-            Error::<TestRuntime>::NotAuthorizedToCancelContract
+            Error::<TestRuntime>::TwinNotAuthorizedToCancelContract
         );
     });
 }

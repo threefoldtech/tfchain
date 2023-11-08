@@ -3,10 +3,8 @@ use frame_support::{
     dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo, Pays},
     ensure,
     pallet_prelude::TypeInfo,
-    traits::EnsureOrigin,
     BoundedVec, RuntimeDebugNoBound,
 };
-use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf, TfgridNode};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use sp_std::{marker::PhantomData, vec, vec::Vec};
@@ -279,26 +277,32 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn _cancel_contract(origin: OriginFor<T>, contract_id: u64) -> DispatchResultWithPostInfo {
+    pub fn _cancel_contract(
+        account_id: T::AccountId,
+        contract_id: u64,
+        cause: types::Cause,
+    ) -> DispatchResultWithPostInfo {
         let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
-
-        // Allow collective approval (council or farmers) to cancel contract
-        if <T as Config>::RestrictedOrigin::ensure_origin(origin.clone()).is_ok() {
-            return Self::_do_cancel_contract(&mut contract, types::Cause::CanceledByCollective);
-        }
-
-        // Allow node the contract is on to cancel contract
-        let account_id = ensure_signed(origin)?;
         let twin =
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
-        if twin.account_id == account_id {
-            return Self::_do_cancel_contract(&mut contract, types::Cause::CanceledByNode);
-        }
+        ensure!(
+            twin.account_id == account_id,
+            Error::<T>::TwinNotAuthorizedToCancelContract
+        );
 
-        Err(Error::<T>::NotAuthorizedToCancelContract.into())
+        Self::do_cancel_contract(&mut contract, cause)
     }
 
-    pub fn _do_cancel_contract(
+    pub fn _cancel_contract_collective(
+        contract_id: u64,
+        cause: types::Cause,
+    ) -> DispatchResultWithPostInfo {
+        let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+
+        Self::do_cancel_contract(&mut contract, cause)
+    }
+
+    fn do_cancel_contract(
         contract: &mut types::Contract<T>,
         cause: types::Cause,
     ) -> DispatchResultWithPostInfo {

@@ -12,6 +12,5 @@ See [here](https://github.com/threefoldtech/tfchain/issues/884) for more details
 
 ## Decision
 
-In `pallet-smart-contract`, `cancel_contract()` extrinsic was only authorized to be executed by the node (ZOS) the contract was on.
-We now allow a collective approval (council or farmers) to cancel a contract.
-For this purpose `Cause` enum was extended to better define the cancelation causes.
+In `pallet-smart-contract`, add `cancel_contract_collective()` extrinsic to allow a collective approval (council or farmers) to cancel a contract.
+For this purpose we also add a new entry `CanceledByCollective` in `Cause` enum to better qualify the cancelation cause.
