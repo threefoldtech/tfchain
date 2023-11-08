@@ -1,7 +1,7 @@
 pub mod v1 {
     use crate::types::StellarSignature;
     use parity_scale_codec::{Decode, Encode};
-    use scale_info::TypeInfo;
+    use scale_info::{TypeInfo, prelude::vec::Vec};
 
     #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
     pub struct BurnTransaction<BlockNumber> {
