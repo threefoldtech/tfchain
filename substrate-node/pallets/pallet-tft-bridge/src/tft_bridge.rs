@@ -99,7 +99,7 @@ impl<T: Config> Pallet<T> {
         let tx = BurnTransaction {
             block: now,
             amount: burn_amount_as_u64,
-            source: source,
+            source: Some(source),
             target: target_stellar_address,
             signatures: Vec::new(),
             sequence_number: 0,

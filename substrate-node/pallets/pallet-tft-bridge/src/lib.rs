@@ -18,6 +18,7 @@ pub mod benchmarking;
 mod tft_bridge;
 mod types;
 pub mod weights;
+pub mod migrations;
 
 // Definition of the pallet logic, to be aggregated at runtime definition
 // through `construct_runtime`.
@@ -27,6 +28,7 @@ pub mod pallet {
         types::{BurnTransaction, MintTransaction, RefundTransaction, StellarSignature},
         weights::WeightInfo,
     };
+    use super::*;
     use frame_support::{
         pallet_prelude::{*, OptionQuery},
         traits::{Currency, EnsureOrigin, OnUnbalanced, ReservableCurrency},
@@ -105,6 +107,10 @@ pub mod pallet {
     #[pallet::getter(fn deposit_fee)]
     pub type DepositFee<T: Config> = StorageValue<_, u64, ValueQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn pallet_version)]
+    pub type PalletVersion<T> = StorageValue<_, types::StorageVersion, ValueQuery>;
+
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_balances::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -139,7 +145,7 @@ pub mod pallet {
         BurnTransactionSignatureAdded(u64, StellarSignature),
         BurnTransactionReady(u64),
         BurnTransactionProcessed(BurnTransaction<T::AccountId, T::BlockNumber>),
-        BurnTransactionExpired(u64, T::AccountId, Vec<u8>, u64),
+        BurnTransactionExpired(u64, Option<T::AccountId>, Vec<u8>, u64),
         // Refund events
         RefundTransactionCreated(Vec<u8>, Vec<u8>, u64),
         RefundTransactionsignatureAdded(Vec<u8>, StellarSignature),
