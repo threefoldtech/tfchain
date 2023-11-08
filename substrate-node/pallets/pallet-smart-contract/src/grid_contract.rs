@@ -287,13 +287,8 @@ impl<T: Config> Pallet<T> {
             return Self::_do_cancel_contract(&mut contract, types::Cause::CanceledByCollective);
         }
 
-        // Allow single council member to cancel contract
-        let account_id = ensure_signed(origin)?;
-        if Self::is_council_member(account_id.clone()) {
-            return Self::_do_cancel_contract(&mut contract, types::Cause::CanceledByCouncilMember);
-        }
-
         // Allow node the contract is on to cancel contract
+        let account_id = ensure_signed(origin)?;
         let twin =
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
         if twin.account_id == account_id {
@@ -667,13 +662,6 @@ impl<T: Config> Pallet<T> {
         Self::deposit_event(Event::NodeExtraFeeSet { node_id, extra_fee });
 
         Ok(().into())
-    }
-
-    fn is_council_member(who: T::AccountId) -> bool {
-        let council_members =
-            pallet_membership::Pallet::<T, pallet_membership::Instance1>::members();
-
-        council_members.contains(&who)
     }
 }
 

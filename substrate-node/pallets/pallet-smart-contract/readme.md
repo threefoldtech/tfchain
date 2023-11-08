@@ -37,7 +37,7 @@ Dispatchable functions of this pallet.
 *   `update_node_contract` - Update a node contract
 *   `create_name_contract` - Create a name contract
 *   `create_rent_contract` - Create a rent contract
-*   `cancel_contract`: Cancel a contract (for any of the smart contract type and callable by the node the contract is on, a collective council/farmers approval, or a single council member)
+*   `cancel_contract`: Cancel a contract (for any of the smart contract type and callable by the node the contract is on or a collective council/farmers approval)
 *   `add_nru_reports`: Reports network resource usage from ZOS to the chain
 *   `report_contract_resources`: Reports a `NodeContract` used resources (nru, cru, mru, sru, ipu) to the chain.
 *   `create_solution_provider`: Create a solution provider

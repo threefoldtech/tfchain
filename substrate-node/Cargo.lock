@@ -4836,7 +4836,6 @@ dependencies = [
  "pallet-authorship",
  "pallet-balances",
  "pallet-collective",
- "pallet-membership",
  "pallet-session",
  "pallet-tfgrid",
  "pallet-tft-price",

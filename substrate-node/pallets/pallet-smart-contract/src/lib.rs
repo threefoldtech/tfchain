@@ -206,7 +206,6 @@ pub mod pallet {
         + pallet_tft_price::Config
         + pallet_authorship::Config
         + pallet_session::Config
-        + pallet_membership::Config<pallet_membership::Instance1>
     {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type Currency: LockableCurrency<Self::AccountId>;

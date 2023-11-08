@@ -351,24 +351,6 @@ fn test_cancel_contract_by_council_approval_works() {
 }
 
 #[test]
-fn test_cancel_contract_by_council_member_works() {
-    new_test_ext().execute_with(|| {
-        run_to_block(1, None);
-        prepare_farm_node_and_node_contract();
-        let node_id = 1;
-        let contract_id = 1;
-
-        assert_ok!(SmartContractModule::cancel_contract(
-            RuntimeOrigin::signed(dave()),
-            contract_id
-        ));
-
-        assert_eq!(SmartContractModule::contracts(contract_id), None);
-        assert_eq!(SmartContractModule::active_node_contracts(node_id).len(), 0);
-    });
-}
-
-#[test]
 fn test_create_multiple_node_contracts_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);

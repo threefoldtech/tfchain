@@ -115,7 +115,6 @@ construct_runtime!(
         ValidatorSet: substrate_validator_set::{Pallet, Call, Storage, Event<T>, Config<T>},
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
         Council: pallet_collective::<Instance1>::{Pallet, Call, Origin<T>, Event<T>, Config<T>},
-        Membership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -393,19 +392,6 @@ impl pallet_collective::Config<CouncilCollective> for TestRuntime {
     type MaxProposalWeight = ();
 }
 
-impl pallet_membership::Config<pallet_membership::Instance1> for TestRuntime {
-    type RuntimeEvent = RuntimeEvent;
-    type AddOrigin = EnsureRoot<Self::AccountId>;
-    type RemoveOrigin = EnsureRoot<Self::AccountId>;
-    type SwapOrigin = EnsureRoot<Self::AccountId>;
-    type ResetOrigin = EnsureRoot<Self::AccountId>;
-    type PrimeOrigin = EnsureRoot<Self::AccountId>;
-    type MembershipInitialized = Council;
-    type MembershipChanged = ();
-    type MaxMembers = CouncilMaxMembers;
-    type WeightInfo = pallet_membership::weights::SubstrateWeight<TestRuntime>;
-}
-
 pub(crate) fn get_name_contract_name(contract_name_input: &[u8]) -> TestNameContractName {
     NameContractName::try_from(contract_name_input.to_vec()).expect("Invalid farm input.")
 }
@@ -538,13 +524,6 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
         ],
     };
     genesis.assimilate_storage(&mut storage).unwrap();
-
-    let membership_genesis =
-        pallet_membership::GenesisConfig::<TestRuntime, pallet_membership::Instance1> {
-            members: vec![dave()].try_into().unwrap(),
-            phantom: Default::default(),
-        };
-    membership_genesis.assimilate_storage(&mut storage).unwrap();
 
     let session_genesis = pallet_session::GenesisConfig::<TestRuntime> {
         keys: vec![(alice(), alice(), MockSessionKeys::from(UintAuthorityId(1)))],
