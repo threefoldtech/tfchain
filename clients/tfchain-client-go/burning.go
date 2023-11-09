@@ -17,7 +17,7 @@ var (
 type BurnTransaction struct {
 	Block          types.U32          `json:"block"`
 	Amount         types.U64          `json:"amount"`
-	Source         types.AccountID    `json:"source"`
+	Source         types.OptionAccountID    `json:"source"`
 	Target         string             `json:"target"`
 	Signatures     []StellarSignature `json:"signatures"`
 	SequenceNumber types.U64          `json:"sequence_number"`

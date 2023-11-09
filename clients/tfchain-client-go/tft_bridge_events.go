@@ -16,7 +16,7 @@ type BridgeBurnTransactionCreated struct {
 type BridgeBurnTransactionExpired struct {
 	Phase             types.Phase
 	BurnTransactionID types.U64 `json:"burn_transaction_id"`
-	Source            types.AccountID `json:"source"`
+	Source            types.OptionAccountID `json:"source"`
 	Target            []byte    `json:"target"`
 	Amount            types.U64 `json:"amount"`
 	Topics            []types.Hash
