@@ -30,7 +30,7 @@ pub mod pallet {
         weights::WeightInfo,
     };
     use frame_support::{
-        pallet_prelude::{OptionQuery, *},
+        pallet_prelude::*,
         traits::{Currency, EnsureOrigin, OnUnbalanced, ReservableCurrency},
     };
     use frame_system::{self as system, ensure_signed, pallet_prelude::*};
