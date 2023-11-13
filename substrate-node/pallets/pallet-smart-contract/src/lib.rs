@@ -647,7 +647,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(21)]
-        #[pallet::weight(<T as Config>::WeightInfo::cancel_contract())] // TODO R1
+        #[pallet::weight(<T as Config>::WeightInfo::cancel_contract_collective())]
         pub fn cancel_contract_collective(
             origin: OriginFor<T>,
             contract_id: u64,

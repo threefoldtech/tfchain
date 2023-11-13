@@ -55,6 +55,7 @@ pub trait WeightInfo {
 	fn change_billing_frequency() -> Weight;
 	fn attach_solution_provider_id() -> Weight;
 	fn set_dedicated_node_extra_fee() -> Weight;
+	fn cancel_contract_collective() -> Weight;
 }
 
 /// Weights for pallet_smart_contract using the Substrate node and recommended hardware.
@@ -497,6 +498,39 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(5_u64))
 			.saturating_add(T::DbWeight::get().writes(1_u64))
 	}
+	/// Storage: SmartContractModule Contracts (r:1 w:1)
+	/// Proof Skipped: SmartContractModule Contracts (max_values: None, max_size: None, mode: Measured)
+	/// Storage: SmartContractModule ActiveNodeContracts (r:1 w:1)
+	/// Proof Skipped: SmartContractModule ActiveNodeContracts (max_values: None, max_size: None, mode: Measured)
+	/// Storage: TfgridModule Twins (r:1 w:0)
+	/// Proof Skipped: TfgridModule Twins (max_values: None, max_size: None, mode: Measured)
+	/// Storage: TfgridModule TwinBoundedAccountID (r:1 w:0)
+	/// Proof Skipped: TfgridModule TwinBoundedAccountID (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Timestamp Now (r:1 w:0)
+	/// Proof: Timestamp Now (max_values: Some(1), max_size: Some(8), added: 503, mode: MaxEncodedLen)
+	/// Storage: SmartContractModule ContractLock (r:1 w:1)
+	/// Proof Skipped: SmartContractModule ContractLock (max_values: None, max_size: None, mode: Measured)
+	/// Storage: TfgridModule PricingPolicies (r:1 w:0)
+	/// Proof Skipped: TfgridModule PricingPolicies (max_values: None, max_size: None, mode: Measured)
+	/// Storage: SmartContractModule BillingFrequency (r:1 w:0)
+	/// Proof Skipped: SmartContractModule BillingFrequency (max_values: Some(1), max_size: None, mode: Measured)
+	/// Storage: SmartContractModule ContractsToBillAt (r:1 w:1)
+	/// Proof Skipped: SmartContractModule ContractsToBillAt (max_values: None, max_size: None, mode: Measured)
+	/// Storage: SmartContractModule ContractBillingInformationByID (r:0 w:1)
+	/// Proof Skipped: SmartContractModule ContractBillingInformationByID (max_values: None, max_size: None, mode: Measured)
+	/// Storage: SmartContractModule NodeContractResources (r:0 w:1)
+	/// Proof Skipped: SmartContractModule NodeContractResources (max_values: None, max_size: None, mode: Measured)
+	/// Storage: SmartContractModule ContractIDByNodeIDAndHash (r:0 w:1)
+	/// Proof Skipped: SmartContractModule ContractIDByNodeIDAndHash (max_values: None, max_size: None, mode: Measured)
+	fn cancel_contract_collective() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `1203`
+		//  Estimated: `4668`
+		// Minimum execution time: 90_735_000 picoseconds.
+		Weight::from_parts(92_827_000, 4668)
+			.saturating_add(T::DbWeight::get().reads(9_u64))
+			.saturating_add(T::DbWeight::get().writes(7_u64))
+	}
 }
 
 // For backwards compatibility and tests
@@ -937,5 +971,38 @@ impl WeightInfo for () {
 		Weight::from_parts(48_978_000, 4198)
 			.saturating_add(RocksDbWeight::get().reads(5_u64))
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
+	/// Storage: SmartContractModule Contracts (r:1 w:1)
+	/// Proof Skipped: SmartContractModule Contracts (max_values: None, max_size: None, mode: Measured)
+	/// Storage: SmartContractModule ActiveNodeContracts (r:1 w:1)
+	/// Proof Skipped: SmartContractModule ActiveNodeContracts (max_values: None, max_size: None, mode: Measured)
+	/// Storage: TfgridModule Twins (r:1 w:0)
+	/// Proof Skipped: TfgridModule Twins (max_values: None, max_size: None, mode: Measured)
+	/// Storage: TfgridModule TwinBoundedAccountID (r:1 w:0)
+	/// Proof Skipped: TfgridModule TwinBoundedAccountID (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Timestamp Now (r:1 w:0)
+	/// Proof: Timestamp Now (max_values: Some(1), max_size: Some(8), added: 503, mode: MaxEncodedLen)
+	/// Storage: SmartContractModule ContractLock (r:1 w:1)
+	/// Proof Skipped: SmartContractModule ContractLock (max_values: None, max_size: None, mode: Measured)
+	/// Storage: TfgridModule PricingPolicies (r:1 w:0)
+	/// Proof Skipped: TfgridModule PricingPolicies (max_values: None, max_size: None, mode: Measured)
+	/// Storage: SmartContractModule BillingFrequency (r:1 w:0)
+	/// Proof Skipped: SmartContractModule BillingFrequency (max_values: Some(1), max_size: None, mode: Measured)
+	/// Storage: SmartContractModule ContractsToBillAt (r:1 w:1)
+	/// Proof Skipped: SmartContractModule ContractsToBillAt (max_values: None, max_size: None, mode: Measured)
+	/// Storage: SmartContractModule ContractBillingInformationByID (r:0 w:1)
+	/// Proof Skipped: SmartContractModule ContractBillingInformationByID (max_values: None, max_size: None, mode: Measured)
+	/// Storage: SmartContractModule NodeContractResources (r:0 w:1)
+	/// Proof Skipped: SmartContractModule NodeContractResources (max_values: None, max_size: None, mode: Measured)
+	/// Storage: SmartContractModule ContractIDByNodeIDAndHash (r:0 w:1)
+	/// Proof Skipped: SmartContractModule ContractIDByNodeIDAndHash (max_values: None, max_size: None, mode: Measured)
+	fn cancel_contract_collective() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `1203`
+		//  Estimated: `4668`
+		// Minimum execution time: 90_735_000 picoseconds.
+		Weight::from_parts(92_827_000, 4668)
+			.saturating_add(RocksDbWeight::get().reads(9_u64))
+			.saturating_add(RocksDbWeight::get().writes(7_u64))
 	}
 }
