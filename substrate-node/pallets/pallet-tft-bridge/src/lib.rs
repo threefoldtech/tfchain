@@ -15,22 +15,22 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
 
+pub mod migrations;
 mod tft_bridge;
 mod types;
 pub mod weights;
-pub mod migrations;
 
 // Definition of the pallet logic, to be aggregated at runtime definition
 // through `construct_runtime`.
 #[frame_support::pallet]
 pub mod pallet {
+    use super::*;
     use super::{
         types::{BurnTransaction, MintTransaction, RefundTransaction, StellarSignature},
         weights::WeightInfo,
     };
-    use super::*;
     use frame_support::{
-        pallet_prelude::{*, OptionQuery},
+        pallet_prelude::{OptionQuery, *},
         traits::{Currency, EnsureOrigin, OnUnbalanced, ReservableCurrency},
     };
     use frame_system::{self as system, ensure_signed, pallet_prelude::*};
@@ -77,13 +77,23 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn burn_transactions)]
-    pub type BurnTransactions<T: Config> =
-        StorageMap<_, Blake2_128Concat, u64, BurnTransaction<T::AccountId, T::BlockNumber>, OptionQuery>;
+    pub type BurnTransactions<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        u64,
+        BurnTransaction<T::AccountId, T::BlockNumber>,
+        OptionQuery,
+    >;
 
     #[pallet::storage]
     #[pallet::getter(fn executed_burn_transactions)]
-    pub type ExecutedBurnTransactions<T: Config> =
-        StorageMap<_, Blake2_128Concat, u64, BurnTransaction<T::AccountId, T::BlockNumber>, OptionQuery>;
+    pub type ExecutedBurnTransactions<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        u64,
+        BurnTransaction<T::AccountId, T::BlockNumber>,
+        OptionQuery,
+    >;
 
     #[pallet::storage]
     #[pallet::getter(fn refund_transactions)]
@@ -235,7 +245,9 @@ pub mod pallet {
                     BurnTransactions::<T>::insert(&tx_id, &tx);
 
                     // Emit event
-                    Self::deposit_event(Event::BurnTransactionExpired(tx_id, tx.source, tx.target, tx.amount));
+                    Self::deposit_event(Event::BurnTransactionExpired(
+                        tx_id, tx.source, tx.target, tx.amount,
+                    ));
                 }
             }
 

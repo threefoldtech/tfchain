@@ -1,8 +1,8 @@
 use crate::*;
-use frame_support::{traits::Get, traits::OnRuntimeUpgrade, weights::Weight};
 use frame_support::log::{debug, info};
-use sp_std::marker::PhantomData;
+use frame_support::{traits::Get, traits::OnRuntimeUpgrade, weights::Weight};
 use parity_scale_codec::Encode;
+use sp_std::marker::PhantomData;
 
 #[cfg(feature = "try-runtime")]
 use sp_runtime::codec::Decode;
@@ -19,13 +19,15 @@ impl<T: Config> OnRuntimeUpgrade for MigrateBurnTransactionsV2<T> {
             return Ok(Vec::<u8>::new());
         };
 
-        let burn_transactions_count: u64 = migrations::types::v1::BurnTransactions::<T>::iter().count() as u64;
+        let burn_transactions_count: u64 =
+            migrations::types::v1::BurnTransactions::<T>::iter().count() as u64;
         info!(
             "🔎 MigrateBurnTransactionsV2 pre migration: Number of existing burn transactions {:?}",
             burn_transactions_count
         );
 
-        let executed_burn_transactions_count: u64 = migrations::types::v1::ExecutedBurnTransactions::<T>::iter().count() as u64;
+        let executed_burn_transactions_count: u64 =
+            migrations::types::v1::ExecutedBurnTransactions::<T>::iter().count() as u64;
         info!(
             "🔎 MigrateBurnTransactionsV2 pre migration: Number of existing executed burn transactions {:?}",
             executed_burn_transactions_count
@@ -56,7 +58,8 @@ impl<T: Config> OnRuntimeUpgrade for MigrateBurnTransactionsV2<T> {
             burn_transactions_count
         );
 
-        let executed_burn_transactions_count: u64 = ExecutedBurnTransactions::<T>::iter().count() as u64;
+        let executed_burn_transactions_count: u64 =
+            ExecutedBurnTransactions::<T>::iter().count() as u64;
         info!(
             "🔎 MigrateBurnTransactionsV2 post migration: Number of existing executed burn transactions {:?}",
             executed_burn_transactions_count
@@ -71,37 +74,42 @@ pub fn migrate_burn_transactions<T: Config>() -> frame_support::weights::Weight 
 
     let mut read_writes = 0;
 
-    BurnTransactions::<T>::translate::<super::types::v1::BurnTransaction<T::BlockNumber>, _>(|k, burn_transaction| {
-        debug!("migrated burn transaction: {:?}", k);
+    BurnTransactions::<T>::translate::<super::types::v1::BurnTransaction<T::BlockNumber>, _>(
+        |k, burn_transaction| {
+            debug!("migrated burn transaction: {:?}", k);
 
-        let new_burn_transaction = types::BurnTransaction::<T::AccountId, T::BlockNumber> {
-            block: burn_transaction.block,
-            amount: burn_transaction.amount,
-            source: None,
-            target: burn_transaction.target,
-            signatures: burn_transaction.signatures,
-            sequence_number: burn_transaction.sequence_number
-        };
+            let new_burn_transaction = types::BurnTransaction::<T::AccountId, T::BlockNumber> {
+                block: burn_transaction.block,
+                amount: burn_transaction.amount,
+                source: None,
+                target: burn_transaction.target,
+                signatures: burn_transaction.signatures,
+                sequence_number: burn_transaction.sequence_number,
+            };
 
-        read_writes += 1;
-        Some(new_burn_transaction)
-    });
+            read_writes += 1;
+            Some(new_burn_transaction)
+        },
+    );
 
-    ExecutedBurnTransactions::<T>::translate::<super::types::v1::BurnTransaction<T::BlockNumber>, _>(|k, executed_burn_transaction| {
-        debug!("migrated executed burn transaction: {:?}", k);
+    ExecutedBurnTransactions::<T>::translate::<super::types::v1::BurnTransaction<T::BlockNumber>, _>(
+        |k, executed_burn_transaction| {
+            debug!("migrated executed burn transaction: {:?}", k);
 
-        let new_executed_burn_transaction = types::BurnTransaction::<T::AccountId, T::BlockNumber> {
-            block: executed_burn_transaction.block,
-            amount: executed_burn_transaction.amount,
-            source: None,
-            target: executed_burn_transaction.target,
-            signatures: executed_burn_transaction.signatures,
-            sequence_number: executed_burn_transaction.sequence_number
-        };
+            let new_executed_burn_transaction =
+                types::BurnTransaction::<T::AccountId, T::BlockNumber> {
+                    block: executed_burn_transaction.block,
+                    amount: executed_burn_transaction.amount,
+                    source: None,
+                    target: executed_burn_transaction.target,
+                    signatures: executed_burn_transaction.signatures,
+                    sequence_number: executed_burn_transaction.sequence_number,
+                };
 
-        read_writes += 1;
-        Some(new_executed_burn_transaction)
-    });
+            read_writes += 1;
+            Some(new_executed_burn_transaction)
+        },
+    );
 
     // Update pallet storage version
     PalletVersion::<T>::set(types::StorageVersion::V2);
