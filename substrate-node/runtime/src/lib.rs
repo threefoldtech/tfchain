@@ -770,7 +770,7 @@ pub type Executive = frame_executive::Executive<
 
 // All migrations executed on runtime upgrade as a nested tuple of types implementing
 // `OnRuntimeUpgrade`.
-type Migrations = (pallet_tfgrid::migrations::v17::FixFarmPublicIps<Runtime>,);
+type Migrations = (pallet_tfgrid::migrations::v17::FixFarmPublicIps<Runtime>, pallet_tft_bridge::migrations::v2::MigrateBurnTransactionsV2<Runtime>);
 
 // follows Substrate's non destructive way of eliminating  otherwise required
 // repetion: https://github.com/paritytech/substrate/pull/10592

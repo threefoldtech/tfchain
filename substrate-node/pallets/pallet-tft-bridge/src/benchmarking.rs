@@ -1,6 +1,6 @@
 #![cfg(feature = "runtime-benchmarks")]
 
-use super::{*, types::*};
+use super::{types::*, *};
 use crate::Pallet as TFTBridgeModule;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::assert_ok;
@@ -75,7 +75,7 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller.clone()), target_stellar_address.clone(), amount)
     verify {
         let burn_id = 1;
-        let tx = TFTBridgeModule::<T>::burn_transactions(burn_id);
+        let tx = TFTBridgeModule::<T>::burn_transactions(burn_id).unwrap();
         assert_last_event::<T>(Event::BurnTransactionCreated(
             burn_id,
             caller,
@@ -195,7 +195,7 @@ benchmarks! {
         ));
 
         let tx_id = 1;
-        let tx = TFTBridgeModule::<T>::burn_transactions(tx_id);
+        let tx = TFTBridgeModule::<T>::burn_transactions(tx_id).unwrap();
 
         let validator: T::AccountId = account("Alice", 0, 0);
     }: _(RawOrigin::Signed(validator), tx_id)

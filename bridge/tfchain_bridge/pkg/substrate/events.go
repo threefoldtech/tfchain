@@ -37,6 +37,7 @@ type WithdrawReadyEvent struct {
 
 type WithdrawExpiredEvent struct {
 	ID     uint64
+	Source types.OptionAccountID
 	Target string
 	Amount uint64
 }
@@ -156,6 +157,7 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 		log.Info().Uint64("ID", uint64(e.BurnTransactionID)).Msg("found burn transaction expired event")
 		withdrawExpiredEvents = append(withdrawExpiredEvents, WithdrawExpiredEvent{
 			ID:     uint64(e.BurnTransactionID),
+			Source: e.Source,
 			Target: string(e.Target),
 			Amount: uint64(e.Amount),
 		})

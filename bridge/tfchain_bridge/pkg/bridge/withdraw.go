@@ -38,18 +38,19 @@ func (bridge *Bridge) handleWithdrawCreated(ctx context.Context, withdraw subpkg
 }
 
 func (bridge *Bridge) handleWithdrawExpired(ctx context.Context, withdrawExpired subpkg.WithdrawExpiredEvent) error {
-	if err := bridge.wallet.CheckAccount(withdrawExpired.Target); err != nil {
-		log.Info().Uint64("ID", uint64(withdrawExpired.ID)).Msg("tx is an invalid burn transaction, setting burn as executed since we have no way to recover...")
-		return bridge.subClient.RetrySetWithdrawExecuted(ctx, withdrawExpired.ID)
+	ok, source := withdrawExpired.Source.Unwrap()
+
+	if !ok {
+		// log and skip
+		return nil
 	}
 
-	signature, sequenceNumber, err := bridge.wallet.CreatePaymentAndReturnSignature(ctx, withdrawExpired.Target, withdrawExpired.Amount, withdrawExpired.ID)
-	if err != nil {
-		return err
-	}
-	log.Debug().Msgf("stellar account sequence number: %d", sequenceNumber)
-
-	return bridge.subClient.RetryProposeWithdrawOrAddSig(ctx, withdrawExpired.ID, withdrawExpired.Target, big.NewInt(int64(withdrawExpired.Amount)), signature, bridge.wallet.GetKeypair().Address(), sequenceNumber)
+	return bridge.handleWithdrawCreated(ctx, subpkg.WithdrawCreatedEvent{
+		ID:     withdrawExpired.ID,
+		Source: source,
+		Target: withdrawExpired.Target,
+		Amount: withdrawExpired.Amount,
+	})
 }
 
 func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady subpkg.WithdrawReadyEvent) error {
