@@ -1,5 +1,5 @@
 pub mod v1 {
-    use frame_support::{pallet_prelude::OptionQuery, storage_alias, Blake2_128Concat, StorageMap};
+    use frame_support::{pallet_prelude::OptionQuery, storage_alias, Blake2_128Concat};
     use parity_scale_codec::{Decode, Encode};
     use scale_info::{prelude::vec::Vec, TypeInfo};
 
