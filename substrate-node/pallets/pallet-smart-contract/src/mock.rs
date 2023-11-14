@@ -6,7 +6,7 @@ use frame_support::{
     dispatch::DispatchErrorWithPostInfo,
     dispatch::PostDispatchInfo,
     parameter_types,
-    traits::{ConstU32, GenesisBuild},
+    traits::{ConstU32, EitherOfDiverse, GenesisBuild},
     BoundedVec,
 };
 use frame_system::EnsureRoot;
@@ -114,6 +114,7 @@ construct_runtime!(
         Authorship: pallet_authorship::{Pallet, Storage},
         ValidatorSet: substrate_validator_set::{Pallet, Call, Storage, Event<T>, Config<T>},
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
+        Council: pallet_collective::<Instance1>::{Pallet, Call, Origin<T>, Event<T>, Config<T>},
     }
 );
 
@@ -267,6 +268,11 @@ parameter_types! {
 
 pub(crate) type TestNameContractName = NameContractName<TestRuntime>;
 
+type EnsureRootOrCouncilApproval = EitherOfDiverse<
+    EnsureRoot<AccountId>,
+    pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 5>,
+>;
+
 use weights;
 impl pallet_smart_contract::Config for TestRuntime {
     type RuntimeEvent = RuntimeEvent;
@@ -281,7 +287,7 @@ impl pallet_smart_contract::Config for TestRuntime {
     type NodeChanged = NodeChanged;
     type MaxNameContractNameLength = MaxNameContractNameLength;
     type NameContractName = TestNameContractName;
-    type RestrictedOrigin = EnsureRoot<Self::AccountId>;
+    type RestrictedOrigin = EnsureRootOrCouncilApproval;
     type MaxDeploymentDataLength = MaxDeploymentDataLength;
     type MaxNodeContractPublicIps = MaxNodeContractPublicIPs;
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
@@ -365,7 +371,26 @@ impl pallet_session::Config for TestRuntime {
     type WeightInfo = ();
 }
 
-type AccountPublic = <MultiSignature as Verify>::Signer;
+pub type BlockNumber = u32;
+parameter_types! {
+    pub const CouncilMotionDuration: BlockNumber = 4;
+    pub const CouncilMaxProposals: u32 = 100;
+    pub const CouncilMaxMembers: u32 = 100;
+}
+
+pub type CouncilCollective = pallet_collective::Instance1;
+impl pallet_collective::Config<CouncilCollective> for TestRuntime {
+    type RuntimeOrigin = RuntimeOrigin;
+    type Proposal = RuntimeCall;
+    type RuntimeEvent = RuntimeEvent;
+    type MotionDuration = CouncilMotionDuration;
+    type MaxProposals = CouncilMaxProposals;
+    type MaxMembers = CouncilMaxMembers;
+    type DefaultVote = pallet_collective::PrimeDefaultVote;
+    type SetMembersOrigin = EnsureRoot<Self::AccountId>;
+    type WeightInfo = ();
+    type MaxProposalWeight = ();
+}
 
 pub(crate) fn get_name_contract_name(contract_name_input: &[u8]) -> TestNameContractName {
     NameContractName::try_from(contract_name_input.to_vec()).expect("Invalid farm input.")
@@ -445,6 +470,8 @@ where
     }
 }
 
+type AccountPublic = <MultiSignature as Verify>::Signer;
+
 /// Helper function to generate an account ID from seed
 fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
 where
@@ -503,12 +530,12 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     };
     session_genesis.assimilate_storage(&mut storage).unwrap();
 
-    let genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
+    let price_genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
         min_tft_price: 10,
         max_tft_price: 1000,
         _data: PhantomData,
     };
-    genesis.assimilate_storage(&mut storage).unwrap();
+    price_genesis.assimilate_storage(&mut storage).unwrap();
 
     let t = sp_io::TestExternalities::from(storage);
 

@@ -73,6 +73,7 @@ Once the motion is closed it is removed from list and the `proposal` extrinsic i
 
 ### smartContractModule
 
+*   `cancelContract()` (cancels a contract)
 *   `approveSolutionProvider()` (approves a solution provider)
 *   `changeBillingFrequency()` (changes the billing frequency)
 
