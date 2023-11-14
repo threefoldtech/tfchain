@@ -49,14 +49,14 @@ impl<T: Config> OnRuntimeUpgrade for MigrateBurnTransactionsV2<T> {
         if PalletVersion::<T>::get() != types::StorageVersion::V2 {
             return Ok(());
         }
-        let burn_transactions_count: u64 = BurnTransactions::<T>::iter().count() as u64;
+        let burn_transactions_count: u64 = migrations::types::v2::BurnTransactions::<T>::iter().count() as u64;
         info!(
             "🔎 MigrateBurnTransactionsV2 post migration: Number of existing burn transactions {:?}",
             burn_transactions_count
         );
 
         let executed_burn_transactions_count: u64 =
-            ExecutedBurnTransactions::<T>::iter().count() as u64;
+            migrations::types::v2::ExecutedBurnTransactions::<T>::iter().count() as u64;
         info!(
             "🔎 MigrateBurnTransactionsV2 post migration: Number of existing executed burn transactions {:?}",
             executed_burn_transactions_count
@@ -71,11 +71,11 @@ pub fn migrate_burn_transactions<T: Config>() -> frame_support::weights::Weight 
 
     let mut read_writes = 0;
 
-    BurnTransactions::<T>::translate::<super::types::v1::BurnTransaction<T::BlockNumber>, _>(
+    migrations::types::v2::BurnTransactions::<T>::translate::<super::types::v1::BurnTransaction<T::BlockNumber>, _>(
         |k, burn_transaction| {
             debug!("migrated burn transaction: {:?}", k);
 
-            let new_burn_transaction = types::BurnTransaction::<T::AccountId, T::BlockNumber> {
+            let new_burn_transaction = migrations::types::v2::BurnTransaction::<T::AccountId, T::BlockNumber> {
                 block: burn_transaction.block,
                 amount: burn_transaction.amount,
                 source: None,
@@ -89,12 +89,12 @@ pub fn migrate_burn_transactions<T: Config>() -> frame_support::weights::Weight 
         },
     );
 
-    ExecutedBurnTransactions::<T>::translate::<super::types::v1::BurnTransaction<T::BlockNumber>, _>(
+    migrations::types::v2::ExecutedBurnTransactions::<T>::translate::<super::types::v1::BurnTransaction<T::BlockNumber>, _>(
         |k, executed_burn_transaction| {
             debug!("migrated executed burn transaction: {:?}", k);
 
             let new_executed_burn_transaction =
-                types::BurnTransaction::<T::AccountId, T::BlockNumber> {
+                migrations::types::v2::BurnTransaction::<T::AccountId, T::BlockNumber> {
                     block: executed_burn_transaction.block,
                     amount: executed_burn_transaction.amount,
                     source: None,
