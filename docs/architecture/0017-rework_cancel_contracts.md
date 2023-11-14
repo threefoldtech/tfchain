@@ -1,4 +1,4 @@
-# 16. Prevent DAO proposal from duplicate veto
+# 17. Allow collective approval to cancel contracts
 
 Date: 2023-11-06
 
