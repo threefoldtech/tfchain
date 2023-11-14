@@ -38,7 +38,19 @@ func (bridge *Bridge) handleWithdrawCreated(ctx context.Context, withdraw subpkg
 }
 
 func (bridge *Bridge) handleWithdrawExpired(ctx context.Context, withdrawExpired subpkg.WithdrawExpiredEvent) error {
-	return bridge.handleWithdrawCreated(ctx, subpkg.WithdrawCreatedEvent(withdrawExpired))
+	ok, source:= withdrawExpired.Source.Unwrap();
+
+		if !ok {
+			// log and skip
+			return nil
+		}
+		
+	return bridge.handleWithdrawCreated(ctx, subpkg.WithdrawCreatedEvent{
+		ID:     withdrawExpired.ID,
+		Source: source,
+		Target: withdrawExpired.Target,
+		Amount: withdrawExpired.Amount,
+	})
 }
 
 func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady subpkg.WithdrawReadyEvent) error {
