@@ -9,6 +9,8 @@ use tfchain_support::types::{PublicIP, IP4};
 
 #[cfg(feature = "try-runtime")]
 use parity_scale_codec::{Decode, Encode};
+#[cfg(feature = "try-runtime")]
+use sp_std::vec;
 
 pub struct FixFarmPublicIps<T: Config>(PhantomData<T>);
 
@@ -120,4 +122,51 @@ fn public_ips_to_string(public_ips: BoundedVec<PublicIP, ConstU32<256>>) -> Stri
         s.push_str("} ");
     }
     s
+}
+
+pub struct CheckStorageState<T: Config>(PhantomData<T>);
+
+impl<T: Config> OnRuntimeUpgrade for CheckStorageState<T> {
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+        info!("current pallet version: {:?}", PalletVersion::<T>::get());
+        assert!(PalletVersion::<T>::get() == types::StorageVersion::V17Struct);
+
+        check_pallet_tfgrid::<T>();
+
+        Ok(vec![])
+    }
+}
+
+pub fn check_pallet_tfgrid<T: Config>() {
+    migrations::v16::check_pallet_tfgrid::<T>();
+    check_farms_public_ips::<T>();
+}
+
+// Check farms public ips
+pub fn check_farms_public_ips<T: Config>() {
+    debug!(
+        "🔎  TFGrid pallet {:?} checking Farms storage map (public ips) START",
+        PalletVersion::<T>::get()
+    );
+
+    for (farm_id, farm) in Farms::<T>::iter() {
+        for pubip in farm.public_ips {
+            let ip4 = IP4 {
+                ip: pubip.ip.clone(),
+                gw: pubip.gateway.clone(),
+            };
+            if ip4.is_valid().is_err() {
+                debug!(
+                    " ⚠️    Farms[id: {}]: invalid public ip ({:?})",
+                    farm_id, ip4
+                );
+            }
+        }
+    }
+
+    debug!(
+        "🏁  TFGrid pallet {:?} checking Farms storage map (public ips) END",
+        PalletVersion::<T>::get()
+    );
 }
