@@ -12,6 +12,16 @@ The Council is a group of people that have collective interests in the Threefold
 
 Council members are configurable at runtime, members can be added and removed by the council itself.
 
+### Adding / Removing members
+
+Browse to the Polkadot UI and connect to the Node, select the `Governance` -> `Council` page
+
+Select `Motion` on top and click `Propose Motion` on the right.
+
+Now select `councilMembership` as proposal and select `addMember` or `removeMember` as extrinsic.
+
+Use the `id` of the account address (SS58) you want to add or remove.
+
 ## Proposals
 
 Proposals are created by council members and can be voted on by other council members. Proposals can be created as following:

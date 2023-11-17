@@ -2,4 +2,4 @@
 
 TFT Bridge between Tfchain and stellar.
 
-See [docs](./docs/readme.md) for more information.
+See [docs](../docs/readme.md) for more information.

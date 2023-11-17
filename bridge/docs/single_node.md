@@ -4,7 +4,7 @@ In this document we will explain how you can setup a local single node instance 
 
 ## Step 1: Create a Twin on tfchain
 
-Make sure [tfchain](https://github.com/threefoldtech/tfchain/blob/development/docs/development/development.md) is up and running.
+Make sure [tfchain](https://github.com/threefoldtech/tfchain/blob/development/docs/development) is up and running.
 
 Create a twin on your local chain:
 
@@ -97,7 +97,7 @@ First identify the bridge master address you generated above, in this example th
 Now construct a memo message indicating which twin you will deposit to: "twin_TWINID" (you should have created a twin in the above steps).
 
 ```sh
-./stellar-utils transfer 50 "twin_1" GAYJSBPBQ3J32CZZ72OM3GZP646KSVD3V5QB3WBJSSGPYHYS5MZSS4Z6 --secret SDGRCA63GSP4MSASFAWX5FORTS6ATQMK63YL6ZMF7YIFEJVBTLJDJA3M
+./stellar-utils transfer GAYJSBPBQ3J32CZZ72OM3GZP646KSVD3V5QB3WBJSSGPYHYS5MZSS4Z6 50 "twin_1" --secret SDGRCA63GSP4MSASFAWX5FORTS6ATQMK63YL6ZMF7YIFEJVBTLJDJA3M
 ```
 
 Now you should have received the tokens minus the depositfee on your account on tfchain (the default depositfee is 10 TFT).

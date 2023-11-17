@@ -263,6 +263,52 @@ fn close_after_proposal_duration_works() {
 }
 
 #[test]
+fn close_after_proposal_duration_threshold_not_met_works() {
+    new_test_ext().execute_with(|| {
+        System::set_block_number(1);
+
+        let proposal = make_proposal(b"some_remark".to_vec());
+        let hash = BlakeTwo256::hash_of(&proposal);
+        let threshold = 2;
+
+        assert_ok!(DaoModule::propose(
+            RuntimeOrigin::signed(1),
+            threshold,
+            Box::new(proposal.clone()),
+            b"some_description".to_vec(),
+            b"some_link".to_vec(),
+            None
+        ));
+        let proposal_index = 0;
+
+        // Farmer 1 votes yes
+        let farm_id = 1;
+        prepare_twin_farm_and_node(10, b"farm1".to_vec(), farm_id);
+        assert_ok!(DaoModule::vote(
+            RuntimeOrigin::signed(10),
+            farm_id,
+            hash.clone(),
+            true
+        ));
+
+        System::set_block_number(5); // default duration is 4 blocks
+        assert_ok!(DaoModule::close(
+            RuntimeOrigin::signed(2),
+            hash.clone(),
+            proposal_index
+        ));
+
+        let e = System::events();
+        assert_eq!(
+            e[6],
+            record(MockEvent::DaoModule(DaoEvent::Disapproved {
+                proposal_hash: hash,
+            }))
+        );
+    });
+}
+
+#[test]
 fn close_if_not_council_member_fails() {
     new_test_ext().execute_with(|| {
         let proposal = make_proposal(b"some_remark".to_vec());
@@ -504,6 +550,33 @@ fn motion_veto_works() {
         //         proposal_hash: hash,
         //     }))
         // );
+    });
+}
+
+#[test]
+fn motion_veto_duplicate_fails() {
+    new_test_ext().execute_with(|| {
+        let proposal = RuntimeCall::System(frame_system::Call::remark {
+            remark: b"some_proposal".to_vec(),
+        });
+        let hash = BlakeTwo256::hash_of(&proposal);
+
+        assert_ok!(DaoModule::propose(
+            RuntimeOrigin::signed(1),
+            2,
+            Box::new(proposal.clone()),
+            b"some_description".to_vec(),
+            b"some_link".to_vec(),
+            None
+        ));
+
+        assert_ok!(DaoModule::veto(RuntimeOrigin::signed(2), hash.clone()));
+
+        // try to veto again
+        assert_noop!(
+            DaoModule::veto(RuntimeOrigin::signed(2), hash.clone()),
+            Error::<TestRuntime>::DuplicateVeto
+        );
     });
 }
 

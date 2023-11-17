@@ -1,12 +1,13 @@
-name: Publish Docker image
+name: Publish bridge image
 
 on:
+  workflow_dispatch:
   release:
     types: [published]
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
@@ -26,13 +27,15 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ghcr.io/threefoldtech/tfchain_stellar_bridge
           tags: |
             type=semver,pattern={{version}}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
+          file: ./bridge/tfchain_bridge/Dockerfile
+          context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

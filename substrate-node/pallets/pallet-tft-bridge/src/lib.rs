@@ -15,6 +15,7 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
 
+pub mod migrations;
 mod tft_bridge;
 mod types;
 pub mod weights;
@@ -23,6 +24,7 @@ pub mod weights;
 // through `construct_runtime`.
 #[frame_support::pallet]
 pub mod pallet {
+    use super::*;
     use super::{
         types::{BurnTransaction, MintTransaction, RefundTransaction, StellarSignature},
         weights::WeightInfo,
@@ -75,13 +77,23 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn burn_transactions)]
-    pub type BurnTransactions<T: Config> =
-        StorageMap<_, Blake2_128Concat, u64, BurnTransaction<T::BlockNumber>, ValueQuery>;
+    pub type BurnTransactions<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        u64,
+        BurnTransaction<T::AccountId, T::BlockNumber>,
+        OptionQuery,
+    >;
 
     #[pallet::storage]
     #[pallet::getter(fn executed_burn_transactions)]
-    pub type ExecutedBurnTransactions<T: Config> =
-        StorageMap<_, Blake2_128Concat, u64, BurnTransaction<T::BlockNumber>, ValueQuery>;
+    pub type ExecutedBurnTransactions<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        u64,
+        BurnTransaction<T::AccountId, T::BlockNumber>,
+        OptionQuery,
+    >;
 
     #[pallet::storage]
     #[pallet::getter(fn refund_transactions)]
@@ -104,6 +116,10 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn deposit_fee)]
     pub type DepositFee<T: Config> = StorageValue<_, u64, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn pallet_version)]
+    pub type PalletVersion<T> = StorageValue<_, types::StorageVersion, ValueQuery>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_balances::Config {
@@ -138,8 +154,8 @@ pub mod pallet {
         BurnTransactionProposed(u64, Vec<u8>, u64),
         BurnTransactionSignatureAdded(u64, StellarSignature),
         BurnTransactionReady(u64),
-        BurnTransactionProcessed(BurnTransaction<T::BlockNumber>),
-        BurnTransactionExpired(u64, Vec<u8>, u64),
+        BurnTransactionProcessed(BurnTransaction<T::AccountId, T::BlockNumber>),
+        BurnTransactionExpired(u64, Option<T::AccountId>, Vec<u8>, u64),
         // Refund events
         RefundTransactionCreated(Vec<u8>, Vec<u8>, u64),
         RefundTransactionsignatureAdded(Vec<u8>, StellarSignature),
@@ -229,7 +245,9 @@ pub mod pallet {
                     BurnTransactions::<T>::insert(&tx_id, &tx);
 
                     // Emit event
-                    Self::deposit_event(Event::BurnTransactionExpired(tx_id, tx.target, tx.amount));
+                    Self::deposit_event(Event::BurnTransactionExpired(
+                        tx_id, tx.source, tx.target, tx.amount,
+                    ));
                 }
             }
 

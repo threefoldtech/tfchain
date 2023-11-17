@@ -645,6 +645,16 @@ pub mod pallet {
             let account_id = ensure_signed(origin)?;
             Self::_set_dedicated_node_extra_fee(account_id, node_id, extra_fee)
         }
+
+        #[pallet::call_index(21)]
+        #[pallet::weight(<T as Config>::WeightInfo::cancel_contract_collective())]
+        pub fn cancel_contract_collective(
+            origin: OriginFor<T>,
+            contract_id: u64,
+        ) -> DispatchResultWithPostInfo {
+            <T as Config>::RestrictedOrigin::ensure_origin(origin)?;
+            Self::_cancel_contract_collective(contract_id, types::Cause::CanceledByCollective)
+        }
     }
 
     #[pallet::hooks]

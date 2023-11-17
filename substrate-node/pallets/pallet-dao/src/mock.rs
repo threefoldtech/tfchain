@@ -3,11 +3,10 @@ use crate::{self as pallet_dao};
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
 use frame_system::EnsureRoot;
 use pallet_collective;
-use pallet_tfgrid::node::{CityName, CountryName};
 use pallet_tfgrid::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
-    node::{Location, SerialNumber},
+    node::{CityName, CountryName, Location, SerialNumber},
     terms_cond::TermsAndConditions,
     CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, Gw4Input, Ip4Input,
     LatitudeInput, LongitudeInput, PkInput, RelayInput,

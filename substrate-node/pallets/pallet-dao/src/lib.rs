@@ -170,6 +170,7 @@ pub mod pallet {
         ProposalMissing,
         WrongIndex,
         DuplicateVote,
+        DuplicateVeto,
         WrongProposalWeight,
         TooEarly,
         TimeLimitReached,

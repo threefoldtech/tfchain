@@ -89,7 +89,7 @@ impl<T: Config> Pallet<T> {
         let burn_amount_as_u64 = amount.saturated_into::<u64>() - withdraw_fee;
         Self::deposit_event(Event::BurnTransactionCreated(
             burn_id,
-            source,
+            source.clone(),
             target_stellar_address.clone(),
             burn_amount_as_u64,
         ));
@@ -99,6 +99,7 @@ impl<T: Config> Pallet<T> {
         let tx = BurnTransaction {
             block: now,
             amount: burn_amount_as_u64,
+            source: Some(source),
             target: target_stellar_address,
             signatures: Vec::new(),
             sequence_number: 0,
@@ -239,7 +240,10 @@ impl<T: Config> Pallet<T> {
             Error::<T>::BurnTransactionAlreadyExecuted
         );
 
-        let mut burn_tx = BurnTransactions::<T>::get(tx_id);
+        let Some(mut burn_tx) = BurnTransactions::<T>::get(tx_id) else {return Err(DispatchErrorWithPostInfo::from(
+            Error::<T>::BurnTransactionNotExists,
+        ));};
+
         ensure!(
             BurnTransactions::<T>::contains_key(tx_id),
             Error::<T>::BurnTransactionNotExists
@@ -282,7 +286,9 @@ impl<T: Config> Pallet<T> {
         stellar_pub_key: Vec<u8>,
         sequence_number: u64,
     ) -> DispatchResultWithPostInfo {
-        let mut tx = BurnTransactions::<T>::get(&tx_id);
+        let Some(mut tx) = BurnTransactions::<T>::get(&tx_id) else {return Err(DispatchErrorWithPostInfo::from(
+            Error::<T>::BurnTransactionNotExists,
+        ));};
 
         let validators = Validators::<T>::get();
         if tx.signatures.len() == (validators.len() / 2) + 1 {
@@ -340,7 +346,9 @@ impl<T: Config> Pallet<T> {
             Error::<T>::BurnTransactionNotExists
         );
 
-        let tx = BurnTransactions::<T>::get(tx_id);
+        let Some(tx) = BurnTransactions::<T>::get(tx_id) else {return Err(DispatchErrorWithPostInfo::from(
+            Error::<T>::BurnTransactionNotExists,
+        ));};
 
         BurnTransactions::<T>::remove(tx_id);
         ExecutedBurnTransactions::<T>::insert(tx_id, &tx);
