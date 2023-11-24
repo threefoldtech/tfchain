@@ -11,7 +11,7 @@ pub struct ContractMigrationV5<T: Config>(PhantomData<T>);
 
 impl<T: Config> OnRuntimeUpgrade for ContractMigrationV5<T> {
     #[cfg(feature = "try-runtime")]
-    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+    fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
         assert!(PalletVersion::<T>::get() >= types::StorageVersion::V5);
 
@@ -30,7 +30,7 @@ impl<T: Config> OnRuntimeUpgrade for ContractMigrationV5<T> {
     }
 
     #[cfg(feature = "try-runtime")]
-    fn post_upgrade(pre_contracts_count: Vec<u8>) -> Result<(), &'static str> {
+    fn post_upgrade(pre_contracts_count: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
         assert!(PalletVersion::<T>::get() >= types::StorageVersion::V6);
 

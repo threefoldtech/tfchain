@@ -15,7 +15,7 @@ pub struct FixTwinLockedBalances<T: Config>(PhantomData<T>);
 
 impl<T: Config> OnRuntimeUpgrade for FixTwinLockedBalances<T> {
     #[cfg(feature = "try-runtime")]
-    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+    fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
         debug!("current pallet version: {:?}", PalletVersion::<T>::get());
         assert!(PalletVersion::<T>::get() >= types::StorageVersion::V6);
 
@@ -33,7 +33,7 @@ impl<T: Config> OnRuntimeUpgrade for FixTwinLockedBalances<T> {
     }
 
     #[cfg(feature = "try-runtime")]
-    fn post_upgrade(_: Vec<u8>) -> Result<(), &'static str> {
+    fn post_upgrade(_: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
         debug!("current pallet version: {:?}", PalletVersion::<T>::get());
         assert!(PalletVersion::<T>::get() >= types::StorageVersion::V8);
 

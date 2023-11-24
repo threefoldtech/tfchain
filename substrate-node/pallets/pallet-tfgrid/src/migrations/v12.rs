@@ -35,7 +35,7 @@ pub struct InputValidation<T: Config>(PhantomData<T>);
 
 impl<T: Config> OnRuntimeUpgrade for InputValidation<T> {
     #[cfg(feature = "try-runtime")]
-    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+    fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
         assert!(PalletVersion::<T>::get() >= types::StorageVersion::V11Struct);
 
@@ -59,7 +59,7 @@ impl<T: Config> OnRuntimeUpgrade for InputValidation<T> {
     }
 
     #[cfg(feature = "try-runtime")]
-    fn post_upgrade(pre_nodes_count: Vec<u8>) -> Result<(), &'static str> {
+    fn post_upgrade(pre_nodes_count: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
         assert!(PalletVersion::<T>::get() >= types::StorageVersion::V12Struct);
 

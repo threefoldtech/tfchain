@@ -34,7 +34,7 @@ pub struct Migrate<T: Config>(PhantomData<T>);
 
 impl<T: Config> OnRuntimeUpgrade for Migrate<T> {
     #[cfg(feature = "try-runtime")]
-    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+    fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
         info!(
             "current pallet version: {:?}",
             pallet_tfgrid::PalletVersion::<T>::get()
@@ -92,7 +92,7 @@ impl<T: Config> OnRuntimeUpgrade for Migrate<T> {
     }
 
     #[cfg(feature = "try-runtime")]
-    fn post_upgrade(pre_twins_count: Vec<u8>) -> Result<(), &'static str> {
+    fn post_upgrade(pre_twins_count: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
         info!(
             "current pallet version: {:?}",
             pallet_tfgrid::PalletVersion::<T>::get()

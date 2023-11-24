@@ -12,7 +12,7 @@ pub struct FixFarmingPoliciesMap<T: Config>(PhantomData<T>);
 
 impl<T: Config> OnRuntimeUpgrade for FixFarmingPoliciesMap<T> {
     #[cfg(feature = "try-runtime")]
-    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+    fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
         assert!(PalletVersion::<T>::get() >= types::StorageVersion::V13Struct);
 
@@ -36,7 +36,7 @@ impl<T: Config> OnRuntimeUpgrade for FixFarmingPoliciesMap<T> {
     }
 
     #[cfg(feature = "try-runtime")]
-    fn post_upgrade(pre_policies_count: Vec<u8>) -> Result<(), &'static str> {
+    fn post_upgrade(pre_policies_count: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
         assert!(PalletVersion::<T>::get() >= types::StorageVersion::V14Struct);
 
