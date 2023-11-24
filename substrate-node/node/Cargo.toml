@@ -28,6 +28,7 @@ serde_json.workspace = true
 sc-cli.workspace = true
 sp-core.workspace = true
 sc-executor.workspace = true
+sc-network.workspace = true
 sc-service.workspace = true
 sc-telemetry.workspace = true
 sc-keystore.workspace = true
