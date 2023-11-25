@@ -9,6 +9,8 @@ use sp_runtime::traits::{CheckedSub, SaturatedConversion};
 use sp_std::{collections::btree_map::BTreeMap, marker::PhantomData};
 
 #[cfg(feature = "try-runtime")]
+use frame_support::{dispatch::DispatchError, ensure};
+#[cfg(feature = "try-runtime")]
 use sp_std::{vec, vec::Vec};
 
 pub struct FixTwinLockedBalances<T: Config>(PhantomData<T>);
@@ -17,7 +19,10 @@ impl<T: Config> OnRuntimeUpgrade for FixTwinLockedBalances<T> {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
         debug!("current pallet version: {:?}", PalletVersion::<T>::get());
-        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V6);
+        ensure!(
+            PalletVersion::<T>::get() >= types::StorageVersion::V6,
+            DispatchError::Other("Unexpected pallet version")
+        );
 
         debug!("👥  Smart Contract pallet to V8 passes PRE migrate checks ✅",);
         Ok(vec![])
@@ -35,7 +40,10 @@ impl<T: Config> OnRuntimeUpgrade for FixTwinLockedBalances<T> {
     #[cfg(feature = "try-runtime")]
     fn post_upgrade(_: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
         debug!("current pallet version: {:?}", PalletVersion::<T>::get());
-        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V8);
+        ensure!(
+            PalletVersion::<T>::get() >= types::StorageVersion::V8,
+            DispatchError::Other("Unexpected pallet version")
+        );
 
         debug!(
             "👥  Smart Contract pallet to {:?} passes POST migrate checks ✅",

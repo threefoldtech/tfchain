@@ -9,6 +9,8 @@ use sp_runtime::traits::Zero;
 use sp_std::marker::PhantomData;
 
 #[cfg(feature = "try-runtime")]
+use frame_support::{dispatch::DispatchError, ensure};
+#[cfg(feature = "try-runtime")]
 use sp_std::{vec, vec::Vec};
 
 // Storage alias from ContractLock v11
@@ -25,7 +27,10 @@ impl<T: Config> OnRuntimeUpgrade for ExtendContractLock<T> {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
         debug!("current pallet version: {:?}", PalletVersion::<T>::get());
-        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V10);
+        ensure!(
+            PalletVersion::<T>::get() >= types::StorageVersion::V10,
+            DispatchError::Other("Unexpected pallet version")
+        );
 
         debug!("👥  Smart Contract pallet to V11 passes PRE migrate checks ✅",);
         Ok(vec![])
@@ -43,16 +48,12 @@ impl<T: Config> OnRuntimeUpgrade for ExtendContractLock<T> {
     #[cfg(feature = "try-runtime")]
     fn post_upgrade(_: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
         debug!("current pallet version: {:?}", PalletVersion::<T>::get());
-        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V11);
-
-        check_contract_lock_v11::<T>();
-
-        debug!(
-            "👥  Smart Contract pallet to {:?} passes POST migrate checks ✅",
-            PalletVersion::<T>::get()
+        ensure!(
+            PalletVersion::<T>::get() >= types::StorageVersion::V11,
+            DispatchError::Other("Unexpected pallet version")
         );
 
-        Ok(())
+        check_contract_lock_v11::<T>()
     }
 }
 
@@ -86,7 +87,8 @@ pub fn migrate_to_version_11<T: Config>() -> frame_support::weights::Weight {
     T::DbWeight::get().reads_writes(r, w)
 }
 
-pub fn check_contract_lock_v11<T: Config>() {
+#[cfg(feature = "try-runtime")]
+pub fn check_contract_lock_v11<T: Config>() -> Result<(), sp_runtime::TryRuntimeError> {
     debug!(
         "🔎  Smart Contract pallet {:?} checking ContractLock storage map START",
         PalletVersion::<T>::get()
@@ -112,7 +114,10 @@ pub fn check_contract_lock_v11<T: Config>() {
             );
         } else {
             // Ensure new field is set to zero
-            assert_eq!(contract_lock.extra_amount_locked, BalanceOf::<T>::zero());
+            ensure!(
+                contract_lock.extra_amount_locked == BalanceOf::<T>::zero(),
+                DispatchError::Other("Unexpected lock amount")
+            );
         }
     }
 
@@ -120,4 +125,11 @@ pub fn check_contract_lock_v11<T: Config>() {
         "🏁  Smart Contract pallet {:?} checking ContractLock storage map END",
         PalletVersion::<T>::get()
     );
+
+    debug!(
+        "👥  Smart Contract pallet to {:?} passes POST migrate checks ✅",
+        PalletVersion::<T>::get()
+    );
+
+    Ok(())
 }

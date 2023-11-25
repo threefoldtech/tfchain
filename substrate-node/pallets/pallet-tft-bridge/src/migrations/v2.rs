@@ -4,6 +4,8 @@ use frame_support::{traits::Get, traits::OnRuntimeUpgrade, weights::Weight};
 use sp_std::marker::PhantomData;
 
 #[cfg(feature = "try-runtime")]
+use frame_support::{dispatch::DispatchError, ensure};
+#[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
 
 pub struct MigrateBurnTransactionsV2<T: Config>(PhantomData<T>);
@@ -12,9 +14,10 @@ impl<T: Config> OnRuntimeUpgrade for MigrateBurnTransactionsV2<T> {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
-        if PalletVersion::<T>::get() != types::StorageVersion::V1 {
-            return Ok(Vec::<u8>::new());
-        };
+        ensure!(
+            PalletVersion::<T>::get() == types::StorageVersion::V1,
+            DispatchError::Other("Unexpected pallet version")
+        );
 
         let burn_transactions_count: u64 =
             migrations::types::v1::BurnTransactions::<T>::iter().count() as u64;
@@ -48,9 +51,11 @@ impl<T: Config> OnRuntimeUpgrade for MigrateBurnTransactionsV2<T> {
         _pre_burn_transactions_count: Vec<u8>,
     ) -> Result<(), sp_runtime::TryRuntimeError> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
-        if PalletVersion::<T>::get() != types::StorageVersion::V2 {
-            return Ok(());
-        }
+        ensure!(
+            PalletVersion::<T>::get() == types::StorageVersion::V2,
+            DispatchError::Other("Unexpected pallet version")
+        );
+
         let burn_transactions_count: u64 =
             migrations::types::v2::BurnTransactions::<T>::iter().count() as u64;
         info!(

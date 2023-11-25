@@ -6,6 +6,8 @@ use sp_runtime::Saturating;
 use sp_std::{marker::PhantomData, vec};
 
 #[cfg(feature = "try-runtime")]
+use frame_support::{dispatch::DispatchError, ensure};
+#[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
 
 pub struct ReworkBillingLoopInsertion<T: Config>(PhantomData<T>);
@@ -18,7 +20,10 @@ impl<T: Config> OnRuntimeUpgrade for ReworkBillingLoopInsertion<T> {
     #[cfg(feature = "try-runtime")]
     fn post_upgrade(_: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
-        assert!(PalletVersion::<T>::get() >= types::StorageVersion::V10);
+        ensure!(
+            PalletVersion::<T>::get() >= types::StorageVersion::V10,
+            DispatchError::Other("Unexpected pallet version")
+        );
 
         super::v9::check_contracts_to_bill_at::<T>();
 
