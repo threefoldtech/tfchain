@@ -13,6 +13,7 @@ import time
 
 
 SUBSTRATE_NODE_DIR = dirname(os.getcwd())
+TMP_DIR = "\tmp"
 TFCHAIN_EXE = join(SUBSTRATE_NODE_DIR, "target", "release", "tfchain")
 
 RE_NODE_STARTED = re.compile("Running JSON-RPC server")
@@ -151,17 +152,17 @@ class SubstrateNetwork:
         rmtree(output_dir_network, ignore_errors=True)
 
         port = 30333
-        rpc_port = 9944
+        rpc_port = 994
         
         if amt == 1:
             log_file_alice = join(output_dir_network, "node_alice.log")
-            self._nodes["alice"] = run_single_node(log_file_alice, "/tmp/alice", port, rpc_port)
+            self._nodes["alice"] = run_single_node(log_file_alice, f"{TMP_DIR}/alice", port, rpc_port)
             wait_till_node_ready(log_file_alice)
             setup_offchain_workers(rpc_port, "Alice")
             wait_till_first_block(log_file_alice)
         else:
             log_file_alice = join(output_dir_network, "node_alice.log")
-            self._nodes["alice"] = run_node(log_file_alice, "/tmp/alice", "alice", port,
+            self._nodes["alice"] = run_node(log_file_alice, f"{TMP_DIR}/alice", "alice", port,
                                         rpc_port, node_key="0000000000000000000000000000000000000000000000000000000000000001")
             wait_till_node_ready(log_file_alice)
             setup_offchain_workers(rpc_port, "Alice")
@@ -173,7 +174,7 @@ class SubstrateNetwork:
                 rpc_port += 1
                 name = list(PREDEFINED_KEYS.keys())[x].lower()
                 log_file = join(output_dir_network, f"node_{name}.log")
-                self._nodes[name] = run_node(log_file, f"/tmp/{name}", name, port, rpc_port, node_key=None,
+                self._nodes[name] = run_node(log_file, f"{TMP_DIR}/{name}", name, port, rpc_port, node_key=None,
                                             bootnodes="/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp")
                 wait_till_node_ready(log_file)
                 setup_offchain_workers(rpc_port, "Bob")
