@@ -116,8 +116,8 @@ class TfChainClient:
 
         for event in response.triggered_events:
             if event.value["event_id"] == "Proposed":
-                proposal_hash = event.value["event"]["attributes"][2]
-                proposal_index = event.value["event"]["attributes"][1]
+                proposal_hash = event.value["event"]["attributes"]["proposal_hash"]
+                proposal_index = event.value["event"]["attributes"]["proposal_index"]
 
         return proposal_hash, proposal_index
 
