@@ -38,24 +38,19 @@ spec:
             - name: rpc
               containerPort: {{ .Values.rpc_port }}
               protocol: TCP
-            - name: ws
-              containerPort: {{ .Values.ws_port }}
-              protocol: TCP
           env:
           - name: SUBSTRATE_NAME
             value: {{ .Values.name }}
           - name: SUBSTRATE_PORT
             value: {{ .Values.port | quote }}
-          - name: SUBSTRATE_WS_PORT
-            value: {{ .Values.ws_port | quote }}
           - name: SUBSTRATE_RPC_PORT
             value: {{ .Values.rpc_port | quote }}
           - name: SUBSTRATE_BOOT_NODE
             value: {{ .Values.boot_node }}
           - name: CHAINSPEC
             value: {{ .Values.chainspec }}
-          - name: WS_MAX_CONNECTIONS
-            value: {{ .Values.ws_max_connections | quote }}
+          - name: RPC_MAX_CONNECTIONS
+            value: {{ .Values.rpc_max_connections | quote }}
           - name: SUBSTRATE_RPC_METHODS
             value: {{ .Values.rpc_methods }}
           args: [
@@ -66,7 +61,6 @@ spec:
             "--keystore-path=/keystore",
             "--chain=$(CHAINSPEC)",
             "--port", "$(SUBSTRATE_PORT)",
-            "--ws-port", "$(SUBSTRATE_WS_PORT)",
             "--rpc-port", "$(SUBSTRATE_RPC_PORT)",
             {{ if .Values.boot_node }}
             "--bootnodes", "$(SUBSTRATE_BOOT_NODE)",
@@ -76,9 +70,9 @@ spec:
             "--validator",
             "--pruning", "archive",
             {{ else }}
-            "--ws-external",
+            "--rpc-external",
             {{ end }}
-            "--ws-max-connections", "$(WS_MAX_CONNECTIONS)",
+            "--rpc-max-connections", "$(RPC_MAX_CONNECTIONS)",
             {{ if .Values.telemetry_url }}
             "--telemetry-url", {{ .Values.telemetry_url | quote }},
             {{ end }}
