@@ -152,7 +152,7 @@ class SubstrateNetwork:
         rmtree(output_dir_network, ignore_errors=True)
 
         port = 30333
-        rpc_port = 994
+        rpc_port = 9944
         
         if amt == 1:
             log_file_alice = join(output_dir_network, "node_alice.log")
