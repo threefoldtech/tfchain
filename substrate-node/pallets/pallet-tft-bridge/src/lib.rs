@@ -147,7 +147,7 @@ pub mod pallet {
         // Minting events
         MintTransactionProposed(Vec<u8>, T::AccountId, u64),
         MintTransactionVoted(Vec<u8>),
-        MintCompleted(MintTransaction<T::AccountId, BlockNumberFor<T>>),
+        MintCompleted(MintTransaction<T::AccountId, BlockNumberFor<T>>, Vec<u8>),
         MintTransactionExpired(Vec<u8>, u64, T::AccountId),
         // Burn events
         BurnTransactionCreated(u64, T::AccountId, Vec<u8>, u64),
