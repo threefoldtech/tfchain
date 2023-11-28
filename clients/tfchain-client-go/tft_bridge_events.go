@@ -104,6 +104,7 @@ type MintTransactionVoted struct {
 type MintCompleted struct {
 	Phase           types.Phase
 	MintTransaction MintTransaction `json:"mint_transaction"`
+	TxHash          string          `json:"tx_hash"`
 	Topics          []types.Hash
 }
 
