@@ -1,6 +1,11 @@
 use crate::*;
-use frame_support::log::{debug, info};
-use frame_support::{traits::Get, traits::OnRuntimeUpgrade, weights::Weight};
+use frame_support::{
+    log::{debug, info},
+    traits::Get,
+    traits::OnRuntimeUpgrade,
+    weights::Weight,
+};
+use frame_system::pallet_prelude::BlockNumberFor;
 use sp_std::marker::PhantomData;
 
 #[cfg(feature = "try-runtime")]
@@ -80,13 +85,13 @@ pub fn migrate_burn_transactions<T: Config>() -> frame_support::weights::Weight 
     let mut read_writes = 0;
 
     migrations::types::v2::BurnTransactions::<T>::translate::<
-        super::types::v1::BurnTransaction<T::BlockNumber>,
+        super::types::v1::BurnTransaction<BlockNumberFor<T>>,
         _,
     >(|k, burn_transaction| {
         debug!("migrated burn transaction: {:?}", k);
 
         let new_burn_transaction =
-            migrations::types::v2::BurnTransaction::<T::AccountId, T::BlockNumber> {
+            migrations::types::v2::BurnTransaction::<T::AccountId, BlockNumberFor<T>> {
                 block: burn_transaction.block,
                 amount: burn_transaction.amount,
                 source: None,
@@ -100,13 +105,13 @@ pub fn migrate_burn_transactions<T: Config>() -> frame_support::weights::Weight 
     });
 
     migrations::types::v2::ExecutedBurnTransactions::<T>::translate::<
-        super::types::v1::BurnTransaction<T::BlockNumber>,
+        super::types::v1::BurnTransaction<BlockNumberFor<T>>,
         _,
     >(|k, executed_burn_transaction| {
         debug!("migrated executed burn transaction: {:?}", k);
 
         let new_executed_burn_transaction =
-            migrations::types::v2::BurnTransaction::<T::AccountId, T::BlockNumber> {
+            migrations::types::v2::BurnTransaction::<T::AccountId, BlockNumberFor<T>> {
                 block: executed_burn_transaction.block,
                 amount: executed_burn_transaction.amount,
                 source: None,

@@ -4,7 +4,10 @@ use frame_support::{
     ensure,
     traits::{Currency, ExistenceRequirement, LockableCurrency, OnUnbalanced, WithdrawReasons},
 };
-use frame_system::offchain::{SendSignedTransaction, SignMessage, Signer};
+use frame_system::{
+    offchain::{SendSignedTransaction, SignMessage, Signer},
+    pallet_prelude::BlockNumberFor,
+};
 use sp_core::Get;
 use sp_runtime::{
     traits::{CheckedAdd, CheckedSub, Convert, Zero},
@@ -13,7 +16,7 @@ use sp_runtime::{
 use sp_std::vec::Vec;
 
 impl<T: Config> Pallet<T> {
-    pub fn bill_conttracts_for_block(block_number: T::BlockNumber) {
+    pub fn bill_conttracts_for_block(block_number: BlockNumberFor<T>) {
         // Let offchain worker check if there are contracts on
         // billing loop at current index and try to bill them
         let index = Self::get_billing_loop_index_from_block_number(block_number);
@@ -619,7 +622,7 @@ impl<T: Config> Pallet<T> {
 
     // Billing index is block number % (mod) Billing Frequency
     // So index belongs to [0; billing_frequency - 1] range
-    pub fn get_billing_loop_index_from_block_number(block_number: T::BlockNumber) -> u64 {
+    pub fn get_billing_loop_index_from_block_number(block_number: BlockNumberFor<T>) -> u64 {
         block_number.saturated_into::<u64>() % BillingFrequency::<T>::get()
     }
 

@@ -1,5 +1,6 @@
 use crate::{types::FarmingPolicy, *};
 use frame_support::{traits::Get, traits::OnRuntimeUpgrade, weights::Weight};
+use frame_system::pallet_prelude::BlockNumberFor;
 use log::{debug, info};
 use sp_std::marker::PhantomData;
 
@@ -69,7 +70,7 @@ pub fn fix_farming_policies_map_migration_<T: Config>() -> frame_support::weight
     info!(" >>> Migrating farming policies storage...");
 
     let mut read_writes = 0;
-    FarmingPoliciesMap::<T>::translate::<FarmingPolicy<T::BlockNumber>, _>(|k, fp| {
+    FarmingPoliciesMap::<T>::translate::<FarmingPolicy<BlockNumberFor<T>>, _>(|k, fp| {
         debug!("Farming policy #{:?}: start migrating", k);
         debug!("  id was: {:?}", fp.id);
         let mut new_farming_policy = fp.clone();

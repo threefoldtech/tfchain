@@ -4,6 +4,7 @@ use frame_support::{
     ensure,
     sp_runtime::SaturatedConversion,
 };
+use frame_system::pallet_prelude::BlockNumberFor;
 use sp_std::vec::Vec;
 use tfchain_support::types::{FarmCertification, NodeCertification};
 
@@ -108,7 +109,7 @@ impl<T: Config> Pallet<T> {
         nu: u32,
         ipv4: u32,
         minimal_uptime: u16,
-        policy_end: T::BlockNumber,
+        policy_end: BlockNumberFor<T>,
         immutable: bool,
         default: bool,
         node_certification: NodeCertification,
@@ -152,7 +153,7 @@ impl<T: Config> Pallet<T> {
         nu: u32,
         ipv4: u32,
         minimal_uptime: u16,
-        policy_end: T::BlockNumber,
+        policy_end: BlockNumberFor<T>,
         default: bool,
         node_certification: NodeCertification,
         farm_certification: FarmCertification,
@@ -190,7 +191,7 @@ impl<T: Config> Pallet<T> {
 
     pub fn get_farming_policy(
         node: &TfgridNode<T>,
-    ) -> Result<types::FarmingPolicy<T::BlockNumber>, DispatchErrorWithPostInfo> {
+    ) -> Result<types::FarmingPolicy<BlockNumberFor<T>>, DispatchErrorWithPostInfo> {
         let mut farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
         // If there is a farming policy defined on the
@@ -260,7 +261,7 @@ impl<T: Config> Pallet<T> {
         // policy which certifications best fit the current
         // node and farm certifications, considering that in all
         // cases a default policy would be preferable
-        let mut policies: Vec<types::FarmingPolicy<T::BlockNumber>> =
+        let mut policies: Vec<types::FarmingPolicy<BlockNumberFor<T>>> =
             FarmingPoliciesMap::<T>::iter().map(|p| p.1).collect();
 
         policies.sort();
@@ -290,8 +291,8 @@ impl<T: Config> Pallet<T> {
     // Set the default farming policy as the last best certified
     // farming policy amoung all the default farming policies
     fn get_default_farming_policy(
-    ) -> Result<types::FarmingPolicy<T::BlockNumber>, DispatchErrorWithPostInfo> {
-        let mut policies: Vec<types::FarmingPolicy<T::BlockNumber>> =
+    ) -> Result<types::FarmingPolicy<BlockNumberFor<T>>, DispatchErrorWithPostInfo> {
+        let mut policies: Vec<types::FarmingPolicy<BlockNumberFor<T>>> =
             FarmingPoliciesMap::<T>::iter().map(|p| p.1).collect();
 
         policies.sort();

@@ -1,5 +1,6 @@
 pub mod v1 {
     use frame_support::{pallet_prelude::ValueQuery, storage_alias, Blake2_128Concat};
+    use frame_system::pallet_prelude::BlockNumberFor;
     use parity_scale_codec::{Decode, Encode};
     use scale_info::{prelude::vec::Vec, TypeInfo};
 
@@ -19,7 +20,7 @@ pub mod v1 {
         Pallet<T>,
         Blake2_128Concat,
         u64,
-        BurnTransaction<<T as frame_system::Config>::BlockNumber>,
+        BurnTransaction<BlockNumberFor<T>>,
         ValueQuery,
     >;
 
@@ -28,13 +29,14 @@ pub mod v1 {
         Pallet<T>,
         Blake2_128Concat,
         u64,
-        BurnTransaction<<T as frame_system::Config>::BlockNumber>,
+        BurnTransaction<BlockNumberFor<T>>,
         ValueQuery,
     >;
 }
 
 pub mod v2 {
     use frame_support::{pallet_prelude::OptionQuery, storage_alias, Blake2_128Concat};
+    use frame_system::pallet_prelude::BlockNumberFor;
     use parity_scale_codec::{Decode, Encode};
     use scale_info::{prelude::vec::Vec, TypeInfo};
 
@@ -55,7 +57,7 @@ pub mod v2 {
         Pallet<T>,
         Blake2_128Concat,
         u64,
-        BurnTransaction<<T as frame_system::Config>::AccountId, <T as frame_system::Config>::BlockNumber>,
+        BurnTransaction<<T as frame_system::Config>::AccountId, BlockNumberFor<T>>,
         OptionQuery,
     >;
 
@@ -64,7 +66,7 @@ pub mod v2 {
         Pallet<T>,
         Blake2_128Concat,
         u64,
-        BurnTransaction<<T as frame_system::Config>::AccountId, <T as frame_system::Config>::BlockNumber>,
+        BurnTransaction<<T as frame_system::Config>::AccountId, BlockNumberFor<T>>,
         OptionQuery,
     >;
 }

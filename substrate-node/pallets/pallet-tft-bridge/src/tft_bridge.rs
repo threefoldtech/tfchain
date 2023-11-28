@@ -5,7 +5,7 @@ use frame_support::{
     pallet_prelude::DispatchResultWithPostInfo,
     traits::{Currency, ExistenceRequirement, OnUnbalanced, WithdrawReasons},
 };
-use frame_system as system;
+use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::SaturatedConversion;
 use sp_std::prelude::*;
 use substrate_stellar_sdk as stellar;
@@ -13,7 +13,7 @@ use substrate_stellar_sdk as stellar;
 impl<T: Config> Pallet<T> {
     pub fn mint_tft(
         tx_id: Vec<u8>,
-        mut tx: MintTransaction<T::AccountId, T::BlockNumber>,
+        mut tx: MintTransaction<T::AccountId, BlockNumberFor<T>>,
     ) -> DispatchResultWithPostInfo {
         let deposit_fee = DepositFee::<T>::get();
         ensure!(
@@ -37,7 +37,7 @@ impl<T: Config> Pallet<T> {
         // Remove tx from storage
         MintTransactions::<T>::remove(tx_id.clone());
         // Insert into executed transactions
-        let now = <system::Pallet<T>>::block_number();
+        let now = <frame_system::Pallet<T>>::block_number();
         tx.block = now;
         ExecutedMintTransactions::<T>::insert(tx_id, &tx);
 
