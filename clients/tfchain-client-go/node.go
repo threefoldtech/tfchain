@@ -688,8 +688,8 @@ func (s *Substrate) SetNodePowerState(identity Identity, up bool) (hash types.Ha
 	return callResponse.Hash, nil
 }
 
-// ChangePowerTarget updates the power target
-func (s *Substrate) ChangePowerTarget(identity Identity, nodeID uint32, up bool) (hash types.Hash, err error) {
+// SetNodePowerTarget updates the power target of a node
+func (s *Substrate) SetNodePowerTarget(identity Identity, nodeID uint32, up bool) (hash types.Hash, err error) {
 	cl, meta, err := s.GetClient()
 	if err != nil {
 		return hash, err
