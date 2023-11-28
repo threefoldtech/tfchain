@@ -123,6 +123,7 @@ sc-telemetry = {git = "https://github.com/paritytech/substrate", branch = "polka
 sc-tracing = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0"}
 sc-transaction-pool = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0"}
 sc-transaction-pool-api = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0"}
+sc-offchain = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v1.0.0" }
 sp-blockchain = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0"}
 sp-consensus = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0"}
 sp-keyring = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0"}

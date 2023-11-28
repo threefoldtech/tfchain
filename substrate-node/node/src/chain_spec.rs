@@ -6,8 +6,8 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 use std::convert::TryInto;
 use tfchain_runtime::opaque::SessionKeys;
 use tfchain_runtime::{
-    AccountId, AuraConfig, BalancesConfig, CouncilConfig, CouncilMembershipConfig, GenesisConfig,
-    GrandpaConfig, SessionConfig, Signature, SmartContractModuleConfig, SystemConfig,
+    AccountId, AuraConfig, BalancesConfig, CouncilConfig, CouncilMembershipConfig, GrandpaConfig,
+    RuntimeGenesisConfig, SessionConfig, Signature, SmartContractModuleConfig, SystemConfig,
     TFTBridgeModuleConfig, TFTPriceModuleConfig, TfgridModuleConfig, ValidatorSetConfig,
     WASM_BINARY,
 };
@@ -16,7 +16,7 @@ use tfchain_runtime::{
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
-pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig>;
+pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig>;
 
 /// Generate a crypto pair from seed.
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -303,12 +303,12 @@ fn testnet_genesis(
     max_tft_price: u32,
     billing_frequency: u64,
     council_members: Vec<AccountId>,
-) -> GenesisConfig {
-    GenesisConfig {
+) -> RuntimeGenesisConfig {
+    RuntimeGenesisConfig {
         system: SystemConfig {
             // Add Wasm runtime to storage.
             code: wasm_binary.to_vec(),
-            // changes_trie_config: Default::default(),
+            ..Default::default()
         },
         balances: BalancesConfig {
             // Configure endowed accounts with initial balance of 1 << 60.
@@ -342,6 +342,7 @@ fn testnet_genesis(
         },
         grandpa: GrandpaConfig {
             authorities: vec![],
+            ..Default::default()
         },
         tfgrid_module: TfgridModuleConfig {
             su_price_value: 50000,
@@ -388,6 +389,7 @@ fn testnet_genesis(
         },
         smart_contract_module: SmartContractModuleConfig {
             billing_frequency: billing_frequency,
+            _data: std::marker::PhantomData,
         },
     }
 }
