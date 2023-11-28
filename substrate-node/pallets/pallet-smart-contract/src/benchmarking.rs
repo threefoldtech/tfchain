@@ -8,7 +8,7 @@ use frame_support::{
     traits::{OnFinalize, OnInitialize},
     BoundedVec,
 };
-use frame_system::{EventRecord, Pallet as System, RawOrigin};
+use frame_system::{pallet_prelude::BlockNumberFor, EventRecord, Pallet as System, RawOrigin};
 use pallet_balances::Pallet as Balances;
 use pallet_tfgrid::{
     types::{self as tfgrid_types, LocationInput},
@@ -515,7 +515,7 @@ fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
     assert_eq!(event, &system_event);
 }
 
-pub fn run_to_block<T: Config>(n: T::BlockNumber) {
+pub fn run_to_block<T: Config>(n: BlockNumberFor<T>) {
     while System::<T>::block_number() < n {
         crate::Pallet::<T>::on_finalize(System::<T>::block_number());
         System::<T>::on_finalize(System::<T>::block_number());
@@ -586,7 +586,7 @@ fn _create_farming_policy<T: Config>() {
         10,
         8,
         9999,
-        <T as frame_system::Config>::BlockNumber::max_value(),
+        BlockNumberFor::<T>::max_value(),
         true,
         true,
         NodeCertification::Diy,
