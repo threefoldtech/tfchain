@@ -27,18 +27,15 @@ pub mod pallet {
     use crate::proposal::ProposalIndex;
     use crate::weights::WeightInfo;
     use frame_support::{
-        dispatch::{
-            DispatchResult, DispatchResultWithPostInfo, Dispatchable, GetDispatchInfo,
-            PostDispatchInfo,
-        },
+        dispatch::{DispatchResult, DispatchResultWithPostInfo, GetDispatchInfo, PostDispatchInfo},
+        pallet_prelude::*,
         traits::{EnsureOrigin, Get},
     };
-    use tfchain_support::traits::{ChangeNode, Tfgrid};
-
-    use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
     use pallet_tfgrid::farm::FarmName;
+    use sp_runtime::traits::Dispatchable;
     use sp_std::convert::TryInto;
+    use tfchain_support::traits::{ChangeNode, Tfgrid};
 
     #[pallet::config]
     pub trait Config:

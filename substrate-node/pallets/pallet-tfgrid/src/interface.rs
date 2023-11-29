@@ -1,6 +1,7 @@
 use crate::{Config, Error, InterfaceIpInput, InterfaceMacInput, InterfaceNameInput};
 use frame_support::{
-    ensure, sp_runtime::SaturatedConversion, traits::ConstU32, BoundedVec, RuntimeDebug,
+    ensure, pallet_prelude::RuntimeDebug, sp_runtime::SaturatedConversion, traits::ConstU32,
+    BoundedVec,
 };
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
