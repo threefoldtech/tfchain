@@ -102,6 +102,7 @@ try-runtime-cli = { git = "https://github.com/paritytech/polkadot-sdk", default-
 sp-keystore = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, tag = "polkadot-v1.1.0" }
 sp-staking = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, tag = "polkadot-v1.1.0" }
 sp-weights = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, tag = "polkadot-v1.1.0" }
+sp-state-machine = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, tag = "polkadot-v1.1.0" }
 
 # Client-only (with default enabled)
 polkadot-cli = { git = "https://github.com/paritytech/polkadot-sdk",  tag = "polkadot-v1.1.0" }
