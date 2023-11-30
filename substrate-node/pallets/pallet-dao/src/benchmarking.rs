@@ -3,7 +3,7 @@
 use crate::pallet::Pallet as DaoModule;
 use crate::pallet::Pallet;
 use crate::pallet::{Call, Config, Event};
-use frame_benchmarking::{account, benchmarks, whitelisted_caller, vec, Vec, Box};
+use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::{assert_ok, BoundedVec};
 use frame_system::{Call as SystemCall, EventRecord, Pallet as System, RawOrigin};
 use pallet_membership::Pallet as CouncilMembership;
@@ -16,7 +16,12 @@ use sp_runtime::{
     traits::{Hash, StaticLookup},
     DispatchError,
 };
-use sp_std::convert::{TryFrom, TryInto};
+use sp_std::{
+    boxed::Box,
+    convert::{TryFrom, TryInto},
+    vec,
+    vec::Vec,
+};
 use tfchain_support::types::IP4;
 
 const GIGABYTE: u64 = 1024 * 1024 * 1024;

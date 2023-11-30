@@ -2,10 +2,13 @@
 
 use super::*;
 use crate::Pallet as BurningModule;
-use frame_benchmarking::{benchmarks, whitelisted_caller, Zero};
+use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::traits::Currency;
 use frame_system::{pallet_prelude::BlockNumberFor, EventRecord, Pallet as System, RawOrigin};
-use sp_runtime::{traits::StaticLookup, SaturatedConversion};
+use sp_runtime::{
+    traits::{StaticLookup, Zero},
+    SaturatedConversion,
+};
 use sp_std::vec;
 
 benchmarks! {
