@@ -6,9 +6,11 @@ use sp_std::{vec, vec::Vec};
 use sp_weights::Weight;
 
 #[cfg(feature = "try-runtime")]
-use frame_support::{dispatch::DispatchError, ensure};
+use frame_support::ensure;
 #[cfg(feature = "try-runtime")]
 use parity_scale_codec::{Decode, Encode};
+#[cfg(feature = "try-runtime")]
+use sp_runtime::DispatchError;
 
 pub struct FixFarmNodeIndexMap<T: Config>(PhantomData<T>);
 

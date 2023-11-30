@@ -10,9 +10,11 @@ use tfchain_support::{
 };
 
 #[cfg(feature = "try-runtime")]
-use frame_support::{dispatch::DispatchError, ensure};
+use frame_support::ensure;
 #[cfg(feature = "try-runtime")]
 use parity_scale_codec::{Decode, Encode};
+#[cfg(feature = "try-runtime")]
+use sp_runtime::DispatchError;
 #[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
 

@@ -7,7 +7,9 @@ use sp_core::Get;
 use sp_std::{marker::PhantomData, vec, vec::Vec};
 
 #[cfg(feature = "try-runtime")]
-use frame_support::{dispatch::DispatchError, ensure};
+use frame_support::ensure;
+#[cfg(feature = "try-runtime")]
+use sp_runtime::DispatchError;
 
 pub struct CleanStorageState<T: Config>(PhantomData<T>);
 
