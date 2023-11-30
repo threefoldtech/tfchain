@@ -5,7 +5,7 @@ use crate::{
 use frame_support::{
     assert_noop, assert_ok,
     dispatch::Pays,
-    traits::{LockableCurrency, WithdrawReasons},
+    traits::{Currency, ExistenceRequirement, LockableCurrency, WithdrawReasons},
     BoundedVec,
 };
 use frame_system::{EventRecord, Phase, RawOrigin};
@@ -1506,9 +1506,10 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
 
         let extrinsic_fee = 10000;
         Balances::transfer(
-            RuntimeOrigin::signed(bob()),
-            alice(),
+            &bob(),
+            &alice(),
             initial_twin_balance - total_amount_billed - extrinsic_fee,
+            ExistenceRequirement::AllowDeath,
         )
         .unwrap();
 
@@ -1641,7 +1642,13 @@ fn test_restore_node_contract_in_grace_works() {
         run_to_block(31, Some(&mut pool_state));
         run_to_block(41, Some(&mut pool_state));
         // Transfer some balance to the owner of the contract to trigger the grace period to stop
-        Balances::transfer(RuntimeOrigin::signed(bob()), charlie(), 100000000).unwrap();
+        Balances::transfer(
+            &bob(),
+            &charlie(),
+            100000000,
+            ExistenceRequirement::AllowDeath,
+        )
+        .unwrap();
         run_to_block(52, Some(&mut pool_state));
         run_to_block(62, Some(&mut pool_state));
 
@@ -1881,7 +1888,13 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
         let twin = TfgridModule::twins(2).unwrap();
         let usable_balance = Balances::usable_balance(&twin.account_id);
         assert_ne!(usable_balance, 0);
-        Balances::transfer(RuntimeOrigin::signed(bob()), alice(), usable_balance).unwrap();
+        Balances::transfer(
+            &bob(),
+            &alice(),
+            usable_balance,
+            ExistenceRequirement::AllowDeath,
+        )
+        .unwrap();
 
         // Last amount due is the same as the first one
         assert_ne!(amount_due_as_u128, 0);
@@ -2258,7 +2271,13 @@ fn test_restore_rent_contract_in_grace_works() {
         run_to_block(31, Some(&mut pool_state));
 
         // Transfer some balance to the owner of the contract to trigger the grace period to stop
-        Balances::transfer(RuntimeOrigin::signed(bob()), charlie(), 100000000).unwrap();
+        Balances::transfer(
+            &bob(),
+            &charlie(),
+            100000000,
+            ExistenceRequirement::AllowDeath,
+        )
+        .unwrap();
 
         pool_state
             .write()
@@ -2361,7 +2380,13 @@ fn test_restore_rent_contract_and_node_contracts_in_grace_works() {
         run_to_block(32, Some(&mut pool_state));
 
         // Transfer some balance to the owner of the contract to trigger the grace period to stop
-        Balances::transfer(RuntimeOrigin::signed(bob()), charlie(), 100000000).unwrap();
+        Balances::transfer(
+            &bob(),
+            &charlie(),
+            100000000,
+            ExistenceRequirement::AllowDeath,
+        )
+        .unwrap();
 
         pool_state
             .write()
@@ -3319,7 +3344,13 @@ fn test_service_contract_bill_out_of_funds_fails() {
         // Drain consumer account
         let consumer_twin = TfgridModule::twins(2).unwrap();
         let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
-        Balances::transfer(RuntimeOrigin::signed(bob()), alice(), consumer_balance).unwrap();
+        Balances::transfer(
+            &bob(),
+            &alice(),
+            consumer_balance,
+            ExistenceRequirement::AllowDeath,
+        )
+        .unwrap();
         let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
         assert_eq!(consumer_balance, 0);
 
