@@ -5,7 +5,7 @@ use crate::{
 use frame_support::{
     assert_noop, assert_ok,
     dispatch::Pays,
-    traits::{Currency, ExistenceRequirement, LockableCurrency, WithdrawReasons},
+    traits::{LockableCurrency, WithdrawReasons},
     BoundedVec,
 };
 use frame_system::{EventRecord, Phase, RawOrigin};
@@ -1505,11 +1505,10 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
         let total_amount_billed = initial_twin_balance - usable_balance;
 
         let extrinsic_fee = 10000;
-        Balances::transfer(
-            &bob(),
-            &alice(),
+        Balances::transfer_keep_alive(
+            RuntimeOrigin::signed(bob()),
+            alice(),
             initial_twin_balance - total_amount_billed - extrinsic_fee,
-            ExistenceRequirement::AllowDeath,
         )
         .unwrap();
 
@@ -1642,13 +1641,7 @@ fn test_restore_node_contract_in_grace_works() {
         run_to_block(31, Some(&mut pool_state));
         run_to_block(41, Some(&mut pool_state));
         // Transfer some balance to the owner of the contract to trigger the grace period to stop
-        Balances::transfer(
-            &bob(),
-            &charlie(),
-            100000000,
-            ExistenceRequirement::AllowDeath,
-        )
-        .unwrap();
+        Balances::transfer_keep_alive(RuntimeOrigin::signed(bob()), charlie(), 100000000).unwrap();
         run_to_block(52, Some(&mut pool_state));
         run_to_block(62, Some(&mut pool_state));
 
@@ -1861,7 +1854,9 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
             .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 11);
         run_to_block(11, Some(&mut pool_state));
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, 2, 10);
+        let bob_twin_id = 2;
+        let (amount_due_as_u128, discount_received) =
+            calculate_tft_cost(contract_id, bob_twin_id, 10);
         assert_ne!(amount_due_as_u128, 0);
         check_report_cost(
             contract_id,
@@ -1870,39 +1865,33 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
             discount_received.clone(),
         );
 
-        let twin = TfgridModule::twins(2).unwrap();
-        let usable_balance = Balances::usable_balance(&twin.account_id);
-        let free_balance = Balances::free_balance(&twin.account_id);
-        assert_ne!(usable_balance, free_balance);
+        let bob_twin = TfgridModule::twins(bob_twin_id).unwrap();
+        let usable_balance = Balances::usable_balance(&bob_twin.account_id);
+        let free_balance = Balances::free_balance(&bob_twin.account_id);
+        assert_ne!(usable_balance, free_balance); // there is some locked balance
+        let locked_balance = free_balance - usable_balance;
 
         run_to_block(13, Some(&mut pool_state));
         // cancel contract
         // it will bill before removing the contract and it should bill all
         // reserved balance
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, 2, 2);
+        let (amount_due_as_u128, discount_received) =
+            calculate_tft_cost(contract_id, bob_twin_id, 2);
+
         assert_ok!(SmartContractModule::cancel_contract(
             RuntimeOrigin::signed(bob()),
             contract_id
         ));
 
-        let twin = TfgridModule::twins(2).unwrap();
-        let usable_balance = Balances::usable_balance(&twin.account_id);
-        assert_ne!(usable_balance, 0);
-        Balances::transfer(
-            &bob(),
-            &alice(),
-            usable_balance,
-            ExistenceRequirement::AllowDeath,
-        )
-        .unwrap();
-
         // Last amount due is the same as the first one
         assert_ne!(amount_due_as_u128, 0);
         check_report_cost(contract_id, amount_due_as_u128, 13, discount_received);
 
-        let usable_balance = Balances::usable_balance(&twin.account_id);
-        let free_balance = Balances::free_balance(&twin.account_id);
-        assert_eq!(usable_balance, free_balance);
+        let usable_balance = Balances::usable_balance(&bob_twin.account_id);
+        let past_free_balance = free_balance;
+        let free_balance = Balances::free_balance(&bob_twin.account_id);
+        assert_eq!(usable_balance, free_balance); // there is no more locked balance
+        assert_eq!(past_free_balance - free_balance, locked_balance); // locked balance was transfered to alice
     });
 }
 
@@ -2271,13 +2260,7 @@ fn test_restore_rent_contract_in_grace_works() {
         run_to_block(31, Some(&mut pool_state));
 
         // Transfer some balance to the owner of the contract to trigger the grace period to stop
-        Balances::transfer(
-            &bob(),
-            &charlie(),
-            100000000,
-            ExistenceRequirement::AllowDeath,
-        )
-        .unwrap();
+        Balances::transfer_keep_alive(RuntimeOrigin::signed(bob()), charlie(), 100000000).unwrap();
 
         pool_state
             .write()
@@ -2380,13 +2363,7 @@ fn test_restore_rent_contract_and_node_contracts_in_grace_works() {
         run_to_block(32, Some(&mut pool_state));
 
         // Transfer some balance to the owner of the contract to trigger the grace period to stop
-        Balances::transfer(
-            &bob(),
-            &charlie(),
-            100000000,
-            ExistenceRequirement::AllowDeath,
-        )
-        .unwrap();
+        Balances::transfer_keep_alive(RuntimeOrigin::signed(bob()), charlie(), 100000000).unwrap();
 
         pool_state
             .write()
@@ -3342,17 +3319,11 @@ fn test_service_contract_bill_out_of_funds_fails() {
         approve_service_consumer_contract(service_contract_id);
 
         // Drain consumer account
-        let consumer_twin = TfgridModule::twins(2).unwrap();
-        let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
-        Balances::transfer(
-            &bob(),
-            &alice(),
-            consumer_balance,
-            ExistenceRequirement::AllowDeath,
-        )
-        .unwrap();
-        let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
-        assert_eq!(consumer_balance, 0);
+        let consumer_twin_id = 2;
+        let consumer_twin = TfgridModule::twins(consumer_twin_id).unwrap();
+        Balances::transfer_all(RuntimeOrigin::signed(bob()), alice(), true).unwrap();
+        let consumer_free_balance = Balances::free_balance(&consumer_twin.account_id);
+        assert_eq!(consumer_free_balance, EXISTENTIAL_DEPOSIT);
 
         // Bill 1h after contract approval
         run_to_block(601, Some(&mut pool_state));
@@ -3412,7 +3383,7 @@ fn test_lock() {
 
         let id: u64 = 1;
         // Try to lock less than EXISTENTIAL_DEPOSIT should fail
-        Balances::set_lock(id.to_be_bytes(), &bob(), 100, WithdrawReasons::all());
+        Balances::set_lock(id.to_be_bytes(), &bob(), 1, WithdrawReasons::all());
 
         // usable balance should now return free balance - EXISTENTIAL_DEPOSIT cause there was some activity
         let usable_balance = Balances::usable_balance(&bob());
@@ -3421,7 +3392,7 @@ fn test_lock() {
 
         // ----- INITIAL ------ //
         // Try to lock more than EXISTENTIAL_DEPOSIT should succeed
-        let to_lock = 100 + EXISTENTIAL_DEPOSIT;
+        let to_lock = 1 + EXISTENTIAL_DEPOSIT;
 
         Balances::set_lock(id.to_be_bytes(), &bob(), to_lock, WithdrawReasons::all());
 
@@ -3432,7 +3403,7 @@ fn test_lock() {
 
         // ----- UPDATE ------ //
         // updating a lock should succeed
-        let to_lock = 500 + EXISTENTIAL_DEPOSIT;
+        let to_lock = 10 + EXISTENTIAL_DEPOSIT;
 
         Balances::set_lock(id.to_be_bytes(), &bob(), to_lock, WithdrawReasons::all());
 
