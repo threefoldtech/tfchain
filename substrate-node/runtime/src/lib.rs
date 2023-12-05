@@ -777,8 +777,7 @@ type Migrations = (
     pallet_tfgrid::migrations::v17::FixFarmPublicIps<Runtime>,
     pallet_tft_bridge::migrations::v2::MigrateBurnTransactionsV2<Runtime>,
     pallet_scheduler::migration::v3::MigrateToV4<Runtime>,
-    // pallet_balances::migration::MigrateManyToTrackInactive<Runtime, ?>,
-    migrations::update_storage_version::UpdateStorageVersion,
+    migrations::update_storage_version::PalletBalancesToV1,
     migrations::update_storage_version::PalletSessionToV1<Runtime>,
 );
 

@@ -1,7 +1,7 @@
 use frame_support::pallet_prelude::PhantomData;
 
-pub struct UpdateStorageVersion;
-impl frame_support::traits::OnRuntimeUpgrade for UpdateStorageVersion {
+pub struct PalletBalancesToV1;
+impl frame_support::traits::OnRuntimeUpgrade for PalletBalancesToV1 {
     fn on_runtime_upgrade() -> frame_support::weights::Weight {
         frame_support::pallet_prelude::StorageVersion::new(1).put::<crate::Balances>();
 
