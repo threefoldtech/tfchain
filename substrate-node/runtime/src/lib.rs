@@ -776,6 +776,7 @@ pub type Executive = frame_executive::Executive<
 type Migrations = (
     pallet_tfgrid::migrations::v17::FixFarmPublicIps<Runtime>,
     pallet_tft_bridge::migrations::v2::MigrateBurnTransactionsV2<Runtime>,
+    migrations::update_storage_version::UpdateStorageVersion,
 );
 
 // follows Substrate's non destructive way of eliminating  otherwise required
