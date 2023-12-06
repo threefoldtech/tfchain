@@ -61,7 +61,7 @@ pub mod pallet {
         _,
         Blake2_128Concat,
         Vec<u8>,
-        MintTransaction<T::AccountId, T::BlockNumber>,
+        MintTransaction<T::AccountId, BlockNumberFor<T>>,
         OptionQuery,
     >;
 
@@ -71,7 +71,7 @@ pub mod pallet {
         _,
         Blake2_128Concat,
         Vec<u8>,
-        MintTransaction<T::AccountId, T::BlockNumber>,
+        MintTransaction<T::AccountId, BlockNumberFor<T>>,
         OptionQuery,
     >;
 
@@ -81,7 +81,7 @@ pub mod pallet {
         _,
         Blake2_128Concat,
         u64,
-        BurnTransaction<T::AccountId, T::BlockNumber>,
+        BurnTransaction<T::AccountId, BlockNumberFor<T>>,
         OptionQuery,
     >;
 
@@ -91,19 +91,19 @@ pub mod pallet {
         _,
         Blake2_128Concat,
         u64,
-        BurnTransaction<T::AccountId, T::BlockNumber>,
+        BurnTransaction<T::AccountId, BlockNumberFor<T>>,
         OptionQuery,
     >;
 
     #[pallet::storage]
     #[pallet::getter(fn refund_transactions)]
     pub type RefundTransactions<T: Config> =
-        StorageMap<_, Blake2_128Concat, Vec<u8>, RefundTransaction<T::BlockNumber>, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, Vec<u8>, RefundTransaction<BlockNumberFor<T>>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn executed_refund_transactions)]
     pub type ExecutedRefundTransactions<T: Config> =
-        StorageMap<_, Blake2_128Concat, Vec<u8>, RefundTransaction<T::BlockNumber>, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, Vec<u8>, RefundTransaction<BlockNumberFor<T>>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn burn_transaction_id)]
@@ -147,20 +147,20 @@ pub mod pallet {
         // Minting events
         MintTransactionProposed(Vec<u8>, T::AccountId, u64),
         MintTransactionVoted(Vec<u8>),
-        MintCompleted(MintTransaction<T::AccountId, T::BlockNumber>, Vec<u8>),
+        MintCompleted(MintTransaction<T::AccountId, BlockNumberFor<T>>, Vec<u8>),
         MintTransactionExpired(Vec<u8>, u64, T::AccountId),
         // Burn events
         BurnTransactionCreated(u64, T::AccountId, Vec<u8>, u64),
         BurnTransactionProposed(u64, Vec<u8>, u64),
         BurnTransactionSignatureAdded(u64, StellarSignature),
         BurnTransactionReady(u64),
-        BurnTransactionProcessed(BurnTransaction<T::AccountId, T::BlockNumber>),
+        BurnTransactionProcessed(BurnTransaction<T::AccountId, BlockNumberFor<T>>),
         BurnTransactionExpired(u64, Option<T::AccountId>, Vec<u8>, u64),
         // Refund events
         RefundTransactionCreated(Vec<u8>, Vec<u8>, u64),
         RefundTransactionsignatureAdded(Vec<u8>, StellarSignature),
         RefundTransactionReady(Vec<u8>),
-        RefundTransactionProcessed(RefundTransaction<T::BlockNumber>),
+        RefundTransactionProcessed(RefundTransaction<BlockNumberFor<T>>),
         RefundTransactionExpired(Vec<u8>, Vec<u8>, u64),
     }
 
@@ -190,6 +190,7 @@ pub mod pallet {
     }
 
     #[pallet::genesis_config]
+    #[derive(frame_support::DefaultNoBound)]
     pub struct GenesisConfig<T: Config> {
         pub validator_accounts: Option<Vec<T::AccountId>>,
         pub fee_account: Option<T::AccountId>,
@@ -197,21 +198,8 @@ pub mod pallet {
         pub deposit_fee: u64,
     }
 
-    // The default value for the genesis config type.
-    #[cfg(feature = "std")]
-    impl<T: Config> Default for GenesisConfig<T> {
-        fn default() -> Self {
-            Self {
-                validator_accounts: None,
-                fee_account: None,
-                withdraw_fee: Default::default(),
-                deposit_fee: Default::default(),
-            }
-        }
-    }
-
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+    impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
         fn build(&self) {
             if let Some(validator_accounts) = &self.validator_accounts {
                 Validators::<T>::put(validator_accounts);
@@ -227,7 +215,7 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_finalize(block: T::BlockNumber) {
+        fn on_finalize(block: BlockNumberFor<T>) {
             let current_block_u64: u64 = block.saturated_into::<u64>();
 
             for (tx_id, mut tx) in BurnTransactions::<T>::iter() {

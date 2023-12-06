@@ -51,7 +51,7 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        BurnTransactionCreated(T::AccountId, BalanceOf<T>, T::BlockNumber, Vec<u8>),
+        BurnTransactionCreated(T::AccountId, BalanceOf<T>, BlockNumberFor<T>, Vec<u8>),
     }
 
     #[pallet::error]
@@ -62,7 +62,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn burns)]
     pub type Burns<T: Config> =
-        StorageValue<_, Vec<Burn<T::AccountId, BalanceOf<T>, T::BlockNumber>>, OptionQuery>;
+        StorageValue<_, Vec<Burn<T::AccountId, BalanceOf<T>, BlockNumberFor<T>>>, OptionQuery>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {

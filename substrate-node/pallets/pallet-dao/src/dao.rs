@@ -14,6 +14,7 @@ use frame_support::{
     traits::Get,
     weights::Weight,
 };
+use frame_system::pallet_prelude::BlockNumberFor;
 use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf, TfgridNode};
 use sp_runtime::traits::{Dispatchable, Hash};
 use sp_std::prelude::*;
@@ -29,7 +30,7 @@ impl<T: Config> Pallet<T> {
         action: Box<<T as Config>::Proposal>,
         description: Vec<u8>,
         link: Vec<u8>,
-        duration: Option<T::BlockNumber>,
+        duration: Option<BlockNumberFor<T>>,
     ) -> DispatchResultWithPostInfo {
         Self::is_council_member(who.clone())?;
 
@@ -43,7 +44,7 @@ impl<T: Config> Pallet<T> {
         let mut end = now + T::MotionDuration::get();
         if let Some(motion_duration) = duration {
             ensure!(
-                motion_duration < T::BlockNumber::from(constants::time::DAYS * 30),
+                motion_duration < BlockNumberFor::<T>::from(constants::time::DAYS * 30),
                 Error::<T>::InvalidProposalDuration
             );
             end = now + motion_duration;

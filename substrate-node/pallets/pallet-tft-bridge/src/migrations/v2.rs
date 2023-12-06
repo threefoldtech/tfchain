@@ -1,8 +1,15 @@
 use crate::*;
-use frame_support::log::{debug, info};
-use frame_support::{traits::Get, traits::OnRuntimeUpgrade, weights::Weight};
+use frame_support::{
+    log::{debug, info},
+    traits::Get,
+    traits::OnRuntimeUpgrade,
+    weights::Weight,
+};
+use frame_system::pallet_prelude::BlockNumberFor;
 use sp_std::marker::PhantomData;
 
+#[cfg(feature = "try-runtime")]
+use frame_support::{dispatch::DispatchError, ensure};
 #[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
 
@@ -10,11 +17,11 @@ pub struct MigrateBurnTransactionsV2<T: Config>(PhantomData<T>);
 
 impl<T: Config> OnRuntimeUpgrade for MigrateBurnTransactionsV2<T> {
     #[cfg(feature = "try-runtime")]
-    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+    fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
         if PalletVersion::<T>::get() != types::StorageVersion::V1 {
             return Ok(Vec::<u8>::new());
-        };
+        }
 
         let burn_transactions_count: u64 =
             migrations::types::v1::BurnTransactions::<T>::iter().count() as u64;
@@ -31,7 +38,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateBurnTransactionsV2<T> {
         );
 
         info!("👥  TFT-BRIDGE pallet to V1 passes PRE migrate checks ✅",);
-        return Ok(Vec::<u8>::new());
+        Ok(Vec::<u8>::new())
     }
 
     fn on_runtime_upgrade() -> Weight {
@@ -44,12 +51,17 @@ impl<T: Config> OnRuntimeUpgrade for MigrateBurnTransactionsV2<T> {
     }
 
     #[cfg(feature = "try-runtime")]
-    fn post_upgrade(_pre_burn_transactions_count: Vec<u8>) -> Result<(), &'static str> {
+    fn post_upgrade(
+        _pre_burn_transactions_count: Vec<u8>,
+    ) -> Result<(), sp_runtime::TryRuntimeError> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
-        if PalletVersion::<T>::get() != types::StorageVersion::V2 {
-            return Ok(());
-        }
-        let burn_transactions_count: u64 = migrations::types::v2::BurnTransactions::<T>::iter().count() as u64;
+        ensure!(
+            PalletVersion::<T>::get() == types::StorageVersion::V2,
+            DispatchError::Other("Unexpected pallet version")
+        );
+
+        let burn_transactions_count: u64 =
+            migrations::types::v2::BurnTransactions::<T>::iter().count() as u64;
         info!(
             "🔎 MigrateBurnTransactionsV2 post migration: Number of existing burn transactions {:?}",
             burn_transactions_count
@@ -71,11 +83,14 @@ pub fn migrate_burn_transactions<T: Config>() -> frame_support::weights::Weight 
 
     let mut read_writes = 0;
 
-    migrations::types::v2::BurnTransactions::<T>::translate::<super::types::v1::BurnTransaction<T::BlockNumber>, _>(
-        |k, burn_transaction| {
-            debug!("migrated burn transaction: {:?}", k);
+    migrations::types::v2::BurnTransactions::<T>::translate::<
+        super::types::v1::BurnTransaction<BlockNumberFor<T>>,
+        _,
+    >(|k, burn_transaction| {
+        debug!("migrated burn transaction: {:?}", k);
 
-            let new_burn_transaction = migrations::types::v2::BurnTransaction::<T::AccountId, T::BlockNumber> {
+        let new_burn_transaction =
+            migrations::types::v2::BurnTransaction::<T::AccountId, BlockNumberFor<T>> {
                 block: burn_transaction.block,
                 amount: burn_transaction.amount,
                 source: None,
@@ -84,29 +99,29 @@ pub fn migrate_burn_transactions<T: Config>() -> frame_support::weights::Weight 
                 sequence_number: burn_transaction.sequence_number,
             };
 
-            read_writes += 1;
-            Some(new_burn_transaction)
-        },
-    );
+        read_writes += 1;
+        Some(new_burn_transaction)
+    });
 
-    migrations::types::v2::ExecutedBurnTransactions::<T>::translate::<super::types::v1::BurnTransaction<T::BlockNumber>, _>(
-        |k, executed_burn_transaction| {
-            debug!("migrated executed burn transaction: {:?}", k);
+    migrations::types::v2::ExecutedBurnTransactions::<T>::translate::<
+        super::types::v1::BurnTransaction<BlockNumberFor<T>>,
+        _,
+    >(|k, executed_burn_transaction| {
+        debug!("migrated executed burn transaction: {:?}", k);
 
-            let new_executed_burn_transaction =
-                migrations::types::v2::BurnTransaction::<T::AccountId, T::BlockNumber> {
-                    block: executed_burn_transaction.block,
-                    amount: executed_burn_transaction.amount,
-                    source: None,
-                    target: executed_burn_transaction.target,
-                    signatures: executed_burn_transaction.signatures,
-                    sequence_number: executed_burn_transaction.sequence_number,
-                };
+        let new_executed_burn_transaction =
+            migrations::types::v2::BurnTransaction::<T::AccountId, BlockNumberFor<T>> {
+                block: executed_burn_transaction.block,
+                amount: executed_burn_transaction.amount,
+                source: None,
+                target: executed_burn_transaction.target,
+                signatures: executed_burn_transaction.signatures,
+                sequence_number: executed_burn_transaction.sequence_number,
+            };
 
-            read_writes += 1;
-            Some(new_executed_burn_transaction)
-        },
-    );
+        read_writes += 1;
+        Some(new_executed_burn_transaction)
+    });
 
     // Update pallet storage version
     PalletVersion::<T>::set(types::StorageVersion::V2);

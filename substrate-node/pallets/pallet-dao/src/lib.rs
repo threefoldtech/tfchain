@@ -57,7 +57,7 @@ pub mod pallet {
             + GetDispatchInfo;
 
         /// The time-out for council motions.
-        type MotionDuration: Get<Self::BlockNumber>;
+        type MotionDuration: Get<BlockNumberFor<Self>>;
 
         /// The minimum amount of vetos to dissaprove a proposal
         type MinVetos: Get<u32>;
@@ -100,7 +100,7 @@ pub mod pallet {
         _,
         Identity,
         T::Hash,
-        proposal::DaoVotes<T::BlockNumber, T::AccountId>,
+        proposal::DaoVotes<BlockNumberFor<T>, T::AccountId>,
         OptionQuery,
     >;
 
@@ -189,7 +189,7 @@ pub mod pallet {
             action: Box<<T as Config>::Proposal>,
             description: Vec<u8>,
             link: Vec<u8>,
-            duration: Option<T::BlockNumber>,
+            duration: Option<BlockNumberFor<T>>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             Self::_propose(who, threshold, action, description, link, duration)

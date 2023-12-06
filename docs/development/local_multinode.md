@@ -9,7 +9,8 @@ cd substrate-node
 cargo build
 ```
 
-you can 
+you can
+
 ## Start the network
 
 In a terminal window execute the following command:
@@ -20,8 +21,7 @@ In a terminal window execute the following command:
     --chain local \
     --alice \
     --port 30333 \
-    --ws-port 9945 \
-    --rpc-port 9933 \
+    --rpc-port 9945 \
     --node-key 0000000000000000000000000000000000000000000000000000000000000001 \
     --validator
 ```
@@ -36,8 +36,7 @@ In a second terminal window executing the following command:
     --chain local \
     --bob \
     --port 30334 \
-    --ws-port 9946 \
-    --rpc-port 9934 \
+    --rpc-port 9946 \
     --telemetry-url "wss://telemetry.polkadot.io/submit/ 0" \
     --validator \
     --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp
@@ -73,25 +72,23 @@ Verify that you see lines similar to the following in the terminal where you sta
 
 In these lines, you can see the following information about your blockchain:
 
-- The second node identity was discovered on the network (12D3KooWBCbmQovz78Hq7MzPxdx9d1gZzXMsn6HtWj29bW51YUKB).
-- The node has a one peer (1 peers).
-- The nodes have produced some blocks (best: #3 (0x0c55…d51b)).
-- The blocks are being finalized (finalized #1 (0xf086…9847)).
+*   The second node identity was discovered on the network (12D3KooWBCbmQovz78Hq7MzPxdx9d1gZzXMsn6HtWj29bW51YUKB).
+*   The node has a one peer (1 peers).
+*   The nodes have produced some blocks (best: #3 (0x0c55…d51b)).
+*   The blocks are being finalized (finalized #1 (0xf086…9847)).
 
 ## Review the command-line options
 
 Before moving on, have a look at how the following options are used to start the node.
 
-- --base-path Specifies the directory for storing all of the data related to this chain.
-- --chain local Specifies the chain specification to use. Valid predefined chain specifications include local, development, and staging.
-- --alice Adds the predefined keys for the alice account to the node's keystore. With this setting, the alice account is used for block production and finalization.
-- --port 30333 Specifies the port to listen on for peer-to-peer (p2p) traffic. Because this tutorial uses two nodes running on the same physical computer to simulate a network, you must explicitly specify a different port for at least one account.
-- --ws-port 9945 Specifies the port to listen on for incoming WebSocket traffic. The default port is 9944. This tutorial uses a custom web socket port number (9945).
-- --rpc-port 9933 Specifies the port to listen on for incoming RPC traffic. The default port is 9933.
-- --node-key <key> Specifies the Ed25519 secret key to use for libp2p networking. You should only use this option for development and testing.
-- --telemetry-url Specifies where to send telemetry data. For this tutorial, you can send telemetry data to a server hosted by Parity that is available for anyone to use.
-- --validator Specifies that this node participates in block production and finalization for the network.
-
+*   \--base-path Specifies the directory for storing all of the data related to this chain.
+*   \--chain local Specifies the chain specification to use. Valid predefined chain specifications include local, development, and staging.
+*   \--alice Adds the predefined keys for the alice account to the node's keystore. With this setting, the alice account is used for block production and finalization.
+*   \--port 30333 Specifies the port to listen on for peer-to-peer (p2p) traffic. Because this tutorial uses two nodes running on the same physical computer to simulate a network, you must explicitly specify a different port for at least one account.
+*   \--rpc-port 9945 Specifies the port to listen on for incoming RPC traffic. The default port is 9944.
+*   \--node-key <key> Specifies the Ed25519 secret key to use for libp2p networking. You should only use this option for development and testing.
+*   \--telemetry-url Specifies where to send telemetry data. For this tutorial, you can send telemetry data to a server hosted by Parity that is available for anyone to use.
+*   \--validator Specifies that this node participates in block production and finalization for the network.
 
 ## What next
 

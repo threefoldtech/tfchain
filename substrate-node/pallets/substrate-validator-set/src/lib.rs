@@ -102,21 +102,13 @@ pub mod pallet {
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
     #[pallet::genesis_config]
+    #[derive(frame_support::DefaultNoBound)]
     pub struct GenesisConfig<T: Config> {
         pub initial_validators: Vec<T::AccountId>,
     }
 
-    #[cfg(feature = "std")]
-    impl<T: Config> Default for GenesisConfig<T> {
-        fn default() -> Self {
-            Self {
-                initial_validators: Default::default(),
-            }
-        }
-    }
-
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+    impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
         fn build(&self) {
             Pallet::<T>::initialize_validators(&self.initial_validators);
         }
@@ -206,20 +198,20 @@ pub mod pallet {
         fn start_session(_start_index: u32) {}
     }
 
-    impl<T: Config> EstimateNextSessionRotation<T::BlockNumber> for Pallet<T> {
-        fn average_session_length() -> T::BlockNumber {
+    impl<T: Config> EstimateNextSessionRotation<BlockNumberFor<T>> for Pallet<T> {
+        fn average_session_length() -> BlockNumberFor<T> {
             Zero::zero()
         }
 
         fn estimate_current_session_progress(
-            _now: T::BlockNumber,
+            _now: BlockNumberFor<T>,
         ) -> (Option<sp_runtime::Permill>, frame_support::dispatch::Weight) {
             (None, Zero::zero())
         }
 
         fn estimate_next_session_rotation(
-            _now: T::BlockNumber,
-        ) -> (Option<T::BlockNumber>, frame_support::dispatch::Weight) {
+            _now: BlockNumberFor<T>,
+        ) -> (Option<BlockNumberFor<T>>, frame_support::dispatch::Weight) {
             (None, Zero::zero())
         }
     }

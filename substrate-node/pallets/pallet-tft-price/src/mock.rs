@@ -2,7 +2,6 @@
 
 use super::*;
 use crate::{self as pallet_tft_price, tft_price::KEY_TYPE};
-use frame_support::traits::GenesisBuild;
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::mocking;
 use frame_system::EnsureRoot;
@@ -17,11 +16,11 @@ use sp_io::TestExternalities;
 use sp_keystore::{testing::MemoryKeystore, Keystore, KeystoreExt};
 use sp_runtime::{
     impl_opaque_keys,
-    testing::{Header, UintAuthorityId},
+    testing::UintAuthorityId,
     traits::{
         BlakeTwo256, Extrinsic as ExtrinsicT, IdentifyAccount, IdentityLookup, OpaqueKeys, Verify,
     },
-    MultiSignature,
+    BuildStorage, MultiSignature,
 };
 use sp_std::marker::PhantomData;
 use std::cell::RefCell;
@@ -71,12 +70,9 @@ impl OpaqueKeys for PreUpgradeMockSessionKeys {
 
 // For testing the module, we construct a mock runtime.
 construct_runtime!(
-    pub enum TestRuntime where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum TestRuntime
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>},
         TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Config<T>, Event<T>},
         Authorship: pallet_authorship::{Pallet, Storage},
         ValidatorSet: substrate_validator_set::{Event<T>},
@@ -90,25 +86,24 @@ parameter_types! {
 
 impl frame_system::Config for TestRuntime {
     type BaseCallFilter = frame_support::traits::Everything;
+    type Block = Block;
     type BlockWeights = ();
     type BlockLength = ();
-    type RuntimeOrigin = RuntimeOrigin;
-    type Index = u64;
+    type AccountId = AccountId;
     type RuntimeCall = RuntimeCall;
-    type BlockNumber = u64;
+    type Lookup = IdentityLookup<Self::AccountId>;
+    type Nonce = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = AccountId;
-    type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
     type RuntimeEvent = RuntimeEvent;
+    type RuntimeOrigin = RuntimeOrigin;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
     type PalletInfo = PalletInfo;
-    type AccountData = ();
     type OnNewAccount = ();
     type OnKilledAccount = ();
+    type AccountData = ();
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
@@ -274,8 +269,8 @@ impl ExternalityBuilder {
             .sr25519_generate_new(KEY_TYPE, Some(&format!("{}/hunter1", PHRASE)))
             .unwrap();
 
-        let mut storage = frame_system::GenesisConfig::default()
-            .build_storage::<TestRuntime>()
+        let mut storage = frame_system::GenesisConfig::<TestRuntime>::default()
+            .build_storage()
             .unwrap();
 
         let session_genesis = pallet_session::GenesisConfig::<TestRuntime> {

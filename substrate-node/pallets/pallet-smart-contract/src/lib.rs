@@ -389,22 +389,14 @@ pub mod pallet {
     }
 
     #[pallet::genesis_config]
-    pub struct GenesisConfig {
+    #[derive(frame_support::DefaultNoBound)]
+    pub struct GenesisConfig<T> {
         pub billing_frequency: u64,
-    }
-
-    // The default value for the genesis config type.
-    #[cfg(feature = "std")]
-    impl Default for GenesisConfig {
-        fn default() -> Self {
-            Self {
-                billing_frequency: 600,
-            }
-        }
+        pub _data: PhantomData<T>,
     }
 
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig {
+    impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
         fn build(&self) {
             BillingFrequency::<T>::put(self.billing_frequency);
         }
@@ -670,7 +662,7 @@ pub mod pallet {
             weight_used
         }
 
-        fn offchain_worker(block_number: T::BlockNumber) {
+        fn offchain_worker(block_number: BlockNumberFor<T>) {
             Self::bill_conttracts_for_block(block_number);
         }
     }
