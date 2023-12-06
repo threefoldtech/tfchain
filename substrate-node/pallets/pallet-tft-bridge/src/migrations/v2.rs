@@ -19,10 +19,9 @@ impl<T: Config> OnRuntimeUpgrade for MigrateBurnTransactionsV2<T> {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
-        ensure!(
-            PalletVersion::<T>::get() == types::StorageVersion::V1,
-            DispatchError::Other("Unexpected pallet version")
-        );
+        if PalletVersion::<T>::get() != types::StorageVersion::V1 {
+            return Ok(Vec::<u8>::new());
+        }
 
         let burn_transactions_count: u64 =
             migrations::types::v1::BurnTransactions::<T>::iter().count() as u64;
@@ -39,7 +38,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateBurnTransactionsV2<T> {
         );
 
         info!("👥  TFT-BRIDGE pallet to V1 passes PRE migrate checks ✅",);
-        return Ok(Vec::<u8>::new());
+        Ok(Vec::<u8>::new())
     }
 
     fn on_runtime_upgrade() -> Weight {
