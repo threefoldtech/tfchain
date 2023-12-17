@@ -15,9 +15,10 @@ type BridgeBurnTransactionCreated struct {
 // BridgeBurnTransactionExpired
 type BridgeBurnTransactionExpired struct {
 	Phase             types.Phase
-	BurnTransactionID types.U64 `json:"burn_transaction_id"`
-	Target            []byte    `json:"target"`
-	Amount            types.U64 `json:"amount"`
+	BurnTransactionID types.U64             `json:"burn_transaction_id"`
+	Source            types.OptionAccountID `json:"source"`
+	Target            []byte                `json:"target"`
+	Amount            types.U64             `json:"amount"`
 	Topics            []types.Hash
 }
 
@@ -103,6 +104,7 @@ type MintTransactionVoted struct {
 type MintCompleted struct {
 	Phase           types.Phase
 	MintTransaction MintTransaction `json:"mint_transaction"`
+	TxHash          string          `json:"tx_hash"`
 	Topics          []types.Hash
 }
 

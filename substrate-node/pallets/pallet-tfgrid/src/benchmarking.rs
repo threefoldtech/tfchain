@@ -4,7 +4,7 @@ use super::*;
 use crate::Pallet as TfgridModule;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::{assert_ok, BoundedVec};
-use frame_system::{EventRecord, Pallet as System, RawOrigin};
+use frame_system::{pallet_prelude::BlockNumberFor, EventRecord, Pallet as System, RawOrigin};
 // use hex;
 // use scale_info::prelude::format;
 // use sp_core::{ed25519, Pair, Public};
@@ -497,7 +497,7 @@ benchmarks! {
         let nu = 10;
         let ipv4 = 8;
         let minimal_uptime = 9999;
-        let policy_end = T::BlockNumber::max_value();
+        let policy_end = BlockNumberFor::<T>::max_value();
         let immutable = true;
         let default = true;
         let node_certification = NodeCertification::Diy;
@@ -680,7 +680,7 @@ benchmarks! {
         let power = Power::Down;
     }: _(RawOrigin::Signed(caller), power)
     verify {
-        let power_state = PowerState::Down(T::BlockNumber::from(1 as u32));
+        let power_state = PowerState::Down(BlockNumberFor::<T>::from(1 as u32));
         let node_power = TfgridModule::<T>::node_power_state(node_id);
         assert_eq!(node_power.state, power_state);
         assert_last_event::<T>(Event::PowerStateChanged {
@@ -812,7 +812,7 @@ fn _create_farming_policy<T: Config>() {
     let nu = 10;
     let ipv4 = 8;
     let minimal_uptime = 9999;
-    let policy_end = T::BlockNumber::max_value();
+    let policy_end = BlockNumberFor::<T>::max_value();
     let immutable = true;
     let default = true;
     let node_certification = NodeCertification::Diy;

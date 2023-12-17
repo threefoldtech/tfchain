@@ -26,14 +26,16 @@ cargo build
 ```
 
 ## Run a dev node
+
 A dev node is a single-node network that runs on your local machine. It is useful for testing and debugging purposes. To run a dev node, you need to do the following:
 
 ```sh
 cd tfchain/substrate-node
 cargo build
 
-./target/debug/tfchain --dev --ws-external --pruning archive
+./target/debug/tfchain --dev --rpc-external --pruning archive
 ```
+
 This will run the node in default development mode. This flag sets `--chain=dev`, `--force-authoring`, `--rpc-cors=all`, `--alice`, and `--tmp` flags, unless explicitly overridden.
 
 ## Run multiple local nodes
@@ -45,11 +47,12 @@ If you want to run tfchain in a multi node network (more than one node), see [lo
 You can use the Polkadot JS Apps ui to connect to your dev node. You can access the web interface at https://polkadot.js.org/apps/ and change the settings to use a local node with the address `ws://127.0.0.1:9944`.
 
 This will allow you to interact with your dev node and perform basic operations.
-- Use the Polkadot JS Apps to interact with your nodes. You can access the web interface at https://polkadot.js.org/apps/ and change the settings to use a local node or a remote node with the appropriate address.
-- Use the `Accounts` tab to manage your accounts and balances. You can create new accounts, import existing accounts, transfer tokens, and view your transaction history.
-- Use the `Explorer` tab to view the network status and activity. You can see the latest blocks, events, validators, and peers.
-- Use the `Chain State` tab to query the state of the network. You can select a module and a storage item and see its value at any given block.
-- Use the `Extrinsics` tab to submit extrinsics to the network. You can select an account, a module, and a function and provide any required parameters.
+
+*   Use the Polkadot JS Apps to interact with your nodes. You can access the web interface at https://polkadot.js.org/apps/ and change the settings to use a local node or a remote node with the appropriate address.
+*   Use the `Accounts` tab to manage your accounts and balances. You can create new accounts, import existing accounts, transfer tokens, and view your transaction history.
+*   Use the `Explorer` tab to view the network status and activity. You can see the latest blocks, events, validators, and peers.
+*   Use the `Chain State` tab to query the state of the network. You can select a module and a storage item and see its value at any given block.
+*   Use the `Extrinsics` tab to submit extrinsics to the network. You can select an account, a module, and a function and provide any required parameters.
 
 ## Create an account
 
@@ -79,19 +82,18 @@ A pallet is a modular component that defines some logic and functionality for th
 
 To learn about pallet development, you can start by checking these resources:
 
-- Get start by reading The substrate [Build application logic tutorials](https://docs.substrate.io/tutorials/build-application-logic/). these tutorials focus on how you can customize the runtime using pallets, creating a custom pallet using macros, adding it to the runtime, and testing its functionality.
+*   Get start by reading The substrate [Build application logic tutorials](https://docs.substrate.io/tutorials/build-application-logic/). these tutorials focus on how you can customize the runtime using pallets, creating a custom pallet using macros, adding it to the runtime, and testing its functionality.
 
-- Check the [the Substrate collectibles workshop](https://docs.substrate.io/tutorials/collectibles-workshop/runtime-and-pallets/). This is an interactive, hands-on, and self-paced workshop that introduces the basic steps for building a blockchain-based application using Substrate. 
+*   Check the [the Substrate collectibles workshop](https://docs.substrate.io/tutorials/collectibles-workshop/runtime-and-pallets/). This is an interactive, hands-on, and self-paced workshop that introduces the basic steps for building a blockchain-based application using Substrate.
 
-- Explore other existing pallets on the [Substrate GitHub repository](https://github.com/paritytech/substrate/tree/master/frame) and learn from their code. You can see how different pallets implement different features and patterns, such as storage, events, errors, hooks, traits, weights, origins, calls, etc.
-
+*   Explore other existing pallets on the [Substrate GitHub repository](https://github.com/paritytech/substrate/tree/master/frame) and learn from their code. You can see how different pallets implement different features and patterns, such as storage, events, errors, hooks, traits, weights, origins, calls, etc.
 
 ## Writing tests for pallets
 
 Every pallet should have all functionality tested, you can write unit tests and integration tests for a pallet:
 
-- Unit tests: check this [guide](https://docs.substrate.io/reference/how-to-guides/testing/)
-- Integration tests: see this [document](../../substrate-node/tests/readme.md)
+*   Unit tests: check this [guide](https://docs.substrate.io/reference/how-to-guides/testing/)
+*   Integration tests: see this [document](../../substrate-node/tests/readme.md)
 
 ## Upgrading Substrate version
 

@@ -112,7 +112,7 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn last_block_set)]
-    pub type LastBlockSet<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
+    pub type LastBlockSet<T: Config> = StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn average_tft_price)]
@@ -141,7 +141,7 @@ pub mod pallet {
         pub fn set_prices(
             origin: OriginFor<T>,
             price: u32,
-            block_number: T::BlockNumber,
+            block_number: BlockNumberFor<T>,
         ) -> DispatchResultWithPostInfo {
             let address = ensure_signed(origin)?;
 
@@ -180,7 +180,7 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn offchain_worker(block_number: T::BlockNumber) {
+        fn offchain_worker(block_number: BlockNumberFor<T>) {
             match Self::offchain_signed_tx(block_number) {
                 Ok(_) => log::info!("offchain worker done."),
                 Err(err) => log::error!("{:?}", err),
@@ -189,25 +189,15 @@ pub mod pallet {
     }
 
     #[pallet::genesis_config]
+    #[derive(frame_support::DefaultNoBound)]
     pub struct GenesisConfig<T: Config> {
         pub min_tft_price: u32,
         pub max_tft_price: u32,
         pub _data: PhantomData<T>,
     }
 
-    #[cfg(feature = "std")]
-    impl<T: Config> Default for GenesisConfig<T> {
-        fn default() -> Self {
-            Self {
-                min_tft_price: 10,
-                max_tft_price: 1000,
-                _data: PhantomData,
-            }
-        }
-    }
-
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+    impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
         fn build(&self) {
             MinTftPrice::<T>::put(self.min_tft_price);
             MaxTftPrice::<T>::put(self.max_tft_price);

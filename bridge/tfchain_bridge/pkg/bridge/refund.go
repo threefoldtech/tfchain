@@ -26,10 +26,9 @@ func (bridge *Bridge) refund(ctx context.Context, destination string, amount int
 
 	// save cursor
 	cursor := tx.PagingToken()
-	if err = bridge.blockPersistency.SaveStellarCursor(cursor); err != nil {
-		return errors.Wrap(err, "an error occurred while saving stellar cursor")
-	}
-	return nil
+	err = bridge.blockPersistency.SaveStellarCursor(cursor)
+	// no need to check for err, if err is nil, Wrap returns nil.
+	return errors.Wrap(err, "an error occurred while saving stellar cursor")
 }
 
 func (bridge *Bridge) handleRefundExpired(ctx context.Context, refundExpiredEvent subpkg.RefundTransactionExpiredEvent) error {

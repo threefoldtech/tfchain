@@ -69,46 +69,22 @@ func (bridge *Bridge) handleWithdrawCreated(ctx context.Context, withdraw subpkg
 
 func (bridge *Bridge) handleWithdrawExpired(ctx context.Context, withdrawExpired subpkg.WithdrawExpiredEvent) error {
 	logger := log.Logger.With().Str("trace_id", fmt.Sprint(withdrawExpired.ID)).Logger()
-	if err := bridge.wallet.CheckAccount(withdrawExpired.Target); err != nil {
-		logger.Warn().
-			Str("event_action", "transfer_failed").
-			Str("event_kind", "alert").
-			Str("category", "transfer").
-			Dict("metadata", zerolog.Dict().
-				Str("reason", err.Error())).
-				Str("type", "burn").
-			Msg("a withdraw failed with no way to refund!") // why the event not have the source address or we don't get it by query tfcahin and refund this?
-		return bridge.subClient.RetrySetWithdrawExecuted(ctx, withdrawExpired.ID)
-	}
 
-	signature, sequenceNumber, err := bridge.wallet.CreatePaymentAndReturnSignature(ctx, withdrawExpired.Target, withdrawExpired.Amount, withdrawExpired.ID)
-	if err != nil {
-		return err
-	}
-	log.Debug().Msgf("stellar account sequence number: %d", sequenceNumber)
+	ok, source := withdrawExpired.Source.Unwrap()
 
-	err = bridge.subClient.RetryProposeWithdrawOrAddSig(ctx, withdrawExpired.ID, withdrawExpired.Target, big.NewInt(int64(withdrawExpired.Amount)), signature, bridge.wallet.GetKeypair().Address(), sequenceNumber)
-	if err != nil {
+	if !ok {
+		// log and skip ? FATAL ?
+		logger.Error().Msg("this should never be triggered unless this bridge release was deployed before the runtime 147 upgrade!")
 		return nil
 	}
-	logger.Info().
-		Str("event_action", "transfer_initiated").
-		Str("event_kind", "event").
-		Str("category", "transfer").
-		Dict("metadata", zerolog.Dict().
-			Str("type", "burn")).
-		Msg("a transfer has initiated")
 
-	logger.Info().
-		Str("event_action", "withdraw_proposed").
-		Str("event_kind", "event").
-		Str("category", "withdraw").
-		Dict("metadata", zerolog.Dict().
-			Uint64("amount", withdrawExpired.Amount).
-			Str("tx_id", fmt.Sprint(withdrawExpired.ID)).
-			Str("destination_address", withdrawExpired.Target)).
-		Msgf("a withdraw has proposed with the target stellar address of %s", withdrawExpired.Target)
-	return nil
+	// refundable path (starting from tfchain runtime 147)
+	return bridge.handleWithdrawCreated(ctx, subpkg.WithdrawCreatedEvent{
+		ID:     withdrawExpired.ID,
+		Source: source,
+		Target: withdrawExpired.Target,
+		Amount: withdrawExpired.Amount,
+	})
 }
 
 func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady subpkg.WithdrawReadyEvent) error {

@@ -13,9 +13,10 @@ import time
 
 
 SUBSTRATE_NODE_DIR = dirname(os.getcwd())
+TMP_DIR = "\tmp"
 TFCHAIN_EXE = join(SUBSTRATE_NODE_DIR, "target", "release", "tfchain")
 
-RE_NODE_STARTED = re.compile("Running JSON-RPC WS server")
+RE_NODE_STARTED = re.compile("Running JSON-RPC server")
 RE_FIRST_BLOCK = re.compile("Prepared block for proposing at")
 
 TIMEOUT_STARTUP_IN_SECONDS = 600
@@ -78,7 +79,7 @@ def execute_command(cmd: list, log_file: str | None = None):
     return p, fd
 
 
-def run_node(log_file: str, base_path: str, predefined_account: str, port: int, ws_port: int, rpc_port: int, node_key: str | None = None, bootnodes: str | None = None):
+def run_node(log_file: str, base_path: str, predefined_account: str, port: int, rpc_port: int, node_key: str | None = None, bootnodes: str | None = None):
     logging.info("Starting node with logfile %s", log_file)
 
     if not isfile(TFCHAIN_EXE):
@@ -90,9 +91,8 @@ def run_node(log_file: str, base_path: str, predefined_account: str, port: int, 
            "--chain", "local",
            f"--{predefined_account.lower()}",
            "--port", f"{port}",
-           "--ws-port", f"{ws_port}",
            "--rpc-port", f"{rpc_port}",
-           "--telemetry-url", "wss://telemetry.polkadot.io/submit/ 0",
+           "--no-telemetry", 
            "--validator",
            "--rpc-methods", "Unsafe",
            "--rpc-cors", "all"
@@ -108,7 +108,7 @@ def run_node(log_file: str, base_path: str, predefined_account: str, port: int, 
 
     return execute_command(cmd, log_file)
 
-def run_single_node(log_file: str, base_path: str, port: int, ws_port: int, rpc_port: int, node_key: str | None = None, bootnodes: str | None = None):
+def run_single_node(log_file: str, base_path: str, port: int, rpc_port: int, node_key: str | None = None, bootnodes: str | None = None):
     logging.info("Starting node with logfile %s", log_file)
 
     if not isfile(TFCHAIN_EXE):
@@ -117,10 +117,9 @@ def run_single_node(log_file: str, base_path: str, port: int, ws_port: int, rpc_
         
     cmd = [TFCHAIN_EXE,
            "--dev",
-           "--ws-external",
+           "--rpc-external",
            "--base-path", f"{base_path}",
            "--port", f"{port}",
-           "--ws-port", f"{ws_port}",
            "--rpc-port", f"{rpc_port}",
            "--validator", 
            "--rpc-methods", "Unsafe",
@@ -153,34 +152,32 @@ class SubstrateNetwork:
         rmtree(output_dir_network, ignore_errors=True)
 
         port = 30333
-        ws_port = 9944
-        rpc_port = 9933
+        rpc_port = 9944
         
         if amt == 1:
             log_file_alice = join(output_dir_network, "node_alice.log")
-            self._nodes["alice"] = run_single_node(log_file_alice, "/tmp/alice", port, ws_port, rpc_port)
+            self._nodes["alice"] = run_single_node(log_file_alice, f"{TMP_DIR}/alice", port, rpc_port)
             wait_till_node_ready(log_file_alice)
-            setup_offchain_workers(ws_port, "Alice")
+            setup_offchain_workers(rpc_port, "Alice")
             wait_till_first_block(log_file_alice)
         else:
             log_file_alice = join(output_dir_network, "node_alice.log")
-            self._nodes["alice"] = run_node(log_file_alice, "/tmp/alice", "alice", port, ws_port,
+            self._nodes["alice"] = run_node(log_file_alice, f"{TMP_DIR}/alice", "alice", port,
                                         rpc_port, node_key="0000000000000000000000000000000000000000000000000000000000000001")
             wait_till_node_ready(log_file_alice)
-            setup_offchain_workers(ws_port, "Alice")
+            setup_offchain_workers(rpc_port, "Alice")
 
 
             log_file = ""
             for x in range(1, amt):
                 port += 1
-                ws_port += 1
                 rpc_port += 1
                 name = list(PREDEFINED_KEYS.keys())[x].lower()
                 log_file = join(output_dir_network, f"node_{name}.log")
-                self._nodes[name] = run_node(log_file, f"/tmp/{name}", name, port, ws_port, rpc_port, node_key=None,
+                self._nodes[name] = run_node(log_file, f"{TMP_DIR}/{name}", name, port, rpc_port, node_key=None,
                                             bootnodes="/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp")
                 wait_till_node_ready(log_file)
-                setup_offchain_workers(ws_port, "Bob")
+                setup_offchain_workers(rpc_port, "Bob")
             
             wait_till_first_block(log_file_alice)
 

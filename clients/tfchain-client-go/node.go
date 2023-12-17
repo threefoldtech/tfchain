@@ -688,6 +688,32 @@ func (s *Substrate) SetNodePowerState(identity Identity, up bool) (hash types.Ha
 	return callResponse.Hash, nil
 }
 
+// SetNodePowerTarget updates the power target of a node
+func (s *Substrate) SetNodePowerTarget(identity Identity, nodeID uint32, up bool) (hash types.Hash, err error) {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return hash, err
+	}
+
+	power := Power{
+		IsUp:   up,
+		IsDown: !up,
+	}
+
+	c, err := types.NewCall(meta, "TfgridModule.change_power_target", nodeID, power)
+
+	if err != nil {
+		return hash, errors.Wrap(err, "failed to create call")
+	}
+
+	callResponse, err := s.Call(cl, meta, identity, c)
+	if err != nil {
+		return hash, errors.Wrap(err, "failed to change node power target")
+	}
+
+	return callResponse.Hash, nil
+}
+
 // GetPowerTarget returns the power target for a node
 func (s *Substrate) GetPowerTarget(nodeID uint32) (power NodePower, err error) {
 	cl, meta, err := s.GetClient()

@@ -1,6 +1,6 @@
 {
   "name": "tfgrid-api-client",
-  "version": "2.6.0-rc1",
+  "version": "2.7.0-rc1",
   "description": "API client for the TF Grid",
   "main": "index.js",
   "scripts": {
