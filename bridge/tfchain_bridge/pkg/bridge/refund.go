@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 	hProtocol "github.com/stellar/go/protocols/horizon"
 	"github.com/threefoldtech/tfchain_bridge/pkg"
+	_logger "github.com/threefoldtech/tfchain_bridge/pkg/logger"
 	subpkg "github.com/threefoldtech/tfchain_bridge/pkg/substrate"
 )
 
@@ -57,7 +58,8 @@ func (bridge *Bridge) handleRefundExpired(ctx context.Context, refundExpiredEven
 	if err != nil {
 		return err
 	}
-	reason := fmt.Sprint(ctx.Value("refund_reason"))
+
+	reason := fmt.Sprint(_logger.GetRefundReason(ctx))
 	logger.Info().
 		Str("event_action", "refund_proposed").
 		Str("event_kind", "event").

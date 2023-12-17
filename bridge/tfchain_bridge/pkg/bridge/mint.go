@@ -12,6 +12,7 @@ import (
 	hProtocol "github.com/stellar/go/protocols/horizon"
 	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
 	"github.com/threefoldtech/tfchain_bridge/pkg"
+	_logger "github.com/threefoldtech/tfchain_bridge/pkg/logger"
 )
 
 // mint handler for stellar
@@ -47,7 +48,7 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 
 	// only one payment in transaction is allowed
 	if len(senders) > 1 {
-		ctx = context.WithValue(ctx, "refund_reason", "multiple senders found")
+		ctx = _logger.WithRefundReason(ctx, "multiple senders found")
 		for sender, depositAmount := range senders {
 			return bridge.refund(ctx, sender, depositAmount.Int64(), tx) // so how this should refund the multiple senders ?
 		}
@@ -61,7 +62,7 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 	}
 
 	if tx.Memo == "" {
-		ctx = context.WithValue(ctx, "refund_reason", "no memo in transaction")
+		ctx = _logger.WithRefundReason(ctx, "no memo in transaction")
 		return bridge.refund(ctx, receiver, depositedAmount.Int64(), tx)
 	}
 
@@ -78,7 +79,7 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 
 	// if the deposited amount is lower than the deposit fee, trigger a refund
 	if depositedAmount.Cmp(big.NewInt(bridge.depositFee)) <= 0 {
-		ctx = context.WithValue(ctx, "refund_reason", "insufficient deposit amount to cover fee")
+		ctx = _logger.WithRefundReason(ctx, "insufficient deposit amount to cover fee")
 		return bridge.refund(ctx, receiver, depositedAmount.Int64(), tx)
 	}
 
@@ -86,7 +87,7 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 	if err != nil {
 		logger.Debug().Err(err).Msg("there was an issue decoding the memo for the transaction")
 		// memo is not formatted correctly, issue a refund
-		ctx = context.WithValue(ctx, "refund_reason", "memo is not properly formatted")
+		ctx = _logger.WithRefundReason(ctx, "memo is not properly formatted")
 		return bridge.refund(ctx, receiver, depositedAmount.Int64(), tx)
 	}
 
