@@ -2,10 +2,10 @@
 
 List of available endpoints for our networks:
 
-- Devnet: 10.10.0.151
-- QAnet: 10.10.0.152
-- Testnet: 10.10.0.22
-- Mainnet: 10.10.0.19
+- Devnet: 10.10.0.44
+- QAnet: 10.10.0.43
+- Testnet: 10.10.0.100
+- Mainnet: 10.10.0.154
 
 (If you are not in lochristi office you probably need vpn to reach to ips)
 
