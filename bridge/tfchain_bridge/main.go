@@ -48,11 +48,11 @@ func main() {
 			Msg("the bridge instance cannot be started")
 	}
 	sourceLogEntry := logger.SourceCommonLogEntry{
-		Instance_public_key: address,
+		Instance_public_key:   address,
 		Bridge_wallet_address: bridgeCfg.StellarBridgeAccount,
-		Stellar_network: bridgeCfg.StellarNetwork,
-		Tfchain_url: bridgeCfg.TfchainURL,
-		}
+		Stellar_network:       bridgeCfg.StellarNetwork,
+		Tfchain_url:           bridgeCfg.TfchainURL,
+	}
 
 	log.Logger = log.Logger.With().Interface("source", sourceLogEntry).Logger()
 

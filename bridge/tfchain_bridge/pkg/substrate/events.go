@@ -64,7 +64,7 @@ type RefundTransactionExpiredEvent struct {
 }
 
 func (client *SubstrateClient) SubscribeTfchainBridgeEvents(ctx context.Context, eventChannel chan<- EventSubscription) error {
-	
+
 	cl, _, err := client.GetClient()
 	if err != nil {
 		return errors.Wrap(err, "an error occurred while getting substrate client")
@@ -219,8 +219,8 @@ func (client *SubstrateClient) processEventRecords(events *substrate.EventRecord
 			Str("event_kind", "event").
 			Str("category", "mint").
 			Msg("found MintCompleted event")
-		
-			logger.Info().
+
+		logger.Info().
 			Str("event_action", "transfer_completed").
 			Str("event_kind", "event").
 			Str("category", "transfer").

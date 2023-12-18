@@ -180,7 +180,7 @@ func (bridge *Bridge) Start(ctx context.Context) error {
 			}
 			time.Sleep(0)
 		case <-afterMinute:
-			balance, err:= bridge.wallet.StatBridgeAccount()
+			balance, err := bridge.wallet.StatBridgeAccount()
 			if err != nil {
 				log.Logger.Warn().Err(err).Msgf("Can't retrieve the wallet balance at the moment")
 			}

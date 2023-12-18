@@ -387,8 +387,8 @@ func (w *StellarWallet) StreamBridgeStellarTransactions(ctx context.Context, min
 				Str("event_kind", "event").
 				Str("category", "stellar_monitor").
 				Dict("metadata", zerolog.Dict().
-						Str("cursor", opRequest.Cursor).
-						Int("count", len(response.Embedded.Records))).
+					Str("cursor", opRequest.Cursor).
+					Int("count", len(response.Embedded.Records))).
 				Msg("stellar transactions fetched")
 
 			for _, tx := range response.Embedded.Records {
@@ -471,8 +471,8 @@ func (w *StellarWallet) processTransaction(tx hProtocol.Transaction) ([]MintEven
 				Dict("metadata", zerolog.Dict().
 					Str("from", PaymentOperation.From).
 					Str("amount", PaymentOperation.Amount)).
-					Str("tx_hash", PaymentOperation.TransactionHash).
-					Str("ledger_close_time", PaymentOperation.LedgerCloseTime.String()).
+				Str("tx_hash", PaymentOperation.TransactionHash).
+				Str("ledger_close_time", PaymentOperation.LedgerCloseTime.String()).
 				Msg("a payment has received on bridge Stellar account")
 			if _, ok := senders[PaymentOperation.From]; !ok {
 				senders[PaymentOperation.From] = depositedAmount

@@ -28,14 +28,14 @@ type SourceCommonLogEntry struct {
 	Tfchain_url           string
 }
 
-type refundReasonKey struct {}
+type refundReasonKey struct{}
 
 func WithRefundReason(ctx context.Context, reason string) context.Context {
-    return context.WithValue(ctx, refundReasonKey{}, reason)
+	return context.WithValue(ctx, refundReasonKey{}, reason)
 }
 
 func GetRefundReason(ctx context.Context) string {
-    return ctx.Value(refundReasonKey{}).(string)
+	return ctx.Value(refundReasonKey{}).(string)
 }
 
 // TODO: event log interfaces
