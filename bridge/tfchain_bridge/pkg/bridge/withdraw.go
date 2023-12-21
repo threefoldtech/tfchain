@@ -119,12 +119,12 @@ func (bridge *Bridge) handleWithdrawReady(ctx context.Context, withdrawReady sub
 		// we can log and skip here as we could depend on tfcahin retry mechanism
 		// to notify us again about related burn tx
 		logger.Info().
-		Str("event_action", "withdraw_postponed").
-		Str("event_kind", "event").
-		Str("category", "withdraw").
-		Dict("metadata", zerolog.Dict().
-			Str("reason", err.Error())).
-		Msgf("the withdraw has been postponed due to a problem in sending this transaction to the stellar network. error was %s", err.Error())
+			Str("event_action", "withdraw_postponed").
+			Str("event_kind", "event").
+			Str("category", "withdraw").
+			Dict("metadata", zerolog.Dict().
+				Str("reason", err.Error())).
+			Msgf("the withdraw has been postponed due to a problem in sending this transaction to the stellar network. error was %s", err.Error())
 		return nil
 	}
 	logger.Info().

@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	BridgeNetwork = "stellar"
+	BridgeNetwork  = "stellar"
 	MinimumBalance = 0
 )
 
