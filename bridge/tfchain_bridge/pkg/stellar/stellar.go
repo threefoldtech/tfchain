@@ -579,5 +579,5 @@ func (w *StellarWallet) StatBridgeAccount() (string, error) {
 			return balance.Balance, nil
 		}
 	}
-	return "", nil
+	return "", errors.New("source account does not have trustline")
 }

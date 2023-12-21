@@ -2,6 +2,7 @@ package bridge
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/pkg/errors"
@@ -14,6 +15,7 @@ import (
 
 const (
 	BridgeNetwork = "stellar"
+	MinimumBalance = 0
 )
 
 // Bridge is a high lvl structure which listens on contract events and bridge-related
@@ -73,7 +75,29 @@ func NewBridge(ctx context.Context, cfg pkg.BridgeConfig) (*Bridge, string, erro
 	return bridge, wallet.GetKeypair().Address(), nil
 }
 
+func (bridge *Bridge) preCheckBalance(ctx context.Context) error {
+	balance, err := bridge.wallet.StatBridgeAccount()
+
+	if err != nil {
+		return errors.Wrap(err, "can't retrieve the wallet balance at the moment")
+	}
+	s, err := strconv.ParseFloat(balance, 64)
+	if err != nil {
+		return errors.Wrap(err, "can't parse the wallet balance")
+	}
+
+	if s < MinimumBalance {
+		return errors.Errorf("wallet balance insufficient: %s", balance)
+	}
+	return nil
+}
+
 func (bridge *Bridge) Start(ctx context.Context) error {
+	// pre-check wallet balance
+	if err := bridge.preCheckBalance(ctx); err != nil {
+		return err
+	}
+
 	log.Info().
 		Str("event_action", "bridge_started").
 		Str("event_kind", "event").
