@@ -145,12 +145,12 @@ impl frame_system::Config for TestRuntime {
     type MaxConsumers = ConstU32<16>;
 }
 
-pub const EXISTENTIAL_DEPOSIT: u64 = 500;
+pub const EXISTENTIAL_DEPOSIT: u64 = 2;
 
 parameter_types! {
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
-    pub const ExistentialDepositBalance: u64 = EXISTENTIAL_DEPOSIT;
+    pub const ExistentialDeposit: u64 = EXISTENTIAL_DEPOSIT;
 }
 
 impl pallet_balances::Config for TestRuntime {
@@ -162,7 +162,7 @@ impl pallet_balances::Config for TestRuntime {
     /// The ubiquitous event type.
     type RuntimeEvent = RuntimeEvent;
     type DustRemoval = ();
-    type ExistentialDeposit = ExistentialDepositBalance;
+    type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = pallet_balances::weights::SubstrateWeight<TestRuntime>;
     type FreezeIdentifier = ();
