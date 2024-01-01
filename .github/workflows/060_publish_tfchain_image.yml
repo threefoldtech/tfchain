@@ -36,7 +36,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           file: ./substrate-node/Dockerfile
-          context: .
+          context: ./substrate-node/.
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
