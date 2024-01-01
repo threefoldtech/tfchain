@@ -1,6 +1,6 @@
 {
   "name": "tfchain-js-scripts",
-  "version": "2.7.0-rc1",
+  "version": "2.7.0-rc2",
   "description": "scripts to fetch data / write data to tfchain",
   "main": "index.js",
   "scripts": {

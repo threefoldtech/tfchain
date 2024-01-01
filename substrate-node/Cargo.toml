@@ -6,7 +6,7 @@ homepage = "https://threefold.io/"
 license-file = "LICENSE"
 readme = "README.md"
 repository = "https://github.com/threefoldtech/tfchain3"
-version = "2.7.0-rc1"
+version = "2.7.0-rc2"
 
 [workspace]
 members = [
