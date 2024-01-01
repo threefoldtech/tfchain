@@ -4260,7 +4260,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-burning"
-version = "2.7.0-rc1"
+version = "2.7.0-rc2"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4295,7 +4295,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-dao"
-version = "2.7.0-rc1"
+version = "2.7.0-rc2"
 dependencies = [
  "env_logger",
  "frame-benchmarking",
@@ -4341,7 +4341,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-kvstore"
-version = "2.7.0-rc1"
+version = "2.7.0-rc2"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4374,7 +4374,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-runtime-upgrade"
-version = "2.7.0-rc1"
+version = "2.7.0-rc2"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4440,7 +4440,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-smart-contract"
-version = "2.7.0-rc1"
+version = "2.7.0-rc2"
 dependencies = [
  "env_logger",
  "frame-benchmarking",
@@ -4493,7 +4493,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-tfgrid"
-version = "2.7.0-rc1"
+version = "2.7.0-rc2"
 dependencies = [
  "env_logger",
  "frame-benchmarking",
@@ -4521,7 +4521,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-tft-bridge"
-version = "2.7.0-rc1"
+version = "2.7.0-rc2"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4539,7 +4539,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-tft-price"
-version = "2.7.0-rc1"
+version = "2.7.0-rc2"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4643,7 +4643,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-validator"
-version = "2.7.0-rc1"
+version = "2.7.0-rc2"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -8011,7 +8011,7 @@ dependencies = [
 
 [[package]]
 name = "substrate-validator-set"
-version = "2.7.0-rc1"
+version = "2.7.0-rc2"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -8149,7 +8149,7 @@ checksum = "3369f5ac52d5eb6ab48c6b4ffdc8efbcad6b89c765749064ba298f2c68a16a76"
 
 [[package]]
 name = "tfchain"
-version = "2.7.0-rc1"
+version = "2.7.0-rc2"
 dependencies = [
  "clap",
  "frame-benchmarking",
@@ -8195,7 +8195,7 @@ dependencies = [
 
 [[package]]
 name = "tfchain-runtime"
-version = "2.7.0-rc1"
+version = "2.7.0-rc2"
 dependencies = [
  "frame-benchmarking",
  "frame-executive",
@@ -8249,7 +8249,7 @@ dependencies = [
 
 [[package]]
 name = "tfchain-support"
-version = "2.7.0-rc1"
+version = "2.7.0-rc2"
 dependencies = [
  "frame-support",
  "frame-system",
