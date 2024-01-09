@@ -663,7 +663,7 @@ pub mod pallet {
         }
 
         fn offchain_worker(block_number: BlockNumberFor<T>) {
-            Self::bill_conttracts_for_block(block_number);
+            Self::bill_contracts_for_block(block_number);
         }
     }
 }

@@ -16,7 +16,7 @@ use sp_runtime::{
 use sp_std::vec::Vec;
 
 impl<T: Config> Pallet<T> {
-    pub fn bill_conttracts_for_block(block_number: BlockNumberFor<T>) {
+    pub fn bill_contracts_for_block(block_number: BlockNumberFor<T>) {
         // Let offchain worker check if there are contracts on
         // billing loop at current index and try to bill them
         let index = Self::get_billing_loop_index_from_block_number(block_number);
@@ -38,27 +38,46 @@ impl<T: Config> Pallet<T> {
         );
 
         for contract_id in contract_ids {
-            if let Some(c) = Contracts::<T>::get(contract_id) {
-                if let types::ContractData::NodeContract(node_contract) = c.contract_type {
-                    // Is there IP consumption to bill?
-                    let bill_ip = node_contract.public_ips > 0;
+            if let Some(contract) = Contracts::<T>::get(contract_id) {
+                match contract.contract_type {
+                    types::ContractData::NodeContract(node_contract) => {
+                        // Is there IP consumption to bill ?
+                        let bill_ip = node_contract.public_ips > 0;
 
-                    // Is there CU/SU consumption to bill?
-                    // No need for preliminary call to contains_key() because default resource value is empty
-                    let bill_cu_su = !NodeContractResources::<T>::get(contract_id).used.is_empty();
+                        // Is there CU/SU consumption to bill ?
+                        // No need for preliminary call to contains_key() because default resource value is empty
+                        let bill_cu_su =
+                            !NodeContractResources::<T>::get(contract_id).used.is_empty();
 
-                    // Is there NU consumption to bill?
-                    // No need for preliminary call to contains_key() because default amount_unbilled is 0
-                    let bill_nu =
-                        ContractBillingInformationByID::<T>::get(contract_id).amount_unbilled > 0;
+                        // Is there NU consumption to bill ?
+                        // No need for preliminary call to contains_key() because default amount_unbilled is 0
+                        let bill_nu = ContractBillingInformationByID::<T>::get(contract_id)
+                            .amount_unbilled
+                            > 0;
 
-                    // Don't bill if no IP/CU/SU/NU to be billed
-                    if !bill_ip && !bill_cu_su && !bill_nu {
-                        continue;
+                        // Bill node contract if there is some IP/CU/SU/NU to be billed
+                        if bill_ip || bill_cu_su || bill_nu {
+                            let _res = Self::bill_contract_using_signed_transaction(contract_id);
+                        }
+                    }
+                    types::ContractData::RentContract(rent_contract) => {
+                        if let Some(node) = pallet_tfgrid::Nodes::<T>::get(rent_contract.node_id) {
+                            // No need for preliminary call to contains_key() because default node power value is Up
+                            let node_power = pallet_tfgrid::NodePower::<T>::get(node.id);
+
+                            // Bill rent contract if node is effectively not standby even if it was switched to standby
+                            if !node_power.is_standby() {
+                                let _res =
+                                    Self::bill_contract_using_signed_transaction(contract_id);
+                            }
+                        }
+                    }
+                    types::ContractData::NameContract(_) => {
+                        // Always bill name contract
+                        let _res = Self::bill_contract_using_signed_transaction(contract_id);
                     }
                 }
             }
-            let _res = Self::bill_contract_using_signed_transaction(contract_id);
         }
     }
 
