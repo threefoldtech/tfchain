@@ -27,8 +27,12 @@ impl<T: Config> Pallet<T> {
 
         let node = pallet_tfgrid::Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
 
+        // Don't deploy if node is (or is switched to) standby
         let node_power = pallet_tfgrid::NodePower::<T>::get(node_id);
-        ensure!(!node_power.is_down(), Error::<T>::NodeNotAvailableToDeploy);
+        ensure!(
+            !node_power.is_standby_phase(),
+            Error::<T>::NodeNotAvailableToDeploy
+        );
 
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
 
@@ -122,9 +126,6 @@ impl<T: Config> Pallet<T> {
             pallet_tfgrid::Farms::<T>::contains_key(node.farm_id),
             Error::<T>::FarmNotExists
         );
-
-        let node_power = pallet_tfgrid::NodePower::<T>::get(node_id);
-        ensure!(!node_power.is_down(), Error::<T>::NodeNotAvailableToDeploy);
 
         let active_node_contracts = ActiveNodeContracts::<T>::get(node_id);
         let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;

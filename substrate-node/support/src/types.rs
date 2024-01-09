@@ -238,8 +238,16 @@ pub struct NodePower<B> {
 }
 
 impl<B> NodePower<B> {
-    pub fn is_down(&self) -> bool {
-        matches!(self.state, PowerState::Down(_)) || matches!(self.target, Power::Down)
+    pub fn is_standby(&self) -> bool {
+        matches!(self.state, PowerState::Down(_))
+    }
+
+    pub fn is_switched_to_standby(&self) -> bool {
+        matches!(self.target, Power::Down)
+    }
+
+    pub fn is_standby_phase(&self) -> bool {
+        self.is_standby() || self.is_switched_to_standby()
     }
 }
 
