@@ -49,7 +49,7 @@ fn test_create_node_contract_works() {
 }
 
 #[test]
-fn test_create_node_contract_on_offline_node_fails() {
+fn test_create_node_contract_on_standby_node_fails() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
@@ -669,7 +669,7 @@ fn test_create_rent_contract_works() {
 }
 
 #[test]
-fn test_create_rent_contract_on_offline_node_fails() {
+fn test_create_rent_contract_on_standby_node_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
         prepare_dedicated_farm_and_node();
@@ -680,10 +680,11 @@ fn test_create_rent_contract_on_offline_node_fails() {
             tfchain_support::types::Power::Down
         ));
 
-        assert_noop!(
-            SmartContractModule::create_rent_contract(RuntimeOrigin::signed(bob()), node_id, None),
-            Error::<TestRuntime>::NodeNotAvailableToDeploy
-        );
+        assert_ok!(SmartContractModule::create_rent_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            None
+        ));
     });
 }
 
