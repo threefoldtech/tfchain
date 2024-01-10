@@ -1799,6 +1799,12 @@ fn test_rent_contract_billing() {
         prepare_dedicated_farm_and_node();
         let node_id = 1;
 
+        // switch node to standby at block 1
+        assert_ok!(TfgridModule::change_power_state(
+            RuntimeOrigin::signed(alice()),
+            tfchain_support::types::Power::Down
+        ));
+
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         assert_ok!(SmartContractModule::create_rent_contract(
@@ -1815,14 +1821,55 @@ fn test_rent_contract_billing() {
             types::ContractData::RentContract(rent_contract)
         );
 
-        pool_state
-            .write()
-            .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 11);
+        // should not bill cycle 1 [1-11]
         run_to_block(11, Some(&mut pool_state));
 
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(1, 2, 10);
+        // wake up node at block 15, in the middle of cycle 2 [11-21]
+        run_to_block(15, Some(&mut pool_state));
+        assert_ok!(TfgridModule::change_power_state(
+            RuntimeOrigin::signed(alice()),
+            tfchain_support::types::Power::Up
+        ));
+
+        pool_state
+            .write()
+            .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 21);
+        run_to_block(21, Some(&mut pool_state));
+
+        // should bill full cycle 2 [11-21], 10 blocks
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, 2, 10);
         assert_ne!(amount_due_as_u128, 0);
-        check_report_cost(1, amount_due_as_u128, 11, discount_received);
+        check_report_cost(contract_id, amount_due_as_u128, 21, discount_received);
+
+        // switch node to standby at block 25, in the middle of cycle 3 [21-31]
+        run_to_block(25, Some(&mut pool_state));
+        assert_ok!(TfgridModule::change_power_state(
+            RuntimeOrigin::signed(alice()),
+            tfchain_support::types::Power::Down
+        ));
+
+        // should not bill cycle 3 [21-31]
+        run_to_block(31, Some(&mut pool_state));
+
+        // should not bill cycle 4 [31-41]
+        run_to_block(41, Some(&mut pool_state));
+
+        // wake up node at block 45, in the middle of cycle 5 [41-51]
+        run_to_block(45, Some(&mut pool_state));
+        assert_ok!(TfgridModule::change_power_state(
+            RuntimeOrigin::signed(alice()),
+            tfchain_support::types::Power::Up
+        ));
+
+        pool_state
+            .write()
+            .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 51);
+        run_to_block(51, Some(&mut pool_state));
+
+        // should bill full cycle 5 [41-51], 10 blocks
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, 2, 10);
+        assert_ne!(amount_due_as_u128, 0);
+        check_report_cost(contract_id, amount_due_as_u128, 51, discount_received);
     });
 }
 
