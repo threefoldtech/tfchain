@@ -49,14 +49,14 @@ is_validator: true
 
 chainspec: '/etc/chainspecs/dev/chainSpecRaw.json'
 
-rpc_max_connections: 1048576
+rpc_max_connections: "1048576"
 
 #rpc_methods: "Unsafe"
 
 rpc_methods: 'safe'
 
 # Archive will keep all history, otherwise only the last 256 blocks will be kept
-archive: true
+#archive: true
 
 # Telemetry dashboard url
 # telemetry_url: ""
@@ -76,7 +76,7 @@ global:
     certresolver: le
 
 ingress:
-  enabled: true
+  enabled: false
   annotations:
   hosts:
     - host: dev.substrate01.threefold.io
