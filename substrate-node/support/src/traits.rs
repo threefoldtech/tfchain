@@ -14,3 +14,7 @@ pub trait ChangeNode<Loc, If, Serial> {
 pub trait PublicIpModifier {
     fn ip_removed(ip: &PublicIP);
 }
+
+pub trait NodeActiveContracts {
+    fn node_has_no_active_contracts(node_id: u32) -> bool;
+}

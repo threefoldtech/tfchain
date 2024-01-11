@@ -17,7 +17,7 @@ use sp_runtime::{
     BuildStorage,
 };
 use sp_std::convert::{TryFrom, TryInto};
-use tfchain_support::traits::{ChangeNode, PublicIpModifier};
+use tfchain_support::traits::{ChangeNode, NodeActiveContracts, PublicIpModifier};
 use tfchain_support::types::PublicIP;
 
 type Block = frame_system::mocking::MockBlock<TestRuntime>;
@@ -92,6 +92,13 @@ impl PublicIpModifier for PublicIpModifierType {
     fn ip_removed(_ip: &PublicIP) {}
 }
 
+pub struct NodeActiveContractsType;
+impl NodeActiveContracts for NodeActiveContractsType {
+    fn node_has_no_active_contracts(_node_id: u32) -> bool {
+        true
+    }
+}
+
 use crate::weights;
 impl pallet_dao::pallet::Config for TestRuntime {
     type RuntimeEvent = RuntimeEvent;
@@ -131,6 +138,7 @@ impl pallet_tfgrid::Config for TestRuntime {
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
     type PublicIpModifier = PublicIpModifierType;
+    type NodeActiveContracts = NodeActiveContractsType;
     type TermsAndConditions = TestTermsAndConditions;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;

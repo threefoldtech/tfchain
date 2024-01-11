@@ -28,7 +28,7 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use tfchain_support::{
     constants::time::*,
-    traits::{ChangeNode, PublicIpModifier},
+    traits::{ChangeNode, NodeActiveContracts, PublicIpModifier},
     types::PublicIP,
 };
 
@@ -339,6 +339,13 @@ impl PublicIpModifier for PublicIpModifierType {
     }
 }
 
+pub struct NodeActiveContractsType;
+impl NodeActiveContracts for NodeActiveContractsType {
+    fn node_has_no_active_contracts(node_id: u32) -> bool {
+        SmartContractModule::node_has_no_active_contracts(node_id)
+    }
+}
+
 parameter_types! {
     pub const MaxFarmNameLength: u32 = 40;
     pub const MaxInterfaceIpsLength: u32 = 10;
@@ -353,6 +360,7 @@ impl pallet_tfgrid::Config for Runtime {
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Runtime>;
     type NodeChanged = NodeChanged;
     type PublicIpModifier = SmartContractModule;
+    type NodeActiveContracts = NodeActiveContractsType;
     type TermsAndConditions = pallet_tfgrid::terms_cond::TermsAndConditions<Runtime>;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;

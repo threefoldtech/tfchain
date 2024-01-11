@@ -75,6 +75,33 @@ fn test_create_node_contract_on_offline_node_fails() {
 }
 
 #[test]
+fn test_create_node_contract_and_switch_node_to_standby_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+        let node_id = 1;
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
+        ));
+
+        assert_noop!(
+            TfgridModule::change_power_target(
+                RuntimeOrigin::signed(alice()),
+                node_id,
+                tfchain_support::types::Power::Down
+            ),
+            pallet_tfgrid::Error::<TestRuntime>::NodeHasActiveContracts
+        );
+    });
+}
+
+#[test]
 fn test_create_node_contract_with_public_ips_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
@@ -683,6 +710,30 @@ fn test_create_rent_contract_on_offline_node_fails() {
         assert_noop!(
             SmartContractModule::create_rent_contract(RuntimeOrigin::signed(bob()), node_id, None),
             Error::<TestRuntime>::NodeNotAvailableToDeploy
+        );
+    });
+}
+
+#[test]
+fn test_create_rent_contract_and_switch_node_to_standby_fails() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_dedicated_farm_and_node();
+        let node_id = 1;
+
+        assert_ok!(SmartContractModule::create_rent_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            None
+        ));
+
+        assert_noop!(
+            TfgridModule::change_power_target(
+                RuntimeOrigin::signed(alice()),
+                node_id,
+                tfchain_support::types::Power::Down
+            ),
+            pallet_tfgrid::Error::<TestRuntime>::NodeHasActiveContracts
         );
     });
 }

@@ -13,7 +13,7 @@ use sp_std::marker::PhantomData;
 use sp_std::{vec, vec::Vec};
 use tfchain_support::{
     resources::Resources,
-    traits::ChangeNode,
+    traits::{ChangeNode, NodeActiveContracts},
     types::{Interface, Node, NodeCertification, Power, PowerState, PublicConfig},
 };
 
@@ -358,14 +358,17 @@ impl<T: Config> Pallet<T> {
         let twin_id = TwinIdByAccountID::<T>::get(account_id).ok_or(Error::<T>::TwinNotExists)?;
         let node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
         let farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
+
+        // Make sure only the farmer that owns this node can change the power target
         ensure!(
             twin_id == farm.twin_id,
             Error::<T>::UnauthorizedToChangePowerTarget
         );
-        // Make sure only the farmer that owns this node can change the power target
+
+        // Make sure there are no active contracts on node
         ensure!(
-            node.farm_id == farm.id,
-            Error::<T>::UnauthorizedToChangePowerTarget
+            T::NodeActiveContracts::node_has_no_active_contracts(node_id),
+            Error::<T>::NodeHasActiveContracts
         );
 
         Self::_change_power_target_on_node(node.id, node.farm_id, power_target);
