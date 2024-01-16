@@ -804,3 +804,24 @@ func (s *Substrate) GetDedicatedNodePrice(nodeID uint32) (uint64, error) {
 
 	return uint64(price), nil
 }
+
+// SetNodeCertificate sets the node certificate type
+func (s *Substrate) SetNodeCertificate(identity Identity, id uint32, cert NodeCertification) error {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return err
+	}
+
+	c, err := types.NewCall(meta, "TfgridModule.set_node_certification",
+		id, cert,
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to create call")
+	}
+
+	if _, err := s.Call(cl, meta, identity, c); err != nil {
+		return errors.Wrap(err, "failed to set node certificate")
+	}
+
+	return nil
+}
