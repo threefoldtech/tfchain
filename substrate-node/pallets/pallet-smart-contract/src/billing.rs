@@ -69,13 +69,6 @@ impl<T: Config> Pallet<T> {
                             if !node_power.is_standby() {
                                 let _res =
                                     Self::bill_contract_using_signed_transaction(contract_id);
-                            } else {
-                                // Update contract lock timestamp to avoid billing for standby period
-                                let mut contract_lock =
-                                    ContractLock::<T>::get(contract.contract_id);
-                                let now = Self::get_current_timestamp_in_secs();
-                                contract_lock.lock_updated = now;
-                                ContractLock::<T>::insert(contract.contract_id, &contract_lock);
                             }
                         }
                     }
