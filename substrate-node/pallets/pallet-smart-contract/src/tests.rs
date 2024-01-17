@@ -1836,8 +1836,8 @@ fn test_rent_contract_billing() {
             .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 21);
         run_to_block(21, Some(&mut pool_state));
 
-        // should bill full cycle 2 [11-21], 10 blocks
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, 2, 10);
+        // should bill partial cycle 2 [15-21], 6 blocks
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, 2, 6);
         assert_ne!(amount_due_as_u128, 0);
         check_report_cost(contract_id, amount_due_as_u128, 21, discount_received);
 
@@ -1866,8 +1866,8 @@ fn test_rent_contract_billing() {
             .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 51);
         run_to_block(51, Some(&mut pool_state));
 
-        // should bill full cycle 5 [41-51], 10 blocks
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, 2, 10);
+        // should bill partial cycle 5 [45-51], 6 blocks
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, 2, 6);
         assert_ne!(amount_due_as_u128, 0);
         check_report_cost(contract_id, amount_due_as_u128, 51, discount_received);
     });
