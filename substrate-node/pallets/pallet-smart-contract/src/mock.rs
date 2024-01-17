@@ -183,6 +183,9 @@ impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
     fn node_deleted(node: &TfgridNode) {
         SmartContractModule::node_deleted(node);
     }
+    fn node_power_state_changed(node: &TfgridNode) {
+        SmartContractModule::node_power_state_changed(node);
+    }
 }
 
 pub struct PublicIpModifierType;
@@ -279,7 +282,6 @@ impl pallet_smart_contract::Config for TestRuntime {
     type DistributionFrequency = DistributionFrequency;
     type GracePeriod = GracePeriod;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
-    type NodeChanged = NodeChanged;
     type MaxNameContractNameLength = MaxNameContractNameLength;
     type NameContractName = TestNameContractName;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;

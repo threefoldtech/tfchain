@@ -82,6 +82,7 @@ pub struct NodeChanged;
 impl tfchain_support::traits::ChangeNode<Loc, Interface, Serial> for NodeChanged {
     fn node_changed(_old_node: Option<&TfgridNode>, _new_node: &TfgridNode) {}
     fn node_deleted(_node: &TfgridNode) {}
+    fn node_power_state_changed(_node: &TfgridNode) {}
 }
 
 pub struct PublicIpModifier;
