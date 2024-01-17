@@ -70,7 +70,6 @@ pub mod pallet {
         offchain::{AppCrypto, CreateSignedTransaction},
         pallet_prelude::*,
     };
-    use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf};
     use parity_scale_codec::FullCodec;
     use sp_core::H256;
     use sp_std::{
@@ -78,7 +77,7 @@ pub mod pallet {
         fmt::Debug,
         vec::Vec,
     };
-    use tfchain_support::traits::{ChangeNode, PublicIpModifier};
+    use tfchain_support::traits::PublicIpModifier;
 
     pub type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
@@ -217,7 +216,6 @@ pub mod pallet {
         type DistributionFrequency: Get<u16>;
         type GracePeriod: Get<u64>;
         type WeightInfo: weights::WeightInfo;
-        type NodeChanged: ChangeNode<LocationOf<Self>, InterfaceOf<Self>, SerialNumberOf<Self>>;
         type PublicIpModifier: PublicIpModifier;
         type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
         type Call: From<Call<Self>>;

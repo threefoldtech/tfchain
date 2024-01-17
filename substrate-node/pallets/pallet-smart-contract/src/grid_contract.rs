@@ -719,6 +719,20 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
             }
         }
     }
+
+    fn node_power_state_changed(node: &TfgridNode<T>) {
+        // Avoid billing rent contract for standby period
+        // So update contract lock timestamp when node power state comes back to Up
+        let node_power = pallet_tfgrid::NodePower::<T>::get(node.id);
+        if !node_power.is_standby() {
+            if let Some(rc_id) = ActiveRentContractForNode::<T>::get(node.id) {
+                let mut contract_lock = ContractLock::<T>::get(rc_id);
+                let now = Self::get_current_timestamp_in_secs();
+                contract_lock.lock_updated = now;
+                ContractLock::<T>::insert(rc_id, &contract_lock);
+            }
+        }
+    }
 }
 
 /// A Name Contract Name.
