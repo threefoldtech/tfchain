@@ -134,9 +134,9 @@ pub enum ContractState {
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Debug, TypeInfo, MaxEncodedLen)]
 pub enum Cause {
-    CanceledByCollective,
     CanceledByUser,
     OutOfFunds,
+    CanceledByCollective,
 }
 
 impl Default for ContractState {
