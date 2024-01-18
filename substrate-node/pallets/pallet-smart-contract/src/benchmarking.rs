@@ -305,7 +305,7 @@ benchmarks! {
 
         let contract = SmartContractModule::<T>::contracts(contract_id).unwrap();
         // Get contract cost before billing to take into account nu
-        let (cost, _) = contract.calculate_contract_cost_tft(balance_init_amount, elapsed_seconds).unwrap();
+        let (cost, discount_level) = contract.calculate_contract_cost_tft(balance_init_amount, elapsed_seconds).unwrap();
     }: _(RawOrigin::Signed(farmer), contract_id)
     verify {
         let lock = SmartContractModule::<T>::contract_number_of_cylces_billed(contract_id);
@@ -313,7 +313,7 @@ benchmarks! {
         let contract_bill = types::ContractBill {
             contract_id,
             timestamp: SmartContractModule::<T>::get_current_timestamp_in_secs(),
-            discount_level: types::DiscountLevel::Gold,
+            discount_level,
             amount_billed: cost.saturated_into::<u128>(),
         };
         assert_last_event::<T>(Event::ContractBilled(contract_bill).into());
