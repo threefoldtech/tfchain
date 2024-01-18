@@ -38,45 +38,26 @@ impl<T: Config> Pallet<T> {
         );
 
         for contract_id in contract_ids {
-            if let Some(contract) = Contracts::<T>::get(contract_id) {
-                match contract.contract_type {
-                    types::ContractData::NodeContract(node_contract) => {
-                        // Is there IP consumption to bill ?
-                        let bill_ip = node_contract.public_ips > 0;
+            if let Some(c) = Contracts::<T>::get(contract_id) {
+                if let types::ContractData::NodeContract(node_contract) = c.contract_type {
+                    // Is there IP consumption to bill?
+                    let bill_ip = node_contract.public_ips > 0;
 
-                        // Is there CU/SU consumption to bill ?
-                        // No need for preliminary call to contains_key() because default resource value is empty
-                        let bill_cu_su =
-                            !NodeContractResources::<T>::get(contract_id).used.is_empty();
+                    // Is there CU/SU consumption to bill?
+                    // No need for preliminary call to contains_key() because default resource value is empty
+                    let bill_cu_su = !NodeContractResources::<T>::get(contract_id).used.is_empty();
 
-                        // Is there NU consumption to bill ?
-                        // No need for preliminary call to contains_key() because default amount_unbilled is 0
-                        let bill_nu = ContractBillingInformationByID::<T>::get(contract_id)
-                            .amount_unbilled
-                            > 0;
+                    // Is there NU consumption to bill?
+                    // No need for preliminary call to contains_key() because default amount_unbilled is 0
+                    let bill_nu =
+                        ContractBillingInformationByID::<T>::get(contract_id).amount_unbilled > 0;
 
-                        // Bill node contract if there is some IP/CU/SU/NU to be billed
-                        if bill_ip || bill_cu_su || bill_nu {
-                            let _res = Self::bill_contract_using_signed_transaction(contract_id);
-                        }
-                    }
-                    types::ContractData::RentContract(rent_contract) => {
-                        if let Some(node) = pallet_tfgrid::Nodes::<T>::get(rent_contract.node_id) {
-                            // No need for preliminary call to contains_key() because default node power value is Up
-                            let node_power = pallet_tfgrid::NodePower::<T>::get(node.id);
-
-                            // Bill rent contract if node is effectively not standby even if it was switched to standby
-                            if !node_power.is_standby() {
-                                let _res =
-                                    Self::bill_contract_using_signed_transaction(contract_id);
-                            }
-                        }
-                    }
-                    types::ContractData::NameContract(_) => {
-                        // Always bill name contract
-                        let _res = Self::bill_contract_using_signed_transaction(contract_id);
+                    // Don't bill if no IP/CU/SU/NU to be billed
+                    if !bill_ip && !bill_cu_su && !bill_nu {
+                        continue;
                     }
                 }
+                let _res = Self::bill_contract_using_signed_transaction(contract_id);
             }
         }
     }
@@ -121,6 +102,17 @@ impl<T: Config> Pallet<T> {
     // Calculates how much TFT is due by the user and distributes the rewards
     pub fn bill_contract(contract_id: u64) -> DispatchResultWithPostInfo {
         let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+
+        // Bill rent contract only if node is online
+        if let types::ContractData::RentContract(rc) = &contract.contract_type {
+            if let Some(node) = pallet_tfgrid::Nodes::<T>::get(rc.node_id) {
+                // No need for preliminary call to contains_key() because default node power value is Up
+                let node_power = pallet_tfgrid::NodePower::<T>::get(node.id);
+                if node_power.is_standby() {
+                    return Ok(().into());
+                }
+            }
+        }
 
         let twin =
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
