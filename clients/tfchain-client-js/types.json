@@ -168,7 +168,8 @@
   "Cause": {
     "_enum": [
       "CanceledByUser",
-      "OutOfFunds"
+      "OutOfFunds",
+      "CanceledByCollective"
     ]
   },
   "NruConsumption": {

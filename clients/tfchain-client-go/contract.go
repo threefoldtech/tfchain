@@ -9,8 +9,9 @@ import (
 )
 
 type DeletedState struct {
-	IsCanceledByUser bool `json:"is_canceled_by_user"`
-	IsOutOfFunds     bool `json:"is_out_of_funds"`
+	IsCanceledByUser       bool `json:"is_canceled_by_user"`
+	IsOutOfFunds           bool `json:"is_out_of_funds"`
+	IsCanceledByCollective bool `json:"is_canceled_by_collective"`
 }
 
 // Decode implementation for the enum type
@@ -25,6 +26,8 @@ func (r *DeletedState) Decode(decoder scale.Decoder) error {
 		r.IsCanceledByUser = true
 	case 1:
 		r.IsOutOfFunds = true
+	case 2:
+		r.IsCanceledByCollective = true
 	default:
 		return fmt.Errorf("unknown deleted state value")
 	}
@@ -38,6 +41,8 @@ func (r DeletedState) Encode(encoder scale.Encoder) (err error) {
 		err = encoder.PushByte(0)
 	} else if r.IsOutOfFunds {
 		err = encoder.PushByte(1)
+	} else if r.IsCanceledByCollective {
+		err = encoder.PushByte(2)
 	}
 	return
 }
