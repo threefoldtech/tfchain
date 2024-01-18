@@ -18,4 +18,4 @@ Moreover, user should be billed for this contract only during online periods.
 In `pallet-smart-contract`:
 
 *   Remove the `node_power.is_down()` restriction when trying to create a rent contract in `create_rent_contract()` extrinsic. restriction
-*   Modify rent contract billing logic by allowing billing only if the node is online (`PowerState` = `Up`). Otherwise, if node is in standby mode (`PowerState` = `Down`), update the contract lock timestamp to avoid billing for such standby period.
+*   Modify rent contract billing logic by allowing billing only if the node is online (`PowerState` = `Up`). To skip the billing during the standby period we update the contract lock when the node power state is switched to `Up`.
