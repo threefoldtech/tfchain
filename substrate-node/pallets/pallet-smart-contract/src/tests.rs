@@ -1821,7 +1821,10 @@ fn test_rent_contract_billing() {
             types::ContractData::RentContract(rent_contract)
         );
 
-        // should not bill cycle 1 [1-11]
+        // go to end of cycle 1 [1-11] and expect a call to bill_contract()
+        pool_state
+            .write()
+            .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 11);
         run_to_block(11, Some(&mut pool_state));
 
         // wake up node at block 15, in the middle of cycle 2 [11-21]
@@ -1831,6 +1834,7 @@ fn test_rent_contract_billing() {
             tfchain_support::types::Power::Up
         ));
 
+        // go to end of cycle 2 [11-21] and expect a call to bill_contract()
         pool_state
             .write()
             .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 21);
@@ -1848,10 +1852,16 @@ fn test_rent_contract_billing() {
             tfchain_support::types::Power::Down
         ));
 
-        // should not bill cycle 3 [21-31]
+        // go to end of cycle 3 [21-31] and expect a call to bill_contract()
+        pool_state
+            .write()
+            .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 31);
         run_to_block(31, Some(&mut pool_state));
 
-        // should not bill cycle 4 [31-41]
+        // go to end of cycle 4 [31-41] and expect a call to bill_contract()
+        pool_state
+            .write()
+            .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 41);
         run_to_block(41, Some(&mut pool_state));
 
         // wake up node at block 45, in the middle of cycle 5 [41-51]
@@ -1861,6 +1871,7 @@ fn test_rent_contract_billing() {
             tfchain_support::types::Power::Up
         ));
 
+        // go to end of cycle 5 [41-51] and expect a call to bill_contract()
         pool_state
             .write()
             .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 51);
