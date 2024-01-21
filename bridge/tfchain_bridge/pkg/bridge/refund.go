@@ -56,7 +56,7 @@ func (bridge *Bridge) handleRefundExpired(ctx context.Context, refundExpiredEven
 	if err != nil {
 		return err
 	}
-	
+
 	reason := _logger.GetRefundReason(ctx)
 	logger.Info().
 		Str("event_action", "refund_proposed").
