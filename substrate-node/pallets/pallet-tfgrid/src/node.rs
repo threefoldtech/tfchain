@@ -335,7 +335,7 @@ impl<T: Config> Pallet<T> {
 
         let mut node_power = NodePower::<T>::get(node_id);
 
-        // if the power state is different from what is set, change it and emit event
+        // If the power state is different from what is set, change it and emit event
         if node_power.state != power_state {
             node_power.state = power_state.clone();
             NodePower::<T>::insert(node_id, node_power);
@@ -368,27 +368,24 @@ impl<T: Config> Pallet<T> {
             Error::<T>::UnauthorizedToChangePowerTarget
         );
 
-        // Make sure there are no active contracts on node
+        // When power target is switched to Down, make sure there are no active contracts on node
         ensure!(
-            T::NodeActiveContracts::node_has_no_active_contracts(node_id),
+            power_target == Power::Down
+                && T::NodeActiveContracts::node_has_no_active_contracts(node_id),
             Error::<T>::NodeHasActiveContracts
         );
 
-        Self::_change_power_target_on_node(node.id, node.farm_id, power_target);
-
-        Ok(().into())
-    }
-
-    fn _change_power_target_on_node(node_id: u32, farm_id: u32, power_target: Power) {
         let mut node_power = NodePower::<T>::get(node_id);
         node_power.target = power_target.clone();
         NodePower::<T>::insert(node_id, &node_power);
 
         Self::deposit_event(Event::PowerTargetChanged {
-            farm_id,
+            farm_id: node.farm_id,
             node_id,
             power_target,
         });
+
+        Ok(().into())
     }
 
     fn get_resources(
