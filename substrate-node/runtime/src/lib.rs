@@ -151,7 +151,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 147,
+    spec_version: 148,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -330,6 +330,10 @@ impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
         SmartContractModule::node_deleted(node);
         Dao::node_deleted(node);
     }
+
+    fn node_power_state_changed(node: &TfgridNode) {
+        SmartContractModule::node_power_state_changed(node);
+    }
 }
 
 pub struct PublicIpModifierType;
@@ -405,7 +409,6 @@ impl pallet_smart_contract::Config for Runtime {
     type DistributionFrequency = DistributionFrequency;
     type GracePeriod = GracePeriod;
     type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
-    type NodeChanged = NodeChanged;
     type PublicIpModifier = PublicIpModifierType;
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
     type Call = RuntimeCall;
@@ -475,7 +478,6 @@ impl pallet_dao::Config for Runtime {
     type Proposal = RuntimeCall;
     type MotionDuration = DaoMotionDuration;
     type Tfgrid = TfgridModule;
-    type NodeChanged = NodeChanged;
     type WeightInfo = pallet_dao::weights::SubstrateWeight<Runtime>;
     type MinVetos = MinVetos;
 }

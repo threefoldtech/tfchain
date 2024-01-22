@@ -335,11 +335,14 @@ impl<T: Config> Pallet<T> {
 
         let mut node_power = NodePower::<T>::get(node_id);
 
-        // if the power state is not correct => change it and emit event
+        // if the power state is different from what is set, change it and emit event
         if node_power.state != power_state {
             node_power.state = power_state.clone();
-
             NodePower::<T>::insert(node_id, node_power);
+
+            // Call node power state changed
+            T::NodeChanged::node_power_state_changed(&node);
+
             Self::deposit_event(Event::PowerStateChanged {
                 farm_id: node.farm_id,
                 node_id,
