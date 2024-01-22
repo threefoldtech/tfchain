@@ -1766,7 +1766,7 @@ fn test_name_contract_billing() {
         let twin = TfgridModule::twins(twin_id).unwrap();
         let balance = Balances::free_balance(&twin.account_id);
         let second_elapsed = BillingFrequency::get() * SECS_PER_BLOCK;
-        let (contract_cost, _) = contract
+        let (contract_cost, discount_level) = contract
             .calculate_contract_cost_tft(balance, second_elapsed)
             .unwrap();
 
@@ -1774,7 +1774,7 @@ fn test_name_contract_billing() {
         let contract_bill_event = types::ContractBill {
             contract_id,
             timestamp: 1628082066,
-            discount_level: types::DiscountLevel::Gold,
+            discount_level,
             amount_billed: contract_cost as u128,
         };
 
