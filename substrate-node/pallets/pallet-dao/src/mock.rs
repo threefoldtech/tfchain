@@ -85,6 +85,8 @@ impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
     fn node_deleted(node: &TfgridNode) {
         DaoModule::node_deleted(node);
     }
+
+    fn node_power_state_changed(_node: &TfgridNode) {}
 }
 
 pub struct PublicIpModifierType;
@@ -100,7 +102,6 @@ impl pallet_dao::pallet::Config for TestRuntime {
     type MotionDuration = DaoMotionDuration;
     type MinVetos = MinVetos;
     type Tfgrid = TfgridModule;
-    type NodeChanged = NodeChanged;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
 }
 

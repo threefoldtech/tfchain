@@ -20,12 +20,10 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf};
-    use sp_std::prelude::*;
-
     use crate::proposal;
     use crate::proposal::ProposalIndex;
     use crate::weights::WeightInfo;
+    use frame_support::pallet_prelude::*;
     use frame_support::{
         dispatch::{
             DispatchResult, DispatchResultWithPostInfo, Dispatchable, GetDispatchInfo,
@@ -33,12 +31,11 @@ pub mod pallet {
         },
         traits::{EnsureOrigin, Get},
     };
-    use tfchain_support::traits::{ChangeNode, Tfgrid};
-
-    use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
     use pallet_tfgrid::farm::FarmName;
     use sp_std::convert::TryInto;
+    use sp_std::prelude::*;
+    use tfchain_support::traits::Tfgrid;
 
     #[pallet::config]
     pub trait Config:
@@ -63,7 +60,6 @@ pub mod pallet {
         type MinVetos: Get<u32>;
 
         type Tfgrid: Tfgrid<Self::AccountId, FarmName<Self>>;
-        type NodeChanged: ChangeNode<LocationOf<Self>, InterfaceOf<Self>, SerialNumberOf<Self>>;
 
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
