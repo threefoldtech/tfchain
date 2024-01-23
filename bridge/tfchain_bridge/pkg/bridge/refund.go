@@ -2,7 +2,6 @@ package bridge
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -58,7 +57,7 @@ func (bridge *Bridge) handleRefundExpired(ctx context.Context, refundExpiredEven
 		return err
 	}
 
-	reason := fmt.Sprint(_logger.GetRefundReason(ctx))
+	reason := _logger.GetRefundReason(ctx)
 	logger.Info().
 		Str("event_action", "refund_proposed").
 		Str("event_kind", "event").

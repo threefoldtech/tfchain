@@ -35,7 +35,11 @@ func WithRefundReason(ctx context.Context, reason string) context.Context {
 }
 
 func GetRefundReason(ctx context.Context) string {
-	return ctx.Value(refundReasonKey{}).(string)
+	reason := ctx.Value(refundReasonKey{})
+	if reason == nil {
+		return ""
+	}
+	return reason.(string)
 }
 
 // TODO: event log interfaces
