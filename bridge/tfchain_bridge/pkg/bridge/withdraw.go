@@ -83,8 +83,8 @@ func (bridge *Bridge) handleWithdrawExpired(ctx context.Context, withdrawExpired
 				Str("category", "transfer").
 				Dict("metadata", zerolog.Dict().
 					Str("reason", err.Error())).
-					Str("type", "burn").
-				Msg("a withdraw failed with no way to refund!") 
+				Str("type", "burn").
+				Msg("a withdraw failed with no way to refund!")
 			return bridge.subClient.RetrySetWithdrawExecuted(ctx, withdrawExpired.ID)
 		}
 
@@ -93,7 +93,7 @@ func (bridge *Bridge) handleWithdrawExpired(ctx context.Context, withdrawExpired
 			return err
 		}
 		log.Debug().Msgf("stellar account sequence number: %d", sequenceNumber)
-	
+
 		err = bridge.subClient.RetryProposeWithdrawOrAddSig(ctx, withdrawExpired.ID, withdrawExpired.Target, big.NewInt(int64(withdrawExpired.Amount)), signature, bridge.wallet.GetKeypair().Address(), sequenceNumber)
 		if err != nil {
 			return err
@@ -114,7 +114,7 @@ func (bridge *Bridge) handleWithdrawExpired(ctx context.Context, withdrawExpired
 				Str("tx_id", fmt.Sprint(withdrawExpired.ID)).
 				Str("to", withdrawExpired.Target)).
 			Msgf("a withdraw has proposed with the target stellar address of %s", withdrawExpired.Target)
-		return nil	
+		return nil
 	}
 
 	// refundable path (starting from tfchain runtime 147)
