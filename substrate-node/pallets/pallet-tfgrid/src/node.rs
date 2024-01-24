@@ -368,12 +368,13 @@ impl<T: Config> Pallet<T> {
             Error::<T>::UnauthorizedToChangePowerTarget
         );
 
-        // When power target is switched to Down, make sure there are no active contracts on node
-        ensure!(
-            power_target == Power::Down
-                && T::NodeActiveContracts::node_has_no_active_contracts(node_id),
-            Error::<T>::NodeHasActiveContracts
-        );
+        // If power target is switched to Down, make sure there are no active contracts on node
+        if power_target == Power::Down {
+            ensure!(
+                T::NodeActiveContracts::node_has_no_active_contracts(node_id),
+                Error::<T>::NodeHasActiveContracts
+            );
+        }
 
         let mut node_power = NodePower::<T>::get(node_id);
         node_power.target = power_target.clone();
