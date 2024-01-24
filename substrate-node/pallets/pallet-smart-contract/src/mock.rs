@@ -46,7 +46,7 @@ use sp_std::{
 use std::{cell::RefCell, panic, thread};
 use tfchain_support::{
     constants::time::{MINUTES, SECS_PER_HOUR},
-    traits::{ChangeNode, PublicIpModifier},
+    traits::{ChangeNode, NodeActiveContracts, PublicIpModifier},
     types::PublicIP,
 };
 
@@ -103,7 +103,7 @@ construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>},
+        TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>, Error<T>},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         SmartContractModule: pallet_smart_contract::{Pallet, Call, Storage, Event<T>},
         TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Event<T>},
@@ -195,6 +195,13 @@ impl PublicIpModifier for PublicIpModifierType {
     }
 }
 
+pub struct NodeActiveContractsType;
+impl NodeActiveContracts for NodeActiveContractsType {
+    fn node_has_no_active_contracts(node_id: u32) -> bool {
+        SmartContractModule::node_has_no_active_contracts(node_id)
+    }
+}
+
 parameter_types! {
     pub const MaxFarmNameLength: u32 = 40;
     pub const MaxInterfaceIpsLength: u32 = 5;
@@ -222,6 +229,7 @@ impl pallet_tfgrid::Config for TestRuntime {
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
     type PublicIpModifier = PublicIpModifierType;
+    type NodeActiveContracts = NodeActiveContractsType;
     type TermsAndConditions = TestTermsAndConditions;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;

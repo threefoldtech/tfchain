@@ -20,7 +20,10 @@ use sp_runtime::{
 use sp_std::prelude::*;
 
 use hex;
-use tfchain_support::types::PublicIP;
+use tfchain_support::{
+    traits::{ChangeNode, NodeActiveContracts, PublicIpModifier},
+    types::PublicIP,
+};
 
 pub type Signature = MultiSignature;
 
@@ -79,15 +82,22 @@ pub(crate) type Interface = crate::InterfaceOf<TestRuntime>;
 pub(crate) type TfgridNode = crate::TfgridNode<TestRuntime>;
 
 pub struct NodeChanged;
-impl tfchain_support::traits::ChangeNode<Loc, Interface, Serial> for NodeChanged {
+impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
     fn node_changed(_old_node: Option<&TfgridNode>, _new_node: &TfgridNode) {}
     fn node_deleted(_node: &TfgridNode) {}
     fn node_power_state_changed(_node: &TfgridNode) {}
 }
 
-pub struct PublicIpModifier;
-impl tfchain_support::traits::PublicIpModifier for PublicIpModifier {
+pub struct PublicIpModifierType;
+impl PublicIpModifier for PublicIpModifierType {
     fn ip_removed(_ip: &PublicIP) {}
+}
+
+pub struct NodeActiveContractsType;
+impl NodeActiveContracts for NodeActiveContractsType {
+    fn node_has_no_active_contracts(_node_id: u32) -> bool {
+        true
+    }
 }
 
 parameter_types! {
@@ -116,7 +126,8 @@ impl Config for TestRuntime {
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
-    type PublicIpModifier = PublicIpModifier;
+    type PublicIpModifier = PublicIpModifierType;
+    type NodeActiveContracts = NodeActiveContractsType;
     type TermsAndConditions = TestTermsAndConditions;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;

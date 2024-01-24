@@ -9,7 +9,7 @@ use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf, TfgridNode}
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use sp_std::{marker::PhantomData, vec, vec::Vec};
 use tfchain_support::{
-    traits::{ChangeNode, PublicIpModifier},
+    traits::{ChangeNode, NodeActiveContracts, PublicIpModifier},
     types::PublicIP,
 };
 
@@ -315,7 +315,7 @@ impl<T: Config> Pallet<T> {
             let rent_contract = Self::get_rent_contract(&contract)?;
             let active_node_contracts = ActiveNodeContracts::<T>::get(rent_contract.node_id);
             ensure!(
-                active_node_contracts.len() == 0,
+                active_node_contracts.is_empty(),
                 Error::<T>::NodeHasActiveContracts
             );
         }
@@ -657,8 +657,7 @@ impl<T: Config> Pallet<T> {
 
         // Make sure there is no active node or rent contract on this node
         ensure!(
-            ActiveRentContractForNode::<T>::get(node_id).is_none()
-                && ActiveNodeContracts::<T>::get(&node_id).is_empty(),
+            Self::node_has_no_active_contracts(node_id),
             Error::<T>::NodeHasActiveContracts
         );
 
@@ -732,6 +731,13 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
                 ContractLock::<T>::insert(rc_id, &contract_lock);
             }
         }
+    }
+}
+
+impl<T: Config> NodeActiveContracts for Pallet<T> {
+    fn node_has_no_active_contracts(node_id: u32) -> bool {
+        ActiveNodeContracts::<T>::get(node_id).is_empty()
+            && ActiveRentContractForNode::<T>::get(node_id).is_none()
     }
 }
 
