@@ -740,6 +740,33 @@ fn test_create_rent_contract_and_switch_node_to_standby_fails() {
 }
 
 #[test]
+fn test_create_rent_contract_on_standby_node_and_wake_it_up_works() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1, None);
+        prepare_dedicated_farm_and_node();
+        let node_id = 1;
+
+        assert_ok!(TfgridModule::change_power_target(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+            tfchain_support::types::Power::Down,
+        ));
+
+        assert_ok!(SmartContractModule::create_rent_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            None
+        ));
+
+        assert_ok!(TfgridModule::change_power_target(
+            RuntimeOrigin::signed(alice()),
+            node_id,
+            tfchain_support::types::Power::Up,
+        ));
+    });
+}
+
+#[test]
 fn test_cancel_rent_contract_works() {
     new_test_ext().execute_with(|| {
         run_to_block(1, None);
