@@ -6,29 +6,28 @@ on:
       - clients/tfchain-client-go/**
   workflow_dispatch:
 
-defaults:
-  run:
-    working-directory: clients/tfchain-client-go
-
 jobs:
   lint:
     name: lint
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    steps:
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: "1.20"
-        id: go
-
+    steps:    
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v3.5.0
+        uses: actions/checkout@v4
         with:
           submodules: "true"
+          sparse-checkout: clients/tfchain-client-go
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.20"
+          cache: false
+          # cache-dependency-path: clients/tfchain-client-go/go.sum
+        id: go
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v3.7.0
         with:
           args: --timeout 3m --verbose
           working-directory: clients/tfchain-client-go
