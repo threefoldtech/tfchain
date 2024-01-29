@@ -9,9 +9,9 @@ import (
 
 	"github.com/rs/zerolog/log"
 	flag "github.com/spf13/pflag"
-	"github.com/threefoldtech/tfchain_bridge/pkg"
-	"github.com/threefoldtech/tfchain_bridge/pkg/bridge"
-	"github.com/threefoldtech/tfchain_bridge/pkg/logger"
+	"github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg"
+	"github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg/bridge"
+	"github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg/logger"
 )
 
 func main() {

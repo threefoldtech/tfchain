@@ -9,9 +9,9 @@ import (
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg"
+	subpkg "github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg/substrate"
 	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
-	"github.com/threefoldtech/tfchain_bridge/pkg"
-	subpkg "github.com/threefoldtech/tfchain_bridge/pkg/substrate"
 )
 
 func (bridge *Bridge) handleWithdrawCreated(ctx context.Context, withdraw subpkg.WithdrawCreatedEvent) error {
