@@ -7,9 +7,9 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	hProtocol "github.com/stellar/go/protocols/horizon"
-	"github.com/threefoldtech/tfchain_bridge/pkg"
-	_logger "github.com/threefoldtech/tfchain_bridge/pkg/logger"
-	subpkg "github.com/threefoldtech/tfchain_bridge/pkg/substrate"
+	"github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg"
+	_logger "github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg/logger"
+	subpkg "github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg/substrate"
 )
 
 // refund handler for stellar
