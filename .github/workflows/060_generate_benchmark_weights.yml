@@ -15,7 +15,14 @@ jobs:
         CARGO_HOME: /root/.cargo
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Fail if branch is main
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/development'
+        run: |
+          echo "This workflow should not be triggered with workflow_dispatch on main branch"
+          exit 1
+
+      - name: Checkout the repo
+        uses: actions/checkout@v3
 
       - name: Chown user
         run: |
@@ -43,33 +50,18 @@ jobs:
       - name: Run benchmarking
         run: |
           cd substrate-node
-          for f in ./pallets/*/src/weights.rs
+          for weights_rs_file in ./pallets/*/src/weights.rs
           do
-            rm $f
-            pal=$(awk -F'pallets/|/src' '{print $2}' <<< $f)
-            ./target/release/tfchain benchmark pallet --chain=dev --pallet="$pal" \
+            rm $weights_rs_file
+            pal_name=$(awk -F'pallets/|/src' '{print $2}' <<< $weights_rs_file)
+            ./target/release/tfchain benchmark pallet --chain=dev --pallet="$pal_name" \
             --extrinsic="*" --steps=50 --repeat=20 --execution=wasm --heap-pages=409 \
-            --output ./pallets/"$pal"/src/weights.rs --template ./.maintain/frame-weight-template.hbs
+            --output ./pallets/"$pal_name"/src/weights.rs --template ./.maintain/frame-weight-template.hbs
           done
 
-      - name: Rebuild
-        run: |
-          cd substrate-node
-          cargo build
-
-      - name: Copy new weight files
-        run: |
-          cd substrate-node
-          for f in ./pallets/*/src/weights.rs
-          do
-            dir=$(awk -F'pallets/|/src' '{print $2}' <<< $f)
-            dir=./_output_benchmarking/"$dir"
-            mkdir -p $dir
-            cp $f $dir
-          done
-
-      - name: Upload new weight files
-        uses: actions/upload-artifact@v3
+      - name: Commit & Push changes
+        uses: actions-js/push@master
         with:
-          name: benchmark-weights
-          path: substrate-node/_output_benchmarking/
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          message: 'chore(pallets): update benchmark `weights.rs` files ${date}'
+          branch: ${{ github.ref_name }}
