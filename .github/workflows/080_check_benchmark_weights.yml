@@ -69,7 +69,7 @@ jobs:
             fi
           done
           if [ "$count" -gt 0 ]; then
-            echo "Found changes on src rust file(s) for $count pallet(s) and respective weights.rs file(s) was not upadated."
+            echo "Found changes on src rust file(s) for $count pallet(s) and respective weights.rs file(s) was not updated."
             echo "Make sure to generate these files again if pallet logic has changed by running generate_benchmark_weights workflow on branch."
             exit 1
           else
