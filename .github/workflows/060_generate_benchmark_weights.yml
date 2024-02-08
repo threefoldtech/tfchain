@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  benchmark-weights:
+  generate-benchmark-weights:
     runs-on: [self-hosted, tfchainrunner01]
     container:
       image: threefolddev/tfchain:4

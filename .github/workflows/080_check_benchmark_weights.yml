@@ -1,0 +1,77 @@
+name: Check benchmark weights
+
+on:
+  push:
+    branches-ignore:
+      - development
+    paths:
+      - '**.rs'
+      - 'substrate-node/pallets/**'
+
+jobs:
+  check-benchmark-weights:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v3
+
+      - name: Get all rust files that have changed in pallets
+        id: pallets-changed-rust-files
+        uses: tj-actions/changed-files@v42
+        with:
+          files: |
+            substrate-node/pallets/**/src/*.rs
+
+      - name: Get all pallets with changes in src dir
+        id: pallets-changed-src-dir
+        uses: tj-actions/changed-files@v42
+        with:
+          dir_names: "true"
+          files: |
+            substrate-node/pallets/**/src/*.rs
+
+      - name: List all changed files
+        env:
+          ALL_CHANGED_FILES: ${{ steps.pallets-changed-rust-files.outputs.all_changed_files }}
+        run: |
+          for file in ${ALL_CHANGED_FILES}; do
+            echo "$file file was changed"
+          done
+
+      - name: List all changed dir
+        env:
+          ALL_CHANGED_DIR: ${{ steps.pallets-changed-src-dir.outputs.all_changed_files }}
+        run: |
+          for dir in ${ALL_CHANGED_DIR}; do
+            echo "$dir has changes"
+          done
+
+      - name: Run benchmarking
+        env:
+          ALL_CHANGED_PALLETS_SRC_DIR: ${{ steps.pallets-changed-src-dir.outputs.all_changed_files }}
+          ALL_CHANGED_PALLETS_FILES: ${{ steps.pallets-changed-rust-files.outputs.all_changed_files }}
+        run: |
+          count=0
+          for pallet_src_dir in ${ALL_CHANGED_PALLETS_SRC_DIR}; do
+            echo "pallet src dir: $pallet_src_dir"
+            weights_file="$pallet_src_dir"/weights.rs
+            echo "weights file: $weights_file"
+            updated_weights=false
+            for changed_file in ${ALL_CHANGED_PALLETS_FILES}; do
+              if [ "$changed_file" = "$weights_file" ]; then
+                updated_weights=true
+                break
+              fi
+            done
+            if [ "$updated_weights" = false ] ; then
+              let "count=count+1"
+            fi
+          done
+          if [ "$count" -gt 0 ]; then
+            echo "Found changes on src rust file(s) for $count pallet(s) and respective weights.rs file(s) was not upadated."
+            echo "Make sure to generate these files again if pallet logic has changed by running generate_benchmark_weights workflow on branch."
+            exit 1
+          else
+            echo "Found changes on src rust file(s) and respective weights.rs file(s) was updated."
+          fi
