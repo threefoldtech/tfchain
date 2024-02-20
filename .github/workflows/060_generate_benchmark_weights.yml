@@ -45,7 +45,7 @@ jobs:
       - name: Build
         run: |
           cd substrate-node
-          cargo build --profile=bench --features runtime-benchmarks
+          cargo build --profile=production --features runtime-benchmarks
 
       - name: Run benchmarking
         run: |
