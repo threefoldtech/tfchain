@@ -41,7 +41,7 @@ pub mod pallet {
     use sp_std::{convert::TryInto, fmt::Debug, vec, vec::Vec};
     use tfchain_support::{
         resources::Resources,
-        traits::{ChangeNode, PublicIpModifier},
+        traits::{ChangeNode, NodeActiveContracts, PublicIpModifier},
         types::*,
     };
 
@@ -201,7 +201,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn farming_policies_map)]
     pub type FarmingPoliciesMap<T: Config> =
-        StorageMap<_, Blake2_128Concat, u32, types::FarmingPolicy<T::BlockNumber>, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, u32, types::FarmingPolicy<BlockNumberFor<T>>, ValueQuery>;
 
     // Concrete type for location
     pub type TermsAndConditionsOf<T> = <T as Config>::TermsAndConditions;
@@ -259,7 +259,7 @@ pub mod pallet {
         _,
         Blake2_128Concat,
         u32,
-        tfchain_support::types::NodePower<T::BlockNumber>,
+        tfchain_support::types::NodePower<BlockNumberFor<T>>,
         ValueQuery,
     >;
 
@@ -280,6 +280,8 @@ pub mod pallet {
         >;
 
         type PublicIpModifier: PublicIpModifier;
+
+        type NodeActiveContracts: NodeActiveContracts;
 
         /// The type of terms and conditions.
         type TermsAndConditions: FullCodec
@@ -412,14 +414,14 @@ pub mod pallet {
 
         PricingPolicyStored(types::PricingPolicy<T::AccountId>),
         // CertificationCodeStored(types::CertificationCodes),
-        FarmingPolicyStored(types::FarmingPolicy<T::BlockNumber>),
+        FarmingPolicyStored(types::FarmingPolicy<BlockNumberFor<T>>),
         FarmPayoutV2AddressRegistered(u32, Vec<u8>),
         FarmMarkedAsDedicated(u32),
         ConnectionPriceSet(u32),
         NodeCertificationSet(u32, NodeCertification),
         NodeCertifierAdded(T::AccountId),
         NodeCertifierRemoved(T::AccountId),
-        FarmingPolicyUpdated(types::FarmingPolicy<T::BlockNumber>),
+        FarmingPolicyUpdated(types::FarmingPolicy<BlockNumberFor<T>>),
         FarmingPolicySet(u32, Option<FarmingPolicyLimit>),
         FarmCertificationSet(u32, FarmCertification),
 
@@ -434,7 +436,7 @@ pub mod pallet {
         PowerStateChanged {
             farm_id: u32,
             node_id: u32,
-            power_state: PowerState<T::BlockNumber>,
+            power_state: PowerState<BlockNumberFor<T>>,
         },
     }
 
@@ -567,11 +569,13 @@ pub mod pallet {
 
         InvalidPublicConfig,
         UnauthorizedToChangePowerTarget,
+        NodeHasActiveContracts,
         InvalidRelayAddress,
         InvalidTimestampHint,
     }
 
     #[pallet::genesis_config]
+    #[derive(frame_support::DefaultNoBound)]
     pub struct GenesisConfig<T: Config> {
         pub su_price_value: u32,
         pub su_price_unit: u32,
@@ -599,41 +603,8 @@ pub mod pallet {
         pub connection_price: u32,
     }
 
-    // The default value for the genesis config type.
-    #[cfg(feature = "std")]
-    impl<T: Config> Default for GenesisConfig<T> {
-        fn default() -> Self {
-            Self {
-                su_price_value: Default::default(),
-                su_price_unit: Default::default(),
-                nu_price_value: Default::default(),
-                nu_price_unit: Default::default(),
-                ipu_price_value: Default::default(),
-                ipu_price_unit: Default::default(),
-                cu_price_value: Default::default(),
-                cu_price_unit: Default::default(),
-                domain_name_price_value: Default::default(),
-                unique_name_price_value: Default::default(),
-                foundation_account: None,
-                sales_account: None,
-                discount_for_dedication_nodes: Default::default(),
-                farming_policy_diy_cu: Default::default(),
-                farming_policy_diy_nu: Default::default(),
-                farming_policy_diy_su: Default::default(),
-                farming_policy_diy_ipu: Default::default(),
-                farming_policy_diy_minimal_uptime: Default::default(),
-                farming_policy_certified_cu: Default::default(),
-                farming_policy_certified_nu: Default::default(),
-                farming_policy_certified_su: Default::default(),
-                farming_policy_certified_ipu: Default::default(),
-                farming_policy_certified_minimal_uptime: Default::default(),
-                connection_price: Default::default(),
-            }
-        }
-    }
-
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+    impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
         fn build(&self) {
             let su = types::Policy {
                 value: self.su_price_value,
@@ -701,8 +672,8 @@ pub mod pallet {
                     nu: self.farming_policy_diy_nu,
                     ipv4: self.farming_policy_diy_ipu,
                     minimal_uptime: self.farming_policy_diy_minimal_uptime,
-                    policy_created: T::BlockNumber::from(0 as u32),
-                    policy_end: T::BlockNumber::from(0 as u32),
+                    policy_created: BlockNumberFor::<T>::from(0 as u32),
+                    policy_end: BlockNumberFor::<T>::from(0 as u32),
                     immutable: false,
                     default: true,
                     node_certification: NodeCertification::Diy,
@@ -723,8 +694,8 @@ pub mod pallet {
                     nu: self.farming_policy_certified_nu,
                     ipv4: self.farming_policy_certified_ipu,
                     minimal_uptime: self.farming_policy_certified_minimal_uptime,
-                    policy_created: T::BlockNumber::from(0 as u32),
-                    policy_end: T::BlockNumber::from(0 as u32),
+                    policy_created: BlockNumberFor::<T>::from(0 as u32),
+                    policy_end: BlockNumberFor::<T>::from(0 as u32),
                     immutable: false,
                     default: true,
                     node_certification: NodeCertification::Certified,
@@ -1069,7 +1040,7 @@ pub mod pallet {
             nu: u32,
             ipv4: u32,
             minimal_uptime: u16,
-            policy_end: T::BlockNumber,
+            policy_end: BlockNumberFor<T>,
             immutable: bool,
             default: bool,
             node_certification: NodeCertification,
@@ -1172,7 +1143,7 @@ pub mod pallet {
             nu: u32,
             ipv4: u32,
             minimal_uptime: u16,
-            policy_end: T::BlockNumber,
+            policy_end: BlockNumberFor<T>,
             default: bool,
             node_certification: NodeCertification,
             farm_certification: FarmCertification,

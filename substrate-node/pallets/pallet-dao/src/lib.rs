@@ -20,12 +20,10 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf};
-    use sp_std::prelude::*;
-
     use crate::proposal;
     use crate::proposal::ProposalIndex;
     use crate::weights::WeightInfo;
+    use frame_support::pallet_prelude::*;
     use frame_support::{
         dispatch::{
             DispatchResult, DispatchResultWithPostInfo, Dispatchable, GetDispatchInfo,
@@ -33,12 +31,11 @@ pub mod pallet {
         },
         traits::{EnsureOrigin, Get},
     };
-    use tfchain_support::traits::{ChangeNode, Tfgrid};
-
-    use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
     use pallet_tfgrid::farm::FarmName;
     use sp_std::convert::TryInto;
+    use sp_std::prelude::*;
+    use tfchain_support::traits::Tfgrid;
 
     #[pallet::config]
     pub trait Config:
@@ -57,13 +54,12 @@ pub mod pallet {
             + GetDispatchInfo;
 
         /// The time-out for council motions.
-        type MotionDuration: Get<Self::BlockNumber>;
+        type MotionDuration: Get<BlockNumberFor<Self>>;
 
         /// The minimum amount of vetos to dissaprove a proposal
         type MinVetos: Get<u32>;
 
         type Tfgrid: Tfgrid<Self::AccountId, FarmName<Self>>;
-        type NodeChanged: ChangeNode<LocationOf<Self>, InterfaceOf<Self>, SerialNumberOf<Self>>;
 
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
@@ -100,7 +96,7 @@ pub mod pallet {
         _,
         Identity,
         T::Hash,
-        proposal::DaoVotes<T::BlockNumber, T::AccountId>,
+        proposal::DaoVotes<BlockNumberFor<T>, T::AccountId>,
         OptionQuery,
     >;
 
@@ -189,7 +185,7 @@ pub mod pallet {
             action: Box<<T as Config>::Proposal>,
             description: Vec<u8>,
             link: Vec<u8>,
-            duration: Option<T::BlockNumber>,
+            duration: Option<BlockNumberFor<T>>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             Self::_propose(who, threshold, action, description, link, duration)

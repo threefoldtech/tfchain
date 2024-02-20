@@ -1,0 +1,49 @@
+name: Lint Go bridge
+
+on:
+  push:
+    paths:
+      - bridge/tfchain_bridge/**
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:    
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v4
+        with:
+          submodules: "true"
+          sparse-checkout: |
+            clients/tfchain-client-go
+            bridge/tfchain_bridge
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.20"
+          cache: false
+          # cache-dependency-path: bridge/tfchain_bridge/go.sum
+        id: go
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3.7.0
+        with:
+          args: --timeout 3m --verbose
+          working-directory: bridge/tfchain_bridge
+
+      - name: staticcheck
+        uses: dominikh/staticcheck-action@v1.3.0
+        with:
+          version: "2022.1.3"
+          working-directory: bridge/tfchain_bridge
+        env:
+          GO111MODULE: on
+
+      - name: gofmt
+        uses: Jerome1337/gofmt-action@v1.0.5
+        with:
+          gofmt-path: './bridge/tfchain_bridge'
+          gofmt-flags: "-l -d"

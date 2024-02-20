@@ -155,7 +155,7 @@ fn burn_approval_retries_works() {
             b"bob_stellar_pubkey".to_vec(),
             1
         ));
-        let burn_tx = TFTBridgeModule::burn_transactions(1);
+        let burn_tx = TFTBridgeModule::burn_transactions(1).unwrap();
         assert_eq!(burn_tx.signatures.len(), 2);
 
         assert_ok!(TFTBridgeModule::propose_burn_transaction_or_add_sig(
@@ -167,7 +167,7 @@ fn burn_approval_retries_works() {
             b"eve_stellar_pubkey".to_vec(),
             1
         ));
-        let executed_burn_tx = TFTBridgeModule::burn_transactions(1);
+        let executed_burn_tx = TFTBridgeModule::burn_transactions(1).unwrap();
         assert_eq!(executed_burn_tx.signatures.len(), 3);
 
         // // Test that the expected events were emitted
@@ -377,7 +377,7 @@ fn burn_flow() {
             b"bob_stellar_pubkey".to_vec(),
             1
         ));
-        let burn_tx = TFTBridgeModule::burn_transactions(1);
+        let burn_tx = TFTBridgeModule::burn_transactions(1).unwrap();
         assert_eq!(burn_tx.signatures.len(), 2);
 
         assert_ok!(TFTBridgeModule::propose_burn_transaction_or_add_sig(
@@ -389,7 +389,7 @@ fn burn_flow() {
             b"eve_stellar_pubkey".to_vec(),
             1
         ));
-        let executed_burn_tx = TFTBridgeModule::burn_transactions(1);
+        let executed_burn_tx = TFTBridgeModule::burn_transactions(1).unwrap();
         assert_eq!(executed_burn_tx.signatures.len(), 3);
 
         let b = TFTBridgeModule::get_usable_balance(&bob());
@@ -443,11 +443,11 @@ fn burn_flow_expired() {
             b"bob_stellar_pubkey".to_vec(),
             1
         ));
-        let burn_tx = TFTBridgeModule::burn_transactions(1);
+        let burn_tx = TFTBridgeModule::burn_transactions(1).unwrap();
         assert_eq!(burn_tx.signatures.len(), 2);
 
         run_to_block(102);
-        let burn_tx = TFTBridgeModule::burn_transactions(1);
+        let burn_tx = TFTBridgeModule::burn_transactions(1).unwrap();
         assert_eq!(burn_tx.signatures.len(), 0);
 
         // let expired_burn_tx = TFTBridgeModule::expired_burn_transactions(1);
@@ -474,7 +474,7 @@ fn burn_flow_expired() {
         //     )];
         // assert_eq!(our_events[4], expected_events[0]);
 
-        let burn_tx = TFTBridgeModule::burn_transactions(1);
+        let burn_tx = TFTBridgeModule::burn_transactions(1).unwrap();
         assert_eq!(burn_tx.signatures.len(), 0);
         assert_eq!(burn_tx.sequence_number, 0);
     });

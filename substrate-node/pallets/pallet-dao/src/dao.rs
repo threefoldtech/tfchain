@@ -14,6 +14,7 @@ use frame_support::{
     traits::Get,
     weights::Weight,
 };
+use frame_system::pallet_prelude::BlockNumberFor;
 use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf, TfgridNode};
 use sp_runtime::traits::{Dispatchable, Hash};
 use sp_std::prelude::*;
@@ -29,7 +30,7 @@ impl<T: Config> Pallet<T> {
         action: Box<<T as Config>::Proposal>,
         description: Vec<u8>,
         link: Vec<u8>,
-        duration: Option<T::BlockNumber>,
+        duration: Option<BlockNumberFor<T>>,
     ) -> DispatchResultWithPostInfo {
         Self::is_council_member(who.clone())?;
 
@@ -43,7 +44,7 @@ impl<T: Config> Pallet<T> {
         let mut end = now + T::MotionDuration::get();
         if let Some(motion_duration) = duration {
             ensure!(
-                motion_duration < T::BlockNumber::from(constants::time::DAYS * 30),
+                motion_duration < BlockNumberFor::<T>::from(constants::time::DAYS * 30),
                 Error::<T>::InvalidProposalDuration
             );
             end = now + motion_duration;
@@ -205,17 +206,20 @@ impl<T: Config> Pallet<T> {
         let no_votes = voting.nays.len() as u32;
         let yes_votes = voting.ayes.len() as u32;
 
+        let threshold_is_met = (no_votes + yes_votes) >= voting.threshold;
+        let proposal_is_expired = frame_system::Pallet::<T>::block_number() >= voting.end;
+
         // Only allow actual closing of the proposal after the voting threshold is met or voting period has ended
         ensure!(
-            (no_votes + yes_votes) >= voting.threshold
-                || frame_system::Pallet::<T>::block_number() >= voting.end,
+            threshold_is_met || proposal_is_expired,
             Error::<T>::OngoingVoteAndTresholdStillNotMet
         );
 
         let total_aye_weight: u64 = voting.ayes.iter().map(|y| y.weight).sum();
         let total_naye_weight: u64 = voting.nays.iter().map(|y| y.weight).sum();
 
-        let approved = total_aye_weight > total_naye_weight;
+        // Only approve proposal if the voting threshold is met and simple majority (expressed in weight) is reached
+        let approved = threshold_is_met && (total_aye_weight > total_naye_weight);
 
         if approved {
             let proposal = Self::validate_and_get_proposal(&proposal_hash)?;
@@ -363,4 +367,6 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
         farm_weight = farm_weight.checked_sub(node_weight).unwrap_or(0);
         FarmWeight::<T>::insert(node.farm_id, farm_weight);
     }
+
+    fn node_power_state_changed(_node: &TfgridNode<T>) {}
 }

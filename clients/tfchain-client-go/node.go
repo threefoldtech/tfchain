@@ -688,6 +688,32 @@ func (s *Substrate) SetNodePowerState(identity Identity, up bool) (hash types.Ha
 	return callResponse.Hash, nil
 }
 
+// SetNodePowerTarget updates the power target of a node
+func (s *Substrate) SetNodePowerTarget(identity Identity, nodeID uint32, up bool) (hash types.Hash, err error) {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return hash, err
+	}
+
+	power := Power{
+		IsUp:   up,
+		IsDown: !up,
+	}
+
+	c, err := types.NewCall(meta, "TfgridModule.change_power_target", nodeID, power)
+
+	if err != nil {
+		return hash, errors.Wrap(err, "failed to create call")
+	}
+
+	callResponse, err := s.Call(cl, meta, identity, c)
+	if err != nil {
+		return hash, errors.Wrap(err, "failed to change node power target")
+	}
+
+	return callResponse.Hash, nil
+}
+
 // GetPowerTarget returns the power target for a node
 func (s *Substrate) GetPowerTarget(nodeID uint32) (power NodePower, err error) {
 	cl, meta, err := s.GetClient()
@@ -777,4 +803,25 @@ func (s *Substrate) GetDedicatedNodePrice(nodeID uint32) (uint64, error) {
 	}
 
 	return uint64(price), nil
+}
+
+// SetNodeCertificate sets the node certificate type
+func (s *Substrate) SetNodeCertificate(identity Identity, id uint32, cert NodeCertification) error {
+	cl, meta, err := s.GetClient()
+	if err != nil {
+		return err
+	}
+
+	c, err := types.NewCall(meta, "TfgridModule.set_node_certification",
+		id, cert,
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to create call")
+	}
+
+	if _, err := s.Call(cl, meta, identity, c); err != nil {
+		return errors.Wrap(err, "failed to set node certificate")
+	}
+
+	return nil
 }

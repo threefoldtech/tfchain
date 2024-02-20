@@ -6,6 +6,7 @@ use frame_support::{
     traits::Get,
     BoundedVec, RuntimeDebug,
 };
+use frame_system::pallet_prelude::BlockNumberFor;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_std::{marker::PhantomData, vec, vec::Vec};
@@ -269,7 +270,7 @@ impl<T: Config> Pallet<T> {
             let now = frame_system::Pallet::<T>::block_number();
 
             // Policy end is expressed in number of blocks
-            if farming_policy.policy_end != T::BlockNumber::from(0 as u32)
+            if farming_policy.policy_end != BlockNumberFor::<T>::from(0 as u32)
                 && now >= farming_policy.policy_created + farming_policy.policy_end
             {
                 return Err(DispatchErrorWithPostInfo::from(
@@ -322,10 +323,13 @@ impl<T: Config> Pallet<T> {
         let mut public_ips_list: PublicIpListOf =
             vec![].try_into().map_err(|_| Error::<T>::InvalidPublicIP)?;
 
-        for ip in public_ips {
+        for ip4 in public_ips {
+            // Check if it's a valid IP4
+            ip4.is_valid().map_err(|_| Error::<T>::InvalidPublicIP)?;
+
             let pub_ip = PublicIP {
-                ip: ip.ip,
-                gateway: ip.gw,
+                ip: ip4.ip,
+                gateway: ip4.gw,
                 contract_id: 0,
             };
 

@@ -8,7 +8,7 @@ use frame_support::{
     traits::{OnFinalize, OnInitialize},
     BoundedVec,
 };
-use frame_system::{EventRecord, Pallet as System, RawOrigin};
+use frame_system::{pallet_prelude::BlockNumberFor, EventRecord, Pallet as System, RawOrigin};
 use pallet_balances::Pallet as Balances;
 use pallet_tfgrid::{
     types::{self as tfgrid_types, LocationInput},
@@ -305,7 +305,7 @@ benchmarks! {
 
         let contract = SmartContractModule::<T>::contracts(contract_id).unwrap();
         // Get contract cost before billing to take into account nu
-        let (cost, _) = contract.calculate_contract_cost_tft(balance_init_amount, elapsed_seconds).unwrap();
+        let (cost, discount_level) = contract.calculate_contract_cost_tft(balance_init_amount, elapsed_seconds).unwrap();
     }: _(RawOrigin::Signed(farmer), contract_id)
     verify {
         let lock = SmartContractModule::<T>::contract_number_of_cylces_billed(contract_id);
@@ -313,7 +313,7 @@ benchmarks! {
         let contract_bill = types::ContractBill {
             contract_id,
             timestamp: SmartContractModule::<T>::get_current_timestamp_in_secs(),
-            discount_level: types::DiscountLevel::Gold,
+            discount_level,
             amount_billed: cost.saturated_into::<u128>(),
         };
         assert_last_event::<T>(Event::ContractBilled(contract_bill).into());
@@ -481,6 +481,28 @@ benchmarks! {
         );
     }
 
+    // cancel_contract_collective()
+    cancel_contract_collective {
+        let farmer: T::AccountId = account("Alice", 0, 0);
+        _prepare_farm_with_node::<T>(farmer.clone());
+
+        let user: T::AccountId = whitelisted_caller();
+        _create_twin::<T>(user.clone());
+        _create_node_contract::<T>(user.clone());
+        let contract_id = 1;
+
+    }: _(RawOrigin::Root, contract_id)
+    verify {
+        assert!(SmartContractModule::<T>::contracts(contract_id).is_none());
+        let node_id = 1;
+        let twin_id = 2;
+        assert_last_event::<T>(Event::NodeContractCanceled {
+            contract_id,
+            node_id,
+            twin_id,
+         }.into());
+    }
+
     // Calling the `impl_benchmark_test_suite` macro inside the `benchmarks`
     // block will generate one #[test] function per benchmark
     impl_benchmark_test_suite!(SmartContractModule, crate::mock::new_test_ext(), crate::mock::TestRuntime)
@@ -493,7 +515,7 @@ fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
     assert_eq!(event, &system_event);
 }
 
-pub fn run_to_block<T: Config>(n: T::BlockNumber) {
+pub fn run_to_block<T: Config>(n: BlockNumberFor<T>) {
     while System::<T>::block_number() < n {
         crate::Pallet::<T>::on_finalize(System::<T>::block_number());
         System::<T>::on_finalize(System::<T>::block_number());
@@ -564,7 +586,7 @@ fn _create_farming_policy<T: Config>() {
         10,
         8,
         9999,
-        <T as frame_system::Config>::BlockNumber::max_value(),
+        BlockNumberFor::<T>::max_value(),
         true,
         true,
         NodeCertification::Diy,

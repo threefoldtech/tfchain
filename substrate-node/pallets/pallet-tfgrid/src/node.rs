@@ -13,7 +13,7 @@ use sp_std::marker::PhantomData;
 use sp_std::{vec, vec::Vec};
 use tfchain_support::{
     resources::Resources,
-    traits::ChangeNode,
+    traits::{ChangeNode, NodeActiveContracts},
     types::{Interface, Node, NodeCertification, Power, PowerState, PublicConfig},
 };
 
@@ -335,11 +335,14 @@ impl<T: Config> Pallet<T> {
 
         let mut node_power = NodePower::<T>::get(node_id);
 
-        // if the power state is not correct => change it and emit event
+        // If the power state is different from what is set, change it and emit event
         if node_power.state != power_state {
             node_power.state = power_state.clone();
-
             NodePower::<T>::insert(node_id, node_power);
+
+            // Call node power state changed
+            T::NodeChanged::node_power_state_changed(&node);
+
             Self::deposit_event(Event::PowerStateChanged {
                 farm_id: node.farm_id,
                 node_id,
@@ -358,31 +361,32 @@ impl<T: Config> Pallet<T> {
         let twin_id = TwinIdByAccountID::<T>::get(account_id).ok_or(Error::<T>::TwinNotExists)?;
         let node = Nodes::<T>::get(node_id).ok_or(Error::<T>::NodeNotExists)?;
         let farm = Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
+
+        // Make sure only the farmer that owns this node can change the power target
         ensure!(
             twin_id == farm.twin_id,
             Error::<T>::UnauthorizedToChangePowerTarget
         );
-        // Make sure only the farmer that owns this node can change the power target
-        ensure!(
-            node.farm_id == farm.id,
-            Error::<T>::UnauthorizedToChangePowerTarget
-        );
 
-        Self::_change_power_target_on_node(node.id, node.farm_id, power_target);
+        // If power target is switched to Down, make sure there are no active contracts on node
+        if power_target == Power::Down {
+            ensure!(
+                T::NodeActiveContracts::node_has_no_active_contracts(node_id),
+                Error::<T>::NodeHasActiveContracts
+            );
+        }
 
-        Ok(().into())
-    }
-
-    fn _change_power_target_on_node(node_id: u32, farm_id: u32, power_target: Power) {
         let mut node_power = NodePower::<T>::get(node_id);
         node_power.target = power_target.clone();
         NodePower::<T>::insert(node_id, &node_power);
 
         Self::deposit_event(Event::PowerTargetChanged {
-            farm_id,
+            farm_id: node.farm_id,
             node_id,
             power_target,
         });
+
+        Ok(().into())
     }
 
     fn get_resources(

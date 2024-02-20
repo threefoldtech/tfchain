@@ -1,6 +1,9 @@
 use super::*;
 use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::Pays};
-use frame_system::offchain::{SendSignedTransaction, SignMessage, Signer};
+use frame_system::{
+    offchain::{SendSignedTransaction, SignMessage, Signer},
+    pallet_prelude::BlockNumberFor,
+};
 use ringbuffer::{RingBufferTrait, RingBufferTransient};
 use scale_info::prelude::format;
 use serde_json::Value;
@@ -24,7 +27,7 @@ pub const DST_AMOUNT: u32 = 100;
 impl<T: Config> Pallet<T> {
     pub(crate) fn calculate_and_set_price(
         price: u32,
-        block_number: T::BlockNumber,
+        block_number: BlockNumberFor<T>,
     ) -> DispatchResultWithPostInfo {
         log::info!("price {:?}", price);
 
@@ -111,7 +114,7 @@ impl<T: Config> Pallet<T> {
         Ok(tft_usd)
     }
 
-    pub(crate) fn offchain_signed_tx(block_number: T::BlockNumber) -> Result<(), Error<T>> {
+    pub(crate) fn offchain_signed_tx(block_number: BlockNumberFor<T>) -> Result<(), Error<T>> {
         let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::any_account();
 
         // Only allow the author of the next block to trigger price fetching
@@ -120,7 +123,7 @@ impl<T: Config> Pallet<T> {
             Err(_) => return Ok(()),
         }
 
-        let last_block_set: T::BlockNumber = LastBlockSet::<T>::get();
+        let last_block_set: BlockNumberFor<T> = LastBlockSet::<T>::get();
         // Fetch the price every 1 minutes
         if block_number.saturated_into::<u64>() - last_block_set.saturated_into::<u64>() < 10 {
             return Ok(());

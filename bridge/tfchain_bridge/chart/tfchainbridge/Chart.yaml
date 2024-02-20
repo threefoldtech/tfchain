@@ -1,9 +1,6 @@
 apiVersion: v2
 name: tfchainbridge
 description: Bridge for TFT between Tfchain Stellar
-
 type: application
-
-version: 2.5.0-rc7
-
-appVersion: '2.5.0-rc7'
+version: 2.7.0-rc4
+appVersion: '2.7.0-rc4'

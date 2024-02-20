@@ -6,7 +6,7 @@ use frame_support::{
     dispatch::DispatchErrorWithPostInfo,
     dispatch::PostDispatchInfo,
     parameter_types,
-    traits::{ConstU32, GenesisBuild},
+    traits::{ConstU32, EitherOfDiverse},
     BoundedVec,
 };
 use frame_system::EnsureRoot;
@@ -33,11 +33,11 @@ use sp_keystore::{testing::MemoryKeystore, Keystore, KeystoreExt};
 use sp_runtime::{
     impl_opaque_keys,
     offchain::TransactionPool,
-    testing::{Header, TestXt, UintAuthorityId},
+    testing::{TestXt, UintAuthorityId},
     traits::{
         BlakeTwo256, Extrinsic as ExtrinsicT, IdentifyAccount, IdentityLookup, OpaqueKeys, Verify,
     },
-    AccountId32, MultiSignature,
+    AccountId32, BuildStorage, MultiSignature,
 };
 use sp_std::{
     convert::{TryFrom, TryInto},
@@ -46,7 +46,7 @@ use sp_std::{
 use std::{cell::RefCell, panic, thread};
 use tfchain_support::{
     constants::time::{MINUTES, SECS_PER_HOUR},
-    traits::{ChangeNode, PublicIpModifier},
+    traits::{ChangeNode, NodeActiveContracts, PublicIpModifier},
     types::PublicIP,
 };
 
@@ -96,24 +96,21 @@ pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::Account
 pub type Moment = u64;
 
 pub type Extrinsic = TestXt<RuntimeCall, ()>;
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime>;
 type Block = frame_system::mocking::MockBlock<TestRuntime>;
 
 construct_runtime!(
-    pub enum TestRuntime where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum TestRuntime
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>},
+        TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>, Error<T>},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         SmartContractModule: pallet_smart_contract::{Pallet, Call, Storage, Event<T>},
         TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Event<T>},
         Authorship: pallet_authorship::{Pallet, Storage},
         ValidatorSet: substrate_validator_set::{Pallet, Call, Storage, Event<T>, Config<T>},
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
+        Council: pallet_collective::<Instance1>::{Pallet, Call, Origin<T>, Event<T>, Config<T>},
     }
 );
 
@@ -124,25 +121,24 @@ parameter_types! {
 
 impl frame_system::Config for TestRuntime {
     type BaseCallFilter = frame_support::traits::Everything;
+    type Block = Block;
     type BlockWeights = ();
     type BlockLength = ();
-    type RuntimeOrigin = RuntimeOrigin;
-    type Index = u64;
+    type AccountId = AccountId;
     type RuntimeCall = RuntimeCall;
-    type BlockNumber = u64;
+    type Lookup = IdentityLookup<Self::AccountId>;
+    type Nonce = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = AccountId;
-    type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
     type RuntimeEvent = RuntimeEvent;
+    type RuntimeOrigin = RuntimeOrigin;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
     type PalletInfo = PalletInfo;
-    type AccountData = pallet_balances::AccountData<u64>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
+    type AccountData = pallet_balances::AccountData<u64>;
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
@@ -171,7 +167,7 @@ impl pallet_balances::Config for TestRuntime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<TestRuntime>;
     type FreezeIdentifier = ();
     type MaxFreezes = ();
-    type HoldIdentifier = ();
+    type RuntimeHoldReason = ();
     type MaxHolds = ();
 }
 
@@ -187,12 +183,22 @@ impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
     fn node_deleted(node: &TfgridNode) {
         SmartContractModule::node_deleted(node);
     }
+    fn node_power_state_changed(node: &TfgridNode) {
+        SmartContractModule::node_power_state_changed(node);
+    }
 }
 
 pub struct PublicIpModifierType;
 impl PublicIpModifier for PublicIpModifierType {
     fn ip_removed(ip: &PublicIP) {
         SmartContractModule::ip_removed(ip);
+    }
+}
+
+pub struct NodeActiveContractsType;
+impl NodeActiveContracts for NodeActiveContractsType {
+    fn node_has_no_active_contracts(node_id: u32) -> bool {
+        SmartContractModule::node_has_no_active_contracts(node_id)
     }
 }
 
@@ -223,6 +229,7 @@ impl pallet_tfgrid::Config for TestRuntime {
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
     type PublicIpModifier = PublicIpModifierType;
+    type NodeActiveContracts = NodeActiveContractsType;
     type TermsAndConditions = TestTermsAndConditions;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
@@ -267,6 +274,11 @@ parameter_types! {
 
 pub(crate) type TestNameContractName = NameContractName<TestRuntime>;
 
+type EnsureRootOrCouncilApproval = EitherOfDiverse<
+    EnsureRoot<AccountId>,
+    pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 5>,
+>;
+
 use weights;
 impl pallet_smart_contract::Config for TestRuntime {
     type RuntimeEvent = RuntimeEvent;
@@ -278,10 +290,9 @@ impl pallet_smart_contract::Config for TestRuntime {
     type DistributionFrequency = DistributionFrequency;
     type GracePeriod = GracePeriod;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
-    type NodeChanged = NodeChanged;
     type MaxNameContractNameLength = MaxNameContractNameLength;
     type NameContractName = TestNameContractName;
-    type RestrictedOrigin = EnsureRoot<Self::AccountId>;
+    type RestrictedOrigin = EnsureRootOrCouncilApproval;
     type MaxDeploymentDataLength = MaxDeploymentDataLength;
     type MaxNodeContractPublicIps = MaxNodeContractPublicIPs;
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
@@ -365,7 +376,26 @@ impl pallet_session::Config for TestRuntime {
     type WeightInfo = ();
 }
 
-type AccountPublic = <MultiSignature as Verify>::Signer;
+pub type BlockNumber = u32;
+parameter_types! {
+    pub const CouncilMotionDuration: BlockNumber = 4;
+    pub const CouncilMaxProposals: u32 = 100;
+    pub const CouncilMaxMembers: u32 = 100;
+}
+
+pub type CouncilCollective = pallet_collective::Instance1;
+impl pallet_collective::Config<CouncilCollective> for TestRuntime {
+    type RuntimeOrigin = RuntimeOrigin;
+    type Proposal = RuntimeCall;
+    type RuntimeEvent = RuntimeEvent;
+    type MotionDuration = CouncilMotionDuration;
+    type MaxProposals = CouncilMaxProposals;
+    type MaxMembers = CouncilMaxMembers;
+    type DefaultVote = pallet_collective::PrimeDefaultVote;
+    type SetMembersOrigin = EnsureRoot<Self::AccountId>;
+    type WeightInfo = ();
+    type MaxProposalWeight = ();
+}
 
 pub(crate) fn get_name_contract_name(contract_name_input: &[u8]) -> TestNameContractName {
     NameContractName::try_from(contract_name_input.to_vec()).expect("Invalid farm input.")
@@ -445,6 +475,8 @@ where
     }
 }
 
+type AccountPublic = <MultiSignature as Verify>::Signer;
+
 /// Helper function to generate an account ID from seed
 fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
 where
@@ -485,8 +517,8 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     // for showing logs in tests
     let _ = env_logger::try_init();
 
-    let mut storage = frame_system::GenesisConfig::default()
-        .build_storage::<TestRuntime>()
+    let mut storage = frame_system::GenesisConfig::<TestRuntime>::default()
+        .build_storage()
         .unwrap();
     let genesis = pallet_balances::GenesisConfig::<TestRuntime> {
         balances: vec![
@@ -503,12 +535,12 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     };
     session_genesis.assimilate_storage(&mut storage).unwrap();
 
-    let genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
+    let price_genesis = pallet_tft_price::GenesisConfig::<TestRuntime> {
         min_tft_price: 10,
         max_tft_price: 1000,
         _data: PhantomData,
     };
-    genesis.assimilate_storage(&mut storage).unwrap();
+    price_genesis.assimilate_storage(&mut storage).unwrap();
 
     let t = sp_io::TestExternalities::from(storage);
 

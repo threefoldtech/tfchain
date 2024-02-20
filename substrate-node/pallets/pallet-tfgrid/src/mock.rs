@@ -2,7 +2,6 @@ use crate::{
     self as tfgridModule,
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
-    mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild,
     node::{CityName, CountryName, Location, SerialNumber},
     terms_cond::TermsAndConditions,
     weights, CityNameInput, Config, CountryNameInput, DocumentHashInput, DocumentLinkInput,
@@ -15,31 +14,29 @@ use frame_system::EnsureRoot;
 use sp_core::{ed25519, sr25519, Pair, Public, H256};
 use sp_io::TestExternalities;
 use sp_runtime::{
-    testing::Header,
     traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-    MultiSignature,
+    BuildStorage, MultiSignature,
 };
 use sp_std::prelude::*;
 
 use hex;
-use tfchain_support::types::PublicIP;
+use tfchain_support::{
+    traits::{ChangeNode, NodeActiveContracts, PublicIpModifier},
+    types::PublicIP,
+};
 
 pub type Signature = MultiSignature;
 
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 pub type Moment = u64;
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime>;
 type Block = frame_system::mocking::MockBlock<TestRuntime>;
 
 construct_runtime!(
-    pub enum TestRuntime where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum TestRuntime
     {
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>},
         TfgridModule: tfgridModule::{Pallet, Call, Storage, Config<T>, Event<T>},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         Council: pallet_collective::<Instance1>::{Pallet, Call, Origin<T>, Event<T>, Config<T>},
@@ -54,25 +51,24 @@ parameter_types! {
 
 impl frame_system::Config for TestRuntime {
     type BaseCallFilter = frame_support::traits::Everything;
+    type Block = Block;
     type BlockWeights = ();
     type BlockLength = ();
-    type RuntimeOrigin = RuntimeOrigin;
-    type Index = u64;
+    type AccountId = AccountId;
     type RuntimeCall = RuntimeCall;
-    type BlockNumber = u64;
+    type Lookup = IdentityLookup<Self::AccountId>;
+    type Nonce = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = AccountId;
-    type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
     type RuntimeEvent = RuntimeEvent;
+    type RuntimeOrigin = RuntimeOrigin;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
     type PalletInfo = PalletInfo;
-    type AccountData = pallet_balances::AccountData<u64>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
+    type AccountData = pallet_balances::AccountData<u64>;
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
@@ -86,14 +82,22 @@ pub(crate) type Interface = crate::InterfaceOf<TestRuntime>;
 pub(crate) type TfgridNode = crate::TfgridNode<TestRuntime>;
 
 pub struct NodeChanged;
-impl tfchain_support::traits::ChangeNode<Loc, Interface, Serial> for NodeChanged {
+impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
     fn node_changed(_old_node: Option<&TfgridNode>, _new_node: &TfgridNode) {}
     fn node_deleted(_node: &TfgridNode) {}
+    fn node_power_state_changed(_node: &TfgridNode) {}
 }
 
-pub struct PublicIpModifier;
-impl tfchain_support::traits::PublicIpModifier for PublicIpModifier {
+pub struct PublicIpModifierType;
+impl PublicIpModifier for PublicIpModifierType {
     fn ip_removed(_ip: &PublicIP) {}
+}
+
+pub struct NodeActiveContractsType;
+impl NodeActiveContracts for NodeActiveContractsType {
+    fn node_has_no_active_contracts(_node_id: u32) -> bool {
+        true
+    }
 }
 
 parameter_types! {
@@ -122,7 +126,8 @@ impl Config for TestRuntime {
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
-    type PublicIpModifier = PublicIpModifier;
+    type PublicIpModifier = PublicIpModifierType;
+    type NodeActiveContracts = NodeActiveContractsType;
     type TermsAndConditions = TestTermsAndConditions;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
@@ -158,7 +163,7 @@ impl pallet_balances::Config for TestRuntime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<TestRuntime>;
     type FreezeIdentifier = ();
     type MaxFreezes = ();
-    type HoldIdentifier = ();
+    type RuntimeHoldReason = ();
     type MaxHolds = ();
 }
 
@@ -208,8 +213,8 @@ impl ExternalityBuilder {
     pub fn build() -> TestExternalities {
         let _ = env_logger::try_init();
 
-        let storage = frame_system::GenesisConfig::default()
-            .build_storage::<TestRuntime>()
+        let storage = frame_system::GenesisConfig::<TestRuntime>::default()
+            .build_storage()
             .unwrap();
         let mut ext = TestExternalities::from(storage);
         ext.execute_with(|| System::set_block_number(1));
@@ -221,8 +226,8 @@ type AccountPublic = <MultiSignature as Verify>::Signer;
 pub fn new_test_ext() -> sp_io::TestExternalities {
     let _ = env_logger::try_init();
 
-    let mut t = frame_system::GenesisConfig::default()
-        .build_storage::<TestRuntime>()
+    let mut t = frame_system::GenesisConfig::<TestRuntime>::default()
+        .build_storage()
         .unwrap();
 
     let genesis = pallet_balances::GenesisConfig::<TestRuntime> {

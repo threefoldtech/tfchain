@@ -10,9 +10,9 @@ The transactions weights in TFchain were benchmarked on standard hardware. It is
 Standard Hardware
 For the full details of the standard hardware please see here.
 
-- CPU - Intel(R) Core(TM) i7-7700K CPU @ 4.20GHz
-- Storage - A NVMe solid state drive. Should be reasonably sized to deal with blockchain growth. Starting around 80GB - 160GB will be okay for the first six months of TFchain, but will need to be re-evaluated every six months.
-- Memory - 64GB ECC.
+*   CPU - Intel(R) Core(TM) i7-7700K CPU @ 4.20GHz
+*   Storage - A NVMe solid state drive. Should be reasonably sized to deal with blockchain growth. Starting around 80GB - 160GB will be okay for the first six months of TFchain, but will need to be re-evaluated every six months.
+*   Memory - 64GB ECC.
 
 The specs posted above are by no means the minimum specs that you could use when running a validator, however you should be aware that if you are using less you may need to toggle some extra optimizations in order to be equal to other validators that are running the standard.
 
@@ -101,9 +101,9 @@ You can now start synchronising chain data.
 
 Bootnodes examples:
 
-- Devnet bootnode: `/ip4/185.206.122.7/tcp/30333/p2p/12D3KooWLcMLBg9itjQL1EXsAqkJFPhqESHqJKY7CBKmhhhL8fdp`
-- Testnet bootnode: `/ip4/51.68.204.40/tcp/30333/p2p/12D3KooWHe8Wbn6dDbyxXietaXSRTZJfykPRgrkJDjXh9xZ4383k`
-- Mainnet bootnode: `/ip4/185.206.122.83/tcp/30333/p2p/12D3KooWLtsdtQHswnXkLRH7e8vZJHktsh7gfuL5PoADV51JJ6wY`
+*   Devnet bootnode: `/ip4/185.206.122.7/tcp/30333/p2p/12D3KooWLcMLBg9itjQL1EXsAqkJFPhqESHqJKY7CBKmhhhL8fdp`
+*   Testnet bootnode: `/ip4/51.68.204.40/tcp/30333/p2p/12D3KooWHe8Wbn6dDbyxXietaXSRTZJfykPRgrkJDjXh9xZ4383k`
+*   Mainnet bootnode: `/ip4/185.206.122.83/tcp/30333/p2p/12D3KooWLtsdtQHswnXkLRH7e8vZJHktsh7gfuL5PoADV51JJ6wY`
 
 You can begin syncing your node by running the following command:
 
@@ -147,16 +147,16 @@ If you are interested in determining how much longer you have to go, your server
 
 ## Create a Validator object
 
-- dev: <https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.grid.tf#/accounts>
-- test: <https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.test.grid.tf#/accounts>
-- main: <https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.grid.tf#/accounts>
+*   dev: <https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.dev.grid.tf#/accounts>
+*   test: <https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.test.grid.tf#/accounts>
+*   main: <https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftfchain.grid.tf#/accounts>
 
 Open polkadot js link in the browser based on the network you want to validate on.
 
-- Browse to `accounts` and click `Add Account`, create an account and name it `VALIDATOR_ACCOUNT`. Take note of the mnemonic.
-  This account will be your account that manages the Validator and manages your council membership (voting). Make sure to send some TFT to this account.
-- (Optional) Create another account and name it `ANYNAME_STASH`. This account will be your stash account.
-- Create one more account and call it `VALIDATOR_NODE_ACCOUNT`, this account will be used to participate in consensus.
+*   Browse to `accounts` and click `Add Account`, create an account and name it `VALIDATOR_ACCOUNT`. Take note of the mnemonic.
+    This account will be your account that manages the Validator and manages your council membership (voting). Make sure to send some TFT to this account.
+*   (Optional) Create another account and name it `ANYNAME_STASH`. This account will be your stash account.
+*   Create one more account and call it `VALIDATOR_NODE_ACCOUNT`, this account will be used to participate in consensus.
 
 You now should have 3 accounts.
 
@@ -180,11 +180,11 @@ This call needs to be signed with your account (`VALIDATOR_ACCOUNT`) that manage
 
 Information needed:
 
-- validator_node_account: Account ID generated from previous step (`VALIDATOR_NODE_ACCOUNT`)
-- stash_account: Stash account, can be your `VALIDATOR_ACCOUNT`
-- description: Reason why I want to become a validator
-- tfconnectid: Your Threefold connect name
-- info: link to webpage or linked in profile
+*   validator\_node\_account: Account ID generated from previous step (`VALIDATOR_NODE_ACCOUNT`)
+*   stash\_account: Stash account, can be your `VALIDATOR_ACCOUNT`
+*   description: Reason why I want to become a validator
+*   tfconnectid: Your Threefold connect name
+*   info: link to webpage or linked in profile
 
 If all information is filled in correctly. Click on `Submit transaction` and sign. If all goes well, the Council will approve your request.
 
@@ -204,7 +204,7 @@ Transfer some balance to this account (you can see the address in the polkadot U
 Restart tfchain with:
 
 ```sh
-./target/release/tfchain ...otherArgs --ws-external --rpc-methods Unsafe --rpc-external --telemetry-url 'wss://shard1.telemetry.tfchain.grid.tf/submit 1'
+./target/release/tfchain ...otherArgs --rpc-external --rpc-methods Unsafe --telemetry-url 'wss://shard1.telemetry.tfchain.grid.tf/submit 1'
 ```
 
 #### Using polkodatjs
@@ -220,7 +220,7 @@ yarn
 yarn start
 ```
 
-Browse to <http://localhost:3000> and connect to the new node over its public ip. Make sure to specify the port, like: ws://YOUR_MACHINE_PUBLIC_IP:9944
+Browse to <http://localhost:3000> and connect to the new node over its public ip. Make sure to specify the port, like: ws://YOUR\_MACHINE\_PUBLIC\_IP:9944
 
 First insert the types: Go to `Settings` -> `Developer` -> Copy paste output of following [file](https://raw.githubusercontent.com/threefoldtech/tfchain_client_js/master/types.json)
 
@@ -240,14 +240,12 @@ Go to `Extrinsics` -> `session` -> `setKeys` -> (make sure to use the created no
 
 input:
 
-```
-keys: the key from rotate keys ouput
-proofs: 0
-```
+    keys: the key from rotate keys ouput
+    proofs: 0
 
 Now we can start the node in Validator mode:
 
-Restart tfchain and remove flags: `--ws-external --rpc-methods Unsafe --rpc-external` and replace that with `--validator`
+Restart tfchain and remove flags: `--rpc-external --rpc-methods Unsafe` and replace that with `--validator`
 
 Your node is now running in validator mode. Next up you need to manually activate the validator.
 
@@ -265,22 +263,20 @@ Select `ActivateValidatorNode` and click Submit Transaction.
 
 Example systemd file:
 
-```
-[Unit]
-Description=TFchain service
-After=network.target
-StartLimitIntervalSec=0
+    [Unit]
+    Description=TFchain service
+    After=network.target
+    StartLimitIntervalSec=0
 
-[Service]
-Type=simple
-Restart=always
-RestartSec=1
-User=user
-ExecStart=/home/user/tfchain/substrate-node/target/release/tfchain --chain /home/user/tfchain/substrate-node/chainspecs/dev/chainSpec.json --pruning=archive --bootnodes /ip4/185.206.122.7/tcp/30333/p2p/12D3KooWLcMLBg9itjQL1EXsAqkJFPhqESHqJKY7CBKmhhhL8fdp --validator --telemetry-url 'wss://shard1.telemetry.tfchain.grid.tf/submit 1'
+    [Service]
+    Type=simple
+    Restart=always
+    RestartSec=1
+    User=user
+    ExecStart=/home/user/tfchain/substrate-node/target/release/tfchain --chain /home/user/tfchain/substrate-node/chainspecs/dev/chainSpec.json --pruning=archive --bootnodes /ip4/185.206.122.7/tcp/30333/p2p/12D3KooWLcMLBg9itjQL1EXsAqkJFPhqESHqJKY7CBKmhhhL8fdp --validator --telemetry-url 'wss://shard1.telemetry.tfchain.grid.tf/submit 1'
 
-[Install]
-WantedBy=multi-user.target
-```
+    [Install]
+    WantedBy=multi-user.target
 
 Replace `user` by your username.
 

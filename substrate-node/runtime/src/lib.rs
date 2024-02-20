@@ -28,14 +28,17 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use tfchain_support::{
     constants::time::*,
-    traits::{ChangeNode, PublicIpModifier},
+    traits::{ChangeNode, NodeActiveContracts, PublicIpModifier},
     types::PublicIP,
 };
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
     construct_runtime, parameter_types,
-    traits::{ConstU8, EitherOfDiverse, FindAuthor, KeyOwnerProofSystem, PrivilegeCmp, Randomness},
+    traits::{
+        ConstBool, ConstU8, EitherOfDiverse, FindAuthor, KeyOwnerProofSystem, PrivilegeCmp,
+        Randomness,
+    },
     weights::{
         constants::{
             BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND,
@@ -100,7 +103,7 @@ pub type AccountIndex = u32;
 pub type Balance = u128;
 
 /// Index of a transaction in the chain.
-pub type Index = u32;
+pub type Nonce = u32;
 
 /// A hash of some data used by the chain.
 pub type Hash = sp_core::H256;
@@ -143,11 +146,12 @@ pub fn session_keys(aura: AuraId, grandpa: GrandpaId) -> SessionKeys {
 /// Constant values used within the runtime.
 pub mod constants;
 
+#[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 145,
+    spec_version: 149,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -188,6 +192,8 @@ parameter_types! {
 impl frame_system::Config for Runtime {
     /// The basic call filter to use in dispatchable.
     type BaseCallFilter = frame_support::traits::Everything;
+    /// The block type for the runtime.
+    type Block = Block;
     /// Block & extrinsics weights: base values and limits.
     type BlockWeights = BlockWeights;
     /// The maximum length of a block (in bytes).
@@ -198,16 +204,12 @@ impl frame_system::Config for Runtime {
     type RuntimeCall = RuntimeCall;
     /// The lookup mechanism to get account ID from whatever is passed in dispatchers.
     type Lookup = AccountIdLookup<AccountId, ()>;
-    /// The index type for storing how many extrinsics an account has signed.
-    type Index = Index;
-    /// The index type for blocks.
-    type BlockNumber = BlockNumber;
+    /// The type for storing how many extrinsics an account has signed.
+    type Nonce = Nonce;
     /// The type for hashing blocks and tries.
     type Hash = Hash;
     /// The hashing algorithm used.
     type Hashing = BlakeTwo256;
-    /// The header type.
-    type Header = generic::Header<BlockNumber, BlakeTwo256>;
     /// The ubiquitous event type.
     type RuntimeEvent = RuntimeEvent;
     /// The ubiquitous origin type.
@@ -246,6 +248,7 @@ impl pallet_aura::Config for Runtime {
     type AuthorityId = AuraId;
     type DisabledValidators = ();
     type MaxAuthorities = MaxAuthorities;
+    type AllowMultipleBlocksPerSlot = ConstBool<false>;
 }
 
 impl pallet_grandpa::Config for Runtime {
@@ -271,8 +274,11 @@ impl pallet_timestamp::Config for Runtime {
     type WeightInfo = ();
 }
 
+/// Existential deposit.
+pub const EXISTENTIAL_DEPOSIT: u128 = 500;
+
 parameter_types! {
-    pub const ExistentialDeposit: u128 = 500;
+    pub const ExistentialDeposit: u128 = EXISTENTIAL_DEPOSIT;
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
 }
@@ -291,7 +297,7 @@ impl pallet_balances::Config for Runtime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
     type FreezeIdentifier = ();
     type MaxFreezes = ();
-    type HoldIdentifier = ();
+    type RuntimeHoldReason = ();
     type MaxHolds = ();
 }
 
@@ -324,12 +330,23 @@ impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
         SmartContractModule::node_deleted(node);
         Dao::node_deleted(node);
     }
+
+    fn node_power_state_changed(node: &TfgridNode) {
+        SmartContractModule::node_power_state_changed(node);
+    }
 }
 
 pub struct PublicIpModifierType;
 impl PublicIpModifier for PublicIpModifierType {
     fn ip_removed(ip: &PublicIP) {
         SmartContractModule::ip_removed(ip);
+    }
+}
+
+pub struct NodeActiveContractsType;
+impl NodeActiveContracts for NodeActiveContractsType {
+    fn node_has_no_active_contracts(node_id: u32) -> bool {
+        SmartContractModule::node_has_no_active_contracts(node_id)
     }
 }
 
@@ -347,6 +364,7 @@ impl pallet_tfgrid::Config for Runtime {
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Runtime>;
     type NodeChanged = NodeChanged;
     type PublicIpModifier = SmartContractModule;
+    type NodeActiveContracts = NodeActiveContractsType;
     type TermsAndConditions = pallet_tfgrid::terms_cond::TermsAndConditions<Runtime>;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
@@ -391,7 +409,6 @@ impl pallet_smart_contract::Config for Runtime {
     type DistributionFrequency = DistributionFrequency;
     type GracePeriod = GracePeriod;
     type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
-    type NodeChanged = NodeChanged;
     type PublicIpModifier = PublicIpModifierType;
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
     type Call = RuntimeCall;
@@ -461,7 +478,6 @@ impl pallet_dao::Config for Runtime {
     type Proposal = RuntimeCall;
     type MotionDuration = DaoMotionDuration;
     type Tfgrid = TfgridModule;
-    type NodeChanged = NodeChanged;
     type WeightInfo = pallet_dao::weights::SubstrateWeight<Runtime>;
     type MinVetos = MinVetos;
 }
@@ -514,7 +530,7 @@ where
         call: RuntimeCall,
         public: <Signature as sp_runtime::traits::Verify>::Signer,
         account: AccountId,
-        index: Index,
+        index: Nonce,
     ) -> Option<(
         RuntimeCall,
         <UncheckedExtrinsic as sp_runtime::traits::Extrinsic>::SignaturePayload,
@@ -690,10 +706,7 @@ impl pallet_utility::Config for Runtime {
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
-    pub enum Runtime where
-        Block = Block,
-        NodeBlock = opaque::Block,
-        UncheckedExtrinsic = UncheckedExtrinsic
+    pub enum Runtime
     {
         // System support
         System: frame_system = 0,
@@ -771,10 +784,10 @@ pub type Executive = frame_executive::Executive<
 // All migrations executed on runtime upgrade as a nested tuple of types implementing
 // `OnRuntimeUpgrade`.
 type Migrations = (
-    pallet_tfgrid::migrations::v16::KillNodeGpuStatus<Runtime>,
-    pallet_smart_contract::migrations::v10::ReworkBillingLoopInsertion<Runtime>,
-    pallet_smart_contract::migrations::v11::ExtendContractLock<Runtime>,
-    migrations::remove_sudo::RemoveSudo<Runtime>,
+    pallet_tft_bridge::migrations::v2::MigrateBurnTransactionsV2<Runtime>,
+    pallet_scheduler::migration::v3::MigrateToV4<Runtime>,
+    migrations::update_storage_version::PalletBalancesToV1<Runtime>,
+    migrations::update_storage_version::PalletSessionToV1<Runtime>,
 );
 
 // follows Substrate's non destructive way of eliminating  otherwise required
@@ -924,8 +937,8 @@ impl_runtime_apis! {
         }
     }
 
-    impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index> for Runtime {
-        fn account_nonce(account: AccountId) -> Index {
+    impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce> for Runtime {
+        fn account_nonce(account: AccountId) -> Nonce {
             System::account_nonce(account)
         }
     }

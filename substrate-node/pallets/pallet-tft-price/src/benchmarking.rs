@@ -3,7 +3,7 @@
 use super::*;
 use crate::Pallet as TFTPriceModule;
 use frame_benchmarking::benchmarks;
-use frame_system::{EventRecord, Pallet as System, RawOrigin};
+use frame_system::{pallet_prelude::BlockNumberFor, EventRecord, Pallet as System, RawOrigin};
 use pallet_session::Pallet as Session;
 
 benchmarks! {
@@ -14,7 +14,7 @@ benchmarks! {
 
     // set_prices()
     set_prices {
-        let block = T::BlockNumber::from(1u32);
+        let block = BlockNumberFor::<T>::from(1u32);
         let price = 500;
 
         let validators = Session::<T>::validators();

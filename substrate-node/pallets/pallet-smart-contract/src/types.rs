@@ -136,6 +136,7 @@ pub enum ContractState {
 pub enum Cause {
     CanceledByUser,
     OutOfFunds,
+    CanceledByCollective,
 }
 
 impl Default for ContractState {

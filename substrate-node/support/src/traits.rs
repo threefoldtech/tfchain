@@ -9,8 +9,13 @@ pub trait ChangeNode<Loc, If, Serial> {
         new_node: &super::types::Node<Loc, If, Serial>,
     );
     fn node_deleted(node: &super::types::Node<Loc, If, Serial>);
+    fn node_power_state_changed(node: &super::types::Node<Loc, If, Serial>);
 }
 
 pub trait PublicIpModifier {
     fn ip_removed(ip: &PublicIP);
+}
+
+pub trait NodeActiveContracts {
+    fn node_has_no_active_contracts(node_id: u32) -> bool;
 }

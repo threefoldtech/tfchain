@@ -6,6 +6,9 @@ use scale_info::prelude::string::String;
 use sp_core::Get;
 use sp_std::{marker::PhantomData, vec, vec::Vec};
 
+#[cfg(feature = "try-runtime")]
+use frame_support::{dispatch::DispatchError, ensure};
+
 pub struct CleanStorageState<T: Config>(PhantomData<T>);
 
 impl<T: Config> OnRuntimeUpgrade for CleanStorageState<T> {
@@ -24,9 +27,12 @@ impl<T: Config> OnRuntimeUpgrade for CleanStorageState<T> {
     }
 
     #[cfg(feature = "try-runtime")]
-    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+    fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
-        assert!(PalletVersion::<T>::get() == types::StorageVersion::V8 || PalletVersion::<T>::get() == types::StorageVersion::V9);
+        ensure!(
+            PalletVersion::<T>::get() == types::StorageVersion::V8 || PalletVersion::<T>::get() == types::StorageVersion::V9,
+            DispatchError::Other("Unexpected pallet version")
+        );
 
         check_pallet_smart_contract::<T>();
 

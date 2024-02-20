@@ -70,7 +70,6 @@ pub mod pallet {
         offchain::{AppCrypto, CreateSignedTransaction},
         pallet_prelude::*,
     };
-    use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf};
     use parity_scale_codec::FullCodec;
     use sp_core::H256;
     use sp_std::{
@@ -78,7 +77,7 @@ pub mod pallet {
         fmt::Debug,
         vec::Vec,
     };
-    use tfchain_support::traits::{ChangeNode, PublicIpModifier};
+    use tfchain_support::traits::PublicIpModifier;
 
     pub type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
@@ -217,7 +216,6 @@ pub mod pallet {
         type DistributionFrequency: Get<u16>;
         type GracePeriod: Get<u64>;
         type WeightInfo: weights::WeightInfo;
-        type NodeChanged: ChangeNode<LocationOf<Self>, InterfaceOf<Self>, SerialNumberOf<Self>>;
         type PublicIpModifier: PublicIpModifier;
         type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
         type Call: From<Call<Self>>;
@@ -389,22 +387,14 @@ pub mod pallet {
     }
 
     #[pallet::genesis_config]
-    pub struct GenesisConfig {
+    #[derive(frame_support::DefaultNoBound)]
+    pub struct GenesisConfig<T> {
         pub billing_frequency: u64,
-    }
-
-    // The default value for the genesis config type.
-    #[cfg(feature = "std")]
-    impl Default for GenesisConfig {
-        fn default() -> Self {
-            Self {
-                billing_frequency: 600,
-            }
-        }
+        pub _data: PhantomData<T>,
     }
 
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig {
+    impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
         fn build(&self) {
             BillingFrequency::<T>::put(self.billing_frequency);
         }
@@ -645,6 +635,16 @@ pub mod pallet {
             let account_id = ensure_signed(origin)?;
             Self::_set_dedicated_node_extra_fee(account_id, node_id, extra_fee)
         }
+
+        #[pallet::call_index(21)]
+        #[pallet::weight(<T as Config>::WeightInfo::cancel_contract_collective())]
+        pub fn cancel_contract_collective(
+            origin: OriginFor<T>,
+            contract_id: u64,
+        ) -> DispatchResultWithPostInfo {
+            <T as Config>::RestrictedOrigin::ensure_origin(origin)?;
+            Self::_cancel_contract_collective(contract_id, types::Cause::CanceledByCollective)
+        }
     }
 
     #[pallet::hooks]
@@ -660,8 +660,8 @@ pub mod pallet {
             weight_used
         }
 
-        fn offchain_worker(block_number: T::BlockNumber) {
-            Self::bill_conttracts_for_block(block_number);
+        fn offchain_worker(block_number: BlockNumberFor<T>) {
+            Self::bill_contracts_for_block(block_number);
         }
     }
 }
