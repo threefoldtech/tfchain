@@ -54,9 +54,16 @@ jobs:
           do
             rm $weights_rs_file
             pal_name=$(awk -F'pallets/|/src' '{print $2}' <<< $weights_rs_file)
-            ./target/release/tfchain benchmark pallet --chain=dev --pallet="$pal_name" \
-            --extrinsic="*" --steps=50 --repeat=20 --execution=wasm --heap-pages=409 \
-            --output ./pallets/"$pal_name"/src/weights.rs --template ./.maintain/frame-weight-template.hbs
+            ./target/production/tfchain benchmark pallet \
+            --chain=dev \
+            --wasm-execution=compiled \
+            --pallet="$pal_name" \
+            --extrinsic="*" \
+            --steps=50 \
+            --repeat=20 \
+            --heap-pages=409 \
+            --output ./pallets/"$pal_name"/src/weights.rs \
+            --template ./.maintain/frame-weight-template.hbs
           done
 
       - name: Commit & Push changes
