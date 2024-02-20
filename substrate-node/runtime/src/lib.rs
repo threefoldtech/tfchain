@@ -673,6 +673,7 @@ type EnsureRootOrCouncilApproval = EitherOfDiverse<
 
 impl pallet_runtime_upgrade::Config for Runtime {
     type SetCodeOrigin = EnsureRootOrCouncilApproval;
+    type WeightInfo = ();
 }
 
 pub struct AuraAccountAdapter;
