@@ -673,6 +673,7 @@ type EnsureRootOrCouncilApproval = EitherOfDiverse<
 
 impl pallet_runtime_upgrade::Config for Runtime {
     type SetCodeOrigin = EnsureRootOrCouncilApproval;
+    type WeightInfo = ();
 }
 
 pub struct AuraAccountAdapter;
@@ -805,7 +806,7 @@ mod benches {
         [pallet_burning, BurningModule]
         [pallet_dao, Dao]
         [pallet_kvstore, TFKVStore]
-        [validatorset, ValidatorSet]
+        [substrate_validator_set, ValidatorSet]
         [pallet_validator, Validator]
         [pallet_tft_bridge, TFTBridgeModule]
         // Substrate

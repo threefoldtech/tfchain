@@ -131,3 +131,13 @@ sp-timestamp = {git = "https://github.com/paritytech/substrate", branch = "polka
 substrate-build-script-utils = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0"}
 substrate-frame-rpc-system = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0"}
 substrate-prometheus-endpoint = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0"}
+
+[profile.production]
+inherits = "release"
+
+# Sacrifice compile speed for execution speed by using optimization flags:
+
+# https://doc.rust-lang.org/rustc/linker-plugin-lto.html
+lto = "fat"
+# https://doc.rust-lang.org/rustc/codegen-options/index.html#codegen-units
+codegen-units = 1
