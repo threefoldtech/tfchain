@@ -66,6 +66,12 @@ jobs:
             --output ./pallets/"$pal_name"/src/weights.rs \
             --template ./.maintain/frame-weight-template.hbs
           done
+          
+      - name: Git check
+        run: |
+          pwd
+          ls -a
+          git status
 
       - name: Commit & Push changes
         uses: actions-js/push@master
