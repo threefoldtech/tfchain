@@ -48,6 +48,7 @@ jobs:
           cargo build --profile=production --features runtime-benchmarks
 
       - name: Run benchmarking
+        shell: bash
         run: |
           cd substrate-node
           for weights_rs_file in ./pallets/*/src/weights.rs
