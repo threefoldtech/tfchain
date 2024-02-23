@@ -22,7 +22,7 @@ jobs:
           exit 1
 
       - name: Checkout the repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@master
 
       - name: Chown user
         run: |
@@ -73,3 +73,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           message: 'chore(pallets): update benchmark `weights.rs` files ${date}'
           branch: ${{ github.ref_name }}
+          directory: './substrate-node/'
