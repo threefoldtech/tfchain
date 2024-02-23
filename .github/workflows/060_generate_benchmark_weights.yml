@@ -74,3 +74,4 @@ jobs:
           message: 'chore(pallets): update benchmark `weights.rs` files ${date}'
           branch: ${{ github.ref_name }}
           directory: './substrate-node/'
+          force: true
