@@ -22,7 +22,7 @@ jobs:
           exit 1
 
       - name: Checkout the repo
-        uses: actions/checkout@master
+        uses: actions/checkout@v3
 
       - name: Chown user
         run: |
@@ -41,13 +41,6 @@ jobs:
             substrate-node/target/
           key: ${{ runner.os }}-tfchain-build-cache-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-tfchain-build-cache
-
-      - name: Git check
-        run: |
-          pwd
-          ls -a
-          git config --global --add safe.directory /__w/tfchain/tfchain
-          git status
 
       - name: Build
         run: |
@@ -76,8 +69,6 @@ jobs:
           
       - name: Git check
         run: |
-          pwd
-          ls -a
           git config --global --add safe.directory /__w/tfchain/tfchain
           git status
 
@@ -87,5 +78,3 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           message: 'chore(pallets): update benchmark `weights.rs` files ${date}'
           branch: ${{ github.ref_name }}
-          directory: './substrate-node/'
-          force: true
