@@ -76,5 +76,5 @@ jobs:
         uses: actions-js/push@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          message: "chore(pallets): update benchmark `weights.rs` files `date +'%Y-%m-%d %H:%M:%S'`"
+          message: chore(pallets): update benchmark `weights.rs` files `date +'%Y-%m-%d %H:%M:%S'`
           branch: ${{ github.ref_name }}
