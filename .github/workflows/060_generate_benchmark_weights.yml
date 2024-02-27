@@ -48,6 +48,7 @@ jobs:
           cargo build --profile=production --features runtime-benchmarks
 
       - name: Run benchmarking
+        shell: bash
         run: |
           cd substrate-node
           for weights_rs_file in ./pallets/*/src/weights.rs
@@ -65,10 +66,15 @@ jobs:
             --output ./pallets/"$pal_name"/src/weights.rs \
             --template ./.maintain/frame-weight-template.hbs
           done
+          
+      - name: Git config
+        run: |
+          git config --global --add safe.directory /__w/tfchain/tfchain
+          git status
 
       - name: Commit & Push changes
         uses: actions-js/push@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          message: 'chore(pallets): update benchmark `weights.rs` files ${date}'
+          message: 'chore: update benchmark `weights.rs` file for all pallets'
           branch: ${{ github.ref_name }}
