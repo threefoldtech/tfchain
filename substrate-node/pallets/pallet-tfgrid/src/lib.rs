@@ -41,7 +41,7 @@ pub mod pallet {
     use sp_std::{convert::TryInto, fmt::Debug, vec, vec::Vec};
     use tfchain_support::{
         resources::Resources,
-        traits::{ChangeNode, PublicIpModifier},
+        traits::{ChangeNode, NodeActiveContracts, PublicIpModifier},
         types::*,
     };
 
@@ -280,6 +280,8 @@ pub mod pallet {
         >;
 
         type PublicIpModifier: PublicIpModifier;
+
+        type NodeActiveContracts: NodeActiveContracts;
 
         /// The type of terms and conditions.
         type TermsAndConditions: FullCodec
@@ -567,6 +569,7 @@ pub mod pallet {
 
         InvalidPublicConfig,
         UnauthorizedToChangePowerTarget,
+        NodeHasActiveContracts,
         InvalidRelayAddress,
         InvalidTimestampHint,
     }

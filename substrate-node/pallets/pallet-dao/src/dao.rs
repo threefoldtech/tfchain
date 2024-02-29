@@ -370,4 +370,6 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
         farm_weight = farm_weight.checked_sub(node_weight).unwrap_or(0);
         FarmWeight::<T>::insert(node.farm_id, farm_weight);
     }
+
+    fn node_power_state_changed(_node: &TfgridNode<T>) {}
 }

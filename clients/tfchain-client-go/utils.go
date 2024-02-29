@@ -243,6 +243,7 @@ var tfgridModuleErrors = []string{
 	"InvalidDocumentHashInput",
 	"InvalidPublicConfig",
 	"UnauthorizedToChangePowerTarget",
+	"NodeHasActiveContracts",
 	"InvalidRelayAddress",
 	"InvalidTimestampHint",
 }

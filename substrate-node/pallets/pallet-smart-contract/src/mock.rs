@@ -46,7 +46,7 @@ use sp_std::{
 use std::{cell::RefCell, panic, thread};
 use tfchain_support::{
     constants::time::{MINUTES, SECS_PER_HOUR},
-    traits::{ChangeNode, PublicIpModifier},
+    traits::{ChangeNode, NodeActiveContracts, PublicIpModifier},
     types::PublicIP,
 };
 
@@ -103,7 +103,7 @@ construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>},
+        TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>, Error<T>},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         SmartContractModule: pallet_smart_contract::{Pallet, Call, Storage, Event<T>},
         TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Event<T>},
@@ -183,12 +183,22 @@ impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
     fn node_deleted(node: &TfgridNode) {
         SmartContractModule::node_deleted(node);
     }
+    fn node_power_state_changed(node: &TfgridNode) {
+        SmartContractModule::node_power_state_changed(node);
+    }
 }
 
 pub struct PublicIpModifierType;
 impl PublicIpModifier for PublicIpModifierType {
     fn ip_removed(ip: &PublicIP) {
         SmartContractModule::ip_removed(ip);
+    }
+}
+
+pub struct NodeActiveContractsType;
+impl NodeActiveContracts for NodeActiveContractsType {
+    fn node_has_no_active_contracts(node_id: u32) -> bool {
+        SmartContractModule::node_has_no_active_contracts(node_id)
     }
 }
 
@@ -219,6 +229,7 @@ impl pallet_tfgrid::Config for TestRuntime {
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
     type PublicIpModifier = PublicIpModifierType;
+    type NodeActiveContracts = NodeActiveContractsType;
     type TermsAndConditions = TestTermsAndConditions;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
@@ -279,7 +290,6 @@ impl pallet_smart_contract::Config for TestRuntime {
     type DistributionFrequency = DistributionFrequency;
     type GracePeriod = GracePeriod;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
-    type NodeChanged = NodeChanged;
     type MaxNameContractNameLength = MaxNameContractNameLength;
     type NameContractName = TestNameContractName;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;

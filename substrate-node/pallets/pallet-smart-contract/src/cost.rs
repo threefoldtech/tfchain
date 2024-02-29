@@ -305,8 +305,9 @@ pub fn calculate_discount_tft<T: Config>(
 
     // calculate amount due on a monthly basis
     // first get the normalized amount per hour
-    let amount_due_hourly = U64F64::from_num(amount_due) * U64F64::from_num(seconds_elapsed)
-        / U64F64::from_num(SECS_PER_HOUR);
+    // amount_due / seconds_elapsed = amount_due_hourly / 3600
+    let amount_due_hourly = U64F64::from_num(amount_due) * U64F64::from_num(SECS_PER_HOUR)
+        / U64F64::from_num(seconds_elapsed);
     // then we can infer the amount due monthly (30 days ish)
     let amount_due_monthly = (amount_due_hourly * 24 * 30).round().to_num::<u64>();
 

@@ -66,7 +66,8 @@ For example, if a customer is complaining that their deposit never bridged, you 
 - `event_burn_tx_ready_received`: The bridge instance has received TFChain `BurnTransactionReady` event which means all bridge validators signed a withdraw transaction.
 - `event_burn_tx_expired_received`: The bridge instance has received TFChain `BurnTransactionExpired` event.
 - `withdraw_skipped`: a refund request skipped by the bridge instance as it has already been refunded.
-- `withdraw_proposed`: a withdraw has proposed or signed by the bridge instance. 
+- `withdraw_proposed`: a withdraw has proposed or signed by the bridge instance.
+- `withdraw_postponed`: a withdraw has postponed due to a problem in sending this transaction to the stellar network and will be retried later.
 - `withdraw_completed`: a withdraw has completed and received on the target stellar account.
 
 ##### Bridge vault account related
@@ -784,6 +785,32 @@ the source field set contains all fields which are included in the source object
             <td>yes</td>
             <td>The stellar target account address. </td>
         </tr>            
+    </tbody>
+</table>
+
+##### withdraw_postponed
+
+- kind: event
+
+- category: withdraw
+
+<table>
+    <thead>
+        <tr><th colspan="4"><div>withdraw_postponed Event Properties</div></th></tr>
+        <tr>
+            <th>Property</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>reason</code></td>
+            <td>string</td>
+            <td>yes</td>
+            <td>The reason behind the postponed of this transfer. </td>
+        </tr>     
     </tbody>
 </table>
 

@@ -2,15 +2,14 @@ package bridge
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	hProtocol "github.com/stellar/go/protocols/horizon"
-	"github.com/threefoldtech/tfchain_bridge/pkg"
-	_logger "github.com/threefoldtech/tfchain_bridge/pkg/logger"
-	subpkg "github.com/threefoldtech/tfchain_bridge/pkg/substrate"
+	"github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg"
+	_logger "github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg/logger"
+	subpkg "github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg/substrate"
 )
 
 // refund handler for stellar
@@ -58,7 +57,7 @@ func (bridge *Bridge) handleRefundExpired(ctx context.Context, refundExpiredEven
 		return err
 	}
 
-	reason := fmt.Sprint(_logger.GetRefundReason(ctx))
+	reason := _logger.GetRefundReason(ctx)
 	logger.Info().
 		Str("event_action", "refund_proposed").
 		Str("event_kind", "event").

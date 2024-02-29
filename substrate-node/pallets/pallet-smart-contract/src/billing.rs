@@ -16,7 +16,7 @@ use sp_runtime::{
 use sp_std::vec::Vec;
 
 impl<T: Config> Pallet<T> {
-    pub fn bill_conttracts_for_block(block_number: BlockNumberFor<T>) {
+    pub fn bill_contracts_for_block(block_number: BlockNumberFor<T>) {
         // Let offchain worker check if there are contracts on
         // billing loop at current index and try to bill them
         let index = Self::get_billing_loop_index_from_block_number(block_number);
@@ -57,8 +57,8 @@ impl<T: Config> Pallet<T> {
                         continue;
                     }
                 }
+                let _res = Self::bill_contract_using_signed_transaction(contract_id);
             }
-            let _res = Self::bill_contract_using_signed_transaction(contract_id);
         }
     }
 
@@ -102,6 +102,17 @@ impl<T: Config> Pallet<T> {
     // Calculates how much TFT is due by the user and distributes the rewards
     pub fn bill_contract(contract_id: u64) -> DispatchResultWithPostInfo {
         let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+
+        // Bill rent contract only if node is online
+        if let types::ContractData::RentContract(rc) = &contract.contract_type {
+            if let Some(node) = pallet_tfgrid::Nodes::<T>::get(rc.node_id) {
+                // No need for preliminary call to contains_key() because default node power value is Up
+                let node_power = pallet_tfgrid::NodePower::<T>::get(node.id);
+                if node_power.is_standby() {
+                    return Ok(().into());
+                }
+            }
+        }
 
         let twin =
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;

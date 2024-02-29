@@ -2,17 +2,28 @@
 
 List of available endpoints for our networks:
 
-- Devnet: 10.10.0.44
-- QAnet: 10.10.0.43
+- Devnet: 10.10.0.40
+- QAnet: 10.10.0.42
 - Testnet: 10.10.0.100
 - Mainnet: 10.10.0.154
 
-(If you are not in lochristi office you probably need vpn to reach to ips)
+(If you are not in Lochristi office you probably need VPN to reach to ips)
 
 ## Select a network you wish to try the runtime upgrade upon
 
-Now go the release you want to test with try-runtime and compile as following:
+Now select the release you want to test with `try-runtime` and follow instructions [here](https://paritytech.github.io/try-runtime-cli/try_runtime/).
+Example of commands sequence for running migrations of a given runtime on top of Devnet live state:
 
 ```sh
-cargo run --release --features=try-runtime try-runtime --runtime ./target/release/wbuild/tfchain-runtime/tfchain_runtime.compact.wasm --chain chainspecs/NETWORK/chainSpecRaw.json on-runtime-upgrade live --uri NETWORK_URL
+# Install try-runtime latest version (recommended for local development)
+cargo install --git https://github.com/paritytech/try-runtime-cli --locked
+```
+```sh
+# Compile substrate node 
+cd substrate-node
+cargo build --features try-runtime --release
+```
+```sh
+# Run the runtime migrations on top of Devnet live state
+try-runtime --runtime ./target/release/wbuild/tfchain-runtime/tfchain_runtime.compact.compressed.wasm on-runtime-upgrade live --uri ws://10.10.0.40:9944
 ```
