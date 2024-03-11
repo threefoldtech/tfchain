@@ -5,9 +5,11 @@ use sp_core::Get;
 use sp_std::{marker::PhantomData, vec::Vec};
 
 #[cfg(feature = "try-runtime")]
-use frame_support::{dispatch::DispatchError, ensure};
+use frame_support::ensure;
 #[cfg(feature = "try-runtime")]
 use parity_scale_codec::{Decode, Encode};
+#[cfg(feature = "try-runtime")]
+use sp_runtime::DispatchError;
 
 pub struct ContractMigrationV5<T: Config>(PhantomData<T>);
 

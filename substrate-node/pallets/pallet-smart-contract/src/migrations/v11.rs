@@ -9,7 +9,9 @@ use sp_runtime::traits::Zero;
 use sp_std::marker::PhantomData;
 
 #[cfg(feature = "try-runtime")]
-use frame_support::{dispatch::DispatchError, ensure};
+use frame_support::ensure;
+#[cfg(feature = "try-runtime")]
+use sp_runtime::DispatchError;
 #[cfg(feature = "try-runtime")]
 use sp_std::{vec, vec::Vec};
 

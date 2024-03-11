@@ -34,6 +34,7 @@ sp-storage.workspace = true
 pallet-timestamp.workspace = true
 sp-core.workspace = true
 sp-io.workspace = true
+sp-weights.workspace = true
 frame-try-runtime.workspace = true
 
 # Benchmarking

@@ -8,7 +8,7 @@ use crate::{
     proposal::ProposalIndex,
 };
 use frame_support::{
-    dispatch::{DispatchError, DispatchResultWithPostInfo, GetDispatchInfo},
+    dispatch::{DispatchResultWithPostInfo, GetDispatchInfo},
     ensure,
     pallet_prelude::Pays,
     traits::Get,
@@ -16,7 +16,10 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::BlockNumberFor;
 use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf, TfgridNode};
-use sp_runtime::traits::{Dispatchable, Hash};
+use sp_runtime::{
+    traits::{Dispatchable, Hash},
+    DispatchError,
+};
 use sp_std::prelude::*;
 use tfchain_support::{
     constants,

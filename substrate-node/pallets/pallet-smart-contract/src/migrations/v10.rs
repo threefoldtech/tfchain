@@ -6,7 +6,9 @@ use sp_runtime::Saturating;
 use sp_std::{marker::PhantomData, vec};
 
 #[cfg(feature = "try-runtime")]
-use frame_support::{dispatch::DispatchError, ensure};
+use frame_support::ensure;
+#[cfg(feature = "try-runtime")]
+use sp_runtime::DispatchError;
 #[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
 

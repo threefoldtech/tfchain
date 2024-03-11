@@ -1,7 +1,6 @@
 use crate::resources::{Resources, GIGABYTE};
 use crate::types::{PublicIpError, IP4, IP6};
-use frame_support::storage::bounded_vec::BoundedVec;
-use frame_support::{assert_err, assert_ok};
+use frame_support::{assert_err, assert_ok, storage::bounded_vec::BoundedVec};
 
 #[test]
 fn test_calc_cu_falsy_values() {

@@ -21,8 +21,11 @@ use sp_runtime::{
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, MultiSignature,
 };
-use sp_std::convert::{TryFrom, TryInto};
-use sp_std::{cmp::Ordering, prelude::*};
+use sp_std::{
+    cmp::Ordering,
+    convert::{TryFrom, TryInto},
+    prelude::*,
+};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -256,6 +259,7 @@ impl pallet_grandpa::Config for Runtime {
 
     type WeightInfo = ();
     type MaxAuthorities = MaxAuthorities;
+    type MaxNominators = frame_support::traits::ConstU32<0>;
     type MaxSetIdSessionEntries = MaxSetIdSessionEntries;
 
     type KeyOwnerProof = sp_core::Void;
@@ -989,7 +993,9 @@ impl_runtime_apis! {
         fn dispatch_benchmark(
             config: frame_benchmarking::BenchmarkConfig
         ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-            use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
+            use frame_benchmarking::{Benchmarking, BenchmarkBatch};
+            use frame_support::traits::TrackedStorageKey;
+
             use frame_system_benchmarking::Pallet as SystemBench;
             use frame_benchmarking::baseline::Pallet as Baseline;
 

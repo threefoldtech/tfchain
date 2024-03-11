@@ -1,9 +1,9 @@
 use crate as pallet_validator;
 use core::cell::RefCell;
-use frame_support::{bounded_vec, construct_runtime, parameter_types, traits::ConstU32};
+use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::EnsureRoot;
 use pallet_session::{SessionHandler, ShouldEndSession};
-use sp_core::{crypto::key_types::DUMMY, H256};
+use sp_core::{bounded_vec, crypto::key_types::DUMMY, H256};
 use sp_runtime::{
     impl_opaque_keys,
     testing::UintAuthorityId,

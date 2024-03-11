@@ -3,7 +3,7 @@
 #![cfg(test)]
 
 use crate as validator_set;
-use frame_support::{parameter_types, traits::ConstU32, BasicExternalities};
+use frame_support::{parameter_types, traits::ConstU32};
 use frame_system::EnsureRoot;
 use pallet_session::*;
 use parity_scale_codec::{Decode, Encode};
@@ -130,7 +130,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
             .map(|i| (i, i, UintAuthorityId(i).into()))
             .collect()
     });
-    BasicExternalities::execute_with_storage(&mut t, || {
+    sp_state_machine::BasicExternalities::execute_with_storage(&mut t, || {
         for (ref k, ..) in &keys {
             frame_system::Pallet::<TestRuntime>::inc_providers(k);
         }
