@@ -62,10 +62,10 @@ The script can be tweaked and configured using various environment variables -
 | QUICK_MODE           | If set, it parallelizes the data download from the RPC endpoint                                                                                                                                         | `NULL`                   |
 ## Network list
 
-- Devnet: 10.10.0.151
-- QAnet: 10.10.0.152
-- Testnet: 10.10.0.22
-- Mainnet: 10.10.0.19
+- Devnet: 10.10.0.40
+- QAnet: 10.10.0.42
+- Testnet: 10.10.0.55
+- Mainnet: 10.10.0.56
 
 ## Read more
 

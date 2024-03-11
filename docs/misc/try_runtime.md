@@ -4,8 +4,8 @@ List of available endpoints for our networks:
 
 - Devnet: 10.10.0.40
 - QAnet: 10.10.0.42
-- Testnet: 10.10.0.100
-- Mainnet: 10.10.0.154
+- Testnet: 10.10.0.55
+- Mainnet: 10.10.0.56
 
 (If you are not in Lochristi office you probably need VPN to reach to ips)
 
