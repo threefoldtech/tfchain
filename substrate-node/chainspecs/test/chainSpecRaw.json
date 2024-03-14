@@ -1,8 +1,11 @@
 {
   "name": "Tfchain Testnet",
   "id": "tfchain_testnet",
-  "chainType": "Local",
-  "bootNodes": [],
+  "chainType": "Live",
+  "bootNodes": [
+    "/dns4/01.bootnode.test.grid.tf/tcp/30333/p2p/12D3KooWD2gguzT2zFKuet4ZFsJniHH1SdDn2yaNPH5MVQQ6bYSN",
+    "/dns4/02.bootnode.test.grid.tf/tcp/30333/p2p/12D3KooWLkEMTViyC1fzU8FzT9HGQtroZZVUaeGP4JQo2fVF9B22"
+  ],
   "telemetryEndpoints": null,
   "protocolId": null,
   "properties": {
