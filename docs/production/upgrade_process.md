@@ -2,35 +2,31 @@
 
 ## Check first
 
-- Make sure CI passes and it compiles locally
+- Create a release first, runtime binary will be uploaded to the release on github.
+- Make sure CI (build & tests) passes
 - Test migrations (if any) with the tools described in [try-runtime](../misc/try_runtime.md) and [tools](../../tools/fork-off-substrate/README.md)
 
-## Increment spec version
+## Download the latest release from github
 
-Open `substrate-node/runtime/src/lib.rs` and increment the spec version with the current spec version. You can see what spec version a node is running on the polkadot ui.
-In the top left you should see something like: `substrate-threefold/1` which means it's running the runtime `substrate-threefold` with spec version `1`.
+Download the latest release from github tfchain repository release page.
 
-## Compile a runtime wasm build
+## Propose a runtime upgrade using the Council
 
-You can pass an optional release flag.
+Note: this can only be done if you are a council member. See [council](../misc/council.md).
 
-```sh
-cargo build [--release] -p tfchain-runtime
-```
+Browse to the Polkadot UI and connect to the Node, select the `Governance` -> `Council` page 
 
-## Upload the wasm build to the Node using Polkadot UI
+Select `Motions` on top and click `Propose Motion` on the right.
 
-Browse to the Polkadot UI and connect to the Node, select `Developer` -> `Extrinsics`.
+Now select:
 
-Now select a `Root` account to upgrade the runtime with, if the node is running in `Dev`, the default `Root` account is Alice.
+- Account (your account)
+- Threshold (Super Majority)
+- Proposal: `runtimeUpgrade` -> `setCode` (upload wasm file)
 
-[example](./doc/upgrade_runtime.png)
+Now click `Propose`
 
-Select `Sudo` -> `sudoUncheckedWeight` -> `System` -> `setCode` -> Toggle `file upload` and click the box.
-
-Navigate to `tfchain/substrate-node/target/release/wbuild/tfchain-runtime/tfchain_runtime.compact.wasm` and upload that file.
-
-Submit the transaction, wait a couple of seconds and the runtime version should be incremented and the code will be live.
+[example](../assets/propose.png)
 
 ## IMPORTANT
 

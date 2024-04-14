@@ -1,0 +1,18 @@
+{{- if .Values.volume.persistentVolume.create -}}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: tfchainbridge-volume-{{ .Release.Name }}
+  labels:
+    backupType: {{ .Values.threefoldVdc.backup | quote }}
+    type: local
+spec:
+  storageClassName: local-path
+  capacity:
+    storage: {{ .Values.volume.size }}
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: {{ .Values.volume.persistentVolume.hostPath }}
+    type: DirectoryOrCreate
+{{- end }}

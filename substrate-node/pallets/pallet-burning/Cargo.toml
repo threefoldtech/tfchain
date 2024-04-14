@@ -1,34 +1,37 @@
 [package]
-authors = ['Threefoldtech <https://github.com/threefoldtech>']
-description = 'Substrate TF Grid Burning Pallet'
-edition = '2018'
-homepage = 'https://threefold.io'
-license = 'Apache'
-name = 'pallet-burning'
-repository = 'https://github.com/threefoldtech/tfchain_pallets'
-version = '3.0.0'
+authors.workspace = true
+documentation.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license-file.workspace = true
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
+name = "pallet-burning"
+description = "burning pallet"
 
 [package.metadata.docs.rs]
-targets = ['x86_64-unknown-linux-gnu']
+targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 # Substrate packages
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
-	"derive",
-] }
-scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+parity-scale-codec = {workspace = true, features = ["derive"]}
+scale-info = { workspace = true, features = ["derive"] }
 
-pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-sp-storage = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-sp-io =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
+pallet-balances.workspace = true
+frame-support.workspace = true
+frame-system.workspace = true
+sp-runtime.workspace = true
+sp-std.workspace = true
+sp-storage.workspace = true
+pallet-timestamp.workspace = true
+sp-io.workspace = true
+
+# Benchmarking
+frame-benchmarking = { workspace = true, optional = true }
 
 [dev-dependencies]
-sp-core =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
+sp-core.workspace = true
 
 [features]
 default = ['std']
@@ -36,13 +39,17 @@ std = [
 	'pallet-balances/std',
 	'frame-support/std',
 	'frame-system/std',
+	'frame-benchmarking/std',
 	'sp-runtime/std',
 	'sp-std/std',
 	'sp-storage/std',
     'pallet-timestamp/std',
-	'codec/std',
+	'parity-scale-codec/std',
 	'sp-io/std',
 	'scale-info/std'
+]
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
 ]
 try-runtime = [
     "frame-support/try-runtime",

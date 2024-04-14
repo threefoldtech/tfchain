@@ -3,8 +3,9 @@ use crate::{
     mock::RuntimeEvent as MockEvent, mock::*, types::LocationInput, Error, InterfaceInput,
     InterfaceIpsInput, PublicIpListInput, ResourcesInput,
 };
-use frame_support::{assert_noop, assert_ok, bounded_vec};
+use frame_support::{assert_noop, assert_ok};
 use frame_system::{EventRecord, Phase, RawOrigin};
+use sp_core::bounded_vec;
 use sp_core::H256;
 use tfchain_support::types::{
     FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, Power, PowerState,
@@ -337,56 +338,80 @@ fn test_update_farm_name_works() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
         create_farm();
+        let old_farm_name = b"test_farm".to_vec();
+        let farm_id = 1;
 
-        create_twin_bob();
+        let farm = TfgridModule::farms(farm_id).unwrap();
+        let farm_name: Vec<u8> = farm.name.into();
+        assert_eq!(farm_name, old_farm_name);
+        assert_eq!(TfgridModule::farms_by_name_id(&old_farm_name), farm_id);
 
-        let farm_name = get_farm_name_input(b"bob_farm");
-        assert_ok!(TfgridModule::create_farm(
-            RuntimeOrigin::signed(bob()),
-            farm_name,
-            bounded_vec![]
-        ));
-
-        let farm_name = get_farm_name_input(b"bob_updated_farm");
+        let new_farm_name = b"alice_farm".to_vec();
         assert_ok!(TfgridModule::update_farm(
-            RuntimeOrigin::signed(bob()),
-            2,
-            farm_name,
+            RuntimeOrigin::signed(alice()),
+            farm_id,
+            get_farm_name_input(&new_farm_name),
         ));
+
+        let farm = TfgridModule::farms(farm_id).unwrap();
+        let farm_name: Vec<u8> = farm.name.into();
+        assert_eq!(farm_name, new_farm_name);
+        assert_eq!(TfgridModule::farms_by_name_id(&old_farm_name), 0);
+        assert_eq!(TfgridModule::farms_by_name_id(&new_farm_name), farm_id);
     });
 }
 
 #[test]
-fn test_update_farm_existing_name_fails() {
+fn test_update_farm_name_unauthorized_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_twin();
-
-        let farm_name = get_farm_name_input(b"alice_farm");
-        assert_ok!(TfgridModule::create_farm(
-            RuntimeOrigin::signed(alice()),
-            farm_name,
-            bounded_vec![]
-        ));
+        create_farm();
+        let farm_id = 1;
 
         create_twin_bob();
 
-        let farm_name = get_farm_name_input(b"bob_farm");
+        let new_farm_name = b"bob_farm".to_vec();
+        assert_noop!(
+            TfgridModule::update_farm(
+                RuntimeOrigin::signed(bob()),
+                farm_id,
+                get_farm_name_input(&new_farm_name),
+            ),
+            Error::<TestRuntime>::CannotUpdateFarmWrongTwin
+        );
+    });
+}
+
+#[test]
+fn test_update_farm_name_existing_name_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        create_farm();
+        let alice_farm_id = 1;
+
+        create_twin_bob();
+
+        let bob_farm_name = b"bob_farm".to_vec();
         assert_ok!(TfgridModule::create_farm(
             RuntimeOrigin::signed(bob()),
-            farm_name,
+            get_farm_name_input(&bob_farm_name),
             bounded_vec![]
         ));
 
-        let farm_name = get_farm_name_input(b"alice_farm");
+        // Try to set bob farm name to alice farm
         assert_noop!(
-            TfgridModule::update_farm(RuntimeOrigin::signed(bob()), 2, farm_name),
+            TfgridModule::update_farm(
+                RuntimeOrigin::signed(alice()),
+                alice_farm_id,
+                get_farm_name_input(&bob_farm_name),
+            ),
             Error::<TestRuntime>::InvalidFarmName
         );
     });
 }
 
 #[test]
-fn test_create_farm_with_double_ip_fails() {
+fn test_create_farm_duplicate_ip_fails() {
     ExternalityBuilder::build().execute_with(|| {
         create_entity();
         create_twin();
@@ -409,6 +434,26 @@ fn test_create_farm_with_double_ip_fails() {
         assert_noop!(
             TfgridModule::create_farm(RuntimeOrigin::signed(alice()), farm_name, pub_ips),
             Error::<TestRuntime>::IpExists
+        );
+    });
+}
+
+#[test]
+fn test_create_farm_not_valid_ip_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+
+        let farm_name = get_farm_name_input(b"test_farm");
+
+        let mut pub_ips: PublicIpListInput<TestRuntime> = bounded_vec![];
+        let ip = get_public_ip_ip_input(b"185.206.122.33/24");
+        let gw = get_public_ip_gw_input(b"185.206.122.33");
+        pub_ips.try_push(IP4 { ip, gw }).unwrap();
+
+        assert_noop!(
+            TfgridModule::create_farm(RuntimeOrigin::signed(alice()), farm_name, pub_ips),
+            Error::<TestRuntime>::InvalidPublicIP
         );
     });
 }
@@ -1004,11 +1049,47 @@ fn node_report_uptime_works() {
         create_farm();
         create_node();
 
-        Timestamp::set_timestamp(1628082000);
+        Timestamp::set_timestamp(1628082000000);
         assert_ok!(TfgridModule::report_uptime(
             RuntimeOrigin::signed(alice()),
-            500
+            500,
         ));
+    });
+}
+
+#[test]
+fn node_report_uptime_v2_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        Timestamp::set_timestamp(1628082000000);
+        assert_ok!(TfgridModule::report_uptime_v2(
+            RuntimeOrigin::signed(alice()),
+            500,
+            1628082000
+        ));
+    });
+}
+
+#[test]
+fn node_report_uptime_v2_fails_with_invalid_timestamp_hint() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_entity();
+        create_twin();
+        create_farm();
+        create_node();
+
+        Timestamp::set_timestamp(1628082000000);
+
+        // push with invalid timestamp hint + 100 seconds
+        // acceptable range is 60 seconds
+        assert_noop!(
+            TfgridModule::report_uptime_v2(RuntimeOrigin::signed(alice()), 500, 1628082100),
+            Error::<TestRuntime>::InvalidTimestampHint
+        );
     });
 }
 
@@ -2141,6 +2222,145 @@ fn test_set_invalid_zos_version_fails() {
             TfgridModule::set_zos_version(RawOrigin::Root.into(), TfgridModule::zos_version()),
             Error::<TestRuntime>::InvalidZosVersion,
         );
+    })
+}
+
+#[test]
+fn test_bound_twin_account_works() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        let twin_id = 1;
+        assert_ok!(TfgridModule::bond_twin_account(
+            RuntimeOrigin::signed(bob()),
+            twin_id,
+        ));
+
+        assert_eq!(TfgridModule::twin_bonded_account(twin_id), Some(bob()));
+
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::TfgridModule(
+                TfgridEvent::<TestRuntime>::TwinAccountBounded(twin_id, bob())
+            ))),
+            true
+        );
+    })
+}
+
+#[test]
+fn test_bound_twin_account_not_exists_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        let twin_id = 1;
+        assert_noop!(
+            TfgridModule::bond_twin_account(RuntimeOrigin::signed(bob()), twin_id),
+            Error::<TestRuntime>::TwinNotExists,
+        );
+        assert!(TfgridModule::twin_bonded_account(twin_id).is_none());
+    })
+}
+
+#[test]
+fn test_bound_twin_account_itself_fails() {
+    ExternalityBuilder::build().execute_with(|| {
+        create_twin();
+        let twin_id = 1;
+        assert_noop!(
+            TfgridModule::bond_twin_account(RuntimeOrigin::signed(alice()), twin_id),
+            Error::<TestRuntime>::TwinCannotBoundToItself,
+        );
+        assert!(TfgridModule::twin_bonded_account(twin_id).is_none());
+    })
+}
+
+#[test]
+fn test_farming_policies_ordering_and_assignment() {
+    ExternalityBuilder::build().execute_with(|| {
+        let name = b"default_not_certified".to_vec();
+        assert_ok!(TfgridModule::create_farming_policy(
+            RawOrigin::Root.into(),
+            name,
+            12,
+            15,
+            10,
+            8,
+            9999,
+            System::block_number() + 100,
+            true,
+            true,
+            NodeCertification::Diy,
+            FarmCertification::NotCertified,
+        ));
+
+        let name: Vec<u8> = b"fp_1".to_vec();
+        assert_ok!(TfgridModule::create_farming_policy(
+            RawOrigin::Root.into(),
+            name,
+            12,
+            15,
+            10,
+            8,
+            9999,
+            System::block_number() + 100,
+            false,
+            false,
+            NodeCertification::Certified,
+            FarmCertification::NotCertified,
+        ));
+
+        let name: Vec<u8> = b"default_certified".to_vec();
+        assert_ok!(TfgridModule::create_farming_policy(
+            RawOrigin::Root.into(),
+            name,
+            12,
+            15,
+            10,
+            8,
+            9999,
+            System::block_number() + 100,
+            true,
+            true,
+            NodeCertification::Certified,
+            FarmCertification::Gold,
+        ));
+
+        let name: Vec<u8> = b"fp_2".to_vec();
+        assert_ok!(TfgridModule::create_farming_policy(
+            RawOrigin::Root.into(),
+            name,
+            12,
+            15,
+            10,
+            8,
+            9999,
+            System::block_number() + 100,
+            false,
+            false,
+            NodeCertification::Diy,
+            FarmCertification::NotCertified,
+        ));
+
+        let policy_1 = TfgridModule::farming_policies_map(1);
+        let policy_2 = TfgridModule::farming_policies_map(2);
+        let policy_3 = TfgridModule::farming_policies_map(3);
+        let policy_4 = TfgridModule::farming_policies_map(4);
+
+        let mut policies = vec![&policy_1, &policy_2, &policy_3, &policy_4];
+        policies.sort();
+
+        assert_eq!(
+            policies.into_iter().map(|p| p.id).collect::<Vec<_>>(),
+            vec![4, 2, 1, 3]
+        );
+
+        create_twin_bob();
+        create_farm_bob();
+        create_extra_node();
+        let node_id = 1;
+
+        // farming policy 1 should be picked
+        // as last "not too certified" default policy
+        let node = TfgridModule::nodes(node_id).unwrap();
+        assert_eq!(node.farming_policy_id, 1);
     })
 }
 

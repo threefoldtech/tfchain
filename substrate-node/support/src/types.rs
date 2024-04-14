@@ -1,7 +1,8 @@
 use super::resources::Resources;
-use codec::{Decode, Encode, MaxEncodedLen};
 use core::cmp::{Ord, Ordering, PartialOrd};
-use frame_support::{traits::ConstU32, BoundedVec};
+use frame_support::{storage::bounded_vec::BoundedVec, traits::ConstU32};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
 use valip::ip4::{Ip as IPv4, CIDR as IPv4Cidr};
@@ -132,16 +133,17 @@ impl IP4 {
         let gw4 = IPv4::parse(&self.gw).map_err(|_| PublicIpError::InvalidGw4)?;
         let ip4 = IPv4Cidr::parse(&self.ip).map_err(|_| PublicIpError::InvalidIp4)?;
 
-        if gw4.is_public()
-            && gw4.is_unicast()
-            && ip4.is_public()
-            && ip4.is_unicast()
-            && ip4.contains(gw4)
+        if ip4.as_prefix() == gw4
+            || !gw4.is_public()
+            || !gw4.is_unicast()
+            || !ip4.is_public()
+            || !ip4.is_unicast()
+            || !ip4.contains(gw4)
         {
-            Ok(())
-        } else {
-            Err(PublicIpError::InvalidPublicIp)
+            return Err(PublicIpError::InvalidPublicIp);
         }
+
+        Ok(())
     }
 }
 
@@ -154,18 +156,19 @@ pub struct IP6 {
 impl IP6 {
     pub fn is_valid(&self) -> Result<(), PublicIpError> {
         let gw6 = IPv6::parse(&self.gw).map_err(|_| PublicIpError::InvalidGw6)?;
-        let ipv6 = IPv6Cidr::parse(&self.ip).map_err(|_| PublicIpError::InvalidIp6)?;
+        let ip6 = IPv6Cidr::parse(&self.ip).map_err(|_| PublicIpError::InvalidIp6)?;
 
-        if gw6.is_public()
-            && gw6.is_unicast()
-            && ipv6.is_public()
-            && ipv6.is_unicast()
-            && ipv6.contains(gw6)
+        if ip6.as_ip() == gw6
+            || !gw6.is_public()
+            || !gw6.is_unicast()
+            || !ip6.is_public()
+            || !ip6.is_unicast()
+            || !ip6.contains(gw6)
         {
-            Ok(())
-        } else {
-            Err(PublicIpError::InvalidPublicIp)
+            return Err(PublicIpError::InvalidPublicIp);
         }
+
+        Ok(())
     }
 }
 
@@ -235,8 +238,16 @@ pub struct NodePower<B> {
 }
 
 impl<B> NodePower<B> {
-    pub fn is_down(&self) -> bool {
-        matches!(self.state, PowerState::Down(_)) || matches!(self.target, Power::Down)
+    pub fn is_standby(&self) -> bool {
+        matches!(self.state, PowerState::Down(_))
+    }
+
+    pub fn is_switched_to_standby(&self) -> bool {
+        matches!(self.target, Power::Down)
+    }
+
+    pub fn is_standby_phase(&self) -> bool {
+        self.is_standby() || self.is_switched_to_standby()
     }
 }
 

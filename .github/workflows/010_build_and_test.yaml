@@ -1,0 +1,61 @@
+name: Build and Test
+on:
+  push:
+    branches:
+      - development
+  pull_request:
+jobs:
+  build-and-test:
+    runs-on: [self-hosted, tfchainrunner01]
+    container:
+      image: threefolddev/tfchain:4
+      env:
+        DEBIAN_FRONTEND: noninteractive
+        PATH: /root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin
+        RUSTUP_HOME: /root/.rustup
+        CARGO_HOME: /root/.cargo
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Chown user
+        run: |
+          chown -R $USER:$USER $GITHUB_WORKSPACE
+
+      - name: Cache build
+        uses: actions/cache@v3
+        timeout-minutes: 6
+        continue-on-error: true
+        with:
+          path: |
+            /root/.cargo/bin/
+            /root/.cargo/registry/index/
+            /root/.cargo/registry/cache/
+            /root/.cargo/git/db/
+            substrate-node/target/
+          key: ${{ runner.os }}-tfchain-build-cache-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-tfchain-build-cache
+
+      - name: Build
+        run: |
+          cd substrate-node
+          cargo clean
+          cargo build --release
+
+      - name: Unit tests
+        run: |
+          cd substrate-node
+          cargo test --no-fail-fast --features runtime-benchmarks
+
+      - name: Integration tests
+        if: "!contains(github.event.head_commit.message, '[skip integr]')"
+        run: |
+          python3.10 -m pip install robotframework==5.0.1 cryptography==3.4.8 substrate-interface==1.4.0
+          cd substrate-node/tests
+          robot -d _output_tests/ .
+
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: integration test output
+          path: substrate-node/tests/_output_tests/

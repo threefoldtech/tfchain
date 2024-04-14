@@ -1,13 +1,13 @@
+use sc_consensus_grandpa::AuthorityId as GrandpaId;
 use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{ed25519, sr25519, Pair, Public};
-use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use std::convert::TryInto;
 use tfchain_runtime::opaque::SessionKeys;
 use tfchain_runtime::{
-    AccountId, AuraConfig, BalancesConfig, CouncilConfig, CouncilMembershipConfig, GenesisConfig,
-    GrandpaConfig, SessionConfig, Signature, SmartContractModuleConfig, SudoConfig, SystemConfig,
+    AccountId, AuraConfig, BalancesConfig, CouncilConfig, CouncilMembershipConfig, GrandpaConfig,
+    RuntimeGenesisConfig, SessionConfig, Signature, SmartContractModuleConfig, SystemConfig,
     TFTBridgeModuleConfig, TFTPriceModuleConfig, TfgridModuleConfig, ValidatorSetConfig,
     WASM_BINARY,
 };
@@ -16,7 +16,7 @@ use tfchain_runtime::{
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
-pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig>;
+pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig>;
 
 /// Generate a crypto pair from seed.
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -87,8 +87,6 @@ pub fn development_config() -> Result<ChainSpec, String> {
 			vec![
 				authority_keys_from_seed("Alice"),
 			],
-			// Sudo account
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
 			// Foundation account
 			get_account_id_from_seed::<sr25519::Public>("Eve"),
 			// Sales account
@@ -126,7 +124,6 @@ pub fn development_config() -> Result<ChainSpec, String> {
             vec![
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
                 get_account_id_from_seed::<sr25519::Public>("Bob"),
-                get_account_id_from_seed::<sr25519::Public>("Ferdie")
             ],
 		)
         },
@@ -172,8 +169,6 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 				authority_keys_from_seed("Alice"),
 				authority_keys_from_seed("Bob"),
 			],
-			// Sudo account
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
 			// Foundation account
 			get_account_id_from_seed::<sr25519::Public>("Eve"),
 			// Sales account
@@ -219,7 +214,6 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
             vec![
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
                 get_account_id_from_seed::<sr25519::Public>("Bob"),
-                get_account_id_from_seed::<sr25519::Public>("Ferdie")
             ],
 		)
         },
@@ -262,8 +256,6 @@ pub fn live_config() -> Result<ChainSpec, String> {
                 wasm_binary,
                 // Initial PoA authorities
                 vec![authority_keys_from_seed("Alice")],
-                // Sudo account
-                get_account_id_from_seed::<sr25519::Public>("Alice"),
                 // Foundation account
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
                 // Sales account
@@ -301,7 +293,6 @@ pub fn live_config() -> Result<ChainSpec, String> {
 fn testnet_genesis(
     wasm_binary: &[u8],
     initial_authorities: Vec<(AccountId, AuraId, GrandpaId)>,
-    root_key: AccountId,
     foundation_account: AccountId,
     sales_account: AccountId,
     endowed_accounts: Vec<AccountId>,
@@ -312,12 +303,12 @@ fn testnet_genesis(
     max_tft_price: u32,
     billing_frequency: u64,
     council_members: Vec<AccountId>,
-) -> GenesisConfig {
-    GenesisConfig {
+) -> RuntimeGenesisConfig {
+    RuntimeGenesisConfig {
         system: SystemConfig {
             // Add Wasm runtime to storage.
             code: wasm_binary.to_vec(),
-            // changes_trie_config: Default::default(),
+            ..Default::default()
         },
         balances: BalancesConfig {
             // Configure endowed accounts with initial balance of 1 << 60.
@@ -345,15 +336,13 @@ fn testnet_genesis(
                 })
                 .collect::<Vec<_>>(),
         },
+        transaction_payment: Default::default(),
         aura: AuraConfig {
             authorities: vec![],
         },
         grandpa: GrandpaConfig {
             authorities: vec![],
-        },
-        sudo: SudoConfig {
-            // Assign network admin rights.
-            key: Some(root_key),
+            ..Default::default()
         },
         tfgrid_module: TfgridModuleConfig {
             su_price_value: 50000,
@@ -400,6 +389,7 @@ fn testnet_genesis(
         },
         smart_contract_module: SmartContractModuleConfig {
             billing_frequency: billing_frequency,
+            _data: std::marker::PhantomData,
         },
     }
 }

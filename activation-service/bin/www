@@ -1,0 +1,127 @@
+#!/usr/bin/env node
+
+const app = require('../index')
+const http = require('http')
+const { every, isEmpty } = require('lodash')
+
+const { init } = require('../lib/substrate')
+
+const log = require('../lib/logger')
+
+const REQUIRED_ENV_VARIABLES = [
+  'MNEMONIC',
+  'URL',
+  'KYC_PUBLIC_KEY',
+  'ACTIVATION_AMOUNT'
+]
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+const port = normalizePort(process.env.PORT || '3000')
+
+app.set('port', port)
+
+/**
+ * Create HTTP server.
+ */
+
+let server
+
+function checkEnvVariables () {
+  const allVariablesPresent = every(REQUIRED_ENV_VARIABLES, variable => !isEmpty(process.env[variable]))
+  if (!allVariablesPresent) {
+    log.error('Missing env variables')
+    throw new Error(`Missing one of the required env variables ${REQUIRED_ENV_VARIABLES}`)
+  }
+}
+
+/**
+ * Run certain logic before starting the server
+ */
+async function startup () {
+  process.on('SIGTERM', stopGraceful)
+  process.on('SIGINT', stopGraceful)
+
+  checkEnvVariables()
+
+  // Setup substrate
+  await init()
+    .then(_ => log.info('successfully setup substrate'))
+    .catch(err => {
+      log.error({ err }, 'failed to setup substrate')
+      // throw error back up to cancel startup
+      throw err
+    })
+}
+
+startup()
+  .then(_ => {
+    server = http.createServer(app)
+    /**
+     * Listen on provided port, on all network interfaces.
+     */
+    server.listen(port)
+    server.on('error', onError)
+    server.on('listening', onListening)
+  })
+  .catch(err => {
+    log.error(err, 'failed to run startup actions, closing service')
+    stopGraceful()
+    process.exit(1)
+  })
+
+function stopGraceful () {
+  log.info('running shutdown actions')
+  if (server) server.close()
+  process.exit(0)
+}
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+function normalizePort (val) {
+  const port = parseInt(val, 10)
+
+  if (isNaN(port)) return val
+
+  if (port >= 0) return port
+
+  return false
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+function onError (error) {
+  if (error.syscall !== 'listen') throw error
+
+  const bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      log.error(bind + ' requires elevated privileges')
+      process.exit(1)
+    case 'EADDRINUSE':
+      log.error(bind + ' is already in use')
+      process.exit(1)
+    default:
+      throw error
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+function onListening () {
+  const addr = server.address()
+  const bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port
+  log.debug('Listening on ' + bind)
+  log.info('Listening on ' + bind)
+}

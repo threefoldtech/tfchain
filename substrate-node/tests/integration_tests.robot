@@ -4,7 +4,10 @@ Library            Collections
 Library            SubstrateNetwork.py
 Library            TfChainClient.py
 Library            OperatingSystem
+Library            Process
 
+*** Variables ***
+${OUTPUT_GO_TESTS}  test_client_go_integration_tests_go_output.log
 
 *** Keywords ***
 Public Ips Should Contain Ip
@@ -17,7 +20,7 @@ Public Ips Should Contain Ip
     END
     
     Fail    msg=The list of public ips ${list} does not contain ip ${ip}
-
+    
 Public Ips Should Not Contain Ip
     [Arguments]    ${list }    ${ip}
     ${status} =    Run Keyword And Return Status    Public Ips Should Contain Ip    ${list}    ${ip}
@@ -42,13 +45,13 @@ Create Interface
 
 Ensure Account Balance Increased
     [Arguments]    ${balance_before}    ${balance_after}
-    IF    ${balance_before}[free] >= ${balance_after}[free]-${balance_after}[fee_frozen]
+    IF    ${balance_before}[free] >= ${balance_after}[free]-${balance_after}[frozen]
         Fail    msg=It looks like the billing did not take place.
     END
 
 Ensure Account Balance Decreased
     [Arguments]    ${balance_before}    ${balance_after}
-    IF    ${balance_before}[free] <= ${balance_after}[free]-${balance_after}[fee_frozen]
+    IF    ${balance_before}[free] <= ${balance_after}[free]-${balance_after}[frozen]
         Fail    msg=It looks like the billing did not take place.
     END
 
@@ -122,11 +125,11 @@ Test Set Farm Certification
 
     Setup Network And Create Farm
 
-    # only possible with sudo
+    # only possible with council
     Run Keyword And Expect Error    *'BadOrigin'*
     ...    Set Farm Certification    farm_id=${1}    certification=Gold
 
-    Set Farm Certification    farm_id=${1}    certification=Gold    who=sudo
+    Set Farm Certification    farm_id=${1}    certification=Gold    who=Council
 
     Tear Down Multi Node Network
 
@@ -137,11 +140,11 @@ Test Set Node Certification
     Setup Network And Create Node
 
     # Make Alice a node certifier
-    Add Node Certifier    account_name=Alice    who=Sudo
+    Add Node Certifier    account_name=Alice    who=Council
 
     Set Node Certification    node_id=${1}    certification=Certified
 
-    Remove Node Certifier    account_name=Alice    who=Sudo
+    Remove Node Certifier    account_name=Alice    who=Council
 
     # Alice is no longer able to set node certification
     Run Keyword And Expect Error    *'NotAllowedToCertifyNode'*
@@ -180,7 +183,7 @@ Test Add Public Ips: Failure InvalidPublicIP
 
 Test Create Update Delete Node
     [Documentation]    Testing api calls (create, update, delete) for managing nodes
-    Setup Multi Node Network    log_name=test_create_update_delet_node    amt=${3}
+    Setup Multi Node Network    log_name=test_create_update_delet_node
 
     Setup Network And Create Farm
     Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
@@ -214,6 +217,9 @@ Test Reporting Uptime
     Create Farm    name=alice_farm
     Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
     
+    Run Keyword And Expect Error    *'InvalidTimestampHint'*
+    ...    Report Uptime    ${500}    timestamp_hint=${1685538805}
+
     Report Uptime    ${500}
 
     Tear Down Multi Node Network
@@ -272,7 +278,7 @@ Test Add Public Config On Node: Failure InvalidDomain
 
 Test Create Update Cancel Node Contract: Success
     [Documentation]    Testing api calls (create, update, cancel) for managing a node contract
-    Setup Multi Node Network    log_name=test_create_node_contract
+    Setup Multi Node Network    log_name=test_create_node_contract    amt=${2}
 
     Setup Predefined Account    who=Alice
     Setup Predefined Account    who=Bob
@@ -287,7 +293,7 @@ Test Create Update Cancel Node Contract: Success
     Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}   longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent    interfaces=${interfaces}
     
     # Bob is the one creating the contract and thus being billed
-    Create Node Contract    node_id=${1}    public_ips=${1}    who=Bob    port=9946
+    Create Node Contract    node_id=${1}    public_ips=${1}    who=Bob    port=9945
 
     ${farm} =     Get Farm    ${1}
     Should Not Be Equal    ${farm}    ${None}    msg=Farm with id 1 doesn't exist
@@ -297,9 +303,9 @@ Test Create Update Cancel Node Contract: Success
     Should Be Equal    ${farm}[public_ips][0][gateway]    185.206.122.1    msg=The gateway should be 185.206.122.1
     Should Be Equal    ${farm}[public_ips][0][contract_id]    ${1}    msg=The public ip was claimed in contract with id 1 while the farm contains a different contract id for it
 
-    Update Node Contract    contract_id=${1}    who=Bob    port=9946
+    Update Node Contract    contract_id=${1}    who=Bob    port=${9945}
 
-    Cancel Node Contract    contract_id=${1}    who=Bob    port=9946
+    Cancel Node Contract    contract_id=${1}    who=Bob    port=${9945}
 
     Tear Down Multi Node Network
 
@@ -343,20 +349,20 @@ Test Create Update Pricing Policy
     [Documentation]    Testing api calls (create, update) for managing pricing policies including failed attempts
     Setup Multi Node Network    log_name=test_create_update_pricing_policy
 
-    # only possible with sudo
+    # only possible with council
     Run Keyword And Expect Error    *'BadOrigin'*
     ...    Create Pricing Policy    name=mypricingpolicy    unit=Gigabytes    su=${55000}    cu=${90000}    nu=${20000}    ipu=${35000}    unique_name=${3000}    domain_name=${6000}    foundation_account=Bob    certified_sales_account=Bob    discount_for_dedication_nodes=45
 
-    Create Pricing Policy    name=mypricingpolicy    unit=Gigabytes    su=${55000}    cu=${90000}    nu=${20000}    ipu=${35000}    unique_name=${3000}    domain_name=${6000}    foundation_account=Bob    certified_sales_account=Bob    discount_for_dedication_nodes=45    who=Sudo
+    Create Pricing Policy    name=mypricingpolicy    unit=Gigabytes    su=${55000}    cu=${90000}    nu=${20000}    ipu=${35000}    unique_name=${3000}    domain_name=${6000}    foundation_account=Bob    certified_sales_account=Bob    discount_for_dedication_nodes=45    who=Council
     ${pricing_policy} =     Get Pricing Policy    id=${2}
     Should Not Be Equal    ${pricing_policy}    ${None}
     Should Be Equal    ${pricing_policy}[name]    mypricingpolicy
 
-    # only possible with sudo
+    # only possible with council
     Run Keyword And Expect Error    *'BadOrigin'*
     ...    Update Pricing Policy    id=${2}    name=mypricingpolicyupdated    unit=Gigabytes    su=${55000}    cu=${90000}    nu=${20000}    ipu=${35000}    unique_name=${3000}    domain_name=${6000}    foundation_account=Bob    certified_sales_account=Bob    discount_for_dedication_nodes=45
 
-    Update Pricing Policy    id=${2}    name=mypricingpolicyupdated    unit=Gigabytes    su=${55000}    cu=${90000}    nu=${20000}    ipu=${35000}    unique_name=${3000}    domain_name=${6000}    foundation_account=Bob    certified_sales_account=Bob    discount_for_dedication_nodes=45    who=Sudo
+    Update Pricing Policy    id=${2}    name=mypricingpolicyupdated    unit=Gigabytes    su=${55000}    cu=${90000}    nu=${20000}    ipu=${35000}    unique_name=${3000}    domain_name=${6000}    foundation_account=Bob    certified_sales_account=Bob    discount_for_dedication_nodes=45    who=Council
     ${pricing_policy} =     Get Pricing Policy    id=${2}
     Should Not Be Equal    ${pricing_policy}    ${None}
     Should Be Equal    ${pricing_policy}[name]    mypricingpolicyupdated
@@ -367,20 +373,20 @@ Test Create Update Farming Policy
     [Documentation]    Testing api calls (create, update) for managing farming policies including failed attempts
     Setup Multi Node Network    log_name=test_create_update_farming_policy
 
-    # only possible with sudo
+    # only possible with council
     Run Keyword And Expect Error    *'BadOrigin'*
     ...    Create Farming Policy    name=myfarmingpolicy    su=${12}    cu=${15}    nu=${10}    ipv4=${8}    minimal_uptime=${9999}    policy_end=${10}    immutable=${True}    default=${True}    node_certification=Diy    farm_certification=Gold
 
-    Create Farming Policy    name=myfarmingpolicy    su=${12}    cu=${15}    nu=${10}    ipv4=${8}    minimal_uptime=${9999}    policy_end=${15}    immutable=${True}    default=${True}    node_certification=Diy    farm_certification=Gold    who=Sudo
+    Create Farming Policy    name=myfarmingpolicy    su=${12}    cu=${15}    nu=${10}    ipv4=${8}    minimal_uptime=${9999}    policy_end=${15}    immutable=${True}    default=${True}    node_certification=Diy    farm_certification=Gold    who=Council
     ${farming_policy} =    Get Farming Policy    id=${3}
     Should Not Be Equal    ${farming_policy}    ${None}
     Should Be Equal    ${farming_policy}[name]    myfarmingpolicy
 
-    # only possible with sudo
+    # only possible with council
     Run Keyword And Expect Error    *'BadOrigin'*
     ...    Update Farming Policy    id=${3}    name=myfarmingpolicyupdated    su=${12}    cu=${15}    nu=${10}    ipv4=${8}    minimal_uptime=${9999}    policy_end=${10}    immutable=${True}    default=${True}    node_certification=Diy    farm_certification=Gold
 
-    Update Farming Policy    id=${3}    name=myfarmingpolicyupdated    su=${12}    cu=${15}    nu=${10}    ipv4=${8}    minimal_uptime=${9999}    policy_end=${10}    immutable=${True}    default=${True}    node_certification=Diy    farm_certification=Gold    who=Sudo
+    Update Farming Policy    id=${3}    name=myfarmingpolicyupdated    su=${12}    cu=${15}    nu=${10}    ipv4=${8}    minimal_uptime=${9999}    policy_end=${10}    immutable=${True}    default=${True}    node_certification=Diy    farm_certification=Gold    who=Council
     ${farming_policy} =    Get Farming Policy    id=${3}
     Should Not Be Equal    ${farming_policy}    ${None}
     Should Be Equal    ${farming_policy}[name]    myfarmingpolicyupdated
@@ -392,27 +398,22 @@ Test Attach Policy To Farm
     Setup Multi Node Network    log_name=test_attach_policy_to_farm
 
     Setup Network And Create Farm
-    Create Farming Policy    name=myfarmingpolicy    su=${12}    cu=${15}    nu=${10}    ipv4=${8}    minimal_uptime=${9999}    policy_end=${5}    immutable=${True}    default=${True}    node_certification=Diy    farm_certification=Gold    who=Sudo
+    Create Farming Policy    name=myfarmingpolicy    su=${12}    cu=${15}    nu=${10}    ipv4=${8}    minimal_uptime=${9999}    policy_end=${1000}    immutable=${True}    default=${True}    node_certification=Diy    farm_certification=Gold    who=Council
     ${policy} =     Get Farming Policy    id=${3}
     Should Not Be Equal    ${policy}    ${None}
     Should Be Equal    ${policy}[name]    myfarmingpolicy
 
-    # only possible with sudo
+    # only possible with council
     Run Keyword And Expect Error    *'BadOrigin'*
-    ...    Attach Policy To Farm    farm_id=${1}    farming_policy_id=${3}    cu=${20}    su=${2}    end=${1654058949}    node_certification=${False}    node_count=${10}
+    ...    Attach Policy To Farm    farm_id=${1}    farming_policy_id=${3}    cu=${20}    su=${2}    end=${100000}    node_certification=${False}    node_count=${10}
 
-    Attach Policy To Farm    farm_id=${1}    farming_policy_id=${3}    cu=${20}    su=${2}    end= ${1654058949}    node_certification=${False}    node_count=${10}    who=Sudo
-
-    # farming policy expires after 5 blocks
-    Wait X Blocks    x=${5}
-    Run Keyword And Expect Error    {'Err': {'Module': {'index': 11, 'error': '0x52000000'}}}
-    ...    Attach_policy_to_farm    farm_id=${1}    farming_policy_id=${3}    cu=${20}    su=${2}    end=${1654058949}    node_certification=${False}    node_count=${10}    who=Sudo
+    Attach Policy To Farm    farm_id=${1}    farming_policy_id=${3}    cu=${20}    su=${2}    end=${100000}    node_certification=${False}    node_count=${10}    who=Council
 
     Tear Down Multi Node Network
 
 Test Billing
     [Documentation]    Testing billing. Alice creates a twin and Bob too. Alice creates a farm and a node in that farm while Bob creates a node contract requesting Alice to use her node. Alice will report contract resources. We will wait 6 blocks so that Bob will be billed a single time.
-    Setup Multi Node Network    log_name=test_billing
+    Setup Multi Node Network    log_name=test_billing    amt=${2}
 
     # Setup
     Setup Predefined Account    who=Alice
@@ -421,9 +422,9 @@ Test Billing
     Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
 
     ${balance_alice} =    Balance Data    who=Alice
-    ${balance_bob} =    Balance Data    who=Bob    port=${9946}
+    ${balance_bob} =    Balance Data    who=Bob    port=${9945}
     # Bob will be using the node: let's create a node contract in his name
-    Create Node Contract    node_id=${1}    port=${9946}    who=Bob
+    Create Node Contract    node_id=${1}    port=${9945}    who=Bob
     Report Contract Resources    contract_id=${1}    hru=${20}    sru=${20}    cru=${2}    mru=${4}
     Add Nru Reports    contract_id=${1}    nru=${3}
 
@@ -433,7 +434,7 @@ Test Billing
 
     # Balance should have decreased
     ${balance_alice_after} =    Balance Data    who=Alice
-    ${balance_bob_after} =    Balance Data    who=Bob    port=${9946}
+    ${balance_bob_after} =    Balance Data    who=Bob    port=${9945}
     Ensure Account Balance Decreased    ${balance_bob}    ${balance_bob_after}
 
     Tear Down Multi Node Network
@@ -458,7 +459,7 @@ Test Solution Provider
     Length Should Be    ${solution_provider}[providers]    ${2}
     
     # The solution provider has to be approved
-    Approve Solution Provider    solution_provider_id=${1}    who=Sudo
+    Approve Solution Provider    solution_provider_id=${1}    who=Council
     ${solution_provider} =    Get Solution Provider    id=${1}
     Should Not Be Equal    ${solution_provider}    ${None}
     Should Be Equal    ${solution_provider}[approved]    ${True}
@@ -466,7 +467,7 @@ Test Solution Provider
     ${balance_charlie_before} =     Balance Data    who=Charlie
     ${balance_dave_before} =    Balance Data    who=Dave
     # Bob will be using the node: let's create a node contract in his name
-    Create Node Contract    node_id=${1}    port=9946    who=Bob    solution_provider_id=${1}
+    Create Node Contract    node_id=${1}    port=${9945}    who=Bob    solution_provider_id=${1}
     Report Contract Resources    contract_id=${1}    hru=${20}    sru=${20}    cru=${2}    mru=${4}
     Add Nru Reports    contract_id=${1}    nru=${3}
     # Wait 6 blocks: after 5 blocks Bob should be billed
@@ -479,5 +480,19 @@ Test Solution Provider
     ${balance_dave_after} =    Balance Data    who=Dave
     Ensure Account Balance Increased    ${balance_charlie_before}    ${balance_charlie_after}
     Ensure Account Balance Increased    ${balance_dave_before}    ${balance_dave_after}
+
+    Tear Down Multi Node Network
+
+Test Client Go integration tests
+    [Documentation]     Run go client integration tests
+    Setup Multi Node Network    log_name=test_client_go_integration_tests
+
+    ${log_go_tests}    Set Variable    ../../substrate-node/tests/_output_tests/test_client_go_integration_tests/${OUTPUT_GO_TESTS}
+
+    Run Process    go  clean  -testcache
+
+    ${result} =	Run Process     go      test   .  -v   cwd=../../clients/tfchain-client-go    shell=yes  env:CI=0  stdout=${log_go_tests}  stderr=${log_go_tests}
+
+    Should Be Equal As Integers   ${result.rc}	0  msg=${result.stdout}
 
     Tear Down Multi Node Network

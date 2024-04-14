@@ -161,10 +161,10 @@ proofs: 0
 
 ## Contact admin to insert the key into the validator set
 
-An admin with access to the sudo key can call following extrinsic to insert the new node as a validator. For Devnet, is found in encrypted repo.
+Create a council motion to add a new validator.
 
-Submit the transaction with the SUDO key!
-
-`Developer` -> `Extrinsics` -> `sudo` -> `sudo(call)` -> -> `validatorSet` -> `addValidator` -> `validatorId` must be the account of the node you are adding
+`Council` -> `Propose Motion` -> `validatorSet` -> `addValidator` -> `validatorId` must be the account of the node you are adding
 
 validatorID: SS58 encoded address of newly generated keypair (aura sr25519 key generated using 'subkey generate')
+
+Let other council members know and ask them to vote on the proposal.

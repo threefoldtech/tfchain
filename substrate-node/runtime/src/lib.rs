@@ -28,14 +28,17 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use tfchain_support::{
     constants::time::*,
-    traits::{ChangeNode, PublicIpModifier},
+    traits::{ChangeNode, NodeActiveContracts, PublicIpModifier},
     types::PublicIP,
 };
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
     construct_runtime, parameter_types,
-    traits::{ConstU8, EitherOfDiverse, FindAuthor, KeyOwnerProofSystem, PrivilegeCmp, Randomness},
+    traits::{
+        ConstBool, ConstU8, EitherOfDiverse, FindAuthor, KeyOwnerProofSystem, PrivilegeCmp,
+        Randomness,
+    },
     weights::{
         constants::{
             BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND,
@@ -80,6 +83,8 @@ pub use pallet_validator;
 
 pub use pallet_dao;
 
+pub mod migrations;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -98,7 +103,7 @@ pub type AccountIndex = u32;
 pub type Balance = u128;
 
 /// Index of a transaction in the chain.
-pub type Index = u32;
+pub type Nonce = u32;
 
 /// A hash of some data used by the chain.
 pub type Hash = sp_core::H256;
@@ -141,11 +146,12 @@ pub fn session_keys(aura: AuraId, grandpa: GrandpaId) -> SessionKeys {
 /// Constant values used within the runtime.
 pub mod constants;
 
+#[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 128,
+    spec_version: 149,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -186,6 +192,8 @@ parameter_types! {
 impl frame_system::Config for Runtime {
     /// The basic call filter to use in dispatchable.
     type BaseCallFilter = frame_support::traits::Everything;
+    /// The block type for the runtime.
+    type Block = Block;
     /// Block & extrinsics weights: base values and limits.
     type BlockWeights = BlockWeights;
     /// The maximum length of a block (in bytes).
@@ -196,16 +204,12 @@ impl frame_system::Config for Runtime {
     type RuntimeCall = RuntimeCall;
     /// The lookup mechanism to get account ID from whatever is passed in dispatchers.
     type Lookup = AccountIdLookup<AccountId, ()>;
-    /// The index type for storing how many extrinsics an account has signed.
-    type Index = Index;
-    /// The index type for blocks.
-    type BlockNumber = BlockNumber;
+    /// The type for storing how many extrinsics an account has signed.
+    type Nonce = Nonce;
     /// The type for hashing blocks and tries.
     type Hash = Hash;
     /// The hashing algorithm used.
     type Hashing = BlakeTwo256;
-    /// The header type.
-    type Header = generic::Header<BlockNumber, BlakeTwo256>;
     /// The ubiquitous event type.
     type RuntimeEvent = RuntimeEvent;
     /// The ubiquitous origin type.
@@ -237,31 +241,25 @@ impl frame_system::Config for Runtime {
 
 parameter_types! {
     pub const MaxAuthorities: u32  = 100;
+    pub const MaxSetIdSessionEntries: u64 = 0;
 }
 
 impl pallet_aura::Config for Runtime {
     type AuthorityId = AuraId;
     type DisabledValidators = ();
     type MaxAuthorities = MaxAuthorities;
+    type AllowMultipleBlocksPerSlot = ConstBool<false>;
 }
 
 impl pallet_grandpa::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
 
-    type KeyOwnerProofSystem = ();
-
-    type KeyOwnerProof =
-        <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
-
-    type KeyOwnerIdentification = <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(
-        KeyTypeId,
-        GrandpaId,
-    )>>::IdentificationTuple;
-
-    type HandleEquivocation = ();
-
     type WeightInfo = ();
     type MaxAuthorities = MaxAuthorities;
+    type MaxSetIdSessionEntries = MaxSetIdSessionEntries;
+
+    type KeyOwnerProof = sp_core::Void;
+    type EquivocationReportSystem = ();
 }
 
 parameter_types! {
@@ -276,8 +274,11 @@ impl pallet_timestamp::Config for Runtime {
     type WeightInfo = ();
 }
 
+/// Existential deposit.
+pub const EXISTENTIAL_DEPOSIT: u128 = 500;
+
 parameter_types! {
-    pub const ExistentialDeposit: u128 = 500;
+    pub const ExistentialDeposit: u128 = EXISTENTIAL_DEPOSIT;
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
 }
@@ -294,6 +295,10 @@ impl pallet_balances::Config for Runtime {
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
+    type FreezeIdentifier = ();
+    type MaxFreezes = ();
+    type RuntimeHoldReason = ();
+    type MaxHolds = ();
 }
 
 parameter_types! {
@@ -307,11 +312,6 @@ impl pallet_transaction_payment::Config for Runtime {
     type WeightToFee = WeightToFeeStruct;
     type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
     type FeeMultiplierUpdate = ();
-}
-
-impl pallet_sudo::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type RuntimeCall = RuntimeCall;
 }
 
 pub type Serial = pallet_tfgrid::pallet::SerialNumberOf<Runtime>;
@@ -330,6 +330,10 @@ impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
         SmartContractModule::node_deleted(node);
         Dao::node_deleted(node);
     }
+
+    fn node_power_state_changed(node: &TfgridNode) {
+        SmartContractModule::node_power_state_changed(node);
+    }
 }
 
 pub struct PublicIpModifierType;
@@ -339,11 +343,19 @@ impl PublicIpModifier for PublicIpModifierType {
     }
 }
 
+pub struct NodeActiveContractsType;
+impl NodeActiveContracts for NodeActiveContractsType {
+    fn node_has_no_active_contracts(node_id: u32) -> bool {
+        SmartContractModule::node_has_no_active_contracts(node_id)
+    }
+}
+
 parameter_types! {
     pub const MaxFarmNameLength: u32 = 40;
     pub const MaxInterfaceIpsLength: u32 = 10;
     pub const MaxInterfacesLength: u32 = 10;
     pub const MaxFarmPublicIps: u32 = 512;
+    pub const TimestampHintDrift: u64 = 60;
 }
 
 impl pallet_tfgrid::Config for Runtime {
@@ -352,6 +364,7 @@ impl pallet_tfgrid::Config for Runtime {
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Runtime>;
     type NodeChanged = NodeChanged;
     type PublicIpModifier = SmartContractModule;
+    type NodeActiveContracts = NodeActiveContractsType;
     type TermsAndConditions = pallet_tfgrid::terms_cond::TermsAndConditions<Runtime>;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
@@ -365,6 +378,7 @@ impl pallet_tfgrid::Config for Runtime {
     type CityName = pallet_tfgrid::node::CityName<Runtime>;
     type Location = pallet_tfgrid::node::Location<Runtime>;
     type SerialNumber = pallet_tfgrid::node::SerialNumber<Runtime>;
+    type TimestampHintDrift = TimestampHintDrift;
 }
 
 parameter_types! {
@@ -395,12 +409,11 @@ impl pallet_smart_contract::Config for Runtime {
     type DistributionFrequency = DistributionFrequency;
     type GracePeriod = GracePeriod;
     type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
-    type NodeChanged = NodeChanged;
     type PublicIpModifier = PublicIpModifierType;
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
     type Call = RuntimeCall;
     type MaxNameContractNameLength = MaxNameContractNameLength;
-    type NameContractName = pallet_smart_contract::name_contract::NameContractName<Runtime>;
+    type NameContractName = pallet_smart_contract::grid_contract::NameContractName<Runtime>;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
     type MaxDeploymentDataLength = MaxDeploymentDataLength;
     type MaxNodeContractPublicIps = MaxFarmPublicIps;
@@ -413,16 +426,19 @@ impl pallet_tft_bridge::Config for Runtime {
     type Burn = ();
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
     type RetryInterval = RetryInterval;
+    type WeightInfo = pallet_tft_bridge::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_burning::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type Burn = ();
+    type WeightInfo = pallet_burning::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_kvstore::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = pallet_kvstore::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_tft_price::Config for Runtime {
@@ -430,22 +446,25 @@ impl pallet_tft_price::Config for Runtime {
     type Call = RuntimeCall;
     type RuntimeEvent = RuntimeEvent;
     type RestrictedOrigin = EnsureRootOrCouncilApproval;
+    type WeightInfo = pallet_tft_price::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_validator::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type CouncilOrigin = EnsureRootOrCouncilApproval;
     type Currency = Balances;
+    type WeightInfo = pallet_validator::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
     pub MinAuthorities: u32 = 1;
 }
 
-impl validatorset::Config for Runtime {
+impl substrate_validator_set::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type AddRemoveOrigin = EnsureRootOrCouncilApproval;
     type MinAuthorities = MinAuthorities;
+    type WeightInfo = substrate_validator_set::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -459,7 +478,6 @@ impl pallet_dao::Config for Runtime {
     type Proposal = RuntimeCall;
     type MotionDuration = DaoMotionDuration;
     type Tfgrid = TfgridModule;
-    type NodeChanged = NodeChanged;
     type WeightInfo = pallet_dao::weights::SubstrateWeight<Runtime>;
     type MinVetos = MinVetos;
 }
@@ -492,7 +510,7 @@ parameter_types! {
 
 impl pallet_session::Config for Runtime {
     type ValidatorId = <Self as frame_system::Config>::AccountId;
-    type ValidatorIdOf = validatorset::ValidatorOf<Self>;
+    type ValidatorIdOf = substrate_validator_set::ValidatorOf<Self>;
     type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
     type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
     type SessionManager = ValidatorSet;
@@ -512,7 +530,7 @@ where
         call: RuntimeCall,
         public: <Signature as sp_runtime::traits::Verify>::Signer,
         account: AccountId,
-        index: Index,
+        index: Nonce,
     ) -> Option<(
         RuntimeCall,
         <UncheckedExtrinsic as sp_runtime::traits::Extrinsic>::SignaturePayload,
@@ -604,6 +622,7 @@ parameter_types! {
     pub const CouncilMotionDuration: BlockNumber = 2 * HOURS;
     pub const CouncilMaxProposals: u32 = 100;
     pub const CouncilMaxMembers: u32 = 100;
+    pub MaxProposalWeight: Weight = Perbill::from_percent(50) * BlockWeights::get().max_block;
 }
 
 type CouncilCollective = pallet_collective::Instance1;
@@ -614,8 +633,10 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
     type MotionDuration = CouncilMotionDuration;
     type MaxProposals = CouncilMaxProposals;
     type MaxMembers = CouncilMaxMembers;
+    type SetMembersOrigin = EnsureRoot<AccountId>;
     type DefaultVote = pallet_collective::PrimeDefaultVote;
     type WeightInfo = ();
+    type MaxProposalWeight = MaxProposalWeight;
 }
 
 impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
@@ -652,6 +673,7 @@ type EnsureRootOrCouncilApproval = EitherOfDiverse<
 
 impl pallet_runtime_upgrade::Config for Runtime {
     type SetCodeOrigin = EnsureRootOrCouncilApproval;
+    type WeightInfo = ();
 }
 
 pub struct AuraAccountAdapter;
@@ -671,18 +693,10 @@ impl FindAuthor<AccountId> for AuraAccountAdapter {
     }
 }
 
-parameter_types! {
-    pub const UncleGenerations: u32 = 0;
-}
-
 impl pallet_authorship::Config for Runtime {
     type FindAuthor = AuraAccountAdapter;
-    type UncleGenerations = UncleGenerations;
-    type FilterUncle = ();
     type EventHandler = ();
 }
-
-impl pallet_randomness_collective_flip::Config for Runtime {}
 
 impl pallet_utility::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
@@ -693,35 +707,42 @@ impl pallet_utility::Config for Runtime {
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
-    pub enum Runtime where
-        Block = Block,
-        NodeBlock = opaque::Block,
-        UncheckedExtrinsic = UncheckedExtrinsic
+    pub enum Runtime
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
-        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        ValidatorSet: validatorset::{Pallet, Call, Storage, Event<T>, Config<T>},
-        Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
-        Aura: pallet_aura::{Pallet, Config<T>},
-        Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event},
-        TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
-        Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
-        Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
-        TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>, Config<T>},
-        SmartContractModule: pallet_smart_contract::{Pallet, Call, Config, Storage, Event<T>},
-        TFTBridgeModule: pallet_tft_bridge::{Pallet, Call, Config<T>, Storage, Event<T>},
-        TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Config<T>, Event<T>},
-        Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>},
-        BurningModule: pallet_burning::{Pallet, Call, Storage, Event<T>},
-        TFKVStore: pallet_kvstore::{Pallet, Call, Storage, Event<T>},
-        Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
-        CouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
-        RuntimeUpgrade: pallet_runtime_upgrade::{Pallet, Call},
-        Validator: pallet_validator::{Pallet, Call, Storage, Event<T>},
-        Dao: pallet_dao::{Pallet, Call, Storage, Event<T>},
-        Utility: pallet_utility::{Pallet, Call, Event},
+        // System support
+        System: frame_system = 0,
+        Timestamp: pallet_timestamp = 1,
+        Utility: pallet_utility = 3,
+        Scheduler: pallet_scheduler = 4,
+
+        // Consensus support
+        ValidatorSet: substrate_validator_set = 10,
+        Session: pallet_session = 11,
+        Aura: pallet_aura = 12,
+        Grandpa: pallet_grandpa = 13,
+        Historical: pallet_session::historical::{Pallet} = 14,
+        Authorship: pallet_authorship = 15,
+
+        // Money
+        Balances: pallet_balances = 20,
+        TransactionPayment: pallet_transaction_payment = 21,
+
+        // Custom
+        TfgridModule: pallet_tfgrid = 25,
+        SmartContractModule: pallet_smart_contract = 26,
+        TFTBridgeModule: pallet_tft_bridge  = 27,
+        TFTPriceModule: pallet_tft_price = 28,
+        BurningModule: pallet_burning = 29,
+        TFKVStore: pallet_kvstore = 30,
+        RuntimeUpgrade: pallet_runtime_upgrade  = 31,
+
+        // Governance
+        Council: pallet_collective::<Instance1> = 40,
+        CouncilMembership: pallet_membership::<Instance1> = 41,
+        Dao: pallet_dao = 43,
+
+        // otherwise it requires genesis config, will be deprecated in the future so we can remove later
+        Validator: pallet_validator::{Pallet, Call, Storage, Event<T>} = 50,
     }
 );
 
@@ -764,9 +785,10 @@ pub type Executive = frame_executive::Executive<
 // All migrations executed on runtime upgrade as a nested tuple of types implementing
 // `OnRuntimeUpgrade`.
 type Migrations = (
-    pallet_tfgrid::migrations::v14::FixFarmingPoliciesMap<Runtime>,
-    pallet_tfgrid::migrations::v15::MigrateTwinsV15<Runtime>,
-    pallet_smart_contract::migrations::v7::FixTwinLockedBalances<Runtime>,
+    pallet_tft_bridge::migrations::v2::MigrateBurnTransactionsV2<Runtime>,
+    pallet_scheduler::migration::v3::MigrateToV4<Runtime>,
+    migrations::update_storage_version::PalletBalancesToV1<Runtime>,
+    migrations::update_storage_version::PalletSessionToV1<Runtime>,
 );
 
 // follows Substrate's non destructive way of eliminating  otherwise required
@@ -778,8 +800,15 @@ extern crate frame_benchmarking;
 #[cfg(feature = "runtime-benchmarks")]
 mod benches {
     define_benchmarks!(
-        // KILT
         [pallet_smart_contract, SmartContractModule]
+        [pallet_tfgrid, TfgridModule]
+        [pallet_tft_price, TFTPriceModule]
+        [pallet_burning, BurningModule]
+        [pallet_dao, Dao]
+        [pallet_kvstore, TFKVStore]
+        [substrate_validator_set, ValidatorSet]
+        [pallet_validator, Validator]
+        [pallet_tft_bridge, TFTBridgeModule]
         // Substrate
         [frame_benchmarking::baseline, Baseline::<Runtime>]
         [frame_system, SystemBench::<Runtime>]
@@ -808,6 +837,14 @@ impl_runtime_apis! {
     impl sp_api::Metadata<Block> for Runtime {
         fn metadata() -> OpaqueMetadata {
             OpaqueMetadata::new(Runtime::metadata().into())
+        }
+
+        fn metadata_at_version(version: u32) -> Option<OpaqueMetadata> {
+            Runtime::metadata_at_version(version)
+        }
+
+        fn metadata_versions() -> sp_std::vec::Vec<u32> {
+            Runtime::metadata_versions()
         }
     }
 
@@ -901,8 +938,8 @@ impl_runtime_apis! {
         }
     }
 
-    impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index> for Runtime {
-        fn account_nonce(account: AccountId) -> Index {
+    impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce> for Runtime {
+        fn account_nonce(account: AccountId) -> Nonce {
             System::account_nonce(account)
         }
     }
@@ -920,6 +957,12 @@ impl_runtime_apis! {
             len: u32,
         ) -> pallet_transaction_payment::FeeDetails<Balance> {
             TransactionPayment::query_fee_details(uxt, len)
+        }
+        fn query_weight_to_fee(weight: Weight) -> Balance {
+            TransactionPayment::weight_to_fee(weight)
+        }
+        fn query_length_to_fee(length: u32) -> Balance {
+            TransactionPayment::length_to_fee(length)
         }
     }
 
@@ -983,10 +1026,12 @@ impl_runtime_apis! {
 
     #[cfg(feature = "try-runtime")]
     impl frame_try_runtime::TryRuntime<Block> for Runtime {
-        fn on_runtime_upgrade(checks: bool) -> (Weight, Weight) {
+        fn on_runtime_upgrade(checks: frame_try_runtime::UpgradeCheckSelect) -> (Weight, Weight) {
             // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
             // have a backtrace here. If any of the pre/post migration checks fail, we shall stop
             // right here and right now.
+
+            // For some reason the checks are not working, so we disable them for now and always run with checks.
             let weight = Executive::try_runtime_upgrade(checks).unwrap();
             (weight, BlockWeights::get().max_block)
         }
@@ -999,7 +1044,7 @@ impl_runtime_apis! {
         ) -> Weight {
             // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
             // have a backtrace here.
-            Executive::try_execute_block(block, state_root_check, signature_check, select).expect("execute-block failed")
+            Executive::try_execute_block(block, state_root_check, signature_check, select).unwrap()
         }
     }
 }

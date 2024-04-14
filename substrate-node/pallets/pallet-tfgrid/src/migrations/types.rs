@@ -1,6 +1,6 @@
 pub mod v11 {
-    use codec::{Decode, Encode};
     use core::cmp::{Ord, PartialOrd};
+    use parity_scale_codec::{Decode, Encode};
     use scale_info::TypeInfo;
     use sp_std::{prelude::*, vec::Vec};
     use tfchain_support::{
@@ -47,8 +47,8 @@ pub mod v11 {
 }
 
 pub mod v12 {
-    use codec::{Decode, Encode};
     use core::cmp::{Ord, PartialOrd};
+    use parity_scale_codec::{Decode, Encode};
     use scale_info::TypeInfo;
     use sp_std::{prelude::*, vec::Vec};
     use tfchain_support::{
@@ -88,7 +88,7 @@ pub mod v12 {
 
 pub mod v14 {
     use crate::types;
-    use codec::{Decode, Encode};
+    use parity_scale_codec::{Decode, Encode};
     use scale_info::TypeInfo;
     use sp_std::{prelude::*, vec::Vec};
 

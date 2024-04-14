@@ -1,6 +1,6 @@
 # Service/Consumer contracts
 
-It is now possible to create generic contract between two TFChain users (without restriction of account type) for some service and bill for it.
+It is now possible to create generic contract between two TFChain users (without restriction of account type) for some "away from the grid" service and bill for it.
 
 
 ## How does it work?
@@ -38,7 +38,7 @@ Be aware that calling the extrinsic a second time will create a new contract wit
 
 ## Step 2: Fill contract
 
-Once created, the contract must be filled with its relative `per hour` fees (only service can set fees):
+Once created, the contract must be filled with its relative fees in `mUSD / hour` (only service can set fees):
 
 ~~~rust
 service_contract_set_fees(
@@ -112,7 +112,7 @@ where `T` is the elapsed time, in seconds and bounded by 3600 (see above), since
 Note that if `variable_amount` is too high (i.e `variable_amount >  variable_fee * T / 3600`) the billing extrinsic will fail.
 The `variable_fee` value in the contract is interpreted as being "per hour" and acts as a protection mechanism to avoid consumer draining.
 Indeed, as it is technically possible for the service to send a bill every second, there would be no gain for that (unless overloading the chain uselessly).
-So it is also the service responsability to set a suitable `variable_amount` according to the billing frequency!
+So it is also the service responsability to set a suitable `variable_amount` (in mUSD) according to the billing frequency!
 
 Also be aware that if the consumer is out of funds the billing will fail AND the contract will be canceled.
 

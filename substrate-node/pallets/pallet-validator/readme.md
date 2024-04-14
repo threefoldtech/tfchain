@@ -1,45 +1,35 @@
-# Pallet Validator
+# Validator addition module
 
-A pallet that manages external parties to join Threefold DAO & become a consensus validator (babe/gran).
+A pallet that manages external parties to join Threefold DAO & become a consensus validator (aura/gran).
 
 See: [flow diagram](./validator_request_flow.md)
 
-## Flow explained
+## Overview
 
-Anyone can apply to become a validator by calling the `create_validator` extrinsic on the `validator` pallet.
+The Validator addition module provides functions for:
 
-This call must be signed by the account that wants to become a member of the DAO Council & wants to participate in consensus.
+- Create a validator request
+- Activating a validator node
+- Changing a validator node account
+- Bonding a validator account to prove that account is indeed in control of the valiadtor node
+- Approving a validator to be added as a council member and to participate in consensus
+- Removing a validator node
 
-The object looks as following:
+## Terminology
 
-```rust
-pub struct Validator<AccountId> {
-    pub validator_node_account: AccountId,
-    pub stash_account: AccountId,
-    pub description: Vec<u8>,
-    pub tf_connect_id: Vec<u8>,
-    pub info: Vec<u8>,
-    pub state: ValidatorRequestState(created, approved, executed),
-}
-```
+- Validator request: A request to add a validator node to the Threefold DAO
+- Validator node account: The account that is used to sign blocks and participate in consensus
+- Stash account: The account that is used to bond tokens to the validator node account
 
-This object represents a Validator. A Validator is a combination of two things:
+See [spec](./spec.md) for more details.
 
-- Council member (account ID is inferred from the creator of this object).
-- Consensus Validator (aura/gran) represented by the `validator_node_account` field.
+## Interface
 
-When the council decides to approve the request, the council should propose a motion with following extrinsic: `(CouncilMembership -> ApproveValidator(who)` (who being the validator's account).
+Dispatchable functions of this pallet.
 
-If the motion is closed, two things happen:
-
-- the account id provided is added as a council member
-- the validator request state goes to an approved state
-
-Now that the validator request is in an `Approved` state, the newly added council member can call `(ValidatorSet -> ActivateValidator())`.
-
-Following things happen when this is executed:
-
-- Chain reads validator request
-- Extract validator_node_account field, insert that in the list of active validators
-- Move the state of the validator request to `Validating`
-- Rotate Session
+- `create_validator_request`: Create a validator request
+- `activate_validator_node`: Activate a validator node
+- `change_validator_node_account`: Change the validator node account
+- `bond`: Bond a validator node account
+- `approve_validator`: Approve a validator node to be added as a council member and to participate in consensus, can only by called by a council member
+- `remove_validator_node`: Remove a validator node, can only by called by a council member

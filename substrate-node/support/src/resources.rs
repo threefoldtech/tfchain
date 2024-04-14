@@ -1,4 +1,4 @@
-use codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::Percent;
 
@@ -17,6 +17,15 @@ pub const ONE_THOUSAND: u128 = 1_000;
 pub const GIGABYTE: u128 = 1024 * 1024 * 1024;
 
 impl Resources {
+    pub fn empty() -> Resources {
+        Resources {
+            hru: 0,
+            sru: 0,
+            cru: 0,
+            mru: 0,
+        }
+    }
+
     pub fn add(mut self, other: &Resources) -> Resources {
         self.cru += other.cru;
         self.sru += other.sru;
@@ -100,151 +109,8 @@ impl Resources {
             || wiggle(resources_before.hru, resources_after.hru)
             || wiggle(resources_before.mru, resources_after.mru);
     }
-}
 
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_calc_cu_falsy_values() {
-        let resources = Resources {
-            hru: 0,
-            cru: 0,
-            mru: 0,
-            sru: 0,
-        };
-
-        let cu = resources.get_cu();
-        assert_eq!(cu, 0);
-    }
-
-    #[test]
-    fn test_calc_cu() {
-        let resources = Resources {
-            hru: 4 * GIGABYTE as u64 * 1024,
-            cru: 64,
-            mru: 64 * GIGABYTE as u64 * 1024,
-            sru: 12 * GIGABYTE as u64 * 1024,
-        };
-
-        let cu = resources.get_cu();
-        assert_eq!(cu, 256);
-    }
-
-    #[test]
-    fn test_calc_cu_2() {
-        let resources = Resources {
-            hru: 4 * GIGABYTE as u64 * 1024,
-            cru: 4,
-            mru: 8,
-            sru: 12 * GIGABYTE as u64 * 1024,
-        };
-
-        let cu = resources.get_cu();
-        assert_eq!(cu, 2);
-    }
-
-    #[test]
-    fn test_calc_su() {
-        let resources = Resources {
-            hru: 4 * GIGABYTE as u64 * 1024,
-            cru: 64,
-            mru: 64,
-            sru: 12 * GIGABYTE as u64 * 1024,
-        };
-
-        let su = resources.get_su();
-        assert_eq!(su, 52);
-    }
-
-    #[test]
-    fn test_calc_su_2() {
-        let resources = Resources {
-            hru: 0,
-            cru: 64,
-            mru: 64,
-            sru: 12 * GIGABYTE as u64 * 1024,
-        };
-
-        let su = resources.get_su();
-        assert_eq!(su, 49);
-    }
-
-    #[test]
-    fn test_calc_su_3() {
-        let resources = Resources {
-            hru: 0,
-            cru: 64,
-            mru: 64,
-            sru: 0,
-        };
-
-        let su = resources.get_su();
-        assert_eq!(su, 0);
-    }
-
-    #[test]
-    fn test_calc_su_4() {
-        let resources = Resources {
-            hru: 4 * GIGABYTE as u64 * 1024,
-            cru: 64,
-            mru: 64,
-            sru: 0,
-        };
-
-        let su = resources.get_su();
-        assert_eq!(su, 3);
-    }
-
-    #[test]
-    fn test_resources_diff() {
-        let resources = Resources {
-            hru: 4 * GIGABYTE as u64 * 1024,
-            cru: 64,
-            mru: 64 * GIGABYTE as u64,
-            sru: 0,
-        };
-
-        let new_resources = Resources {
-            hru: 4 * GIGABYTE as u64 * 1024,
-            cru: 64,
-            mru: 64 * GIGABYTE as u64,
-            sru: 0,
-        };
-
-        assert_eq!(Resources::has_changed(&resources, &new_resources, 1), false);
-
-        let resources = Resources {
-            hru: 4 * GIGABYTE as u64 * 1024,
-            cru: 64,
-            mru: 64 * GIGABYTE as u64,
-            sru: 0,
-        };
-
-        let new_resources = Resources {
-            hru: 4 * GIGABYTE as u64 * 1024,
-            cru: 64,
-            mru: 40 * GIGABYTE as u64,
-            sru: 0,
-        };
-
-        assert_eq!(Resources::has_changed(&resources, &new_resources, 1), true);
-
-        let resources = Resources {
-            hru: 4 * GIGABYTE as u64 * 1024,
-            cru: 64,
-            mru: 64 * GIGABYTE as u64,
-            sru: 1000 * GIGABYTE as u64,
-        };
-
-        let new_resources = Resources {
-            hru: 4 * GIGABYTE as u64 * 1024,
-            cru: 64,
-            mru: 64 * GIGABYTE as u64,
-            sru: 989 * GIGABYTE as u64,
-        };
-
-        assert_eq!(Resources::has_changed(&resources, &new_resources, 1), true);
+    pub fn is_empty(&self) -> bool {
+        return self.hru == 0 && self.sru == 0 && self.cru == 0 && self.mru == 0;
     }
 }

@@ -1,12 +1,13 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
-use sc_client_api::BlockBackend;
+use futures::FutureExt;
+use sc_client_api::{Backend, BlockBackend};
 use sc_consensus_aura::{ImportQueueParams, SlotProportion, StartAuraParams};
+use sc_consensus_grandpa::SharedVoterState;
 pub use sc_executor::NativeElseWasmExecutor;
-use sc_finality_grandpa::SharedVoterState;
-use sc_keystore::LocalKeystore;
-use sc_service::{error::Error as ServiceError, Configuration, TaskManager};
+use sc_service::{error::Error as ServiceError, Configuration, TaskManager, WarpSyncParams};
 use sc_telemetry::{Telemetry, TelemetryWorker};
+use sc_transaction_pool_api::OffchainTransactionPoolFactory;
 use sp_consensus_aura::sr25519::AuthorityPair as AuraPair;
 use std::{sync::Arc, time::Duration};
 use tfchain_runtime::{self, opaque::Block, RuntimeApi};
@@ -36,6 +37,7 @@ pub type FullClient =
 type FullBackend = sc_service::TFullBackend<Block>;
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
+#[allow(clippy::type_complexity)]
 pub fn new_partial(
     config: &Configuration,
 ) -> Result<
@@ -46,24 +48,18 @@ pub fn new_partial(
         sc_consensus::DefaultImportQueue<Block, FullClient>,
         sc_transaction_pool::FullPool<Block, FullClient>,
         (
-            sc_finality_grandpa::GrandpaBlockImport<
+            sc_consensus_grandpa::GrandpaBlockImport<
                 FullBackend,
                 Block,
                 FullClient,
                 FullSelectChain,
             >,
-            sc_finality_grandpa::LinkHalf<Block, FullClient, FullSelectChain>,
+            sc_consensus_grandpa::LinkHalf<Block, FullClient, FullSelectChain>,
             Option<Telemetry>,
         ),
     >,
     ServiceError,
 > {
-    if config.keystore_remote.is_some() {
-        return Err(ServiceError::Other(format!(
-            "Remote Keystores are not supported."
-        )));
-    }
-
     let telemetry = config
         .telemetry_endpoints
         .clone()
@@ -75,13 +71,7 @@ pub fn new_partial(
         })
         .transpose()?;
 
-    let executor = NativeElseWasmExecutor::<ExecutorDispatch>::new(
-        config.wasm_method,
-        config.default_heap_pages,
-        config.max_runtime_instances,
-        config.runtime_cache_size,
-    );
-
+    let executor = sc_service::new_native_or_wasm_executor(config);
     let (client, backend, keystore_container, task_manager) =
         sc_service::new_full_parts::<Block, RuntimeApi, _>(
             &config,
@@ -107,14 +97,30 @@ pub fn new_partial(
         client.clone(),
     );
 
-    let (grandpa_block_import, grandpa_link) = sc_finality_grandpa::block_import(
+    let (grandpa_block_import, grandpa_link) = sc_consensus_grandpa::block_import(
         client.clone(),
-        &(client.clone() as Arc<_>),
+        &client,
         select_chain.clone(),
         telemetry.as_ref().map(|x| x.handle()),
     )?;
 
     let slot_duration = sc_consensus_aura::slot_duration(&*client)?;
+
+    let compatibility_mode = match config.chain_spec.id() {
+        "tfchain_devnet" => {
+            sc_consensus_aura::CompatibilityMode::UseInitializeBlock { until: 1195403 }
+        }
+        "tfchain_qa_net" => {
+            sc_consensus_aura::CompatibilityMode::UseInitializeBlock { until: 608253 }
+        }
+        "tfchain_testnet" => {
+            sc_consensus_aura::CompatibilityMode::UseInitializeBlock { until: 4740026 }
+        }
+        "tfchain_mainnet" => {
+            sc_consensus_aura::CompatibilityMode::UseInitializeBlock { until: 4231659 }
+        }
+        _ => sc_consensus_aura::CompatibilityMode::None,
+    };
 
     let import_queue =
         sc_consensus_aura::import_queue::<AuraPair, _, _, _, _, _>(ImportQueueParams {
@@ -136,9 +142,7 @@ pub fn new_partial(
             registry: config.prometheus_registry(),
             check_for_equivocation: Default::default(),
             telemetry: telemetry.as_ref().map(|x| x.handle()),
-            compatibility_mode: sc_consensus_aura::CompatibilityMode::UseInitializeBlock {
-                until: 1195403,
-            },
+            compatibility_mode,
         })?;
 
     Ok(sc_service::PartialComponents {
@@ -153,39 +157,22 @@ pub fn new_partial(
     })
 }
 
-fn remote_keystore(_url: &String) -> Result<Arc<LocalKeystore>, &'static str> {
-    // FIXME: here would the concrete keystore be built,
-    //        must return a concrete type (NOT `LocalKeystore`) that
-    //        implements `CryptoStore` and `SyncCryptoStore`
-    Err("Remote Keystore not supported.")
-}
-
 /// Builds a new service for a full client.
-pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> {
+pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
     let sc_service::PartialComponents {
         client,
         backend,
         mut task_manager,
         import_queue,
-        mut keystore_container,
+        keystore_container,
         select_chain,
         transaction_pool,
         other: (block_import, grandpa_link, mut telemetry),
     } = new_partial(&config)?;
 
-    if let Some(url) = &config.keystore_remote {
-        match remote_keystore(url) {
-            Ok(k) => keystore_container.set_remote_keystore(k),
-            Err(e) => {
-                return Err(ServiceError::Other(format!(
-                    "Error hooking up remote keystore for {}: {}",
-                    url, e
-                )))
-            }
-        };
-    }
+    let mut net_config = sc_network::config::FullNetworkConfiguration::new(&config.network);
 
-    let grandpa_protocol_name = sc_finality_grandpa::protocol_standard_name(
+    let grandpa_protocol_name = sc_consensus_grandpa::protocol_standard_name(
         &client
             .block_hash(0)
             .ok()
@@ -193,36 +180,46 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
             .expect("Genesis block exists; qed"),
         &config.chain_spec,
     );
+    net_config.add_notification_protocol(sc_consensus_grandpa::grandpa_peers_set_config(
+        grandpa_protocol_name.clone(),
+    ));
 
-    config
-        .network
-        .extra_sets
-        .push(sc_finality_grandpa::grandpa_peers_set_config(
-            grandpa_protocol_name.clone(),
-        ));
-    let warp_sync = Arc::new(sc_finality_grandpa::warp_proof::NetworkProvider::new(
+    let warp_sync = Arc::new(sc_consensus_grandpa::warp_proof::NetworkProvider::new(
         backend.clone(),
         grandpa_link.shared_authority_set().clone(),
         Vec::default(),
     ));
 
-    let (network, system_rpc_tx, tx_handler_controller, network_starter) =
+    let (network, system_rpc_tx, tx_handler_controller, network_starter, sync) =
         sc_service::build_network(sc_service::BuildNetworkParams {
             config: &config,
+            net_config,
             client: client.clone(),
             transaction_pool: transaction_pool.clone(),
             spawn_handle: task_manager.spawn_handle(),
             import_queue,
             block_announce_validator_builder: None,
-            warp_sync: Some(warp_sync),
+            warp_sync_params: Some(WarpSyncParams::WithProvider(warp_sync)),
         })?;
 
     if config.offchain_worker.enabled {
-        sc_service::build_offchain_workers(
-            &config,
-            task_manager.spawn_handle(),
-            client.clone(),
-            network.clone(),
+        task_manager.spawn_handle().spawn(
+            "offchain-workers-runner",
+            "offchain-worker",
+            sc_offchain::OffchainWorkers::new(sc_offchain::OffchainWorkerOptions {
+                runtime_api_provider: client.clone(),
+                is_validator: config.role.is_authority(),
+                keystore: Some(keystore_container.keystore()),
+                offchain_db: backend.offchain_storage(),
+                transaction_pool: Some(OffchainTransactionPoolFactory::new(
+                    transaction_pool.clone(),
+                )),
+                network_provider: network.clone(),
+                enable_http_requests: true,
+                custom_extensions: |_| vec![],
+            })
+            .run(client.clone(), task_manager.spawn_handle())
+            .boxed(),
         );
     }
 
@@ -266,7 +263,8 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
     let _rpc_handlers = sc_service::spawn_tasks(sc_service::SpawnTasksParams {
         network: network.clone(),
         client: client.clone(),
-        keystore: keystore_container.sync_keystore(),
+        sync_service: sync.clone(),
+        keystore: keystore_container.keystore(),
         task_manager: &mut task_manager,
         transaction_pool: transaction_pool.clone(),
         rpc_builder: rpc_extensions_builder,
@@ -281,7 +279,7 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
         let proposer_factory = sc_basic_authorship::ProposerFactory::new(
             task_manager.spawn_handle(),
             client.clone(),
-            transaction_pool,
+            transaction_pool.clone(),
             prometheus_registry.as_ref(),
             telemetry.as_ref().map(|x| x.handle()),
         );
@@ -308,9 +306,9 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
                 },
                 force_authoring,
                 backoff_authoring_blocks,
-                keystore: keystore_container.sync_keystore(),
-                sync_oracle: network.clone(),
-                justification_sync_link: network.clone(),
+                keystore: keystore_container.keystore(),
+                sync_oracle: sync.clone(),
+                justification_sync_link: sync.clone(),
                 block_proposal_slot_portion: SlotProportion::new(2f32 / 3f32),
                 max_block_proposal_slot_portion: None,
                 telemetry: telemetry.as_ref().map(|x| x.handle()),
@@ -329,12 +327,12 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
         // if the node isn't actively participating in consensus then it doesn't
         // need a keystore, regardless of which protocol we use below.
         let keystore = if role.is_authority() {
-            Some(keystore_container.sync_keystore())
+            Some(keystore_container.keystore())
         } else {
             None
         };
 
-        let grandpa_config = sc_finality_grandpa::Config {
+        let grandpa_config = sc_consensus_grandpa::Config {
             // FIXME #1578 make this available through chainspec
             gossip_duration: Duration::from_millis(333),
             justification_period: 512,
@@ -351,14 +349,16 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
         // and vote data availability than the observer. The observer has not
         // been tested extensively yet and having most nodes in a network run it
         // could lead to finality stalls.
-        let grandpa_config = sc_finality_grandpa::GrandpaParams {
+        let grandpa_config = sc_consensus_grandpa::GrandpaParams {
             config: grandpa_config,
             link: grandpa_link,
+            sync,
             network,
-            voting_rule: sc_finality_grandpa::VotingRulesBuilder::default().build(),
+            voting_rule: sc_consensus_grandpa::VotingRulesBuilder::default().build(),
             prometheus_registry,
             shared_voter_state: SharedVoterState::empty(),
             telemetry: telemetry.as_ref().map(|x| x.handle()),
+            offchain_tx_pool_factory: OffchainTransactionPoolFactory::new(transaction_pool),
         };
 
         // the GRANDPA voter task is considered infallible, i.e.
@@ -366,7 +366,7 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
         task_manager.spawn_essential_handle().spawn_blocking(
             "grandpa-voter",
             None,
-            sc_finality_grandpa::run_grandpa_voter(grandpa_config)?,
+            sc_consensus_grandpa::run_grandpa_voter(grandpa_config)?,
         );
     }
 

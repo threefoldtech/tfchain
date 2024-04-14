@@ -4,7 +4,7 @@
 
 Code changes are in `diff.patch`
 
-A [Substrate](https://github.com/paritytech/substrate/) pallet to add/remove validators using extrinsics, in Substrate-based PoA networks. 
+A [Substrate](https://github.com/paritytech/substrate/) pallet to add/remove validators using extrinsics, in Substrate-based PoA networks.
 
 **Note: Current build is compatible with Substrate [v3.0.0](https://github.com/paritytech/substrate/releases/tag/v3.0.0) release.**
 
@@ -14,7 +14,7 @@ To see this pallet in action in a Substrate runtime, watch this video - https://
 
 ## Setup with Substrate Node Template
 
-* Add the module's dependency in the `Cargo.toml` of your runtime directory. Make sure to enter the correct path or git url of the pallet as per your setup.
+*   Add the module's dependency in the `Cargo.toml` of your runtime directory. Make sure to enter the correct path or git url of the pallet as per your setup.
 
 ```toml
 validatorset = { 
@@ -33,9 +33,9 @@ std = [
 ]
 ```
 
-* Make sure that you also have the Substrate [session pallet](https://github.com/paritytech/substrate/tree/master/frame/session) as part of your runtime. This is because the validator-set pallet is based on the session pallet.
+*   Make sure that you also have the Substrate [session pallet](https://github.com/paritytech/substrate/tree/master/frame/session) as part of your runtime. This is because the validator-set pallet is based on the session pallet.
 
-* Import `OpaqueKeys` in your `runtime/src/lib.rs`.
+*   Import `OpaqueKeys` in your `runtime/src/lib.rs`.
 
 ```rust
 use sp_runtime::traits::{
@@ -43,7 +43,7 @@ use sp_runtime::traits::{
 };
 ```
 
-* Declare the pallet in your `runtime/src/lib.rs`.
+*   Declare the pallet in your `runtime/src/lib.rs`.
 
 ```rust
 impl validatorset::Config for Runtime {
@@ -51,7 +51,7 @@ impl validatorset::Config for Runtime {
 }
 ```
 
-* Also, declare the session pallet in  your `runtime/src/lib.rs`. The type configuration of session pallet would depend on the ValidatorSet pallet as shown below.
+*   Also, declare the session pallet in  your `runtime/src/lib.rs`. The type configuration of session pallet would depend on the ValidatorSet pallet as shown below.
 
 ```rust
 impl pallet_session::Config for Runtime {
@@ -68,17 +68,14 @@ impl pallet_session::Config for Runtime {
 }
 ```
 
-* Add both `session` and `validatorset` pallets in `construct_runtime` macro. **Make sure to add them before `Aura` and `Grandpa` pallets and after `Balances`.**
+*   Add both `session` and `validatorset` pallets in `construct_runtime` macro. **Make sure to add them before `Aura` and `Grandpa` pallets and after `Balances`.**
 
 ```rust
 construct_runtime!(
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = opaque::Block,
-		UncheckedExtrinsic = UncheckedExtrinsic
+	pub enum Runtime
 	{
 		...
-    Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
+    	Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
 		ValidatorSet: validatorset::{Module, Call, Storage, Event<T>, Config<T>},
 		Aura: aura::{Module, Config<T>, Inherent(Timestamp)},
@@ -89,7 +86,7 @@ construct_runtime!(
 );
 ```
 
-* Add genesis config in the `chain_spec.rs` file for `session` and `validatorset` pallets, and update it for `Aura` and `Grandpa` pallets. Because the validators are provided by the `session` pallet, we do not initialize them explicitly for `Aura` and `Grandpa` pallets. Order is important, notice that `pallet_session` is declared after `pallet_balances` since it depends on it (session accounts should have some balance).
+*   Add genesis config in the `chain_spec.rs` file for `session` and `validatorset` pallets, and update it for `Aura` and `Grandpa` pallets. Because the validators are provided by the `session` pallet, we do not initialize them explicitly for `Aura` and `Grandpa` pallets. Order is important, notice that `pallet_session` is declared after `pallet_balances` since it depends on it (session accounts should have some balance).
 
 ```rust
 fn testnet_genesis(initial_authorities: Vec<(AccountId, AuraId, GrandpaId)>,
@@ -119,7 +116,7 @@ fn testnet_genesis(initial_authorities: Vec<(AccountId, AuraId, GrandpaId)>,
 }
 ```
 
-* Make sure you have the same number and order of session keys for your runtime. First in `runtime/src/lib.rs`:
+*   Make sure you have the same number and order of session keys for your runtime. First in `runtime/src/lib.rs`:
 
 ```rust
 pub struct SessionKeys {
@@ -128,7 +125,7 @@ pub struct SessionKeys {
 }
 ```
 
-* And then in `src/chain_spec.rs`:
+*   And then in `src/chain_spec.rs`:
 
 ```rust
 fn session_keys(
@@ -151,7 +148,7 @@ pub fn authority_keys_from_seed(seed: &str) -> (
 }
 ```
 
-* `cargo build --release` and then `cargo run --release -- --dev`
+*   `cargo build --release` and then `cargo run --release -- --dev`
 
 ## Sample
 

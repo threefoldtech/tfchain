@@ -8,7 +8,7 @@ fn test_burn() {
         assert_ok!(BurningModule::burn_tft(
             RuntimeOrigin::signed(alice()),
             900000000000,
-            "some_message".as_bytes().to_vec()
+            b"some_message".to_vec()
         ));
 
         let b = Balances::free_balance(alice());
@@ -24,7 +24,7 @@ fn test_burn_to_much_fails() {
             BurningModule::burn_tft(
                 RuntimeOrigin::signed(alice()),
                 1200000000000,
-                "some_message".as_bytes().to_vec()
+                b"some_message".to_vec()
             ),
             Error::<TestRuntime>::NotEnoughBalanceToBurn
         );

@@ -1,0 +1,102 @@
+name: Create release
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  srtool:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Cache target dir
+        uses: actions/cache@v3
+        with:
+          path: '${{ github.workspace }}/substrate-node/runtime/target'
+          key: srtool-target-tfchain-${{ github.sha }}
+          restore-keys: |
+            srtool-target-tfchain-
+            srtool-target-
+
+      - name: Srtool build
+        id: srtool_build
+        uses: chevdor/srtool-actions@v0.7.0
+        with:
+          workdir: '${{ github.workspace }}/substrate-node'
+          package: tfchain-runtime
+          runtime_dir: runtime
+
+      - name: Summary
+        run: |
+          echo '${{ steps.srtool_build.outputs.json }}' | jq . > tfchain-srtool-digest.json
+          cat tfchain-srtool-digest.json
+          echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
+
+      - name: Upload tfchain srtool json
+        uses: actions/upload-artifact@v3
+        with:
+          name: tfchain-srtool-digest-json
+          path: tfchain-srtool-digest.json
+
+      - name: Upload runtime
+        uses: actions/upload-artifact@v3
+        with:
+          name: tfchain-runtime
+          path: substrate-node/${{ steps.srtool_build.outputs.wasm_compressed }}
+
+  release:
+    needs: srtool
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Work around for https://github.com/heinrichreimer/action-github-changelog-generator/issues/21
+
+      - name: Download artifacts
+        id: download
+        uses: actions/download-artifact@v3
+        with:
+          name: tfchain-runtime
+          path: tfchain-runtime
+
+      - name: Generate changelog
+        id: changelog
+        uses: heinrichreimer/github-changelog-generator-action@v2.3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          headerLabel: "# 📑 Changelog"
+          breakingLabel: '### 💥 Breaking'
+          enhancementLabel: '### 🚀 Enhancements'
+          bugsLabel: '### 🐛 Bug fixes'
+          securityLabel: '### 🛡️ Security'
+          issuesLabel: '### 📁 Other issues'
+          prLabel: '### 📁 Other pull requests'
+          addSections: '{"documentation":{"prefix":"### 📖 Documentation","labels":["documentation"]},"tests":{"prefix":"### ✅ Testing","labels":["tests"]}}'
+          onlyLastTag: true
+          issues: false
+          issuesWoLabels: false
+          pullRequests: true
+          prWoLabels: true
+          author: true
+          unreleased: true
+          compareLink: true
+          stripGeneratorNotice: true
+          verbose: true
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_KEY }}
+        with:
+          tag_name: ${{ github.ref }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          fail_on_unmatched_files: true
+          prerelease: ${{ contains(github.ref, 'rc') }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          files: tfchain-runtime/*

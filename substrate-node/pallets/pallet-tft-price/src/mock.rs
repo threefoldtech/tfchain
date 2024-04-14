@@ -1,26 +1,26 @@
 #![cfg(test)]
 
 use super::*;
-use crate::{self as pallet_tft_price};
-use codec::alloc::sync::Arc;
-use frame_support::traits::GenesisBuild;
+use crate::{self as pallet_tft_price, tft_price::KEY_TYPE};
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32};
 use frame_system::mocking;
 use frame_system::EnsureRoot;
+use parity_scale_codec::alloc::sync::Arc;
+use parity_scale_codec::{Decode, Encode};
 use sp_core::{
     crypto::key_types::DUMMY,
     offchain::{testing, OffchainDbExt, TransactionPoolExt},
     sr25519, H256,
 };
 use sp_io::TestExternalities;
-use sp_keystore::{testing::KeyStore, KeystoreExt, SyncCryptoStore};
+use sp_keystore::{testing::MemoryKeystore, Keystore, KeystoreExt};
 use sp_runtime::{
     impl_opaque_keys,
-    testing::{Header, UintAuthorityId},
+    testing::UintAuthorityId,
     traits::{
         BlakeTwo256, Extrinsic as ExtrinsicT, IdentifyAccount, IdentityLookup, OpaqueKeys, Verify,
     },
-    MultiSignature,
+    BuildStorage, MultiSignature,
 };
 use sp_std::marker::PhantomData;
 use std::cell::RefCell;
@@ -46,7 +46,7 @@ impl From<UintAuthorityId> for MockSessionKeys {
 pub const KEY_ID_A: KeyTypeId = KeyTypeId([4; 4]);
 pub const KEY_ID_B: KeyTypeId = KeyTypeId([9; 4]);
 
-#[derive(Debug, Clone, codec::Encode, codec::Decode, PartialEq, Eq)]
+#[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
 pub struct PreUpgradeMockSessionKeys {
     pub a: [u8; 32],
     pub b: [u8; 64],
@@ -70,15 +70,12 @@ impl OpaqueKeys for PreUpgradeMockSessionKeys {
 
 // For testing the module, we construct a mock runtime.
 construct_runtime!(
-    pub enum TestRuntime where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum TestRuntime
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>},
         TFTPriceModule: pallet_tft_price::{Pallet, Call, Storage, Config<T>, Event<T>},
-        Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
-        ValidatorSet: substrate_validator_set::{Pallet, Call, Storage, Event<T>, Config<T>},
+        Authorship: pallet_authorship::{Pallet, Storage},
+        ValidatorSet: substrate_validator_set::{Event<T>},
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
     }
 );
@@ -89,25 +86,24 @@ parameter_types! {
 
 impl frame_system::Config for TestRuntime {
     type BaseCallFilter = frame_support::traits::Everything;
+    type Block = Block;
     type BlockWeights = ();
     type BlockLength = ();
-    type RuntimeOrigin = RuntimeOrigin;
-    type Index = u64;
+    type AccountId = AccountId;
     type RuntimeCall = RuntimeCall;
-    type BlockNumber = u64;
+    type Lookup = IdentityLookup<Self::AccountId>;
+    type Nonce = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = AccountId;
-    type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
     type RuntimeEvent = RuntimeEvent;
+    type RuntimeOrigin = RuntimeOrigin;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
     type PalletInfo = PalletInfo;
-    type AccountData = ();
     type OnNewAccount = ();
     type OnKilledAccount = ();
+    type AccountData = ();
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
@@ -118,11 +114,13 @@ parameter_types! {
     pub const UnsignedPriority: u64 = 100;
 }
 
+use weights;
 impl Config for TestRuntime {
     type AuthorityId = pallet_tft_price::AuthId;
     type Call = RuntimeCall;
     type RuntimeEvent = RuntimeEvent;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
+    type WeightInfo = weights::SubstrateWeight<TestRuntime>;
 }
 
 parameter_types! {
@@ -131,8 +129,6 @@ parameter_types! {
 
 impl pallet_authorship::Config for TestRuntime {
     type FindAuthor = ();
-    type UncleGenerations = UncleGenerations;
-    type FilterUncle = ();
     type EventHandler = ();
 }
 
@@ -154,7 +150,7 @@ thread_local! {
 }
 
 use pallet_session::SessionHandler;
-use sp_runtime::RuntimeAppPublic;
+use sp_runtime::{KeyTypeId, RuntimeAppPublic};
 pub struct TestSessionHandler;
 impl SessionHandler<AccountId> for TestSessionHandler {
     const KEY_TYPE_IDS: &'static [sp_runtime::KeyTypeId] = &[UintAuthorityId::ID];
@@ -188,6 +184,7 @@ impl substrate_validator_set::Config for TestRuntime {
     type AddRemoveOrigin = EnsureRoot<Self::AccountId>;
     type RuntimeEvent = RuntimeEvent;
     type MinAuthorities = MinAuthorities;
+    type WeightInfo = substrate_validator_set::weights::SubstrateWeight<TestRuntime>;
 }
 
 impl pallet_session::Config for TestRuntime {
@@ -267,13 +264,13 @@ impl ExternalityBuilder {
 
         let (offchain, _) = testing::TestOffchainExt::new();
         let (pool, _) = testing::TestTransactionPoolExt::new();
-        let keystore = KeyStore::new();
+        let keystore = MemoryKeystore::new();
         keystore
             .sr25519_generate_new(KEY_TYPE, Some(&format!("{}/hunter1", PHRASE)))
             .unwrap();
 
-        let mut storage = frame_system::GenesisConfig::default()
-            .build_storage::<TestRuntime>()
+        let mut storage = frame_system::GenesisConfig::<TestRuntime>::default()
+            .build_storage()
             .unwrap();
 
         let session_genesis = pallet_session::GenesisConfig::<TestRuntime> {

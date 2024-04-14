@@ -1,13 +1,11 @@
-use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
 use crate::{self as pallet_dao};
 use frame_support::{construct_runtime, parameter_types, traits::ConstU32, BoundedVec};
 use frame_system::EnsureRoot;
 use pallet_collective;
-use pallet_tfgrid::node::{CityName, CountryName};
 use pallet_tfgrid::{
     farm::FarmName,
     interface::{InterfaceIp, InterfaceMac, InterfaceName},
-    node::{Location, SerialNumber},
+    node::{CityName, CountryName, Location, SerialNumber},
     terms_cond::TermsAndConditions,
     CityNameInput, CountryNameInput, DocumentHashInput, DocumentLinkInput, Gw4Input, Ip4Input,
     LatitudeInput, LongitudeInput, PkInput, RelayInput,
@@ -15,25 +13,21 @@ use pallet_tfgrid::{
 use pallet_timestamp;
 use sp_core::H256;
 use sp_runtime::{
-    testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
+    BuildStorage,
 };
 use sp_std::convert::{TryFrom, TryInto};
-use tfchain_support::traits::{ChangeNode, PublicIpModifier};
+use tfchain_support::traits::{ChangeNode, NodeActiveContracts, PublicIpModifier};
 use tfchain_support::types::PublicIP;
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
-type Block = frame_system::mocking::MockBlock<Test>;
+type Block = frame_system::mocking::MockBlock<TestRuntime>;
 
 // Configure a mock runtime to test the pallet.
 construct_runtime!(
-    pub enum Test where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum TestRuntime
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        DaoModule: pallet_dao::{Pallet, Call, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>},
+        DaoModule: pallet_dao::pallet::{Pallet, Call, Storage, Event<T>},
         TfgridModule: pallet_tfgrid::{Pallet, Call, Storage, Event<T>},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         Council: pallet_collective::<Instance1>::{Pallet, Call, Origin<T>, Event<T>, Config<T>},
@@ -45,27 +39,26 @@ parameter_types! {
     pub const BlockHashCount: u64 = 250;
 }
 
-impl frame_system::Config for Test {
+impl frame_system::Config for TestRuntime {
     type BaseCallFilter = frame_support::traits::Everything;
+    type Block = Block;
     type BlockWeights = ();
     type BlockLength = ();
-    type RuntimeOrigin = RuntimeOrigin;
-    type Index = u64;
+    type AccountId = u64;
     type RuntimeCall = RuntimeCall;
-    type BlockNumber = u64;
+    type Lookup = IdentityLookup<Self::AccountId>;
+    type Nonce = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = u64;
-    type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
     type RuntimeEvent = RuntimeEvent;
+    type RuntimeOrigin = RuntimeOrigin;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
     type PalletInfo = PalletInfo;
-    type AccountData = ();
     type OnNewAccount = ();
     type OnKilledAccount = ();
+    type AccountData = ();
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
@@ -78,11 +71,11 @@ parameter_types! {
     pub const MinVetos: u32 = 2;
 }
 
-pub(crate) type Serial = pallet_tfgrid::pallet::SerialNumberOf<Test>;
-pub(crate) type Loc = pallet_tfgrid::pallet::LocationOf<Test>;
-pub(crate) type Interface = pallet_tfgrid::pallet::InterfaceOf<Test>;
+pub(crate) type Serial = pallet_tfgrid::pallet::SerialNumberOf<TestRuntime>;
+pub(crate) type Loc = pallet_tfgrid::pallet::LocationOf<TestRuntime>;
+pub(crate) type Interface = pallet_tfgrid::pallet::InterfaceOf<TestRuntime>;
 
-pub(crate) type TfgridNode = pallet_tfgrid::pallet::TfgridNode<Test>;
+pub(crate) type TfgridNode = pallet_tfgrid::pallet::TfgridNode<TestRuntime>;
 
 pub struct NodeChanged;
 impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
@@ -92,6 +85,8 @@ impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
     fn node_deleted(node: &TfgridNode) {
         DaoModule::node_deleted(node);
     }
+
+    fn node_power_state_changed(_node: &TfgridNode) {}
 }
 
 pub struct PublicIpModifierType;
@@ -99,16 +94,22 @@ impl PublicIpModifier for PublicIpModifierType {
     fn ip_removed(_ip: &PublicIP) {}
 }
 
-use super::weights;
-impl pallet_dao::Config for Test {
+pub struct NodeActiveContractsType;
+impl NodeActiveContracts for NodeActiveContractsType {
+    fn node_has_no_active_contracts(_node_id: u32) -> bool {
+        true
+    }
+}
+
+use crate::weights;
+impl pallet_dao::pallet::Config for TestRuntime {
     type RuntimeEvent = RuntimeEvent;
     type CouncilOrigin = EnsureRoot<Self::AccountId>;
     type Proposal = RuntimeCall;
     type MotionDuration = DaoMotionDuration;
     type MinVetos = MinVetos;
     type Tfgrid = TfgridModule;
-    type NodeChanged = NodeChanged;
-    type WeightInfo = weights::SubstrateWeight<Test>;
+    type WeightInfo = weights::SubstrateWeight<TestRuntime>;
 }
 
 parameter_types! {
@@ -116,27 +117,29 @@ parameter_types! {
     pub const MaxInterfaceIpsLength: u32 = 5;
     pub const MaxInterfacesLength: u32 = 10;
     pub const MaxFarmPublicIps: u32 = 512;
+    pub const TimestampHintDrift: u64 = 60;
 }
 
-pub(crate) type TestTermsAndConditions = TermsAndConditions<Test>;
+pub(crate) type TestTermsAndConditions = TermsAndConditions<TestRuntime>;
 
-pub(crate) type TestFarmName = FarmName<Test>;
+pub(crate) type TestFarmName = FarmName<TestRuntime>;
 
-pub(crate) type TestInterfaceName = InterfaceName<Test>;
-pub(crate) type TestInterfaceMac = InterfaceMac<Test>;
-pub(crate) type TestInterfaceIp = InterfaceIp<Test>;
+pub(crate) type TestInterfaceName = InterfaceName<TestRuntime>;
+pub(crate) type TestInterfaceMac = InterfaceMac<TestRuntime>;
+pub(crate) type TestInterfaceIp = InterfaceIp<TestRuntime>;
 
-pub(crate) type TestCountryName = CountryName<Test>;
-pub(crate) type TestCityName = CityName<Test>;
-pub(crate) type TestLocation = Location<Test>;
-pub(crate) type TestSerialNumber = SerialNumber<Test>;
+pub(crate) type TestCountryName = CountryName<TestRuntime>;
+pub(crate) type TestCityName = CityName<TestRuntime>;
+pub(crate) type TestLocation = Location<TestRuntime>;
+pub(crate) type TestSerialNumber = SerialNumber<TestRuntime>;
 
-impl pallet_tfgrid::Config for Test {
+impl pallet_tfgrid::Config for TestRuntime {
     type RuntimeEvent = RuntimeEvent;
     type RestrictedOrigin = EnsureRoot<Self::AccountId>;
-    type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Test>;
+    type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
     type PublicIpModifier = PublicIpModifierType;
+    type NodeActiveContracts = NodeActiveContractsType;
     type TermsAndConditions = TestTermsAndConditions;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;
@@ -150,13 +153,14 @@ impl pallet_tfgrid::Config for Test {
     type CityName = TestCityName;
     type Location = TestLocation;
     type SerialNumber = TestSerialNumber;
+    type TimestampHintDrift = TimestampHintDrift;
 }
 
-impl pallet_timestamp::Config for Test {
+impl pallet_timestamp::Config for TestRuntime {
     type Moment = u64;
     type OnTimestampSet = ();
     type MinimumPeriod = ();
-    type WeightInfo = pallet_timestamp::weights::SubstrateWeight<Test>;
+    type WeightInfo = pallet_timestamp::weights::SubstrateWeight<TestRuntime>;
 }
 
 parameter_types! {
@@ -166,7 +170,7 @@ parameter_types! {
 }
 
 pub type CouncilCollective = pallet_collective::Instance1;
-impl pallet_collective::Config<CouncilCollective> for Test {
+impl pallet_collective::Config<CouncilCollective> for TestRuntime {
     type RuntimeOrigin = RuntimeOrigin;
     type Proposal = RuntimeCall;
     type RuntimeEvent = RuntimeEvent;
@@ -174,10 +178,12 @@ impl pallet_collective::Config<CouncilCollective> for Test {
     type MaxProposals = CouncilMaxProposals;
     type MaxMembers = CouncilMaxMembers;
     type DefaultVote = pallet_collective::PrimeDefaultVote;
+    type SetMembersOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = ();
+    type MaxProposalWeight = ();
 }
 
-impl pallet_membership::Config<pallet_membership::Instance1> for Test {
+impl pallet_membership::Config<pallet_membership::Instance1> for TestRuntime {
     type RuntimeEvent = RuntimeEvent;
     type AddOrigin = EnsureRoot<Self::AccountId>;
     type RemoveOrigin = EnsureRoot<Self::AccountId>;
@@ -187,7 +193,7 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Test {
     type MembershipInitialized = Council;
     type MembershipChanged = ();
     type MaxMembers = CouncilMaxMembers;
-    type WeightInfo = pallet_membership::weights::SubstrateWeight<Test>;
+    type WeightInfo = pallet_membership::weights::SubstrateWeight<TestRuntime>;
 }
 
 pub(crate) fn get_document_link_input(document_link_input: &[u8]) -> DocumentLinkInput {
@@ -203,7 +209,7 @@ pub(crate) fn get_relay_input(relay_input: &[u8]) -> RelayInput {
 }
 
 pub(crate) fn get_public_key_input(pk_input: &[u8]) -> PkInput {
-    Some(BoundedVec::try_from(pk_input.to_vec()).expect("Invalid document hash input."))
+    Some(BoundedVec::try_from(pk_input.to_vec()).expect("Invalid public key input."))
 }
 
 pub(crate) fn get_public_ip_ip_input(ip_input: &[u8]) -> Ip4Input {
@@ -232,20 +238,20 @@ pub(crate) fn get_longitude_input(longitude_input: &[u8]) -> LongitudeInput {
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-    let mut t = frame_system::GenesisConfig::default()
-        .build_storage::<Test>()
+    let mut t = frame_system::GenesisConfig::<TestRuntime>::default()
+        .build_storage()
         .unwrap();
 
-    let genesis = pallet_collective::GenesisConfig::<Test, CouncilCollective>::default();
+    let genesis = pallet_collective::GenesisConfig::<TestRuntime, CouncilCollective>::default();
     genesis.assimilate_storage(&mut t).unwrap();
 
-    let genesis = pallet_membership::GenesisConfig::<Test, pallet_membership::Instance1> {
+    let genesis = pallet_membership::GenesisConfig::<TestRuntime, pallet_membership::Instance1> {
         members: vec![1, 2, 3].try_into().unwrap(),
         phantom: Default::default(),
     };
     genesis.assimilate_storage(&mut t).unwrap();
 
-    let genesis = pallet_tfgrid::GenesisConfig::<Test> {
+    let genesis = pallet_tfgrid::GenesisConfig::<TestRuntime> {
         su_price_value: 300000,
         su_price_unit: 4,
         nu_price_value: 2000,

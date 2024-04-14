@@ -1,0 +1,28 @@
+[package]
+name = "tfchain-client"
+version = "0.2.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+path = "src/lib.rs"
+name = "tfchain_client"
+
+[dependencies]
+subxt = "0.28.0"
+subxt-codegen = "0.28.0"
+syn = "1.0.99"
+tokio = { version = "1.8", features = ["rt-multi-thread", "macros", "time"] }
+futures-util = "0.3.23"
+tracing-subscriber = "0.3.15"
+futures = "0.3.23"
+serde = "1.0.147"
+
+# Substrate dependencies
+frame-metadata = "15.0.0"
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "full", "bit-vec"] }
+frame-support = { version = "10.0.0" }
+sp-std =  { version = "6.0.0" }
+frame-system =  { version = "10.0.0" }
+pallet-balances =  { version = "10.0.0" }

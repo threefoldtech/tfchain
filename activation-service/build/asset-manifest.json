@@ -1,0 +1,23 @@
+{
+  "files": {
+    "main.css": "/activation/static/css/main.06200839.chunk.css",
+    "main.js": "/activation/static/js/main.44972da9.chunk.js",
+    "main.js.map": "/activation/static/js/main.44972da9.chunk.js.map",
+    "runtime-main.js": "/activation/static/js/runtime-main.027fba6a.js",
+    "runtime-main.js.map": "/activation/static/js/runtime-main.027fba6a.js.map",
+    "static/js/2.0bcb67e2.chunk.js": "/activation/static/js/2.0bcb67e2.chunk.js",
+    "static/js/2.0bcb67e2.chunk.js.map": "/activation/static/js/2.0bcb67e2.chunk.js.map",
+    "static/js/3.9928db77.chunk.js": "/activation/static/js/3.9928db77.chunk.js",
+    "static/js/3.9928db77.chunk.js.map": "/activation/static/js/3.9928db77.chunk.js.map",
+    "index.html": "/activation/index.html",
+    "static/css/main.06200839.chunk.css.map": "/activation/static/css/main.06200839.chunk.css.map",
+    "static/js/2.0bcb67e2.chunk.js.LICENSE.txt": "/activation/static/js/2.0bcb67e2.chunk.js.LICENSE.txt",
+    "static/media/3fold_logo.b121932e.png": "/activation/static/media/3fold_logo.b121932e.png"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.027fba6a.js",
+    "static/js/2.0bcb67e2.chunk.js",
+    "static/css/main.06200839.chunk.css",
+    "static/js/main.44972da9.chunk.js"
+  ]
+}
