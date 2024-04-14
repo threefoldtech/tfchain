@@ -3,10 +3,8 @@
   "id": "tfchain_devnet",
   "chainType": "Live",
   "bootNodes": [
-    "/ip4/185.206.122.7/tcp/30333/p2p/12D3KooWLcMLBg9itjQL1EXsAqkJFPhqESHqJKY7CBKmhhhL8fdp",
-    "/ip4/185.206.122.126/tcp/30333/p2p/12D3KooWAnibsVN4yBcKNKnnRm8pxmHkEf3DUT65dpb3P252RpZK",
-    "/ip4/185.206.122.127/tcp/30333/p2p/12D3KooWBkwH8LfJsz48Q8LHXSQnuqKJK8YdoQokDeS9wQX1j8mm",
-    "/ip4/185.206.122.128/tcp/30333/p2p/12D3KooWMPnWPkAi9UhVgGv9QmozXiPDE94rymPCsXLJ5EKynwta"
+    "/dns/01.bootnode.dev.grid.tf/tcp/30333/ws/p2p/12D3KooWDgsXduuSiPYRo616JwZQjXHmgGjayFxL2e6CXRAKP9K5",
+    "/dns/02.bootnode.dev.grid.tf/tcp/30333/ws/p2p/12D3KooWJjSHQpzsPDCN83o49q7sNopLviwbMKNijKSeFFnnpsNV"
   ],
   "telemetryEndpoints": null,
   "protocolId": null,
