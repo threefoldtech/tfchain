@@ -1,8 +1,15 @@
 {
   "name": "Tfchain Mainnet",
   "id": "tfchain_mainnet",
-  "chainType": "Local",
-  "bootNodes": [],
+  "chainType": "Live",
+  "bootNodes": [
+    "/dns/01.bootnode.main.grid.tf/tcp/30333/ws/p2p/12D3KooWPswftbG27wBn9dnz4ccQpdSQ6ynW6wa87BmsHhcsphja",
+    "/dns/02.bootnode.main.grid.tf/tcp/30333/ws/p2p/12D3KooWAfLdFkWsqGzqA51njgm3st7maawbcFwc2ALXsMk8VV1z",
+    "/dns/03.bootnode.main.grid.tf/tcp/30333/ws/p2p/12D3KooWBZqpGHjVbukqctNBmkgwrP4bSHDisojpCxbt71BNQ47y",
+    "/dns/04.bootnode.main.grid.tf/tcp/30333/ws/p2p/12D3KooW9xtmpd6BWWqbbbG9JMRUwQnfpHiRUteEdkPpc3UsiAw5",
+    "/dns/05.bootnode.main.grid.tf/tcp/30333/ws/p2p/12D3KooWE19pLyW7LHkCDQPttrkDtquNt89LLUZtpXayv2Uc8dd2",
+    "/dns/06.bootnode.main.grid.tf/tcp/30333/ws/p2p/12D3KooWKwZcU3S3Wwu1ppgk5FrFcdUVcT3LUZTMsGdxodMVAtT1"
+  ],
   "telemetryEndpoints": null,
   "protocolId": null,
   "properties": {
