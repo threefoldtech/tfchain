@@ -537,8 +537,7 @@ pub mod pallet {
         InvalidZosVersion,
         FarmingPolicyExpired,
 
-        InvalidHRUInput,
-        InvalidSRUInput,
+        InvalidStorageInput,
         InvalidCRUInput,
         InvalidMRUInput,
 
