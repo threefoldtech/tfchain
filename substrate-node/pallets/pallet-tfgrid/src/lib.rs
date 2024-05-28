@@ -572,6 +572,8 @@ pub mod pallet {
         NodeHasActiveContracts,
         InvalidRelayAddress,
         InvalidTimestampHint,
+
+        InvalidStorageInput,
     }
 
     #[pallet::genesis_config]

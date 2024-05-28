@@ -1,4 +1,4 @@
-use crate::resources::{Resources, GIGABYTE};
+use crate::resources::{Resources, GIGABYTE, MINIMUM_STORAGE_CAPACITY};
 use crate::types::{PublicIpError, IP4, IP6};
 use frame_support::storage::bounded_vec::BoundedVec;
 use frame_support::{assert_err, assert_ok};
@@ -92,6 +92,36 @@ fn test_calc_su_4() {
 
     let su = resources.get_su();
     assert_eq!(su, 3);
+}
+
+#[test]
+fn test_validate_storage() {
+    // SSD only node
+    let resources = Resources {
+        hru: 0,
+        cru: 0,
+        mru: 0,
+        sru: MINIMUM_STORAGE_CAPACITY as u64,
+    };
+    assert_eq!(resources.validate_storage(), true);
+
+    // HDD only node
+    let resources = Resources {
+        hru: MINIMUM_STORAGE_CAPACITY as u64,
+        cru: 0,
+        mru: 0,
+        sru: 0,
+    };
+    assert_eq!(resources.validate_storage(), true);
+
+    // Storage capacities are both under minimum requirement
+    let resources = Resources {
+        hru: MINIMUM_STORAGE_CAPACITY as u64 - 1,
+        cru: 0,
+        mru: 0,
+        sru: MINIMUM_STORAGE_CAPACITY as u64 - 1,
+    };
+    assert_eq!(resources.validate_storage(), false);
 }
 
 #[test]
