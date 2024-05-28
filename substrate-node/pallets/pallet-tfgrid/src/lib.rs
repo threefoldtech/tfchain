@@ -537,7 +537,8 @@ pub mod pallet {
         InvalidZosVersion,
         FarmingPolicyExpired,
 
-        InvalidStorageInput,
+        InvalidHRUInput,
+        InvalidSRUInput,
         InvalidCRUInput,
         InvalidMRUInput,
 
@@ -571,6 +572,8 @@ pub mod pallet {
         NodeHasActiveContracts,
         InvalidRelayAddress,
         InvalidTimestampHint,
+
+        InvalidStorageInput,
     }
 
     #[pallet::genesis_config]
