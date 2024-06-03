@@ -26,7 +26,7 @@ benchmarks! {
     propose {
         let caller: T::AccountId = whitelisted_caller();
         assert_ok!(_add_council_member::<T>(caller.clone()));
-        let threshold = 1;
+        let threshold = 2;
         let proposal: T::Proposal = SystemCall::<T>::remark { remark: b"remark".to_vec() }.into();
         let description = b"some_description".to_vec();
         let link = b"some_link".to_vec();
@@ -53,7 +53,7 @@ benchmarks! {
     // vote()
     vote {
         let farmer: T::AccountId = account("Alice", 0, 0);
-        _prepare_farm_with_node::<T>(farmer.clone());
+        _prepare_farm_with_node::<T>(farmer.clone(), b"testfarm", 1);
         let farm_id = 1;
 
         let caller: T::AccountId = whitelisted_caller();
@@ -80,7 +80,7 @@ benchmarks! {
     // veto()
     veto {
         let farmer: T::AccountId = account("Alice", 0, 0);
-        _prepare_farm_with_node::<T>(farmer.clone());
+        _prepare_farm_with_node::<T>(farmer.clone(), b"testfarm", 1);
         let farm_id = 1;
 
         let caller: T::AccountId = whitelisted_caller();
@@ -98,15 +98,19 @@ benchmarks! {
     // close()
     close {
         let farmer: T::AccountId = account("Alice", 0, 0);
-        _prepare_farm_with_node::<T>(farmer.clone());
-        let farm_id = 1;
+        let farmer2: T::AccountId = account("Bob", 0, 0);
+
+        _prepare_farm_with_node::<T>(farmer.clone(), b"testfarm", 1);
+        _prepare_farm_with_node::<T>(farmer2.clone(), b"testfarm2", 2);
 
         let caller: T::AccountId = whitelisted_caller();
         let proposal_hash = _create_proposal::<T>(caller.clone());
         let proposal_index = 0;
 
         let approve = false;
-        DaoModule::<T>::vote(RawOrigin::Signed(farmer.clone()).into(), farm_id, proposal_hash, approve).unwrap();
+        DaoModule::<T>::vote(RawOrigin::Signed(farmer.clone()).into(), 1, proposal_hash, approve).unwrap();
+        DaoModule::<T>::vote(RawOrigin::Signed(farmer2.clone()).into(), 2, proposal_hash, approve).unwrap();
+
     }: _(RawOrigin::Signed(caller.clone()), proposal_hash, proposal_index)
     verify {
         assert!(DaoModule::<T>::proposal_list(proposal_hash).is_none());
@@ -127,10 +131,10 @@ fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
     assert_eq!(event, &system_event);
 }
 
-pub fn _prepare_farm_with_node<T: Config>(source: T::AccountId) {
+pub fn _prepare_farm_with_node<T: Config>(source: T::AccountId, farm_name: &[u8], farm_id : u32) {
     _create_twin::<T>(source.clone());
-    _create_farm::<T>(source.clone());
-    _create_node::<T>(source.clone());
+    _create_farm::<T>(source.clone(), farm_name);
+    _create_node::<T>(source.clone(), farm_id);
 }
 
 fn _create_twin<T: Config>(source: T::AccountId) {
@@ -147,7 +151,7 @@ fn _create_twin<T: Config>(source: T::AccountId) {
     ));
 }
 
-fn _create_farm<T: Config>(source: T::AccountId) {
+fn _create_farm<T: Config>(source: T::AccountId, farm_name: &[u8]) {
     let mut pub_ips = Vec::new();
     pub_ips.push(IP4 {
         ip: get_public_ip_ip_input(b"185.206.122.33/24"),
@@ -160,12 +164,12 @@ fn _create_farm<T: Config>(source: T::AccountId) {
 
     assert_ok!(TfgridModule::<T>::create_farm(
         RawOrigin::Signed(source).into(),
-        b"testfarm".to_vec().try_into().unwrap(),
+        farm_name.to_vec().try_into().unwrap(),
         pub_ips.clone().try_into().unwrap(),
     ));
 }
 
-fn _create_node<T: Config>(source: T::AccountId) {
+fn _create_node<T: Config>(source: T::AccountId, farm_id: u32) {
     let resources = ResourcesInput {
         hru: 1024 * GIGABYTE,
         sru: 512 * GIGABYTE,
@@ -183,7 +187,7 @@ fn _create_node<T: Config>(source: T::AccountId) {
 
     assert_ok!(TfgridModule::<T>::create_node(
         RawOrigin::Signed(source.clone()).into(),
-        1,
+        farm_id,
         resources,
         location,
         Vec::new().try_into().unwrap(),
@@ -196,7 +200,7 @@ fn _create_node<T: Config>(source: T::AccountId) {
 pub fn _create_proposal<T: Config>(source: T::AccountId) -> T::Hash {
     assert_ok!(_add_council_member::<T>(source.clone()));
 
-    let threshold = 1;
+    let threshold = 2;
     let proposal: T::Proposal = SystemCall::<T>::remark {
         remark: b"remark".to_vec(),
     }
