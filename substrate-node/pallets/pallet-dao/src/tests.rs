@@ -18,7 +18,7 @@ fn farmers_vote_no_farm_fails() {
 
         assert_ok!(DaoModule::propose(
             RuntimeOrigin::signed(1),
-            3,
+            MinThreshold::get(),
             Box::new(proposal.clone()),
             b"some_description".to_vec(),
             b"some_link".to_vec(),
@@ -44,7 +44,7 @@ fn farmers_vote_proposal_works() {
 
         assert_ok!(DaoModule::propose(
             RuntimeOrigin::signed(1),
-            5,
+            MinThreshold::get(),
             Box::new(proposal.clone()),
             b"some_description".to_vec(),
             b"some_link".to_vec(),
@@ -81,7 +81,7 @@ fn farmers_vote_proposal_if_no_nodes_fails() {
 
         assert_ok!(DaoModule::propose(
             RuntimeOrigin::signed(1),
-            2,
+            MinThreshold::get(),
             Box::new(proposal.clone()),
             b"some_description".to_vec(),
             b"some_link".to_vec(),
@@ -140,10 +140,9 @@ fn close_works() {
         let proposal = make_proposal(b"some_remark".to_vec());
         let hash = BlakeTwo256::hash_of(&proposal);
 
-        let threshold = 2;
         assert_ok!(DaoModule::propose(
             RuntimeOrigin::signed(1),
-            threshold,
+            MinThreshold::get(),
             Box::new(proposal.clone()),
             b"some_description".to_vec(),
             b"some_link".to_vec(),
@@ -250,7 +249,7 @@ fn close_after_proposal_duration_works() {
 
         assert_ok!(DaoModule::propose(
             RuntimeOrigin::signed(1),
-            2,
+            MinThreshold::get(),
             Box::new(proposal.clone()),
             b"some_description".to_vec(),
             b"some_link".to_vec(),
@@ -269,11 +268,10 @@ fn close_after_proposal_duration_threshold_not_met_works() {
 
         let proposal = make_proposal(b"some_remark".to_vec());
         let hash = BlakeTwo256::hash_of(&proposal);
-        let threshold = 2;
 
         assert_ok!(DaoModule::propose(
             RuntimeOrigin::signed(1),
-            threshold,
+            MinThreshold::get(),
             Box::new(proposal.clone()),
             b"some_description".to_vec(),
             b"some_link".to_vec(),
@@ -316,7 +314,7 @@ fn close_if_not_council_member_fails() {
 
         assert_ok!(DaoModule::propose(
             RuntimeOrigin::signed(1),
-            2,
+            MinThreshold::get(),
             Box::new(proposal.clone()),
             b"some_description".to_vec(),
             b"some_link".to_vec(),
@@ -346,7 +344,7 @@ fn motion_approval_works() {
 
         assert_ok!(DaoModule::propose(
             RuntimeOrigin::signed(1),
-            2,
+            MinThreshold::get(),
             Box::new(proposal.clone()),
             b"some_description".to_vec(),
             b"some_link".to_vec(),
@@ -461,7 +459,7 @@ fn motion_veto_works() {
 
         assert_ok!(DaoModule::propose(
             RuntimeOrigin::signed(1),
-            2,
+            MinThreshold::get(),
             Box::new(proposal.clone()),
             b"some_description".to_vec(),
             b"some_link".to_vec(),
@@ -563,7 +561,7 @@ fn motion_veto_duplicate_fails() {
 
         assert_ok!(DaoModule::propose(
             RuntimeOrigin::signed(1),
-            2,
+            MinThreshold::get(),
             Box::new(proposal.clone()),
             b"some_description".to_vec(),
             b"some_link".to_vec(),
@@ -594,7 +592,7 @@ fn weighted_voting_works() {
 
         assert_ok!(DaoModule::propose(
             RuntimeOrigin::signed(1),
-            2,
+            MinThreshold::get(),
             Box::new(proposal.clone()),
             b"some_description".to_vec(),
             b"some_link".to_vec(),
@@ -700,7 +698,7 @@ fn voting_tfgridmodule_call_works() {
 
         assert_ok!(DaoModule::propose(
             RuntimeOrigin::signed(1),
-            2,
+            MinThreshold::get(),
             Box::new(proposal.clone()),
             b"some_description".to_vec(),
             b"some_link".to_vec(),
@@ -817,7 +815,7 @@ fn customize_proposal_duration_works() {
 
         assert_ok!(DaoModule::propose(
             RuntimeOrigin::signed(1),
-            2,
+            MinThreshold::get(),
             Box::new(proposal.clone()),
             b"some_description".to_vec(),
             b"some_link".to_vec(),
@@ -865,7 +863,7 @@ fn customize_proposal_duration_out_of_bounds_fails() {
         assert_noop!(
             DaoModule::propose(
                 RuntimeOrigin::signed(1),
-                2,
+                MinThreshold::get(),
                 Box::new(proposal.clone()),
                 b"some_description".to_vec(),
                 b"some_link".to_vec(),
@@ -877,7 +875,7 @@ fn customize_proposal_duration_out_of_bounds_fails() {
         assert_noop!(
             DaoModule::propose(
                 RuntimeOrigin::signed(1),
-                2,
+                MinThreshold::get(),
                 Box::new(proposal.clone()),
                 b"some_description".to_vec(),
                 b"some_link".to_vec(),
@@ -896,7 +894,7 @@ fn motion_proposal_threshold_fails() {
         assert_noop!(
             DaoModule::propose(
                 RuntimeOrigin::signed(1),
-                1,
+                MinThreshold::get() - 1,
                 Box::new(proposal.clone()),
                 b"some_description".to_vec(),
                 b"some_link".to_vec(),
