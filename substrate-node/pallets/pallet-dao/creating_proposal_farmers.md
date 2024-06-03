@@ -21,11 +21,11 @@ Open the Polkadot JS UI in your browser:
 
 The proposal must include the following arguments:
 
-*   `threshold`: minimal number of farmer votes required to be able to close proposal before its end.
+*   `threshold`: minimal number of farmer votes required to be able to close proposal before its end. should be at least 5 or more.
 *   `action`: call/extrinsic to execute on chain. If there is no call to be executed (which is usually the case) then `system` -> `remark()` should be set.
 *   `description`: a small description of what the proposal is about.
 *   `link`: a link to a more elaborate explanation of the proposal.
-*   `duration`: optional duration of the proposal after beeing created (default is 7 days, max value is 30 days), expressed in number of blocks (1 block = 6 sec).
+*   `duration`: optional duration of the proposal after beeing created (default is 7 days, min value is 1 day, max value is 30 days), expressed in number of blocks (1 block = 6 sec).
 
 ![fill](./img/fill_proposal_farmers.png)
 

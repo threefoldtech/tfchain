@@ -44,7 +44,7 @@ fn farmers_vote_proposal_works() {
 
         assert_ok!(DaoModule::propose(
             RuntimeOrigin::signed(1),
-            3,
+            5,
             Box::new(proposal.clone()),
             b"some_description".to_vec(),
             b"some_link".to_vec(),
@@ -81,7 +81,7 @@ fn farmers_vote_proposal_if_no_nodes_fails() {
 
         assert_ok!(DaoModule::propose(
             RuntimeOrigin::signed(1),
-            1,
+            2,
             Box::new(proposal.clone()),
             b"some_description".to_vec(),
             b"some_link".to_vec(),
@@ -821,7 +821,7 @@ fn customize_proposal_duration_works() {
             Box::new(proposal.clone()),
             b"some_description".to_vec(),
             b"some_link".to_vec(),
-            Some(10)
+            Some(14400)
         ));
 
         // Farmer 1 votes yes
@@ -833,13 +833,13 @@ fn customize_proposal_duration_works() {
             true
         ));
 
-        System::set_block_number(9);
+        System::set_block_number(14400);
         assert_noop!(
             DaoModule::close(RuntimeOrigin::signed(2), hash.clone(), 0,),
             Error::<TestRuntime>::OngoingVoteAndTresholdStillNotMet
         );
 
-        System::set_block_number(11);
+        System::set_block_number(14401);
         assert_ok!(DaoModule::close(RuntimeOrigin::signed(2), hash.clone(), 0,));
     });
 }
@@ -872,6 +872,37 @@ fn customize_proposal_duration_out_of_bounds_fails() {
                 Some(1000000000)
             ),
             Error::<TestRuntime>::InvalidProposalDuration
+        );
+
+        assert_noop!(
+            DaoModule::propose(
+                RuntimeOrigin::signed(1),
+                2,
+                Box::new(proposal.clone()),
+                b"some_description".to_vec(),
+                b"some_link".to_vec(),
+                Some(14399)
+            ),
+            Error::<TestRuntime>::InvalidProposalDuration
+        );
+    });
+}
+
+#[test]
+fn motion_proposal_threshold_fails() {
+    new_test_ext().execute_with(|| {
+        let proposal = make_proposal(b"some_remark".to_vec());
+
+        assert_noop!(
+            DaoModule::propose(
+                RuntimeOrigin::signed(1),
+                1,
+                Box::new(proposal.clone()),
+                b"some_description".to_vec(),
+                b"some_link".to_vec(),
+                None
+            ),
+            Error::<TestRuntime>::ThresholdTooLow
         );
     });
 }

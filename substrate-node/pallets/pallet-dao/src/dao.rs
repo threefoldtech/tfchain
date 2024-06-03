@@ -41,14 +41,18 @@ impl<T: Config> Pallet<T> {
         );
 
         let now = frame_system::Pallet::<T>::block_number();
+        let minimum_threshold = T::MotionMinThreshold::get();
         let mut end = now + T::MotionDuration::get();
+        // Check if duration is set and is less than 30 days and more than 1 Day
         if let Some(motion_duration) = duration {
             ensure!(
-                motion_duration < BlockNumberFor::<T>::from(constants::time::DAYS * 30),
+                motion_duration <= BlockNumberFor::<T>::from(constants::time::DAYS * 30) && motion_duration >= BlockNumberFor::<T>::from(constants::time::DAYS * 1),
                 Error::<T>::InvalidProposalDuration
             );
             end = now + motion_duration;
         }
+        // threshold should be at least the configured minimum threshold for a motion in runtime
+        ensure!(threshold >= minimum_threshold, Error::<T>::ThresholdTooLow);
 
         let index = Self::proposal_count();
         <ProposalCount<T>>::mutate(|i| *i += 1);
