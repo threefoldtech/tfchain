@@ -20,6 +20,8 @@ type=major make version-bump # incrment the major version
 
 This function will take care also of branch and commit creation. Review the changes and push them, then follow the steps 3 and 4 below to finish the release.
 
+Important: This function will also incrment the spec version in the runtime. If you already did this in another commit you need to undo spec_version changes to avoid double incrment.
+
 ### Manually
 
 1 - create the a new branch for the release. increment the version for all components in the monorepo. here is a list of the files that need to be changed to make the release:
