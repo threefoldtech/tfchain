@@ -26,7 +26,7 @@ benchmarks! {
     propose {
         let caller: T::AccountId = whitelisted_caller();
         assert_ok!(_add_council_member::<T>(caller.clone()));
-        let threshold = 2;
+        let threshold = 5;
         let proposal: T::Proposal = SystemCall::<T>::remark { remark: b"remark".to_vec() }.into();
         let description = b"some_description".to_vec();
         let link = b"some_link".to_vec();
@@ -99,9 +99,17 @@ benchmarks! {
     close {
         let farmer: T::AccountId = account("Alice", 0, 0);
         let farmer2: T::AccountId = account("Bob", 0, 0);
+        let farmer3: T::AccountId = account("Charlie", 0, 0);
+        let farmer4: T::AccountId = account("Dave", 0, 0);
+        let farmer5: T::AccountId = account("Eve", 0, 0);
+
 
         _prepare_farm_with_node::<T>(farmer.clone(), b"testfarm", 1);
         _prepare_farm_with_node::<T>(farmer2.clone(), b"testfarm2", 2);
+        _prepare_farm_with_node::<T>(farmer3.clone(), b"testfarm3", 3);
+        _prepare_farm_with_node::<T>(farmer4.clone(), b"testfarm4", 4);
+        _prepare_farm_with_node::<T>(farmer5.clone(), b"testfarm5", 5);
+
 
         let caller: T::AccountId = whitelisted_caller();
         let proposal_hash = _create_proposal::<T>(caller.clone());
@@ -110,6 +118,9 @@ benchmarks! {
         let approve = false;
         DaoModule::<T>::vote(RawOrigin::Signed(farmer.clone()).into(), 1, proposal_hash, approve).unwrap();
         DaoModule::<T>::vote(RawOrigin::Signed(farmer2.clone()).into(), 2, proposal_hash, approve).unwrap();
+        DaoModule::<T>::vote(RawOrigin::Signed(farmer3.clone()).into(), 3, proposal_hash, approve).unwrap();
+        DaoModule::<T>::vote(RawOrigin::Signed(farmer4.clone()).into(), 4, proposal_hash, approve).unwrap();
+        DaoModule::<T>::vote(RawOrigin::Signed(farmer5.clone()).into(), 5, proposal_hash, approve).unwrap();
 
     }: _(RawOrigin::Signed(caller.clone()), proposal_hash, proposal_index)
     verify {
@@ -200,7 +211,7 @@ fn _create_node<T: Config>(source: T::AccountId, farm_id: u32) {
 pub fn _create_proposal<T: Config>(source: T::AccountId) -> T::Hash {
     assert_ok!(_add_council_member::<T>(source.clone()));
 
-    let threshold = 2;
+    let threshold = 5;
     let proposal: T::Proposal = SystemCall::<T>::remark {
         remark: b"remark".to_vec(),
     }
