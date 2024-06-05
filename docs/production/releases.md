@@ -23,7 +23,11 @@ This function will take care also of branch and commit creation.
 Review the changes and push them, then follow the steps 3 and 4 below to finish the release.
 
 Important: This function will also incrment the spec version in the runtime.
-If you already did this in another commit you need to undo spec_version changes to avoid double incrment.
+If you already did this in another commit or you don't need to do this, you can instruct the Makefile version-bump function to skip it by setting the `retain_spec_version` variable to 1 or any other value.
+
+```bash
+type=patch retain_spec_version=1 make version-bump
+```
 
 ### Manually
 
