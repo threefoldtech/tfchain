@@ -470,6 +470,7 @@ impl substrate_validator_set::Config for Runtime {
 parameter_types! {
     pub const DaoMotionDuration: BlockNumber = 7 * DAYS;
     pub const MinVetos: u32 = 3;
+    pub const DaoMotionMinThreshold: u32 = 5;
 }
 
 impl pallet_dao::Config for Runtime {
@@ -477,6 +478,7 @@ impl pallet_dao::Config for Runtime {
     type CouncilOrigin = EnsureRootOrCouncilApproval;
     type Proposal = RuntimeCall;
     type MotionDuration = DaoMotionDuration;
+    type MotionMinThreshold = DaoMotionMinThreshold;
     type Tfgrid = TfgridModule;
     type WeightInfo = pallet_dao::weights::SubstrateWeight<Runtime>;
     type MinVetos = MinVetos;
