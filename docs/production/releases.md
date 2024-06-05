@@ -18,13 +18,16 @@ type=minor make version-bump # incrment the minor version
 type=major make version-bump # incrment the major version
 ```
 
-This function will take care also of branch and commit creation. Review the changes and push them, then follow the steps 3 and 4 below to finish the release.
+This function will take care also of branch and commit creation.
+Review the changes and push them, then follow the steps 3 and 4 below to finish the release.
 
-Important: This function will also incrment the spec version in the runtime. If you already did this in another commit you need to undo spec_version changes to avoid double incrment.
+Important: This function will also incrment the spec version in the runtime.
+If you already did this in another commit you need to undo spec_version changes to avoid double incrment.
 
 ### Manually
 
-1 - create the a new branch for the release. increment the version for all components in the monorepo. here is a list of the files that need to be changed to make the release:
+1 - Create a new branch for the release, increment the version for all components in the monorepo.
+Here is a list of the files that need to be changed to make the release:
 
 * substrate-node
   * Increment spec version in the runtime [lib.rs](../../substrate-node/runtime/src/lib.rs)
@@ -58,7 +61,7 @@ Important: This function will also incrment the spec version in the runtime. If 
 
 The workflow will create a release draft with the changelog and the binaries attached
 
-A changelog will be generated based on the Pull requests merged, so having PRs with meaningful titles is important.
+The generated changelog will be based on the merged Pull requests, so having PRs with meaningful titles is important.
 
 ## Validate a runtime
 
@@ -66,5 +69,5 @@ See [validate](../misc/validating_runtime.md) for instructions on how to validat
 
 ## Upgrade runtime
 
-To upgrade the runtime for a network based on a release, download the runtime attached to the release (tfchain\_runtime.compact.compressed.wasm)
-and upload it to the network using a council proposal. The proposal should be a `set_code` proposal with the runtime as the code and majority of the council should vote in favor of the proposal.
+To upgrade the runtime for a network based on a release, download the runtime attached to the release (tfchain\_runtime.compact.compressed.wasm) and upload it to the network using a council proposal.
+The proposal should be a `set_code` proposal with the runtime as the code and majority of the council should vote in favor of the proposal.
