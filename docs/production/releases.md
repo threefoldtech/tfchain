@@ -1,6 +1,7 @@
 # Releases
 
-Releases are automated by [this workflow](.github/workflows/030_create_release.yaml). When a release should be created following things need to be done:
+Releases are automated by [this workflow](.github/workflows/030_create_release.yaml).
+When a release should be created following things need to be done:
 
 ## Version bump
 
