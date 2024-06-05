@@ -36,8 +36,11 @@ version-bump:
 		sed -i "s/^appVersion: .*/appVersion: '$$new_version'/" activation-service/helm/tfchainactivationservice/Chart.yaml; \
 		cd substrate-node && cargo metadata -q 1> /dev/null && cd ..; \
 		git add substrate-node/Cargo.toml substrate-node/Cargo.lock substrate-node/charts/substrate-node/Chart.yaml bridge/tfchain_bridge/chart/tfchainbridge/Chart.yaml activation-service/helm/tfchainactivationservice/Chart.yaml activation-service/package.json clients/tfchain-client-js/package.json scripts/package.json tools/fork-off-substrate/package.json substrate-node/runtime/src/lib.rs; \
-		git commit -m "Bump version to $$new_version (spec v$$new_spec_version)"; \
+		if [ -z "$${new_spec_version}" ]; then \
+			git commit -m "Bump version to $$new_version"; \
+		else \
+			git commit -m "Bump version to $$new_version (spec v$$new_spec_version)"; \
+		fi \
 	else \
 		echo "Invalid version type. Please use patch, minor, or major."; \
 	fi
-
