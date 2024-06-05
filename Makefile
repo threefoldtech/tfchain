@@ -1,8 +1,11 @@
 .PHONY: version-bump
 
-# usage: > type=patch make version-bump
-# usage: > type=minor make version-bump
-# usage: > type=major make version-bump
+# * Usage Examples:*
+# type=patch make version-bump
+# type=minor make version-bump
+# type=major make version-bump
+# ** skip increment spce_version in substrate-node/runtime/src/lib.rs **
+# type=patch retain_spec_version=1 make version-bump
 version-bump:
 	set -e; \
 	if [ "$(type)" = "patch" ] || [ "$(type)" = "minor" ] || [ "$(type)" = "major" ]; then \
@@ -13,10 +16,13 @@ version-bump:
 		branch_name="$$default_branch-bump-version-to-$$new_version"; \
 		git checkout -b $$branch_name; \
 		current_spec_version=$$(sed -n -e 's/^.*spec_version: \([0-9]\+\),$$/\1/p' substrate-node/runtime/src/lib.rs); \
-		echo "Current spec_version: $$current_spec_version"; \
-		new_spec_version=$$((current_spec_version + 1)); \
-		echo "New spec_version: $$new_spec_version"; \
-		sed -i "s/spec_version: $$current_spec_version,/spec_version: $$new_spec_version,/" substrate-node/runtime/src/lib.rs; \
+		if [ -z "$${retain_spec_version}" ]; then \
+			current_spec_version=$$(sed -n -e 's/^.*spec_version: \([0-9]\+\),$$/\1/p' substrate-node/runtime/src/lib.rs); \
+			echo "Current spec_version: $$current_spec_version"; \
+			new_spec_version=$$((current_spec_version + 1)); \
+			echo "New spec_version: $$new_spec_version"; \
+			sed -i "s/spec_version: $$current_spec_version,/spec_version: $$new_spec_version,/" substrate-node/runtime/src/lib.rs; \
+		fi; \
 		jq ".version = \"$$new_version\"" activation-service/package.json > temp.json && mv temp.json activation-service/package.json; \
 		jq ".version = \"$$new_version\"" clients/tfchain-client-js/package.json > temp.json && mv temp.json clients/tfchain-client-js/package.json; \
 		jq ".version = \"$$new_version\"" scripts/package.json > temp.json && mv temp.json scripts/package.json; \
@@ -34,3 +40,4 @@ version-bump:
 	else \
 		echo "Invalid version type. Please use patch, minor, or major."; \
 	fi
+
