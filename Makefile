@@ -4,7 +4,7 @@
 # type=patch make version-bump
 # type=minor make version-bump
 # type=major make version-bump
-# ** skip increment spce_version in substrate-node/runtime/src/lib.rs **
+# ** skip increment spec_version in substrate-node/runtime/src/lib.rs **
 # type=patch retain_spec_version=1 make version-bump
 version-bump:
 	set -e; \
