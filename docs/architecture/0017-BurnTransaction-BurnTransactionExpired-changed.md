@@ -1,4 +1,4 @@
-# 17. Add Source account ID to BurnTransaction storage type and BurnTransactionExpired event
+# 17. Add Source account ID to BurnTransaction and BurnTransactionExpired
 
 Date: 2023-11-14
 
