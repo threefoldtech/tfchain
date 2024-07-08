@@ -1,4 +1,4 @@
-# 21. Allow 'only hdd' nodes to register on chain
+# 22. Allow 'only hdd' nodes to register on chain
 
 Date: 2024-05-22
 

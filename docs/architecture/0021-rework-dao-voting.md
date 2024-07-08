@@ -1,4 +1,4 @@
-# 20. Harden closing of a DAO motion voting
+# 21. Harden closing of a DAO motion voting
 
 Date: 2024-05-02
 
