@@ -41,7 +41,7 @@ func TestGetBalance(t *testing.T) {
 	require.NoError(err)
 }
 
-func TestEnsureAccount_WithDownActivationService(t *testing.T) {
+func TestEnsureAccountWithDownActivationService(t *testing.T) {
 	cl := startLocalConnection(t)
 	defer cl.Close()
 
