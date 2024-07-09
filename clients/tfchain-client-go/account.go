@@ -52,11 +52,16 @@ type AccountInfo struct {
 	Data        Balance   `json:"data"`
 }
 
+// TODO: Add service response status code if avialble
 type ActivationServiceError struct {
-	Err error
+	StatusCode int // 0 or a valid HTTP status code. 0 indicates that a response was not recived due to an error such host unreachable.
+	Err        error
 }
 
 func (e ActivationServiceError) Error() string {
+	if e.StatusCode != 0 {
+		return fmt.Sprintf("Activation service error (status code %d): %s", e.StatusCode, e.Err.Error())
+	}
 	return fmt.Sprintf("Activation service error: %s", e.Err.Error())
 }
 
@@ -153,7 +158,7 @@ func (s *Substrate) activateAccount(identity Identity, activationURL string) err
 		return nil
 	}
 
-	return ActivationServiceError{Err: fmt.Errorf("failed to activate account: %s", response.Status)}
+	return ActivationServiceError{StatusCode: response.StatusCode, Err: fmt.Errorf("activation service returned status code %d", response.StatusCode)}
 }
 
 // EnsureAccount makes sure account is available on blockchain
