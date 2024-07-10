@@ -52,6 +52,19 @@ type AccountInfo struct {
 	Data        Balance   `json:"data"`
 }
 
+// TODO: Add service response status code if avialble
+type ActivationServiceError struct {
+	StatusCode int // 0 or a valid HTTP status code. 0 indicates that a response was not recived due to an error such host unreachable.
+	Err        error
+}
+
+func (e ActivationServiceError) Error() string {
+	if e.StatusCode != 0 {
+		return fmt.Sprintf("Activation service error (status code %d): %s", e.StatusCode, e.Err.Error())
+	}
+	return fmt.Sprintf("Activation service error: %s", e.Err.Error())
+}
+
 // PublicKey gets public key from account id
 func (a AccountID) PublicKey() []byte {
 	return a[:]
@@ -135,7 +148,7 @@ func (s *Substrate) activateAccount(identity Identity, activationURL string) err
 
 	response, err := http.Post(activationURL, "application/json", &buf)
 	if err != nil {
-		return errors.Wrap(err, "failed to call activation service")
+		return ActivationServiceError{Err: errors.Wrap(err, "failed to call activation service")}
 	}
 
 	defer response.Body.Close()
@@ -145,22 +158,22 @@ func (s *Substrate) activateAccount(identity Identity, activationURL string) err
 		return nil
 	}
 
-	return fmt.Errorf("failed to activate account: %s", response.Status)
+	return ActivationServiceError{StatusCode: response.StatusCode, Err: fmt.Errorf("activation service returned status code %d", response.StatusCode)}
 }
 
 // EnsureAccount makes sure account is available on blockchain
 // if not, it uses activation service to create one.
 // EnsureAccount is safe to call on already activated accounts and it's mostly
 // a NO-OP operation unless the account funds are very low, it will then make
-// sure to reactivate the account (fund it) if the free tokes are <= ReactivateThreefold uTFT
-func (s *Substrate) EnsureAccount(identity Identity, activationURL, termsAndConditionsLink, terminsAndConditionsHash string) (info AccountInfo, err error) {
+// sure to reactivate the account (fund it) if the free tokens are <= ReactivateThreefold uTFT
+func (s *Substrate) EnsureAccount(identity Identity, activationURL, termsAndConditionsLink, termsAndConditionsHash string) (info AccountInfo, err error) {
 	log.Debug().Str("account", identity.Address()).Msg("ensuring account")
 	cl, meta, err := s.GetClient()
 	if err != nil {
 		return info, err
 	}
 	info, err = s.getAccount(cl, meta, identity)
-	// if account does not exist OR account has tokes less that reactivateAt
+	// if account does not exist OR account has tokens less than reactivateAt
 	// then we activate the account.
 	if errors.Is(err, ErrAccountNotFound) || info.Data.Free.Cmp(reactivateAt) <= 0 {
 		// account activation
@@ -203,7 +216,7 @@ func (s *Substrate) EnsureAccount(identity Identity, activationURL, termsAndCond
 		return info, nil
 	}
 
-	return info, s.AcceptTermsAndConditions(identity, termsAndConditionsLink, terminsAndConditionsHash)
+	return info, s.AcceptTermsAndConditions(identity, termsAndConditionsLink, termsAndConditionsHash)
 }
 
 // Identity is a user identity
