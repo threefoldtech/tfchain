@@ -33,7 +33,7 @@ Before you start, you need to have the following items:
     ```bash
     cp ../../substrate-node/target/debug/wbuild/tfchain-runtime/tfchain_runtime.compact.wasm ./data/runtime.wasm
     ```
-*   Run a full node for your blockchain locally (Recommended but should be fully synced) or have an external endpoint handy (but should be running with `--rpc-methods Unsafe` flag)
+*   Run a full node for your blockchain locally (Recommended but should be fully synced) or have an external endpoint handy (but should be running with `--rpc-methods Unsafe` flag, and depending on the chain size you can need to increase the node's default `rpc-max-response-size`)
     ```bash
     ../../substrate-node/target/debug/tfchain --chain ../../substrate-node/chainspecs/dev/chainSpecRaw.json --rpc-external --rpc-methods Unsafe
     ```
@@ -41,12 +41,16 @@ Before you start, you need to have the following items:
 
     *   If using a local node, simply run the script using
         ```bash
-        npm start
+        ALICE="true" npm start
         ```
 
     *   If you are using an external/non-default endpoint, you need to provide it to the script via the HTTP\_RPC\_ENDPOINT environment variable
         ```bash
-        HTTP_RPC_ENDPOINT=https://<EXTERNAL END POINT> npm start
+        HTTP_RPC_ENDPOINT=https://<EXTERNAL END POINT> ALICE="true" npm start
+        ```
+    *   If you are getting `HeadersTimeoutError`, likely on the main net, set `FORK_CHUNKS_LEVEL` to 2
+        ```bash
+        FORK_CHUNKS_LEVEL=2 ALICE="true" npm start
         ```
 *   You should have the genesis file for the forked chain inside the data folder. It will be called `fork.json`.
 *   You can now run a new chain using this genesis file
