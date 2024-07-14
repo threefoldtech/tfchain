@@ -33,7 +33,7 @@ Before you start, you need to have the following items:
     ```bash
     cp ../../substrate-node/target/debug/wbuild/tfchain-runtime/tfchain_runtime.compact.wasm ./data/runtime.wasm
     ```
-*   Run a full node for your blockchain locally (Recommended but should be fully synced) or have an external endpoint handy (but should be running with `--rpc-methods Unsafe` flag, and depending on the chain size you can need to increase the node's default `rpc-max-response-size`)
+*   Run a full node for your blockchain locally (Recommended but should be fully synced) or have an external endpoint handy (but should be running with `--rpc-methods Unsafe` flag, and depending on the chain size you may need to increase the node's default `rpc-max-response-size`)
     ```bash
     ../../substrate-node/target/debug/tfchain --chain ../../substrate-node/chainspecs/dev/chainSpecRaw.json --rpc-external --rpc-methods Unsafe
     ```
