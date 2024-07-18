@@ -1,9 +1,9 @@
 use crate::*;
 use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
-use log::{info, debug};
-use sp_runtime::Saturating;
+use log::{debug, info};
 use scale_info::prelude::string::String;
 use sp_core::Get;
+use sp_runtime::Saturating;
 use sp_std::{marker::PhantomData, vec, vec::Vec};
 
 #[cfg(feature = "try-runtime")]
@@ -13,8 +13,9 @@ pub struct CleanStorageState<T: Config>(PhantomData<T>);
 
 impl<T: Config> OnRuntimeUpgrade for CleanStorageState<T> {
     fn on_runtime_upgrade() -> Weight {
-        if PalletVersion::<T>::get() == types::StorageVersion::V8 ||
-         PalletVersion::<T>::get() == types::StorageVersion::V9 {
+        if PalletVersion::<T>::get() == types::StorageVersion::V8
+            || PalletVersion::<T>::get() == types::StorageVersion::V9
+        {
             info!("🔔 Starting Smart Contract pallet storage cleaning");
             // Start a migration (this happens before on_initialize so it'll happen later in this
             // block, which should be good enough)...
@@ -23,14 +24,15 @@ impl<T: Config> OnRuntimeUpgrade for CleanStorageState<T> {
         } else {
             info!("⛔ Unused Smart Contract pallet V9 storage cleaning");
             Weight::zero()
-        }  
+        }
     }
 
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
         ensure!(
-            PalletVersion::<T>::get() == types::StorageVersion::V8 || PalletVersion::<T>::get() == types::StorageVersion::V9,
+            PalletVersion::<T>::get() == types::StorageVersion::V8
+                || PalletVersion::<T>::get() == types::StorageVersion::V9,
             DispatchError::Other("Unexpected pallet version")
         );
 
@@ -54,20 +56,36 @@ pub fn check_pallet_smart_contract<T: Config>() {
     check_node_contract_resources::<T>();
 }
 
-pub fn clean_pallet_smart_contract<T: Config>(current_stage: MigrationStage
+pub fn clean_pallet_smart_contract<T: Config>(
+    current_stage: MigrationStage,
 ) -> (frame_support::weights::Weight, Option<MigrationStage>) {
-    info!("🧼 Cleaning Smart Contract pallet storage [{}/10]", current_stage);
+    info!(
+        "🧼 Cleaning Smart Contract pallet storage [{}/10]",
+        current_stage
+    );
     match current_stage {
         0 => (Weight::zero(), Some(current_stage + 1)),
         1 => (clean_contracts::<T>(), Some(current_stage + 1)),
         2 => (clean_contracts_to_bill_at::<T>(), Some(current_stage + 1)),
         3 => (clean_active_node_contracts::<T>(), Some(current_stage + 1)),
-        4 => (clean_active_rent_contract_for_node::<T>(), Some(current_stage + 1)),
-        5 => (clean_contract_id_by_node_id_and_hash::<T>(), Some(current_stage + 1)),
-        6 => (clean_contract_id_by_name_registration::<T>(), Some(current_stage + 1)),
+        4 => (
+            clean_active_rent_contract_for_node::<T>(),
+            Some(current_stage + 1),
+        ),
+        5 => (
+            clean_contract_id_by_node_id_and_hash::<T>(),
+            Some(current_stage + 1),
+        ),
+        6 => (
+            clean_contract_id_by_name_registration::<T>(),
+            Some(current_stage + 1),
+        ),
         7 => (clean_contract_lock::<T>(), Some(current_stage + 1)),
         8 => (clean_solution_providers::<T>(), Some(current_stage + 1)),
-        9 => (clean_contract_billing_information_by_id::<T>(), Some(current_stage + 1)),
+        9 => (
+            clean_contract_billing_information_by_id::<T>(),
+            Some(current_stage + 1),
+        ),
         // Last cleaning operation, set stage to none to stop migration
         10 => {
             let weight = clean_node_contract_resources::<T>();
@@ -176,7 +194,7 @@ fn check_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_has
         }
 
         // NodeContractResources
-        // Nothing to check here 
+        // Nothing to check here
         // A node contract needs a call to report_contract_resources() to
         // have associated ressources in NodeContractResources storage map
     } else {
@@ -189,7 +207,9 @@ fn check_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_has
     if deployment_hash == types::HexHash::default() {
         debug!(
             " ⚠️    Node Contract (id: {}) on node {}: deployment hash is default ({:?})",
-            contract_id, node_id, String::from_utf8_lossy(&deployment_hash)
+            contract_id,
+            node_id,
+            String::from_utf8_lossy(&deployment_hash)
         );
     }
 }
@@ -202,8 +222,7 @@ fn check_name_contract<T: Config>(contract_id: u64, name: &T::NameContractName) 
             " ⚠️    Name Contract (id: {}): key (name: {:?}) not exists",
             contract_id, name
         );
-    }
-    else if ctr_id != contract_id  {
+    } else if ctr_id != contract_id {
         debug!(
             " ⚠️    Name Contract (id: {}): wrong contract (id: {}) in name registration map",
             contract_id, ctr_id
@@ -380,7 +399,8 @@ pub fn check_contract_id_by_node_id_and_hash<T: Config>() {
         if pallet_tfgrid::Nodes::<T>::get(node_id).is_none() {
             debug!(
                 " ⚠️    ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: node not exists",
-                node_id, String::from_utf8_lossy(&hash)
+                node_id,
+                String::from_utf8_lossy(&hash)
             );
         }
 
@@ -390,7 +410,7 @@ pub fn check_contract_id_by_node_id_and_hash<T: Config>() {
                     if node_contract.deployment_hash != hash {
                         debug!(
                             " ⚠️    ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: deployment hash ({:?}) on contract {} is not matching",
-                            node_id, String::from_utf8_lossy(&hash), String::from_utf8_lossy(&node_contract.deployment_hash), contract_id, 
+                            node_id, String::from_utf8_lossy(&hash), String::from_utf8_lossy(&node_contract.deployment_hash), contract_id,
                         );
                     }
                 }
@@ -404,7 +424,9 @@ pub fn check_contract_id_by_node_id_and_hash<T: Config>() {
         } else {
             debug!(
                 " ⚠️    ContractIDByNodeIDAndHash[node: {}, hash: {:?}]: contract {} not exists",
-                node_id, String::from_utf8_lossy(&hash), contract_id
+                node_id,
+                String::from_utf8_lossy(&hash),
+                contract_id
             );
         }
     }
@@ -429,7 +451,7 @@ pub fn check_contract_id_by_name_registration<T: Config>() {
                     if name_contract.name != name {
                         debug!(
                             " ⚠️    ContractIDByNameRegistration[name: {:?}]: name ({:?}) on contract {} is not matching",
-                            String::from_utf8_lossy(&name.into()), String::from_utf8_lossy(&name_contract.name.into()), contract_id, 
+                            String::from_utf8_lossy(&name.into()), String::from_utf8_lossy(&name_contract.name.into()), contract_id,
                         );
                     }
                 }
@@ -443,7 +465,8 @@ pub fn check_contract_id_by_name_registration<T: Config>() {
         } else {
             debug!(
                 " ⚠️    ContractIDByNameRegistration[name: {:?}]: contract {} not exists",
-                String::from_utf8_lossy(&name.into()), contract_id
+                String::from_utf8_lossy(&name.into()),
+                contract_id
             );
         }
     }
@@ -462,7 +485,7 @@ pub fn check_contract_lock<T: Config>() {
     );
 
     for (contract_id, _contract_lock) in ContractLock::<T>::iter() {
-        if Contracts::<T>::get(contract_id).is_none() {        
+        if Contracts::<T>::get(contract_id).is_none() {
             debug!(
                 " ⚠️    ContractLock[contract: {}]: contract not exists",
                 contract_id
@@ -507,7 +530,8 @@ pub fn check_contract_billing_information_by_id<T: Config>() {
         PalletVersion::<T>::get()
     );
 
-    for (contract_id, _contract_billing_information) in ContractBillingInformationByID::<T>::iter() {
+    for (contract_id, _contract_billing_information) in ContractBillingInformationByID::<T>::iter()
+    {
         if let Some(c) = Contracts::<T>::get(contract_id) {
             match c.contract_type {
                 types::ContractData::NodeContract(_) => (),
@@ -543,7 +567,7 @@ pub fn check_node_contract_resources<T: Config>() {
         if contract_resource.contract_id != contract_id {
             debug!(
                 " ⚠️    NodeContractResources[contract: {}]: wrong contract id on resource ({})",
-               contract_id, contract_resource.contract_id
+                contract_id, contract_resource.contract_id
             );
         }
 
@@ -616,7 +640,13 @@ pub fn clean_contracts<T: Config>() -> frame_support::weights::Weight {
     T::DbWeight::get().reads_writes(r.saturating_add(2), w)
 }
 
-fn clean_node_contract<T: Config>(node_id: u32, contract_id: u64, deployment_hash: types::HexHash, r: &mut u64, w: &mut u64) {
+fn clean_node_contract<T: Config>(
+    node_id: u32,
+    contract_id: u64,
+    deployment_hash: types::HexHash,
+    r: &mut u64,
+    w: &mut u64,
+) {
     if deployment_hash == types::HexHash::default() {
         Contracts::<T>::remove(contract_id);
         (*w).saturating_inc();
@@ -691,9 +721,9 @@ pub fn clean_active_node_contracts<T: Config>() -> frame_support::weights::Weigh
             ActiveNodeContracts::<T>::remove(node_id);
             w.saturating_inc();
         } else {
-            contract_ids.retain(|contract_id| { 
+            contract_ids.retain(|contract_id| {
                 r.saturating_inc();
-                Contracts::<T>::get(contract_id).is_some() 
+                Contracts::<T>::get(contract_id).is_some()
             });
             ActiveNodeContracts::<T>::insert(node_id, contract_ids);
             w.saturating_inc();

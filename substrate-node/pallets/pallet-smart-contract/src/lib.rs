@@ -72,6 +72,7 @@ pub mod pallet {
     };
     use parity_scale_codec::FullCodec;
     use sp_core::H256;
+    use sp_runtime::traits::Convert;
     use sp_std::{
         convert::{TryFrom, TryInto},
         fmt::Debug,
@@ -194,6 +195,10 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn dedicated_nodes_extra_fee)]
     pub type DedicatedNodesExtraFee<T> = StorageMap<_, Blake2_128Concat, u32, u64, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn seen_values)]
+    pub type SeenContracts<T> = StorageValue<_, Vec<u64>, ValueQuery>;
 
     #[pallet::config]
     pub trait Config:
@@ -516,7 +521,21 @@ pub mod pallet {
             contract_id: u64,
         ) -> DispatchResultWithPostInfo {
             let _account_id = ensure_signed(origin)?;
-            Self::bill_contract(contract_id)
+
+            let mut seen_contracts = SeenContracts::<T>::get();
+            ensure!(
+                !seen_contracts.contains(&contract_id),
+                "this contract already processed in this block",
+            );
+            seen_contracts.push(contract_id);
+            SeenContracts::<T>::put(seen_contracts);
+
+            let validators = pallet_session::Pallet::<T>::validators();
+            let is_validator =
+                <T as pallet_session::Config>::ValidatorIdOf::convert(_account_id.clone())
+                    .map_or(false, |validator_id| validators.contains(&validator_id));
+
+            Self::bill_contract(contract_id, is_validator)
         }
 
         #[pallet::call_index(11)]
@@ -662,6 +681,10 @@ pub mod pallet {
 
         fn offchain_worker(block_number: BlockNumberFor<T>) {
             Self::bill_contracts_for_block(block_number);
+        }
+
+        fn on_finalize(_n: BlockNumberFor<T>) {
+            SeenContracts::<T>::kill();
         }
     }
 }

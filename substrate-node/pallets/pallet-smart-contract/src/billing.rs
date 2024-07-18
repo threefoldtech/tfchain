@@ -2,15 +2,19 @@ use crate::*;
 use frame_support::{
     dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
     ensure,
-    traits::{Currency, ExistenceRequirement, LockableCurrency, OnUnbalanced, WithdrawReasons},
+    pallet_prelude::Pays,
+    traits::{
+        Currency, ExistenceRequirement, LockableCurrency, OnUnbalanced,
+        WithdrawReasons,
+    },
 };
 use frame_system::{
-    offchain::{SendSignedTransaction, SignMessage, Signer},
+    offchain::{SendSignedTransaction, Signer},
     pallet_prelude::BlockNumberFor,
 };
 use sp_core::Get;
 use sp_runtime::{
-    traits::{CheckedAdd, CheckedSub, Convert, Zero},
+    traits::{CheckedAdd, CheckedSub, Zero},
     DispatchResult, Perbill, SaturatedConversion,
 };
 use sp_std::vec::Vec;
@@ -39,7 +43,7 @@ impl<T: Config> Pallet<T> {
 
         for contract_id in contract_ids {
             if let Some(c) = Contracts::<T>::get(contract_id) {
-                if let types::ContractData::NodeContract(node_contract) = c.contract_type {
+                if let types::ContractData::NodeContract(node_contract) = c.contract_type.clone() {
                     // Is there IP consumption to bill?
                     let bill_ip = node_contract.public_ips > 0;
 
@@ -54,23 +58,32 @@ impl<T: Config> Pallet<T> {
 
                     // Don't bill if no IP/CU/SU/NU to be billed
                     if !bill_ip && !bill_cu_su && !bill_nu {
+                        log::debug!(
+                            "Skipping billing node contract {:?}, no IP/CU/SU/NU to bill",
+                            contract_id,
+                        );
                         continue;
                     }
+                }                
+                log::info!("Starting billing contract {:?}, type: {:?}", contract_id, c.contract_type);
+                let res = Self::bill_contract_using_signed_transaction(contract_id);
+                if res.is_ok() {
+                    log::info!("Successfully submitted signed transaction for contract {:?}",
+                        contract_id,
+                    );
                 }
-                let _res = Self::bill_contract_using_signed_transaction(contract_id);
             }
         }
+        log::debug!("Finished billing contracts at block {:?}", block_number);
     }
 
     pub fn bill_contract_using_signed_transaction(contract_id: u64) -> Result<(), Error<T>> {
-        let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::any_account();
+        let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::all_accounts();
 
-        // Only allow the author of the next block to trigger the billing
-        Self::is_next_block_author(&signer)?;
-
+        // check if the account can sign the transaction
         if !signer.can_sign() {
             log::error!(
-                "failed billing contract {:?} account cannot be used to sign transaction",
+                "failed billing contract {:?}, account cannot be used to sign transaction",
                 contract_id,
             );
             return Err(<Error<T>>::OffchainSignedTxCannotSign);
@@ -78,29 +91,29 @@ impl<T: Config> Pallet<T> {
 
         let result =
             signer.send_signed_transaction(|_acct| Call::bill_contract_for_block { contract_id });
-
-        if let Some((acc, res)) = result {
-            // if res is an error this means sending the transaction failed
-            // this means the transaction was already send before (probably by another node)
-            // unfortunately the error is always empty (substrate just logs the error and
-            // returns Err())
-            if res.is_err() {
-                log::error!(
-                    "signed transaction failed for billing contract {:?} using account {:?}",
-                    contract_id,
-                    acc.id
-                );
-                return Err(<Error<T>>::OffchainSignedTxAlreadySent);
+        for (_, res) in &result {
+            if res.is_ok() {
+                return Ok(());
             }
-            return Ok(());
         }
-        log::error!("No local account available");
-        return Err(<Error<T>>::OffchainSignedTxNoLocalAccountAvailable);
+        log::error!(
+            "All local accounts failed to submit signed transaction for contract {:?}",
+            contract_id,
+        );
+        for (_, res) in result {
+            if let Err(e) = res {
+                log::error!(
+                    "error: {:?}",
+                    e,
+                );
+            }
+        }
+        return Err(<Error<T>>::OffchainSignedTxAlreadySent);
     }
 
     // Bills a contract (NodeContract, NameContract or RentContract)
     // Calculates how much TFT is due by the user and distributes the rewards
-    pub fn bill_contract(contract_id: u64) -> DispatchResultWithPostInfo {
+    pub fn bill_contract(contract_id: u64, is_validator: bool) -> DispatchResultWithPostInfo {
         let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
 
         // Bill rent contract only if node is online
@@ -109,8 +122,15 @@ impl<T: Config> Pallet<T> {
                 // No need for preliminary call to contains_key() because default node power value is Up
                 let node_power = pallet_tfgrid::NodePower::<T>::get(node.id);
                 if node_power.is_standby() {
+                    log::debug!(
+                        "Skipping billing rent contract {:?}, node {:?} is in standby",
+                        contract_id,
+                        node.id,
+                    );
                     return Ok(().into());
                 }
+            } else {
+                return Err(Error::<T>::NodeNotExists.into());
             }
         }
 
@@ -126,25 +146,38 @@ impl<T: Config> Pallet<T> {
 
         // Calculate amount of seconds elapsed based on the contract lock struct
         let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
-        let seconds_elapsed = now.checked_sub(contract_lock.lock_updated).unwrap_or(0);
+        let seconds_elapsed = now.checked_sub(contract_lock.lock_updated).unwrap_or_else(|| {
+            log::warn!(
+                "error while calculating seconds elapsed, now: {:?}, lock_updated: {:?}, 0 assumed",
+                now,
+                contract_lock.lock_updated
+            );
+            0
+        });
 
         // Calculate total amount due
         let (regular_amount_due, discount_received) =
-            contract.calculate_contract_cost_tft(total_balance, seconds_elapsed)?;
+            contract.calculate_contract_cost_tft(total_balance, seconds_elapsed).map_err(|e| {
+                log::error!("error while calculating contract cost: {:?}", e);
+                e
+            })?;
         let extra_amount_due = match &contract.contract_type {
             types::ContractData::RentContract(rc) => {
-                contract.calculate_extra_fee_cost_tft(rc.node_id, seconds_elapsed)?
+                contract.calculate_extra_fee_cost_tft(rc.node_id, seconds_elapsed).map_err(|e| {
+                    log::error!("error while calculating extra fee cost: {:?}", e);
+                    e
+                })?
             }
             _ => BalanceOf::<T>::zero(),
         };
         let amount_due = regular_amount_due
             .checked_add(&extra_amount_due)
-            .unwrap_or(BalanceOf::<T>::zero());
+            .unwrap_or(BalanceOf::<T>::zero()); // TODO: IMO this is bad, we should return an error here
 
         // If there is nothing to be paid and the contract is not in state delete, return
         // Can be that the users cancels the contract in the same block that it's getting billed
         // where elapsed seconds would be 0, but we still have to distribute rewards
-        if amount_due == BalanceOf::<T>::zero() && !contract.is_state_delete() {
+        if amount_due.is_zero() && !contract.is_state_delete() {
             log::debug!("amount to be billed is 0, nothing to do");
             return Ok(().into());
         };
@@ -214,7 +247,12 @@ impl<T: Config> Pallet<T> {
 
         log::info!("successfully billed contract with id {:?}", contract_id,);
 
-        Ok(().into())
+        if is_validator {
+            // Exempt fees for validators
+            Ok(Pays::No.into())
+        } else {
+            Ok(Pays::Yes.into())
+        }
     }
 
     fn handle_grace(
@@ -715,43 +753,6 @@ impl<T: Config> Pallet<T> {
             Some(account) => Self::get_usable_balance(&account),
             None => BalanceOf::<T>::zero(),
         }
-    }
-
-    // Validates if the given signer is the next block author based on the validators in session
-    // This can be used if an extrinsic should be refunded by the author in the same block
-    // It also requires that the keytype inserted for the offchain workers is the validator key
-    fn is_next_block_author(
-        signer: &Signer<T, <T as Config>::AuthorityId>,
-    ) -> Result<(), Error<T>> {
-        let author = <pallet_authorship::Pallet<T>>::author();
-        let validators = <pallet_session::Pallet<T>>::validators();
-
-        // Sign some arbitrary data in order to get the AccountId, maybe there is another way to do this?
-        let signed_message = signer.sign_message(&[0]);
-        if let Some(signed_message_data) = signed_message {
-            if let Some(block_author) = author {
-                let validator =
-                    <T as pallet_session::Config>::ValidatorIdOf::convert(block_author.clone())
-                        .ok_or(Error::<T>::IsNotAnAuthority)?;
-
-                let validator_count = validators.len();
-                let author_index = (validators.iter().position(|a| a == &validator).unwrap_or(0)
-                    + 1)
-                    % validator_count;
-
-                let signer_validator_account =
-                    <T as pallet_session::Config>::ValidatorIdOf::convert(
-                        signed_message_data.0.id.clone(),
-                    )
-                    .ok_or(Error::<T>::IsNotAnAuthority)?;
-
-                if signer_validator_account != validators[author_index] {
-                    return Err(Error::<T>::WrongAuthority);
-                }
-            }
-        }
-
-        Ok(().into())
     }
 
     pub fn get_current_timestamp_in_secs() -> u64 {

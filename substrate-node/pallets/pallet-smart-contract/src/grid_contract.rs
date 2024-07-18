@@ -321,7 +321,8 @@ impl<T: Config> Pallet<T> {
         }
 
         Self::update_contract_state(contract, &types::ContractState::Deleted(cause))?;
-        Self::bill_contract(contract.contract_id)?;
+        log::debug!("Billing for contract {} kicked in due to cancel request", contract.contract_id);
+        Self::bill_contract(contract.contract_id, false)?;
 
         Ok(().into())
     }
@@ -370,13 +371,13 @@ impl<T: Config> Pallet<T> {
             }
         };
 
-        log::debug!("removing contract");
+        log::debug!("removing contract {}", contract_id);
         Contracts::<T>::remove(contract_id);
         ContractLock::<T>::remove(contract_id);
 
         // Clean up contract from billing loop
         // This is the only place it should be done
-        log::debug!("cleaning up deleted contract from billing loop");
+        log::debug!("cleaning up deleted contract {} from billing loop", contract_id);
         Self::remove_contract_from_billing_loop(contract_id)?;
 
         Ok(().into())
@@ -702,7 +703,9 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
                     &mut contract,
                     &types::ContractState::Deleted(types::Cause::CanceledByUser),
                 );
-                let _ = Self::bill_contract(node_contract_id);
+                log::debug!("Billing for node contract {} kicked in due to node deletion", contract.contract_id);
+                let _ = Self::bill_contract(node_contract_id, false);
+
             }
         }
 
@@ -714,7 +717,8 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
                     &mut contract,
                     &types::ContractState::Deleted(types::Cause::CanceledByUser),
                 );
-                let _ = Self::bill_contract(contract.contract_id);
+                log::debug!("Billing for rent contract {} kicked in due to node deletion", contract.contract_id);
+                let _ = Self::bill_contract(contract.contract_id, false);
             }
         }
     }
@@ -729,6 +733,7 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
                 let now = Self::get_current_timestamp_in_secs();
                 contract_lock.lock_updated = now;
                 ContractLock::<T>::insert(rc_id, &contract_lock);
+                log::debug!("Rented node {} is back up, updated contract lock_updated for contract {}", node.id, rc_id);
             }
         }
     }
