@@ -4,8 +4,7 @@ use frame_support::{
     ensure,
     pallet_prelude::Pays,
     traits::{
-        Currency, ExistenceRequirement, LockableCurrency, OnUnbalanced,
-        WithdrawReasons,
+        fungible::Inspect, tokens::{Fortitude::Polite, Preservation::Preserve}, Currency, ExistenceRequirement, LockableCurrency, OnUnbalanced, WithdrawReasons
     },
 };
 use frame_system::{
@@ -14,18 +13,18 @@ use frame_system::{
 };
 use sp_core::Get;
 use sp_runtime::{
-    traits::{CheckedAdd, CheckedSub, Zero},
+    traits::{Bounded, CheckedAdd, CheckedSub, Zero},
     DispatchResult, Perbill, SaturatedConversion,
 };
 use sp_std::vec::Vec;
 
 impl<T: Config> Pallet<T> {
+    // Let offchain worker check if there are contracts on
+    // billing loop at current index and try to bill them
     pub fn bill_contracts_for_block(block_number: BlockNumberFor<T>) {
-        // Let offchain worker check if there are contracts on
-        // billing loop at current index and try to bill them
         let index = Self::get_billing_loop_index_from_block_number(block_number);
-
         let contract_ids = ContractsToBillAt::<T>::get(index);
+
         if contract_ids.is_empty() {
             log::info!(
                 "No contracts to bill at block {:?}, index: {:?}",
@@ -42,74 +41,59 @@ impl<T: Config> Pallet<T> {
         );
 
         for contract_id in contract_ids {
-            if let Some(c) = Contracts::<T>::get(contract_id) {
-                if let types::ContractData::NodeContract(node_contract) = c.contract_type.clone() {
-                    // Is there IP consumption to bill?
-                    let bill_ip = node_contract.public_ips > 0;
-
-                    // Is there CU/SU consumption to bill?
-                    // No need for preliminary call to contains_key() because default resource value is empty
-                    let bill_cu_su = !NodeContractResources::<T>::get(contract_id).used.is_empty();
-
-                    // Is there NU consumption to bill?
-                    // No need for preliminary call to contains_key() because default amount_unbilled is 0
-                    let bill_nu =
-                        ContractBillingInformationByID::<T>::get(contract_id).amount_unbilled > 0;
-
-                    // Don't bill if no IP/CU/SU/NU to be billed
-                    if !bill_ip && !bill_cu_su && !bill_nu {
-                        log::debug!(
-                            "Skipping billing node contract {:?}, no IP/CU/SU/NU to bill",
-                            contract_id,
-                        );
-                        continue;
+            if let Some(contract) = Contracts::<T>::get(contract_id) {
+                if Self::should_bill_contract(&contract) {
+                    log::info!("Starting billing contract {:?}, type: {:?}", contract_id, contract.contract_type);
+                    if Self::bill_contract_using_signed_transaction(contract_id).is_ok() {
+                        log::info!("Successfully submitted signed transaction for contract {:?}", contract_id);
                     }
-                }                
-                log::info!("Starting billing contract {:?}, type: {:?}", contract_id, c.contract_type);
-                let res = Self::bill_contract_using_signed_transaction(contract_id);
-                if res.is_ok() {
-                    log::info!("Successfully submitted signed transaction for contract {:?}",
+                } else {
+                    log::debug!(
+                        "Skipping billing node contract {:?}, no IP/CU/SU/NU to bill",
                         contract_id,
                     );
                 }
             }
+            log::debug!("Contract {:?} not exists!", contract_id);
         }
         log::debug!("Finished billing contracts at block {:?}", block_number);
+    }
+    
+    fn should_bill_contract(contract: &types::Contract<T>) -> bool {
+        if let types::ContractData::NodeContract(node_contract) = contract.contract_type.clone() {
+            let bill_ip = node_contract.public_ips > 0;
+            let bill_cu_su = !NodeContractResources::<T>::get(contract.contract_id).used.is_empty();
+            let bill_nu = ContractBillingInformationByID::<T>::get(contract.contract_id).amount_unbilled > 0;
+
+            return bill_ip || bill_cu_su || bill_nu;
+        }
+        true
     }
 
     pub fn bill_contract_using_signed_transaction(contract_id: u64) -> Result<(), Error<T>> {
         let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::all_accounts();
 
-        // check if the account can sign the transaction
         if !signer.can_sign() {
-            log::error!(
-                "failed billing contract {:?}, account cannot be used to sign transaction",
-                contract_id,
-            );
+            log::error!("failed billing contract {:?}, account cannot be used to sign transaction", contract_id);
             return Err(<Error<T>>::OffchainSignedTxCannotSign);
         }
 
-        let result =
-            signer.send_signed_transaction(|_acct| Call::bill_contract_for_block { contract_id });
-        for (_, res) in &result {
-            if res.is_ok() {
-                return Ok(());
-            }
+        let result = signer.send_signed_transaction(|_acct| Call::bill_contract_for_block { contract_id });
+
+        if result.iter().any(|(_, res)| res.is_ok()) {
+            return Ok(());
         }
-        log::error!(
-            "All local accounts failed to submit signed transaction for contract {:?}",
-            contract_id,
-        );
+
+        log::error!("All local accounts failed to submit signed transaction for contract {:?}", contract_id);
         for (_, res) in result {
             if let Err(e) = res {
-                log::error!(
-                    "error: {:?}",
-                    e,
-                );
+                log::error!("error: {:?}", e);
             }
         }
-        return Err(<Error<T>>::OffchainSignedTxAlreadySent);
+
+        Err(<Error<T>>::OffchainSignedTxAlreadySent)
     }
+
 
     // Bills a contract (NodeContract, NameContract or RentContract)
     // Calculates how much TFT is due by the user and distributes the rewards
@@ -117,6 +101,7 @@ impl<T: Config> Pallet<T> {
         let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
 
         // Bill rent contract only if node is online
+        // TODO: ensure contract state not in (deleted, grace period)
         if let types::ContractData::RentContract(rc) = &contract.contract_type {
             if let Some(node) = pallet_tfgrid::Nodes::<T>::get(rc.node_id) {
                 // No need for preliminary call to contains_key() because default node power value is Up
@@ -138,17 +123,26 @@ impl<T: Config> Pallet<T> {
             pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
         let usable_balance = Self::get_usable_balance(&twin.account_id);
         let stash_balance = Self::get_stash_balance(twin.id);
-        let total_balance = usable_balance
-            .checked_add(&stash_balance)
-            .unwrap_or(BalanceOf::<T>::zero());
-
+        // cap to max value of Balance type
+        let total_balance = usable_balance.checked_add(&stash_balance).unwrap_or_else(|| {
+            log::warn!(
+                "overflow while calculating total balance for twin {:?}, usable_balance: {:?}, stash_balance: {:?}, max value for balance type assumed",
+                contract.twin_id,
+                usable_balance,
+                stash_balance
+            );
+            BalanceOf::<T>::max_value() // TODO: check if this is the correct behavior or should we return an error
+        }); 
         let now = Self::get_current_timestamp_in_secs();
 
         // Calculate amount of seconds elapsed based on the contract lock struct
         let mut contract_lock = ContractLock::<T>::get(contract.contract_id);
+        
+        // calculate the seconds elapsed since the last lock update, if the lock updated time is 0 assume 0
         let seconds_elapsed = now.checked_sub(contract_lock.lock_updated).unwrap_or_else(|| {
             log::warn!(
-                "error while calculating seconds elapsed, now: {:?}, lock_updated: {:?}, 0 assumed",
+                "overflow while calculating seconds elapsed for contract {:?}, now: {:?}, lock_updated: {:?}, 0 assumed",
+                contract_id,
                 now,
                 contract_lock.lock_updated
             );
@@ -170,15 +164,27 @@ impl<T: Config> Pallet<T> {
             }
             _ => BalanceOf::<T>::zero(),
         };
-        let amount_due = regular_amount_due
-            .checked_add(&extra_amount_due)
-            .unwrap_or(BalanceOf::<T>::zero()); // TODO: IMO this is bad, we should return an error here
+        let amount_due = regular_amount_due.checked_add(&extra_amount_due).unwrap_or_else(|| {
+            log::warn!(
+                "overflow while calculating total amount due for contract {:?}, regular_amount_due: {:?}, extra_amount_due: {:?}, max value for balance type assumed",
+                contract_id,
+                regular_amount_due,
+                extra_amount_due
+            );
+            BalanceOf::<T>::max_value() // TODO: check if this is the correct behavior or should we return an error
+        });
 
         // If there is nothing to be paid and the contract is not in state delete, return
         // Can be that the users cancels the contract in the same block that it's getting billed
         // where elapsed seconds would be 0, but we still have to distribute rewards
         if amount_due.is_zero() && !contract.is_state_delete() {
-            log::debug!("amount to be billed is 0, nothing to do");
+            if matches!(contract.state, types::ContractState::GracePeriod(_)) {
+                // TODO: check if this is a valid case
+                // Oh well, the contract is in grace and for some reason the amount due is zero, now contract could stuck in grace
+                log::debug!("contract {} is in grace and amount due is zero!", contract.contract_id);
+            }
+            // TODO: this is likley okay, but double check if contract lock should be updated even if amount due is zero
+            log::info!("amount to be billed is 0, contract state {:?}, nothing to do with contract {:?}",contract.state , contract_id);
             return Ok(().into());
         };
 
@@ -186,17 +192,44 @@ impl<T: Config> Pallet<T> {
         let regular_lock_amount = contract_lock
             .amount_locked
             .checked_add(&regular_amount_due)
-            .unwrap_or(BalanceOf::<T>::zero());
+            .unwrap_or_else(|| {
+                log::warn!(
+                    "overflow while calculating regular lock amount for contract {:?}, amount_locked: {:?}, regular_amount_due: {:?}, max value for balance type assumed",
+                    contract_id,
+                    contract_lock.amount_locked,
+                    regular_amount_due
+                );
+                BalanceOf::<T>::max_value() // TODO: check if this is the correct behavior or should we return an error
+            });
         let extra_lock_amount = contract_lock
             .extra_amount_locked
             .checked_add(&extra_amount_due)
-            .unwrap_or(BalanceOf::<T>::zero());
+            .unwrap_or_else(|| {
+                log::warn!(
+                    "overflow while calculating extra lock amount for contract {:?}, extra_amount_locked: {:?}, extra_amount_due: {:?}, max value for balance type assumed",
+                    contract_id,
+                    contract_lock.extra_amount_locked,
+                    extra_amount_due
+                );
+                BalanceOf::<T>::max_value() // TODO: check if this is the correct behavior or should we return an error
+            });
         let lock_amount = regular_lock_amount
             .checked_add(&extra_lock_amount)
-            .unwrap_or(BalanceOf::<T>::zero());
+            .unwrap_or_else(|| {
+                log::warn!(
+                    "overflow while calculating total lock amount for contract {:?}, regular_lock_amount: {:?}, extra_lock_amount: {:?}, max value for balance type assumed",
+                    contract_id,
+                    regular_lock_amount,
+                    extra_lock_amount
+                );
+                BalanceOf::<T>::max_value() // TODO: check if this is the correct behavior or should we return an error
+            });
 
         // Handle grace
-        let contract = Self::handle_grace(&mut contract, usable_balance, lock_amount)?;
+        let contract = Self::handle_grace(&mut contract, usable_balance, lock_amount).or_else(|e| {
+            log::error!("error while handling grace: {:?}", e);
+            Err(e)
+        })?;
 
         // Only update contract lock in state (Created, GracePeriod)
         if !matches!(contract.state, types::ContractState::Deleted(_)) {
@@ -207,14 +240,14 @@ impl<T: Config> Pallet<T> {
             contract_lock.extra_amount_locked = extra_lock_amount;
         }
 
-        // If still in grace period, no need to continue doing locking and other stuff
+        // If still in grace period, no need to continue doing balance locking and other stuff
         if matches!(contract.state, types::ContractState::GracePeriod(_)) {
             log::info!("contract {} is still in grace", contract.contract_id);
             ContractLock::<T>::insert(contract.contract_id, &contract_lock);
             return Ok(().into());
         }
 
-        // Handle contract lock operations
+        // Handle balance lock operations for deleted, created contracts
         Self::handle_lock(contract, &mut contract_lock, amount_due)?;
 
         // Always emit a contract billed event
@@ -255,6 +288,8 @@ impl<T: Config> Pallet<T> {
         }
     }
 
+    // The handle_grace function manages the contract state when the user does not have sufficient funds to cover the amount due.
+    // It handles transitions to and from the grace period, ensuring that contracts can recover from or be terminated due to insufficient funds.
     fn handle_grace(
         contract: &mut types::Contract<T>,
         usable_balance: BalanceOf<T>,
@@ -267,6 +302,11 @@ impl<T: Config> Pallet<T> {
             types::ContractState::GracePeriod(grace_start) => {
                 // if the usable balance is recharged, we can move the contract to created state again
                 if usable_balance > amount_due {
+                    log::info!(
+                        "Contract {:?} is in grace period, but balance is recharged, moving to created state at block {:?}",
+                        contract.contract_id,
+                        current_block
+                    );
                     Self::update_contract_state(contract, &types::ContractState::Created)?;
                     Self::deposit_event(Event::ContractGracePeriodEnded {
                         contract_id: contract.contract_id,
@@ -276,9 +316,22 @@ impl<T: Config> Pallet<T> {
                     // If the contract is a rent contract, also move state on associated node contracts
                     Self::handle_grace_rent_contract(contract, types::ContractState::Created)?;
                 } else {
-                    let diff = current_block.checked_sub(grace_start).unwrap_or(0);
+                    let diff = current_block.checked_sub(grace_start).unwrap_or_else(|| {
+                        log::warn!(
+                            "overflow while calculating elapsed grace period for contract {:?}, current_block: {:?}, grace_start: {:?}, 0 assumed",
+                            contract.contract_id,
+                            current_block,
+                            grace_start
+                        );
+                        0
+                    });
                     // If the contract grace period ran out, we can decomission the contract
                     if diff >= T::GracePeriod::get() {
+                        log::info!(
+                            "Contract state chanegd to deleted at block {:?} due to an expired grace period. elapsed blocks: {:?}",
+                            current_block,
+                            diff
+                        );
                         Self::update_contract_state(
                             contract,
                             &types::ContractState::Deleted(types::Cause::OutOfFunds),
@@ -320,6 +373,7 @@ impl<T: Config> Pallet<T> {
         Ok(contract)
     }
 
+    // handling rent contracts, associated node contracts are also transitioned to the appropriate state (either Created or GracePeriod).
     fn handle_grace_rent_contract(
         contract: &mut types::Contract<T>,
         state: types::ContractState,
@@ -358,13 +412,13 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
+    // The handle_lock function manages the locking of tokens for a contract.
+    // It ensures that the correct amount of tokens is locked based on the contract's billing cycle and distributes rewards if necessary.
     fn handle_lock(
         contract: &mut types::Contract<T>,
         contract_lock: &mut types::ContractLock<BalanceOf<T>>,
         amount_due: BalanceOf<T>,
     ) -> DispatchResultWithPostInfo {
-        let now = Self::get_current_timestamp_in_secs();
-
         // Only lock an amount from the user's balance if the contract is in create state
         // The lock is specified on the user's account, since a user can have multiple contracts
         // Just extend the lock with the amount due for this contract billing period (lock will be created if not exists)
@@ -374,8 +428,8 @@ impl<T: Config> Pallet<T> {
             let mut locked_balance = Self::get_locked_balance(&twin.account_id);
             locked_balance = locked_balance
                 .checked_add(&amount_due)
-                .unwrap_or(BalanceOf::<T>::zero());
-            <T as Config>::Currency::extend_lock(
+                .unwrap_or(BalanceOf::<T>::zero()); // TODO: check if this is the correct behavior or should we return an error
+            <T as Config>::Currency::set_lock(
                 GRID_LOCK_ID,
                 &twin.account_id,
                 locked_balance,
@@ -383,39 +437,17 @@ impl<T: Config> Pallet<T> {
             );
         }
 
-        let canceled_and_not_zero =
+        let canceled_and_not_zero: bool =
             contract.is_state_delete() && contract_lock.has_some_amount_locked();
         // When the cultivation rewards are ready to be distributed or it's in delete state
         // Unlock all reserved balance and distribute
         if contract_lock.cycles >= T::DistributionFrequency::get() || canceled_and_not_zero {
             // First remove the lock, calculate how much locked balance needs to be unlocked and re-lock the remaining locked balance
             let locked_balance = Self::get_locked_balance(&twin.account_id);
-            let new_locked_balance =
-                match locked_balance.checked_sub(&contract_lock.total_amount_locked()) {
-                    Some(b) => b,
-                    None => BalanceOf::<T>::zero(),
-                };
-            <T as Config>::Currency::remove_lock(GRID_LOCK_ID, &twin.account_id);
+            let new_locked_balance = locked_balance.checked_sub(&contract_lock.total_amount_locked()).unwrap_or(BalanceOf::<T>::zero()); // TODO: check if this is the correct behavior or should we return an error
+            <T as Config>::Currency::set_lock(GRID_LOCK_ID, &twin.account_id, new_locked_balance, WithdrawReasons::all());
 
-            // Fetch twin balance, if the amount locked in the contract lock exceeds the current unlocked
-            // balance we can only transfer out the remaining balance
-            // https://github.com/threefoldtech/tfchain/issues/479
-            let min_balance = <T as Config>::Currency::minimum_balance();
-            let mut twin_balance = match new_locked_balance {
-                bal if bal > min_balance => {
-                    <T as Config>::Currency::set_lock(
-                        GRID_LOCK_ID,
-                        &twin.account_id,
-                        new_locked_balance,
-                        WithdrawReasons::all(),
-                    );
-                    Self::get_usable_balance(&twin.account_id)
-                }
-                _ => Self::get_usable_balance(&twin.account_id)
-                    .checked_sub(&min_balance)
-                    .unwrap_or(BalanceOf::<T>::zero()),
-            };
-
+            let mut twin_balance = Self::get_usable_balance(&twin.account_id);
             // First, distribute extra cultivation rewards if any
             if contract_lock.has_extra_amount_locked() {
                 log::info!(
@@ -466,6 +498,7 @@ impl<T: Config> Pallet<T> {
             };
 
             // Reset contract lock values
+            let now: u64 = Self::get_current_timestamp_in_secs();
             contract_lock.lock_updated = now;
             contract_lock.amount_locked = BalanceOf::<T>::zero();
             contract_lock.extra_amount_locked = BalanceOf::<T>::zero();
@@ -729,22 +762,20 @@ impl<T: Config> Pallet<T> {
     }
 
     // Get the usable balance of an account
-    // This is the balance minus the minimum balance
+    // This is the balance minus the minimum balance (spendable = free - max(frozen - on_hold, ED))
     pub fn get_usable_balance(account_id: &T::AccountId) -> BalanceOf<T> {
-        let balance = pallet_balances::pallet::Pallet::<T>::usable_balance(account_id);
-        let b = balance.saturated_into::<u128>();
+        let spendable = pallet_balances::pallet::Pallet::<T>::reducible_balance(account_id, Preserve, Polite);
+        let b = spendable.saturated_into::<u128>();
         BalanceOf::<T>::saturated_from(b)
     }
 
+    // TODO: fix me / remove me
     fn get_locked_balance(account_id: &T::AccountId) -> BalanceOf<T> {
-        let usable_balance = Self::get_usable_balance(account_id);
-        let free_balance = <T as Config>::Currency::free_balance(account_id);
-
-        let locked_balance = free_balance.checked_sub(&usable_balance);
-        match locked_balance {
-            Some(balance) => balance,
-            None => BalanceOf::<T>::zero(),
-        }
+        // get locked balance by Grid lock id
+        let grid_lock = pallet_balances::pallet::Pallet::<T>::locks(account_id).into_iter().find(|l| l.id == GRID_LOCK_ID);
+        
+        let b = grid_lock.map_or(0, |l| l.amount.saturated_into::<u128>());
+        BalanceOf::<T>::saturated_from(b)
     }
 
     fn get_stash_balance(twin_id: u32) -> BalanceOf<T> {

@@ -329,7 +329,8 @@ impl<T: Config> Pallet<T> {
 
     pub fn remove_contract(contract_id: u64) -> DispatchResultWithPostInfo {
         let contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
-
+        
+        log::debug!("removing contract {}", contract_id);
         match contract.contract_type.clone() {
             types::ContractData::NodeContract(mut node_contract) => {
                 if node_contract.public_ips > 0 {
@@ -371,7 +372,6 @@ impl<T: Config> Pallet<T> {
             }
         };
 
-        log::debug!("removing contract {}", contract_id);
         Contracts::<T>::remove(contract_id);
         ContractLock::<T>::remove(contract_id);
 
@@ -405,7 +405,7 @@ impl<T: Config> Pallet<T> {
         contract.state = state.clone();
         Contracts::<T>::insert(&contract.contract_id, contract.clone());
 
-        // if the contract is a name contract, nothing to do left here
+        // if the contract is a name or rent contract, nothing to do left here
         match contract.contract_type {
             types::ContractData::NameContract(_) => return Ok(().into()),
             types::ContractData::RentContract(_) => return Ok(().into()),
