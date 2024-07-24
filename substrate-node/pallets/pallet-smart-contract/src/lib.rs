@@ -197,7 +197,6 @@ pub mod pallet {
     pub type DedicatedNodesExtraFee<T> = StorageMap<_, Blake2_128Concat, u32, u64, ValueQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn seen_values)]
     pub type SeenContracts<T> = StorageValue<_, Vec<u64>, ValueQuery>;
 
     #[pallet::config]
@@ -521,21 +520,34 @@ pub mod pallet {
             contract_id: u64,
         ) -> DispatchResultWithPostInfo {
             let _account_id = ensure_signed(origin)?;
-
-            let mut seen_contracts = SeenContracts::<T>::get();
-            ensure!(
-                !seen_contracts.contains(&contract_id),
-                "this contract already processed in this block",
-            );
-            seen_contracts.push(contract_id);
-            SeenContracts::<T>::put(seen_contracts);
-
             let validators = pallet_session::Pallet::<T>::validators();
             let is_validator =
                 <T as pallet_session::Config>::ValidatorIdOf::convert(_account_id.clone())
                     .map_or(false, |validator_id| validators.contains(&validator_id));
 
-            Self::bill_contract(contract_id, is_validator)
+            let res = Self::bill_contract(contract_id);
+
+            let pays: Pays = if is_validator {
+                log::info!("validator is exempt from fees");
+                // Exempt fees for validators
+                Pays::No.into()
+            } else {
+                log::info!("caller is not exempt from fees");
+                Pays::Yes.into()
+            };
+
+            match res {
+                Ok(mut info) => {
+                    log::info!("successfully billed contract with id {:?}", contract_id,);
+                    info.pays_fee = pays;
+                    Ok(info)
+                }
+                Err(mut info) => {
+                    log::info!("failed to bill contract with id {:?}", contract_id);
+                    info.post_info.pays_fee = pays;
+                    Err(info)
+                }
+            }
         }
 
         #[pallet::call_index(11)]

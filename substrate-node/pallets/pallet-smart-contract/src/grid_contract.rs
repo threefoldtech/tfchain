@@ -322,7 +322,7 @@ impl<T: Config> Pallet<T> {
 
         Self::update_contract_state(contract, &types::ContractState::Deleted(cause))?;
         log::debug!("Billing for contract {} kicked in due to cancel request", contract.contract_id);
-        Self::bill_contract(contract.contract_id, false)?;
+        Self::bill_contract(contract.contract_id)?;
 
         Ok(().into())
     }
@@ -704,7 +704,7 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
                     &types::ContractState::Deleted(types::Cause::CanceledByUser),
                 );
                 log::debug!("Billing for node contract {} kicked in due to node deletion", contract.contract_id);
-                let _ = Self::bill_contract(node_contract_id, false);
+                let _ = Self::bill_contract(node_contract_id);
 
             }
         }
@@ -718,7 +718,7 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
                     &types::ContractState::Deleted(types::Cause::CanceledByUser),
                 );
                 log::debug!("Billing for rent contract {} kicked in due to node deletion", contract.contract_id);
-                let _ = Self::bill_contract(contract.contract_id, false);
+                let _ = Self::bill_contract(contract.contract_id);
             }
         }
     }
