@@ -3962,8 +3962,7 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
 
             // aggregate extra fee cost
             extra_fee_cost_tft += rent_contract
-                .calculate_extra_fee_cost_tft(node_id, elapsed_time_in_secs)
-                .unwrap();
+                .calculate_extra_fee_cost_tft(node_id, elapsed_time_in_secs);
         }
 
         let then = SmartContractModule::get_current_timestamp_in_secs();

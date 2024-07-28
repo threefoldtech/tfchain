@@ -5,17 +5,21 @@ use frame_support::{
     traits::{
         fungible::Inspect,
         tokens::{Fortitude::Polite, Preservation::Preserve},
-        Currency, ExistenceRequirement, LockableCurrency, OnUnbalanced, WithdrawReasons,
+        Currency, ExistenceRequirement, LockableCurrency, OnUnbalanced, WithdrawReasons, ReservableCurrency, NamedReservableCurrency
     },
 };
+use frame_support::traits::{DefensiveSaturating};
+
 use frame_system::{
     offchain::{SendSignedTransaction, Signer},
-    pallet_prelude::BlockNumberFor,
+    pallet_prelude::BlockNumberFor, Account, AccountInfo,
 };
+use frame_support::traits::BalanceStatus;
+use frame_support::traits::StoredMap;
+use pallet_tfgrid::migrations::types::v14::Twin;
 use sp_core::Get;
 use sp_runtime::{
-    traits::{Bounded, CheckedAdd, CheckedSub, Zero},
-    DispatchResult, Perbill, SaturatedConversion,
+    traits::{Bounded, CheckedAdd, CheckedSub, IdentityLookup, Saturating, StaticLookup, Zero}, DispatchResult, Perbill, SaturatedConversion
 };
 use sp_std::vec::Vec;
 
@@ -116,6 +120,450 @@ impl<T: Config> Pallet<T> {
     // Bills a contract (NodeContract, NameContract or RentContract)
     // Calculates how much TFT is due by the user and distributes the rewards
     pub fn bill_contract(contract_id: u64) -> DispatchResultWithPostInfo {
+        // what events we expect ?
+        // - ContractBilled // a new bill is issued to the user
+        // - RentWaived // rent contract is waived due to node being in standby
+        // - ContractGracePeriodStarted // contract moved to grace period due to lack of funds
+        // - ContractGracePeriodEnded // contract restored from grace period due to funds being available
+        // - ContractGracePeriodElapsed // grace period expired and contract moved to deleted state
+        // - Overdrafted // overdraft is incurred 
+
+        // pre check if contract is already processed in this block
+        let mut seen_contracts = SeenContracts::<T>::get();
+        ensure!(
+            !seen_contracts.contains(&contract_id),
+            Error::<T>::ContractAlreadyProcessedInBlock,
+        );
+        seen_contracts.push(contract_id);
+        SeenContracts::<T>::put(seen_contracts);
+
+        let mut contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
+        let src_twin =
+            pallet_tfgrid::Twins::<T>::get(contract.twin_id).ok_or(Error::<T>::TwinNotExists)?;
+        let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1)
+            .ok_or(Error::<T>::PricingPolicyNotExists)?;
+
+            
+        // if contract is not name contract ensure the node exists
+        if !matches!(contract.contract_type, types::ContractData::NameContract(_)) {
+            let node = pallet_tfgrid::Nodes::<T>::get(contract.get_node_id()).ok_or(Error::<T>::NodeNotExists)?;
+            let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
+            pallet_tfgrid::Twins::<T>::get(farm.twin_id).ok_or(Error::<T>::TwinNotExists)?;
+        }
+        
+        // TODO: this get updated externally when contract created and for rent contract when node back up from standby
+        // so we need to update the code there as well to use the new ContractPaymentState struct
+        let mut old_contract_lock = ContractLock::<T>::take(contract.contract_id); // get and remove the contract lock
+        let mut contract_payment_state = ContractPaymentState::<T>::get(contract.contract_id);
+        // ensure contract is migrated
+        Self::ensure_contract_migrated(&src_twin.account_id, &mut old_contract_lock, &mut contract_payment_state)?;
+
+        // calcualte user total reducible balance to decied the dicsount level
+        let twin_usable_balance = Self::get_usable_balance(&src_twin.account_id);
+        let stash_usable_balance = Self::get_stash_balance(src_twin.id);
+        // saturated_sum to cap the total balance to max value of Balance type
+        let total_usable_balance = twin_usable_balance.defensive_saturating_add(stash_usable_balance);
+        let now: u64 = Self::get_current_timestamp_in_secs();
+
+        // Calculate amount of seconds elapsed based on the contract payment state
+        let seconds_elapsed = now.defensive_saturating_sub(contract_payment_state.last_updated_seconds);
+        
+        let should_waive_payment = match &contract.contract_type {
+            types::ContractData::RentContract(rc) => {
+                let node_power = pallet_tfgrid::NodePower::<T>::get(rc.node_id);
+                node_power.is_standby()
+            }
+            _ => false,
+        };
+
+        if should_waive_payment {
+            // Always emit a rent waived event
+            Self::deposit_event(Event::RentWaived{contract_id: contract.contract_id});
+            if matches!(contract.state, types::ContractState::Created) {
+                return Ok(().into());
+            }
+        }
+
+        // Calculate the due amount / note that calculate_contract_cost_tft function uses the default pricing policy
+        let (standard_amount_due, discount_received) = match should_waive_payment {
+            true => (BalanceOf::<T>::zero(), types::DiscountLevel::None),
+            false => contract
+            .calculate_contract_cost_tft(total_usable_balance, seconds_elapsed)
+            .map_err(|e| {
+                log::error!("error while calculating contract cost: {:?}", e);
+                e
+            })?,
+        };
+
+        let additional_amount_due = match &contract.contract_type {
+            types::ContractData::RentContract(rc) => match should_waive_payment {
+                true => BalanceOf::<T>::zero(),
+                false => contract
+                .calculate_extra_fee_cost_tft(rc.node_id, seconds_elapsed),
+            },
+            _ => BalanceOf::<T>::zero(),
+        };
+
+        let total_amount_due = standard_amount_due.defensive_saturating_add(additional_amount_due);
+
+        // The term "billed" generally implies that a request for payment has been made rather than the payment itself being completed.
+        // Therefore, using ContractBilled for issuing a new bill to the user fits well within the common understanding of billing processes.
+
+        // Always emit a contract billed event, unless payment is waived
+        let contract_bill = types::ContractBill {
+            contract_id: contract.contract_id,
+            timestamp: now,
+            discount_level: discount_received.clone(),
+            amount_billed: total_amount_due.saturated_into::<u128>(),
+        };
+        Self::deposit_event(Event::ContractBilled(contract_bill));
+
+        // Calculate the amount needed to be reserved from the user's balance. this is the total amount due + overdrafted amount
+        let standard_amount_to_reserve = standard_amount_due.defensive_saturating_add(contract_payment_state.standard_overdrafted);
+        let additional_amount_to_reserve = additional_amount_due.defensive_saturating_add(contract_payment_state.additional_overdrafted);
+        let total_amount_to_reserve = standard_amount_to_reserve.defensive_saturating_add(additional_amount_to_reserve);
+
+        // can we reserve this amount from the user's balance ?
+        let has_sufficient_fund =  <T as Config>::Currency::can_reserve(&src_twin.account_id, total_amount_to_reserve);
+
+        let current_block = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
+
+        // check contract state and take action
+        match contract.state {
+            types::ContractState::GracePeriod(grace_start) => {
+                // if the usable balance is recharged, we can move the contract to created state again
+                if has_sufficient_fund {
+                    log::info!(
+                        "Contract {:?} is in grace period, but balance is recharged, moving to created state at block {:?}",
+                        contract.contract_id,
+                        current_block
+                    );
+                    Self::update_contract_state(&mut contract, &types::ContractState::Created)?;
+                    Self::deposit_event(Event::ContractGracePeriodEnded {
+                        contract_id: contract.contract_id,
+                        node_id: contract.get_node_id(),
+                        twin_id: contract.twin_id,
+                    });
+                    // If the contract is a rent contract, also move state on associated node contracts
+                    Self::handle_grace_rent_contract(&mut contract, types::ContractState::Created)?;
+                } else {
+                    let diff = current_block.defensive_saturating_sub(grace_start);
+                    // If the contract grace period ran out, we can decomission the contract
+                    if diff >= T::GracePeriod::get() {
+                        // emit grace period elapsed event
+                        Self::deposit_event(Event::ContractGracePeriodElapsed {
+                            contract_id: contract.contract_id,
+                        });
+                        log::info!(
+                            "Contract state chanegd to deleted at block {:?} due to an expired grace period. elapsed blocks: {:?}",
+                            current_block,
+                            diff
+                        );
+                        Self::update_contract_state(
+                            &mut contract,
+                            &types::ContractState::Deleted(types::Cause::OutOfFunds),
+                        )?;
+                    }
+                }
+            }
+            types::ContractState::Created => {
+                // if the user ran out of funds, move the contract to be in a grace period
+                // dont lock the tokens because there is nothing to lock
+                // we can still update the internal contract lock object to figure out later how much was due
+                // whilst in grace period
+                if !has_sufficient_fund {
+                    log::info!(
+                        "Grace period started at block {:?} due to lack of funds",
+                        now
+                    );
+                    Self::update_contract_state(
+                        &mut contract,
+                        &types::ContractState::GracePeriod(now),
+                    )?;
+                    // We can't lock the amount due on the contract's lock because the user ran out of funds
+                    Self::deposit_event(Event::ContractGracePeriodStarted {
+                        contract_id: contract.contract_id,
+                        node_id: contract.get_node_id(),
+                        twin_id: contract.twin_id,
+                        block_number: current_block.saturated_into(),
+                    });
+                }
+            }
+            _ => (),
+        }
+        
+        contract_payment_state.last_updated_seconds = now;
+        contract_payment_state.cycles.defensive_saturating_inc();
+        // if the user has sufficient funds, reserve the amount due
+        if has_sufficient_fund {
+            // Reserve the amount due from the user's balance
+            <T as Config>::Currency::reserve(&src_twin.account_id, total_amount_to_reserve)
+                .map_err(|e| {
+                    log::error!("error while reserving amount due: {:?}", e);
+                    e
+                })?;
+            // update the contract payment state
+            contract_payment_state.settle_overdrafted();
+            contract_payment_state.reserve_standard_amount(standard_amount_due);
+            contract_payment_state.reserve_additional_amount(additional_amount_due);
+            ContractPaymentState::<T>::insert(contract.contract_id, &contract_payment_state);
+        } else {
+            contract_payment_state.overdraft_standard_amount(standard_amount_due);
+            contract_payment_state.overdraft_additional_amount(additional_amount_due);
+            // if the user doesn't have sufficient funds, reserve as much as posible and overdraft the rest
+            // get the account from account_id
+            // Get the free balance
+            let reservable = Self::get_reservable_balance(&src_twin.account_id);
+            <T as Config>::Currency::reserve(&src_twin.account_id, reservable)
+                .map_err(|e| {
+                    log::error!("error while reserving amount due: {:?}", e);
+                    e
+                })?;
+            contract_payment_state.settle_partial_overdrafted(reservable);
+            
+            
+            ContractPaymentState::<T>::insert(contract.contract_id, &contract_payment_state);
+            // emit overdrafted event
+            Self::deposit_event(Event::ContractPaymentOverdrafted {
+                contract_id: contract.contract_id,
+                amount: contract_payment_state.get_overdrafted(), // total drafted amount for the contract
+            });
+        }
+
+        // distribute rewards if threshold reached or contract in deleted state and emit RewardDistributed event
+        let is_deleted = matches!(contract.state, types::ContractState::Deleted(_));
+        let should_distribute_rewards = contract_payment_state.cycles >= T::DistributionFrequency::get() || is_deleted;
+        if should_distribute_rewards {
+            if contract_payment_state.has_reserved_amount() {
+                let standard_rewards = contract_payment_state.standard_reserved;
+                let additional_rewards = contract_payment_state.additional_reserved;
+                let distributed_additional_amount = match &contract.contract_type {
+                    types::ContractData::RentContract(rc) =>  {
+                        let dst_twin = {
+                        let node = pallet_tfgrid::Nodes::<T>::get(rc.node_id).ok_or(Error::<T>::NodeNotExists)?;
+                        let farm = pallet_tfgrid::Farms::<T>::get(node.farm_id).ok_or(Error::<T>::FarmNotExists)?;
+                        pallet_tfgrid::Twins::<T>::get(farm.twin_id).ok_or(Error::<T>::TwinNotExists)?
+                        };
+                        Self::distribute_additional_rewards(&src_twin, &dst_twin ,additional_rewards)},
+                    _ => BalanceOf::<T>::zero(),
+                };
+                // update additional_reserved amount in contract payment state
+                let reminder = additional_rewards.defensive_saturating_sub(distributed_additional_amount);
+                // reminder is the amount that couldn't be distributed, we will keep it for the next cycle. Normally this should be zero
+                contract_payment_state.additional_reserved = reminder;
+                // distribute standard rewards
+                let solution_provider_id = contract.solution_provider_id;
+                Self::distribute_standard_rewards(&src_twin, contract.contract_id,solution_provider_id, &pricing_policy, standard_rewards)?;
+                // update standard_reserved amount in contract payment state
+                contract_payment_state.standard_reserved = BalanceOf::<T>::zero();
+                // reset cycle
+                contract_payment_state.cycles = 0;
+                // emit reward distributed event
+                Self::deposit_event(Event::RewardDistributed {
+                    contract_id: contract.contract_id,
+                    standard_rewards: standard_rewards,
+                    additional_rewards: distributed_additional_amount,
+                });
+            }
+            
+        }        
+
+        // check if we need to clean up the contract storage
+        if matches!(contract.state, types::ContractState::Deleted(_)) {
+            return Self::remove_contract(contract.contract_id);
+        }
+
+        // If contract is node contract, set the amount unbilled back to 0
+        if matches!(contract.contract_type, types::ContractData::NodeContract(_)) {
+            let mut contract_billing_info =
+                ContractBillingInformationByID::<T>::get(contract.contract_id);
+            contract_billing_info.amount_unbilled = 0;
+            ContractBillingInformationByID::<T>::insert(
+                contract.contract_id,
+                &contract_billing_info,
+            );
+        }
+
+        // Finally update contract payment state
+        ContractPaymentState::<T>::insert(contract.contract_id, &contract_payment_state);
+        Ok(().into())
+
+    }
+
+    // due to the number of contracts we need to do the migration in lazy way
+    fn ensure_contract_migrated(account_id: &T::AccountId, contract_lock: &mut types::ContractLock<BalanceOf<T>>, contract_payment_state: &mut types::ContractPaymentState<BalanceOf<T>> ) -> DispatchResult {
+        if !contract_lock.is_migrated() {
+            // do migartion
+            contract_payment_state.last_updated_seconds = contract_lock.lock_updated;
+            contract_payment_state.standard_overdrafted = contract_lock.amount_locked;
+            contract_payment_state.additional_overdrafted = contract_lock.extra_amount_locked;
+            contract_payment_state.cycles = contract_lock.cycles;
+            // remove all locks on user balance
+            let locks = pallet_balances::Pallet::<T>::locks(&account_id);
+            for lock in locks {
+                pallet_balances::Pallet::<T>::remove_lock(lock.id, &account_id);
+            }
+        }
+        Ok(())
+    }
+
+    pub fn distribute_additional_rewards(src_twin: &pallet_tfgrid::types::Twin<T::AccountId>, dst_twin: &pallet_tfgrid::types::Twin<T::AccountId>, amount: BalanceOf<T>) -> BalanceOf<T> {
+        // distribute the additional rewards to the dedicated node owner
+    
+        // Return 0 if the amount is zero
+        if amount == BalanceOf::<T>::zero() {
+            return amount;
+        }
+        // Repatriate reserved amount from the contract twin to the farmer's account
+        let res = <T as Config>::Currency::repatriate_reserved(
+            &src_twin.account_id,
+            &dst_twin.account_id,
+            amount,
+            BalanceStatus::Free,
+        );
+    
+        match res {
+            Ok(actual) => {
+                // Log the successful transfer
+                actual
+            }
+            Err(e) => {
+                // Log the failed transfer
+                log::error!("Error: {:?}", e);
+                BalanceOf::<T>::zero()
+            }
+        }
+    }
+
+    fn distribute_standard_rewards(
+        src_twin: &pallet_tfgrid::types::Twin<T::AccountId>,
+        contract_id: u64,
+        solution_provider_id: Option<u64>,
+        pricing_policy: &pallet_tfgrid::types::PricingPolicy<T::AccountId>,
+        amount: BalanceOf<T>,
+    ) -> DispatchResult {
+        log::info!(
+            "Distributing standard rewards for twin {:?} with amount {:?}",
+            src_twin.account_id,
+            amount,
+        );
+    
+        // Return 0 if the amount is zero
+        if amount == BalanceOf::<T>::zero() {
+            return Ok(().into());
+        }
+    
+        // Calculate foundation share (10%)
+        let foundation_share = Perbill::from_percent(10) * amount;
+        log::debug!(
+            "Transferring: {:?} from twin {:?} to foundation account {:?}",
+            &foundation_share,
+            &src_twin.account_id,
+            &pricing_policy.foundation_account
+        );
+        let actual = <T as Config>::Currency::repatriate_reserved(
+            &src_twin.account_id,
+            &pricing_policy.foundation_account,
+            foundation_share,
+            BalanceStatus::Free,
+        )?;
+        assert!(actual == foundation_share);
+    
+        // Calculate staking pool share (5%)
+        let staking_pool_share = Perbill::from_percent(5) * amount;
+        let staking_pool_account = T::StakingPoolAccount::get();
+        log::debug!(
+            "Transferring: {:?} from twin {:?} to staking pool account {:?}",
+            &staking_pool_share,
+            &src_twin.account_id,
+            &staking_pool_account,
+        );
+        let actual = <T as Config>::Currency::repatriate_reserved(
+            &src_twin.account_id,
+            &staking_pool_account,
+            staking_pool_share,
+            BalanceStatus::Free,
+        )?;
+        assert!(actual == staking_pool_share);
+
+        // Calculate sales share (default 50%)
+        let mut sales_percentage = 50;
+        let mut total_provider_share = BalanceOf::<T>::zero();
+        if let Some(provider_id) = solution_provider_id {
+            if let Some(solution_provider) = SolutionProviders::<T>::get(provider_id) {
+                let total_take: u8 = solution_provider
+                    .providers
+                    .iter()
+                    .map(|provider| provider.take)
+                    .sum();
+                assert!(total_take <= 50);
+                sales_percentage.defensive_saturating_reduce(total_take);
+    
+                for provider in solution_provider.providers.iter() {
+                    let share = Perbill::from_percent(provider.take as u32) * amount;
+                    log::debug!(
+                        "Transferring: {:?} from twin {:?} to provider account {:?}",
+                        &share,
+                        &src_twin.account_id,
+                        &provider.who
+                    );
+                    let actual = <T as Config>::Currency::repatriate_reserved(
+                        &src_twin.account_id,
+                        &provider.who,
+                        share,
+                        BalanceStatus::Free,
+                    )?;
+                    assert!(actual == share);
+
+                    total_provider_share.defensive_saturating_add(share);
+                }
+            }
+        };
+    
+        let sales_share =if sales_percentage > 0 {
+            let share = Perbill::from_percent(sales_percentage.into()) * amount;
+            log::debug!(
+                "Transferring: {:?} from twin {:?} to sales account {:?}",
+                &share,
+                &src_twin.account_id,
+                &pricing_policy.certified_sales_account
+            );
+            let actual = <T as Config>::Currency::repatriate_reserved(
+                &src_twin.account_id,
+                &pricing_policy.certified_sales_account,
+                share,
+                BalanceStatus::Free,
+            )?;
+            assert!(actual == share);
+
+            share
+        } else {
+            BalanceOf::<T>::zero()
+        };
+    
+        // Calculate amount to burn (35%)
+
+        let total_distributed = foundation_share + staking_pool_share + total_provider_share + sales_share;
+        let amount_to_burn = amount - total_distributed;
+
+        let (to_burn , reminder) = T::Currency::slash_reserved(
+            &src_twin.account_id,
+            amount_to_burn,
+        );
+        assert!(reminder == BalanceOf::<T>::zero());
+        log::debug!("Burning: {:?} from twin {:?}", amount_to_burn, &src_twin.account_id);
+        T::Burn::on_unbalanced(to_burn);
+    
+        Self::deposit_event(Event::TokensBurned {
+            contract_id: contract_id,
+            amount: amount_to_burn,
+        });
+    
+        Ok(().into())
+    }
+    // Bills a contract (NodeContract, NameContract or RentContract)
+    // Calculates how much TFT is due by the user and distributes the rewards
+    pub fn bill_contract_old(contract_id: u64) -> DispatchResultWithPostInfo {
         
         let mut seen_contracts = SeenContracts::<T>::get();
         ensure!(
@@ -134,6 +582,7 @@ impl<T: Config> Pallet<T> {
         }
 
         let usable_balance = Self::get_usable_balance(&twin.account_id);
+        // TODO: Q: why we use stash balance only for decieding the discount level, but not touch it in the billing process if main account didn't have enough balance?
         let stash_balance = Self::get_stash_balance(twin.id);
         // cap to max value of Balance type
         let total_balance = usable_balance.checked_add(&stash_balance).unwrap_or_else(|| {
@@ -170,11 +619,7 @@ impl<T: Config> Pallet<T> {
             })?;
         let extra_amount_due = match &contract.contract_type {
             types::ContractData::RentContract(rc) => contract
-                .calculate_extra_fee_cost_tft(rc.node_id, seconds_elapsed)
-                .map_err(|e| {
-                    log::error!("error while calculating extra fee cost: {:?}", e);
-                    e
-                })?,
+                .calculate_extra_fee_cost_tft(rc.node_id, seconds_elapsed),
             _ => BalanceOf::<T>::zero(),
         };
         let amount_due = regular_amount_due.checked_add(&extra_amount_due).unwrap_or_else(|| {
@@ -283,7 +728,7 @@ impl<T: Config> Pallet<T> {
         }
 
         // ____________________________________________________________________________________________________________________________ //
-        // return early (contract lock updated, no event)!
+        // return early (contract lock updated, no event)! what about nu unbilled amount in conatrct billing info, we will get it counted again next time ?
         // ____________________________________________________________________________________________________________________________ //
         // If still in grace period, no need to continue doing balance locking and other stuff
         if matches!(contract.state, types::ContractState::GracePeriod(_)) {
@@ -832,7 +1277,7 @@ impl<T: Config> Pallet<T> {
         BalanceOf::<T>::saturated_from(b)
     }
 
-    // TODO: fix me / remove me
+    // TODO: fix me / remove me / previously locked balance is acyually the untuchable balance
     fn get_locked_balance(account_id: &T::AccountId) -> BalanceOf<T> {
         // get locked balance by Grid lock id
         let grid_lock = pallet_balances::pallet::Pallet::<T>::locks(account_id)
@@ -850,6 +1295,19 @@ impl<T: Config> Pallet<T> {
             None => BalanceOf::<T>::zero(),
         }
     }
+
+    // Get the reservable balance of an account
+    // This is the balance minus the minimum balance (reservable = free - ED - Frozen )
+    fn get_reservable_balance(account_id: &T::AccountId) -> BalanceOf<T> {
+        let account = T::AccountStore::get(account_id);
+        let free = account.free;
+        let frozen = account.frozen;
+
+        // Get the reservable balance
+        let reservable = free.saturating_sub(<pallet_balances::Pallet<T> as frame_support::traits::fungible::Inspect<T::AccountId>>::minimum_balance()).saturating_sub(frozen);
+        BalanceOf::<T>::saturated_from(reservable.saturated_into::<u128>())
+    }
+
 
     pub fn get_current_timestamp_in_secs() -> u64 {
         <pallet_timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000

@@ -35,7 +35,7 @@ impl<T: Config> types::Contract<T> {
             return Ok((BalanceOf::<T>::zero(), types::DiscountLevel::None));
         }
 
-        let total_cost_tft_64 = calculate_cost_in_tft_from_units_usd::<T>(total_cost)?;
+        let total_cost_tft_64 = calculate_cost_in_tft_from_units_usd::<T>(total_cost);
 
         // Calculate the amount due and discount received based on the total_cost amount due
         let (amount_due, discount_received) = calculate_discount_tft::<T>(
@@ -118,14 +118,14 @@ impl<T: Config> types::Contract<T> {
         &self,
         node_id: u32,
         seconds_elapsed: u64,
-    ) -> Result<BalanceOf<T>, DispatchErrorWithPostInfo> {
+    ) -> BalanceOf<T> {
         let cost = calculate_extra_fee_cost_units_usd::<T>(node_id, seconds_elapsed);
         if cost == 0 {
-            return Ok(BalanceOf::<T>::zero());
+            return BalanceOf::<T>::zero();
         }
-        let cost_tft = calculate_cost_in_tft_from_units_usd::<T>(cost)?;
+        let cost_tft = calculate_cost_in_tft_from_units_usd::<T>(cost);
 
-        Ok(BalanceOf::<T>::saturated_from(cost_tft))
+        BalanceOf::<T>::saturated_from(cost_tft)
     }
 }
 
@@ -178,7 +178,7 @@ impl types::ServiceContract {
         }
 
         // Calculate the cost in TFT for service contract
-        let total_cost_tft_64 = calculate_cost_in_tft_from_units_usd::<T>(total_cost)?;
+        let total_cost_tft_64 = calculate_cost_in_tft_from_units_usd::<T>(total_cost);
 
         // convert to balance object
         let amount_due: BalanceOf<T> = BalanceOf::<T>::saturated_from(total_cost_tft_64);
@@ -342,7 +342,7 @@ pub fn calculate_discount_tft<T: Config>(
 
 pub fn calculate_cost_in_tft_from_units_usd<T: Config>(
     cost_units_usd: u64,
-) -> Result<u64, DispatchErrorWithPostInfo> {
+) -> u64 {
     let avg_tft_price = pallet_tft_price::AverageTftPrice::<T>::get();
 
     // Guarantee tft price will never be lower than min tft price
@@ -360,7 +360,5 @@ pub fn calculate_cost_in_tft_from_units_usd<T: Config>(
     let cost_tft = U64F64::from_num(cost_units_usd) / U64F64::from_num(tft_price_units_usd);
 
     // Multiply by the chain precision (7 decimals)
-    Ok((cost_tft * U64F64::from_num(10u64.pow(7)))
-        .round()
-        .to_num::<u64>())
+    (cost_tft * U64F64::from_num(10u64.pow(7))).round().to_num::<u64>()
 }

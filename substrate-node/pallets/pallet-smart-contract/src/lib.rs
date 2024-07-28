@@ -63,7 +63,7 @@ pub mod pallet {
     use super::*;
     use frame_support::{
         pallet_prelude::*,
-        traits::{Currency, Get, Hooks, LockIdentifier, LockableCurrency, OnUnbalanced},
+        traits::{Currency, Get, Hooks, LockIdentifier, LockableCurrency, OnUnbalanced, ReservableCurrency, NamedReservableCurrency,},
     };
     use frame_system::{
         self as system, ensure_signed,
@@ -199,6 +199,11 @@ pub mod pallet {
     #[pallet::storage]
     pub type SeenContracts<T> = StorageValue<_, Vec<u64>, ValueQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn contract_payment_state)]
+    pub type ContractPaymentState<T: Config> =
+        StorageMap<_, Blake2_128Concat, u64, types::ContractPaymentState<BalanceOf<T>>, ValueQuery>;
+
     #[pallet::config]
     pub trait Config:
         CreateSignedTransaction<Call<Self>>
@@ -211,7 +216,7 @@ pub mod pallet {
         + pallet_session::Config
     {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-        type Currency: LockableCurrency<Self::AccountId>;
+        type Currency: LockableCurrency<Self::AccountId> + NamedReservableCurrency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
         /// Handler for the unbalanced decrement when slashing (burning collateral)
         type Burn: OnUnbalanced<NegativeImbalanceOf<Self>>;
         type StakingPoolAccount: Get<Self::AccountId>;
@@ -293,14 +298,14 @@ pub mod pallet {
         RentContractCanceled {
             contract_id: u64,
         },
-        /// A Contract grace period is triggered
+        /// A Contract grace period is triggered due to overdarfted
         ContractGracePeriodStarted {
             contract_id: u64,
             node_id: u32,
             twin_id: u32,
             block_number: u64,
         },
-        /// A Contract grace period was ended
+        /// A Contract grace period was ended due to overdarfted being settled
         ContractGracePeriodEnded {
             contract_id: u64,
             node_id: u32,
@@ -331,6 +336,25 @@ pub mod pallet {
         NodeExtraFeeSet {
             node_id: u32,
             extra_fee: u64,
+        },
+        // A rent contract is waived due to node being in standby
+        RentWaived {
+            contract_id: u64,
+        },
+        // A Contract grace Period is elapsed
+        ContractGracePeriodElapsed {
+            contract_id: u64,
+        },
+        // Overdafted incurred
+        ContractPaymentOverdrafted {
+            contract_id: u64,
+            amount: BalanceOf<T>, // total amount overdrafted
+        },
+        // RewardDistributed
+        RewardDistributed {
+            contract_id: u64,
+            standard_rewards: BalanceOf<T>,
+            additional_rewards: BalanceOf<T>,
         },
     }
 
@@ -388,6 +412,7 @@ pub mod pallet {
         WrongAuthority,
         UnauthorizedToChangeSolutionProviderId,
         UnauthorizedToSetExtraFee,
+        ContractAlreadyProcessedInBlock,
     }
 
     #[pallet::genesis_config]
