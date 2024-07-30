@@ -223,9 +223,9 @@ impl<T: Config> Pallet<T> {
         ContractID::<T>::put(id);
 
         let now = Self::get_current_timestamp_in_secs();
-        let mut contract_lock = types::ContractLock::default();
-        contract_lock.lock_updated = now;
-        ContractLock::<T>::insert(id, contract_lock);
+        let mut contract_payment_state = types::ContractPaymentState::default();
+        contract_payment_state.last_updated_seconds = now;
+        ContractPaymentState::<T>::insert(id, contract_payment_state);
 
         Ok(contract)
     }
@@ -374,7 +374,7 @@ impl<T: Config> Pallet<T> {
 
         Contracts::<T>::remove(contract_id);
         ContractLock::<T>::remove(contract_id);
-
+        ContractPaymentState::<T>::remove(contract_id);
         // Clean up contract from billing loop
         // This is the only place it should be done
         log::debug!("cleaning up deleted contract {} from billing loop", contract_id);
@@ -729,11 +729,11 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
         let node_power = pallet_tfgrid::NodePower::<T>::get(node.id);
         if !node_power.is_standby() {
             if let Some(rc_id) = ActiveRentContractForNode::<T>::get(node.id) {
-                let mut contract_lock = ContractLock::<T>::get(rc_id);
+                let mut contract_payment_state = ContractPaymentState::<T>::get(rc_id);
                 let now = Self::get_current_timestamp_in_secs();
-                contract_lock.lock_updated = now;
-                ContractLock::<T>::insert(rc_id, &contract_lock);
-                log::debug!("Rented node {} is back up, updated contract lock_updated for contract {}", node.id, rc_id);
+                contract_payment_state.last_updated_seconds = now;
+                ContractPaymentState::<T>::insert(rc_id, &contract_payment_state);
+                log::debug!("Rented node {} is back up, updated contract contract_payment_state for contract {}", node.id, rc_id);
             }
         }
     }

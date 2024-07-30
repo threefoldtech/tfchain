@@ -2137,6 +2137,8 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
         // Event 6: Balances locked
         // Event 7: Contract Billed
         // => no Node Contract billed event
+        log::debug!("our_events: {:?}", our_events);
+
         assert_eq!(our_events.len(), 7);
     });
 }
