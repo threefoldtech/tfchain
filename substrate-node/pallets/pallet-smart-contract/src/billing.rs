@@ -222,8 +222,8 @@ impl<T: Config> Pallet<T> {
 
         let total_amount_due = standard_amount_due.defensive_saturating_add(additional_amount_due);
 
-        // if the amount due is zero and the contract is not in deleted or grace period state, don't bill the contract (mostly node contarct on a rented node)
-        if total_amount_due.is_zero() && matches!(contract.state, types::ContractState::Created) {
+        // if the amount due is zero and the contract is not in deleted, don't bill the contract (mostly node contarct on a rented node)
+        if total_amount_due.is_zero() && !matches!(contract.state, types::ContractState::Deleted(_)) {
             log::info!(
                 "Amount to be billed is 0, contract state: {:?}, nothing to do with contract_id: {:?}",
                 contract.state,
@@ -278,6 +278,7 @@ impl<T: Config> Pallet<T> {
                         twin_id: contract.twin_id,
                         block_number: current_block.saturated_into(),
                     });
+                    Self::handle_grace_rent_contract(&mut contract, types::ContractState::GracePeriod(current_block))?;
                 }
             }
             _ => (),

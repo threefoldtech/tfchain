@@ -1213,12 +1213,10 @@ fn test_node_contract_billing_cycles() {
         check_report_cost(1, amount_due_1, 11, discount_received);
 
         let twin = TfgridModule::twins(twin_id).unwrap();
-        let usable_balance = Balances::usable_balance(&twin.account_id);
-        let free_balance = Balances::free_balance(&twin.account_id);
+        let reserved_balance = Balances::reserved_balance(&twin.account_id);
 
-        let locked_balance = free_balance - usable_balance;
         assert_eq!(
-            locked_balance.saturated_into::<u128>(),
+            reserved_balance.saturated_into::<u128>(),
             amount_due_1 as u128
         );
 
@@ -1237,12 +1235,11 @@ fn test_node_contract_billing_cycles() {
         check_report_cost(1, amount_due_3, 31, discount_received);
 
         let twin = TfgridModule::twins(twin_id).unwrap();
-        let usable_balance = Balances::usable_balance(&twin.account_id);
-        let free_balance = Balances::free_balance(&twin.account_id);
 
-        let locked_balance = free_balance - usable_balance;
+        let reserved_balance = Balances::reserved_balance(&twin.account_id);
+
         assert_eq!(
-            locked_balance.saturated_into::<u128>(),
+            reserved_balance.saturated_into::<u128>(),
             amount_due_1 as u128 + amount_due_2 as u128 + amount_due_3 as u128
         );
     });
@@ -1316,12 +1313,12 @@ fn test_node_multiple_contract_billing_cycles() {
         );
 
         let twin = TfgridModule::twins(twin_id).unwrap();
-        let usable_balance = Balances::usable_balance(&twin.account_id);
-        let free_balance = Balances::free_balance(&twin.account_id);
-
-        let locked_balance = free_balance - usable_balance;
+        // let usable_balance = Balances::usable_balance(&twin.account_id);
+        // let free_balance = Balances::free_balance(&twin.account_id);
+        let reserved_balance = Balances::reserved_balance(&twin.account_id);
+        // let locked_balance = free_balance - usable_balance;
         assert_eq!(
-            locked_balance.saturated_into::<u128>(),
+            reserved_balance.saturated_into::<u128>(),
             amount_due_contract_1 as u128 + amount_due_contract_2 as u128
         );
     });
@@ -2458,6 +2455,8 @@ fn test_restore_rent_contract_and_node_contracts_in_grace_works() {
         assert_eq!(c1.state, types::ContractState::GracePeriod(11));
 
         let our_events = System::events();
+        log::debug!("Events: {:?}", our_events);
+
         assert_eq!(
             our_events[5],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
@@ -2524,9 +2523,10 @@ fn test_restore_rent_contract_and_node_contracts_in_grace_works() {
         assert_eq!(c1.state, types::ContractState::Created);
 
         let our_events = System::events();
+        log::debug!("Events: {:?}", our_events);
 
         assert_eq!(
-            our_events[8],
+            our_events[12],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::ContractGracePeriodEnded {
@@ -2536,7 +2536,7 @@ fn test_restore_rent_contract_and_node_contracts_in_grace_works() {
             }))
         );
         assert_eq!(
-            our_events[9],
+            our_events[13],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::ContractGracePeriodEnded {
