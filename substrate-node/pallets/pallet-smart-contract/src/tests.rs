@@ -5,14 +5,13 @@ use crate::{
 use frame_support::{
     assert_noop, assert_ok, bounded_vec,
     dispatch::Pays,
-    traits::{LockableCurrency, WithdrawReasons},
+    traits::{LockableCurrency, WithdrawReasons, Currency},
     BoundedVec,
 };
 use frame_system::{EventRecord, Phase, RawOrigin};
 use log::info;
 use pallet_tfgrid::{
-    types::{self as pallet_tfgrid_types, LocationInput},
-    ResourcesInput,
+    types::{self as pallet_tfgrid_types, LocationInput, PricingPolicy}, PricingPolicies, ResourcesInput
 };
 use sp_core::H256;
 use sp_runtime::{assert_eq_error_rate, traits::SaturatedConversion, Perbill, Percent};
@@ -977,7 +976,7 @@ fn test_node_contract_billing_details() {
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         let twin = TfgridModule::twins(2).unwrap();
-        let initial_twin_balance = Balances::free_balance(&twin.account_id);
+        let initial_twin_balance = Balances::total_balance(&twin.account_id);
 
         assert_ok!(SmartContractModule::create_node_contract(
             RuntimeOrigin::signed(bob()),
@@ -998,6 +997,8 @@ fn test_node_contract_billing_details() {
             SmartContractModule::contract_to_bill_at_block(index),
             vec![contract_id]
         );
+        let pricing_policy = TfgridModule::pricing_policies(1).unwrap();
+        activate_billing_accounts(&pricing_policy);
 
         let initial_total_issuance = Balances::total_issuance();
         // advance 25 cycles
@@ -1011,11 +1012,11 @@ fn test_node_contract_billing_details() {
             run_to_block(block_number, Some(&mut pool_state));
         }
 
-        let free_balance = Balances::free_balance(&twin.account_id);
-        let total_amount_billed = initial_twin_balance - free_balance;
-        info!("locked balance {:?}", total_amount_billed);
+        let twin_balance = Balances::total_balance(&twin.account_id);
+        let total_amount_billed = initial_twin_balance - twin_balance;
+        info!("current balance {:?}", twin_balance);
 
-        info!("total locked balance {:?}", total_amount_billed);
+        info!("total amount billed {:?}", total_amount_billed);
 
         let staking_pool_account_balance = Balances::free_balance(&get_staking_pool_account());
         info!(
@@ -1025,22 +1026,21 @@ fn test_node_contract_billing_details() {
 
         // 5% is sent to the staking pool account
         assert_eq!(
-            staking_pool_account_balance,
+            staking_pool_account_balance - 500,
             Perbill::from_percent(5) * total_amount_billed
         );
 
         // 10% is sent to the foundation account
-        let pricing_policy = TfgridModule::pricing_policies(1).unwrap();
         let foundation_account_balance = Balances::free_balance(&pricing_policy.foundation_account);
         assert_eq!(
-            foundation_account_balance,
+            foundation_account_balance - 500,
             Perbill::from_percent(10) * total_amount_billed
         );
 
         // 50% is sent to the sales account
         let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
         assert_eq!(
-            sales_account_balance,
+            sales_account_balance - 500,
             Perbill::from_percent(50) * total_amount_billed
         );
 
@@ -1399,7 +1399,8 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
         let mut ips: BoundedVec<PublicIP, crate::MaxNodeContractPublicIPs<TestRuntime>> =
             vec![].try_into().unwrap();
         ips.try_push(public_ip).unwrap();
-
+        
+        log::debug!("events : {:?}", our_events);
         assert_eq!(
             our_events.contains(&record(MockEvent::SmartContractModule(
                 SmartContractEvent::<TestRuntime>::IPsFreed {
@@ -4537,4 +4538,10 @@ fn get_service_contract() -> types::ServiceContract {
 
 fn get_timestamp_in_seconds_for_block(block_number: u64) -> u64 {
     1628082000 + (6 * block_number)
+}
+
+fn activate_billing_accounts(pricing_policy: &PricingPolicies) {
+    let _ = Balances::deposit_creating( &get_staking_pool_account(), 500);
+    let _ = Balances::deposit_creating(&pricing_policy.foundation_account, 500);
+    let _ = Balances::deposit_creating(&pricing_policy.certified_sales_account, 500);
 }

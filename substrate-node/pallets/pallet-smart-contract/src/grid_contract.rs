@@ -704,7 +704,10 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
                     &types::ContractState::Deleted(types::Cause::CanceledByUser),
                 );
                 log::debug!("Billing for node contract {} kicked in due to node deletion", contract.contract_id);
-                let _ = Self::bill_contract(node_contract_id);
+                let res = Self::bill_contract(node_contract_id);
+                if let Err(e) = res {
+                    log::error!("error in node_deleted hook while billing contract {:?}: {:?}. Contract could be in dirty state", node_contract_id, e);
+                }
 
             }
         }
@@ -718,7 +721,10 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
                     &types::ContractState::Deleted(types::Cause::CanceledByUser),
                 );
                 log::debug!("Billing for rent contract {} kicked in due to node deletion", contract.contract_id);
-                let _ = Self::bill_contract(contract.contract_id);
+                let res = Self::bill_contract(contract.contract_id);
+                if let Err(e) = res {
+                    log::error!("error in node_deleted hook while billing contract id {:?}: {:?}. Contract could be in dirty state", rc_id, e);
+                }
             }
         }
     }
