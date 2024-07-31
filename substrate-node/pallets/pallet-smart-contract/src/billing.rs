@@ -5,9 +5,7 @@ use frame_support::{
     ensure,
     traits::{
         fungible::{Inspect, InspectHold},
-        tokens::{Fortitude::Polite, Preservation::Preserve},
-        Currency, ExistenceRequirement, LockableCurrency, OnUnbalanced, ReservableCurrency,
-        WithdrawReasons,
+        tokens::{Fortitude::Polite, Preservation::Preserve}, LockableCurrency, OnUnbalanced, ReservableCurrency,
     },
 };
 
@@ -19,10 +17,9 @@ use frame_system::{
 };
 use sp_core::Get;
 use sp_runtime::{
-    traits::{Bounded, CheckedAdd, CheckedSub, Saturating, Zero},
+    traits::{Saturating, Zero},
     DispatchResult, Perbill, SaturatedConversion,
 };
-use sp_std::vec::Vec;
 
 impl<T: Config> Pallet<T> {
     // Let offchain worker check if there are contracts on
@@ -345,8 +342,8 @@ impl<T: Config> Pallet<T> {
         // Distribute rewards if threshold reached or contract in deleted state
         let is_deleted = matches!(contract.state, types::ContractState::Deleted(_));
         let should_distribute_rewards =
-            contract_payment_state.cycles >= T::DistributionFrequency::get() || is_deleted;
-        if should_distribute_rewards && contract_payment_state.has_reserved_amount() {
+            (contract_payment_state.cycles >= T::DistributionFrequency::get() || is_deleted) && contract_payment_state.has_reserved_amount();
+        if should_distribute_rewards {
             if !(contract_payment_state.get_reserved()
                 <= <T as Config>::Currency::reserved_balance(&src_twin.account_id))
             {
