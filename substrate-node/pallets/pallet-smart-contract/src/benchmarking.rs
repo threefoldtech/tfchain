@@ -308,8 +308,8 @@ benchmarks! {
         let (cost, discount_level) = contract.calculate_contract_cost_tft(balance_init_amount, elapsed_seconds).unwrap();
     }: _(RawOrigin::Signed(farmer), contract_id)
     verify {
-        let lock = SmartContractModule::<T>::contract_number_of_cylces_billed(contract_id);
-        assert_eq!(lock.amount_locked, cost);
+        let contract_payment_state = SmartContractModule::<T>::contract_payment_state(contract_id);
+        assert_eq!(contract_payment_state.standard_reserved, cost);
         let contract_bill = types::ContractBill {
             contract_id,
             timestamp: SmartContractModule::<T>::get_current_timestamp_in_secs(),
