@@ -344,10 +344,12 @@ pub mod pallet {
         // A Contract grace Period is elapsed
         ContractGracePeriodElapsed {
             contract_id: u64,
+            grace_period: u64,
         },
         // Overdafted incurred
         ContractPaymentOverdrafted {
             contract_id: u64,
+            timestamp: u64,
             partial_billed_amount: BalanceOf<T>, // amount billed
             overdrafted_amount: BalanceOf<T>, // amount overdrafted
         },
@@ -554,11 +556,11 @@ pub mod pallet {
             let res = Self::bill_contract(contract_id);
 
             let pays: Pays = if is_validator {
-                log::info!("validator is exempt from fees");
+                log::debug!("validator is exempt from fees");
                 // Exempt fees for validators
                 Pays::No.into()
             } else {
-                log::info!("caller is not exempt from fees");
+                log::debug!("caller is not exempt from fees");
                 Pays::Yes.into()
             };
 
