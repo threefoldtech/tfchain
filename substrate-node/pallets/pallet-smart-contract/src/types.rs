@@ -227,20 +227,13 @@ pub struct ContractLock<BalanceOf> {
     PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
 )]
 pub struct ContractPaymentState<BalanceOf> {
-    // another way to avoid having new contract payment struct is to distrbute the amount in the contract lock when contract is switched to grace period
-    // by doing that contract locked amount is resteted and we can asusme that the new amount is not covered
-    // we return from grace period when the amount_due + locked amount is avialable in user balance
-    // a bit ugly because teh same field would be used for different purposes depend on the state of the contract
+
     pub standard_reserved: BalanceOf,
     pub additional_reserved: BalanceOf,
     pub standard_overdrafted: BalanceOf,
     pub additional_overdrafted: BalanceOf,
-    pub last_updated_seconds: u64, // last time the payment tracking was updated
-    // we don't want to distrbute dust amounts, so instead we have a threshold that needs to be reached before we distribute
-    // small amounts are not distributed, but are kept in the contract
-    // now, would we still need the cycles field? does the number of cycles matter? or is it just the amount that matters?
-    // does distribution happen every 24 cycle is needed, somet calculation or tools asume that? or we can happily distrbute when contract is about to get deleted, or have worthy amount?
-    pub cycles: u16, // number of cycles the payment tracking has been updated
+    pub last_updated_seconds: u64,
+    pub cycles: u16,
 }
 
 impl<BalanceOf: Add<Output = BalanceOf> + Copy + TryInto<u64>> ContractLock<BalanceOf> {
