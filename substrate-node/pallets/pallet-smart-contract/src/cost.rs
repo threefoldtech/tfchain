@@ -9,6 +9,8 @@ use tfchain_support::{
     types::NodeCertification,
 };
 
+pub const CERTIFIED_INCREASE_FACTOR: f64 = 1.25;
+
 impl<T: Config> types::Contract<T> {
     pub fn get_billing_info(&self) -> types::ContractBillingInformation {
         pallet::ContractBillingInformationByID::<T>::get(self.contract_id)
@@ -18,10 +20,10 @@ impl<T: Config> types::Contract<T> {
         &self,
         balance: BalanceOf<T>,
         seconds_elapsed: u64,
+        certification_type: Option<NodeCertification>,
     ) -> Result<(BalanceOf<T>, types::DiscountLevel), DispatchErrorWithPostInfo> {
         // Fetch the default pricing policy and certification type
         let pricing_policy = pallet_tfgrid::PricingPolicies::<T>::get(1).unwrap();
-        let certification_type = NodeCertification::Diy;
 
         // Calculate the cost for a contract, can be any of:
         // - NodeContract
@@ -30,7 +32,6 @@ impl<T: Config> types::Contract<T> {
         let total_cost =
             self.calculate_contract_cost_units_usd(&pricing_policy, seconds_elapsed)?;
 
-        // If cost is 0, reinsert to be billed at next interval
         if total_cost == 0 {
             return Ok((BalanceOf::<T>::zero(), types::DiscountLevel::None));
         }
@@ -114,11 +115,7 @@ impl<T: Config> types::Contract<T> {
     }
 
     // Calculates the cost of extra fee for a dedicated node in TFT.
-    pub fn calculate_extra_fee_cost_tft(
-        &self,
-        node_id: u32,
-        seconds_elapsed: u64,
-    ) -> BalanceOf<T> {
+    pub fn calculate_extra_fee_cost_tft(&self, node_id: u32, seconds_elapsed: u64) -> BalanceOf<T> {
         let cost = calculate_extra_fee_cost_units_usd::<T>(node_id, seconds_elapsed);
         if cost == 0 {
             return BalanceOf::<T>::zero();
@@ -297,7 +294,7 @@ pub fn calculate_discount_tft<T: Config>(
     amount_due: u64,
     seconds_elapsed: u64,
     balance: BalanceOf<T>,
-    certification_type: NodeCertification,
+    certification_type: Option<NodeCertification>,
 ) -> (BalanceOf<T>, types::DiscountLevel) {
     if amount_due == 0 {
         return (BalanceOf::<T>::zero(), types::DiscountLevel::None);
@@ -329,8 +326,9 @@ pub fn calculate_discount_tft<T: Config>(
     let mut amount_due = U64F64::from_num(amount_due) * discount_received.price_multiplier();
 
     // Certified capacity costs 25% more
-    if certification_type == NodeCertification::Certified {
-        amount_due = amount_due * U64F64::from_num(1.25);
+    if let Some(NodeCertification::Certified) = certification_type {
+        log::debug!("Certified node detected, increasing amount due by 25%");
+        amount_due *= U64F64::from_num(CERTIFIED_INCREASE_FACTOR);
     }
 
     // convert to balance object
@@ -340,9 +338,7 @@ pub fn calculate_discount_tft<T: Config>(
     (amount_due, discount_received)
 }
 
-pub fn calculate_cost_in_tft_from_units_usd<T: Config>(
-    cost_units_usd: u64,
-) -> u64 {
+pub fn calculate_cost_in_tft_from_units_usd<T: Config>(cost_units_usd: u64) -> u64 {
     let avg_tft_price = pallet_tft_price::AverageTftPrice::<T>::get();
 
     // Guarantee tft price will never be lower than min tft price
@@ -360,5 +356,7 @@ pub fn calculate_cost_in_tft_from_units_usd<T: Config>(
     let cost_tft = U64F64::from_num(cost_units_usd) / U64F64::from_num(tft_price_units_usd);
 
     // Multiply by the chain precision (7 decimals)
-    (cost_tft * U64F64::from_num(10u64.pow(7))).round().to_num::<u64>()
+    (cost_tft * U64F64::from_num(10u64.pow(7)))
+        .round()
+        .to_num::<u64>()
 }

@@ -1852,7 +1852,7 @@ fn test_name_contract_billing() {
         let balance = Balances::free_balance(&twin.account_id);
         let second_elapsed = BillingFrequency::get() * SECS_PER_BLOCK;
         let (contract_cost, discount_level) = contract
-            .calculate_contract_cost_tft(balance, second_elapsed)
+            .calculate_contract_cost_tft(balance, second_elapsed, None)
             .unwrap();
 
         // the contractbill event should look like:
@@ -3954,15 +3954,18 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
         let mut rent_contract_cost_tft = 0u64;
         let mut extra_fee_cost_tft = 0;
 
-        // advance 24 cycles to reach reward distribution block
-        for i in 1..=DistributionFrequency::get() as u64 {
+        // advance 25 cycles to reach reward distribution block
+        for i in 1..=DistributionFrequency::get() as u64 + 1u64{
             let block_number = start_block + i * BillingFrequency::get();
             pool_state.write().should_call_bill_contract(
                 rent_contract_id,
                 Ok(Pays::Yes.into()),
                 block_number,
             );
-            run_to_block(block_number, Some(&mut pool_state));
+            log::debug!("i {} after pool block_number: {}", i, block_number);
+
+            run_to_block( block_number, Some(&mut pool_state));
+            log::debug!("i {} after run block_number: {}", i, block_number);
 
             // check why aggregating seconds elapsed is giving different results
             let elapsed_time_in_secs = BillingFrequency::get() * SECS_PER_BLOCK;
@@ -3970,7 +3973,7 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
             // aggregate rent contract cost
             let free_balance = Balances::free_balance(&twin.account_id);
             let (contract_cost_tft, _) = rent_contract
-                .calculate_contract_cost_tft(free_balance, elapsed_time_in_secs)
+                .calculate_contract_cost_tft(free_balance, elapsed_time_in_secs, None)
                 .unwrap();
             rent_contract_cost_tft += contract_cost_tft;
 
@@ -4039,7 +4042,7 @@ macro_rules! test_calculate_discount {
                 amount_due,
                 seconds_elapsed,
                 balance.round().to_num::<u64>(),
-                NodeCertification::Diy,
+                None,
             );
 
             assert_eq!(
@@ -4205,7 +4208,7 @@ fn calculate_tft_cost(contract_id: u64, twin_id: u32, blocks: u64) -> (u64, type
     let b = Balances::free_balance(&twin.account_id);
     let contract = SmartContractModule::contracts(contract_id).unwrap();
     let (amount_due, discount_received) =
-        contract.calculate_contract_cost_tft(b, blocks * 6).unwrap();
+        contract.calculate_contract_cost_tft(b, blocks * 6, None).unwrap();
 
     (amount_due, discount_received)
 }

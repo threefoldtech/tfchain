@@ -318,13 +318,13 @@ where
 
     // Method to return weather the contract has reserved amount or not
     pub fn has_reserved_amount(&self) -> bool {
-        self.standard_reserved != BalanceOf::zero() || self.additional_reserved != BalanceOf::zero()
+        !self.standard_reserved.is_zero() || !self.additional_reserved.is_zero()
     }
 
     // Method to return weather the contract has overdrafted amount or not
     pub fn has_overdrafted_amount(&self) -> bool {
-        self.standard_overdrafted != BalanceOf::zero()
-            || self.additional_overdrafted != BalanceOf::zero()
+        !self.standard_overdrafted.is_zero()
+            || !self.additional_overdrafted.is_zero()
     }
 
     // Method to settle partial overdrafted amount
@@ -359,7 +359,6 @@ where
                     .defensive_saturating_reduce(remaining_amount);
                 self.standard_reserved
                     .defensive_saturating_accrue(remaining_amount);
-                remaining_amount = BalanceOf::zero();
             }
         }
     }

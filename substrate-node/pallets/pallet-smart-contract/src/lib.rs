@@ -63,7 +63,7 @@ pub mod pallet {
     use super::*;
     use frame_support::{
         pallet_prelude::*,
-        traits::{Currency, Get, Hooks, LockIdentifier, LockableCurrency, OnUnbalanced, ReservableCurrency, NamedReservableCurrency, tokens::fungible::*},
+        traits::{Currency, Get, Hooks, LockIdentifier, LockableCurrency, OnUnbalanced, ReservableCurrency, tokens::fungible::*},
     };
     use frame_system::{
         self as system, ensure_signed,
@@ -216,7 +216,7 @@ pub mod pallet {
         + pallet_session::Config
     {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-        type Currency: LockableCurrency<Self::AccountId> + ReservableCurrency<Self::AccountId> + InspectHold<Self::AccountId>;
+        type Currency: LockableCurrency<Self::AccountId> + ReservableCurrency<Self::AccountId> + InspectHold<Self::AccountId> + Inspect<Self::AccountId>;
         /// Handler for the unbalanced decrement when slashing (burning collateral)
         type Burn: OnUnbalanced<NegativeImbalanceOf<Self>>;
         type StakingPoolAccount: Get<Self::AccountId>;
