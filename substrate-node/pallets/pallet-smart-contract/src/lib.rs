@@ -544,7 +544,7 @@ pub mod pallet {
             contract_id: u64,
         ) -> DispatchResultWithPostInfo {
             let account_id = ensure_signed(origin)?;
-            log::info!("Starting billing for contract_id: {:?}", contract_id);
+            log::debug!("Starting billing for contract_id: {:?}", contract_id);
 
             let validators = pallet_session::Pallet::<T>::validators();
             let is_validator =

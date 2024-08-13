@@ -38,23 +38,31 @@ impl<T: Config> Pallet<T> {
         }
     
         log::info!(
-            "{:?} contracts to bill at block {:?}",
+            "Contracts to bill at block {:?}: {:?}",
+            block_number,
             contract_ids,
-            block_number
         );
     
         let mut succeeded_contracts = Vec::new();
         let mut failed_contracts = Vec::new();
         let mut skipped_contracts = Vec::new();
         let mut missing_contracts = Vec::new();
+        let mut already_sent_contracts = Vec::new();
     
         for contract_id in contract_ids {
             if let Some(contract) = Contracts::<T>::get(contract_id) {
                 if Self::should_bill_contract(&contract) {
-                    if Self::bill_contract_using_signed_transaction(contract_id).is_ok() {
-                        succeeded_contracts.push(contract_id);
-                    } else {
-                        failed_contracts.push(contract_id);
+                    match Self::bill_contract_using_signed_transaction(contract_id) {
+                        Ok(()) => succeeded_contracts.push(contract_id),
+                        Err(Error::<T>::OffchainSignedTxCannotSign) => {
+                            failed_contracts.push(contract_id);
+                        }
+                        Err(Error::<T>::OffchainSignedTxAlreadySent) => {
+                            already_sent_contracts.push(contract_id);
+                        }
+                        Err(_) => {
+                            failed_contracts.push(contract_id);
+                        }
                     }
                 } else {
                     skipped_contracts.push(contract_id);
@@ -72,10 +80,10 @@ impl<T: Config> Pallet<T> {
             );
         }
     
-        if !failed_contracts.is_empty() {
+        if !already_sent_contracts.is_empty() {
             log::info!(
-                "Failed to submit signed transactions (likely already included in the block) for contracts: {:?}",
-                failed_contracts
+                "Signed transactions for contracts were already sent: {:?}",
+                already_sent_contracts
             );
         }
     
@@ -85,15 +93,20 @@ impl<T: Config> Pallet<T> {
                 skipped_contracts
             );
         }
-    
-        if !missing_contracts.is_empty() {
-            log::info!(
-                "Contracts not found in storage: {:?}",
-                missing_contracts
+
+        if !failed_contracts.is_empty() {
+            log::error!(
+                "Failed to submit signed transactions for contracts: {:?}",
+                failed_contracts
             );
         }
     
-        log::debug!("Finished billing contracts at block {:?}", block_number);
+        if !missing_contracts.is_empty() {
+            log::error!(
+                "Contracts not found in storage: {:?}",
+                missing_contracts
+            );
+        }    
     }
     fn should_bill_contract(contract: &types::Contract<T>) -> bool {
         match &contract.contract_type {
@@ -116,10 +129,6 @@ impl<T: Config> Pallet<T> {
         let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::all_accounts();
 
         if !signer.can_sign() {
-            log::error!(
-                "failed billing contract {:?}, account cannot be used to sign transaction",
-                contract_id
-            );
             return Err(<Error<T>>::OffchainSignedTxCannotSign);
         }
 
@@ -128,16 +137,6 @@ impl<T: Config> Pallet<T> {
 
         if result.iter().any(|(_, res)| res.is_ok()) {
             return Ok(());
-        }
-
-        log::debug!(
-            "All local accounts failed to submit signed transaction for contract {:?}",
-            contract_id
-        );
-        for (_, res) in result {
-            if let Err(e) = res {
-                log::debug!("error: {:?}", e);
-            }
         }
 
         Err(<Error<T>>::OffchainSignedTxAlreadySent)
@@ -253,12 +252,20 @@ impl<T: Config> Pallet<T> {
             };
 
         let total_amount_due = standard_amount_due.defensive_saturating_add(additional_amount_due);
+        log::debug!(
+            "Seconds elapsed since last bill {:?}, standard amount due: {:?}, additional amount due: {:?}, total amount due: {:?}, Discount received: {:?}",
+            seconds_elapsed,
+            standard_amount_due,
+            additional_amount_due,
+            total_amount_due,
+            discount_received
+        );
 
         // If the amount due is zero and the contract is not in deleted state, don't bill the contract (mostly node contarct on a rented node)
         if total_amount_due.is_zero() && !matches!(contract.state, types::ContractState::Deleted(_))
         {
             log::info!(
-                "Amount to be billed is 0, contract state: {:?}, nothing to do with contract_id: {:?}",
+                "Amount to be billed is 0 and contract state is {:?}, nothing to do with contract_id: {:?}",
                 contract.state,
                 contract.contract_id
             );
@@ -281,7 +288,7 @@ impl<T: Config> Pallet<T> {
         _ = Self::handle_grace(&mut contract, has_sufficient_fund, current_block);
 
         if has_sufficient_fund {
-            log::debug!("Billing contract_id: {:?}, Contract state: {:?}, This cycle amount due: {:?}, Total (include previous overdraft) {:?}", contract.contract_id, contract.state, total_amount_due, total_amount_to_reserve);
+            log::info!("Billing contract_id: {:?}, Contract state: {:?}, This cycle amount due: {:?}, Total (include previous overdraft) {:?}", contract.contract_id, contract.state, total_amount_due, total_amount_to_reserve);
             Self::reserve_funds(
                 &mut contract_payment_state,
                 standard_amount_due,
@@ -301,7 +308,7 @@ impl<T: Config> Pallet<T> {
                 &contract,
                 now,
             )?;
-            log::debug!(
+            log::info!(
                 "Contract payment overdrafted for contract_id: {:?}, Contract state: {:?}, Total overdrafted amount: {:?}",
                 contract.contract_id,
                 contract.state,
@@ -510,7 +517,13 @@ impl<T: Config> Pallet<T> {
             let standard_rewards = contract_payment_state.standard_reserved;
             let additional_rewards = contract_payment_state.additional_reserved;
             // distribute additional rewards to the farm twin
+            
             let reminder = if let types::ContractData::RentContract(_) = &contract.contract_type {
+                log::info!(
+                    "Distributing additional rewards from twin {:?} with amount {:?}",
+                    src_twin.id,
+                    additional_rewards,
+                );
                 let dst_twin = farmer_twin.ok_or(Error::<T>::TwinNotExists)?;
                 Self::transfer_reserved(
                     &src_twin.account_id,
@@ -520,6 +533,7 @@ impl<T: Config> Pallet<T> {
             } else {
                 BalanceOf::<T>::zero()
             };
+            
             let distributed_additional_amount = additional_rewards.saturating_sub(reminder);
             if reminder > BalanceOf::<T>::zero() {
                 log::warn!(
@@ -530,6 +544,11 @@ impl<T: Config> Pallet<T> {
             }
             contract_payment_state.additional_reserved = reminder;
 
+            log::info!(
+                "Distributing standard rewards from twin {:?} with amount {:?}",
+                src_twin.id,
+                standard_rewards,
+            );
             // distribute standard rewards
             Self::distribute_standard_rewards(
                 &src_twin,
@@ -574,19 +593,14 @@ impl<T: Config> Pallet<T> {
         pricing_policy: &pallet_tfgrid::types::PricingPolicy<T::AccountId>,
         amount: BalanceOf<T>,
     ) -> DispatchResult {
-        log::info!(
-            "Distributing standard rewards for twin {:?} with amount {:?}",
-            src_twin.id,
-            amount,
-        );
-
         if amount.is_zero() {
             return Ok(().into());
         }
 
+        // Calculate foundation share (10%)
         let foundation_share = Perbill::from_percent(10) * amount;
         log::debug!(
-            "Transferring: {:?} from twin {:?} to foundation account {:?}",
+            "Transferring: {:?} (10%) from twin {:?} to foundation account {:?}",
             &foundation_share,
             &src_twin.id,
             &pricing_policy.foundation_account
@@ -601,7 +615,7 @@ impl<T: Config> Pallet<T> {
         let staking_pool_share = Perbill::from_percent(5) * amount;
         let staking_pool_account = T::StakingPoolAccount::get();
         log::debug!(
-            "Transferring: {:?} from twin {:?} to staking pool account {:?}",
+            "Transferring: {:?} (5%) from twin {:?} to staking pool account {:?}",
             &staking_pool_share,
             &src_twin.id,
             &staking_pool_account,
@@ -611,7 +625,7 @@ impl<T: Config> Pallet<T> {
             &staking_pool_account,
             staking_pool_share,
         );
-
+        // Calculate the sales share and solution provider share if any. Both combined should be 50%
         let mut sales_percentage = 50;
         let mut total_provider_share = BalanceOf::<T>::zero();
         if let Some(provider_id) = solution_provider_id {
@@ -626,8 +640,9 @@ impl<T: Config> Pallet<T> {
                 for provider in solution_provider.providers.iter() {
                     let share = Perbill::from_percent(provider.take as u32) * amount;
                     log::debug!(
-                        "Transferring: {:?} from twin {:?} to provider account {:?}",
+                        "Transferring: {:?} ({:?}%) from twin {:?} to provider account {:?}",
                         &share,
+                        &provider.take,
                         &src_twin.id,
                         &provider.who
                     );
@@ -641,8 +656,9 @@ impl<T: Config> Pallet<T> {
         let sales_share = if sales_percentage > 0 {
             let share = Perbill::from_percent(sales_percentage.into()) * amount;
             log::debug!(
-                "Transferring: {:?} from twin {:?} to sales account {:?}",
+                "Transferring: {:?} ({:?}%) from twin {:?} to sales account {:?}",
                 &share,
+                &sales_percentage,
                 &src_twin.id,
                 &pricing_policy.certified_sales_account
             );
@@ -658,6 +674,9 @@ impl<T: Config> Pallet<T> {
 
         let total_distributed =
             foundation_share + staking_pool_share + total_provider_share + sales_share;
+        
+        // Calculate the amount to burn, which is the remainder after distributing the rewards to the beneficiaries.
+        // This should be 35% of the total amount, but we calculate it to avoid rounding errors
         let amount_to_burn = amount.defensive_saturating_sub(total_distributed);
         let (to_burn, reminder) = T::Currency::slash_reserved(&src_twin.account_id, amount_to_burn);
 
