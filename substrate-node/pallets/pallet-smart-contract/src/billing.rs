@@ -1,7 +1,7 @@
 use crate::*;
 use frame_support::traits::DefensiveSaturating;
 use frame_support::{
-    dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
+    dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo, Vec},
     ensure,
     traits::{
         tokens::{fungible::*, Fortitude::Polite, Preservation::Preserve},
@@ -27,7 +27,7 @@ impl<T: Config> Pallet<T> {
     pub fn bill_contracts_for_block(block_number: BlockNumberFor<T>) {
         let index = Self::get_billing_loop_index_from_block_number(block_number);
         let contract_ids = ContractsToBillAt::<T>::get(index);
-
+    
         if contract_ids.is_empty() {
             log::info!(
                 "No contracts to bill at block {:?}, index: {:?}",
@@ -36,40 +36,65 @@ impl<T: Config> Pallet<T> {
             );
             return;
         }
-
+    
         log::info!(
             "{:?} contracts to bill at block {:?}",
             contract_ids,
             block_number
         );
-
+    
+        let mut succeeded_contracts = Vec::new();
+        let mut failed_contracts = Vec::new();
+        let mut skipped_contracts = Vec::new();
+        let mut missing_contracts = Vec::new();
+    
         for contract_id in contract_ids {
             if let Some(contract) = Contracts::<T>::get(contract_id) {
                 if Self::should_bill_contract(&contract) {
-                    log::info!(
-                        "Starting billing contract {:?}, type: {:?}",
-                        contract_id,
-                        contract.contract_type
-                    );
                     if Self::bill_contract_using_signed_transaction(contract_id).is_ok() {
-                        log::info!(
-                            "Successfully submitted signed transaction for contract {:?}",
-                            contract_id
-                        );
+                        succeeded_contracts.push(contract_id);
+                    } else {
+                        failed_contracts.push(contract_id);
                     }
                 } else {
-                    log::debug!(
-                        "Skipping billing node contract {:?}, no IP/CU/SU/NU to bill",
-                        contract_id,
-                    );
+                    skipped_contracts.push(contract_id);
                 }
             } else {
-                log::debug!("Contract {:?} not exists!", contract_id);
+                missing_contracts.push(contract_id);
             }
         }
+    
+        // Log the results at the end of the function
+        if !succeeded_contracts.is_empty() {
+            log::info!(
+                "Successfully submitted signed transactions for contracts: {:?}",
+                succeeded_contracts
+            );
+        }
+    
+        if !failed_contracts.is_empty() {
+            log::info!(
+                "Failed to submit signed transactions (likely already included in the block) for contracts: {:?}",
+                failed_contracts
+            );
+        }
+    
+        if !skipped_contracts.is_empty() {
+            log::info!(
+                "Skipped billing node contracts (no IP/CU/SU/NU to bill): {:?}",
+                skipped_contracts
+            );
+        }
+    
+        if !missing_contracts.is_empty() {
+            log::info!(
+                "Contracts not found in storage: {:?}",
+                missing_contracts
+            );
+        }
+    
         log::debug!("Finished billing contracts at block {:?}", block_number);
     }
-
     fn should_bill_contract(contract: &types::Contract<T>) -> bool {
         match &contract.contract_type {
             types::ContractData::NodeContract(node_contract) => {
@@ -105,13 +130,13 @@ impl<T: Config> Pallet<T> {
             return Ok(());
         }
 
-        log::error!(
+        log::debug!(
             "All local accounts failed to submit signed transaction for contract {:?}",
             contract_id
         );
         for (_, res) in result {
             if let Err(e) = res {
-                log::error!("error: {:?}", e);
+                log::debug!("error: {:?}", e);
             }
         }
 
@@ -121,8 +146,6 @@ impl<T: Config> Pallet<T> {
     // Bills a contract (NodeContract, NameContract or RentContract)
     // Calculates how much TFT is due by the user and distributes the rewards
     pub fn bill_contract(contract_id: u64) -> DispatchResultWithPostInfo {
-        log::debug!("Starting billing for contract_id: {:?}", contract_id);
-
         let mut contract = Contracts::<T>::get(contract_id).ok_or_else(|| {
             log::error!("Contract not exists: {:?}", contract_id);
             Error::<T>::ContractNotExists
@@ -191,7 +214,7 @@ impl<T: Config> Pallet<T> {
         };
 
         if should_waive_payment {
-            log::debug!("Waiving rent for contract_id: {:?}", contract.contract_id);
+            log::info!("Waiving rent for contract_id: {:?}", contract.contract_id);
             Self::deposit_event(Event::RentWaived {
                 contract_id: contract.contract_id,
             });
@@ -234,7 +257,7 @@ impl<T: Config> Pallet<T> {
         // If the amount due is zero and the contract is not in deleted state, don't bill the contract (mostly node contarct on a rented node)
         if total_amount_due.is_zero() && !matches!(contract.state, types::ContractState::Deleted(_))
         {
-            log::debug!(
+            log::info!(
                 "Amount to be billed is 0, contract state: {:?}, nothing to do with contract_id: {:?}",
                 contract.state,
                 contract.contract_id
@@ -258,7 +281,7 @@ impl<T: Config> Pallet<T> {
         _ = Self::handle_grace(&mut contract, has_sufficient_fund, current_block);
 
         if has_sufficient_fund {
-            log::debug!("Billing contract_id: {:?}, This cycle amount due: {:?}, Total (include previous overdraft) {:?}", contract.contract_id, total_amount_due, total_amount_to_reserve);
+            log::debug!("Billing contract_id: {:?}, Contract state: {:?}, This cycle amount due: {:?}, Total (include previous overdraft) {:?}", contract.contract_id, contract.state, total_amount_due, total_amount_to_reserve);
             Self::reserve_funds(
                 &mut contract_payment_state,
                 standard_amount_due,
@@ -279,7 +302,7 @@ impl<T: Config> Pallet<T> {
                 now,
             )?;
             log::debug!(
-                "Contract payment overdrafted for contract_id: {:?}, Contract state: {:?}, Current Overdrafted amount: {:?}",
+                "Contract payment overdrafted for contract_id: {:?}, Contract state: {:?}, Total overdrafted amount: {:?}",
                 contract.contract_id,
                 contract.state,
                 contract_payment_state.get_overdrafted()
@@ -318,10 +341,7 @@ impl<T: Config> Pallet<T> {
         contract_payment_state.last_updated_seconds = now;
         contract_payment_state.cycles.defensive_saturating_inc();
         ContractPaymentState::<T>::insert(contract.contract_id, &contract_payment_state);
-        log::info!(
-            "Billing completed for contract_id: {:?}",
-            contract.contract_id
-        );
+        
         Ok(().into())
     }
 
@@ -331,13 +351,23 @@ impl<T: Config> Pallet<T> {
         contract_payment_state: &mut types::ContractPaymentState<BalanceOf<T>>,
     ) {
         if !contract_lock.is_migrated() {
+            log::debug!("Migrating contract to new payment state, CL: {:?}", contract_lock);
             contract_payment_state.last_updated_seconds = contract_lock.lock_updated;
             contract_payment_state.standard_overdrafted = contract_lock.amount_locked;
             contract_payment_state.additional_overdrafted = contract_lock.extra_amount_locked;
             contract_payment_state.cycles = contract_lock.cycles;
+            log::debug!(
+                "Migrated contract to new payment state, CPS: {:?}",
+                contract_payment_state
+            );
 
             let locks = pallet_balances::Pallet::<T>::locks(&account_id);
             for lock in locks {
+                log::debug!(
+                    "Removing lock: {:?} for account: {:?}",
+                    lock.id,
+                    account_id,
+                );
                 pallet_balances::Pallet::<T>::remove_lock(lock.id, &account_id);
             }
         }
@@ -414,6 +444,7 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         <T as Config>::Currency::reserve(&src_twin.account_id, total_amount_to_reserve).map_err(
             |e| {
+                // should never happen as we called can_reserve first to check if the funds are available
                 log::error!("Error while reserving amount due: {:?}", e);
                 e
             },
@@ -443,6 +474,7 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         contract_payment_state.overdraft_standard_amount(standard_amount_due);
         contract_payment_state.overdraft_additional_amount(additional_amount_due);
+        // Reserve as much as possible from the user's account to cover part of the amount due
         let reservable = Self::get_reservable_balance(&src_twin.account_id);
         <T as Config>::Currency::reserve(&src_twin.account_id, reservable).map_err(|e| {
             log::error!("Error while reserving partial amount due: {:?}", e);
@@ -453,6 +485,7 @@ impl<T: Config> Pallet<T> {
         Self::deposit_event(Event::ContractPaymentOverdrafted {
             contract_id: contract.contract_id,
             timestamp: now,
+            // This is the partial amount successfully reserved from the user's account in this billing cycle
             partial_billed_amount: reservable,
             // This is the total overdrafted amount for this contract since grace period started
             overdrafted_amount: contract_payment_state.get_overdrafted(),
@@ -627,14 +660,7 @@ impl<T: Config> Pallet<T> {
             foundation_share + staking_pool_share + total_provider_share + sales_share;
         let amount_to_burn = amount.defensive_saturating_sub(total_distributed);
         let (to_burn, reminder) = T::Currency::slash_reserved(&src_twin.account_id, amount_to_burn);
-        if !reminder.is_zero() {
-            // Shouldn't happen
-            log::warn!(
-                "Failed to burn the whole amount: want {:?}, remainder {:?}",
-                amount_to_burn,
-                reminder
-            );
-        };
+
         log::debug!(
             "Burning: {:?} from twin {:?}",
             amount_to_burn - reminder,
@@ -649,7 +675,7 @@ impl<T: Config> Pallet<T> {
     }
 
     // Wrapper around the balances::repatriate_reserved function to handle reserved funds
-    // As much funds up to value will be deducted as possible. If this is less than amount, then the reminder amount will be returned.
+    // As much funds up to value will be transfered as possible. If this is less than amount, then the reminder amount will be returned.
     fn transfer_reserved(
         src_account: &T::AccountId,
         dst_account: &T::AccountId,
@@ -667,7 +693,7 @@ impl<T: Config> Pallet<T> {
         match res {
             Ok(reminder) => {
                 if !(reminder.is_zero()) {
-                    // assertion
+                    // shouldn't happen, unless onchain logic was chanegd and introduce a liquid restriction on to the source account
                     log::warn!(
                         "Failed to distribute the whole amount: want {:?}, reminder {:?}",
                         amount,

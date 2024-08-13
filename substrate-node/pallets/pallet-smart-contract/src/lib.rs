@@ -543,10 +543,12 @@ pub mod pallet {
             origin: OriginFor<T>,
             contract_id: u64,
         ) -> DispatchResultWithPostInfo {
-            let _account_id = ensure_signed(origin)?;
+            let account_id = ensure_signed(origin)?;
+            log::info!("Starting billing for contract_id: {:?}", contract_id);
+
             let validators = pallet_session::Pallet::<T>::validators();
             let is_validator =
-                <T as pallet_session::Config>::ValidatorIdOf::convert(_account_id.clone())
+                <T as pallet_session::Config>::ValidatorIdOf::convert(account_id.clone())
                     .map_or(false, |validator_id| validators.contains(&validator_id));
 
             let res = Self::bill_contract(contract_id);
@@ -556,7 +558,6 @@ pub mod pallet {
                 // Exempt fees for validators
                 Pays::No.into()
             } else {
-                log::debug!("caller is not exempt from fees");
                 Pays::Yes.into()
             };
 
@@ -567,7 +568,7 @@ pub mod pallet {
                     Ok(info)
                 }
                 Err(mut info) => {
-                    log::info!("failed to bill contract with id {:?}", contract_id);
+                    log::warn!("failed to bill contract with id {:?}", contract_id);
                     info.post_info.pays_fee = pays;
                     Err(info)
                 }
