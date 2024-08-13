@@ -242,3 +242,33 @@ type NodeExtraFeeSet struct {
 	ExtraFee types.U64 `json:"extra_fee"`
 	Topics   []types.Hash
 }
+
+type RentWaived struct {
+	Phase      types.Phase
+	ContractID types.U64 `json:"contract_id"`
+	Topics     []types.Hash
+}
+
+type ContractGracePeriodElapsed struct {
+	Phase       types.Phase
+	ContractID  types.U64 `json:"contract_id"`
+	GracePeriod types.U64 `json:"grace_period"`
+	Topics      []types.Hash
+}
+
+type ContractPaymentOverdrafted struct {
+	Phase               types.Phase
+	ContractID          types.U64  `json:"contract_id"`
+	Timestamp           types.U64  `json:"timestamp"`
+	PartialBilledAmount types.U128 `json:"partial_billed_amount"`
+	OverdraftedAmount   types.U128 `json:"overdrafted_amount"`
+	Topics              []types.Hash
+}
+
+type RewardDistributed struct {
+	Phase             types.Phase
+	ContractID        types.U64  `json:"contract_id"`
+	StandardRewards   types.U128 `json:"standard_rewards"`
+	AdditionalRewards types.U128 `json:"additional_rewards"`
+	Topics            []types.Hash
+}
