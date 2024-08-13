@@ -197,9 +197,6 @@ pub mod pallet {
     pub type DedicatedNodesExtraFee<T> = StorageMap<_, Blake2_128Concat, u32, u64, ValueQuery>;
 
     #[pallet::storage]
-    pub type SeenContracts<T> = StorageValue<_, Vec<u64>, ValueQuery>;
-
-    #[pallet::storage]
     #[pallet::getter(fn contract_payment_state)]
     pub type ContractPaymentState<T: Config> =
         StorageMap<_, Blake2_128Concat, u64, types::ContractPaymentState<BalanceOf<T>>, ValueQuery>;
@@ -415,7 +412,6 @@ pub mod pallet {
         WrongAuthority,
         UnauthorizedToChangeSolutionProviderId,
         UnauthorizedToSetExtraFee,
-        ContractAlreadyProcessedInBlock,
     }
 
     #[pallet::genesis_config]
@@ -721,10 +717,6 @@ pub mod pallet {
 
         fn offchain_worker(block_number: BlockNumberFor<T>) {
             Self::bill_contracts_for_block(block_number);
-        }
-
-        fn on_finalize(_n: BlockNumberFor<T>) {
-            SeenContracts::<T>::kill();
         }
     }
 }

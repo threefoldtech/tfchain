@@ -1,15 +1,21 @@
 use crate::{
     pallet::{MaxDeploymentDataLength, MaxNodeContractPublicIPs},
-    Config,
+    Call, Config,
 };
 use core::{convert::TryInto, ops::Add};
 use frame_support::{
-    pallet_prelude::ConstU32, traits::DefensiveSaturating, BoundedVec, RuntimeDebugNoBound,
+    pallet_prelude::ConstU32,
+    traits::{DefensiveSaturating, IsSubType},
+    BoundedVec, RuntimeDebugNoBound,
 };
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_runtime::{traits::Zero, SaturatedConversion};
-use sp_std::prelude::*;
+use sp_runtime::{
+    traits::{DispatchInfoOf, SignedExtension, Zero},
+    transaction_validity::{TransactionValidity, TransactionValidityError, ValidTransaction},
+    SaturatedConversion,
+};
+use sp_std::{fmt::Debug, marker::PhantomData, prelude::*};
 use substrate_fixed::types::U64F64;
 use tfchain_support::{resources::Resources, types::PublicIP};
 pub type BlockNumber = u64;
@@ -227,7 +233,6 @@ pub struct ContractLock<BalanceOf> {
     PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
 )]
 pub struct ContractPaymentState<BalanceOf> {
-
     pub standard_reserved: BalanceOf,
     pub additional_reserved: BalanceOf,
     pub standard_overdrafted: BalanceOf,
@@ -316,8 +321,7 @@ where
 
     // Method to return weather the contract has overdrafted amount or not
     pub fn has_overdrafted_amount(&self) -> bool {
-        !self.standard_overdrafted.is_zero()
-            || !self.additional_overdrafted.is_zero()
+        !self.standard_overdrafted.is_zero() || !self.additional_overdrafted.is_zero()
     }
 
     // Method to settle partial overdrafted amount
@@ -404,4 +408,85 @@ pub enum ServiceContractState {
     Created,
     AgreementReady,
     ApprovedByBoth,
+}
+
+#[derive(Encode, Decode, Clone, Eq, PartialEq, scale_info::TypeInfo)]
+pub struct ContractIdProvides<T: Config + Send + Sync + scale_info::TypeInfo>(PhantomData<T>)
+where
+    <T as frame_system::Config>::RuntimeCall: IsSubType<Call<T>>;
+
+impl<T: Config + Send + Sync + scale_info::TypeInfo> SignedExtension for ContractIdProvides<T>
+where
+    <T as frame_system::Config>::RuntimeCall: IsSubType<Call<T>>,
+{
+    const IDENTIFIER: &'static str = "ContractIdProvides";
+    type AccountId = T::AccountId;
+    type Call = T::RuntimeCall;
+    type AdditionalSigned = ();
+    type Pre = ();
+
+    fn additional_signed(&self) -> Result<(), TransactionValidityError> {
+        Ok(())
+    }
+
+    fn validate(
+        &self,
+        _who: &Self::AccountId,
+        call: &Self::Call,
+        _info: &DispatchInfoOf<Self::Call>,
+        _len: usize,
+    ) -> TransactionValidity {
+        if let Some(local_call) = call.is_sub_type() {
+            if let Call::bill_contract_for_block { contract_id } = local_call {
+                return ValidTransaction::with_tag_prefix(Self::IDENTIFIER)
+                    .and_provides(contract_id.to_le_bytes().to_vec())
+                    .build()
+                    .into();
+            }
+        }
+        Ok(ValidTransaction::default())
+    }
+
+    fn pre_dispatch(
+        self,
+        who: &Self::AccountId,
+        call: &Self::Call,
+        info: &DispatchInfoOf<Self::Call>,
+        len: usize,
+    ) -> Result<Self::Pre, TransactionValidityError> {
+        self.validate(who, call, info, len).map(|_| ())
+    }
+}
+
+impl<T: Config + Send + Sync + scale_info::TypeInfo> Debug for ContractIdProvides<T>
+where
+    <T as frame_system::Config>::RuntimeCall: IsSubType<Call<T>>,
+{
+    #[cfg(feature = "std")]
+    fn fmt(&self, f: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
+        write!(f, "ContractIdProvides")
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn fmt(&self, _: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
+        Ok(())
+    }
+}
+
+impl<T: Config + Send + Sync + scale_info::TypeInfo> Default for ContractIdProvides<T>
+where
+    <T as frame_system::Config>::RuntimeCall: IsSubType<Call<T>>,
+{
+    fn default() -> Self {
+        Self(PhantomData)
+    }
+}
+
+impl<T: Config + Send + Sync + scale_info::TypeInfo> ContractIdProvides<T>
+where
+    <T as frame_system::Config>::RuntimeCall: IsSubType<Call<T>>,
+{
+    pub fn new() -> Self {
+        Self(PhantomData)
+    }
 }

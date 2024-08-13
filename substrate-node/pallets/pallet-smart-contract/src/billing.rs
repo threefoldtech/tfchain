@@ -123,15 +123,6 @@ impl<T: Config> Pallet<T> {
     pub fn bill_contract(contract_id: u64) -> DispatchResultWithPostInfo {
         log::debug!("Starting billing for contract_id: {:?}", contract_id);
 
-        // Check if contract is already processed in this block
-        let mut seen_contracts = SeenContracts::<T>::get();
-        ensure!(
-            !seen_contracts.contains(&contract_id),
-            Error::<T>::ContractAlreadyProcessedInBlock,
-        );
-        seen_contracts.push(contract_id);
-        SeenContracts::<T>::put(seen_contracts);
-
         let mut contract = Contracts::<T>::get(contract_id).ok_or_else(|| {
             log::error!("Contract not exists: {:?}", contract_id);
             Error::<T>::ContractNotExists

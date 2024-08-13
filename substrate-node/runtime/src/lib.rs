@@ -551,6 +551,7 @@ where
             frame_system::CheckNonce::<Runtime>::from(index),
             frame_system::CheckWeight::<Runtime>::new(),
             pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
+            pallet_smart_contract::types::ContractIdProvides::<Runtime>::new(),
         );
 
         #[cfg_attr(not(feature = "std"), allow(unused_variables))]
@@ -768,6 +769,7 @@ pub type SignedExtra = (
     frame_system::CheckNonce<Runtime>,
     frame_system::CheckWeight<Runtime>,
     pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+    pallet_smart_contract::types::ContractIdProvides::<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic =
