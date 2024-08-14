@@ -668,7 +668,7 @@ impl<T: Config> Pallet<T> {
             foundation_share + staking_pool_share + total_provider_share + sales_share;
 
         // Calculate the amount to burn, which is the remainder after distributing the rewards to the beneficiaries.
-        // This should be 35% of the total amount, but we calculate it to avoid rounding errors
+        // This should be 35% of the total amount, but we calculate it by subtract all previously send amounts with the initial to avoid accumulating rounding errors.
         let amount_to_burn = amount.defensive_saturating_sub(total_distributed);
         let (to_burn, reminder) = T::Currency::slash_reserved(&src_twin.account_id, amount_to_burn);
 
