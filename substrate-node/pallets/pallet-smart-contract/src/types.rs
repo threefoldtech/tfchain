@@ -409,7 +409,9 @@ pub enum ServiceContractState {
     AgreementReady,
     ApprovedByBoth,
 }
-
+// This code defines a custom SignedExtension `ContractIdProvides`
+// SignedExtension is a trait that allows developers to add custom logic to the transaction validation process.
+// It ensures that transactions of type bill_contract_for_block are unique per block based on the provided contract ID.
 #[derive(Encode, Decode, Clone, Eq, PartialEq, scale_info::TypeInfo)]
 pub struct ContractIdProvides<T: Config + Send + Sync + scale_info::TypeInfo>(PhantomData<T>)
 where
@@ -429,6 +431,7 @@ where
         Ok(())
     }
 
+    //  Provides the contract ID in a way that prevents duplicate transactions with the same contract ID.
     fn validate(
         &self,
         _who: &Self::AccountId,

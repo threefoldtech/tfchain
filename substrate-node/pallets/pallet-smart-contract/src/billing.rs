@@ -850,7 +850,7 @@ impl<T: Config> Pallet<T> {
     }
 
     // Get the reservable balance of an account
-    // This is the balance minus the minimum balance (reservable = free - ED - Frozen)
+    // reservable = free - ED - Frozen
     fn get_reservable_balance(account_id: &T::AccountId) -> BalanceOf<T> {
         let account = T::AccountStore::get(account_id);
         let free = account.free;
