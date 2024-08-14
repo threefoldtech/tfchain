@@ -27,7 +27,7 @@ impl<T: Config> Pallet<T> {
     pub fn bill_contracts_for_block(block_number: BlockNumberFor<T>) {
         let index = Self::get_billing_loop_index_from_block_number(block_number);
         let contract_ids = ContractsToBillAt::<T>::get(index);
-    
+
         if contract_ids.is_empty() {
             log::info!(
                 "No contracts to bill at block {:?}, index: {:?}",
@@ -36,19 +36,19 @@ impl<T: Config> Pallet<T> {
             );
             return;
         }
-    
+
         log::info!(
             "Contracts to bill at block {:?}: {:?}",
             block_number,
             contract_ids,
         );
-    
+
         let mut succeeded_contracts = Vec::new();
         let mut failed_contracts = Vec::new();
         let mut skipped_contracts = Vec::new();
         let mut missing_contracts = Vec::new();
         let mut already_sent_contracts = Vec::new();
-    
+
         for contract_id in contract_ids {
             if let Some(contract) = Contracts::<T>::get(contract_id) {
                 if Self::should_bill_contract(&contract) {
@@ -71,7 +71,7 @@ impl<T: Config> Pallet<T> {
                 missing_contracts.push(contract_id);
             }
         }
-    
+
         // Log the results at the end of the function
         if !succeeded_contracts.is_empty() {
             log::info!(
@@ -79,14 +79,14 @@ impl<T: Config> Pallet<T> {
                 succeeded_contracts
             );
         }
-    
+
         if !already_sent_contracts.is_empty() {
             log::info!(
                 "Signed transactions for contracts were already sent: {:?}",
                 already_sent_contracts
             );
         }
-    
+
         if !skipped_contracts.is_empty() {
             log::info!(
                 "Skipped billing node contracts (no IP/CU/SU/NU to bill): {:?}",
@@ -100,13 +100,10 @@ impl<T: Config> Pallet<T> {
                 failed_contracts
             );
         }
-    
+
         if !missing_contracts.is_empty() {
-            log::error!(
-                "Contracts not found in storage: {:?}",
-                missing_contracts
-            );
-        }    
+            log::error!("Contracts not found in storage: {:?}", missing_contracts);
+        }
     }
     fn should_bill_contract(contract: &types::Contract<T>) -> bool {
         match &contract.contract_type {
@@ -348,7 +345,7 @@ impl<T: Config> Pallet<T> {
         contract_payment_state.last_updated_seconds = now;
         contract_payment_state.cycles.defensive_saturating_inc();
         ContractPaymentState::<T>::insert(contract.contract_id, &contract_payment_state);
-        
+
         Ok(().into())
     }
 
@@ -358,23 +355,18 @@ impl<T: Config> Pallet<T> {
         contract_payment_state: &mut types::ContractPaymentState<BalanceOf<T>>,
     ) {
         if !contract_lock.is_migrated() {
-            log::debug!("Migrating contract to new payment state, CL: {:?}", contract_lock);
+            log::debug!(
+                "Migrating contract to new payment state, CL: {:?}",
+                contract_lock
+            );
             contract_payment_state.last_updated_seconds = contract_lock.lock_updated;
             contract_payment_state.standard_overdrafted = contract_lock.amount_locked;
             contract_payment_state.additional_overdrafted = contract_lock.extra_amount_locked;
             contract_payment_state.cycles = contract_lock.cycles;
-            log::debug!(
-                "Migrated contract to new payment state, CPS: {:?}",
-                contract_payment_state
-            );
 
             let locks = pallet_balances::Pallet::<T>::locks(&account_id);
             for lock in locks {
-                log::debug!(
-                    "Removing lock: {:?} for account: {:?}",
-                    lock.id,
-                    account_id,
-                );
+                log::debug!("Removing lock: {:?} for account: {:?}", lock.id, account_id,);
                 pallet_balances::Pallet::<T>::remove_lock(lock.id, &account_id);
             }
         }
@@ -517,7 +509,7 @@ impl<T: Config> Pallet<T> {
             let standard_rewards = contract_payment_state.standard_reserved;
             let additional_rewards = contract_payment_state.additional_reserved;
             // distribute additional rewards to the farm twin
-            
+
             let reminder = if let types::ContractData::RentContract(_) = &contract.contract_type {
                 log::info!(
                     "Distributing additional rewards from twin {:?} with amount {:?}",
@@ -533,7 +525,7 @@ impl<T: Config> Pallet<T> {
             } else {
                 BalanceOf::<T>::zero()
             };
-            
+
             let distributed_additional_amount = additional_rewards.saturating_sub(reminder);
             if reminder > BalanceOf::<T>::zero() {
                 log::warn!(
@@ -674,7 +666,7 @@ impl<T: Config> Pallet<T> {
 
         let total_distributed =
             foundation_share + staking_pool_share + total_provider_share + sales_share;
-        
+
         // Calculate the amount to burn, which is the remainder after distributing the rewards to the beneficiaries.
         // This should be 35% of the total amount, but we calculate it to avoid rounding errors
         let amount_to_burn = amount.defensive_saturating_sub(total_distributed);

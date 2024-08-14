@@ -321,7 +321,10 @@ impl<T: Config> Pallet<T> {
         }
 
         Self::update_contract_state(contract, &types::ContractState::Deleted(cause))?;
-        log::debug!("Billing for contract {} kicked in due to cancel request", contract.contract_id);
+        log::debug!(
+            "Billing for contract {} kicked in due to cancel request",
+            contract.contract_id
+        );
         Self::bill_contract(contract.contract_id)?;
 
         Ok(().into())
@@ -329,7 +332,7 @@ impl<T: Config> Pallet<T> {
 
     pub fn remove_contract(contract_id: u64) -> DispatchResultWithPostInfo {
         let contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
-        
+
         log::debug!("removing contract {}", contract_id);
         match contract.contract_type.clone() {
             types::ContractData::NodeContract(mut node_contract) => {
@@ -377,7 +380,10 @@ impl<T: Config> Pallet<T> {
         ContractPaymentState::<T>::remove(contract_id);
         // Clean up contract from billing loop
         // This is the only place it should be done
-        log::debug!("cleaning up deleted contract {} from billing loop", contract_id);
+        log::debug!(
+            "cleaning up deleted contract {} from billing loop",
+            contract_id
+        );
         Self::remove_contract_from_billing_loop(contract_id)?;
 
         Ok(().into())
@@ -703,12 +709,14 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
                     &mut contract,
                     &types::ContractState::Deleted(types::Cause::CanceledByUser),
                 );
-                log::debug!("Billing for node contract {} kicked in due to node deletion", contract.contract_id);
+                log::debug!(
+                    "Billing for node contract {} kicked in due to node deletion",
+                    contract.contract_id
+                );
                 let res = Self::bill_contract(node_contract_id);
                 if let Err(e) = res {
                     log::error!("error in node_deleted hook while billing contract {:?}: {:?}. Contract could be in dirty state", node_contract_id, e);
                 }
-
             }
         }
 
@@ -720,7 +728,10 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
                     &mut contract,
                     &types::ContractState::Deleted(types::Cause::CanceledByUser),
                 );
-                log::debug!("Billing for rent contract {} kicked in due to node deletion", contract.contract_id);
+                log::debug!(
+                    "Billing for rent contract {} kicked in due to node deletion",
+                    contract.contract_id
+                );
                 let res = Self::bill_contract(contract.contract_id);
                 if let Err(e) = res {
                     log::error!("error in node_deleted hook while billing contract id {:?}: {:?}. Contract could be in dirty state", rc_id, e);

@@ -5,13 +5,14 @@ use crate::{
 use frame_support::{
     assert_noop, assert_ok, bounded_vec,
     dispatch::Pays,
-    traits::{LockableCurrency, WithdrawReasons, Currency},
+    traits::{Currency, LockableCurrency, WithdrawReasons},
     BoundedVec,
 };
 use frame_system::{EventRecord, Phase, RawOrigin};
 use log::info;
 use pallet_tfgrid::{
-    types::{self as pallet_tfgrid_types, LocationInput}, ResourcesInput
+    types::{self as pallet_tfgrid_types, LocationInput},
+    ResourcesInput,
 };
 use sp_core::H256;
 use sp_runtime::{assert_eq_error_rate, traits::SaturatedConversion, Perbill, Percent};
@@ -997,7 +998,7 @@ fn test_node_contract_billing_details() {
             SmartContractModule::contract_to_bill_at_block(index),
             vec![contract_id]
         );
-        
+
         activate_billing_accounts(false);
 
         let initial_total_issuance = Balances::total_issuance();
@@ -1401,7 +1402,7 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
         let mut ips: BoundedVec<PublicIP, crate::MaxNodeContractPublicIPs<TestRuntime>> =
             vec![].try_into().unwrap();
         ips.try_push(public_ip).unwrap();
-        
+
         log::debug!("events : {:?}", our_events);
         assert_eq!(
             our_events.contains(&record(MockEvent::SmartContractModule(
@@ -1595,7 +1596,10 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
         .unwrap();
 
         let usable_balance_before_canceling = Balances::free_balance(&twin.account_id);
-        info!("usable balance before canceling: {:?}", usable_balance_before_canceling);
+        info!(
+            "usable balance before canceling: {:?}",
+            usable_balance_before_canceling
+        );
         assert_ne!(usable_balance_before_canceling, 0);
 
         assert_ok!(SmartContractModule::cancel_contract(
@@ -1606,14 +1610,23 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
         // After canceling contract, and not being able to pay for the remainder of the cycle
         // where the cancel was excecuted, should deduct as much as possible from the user
         let usable_balance_after_canceling = Balances::free_balance(&twin.account_id);
-        info!("usable balance after canceling: {:?}", usable_balance_after_canceling);
-        info!("total amount billed: {:?}", total_amount_billed + (usable_balance_before_canceling - usable_balance_after_canceling));
-        assert_eq!(
-            usable_balance_after_canceling,
-            500
+        info!(
+            "usable balance after canceling: {:?}",
+            usable_balance_after_canceling
         );
+        info!(
+            "total amount billed: {:?}",
+            total_amount_billed
+                + (usable_balance_before_canceling - usable_balance_after_canceling)
+        );
+        assert_eq!(usable_balance_after_canceling, 500);
 
-        validate_distribution_rewards(initial_total_issuance, total_amount_billed + (usable_balance_before_canceling - usable_balance_after_canceling), false);
+        validate_distribution_rewards(
+            initial_total_issuance,
+            total_amount_billed
+                + (usable_balance_before_canceling - usable_balance_after_canceling),
+            false,
+        );
     });
 }
 
@@ -2064,7 +2077,6 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
         );
 
         let twin = TfgridModule::twins(2).unwrap();
-
 
         let reserved_balance = Balances::reserved_balance(&twin.account_id);
         info!("reserved balance: {:?}", reserved_balance);
@@ -3955,7 +3967,7 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
         let mut extra_fee_cost_tft = 0;
 
         // advance 25 cycles to reach reward distribution block
-        for i in 1..=DistributionFrequency::get() as u64 + 1u64{
+        for i in 1..=DistributionFrequency::get() as u64 + 1u64 {
             let block_number = start_block + i * BillingFrequency::get();
             pool_state.write().should_call_bill_contract(
                 rent_contract_id,
@@ -3964,7 +3976,7 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
             );
             log::debug!("i {} after pool block_number: {}", i, block_number);
 
-            run_to_block( block_number, Some(&mut pool_state));
+            run_to_block(block_number, Some(&mut pool_state));
             log::debug!("i {} after run block_number: {}", i, block_number);
 
             // check why aggregating seconds elapsed is giving different results
@@ -3978,8 +3990,8 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
             rent_contract_cost_tft += contract_cost_tft;
 
             // aggregate extra fee cost
-            extra_fee_cost_tft += rent_contract
-                .calculate_extra_fee_cost_tft(node_id, elapsed_time_in_secs);
+            extra_fee_cost_tft +=
+                rent_contract.calculate_extra_fee_cost_tft(node_id, elapsed_time_in_secs);
         }
 
         let then = SmartContractModule::get_current_timestamp_in_secs();
@@ -4207,8 +4219,9 @@ fn calculate_tft_cost(contract_id: u64, twin_id: u32, blocks: u64) -> (u64, type
     let twin = TfgridModule::twins(twin_id).unwrap();
     let b = Balances::free_balance(&twin.account_id);
     let contract = SmartContractModule::contracts(contract_id).unwrap();
-    let (amount_due, discount_received) =
-        contract.calculate_contract_cost_tft(b, blocks * 6, None).unwrap();
+    let (amount_due, discount_received) = contract
+        .calculate_contract_cost_tft(b, blocks * 6, None)
+        .unwrap();
 
     (amount_due, discount_received)
 }
@@ -4555,7 +4568,6 @@ fn get_timestamp_in_seconds_for_block(block_number: u64) -> u64 {
 }
 
 fn activate_billing_accounts(had_solution_provider: bool) {
-
     let pricing_policy = TfgridModule::pricing_policies(1).unwrap();
     let foundation_account = pricing_policy.foundation_account;
     let sales_account = pricing_policy.certified_sales_account;
@@ -4563,7 +4575,11 @@ fn activate_billing_accounts(had_solution_provider: bool) {
     let mut billing_accounts = vec![foundation_account, sales_account, staking_pool_account];
     // push solution_provider_account if SmartContractModule::solution_providers(1) has Some
     if had_solution_provider {
-        let solution_provider_account = SmartContractModule::solution_providers(1).unwrap().providers[0].who.clone();
+        let solution_provider_account = SmartContractModule::solution_providers(1)
+            .unwrap()
+            .providers[0]
+            .who
+            .clone();
         billing_accounts.push(solution_provider_account);
     }
     for account in billing_accounts {

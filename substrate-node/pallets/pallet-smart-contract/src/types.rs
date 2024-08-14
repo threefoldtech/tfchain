@@ -409,6 +409,7 @@ pub enum ServiceContractState {
     AgreementReady,
     ApprovedByBoth,
 }
+
 // This code defines a custom SignedExtension `ContractIdProvides`
 // SignedExtension is a trait that allows developers to add custom logic to the transaction validation process.
 // It ensures that transactions of type bill_contract_for_block are unique per block based on the provided contract ID.
