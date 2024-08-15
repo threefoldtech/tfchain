@@ -486,7 +486,7 @@ impl<T: Config> Pallet<T> {
             contract_id: contract.contract_id,
             timestamp: now,
             // This is the partial amount successfully reserved from the user's account in this billing cycle
-            partial_billed_amount: reservable,
+            partially_billed_amount: reservable,
             // This is the total overdrafted amount for this contract since grace period started
             overdrafted_amount: contract_payment_state.get_overdrafted(),
         });

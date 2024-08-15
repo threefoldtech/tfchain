@@ -64,7 +64,7 @@ pub mod pallet {
     use frame_support::{
         pallet_prelude::*,
         traits::{
-            tokens::fungible::*, Currency, Get, Hooks, LockableCurrency,
+            tokens::fungible::*, Currency, Get, Hooks, LockIdentifier, LockableCurrency,
             OnUnbalanced, ReservableCurrency,
         },
     };
@@ -86,6 +86,8 @@ pub mod pallet {
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
     pub type NegativeImbalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::NegativeImbalance;
+    pub const GRID_LOCK_ID: LockIdentifier = *b"gridlock";
+
     use tfchain_support::types::PublicIP;
 
     #[pallet::pallet]
@@ -350,7 +352,7 @@ pub mod pallet {
         ContractPaymentOverdrafted {
             contract_id: u64,
             timestamp: u64,
-            partial_billed_amount: BalanceOf<T>, // amount billed
+            partially_billed_amount: BalanceOf<T>, // amount billed
             overdrafted_amount: BalanceOf<T>,    // amount overdrafted
         },
         // RewardDistributed

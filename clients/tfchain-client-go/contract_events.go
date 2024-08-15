@@ -257,12 +257,12 @@ type ContractGracePeriodElapsed struct {
 }
 
 type ContractPaymentOverdrafted struct {
-	Phase               types.Phase
-	ContractID          types.U64  `json:"contract_id"`
-	Timestamp           types.U64  `json:"timestamp"`
-	PartialBilledAmount types.U128 `json:"partial_billed_amount"`
-	OverdraftedAmount   types.U128 `json:"overdrafted_amount"`
-	Topics              []types.Hash
+	Phase                 types.Phase
+	ContractID            types.U64  `json:"contract_id"`
+	Timestamp             types.U64  `json:"timestamp"`
+	PartiallyBilledAmount types.U128 `json:"partially_billed_amount"`
+	OverdraftedAmount     types.U128 `json:"overdrafted_amount"`
+	Topics                []types.Hash
 }
 
 type RewardDistributed struct {
