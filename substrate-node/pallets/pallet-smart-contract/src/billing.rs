@@ -713,9 +713,9 @@ impl<T: Config> Pallet<T> {
                 }
                 reminder
             }
-            // Shouldn't happen, uless the destination account is not able to receive the funds
+            // This shouldn’t happen unless the destination account is unable to receive the funds
             Err(e) => {
-                log::error!("Error while repatriating reserved balance: {:?}. source: {:?}, destnation: {:?}", e, src_account, dst_account);
+                log::error!("Error while repatriating reserved balance: {:?}. source: {:?}, destination: {:?}", e, src_account, dst_account);
                 amount
             }
         }
