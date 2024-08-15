@@ -17,7 +17,7 @@ use frame_system::{
 };
 use sp_core::Get;
 use sp_runtime::{
-    traits::{Saturating, Zero},
+    traits::{Convert, Saturating, Zero},
     DispatchResult, Perbill, SaturatedConversion,
 };
 
@@ -105,6 +105,7 @@ impl<T: Config> Pallet<T> {
             log::error!("Contracts not found in storage: {:?}", missing_contracts);
         }
     }
+
     fn should_bill_contract(contract: &types::Contract<T>) -> bool {
         match &contract.contract_type {
             types::ContractData::NodeContract(node_contract) => {
@@ -155,7 +156,7 @@ impl<T: Config> Pallet<T> {
             Error::<T>::PricingPolicyNotExists
         })?;
 
-        // Check if contract is not a name contract ensure the node, farm and farmer twin exists
+        // In case contract is not a name contract ensure the node, farm and farmer twin exists
         let (farmer_twin, node_certification) =
             if !matches!(contract.contract_type, types::ContractData::NameContract(_)) {
                 let node =
@@ -492,7 +493,7 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    // Orcastrate the distribution of rewards
+    // Orchestrate the distribution of rewards
     // Emits RewardDistributed event
     // No-Op if contract nither in deleted state nor the distribution frequency is reached
     fn remit_funds(
@@ -860,4 +861,12 @@ impl<T: Config> Pallet<T> {
     pub fn get_current_timestamp_in_secs() -> u64 {
         <pallet_timestamp::Pallet<T>>::get().saturated_into::<u64>() / 1000
     }
+
+    pub fn is_validator(account_id: T::AccountId) -> bool {
+        let validators = pallet_session::Pallet::<T>::validators();
+
+        <T as pallet_session::Config>::ValidatorIdOf::convert(account_id.clone())
+            .map_or(false, |validator_id| validators.contains(&validator_id))
+    }
+    
 }

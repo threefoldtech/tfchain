@@ -64,7 +64,7 @@ pub mod pallet {
     use frame_support::{
         pallet_prelude::*,
         traits::{
-            tokens::fungible::*, Currency, Get, Hooks, LockIdentifier, LockableCurrency,
+            tokens::fungible::*, Currency, Get, Hooks, LockableCurrency,
             OnUnbalanced, ReservableCurrency,
         },
     };
@@ -75,7 +75,6 @@ pub mod pallet {
     };
     use parity_scale_codec::FullCodec;
     use sp_core::H256;
-    use sp_runtime::traits::Convert;
     use sp_std::{
         convert::{TryFrom, TryInto},
         fmt::Debug,
@@ -87,8 +86,6 @@ pub mod pallet {
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
     pub type NegativeImbalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::NegativeImbalance;
-
-    pub const GRID_LOCK_ID: LockIdentifier = *b"gridlock";
     use tfchain_support::types::PublicIP;
 
     #[pallet::pallet]
@@ -552,14 +549,9 @@ pub mod pallet {
             let account_id = ensure_signed(origin)?;
             log::debug!("Starting billing for contract_id: {:?}", contract_id);
 
-            let validators = pallet_session::Pallet::<T>::validators();
-            let is_validator =
-                <T as pallet_session::Config>::ValidatorIdOf::convert(account_id.clone())
-                    .map_or(false, |validator_id| validators.contains(&validator_id));
-
             let res = Self::bill_contract(contract_id);
 
-            let pays: Pays = if is_validator {
+            let pays: Pays = if Self::is_validator(account_id) {
                 log::debug!("validator is exempt from fees");
                 // Exempt fees for validators
                 Pays::No.into()
@@ -708,7 +700,7 @@ pub mod pallet {
             Self::_cancel_contract_collective(contract_id, types::Cause::CanceledByCollective)
         }
     }
-
+    
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
