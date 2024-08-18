@@ -273,8 +273,7 @@ where
     }
     // accumulate the standard overdraft
     pub fn overdraft_standard_amount(&mut self, amount: BalanceOf) {
-        self.standard_overdraft
-            .defensive_saturating_accrue(amount);
+        self.standard_overdraft.defensive_saturating_accrue(amount);
     }
     // accumulate the additional overdraft
     pub fn overdraft_additional_amount(&mut self, amount: BalanceOf) {
@@ -505,5 +504,150 @@ where
 {
     pub fn new() -> Self {
         Self(PhantomData)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Helper function to create a default ContractPaymentState
+    fn default_contract_payment_state() -> ContractPaymentState<u64> {
+        ContractPaymentState {
+            last_updated_seconds: 0,
+            standard_reserve: 0,
+            additional_reserve: 0,
+            standard_overdraft: 0,
+            additional_overdraft: 0,
+            cycles: 0,
+        }
+    }
+
+    #[test]
+    fn test_settle_overdrafted() {
+        let mut payment_state = default_contract_payment_state();
+        payment_state.standard_overdraft = 50;
+        payment_state.additional_overdraft = 30;
+
+        payment_state.settle_overdraft();
+
+        assert_eq!(payment_state.standard_overdraft, 0);
+        assert_eq!(payment_state.additional_overdraft, 0);
+    }
+
+    #[test]
+    fn test_reserve_standard_amount() {
+        let mut payment_state = default_contract_payment_state();
+        payment_state.reserve_standard_amount(100);
+        assert_eq!(payment_state.standard_reserve, 100);
+
+        payment_state.reserve_standard_amount(50);
+        assert_eq!(payment_state.standard_reserve, 150);
+    }
+
+    #[test]
+    fn test_reserve_additional_amount() {
+        let mut payment_state = default_contract_payment_state();
+        payment_state.reserve_additional_amount(200);
+        assert_eq!(payment_state.additional_reserve, 200);
+
+        payment_state.reserve_additional_amount(100);
+        assert_eq!(payment_state.additional_reserve, 300);
+    }
+
+    #[test]
+    fn test_overdraft_standard_amount() {
+        let mut payment_state = default_contract_payment_state();
+        payment_state.overdraft_standard_amount(150);
+        assert_eq!(payment_state.standard_overdraft, 150);
+
+        payment_state.overdraft_standard_amount(50);
+        assert_eq!(payment_state.standard_overdraft, 200);
+    }
+
+    #[test]
+    fn test_overdraft_additional_amount() {
+        let mut payment_state = default_contract_payment_state();
+        payment_state.overdraft_additional_amount(75);
+        assert_eq!(payment_state.additional_overdraft, 75);
+
+        payment_state.overdraft_additional_amount(75);
+        assert_eq!(payment_state.additional_overdraft, 150);
+    }
+
+    #[test]
+    fn test_settle_partial_overdrafted() {
+        let mut payment_state = default_contract_payment_state();
+        payment_state.standard_overdraft = 100;
+        payment_state.additional_overdraft = 50;
+
+        payment_state.settle_partial_overdraft(30);
+
+        // The remaining overdraft should be reduced by 30
+        // Assuming 30 is prefearbly deducted from additional first
+        assert_eq!(payment_state.standard_overdraft, 100);
+        assert_eq!(payment_state.additional_overdraft, 20);
+
+        payment_state.settle_partial_overdraft(30);
+        assert_eq!(payment_state.standard_overdraft, 90);
+        assert_eq!(payment_state.additional_overdraft, 0);
+    }
+
+    #[test]
+    fn test_get_overdrafted() {
+        let mut payment_state = default_contract_payment_state();
+        payment_state.standard_overdraft = 200;
+        payment_state.additional_overdraft = 100;
+
+        let total_overdrafted = payment_state.get_overdraft();
+
+        assert_eq!(total_overdrafted, 300);
+    }
+
+    #[test]
+    fn test_get_reserved() {
+        let mut payment_state = default_contract_payment_state();
+        payment_state.standard_reserve = 120;
+        payment_state.additional_reserve = 80;
+
+        let total_reserved = payment_state.get_reserved();
+
+        assert_eq!(total_reserved, 200);
+    }
+
+    #[test]
+    fn test_has_reserved_amount() {
+        let mut payment_state = default_contract_payment_state();
+        assert_eq!(payment_state.has_reserved_amount(), false);
+
+        payment_state.standard_reserve = 120;
+        payment_state.additional_reserve = 80;
+        assert_eq!(payment_state.has_reserved_amount(), true);
+
+        let mut payment_state = default_contract_payment_state();
+        payment_state.standard_reserve = 120;
+        assert_eq!(payment_state.has_reserved_amount(), true);
+
+        let mut payment_state = default_contract_payment_state();
+        payment_state.additional_reserve = 80;
+        assert_eq!(payment_state.has_reserved_amount(), true);
+    }
+
+    #[test]
+    fn test_has_overdarft() {
+        let mut payment_state = default_contract_payment_state();
+        assert_eq!(payment_state.has_overdraft(), false);
+
+        payment_state.standard_overdraft = 120;
+        payment_state.additional_overdraft = 80;
+        assert_eq!(payment_state.has_overdraft(), true);
+
+        let mut payment_state = default_contract_payment_state();
+        payment_state.standard_overdraft = 120;
+        assert_eq!(payment_state.has_overdraft(), true);
+
+        let mut payment_state = default_contract_payment_state();
+        payment_state.additional_overdraft = 80;
+        assert_eq!(payment_state.has_overdraft(), true);
     }
 }
