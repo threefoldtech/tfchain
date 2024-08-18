@@ -261,7 +261,7 @@ type ContractPaymentOverdrawn struct {
 	ContractID            types.U64  `json:"contract_id"`
 	Timestamp             types.U64  `json:"timestamp"`
 	PartiallyBilledAmount types.U128 `json:"partially_billed_amount"`
-	Overdraft             types.U128 `json:"Overdraft"`
+	Overdraft             types.U128 `json:"overdraft"`
 	Topics                []types.Hash
 }
 
