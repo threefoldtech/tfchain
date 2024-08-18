@@ -446,6 +446,8 @@ Test Solution Provider
     # Setup
     Setup Predefined Account    who=Alice
     Setup Predefined Account    who=Bob
+    Setup Predefined Account    who=Charlie
+    Setup Predefined Account    who=Dave
     Create Farm    name=alice_farm
     Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
     
