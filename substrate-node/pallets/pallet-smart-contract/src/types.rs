@@ -313,8 +313,8 @@ where
             .defensive_saturating_add(self.additional_reserve)
     }
 
-    // Method to return weather the contract has reserved amount or not
-    pub fn has_reserved_amount(&self) -> bool {
+    // Method to return weather the contract has any reserved balance at all.
+    pub fn has_reserve(&self) -> bool {
         !self.standard_reserve.is_zero() || !self.additional_reserve.is_zero()
     }
 
@@ -616,21 +616,21 @@ mod tests {
     }
 
     #[test]
-    fn test_has_reserved_amount() {
+    fn test_has_reserve() {
         let mut payment_state = default_contract_payment_state();
-        assert_eq!(payment_state.has_reserved_amount(), false);
+        assert_eq!(payment_state.has_reserve(), false);
 
         payment_state.standard_reserve = 120;
         payment_state.additional_reserve = 80;
-        assert_eq!(payment_state.has_reserved_amount(), true);
+        assert_eq!(payment_state.has_reserve(), true);
 
         let mut payment_state = default_contract_payment_state();
         payment_state.standard_reserve = 120;
-        assert_eq!(payment_state.has_reserved_amount(), true);
+        assert_eq!(payment_state.has_reserve(), true);
 
         let mut payment_state = default_contract_payment_state();
         payment_state.additional_reserve = 80;
-        assert_eq!(payment_state.has_reserved_amount(), true);
+        assert_eq!(payment_state.has_reserve(), true);
     }
 
     #[test]

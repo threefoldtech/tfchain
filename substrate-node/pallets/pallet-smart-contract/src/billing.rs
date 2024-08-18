@@ -513,7 +513,7 @@ impl<T: Config> Pallet<T> {
         let is_deleted = matches!(contract.state, types::ContractState::Deleted(_));
         let should_distribute_rewards =
             contract_payment_state.cycles >= T::DistributionFrequency::get() || is_deleted;
-        if should_distribute_rewards && contract_payment_state.has_reserved_amount() {
+        if should_distribute_rewards && contract_payment_state.has_reserve() {
             let standard_rewards = contract_payment_state.standard_reserve;
             let additional_rewards = contract_payment_state.additional_reserve;
             // distribute additional rewards to the farm twin
