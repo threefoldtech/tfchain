@@ -233,10 +233,10 @@ pub struct ContractLock<BalanceOf> {
     PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo, MaxEncodedLen,
 )]
 pub struct ContractPaymentState<BalanceOf> {
-    pub standard_reserved: BalanceOf,
-    pub additional_reserved: BalanceOf,
-    pub standard_overdrafted: BalanceOf,
-    pub additional_overdrafted: BalanceOf,
+    pub standard_reserve: BalanceOf,
+    pub additional_reserve: BalanceOf,
+    pub standard_overdraft: BalanceOf,
+    pub additional_overdraft: BalanceOf,
     pub last_updated_seconds: u64,
     pub cycles: u16,
 }
@@ -265,80 +265,80 @@ where
 {
     // accumulate the standard reserved amount
     pub fn reserve_standard_amount(&mut self, amount: BalanceOf) {
-        self.standard_reserved.defensive_saturating_accrue(amount);
+        self.standard_reserve.defensive_saturating_accrue(amount);
     }
     // accumulate the additional reserved amount
     pub fn reserve_additional_amount(&mut self, amount: BalanceOf) {
-        self.additional_reserved.defensive_saturating_accrue(amount);
+        self.additional_reserve.defensive_saturating_accrue(amount);
     }
     // accumulate the standard overdrafted amount
     pub fn overdraft_standard_amount(&mut self, amount: BalanceOf) {
-        self.standard_overdrafted
+        self.standard_overdraft
             .defensive_saturating_accrue(amount);
     }
     // accumulate the additional overdrafted amount
     pub fn overdraft_additional_amount(&mut self, amount: BalanceOf) {
-        self.additional_overdrafted
+        self.additional_overdraft
             .defensive_saturating_accrue(amount);
     }
 
     // Method to settle the standard overdrafted amount
-    pub fn settle_overdrafted_standard_amount(&mut self) {
-        self.standard_reserved
-            .defensive_saturating_accrue(self.standard_overdrafted);
-        self.standard_overdrafted = BalanceOf::zero();
+    pub fn settle_overdraft_standard_amount(&mut self) {
+        self.standard_reserve
+            .defensive_saturating_accrue(self.standard_overdraft);
+        self.standard_overdraft = BalanceOf::zero();
     }
 
     // Method to settle the additional overdrafted amount
-    pub fn settle_overdrafted_additional_amount(&mut self) {
-        self.additional_reserved
-            .defensive_saturating_accrue(self.additional_overdrafted);
-        self.additional_overdrafted = BalanceOf::zero();
+    pub fn settle_overdraft_additional_amount(&mut self) {
+        self.additional_reserve
+            .defensive_saturating_accrue(self.additional_overdraft);
+        self.additional_overdraft = BalanceOf::zero();
     }
 
     // Method to settle both standard and additional overdrafted amounts
-    pub fn settle_overdrafted(&mut self) {
-        self.settle_overdrafted_standard_amount();
-        self.settle_overdrafted_additional_amount();
+    pub fn settle_overdraft(&mut self) {
+        self.settle_overdraft_standard_amount();
+        self.settle_overdraft_additional_amount();
     }
 
-    // Method to return the sum of standard_overdrafted and additional_overdrafted
-    pub fn get_overdrafted(&self) -> BalanceOf {
-        self.standard_overdrafted
-            .defensive_saturating_add(self.additional_overdrafted)
+    // Method to return the sum of standard_overdraft and additional_overdraft
+    pub fn get_overdraft(&self) -> BalanceOf {
+        self.standard_overdraft
+            .defensive_saturating_add(self.additional_overdraft)
     }
 
-    // Method to return the sum of standard_reserved_amount and additional_reserved_amount
+    // Method to return the sum of standard_reserve_amount and additional_reserve_amount
     pub fn get_reserved(&self) -> BalanceOf {
-        self.standard_reserved
-            .defensive_saturating_add(self.additional_reserved)
+        self.standard_reserve
+            .defensive_saturating_add(self.additional_reserve)
     }
 
     // Method to return weather the contract has reserved amount or not
     pub fn has_reserved_amount(&self) -> bool {
-        !self.standard_reserved.is_zero() || !self.additional_reserved.is_zero()
+        !self.standard_reserve.is_zero() || !self.additional_reserve.is_zero()
     }
 
     // Method to return weather the contract has overdrafted amount or not
-    pub fn has_overdrafted_amount(&self) -> bool {
-        !self.standard_overdrafted.is_zero() || !self.additional_overdrafted.is_zero()
+    pub fn has_overdraft(&self) -> bool {
+        !self.standard_overdraft.is_zero() || !self.additional_overdraft.is_zero()
     }
 
     // Method to settle partial overdrafted amount
-    pub fn settle_partial_overdrafted(&mut self, amount: BalanceOf) {
+    pub fn settle_partial_overdraft(&mut self, amount: BalanceOf) {
         let mut remaining_amount = amount;
 
         // Settle additional overdraft first
         if remaining_amount > BalanceOf::zero() {
-            if remaining_amount >= self.additional_overdrafted {
-                remaining_amount.defensive_saturating_reduce(self.additional_overdrafted);
-                self.additional_reserved
-                    .defensive_saturating_accrue(self.additional_overdrafted);
-                self.additional_overdrafted = BalanceOf::zero();
+            if remaining_amount >= self.additional_overdraft {
+                remaining_amount.defensive_saturating_reduce(self.additional_overdraft);
+                self.additional_reserve
+                    .defensive_saturating_accrue(self.additional_overdraft);
+                self.additional_overdraft = BalanceOf::zero();
             } else {
-                self.additional_overdrafted
+                self.additional_overdraft
                     .defensive_saturating_reduce(remaining_amount);
-                self.additional_reserved
+                self.additional_reserve
                     .defensive_saturating_accrue(remaining_amount);
                 remaining_amount = BalanceOf::zero();
             }
@@ -346,15 +346,15 @@ where
 
         // Settle standard overdraft with any remaining amount
         if remaining_amount > BalanceOf::zero() {
-            if remaining_amount >= self.standard_overdrafted {
-                remaining_amount.defensive_saturating_reduce(self.standard_overdrafted);
-                self.standard_reserved
-                    .defensive_saturating_accrue(self.standard_overdrafted);
-                self.standard_overdrafted = BalanceOf::zero();
+            if remaining_amount >= self.standard_overdraft {
+                remaining_amount.defensive_saturating_reduce(self.standard_overdraft);
+                self.standard_reserve
+                    .defensive_saturating_accrue(self.standard_overdraft);
+                self.standard_overdraft = BalanceOf::zero();
             } else {
-                self.standard_overdrafted
+                self.standard_overdraft
                     .defensive_saturating_reduce(remaining_amount);
-                self.standard_reserved
+                self.standard_reserve
                     .defensive_saturating_accrue(remaining_amount);
             }
         }

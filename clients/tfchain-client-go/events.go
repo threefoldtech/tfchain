@@ -391,7 +391,7 @@ type EventRecords struct {
 	SmartContractModule_NodeExtraFeeSet              []NodeExtraFeeSet              //nolint:stylecheck,golint
 	SmartContractModule_RentWaived                   []RentWaived                   //nolint:stylecheck,golint
 	SmartContractModule_ContractGracePeriodElapsed   []ContractGracePeriodElapsed   //nolint:stylecheck,golint
-	SmartContractModule_ContractPaymentOverdrafted   []ContractPaymentOverdrafted   //nolint:stylecheck,golint
+	SmartContractModule_ContractPaymentOverdrawn     []ContractPaymentOverdrawn     //nolint:stylecheck,golint
 	SmartContractModule_RewardDistributed            []RewardDistributed            //nolint:stylecheck,golint
 
 	// farm events

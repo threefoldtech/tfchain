@@ -256,12 +256,12 @@ type ContractGracePeriodElapsed struct {
 	Topics      []types.Hash
 }
 
-type ContractPaymentOverdrafted struct {
+type ContractPaymentOverdrawn struct {
 	Phase                 types.Phase
 	ContractID            types.U64  `json:"contract_id"`
 	Timestamp             types.U64  `json:"timestamp"`
 	PartiallyBilledAmount types.U128 `json:"partially_billed_amount"`
-	OverdraftedAmount     types.U128 `json:"overdrafted_amount"`
+	Overdraft             types.U128 `json:"Overdraft"`
 	Topics                []types.Hash
 }
 

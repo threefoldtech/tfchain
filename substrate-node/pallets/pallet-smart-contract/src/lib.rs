@@ -349,7 +349,7 @@ pub mod pallet {
             grace_period: u64,
         },
         // Overdafted incurred
-        ContractPaymentOverdrafted {
+        ContractPaymentOverdrawn {
             contract_id: u64,
             timestamp: u64,
             partially_billed_amount: BalanceOf<T>, // amount billed

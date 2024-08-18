@@ -273,9 +273,9 @@ impl<T: Config> Pallet<T> {
         // Calculate the amount needed to be reserved from the user's balance
         // should be the total amount due for current cycle + any overdrafted amount from previous cycles
         let standard_amount_to_reserve = standard_amount_due
-            .defensive_saturating_add(contract_payment_state.standard_overdrafted);
+            .defensive_saturating_add(contract_payment_state.standard_overdraft);
         let additional_amount_to_reserve = additional_amount_due
-            .defensive_saturating_add(contract_payment_state.additional_overdrafted);
+            .defensive_saturating_add(contract_payment_state.additional_overdraft);
         let total_amount_to_reserve =
             standard_amount_to_reserve.defensive_saturating_add(additional_amount_to_reserve);
 
@@ -315,7 +315,7 @@ impl<T: Config> Pallet<T> {
                 "Contract payment overdrafted for contract_id: {:?}, Contract state: {:?}, Total overdrafted amount: {:?}",
                 contract.contract_id,
                 contract.state,
-                contract_payment_state.get_overdrafted()
+                contract_payment_state.get_overdraft()
             );
         }
 
@@ -366,8 +366,8 @@ impl<T: Config> Pallet<T> {
                 contract_lock
             );
             contract_payment_state.last_updated_seconds = contract_lock.lock_updated;
-            contract_payment_state.standard_overdrafted = contract_lock.amount_locked;
-            contract_payment_state.additional_overdrafted = contract_lock.extra_amount_locked;
+            contract_payment_state.standard_overdraft = contract_lock.amount_locked;
+            contract_payment_state.additional_overdraft = contract_lock.extra_amount_locked;
             contract_payment_state.cycles = contract_lock.cycles;
 
             let locks = pallet_balances::Pallet::<T>::locks(&account_id);
@@ -454,7 +454,7 @@ impl<T: Config> Pallet<T> {
                 e
             },
         )?;
-        contract_payment_state.settle_overdrafted();
+        contract_payment_state.settle_overdraft();
         contract_payment_state.reserve_standard_amount(standard_amount_due);
         contract_payment_state.reserve_additional_amount(additional_amount_due);
         let contract_bill = types::ContractBill {
@@ -468,7 +468,7 @@ impl<T: Config> Pallet<T> {
     }
 
     // Increasing the overdraft in the user's account
-    // Emits ContractPaymentOverdrafted event
+    // Emits ContractPaymentOverdrawn event
     fn overdraft_funds(
         contract_payment_state: &mut types::ContractPaymentState<BalanceOf<T>>,
         standard_amount_due: BalanceOf<T>,
@@ -485,15 +485,15 @@ impl<T: Config> Pallet<T> {
             log::error!("Error while reserving partial amount due: {:?}", e);
             e
         })?;
-        contract_payment_state.settle_partial_overdrafted(reservable);
+        contract_payment_state.settle_partial_overdraft(reservable);
 
-        Self::deposit_event(Event::ContractPaymentOverdrafted {
+        Self::deposit_event(Event::ContractPaymentOverdrawn {
             contract_id: contract.contract_id,
             timestamp: now,
             // This is the partial amount successfully reserved from the user's account in this billing cycle
             partially_billed_amount: reservable,
             // This is the total overdrafted amount for this contract since grace period started
-            overdrafted_amount: contract_payment_state.get_overdrafted(),
+            overdrafted_amount: contract_payment_state.get_overdraft(),
         });
         Ok(().into())
     }
@@ -512,8 +512,8 @@ impl<T: Config> Pallet<T> {
         let should_distribute_rewards =
             contract_payment_state.cycles >= T::DistributionFrequency::get() || is_deleted;
         if should_distribute_rewards && contract_payment_state.has_reserved_amount() {
-            let standard_rewards = contract_payment_state.standard_reserved;
-            let additional_rewards = contract_payment_state.additional_reserved;
+            let standard_rewards = contract_payment_state.standard_reserve;
+            let additional_rewards = contract_payment_state.additional_reserve;
             // distribute additional rewards to the farm twin
 
             let remainder = if let types::ContractData::RentContract(_) = &contract.contract_type {
@@ -540,7 +540,7 @@ impl<T: Config> Pallet<T> {
                     distributed_additional_amount
                 );
             }
-            contract_payment_state.additional_reserved = remainder;
+            contract_payment_state.additional_reserve = remainder;
 
             log::info!(
                 "Distributing standard rewards from twin {:?} with amount {:?}",
@@ -560,7 +560,7 @@ impl<T: Config> Pallet<T> {
                 e
             })?;
 
-            contract_payment_state.standard_reserved = BalanceOf::<T>::zero();
+            contract_payment_state.standard_reserve = BalanceOf::<T>::zero();
             contract_payment_state.cycles = 0;
 
             log::info!(

@@ -309,7 +309,7 @@ benchmarks! {
     }: _(RawOrigin::Signed(farmer), contract_id)
     verify {
         let contract_payment_state = SmartContractModule::<T>::contract_payment_state(contract_id);
-        assert_eq!(contract_payment_state.standard_reserved, cost);
+        assert_eq!(contract_payment_state.standard_reserve, cost);
         let contract_bill = types::ContractBill {
             contract_id,
             timestamp: SmartContractModule::<T>::get_current_timestamp_in_secs(),
