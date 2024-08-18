@@ -263,40 +263,40 @@ impl<BalanceOf> ContractPaymentState<BalanceOf>
 where
     BalanceOf: DefensiveSaturating + Copy + Zero + PartialOrd,
 {
-    // accumulate the standard reserved amount
+    // accumulate the standard reserve
     pub fn reserve_standard_amount(&mut self, amount: BalanceOf) {
         self.standard_reserve.defensive_saturating_accrue(amount);
     }
-    // accumulate the additional reserved amount
+    // accumulate the additional reserve
     pub fn reserve_additional_amount(&mut self, amount: BalanceOf) {
         self.additional_reserve.defensive_saturating_accrue(amount);
     }
-    // accumulate the standard overdrafted amount
+    // accumulate the standard overdraft
     pub fn overdraft_standard_amount(&mut self, amount: BalanceOf) {
         self.standard_overdraft
             .defensive_saturating_accrue(amount);
     }
-    // accumulate the additional overdrafted amount
+    // accumulate the additional overdraft
     pub fn overdraft_additional_amount(&mut self, amount: BalanceOf) {
         self.additional_overdraft
             .defensive_saturating_accrue(amount);
     }
 
-    // Method to settle the standard overdrafted amount
+    // Method to settle the standard overdraft
     pub fn settle_overdraft_standard_amount(&mut self) {
         self.standard_reserve
             .defensive_saturating_accrue(self.standard_overdraft);
         self.standard_overdraft = BalanceOf::zero();
     }
 
-    // Method to settle the additional overdrafted amount
+    // Method to settle the additional overdraft
     pub fn settle_overdraft_additional_amount(&mut self) {
         self.additional_reserve
             .defensive_saturating_accrue(self.additional_overdraft);
         self.additional_overdraft = BalanceOf::zero();
     }
 
-    // Method to settle both standard and additional overdrafted amounts
+    // Method to settle both standard and additional overdraft
     pub fn settle_overdraft(&mut self) {
         self.settle_overdraft_standard_amount();
         self.settle_overdraft_additional_amount();
@@ -319,12 +319,12 @@ where
         !self.standard_reserve.is_zero() || !self.additional_reserve.is_zero()
     }
 
-    // Method to return weather the contract has overdrafted amount or not
+    // Method to return weather the contract has overdraft or not
     pub fn has_overdraft(&self) -> bool {
         !self.standard_overdraft.is_zero() || !self.additional_overdraft.is_zero()
     }
 
-    // Method to settle partial overdrafted amount
+    // Method to settle partial overdraft
     pub fn settle_partial_overdraft(&mut self, amount: BalanceOf) {
         let mut remaining_amount = amount;
 

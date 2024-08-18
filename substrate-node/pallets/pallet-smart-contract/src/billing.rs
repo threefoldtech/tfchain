@@ -179,7 +179,7 @@ impl<T: Config> Pallet<T> {
             };
 
         // Switch lazily from old contract lock to use new contract payment state
-        // This allows tracking the overdrafted amount for the current contract
+        // This allows tracking overdraft  for the current contract
         // While still avoiding the need for a storage migration for all contracts
         let mut contract_payment_state = ContractPaymentState::<T>::get(contract.contract_id);
         // Get and remove the contract lock from storage
@@ -271,7 +271,7 @@ impl<T: Config> Pallet<T> {
         }
 
         // Calculate the amount needed to be reserved from the user's balance
-        // should be the total amount due for current cycle + any overdrafted amount from previous cycles
+        // should be the total amount due for current cycle + any overdraft from previous cycles
         let standard_amount_to_reserve = standard_amount_due
             .defensive_saturating_add(contract_payment_state.standard_overdraft);
         let additional_amount_to_reserve = additional_amount_due
@@ -312,7 +312,7 @@ impl<T: Config> Pallet<T> {
                 now,
             )?;
             log::info!(
-                "Contract payment overdrafted for contract_id: {:?}, Contract state: {:?}, Total overdrafted amount: {:?}",
+                "Contract payment overdrawn for contract_id: {:?}, Contract state: {:?}, Total overdraft: {:?}",
                 contract.contract_id,
                 contract.state,
                 contract_payment_state.get_overdraft()
@@ -492,8 +492,8 @@ impl<T: Config> Pallet<T> {
             timestamp: now,
             // This is the partial amount successfully reserved from the user's account in this billing cycle
             partially_billed_amount: reservable,
-            // This is the total overdrafted amount for this contract since grace period started
-            overdrafted_amount: contract_payment_state.get_overdraft(),
+            // This is the total overdraft for this contract since grace period started
+            overdraft: contract_payment_state.get_overdraft(),
         });
         Ok(().into())
     }

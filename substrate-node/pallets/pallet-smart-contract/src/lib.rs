@@ -352,8 +352,8 @@ pub mod pallet {
         ContractPaymentOverdrawn {
             contract_id: u64,
             timestamp: u64,
-            partially_billed_amount: BalanceOf<T>, // amount billed
-            overdrafted_amount: BalanceOf<T>,    // amount overdrafted
+            partially_billed_amount: BalanceOf<T>,
+            overdraft: BalanceOf<T>,
         },
         // RewardDistributed
         RewardDistributed {
