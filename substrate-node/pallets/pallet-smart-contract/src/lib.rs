@@ -218,7 +218,8 @@ pub mod pallet {
         type Currency: LockableCurrency<Self::AccountId>
             + ReservableCurrency<Self::AccountId>
             + InspectHold<Self::AccountId>
-            + Inspect<Self::AccountId>;
+            + Inspect<Self::AccountId>
+            + Currency<Self::AccountId>;
         /// Handler for the unbalanced decrement when slashing (burning collateral)
         type Burn: OnUnbalanced<NegativeImbalanceOf<Self>>;
         type StakingPoolAccount: Get<Self::AccountId>;
@@ -702,7 +703,7 @@ pub mod pallet {
             Self::_cancel_contract_collective(contract_id, types::Cause::CanceledByCollective)
         }
     }
-    
+
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_initialize(_n: BlockNumberFor<T>) -> Weight {

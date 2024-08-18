@@ -1,15 +1,14 @@
 use crate::*;
 use frame_support::traits::DefensiveSaturating;
 use frame_support::{
-    dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo, DispatchResult, Vec},
+    dispatch::{DispatchErrorWithPostInfo, DispatchResult, DispatchResultWithPostInfo, Vec},
     ensure,
     traits::{
         tokens::{fungible::*, Fortitude::Polite, Preservation::Preserve},
-        LockableCurrency, OnUnbalanced, ReservableCurrency,
+        Currency, LockableCurrency, OnUnbalanced, ReservableCurrency,
     },
 };
 
-use frame_support::traits::BalanceStatus;
 use frame_support::traits::StoredMap;
 use frame_system::{
     offchain::{SendSignedTransaction, Signer},
@@ -524,11 +523,8 @@ impl<T: Config> Pallet<T> {
                     src_twin.id,
                     additional_rewards,
                 );
-                match Self::distribute_additional_rewards(
-                    farmer_twin,
-                    src_twin,
-                    additional_rewards
-                ) {
+                match Self::distribute_additional_rewards(farmer_twin, src_twin, additional_rewards)
+                {
                     Ok(_) => (),
                     Err(e) => {
                         log::error!("Error while distributing additional rewards: {:?}", e);
@@ -585,7 +581,11 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    fn distribute_additional_rewards(farmer_twin: Option<pallet_tfgrid::types::Twin<T::AccountId>>, src_twin: &pallet_tfgrid::types::Twin<T::AccountId>, additional_rewards: BalanceOf<T>) -> DispatchResult {
+    fn distribute_additional_rewards(
+        farmer_twin: Option<pallet_tfgrid::types::Twin<T::AccountId>>,
+        src_twin: &pallet_tfgrid::types::Twin<T::AccountId>,
+        additional_rewards: BalanceOf<T>,
+    ) -> DispatchResult {
         if additional_rewards.is_zero() {
             return Ok(().into());
         }
@@ -598,7 +598,7 @@ impl<T: Config> Pallet<T> {
         )?;
         Ok(().into())
     }
-    
+
     // Transferring the held or reserved funds from the user's account to the beneficiaries (foundation, staking pool, solution providers, sales account) and burning the remainder
     fn distribute_standard_rewards(
         src_twin: &pallet_tfgrid::types::Twin<T::AccountId>,
@@ -717,31 +717,20 @@ impl<T: Config> Pallet<T> {
         if amount.is_zero() {
             return Ok(().into());
         }
-        let res = <T as Config>::Currency::repatriate_reserved(
-            &src_account,
-            &dst_account,
-            amount,
-            BalanceStatus::Free,
-        );
-        match res {
-            Ok(remainder) => {
-                if !(remainder.is_zero()) {
-                    // This shouldn't happen, unless onchain logic was changed and a liquid restriction was introduced to the source account
-                    log::error!(
-                        "Failed to distribute the whole amount: want {:?}, remainder {:?}",
-                        amount,
-                        remainder
-                    );
-                    return Err("Failed to distribute the whole amount".into());
-                }
-                Ok(().into())
-            }
-            // This shouldn’t happen unless the destination account is unable to receive the funds
-            Err(e) => {
-                log::error!("Error while repatriating reserved balance: {:?}. source: {:?}, destination: {:?}", e, src_account, dst_account);
-                Err(e)
-            }
+        // Utilize the highest level of privileges to deduct the funds, bypassing any restrictions.
+        let (slashed, remainder) = <T as Config>::Currency::slash_reserved(&src_account, amount);
+        if !(remainder.is_zero()) {
+            // This shouldn't happen, If happened this most be a bug
+            log::error!(
+                "Failed to distribute the whole amount: want {:?}, remainder {:?}",
+                amount,
+                remainder
+            );
+            return Err("Failed to distribute the whole amount".into());
         }
+        // Deposit deducted fund into the dest account, creating it if needed.
+        <T as Config>::Currency::resolve_creating(dst_account, slashed);
+        Ok(().into())
     }
 
     // Handling rent contracts, associated node contracts are also transitioned to the appropriate state (either Created or GracePeriod).
@@ -870,7 +859,9 @@ impl<T: Config> Pallet<T> {
         let account = T::AccountStore::get(account_id);
         let free = account.free;
         let frozen = account.frozen;
-        let minimum_balance = <T as Config>::Currency::minimum_balance().saturated_into::<u128>();
+        let minimum_balance =
+            <<T as Config>::Currency as Currency<T::AccountId>>::minimum_balance()
+                .saturated_into::<u128>();
         // Get the reservable balance
         let reservable = free
             .saturating_sub(<T as pallet_balances::Config>::Balance::saturated_from(
