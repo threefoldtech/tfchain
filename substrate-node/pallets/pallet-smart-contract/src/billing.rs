@@ -511,7 +511,7 @@ impl<T: Config> Pallet<T> {
             let additional_rewards = contract_payment_state.additional_reserved;
             // distribute additional rewards to the farm twin
 
-            let reminder = if let types::ContractData::RentContract(_) = &contract.contract_type {
+            let remainder = if let types::ContractData::RentContract(_) = &contract.contract_type {
                 log::info!(
                     "Distributing additional rewards from twin {:?} with amount {:?}",
                     src_twin.id,
@@ -527,15 +527,15 @@ impl<T: Config> Pallet<T> {
                 BalanceOf::<T>::zero()
             };
 
-            let distributed_additional_amount = additional_rewards.saturating_sub(reminder);
-            if reminder > BalanceOf::<T>::zero() {
+            let distributed_additional_amount = additional_rewards.saturating_sub(remainder);
+            if remainder > BalanceOf::<T>::zero() {
                 log::warn!(
                     "distributing additional rewards, should rewarded: {:?}, actual {:?}",
                     additional_rewards,
                     distributed_additional_amount
                 );
             }
-            contract_payment_state.additional_reserved = reminder;
+            contract_payment_state.additional_reserved = remainder;
 
             log::info!(
                 "Distributing standard rewards from twin {:?} with amount {:?}",
@@ -671,23 +671,23 @@ impl<T: Config> Pallet<T> {
         // Calculate the amount to burn, which is the remainder after distributing the rewards to the beneficiaries.
         // This should be 35% of the total amount, but we calculate it by subtract all previously send amounts with the initial to avoid accumulating rounding errors.
         let amount_to_burn = amount.defensive_saturating_sub(total_distributed);
-        let (to_burn, reminder) = T::Currency::slash_reserved(&src_twin.account_id, amount_to_burn);
+        let (to_burn, remainder) = T::Currency::slash_reserved(&src_twin.account_id, amount_to_burn);
 
         log::debug!(
             "Burning: {:?} from twin {:?}",
-            amount_to_burn - reminder,
+            amount_to_burn - remainder,
             &src_twin.id
         );
         T::Burn::on_unbalanced(to_burn);
         Self::deposit_event(Event::TokensBurned {
             contract_id,
-            amount: amount_to_burn - reminder,
+            amount: amount_to_burn - remainder,
         });
         Ok(().into())
     }
 
     // Wrapper around the balances::repatriate_reserved function to handle reserved funds
-    // As much funds up to value will be transfered as possible. If this is less than amount, then the reminder amount will be returned.
+    // As much funds up to value will be transfered as possible. If this is less than amount, then the remainder amount will be returned.
     fn transfer_reserved(
         src_account: &T::AccountId,
         dst_account: &T::AccountId,
@@ -703,16 +703,16 @@ impl<T: Config> Pallet<T> {
             BalanceStatus::Free,
         );
         match res {
-            Ok(reminder) => {
-                if !(reminder.is_zero()) {
+            Ok(remainder) => {
+                if !(remainder.is_zero()) {
                     // shouldn't happen, unless onchain logic was chanegd and introduce a liquid restriction on to the source account
                     log::warn!(
-                        "Failed to distribute the whole amount: want {:?}, reminder {:?}",
+                        "Failed to distribute the whole amount: want {:?}, remainder {:?}",
                         amount,
-                        reminder
+                        remainder
                     );
                 }
-                reminder
+                remainder
             }
             // This shouldn’t happen unless the destination account is unable to receive the funds
             Err(e) => {
