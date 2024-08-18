@@ -492,8 +492,8 @@ impl<T: Config> Pallet<T> {
             timestamp: now,
             // This is the partial amount successfully reserved from the user's account in this billing cycle
             partially_billed_amount: reservable,
-            // This is the total overdraft for this contract since grace period started
-            overdraft: contract_payment_state.get_overdraft(),
+            // This is the overdraft caused by insufficient funds for the contract payment in this billing cycle
+            overdraft: standard_amount_due.saturating_add(additional_amount_due).saturating_sub(reservable),
         });
         Ok(().into())
     }
