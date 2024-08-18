@@ -270,7 +270,7 @@ impl<T: Config> Pallet<T> {
         }
 
         // Calculate the amount needed to be reserved from the user's balance
-        // should be the total amount due for current cycle + any overdraft from previous cycles
+        // Should be the total amount due for current cycle + any overdraft from previous cycles
         let standard_amount_to_reserve =
             standard_amount_due.defensive_saturating_add(contract_payment_state.standard_overdraft);
         let additional_amount_to_reserve = additional_amount_due
@@ -348,7 +348,6 @@ impl<T: Config> Pallet<T> {
         }
 
         contract_payment_state.last_updated_seconds = now;
-        contract_payment_state.cycles.defensive_saturating_inc();
         ContractPaymentState::<T>::insert(contract.contract_id, &contract_payment_state);
 
         Ok(().into())
@@ -509,6 +508,7 @@ impl<T: Config> Pallet<T> {
         farmer_twin: Option<pallet_tfgrid::types::Twin<T::AccountId>>,
         pricing_policy: &pallet_tfgrid::types::PricingPolicy<T::AccountId>,
     ) -> DispatchResult {
+        contract_payment_state.cycles.defensive_saturating_inc();
         let is_deleted = matches!(contract.state, types::ContractState::Deleted(_));
         let should_distribute_rewards =
             contract_payment_state.cycles >= T::DistributionFrequency::get() || is_deleted;

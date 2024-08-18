@@ -3981,8 +3981,8 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
         let mut rent_contract_cost_tft = 0u64;
         let mut extra_fee_cost_tft = 0;
 
-        // advance 25 cycles to reach reward distribution block
-        for i in 1..=DistributionFrequency::get() as u64 + 1u64 {
+        // advance 24 cycles to reach reward distribution block
+        for i in 1..=DistributionFrequency::get() as u64 {
             let block_number = start_block + i * BillingFrequency::get();
             pool_state.write().should_call_bill_contract(
                 rent_contract_id,
