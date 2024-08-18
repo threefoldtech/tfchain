@@ -360,6 +360,7 @@ where
         }
     }
 }
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]
 pub struct SolutionProvider<AccountId> {
     pub solution_provider_id: u64,

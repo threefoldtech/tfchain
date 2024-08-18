@@ -286,7 +286,12 @@ impl<T: Config> Pallet<T> {
         _ = Self::handle_grace(&mut contract, has_sufficient_fund, current_block);
 
         if has_sufficient_fund {
-            log::info!("Billing contract_id: {:?}, Contract state: {:?}, This cycle amount due: {:?}, Total (include previous overdraft) {:?}", contract.contract_id, contract.state, total_amount_due, total_amount_to_reserve);
+            log::info!("Billing contract_id: {:?}, Contract state: {:?}, This cycle amount due: {:?}, Total (include previous overdraft) {:?}",
+                contract.contract_id,
+                contract.state,
+                total_amount_due,
+                total_amount_to_reserve
+            );
             Self::reserve_funds(
                 &mut contract_payment_state,
                 standard_amount_due,
@@ -495,7 +500,7 @@ impl<T: Config> Pallet<T> {
 
     // Orchestrate the distribution of rewards
     // Emits RewardDistributed event
-    // No-Op if contract nither in deleted state nor the distribution frequency is reached
+    // No-Op if contract neither in deleted state nor the distribution frequency is reached
     fn remit_funds(
         contract: &types::Contract<T>,
         contract_payment_state: &mut types::ContractPaymentState<BalanceOf<T>>,
@@ -530,7 +535,7 @@ impl<T: Config> Pallet<T> {
             let distributed_additional_amount = additional_rewards.saturating_sub(remainder);
             if remainder > BalanceOf::<T>::zero() {
                 log::warn!(
-                    "distributing additional rewards, should rewarded: {:?}, actual {:?}",
+                    "Distributing additional rewards, should reward: {:?}, actual {:?}",
                     additional_rewards,
                     distributed_additional_amount
                 );
@@ -705,7 +710,7 @@ impl<T: Config> Pallet<T> {
         match res {
             Ok(remainder) => {
                 if !(remainder.is_zero()) {
-                    // shouldn't happen, unless onchain logic was chanegd and introduce a liquid restriction on to the source account
+                    // This shouldn't happen, unless onchain logic was changed and a liquid restriction was introduced to the source account
                     log::warn!(
                         "Failed to distribute the whole amount: want {:?}, remainder {:?}",
                         amount,
