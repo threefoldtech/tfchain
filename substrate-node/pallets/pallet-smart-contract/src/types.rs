@@ -524,7 +524,7 @@ mod tests {
     }
 
     #[test]
-    fn test_settle_overdrafted() {
+    fn test_settle_overdraft() {
         let mut payment_state = default_contract_payment_state();
         payment_state.standard_overdraft = 50;
         payment_state.additional_overdraft = 30;
@@ -576,7 +576,7 @@ mod tests {
     }
 
     #[test]
-    fn test_settle_partial_overdrafted() {
+    fn test_settle_partial_overdraft() {
         let mut payment_state = default_contract_payment_state();
         payment_state.standard_overdraft = 100;
         payment_state.additional_overdraft = 50;
@@ -594,14 +594,14 @@ mod tests {
     }
 
     #[test]
-    fn test_get_overdrafted() {
+    fn test_get_overdraft() {
         let mut payment_state = default_contract_payment_state();
         payment_state.standard_overdraft = 200;
         payment_state.additional_overdraft = 100;
 
-        let total_overdrafted = payment_state.get_overdraft();
+        let total_overdraft = payment_state.get_overdraft();
 
-        assert_eq!(total_overdrafted, 300);
+        assert_eq!(total_overdraft, 300);
     }
 
     #[test]
