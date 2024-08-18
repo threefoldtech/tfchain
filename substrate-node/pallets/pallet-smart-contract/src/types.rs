@@ -359,6 +359,18 @@ where
             }
         }
     }
+
+    pub fn reset_standard_reserve(&mut self) {
+        self.standard_reserve = BalanceOf::zero();
+    }
+
+    pub fn reset_additional_reserve(&mut self) {
+        self.additional_reserve = BalanceOf::zero();
+    }
+
+    pub fn reset_cycles(&mut self) {
+        self.cycles = 0;
+    }
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, Debug, TypeInfo)]

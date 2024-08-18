@@ -1333,6 +1333,8 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
     ext.execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
+        activate_billing_accounts(false);
+
         let node_id = 1;
 
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
@@ -1485,6 +1487,8 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
     ext.execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
+        activate_billing_accounts(false);
+
         let node_id = 1;
 
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
@@ -1544,6 +1548,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
         run_to_block(1, None);
         prepare_farm_and_node();
         activate_billing_accounts(false);
+
         let node_id = 1;
 
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
@@ -1755,6 +1760,7 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
         run_to_block(1, None);
         prepare_farm_and_node();
         activate_billing_accounts(false);
+
         let node_id = 1;
 
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
@@ -1989,6 +1995,7 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
         run_to_block(1, None);
         prepare_dedicated_farm_and_node();
         activate_billing_accounts(false);
+
         let node_id = 1;
 
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
@@ -2058,6 +2065,7 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
         run_to_block(1, None);
         prepare_dedicated_farm_and_node();
         activate_billing_accounts(false);
+
         let node_id = 1;
 
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
@@ -2168,6 +2176,8 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
+        activate_billing_accounts(false);
+
         let node_id = 1;
         run_to_block(1, None);
 
@@ -2220,7 +2230,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         run_to_block(end_grace_block_number, Some(&mut pool_state));
 
         let our_events = System::events();
-        assert_eq!(our_events.len(), 25);
+        assert_eq!(our_events.len(), 28);
 
         for e in our_events.clone() {
             log::info!("event: {:?}", e);
@@ -2250,7 +2260,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         );
 
         assert_eq!(
-            our_events[23],
+            our_events[26],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::NodeContractCanceled {
@@ -2260,7 +2270,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
             }))
         );
         assert_eq!(
-            our_events[24],
+            our_events[27],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::RentContractCanceled {
@@ -2577,6 +2587,8 @@ fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works
     ext.execute_with(|| {
         run_to_block(1, None);
         prepare_dedicated_farm_and_node();
+        activate_billing_accounts(false);
+
         let node_id = 1;
 
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
@@ -2641,6 +2653,8 @@ fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
     ext.execute_with(|| {
         run_to_block(1, None);
         prepare_dedicated_farm_and_node();
+        activate_billing_accounts(false);
+
         let node_id = 1;
 
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
@@ -3917,6 +3931,7 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
     ext.execute_with(|| {
         prepare_farm_and_node();
         activate_billing_accounts(false);
+
         let node_id = 1;
 
         let start_block = 1;

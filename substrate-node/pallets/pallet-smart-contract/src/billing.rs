@@ -1,7 +1,7 @@
 use crate::*;
 use frame_support::traits::DefensiveSaturating;
 use frame_support::{
-    dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo, Vec},
+    dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo, DispatchResult, Vec},
     ensure,
     traits::{
         tokens::{fungible::*, Fortitude::Polite, Preservation::Preserve},
@@ -18,7 +18,7 @@ use frame_system::{
 use sp_core::Get;
 use sp_runtime::{
     traits::{Convert, Saturating, Zero},
-    DispatchResult, Perbill, SaturatedConversion,
+    Perbill, SaturatedConversion,
 };
 
 impl<T: Config> Pallet<T> {
@@ -272,8 +272,8 @@ impl<T: Config> Pallet<T> {
 
         // Calculate the amount needed to be reserved from the user's balance
         // should be the total amount due for current cycle + any overdraft from previous cycles
-        let standard_amount_to_reserve = standard_amount_due
-            .defensive_saturating_add(contract_payment_state.standard_overdraft);
+        let standard_amount_to_reserve =
+            standard_amount_due.defensive_saturating_add(contract_payment_state.standard_overdraft);
         let additional_amount_to_reserve = additional_amount_due
             .defensive_saturating_add(contract_payment_state.additional_overdraft);
         let total_amount_to_reserve =
@@ -493,7 +493,9 @@ impl<T: Config> Pallet<T> {
             // This is the partial amount successfully reserved from the user's account in this billing cycle
             partially_billed_amount: reservable,
             // This is the overdraft caused by insufficient funds for the contract payment in this billing cycle
-            overdraft: standard_amount_due.saturating_add(additional_amount_due).saturating_sub(reservable),
+            overdraft: standard_amount_due
+                .saturating_add(additional_amount_due)
+                .saturating_sub(reservable),
         });
         Ok(().into())
     }
@@ -507,7 +509,7 @@ impl<T: Config> Pallet<T> {
         src_twin: &pallet_tfgrid::types::Twin<T::AccountId>,
         farmer_twin: Option<pallet_tfgrid::types::Twin<T::AccountId>>,
         pricing_policy: &pallet_tfgrid::types::PricingPolicy<T::AccountId>,
-    ) -> DispatchResultWithPostInfo {
+    ) -> DispatchResult {
         let is_deleted = matches!(contract.state, types::ContractState::Deleted(_));
         let should_distribute_rewards =
             contract_payment_state.cycles >= T::DistributionFrequency::get() || is_deleted;
@@ -516,31 +518,27 @@ impl<T: Config> Pallet<T> {
             let additional_rewards = contract_payment_state.additional_reserve;
             // distribute additional rewards to the farm twin
 
-            let remainder = if let types::ContractData::RentContract(_) = &contract.contract_type {
+            if let types::ContractData::RentContract(_) = &contract.contract_type {
                 log::info!(
                     "Distributing additional rewards from twin {:?} with amount {:?}",
                     src_twin.id,
                     additional_rewards,
                 );
-                let dst_twin = farmer_twin.ok_or(Error::<T>::TwinNotExists)?;
-                Self::transfer_reserved(
-                    &src_twin.account_id,
-                    &dst_twin.account_id,
-                    additional_rewards,
-                )
-            } else {
-                BalanceOf::<T>::zero()
-            };
-
-            let distributed_additional_amount = additional_rewards.saturating_sub(remainder);
-            if remainder > BalanceOf::<T>::zero() {
-                log::warn!(
-                    "Distributing additional rewards, should reward: {:?}, actual {:?}",
-                    additional_rewards,
-                    distributed_additional_amount
-                );
+                match Self::distribute_additional_rewards(
+                    farmer_twin,
+                    src_twin,
+                    additional_rewards
+                ) {
+                    Ok(_) => (),
+                    Err(e) => {
+                        log::error!("Error while distributing additional rewards: {:?}", e);
+                        if !is_deleted {
+                            return Err(e);
+                        }
+                    }
+                }
+                contract_payment_state.reset_additional_reserve();
             }
-            contract_payment_state.additional_reserve = remainder;
 
             log::info!(
                 "Distributing standard rewards from twin {:?} with amount {:?}",
@@ -548,20 +546,24 @@ impl<T: Config> Pallet<T> {
                 standard_rewards,
             );
             // distribute standard rewards
-            Self::distribute_standard_rewards(
+            match Self::distribute_standard_rewards(
                 &src_twin,
                 contract.contract_id,
                 contract.solution_provider_id,
                 &pricing_policy,
                 standard_rewards,
-            )
-            .map_err(|e| {
-                log::error!("Error while distributing standard rewards: {:?}", e);
-                e
-            })?;
+            ) {
+                Ok(_) => (),
+                Err(e) => {
+                    log::error!("Error while distributing standard rewards: {:?}", e);
+                    if !is_deleted {
+                        return Err(e);
+                    }
+                }
+            };
 
-            contract_payment_state.standard_reserve = BalanceOf::<T>::zero();
-            contract_payment_state.cycles = 0;
+            contract_payment_state.reset_standard_reserve();
+            contract_payment_state.reset_cycles();
 
             log::info!(
                 "Rewards distributed for contract_id: {:?}",
@@ -570,7 +572,7 @@ impl<T: Config> Pallet<T> {
             Self::deposit_event(Event::RewardDistributed {
                 contract_id: contract.contract_id,
                 standard_rewards,
-                additional_rewards: distributed_additional_amount,
+                additional_rewards,
             });
         } else {
             log::debug!(
@@ -583,6 +585,20 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
+    fn distribute_additional_rewards(farmer_twin: Option<pallet_tfgrid::types::Twin<T::AccountId>>, src_twin: &pallet_tfgrid::types::Twin<T::AccountId>, additional_rewards: BalanceOf<T>) -> DispatchResult {
+        if additional_rewards.is_zero() {
+            return Ok(().into());
+        }
+
+        let dst_twin = farmer_twin.ok_or(Error::<T>::TwinNotExists)?;
+        Self::transfer_reserved(
+            &src_twin.account_id,
+            &dst_twin.account_id,
+            additional_rewards,
+        )?;
+        Ok(().into())
+    }
+    
     // Transferring the held or reserved funds from the user's account to the beneficiaries (foundation, staking pool, solution providers, sales account) and burning the remainder
     fn distribute_standard_rewards(
         src_twin: &pallet_tfgrid::types::Twin<T::AccountId>,
@@ -607,7 +623,7 @@ impl<T: Config> Pallet<T> {
             &src_twin.account_id,
             &pricing_policy.foundation_account,
             foundation_share,
-        );
+        )?;
 
         // Calculate staking pool share (5%)
         let staking_pool_share = Perbill::from_percent(5) * amount;
@@ -622,7 +638,7 @@ impl<T: Config> Pallet<T> {
             &src_twin.account_id,
             &staking_pool_account,
             staking_pool_share,
-        );
+        )?;
         // Calculate the sales share and solution provider share if any. Both combined should be 50%
         let mut sales_percentage = 50;
         let mut total_provider_share = BalanceOf::<T>::zero();
@@ -644,7 +660,7 @@ impl<T: Config> Pallet<T> {
                         &src_twin.id,
                         &provider.who
                     );
-                    Self::transfer_reserved(&src_twin.account_id, &provider.who, share);
+                    Self::transfer_reserved(&src_twin.account_id, &provider.who, share)?;
 
                     total_provider_share.defensive_saturating_accrue(share);
                 }
@@ -664,7 +680,7 @@ impl<T: Config> Pallet<T> {
                 &src_twin.account_id,
                 &pricing_policy.certified_sales_account,
                 share,
-            );
+            )?;
             share
         } else {
             BalanceOf::<T>::zero()
@@ -676,7 +692,8 @@ impl<T: Config> Pallet<T> {
         // Calculate the amount to burn, which is the remainder after distributing the rewards to the beneficiaries.
         // This should be 35% of the total amount, but we calculate it by subtract all previously send amounts with the initial to avoid accumulating rounding errors.
         let amount_to_burn = amount.defensive_saturating_sub(total_distributed);
-        let (to_burn, remainder) = T::Currency::slash_reserved(&src_twin.account_id, amount_to_burn);
+        let (to_burn, remainder) =
+            T::Currency::slash_reserved(&src_twin.account_id, amount_to_burn);
 
         log::debug!(
             "Burning: {:?} from twin {:?}",
@@ -692,14 +709,13 @@ impl<T: Config> Pallet<T> {
     }
 
     // Wrapper around the balances::repatriate_reserved function to handle reserved funds
-    // As much funds up to value will be transfered as possible. If this is less than amount, then the remainder amount will be returned.
     fn transfer_reserved(
         src_account: &T::AccountId,
         dst_account: &T::AccountId,
         amount: BalanceOf<T>,
-    ) -> BalanceOf<T> {
+    ) -> DispatchResult {
         if amount.is_zero() {
-            return amount;
+            return Ok(().into());
         }
         let res = <T as Config>::Currency::repatriate_reserved(
             &src_account,
@@ -711,18 +727,19 @@ impl<T: Config> Pallet<T> {
             Ok(remainder) => {
                 if !(remainder.is_zero()) {
                     // This shouldn't happen, unless onchain logic was changed and a liquid restriction was introduced to the source account
-                    log::warn!(
+                    log::error!(
                         "Failed to distribute the whole amount: want {:?}, remainder {:?}",
                         amount,
                         remainder
                     );
+                    return Err("Failed to distribute the whole amount".into());
                 }
-                remainder
+                Ok(().into())
             }
             // This shouldn’t happen unless the destination account is unable to receive the funds
             Err(e) => {
                 log::error!("Error while repatriating reserved balance: {:?}. source: {:?}, destination: {:?}", e, src_account, dst_account);
-                amount
+                Err(e)
             }
         }
     }
@@ -873,5 +890,4 @@ impl<T: Config> Pallet<T> {
         <T as pallet_session::Config>::ValidatorIdOf::convert(account_id.clone())
             .map_or(false, |validator_id| validators.contains(&validator_id))
     }
-    
 }
