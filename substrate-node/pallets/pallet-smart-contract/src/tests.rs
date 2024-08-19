@@ -1027,23 +1027,23 @@ fn test_node_contract_billing_details() {
 
         // 5% is sent to the staking pool account
         assert_eq!(
-            staking_pool_account_balance - 500,
-            Perbill::from_percent(5) * total_amount_billed
+            staking_pool_account_balance,
+            (Perbill::from_percent(5) * total_amount_billed) + EXISTENTIAL_DEPOSIT
         );
 
         // 10% is sent to the foundation account
         let pricing_policy = TfgridModule::pricing_policies(1).unwrap();
         let foundation_account_balance = Balances::free_balance(&pricing_policy.foundation_account);
         assert_eq!(
-            foundation_account_balance - 500,
-            Perbill::from_percent(10) * total_amount_billed
+            foundation_account_balance,
+            (Perbill::from_percent(10) * total_amount_billed) + EXISTENTIAL_DEPOSIT
         );
 
         // 50% is sent to the sales account
         let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
         assert_eq!(
-            sales_account_balance - 500,
-            Perbill::from_percent(50) * total_amount_billed
+            sales_account_balance,
+            (Perbill::from_percent(50) * total_amount_billed) + EXISTENTIAL_DEPOSIT
         );
 
         let total_issuance = Balances::total_issuance();
@@ -1624,7 +1624,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
             total_amount_billed
                 + (usable_balance_before_canceling - usable_balance_after_canceling)
         );
-        assert_eq!(usable_balance_after_canceling, 500);
+        assert_eq!(usable_balance_after_canceling, EXISTENTIAL_DEPOSIT);
 
         validate_distribution_rewards(
             initial_total_issuance,
@@ -4115,7 +4115,7 @@ fn validate_distribution_rewards(
     // 5% is sent to the staking pool account
     assert_eq_error_rate!(
         staking_pool_account_balance,
-        (Perbill::from_percent(5) * total_amount_billed) + 500,
+        (Perbill::from_percent(5) * total_amount_billed) + EXISTENTIAL_DEPOSIT,
         6
     );
 
@@ -4124,7 +4124,7 @@ fn validate_distribution_rewards(
     let foundation_account_balance = Balances::free_balance(&pricing_policy.foundation_account);
     assert_eq!(
         foundation_account_balance,
-        (Perbill::from_percent(10) * total_amount_billed) + 500
+        (Perbill::from_percent(10) * total_amount_billed) + EXISTENTIAL_DEPOSIT
     );
 
     if had_solution_provider {
@@ -4132,7 +4132,7 @@ fn validate_distribution_rewards(
         let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
         assert_eq!(
             sales_account_balance,
-            (Perbill::from_percent(40) * total_amount_billed) + 500
+            (Perbill::from_percent(40) * total_amount_billed) + EXISTENTIAL_DEPOSIT
         );
 
         // 10% is sent to the solution provider
@@ -4146,7 +4146,7 @@ fn validate_distribution_rewards(
         let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
         assert_eq!(
             sales_account_balance,
-            (Perbill::from_percent(50) * total_amount_billed) + 500
+            (Perbill::from_percent(50) * total_amount_billed) + EXISTENTIAL_DEPOSIT
         );
     }
 
