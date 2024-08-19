@@ -4599,7 +4599,7 @@ fn activate_billing_accounts(had_solution_provider: bool) {
     }
     for account in billing_accounts {
         if Balances::free_balance(&account) == 0 {
-            let _ = Balances::deposit_creating(&account, 500);
+            let _ = Balances::deposit_creating(&account, EXISTENTIAL_DEPOSIT);
         }
     }
 }
