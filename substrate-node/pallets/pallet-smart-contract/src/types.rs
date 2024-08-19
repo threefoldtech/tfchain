@@ -584,13 +584,21 @@ mod tests {
         payment_state.settle_partial_overdraft(30);
 
         // The remaining overdraft should be reduced by 30
-        // Assuming 30 is prefearbly deducted from additional first
+        // Assuming 30 is preferably deducted from additional first
         assert_eq!(payment_state.standard_overdraft, 100);
         assert_eq!(payment_state.additional_overdraft, 20);
 
         payment_state.settle_partial_overdraft(30);
         assert_eq!(payment_state.standard_overdraft, 90);
         assert_eq!(payment_state.additional_overdraft, 0);
+
+        payment_state.settle_partial_overdraft(100);
+        assert_eq!(payment_state.standard_overdraft, 0);
+        assert_eq!(payment_state.additional_overdraft, 0);
+
+        payment_state.additional_overdraft = 50;
+        payment_state.settle_partial_overdraft(40);
+        assert_eq!(payment_state.additional_overdraft, 10);
     }
 
     #[test]
