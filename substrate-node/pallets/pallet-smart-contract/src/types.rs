@@ -308,7 +308,7 @@ where
     }
 
     // Method to return the sum of standard_reserve_amount and additional_reserve_amount
-    pub fn get_reserved(&self) -> BalanceOf {
+    pub fn get_reserve(&self) -> BalanceOf {
         self.standard_reserve
             .defensive_saturating_add(self.additional_reserve)
     }
@@ -613,12 +613,12 @@ mod tests {
     }
 
     #[test]
-    fn test_get_reserved() {
+    fn test_get_reserve() {
         let mut payment_state = default_contract_payment_state();
         payment_state.standard_reserve = 120;
         payment_state.additional_reserve = 80;
 
-        let total_reserved = payment_state.get_reserved();
+        let total_reserved = payment_state.get_reserve();
 
         assert_eq!(total_reserved, 200);
     }

@@ -575,7 +575,7 @@ impl<T: Config> Pallet<T> {
                 "Not distributing rewards for contract_id: {:?}, cycles: {:?}, reserved amount: {:?}",
                 contract.contract_id,
                 contract_payment_state.cycles,
-                contract_payment_state.get_reserved()
+                contract_payment_state.get_reserve()
             );
         }
         Ok(().into())
