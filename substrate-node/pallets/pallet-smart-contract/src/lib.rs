@@ -418,6 +418,7 @@ pub mod pallet {
         WrongAuthority,
         UnauthorizedToChangeSolutionProviderId,
         UnauthorizedToSetExtraFee,
+        RewardDistributionError,
     }
 
     #[pallet::genesis_config]

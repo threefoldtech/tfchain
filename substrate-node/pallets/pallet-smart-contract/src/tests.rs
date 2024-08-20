@@ -1063,6 +1063,100 @@ fn test_node_contract_billing_details() {
 }
 
 #[test]
+fn test_node_contract_billing_works_for_non_existing_accounts() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+        let node_id = 1;
+
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
+
+        let twin = TfgridModule::twins(2).unwrap();
+        let initial_twin_balance = Balances::total_balance(&twin.account_id);
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            1,
+            None
+        ));
+        let contract_id = 1;
+
+        push_contract_resources_used(contract_id);
+        push_nru_report_for_contract(contract_id, 10);
+
+        // Ensure contract_id is stored at right billing loop index
+        let index = SmartContractModule::get_billing_loop_index_from_contract_id(contract_id);
+        assert_eq!(
+            SmartContractModule::contract_to_bill_at_block(index),
+            vec![contract_id]
+        );
+
+        let initial_total_issuance = Balances::total_issuance();
+        // advance 24 cycles
+        for i in 1..=24 {
+            let block_number = 1 + i * 10;
+            pool_state.write().should_call_bill_contract(
+                contract_id,
+                Ok(Pays::Yes.into()),
+                block_number,
+            );
+            run_to_block(block_number, Some(&mut pool_state));
+        }
+
+        let twin_balance = Balances::total_balance(&twin.account_id);
+        let total_amount_billed = initial_twin_balance - twin_balance;
+        info!("current balance {:?}", twin_balance);
+
+        info!("total amount billed {:?}", total_amount_billed);
+
+        let staking_pool_account_balance = Balances::free_balance(&get_staking_pool_account());
+        info!(
+            "staking pool account balance, {:?}",
+            staking_pool_account_balance
+        );
+
+        // 5% is sent to the staking pool account
+        assert_eq!(
+            staking_pool_account_balance,
+            (Perbill::from_percent(5) * total_amount_billed)
+        );
+
+        // 10% is sent to the foundation account
+        let pricing_policy = TfgridModule::pricing_policies(1).unwrap();
+        let foundation_account_balance = Balances::free_balance(&pricing_policy.foundation_account);
+        assert_eq!(
+            foundation_account_balance,
+            (Perbill::from_percent(10) * total_amount_billed)
+        );
+
+        // 50% is sent to the sales account
+        let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
+        assert_eq!(
+            sales_account_balance,
+            (Perbill::from_percent(50) * total_amount_billed)
+        );
+
+        let total_issuance = Balances::total_issuance();
+        // total issueance is now previous total - amount burned from contract billed (35%)
+        let burned_amount = Perbill::from_percent(35) * total_amount_billed;
+        assert_eq_error_rate!(
+            total_issuance,
+            initial_total_issuance - burned_amount as u64,
+            1
+        );
+
+        // amount unbilled should have been reset after a transfer between contract owner and farmer
+        let contract_billing_info =
+            SmartContractModule::contract_billing_information_by_id(contract_id);
+        assert_eq!(contract_billing_info.amount_unbilled, 0);
+    });
+}
+
+#[test]
 fn test_node_contract_billing_details_with_solution_provider() {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
@@ -2230,7 +2324,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         run_to_block(end_grace_block_number, Some(&mut pool_state));
 
         let our_events = System::events();
-        assert_eq!(our_events.len(), 31);
+        assert_eq!(our_events.len(), 28);
 
         for e in our_events.clone() {
             log::info!("event: {:?}", e);
@@ -2260,7 +2354,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         );
 
         assert_eq!(
-            our_events[29],
+            our_events[26],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::NodeContractCanceled {
@@ -2270,7 +2364,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
             }))
         );
         assert_eq!(
-            our_events[30],
+            our_events[27],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::RentContractCanceled {
@@ -4598,7 +4692,7 @@ fn activate_billing_accounts(had_solution_provider: bool) {
         billing_accounts.push(solution_provider_account);
     }
     for account in billing_accounts {
-        if Balances::free_balance(&account) == 0 {
+        if !<frame_system::Pallet<TestRuntime>>::account_exists(&account.clone().into()) {
             let _ = Balances::deposit_creating(&account, EXISTENTIAL_DEPOSIT);
         }
     }

@@ -1,5 +1,5 @@
 use crate::*;
-use frame_support::traits::DefensiveSaturating;
+use frame_support::traits::{BalanceStatus, DefensiveSaturating};
 use frame_support::{
     dispatch::{DispatchErrorWithPostInfo, DispatchResult, DispatchResultWithPostInfo, Vec},
     ensure,
@@ -708,7 +708,7 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    // Wrapper around the balances::repatriate_reserved function to handle reserved funds
+    // Transfer reserved funds to a beneficiary
     fn transfer_reserved(
         src_account: &T::AccountId,
         dst_account: &T::AccountId,
@@ -717,20 +717,48 @@ impl<T: Config> Pallet<T> {
         if amount.is_zero() {
             return Ok(().into());
         }
-        // Utilize the highest level of privileges to deduct the funds, bypassing any restrictions.
-        let (slashed, remainder) = <T as Config>::Currency::slash_reserved(&src_account, amount);
-        if !(remainder.is_zero()) {
-            // This shouldn't happen, If happened this most be a bug
-            log::error!(
-                "Failed to distribute the whole amount: want {:?}, remainder {:?}",
+
+        let result = if Self::account_exists(&dst_account) {
+            // Default case: repatriate_reserved is efficient but requires the beneficiary account to exist
+            <T as Config>::Currency::repatriate_reserved(
+                &src_account,
+                &dst_account,
                 amount,
-                remainder
-            );
-            return Err("Failed to distribute the whole amount".into());
+                BalanceStatus::Free,
+            )
+        } else {
+            // Defensive measure: less efficient than repatriate_reserved, but works for non-existent accounts
+            log::info!("Beneficiary account does not exist. The account will be created");
+            let (slashed, remainder) =
+                <T as Config>::Currency::slash_reserved(&src_account, amount);
+            if remainder.is_zero() {
+                <T as Config>::Currency::resolve_creating(dst_account, slashed);
+            }
+            Ok(remainder)
+        };
+
+        match result {
+            // No remainder: the full amount was successfully deducted from the reserve and transferred to the beneficiary
+            Ok(remainder) if remainder.is_zero() => Ok(().into()),
+            // Partial remainder: A portion of the amount wasn't successfully deducted from the reserve.
+            // This should only occur if on-chain logic has introduced a liquid restriction on the source account, or if there's a bug
+            Ok(remainder) => {
+                log::error!(
+                    "Failed to transfer the whole amount: wanted {:?}, remainder {:?}",
+                    amount,
+                    remainder
+                );
+                Err(Error::<T>::RewardDistributionError.into())
+            }
+            // This should only occur if the destination account is unable to receive the funds
+            Err(e) => {
+                log::error!(
+                    "Failed to transfer reserved balance: error: {:?}. source: {:?}, destination: {:?}",
+                    e, src_account, dst_account
+                );
+                Err(e)
+            }
         }
-        // Deposit deducted fund into the dest account, creating it if needed.
-        <T as Config>::Currency::resolve_creating(dst_account, slashed);
-        Ok(().into())
     }
 
     // Handling rent contracts, associated node contracts are also transitioned to the appropriate state (either Created or GracePeriod).
@@ -880,5 +908,9 @@ impl<T: Config> Pallet<T> {
 
         <T as pallet_session::Config>::ValidatorIdOf::convert(account_id.clone())
             .map_or(false, |validator_id| validators.contains(&validator_id))
+    }
+
+    fn account_exists(account_id: &T::AccountId) -> bool {
+        <frame_system::Pallet<T>>::account_exists(&account_id.clone().into())
     }
 }
