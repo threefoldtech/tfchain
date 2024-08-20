@@ -1002,9 +1002,9 @@ fn test_node_contract_billing_details() {
         activate_billing_accounts(false);
 
         let initial_total_issuance = Balances::total_issuance();
-        // advance 25 cycles
-        for i in 0..25 {
-            let block_number = 11 + i * 10;
+        // advance 24 cycles
+        for i in 1..24 {
+            let block_number = 1 + i * 10;
             pool_state.write().should_call_bill_contract(
                 contract_id,
                 Ok(Pays::Yes.into()),
@@ -1157,6 +1157,51 @@ fn test_node_contract_billing_works_for_non_existing_accounts() {
 }
 
 #[test]
+fn test_billing_node_contract_in_graceperiod_should_reset_unbilled_newtroek_consumption_after_added_to_overdraft() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, None);
+        prepare_farm_and_node();
+        let node_id = 1;
+
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
+
+        assert_ok!(SmartContractModule::create_node_contract(
+            RuntimeOrigin::signed(charlie()),
+            node_id,
+            generate_deployment_hash(),
+            get_deployment_data(),
+            0,
+            None
+        ));
+        let contract_id = 1;
+
+        push_contract_resources_used(contract_id);
+        push_nru_report_for_contract(contract_id, 10);
+
+        // cycle 1
+        // user does not have enough funds to pay
+        pool_state
+            .write()
+            .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 11);
+        run_to_block(11, Some(&mut pool_state));
+
+        let c1 = SmartContractModule::contracts(1).unwrap();
+        assert_eq!(c1.state, types::ContractState::GracePeriod(11));
+
+        // contract payment should be overdrawn
+        let contract_payment_state =
+            SmartContractModule::contract_payment_state(contract_id);
+        assert_ne!(contract_payment_state.get_overdraft(), 0);
+
+        // amount unbilled should have been reset after aftare adding the amount to the contract overdraft
+        let contract_billing_info =
+            SmartContractModule::contract_billing_information_by_id(contract_id);
+        assert_eq!(contract_billing_info.amount_unbilled, 0);
+    });
+}
+
+#[test]
 fn test_node_contract_billing_details_with_solution_provider() {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
@@ -1193,9 +1238,9 @@ fn test_node_contract_billing_details_with_solution_provider() {
             vec![contract_id]
         );
 
-        // advance 25 cycles
-        for i in 0..25 {
-            let block_number = 11 + i * 10;
+        // advance 24 cycles
+        for i in 1..24 {
+            let block_number = 1 + i * 10;
             pool_state.write().should_call_bill_contract(
                 contract_id,
                 Ok(Pays::Yes.into()),
