@@ -1019,41 +1019,10 @@ fn test_node_contract_billing_details() {
 
         info!("total amount billed {:?}", total_amount_billed);
 
-        let staking_pool_account_balance = Balances::free_balance(&get_staking_pool_account());
-        info!(
-            "staking pool account balance, {:?}",
-            staking_pool_account_balance
-        );
+        let total_balance = Balances::total_balance(&twin.account_id);
+        let total_amount_billed = initial_twin_balance - total_balance;
 
-        // 5% is sent to the staking pool account
-        assert_eq!(
-            staking_pool_account_balance,
-            (Perbill::from_percent(5) * total_amount_billed) + EXISTENTIAL_DEPOSIT
-        );
-
-        // 10% is sent to the foundation account
-        let pricing_policy = TfgridModule::pricing_policies(1).unwrap();
-        let foundation_account_balance = Balances::free_balance(&pricing_policy.foundation_account);
-        assert_eq!(
-            foundation_account_balance,
-            (Perbill::from_percent(10) * total_amount_billed) + EXISTENTIAL_DEPOSIT
-        );
-
-        // 50% is sent to the sales account
-        let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
-        assert_eq!(
-            sales_account_balance,
-            (Perbill::from_percent(50) * total_amount_billed) + EXISTENTIAL_DEPOSIT
-        );
-
-        let total_issuance = Balances::total_issuance();
-        // total issueance is now previous total - amount burned from contract billed (35%)
-        let burned_amount = Perbill::from_percent(35) * total_amount_billed;
-        assert_eq_error_rate!(
-            total_issuance,
-            initial_total_issuance - burned_amount as u64,
-            1
-        );
+        validate_distribution_rewards(initial_total_issuance, total_amount_billed, false, true);
 
         // amount unbilled should have been reset after a transfer between contract owner and farmer
         let contract_billing_info =
@@ -1113,41 +1082,10 @@ fn test_node_contract_billing_works_for_non_existing_accounts() {
 
         info!("total amount billed {:?}", total_amount_billed);
 
-        let staking_pool_account_balance = Balances::free_balance(&get_staking_pool_account());
-        info!(
-            "staking pool account balance, {:?}",
-            staking_pool_account_balance
-        );
+        let total_balance = Balances::total_balance(&twin.account_id);
+        let total_amount_billed = initial_twin_balance - total_balance;
 
-        // 5% is sent to the staking pool account
-        assert_eq!(
-            staking_pool_account_balance,
-            (Perbill::from_percent(5) * total_amount_billed)
-        );
-
-        // 10% is sent to the foundation account
-        let pricing_policy = TfgridModule::pricing_policies(1).unwrap();
-        let foundation_account_balance = Balances::free_balance(&pricing_policy.foundation_account);
-        assert_eq!(
-            foundation_account_balance,
-            (Perbill::from_percent(10) * total_amount_billed)
-        );
-
-        // 50% is sent to the sales account
-        let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
-        assert_eq!(
-            sales_account_balance,
-            (Perbill::from_percent(50) * total_amount_billed)
-        );
-
-        let total_issuance = Balances::total_issuance();
-        // total issueance is now previous total - amount burned from contract billed (35%)
-        let burned_amount = Perbill::from_percent(35) * total_amount_billed;
-        assert_eq_error_rate!(
-            total_issuance,
-            initial_total_issuance - burned_amount as u64,
-            1
-        );
+        validate_distribution_rewards(initial_total_issuance, total_amount_billed, false, false);
 
         // amount unbilled should have been reset after a transfer between contract owner and farmer
         let contract_billing_info =
@@ -1252,7 +1190,7 @@ fn test_node_contract_billing_details_with_solution_provider() {
         let total_balance = Balances::total_balance(&twin.account_id);
         let total_amount_billed = initial_twin_balance - total_balance;
 
-        validate_distribution_rewards(initial_total_issuance, total_amount_billed, true);
+        validate_distribution_rewards(initial_total_issuance, total_amount_billed, true, true);
 
         // amount unbilled should have been reset after a transfer between contract owner and farmer
         let contract_billing_info =
@@ -1770,6 +1708,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
             total_amount_billed
                 + (usable_balance_before_canceling - usable_balance_after_canceling),
             false,
+            true,
         );
     });
 }
@@ -1967,7 +1906,7 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
         let free_balance = Balances::free_balance(&twin.account_id);
         let total_amount_billed = initial_twin_balance - free_balance;
 
-        validate_distribution_rewards(initial_total_issuance, total_amount_billed, false);
+        validate_distribution_rewards(initial_total_issuance, total_amount_billed, false, true);
 
         let c1 = SmartContractModule::contracts(contract_id);
         assert_eq!(c1, None);
@@ -4173,7 +4112,7 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
             rent_contract_cost_tft + extra_fee_cost_tft
         );
 
-        validate_distribution_rewards(initial_total_issuance, rent_contract_cost_tft, false);
+        validate_distribution_rewards(initial_total_issuance, rent_contract_cost_tft, false, true);
     })
 }
 
@@ -4242,6 +4181,7 @@ fn validate_distribution_rewards(
     initial_total_issuance: u64,
     total_amount_billed: u64,
     had_solution_provider: bool,
+    had_existential_deposit: bool
 ) {
     info!("total amount billed {:?}", total_amount_billed);
 
@@ -4254,7 +4194,7 @@ fn validate_distribution_rewards(
     // 5% is sent to the staking pool account
     assert_eq_error_rate!(
         staking_pool_account_balance,
-        (Perbill::from_percent(5) * total_amount_billed) + EXISTENTIAL_DEPOSIT,
+        (Perbill::from_percent(5) * total_amount_billed) + if had_existential_deposit {EXISTENTIAL_DEPOSIT} else {0},
         6
     );
 
@@ -4263,7 +4203,7 @@ fn validate_distribution_rewards(
     let foundation_account_balance = Balances::free_balance(&pricing_policy.foundation_account);
     assert_eq!(
         foundation_account_balance,
-        (Perbill::from_percent(10) * total_amount_billed) + EXISTENTIAL_DEPOSIT
+        (Perbill::from_percent(10) * total_amount_billed) + if had_existential_deposit {EXISTENTIAL_DEPOSIT} else {0}
     );
 
     if had_solution_provider {
@@ -4271,7 +4211,7 @@ fn validate_distribution_rewards(
         let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
         assert_eq!(
             sales_account_balance,
-            (Perbill::from_percent(40) * total_amount_billed) + EXISTENTIAL_DEPOSIT
+            (Perbill::from_percent(40) * total_amount_billed) + if had_existential_deposit {EXISTENTIAL_DEPOSIT} else {0}
         );
 
         // 10% is sent to the solution provider
@@ -4285,7 +4225,7 @@ fn validate_distribution_rewards(
         let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
         assert_eq!(
             sales_account_balance,
-            (Perbill::from_percent(50) * total_amount_billed) + EXISTENTIAL_DEPOSIT
+            (Perbill::from_percent(50) * total_amount_billed) + if had_existential_deposit {EXISTENTIAL_DEPOSIT} else {0}
         );
     }
 
