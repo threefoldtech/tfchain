@@ -1016,11 +1016,7 @@ fn test_node_contract_billing_details() {
         let twin_balance = Balances::total_balance(&twin.account_id);
         let total_amount_billed = initial_twin_balance - twin_balance;
         info!("current balance {:?}", twin_balance);
-
         info!("total amount billed {:?}", total_amount_billed);
-
-        let total_balance = Balances::total_balance(&twin.account_id);
-        let total_amount_billed = initial_twin_balance - total_balance;
 
         validate_distribution_rewards(initial_total_issuance, total_amount_billed, false, true);
 
@@ -1079,11 +1075,7 @@ fn test_node_contract_billing_works_for_non_existing_accounts() {
         let twin_balance = Balances::total_balance(&twin.account_id);
         let total_amount_billed = initial_twin_balance - twin_balance;
         info!("current balance {:?}", twin_balance);
-
         info!("total amount billed {:?}", total_amount_billed);
-
-        let total_balance = Balances::total_balance(&twin.account_id);
-        let total_amount_billed = initial_twin_balance - total_balance;
 
         validate_distribution_rewards(initial_total_issuance, total_amount_billed, false, false);
 
