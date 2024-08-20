@@ -1157,7 +1157,7 @@ fn test_node_contract_billing_works_for_non_existing_accounts() {
 }
 
 #[test]
-fn test_billing_node_contract_in_graceperiod_should_reset_unbilled_newtroek_consumption_after_added_to_overdraft() {
+fn test_billing_node_contract_in_graceperiod_should_reset_unbilled_network_consumption_after_added_to_overdraft() {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
         run_to_block(1, None);
@@ -1194,7 +1194,7 @@ fn test_billing_node_contract_in_graceperiod_should_reset_unbilled_newtroek_cons
             SmartContractModule::contract_payment_state(contract_id);
         assert_ne!(contract_payment_state.get_overdraft(), 0);
 
-        // amount unbilled should have been reset after aftare adding the amount to the contract overdraft
+        // amount unbilled should have been reset after adding the amount to the contract overdraft
         let contract_billing_info =
             SmartContractModule::contract_billing_information_by_id(contract_id);
         assert_eq!(contract_billing_info.amount_unbilled, 0);
