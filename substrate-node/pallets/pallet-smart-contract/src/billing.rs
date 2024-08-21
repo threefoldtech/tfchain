@@ -186,6 +186,7 @@ impl<T: Config> Pallet<T> {
         // This is no-op if the contract lock is empty (migrated)
         Self::ensure_contract_migrated(
             &src_twin.account_id,
+            contract.contract_id,
             &old_contract_lock,
             &mut contract_payment_state,
         );
@@ -355,6 +356,7 @@ impl<T: Config> Pallet<T> {
 
     fn ensure_contract_migrated(
         account_id: &T::AccountId,
+        contract_id: u64,
         contract_lock: &types::ContractLock<BalanceOf<T>>,
         contract_payment_state: &mut types::ContractPaymentState<BalanceOf<T>>,
     ) {
@@ -367,6 +369,7 @@ impl<T: Config> Pallet<T> {
             contract_payment_state.standard_overdraft = contract_lock.amount_locked;
             contract_payment_state.additional_overdraft = contract_lock.extra_amount_locked;
             contract_payment_state.cycles = contract_lock.cycles;
+            ContractPaymentState::<T>::insert(contract_id, contract_payment_state);
 
             let locks = pallet_balances::Pallet::<T>::locks(&account_id);
             for lock in locks {
