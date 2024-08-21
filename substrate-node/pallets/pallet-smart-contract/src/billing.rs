@@ -177,19 +177,7 @@ impl<T: Config> Pallet<T> {
                 (None, None)
             };
 
-        // Switch lazily from old contract lock to use new contract payment state
-        // This allows tracking overdraft  for the current contract
-        // While still avoiding the need for a storage migration for all contracts
         let mut contract_payment_state = ContractPaymentState::<T>::get(contract.contract_id);
-        // Get and remove the contract lock from storage
-        let old_contract_lock = ContractLock::<T>::take(contract.contract_id);
-        // This is no-op if the contract lock is empty (migrated)
-        Self::ensure_contract_migrated(
-            &src_twin.account_id,
-            contract.contract_id,
-            &old_contract_lock,
-            &mut contract_payment_state,
-        );
 
         // Calculate user total usable balance
         let twin_usable_balance = Self::get_usable_balance(&src_twin.account_id);
@@ -352,31 +340,6 @@ impl<T: Config> Pallet<T> {
         ContractPaymentState::<T>::insert(contract.contract_id, &contract_payment_state);
 
         Ok(().into())
-    }
-
-    fn ensure_contract_migrated(
-        account_id: &T::AccountId,
-        contract_id: u64,
-        contract_lock: &types::ContractLock<BalanceOf<T>>,
-        contract_payment_state: &mut types::ContractPaymentState<BalanceOf<T>>,
-    ) {
-        if !contract_lock.is_migrated() {
-            log::debug!(
-                "Migrating contract to new payment state, CL: {:?}",
-                contract_lock
-            );
-            contract_payment_state.last_updated_seconds = contract_lock.lock_updated;
-            contract_payment_state.standard_overdraft = contract_lock.amount_locked;
-            contract_payment_state.additional_overdraft = contract_lock.extra_amount_locked;
-            contract_payment_state.cycles = contract_lock.cycles;
-            ContractPaymentState::<T>::insert(contract_id, contract_payment_state);
-
-            let locks = pallet_balances::Pallet::<T>::locks(&account_id);
-            for lock in locks {
-                log::debug!("Removing lock: {:?} for account: {:?}", lock.id, account_id,);
-                pallet_balances::Pallet::<T>::remove_lock(lock.id, &account_id);
-            }
-        }
     }
 
     // Handles the transition between different contract states based on the fund availability

@@ -376,7 +376,6 @@ impl<T: Config> Pallet<T> {
         };
 
         Contracts::<T>::remove(contract_id);
-        ContractLock::<T>::remove(contract_id);
         ContractPaymentState::<T>::remove(contract_id);
         // Clean up contract from billing loop
         // This is the only place it should be done
