@@ -5,7 +5,7 @@ use crate::{
 use frame_support::{
     assert_noop, assert_ok, bounded_vec,
     dispatch::Pays,
-    traits::{Currency, LockableCurrency, WithdrawReasons},
+    traits::{BalanceStatus, Currency, ReservableCurrency},
     BoundedVec,
 };
 use frame_system::{EventRecord, Phase, RawOrigin};
@@ -972,6 +972,8 @@ fn test_node_contract_billing_details() {
     ext.execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
+        activate_billing_accounts(false);
+
         let node_id = 1;
 
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
@@ -999,11 +1001,9 @@ fn test_node_contract_billing_details() {
             vec![contract_id]
         );
 
-        activate_billing_accounts(false);
-
         let initial_total_issuance = Balances::total_issuance();
         // advance 24 cycles
-        for i in 1..24 {
+        for i in 1..=DistributionFrequency::get() as u64 {
             let block_number = 1 + i * 10;
             pool_state.write().should_call_bill_contract(
                 contract_id,
@@ -1062,7 +1062,7 @@ fn test_node_contract_billing_works_for_non_existing_accounts() {
 
         let initial_total_issuance = Balances::total_issuance();
         // advance 24 cycles
-        for i in 1..=24 {
+        for i in 1..=DistributionFrequency::get() as u64 {
             let block_number = 1 + i * 10;
             pool_state.write().should_call_bill_contract(
                 contract_id,
@@ -1087,7 +1087,8 @@ fn test_node_contract_billing_works_for_non_existing_accounts() {
 }
 
 #[test]
-fn test_billing_node_contract_in_graceperiod_should_reset_unbilled_network_consumption_after_added_to_overdraft() {
+fn test_billing_node_contract_in_graceperiod_should_reset_unbilled_network_consumption_after_added_to_overdraft(
+) {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
         run_to_block(1, None);
@@ -1120,8 +1121,7 @@ fn test_billing_node_contract_in_graceperiod_should_reset_unbilled_network_consu
         assert_eq!(c1.state, types::ContractState::GracePeriod(11));
 
         // contract payment should be overdrawn
-        let contract_payment_state =
-            SmartContractModule::contract_payment_state(contract_id);
+        let contract_payment_state = SmartContractModule::contract_payment_state(contract_id);
         assert_ne!(contract_payment_state.get_overdraft(), 0);
 
         // amount unbilled should have been reset after adding the amount to the contract overdraft
@@ -1137,15 +1137,16 @@ fn test_node_contract_billing_details_with_solution_provider() {
     ext.execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
+
         let node_id = 1;
 
         prepare_solution_provider(dave());
+        activate_billing_accounts(true);
 
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         let twin = TfgridModule::twins(2).unwrap();
         let initial_twin_balance = Balances::free_balance(&twin.account_id);
-        activate_billing_accounts(true);
         let initial_total_issuance = Balances::total_issuance();
 
         assert_ok!(SmartContractModule::create_node_contract(
@@ -1169,7 +1170,7 @@ fn test_node_contract_billing_details_with_solution_provider() {
         );
 
         // advance 24 cycles
-        for i in 1..24 {
+        for i in 1..=DistributionFrequency::get() as u64 {
             let block_number = 1 + i * 10;
             pool_state.write().should_call_bill_contract(
                 contract_id,
@@ -1385,10 +1386,7 @@ fn test_node_multiple_contract_billing_cycles() {
         );
 
         let twin = TfgridModule::twins(twin_id).unwrap();
-        // let usable_balance = Balances::usable_balance(&twin.account_id);
-        // let free_balance = Balances::free_balance(&twin.account_id);
         let reserved_balance = Balances::reserved_balance(&twin.account_id);
-        // let locked_balance = free_balance - usable_balance;
         assert_eq!(
             reserved_balance.saturated_into::<u128>(),
             amount_due_contract_1 as u128 + amount_due_contract_2 as u128
@@ -1881,18 +1879,27 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
         );
 
         // grace period stops after 100 blocknumbers, so after 121
-        for i in 1..11 {
+        for i in 1..=10 {
             let block_number = 21 + i * 10;
             pool_state.write().should_call_bill_contract(
                 contract_id,
                 Ok(Pays::Yes.into()),
                 block_number,
             );
+            run_to_block(block_number, Some(&mut pool_state));
         }
 
-        for i in 1..11 {
-            run_to_block(21 + i * 10, Some(&mut pool_state));
-        }
+        // expect ContractGracePeriodElapsed event
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::ContractGracePeriodElapsed {
+                    contract_id,
+                    grace_period: GracePeriod::get(),
+                }
+            ))),
+            true
+        );
 
         // The user's total free balance should be distributed
         let free_balance = Balances::free_balance(&twin.account_id);
@@ -2059,6 +2066,67 @@ fn test_rent_contract_billing() {
 }
 
 #[test]
+fn test_rent_contract_on_standby_node_rent_waived_and_cancel_works() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, None);
+        prepare_dedicated_farm_and_node();
+        let node_id = 1;
+
+        // switch node to standby at block 1
+        assert_ok!(TfgridModule::change_power_state(
+            RuntimeOrigin::signed(alice()),
+            tfchain_support::types::Power::Down
+        ));
+
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
+
+        assert_ok!(SmartContractModule::create_rent_contract(
+            RuntimeOrigin::signed(bob()),
+            node_id,
+            None
+        ));
+        let contract_id = 1;
+
+        let contract = SmartContractModule::contracts(contract_id).unwrap();
+        let rent_contract = types::RentContract { node_id };
+        assert_eq!(
+            contract.contract_type,
+            types::ContractData::RentContract(rent_contract)
+        );
+
+        // go to end of cycle 1 [1-11] and expect a call to bill_contract()
+        pool_state
+            .write()
+            .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 11);
+        run_to_block(11, Some(&mut pool_state));
+
+        // expect RentWaived event
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::RentWaived { contract_id }
+            ))),
+            true
+        );
+        // cancel contract
+        assert_ok!(SmartContractModule::cancel_contract(
+            RuntimeOrigin::signed(bob()),
+            contract_id
+        ));
+        let our_events = System::events();
+
+        // expect ContractCanceled event
+        assert_eq!(
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::RentContractCanceled { contract_id }
+            ))),
+            true
+        );
+    });
+}
+
+#[test]
 fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
@@ -2118,13 +2186,133 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
         assert_ne!(usable_balance, 0);
         Balances::transfer(RuntimeOrigin::signed(bob()), alice(), usable_balance).unwrap();
 
-        // Last amount due is the same as the first one
+        // Last amount due is not the same as the first one
         assert_ne!(amount_due_1_as_u128, amount_due_2_as_u128);
         check_report_cost(contract_id, amount_due_2_as_u128, 13, discount_received);
 
         let total_balance = Balances::total_balance(&twin.account_id);
         let free_balance = Balances::free_balance(&twin.account_id);
         assert_eq!(total_balance, free_balance);
+    });
+}
+
+#[test]
+fn test_rent_contract_overdrawn_and_partial_bill() {
+    let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
+    ext.execute_with(|| {
+        run_to_block(1, None);
+        prepare_dedicated_farm_and_node();
+        activate_billing_accounts(false);
+
+        let node_id = 1;
+
+        TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
+
+        assert_ok!(SmartContractModule::create_rent_contract(
+            RuntimeOrigin::signed(charlie()),
+            node_id,
+            None
+        ));
+        let contract_id = 1;
+
+        let twin = TfgridModule::twins(3).unwrap();
+        let initial_reservable_balance =
+            Balances::usable_balance(&twin.account_id) - EXISTENTIAL_DEPOSIT;
+
+        let contract = SmartContractModule::contracts(contract_id).unwrap();
+        let rent_contract = types::RentContract { node_id };
+        assert_eq!(
+            contract.contract_type,
+            types::ContractData::RentContract(rent_contract)
+        );
+
+        pool_state
+            .write()
+            .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 11);
+        run_to_block(11, Some(&mut pool_state));
+
+        let (amount_due_per_cycle, _) = calculate_tft_cost(contract_id, 2, 10);
+        assert_ne!(amount_due_per_cycle, 0);
+
+        // expect contractPaymentOverdarwn event with partially billed amount
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::ContractPaymentOverdrawn {
+                    contract_id: contract_id,
+                    timestamp: get_timestamp_in_seconds_for_block(11),
+                    partially_billed_amount: initial_reservable_balance,
+                    overdraft: amount_due_per_cycle - initial_reservable_balance
+                }
+            ))),
+            true
+        );
+
+        let contract_payment_state = SmartContractModule::contract_payment_state(contract_id);
+        assert_eq!(
+            contract_payment_state.get_reserve(),
+            initial_reservable_balance
+        );
+        assert_eq!(
+            contract_payment_state.get_overdraft(),
+            amount_due_per_cycle - initial_reservable_balance
+        );
+
+        let free_balance = Balances::free_balance(&twin.account_id);
+        assert_eq!(free_balance, EXISTENTIAL_DEPOSIT);
+
+        pool_state
+            .write()
+            .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 21);
+        run_to_block(21, Some(&mut pool_state));
+
+        // expect contractPaymentOverdarwn event with no partially billed amount
+        let our_events = System::events();
+        assert_eq!(
+            our_events.contains(&record(MockEvent::SmartContractModule(
+                SmartContractEvent::<TestRuntime>::ContractPaymentOverdrawn {
+                    contract_id: contract_id,
+                    timestamp: get_timestamp_in_seconds_for_block(21),
+                    partially_billed_amount: 0,
+                    overdraft: amount_due_per_cycle
+                }
+            ))),
+            true
+        );
+        let contract_payment_state = SmartContractModule::contract_payment_state(contract_id);
+        assert_eq!(
+            contract_payment_state.get_reserve(),
+            initial_reservable_balance
+        );
+        assert_eq!(
+            contract_payment_state.get_overdraft(),
+            amount_due_per_cycle * 2 - initial_reservable_balance
+        );
+        let should_have_next_cycle = amount_due_per_cycle * 3 - initial_reservable_balance;
+
+        // transfer some balance to the owner of the contract to trigger the grace period to stop
+        Balances::transfer(
+            RuntimeOrigin::signed(bob()),
+            charlie(),
+            should_have_next_cycle,
+        )
+        .unwrap();
+
+        pool_state
+            .write()
+            .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 31);
+        run_to_block(31, Some(&mut pool_state));
+
+        let contract_payment_state = SmartContractModule::contract_payment_state(contract_id);
+        assert_eq!(
+            contract_payment_state.get_reserve(),
+            amount_due_per_cycle * 3
+        );
+        assert_eq!(contract_payment_state.get_overdraft(), 0);
+
+        // contract state should be Created
+        let c1 = SmartContractModule::contracts(contract_id).unwrap();
+        assert_eq!(c1.state, types::ContractState::Created);
     });
 }
 
@@ -2175,11 +2363,10 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
             discount_received.clone(),
         );
 
-        // Twin should have no more locked balance
+        // Twin should have no more reserved balance
         let twin = TfgridModule::twins(2).unwrap();
-        let total_balance = Balances::total_balance(&twin.account_id);
-        let free_balance = Balances::free_balance(&twin.account_id);
-        assert_eq!(total_balance, free_balance);
+        let reserved_balance = Balances::reserved_balance(&twin.account_id);
+        assert_eq!(reserved_balance, 0);
     });
 }
 
@@ -2232,7 +2419,7 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
         // Event 3: Rent contract created
         // Event 4: Node Contract created
         // Event 5: Updated resources contract
-        // Event 6: Balances locked
+        // Event 6: Balances Reserved
         // Event 7: Contract Billed
         // => no Node Contract billed event
         log::debug!("our_events: {:?}", our_events);
@@ -3617,53 +3804,92 @@ fn test_cu_calculation() {
 }
 
 #[test]
-fn test_lock() {
+fn test_reserve_and_unreserve() {
     new_test_ext().execute_with(|| {
-        let usable_balance = Balances::usable_balance(&bob());
+        let total_balance = Balances::total_balance(&bob());
+        let initial_free_balance = Balances::free_balance(&bob());
+        let initial_reserved_balance = Balances::reserved_balance(&bob());
+        log::debug!("Total balance: {}", total_balance);
+        log::debug!("Initial free balance: {}", initial_free_balance);
+        log::debug!("Initial reserved balance: {}", initial_reserved_balance);
+
+        // should be equal since no activity and no reserves
+        assert_eq!(initial_reserved_balance, 0);
+
+        // Try to reserve some amount should succeed
+        let res = Balances::reserve(&bob(), 100);
+
+        assert_eq!(res.is_ok(), true);
+
+        // free balance should be decreased by 100
         let free_balance = Balances::free_balance(&bob());
+        let expected_free_balance = initial_free_balance - 100;
+        assert_eq!(free_balance, expected_free_balance);
 
-        // should be equal since no activity and no locks
-        assert_eq!(usable_balance, free_balance);
+        // reserving all free balance shouldn't succeed
+        let to_reserve = free_balance;
+        assert_eq!(Balances::can_reserve(&bob(), to_reserve), false);
+        // Try to reserve all free balance
+        let res = Balances::reserve(&bob(), to_reserve);
+        assert_eq!(res.is_err(), true);
+        // balance still the same
+        assert_eq!(free_balance, expected_free_balance);
 
-        let id: u64 = 1;
-        // Try to lock less than EXISTENTIAL_DEPOSIT should fail
-        Balances::set_lock(id.to_be_bytes(), &bob(), 100, WithdrawReasons::all());
+        // Try to reserve all reservable balance should succeed
+        let to_reserve = crate::pallet::Pallet::<TestRuntime>::get_reservable_balance(&bob());
 
-        // usable balance should now return free balance - EXISTENTIAL_DEPOSIT cause there was some activity
-        let usable_balance = Balances::usable_balance(&bob());
+        let res = Balances::reserve(&bob(), to_reserve);
+        assert_eq!(res.is_ok(), true);
+
         let free_balance = Balances::free_balance(&bob());
-        assert_eq!(usable_balance, free_balance - EXISTENTIAL_DEPOSIT);
+        let expected_reserved_balance = initial_free_balance - (100 + to_reserve);
+        assert_eq!(free_balance, expected_reserved_balance);
 
-        // ----- INITIAL ------ //
-        // Try to lock more than EXISTENTIAL_DEPOSIT should succeed
-        let to_lock = 100 + EXISTENTIAL_DEPOSIT;
+        let reserved_balance = Balances::reserved_balance(&bob());
+        assert_eq!(reserved_balance, initial_free_balance - EXISTENTIAL_DEPOSIT);
 
-        Balances::set_lock(id.to_be_bytes(), &bob(), to_lock, WithdrawReasons::all());
+        // reservable balance should be 0
+        assert_eq!(
+            crate::pallet::Pallet::<TestRuntime>::get_reservable_balance(&bob()),
+            0
+        );
 
-        // usable balance should now be free_balance - to_lock cause there was some activity
-        let usable_balance = Balances::usable_balance(&bob());
-        let free_balance = Balances::free_balance(&bob());
-        assert_eq!(usable_balance, free_balance - to_lock);
+        // unreserve should succeed without a remainder
+        let remainder = Balances::unreserve(&bob(), reserved_balance);
+        assert_eq!(remainder, 0);
+        // user balance now should be the same as initial
+        assert_eq!(Balances::free_balance(&bob()), initial_free_balance)
+    })
+}
 
-        // ----- UPDATE ------ //
-        // updating a lock should succeed
-        let to_lock = 500 + EXISTENTIAL_DEPOSIT;
+#[test]
+fn test_reserve_and_transfer_reserved() {
+    new_test_ext().execute_with(|| {
+        let total_balance = Balances::total_balance(&bob());
+        let initial_free_balance = Balances::free_balance(&bob());
+        let initial_reserved_balance = Balances::reserved_balance(&bob());
+        log::debug!("Total balance: {}", total_balance);
+        log::debug!("Initial free balance: {}", initial_free_balance);
+        log::debug!("Initial reserved balance: {}", initial_reserved_balance);
 
-        Balances::set_lock(id.to_be_bytes(), &bob(), to_lock, WithdrawReasons::all());
+        // Try to reserve all reservable balance should succeed
+        let to_reserve = crate::pallet::Pallet::<TestRuntime>::get_reservable_balance(&bob());
 
-        // usable balance should now be free_balance - to_lock cause there was some activity
-        let usable_balance = Balances::usable_balance(&bob());
-        let free_balance = Balances::free_balance(&bob());
-        assert_eq!(usable_balance, free_balance - to_lock);
+        let res = Balances::reserve(&bob(), to_reserve);
+        assert_eq!(res.is_ok(), true);
 
-        // ----- UNLOCK ------ //
-        // Unlock should work
-        Balances::remove_lock(id.to_be_bytes(), &bob());
+        let res = Balances::repatriate_reserved(&bob(), &alice(), to_reserve, BalanceStatus::Free);
+        assert_eq!(res.is_ok(), true);
+        match res {
+            Ok(remainder) => assert_eq!(remainder, 0),
+            Err(_) => assert!(false),
+        }
 
-        // usable balance should now be free_balance cause there are no locks
-        let usable_balance = Balances::usable_balance(&bob());
-        let free_balance = Balances::free_balance(&bob());
-        assert_eq!(usable_balance, free_balance);
+        // reserved balance should be 0
+        assert_eq!(Balances::reserved_balance(&bob()), 0);
+
+        // user balance now should be only the existential deposit
+        assert_eq!(Balances::free_balance(&bob()), EXISTENTIAL_DEPOSIT)
     })
 }
 
@@ -4173,7 +4399,7 @@ fn validate_distribution_rewards(
     initial_total_issuance: u64,
     total_amount_billed: u64,
     had_solution_provider: bool,
-    had_existential_deposit: bool
+    had_existential_deposit: bool,
 ) {
     info!("total amount billed {:?}", total_amount_billed);
 
@@ -4186,7 +4412,12 @@ fn validate_distribution_rewards(
     // 5% is sent to the staking pool account
     assert_eq_error_rate!(
         staking_pool_account_balance,
-        (Perbill::from_percent(5) * total_amount_billed) + if had_existential_deposit {EXISTENTIAL_DEPOSIT} else {0},
+        (Perbill::from_percent(5) * total_amount_billed)
+            + if had_existential_deposit {
+                EXISTENTIAL_DEPOSIT
+            } else {
+                0
+            },
         6
     );
 
@@ -4195,7 +4426,12 @@ fn validate_distribution_rewards(
     let foundation_account_balance = Balances::free_balance(&pricing_policy.foundation_account);
     assert_eq!(
         foundation_account_balance,
-        (Perbill::from_percent(10) * total_amount_billed) + if had_existential_deposit {EXISTENTIAL_DEPOSIT} else {0}
+        (Perbill::from_percent(10) * total_amount_billed)
+            + if had_existential_deposit {
+                EXISTENTIAL_DEPOSIT
+            } else {
+                0
+            }
     );
 
     if had_solution_provider {
@@ -4203,7 +4439,12 @@ fn validate_distribution_rewards(
         let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
         assert_eq!(
             sales_account_balance,
-            (Perbill::from_percent(40) * total_amount_billed) + if had_existential_deposit {EXISTENTIAL_DEPOSIT} else {0}
+            (Perbill::from_percent(40) * total_amount_billed)
+                + if had_existential_deposit {
+                    EXISTENTIAL_DEPOSIT
+                } else {
+                    0
+                }
         );
 
         // 10% is sent to the solution provider
@@ -4217,7 +4458,12 @@ fn validate_distribution_rewards(
         let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
         assert_eq!(
             sales_account_balance,
-            (Perbill::from_percent(50) * total_amount_billed) + if had_existential_deposit {EXISTENTIAL_DEPOSIT} else {0}
+            (Perbill::from_percent(50) * total_amount_billed)
+                + if had_existential_deposit {
+                    EXISTENTIAL_DEPOSIT
+                } else {
+                    0
+                }
         );
     }
 
