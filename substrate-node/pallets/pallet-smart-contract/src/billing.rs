@@ -5,7 +5,7 @@ use frame_support::{
     ensure,
     traits::{
         tokens::{fungible::*, Fortitude::Polite, Preservation::Preserve},
-        Currency, LockableCurrency, OnUnbalanced, ReservableCurrency,
+        Currency, OnUnbalanced, ReservableCurrency,
     },
 };
 

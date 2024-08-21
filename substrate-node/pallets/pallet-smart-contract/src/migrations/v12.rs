@@ -1,6 +1,9 @@
 use crate::*;
 use frame_support::{
-    pallet_prelude::ValueQuery, storage_alias, traits::{LockableCurrency, OnRuntimeUpgrade}, weights::Weight,
+    pallet_prelude::ValueQuery,
+    storage_alias,
+    traits::{LockableCurrency, OnRuntimeUpgrade},
+    weights::Weight,
     Blake2_128Concat,
 };
 use log::{debug, info};
@@ -11,7 +14,7 @@ use sp_std::marker::PhantomData;
 #[cfg(feature = "try-runtime")]
 use frame_support::{dispatch::DispatchError, ensure};
 #[cfg(feature = "try-runtime")]
-use sp_std::{vec::Vec};
+use sp_std::vec::Vec;
 
 // Storage alias from ContractPaymentState v12
 #[storage_alias]
@@ -22,24 +25,22 @@ pub type ContractPaymentState<T: Config> = StorageMap<
     super::types::v12::ContractPaymentState<BalanceOf<T>>,
     ValueQuery,
 >;
-pub struct MigrateContractLockToContractPaymentState<T: Config>(PhantomData<T>);
+
+pub struct MigrateContractLockToContractPaymentState<T: Config>(pub PhantomData<T>);
+
 impl<T: Config> OnRuntimeUpgrade for MigrateContractLockToContractPaymentState<T> {
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
-        debug!("current pallet version: {:?}", PalletVersion::<T>::get());
-        ensure!(
-            PalletVersion::<T>::get() >= types::StorageVersion::V11,
-            DispatchError::Other("Unexpected pallet version")
-        );
-        debug!("👥  Smart Contract pallet to V12 passes PRE migrate checks ✅",);
+        validate_pallet_version::<T>(types::StorageVersion::V11)?;
+
         let count = ContractLock::<T>::iter().count();
         debug!(
             "🏁  Smart Contract pallet {:?} ContractLock length before migration {:?}",
             PalletVersion::<T>::get(),
             count
         );
-        // convert usize to vec of u8
-        Ok(ContractLock::<T>::iter().count().to_le_bytes().to_vec())
+
+        Ok(count.to_le_bytes().to_vec())
     }
 
     fn on_runtime_upgrade() -> Weight {
@@ -53,25 +54,41 @@ impl<T: Config> OnRuntimeUpgrade for MigrateContractLockToContractPaymentState<T
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade(count: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
-        debug!("current pallet version: {:?}", PalletVersion::<T>::get());
-        ensure!(
-            PalletVersion::<T>::get() >= types::StorageVersion::V12,
-            DispatchError::Other("Unexpected pallet version")
-        );
-        let new_count =  ContractPaymentState::<T>::iter().count();
-        debug!("🏁  Smart Contract pallet {:?} ContractPaymentState length after migration {:?}", PalletVersion::<T>::get(), new_count);
-        ensure!(
-            new_count == usize::from_le_bytes(count.try_into().expect("slice with incorrect length")),
-            DispatchError::Other("Number of ContractPaymentState migrated does not match: {:?}")
-        );
-        // print len of ContractPaymentState
-        debug!(
-            "🏁  Smart Contract pallet {:?} ContractPaymentState length after migration {:?}",
-            PalletVersion::<T>::get(),
-            new_count
-        );
+        validate_pallet_version::<T>(types::StorageVersion::V12)?;
+
+        let new_count = ContractPaymentState::<T>::iter().count();
+        let old_count =
+            usize::from_le_bytes(count.try_into().expect("slice with incorrect length"));
+
+        if old_count != 0 {
+            debug!(
+                "🏁  Smart Contract pallet {:?} ContractPaymentState length after migration {:?}",
+                PalletVersion::<T>::get(),
+                new_count
+            );
+            ensure!(
+                new_count == old_count,
+                DispatchError::Other(
+                    "Number of ContractPaymentState migrated does not match: {:?}"
+                )
+            );
+        }
+
         check_contract_lock_v12::<T>()
     }
+}
+
+#[cfg(feature = "try-runtime")]
+fn validate_pallet_version<T: Config>(
+    expected_version: types::StorageVersion,
+) -> Result<(), sp_runtime::TryRuntimeError> {
+    let current_version = PalletVersion::<T>::get();
+    debug!("current pallet version: {:?}", current_version);
+    ensure!(
+        current_version >= expected_version,
+        DispatchError::Other("Unexpected pallet version")
+    );
+    Ok(())
 }
 
 pub fn migrate_to_version_12<T: Config>() -> frame_support::weights::Weight {
@@ -80,52 +97,75 @@ pub fn migrate_to_version_12<T: Config>() -> frame_support::weights::Weight {
         PalletVersion::<T>::get()
     );
 
-    let mut r = 0;
-    let mut w = 0;
+    let mut total_reads = 0;
+    let mut total_writes = 0;
 
     for (contract_id, contract) in Contracts::<T>::iter() {
         log::debug!("Contract id: {:?}", contract_id);
-        let src_twin = pallet_tfgrid::Twins::<T>::get(contract.twin_id);
-        // continue if src_twin doesn't exist
-        if src_twin.is_none() {
-            log::debug!("Twin not found for contract {:?}", contract_id);
-            continue;
-        }
-        let old_contract_lock = ContractLock::<T>::take(contract_id);
 
-        ContractPaymentState::<T>::insert(contract_id, super::types::v12::ContractPaymentState {
+        if let Some(src_twin) = pallet_tfgrid::Twins::<T>::get(contract.twin_id) {
+            if ContractLock::<T>::contains_key(contract_id) {
+                let (r, w) = migrate_contract_lock::<T>(contract_id);
+                total_reads += r;
+                total_writes += w;
+
+                let (r, w) = remove_all_locks::<T>(&src_twin.account_id);
+                total_reads += r;
+                total_writes += w;
+            } else {
+                log::debug!("ContractLock not found for contract {:?}", contract_id);
+            }
+        } else {
+            log::debug!("Twin not found for contract {:?}", contract_id);
+        }
+    }
+
+    // Set the new storage version
+    PalletVersion::<T>::put(types::StorageVersion::V12);
+    total_writes += 1;
+
+    T::DbWeight::get().reads_writes(total_reads, total_writes)
+}
+
+fn migrate_contract_lock<T: Config>(contract_id: u64) -> (u64, u64) {
+    let mut reads = 0;
+    let mut writes = 0;
+
+    let old_contract_lock = ContractLock::<T>::take(contract_id);
+    reads += 1;
+    writes += 1;
+
+    ContractPaymentState::<T>::insert(
+        contract_id,
+        super::types::v12::ContractPaymentState {
             standard_reserve: BalanceOf::<T>::zero(),
             additional_reserve: BalanceOf::<T>::zero(),
             standard_overdraft: old_contract_lock.amount_locked,
-            additional_overdraft:old_contract_lock.extra_amount_locked,
+            additional_overdraft: old_contract_lock.extra_amount_locked,
             last_updated_seconds: old_contract_lock.lock_updated,
             cycles: old_contract_lock.cycles,
-        });
+        },
+    );
+    writes += 1;
 
-        let src_twin = src_twin.unwrap();
-        let account_id = &src_twin.account_id;
-        let locks = pallet_balances::Pallet::<T>::locks(account_id);
-        r += 3;
-        w += 2;
+    (reads, writes)
+}
 
-        // Remove all locks on the user account
-        for lock in locks {
-            log::debug!("Removing lock: {:?} for account: {:?}", lock.id, account_id,);
-            pallet_balances::Pallet::<T>::remove_lock(lock.id, account_id);
-            r += 1;
-            w += 1;
-        }
+fn remove_all_locks<T: Config>(account_id: &T::AccountId) -> (u64, u64) {
+    let mut reads = 0;
+    let mut writes = 0;
+
+    let locks = pallet_balances::Pallet::<T>::locks(account_id);
+    reads += 1;
+
+    for lock in locks {
+        log::debug!("Removing lock: {:?} for account: {:?}", lock.id, account_id);
+        pallet_balances::Pallet::<T>::remove_lock(lock.id, account_id);
+        reads += 1;
+        writes += 1;
     }
-    // Set the new storage version
-    PalletVersion::<T>::put(types::StorageVersion::V12);
-    w += 1;
 
-    let weight = T::DbWeight::get().reads_writes(r, w);
-
-    // log weights
-    debug!(" >>> consumed weight: {:?} ", weight);
-    weight
-
+    (reads, writes)
 }
 
 #[cfg(feature = "try-runtime")]
@@ -135,9 +175,7 @@ pub fn check_contract_lock_v12<T: Config>() -> Result<(), sp_runtime::TryRuntime
         PalletVersion::<T>::get()
     );
 
-    // Check each contract has an associated contract lock
     for (contract_id, _) in Contracts::<T>::iter() {
-        // ContractLock
         if !ContractPaymentState::<T>::contains_key(contract_id) {
             debug!(
                 " ⚠️    Contract (id: {}): no contract lock found",
