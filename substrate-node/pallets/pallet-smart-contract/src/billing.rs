@@ -176,6 +176,7 @@ impl<T: Config> Pallet<T> {
             };
 
         let mut contract_payment_state = ContractPaymentState::<T>::get(contract.contract_id);
+        log::trace!("Contract payment state [before billing]: {:?}", contract_payment_state);
 
         // Calculate user total usable balance
         let twin_usable_balance = Self::get_usable_balance(&src_twin.account_id);
@@ -289,6 +290,14 @@ impl<T: Config> Pallet<T> {
                 discount_received,
             )?;
         } else {
+            log::info!(
+                "Contract payment overdrawn for contract_id: {:?}, Contract state: {:?}, This cycle over due: {:?}, Twin have: {:?}, Previous overdraft: {:?}",
+                contract.contract_id,
+                contract.state,
+                total_amount_due,
+                twin_usable_balance,
+                contract_payment_state.get_overdraft()
+            );
             Self::overdraft_funds(
                 &mut contract_payment_state,
                 standard_amount_due,
@@ -298,12 +307,6 @@ impl<T: Config> Pallet<T> {
                 now,
                 twin_usable_balance,
             )?;
-            log::info!(
-                "Contract payment overdrawn for contract_id: {:?}, Contract state: {:?}, Total overdraft: {:?}",
-                contract.contract_id,
-                contract.state,
-                contract_payment_state.get_overdraft()
-            );
         }
 
         // Distribute rewards
@@ -336,6 +339,7 @@ impl<T: Config> Pallet<T> {
         }
 
         contract_payment_state.last_updated_seconds = now;
+        log::trace!("Contract payment state [after billing]: {:?}", contract_payment_state);
         ContractPaymentState::<T>::insert(contract.contract_id, &contract_payment_state);
 
         Ok(().into())
@@ -426,6 +430,7 @@ impl<T: Config> Pallet<T> {
             discount_level: discount_received.clone(),
             amount_billed: total_amount_to_reserve.saturated_into::<u128>(),
         };
+        log::debug!("Contract billed: {:?}", contract_bill);
         Self::deposit_event(Event::ContractBilled(contract_bill));
         Ok(().into())
     }
@@ -443,22 +448,30 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         contract_payment_state.overdraft_standard_amount(standard_amount_due);
         contract_payment_state.overdraft_additional_amount(additional_amount_due);
-        // Reserve as much as possible from the user's account to cover part of the amount due
-        <T as Config>::Currency::reserve(&src_twin.account_id, reservable).map_err(|e| {
-            log::error!("Error while reserving partial amount due: {:?}", e);
-            e
-        })?;
-        contract_payment_state.settle_partial_overdraft(reservable);
-
+        // Reserve as much as possible from the user's account to cover part of the amount over due
+        // We defensivly check if the avilable funds are greater than the amount over due to avoid unintended overdraw
+        let over_due = standard_amount_due.saturating_add(additional_amount_due);
+        let reserved = if reservable > over_due {
+            log::error!("Logic error: handling overdarft while the reservable amount is greater than the amount over due!");
+            BalanceOf::<T>::zero()
+        } else {
+            <T as Config>::Currency::reserve(&src_twin.account_id, reservable).map_err(|e| {
+                log::error!("Error while reserving partial amount due: {:?}", e);
+                e
+            })?;
+            contract_payment_state.settle_partial_overdraft(reservable);
+            reservable
+        };
+        let overdrawn = over_due.saturating_sub(reserved);
+        log::info!("Partial amount reserved: {:?}", reserved);
+        log::info!("Overdrawn: {:?}", overdrawn);
         Self::deposit_event(Event::ContractPaymentOverdrawn {
             contract_id: contract.contract_id,
             timestamp: now,
             // This is the partial amount successfully reserved from the user's account in this billing cycle
-            partially_billed_amount: reservable,
+            partially_billed_amount: reserved,
             // This is the overdraft caused by insufficient funds for the contract payment in this billing cycle
-            overdraft: standard_amount_due
-                .saturating_add(additional_amount_due)
-                .saturating_sub(reservable),
+            overdraft: overdrawn,
         });
         Ok(().into())
     }
@@ -845,6 +858,7 @@ impl<T: Config> Pallet<T> {
         let account = T::AccountStore::get(account_id);
         let free = account.free;
         let frozen = account.frozen;
+        let reserved = account.reserved;
         let minimum_balance =
             <<T as Config>::Currency as Currency<T::AccountId>>::minimum_balance()
                 .saturated_into::<u128>();
@@ -853,6 +867,7 @@ impl<T: Config> Pallet<T> {
             <T as pallet_balances::Config>::Balance::saturated_from(minimum_balance),
             frozen,
         ));
+        log::debug!("Free balance: {:?} Reserved balance: {:?} Locked balance: {:?} Reservable balance: {:?}", free, reserved, frozen, reservable);
         let b = reservable.saturated_into::<u128>();
         BalanceOf::<T>::saturated_from(b)
     }
