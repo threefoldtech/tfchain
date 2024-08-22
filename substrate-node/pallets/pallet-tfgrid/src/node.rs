@@ -393,8 +393,7 @@ impl<T: Config> Pallet<T> {
     fn get_resources(
         resources: pallet::ResourcesInput,
     ) -> Result<Resources, DispatchErrorWithPostInfo> {
-        ensure!(resources.validate_hru(), Error::<T>::InvalidHRUInput);
-        ensure!(resources.validate_sru(), Error::<T>::InvalidSRUInput);
+        ensure!(resources.validate_storage(), Error::<T>::InvalidStorageInput);
         ensure!(resources.validate_cru(), Error::<T>::InvalidCRUInput);
         ensure!(resources.validate_mru(), Error::<T>::InvalidMRUInput);
 

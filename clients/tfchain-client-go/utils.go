@@ -246,6 +246,7 @@ var tfgridModuleErrors = []string{
 	"NodeHasActiveContracts",
 	"InvalidRelayAddress",
 	"InvalidTimestampHint",
+	"InvalidStorageInput",
 }
 
 // https://github.com/threefoldtech/tfchain/blob/development/substrate-node/pallets/pallet-tft-bridge/src/lib.rs#L152

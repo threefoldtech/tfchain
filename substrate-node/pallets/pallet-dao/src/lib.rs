@@ -53,6 +53,8 @@ pub mod pallet {
         /// The time-out for council motions.
         type MotionDuration: Get<BlockNumberFor<Self>>;
 
+        type MotionMinThreshold: Get<u32>;
+
         /// The minimum amount of vetos to dissaprove a proposal
         type MinVetos: Get<u32>;
 
@@ -170,6 +172,7 @@ pub mod pallet {
         OngoingVoteAndTresholdStillNotMet,
         FarmHasNoNodes,
         InvalidProposalDuration,
+        ThresholdTooLow,
     }
 
     #[pallet::call]

@@ -69,6 +69,7 @@ pub type BlockNumber = u32;
 parameter_types! {
     pub const DaoMotionDuration: BlockNumber = 4;
     pub const MinVetos: u32 = 2;
+    pub const MinThreshold: u32 = 2;
 }
 
 pub(crate) type Serial = pallet_tfgrid::pallet::SerialNumberOf<TestRuntime>;
@@ -107,6 +108,7 @@ impl pallet_dao::pallet::Config for TestRuntime {
     type CouncilOrigin = EnsureRoot<Self::AccountId>;
     type Proposal = RuntimeCall;
     type MotionDuration = DaoMotionDuration;
+    type MotionMinThreshold = MinThreshold;
     type MinVetos = MinVetos;
     type Tfgrid = TfgridModule;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;

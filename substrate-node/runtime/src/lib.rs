@@ -154,7 +154,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 149,
+    spec_version: 151,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -474,6 +474,7 @@ impl substrate_validator_set::Config for Runtime {
 parameter_types! {
     pub const DaoMotionDuration: BlockNumber = 7 * DAYS;
     pub const MinVetos: u32 = 3;
+    pub const DaoMotionMinThreshold: u32 = 5;
 }
 
 impl pallet_dao::Config for Runtime {
@@ -481,6 +482,7 @@ impl pallet_dao::Config for Runtime {
     type CouncilOrigin = EnsureRootOrCouncilApproval;
     type Proposal = RuntimeCall;
     type MotionDuration = DaoMotionDuration;
+    type MotionMinThreshold = DaoMotionMinThreshold;
     type Tfgrid = TfgridModule;
     type WeightInfo = pallet_dao::weights::SubstrateWeight<Runtime>;
     type MinVetos = MinVetos;
