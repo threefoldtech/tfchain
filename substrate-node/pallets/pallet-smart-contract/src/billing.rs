@@ -296,6 +296,7 @@ impl<T: Config> Pallet<T> {
                 &src_twin,
                 &contract,
                 now,
+                twin_usable_balance,
             )?;
             log::info!(
                 "Contract payment overdrawn for contract_id: {:?}, Contract state: {:?}, Total overdraft: {:?}",
@@ -438,11 +439,11 @@ impl<T: Config> Pallet<T> {
         src_twin: &pallet_tfgrid::types::Twin<T::AccountId>,
         contract: &types::Contract<T>,
         now: u64,
+        reservable: BalanceOf<T>,
     ) -> DispatchResultWithPostInfo {
         contract_payment_state.overdraft_standard_amount(standard_amount_due);
         contract_payment_state.overdraft_additional_amount(additional_amount_due);
         // Reserve as much as possible from the user's account to cover part of the amount due
-        let reservable = Self::get_usable_balance(&src_twin.account_id);
         <T as Config>::Currency::reserve(&src_twin.account_id, reservable).map_err(|e| {
             log::error!("Error while reserving partial amount due: {:?}", e);
             e
