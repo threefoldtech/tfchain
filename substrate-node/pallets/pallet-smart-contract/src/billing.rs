@@ -249,7 +249,7 @@ impl<T: Config> Pallet<T> {
             discount_received
         );
 
-        // If the amount due is zero and the contract is not in deleted state, don't bill the contract (mostly node contarct on a rented node)
+        // If the amount due is zero and the contract is not in deleted state, don't bill the contract (mostly node contract on a rented node)
         if total_amount_due.is_zero() && !matches!(contract.state, types::ContractState::Deleted(_))
         {
             log::info!(
@@ -294,7 +294,7 @@ impl<T: Config> Pallet<T> {
             )?;
         } else {
             log::info!(
-                "Contract payment overdrawn for contract_id: {:?}, Contract state: {:?}, This cycle over due: {:?}, Twin have: {:?}, Previous overdraft: {:?}",
+                "Contract payment overdrawn for contract_id: {:?}, Contract state: {:?}, This cycle overdue: {:?}, Twin have: {:?}, Previous overdraft: {:?}",
                 contract.contract_id,
                 contract.state,
                 total_amount_due,
@@ -454,11 +454,11 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         contract_payment_state.overdraft_standard_amount(standard_amount_due);
         contract_payment_state.overdraft_additional_amount(additional_amount_due);
-        // Reserve as much as possible from the user's account to cover part of the amount over due
-        // We defensivly check if the avilable funds are greater than the amount over due to avoid unintended overdraw
+        // Reserve as much as possible from the user's account to cover part of the amount overdue
+        // We defensivly check if the available funds are greater than the amount overdue to avoid unintended reservation
         let over_due = standard_amount_due.saturating_add(additional_amount_due);
         let reserved = if reservable > over_due {
-            log::error!("Logic error: handling overdarft while the reservable amount is greater than the amount over due!");
+            log::error!("Logic error: handling overdraft while the reservable amount is greater than the amount overdue!");
             BalanceOf::<T>::zero()
         } else {
             <T as Config>::Currency::reserve(&src_twin.account_id, reservable).map_err(|e| {
@@ -797,7 +797,7 @@ impl<T: Config> Pallet<T> {
     }
 
     // Inserts a contract in a billing loop where the index is the contract id % billing frequency
-    // This way, we don't need to reinsert the contract everytime it gets billed
+    // This way, we don't need to re-insert the contract every time it gets billed
     pub fn insert_contract_in_billing_loop(contract_id: u64) {
         let index = Self::get_billing_loop_index_from_contract_id(contract_id);
         let mut contract_ids = ContractsToBillAt::<T>::get(index);
