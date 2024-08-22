@@ -49,7 +49,7 @@ impl<T: Config> Pallet<T> {
         for contract_id in contract_ids {
             if let Some(contract) = Contracts::<T>::get(contract_id) {
                 if Self::should_bill_contract(&contract) {
-                    match Self::bill_contract_using_signed_transaction(contract_id) {
+                    match Self::submit_signed_transaction_for_contract_billing(contract_id) {
                         Ok(()) => succeeded_contracts.push(contract_id),
                         Err(Error::<T>::OffchainSignedTxCannotSign) => {
                             failed_contracts.push(contract_id);
@@ -120,7 +120,9 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    pub fn bill_contract_using_signed_transaction(contract_id: u64) -> Result<(), Error<T>> {
+    pub fn submit_signed_transaction_for_contract_billing(
+        contract_id: u64,
+    ) -> Result<(), Error<T>> {
         let signer = Signer::<T, <T as pallet::Config>::AuthorityId>::all_accounts();
 
         if !signer.can_sign() {
@@ -273,7 +275,7 @@ impl<T: Config> Pallet<T> {
             <T as Config>::Currency::can_reserve(&src_twin.account_id, total_amount_to_reserve);
         let current_block = <frame_system::Pallet<T>>::block_number().saturated_into::<u64>();
 
-        _ = Self::handle_grace(&mut contract, has_sufficient_fund, current_block);
+        _ = Self::manage_contract_state(&mut contract, has_sufficient_fund, current_block);
 
         if has_sufficient_fund {
             log::info!("Billing contract_id: {:?}, Contract state: {:?}, This cycle amount due: {:?}, Total (include previous overdraft) {:?}",
@@ -353,13 +355,14 @@ impl<T: Config> Pallet<T> {
 
     // Handles the transition between different contract states based on the fund availability
     // May emits one of ContractGracePeriodStarted, ContractGracePeriodEnded, ContractGracePeriodElapsed events
-    fn handle_grace(
+    fn manage_contract_state(
         contract: &mut types::Contract<T>,
         has_sufficient_fund: bool,
         current_block: u64,
     ) -> DispatchResultWithPostInfo {
         match contract.state {
             types::ContractState::GracePeriod(_) if has_sufficient_fund => {
+                // Manage transition from GracePeriod to Created
                 log::info!("Contract {:?} is in grace period, but balance is recharged, moving to created state at block {:?}", contract.contract_id, current_block);
                 Self::update_contract_state(contract, &types::ContractState::Created)?;
                 Self::deposit_event(Event::ContractGracePeriodEnded {
@@ -367,9 +370,13 @@ impl<T: Config> Pallet<T> {
                     node_id: contract.get_node_id(),
                     twin_id: contract.twin_id,
                 });
-                Self::handle_grace_rent_contract(contract, types::ContractState::Created)?;
+                Self::synchronize_associated_node_contract_states(
+                    contract,
+                    types::ContractState::Created,
+                )?;
             }
             types::ContractState::GracePeriod(grace_start) => {
+                // Manage transition from GracePeriod to Deleted
                 let diff = current_block.defensive_saturating_sub(grace_start);
                 if diff >= T::GracePeriod::get() {
                     log::info!("Contract {:?} state changed to deleted at block {:?} due to an expired grace period. Elapsed blocks: {:?}", contract.contract_id, current_block, diff);
@@ -384,6 +391,7 @@ impl<T: Config> Pallet<T> {
                 }
             }
             types::ContractState::Created if !has_sufficient_fund => {
+                // Manage transition from Created to GracePeriod
                 log::info!(
                     "Grace period started at block {:?} due to lack of funds",
                     current_block
@@ -398,7 +406,7 @@ impl<T: Config> Pallet<T> {
                     twin_id: contract.twin_id,
                     block_number: current_block.saturated_into(),
                 });
-                Self::handle_grace_rent_contract(
+                Self::synchronize_associated_node_contract_states(
                     contract,
                     types::ContractState::GracePeriod(current_block),
                 )?;
@@ -745,8 +753,8 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    // Handling rent contracts, associated node contracts are also transitioned to the appropriate state (either Created or GracePeriod).
-    fn handle_grace_rent_contract(
+    // Managing the states of node contracts associated with a rent contract to transition them to the appropriate state (either Created or GracePeriod).
+    fn synchronize_associated_node_contract_states(
         contract: &mut types::Contract<T>,
         state: types::ContractState,
     ) -> DispatchResultWithPostInfo {
