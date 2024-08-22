@@ -64,7 +64,7 @@ pub mod pallet {
     use frame_support::{
         pallet_prelude::*,
         traits::{
-            tokens::fungible::*, Currency, Get, Hooks, LockIdentifier, LockableCurrency,
+            Currency, Get, Hooks, LockIdentifier, LockableCurrency,
             OnUnbalanced, ReservableCurrency,
         },
     };
@@ -217,8 +217,6 @@ pub mod pallet {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type Currency: LockableCurrency<Self::AccountId>
             + ReservableCurrency<Self::AccountId>
-            + InspectHold<Self::AccountId>
-            + Inspect<Self::AccountId>
             + Currency<Self::AccountId>;
         /// Handler for the unbalanced decrement when slashing (burning collateral)
         type Burn: OnUnbalanced<NegativeImbalanceOf<Self>>;

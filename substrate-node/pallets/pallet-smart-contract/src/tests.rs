@@ -5,7 +5,7 @@ use crate::{
 use frame_support::{
     assert_noop, assert_ok, bounded_vec,
     dispatch::Pays,
-    traits::{BalanceStatus, Currency, ReservableCurrency},
+    traits::{BalanceStatus, Currency, LockableCurrency, ReservableCurrency, WithdrawReasons},
     BoundedVec,
 };
 use frame_system::{EventRecord, Phase, RawOrigin};
@@ -16,7 +16,10 @@ use pallet_tfgrid::{
 };
 use sp_core::H256;
 use sp_runtime::{assert_eq_error_rate, traits::SaturatedConversion, Perbill, Percent};
-use sp_std::convert::{TryFrom, TryInto};
+use sp_std::{
+    cmp::max,
+    convert::{TryFrom, TryInto},
+};
 use substrate_fixed::types::U64F64;
 use tfchain_support::{
     constants::time::{SECS_PER_BLOCK, SECS_PER_HOUR},
@@ -3836,7 +3839,7 @@ fn test_reserve_and_unreserve() {
         assert_eq!(free_balance, expected_free_balance);
 
         // Try to reserve all reservable balance should succeed
-        let to_reserve = crate::pallet::Pallet::<TestRuntime>::get_reservable_balance(&bob());
+        let to_reserve = crate::pallet::Pallet::<TestRuntime>::get_usable_balance(&bob());
 
         let res = Balances::reserve(&bob(), to_reserve);
         assert_eq!(res.is_ok(), true);
@@ -3850,7 +3853,7 @@ fn test_reserve_and_unreserve() {
 
         // reservable balance should be 0
         assert_eq!(
-            crate::pallet::Pallet::<TestRuntime>::get_reservable_balance(&bob()),
+            crate::pallet::Pallet::<TestRuntime>::get_usable_balance(&bob()),
             0
         );
 
@@ -3859,6 +3862,77 @@ fn test_reserve_and_unreserve() {
         assert_eq!(remainder, 0);
         // user balance now should be the same as initial
         assert_eq!(Balances::free_balance(&bob()), initial_free_balance)
+    })
+}
+
+#[test]
+fn test_reserve_while_lock_exists() {
+    new_test_ext().execute_with(|| {
+        let total_balance = Balances::total_balance(&bob());
+        let initial_free_balance = Balances::free_balance(&bob());
+        let initial_reserved_balance = Balances::reserved_balance(&bob());
+        log::debug!("Total balance: {}", total_balance);
+        log::debug!("Initial free balance: {}", initial_free_balance);
+        log::debug!("Initial reserved balance: {}", initial_reserved_balance);
+
+        // should be equal since no activity and no reserves
+        assert_eq!(initial_reserved_balance, 0);
+        // Try to lock and reserve some amount should succeed
+        let id: [u8; 8] = *b"my_lock1";
+        let locked_amount = initial_free_balance - 200100;
+        let reserved_amount = 200000;
+        let reservable_before = crate::pallet::Pallet::<TestRuntime>::get_usable_balance(&bob());
+        log::info!("Reservable before: {}", reservable_before);
+        Balances::set_lock(id, &bob(), locked_amount, WithdrawReasons::all());
+        let _ = Balances::reserve(&bob(), reserved_amount);
+        let reservable_after = crate::pallet::Pallet::<TestRuntime>::get_usable_balance(&bob());
+        log::info!("Reservable after: {}", reservable_after);
+
+        if locked_amount <= EXISTENTIAL_DEPOSIT {
+            assert_eq!(reservable_after + reserved_amount, reservable_before);
+        } else {
+            assert_ne!(reservable_after, reservable_before);
+            assert_eq!(Balances::can_reserve(&bob(), reservable_before), false);
+        }
+
+        assert_eq!(Balances::can_reserve(&bob(), reservable_after), true);
+
+        assert_eq!(
+            reservable_after,
+            initial_free_balance
+                .saturating_sub(max(locked_amount, EXISTENTIAL_DEPOSIT) + reserved_amount)
+        );
+
+        // reserve all reservable balance should succeed
+        let res = Balances::reserve(&bob(), reservable_after);
+        assert_eq!(res.is_ok(), true);
+
+        // transfer all reserved balance should succeed
+        let res = Balances::repatriate_reserved(
+            &bob(),
+            &alice(),
+            reservable_after + reserved_amount,
+            BalanceStatus::Free,
+        );
+        assert_eq!(res.is_ok(), true);
+        match res {
+            Ok(remainder) => assert_eq!(remainder, 0),
+            Err(_) => assert!(false),
+        }
+
+        // reserved balance should be 0
+        assert_eq!(Balances::reserved_balance(&bob()), 0);
+
+        // reservable balance should be 0
+        assert_eq!(
+            crate::pallet::Pallet::<TestRuntime>::get_usable_balance(&bob()),
+            0
+        );
+        // user balance now should be only the max of locked_amount and EXISTENTIAL_DEPOSIT
+        assert_eq!(
+            Balances::free_balance(&bob()),
+            max(locked_amount, EXISTENTIAL_DEPOSIT)
+        );
     })
 }
 
@@ -3873,7 +3947,7 @@ fn test_reserve_and_transfer_reserved() {
         log::debug!("Initial reserved balance: {}", initial_reserved_balance);
 
         // Try to reserve all reservable balance should succeed
-        let to_reserve = crate::pallet::Pallet::<TestRuntime>::get_reservable_balance(&bob());
+        let to_reserve = crate::pallet::Pallet::<TestRuntime>::get_usable_balance(&bob());
 
         let res = Balances::reserve(&bob(), to_reserve);
         assert_eq!(res.is_ok(), true);

@@ -3,10 +3,7 @@ use frame_support::traits::{BalanceStatus, DefensiveSaturating};
 use frame_support::{
     dispatch::{DispatchErrorWithPostInfo, DispatchResult, DispatchResultWithPostInfo, Vec},
     ensure,
-    traits::{
-        tokens::{fungible::*, Fortitude::Polite, Preservation::Preserve},
-        Currency, OnUnbalanced, ReservableCurrency,
-    },
+    traits::{Currency, OnUnbalanced, ReservableCurrency},
 };
 
 use frame_support::traits::StoredMap;
@@ -19,6 +16,7 @@ use sp_runtime::{
     traits::{Convert, Saturating, Zero},
     Perbill, SaturatedConversion,
 };
+use sp_std::cmp::max;
 
 impl<T: Config> Pallet<T> {
     // Let offchain worker check if there are contracts on
@@ -444,7 +442,7 @@ impl<T: Config> Pallet<T> {
         contract_payment_state.overdraft_standard_amount(standard_amount_due);
         contract_payment_state.overdraft_additional_amount(additional_amount_due);
         // Reserve as much as possible from the user's account to cover part of the amount due
-        let reservable = Self::get_reservable_balance(&src_twin.account_id);
+        let reservable = Self::get_usable_balance(&src_twin.account_id);
         <T as Config>::Currency::reserve(&src_twin.account_id, reservable).map_err(|e| {
             log::error!("Error while reserving partial amount due: {:?}", e);
             e
@@ -831,14 +829,6 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    // Get the usable balance of an account
-    // This is the balance minus the minimum balance (spendable = free - max(frozen - on_hold, ED))
-    pub fn get_usable_balance(account_id: &T::AccountId) -> BalanceOf<T> {
-        let spendable = <T as Config>::Currency::reducible_balance(account_id, Preserve, Polite);
-        let b = spendable.saturated_into::<u128>();
-        BalanceOf::<T>::saturated_from(b)
-    }
-
     fn get_stash_balance(twin_id: u32) -> BalanceOf<T> {
         let account_id = pallet_tfgrid::TwinBoundedAccountID::<T>::get(twin_id);
         match account_id {
@@ -847,9 +837,10 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    // Get the reservable balance of an account
-    // reservable = free - ED - Frozen
-    pub fn get_reservable_balance(account_id: &T::AccountId) -> BalanceOf<T> {
+    // Retrieve the liquid balance (amount that is neither reserved nor frozen).
+    // The check can_reserve(get_reservable_balance(acc)) should always return true.
+    // Returns free - max (ED, Frozen)
+    pub fn get_usable_balance(account_id: &T::AccountId) -> BalanceOf<T> {
         let account = T::AccountStore::get(account_id);
         let free = account.free;
         let frozen = account.frozen;
@@ -857,12 +848,12 @@ impl<T: Config> Pallet<T> {
             <<T as Config>::Currency as Currency<T::AccountId>>::minimum_balance()
                 .saturated_into::<u128>();
         // Get the reservable balance
-        let reservable = free
-            .saturating_sub(<T as pallet_balances::Config>::Balance::saturated_from(
-                minimum_balance,
-            ))
-            .saturating_sub(frozen);
-        BalanceOf::<T>::saturated_from(reservable.saturated_into::<u128>())
+        let reservable = free.saturating_sub(max(
+            <T as pallet_balances::Config>::Balance::saturated_from(minimum_balance),
+            frozen,
+        ));
+        let b = reservable.saturated_into::<u128>();
+        BalanceOf::<T>::saturated_from(b)
     }
 
     pub fn get_current_timestamp_in_secs() -> u64 {
