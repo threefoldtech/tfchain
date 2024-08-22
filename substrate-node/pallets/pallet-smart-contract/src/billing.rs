@@ -176,7 +176,10 @@ impl<T: Config> Pallet<T> {
             };
 
         let mut contract_payment_state = ContractPaymentState::<T>::get(contract.contract_id);
-        log::trace!("Contract payment state [before billing]: {:?}", contract_payment_state);
+        log::trace!(
+            "Contract payment state [before billing]: {:?}",
+            contract_payment_state
+        );
 
         // Calculate user total usable balance
         let twin_usable_balance = Self::get_usable_balance(&src_twin.account_id);
@@ -339,7 +342,10 @@ impl<T: Config> Pallet<T> {
         }
 
         contract_payment_state.last_updated_seconds = now;
-        log::trace!("Contract payment state [after billing]: {:?}", contract_payment_state);
+        log::trace!(
+            "Contract payment state [after billing]: {:?}",
+            contract_payment_state
+        );
         ContractPaymentState::<T>::insert(contract.contract_id, &contract_payment_state);
 
         Ok(().into())
