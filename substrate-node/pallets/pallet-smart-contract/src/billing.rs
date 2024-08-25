@@ -1,12 +1,10 @@
 use crate::*;
-use frame_support::traits::{BalanceStatus, DefensiveSaturating};
 use frame_support::{
     dispatch::{DispatchErrorWithPostInfo, DispatchResult, DispatchResultWithPostInfo, Vec},
     ensure,
-    traits::{Currency, OnUnbalanced, ReservableCurrency},
+    traits::{BalanceStatus, Currency, DefensiveSaturating, ReservableCurrency, StoredMap},
 };
 
-use frame_support::traits::StoredMap;
 use frame_system::{
     offchain::{SendSignedTransaction, Signer},
     pallet_prelude::BlockNumberFor,
@@ -319,7 +317,7 @@ impl<T: Config> Pallet<T> {
             &contract,
             &mut contract_payment_state,
             &src_twin,
-            farmer_twin,
+            &farmer_twin,
             &pricing_policy,
         )?;
 
@@ -378,8 +376,13 @@ impl<T: Config> Pallet<T> {
             types::ContractState::GracePeriod(grace_start) => {
                 // Manage transition from GracePeriod to Deleted
                 let diff = current_block.defensive_saturating_sub(grace_start);
+                log::debug!(
+                    "Contract {:?} in grace period, elapsed blocks: {:?}",
+                    contract.contract_id,
+                    diff
+                );
                 if diff >= T::GracePeriod::get() {
-                    log::info!("Contract {:?} state changed to deleted at block {:?} due to an expired grace period. Elapsed blocks: {:?}", contract.contract_id, current_block, diff);
+                    log::info!("Contract {:?} state changed to deleted at block {:?} due to an expired grace period.", contract.contract_id, current_block);
                     Self::deposit_event(Event::ContractGracePeriodElapsed {
                         contract_id: contract.contract_id,
                         grace_period: diff,
@@ -463,27 +466,20 @@ impl<T: Config> Pallet<T> {
         contract_payment_state.overdraft_standard_amount(standard_amount_due);
         contract_payment_state.overdraft_additional_amount(additional_amount_due);
         // Reserve as much as possible from the user's account to cover part of the amount overdue
-        // We defensivly check if the available funds are greater than the amount overdue to avoid unintended reservation
         let over_due = standard_amount_due.saturating_add(additional_amount_due);
-        let reserved = if reservable > over_due {
-            log::error!("Logic error: handling overdraft while the reservable amount is greater than the amount overdue!");
-            BalanceOf::<T>::zero()
-        } else {
-            <T as Config>::Currency::reserve(&src_twin.account_id, reservable).map_err(|e| {
-                log::error!("Error while reserving partial amount due: {:?}", e);
-                e
-            })?;
-            contract_payment_state.settle_partial_overdraft(reservable);
-            reservable
-        };
-        let overdrawn = over_due.saturating_sub(reserved);
-        log::info!("Partial amount reserved: {:?}", reserved);
+        let overdrawn = over_due.saturating_sub(reservable);
+        <T as Config>::Currency::reserve(&src_twin.account_id, reservable).map_err(|e| {
+            log::error!("Error while reserving partial amount due: {:?}", e);
+            e
+        })?;
+        contract_payment_state.settle_partial_overdraft(reservable);
+        log::info!("Partial amount reserved: {:?}", reservable);
         log::info!("Overdrawn: {:?}", overdrawn);
         Self::deposit_event(Event::ContractPaymentOverdrawn {
             contract_id: contract.contract_id,
             timestamp: now,
             // This is the partial amount successfully reserved from the user's account in this billing cycle
-            partially_billed_amount: reserved,
+            partially_billed_amount: reservable,
             // This is the overdraft caused by insufficient funds for the contract payment in this billing cycle
             overdraft: overdrawn,
         });
@@ -497,7 +493,7 @@ impl<T: Config> Pallet<T> {
         contract: &types::Contract<T>,
         contract_payment_state: &mut types::ContractPaymentState<BalanceOf<T>>,
         src_twin: &pallet_tfgrid::types::Twin<T::AccountId>,
-        farmer_twin: Option<pallet_tfgrid::types::Twin<T::AccountId>>,
+        farmer_twin: &Option<pallet_tfgrid::types::Twin<T::AccountId>>,
         pricing_policy: &pallet_tfgrid::types::PricingPolicy<T::AccountId>,
     ) -> DispatchResult {
         contract_payment_state.cycles.defensive_saturating_inc();
@@ -515,7 +511,7 @@ impl<T: Config> Pallet<T> {
                     src_twin.id,
                     additional_rewards,
                 );
-                match Self::distribute_additional_rewards(farmer_twin, src_twin, additional_rewards)
+                match Self::distribute_additional_rewards(src_twin, farmer_twin, additional_rewards)
                 {
                     Ok(_) => (),
                     Err(e) => {
@@ -533,13 +529,12 @@ impl<T: Config> Pallet<T> {
                 src_twin.id,
                 standard_rewards,
             );
-            // distribute standard rewards
+            // Distribute standard rewards
             match Self::distribute_standard_rewards(
-                &src_twin,
-                contract.contract_id,
-                contract.solution_provider_id,
-                &pricing_policy,
+                src_twin,
+                farmer_twin,
                 standard_rewards,
+                pricing_policy,
             ) {
                 Ok(_) => (),
                 Err(e) => {
@@ -574,42 +569,91 @@ impl<T: Config> Pallet<T> {
     }
 
     fn distribute_additional_rewards(
-        farmer_twin: Option<pallet_tfgrid::types::Twin<T::AccountId>>,
         src_twin: &pallet_tfgrid::types::Twin<T::AccountId>,
+        farmer_twin: &Option<pallet_tfgrid::types::Twin<T::AccountId>>,
         additional_rewards: BalanceOf<T>,
     ) -> DispatchResult {
         if additional_rewards.is_zero() {
             return Ok(().into());
         }
 
-        let dst_twin = farmer_twin.ok_or(Error::<T>::TwinNotExists)?;
-        Self::transfer_reserved(
-            &src_twin.account_id,
-            &dst_twin.account_id,
-            additional_rewards,
-        )?;
+        if let Some(dst_twin) = farmer_twin {
+            log::debug!(
+                "Transferring: {:?} (100%) from twin {:?} to farmer twin {:?}",
+                additional_rewards,
+                src_twin.id,
+                dst_twin.id
+            );
+            Self::transfer_reserved(
+                &src_twin.account_id,
+                &dst_twin.account_id,
+                additional_rewards,
+            )?;
+        }
+
         Ok(().into())
     }
 
-    // Transferring the held or reserved funds from the user's account to the beneficiaries (foundation, staking pool, solution providers, sales account) and burning the remainder
+    // Transferring the held or reserved funds from the user's account to the beneficiaries (foundation, staking pool, and farmer)
     fn distribute_standard_rewards(
         src_twin: &pallet_tfgrid::types::Twin<T::AccountId>,
-        contract_id: u64,
-        solution_provider_id: Option<u64>,
+        farmer_twin: &Option<pallet_tfgrid::types::Twin<T::AccountId>>,
+        standard_rewards: BalanceOf<T>,
         pricing_policy: &pallet_tfgrid::types::PricingPolicy<T::AccountId>,
-        amount: BalanceOf<T>,
     ) -> DispatchResult {
-        if amount.is_zero() {
+        if standard_rewards.is_zero() {
             return Ok(().into());
         }
 
-        // Calculate foundation share (10%)
-        let foundation_share = Perbill::from_percent(10) * amount;
+        // Calculate and transfer staking pool share (10%)
+        let staking_pool_share = Perbill::from_percent(10) * standard_rewards;
+        let staking_pool_account = T::StakingPoolAccount::get();
         log::debug!(
-            "Transferring: {:?} (10%) from twin {:?} to foundation account {:?}",
-            &foundation_share,
-            &src_twin.id,
-            &pricing_policy.foundation_account
+            "Transferring: {:?} (10%) from twin {:?} to staking pool account {:?}",
+            staking_pool_share,
+            src_twin.id,
+            staking_pool_account,
+        );
+        Self::transfer_reserved(
+            &src_twin.account_id,
+            &staking_pool_account,
+            staking_pool_share,
+        )?;
+
+        let (foundation_percent, foundation_share) = if let Some(dst_twin) = farmer_twin {
+            // Where 3node utilized (Node and Rent contracts)
+            // Calculate foundation share (40%)
+            let foundation_percent = 40;
+            let foundation_share = Perbill::from_percent(foundation_percent) * standard_rewards;
+            // Calculate and transfer farmer share (50%)
+            // We calculate it by subtract all previously send amounts with the initial to avoid accumulating rounding errors.
+            let total_distributed = foundation_share + staking_pool_share;
+            let farmer_share = standard_rewards.defensive_saturating_sub(total_distributed);
+            log::debug!(
+                "Transferring: {:?} (50%) from twin {:?} to farmer twin {:?}",
+                farmer_share,
+                src_twin.id,
+                dst_twin.id
+            );
+            Self::transfer_reserved(&src_twin.account_id, &dst_twin.account_id, farmer_share)?;
+
+            (foundation_percent, foundation_share)
+        } else {
+            // Where no 3node utilized (Name contracts)
+            // Calculate foundation share (90%)
+            let foundation_percent = 90;
+            // We calculate it by subtract all previously send amounts with the initial to avoid accumulating rounding errors.
+            let foundation_share = standard_rewards.defensive_saturating_sub(staking_pool_share);
+
+            (foundation_percent, foundation_share)
+        };
+        // Transfer foundation share
+        log::debug!(
+            "Transferring: {:?} ({:}%) from twin {:?} to foundation account {:?}",
+            foundation_share,
+            foundation_percent,
+            src_twin.id,
+            pricing_policy.foundation_account,
         );
         Self::transfer_reserved(
             &src_twin.account_id,
@@ -617,86 +661,6 @@ impl<T: Config> Pallet<T> {
             foundation_share,
         )?;
 
-        // Calculate staking pool share (5%)
-        let staking_pool_share = Perbill::from_percent(5) * amount;
-        let staking_pool_account = T::StakingPoolAccount::get();
-        log::debug!(
-            "Transferring: {:?} (5%) from twin {:?} to staking pool account {:?}",
-            &staking_pool_share,
-            &src_twin.id,
-            &staking_pool_account,
-        );
-        Self::transfer_reserved(
-            &src_twin.account_id,
-            &staking_pool_account,
-            staking_pool_share,
-        )?;
-        // Calculate the sales share and solution provider share if any. Both combined should be 50%
-        let mut sales_percentage = 50;
-        let mut total_provider_share = BalanceOf::<T>::zero();
-        if let Some(provider_id) = solution_provider_id {
-            if let Some(solution_provider) = SolutionProviders::<T>::get(provider_id) {
-                let total_take: u8 = solution_provider
-                    .providers
-                    .iter()
-                    .map(|provider| provider.take)
-                    .sum();
-
-                sales_percentage.defensive_saturating_reduce(total_take);
-                for provider in solution_provider.providers.iter() {
-                    let share = Perbill::from_percent(provider.take as u32) * amount;
-                    log::debug!(
-                        "Transferring: {:?} ({:?}%) from twin {:?} to provider account {:?}",
-                        &share,
-                        &provider.take,
-                        &src_twin.id,
-                        &provider.who
-                    );
-                    Self::transfer_reserved(&src_twin.account_id, &provider.who, share)?;
-
-                    total_provider_share.defensive_saturating_accrue(share);
-                }
-            }
-        }
-
-        let sales_share = if sales_percentage > 0 {
-            let share = Perbill::from_percent(sales_percentage.into()) * amount;
-            log::debug!(
-                "Transferring: {:?} ({:?}%) from twin {:?} to sales account {:?}",
-                &share,
-                &sales_percentage,
-                &src_twin.id,
-                &pricing_policy.certified_sales_account
-            );
-            Self::transfer_reserved(
-                &src_twin.account_id,
-                &pricing_policy.certified_sales_account,
-                share,
-            )?;
-            share
-        } else {
-            BalanceOf::<T>::zero()
-        };
-
-        let total_distributed =
-            foundation_share + staking_pool_share + total_provider_share + sales_share;
-
-        // Calculate the amount to burn, which is the remainder after distributing the rewards to the beneficiaries.
-        // This should be 35% of the total amount, but we calculate it by subtract all previously send amounts with the initial to avoid accumulating rounding errors.
-        let amount_to_burn = amount.defensive_saturating_sub(total_distributed);
-        let (to_burn, remainder) =
-            T::Currency::slash_reserved(&src_twin.account_id, amount_to_burn);
-
-        log::debug!(
-            "Burning: {:?} from twin {:?}",
-            amount_to_burn - remainder,
-            &src_twin.id
-        );
-        T::Burn::on_unbalanced(to_burn);
-        Self::deposit_event(Event::TokensBurned {
-            contract_id,
-            amount: amount_to_burn - remainder,
-        });
         Ok(().into())
     }
 
@@ -724,6 +688,7 @@ impl<T: Config> Pallet<T> {
             let (slashed, remainder) =
                 <T as Config>::Currency::slash_reserved(&src_account, amount);
             if remainder.is_zero() {
+                // This may fail to create the account if the amount is too low (less than EXISTENTIAL_DEPOSIT) but nothing we can do about it
                 <T as Config>::Currency::resolve_creating(dst_account, slashed);
             }
             Ok(remainder)

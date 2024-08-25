@@ -975,7 +975,7 @@ fn test_node_contract_billing_details() {
     ext.execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
-        activate_billing_accounts(false);
+        activate_billing_accounts();
 
         let node_id = 1;
 
@@ -1004,7 +1004,7 @@ fn test_node_contract_billing_details() {
             vec![contract_id]
         );
 
-        let initial_total_issuance = Balances::total_issuance();
+        let initial_farmer_balance = Balances::free_balance(alice());
         // advance 24 cycles to reach reward distribution block
         for i in 1..=DistributionFrequency::get() as u64 {
             let block_number = 1 + i * BillingFrequency::get();
@@ -1021,7 +1021,7 @@ fn test_node_contract_billing_details() {
         info!("current balance {:?}", twin_balance);
         info!("total amount billed {:?}", total_amount_billed);
 
-        validate_distribution_rewards(initial_total_issuance, total_amount_billed, false, true);
+        validate_distribution_rewards(initial_farmer_balance, total_amount_billed, 0, true, false);
 
         // amount unbilled should have been reset after a transfer between contract owner and farmer
         let contract_billing_info =
@@ -1063,7 +1063,7 @@ fn test_node_contract_billing_works_for_non_existing_accounts() {
             vec![contract_id]
         );
 
-        let initial_total_issuance = Balances::total_issuance();
+        let initial_farmer_balance = Balances::free_balance(alice());
         // advance 24 cycles to reach reward distribution block
         for i in 1..=DistributionFrequency::get() as u64 {
             let block_number = 1 + i * BillingFrequency::get();
@@ -1080,7 +1080,7 @@ fn test_node_contract_billing_works_for_non_existing_accounts() {
         info!("current balance {:?}", twin_balance);
         info!("total amount billed {:?}", total_amount_billed);
 
-        validate_distribution_rewards(initial_total_issuance, total_amount_billed, false, false);
+        validate_distribution_rewards(initial_farmer_balance, total_amount_billed, 0, false, false);
 
         // amount unbilled should have been reset after a transfer between contract owner and farmer
         let contract_billing_info =
@@ -1144,13 +1144,13 @@ fn test_node_contract_billing_details_with_solution_provider() {
         let node_id = 1;
 
         prepare_solution_provider(dave());
-        activate_billing_accounts(true);
+        activate_billing_accounts();
 
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         let twin = TfgridModule::twins(2).unwrap();
         let initial_twin_balance = Balances::free_balance(&twin.account_id);
-        let initial_total_issuance = Balances::total_issuance();
+        let initial_farmer_balance = Balances::free_balance(alice());
 
         assert_ok!(SmartContractModule::create_node_contract(
             RuntimeOrigin::signed(bob()),
@@ -1186,7 +1186,7 @@ fn test_node_contract_billing_details_with_solution_provider() {
         let total_balance = Balances::total_balance(&twin.account_id);
         let total_amount_billed = initial_twin_balance - total_balance;
 
-        validate_distribution_rewards(initial_total_issuance, total_amount_billed, true, true);
+        validate_distribution_rewards(initial_farmer_balance, total_amount_billed, 0, true, false);
 
         // amount unbilled should have been reset after a transfer between contract owner and farmer
         let contract_billing_info =
@@ -1403,7 +1403,7 @@ fn test_node_contract_billing_cycles_delete_node_cancels_contract() {
     ext.execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
-        activate_billing_accounts(false);
+        activate_billing_accounts();
 
         let node_id = 1;
 
@@ -1557,7 +1557,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_works() {
     ext.execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
-        activate_billing_accounts(false);
+        activate_billing_accounts();
 
         let node_id = 1;
 
@@ -1617,7 +1617,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
     ext.execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
-        activate_billing_accounts(false);
+        activate_billing_accounts();
 
         let node_id = 1;
 
@@ -1626,7 +1626,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
         let twin = TfgridModule::twins(2).unwrap();
         let initial_twin_balance = Balances::free_balance(&twin.account_id);
         info!("initial twin balance: {:?}", initial_twin_balance);
-        let initial_total_issuance = Balances::total_issuance();
+        let initial_farmer_balance = Balances::free_balance(alice());
 
         assert_ok!(SmartContractModule::create_node_contract(
             RuntimeOrigin::signed(bob()),
@@ -1665,7 +1665,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
         let leave = 1000;
         Balances::transfer(
             RuntimeOrigin::signed(bob()),
-            alice(),
+            charlie(),
             initial_twin_balance - total_amount_billed - leave,
         )
         .unwrap();
@@ -1697,11 +1697,12 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
         assert_eq!(usable_balance_after_canceling, EXISTENTIAL_DEPOSIT);
 
         validate_distribution_rewards(
-            initial_total_issuance,
+            initial_farmer_balance,
             total_amount_billed
                 + (usable_balance_before_canceling - usable_balance_after_canceling),
-            false,
+            0,
             true,
+            false,
         );
     });
 }
@@ -1830,14 +1831,14 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
     ext.execute_with(|| {
         run_to_block(1, None);
         prepare_farm_and_node();
-        activate_billing_accounts(false);
+        activate_billing_accounts();
 
         let node_id = 1;
 
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
         let twin = TfgridModule::twins(3).unwrap();
-        let initial_total_issuance = Balances::total_issuance();
+        let initial_farmer_balance = Balances::free_balance(alice());
         let initial_twin_balance = Balances::free_balance(&twin.account_id);
 
         assert_ok!(SmartContractModule::create_node_contract(
@@ -1908,7 +1909,7 @@ fn test_node_contract_grace_period_cancels_contract_when_grace_period_ends_works
         let free_balance = Balances::free_balance(&twin.account_id);
         let total_amount_billed = initial_twin_balance - free_balance;
 
-        validate_distribution_rewards(initial_total_issuance, total_amount_billed, false, true);
+        validate_distribution_rewards(initial_farmer_balance, total_amount_billed, 0, true, false);
 
         let c1 = SmartContractModule::contracts(contract_id);
         assert_eq!(c1, None);
@@ -1972,6 +1973,18 @@ fn test_name_contract_billing() {
                 contract_bill_event
             )))
         );
+        // advance 23 more cycles to reach reward distribution block
+        for i in 1..=23 {
+            let block_number = 11 + i * BillingFrequency::get();
+            pool_state.write().should_call_bill_contract(
+                contract_id,
+                Ok(Pays::Yes.into()),
+                block_number,
+            );
+            run_to_block(block_number, Some(&mut pool_state));
+        }
+        let total_contract_cost = contract_cost * 24;
+        validate_distribution_rewards(0, total_contract_cost, 0, false, true)
     });
 }
 
@@ -2135,7 +2148,7 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
     ext.execute_with(|| {
         run_to_block(1, None);
         prepare_dedicated_farm_and_node();
-        activate_billing_accounts(false);
+        activate_billing_accounts();
 
         let node_id = 1;
 
@@ -2205,7 +2218,7 @@ fn test_rent_contract_overdrawn_and_partial_bill() {
     ext.execute_with(|| {
         run_to_block(1, None);
         prepare_dedicated_farm_and_node();
-        activate_billing_accounts(false);
+        activate_billing_accounts();
 
         let node_id = 1;
 
@@ -2325,7 +2338,7 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
     ext.execute_with(|| {
         run_to_block(1, None);
         prepare_dedicated_farm_and_node();
-        activate_billing_accounts(false);
+        activate_billing_accounts();
 
         let node_id = 1;
 
@@ -2436,7 +2449,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
         prepare_dedicated_farm_and_node();
-        activate_billing_accounts(false);
+        activate_billing_accounts();
 
         let node_id = 1;
         run_to_block(1, None);
@@ -2490,7 +2503,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         run_to_block(end_grace_block_number, Some(&mut pool_state));
 
         let our_events = System::events();
-        assert_eq!(our_events.len(), 28);
+        assert_eq!(our_events.len(), 26);
 
         for e in our_events.clone() {
             log::info!("event: {:?}", e);
@@ -2520,7 +2533,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
         );
 
         assert_eq!(
-            our_events[26],
+            our_events[24],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::NodeContractCanceled {
@@ -2530,7 +2543,7 @@ fn test_rent_contract_canceled_due_to_out_of_funds_should_cancel_node_contracts_
             }))
         );
         assert_eq!(
-            our_events[27],
+            our_events[25],
             record(MockEvent::SmartContractModule(SmartContractEvent::<
                 TestRuntime,
             >::RentContractCanceled {
@@ -2847,7 +2860,7 @@ fn test_rent_contract_grace_period_cancels_contract_when_grace_period_ends_works
     ext.execute_with(|| {
         run_to_block(1, None);
         prepare_dedicated_farm_and_node();
-        activate_billing_accounts(false);
+        activate_billing_accounts();
 
         let node_id = 1;
 
@@ -2913,7 +2926,7 @@ fn test_rent_contract_and_node_contract_canceled_when_node_is_deleted_works() {
     ext.execute_with(|| {
         run_to_block(1, None);
         prepare_dedicated_farm_and_node();
-        activate_billing_accounts(false);
+        activate_billing_accounts();
 
         let node_id = 1;
 
@@ -4300,7 +4313,7 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
     let (mut ext, mut pool_state) = new_test_ext_with_pool_state(0);
     ext.execute_with(|| {
         prepare_farm_and_node();
-        activate_billing_accounts(false);
+        activate_billing_accounts();
 
         let node_id = 1;
 
@@ -4309,7 +4322,7 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
 
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
-        let initial_total_issuance = Balances::total_issuance();
+        let initial_farmer_balance = Balances::free_balance(alice());
         // Get daves's twin
         let twin = TfgridModule::twins(4).unwrap();
         let initial_twin_balance = Balances::free_balance(&twin.account_id);
@@ -4404,7 +4417,13 @@ fn test_set_dedicated_node_extra_fee_and_create_rent_contract_billing_works() {
             rent_contract_cost_tft + extra_fee_cost_tft
         );
 
-        validate_distribution_rewards(initial_total_issuance, rent_contract_cost_tft, false, true);
+        validate_distribution_rewards(
+            initial_farmer_balance,
+            rent_contract_cost_tft,
+            extra_fee_cost_tft,
+            true,
+            false,
+        );
     })
 }
 
@@ -4470,12 +4489,13 @@ test_calculate_discount! {
 // ---------------------------- //
 
 fn validate_distribution_rewards(
-    initial_total_issuance: u64,
-    total_amount_billed: u64,
-    had_solution_provider: bool,
+    initial_farmer_balance: u64,
+    standard_fees_billed: u64,
+    extra_fees_billed: u64,
     had_existential_deposit: bool,
+    is_name_contract: bool,
 ) {
-    info!("total amount billed {:?}", total_amount_billed);
+    info!("total amount billed {:?}", standard_fees_billed);
 
     let staking_pool_account_balance = Balances::free_balance(&get_staking_pool_account());
     info!(
@@ -4483,72 +4503,39 @@ fn validate_distribution_rewards(
         staking_pool_account_balance
     );
 
-    // 5% is sent to the staking pool account
-    assert_eq_error_rate!(
-        staking_pool_account_balance,
-        (Perbill::from_percent(5) * total_amount_billed)
-            + if had_existential_deposit {
-                EXISTENTIAL_DEPOSIT
-            } else {
-                0
-            },
-        6
-    );
-
-    // 10% is sent to the foundation account
-    let pricing_policy = TfgridModule::pricing_policies(1).unwrap();
-    let foundation_account_balance = Balances::free_balance(&pricing_policy.foundation_account);
+    // 10% is sent to the staking pool account
     assert_eq!(
-        foundation_account_balance,
-        (Perbill::from_percent(10) * total_amount_billed)
+        staking_pool_account_balance,
+        (Perbill::from_percent(10) * standard_fees_billed)
             + if had_existential_deposit {
                 EXISTENTIAL_DEPOSIT
             } else {
                 0
             }
     );
-
-    if had_solution_provider {
-        // 40% is sent to the sales account
-        let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
-        assert_eq!(
-            sales_account_balance,
-            (Perbill::from_percent(40) * total_amount_billed)
-                + if had_existential_deposit {
-                    EXISTENTIAL_DEPOSIT
-                } else {
-                    0
-                }
-        );
-
-        // 10% is sent to the solution provider
-        let solution_provider = SmartContractModule::solution_providers(1).unwrap();
-        let solution_provider_1_balance =
-            Balances::free_balance(solution_provider.providers[0].who.clone());
-        info!("solution provider b: {:?}", solution_provider_1_balance);
-        assert_ne!(solution_provider_1_balance, 0);
-    } else {
-        // 50% is sent to the sales account
-        let sales_account_balance = Balances::free_balance(&pricing_policy.certified_sales_account);
-        assert_eq!(
-            sales_account_balance,
-            (Perbill::from_percent(50) * total_amount_billed)
-                + if had_existential_deposit {
-                    EXISTENTIAL_DEPOSIT
-                } else {
-                    0
-                }
+    let foundation_percent = if is_name_contract { 90 } else { 40 };
+    // 40% is sent to the foundation account
+    let pricing_policy = TfgridModule::pricing_policies(1).unwrap();
+    let foundation_account_balance = Balances::free_balance(&pricing_policy.foundation_account);
+    assert_eq!(
+        foundation_account_balance,
+        (Perbill::from_percent(foundation_percent) * standard_fees_billed)
+            + if had_existential_deposit {
+                EXISTENTIAL_DEPOSIT
+            } else {
+                0
+            }
+    );
+    if !is_name_contract {
+        // get alice balance
+        let farmer_balance = Balances::free_balance(&alice());
+        let farmer_amount = Perbill::from_percent(50) * standard_fees_billed;
+        assert_eq_error_rate!(
+            farmer_balance,
+            initial_farmer_balance + farmer_amount + extra_fees_billed,
+            5
         );
     }
-
-    let total_issuance = Balances::total_issuance();
-    // total issueance is now previous total - amount burned from contract billed (35%)
-    let burned_amount = Perbill::from_percent(35) * total_amount_billed;
-    assert_eq_error_rate!(
-        total_issuance,
-        initial_total_issuance - burned_amount as u64,
-        1
-    );
 }
 
 fn push_nru_report_for_contract(contract_id: u64, block_number: u64) {
@@ -4973,21 +4960,11 @@ fn get_timestamp_in_seconds_for_block(block_number: u64) -> u64 {
     1628082000 + (6 * block_number)
 }
 
-fn activate_billing_accounts(had_solution_provider: bool) {
+fn activate_billing_accounts() {
     let pricing_policy = TfgridModule::pricing_policies(1).unwrap();
     let foundation_account = pricing_policy.foundation_account;
-    let sales_account = pricing_policy.certified_sales_account;
     let staking_pool_account = get_staking_pool_account();
-    let mut billing_accounts = vec![foundation_account, sales_account, staking_pool_account];
-    // push solution_provider_account if SmartContractModule::solution_providers(1) has Some
-    if had_solution_provider {
-        let solution_provider_account = SmartContractModule::solution_providers(1)
-            .unwrap()
-            .providers[0]
-            .who
-            .clone();
-        billing_accounts.push(solution_provider_account);
-    }
+    let billing_accounts = vec![foundation_account, staking_pool_account];
     for account in billing_accounts {
         if !<frame_system::Pallet<TestRuntime>>::account_exists(&account.clone().into()) {
             let _ = Balances::deposit_creating(&account, EXISTENTIAL_DEPOSIT);
