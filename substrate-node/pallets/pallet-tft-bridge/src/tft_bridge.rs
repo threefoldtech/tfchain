@@ -1,7 +1,7 @@
 use super::{types::*, *};
 use frame_support::{
     dispatch::DispatchErrorWithPostInfo,
-    ensure, log,
+    ensure,
     pallet_prelude::DispatchResultWithPostInfo,
     traits::{Currency, ExistenceRequirement, OnUnbalanced, WithdrawReasons},
 };

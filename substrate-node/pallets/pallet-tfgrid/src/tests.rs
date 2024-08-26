@@ -5,8 +5,7 @@ use crate::{
 };
 use frame_support::{assert_noop, assert_ok};
 use frame_system::{EventRecord, Phase, RawOrigin};
-use sp_core::bounded_vec;
-use sp_core::H256;
+use sp_core::{bounded_vec, H256};
 use tfchain_support::types::{
     FarmCertification, FarmingPolicyLimit, Interface, NodeCertification, Power, PowerState,
     PublicConfig, PublicIpError, IP4, IP6,
