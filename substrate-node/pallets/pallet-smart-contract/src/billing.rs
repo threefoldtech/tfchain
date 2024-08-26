@@ -466,8 +466,8 @@ impl<T: Config> Pallet<T> {
         contract_payment_state.overdraft_standard_amount(standard_amount_due);
         contract_payment_state.overdraft_additional_amount(additional_amount_due);
         // Reserve as much as possible from the user's account to cover part of the amount overdue
-        let over_due = standard_amount_due.saturating_add(additional_amount_due);
-        let overdrawn = over_due.saturating_sub(reservable);
+        let overdue = standard_amount_due.saturating_add(additional_amount_due);
+        let overdrawn = overdue.saturating_sub(reservable);
         <T as Config>::Currency::reserve(&src_twin.account_id, reservable).map_err(|e| {
             log::error!("Error while reserving partial amount due: {:?}", e);
             e
@@ -501,6 +501,7 @@ impl<T: Config> Pallet<T> {
         let should_distribute_rewards =
             contract_payment_state.cycles >= T::DistributionFrequency::get() || is_deleted;
         if should_distribute_rewards && contract_payment_state.has_reserve() {
+            // At this point we don't expect any distribution failure since every fund to transfer should have been accumulated in account reserve along previous billing cycles
             let standard_rewards = contract_payment_state.standard_reserve;
             let additional_rewards = contract_payment_state.additional_reserve;
             // distribute additional rewards to the farm twin
