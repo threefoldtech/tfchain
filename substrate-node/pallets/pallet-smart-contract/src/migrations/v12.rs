@@ -12,9 +12,11 @@ use sp_runtime::traits::Zero;
 use sp_std::marker::PhantomData;
 
 #[cfg(feature = "try-runtime")]
-use frame_support::{dispatch::DispatchError, ensure};
+use frame_support::ensure;
 #[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
+#[cfg(feature = "try-runtime")]
+use sp_runtime::DispatchError;
 
 // Storage alias from ContractPaymentState v12
 #[storage_alias]

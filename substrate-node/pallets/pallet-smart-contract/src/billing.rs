@@ -1,6 +1,6 @@
 use crate::*;
 use frame_support::{
-    dispatch::{DispatchErrorWithPostInfo, DispatchResult, DispatchResultWithPostInfo, Vec},
+    dispatch::{DispatchErrorWithPostInfo, DispatchResult, DispatchResultWithPostInfo},
     ensure,
     traits::{BalanceStatus, Currency, DefensiveSaturating, ReservableCurrency, StoredMap},
 };
@@ -14,7 +14,7 @@ use sp_runtime::{
     traits::{Convert, Saturating, Zero},
     Perbill, SaturatedConversion,
 };
-use sp_std::cmp::max;
+use sp_std::{cmp::max, vec::Vec};
 
 impl<T: Config> Pallet<T> {
     // Let offchain worker check if there are contracts on
@@ -447,7 +447,7 @@ impl<T: Config> Pallet<T> {
             discount_level: discount_received.clone(),
             amount_billed: total_amount_to_reserve.saturated_into::<u128>(),
         };
-        log::debug!("Contract billed: {:?}", contract_bill);
+        log::info!("Contract billed: {:?}", contract_bill);
         Self::deposit_event(Event::ContractBilled(contract_bill));
         Ok(().into())
     }
