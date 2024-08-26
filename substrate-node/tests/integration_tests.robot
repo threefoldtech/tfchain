@@ -439,6 +439,35 @@ Test Billing
 
     Tear Down Multi Node Network
 
+Test Solution Provider
+    [Documentation]    Testing creating and validating a solution provider
+    Setup Multi Node Network    log_name=test_create_approve_solution_provider    amt=${2}
+
+    # Setup
+    Setup Predefined Account    who=Alice
+    Setup Predefined Account    who=Bob
+    Setup Predefined Account    who=Charlie
+    Setup Predefined Account    who=Dave
+    Create Farm    name=alice_farm
+    Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
+    
+    # lets add two providers: charlie gets 30% and Dave 10%
+    ${providers} =    Create Dictionary    Charlie    ${30}    Dave    ${10}
+    Create Solution Provider    description=mysolutionprovider    providers=${providers}
+    ${solution_provider} =    Get Solution Provider    id=${1}
+    Should Not Be Equal    ${solution_provider}    ${None}
+    Should Be Equal    ${solution_provider}[description]    mysolutionprovider
+    Should Be Equal    ${solution_provider}[approved]    ${False}
+    Length Should Be    ${solution_provider}[providers]    ${2}
+    
+    # The solution provider has to be approved
+    Approve Solution Provider    solution_provider_id=${1}    who=Council
+    ${solution_provider} =    Get Solution Provider    id=${1}
+    Should Not Be Equal    ${solution_provider}    ${None}
+    Should Be Equal    ${solution_provider}[approved]    ${True}
+
+    Tear Down Multi Node Network
+
 Test Client Go integration tests
     [Documentation]     Run go client integration tests
     Setup Multi Node Network    log_name=test_client_go_integration_tests
