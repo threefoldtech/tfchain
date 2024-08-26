@@ -8,7 +8,7 @@ use frame_support::{
 };
 use log::{debug, info};
 use sp_core::Get;
-use sp_runtime::traits::Zero;
+use sp_runtime::traits::{Saturating, Zero};
 use sp_std::marker::PhantomData;
 
 #[cfg(feature = "try-runtime")]
@@ -76,7 +76,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateContractLockToContractPaymentState<T
             );
         }
 
-        check_contract_lock_v12::<T>()
+        check_contract_payment_state_v12::<T>()
     }
 }
 
@@ -107,13 +107,13 @@ pub fn migrate_to_version_12<T: Config>() -> frame_support::weights::Weight {
 
         if let Some(src_twin) = pallet_tfgrid::Twins::<T>::get(contract.twin_id) {
             if ContractLock::<T>::contains_key(contract_id) {
-                let (r, w) = migrate_contract_lock::<T>(contract_id);
-                total_reads += r;
-                total_writes += w;
+                let (r, w) = migrate_contract_lock_to_contract_payment_state::<T>(contract_id);
+                total_reads.saturating_accrue(r);
+                total_writes.saturating_accrue(w);
 
-                let (r, w) = remove_all_locks::<T>(&src_twin.account_id);
-                total_reads += r;
-                total_writes += w;
+                let (r, w) = remove_all_balances_locks::<T>(&src_twin.account_id);
+                total_reads.saturating_accrue(r);
+                total_writes.saturating_accrue(w);
             } else {
                 log::debug!("ContractLock not found for contract {:?}", contract_id);
             }
@@ -124,18 +124,18 @@ pub fn migrate_to_version_12<T: Config>() -> frame_support::weights::Weight {
 
     // Set the new storage version
     PalletVersion::<T>::put(types::StorageVersion::V12);
-    total_writes += 1;
+    total_writes.saturating_inc();
 
     T::DbWeight::get().reads_writes(total_reads, total_writes)
 }
 
-fn migrate_contract_lock<T: Config>(contract_id: u64) -> (u64, u64) {
+fn migrate_contract_lock_to_contract_payment_state<T: Config>(contract_id: u64) -> (u64, u64) {
     let mut reads = 0;
     let mut writes = 0;
 
     let old_contract_lock = ContractLock::<T>::take(contract_id);
-    reads += 1;
-    writes += 1;
+    reads.saturating_inc();
+    writes.saturating_inc();
 
     ContractPaymentState::<T>::insert(
         contract_id,
@@ -148,46 +148,46 @@ fn migrate_contract_lock<T: Config>(contract_id: u64) -> (u64, u64) {
             cycles: old_contract_lock.cycles,
         },
     );
-    writes += 1;
+    writes.saturating_inc();
 
     (reads, writes)
 }
 
-fn remove_all_locks<T: Config>(account_id: &T::AccountId) -> (u64, u64) {
+fn remove_all_balances_locks<T: Config>(account_id: &T::AccountId) -> (u64, u64) {
     let mut reads = 0;
     let mut writes = 0;
 
     let locks = pallet_balances::Pallet::<T>::locks(account_id);
-    reads += 1;
+    reads.saturating_inc();
 
     for lock in locks {
         log::debug!("Removing lock: {:?} for account: {:?}", lock.id, account_id);
         pallet_balances::Pallet::<T>::remove_lock(lock.id, account_id);
-        reads += 1;
-        writes += 1;
+        reads.saturating_inc();
+        writes.saturating_inc();
     }
 
     (reads, writes)
 }
 
 #[cfg(feature = "try-runtime")]
-pub fn check_contract_lock_v12<T: Config>() -> Result<(), sp_runtime::TryRuntimeError> {
+pub fn check_contract_payment_state_v12<T: Config>() -> Result<(), sp_runtime::TryRuntimeError> {
     debug!(
-        "🔎  Smart Contract pallet {:?} checking ContractLock storage map START",
+        "🔎  Smart Contract pallet {:?} checking ContractPaymentState storage map START",
         PalletVersion::<T>::get()
     );
 
     for (contract_id, _) in Contracts::<T>::iter() {
         if !ContractPaymentState::<T>::contains_key(contract_id) {
             debug!(
-                " ⚠️    Contract (id: {}): no contract lock found",
+                " ⚠️    Contract (id: {}): no contract payment state found",
                 contract_id
             );
         }
     }
 
     debug!(
-        "🏁  Smart Contract pallet {:?} checking ContractLock storage map END",
+        "🏁  Smart Contract pallet {:?} checking ContractPaymentState storage map END",
         PalletVersion::<T>::get()
     );
 
