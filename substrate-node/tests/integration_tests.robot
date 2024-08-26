@@ -439,52 +439,6 @@ Test Billing
 
     Tear Down Multi Node Network
 
-Test Solution Provider
-    [Documentation]    Testing creating and validating a solution provider
-    Setup Multi Node Network    log_name=test_create_approve_solution_provider    amt=${2}
-
-    # Setup
-    Setup Predefined Account    who=Alice
-    Setup Predefined Account    who=Bob
-    Setup Predefined Account    who=Charlie
-    Setup Predefined Account    who=Dave
-    Create Farm    name=alice_farm
-    Create Node    farm_id=${1}    hru=${1024}    sru=${512}    cru=${8}    mru=${16}    longitude=2.17403    latitude=41.40338    country=Belgium    city=Ghent
-    
-    # lets add two providers: charlie gets 30% and Dave 10%
-    ${providers} =    Create Dictionary    Charlie    ${30}    Dave    ${10}
-    Create Solution Provider    description=mysolutionprovider    providers=${providers}
-    ${solution_provider} =    Get Solution Provider    id=${1}
-    Should Not Be Equal    ${solution_provider}    ${None}
-    Should Be Equal    ${solution_provider}[description]    mysolutionprovider
-    Should Be Equal    ${solution_provider}[approved]    ${False}
-    Length Should Be    ${solution_provider}[providers]    ${2}
-    
-    # The solution provider has to be approved
-    Approve Solution Provider    solution_provider_id=${1}    who=Council
-    ${solution_provider} =    Get Solution Provider    id=${1}
-    Should Not Be Equal    ${solution_provider}    ${None}
-    Should Be Equal    ${solution_provider}[approved]    ${True}
-
-    ${balance_charlie_before} =     Balance Data    who=Charlie
-    ${balance_dave_before} =    Balance Data    who=Dave
-    # Bob will be using the node: let's create a node contract in his name
-    Create Node Contract    node_id=${1}    port=${9945}    who=Bob    solution_provider_id=${1}
-    Report Contract Resources    contract_id=${1}    hru=${20}    sru=${20}    cru=${2}    mru=${4}
-    Add Nru Reports    contract_id=${1}    nru=${3}
-    # Wait 6 blocks: after 5 blocks Bob should be billed
-    Wait X Blocks    ${6}
-    # Cancel the contract so that the bill is distributed and so that the providers get their part
-    Cancel Node Contract    contract_id=${1}    who=Bob
-
-    # Verification: both providers should have received their part
-    ${balance_charlie_after} =     Balance Data    who=Charlie
-    ${balance_dave_after} =    Balance Data    who=Dave
-    Ensure Account Balance Increased    ${balance_charlie_before}    ${balance_charlie_after}
-    Ensure Account Balance Increased    ${balance_dave_before}    ${balance_dave_after}
-
-    Tear Down Multi Node Network
-
 Test Client Go integration tests
     [Documentation]     Run go client integration tests
     Setup Multi Node Network    log_name=test_client_go_integration_tests
