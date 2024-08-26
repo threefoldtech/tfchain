@@ -8,9 +8,11 @@ use sp_std::{marker::PhantomData, vec::Vec};
 use tfchain_support::types::{PublicIP, IP4};
 
 #[cfg(feature = "try-runtime")]
-use frame_support::{dispatch::DispatchError, ensure};
+use frame_support::ensure;
 #[cfg(feature = "try-runtime")]
 use parity_scale_codec::{Decode, Encode};
+#[cfg(feature = "try-runtime")]
+use sp_runtime::DispatchError;
 
 pub struct FixFarmPublicIps<T: Config>(PhantomData<T>);
 

@@ -1,15 +1,13 @@
 use crate::*;
-use frame_support::{
-    log::{debug, info},
-    traits::Get,
-    traits::OnRuntimeUpgrade,
-    weights::Weight,
-};
+use frame_support::{traits::Get, traits::OnRuntimeUpgrade, weights::Weight};
 use frame_system::pallet_prelude::BlockNumberFor;
+use log::{debug, info};
 use sp_std::marker::PhantomData;
 
 #[cfg(feature = "try-runtime")]
-use frame_support::{dispatch::DispatchError, ensure};
+use frame_support::ensure;
+#[cfg(feature = "try-runtime")]
+use sp_runtime::DispatchError;
 #[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
 

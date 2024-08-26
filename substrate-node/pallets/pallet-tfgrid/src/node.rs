@@ -2,9 +2,10 @@ use crate::*;
 use frame_support::{
     dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo, Pays},
     ensure,
+    pallet_prelude::RuntimeDebug,
     sp_runtime::SaturatedConversion,
     traits::ConstU32,
-    BoundedVec, RuntimeDebug,
+    BoundedVec,
 };
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;

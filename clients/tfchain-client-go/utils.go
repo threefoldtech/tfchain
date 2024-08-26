@@ -536,7 +536,7 @@ func (s *Substrate) checkForError(callResponse *CallResponse) error {
 					if int(errIndex) >= len(moduleErrors[e.DispatchError.ModuleError.Index]) || moduleErrors[e.DispatchError.ModuleError.Index] == nil {
 						return fmt.Errorf("module error (%d) with unknown code %d occured, please update the module error list", e.DispatchError.ModuleError.Index, e.DispatchError.ModuleError.Error)
 					}
-					return fmt.Errorf(moduleErrors[e.DispatchError.ModuleError.Index][errIndex])
+					return errors.New(moduleErrors[e.DispatchError.ModuleError.Index][errIndex])
 				} else {
 					return fmt.Errorf("unknown module error (%d) with code %d occured, please create the module error list", e.DispatchError.ModuleError.Index, e.DispatchError.ModuleError.Error)
 				}

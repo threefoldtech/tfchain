@@ -21,8 +21,11 @@ use sp_runtime::{
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, MultiSignature,
 };
-use sp_std::convert::{TryFrom, TryInto};
-use sp_std::{cmp::Ordering, prelude::*};
+use sp_std::{
+    cmp::Ordering,
+    convert::{TryFrom, TryInto},
+    prelude::*,
+};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -256,6 +259,7 @@ impl pallet_grandpa::Config for Runtime {
 
     type WeightInfo = ();
     type MaxAuthorities = MaxAuthorities;
+    type MaxNominators = frame_support::traits::ConstU32<0>;
     type MaxSetIdSessionEntries = MaxSetIdSessionEntries;
 
     type KeyOwnerProof = sp_core::Void;
@@ -786,12 +790,7 @@ pub type Executive = frame_executive::Executive<
 
 // All migrations executed on runtime upgrade as a nested tuple of types implementing
 // `OnRuntimeUpgrade`.
-type Migrations = (
-    pallet_tft_bridge::migrations::v2::MigrateBurnTransactionsV2<Runtime>,
-    pallet_scheduler::migration::v3::MigrateToV4<Runtime>,
-    migrations::update_storage_version::PalletBalancesToV1<Runtime>,
-    migrations::update_storage_version::PalletSessionToV1<Runtime>,
-);
+type Migrations = ();
 
 // follows Substrate's non destructive way of eliminating  otherwise required
 // repetion: https://github.com/paritytech/substrate/pull/10592
@@ -991,7 +990,9 @@ impl_runtime_apis! {
         fn dispatch_benchmark(
             config: frame_benchmarking::BenchmarkConfig
         ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-            use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
+            use frame_benchmarking::{Benchmarking, BenchmarkBatch};
+            use frame_support::traits::TrackedStorageKey;
+
             use frame_system_benchmarking::Pallet as SystemBench;
             use frame_benchmarking::baseline::Pallet as Baseline;
 
