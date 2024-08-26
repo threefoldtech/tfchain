@@ -1124,7 +1124,7 @@ fn test_billing_node_contract_in_graceperiod_should_reset_unbilled_network_consu
         assert_eq!(c1.state, types::ContractState::GracePeriod(11));
 
         // contract payment should be overdrawn
-        let contract_payment_state = SmartContractModule::contract_payment_state(contract_id);
+        let contract_payment_state = SmartContractModule::contract_payment_state(contract_id).unwrap();
         assert_ne!(contract_payment_state.get_overdraft(), 0);
 
         // amount unbilled should have been reset after adding the amount to the contract overdraft
@@ -2264,7 +2264,7 @@ fn test_rent_contract_overdrawn_and_partial_bill() {
             true
         );
 
-        let contract_payment_state = SmartContractModule::contract_payment_state(contract_id);
+        let contract_payment_state = SmartContractModule::contract_payment_state(contract_id).unwrap();
         assert_eq!(
             contract_payment_state.get_reserve(),
             initial_reservable_balance
@@ -2295,7 +2295,7 @@ fn test_rent_contract_overdrawn_and_partial_bill() {
             ))),
             true
         );
-        let contract_payment_state = SmartContractModule::contract_payment_state(contract_id);
+        let contract_payment_state = SmartContractModule::contract_payment_state(contract_id).unwrap();
         assert_eq!(
             contract_payment_state.get_reserve(),
             initial_reservable_balance
@@ -2319,7 +2319,7 @@ fn test_rent_contract_overdrawn_and_partial_bill() {
             .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 31);
         run_to_block(31, Some(&mut pool_state));
 
-        let contract_payment_state = SmartContractModule::contract_payment_state(contract_id);
+        let contract_payment_state = SmartContractModule::contract_payment_state(contract_id).unwrap();
         assert_eq!(
             contract_payment_state.get_reserve(),
             amount_due_per_cycle * 3

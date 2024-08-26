@@ -201,7 +201,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn contract_payment_state)]
     pub type ContractPaymentState<T: Config> =
-        StorageMap<_, Blake2_128Concat, u64, types::ContractPaymentState<BalanceOf<T>>, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, u64, types::ContractPaymentState<BalanceOf<T>>, OptionQuery>;
 
     #[pallet::config]
     pub trait Config:
