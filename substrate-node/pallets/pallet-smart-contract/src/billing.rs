@@ -175,7 +175,11 @@ impl<T: Config> Pallet<T> {
                 (None, None)
             };
 
-        let mut contract_payment_state = ContractPaymentState::<T>::get(contract.contract_id).unwrap();
+        let mut contract_payment_state = ContractPaymentState::<T>::get(contract.contract_id).ok_or_else(|| {
+            log::error!("Contract payment state not exists for contract_id {}", contract_id);
+            Error::<T>::ContractPaymentStateNotExists
+        })?;
+
         log::trace!(
             "Contract payment state [before billing]: {:?}",
             contract_payment_state

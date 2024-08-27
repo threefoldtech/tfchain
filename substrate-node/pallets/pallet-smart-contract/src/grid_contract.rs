@@ -745,7 +745,10 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
         let node_power = pallet_tfgrid::NodePower::<T>::get(node.id);
         if !node_power.is_standby() {
             if let Some(rc_id) = ActiveRentContractForNode::<T>::get(node.id) {
-                let mut contract_payment_state = ContractPaymentState::<T>::get(rc_id).unwrap();
+                let Some(mut contract_payment_state) = ContractPaymentState::<T>::get(rc_id) else {
+                    log::warn!("Contract payment state not exists for contract_id {}", rc_id);
+                    return;
+                };
                 let now = Self::get_current_timestamp_in_secs();
                 contract_payment_state.last_updated_seconds = now;
                 ContractPaymentState::<T>::insert(rc_id, &contract_payment_state);

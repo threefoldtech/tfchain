@@ -417,6 +417,7 @@ pub mod pallet {
         UnauthorizedToChangeSolutionProviderId,
         UnauthorizedToSetExtraFee,
         RewardDistributionError,
+        ContractPaymentStateNotExists,
     }
 
     #[pallet::genesis_config]
