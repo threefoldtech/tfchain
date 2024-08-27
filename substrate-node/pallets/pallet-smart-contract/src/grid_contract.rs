@@ -223,9 +223,9 @@ impl<T: Config> Pallet<T> {
         ContractID::<T>::put(id);
 
         let now = Self::get_current_timestamp_in_secs();
-        let mut contract_lock = types::ContractLock::default();
-        contract_lock.lock_updated = now;
-        ContractLock::<T>::insert(id, contract_lock);
+        let mut contract_payment_state = types::ContractPaymentState::default();
+        contract_payment_state.last_updated_seconds = now;
+        ContractPaymentState::<T>::insert(id, contract_payment_state);
 
         Ok(contract)
     }
@@ -321,6 +321,10 @@ impl<T: Config> Pallet<T> {
         }
 
         Self::update_contract_state(contract, &types::ContractState::Deleted(cause))?;
+        log::debug!(
+            "Billing for contract {} kicked in due to cancel request",
+            contract.contract_id
+        );
         Self::bill_contract(contract.contract_id)?;
 
         Ok(().into())
@@ -329,6 +333,7 @@ impl<T: Config> Pallet<T> {
     pub fn remove_contract(contract_id: u64) -> DispatchResultWithPostInfo {
         let contract = Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
 
+        log::debug!("removing contract {}", contract_id);
         match contract.contract_type.clone() {
             types::ContractData::NodeContract(mut node_contract) => {
                 if node_contract.public_ips > 0 {
@@ -370,13 +375,14 @@ impl<T: Config> Pallet<T> {
             }
         };
 
-        log::debug!("removing contract");
         Contracts::<T>::remove(contract_id);
-        ContractLock::<T>::remove(contract_id);
-
+        ContractPaymentState::<T>::remove(contract_id);
         // Clean up contract from billing loop
         // This is the only place it should be done
-        log::debug!("cleaning up deleted contract from billing loop");
+        log::debug!(
+            "cleaning up deleted contract {} from billing loop",
+            contract_id
+        );
         Self::remove_contract_from_billing_loop(contract_id)?;
 
         Ok(().into())
@@ -404,7 +410,7 @@ impl<T: Config> Pallet<T> {
         contract.state = state.clone();
         Contracts::<T>::insert(&contract.contract_id, contract.clone());
 
-        // if the contract is a name contract, nothing to do left here
+        // if the contract is a name or rent contract, nothing to do left here
         match contract.contract_type {
             types::ContractData::NameContract(_) => return Ok(().into()),
             types::ContractData::RentContract(_) => return Ok(().into()),
@@ -702,7 +708,14 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
                     &mut contract,
                     &types::ContractState::Deleted(types::Cause::CanceledByUser),
                 );
-                let _ = Self::bill_contract(node_contract_id);
+                log::debug!(
+                    "Billing for node contract {} kicked in due to node deletion",
+                    contract.contract_id
+                );
+                let res = Self::bill_contract(node_contract_id);
+                if let Err(e) = res {
+                    log::error!("error in node_deleted hook while billing contract {:?}: {:?}. Contract could be in dirty state", node_contract_id, e);
+                }
             }
         }
 
@@ -714,7 +727,14 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
                     &mut contract,
                     &types::ContractState::Deleted(types::Cause::CanceledByUser),
                 );
-                let _ = Self::bill_contract(contract.contract_id);
+                log::debug!(
+                    "Billing for rent contract {} kicked in due to node deletion",
+                    contract.contract_id
+                );
+                let res = Self::bill_contract(contract.contract_id);
+                if let Err(e) = res {
+                    log::error!("error in node_deleted hook while billing contract id {:?}: {:?}. Contract could be in dirty state", rc_id, e);
+                }
             }
         }
     }
@@ -725,10 +745,14 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
         let node_power = pallet_tfgrid::NodePower::<T>::get(node.id);
         if !node_power.is_standby() {
             if let Some(rc_id) = ActiveRentContractForNode::<T>::get(node.id) {
-                let mut contract_lock = ContractLock::<T>::get(rc_id);
+                let Some(mut contract_payment_state) = ContractPaymentState::<T>::get(rc_id) else {
+                    log::warn!("Contract payment state not exists for contract_id {}", rc_id);
+                    return;
+                };
                 let now = Self::get_current_timestamp_in_secs();
-                contract_lock.lock_updated = now;
-                ContractLock::<T>::insert(rc_id, &contract_lock);
+                contract_payment_state.last_updated_seconds = now;
+                ContractPaymentState::<T>::insert(rc_id, &contract_payment_state);
+                log::debug!("Rented node {} is back up, updated contract contract_payment_state for contract {}", node.id, rc_id);
             }
         }
     }

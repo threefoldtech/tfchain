@@ -11,7 +11,7 @@ use sp_core::{Encode, Pair};
 use sp_inherents::{InherentData, InherentDataProvider};
 use sp_keyring::Sr25519Keyring;
 use sp_runtime::{OpaqueExtrinsic, SaturatedConversion};
-use tfchain_runtime as runtime;
+use tfchain_runtime::{self as runtime, pallet_smart_contract};
 
 use std::{sync::Arc, time::Duration};
 
@@ -132,6 +132,7 @@ pub fn create_benchmark_extrinsic(
         frame_system::CheckNonce::<runtime::Runtime>::from(nonce),
         frame_system::CheckWeight::<runtime::Runtime>::new(),
         pallet_transaction_payment::ChargeTransactionPayment::<runtime::Runtime>::from(0),
+        pallet_smart_contract::types::ContractIdProvides::<runtime::Runtime>::new(),
     );
 
     let raw_payload = runtime::SignedPayload::from_raw(
@@ -143,6 +144,7 @@ pub fn create_benchmark_extrinsic(
             runtime::VERSION.transaction_version,
             genesis_hash,
             best_hash,
+            (),
             (),
             (),
             (),

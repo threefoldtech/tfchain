@@ -127,6 +127,8 @@ var smartContractModuleErrors = []string{
 	"WrongAuthority",
 	"UnauthorizedToChangeSolutionProviderId",
 	"UnauthorizedToSetExtraFee",
+	"RewardDistributionError",
+	"ContractPaymentStateNotExists",
 }
 
 // https://github.com/threefoldtech/tfchain/blob/development/substrate-node/pallets/pallet-tfgrid/src/lib.rs#L442
