@@ -150,7 +150,7 @@ fn migrate_contract_lock_to_contract_payment_state<T: Config>() -> (u64, u64) {
                 cycles: old_contract_lock.cycles,
             },
         );
-        reads.saturating_inc();
+        writes.saturating_inc();
     };
 
     (reads, writes)
