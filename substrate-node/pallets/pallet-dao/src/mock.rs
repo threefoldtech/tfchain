@@ -17,7 +17,7 @@ use sp_runtime::{
     BuildStorage,
 };
 use sp_std::convert::{TryFrom, TryInto};
-use tfchain_support::traits::{ChangeNode, PublicIpModifier};
+use tfchain_support::traits::{ChangeNode, NodeActiveContracts, PublicIpModifier};
 use tfchain_support::types::PublicIP;
 
 type Block = frame_system::mocking::MockBlock<TestRuntime>;
@@ -69,6 +69,7 @@ pub type BlockNumber = u32;
 parameter_types! {
     pub const DaoMotionDuration: BlockNumber = 4;
     pub const MinVetos: u32 = 2;
+    pub const MinThreshold: u32 = 2;
 }
 
 pub(crate) type Serial = pallet_tfgrid::pallet::SerialNumberOf<TestRuntime>;
@@ -85,11 +86,20 @@ impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
     fn node_deleted(node: &TfgridNode) {
         DaoModule::node_deleted(node);
     }
+
+    fn node_power_state_changed(_node: &TfgridNode) {}
 }
 
 pub struct PublicIpModifierType;
 impl PublicIpModifier for PublicIpModifierType {
     fn ip_removed(_ip: &PublicIP) {}
+}
+
+pub struct NodeActiveContractsType;
+impl NodeActiveContracts for NodeActiveContractsType {
+    fn node_has_no_active_contracts(_node_id: u32) -> bool {
+        true
+    }
 }
 
 use crate::weights;
@@ -98,9 +108,9 @@ impl pallet_dao::pallet::Config for TestRuntime {
     type CouncilOrigin = EnsureRoot<Self::AccountId>;
     type Proposal = RuntimeCall;
     type MotionDuration = DaoMotionDuration;
+    type MotionMinThreshold = MinThreshold;
     type MinVetos = MinVetos;
     type Tfgrid = TfgridModule;
-    type NodeChanged = NodeChanged;
     type WeightInfo = weights::SubstrateWeight<TestRuntime>;
 }
 
@@ -131,6 +141,7 @@ impl pallet_tfgrid::Config for TestRuntime {
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<TestRuntime>;
     type NodeChanged = NodeChanged;
     type PublicIpModifier = PublicIpModifierType;
+    type NodeActiveContracts = NodeActiveContractsType;
     type TermsAndConditions = TestTermsAndConditions;
     type FarmName = TestFarmName;
     type MaxFarmNameLength = MaxFarmNameLength;

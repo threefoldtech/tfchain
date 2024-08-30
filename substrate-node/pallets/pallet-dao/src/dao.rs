@@ -45,13 +45,16 @@ impl<T: Config> Pallet<T> {
 
         let now = frame_system::Pallet::<T>::block_number();
         let mut end = now + T::MotionDuration::get();
+        // Check if duration is set and is less than 30 days and more than 1 Day
         if let Some(motion_duration) = duration {
             ensure!(
-                motion_duration < BlockNumberFor::<T>::from(constants::time::DAYS * 30),
+                motion_duration <= BlockNumberFor::<T>::from(constants::time::DAYS * 30) && motion_duration >= BlockNumberFor::<T>::from(constants::time::DAYS * 1),
                 Error::<T>::InvalidProposalDuration
             );
             end = now + motion_duration;
         }
+        // threshold should be at least the configured minimum threshold for a motion in runtime
+        ensure!(threshold >= T::MotionMinThreshold::get(), Error::<T>::ThresholdTooLow);
 
         let index = Self::proposal_count();
         <ProposalCount<T>>::mutate(|i| *i += 1);
@@ -370,4 +373,6 @@ impl<T: Config> ChangeNode<LocationOf<T>, InterfaceOf<T>, SerialNumberOf<T>> for
         farm_weight = farm_weight.checked_sub(node_weight).unwrap_or(0);
         FarmWeight::<T>::insert(node.farm_id, farm_weight);
     }
+
+    fn node_power_state_changed(_node: &TfgridNode<T>) {}
 }

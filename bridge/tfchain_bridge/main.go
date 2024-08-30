@@ -7,11 +7,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	flag "github.com/spf13/pflag"
-	"github.com/threefoldtech/tfchain_bridge/pkg"
-	"github.com/threefoldtech/tfchain_bridge/pkg/bridge"
+	"github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg"
+	"github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg/bridge"
+	"github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg/logger"
 )
 
 func main() {
@@ -30,12 +30,7 @@ func main() {
 
 	flag.Parse()
 
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	if debug {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		log.Debug().Msg("debug mode enabled")
-	}
+	logger.InitLogger(debug)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -43,23 +38,46 @@ func main() {
 	timeout, timeoutCancel := context.WithTimeout(ctx, time.Second*15)
 	defer timeoutCancel()
 
-	br, err := bridge.NewBridge(timeout, bridgeCfg)
+	br, address, err := bridge.NewBridge(timeout, bridgeCfg)
 	if err != nil {
-		panic(err)
+		log.Fatal().
+			Err(err).
+			Str("event_action", "bridge_init_aborted").
+			Str("event_kind", "error").
+			Str("category", "availability").
+			Msg("the bridge instance cannot be started")
 	}
+	sourceLogEntry := logger.SourceCommonLogEntry{
+		Instance_public_key:   address,
+		Bridge_wallet_address: bridgeCfg.StellarBridgeAccount,
+		Stellar_network:       bridgeCfg.StellarNetwork,
+		Tfchain_url:           bridgeCfg.TfchainURL,
+	}
+
+	log.Logger = log.Logger.With().Interface("source", sourceLogEntry).Logger()
 
 	sigs := make(chan os.Signal, 1)
 
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		log.Info().Msg("awaiting signal")
+		log.Debug().Msg("awaiting signal")
 		<-sigs
-		log.Info().Msg("shutting now")
+		log.Debug().Msg("shutting now")
 		cancel()
 	}()
 
 	if err = br.Start(ctx); err != nil && err != context.Canceled {
-		log.Fatal().Err(err).Msg("exited unexpectedly")
+		log.Fatal().
+			Err(err).
+			Str("event_action", "bridge_unexpectedly_exited").
+			Str("event_kind", "error").
+			Str("category", "availability").
+			Msg("the bridge instance has exited unexpectedly")
 	}
+	log.Info().
+		Str("event_action", "bridge_stopped").
+		Str("event_kind", "event").
+		Str("category", "availability").
+		Msg("the bridge instance has stopped")
 }

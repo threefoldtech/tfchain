@@ -6,7 +6,7 @@ homepage = "https://threefold.io/"
 license-file = "LICENSE"
 readme = "README.md"
 repository = "https://github.com/threefoldtech/tfchain3"
-version = "2.6.0-rc1"
+version = "2.9.0"
 
 [workspace]
 members = [
@@ -135,3 +135,13 @@ sp-timestamp = { git = "https://github.com/paritytech/polkadot-sdk",  tag = "pol
 substrate-build-script-utils = { git = "https://github.com/paritytech/polkadot-sdk",  tag = "polkadot-v1.2.0" }
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/polkadot-sdk",  tag = "polkadot-v1.2.0" }
 substrate-prometheus-endpoint = { git = "https://github.com/paritytech/polkadot-sdk",  tag = "polkadot-v1.2.0" }
+
+[profile.production]
+inherits = "release"
+
+# Sacrifice compile speed for execution speed by using optimization flags:
+
+# https://doc.rust-lang.org/rustc/linker-plugin-lto.html
+lto = "fat"
+# https://doc.rust-lang.org/rustc/codegen-options/index.html#codegen-units
+codegen-units = 1

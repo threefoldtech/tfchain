@@ -20,9 +20,6 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf};
-    use sp_std::prelude::*;
-
     use crate::proposal;
     use crate::proposal::ProposalIndex;
     use crate::weights::WeightInfo;
@@ -34,8 +31,8 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use pallet_tfgrid::farm::FarmName;
     use sp_runtime::traits::Dispatchable;
-    use sp_std::convert::TryInto;
-    use tfchain_support::traits::{ChangeNode, Tfgrid};
+    use sp_std::prelude::*;
+    use tfchain_support::traits::Tfgrid;
 
     #[pallet::config]
     pub trait Config:
@@ -56,11 +53,12 @@ pub mod pallet {
         /// The time-out for council motions.
         type MotionDuration: Get<BlockNumberFor<Self>>;
 
+        type MotionMinThreshold: Get<u32>;
+
         /// The minimum amount of vetos to dissaprove a proposal
         type MinVetos: Get<u32>;
 
         type Tfgrid: Tfgrid<Self::AccountId, FarmName<Self>>;
-        type NodeChanged: ChangeNode<LocationOf<Self>, InterfaceOf<Self>, SerialNumberOf<Self>>;
 
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
@@ -174,6 +172,7 @@ pub mod pallet {
         OngoingVoteAndTresholdStillNotMet,
         FarmHasNoNodes,
         InvalidProposalDuration,
+        ThresholdTooLow,
     }
 
     #[pallet::call]

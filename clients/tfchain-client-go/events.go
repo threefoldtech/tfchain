@@ -389,6 +389,10 @@ type EventRecords struct {
 	SmartContractModule_ServiceContractBilled        []ServiceContractBilled        //nolint:stylecheck,golint
 	SmartContractModule_BillingFrequencyChanged      []BillingFrequencyChanged      //nolint:stylecheck,golint
 	SmartContractModule_NodeExtraFeeSet              []NodeExtraFeeSet              //nolint:stylecheck,golint
+	SmartContractModule_RentWaived                   []RentWaived                   //nolint:stylecheck,golint
+	SmartContractModule_ContractGracePeriodElapsed   []ContractGracePeriodElapsed   //nolint:stylecheck,golint
+	SmartContractModule_ContractPaymentOverdrawn     []ContractPaymentOverdrawn     //nolint:stylecheck,golint
+	SmartContractModule_RewardDistributed            []RewardDistributed            //nolint:stylecheck,golint
 
 	// farm events
 	TfgridModule_FarmStored  []FarmStored  //nolint:stylecheck,golint

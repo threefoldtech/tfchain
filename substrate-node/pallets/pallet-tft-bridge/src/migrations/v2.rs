@@ -37,7 +37,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateBurnTransactionsV2<T> {
         );
 
         info!("👥  TFT-BRIDGE pallet to V1 passes PRE migrate checks ✅",);
-        return Ok(Vec::<u8>::new());
+        Ok(Vec::<u8>::new())
     }
 
     fn on_runtime_upgrade() -> Weight {

@@ -63,14 +63,16 @@ pub mod pallet {
     use super::*;
     use frame_support::{
         pallet_prelude::*,
-        traits::{Currency, Get, Hooks, LockIdentifier, LockableCurrency, OnUnbalanced},
+        traits::{
+            Currency, Get, Hooks, LockIdentifier, LockableCurrency,
+            OnUnbalanced, ReservableCurrency,
+        },
     };
     use frame_system::{
         self as system, ensure_signed,
         offchain::{AppCrypto, CreateSignedTransaction},
         pallet_prelude::*,
     };
-    use pallet_tfgrid::pallet::{InterfaceOf, LocationOf, SerialNumberOf};
     use parity_scale_codec::FullCodec;
     use sp_core::H256;
     use sp_std::{
@@ -78,14 +80,14 @@ pub mod pallet {
         fmt::Debug,
         vec::Vec,
     };
-    use tfchain_support::traits::{ChangeNode, PublicIpModifier};
+    use tfchain_support::traits::PublicIpModifier;
 
     pub type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance;
     pub type NegativeImbalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::NegativeImbalance;
-
     pub const GRID_LOCK_ID: LockIdentifier = *b"gridlock";
+
     use tfchain_support::types::PublicIP;
 
     #[pallet::pallet]
@@ -196,6 +198,11 @@ pub mod pallet {
     #[pallet::getter(fn dedicated_nodes_extra_fee)]
     pub type DedicatedNodesExtraFee<T> = StorageMap<_, Blake2_128Concat, u32, u64, ValueQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn contract_payment_state)]
+    pub type ContractPaymentState<T: Config> =
+        StorageMap<_, Blake2_128Concat, u64, types::ContractPaymentState<BalanceOf<T>>, OptionQuery>;
+
     #[pallet::config]
     pub trait Config:
         CreateSignedTransaction<Call<Self>>
@@ -208,7 +215,9 @@ pub mod pallet {
         + pallet_session::Config
     {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-        type Currency: LockableCurrency<Self::AccountId>;
+        type Currency: LockableCurrency<Self::AccountId>
+            + ReservableCurrency<Self::AccountId>
+            + Currency<Self::AccountId>;
         /// Handler for the unbalanced decrement when slashing (burning collateral)
         type Burn: OnUnbalanced<NegativeImbalanceOf<Self>>;
         type StakingPoolAccount: Get<Self::AccountId>;
@@ -217,7 +226,6 @@ pub mod pallet {
         type DistributionFrequency: Get<u16>;
         type GracePeriod: Get<u64>;
         type WeightInfo: weights::WeightInfo;
-        type NodeChanged: ChangeNode<LocationOf<Self>, InterfaceOf<Self>, SerialNumberOf<Self>>;
         type PublicIpModifier: PublicIpModifier;
         type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
         type Call: From<Call<Self>>;
@@ -291,14 +299,14 @@ pub mod pallet {
         RentContractCanceled {
             contract_id: u64,
         },
-        /// A Contract grace period is triggered
+        /// A Contract grace period is triggered due to overdarfted
         ContractGracePeriodStarted {
             contract_id: u64,
             node_id: u32,
             twin_id: u32,
             block_number: u64,
         },
-        /// A Contract grace period was ended
+        /// A Contract grace period was ended due to overdarfted being settled
         ContractGracePeriodEnded {
             contract_id: u64,
             node_id: u32,
@@ -329,6 +337,28 @@ pub mod pallet {
         NodeExtraFeeSet {
             node_id: u32,
             extra_fee: u64,
+        },
+        // A rent contract is waived due to node being in standby
+        RentWaived {
+            contract_id: u64,
+        },
+        // A Contract grace Period is elapsed
+        ContractGracePeriodElapsed {
+            contract_id: u64,
+            grace_period: u64,
+        },
+        // Overdafted incurred
+        ContractPaymentOverdrawn {
+            contract_id: u64,
+            timestamp: u64,
+            partially_billed_amount: BalanceOf<T>,
+            overdraft: BalanceOf<T>,
+        },
+        // RewardDistributed
+        RewardDistributed {
+            contract_id: u64,
+            standard_rewards: BalanceOf<T>,
+            additional_rewards: BalanceOf<T>,
         },
     }
 
@@ -386,6 +416,8 @@ pub mod pallet {
         WrongAuthority,
         UnauthorizedToChangeSolutionProviderId,
         UnauthorizedToSetExtraFee,
+        RewardDistributionError,
+        ContractPaymentStateNotExists,
     }
 
     #[pallet::genesis_config]
@@ -517,8 +549,31 @@ pub mod pallet {
             origin: OriginFor<T>,
             contract_id: u64,
         ) -> DispatchResultWithPostInfo {
-            let _account_id = ensure_signed(origin)?;
-            Self::bill_contract(contract_id)
+            let account_id = ensure_signed(origin)?;
+            log::debug!("Starting billing for contract_id: {:?}", contract_id);
+
+            let res = Self::bill_contract(contract_id);
+
+            let pays: Pays = if Self::is_validator(account_id) {
+                log::debug!("validator is exempt from fees");
+                // Exempt fees for validators
+                Pays::No.into()
+            } else {
+                Pays::Yes.into()
+            };
+
+            match res {
+                Ok(mut info) => {
+                    log::info!("successfully billed contract with id {:?}", contract_id,);
+                    info.pays_fee = pays;
+                    Ok(info)
+                }
+                Err(mut info) => {
+                    log::warn!("failed to bill contract with id {:?}", contract_id);
+                    info.post_info.pays_fee = pays;
+                    Err(info)
+                }
+            }
         }
 
         #[pallet::call_index(11)]
@@ -663,7 +718,7 @@ pub mod pallet {
         }
 
         fn offchain_worker(block_number: BlockNumberFor<T>) {
-            Self::bill_conttracts_for_block(block_number);
+            Self::bill_contracts_for_block(block_number);
         }
     }
 }

@@ -15,7 +15,7 @@ var (
 )
 
 type BurnTransaction struct {
-	Block          types.U32             `json:"block"`
+	Block          BlockNumber           `json:"block"`
 	Amount         types.U64             `json:"amount"`
 	Source         types.OptionAccountID `json:"source"`
 	Target         string                `json:"target"`
