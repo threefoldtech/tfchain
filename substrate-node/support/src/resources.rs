@@ -15,6 +15,7 @@ pub struct Resources {
 
 pub const ONE_THOUSAND: u128 = 1_000;
 pub const GIGABYTE: u128 = 1024 * 1024 * 1024;
+pub const MINIMUM_STORAGE_CAPACITY: u128 = 100 * GIGABYTE;
 
 impl Resources {
     pub fn empty() -> Resources {
@@ -35,13 +36,18 @@ impl Resources {
     }
 
     pub fn validate_hru(&self) -> bool {
-        // No HRU minimun requirement
-        true
+        // HRU minimum of 100 GB
+        self.hru as u128 >= MINIMUM_STORAGE_CAPACITY
     }
 
     pub fn validate_sru(&self) -> bool {
         // SRU minimum of 100 GB
-        self.sru as u128 >= 100 * GIGABYTE
+        self.sru as u128 >= MINIMUM_STORAGE_CAPACITY
+    }
+
+    pub fn validate_storage(&self) -> bool {
+        // At least one type of storage (HDD or SSD) must have minimum capacity size 
+        self.validate_hru() || self.validate_sru()
     }
 
     pub fn validate_cru(&self) -> bool {

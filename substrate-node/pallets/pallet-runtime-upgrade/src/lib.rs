@@ -6,6 +6,7 @@ pub use pallet::*;
 pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
+    use frame_system::weights::WeightInfo;
     use sp_std::vec::Vec;
 
     #[pallet::pallet]
@@ -16,13 +17,14 @@ pub mod pallet {
     pub trait Config: frame_system::Config {
         /// Origin for runtime upgrades
         type SetCodeOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+        type WeightInfo: WeightInfo;
     }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::call_index(0)]
         // Give same weight as set_code() wrapped extrinsic from frame_system
-        #[pallet::weight((T::BlockWeights::get().base_block, DispatchClass::Operational))]
+        #[pallet::weight((<T as Config>::WeightInfo::set_code(), DispatchClass::Operational))]
         pub fn set_code(origin: OriginFor<T>, code: Vec<u8>) -> DispatchResultWithPostInfo {
             T::SetCodeOrigin::ensure_origin(origin)?;
             frame_system::Pallet::<T>::set_code(frame_system::RawOrigin::Root.into(), code)?;

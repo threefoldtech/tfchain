@@ -21,11 +21,11 @@ Open the Polkadot JS UI in your browser:
 
 The proposal must include the following arguments:
 
-*   `threshold`: minimal number of farmer votes required to be able to close proposal before its end.
+*   `threshold`: minimal number of farmer votes required to be able to close proposal before its end and to approve the proposal (should be set to at least 5 votes).
 *   `action`: call/extrinsic to execute on chain. If there is no call to be executed (which is usually the case) then `system` -> `remark()` should be set.
 *   `description`: a small description of what the proposal is about.
 *   `link`: a link to a more elaborate explanation of the proposal.
-*   `duration`: optional duration of the proposal after beeing created (default is 7 days, max value is 30 days), expressed in number of blocks (1 block = 6 sec).
+*   `duration`: optional duration of the proposal after beeing created (default is 7 days, min value is 1 day, max value is 30 days), expressed in number of blocks (1 block = 6 sec).
 
 ![fill](./img/fill_proposal_farmers.png)
 
@@ -52,7 +52,7 @@ After the proposal ends or, before it, if number of votes reached `threshold`, i
 ## Approval
 
 Once closed the proposal is removed from list and the action, if any, is executed on chain in case of approval.
-Since each farmer vote is weighted by the corresponding farm capacity (`weight = 2 * (sum of CU of all nodes) + (sum of SU of all nodes)`), approval is obtained when `Yes` votes quantity is strictly greater than `No` votes quantity.
+Since each farmer vote is weighted by the corresponding farm capacity (`weight = 2 * (sum of CU of all nodes) + (sum of SU of all nodes)`), approval is obtained when `Yes` votes quantity is strictly greater than `No` votes quantity **and** total number of votes reached `threshold` value.
 
 ## Check proposal
 

@@ -39,6 +39,7 @@ jobs:
       - name: Build
         run: |
           cd substrate-node
+          cargo clean
           cargo build --release
 
       - name: Unit tests

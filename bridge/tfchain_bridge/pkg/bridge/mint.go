@@ -7,14 +7,18 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	hProtocol "github.com/stellar/go/protocols/horizon"
+	"github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg"
+	_logger "github.com/threefoldtech/tfchain/bridge/tfchain_bridge/pkg/logger"
 	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
-	"github.com/threefoldtech/tfchain_bridge/pkg"
 )
 
 // mint handler for stellar
 func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx hProtocol.Transaction) error {
+	logger := log.Logger.With().Str("trace_id", tx.ID).Logger()
+
 	minted, err := bridge.subClient.IsMintedAlready(tx.Hash)
 	if err != nil {
 		if !errors.Is(err, substrate.ErrMintTransactionNotFound) {
@@ -23,18 +27,30 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 	}
 
 	if minted {
-		log.Info().Str("tx_id", tx.Hash).Msg("transaction is already minted")
+		logger.Info().
+			Str("event_action", "mint_skipped").
+			Str("event_kind", "event").
+			Str("category", "mint").
+			Msg("the transaction has already been minted")
 		return pkg.ErrTransactionAlreadyMinted
 	}
 
 	if len(senders) == 0 {
 		return nil
 	}
+	logger.Info().
+		Str("event_action", "transfer_initiated").
+		Str("event_kind", "event").
+		Str("category", "transfer").
+		Dict("metadata", zerolog.Dict().
+			Str("type", "deposit")).
+		Msg("a transfer has initiated")
 
+	// only one payment in transaction is allowed
 	if len(senders) > 1 {
-		log.Info().Msgf("cannot process mint transaction, multiple senders found, refunding now")
+		ctx = _logger.WithRefundReason(ctx, "multiple senders found")
 		for sender, depositAmount := range senders {
-			return bridge.refund(context.Background(), sender, depositAmount.Int64(), tx)
+			return bridge.refund(ctx, sender, depositAmount.Int64(), tx) // so how this should refund the multiple senders ?
 		}
 	}
 
@@ -46,36 +62,34 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 	}
 
 	if tx.Memo == "" {
-		log.Info().Str("tx_id", tx.Hash).Msg("transaction has empty memo, refunding now")
-		return bridge.refund(context.Background(), receiver, depositedAmount.Int64(), tx)
+		ctx = _logger.WithRefundReason(ctx, "no memo in transaction")
+		return bridge.refund(ctx, receiver, depositedAmount.Int64(), tx)
 	}
 
 	if tx.MemoType == "return" {
-		log.Debug().Str("tx_id", tx.Hash).Msg("transaction has a return memo hash, skipping this transaction")
+		logger.Debug().Str("tx_id", tx.Hash).Msg("the transaction is being skipped because it contains a return memo")
 		// save cursor
 		cursor := tx.PagingToken()
 		err := bridge.blockPersistency.SaveStellarCursor(cursor)
 		if err != nil {
-			log.Err(err).Msg("error while saving cursor")
-			return err
+			return errors.Wrap(err, "an error occurred while saving stellar cursor")
 		}
-		log.Info().Msg("stellar cursor saved")
 		return nil
 	}
 
-	// if the deposited amount is lower than the depositfee, trigger a refund
+	// if the deposited amount is lower than the deposit fee, trigger a refund
 	if depositedAmount.Cmp(big.NewInt(bridge.depositFee)) <= 0 {
-		return bridge.refund(context.Background(), receiver, depositedAmount.Int64(), tx)
+		ctx = _logger.WithRefundReason(ctx, "insufficient deposit amount to cover fee")
+		return bridge.refund(ctx, receiver, depositedAmount.Int64(), tx)
 	}
 
 	destinationSubstrateAddress, err := bridge.getSubstrateAddressFromMemo(tx.Memo)
 	if err != nil {
-		log.Info().Msgf("error while decoding tx memo: %s", err.Error())
+		logger.Debug().Err(err).Msg("there was an issue decoding the memo for the transaction")
 		// memo is not formatted correctly, issue a refund
-		return bridge.refund(context.Background(), receiver, depositedAmount.Int64(), tx)
+		ctx = _logger.WithRefundReason(ctx, "memo is not properly formatted")
+		return bridge.refund(ctx, receiver, depositedAmount.Int64(), tx)
 	}
-
-	log.Info().Int64("amount", depositedAmount.Int64()).Str("tx_id", tx.Hash).Msgf("target substrate address to mint on: %s", destinationSubstrateAddress)
 
 	accountID, err := substrate.FromAddress(destinationSubstrateAddress)
 	if err != nil {
@@ -87,11 +101,20 @@ func (bridge *Bridge) mint(ctx context.Context, senders map[string]*big.Int, tx 
 		return err
 	}
 
+	logger.Info().
+		Str("event_action", "mint_proposed").
+		Str("event_kind", "event").
+		Str("category", "mint").
+		Dict("metadata", zerolog.Dict().
+			Int64("amount", depositedAmount.Int64()).
+			Str("tx_id", tx.Hash).
+			Str("to", destinationSubstrateAddress)).
+		Msgf("a mint has proposed with the target substrate address of %s", destinationSubstrateAddress)
+
 	// save cursor
 	cursor := tx.PagingToken()
 	if err = bridge.blockPersistency.SaveStellarCursor(cursor); err != nil {
-		log.Err(err).Msgf("error while saving cursor")
-		return err
+		return errors.Wrap(err, "an error occurred while saving stellar cursor")
 	}
 
 	return nil

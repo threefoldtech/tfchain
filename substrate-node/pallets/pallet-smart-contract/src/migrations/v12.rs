@@ -1,0 +1,207 @@
+use crate::*;
+use frame_support::{
+    pallet_prelude::ValueQuery,
+    storage_alias,
+    traits::{LockableCurrency, OnRuntimeUpgrade},
+    weights::Weight,
+    Blake2_128Concat,
+};
+use log::{debug, info};
+use sp_core::Get;
+use sp_runtime::traits::{Saturating, Zero};
+use sp_std::marker::PhantomData;
+
+#[cfg(feature = "try-runtime")]
+use frame_support::ensure;
+#[cfg(feature = "try-runtime")]
+use sp_std::vec::Vec;
+#[cfg(feature = "try-runtime")]
+use sp_runtime::DispatchError;
+
+// Storage alias from ContractPaymentState v12
+#[storage_alias]
+pub type ContractPaymentState<T: Config> = StorageMap<
+    Pallet<T>,
+    Blake2_128Concat,
+    u64,
+    super::types::v12::ContractPaymentState<BalanceOf<T>>,
+    ValueQuery,
+>;
+
+pub struct MigrateContractLockToContractPaymentState<T: Config>(pub PhantomData<T>);
+
+impl<T: Config> OnRuntimeUpgrade for MigrateContractLockToContractPaymentState<T> {
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
+        validate_pallet_version::<T>(types::StorageVersion::V11)?;
+
+        let count = ContractLock::<T>::iter().count();
+        debug!(
+            "🏁  Smart Contract pallet {:?} ContractLock length before migration {:?}",
+            PalletVersion::<T>::get(),
+            count
+        );
+
+        Ok(count.to_le_bytes().to_vec())
+    }
+
+    fn on_runtime_upgrade() -> Weight {
+        if PalletVersion::<T>::get() == types::StorageVersion::V11 {
+            migrate_to_version_12::<T>()
+        } else {
+            info!(" >>> Unused Smart Contract pallet V12 migration");
+            Weight::zero()
+        }
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade(count: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
+        validate_pallet_version::<T>(types::StorageVersion::V12)?;
+
+        let new_count = ContractPaymentState::<T>::iter().count();
+        let old_count =
+            usize::from_le_bytes(count.try_into().expect("slice with incorrect length"));
+
+        if old_count != 0 {
+            debug!(
+                "🏁  Smart Contract pallet {:?} ContractPaymentState length after migration {:?}",
+                PalletVersion::<T>::get(),
+                new_count
+            );
+            ensure!(
+                new_count == old_count,
+                DispatchError::Other(
+                    "Number of ContractPaymentState migrated does not match: {:?}"
+                )
+            );
+        }
+
+        // Ensure that the ContractLock storage map is empty
+        let count = ContractLock::<T>::iter().count();
+        ensure!(
+            count == 0,
+            DispatchError::Other("ContractLock not empty after migration")
+        );
+
+        // Ensure that the balances Locks storage map is empty
+        let count = pallet_balances::Locks::<T>::iter().count();
+        ensure!(
+            count == 0,
+            DispatchError::Other("Locks not empty after migration")
+        );
+
+        check_contract_payment_state_v12::<T>()
+    }
+}
+
+#[cfg(feature = "try-runtime")]
+fn validate_pallet_version<T: Config>(
+    expected_version: types::StorageVersion,
+) -> Result<(), sp_runtime::TryRuntimeError> {
+    let current_version = PalletVersion::<T>::get();
+    debug!("current pallet version: {:?}", current_version);
+    ensure!(
+        current_version >= expected_version,
+        DispatchError::Other("Unexpected pallet version")
+    );
+    Ok(())
+}
+
+pub fn migrate_to_version_12<T: Config>() -> frame_support::weights::Weight {
+    debug!(
+        " >>> Starting contract pallet migration, pallet version: {:?}",
+        PalletVersion::<T>::get()
+    );
+
+    let mut total_reads = 0;
+    let mut total_writes = 0;
+
+    let (r, w) = migrate_contract_lock_to_contract_payment_state::<T>();
+    total_reads.saturating_accrue(r);
+    total_writes.saturating_accrue(w);
+
+    let (r, w) = remove_all_balances_locks::<T>();
+    total_reads.saturating_accrue(r);
+    total_writes.saturating_accrue(w);
+
+    // Set the new storage version
+    PalletVersion::<T>::put(types::StorageVersion::V12);
+    total_writes.saturating_inc();
+
+    T::DbWeight::get().reads_writes(total_reads, total_writes)
+}
+
+fn migrate_contract_lock_to_contract_payment_state<T: Config>() -> (u64, u64) {
+    let mut reads = 0;
+    let mut writes = 0;
+
+    for (contract_id, old_contract_lock) in ContractLock::<T>::drain() {
+        reads.saturating_inc();
+        writes.saturating_inc();
+
+        ContractPaymentState::<T>::insert(
+            contract_id,
+            super::types::v12::ContractPaymentState {
+                standard_reserve: BalanceOf::<T>::zero(),
+                additional_reserve: BalanceOf::<T>::zero(),
+                standard_overdraft: old_contract_lock.amount_locked,
+                additional_overdraft: old_contract_lock.extra_amount_locked,
+                last_updated_seconds: old_contract_lock.lock_updated,
+                cycles: old_contract_lock.cycles,
+            },
+        );
+        writes.saturating_inc();
+    };
+
+    (reads, writes)
+}
+
+fn remove_all_balances_locks<T: Config>() -> (u64, u64) {
+    let mut reads = 0;
+    let mut writes = 0;
+    // Get only the accounts with locks
+    for (account_id, _) in pallet_balances::Locks::<T>::iter() {
+        reads.saturating_inc();
+        // Fetch all locks for the account
+        let locks = pallet_balances::Pallet::<T>::locks(&account_id);
+        reads.saturating_inc();
+
+        // Remove each lock
+        for lock in locks {
+            pallet_balances::Pallet::<T>::remove_lock(lock.id, &account_id);
+            reads.saturating_inc();
+            writes.saturating_inc();
+        }
+    }
+
+    (reads, writes)
+}
+
+#[cfg(feature = "try-runtime")]
+pub fn check_contract_payment_state_v12<T: Config>() -> Result<(), sp_runtime::TryRuntimeError> {
+    debug!(
+        "🔎  Smart Contract pallet {:?} checking ContractPaymentState storage map START",
+        PalletVersion::<T>::get()
+    );
+
+    for (contract_id, _) in Contracts::<T>::iter() {
+        if !ContractPaymentState::<T>::contains_key(contract_id) {
+            debug!(
+                " ⚠️    Contract (id: {}): no contract payment state found",
+                contract_id
+            );
+        }
+    }
+
+    debug!(
+        "🏁  Smart Contract pallet {:?} checking ContractPaymentState storage map END",
+        PalletVersion::<T>::get()
+    );
+
+    debug!(
+        "👥  Smart Contract pallet to {:?} passes POST migrate checks ✅",
+        PalletVersion::<T>::get()
+    );
+
+    Ok(())
+}

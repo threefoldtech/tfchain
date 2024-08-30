@@ -1,4 +1,4 @@
-module github.com/threefoldtech/tfchain_bridge
+module github.com/threefoldtech/tfchain/bridge/tfchain_bridge
 
 go 1.17
 

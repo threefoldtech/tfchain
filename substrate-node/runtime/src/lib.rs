@@ -31,7 +31,7 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use tfchain_support::{
     constants::time::*,
-    traits::{ChangeNode, PublicIpModifier},
+    traits::{ChangeNode, NodeActiveContracts, PublicIpModifier},
     types::PublicIP,
 };
 
@@ -155,7 +155,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("substrate-threefold"),
     impl_name: create_runtime_str!("substrate-threefold"),
     authoring_version: 1,
-    spec_version: 146,
+    spec_version: 152,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -336,12 +336,23 @@ impl ChangeNode<Loc, Interface, Serial> for NodeChanged {
         SmartContractModule::node_deleted(node);
         Dao::node_deleted(node);
     }
+
+    fn node_power_state_changed(node: &TfgridNode) {
+        SmartContractModule::node_power_state_changed(node);
+    }
 }
 
 pub struct PublicIpModifierType;
 impl PublicIpModifier for PublicIpModifierType {
     fn ip_removed(ip: &PublicIP) {
         SmartContractModule::ip_removed(ip);
+    }
+}
+
+pub struct NodeActiveContractsType;
+impl NodeActiveContracts for NodeActiveContractsType {
+    fn node_has_no_active_contracts(node_id: u32) -> bool {
+        SmartContractModule::node_has_no_active_contracts(node_id)
     }
 }
 
@@ -359,6 +370,7 @@ impl pallet_tfgrid::Config for Runtime {
     type WeightInfo = pallet_tfgrid::weights::SubstrateWeight<Runtime>;
     type NodeChanged = NodeChanged;
     type PublicIpModifier = SmartContractModule;
+    type NodeActiveContracts = NodeActiveContractsType;
     type TermsAndConditions = pallet_tfgrid::terms_cond::TermsAndConditions<Runtime>;
     type MaxFarmNameLength = MaxFarmNameLength;
     type MaxFarmPublicIps = MaxFarmPublicIps;
@@ -403,7 +415,6 @@ impl pallet_smart_contract::Config for Runtime {
     type DistributionFrequency = DistributionFrequency;
     type GracePeriod = GracePeriod;
     type WeightInfo = pallet_smart_contract::weights::SubstrateWeight<Runtime>;
-    type NodeChanged = NodeChanged;
     type PublicIpModifier = PublicIpModifierType;
     type AuthorityId = pallet_smart_contract::crypto::AuthId;
     type Call = RuntimeCall;
@@ -465,6 +476,7 @@ impl substrate_validator_set::Config for Runtime {
 parameter_types! {
     pub const DaoMotionDuration: BlockNumber = 7 * DAYS;
     pub const MinVetos: u32 = 3;
+    pub const DaoMotionMinThreshold: u32 = 5;
 }
 
 impl pallet_dao::Config for Runtime {
@@ -472,8 +484,8 @@ impl pallet_dao::Config for Runtime {
     type CouncilOrigin = EnsureRootOrCouncilApproval;
     type Proposal = RuntimeCall;
     type MotionDuration = DaoMotionDuration;
+    type MotionMinThreshold = DaoMotionMinThreshold;
     type Tfgrid = TfgridModule;
-    type NodeChanged = NodeChanged;
     type WeightInfo = pallet_dao::weights::SubstrateWeight<Runtime>;
     type MinVetos = MinVetos;
 }
@@ -545,6 +557,7 @@ where
             frame_system::CheckNonce::<Runtime>::from(index),
             frame_system::CheckWeight::<Runtime>::new(),
             pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
+            pallet_smart_contract::types::ContractIdProvides::<Runtime>::new(),
         );
 
         #[cfg_attr(not(feature = "std"), allow(unused_variables))]
@@ -669,6 +682,7 @@ type EnsureRootOrCouncilApproval = EitherOfDiverse<
 
 impl pallet_runtime_upgrade::Config for Runtime {
     type SetCodeOrigin = EnsureRootOrCouncilApproval;
+    type WeightInfo = ();
 }
 
 pub struct AuraAccountAdapter;
@@ -761,6 +775,7 @@ pub type SignedExtra = (
     frame_system::CheckNonce<Runtime>,
     frame_system::CheckWeight<Runtime>,
     pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+    pallet_smart_contract::types::ContractIdProvides::<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic =
@@ -780,8 +795,7 @@ pub type Executive = frame_executive::Executive<
 // All migrations executed on runtime upgrade as a nested tuple of types implementing
 // `OnRuntimeUpgrade`.
 type Migrations = (
-    pallet_tfgrid::migrations::v17::FixFarmPublicIps<Runtime>,
-    pallet_tft_bridge::migrations::v2::MigrateBurnTransactionsV2<Runtime>,
+    pallet_smart_contract::migrations::v12::MigrateContractLockToContractPaymentState<Runtime>,
 );
 
 // follows Substrate's non destructive way of eliminating  otherwise required
@@ -799,7 +813,7 @@ mod benches {
         [pallet_burning, BurningModule]
         [pallet_dao, Dao]
         [pallet_kvstore, TFKVStore]
-        [validatorset, ValidatorSet]
+        [substrate_validator_set, ValidatorSet]
         [pallet_validator, Validator]
         [pallet_tft_bridge, TFTBridgeModule]
         // Substrate
