@@ -145,7 +145,7 @@ impl frame_system::Config for TestRuntime {
     type MaxConsumers = ConstU32<16>;
 }
 
-pub const EXISTENTIAL_DEPOSIT: u64 = 2;
+pub const EXISTENTIAL_DEPOSIT: u64 = 500;
 
 parameter_types! {
     pub const MaxLocks: u32 = 50;
