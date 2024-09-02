@@ -18,7 +18,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateBurnTransactionsV2<T> {
     fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
         ensure!(
-            PalletVersion::<T>::get() == types::StorageVersion::V1,
+            PalletVersion::<T>::get() >= types::StorageVersion::V1,
             DispatchError::Other("Unexpected pallet version")
         );
 
@@ -36,7 +36,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateBurnTransactionsV2<T> {
             executed_burn_transactions_count
         );
 
-        info!("👥  TFT-BRIDGE pallet to V1 passes PRE migrate checks ✅",);
+        info!("👥  TFT-BRIDGE pallet to V2 passes PRE migrate checks ✅",);
         Ok(Vec::<u8>::new())
     }
 
@@ -55,7 +55,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateBurnTransactionsV2<T> {
     ) -> Result<(), sp_runtime::TryRuntimeError> {
         info!("current pallet version: {:?}", PalletVersion::<T>::get());
         ensure!(
-            PalletVersion::<T>::get() == types::StorageVersion::V2,
+            PalletVersion::<T>::get() >= types::StorageVersion::V2,
             DispatchError::Other("Unexpected pallet version")
         );
 
