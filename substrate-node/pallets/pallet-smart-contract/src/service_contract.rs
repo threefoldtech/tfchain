@@ -376,11 +376,10 @@ impl<T: Config> Pallet<T> {
         }
 
         // Transfer amount due from consumer account to service account
-        <T as Config>::Currency::transfer(
+        <T as Config>::Currency::transfer_allow_death(
             &consumer_twin.account_id,
             &service_twin.account_id,
             amount,
-            ExistenceRequirement::KeepAlive,
         )?;
 
         log::debug!(

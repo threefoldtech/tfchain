@@ -13,7 +13,7 @@ async function transfer (self, address, amount, callback) {
     throw Error('You must pass a valid numeric amount')
   }
 
-  const transfer = self.api.tx.balances.transferKeepAlive(address, amount)
+  const transfer = self.api.tx.balances.transferAllowDeath(address, amount)
 
   const nonce = await self.api.rpc.system.accountNextIndex(self.address)
   return transfer.signAndSend(self.key, { nonce }, callback)
