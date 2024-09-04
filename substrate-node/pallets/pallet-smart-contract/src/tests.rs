@@ -981,8 +981,7 @@ fn test_node_contract_billing_details() {
 
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
-        let twin_id = 2;
-        let twin = TfgridModule::twins(twin_id).unwrap();
+        let twin = TfgridModule::twins(2).unwrap();
         let initial_twin_balance = Balances::total_balance(&twin.account_id);
 
         assert_ok!(SmartContractModule::create_node_contract(
@@ -1041,8 +1040,7 @@ fn test_node_contract_billing_works_for_non_existing_accounts() {
 
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
-        let twin_id = 2;
-        let twin = TfgridModule::twins(twin_id).unwrap();
+        let twin = TfgridModule::twins(2).unwrap();
         let initial_twin_balance = Balances::total_balance(&twin.account_id);
 
         assert_ok!(SmartContractModule::create_node_contract(
@@ -1126,8 +1124,7 @@ fn test_billing_node_contract_in_graceperiod_should_reset_unbilled_network_consu
         assert_eq!(c1.state, types::ContractState::GracePeriod(11));
 
         // contract payment should be overdrawn
-        let contract_payment_state =
-            SmartContractModule::contract_payment_state(contract_id).unwrap();
+        let contract_payment_state = SmartContractModule::contract_payment_state(contract_id).unwrap();
         assert_ne!(contract_payment_state.get_overdraft(), 0);
 
         // amount unbilled should have been reset after adding the amount to the contract overdraft
@@ -1151,8 +1148,7 @@ fn test_node_contract_billing_details_with_solution_provider() {
 
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
-        let twin_id = 2;
-        let twin = TfgridModule::twins(twin_id).unwrap();
+        let twin = TfgridModule::twins(2).unwrap();
         let initial_twin_balance = Balances::free_balance(&twin.account_id);
         let initial_farmer_balance = Balances::free_balance(alice());
 
@@ -1627,8 +1623,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
 
         TFTPriceModule::set_prices(RuntimeOrigin::signed(alice()), 50, 101).unwrap();
 
-        let twin_id = 2;
-        let twin = TfgridModule::twins(twin_id).unwrap();
+        let twin = TfgridModule::twins(2).unwrap();
         let initial_twin_balance = Balances::free_balance(&twin.account_id);
         info!("initial twin balance: {:?}", initial_twin_balance);
         let initial_farmer_balance = Balances::free_balance(alice());
@@ -1642,6 +1637,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
             None
         ));
         let contract_id = 1;
+        let twin_id = 2;
         push_contract_resources_used(contract_id);
 
         let (amount_due_1, discount_received) = calculate_tft_cost(contract_id, twin_id, 10);
@@ -1667,7 +1663,7 @@ fn test_node_contract_billing_cycles_cancel_contract_during_cycle_without_balanc
         info!("total amount billed: {:?}", total_amount_billed);
 
         let leave = 1000;
-        Balances::transfer_allow_death(
+        Balances::transfer(
             RuntimeOrigin::signed(bob()),
             charlie(),
             initial_twin_balance - total_amount_billed - leave,
@@ -1820,7 +1816,7 @@ fn test_restore_node_contract_in_grace_works() {
         run_to_block(31, Some(&mut pool_state));
         run_to_block(41, Some(&mut pool_state));
         // Transfer some balance to the owner of the contract to trigger the grace period to stop
-        Balances::transfer_allow_death(RuntimeOrigin::signed(bob()), charlie(), 100000000).unwrap();
+        Balances::transfer(RuntimeOrigin::signed(bob()), charlie(), 100000000).unwrap();
         run_to_block(52, Some(&mut pool_state));
         run_to_block(62, Some(&mut pool_state));
 
@@ -2013,7 +2009,6 @@ fn test_rent_contract_billing() {
             node_id,
             None
         ));
-        let twin_id = 2;
         let contract_id = 1;
 
         let contract = SmartContractModule::contracts(contract_id).unwrap();
@@ -2043,7 +2038,7 @@ fn test_rent_contract_billing() {
         run_to_block(21, Some(&mut pool_state));
 
         // should bill partial cycle 2 [15-21], 6 blocks
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 6);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, 2, 6);
         assert_ne!(amount_due_as_u128, 0);
         check_report_cost(contract_id, amount_due_as_u128, 21, discount_received);
 
@@ -2080,7 +2075,7 @@ fn test_rent_contract_billing() {
         run_to_block(51, Some(&mut pool_state));
 
         // should bill partial cycle 5 [45-51], 6 blocks
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 6);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, 2, 6);
         assert_ne!(amount_due_as_u128, 0);
         check_report_cost(contract_id, amount_due_as_u128, 51, discount_received);
     });
@@ -2164,7 +2159,6 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
             node_id,
             None
         ));
-        let twin_id = 2;
         let contract_id = 1;
 
         let contract = SmartContractModule::contracts(contract_id).unwrap();
@@ -2179,8 +2173,7 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
             .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 11);
         run_to_block(11, Some(&mut pool_state));
 
-        let (amount_due_1_as_u128, discount_received) =
-            calculate_tft_cost(contract_id, twin_id, 10);
+        let (amount_due_1_as_u128, discount_received) = calculate_tft_cost(contract_id, 2, 10);
         assert_ne!(amount_due_1_as_u128, 0);
         check_report_cost(
             contract_id,
@@ -2189,7 +2182,7 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
             discount_received.clone(),
         );
 
-        let twin = TfgridModule::twins(twin_id).unwrap();
+        let twin = TfgridModule::twins(2).unwrap();
         let total_balance = Balances::total_balance(&twin.account_id);
         let free_balance = Balances::free_balance(&twin.account_id);
         assert_ne!(total_balance, free_balance);
@@ -2198,16 +2191,16 @@ fn test_rent_contract_billing_cancel_should_bill_reserved_balance() {
         // cancel contract
         // it will bill before removing the contract and it should bill all
         // reserved balance
-        let (amount_due_2_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 2);
+        let (amount_due_2_as_u128, discount_received) = calculate_tft_cost(contract_id, 2, 2);
         assert_ok!(SmartContractModule::cancel_contract(
             RuntimeOrigin::signed(bob()),
             contract_id
         ));
 
+        let twin = TfgridModule::twins(2).unwrap();
         let usable_balance = Balances::usable_balance(&twin.account_id);
         assert_ne!(usable_balance, 0);
-        Balances::transfer_allow_death(RuntimeOrigin::signed(bob()), alice(), usable_balance)
-            .unwrap();
+        Balances::transfer(RuntimeOrigin::signed(bob()), alice(), usable_balance).unwrap();
 
         // Last amount due is not the same as the first one
         assert_ne!(amount_due_1_as_u128, amount_due_2_as_u128);
@@ -2236,10 +2229,9 @@ fn test_rent_contract_overdrawn_and_partial_bill() {
             node_id,
             None
         ));
-        let twin_id = 3;
         let contract_id = 1;
 
-        let twin = TfgridModule::twins(twin_id).unwrap();
+        let twin = TfgridModule::twins(3).unwrap();
         let initial_reservable_balance =
             Balances::usable_balance(&twin.account_id) - EXISTENTIAL_DEPOSIT;
 
@@ -2255,7 +2247,7 @@ fn test_rent_contract_overdrawn_and_partial_bill() {
             .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 11);
         run_to_block(11, Some(&mut pool_state));
 
-        let (amount_due_per_cycle, _) = calculate_tft_cost(contract_id, twin_id, 10);
+        let (amount_due_per_cycle, _) = calculate_tft_cost(contract_id, 2, 10);
         assert_ne!(amount_due_per_cycle, 0);
 
         // expect contractPaymentOverdarwn event with partially billed amount
@@ -2272,8 +2264,7 @@ fn test_rent_contract_overdrawn_and_partial_bill() {
             true
         );
 
-        let contract_payment_state =
-            SmartContractModule::contract_payment_state(contract_id).unwrap();
+        let contract_payment_state = SmartContractModule::contract_payment_state(contract_id).unwrap();
         assert_eq!(
             contract_payment_state.get_reserve(),
             initial_reservable_balance
@@ -2304,8 +2295,7 @@ fn test_rent_contract_overdrawn_and_partial_bill() {
             ))),
             true
         );
-        let contract_payment_state =
-            SmartContractModule::contract_payment_state(contract_id).unwrap();
+        let contract_payment_state = SmartContractModule::contract_payment_state(contract_id).unwrap();
         assert_eq!(
             contract_payment_state.get_reserve(),
             initial_reservable_balance
@@ -2317,7 +2307,7 @@ fn test_rent_contract_overdrawn_and_partial_bill() {
         let should_have_next_cycle = amount_due_per_cycle * 3 - initial_reservable_balance;
 
         // transfer some balance to the owner of the contract to trigger the grace period to stop
-        Balances::transfer_allow_death(
+        Balances::transfer(
             RuntimeOrigin::signed(bob()),
             charlie(),
             should_have_next_cycle,
@@ -2329,8 +2319,7 @@ fn test_rent_contract_overdrawn_and_partial_bill() {
             .should_call_bill_contract(contract_id, Ok(Pays::Yes.into()), 31);
         run_to_block(31, Some(&mut pool_state));
 
-        let contract_payment_state =
-            SmartContractModule::contract_payment_state(contract_id).unwrap();
+        let contract_payment_state = SmartContractModule::contract_payment_state(contract_id).unwrap();
         assert_eq!(
             contract_payment_state.get_reserve(),
             amount_due_per_cycle * 3
@@ -2360,7 +2349,6 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
             node_id,
             None
         ));
-        let twin_id = 2;
         let contract_id = 1;
 
         let contract = SmartContractModule::contracts(contract_id).unwrap();
@@ -2370,14 +2358,14 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
             types::ContractData::RentContract(rent_contract)
         );
 
-        let twin = TfgridModule::twins(twin_id).unwrap();
+        let twin = TfgridModule::twins(2).unwrap();
 
         let reserved_balance = Balances::reserved_balance(&twin.account_id);
         info!("reserved balance: {:?}", reserved_balance);
 
         run_to_block(8, Some(&mut pool_state));
         // Calculate the cost for 7 blocks of runtime (created a block 1, canceled at block 8)
-        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, twin_id, 7);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(contract_id, 2, 7);
         // cancel rent contract at block 8
         assert_ok!(SmartContractModule::cancel_contract(
             RuntimeOrigin::signed(bob()),
@@ -2392,7 +2380,7 @@ fn test_rent_contract_canceled_mid_cycle_should_bill_for_remainder() {
         );
 
         // Twin should have no more reserved balance
-        let twin = TfgridModule::twins(twin_id).unwrap();
+        let twin = TfgridModule::twins(2).unwrap();
         let reserved_balance = Balances::reserved_balance(&twin.account_id);
         assert_eq!(reserved_balance, 0);
     });
@@ -2425,7 +2413,6 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
             0,
             None
         ));
-        let twin_id = 2;
         let node_contract_id = 2;
         push_contract_resources_used(node_contract_id);
 
@@ -2438,8 +2425,7 @@ fn test_create_rent_contract_and_node_contract_excludes_node_contract_from_billi
             .should_call_bill_contract(node_contract_id, Ok(Pays::Yes.into()), 12);
         run_to_block(12, Some(&mut pool_state));
 
-        let (amount_due_as_u128, discount_received) =
-            calculate_tft_cost(rent_contract_id, twin_id, 10);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(rent_contract_id, 2, 10);
         assert_ne!(amount_due_as_u128, 0);
         check_report_cost(rent_contract_id, amount_due_as_u128, 11, discount_received);
 
@@ -2581,7 +2567,6 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
             node_id,
             None
         ));
-        let twin_id = 2;
         let rent_contract_id = 1;
 
         run_to_block(2, Some(&mut pool_state));
@@ -2603,8 +2588,7 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
         run_to_block(11, Some(&mut pool_state));
 
         // check contract 1 costs (Rent Contract)
-        let (amount_due_as_u128, discount_received) =
-            calculate_tft_cost(rent_contract_id, twin_id, 10);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(rent_contract_id, 2, 10);
         assert_ne!(amount_due_as_u128, 0);
         check_report_cost(rent_contract_id, amount_due_as_u128, 11, discount_received);
 
@@ -2614,8 +2598,7 @@ fn test_create_rent_contract_and_node_contract_with_ip_billing_works() {
         run_to_block(12, Some(&mut pool_state));
 
         // check contract 2 costs (Node Contract)
-        let (amount_due_as_u128, discount_received) =
-            calculate_tft_cost(node_contract_id, twin_id, 10);
+        let (amount_due_as_u128, discount_received) = calculate_tft_cost(node_contract_id, 2, 10);
         assert_ne!(amount_due_as_u128, 0);
         check_report_cost(node_contract_id, amount_due_as_u128, 12, discount_received);
 
@@ -2717,7 +2700,7 @@ fn test_restore_rent_contract_in_grace_works() {
         run_to_block(31, Some(&mut pool_state));
 
         // Transfer some balance to the owner of the contract to trigger the grace period to stop
-        Balances::transfer_allow_death(RuntimeOrigin::signed(bob()), charlie(), 100000000).unwrap();
+        Balances::transfer(RuntimeOrigin::signed(bob()), charlie(), 100000000).unwrap();
 
         pool_state
             .write()
@@ -2822,7 +2805,7 @@ fn test_restore_rent_contract_and_node_contracts_in_grace_works() {
         run_to_block(32, Some(&mut pool_state));
 
         // Transfer some balance to the owner of the contract to trigger the grace period to stop
-        Balances::transfer_allow_death(RuntimeOrigin::signed(bob()), charlie(), 100000000).unwrap();
+        Balances::transfer(RuntimeOrigin::signed(bob()), charlie(), 100000000).unwrap();
 
         pool_state
             .write()
@@ -3593,8 +3576,7 @@ fn test_service_contract_bill_works() {
             get_timestamp_in_seconds_for_block(1)
         );
 
-        let consumer_twin_id = 2;
-        let consumer_twin = TfgridModule::twins(consumer_twin_id).unwrap();
+        let consumer_twin = TfgridModule::twins(2).unwrap();
         let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
         assert_eq!(consumer_balance, 2500000000);
 
@@ -3602,7 +3584,7 @@ fn test_service_contract_bill_works() {
         run_to_block(201, Some(&mut pool_state));
         assert_ok!(SmartContractModule::service_contract_bill(
             RuntimeOrigin::signed(alice()),
-            service_contract_id,
+            1,
             VARIABLE_AMOUNT,
             b"bill_metadata_1".to_vec(),
         ));
@@ -3784,11 +3766,9 @@ fn test_service_contract_bill_out_of_funds_fails() {
         approve_service_consumer_contract(service_contract_id);
 
         // Drain consumer account
-        let twin_id = 2;
-        let consumer_twin = TfgridModule::twins(twin_id).unwrap();
+        let consumer_twin = TfgridModule::twins(2).unwrap();
         let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
-        Balances::transfer_allow_death(RuntimeOrigin::signed(bob()), alice(), consumer_balance)
-            .unwrap();
+        Balances::transfer(RuntimeOrigin::signed(bob()), alice(), consumer_balance).unwrap();
         let consumer_balance = Balances::free_balance(&consumer_twin.account_id);
         assert_eq!(consumer_balance, 0);
 
