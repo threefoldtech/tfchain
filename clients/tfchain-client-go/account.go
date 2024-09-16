@@ -39,7 +39,7 @@ type AccountID types.AccountID
 // Balance
 type Balance struct {
 	Free       types.U128 `json:"free"`
-	Reserved   types.U128 `json:"reserverd"`
+	Reserved   types.U128 `json:"reserved"`
 	MiscFrozen types.U128 `json:"misc_frozen"`
 	FreeFrozen types.U128 `json:"free_frozen"`
 }
@@ -54,7 +54,7 @@ type AccountInfo struct {
 
 // TODO: Add service response status code if avialble
 type ActivationServiceError struct {
-	StatusCode int // 0 or a valid HTTP status code. 0 indicates that a response was not recived due to an error such host unreachable.
+	StatusCode int // 0 or a valid HTTP status code. 0 indicates that a response was not received due to an error such host unreachable.
 	Err        error
 }
 
