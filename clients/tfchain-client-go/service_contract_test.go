@@ -85,7 +85,7 @@ func TestServiceContract(t *testing.T) {
 	})
 
 	// 4. Bill consumer for service contract
-	// should be able to go to future block to test varaible amount greater than 0
+	// should be able to go to future block to test variable amount greater than 0
 
 	err = cl.ServiceContractBill(serviceIdentity, serviceContractID, variableAmount, billMetadata)
 	require.NoError(t, err)

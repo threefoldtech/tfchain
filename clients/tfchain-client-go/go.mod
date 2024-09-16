@@ -2,8 +2,6 @@ module github.com/threefoldtech/tfchain/clients/tfchain-client-go
 
 go 1.21
 
-toolchain go1.21.3
-
 require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.12
