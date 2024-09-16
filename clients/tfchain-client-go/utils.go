@@ -335,7 +335,6 @@ func (s *Substrate) sign(e *types.Extrinsic, signer Identity, o types.SignatureO
 	}
 
 	signerPubKey, err := types.NewMultiAddressFromAccountID(signer.PublicKey())
-
 	if err != nil {
 		return err
 	}
@@ -346,7 +345,6 @@ func (s *Substrate) sign(e *types.Extrinsic, signer Identity, o types.SignatureO
 	}
 
 	sig, err := signer.Sign(b)
-
 	if err != nil {
 		return err
 	}
@@ -412,7 +410,7 @@ func (s *Substrate) CallOnce(cl Conn, meta Meta, identity Identity, call types.C
 		return hash, err
 	}
 
-	//node.Address =identity.PublicKey
+	// node.Address =identity.PublicKey
 	account, err := s.getAccount(cl, meta, identity)
 	if err != nil {
 		return hash, errors.Wrap(err, "failed to get account")
@@ -547,4 +545,26 @@ func (s *Substrate) checkForError(callResponse *CallResponse) error {
 	}
 
 	return nil
+}
+
+// decodeSecondKey extracts and decodes the second key(Vec<u8>) from the storage key.
+func decodeSecondKey(storageKey types.StorageKey, identity Identity) (key []byte, err error) {
+	// remove 16 bytes(32 in hex) pallet and map prefixes.
+	// pallet prefix (8 bytes): twox64(pallet_name)
+	// map prefix (8bytes) twox64(map_name)
+	prefixLen := 32
+
+	// the storage key contains two keys (AccountID and Vec<u8>)
+	// remove the length of the first key(AccountID)
+	// the hasher `Blake2_128Concat` includes a 16-byte hash followed by the AccountID
+	firstKeyLen := 32 + len(identity.PublicKey())
+
+	offset := prefixLen + firstKeyLen
+
+	if len(storageKey) < offset {
+		return nil, errors.New(fmt.Sprintf("failed to decode second key, storage key len should not be less than %d bytes", offset))
+	}
+
+	err = Decode(storageKey[offset:], &key)
+	return key, err
 }
