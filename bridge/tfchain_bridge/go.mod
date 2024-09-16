@@ -2,8 +2,6 @@ module github.com/threefoldtech/tfchain/bridge/tfchain_bridge
 
 go 1.21
 
-toolchain go1.22.1
-
 require (
 	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.12
 	github.com/pkg/errors v0.9.1
