@@ -1,7 +1,6 @@
 package substrate
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,9 +9,9 @@ import (
 
 func TestKVStore(t *testing.T) {
 	pairs := map[string]string{"key1": "value1", "key2": "value2", "key3": "value3"}
-	mnem := "route visual hundred rabbit wet crunch ice castle milk model inherit outside"
 
-	id, err := NewIdentityFromSr25519Phrase(mnem)
+	// Alice identity
+	id, err := NewIdentityFromSr25519Phrase("//Alice")
 	require.NoError(t, err)
 
 	sub := startLocalConnection(t)
@@ -35,10 +34,8 @@ func TestKVStore(t *testing.T) {
 
 	t.Run("kvstore list keys", func(t *testing.T) {
 		values, err := sub.KVStoreList(id)
-
-		fmt.Println(len(values))
 		assert.NoError(t, err)
-		assert.Equal(t, pairs, values)
+		assert.EqualValues(t, values, pairs)
 	})
 
 	t.Run("kvstore delete", func(t *testing.T) {
@@ -49,6 +46,6 @@ func TestKVStore(t *testing.T) {
 
 		values, err := sub.KVStoreList(id)
 		assert.NoError(t, err)
-		assert.Equal(t, 0, len(values))
+		assert.Empty(t, values)
 	})
 }
