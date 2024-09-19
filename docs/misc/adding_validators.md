@@ -11,6 +11,32 @@ It covers generating keys using `subkey` via Docker, starting the node, insertin
 - **Polkadot.js Browser Extension**: For managing accounts and signing transactions.
 - **Basic Knowledge**: Familiarity with command-line operations and blockchain concepts.
 
+## Hardware
+
+### Requirements
+
+The most common way for a beginner to run a validator is on a cloud server running Linux. You may choose whatever VPS provider that you prefer, and whatever operating system you are comfortable with.
+For this guide we will be using Ubuntu 22.04, but the instructions should be similar for other platforms.
+
+The transactions weights in TFchain were benchmarked on standard hardware. It is recommended that validators run at least the standard hardware in order to ensure they are able to process all blocks in time. The following are not minimum requirements but if you decide to run with less than this beware that you might have performance issue.
+
+#### Standard Hardware
+
+- CPU
+  - x86-64 compatible;
+  - Intel Ice Lake, or newer (Xeon or Core series); AMD Zen3, or newer (EPYC or Ryzen);
+  - ~4~ 8 physical cores @ 3.4GHz;
+  - Simultaneous multithreading disabled (Hyper-Threading on Intel, SMT on AMD);
+  - Prefer single-threaded performance over higher cores count. A comparison of single-threaded performance can be found here.
+- Storage
+  - An NVMe SSD. Should be reasonably sized to deal with blockchain growth. Minimum around 80GB but will need to be re-evaluated every six months.
+- Memory
+  - ~32~ 64 GB DDR4 ECC.
+- System
+  - Linux Kernel 5.16 or newer.
+
+The specs posted above are not a hard requirement to run a validator, but are considered best practice. Running a validator is a responsible task; using professional hardware is a must in any way.
+
 ## 1. Generate Keys
 
 ### 1.1 Generate the Validator Account Key
