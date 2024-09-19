@@ -18,7 +18,9 @@ It covers generating keys using `subkey` via Docker, starting the node, insertin
 The most common way for a beginner to run a validator is on a cloud server running Linux. You may choose whatever VPS provider that you prefer, and whatever operating system you are comfortable with.
 For this guide we will be using Ubuntu 22.04, but the instructions should be similar for other platforms.
 
-The transactions weights in TFchain were benchmarked on standard hardware. It is recommended that validators run at least the standard hardware in order to ensure they are able to process all blocks in time. The following are not minimum requirements but if you decide to run with less than this beware that you might have performance issue.
+The transactions weights in TFchain were benchmarked on standard hardware.
+It is recommended that validators run at least the standard hardware in order to ensure they are able to process all blocks in time.
+The following are not minimum requirements but if you decide to run with less than this beware that you might have performance issue.
 
 #### Standard Hardware
 
@@ -237,7 +239,8 @@ brew install cmake pkg-config openssl git llvm
 
 #### 2.1.2 Install & Configure Network Time Protocol (NTP) Client
 
-NTP is a networking protocol designed to synchronize the clocks of computers over a network. NTP allows you to synchronize the clocks of all the systems within the network. Currently it is required that validators' local clocks stay reasonably in sync, so you should be running NTP or a similar service. You can check whether you have the NTP client by running:
+NTP is a networking protocol designed to synchronize the clocks of computers over a network. NTP allows you to synchronize the clocks of all the systems within the network.
+Currently it is required that validators' local clocks stay reasonably in sync, so you should be running NTP or a similar service. You can check whether you have the NTP client by running:
 
 If you are using Ubuntu 18.04 / 19.04, NTP Client should be installed by default.
 
@@ -257,7 +260,8 @@ ntpd will be started automatically after install. You can query ntpd for status 
 sudo ntpq -p
 ```
 
-- WARNING: Skipping this can result in the validator node missing block authorship opportunities. If the clock is out of sync (even by a small amount), the blocks the validator produces may not get accepted by the network. This will result in ImOnline heartbeats making it on chain, but zero allocated blocks making it on chain.
+- WARNING: Skipping this can result in the validator node missing block authorship opportunities.
+If the clock is out of sync (even by a small amount), the blocks the validator produces may not get accepted by the network.
 
 #### 2.1.3 Compile TFchain Binary
 
