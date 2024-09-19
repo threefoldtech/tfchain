@@ -311,7 +311,7 @@ With warp sync enabled, your node will sync much faster by downloading key block
 
 ```bash
 # For Docker:
-docker logs -f tfchain-validator
+docker logs -f "<container-name>"
 
 # For binary:
 tail -f /storage/logs.txt
@@ -342,17 +342,11 @@ To have your node recognized as a validator, you need to set your session keys o
    - **keys**: Use previously generated aura and gran hex public keys.
      - **aura**: Manually enter the hex public key of the sr25519 key
 
-
      - **gran**: Manually enter the hex public key of the ed25519 key
-
 
    - **proof**: Set to `0x00`.
 
 7. Submit the transaction. Once the session keys are set on-chain, your validator will be recognized by the network.
-
-### 4.3 Governance Consideration
-
-In some cases, the TFChain network may require a governance proposal to add the validator node. If you encounter this, submit a council motion to add the validator node to the validator set.
 
 ## 5. Submit a Council Motion to Add Validator
 
@@ -370,7 +364,7 @@ After submission, inform other council members and request them to vote on the p
 
 Once your session keys are set and the council approves your validator, your node will start participating in block production after 2 era.
 
-### Ensure Node Health:
+### Ensure Node Health
 
 - Keep your node online and synced.
 - Monitor logs for any errors or warnings.
