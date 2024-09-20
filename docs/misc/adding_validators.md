@@ -350,13 +350,14 @@ Example systemd file:
     Restart=always
     RestartSec=1
     User=user
-    ExecStart=/home/user/tfchain/substrate-node/target/release/tfchain --chain /home/user/tfchain/substrate-node/chainspecs/dev/chainSpec.json --pruning=archive --bootnodes /ip4/185.206.122.7/tcp/30333/p2p/12D3KooWLcMLBg9itjQL1EXsAqkJFPhqESHqJKY7CBKmhhhL8fdp --validator --telemetry-url 'wss://shard1.telemetry.tfchain.grid.tf/submit 1'
+    ExecStart=/home/user/tfchain/substrate-node/target/release/tfchain --chain /home/user/tfchain/substrate-node/chainspecs/main/chainSpecRaw.json <...>
 
     [Install]
     WantedBy=multi-user.target
 ```
 
-Replace `user` by your username.
+- Replace `user` by your username.
+- Replace `<...>` by the rest of the tfchain start command args
 
 ```bash
 sudo vim /etc/systemd/system/tfchain.service

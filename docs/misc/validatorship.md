@@ -34,7 +34,7 @@ Bonding an account is optional, you can skip this step and continue to the next 
 
 ## 5 Apply for a Validatorship
 
-- Now go to `Developer` -> `Extrinsicis` and Select your `VALIDATOR_ACCOUNT` account. Now from the left dropdown (modules) search `validator` and select the method: `createValidator(...)`
+- Now go to `Developer` -> `Extrinsicis` and Select your `VALIDATOR_ACCOUNT` account. Now from the left dropdown (modules) search `validator` and select the method: `createValidatorRequest(...)`
 - This call needs to be signed with your account (`VALIDATOR_ACCOUNT`) that manages the Validator and manages your council membership (voting). (You previously created).
 - Information needed:
   - validator\_node\_account: Account ID generated from previous step (`VALIDATOR_NODE_ACCOUNT`)
@@ -50,7 +50,8 @@ Bonding an account is optional, you can skip this step and continue to the next 
 
 If your request is approved by the council AND your tfchain node is fully synced with the network you can activate your validator. This will kickstart block production after 2 era.
 
-- go to `Developer` -> `Extrinsicis` and Select your account that manages the Validator and manages your council membership (voting). (You previously created).. Now from the left dropdown (modules) search `validator`.
+- go to `Developer` -> `Extrinsicis` and Select your `VALIDATOR_ACCOUNT` that manages the Validator and manages your council membership.
+- Now from the left dropdown (modules) search `validator`.
 - Select `ActivateValidatorNode` and click Submit Transaction.
 
 ![activate](../assets/activate.png)
