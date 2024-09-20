@@ -350,7 +350,7 @@ Example systemd file:
     Restart=always
     RestartSec=1
     User=user
-    ExecStart=/home/user/tfchain/substrate-node/target/release/tfchain --chain /home/user/tfchain/substrate-node/chainspecs/main/chainSpecRaw.json <...>
+    ExecStart=/home/user/tfchain/substrate-node/target/release/tfchain <...>
 
     [Install]
     WantedBy=multi-user.target
