@@ -56,7 +56,7 @@ Take note of the following:
 - **Public Key (hex)**
 - **SS58 Address**: This is your validator's account address.
 
-This key will serve as your validator controller account and session key for Aura. It'll used also to derive the GRANDPA key.
+This key will serve as your validator controller account and session key for Aura (validator node/author account). It'll used also to derive the GRANDPA key.
 
 ### 1.2 Generate the Node (aka Network) Key
 
@@ -334,6 +334,59 @@ Insert the Aura and GRANDPA keys into your node's keystore.
 - Replace `<mnemonic phrase>` with your mnemonic from step 1.1.
 
 You can restart your node at this point.
+
+#### 2.4 Managing TFChain with systemd (Optional)
+
+Example systemd file:
+
+```ini
+    [Unit]
+    Description=TFchain service
+    After=network.target
+    StartLimitIntervalSec=0
+
+    [Service]
+    Type=simple
+    Restart=always
+    RestartSec=1
+    User=user
+    ExecStart=/home/user/tfchain/substrate-node/target/release/tfchain --chain /home/user/tfchain/substrate-node/chainspecs/dev/chainSpec.json --pruning=archive --bootnodes /ip4/185.206.122.7/tcp/30333/p2p/12D3KooWLcMLBg9itjQL1EXsAqkJFPhqESHqJKY7CBKmhhhL8fdp --validator --telemetry-url 'wss://shard1.telemetry.tfchain.grid.tf/submit 1'
+
+    [Install]
+    WantedBy=multi-user.target
+```
+
+Replace `user` by your username.
+
+```bash
+sudo vim /etc/systemd/system/tfchain.service
+```
+
+then paste the file content, save and exit vim.
+
+Starting service:
+
+```bash
+sudo systemctl start tfchain
+```
+
+Stopping service:
+
+```bash
+sudo systemctl stop tfchain
+```
+
+Reload config:
+
+```bash
+sudo systemctl stop tfchain
+```
+
+Edit File:
+
+```bash
+sudo systemctl start tfchain
+```
 
 ## 3. Synchronize the Node Using Warp Sync
 
