@@ -41,13 +41,15 @@ impl<T: Config> Pallet<T> {
         let node_is_dedicated =
             DedicatedNodesExtraFee::<T>::get(node_id) > 0 || farm.dedicated_farm;
 
-        // In case there is a rent contract make sure only the contract owner can deploy
+        // In case there is a rent contract:
+        // 1. Ensure only the contract owner can deploy, and
+        // 2. The rent contract is in the 'created' state
         // If not, allow to deploy only if node is not dedicated
         match ActiveRentContractForNode::<T>::get(node_id) {
             Some(contract_id) => {
                 let rent_contract =
                     Contracts::<T>::get(contract_id).ok_or(Error::<T>::ContractNotExists)?;
-                if rent_contract.twin_id != twin_id {
+                if rent_contract.twin_id != twin_id || !matches!(rent_contract.state, types::ContractState::Created) {
                     return Err(Error::<T>::NodeNotAvailableToDeploy.into());
                 }
             }
